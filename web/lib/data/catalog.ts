@@ -130,7 +130,10 @@ export async function getPublishedCatalog(): Promise<PublishedCatalog> {
     if (legacy.error) {
       return { ...empty(), loadError: formatSupabaseError(legacy.error) };
     }
-    modules = ((legacy.data ?? []) as Omit<ModuleRow, "unlock_strategy" | "manual_unlocked">[])
+    modules = ((legacy.data ?? []) as unknown as Omit<
+      ModuleRow,
+      "unlock_strategy" | "manual_unlocked"
+    >[])
       .map((m) => ({
         ...m,
         unlock_strategy: "sequential",
@@ -238,7 +241,10 @@ export async function getLessonBySlugs(moduleSlug: string, lessonSlug: string) {
         .maybeSingle();
       if (legacy.error || !legacy.data) return null;
       mod = {
-        ...(legacy.data as Omit<ModuleRow, "unlock_strategy" | "manual_unlocked">),
+        ...(legacy.data as unknown as Omit<
+          ModuleRow,
+          "unlock_strategy" | "manual_unlocked"
+        >),
         unlock_strategy: "sequential",
         manual_unlocked: false,
       };

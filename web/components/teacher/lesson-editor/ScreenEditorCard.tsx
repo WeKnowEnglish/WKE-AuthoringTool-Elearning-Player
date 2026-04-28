@@ -2144,9 +2144,9 @@ function PresentationInteractiveFields({
                     ));
                     const id = newPresentationId("el");
                     const nextElement: PresentationElementState = {
+                      ...base,
                       id,
                       kind,
-                      ...base,
                       z_index: selectedSlide.elements.length,
                       visible: true,
                       label: kind === "button" ? "Button" : kind,

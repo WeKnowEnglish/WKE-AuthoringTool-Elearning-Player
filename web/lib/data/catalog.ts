@@ -142,7 +142,7 @@ export async function getPublishedCatalog(): Promise<PublishedCatalog> {
   } else if (withUnlockResult.error) {
     return { ...empty(), loadError: formatSupabaseError(withUnlockResult.error) };
   } else {
-    modules = (withUnlockResult.data ?? []) as ModuleRow[];
+    modules = (withUnlockResult.data ?? []) as unknown as ModuleRow[];
   }
   const moduleIds = modules.map((m) => m.id);
   const moduleTagsByModule: Record<string, string[]> = {};

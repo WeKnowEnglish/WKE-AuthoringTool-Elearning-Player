@@ -1,0 +1,440 @@
+@import "tailwindcss";
+
+/*
+  Kid palette (royal blue / sky / sunny yellow / golden orange).
+  Hexes tuned for WCAG-friendly pairings with kid-ink on light surfaces.
+*/
+:root {
+  --background: #e8f6fd;
+  --foreground: #152668;
+  --kid-border: 4px;
+  --kid-ink: #152668;
+  --kid-surface: #b8e8fb;
+  --kid-surface-muted: #e8f6fd;
+  --kid-cta: #ffe135;
+  --kid-cta-hover: #fff176;
+  --kid-cta-active: #fdd835;
+  --kid-accent: #f5a623;
+  --kid-accent-hover: #ffb74d;
+  --kid-accent-active: #ef6c00;
+  --kid-panel: #ffffff;
+  --kid-success: #16a34a;
+  --kid-success-ring: rgba(22, 163, 74, 0.55);
+  --kid-border-strong: var(--kid-ink);
+  --kid-shadow: var(--kid-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --color-kid-ink: var(--kid-ink);
+  --color-kid-surface: var(--kid-surface);
+  --color-kid-surface-muted: var(--kid-surface-muted);
+  --color-kid-cta: var(--kid-cta);
+  --color-kid-cta-hover: var(--kid-cta-hover);
+  --color-kid-cta-active: var(--kid-cta-active);
+  --color-kid-accent: var(--kid-accent);
+  --color-kid-accent-hover: var(--kid-accent-hover);
+  --color-kid-accent-active: var(--kid-accent-active);
+  --color-kid-panel: var(--kid-panel);
+  --color-kid-success: var(--kid-success);
+  --color-kid-border-strong: var(--kid-border-strong);
+}
+
+@layer utilities {
+  .kid-feedback-glow-correct {
+    box-shadow:
+      0 0 0 3px var(--kid-success-ring),
+      0 0 24px 4px rgba(22, 163, 74, 0.35);
+  }
+
+  .kid-animate-shake {
+    animation: kid-shake 0.45s ease-in-out;
+  }
+
+  @keyframes kid-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-8px);
+    }
+    40% {
+      transform: translateX(8px);
+    }
+    60% {
+      transform: translateX(-6px);
+    }
+    80% {
+      transform: translateX(6px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kid-animate-shake {
+      animation: none;
+    }
+  }
+
+  .kid-confetti-layer {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .kid-confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 12px;
+    top: -12px;
+    animation: kid-confetti-fall 2.8s linear forwards;
+    opacity: 0.95;
+  }
+
+  @keyframes kid-confetti-fall {
+    0% {
+      transform: translateY(0) rotate(0deg);
+    }
+    100% {
+      transform: translateY(120vh) rotate(720deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kid-confetti-piece {
+      animation: none;
+      display: none;
+    }
+  }
+
+  /* Story book: preset item animations (driven by --story-dur-ms) */
+  .story-item-anim {
+    --story-dur: 500ms;
+    animation-duration: var(--story-dur);
+    animation-fill-mode: both;
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  @keyframes story-in-fade_in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-fade_out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes story-in-slide_left {
+    from {
+      transform: translateX(-12%);
+      opacity: 0.2;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-slide_right {
+    from {
+      transform: translateX(12%);
+      opacity: 0.2;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-slide_up {
+    from {
+      transform: translateY(12%);
+      opacity: 0.2;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-slide_down {
+    from {
+      transform: translateY(-12%);
+      opacity: 0.2;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-grow {
+    from {
+      transform: scale(0.75);
+      opacity: 0.35;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-shrink {
+    from {
+      transform: scale(var(--story-shrink-scale, 1.15));
+      opacity: 0.35;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-spin {
+    from {
+      transform: rotate(-180deg) scale(0.85);
+      opacity: 0.4;
+    }
+    to {
+      transform: rotate(0) scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes story-in-wobble {
+    0% {
+      transform: rotate(-4deg) scale(0.95);
+    }
+    40% {
+      transform: rotate(4deg) scale(1);
+    }
+    70% {
+      transform: rotate(-2deg);
+    }
+    100% {
+      transform: rotate(0);
+    }
+  }
+
+  @keyframes story-emphasis-grow {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(var(--story-grow-scale, 1.12));
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes story-emphasis-shrink {
+    0% {
+      transform: scale(var(--story-shrink-scale, 1.15));
+    }
+    65% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes story-emphasis-spin {
+    from {
+      transform: rotate(0);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes story-emphasis-wobble {
+    0%,
+    100% {
+      transform: rotate(0);
+    }
+    25% {
+      transform: rotate(-6deg);
+    }
+    75% {
+      transform: rotate(6deg);
+    }
+  }
+
+  @keyframes story-exit-fade_out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  .story-in-none {
+    animation: none;
+  }
+  .story-in-fade_in {
+    animation-name: story-in-fade_in;
+  }
+  .story-in-fade_out {
+    animation-name: story-in-fade_out;
+  }
+  .story-in-slide_left {
+    animation-name: story-in-slide_left;
+  }
+  .story-in-slide_right {
+    animation-name: story-in-slide_right;
+  }
+  .story-in-slide_up {
+    animation-name: story-in-slide_up;
+  }
+  .story-in-slide_down {
+    animation-name: story-in-slide_down;
+  }
+  .story-in-grow {
+    animation-name: story-in-grow;
+  }
+  .story-in-shrink {
+    animation-name: story-in-shrink;
+  }
+  .story-in-spin {
+    animation-name: story-in-spin;
+  }
+  .story-in-wobble {
+    animation-name: story-in-wobble;
+  }
+
+  .story-emphasis-grow {
+    animation: story-emphasis-grow var(--story-dur, 500ms) ease-in-out;
+  }
+  .story-emphasis-shrink {
+    animation: story-emphasis-shrink var(--story-dur, 500ms) cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .story-emphasis-spin {
+    animation: story-emphasis-spin var(--story-dur, 700ms) linear;
+  }
+  .story-emphasis-wobble {
+    animation: story-emphasis-wobble var(--story-dur, 550ms) ease-in-out;
+  }
+  .story-emphasis-fade_in {
+    animation: story-in-fade_in var(--story-dur, 400ms) ease-out;
+  }
+  .story-emphasis-fade_out {
+    animation: story-in-fade_out var(--story-dur, 400ms) ease-out;
+  }
+
+  .story-exit-fade_out {
+    animation: story-exit-fade_out var(--story-dur, 400ms) ease forwards;
+  }
+
+  @keyframes story-page-curl-next {
+    from {
+      transform: perspective(1200px) rotateY(-26deg) translateX(12%) scale(0.98);
+      opacity: 0.78;
+    }
+    to {
+      transform: perspective(1400px) rotateY(0deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes story-page-curl-back {
+    from {
+      transform: perspective(1200px) rotateY(26deg) translateX(-12%) scale(0.98);
+      opacity: 0.78;
+    }
+    to {
+      transform: perspective(1400px) rotateY(0deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes story-page-slide-next {
+    from {
+      transform: translateX(24%);
+      opacity: 0.66;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes story-page-slide-back {
+    from {
+      transform: translateX(-24%);
+      opacity: 0.66;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .story-page-turn-curl-next {
+    animation: story-page-curl-next 0.66s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left center;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+  }
+
+  .story-page-turn-curl-back {
+    animation: story-page-curl-back 0.66s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left center;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+  }
+
+  .story-page-turn-slide-next {
+    animation: story-page-slide-next 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: transform, opacity;
+  }
+
+  .story-page-turn-slide-back {
+    animation: story-page-slide-back 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: transform, opacity;
+  }
+
+  .story-reduce-motion .story-item-anim,
+  .story-reduce-motion .story-page-turn-curl-next,
+  .story-reduce-motion .story-page-turn-curl-back,
+  .story-reduce-motion .story-page-turn-slide-next,
+  .story-reduce-motion .story-page-turn-slide-back,
+  .story-reduce-motion .story-emphasis-grow,
+  .story-reduce-motion .story-emphasis-shrink,
+  .story-reduce-motion .story-emphasis-spin,
+  .story-reduce-motion .story-emphasis-wobble,
+  .story-reduce-motion .story-emphasis-fade_in,
+  .story-reduce-motion .story-emphasis-fade_out {
+    animation: none !important;
+  }
+}
+
+@layer base {
+  button {
+    transition-property: transform, background-color, color, opacity, box-shadow;
+    transition-duration: 100ms;
+    transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Keep teacher workspace backgrounds fully neutral even when route content
+   is shorter than viewport and body background would otherwise show through. */
+body:has([data-teacher-root]) {
+  background: #ffffff;
+}

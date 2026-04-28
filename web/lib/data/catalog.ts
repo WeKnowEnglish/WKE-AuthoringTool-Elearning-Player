@@ -105,7 +105,7 @@ export async function getPublishedCatalog(): Promise<PublishedCatalog> {
   if (cErr) {
     return { ...empty(), loadError: formatSupabaseError(cErr) };
   }
-  const courses = (courseData ?? []) as CourseRow[];
+  const courses = (courseData ?? []) as unknown as CourseRow[];
   const courseIds = courses.map((c) => c.id);
 
   const modQuery = (withUnlockColumns: boolean) =>
@@ -182,7 +182,7 @@ export async function getPublishedCatalog(): Promise<PublishedCatalog> {
     };
   }
 
-  const lessons = (lesData ?? []) as LessonRow[];
+  const lessons = (lesData ?? []) as unknown as LessonRow[];
   const lessonIds = lessons.map((l) => l.id);
   const skillsByLesson: Record<string, string[]> = {};
 
@@ -276,7 +276,7 @@ export async function getLessonBySlugs(moduleSlug: string, lessonSlug: string) {
   return {
     module: mod as ModuleRow,
     lesson: lesson as LessonRow,
-    screens: screens as LessonScreenRow[],
+    screens: screens as unknown as LessonScreenRow[],
   };
 }
 

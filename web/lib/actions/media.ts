@@ -97,5 +97,5 @@ export async function listTeacherMedia(kind: MediaKind = "image"): Promise<Media
   q = q.like("content_type", kind === "audio" ? "audio/%" : "image/%");
   const { data, error } = await q.limit(200);
   if (error) throw new Error(error.message);
-  return (data ?? []) as MediaAssetRow[];
+  return (data ?? []) as unknown as MediaAssetRow[];
 }

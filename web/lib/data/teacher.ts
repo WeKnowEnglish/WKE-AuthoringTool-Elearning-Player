@@ -63,7 +63,7 @@ export async function getAllCourses() {
     if (isMissingCourseSchema(error)) return [];
     throw error;
   }
-  return (data ?? []) as CourseRow[];
+  return (data ?? []) as unknown as CourseRow[];
 }
 
 export async function getCourse(id: string) {
@@ -85,7 +85,7 @@ export async function getAllTags() {
     if (isMissingCourseSchema(error)) return [];
     throw error;
   }
-  return (data ?? []) as TagRow[];
+  return (data ?? []) as unknown as TagRow[];
 }
 
 export async function getAllModules(filters?: ModuleSearchFilters) {
@@ -110,13 +110,13 @@ export async function getAllModules(filters?: ModuleSearchFilters) {
         .select("*")
         .order("order_index", { ascending: true });
       if (legacy.error) throw legacy.error;
-      rows = (legacy.data ?? []).map((row) => ({
+      rows = ((legacy.data ?? []) as unknown[]).map((row) => ({
         ...row,
         courses: null,
         module_tags: [],
-      })) as TeacherModuleRow[];
+      })) as unknown as TeacherModuleRow[];
     } else {
-      rows = (data ?? []) as TeacherModuleRow[];
+      rows = (data ?? []) as unknown as TeacherModuleRow[];
     }
   }
 

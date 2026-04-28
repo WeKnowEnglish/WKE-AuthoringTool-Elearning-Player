@@ -110,7 +110,7 @@ export async function getAllModules(filters?: ModuleSearchFilters) {
         .select("*")
         .order("order_index", { ascending: true });
       if (legacy.error) throw legacy.error;
-      rows = ((legacy.data ?? []) as unknown[]).map((row) => ({
+      rows = ((legacy.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
         ...row,
         courses: null,
         module_tags: [],

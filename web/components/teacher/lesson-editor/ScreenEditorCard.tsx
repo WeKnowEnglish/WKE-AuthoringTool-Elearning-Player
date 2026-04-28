@@ -2303,7 +2303,9 @@ function PresentationInteractiveFields({
                           className="min-w-0 flex-1 rounded border px-1 py-1 text-xs"
                           value={action.type}
                           onChange={(e) => {
-                            const type = e.target.value as PresentationElementState["actions"][number]["type"];
+                            const type = e.target.value as NonNullable<
+                              PresentationElementState["actions"]
+                            >[number]["type"];
                             patchSelectedElement((el) => {
                               const actions = [...(el.actions ?? [])];
                               actions[idx] =

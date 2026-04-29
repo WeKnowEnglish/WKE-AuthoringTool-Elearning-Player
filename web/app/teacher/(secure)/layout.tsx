@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { teacherSignOut } from "@/lib/actions/auth";
+import { TeacherPrimaryTabs } from "@/components/teacher/TeacherPrimaryTabs";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +25,12 @@ export default async function TeacherSecureLayout({
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 bg-white px-4 py-3">
-        <Link href="/teacher" className="font-bold">
+      <header className="grid grid-cols-1 items-center gap-2 border-b border-neutral-200 bg-white px-4 py-3 md:grid-cols-[1fr_auto_1fr]">
+        <Link href="/teacher" className="font-bold md:justify-self-start">
           Teacher
         </Link>
-        <div className="flex items-center gap-3 text-sm">
+        <TeacherPrimaryTabs />
+        <div className="flex items-center justify-start gap-3 text-sm md:justify-self-end">
           <span className="text-neutral-600">{user.email}</span>
           <Link href="/" className="text-blue-700 underline">
             Student site

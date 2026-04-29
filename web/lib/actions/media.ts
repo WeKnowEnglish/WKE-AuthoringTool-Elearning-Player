@@ -73,8 +73,12 @@ function parseCsvField(value: FormDataEntryValue | null): string[] {
   return normalizeAndDedupList(value.split(","));
 }
 
-function normalizeOptionalText(value: FormDataEntryValue | null, max = 80): string | null {
-  if (!value || typeof value !== "string") return null;
+function normalizeOptionalText(
+  value: FormDataEntryValue | string | null | undefined,
+  max = 80,
+): string | null {
+  if (value == null) return null;
+  if (typeof value !== "string") return null;
   const cleaned = value.trim().replace(/\s+/g, " ");
   return cleaned ? cleaned.slice(0, max) : null;
 }
@@ -98,7 +102,8 @@ function computeSha256Hex(bytes: Uint8Array): string {
 async function computeImageDHashHex(bytes: Uint8Array): Promise<string | null> {
   try {
     const img = await Jimp.read(Buffer.from(bytes));
-    img.resize({ w: 9, h: 8 }).grayscale();
+    // Jimp spells this as "greyscale" (UK spelling) in its types.
+    img.resize({ w: 9, h: 8 }).greyscale();
     let bits = "";
     for (let y = 0; y < 8; y += 1) {
       for (let x = 0; x < 8; x += 1) {

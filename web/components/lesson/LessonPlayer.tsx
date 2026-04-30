@@ -424,7 +424,9 @@ export function LessonPlayer({
         const { stickers } = recordCorrectAnswer();
         setStickerCount(stickers);
         const perQuestionGold =
-          typeof parsed.gold_reward_on_pass === "number" && Number.isFinite(parsed.gold_reward_on_pass) ?
+          parsed.type === "interaction" &&
+          typeof parsed.gold_reward_on_pass === "number" &&
+          Number.isFinite(parsed.gold_reward_on_pass) ?
             Math.max(0, parsed.gold_reward_on_pass)
           : 1;
         const rewardSnapshot = awardRewards({
@@ -906,7 +908,9 @@ function extractTrackedWords(payload: ScreenPayload): string[] {
       return uniqueWords(payload.word_bank.flatMap((word) => extractWords(word)));
     case "listen_hotspot_sequence":
       return uniqueWords(
-        extractWords(payload.body_text ?? "").concat(payload.targets.flatMap((target) => extractWords(target.label))),
+        extractWords(payload.body_text ?? "").concat(
+          payload.targets.flatMap((target) => extractWords(target.label ?? "")),
+        ),
       );
     default:
       return [];

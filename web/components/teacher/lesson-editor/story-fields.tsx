@@ -1534,6 +1534,7 @@ export function StoryFields({
                     "https://placehold.co/120x80/f1f5f9/334155?text=Item";
                   const newItem: StoryItem = {
                     ...base,
+                    kind: "image",
                     image_url: fallback,
                     image_scale: 1,
                     show_card: true,

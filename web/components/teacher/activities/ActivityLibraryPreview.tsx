@@ -14,6 +14,7 @@ type Props = {
         items?: unknown[];
         settings?: {
           shuffle_questions?: boolean;
+          auto_advance_on_pass_default?: boolean;
         };
       }
     | null
@@ -45,7 +46,7 @@ export function ActivityLibraryPreview({
         payload: payloadWithDefaults,
       } satisfies LessonScreenRow;
     })
-    .filter((row): row is LessonScreenRow => row != null);
+    .filter((row) => row !== null) as LessonScreenRow[];
   if (payload?.settings?.shuffle_questions) {
     // Shuffle only interaction screens; keep start fixed as first screen.
     interactionScreens = stableShuffleInteractions(interactionScreens, activityId);

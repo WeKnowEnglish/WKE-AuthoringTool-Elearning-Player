@@ -334,41 +334,61 @@ export const storyTapSpeechEntrySchema = z
 
 export type StoryTapSpeechEntry = z.infer<typeof storyTapSpeechEntrySchema>;
 
-export const storyItemSchema = z.object({
-  id: z.string(),
-  /** Teacher-facing name (e.g. “ball”) for labels and editor lists. */
-  name: z.string().optional(),
-  image_url: z.string(),
-  x_percent: z.number(),
-  y_percent: z.number(),
-  w_percent: z.number(),
-  h_percent: z.number(),
-  /** Optional visual card around item image in student view (default: on). */
-  show_card: z.boolean().optional().default(true),
-  /** Show this item when page starts; if false, can be revealed by triggers. */
-  show_on_start: z.boolean().optional().default(true),
-  /** Simple, stable image scale multiplier inside the item box. */
-  image_scale: z.number().min(0.25).max(8).default(1),
-  z_index: z.number().int().default(0),
-  enter: storyAnimationSpecSchema.optional(),
-  exit: storyAnimationSpecSchema.optional(),
-  emphasis: storyAnimationSpecSchema.optional(),
-  path: storyPathSchema.optional(),
-  /** @deprecated Legacy single tap text; prefer `tap_speeches`. */
-  request_line: z.string().optional(),
-  /** Phase-aware tap speech entries. */
-  tap_speeches: z.array(storyTapSpeechEntrySchema).optional(),
-  on_click: z
-    .object({
-      /** @deprecated Legacy single tap sound; prefer `tap_speeches[].sound_url`. */
-      sound_url: z.string().optional(),
-      /** When true, play item emphasis preset on tap */
-      run_emphasis: z.boolean().optional(),
-      /** Extra actions when tapped (after optional tap sound / run_emphasis). */
-      triggers: z.array(storyClickActionSchema).optional(),
-    })
-    .optional(),
-});
+export const storyItemSchema = z
+  .object({
+    id: z.string(),
+    /** Teacher-facing name (e.g. “ball”) for labels and editor lists. */
+    name: z.string().optional(),
+    kind: z.enum(["image", "text"]).optional().default("image"),
+    image_url: z.string().optional(),
+    text: z.string().optional(),
+    text_color: z.string().optional(),
+    text_size_px: z.number().min(10).max(128).optional(),
+    x_percent: z.number(),
+    y_percent: z.number(),
+    w_percent: z.number(),
+    h_percent: z.number(),
+    /** Optional visual card around item image in student view (default: on). */
+    show_card: z.boolean().optional().default(true),
+    /** Show this item when page starts; if false, can be revealed by triggers. */
+    show_on_start: z.boolean().optional().default(true),
+    /** Simple, stable image scale multiplier inside the item box. */
+    image_scale: z.number().min(0.25).max(8).default(1),
+    z_index: z.number().int().default(0),
+    enter: storyAnimationSpecSchema.optional(),
+    exit: storyAnimationSpecSchema.optional(),
+    emphasis: storyAnimationSpecSchema.optional(),
+    path: storyPathSchema.optional(),
+    /** @deprecated Legacy single tap text; prefer `tap_speeches`. */
+    request_line: z.string().optional(),
+    /** Phase-aware tap speech entries. */
+    tap_speeches: z.array(storyTapSpeechEntrySchema).optional(),
+    on_click: z
+      .object({
+        /** @deprecated Legacy single tap sound; prefer `tap_speeches[].sound_url`. */
+        sound_url: z.string().optional(),
+        /** When true, play item emphasis preset on tap */
+        run_emphasis: z.boolean().optional(),
+        /** Extra actions when tapped (after optional tap sound / run_emphasis). */
+        triggers: z.array(storyClickActionSchema).optional(),
+      })
+      .optional(),
+  })
+  .superRefine((item, ctx) => {
+    const kind = item.kind ?? "image";
+    if (kind === "image" && !item.image_url?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Story item ${item.id} is image kind but missing image_url`,
+      });
+    }
+    if (kind === "text" && !item.text?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Story item ${item.id} is text kind but missing text`,
+      });
+    }
+  });
 export type StoryItem = z.infer<typeof storyItemSchema>;
 
 export const storyTimelineActionSchema = z.enum([
@@ -1696,29 +1716,36 @@ export const guidedDialoguePayloadSchema = z
     }
   });
 
-export const interactionPayloadSchema = z.discriminatedUnion("subtype", [
-  mcQuizPayloadSchema,
-  clickTargetsPayloadSchema,
-  dragSentencePayloadSchema,
-  trueFalsePayloadSchema,
-  shortAnswerPayloadSchema,
-  fillBlanksPayloadSchema,
-  fixTextPayloadSchema,
-  hotspotInfoPayloadSchema,
-  hotspotGatePayloadSchema,
-  listenHotspotSequencePayloadSchema,
-  listenColorWritePayloadSchema,
-  letterMixupPayloadSchema,
-  wordShapeHuntPayloadSchema,
-  tableCompletePayloadSchema,
-  sortingGamePayloadSchema,
-  dragMatchPayloadSchema,
-  soundSortPayloadSchema,
-  essayPayloadSchema,
-  voiceQuestionPayloadSchema,
-  guidedDialoguePayloadSchema,
-  presentationInteractivePayloadSchema,
-]);
+export const interactionPayloadSchema = z.intersection(
+  z.discriminatedUnion("subtype", [
+    mcQuizPayloadSchema,
+    clickTargetsPayloadSchema,
+    dragSentencePayloadSchema,
+    trueFalsePayloadSchema,
+    shortAnswerPayloadSchema,
+    fillBlanksPayloadSchema,
+    fixTextPayloadSchema,
+    hotspotInfoPayloadSchema,
+    hotspotGatePayloadSchema,
+    listenHotspotSequencePayloadSchema,
+    listenColorWritePayloadSchema,
+    letterMixupPayloadSchema,
+    wordShapeHuntPayloadSchema,
+    tableCompletePayloadSchema,
+    sortingGamePayloadSchema,
+    dragMatchPayloadSchema,
+    soundSortPayloadSchema,
+    essayPayloadSchema,
+    voiceQuestionPayloadSchema,
+    guidedDialoguePayloadSchema,
+    presentationInteractivePayloadSchema,
+  ]),
+  z.object({
+    auto_advance_on_pass: z.boolean().optional(),
+    /** Gold awarded for a correct answer on this interaction screen. */
+    gold_reward_on_pass: z.number().int().min(0).max(100).optional(),
+  }),
+);
 
 export type ScreenPayload =
   | z.infer<typeof startPayloadSchema>

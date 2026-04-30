@@ -168,7 +168,6 @@ export function StoryBookView({
     if (!currentStoryPhase?.highlight_item_ids?.length) return new Set<string>();
     return new Set(currentStoryPhase.highlight_item_ids);
   }, [currentStoryPhase?.highlight_item_ids]);
-  const pageCrop = page.background_crop ?? { x_percent: 0, y_percent: 0, zoom_percent: 100 };
   const lastPage = safeIndex >= pages.length - 1;
   const firstPage = safeIndex === 0;
 
@@ -434,6 +433,8 @@ export function StoryBookView({
 
   useEffect(() => {
     if (!page.phasesExplicit || !currentStoryPhase?.dialogue?.start?.trim() || muted) return;
+    const hasRecordedPageAudio = !!page.page_audio_url?.trim();
+    if (hasRecordedPageAudio) return;
     const phaseStartText = currentStoryPhase.dialogue.start.trim();
     const startPhaseId = getStartPhaseIdFromNormalizedPage(page);
     const isStartPhase = currentStoryPhase.id === startPhaseId;
@@ -462,6 +463,7 @@ export function StoryBookView({
     currentStoryPhase?.dialogue?.start,
     page.id,
     page.phasesExplicit,
+    page.page_audio_url,
     page.auto_play_page_text,
     page.read_aloud_text,
     page.body_text,
@@ -631,7 +633,13 @@ export function StoryBookView({
   const listenCurrent = () => {
     playSfx("tap", muted);
     setAudioUnlocked(true);
-    speakText(page.read_aloud_text || page.body_text, {
+    const recordedPageAudio = page.page_audio_url?.trim();
+    if (recordedPageAudio && pageAudioRef.current && !muted) {
+      pageAudioRef.current.src = recordedPageAudio;
+      void pageAudioRef.current.play().catch(() => {});
+      return;
+    }
+    void speakText(page.read_aloud_text || page.body_text, {
       lang: payload.tts_lang,
       muted,
     });
@@ -953,6 +961,7 @@ export function StoryBookView({
       style={{
         aspectRatio: "16 / 10",
         backgroundColor: page.background_color || undefined,
+        containerType: "inline-size",
       }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
@@ -986,10 +995,6 @@ export function StoryBookView({
           controls
           className="absolute inset-0 h-full w-full object-cover"
           src={page.video_url}
-          style={{
-            transform: `translate(${pageCrop.x_percent}%, ${pageCrop.y_percent}%) scale(${Math.max(0.5, pageCrop.zoom_percent / 100)})`,
-            transformOrigin: "center center",
-          }}
         />
       ) : page.background_image_url ? (
         <Image
@@ -997,10 +1002,6 @@ export function StoryBookView({
           alt=""
           fill
           className={page.image_fit === "contain" ? "object-contain" : "object-cover"}
-          style={{
-            transform: `translate(${pageCrop.x_percent}%, ${pageCrop.y_percent}%) scale(${Math.max(0.5, pageCrop.zoom_percent / 100)})`,
-            transformOrigin: "center center",
-          }}
           sizes="(max-width:768px) 100vw, 42rem"
           unoptimized={page.background_image_url.includes("placehold.co")}
         />
@@ -1058,10 +1059,12 @@ export function StoryBookView({
               aria-label={
                 item.name?.trim() ?
                   `${item.name.trim()} (story item)`
+                : (item.kind ?? "image") === "text" ?
+                  "Story text"
                 : "Story picture"
               }
               className={clsx(
-                "story-item-anim absolute box-border touch-manipulation",
+                "story-item-anim absolute box-border touch-manipulation appearance-none border-0 bg-transparent p-0 m-0",
                 isDraggable && !isMatched && "touch-none cursor-grab active:cursor-grabbing",
                 enter !== "none" && enterCls,
                 page.phasesExplicit &&
@@ -1088,12 +1091,30 @@ export function StoryBookView({
               <span
                 data-story-item-inner={`${screenId}-${item.id}`}
                 className={clsx(
-                  "relative block h-full w-full overflow-hidden",
+                  "relative block h-full w-full",
+                  (item.kind ?? "image") !== "text" && "overflow-hidden",
                   item.show_card !== false &&
                     "rounded-md border-2 border-kid-ink/40 bg-white/90 shadow-md",
                 )}
               >
-                <ScaledStoryItemImage imageUrl={item.image_url} imageScale={item.image_scale ?? 1} />
+                {(item.kind ?? "image") === "text" ? (
+                  <span
+                    className="flex h-full w-full items-center justify-center px-2 text-center font-semibold whitespace-pre-wrap break-words"
+                    style={{
+                      color: item.text_color ?? "#0f172a",
+                      fontSize: `calc(${item.text_size_px ?? 24} * 100cqw / 960)`,
+                      fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {item.text?.trim() || "Text"}
+                  </span>
+                ) : (
+                  <ScaledStoryItemImage
+                    imageUrl={item.image_url ?? ""}
+                    imageScale={item.image_scale ?? 1}
+                  />
+                )}
               </span>
             </button>
           );
@@ -1129,12 +1150,27 @@ export function StoryBookView({
       >
         <div
           className={clsx(
-            "relative h-full w-full overflow-hidden",
+            "relative h-full w-full",
+            (gi.kind ?? "image") !== "text" && "overflow-hidden",
             gi.show_card !== false &&
               "rounded-md border-2 border-kid-ink/50 bg-white/95 shadow-xl",
           )}
         >
-          <ScaledStoryItemImage imageUrl={gi.image_url} imageScale={gi.image_scale ?? 1} />
+          {(gi.kind ?? "image") === "text" ? (
+            <span
+              className="flex h-full w-full items-center justify-center px-2 text-center font-semibold whitespace-pre-wrap break-words"
+              style={{
+                color: gi.text_color ?? "#0f172a",
+                fontSize: `calc(${gi.text_size_px ?? 24} * 100cqw / 960)`,
+                fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
+                lineHeight: 1.2,
+              }}
+            >
+              {gi.text?.trim() || "Text"}
+            </span>
+          ) : (
+            <ScaledStoryItemImage imageUrl={gi.image_url ?? ""} imageScale={gi.image_scale ?? 1} />
+          )}
         </div>
       </div>,
       document.body,

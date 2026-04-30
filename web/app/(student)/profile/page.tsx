@@ -8,10 +8,9 @@ export default async function ProfilePage() {
   const catalog = await getPublishedCatalog();
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-extrabold">My progress</h1>
+      <h1 className="text-3xl font-extrabold">Achievements</h1>
       <p className="text-lg text-neutral-700">
-        Your progress is saved on this device. Skills grow as you finish
-        lessons.
+        Track your learning and spend gold on sticker rewards.
       </p>
       <ProfileClient
         modules={catalog.modules}

@@ -390,15 +390,56 @@ export function ScreenEditorCard({
         </div>
       ) : null}
       {!showJson && parsed ? (
-        <StructuredFields
-          screenType={screen.screen_type}
-          parsed={parsed}
-          onLivePayload={pushLive}
-          busy={false}
-          storySyncKey={
-            screen.screen_type === "story" ? storySyncKey : undefined
-          }
-        />
+        <>
+          <StructuredFields
+            screenType={screen.screen_type}
+            parsed={parsed}
+            onLivePayload={pushLive}
+            busy={false}
+            storySyncKey={
+              screen.screen_type === "story" ? storySyncKey : undefined
+            }
+          />
+          {screen.screen_type === "interaction" && parsed.type === "interaction" ? (
+            <section className="mt-4 rounded border border-neutral-200 p-3">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-neutral-600">Behavior</h3>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={parsed.auto_advance_on_pass === true}
+                  onChange={(e) => {
+                    pushLive({
+                      ...parsed,
+                      auto_advance_on_pass: e.target.checked,
+                    });
+                  }}
+                />
+                Auto-advance after correct answer
+              </label>
+              <label className="mt-3 block text-sm">
+                Gold reward per correct answer
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={parsed.gold_reward_on_pass ?? 1}
+                  onChange={(e) => {
+                    const nextValue = Number(e.target.value);
+                    const gold_reward_on_pass = Number.isFinite(nextValue)
+                      ? Math.max(0, Math.min(100, Math.round(nextValue)))
+                      : 1;
+                    pushLive({
+                      ...parsed,
+                      gold_reward_on_pass,
+                    });
+                  }}
+                  className="mt-1 w-28 rounded border px-2 py-1 text-sm"
+                />
+              </label>
+            </section>
+          ) : null}
+        </>
       ) : !showJson && !parsed ? (
         <p className="text-sm text-red-700">
           Payload is invalid for this screen type. Fix it in advanced JSON.

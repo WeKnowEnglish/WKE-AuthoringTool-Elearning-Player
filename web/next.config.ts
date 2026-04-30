@@ -24,6 +24,11 @@ function supabaseStoragePattern():
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "100mb",
+    },
+  },
   headers: async () => [
     {
       source: "/:path*",

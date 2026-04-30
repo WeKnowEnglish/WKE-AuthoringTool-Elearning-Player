@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   interactionPayloadSchema,
+  type InteractionSubtype,
   remapStoryPayloadIds,
   startPayloadSchema,
   storyPayloadSchema,
@@ -484,16 +485,66 @@ async function renumberScreens(
 ) {
   const { data } = await supabase
     .from("lesson_screens")
-    .select("id")
+    .select("id,screen_type,payload,order_index")
     .eq("lesson_id", lessonId)
     .order("order_index", { ascending: true });
   if (!data) return;
-  for (let i = 0; i < data.length; i++) {
+  const normalRows = data.filter((row) => !isCongratsEndScreen(row.screen_type, row.payload));
+  const endRows = data.filter((row) => isCongratsEndScreen(row.screen_type, row.payload));
+  const orderedRows = [...normalRows, ...endRows];
+  for (let i = 0; i < orderedRows.length; i++) {
     await supabase
       .from("lesson_screens")
       .update({ order_index: i, updated_at: new Date().toISOString() })
-      .eq("id", data[i].id);
+      .eq("id", orderedRows[i].id);
   }
+}
+
+function isCongratsEndScreen(screenType: string, payload: unknown): boolean {
+  if (screenType !== "start") return false;
+  const parsed = startPayloadSchema.safeParse(payload);
+  if (!parsed.success) return false;
+  return (
+    (parsed.data.cta_label ?? "").trim().toLowerCase() === "finish activity" &&
+    (parsed.data.read_aloud_title ?? "").trim().toLowerCase() === "congratulations"
+  );
+}
+
+function buildCongratsEndPayload() {
+  return startPayloadSchema.parse({
+    type: "start",
+    image_url: "https://placehold.co/800x520/e2e8f0/1e293b?text=Congratulations",
+    image_fit: "contain",
+    cta_label: "Finish activity",
+    read_aloud_title: "Congratulations",
+  });
+}
+
+async function ensureCongratsEndScreen(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lessonId: string,
+) {
+  const { data, error } = await supabase
+    .from("lesson_screens")
+    .select("id,screen_type,payload")
+    .eq("lesson_id", lessonId)
+    .order("order_index", { ascending: true });
+  if (error) throw error;
+  const rows = data ?? [];
+  const hasCongrats = rows.some((row) => isCongratsEndScreen(row.screen_type, row.payload));
+  if (!hasCongrats) {
+    const { count } = await supabase
+      .from("lesson_screens")
+      .select("*", { count: "exact", head: true })
+      .eq("lesson_id", lessonId);
+    await supabase.from("lesson_screens").insert({
+      lesson_id: lessonId,
+      order_index: count ?? rows.length,
+      screen_type: "start",
+      payload: buildCongratsEndPayload(),
+    });
+  }
+  await renumberScreens(supabase, lessonId);
 }
 
 export type AddScreenKind =
@@ -548,6 +599,7 @@ export async function addScreenTemplate(
       screen_type: "start",
       payload,
     });
+    await ensureCongratsEndScreen(supabase, lessonId);
   } else if (kind === "story") {
     const payload = storyPayloadSchema.parse({
       type: "story",
@@ -1089,4 +1141,778 @@ export async function appendScreensFromAi(
     });
   }
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+type ActivityLibrarySubtype = Extract<
+  InteractionSubtype,
+  | "mc_quiz"
+  | "true_false"
+  | "fill_blanks"
+  | "fix_text"
+  | "drag_sentence"
+  | "listen_hotspot_sequence"
+>;
+
+type TeacherSupabase = Awaited<ReturnType<typeof createClient>>;
+type ActivityLibrarySettings = {
+  shuffle_questions: boolean;
+  shuffle_answer_options_each_replay: boolean;
+  auto_advance_on_pass_default: boolean;
+};
+
+function isTruthyFormValue(value: FormDataEntryValue | undefined): boolean {
+  const v = `${value ?? ""}`.toLowerCase();
+  return v === "on" || v === "1" || v === "true" || v === "yes";
+}
+
+function readCheckbox(formData: FormData, name: string): boolean {
+  const values = formData.getAll(name);
+  if (values.length === 0) return false;
+  return values.some((v) => isTruthyFormValue(v));
+}
+
+function asMissingActivityLibrarySchemaError(err: unknown): Error | null {
+  const e = err as { code?: string; message?: string; details?: string; hint?: string } | null;
+  if (!e) return null;
+  const msg = `${e.message ?? ""} ${e.details ?? ""} ${e.hint ?? ""}`.toLowerCase();
+  if (e.code === "42P01" || msg.includes("activity_library_items")) {
+    return new Error("Activity library schema is not available yet. Run migration 014 first.");
+  }
+  return null;
+}
+
+function parseVocabularyInput(raw: string): string[] {
+  return Array.from(
+    new Set(
+      raw
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 40);
+}
+
+function buildActivityItems(
+  subtype: ActivityLibrarySubtype,
+  vocabulary: string[],
+  imageByWord: Record<string, string>,
+): unknown[] {
+  const words = vocabulary.length > 0 ? vocabulary : ["word"];
+  const getImage = (word: string) => imageByWord[word.toLowerCase()];
+  const fallbackTypos = (word: string): string[] => {
+    if (word.length <= 2) return [`${word}${word.slice(-1)}`, `${word}e`, `${word}s`];
+    return [
+      `${word.slice(0, 1)}${word.slice(2)}`,
+      `${word}${word.slice(-1)}`,
+      `${word.slice(0, word.length - 1)}`,
+    ];
+  };
+  const distractorsFor = (word: string): string[] => {
+    const others = words
+      .filter((w) => w.toLowerCase() !== word.toLowerCase())
+      .slice(0, 3);
+    if (others.length >= 2) return others.slice(0, 2);
+    return fallbackTypos(word).slice(0, 2);
+  };
+  const sentenceFrame = (word: string, idx: number): string => {
+    const frames = [
+      `I can see a ${word}.`,
+      `This is a ${word}.`,
+      `We learned the word "${word}" today.`,
+      `Can you find the ${word}?`,
+      `The picture shows a ${word}.`,
+    ];
+    return frames[idx % frames.length] ?? `This is a ${word}.`;
+  };
+  switch (subtype) {
+    case "mc_quiz":
+      return words.map((word) => {
+        const imageUrl = getImage(word);
+        const distractors = distractorsFor(word);
+        const idx = words.findIndex((w) => w === word);
+        const promptVariant = idx % 4;
+        const baseWord = word;
+        const typoA = distractors[0] ?? `${baseWord}s`;
+        const typoB = distractors[1] ?? `${baseWord}e`;
+        if (promptVariant === 1) {
+          return {
+            type: "interaction",
+            subtype: "mc_quiz",
+            image_url: imageUrl,
+            image_fit: "contain",
+            body_text: imageUrl ? "Look at the picture and choose the correct spelling." : undefined,
+            question: imageUrl ? "Which spelling is correct?" : "Which spelling is correct?",
+            options: [
+              { id: "a", label: baseWord },
+              { id: "b", label: typoA },
+              { id: "c", label: typoB },
+            ],
+            correct_option_id: "a",
+            shuffle_options: true,
+          };
+        }
+        if (promptVariant === 2) {
+          return {
+            type: "interaction",
+            subtype: "mc_quiz",
+            image_url: imageUrl,
+            image_fit: "contain",
+            body_text: imageUrl ? "Read the sentence and choose the missing word." : undefined,
+            question: sentenceFrame("__blank__", idx).replace("__blank__", "_____"),
+            options: [
+              { id: "a", label: baseWord },
+              { id: "b", label: typoA },
+              { id: "c", label: typoB },
+            ],
+            correct_option_id: "a",
+            shuffle_options: true,
+          };
+        }
+        if (promptVariant === 3) {
+          return {
+            type: "interaction",
+            subtype: "mc_quiz",
+            image_url: imageUrl,
+            image_fit: "contain",
+            body_text: imageUrl ? "Choose the word that matches this picture." : "Choose the correct word.",
+            question: "What is this?",
+            options: [
+              { id: "a", label: baseWord },
+              { id: "b", label: typoA },
+              { id: "c", label: typoB },
+            ],
+            correct_option_id: "a",
+            shuffle_options: true,
+          };
+        }
+        return {
+          type: "interaction",
+          subtype: "mc_quiz",
+          image_url: imageUrl,
+          image_fit: "contain",
+          body_text: imageUrl ? "Look at the picture and choose the correct word." : undefined,
+          question: imageUrl ? "Which word matches the picture?" : "Which spelling is correct?",
+          options: [{ id: "a", label: word }, { id: "b", label: typoA }, { id: "c", label: typoB }],
+          correct_option_id: "a",
+          shuffle_options: true,
+        };
+      });
+    case "true_false":
+      return words.map((word, idx) => {
+        const variant = idx % 4;
+        const useTrue = variant === 0 || variant === 2;
+        const wrongForm = fallbackTypos(word)[0] ?? `${word}s`;
+        const statement =
+          variant === 0 ? `This is the correct spelling: "${word}".`
+          : variant === 1 ? `This is the correct spelling: "${wrongForm}".`
+          : variant === 2 ? `The sentence "${sentenceFrame(word, idx)}" uses "${word}" correctly.`
+          : `The sentence "${sentenceFrame(wrongForm, idx)}" uses "${word}" correctly.`;
+        return {
+          type: "interaction",
+          subtype: "true_false",
+          image_url: getImage(word),
+          statement,
+          correct: useTrue,
+        };
+      });
+    case "fill_blanks":
+      return words.map((word, idx) => {
+        const templateVariant = idx % 3;
+        const template =
+          templateVariant === 0 ? "I can see a __1__ in the picture."
+          : templateVariant === 1 ? "This is a __1__."
+          : "Today we learned the word __1__.";
+        return {
+          type: "interaction",
+          subtype: "fill_blanks",
+          image_fit: "contain",
+          image_url: getImage(word),
+          template,
+          blanks: [{ id: "1", acceptable: [word] }],
+          word_bank: [word],
+        };
+      });
+    case "fix_text":
+      return words.map((word, idx) => {
+        const typo = fallbackTypos(word)[0] ?? word;
+        const promptVariant = idx % 3;
+        const brokenText =
+          promptVariant === 0 ? `I like ${typo}.`
+          : promptVariant === 1 ? `This is a ${typo}.`
+          : `Can you find the ${typo}?`;
+        const acceptable =
+          promptVariant === 0 ? [`I like ${word}.`]
+          : promptVariant === 1 ? [`This is a ${word}.`]
+          : [`Can you find the ${word}?`];
+        return {
+          type: "interaction",
+          subtype: "fix_text",
+          image_url: getImage(word),
+          broken_text: brokenText,
+          acceptable,
+        };
+      });
+    case "drag_sentence":
+      return words.map((word, idx) => {
+        const variant = idx % 3;
+        const correctOrder =
+          variant === 0 ? ["I", "see", word]
+          : variant === 1 ? ["This", "is", word]
+          : ["Find", "the", word];
+        return {
+          type: "interaction",
+          subtype: "drag_sentence",
+          image_url: getImage(word),
+          body_text: "Drag the words to make a sentence.",
+          sentence_slots: ["", "", ""],
+          word_bank: [...correctOrder].sort(() => Math.random() - 0.5),
+          correct_order: correctOrder,
+        };
+      });
+    case "listen_hotspot_sequence":
+      return words.map((word, idx) => ({
+        type: "interaction",
+        subtype: "listen_hotspot_sequence",
+        image_url:
+          getImage(word) ?? "https://placehold.co/800x450/e2e8f0/334155?text=Listen+and+Find",
+        body_text: `Listen and tap ${word}.`,
+        prompt_audio_url:
+          "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",
+        targets: [
+          {
+            id: "t1",
+            x_percent: 10 + ((idx * 7) % 55),
+            y_percent: 20 + ((idx * 5) % 45),
+            w_percent: 22,
+            h_percent: 22,
+            label: word,
+          },
+        ],
+        order: ["t1"],
+        allow_replay: true,
+      }));
+  }
+}
+
+function parseSelectedActivitySubtypes(formData: FormData): ActivityLibrarySubtype[] {
+  const rawMulti = formData.getAll("activity_subtypes").map((v) => `${v}`.trim());
+  const rawSingle = `${formData.get("activity_subtype") ?? ""}`.trim();
+  const raw = rawMulti.length > 0 ? rawMulti : rawSingle ? [rawSingle] : [];
+  const allowed: ActivityLibrarySubtype[] = [
+    "mc_quiz",
+    "true_false",
+    "fill_blanks",
+    "fix_text",
+    "drag_sentence",
+    "listen_hotspot_sequence",
+  ];
+  const selected = Array.from(new Set(raw)).filter((v): v is ActivityLibrarySubtype =>
+    allowed.includes(v as ActivityLibrarySubtype),
+  );
+  return selected.length ? selected : ["mc_quiz"];
+}
+
+function normalizeWordForLookup(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+async function findImageByVocabulary(
+  supabase: TeacherSupabase,
+  vocabulary: string[],
+): Promise<Record<string, string>> {
+  if (!vocabulary.length) return {};
+  const { data, error } = await supabase
+    .from("media_assets")
+    .select(
+      "public_url,original_filename,meta_item_name,meta_tags,meta_alternative_names,meta_plural",
+    )
+    .like("content_type", "image/%")
+    .order("created_at", { ascending: false })
+    .limit(800);
+  if (error) return {};
+  const rows = (data ?? []) as Array<{
+    public_url?: string | null;
+    original_filename?: string | null;
+    meta_item_name?: string | null;
+    meta_tags?: string[] | null;
+    meta_alternative_names?: string[] | null;
+    meta_plural?: string | null;
+  }>;
+  const out: Record<string, string> = {};
+  for (const rawWord of vocabulary) {
+    const word = normalizeWordForLookup(rawWord);
+    if (!word) continue;
+    const found = rows.find((row) => {
+      const bag = [
+        row.meta_item_name ?? "",
+        row.original_filename ?? "",
+        row.meta_plural ?? "",
+        ...((row.meta_tags ?? []).filter(Boolean) as string[]),
+        ...((row.meta_alternative_names ?? []).filter(Boolean) as string[]),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return bag.includes(word);
+    });
+    if (found?.public_url) {
+      out[word] = found.public_url;
+    }
+  }
+  return out;
+}
+
+function parseActivitySettings(raw: unknown): ActivityLibrarySettings {
+  const settings = (raw as { settings?: Record<string, unknown> } | null)?.settings;
+  return {
+    shuffle_questions:
+      settings?.shuffle_questions === true || isTruthyFormValue(settings?.shuffle_questions as string | undefined),
+    shuffle_answer_options_each_replay:
+      settings?.shuffle_answer_options_each_replay !== false &&
+      `${settings?.shuffle_answer_options_each_replay ?? ""}` !== "0",
+    auto_advance_on_pass_default:
+      settings?.auto_advance_on_pass_default === true ||
+      isTruthyFormValue(settings?.auto_advance_on_pass_default as string | undefined),
+  };
+}
+
+function applySettingsToItems(items: unknown[], settings: ActivityLibrarySettings): unknown[] {
+  return items.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const maybe = item as {
+      subtype?: string;
+      shuffle_options?: boolean;
+      auto_advance_on_pass?: boolean;
+    };
+    const next: Record<string, unknown> = { ...maybe };
+    if (maybe.subtype === "mc_quiz") {
+      next.shuffle_options = settings.shuffle_answer_options_each_replay;
+    }
+    next.auto_advance_on_pass = settings.auto_advance_on_pass_default;
+    return next;
+  });
+}
+
+function normalizeActivityPayload(raw: unknown): {
+  start: unknown;
+  items: unknown[];
+  settings: ActivityLibrarySettings;
+} {
+  const fallbackStart = startPayloadSchema.parse({
+    type: "start",
+    image_url: "https://placehold.co/800x520/e2e8f0/1e293b?text=Start+Activity",
+    image_fit: "contain",
+    cta_label: "Start activity",
+  });
+  if (!raw || typeof raw !== "object") {
+    return {
+      start: fallbackStart,
+      items: [],
+      settings: {
+        shuffle_questions: false,
+        shuffle_answer_options_each_replay: true,
+        auto_advance_on_pass_default: false,
+      },
+    };
+  }
+  const startRaw = (raw as { start?: unknown }).start;
+  const itemsRaw = (raw as { items?: unknown[] }).items;
+  const settings = parseActivitySettings(raw);
+  const start =
+    startRaw ? startPayloadSchema.parse(startRaw) : fallbackStart;
+  const items = Array.isArray(itemsRaw) ? itemsRaw : [];
+  const parsed = items.map((item) => interactionPayloadSchema.parse(item));
+  const withSettings = applySettingsToItems(parsed, settings);
+  return { start, items: withSettings, settings };
+}
+
+export async function createActivityLibraryItem(formData: FormData) {
+  const supabase = await requireTeacher();
+  const title = `${formData.get("title") ?? ""}`.trim();
+  const selectedSubtypes = parseSelectedActivitySubtypes(formData);
+  const subtype = selectedSubtypes[0]!;
+  const level = `${formData.get("level") ?? ""}`.trim();
+  const topic = `${formData.get("topic") ?? ""}`.trim();
+  const vocabulary = parseVocabularyInput(`${formData.get("vocabulary_raw") ?? ""}`);
+  if (!title) throw new Error("Title is required");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+  const imageByWord = await findImageByVocabulary(supabase, vocabulary);
+  const items = selectedSubtypes
+    .flatMap((selectedSubtype) => buildActivityItems(selectedSubtype, vocabulary, imageByWord))
+    .map((item) => interactionPayloadSchema.parse(item));
+  const firstWord = vocabulary[0] ?? "activity";
+  const startImage =
+    imageByWord[firstWord.toLowerCase()] ??
+    (items.find((item) => typeof item === "object" && item && "image_url" in item) as { image_url?: string })
+      ?.image_url ??
+    "https://placehold.co/800x520/e2e8f0/1e293b?text=Start+Activity";
+  const start = startPayloadSchema.parse({
+    type: "start",
+    image_url: startImage,
+    image_fit: "contain",
+    cta_label: "Start activity",
+    read_aloud_title: title,
+  });
+  const settings: ActivityLibrarySettings = {
+    shuffle_questions: false,
+    shuffle_answer_options_each_replay: true,
+    auto_advance_on_pass_default: false,
+  };
+  const payload = {
+    start,
+    items: applySettingsToItems(items, settings),
+    settings: {
+      ...settings,
+      activity_subtypes: selectedSubtypes,
+    },
+  };
+  const { error } = await supabase.from("activity_library_items").insert({
+    title,
+    activity_subtype: subtype,
+    level,
+    topic,
+    vocabulary,
+    payload,
+    question_count: items.length,
+    created_by: user.id,
+  });
+  if (error) throw asMissingActivityLibrarySchemaError(error) ?? error;
+  revalidatePath("/teacher/activities");
+}
+
+export async function updateActivityLibraryItem(formData: FormData) {
+  const supabase = await requireTeacher();
+  const id = `${formData.get("id") ?? ""}`.trim();
+  const title = `${formData.get("title") ?? ""}`.trim();
+  const level = `${formData.get("level") ?? ""}`.trim();
+  const topic = `${formData.get("topic") ?? ""}`.trim();
+  const vocabulary = parseVocabularyInput(`${formData.get("vocabulary_raw") ?? ""}`);
+  const settings: ActivityLibrarySettings = {
+    shuffle_questions: readCheckbox(formData, "shuffle_questions"),
+    shuffle_answer_options_each_replay: readCheckbox(formData, "shuffle_answer_options_each_replay"),
+    auto_advance_on_pass_default: readCheckbox(formData, "auto_advance_on_pass_default"),
+  };
+  const editorModuleIdFromForm = `${formData.get("editor_module_id") ?? ""}`.trim();
+  const editorLessonIdFromForm = `${formData.get("editor_lesson_id") ?? ""}`.trim();
+  const payloadJson = `${formData.get("payload_json") ?? ""}`.trim();
+  if (!id || !title) throw new Error("Missing required fields");
+  let payload: {
+    start: unknown;
+    items: unknown[];
+    settings: ActivityLibrarySettings & Record<string, unknown>;
+  };
+  if (payloadJson) {
+    payload = normalizeActivityPayload(JSON.parse(payloadJson));
+  } else {
+    const existing = await supabase
+      .from("activity_library_items")
+      .select("payload")
+      .eq("id", id)
+      .single();
+    if (existing.error) throw existing.error;
+    payload = normalizeActivityPayload(existing.data.payload);
+    const linkedLessonId =
+      editorLessonIdFromForm ||
+      `${(payload.settings as Record<string, unknown> | undefined)?.editor_lesson_id ?? ""}`;
+    if (typeof linkedLessonId === "string" && linkedLessonId.length > 0) {
+      const lessonScreens = await supabase
+        .from("lesson_screens")
+        .select("screen_type,payload,order_index")
+        .eq("lesson_id", linkedLessonId)
+        .order("order_index", { ascending: true });
+      if (lessonScreens.error) {
+        throw new Error(
+          `Could not load linked editor lesson screens (${linkedLessonId}): ${lessonScreens.error.message}`,
+        );
+      }
+      if ((lessonScreens.data?.length ?? 0) > 0) {
+        const startFromLesson =
+          lessonScreens.data?.find((s) => s.screen_type === "start")?.payload ?? payload.start;
+        const itemsFromLesson =
+          lessonScreens.data
+            ?.filter((s) => s.screen_type === "interaction")
+            .map((s) => interactionPayloadSchema.parse(s.payload)) ?? payload.items;
+        payload = {
+          ...payload,
+          start: startPayloadSchema.parse(startFromLesson),
+          items: itemsFromLesson,
+        };
+      }
+    }
+  }
+  payload.settings = {
+    ...(payload.settings ?? {}),
+    shuffle_questions: settings.shuffle_questions,
+    shuffle_answer_options_each_replay: settings.shuffle_answer_options_each_replay,
+    auto_advance_on_pass_default: settings.auto_advance_on_pass_default,
+    ...(editorModuleIdFromForm ? { editor_module_id: editorModuleIdFromForm } : {}),
+    ...(editorLessonIdFromForm ? { editor_lesson_id: editorLessonIdFromForm } : {}),
+  };
+  payload.items = applySettingsToItems(payload.items, payload.settings);
+  const linkedLessonId = `${(payload.settings as Record<string, unknown>)?.editor_lesson_id ?? ""}`;
+  if (linkedLessonId) {
+    const lessonScreens = await supabase
+      .from("lesson_screens")
+      .select("id,screen_type,payload")
+      .eq("lesson_id", linkedLessonId);
+    if (lessonScreens.error) {
+      throw new Error(
+        `Could not load linked editor lesson screens (${linkedLessonId}): ${lessonScreens.error.message}`,
+      );
+    }
+    const desiredAutoAdvance = settings.auto_advance_on_pass_default;
+    for (const row of lessonScreens.data ?? []) {
+      if (row.screen_type !== "interaction") continue;
+      const parsed = interactionPayloadSchema.safeParse(row.payload);
+      if (!parsed.success) continue;
+      const nextPayload = {
+        ...parsed.data,
+        auto_advance_on_pass: desiredAutoAdvance,
+      };
+      const { error: updateErr } = await supabase
+        .from("lesson_screens")
+        .update({
+          payload: nextPayload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id);
+      if (updateErr) throw updateErr;
+    }
+  }
+  const { error } = await supabase
+    .from("activity_library_items")
+    .update({
+      title,
+      level,
+      topic,
+      vocabulary,
+      payload,
+      question_count: payload.items.length,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw asMissingActivityLibrarySchemaError(error) ?? error;
+  revalidatePath("/teacher/activities");
+}
+
+export async function removeActivityLibraryQuestion(formData: FormData) {
+  const supabase = await requireTeacher();
+  const id = `${formData.get("id") ?? ""}`.trim();
+  const index = Number(formData.get("question_index") ?? -1);
+  if (!id || index < 0) throw new Error("Missing question target");
+  const { data, error } = await supabase
+    .from("activity_library_items")
+    .select("payload")
+    .eq("id", id)
+    .single();
+  if (error) throw asMissingActivityLibrarySchemaError(error) ?? error;
+  const payload = normalizeActivityPayload(data.payload);
+  payload.items.splice(index, 1);
+  const validated = normalizeActivityPayload(payload);
+  const { error: saveErr } = await supabase
+    .from("activity_library_items")
+    .update({
+      payload: validated,
+      question_count: validated.items.length,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (saveErr) throw asMissingActivityLibrarySchemaError(saveErr) ?? saveErr;
+  revalidatePath("/teacher/activities");
+}
+
+export async function deleteActivityLibraryItem(formData: FormData) {
+  const supabase = await requireTeacher();
+  const id = `${formData.get("id") ?? ""}`.trim();
+  if (!id) throw new Error("Missing id");
+  const { error } = await supabase.from("activity_library_items").delete().eq("id", id);
+  if (error) throw asMissingActivityLibrarySchemaError(error) ?? error;
+  revalidatePath("/teacher/activities");
+}
+
+export async function openActivityInCourseEditor(formData: FormData) {
+  const supabase = await requireTeacher();
+  const activityId = `${formData.get("id") ?? ""}`.trim();
+  if (!activityId) throw new Error("Missing activity id");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: activity, error: activityErr } = await supabase
+    .from("activity_library_items")
+    .select("id,title,payload")
+    .eq("id", activityId)
+    .single();
+  if (activityErr) throw activityErr;
+  const normalized = normalizeActivityPayload(activity.payload);
+  const settings = normalized.settings as ActivityLibrarySettings & {
+    editor_module_id?: string;
+    editor_lesson_id?: string;
+  };
+
+  let courseId: string | null = null;
+  {
+    const existingCourse = await supabase
+      .from("courses")
+      .select("id")
+      .order("order_index", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (existingCourse.data?.id) {
+      courseId = existingCourse.data.id as string;
+    } else {
+      const courseRows = await supabase.from("courses").select("order_index");
+      const orderIndex =
+        courseRows.data?.length ?
+          Math.max(...courseRows.data.map((r) => (r.order_index as number) ?? 0)) + 1
+        : 0;
+      const createdCourse = await supabase
+        .from("courses")
+        .insert({
+          title: "Activity Library Workspace",
+          slug: `activity-library-workspace-${user.id.slice(0, 8)}`,
+          target: "Activity Library",
+          order_index: orderIndex,
+          published: false,
+        })
+        .select("id")
+        .single();
+      if (createdCourse.error || !createdCourse.data?.id) {
+        throw createdCourse.error ?? new Error("Could not create editor course");
+      }
+      courseId = createdCourse.data.id as string;
+    }
+  }
+
+  let moduleId = settings.editor_module_id;
+  const moduleSlug = `activity-library-${user.id.slice(0, 8)}`;
+  if (!moduleId) {
+    const existing = await supabase
+      .from("modules")
+      .select("id")
+      .eq("slug", moduleSlug)
+      .eq("published", false)
+      .limit(1)
+      .maybeSingle();
+    if (existing.data?.id) {
+      moduleId = existing.data.id as string;
+    } else {
+      const rows = await supabase.from("modules").select("order_index").eq("published", false);
+      const orderIndex =
+        rows.data?.length ? Math.max(...rows.data.map((r) => (r.order_index as number) ?? 0)) + 1 : 0;
+      const created = await supabase
+        .from("modules")
+        .insert({
+          title: "Activity Library Editor",
+          slug: moduleSlug,
+          course_id: courseId,
+          order_index: orderIndex,
+          published: false,
+        })
+        .select("id")
+        .single();
+      if (created.error || !created.data?.id) throw created.error ?? new Error("Could not create editor module");
+      moduleId = created.data.id as string;
+    }
+  }
+
+  let lessonId = settings.editor_lesson_id;
+  if (!lessonId) {
+    const lessonSlug = `activity-${activityId}`;
+    const existingLesson = await supabase
+      .from("lessons")
+      .select("id")
+      .eq("module_id", moduleId)
+      .eq("slug", lessonSlug)
+      .limit(1)
+      .maybeSingle();
+    if (existingLesson.data?.id) {
+      lessonId = existingLesson.data.id as string;
+    } else {
+      const lessonRows = await supabase.from("lessons").select("order_index").eq("module_id", moduleId);
+      const orderIndex =
+        lessonRows.data?.length ?
+          Math.max(...lessonRows.data.map((r) => (r.order_index as number) ?? 0)) + 1
+        : 0;
+      const createdLesson = await supabase
+        .from("lessons")
+        .insert({
+          module_id: moduleId,
+          title: `${activity.title} (Activity Library)`,
+          slug: lessonSlug,
+          order_index: orderIndex,
+          published: false,
+        })
+        .select("id")
+        .single();
+      if (createdLesson.error || !createdLesson.data?.id) {
+        throw createdLesson.error ?? new Error("Could not create editor lesson");
+      }
+      lessonId = createdLesson.data.id as string;
+    }
+  }
+
+  const existingScreens = await supabase
+    .from("lesson_screens")
+    .select("id", { count: "exact", head: true })
+    .eq("lesson_id", lessonId);
+  const hasExistingScreens = (existingScreens.count ?? 0) > 0;
+  if (!hasExistingScreens) {
+    const screensToInsert = [
+      { screen_type: "start", payload: normalized.start },
+      ...normalized.items.map((payload) => ({ screen_type: "interaction", payload })),
+    ];
+    for (let i = 0; i < screensToInsert.length; i += 1) {
+      const row = screensToInsert[i]!;
+      await supabase.from("lesson_screens").insert({
+        lesson_id: lessonId,
+        order_index: i,
+        screen_type: row.screen_type,
+        payload: row.payload,
+      });
+    }
+  } else {
+    const desiredAutoAdvance = normalized.settings.auto_advance_on_pass_default;
+    const lessonScreens = await supabase
+      .from("lesson_screens")
+      .select("id,screen_type,payload")
+      .eq("lesson_id", lessonId);
+    if (lessonScreens.error) throw lessonScreens.error;
+    for (const row of lessonScreens.data ?? []) {
+      if (row.screen_type !== "interaction") continue;
+      const parsed = interactionPayloadSchema.safeParse(row.payload);
+      if (!parsed.success) continue;
+      const nextPayload = {
+        ...parsed.data,
+        auto_advance_on_pass: desiredAutoAdvance,
+      };
+      const { error: updateErr } = await supabase
+        .from("lesson_screens")
+        .update({
+          payload: nextPayload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id);
+      if (updateErr) throw updateErr;
+    }
+  }
+
+  const nextSettings = {
+    ...normalized.settings,
+    editor_module_id: moduleId,
+    editor_lesson_id: lessonId,
+  };
+  await supabase
+    .from("activity_library_items")
+    .update({
+      payload: { ...normalized, settings: nextSettings },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", activityId);
+
+  revalidatePath("/teacher/activities");
+  redirect(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }

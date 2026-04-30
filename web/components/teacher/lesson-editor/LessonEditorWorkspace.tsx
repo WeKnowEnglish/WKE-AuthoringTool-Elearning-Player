@@ -176,9 +176,16 @@ function areConnectorLinesEqual(a: ConnectorLine[], b: ConnectorLine[]) {
   return true;
 }
 
+function stabilizeCoord(n: number): number {
+  // DOM layout can jitter at sub-pixel precision between commits; normalize to avoid effect loops.
+  return Math.round(n);
+}
+
 type EditorLayoutPrefs = {
   storyboardOpen: boolean;
   toolsOpen: boolean;
+  previewOpen: boolean;
+  detailsOpen: boolean;
   leftPanePct: number;
   rightPanePct: number;
   previewPanePct: number;
@@ -198,6 +205,8 @@ export function LessonEditorWorkspace({
   screens,
   children,
 }: Props) {
+  const topMenuButtonClass =
+    "inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg border border-neutral-300 bg-neutral-50 px-3 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-100 active:bg-neutral-200";
   const shellRef = useRef<HTMLDivElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -207,6 +216,8 @@ export function LessonEditorWorkspace({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [storyboardOpen, setStoryboardOpen] = useState(true);
   const [toolsOpen, setToolsOpen] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(true);
   const [leftPanePct, setLeftPanePct] = useState(23);
   const [rightPanePct, setRightPanePct] = useState(23);
   const [previewPanePct, setPreviewPanePct] = useState(62);
@@ -251,6 +262,8 @@ export function LessonEditorWorkspace({
       const parsed = JSON.parse(raw) as Partial<EditorLayoutPrefs>;
       if (typeof parsed.storyboardOpen === "boolean") setStoryboardOpen(parsed.storyboardOpen);
       if (typeof parsed.toolsOpen === "boolean") setToolsOpen(parsed.toolsOpen);
+      if (typeof parsed.previewOpen === "boolean") setPreviewOpen(parsed.previewOpen);
+      if (typeof parsed.detailsOpen === "boolean") setDetailsOpen(parsed.detailsOpen);
       if (typeof parsed.leftPanePct === "number") setLeftPanePct(clamp(parsed.leftPanePct, 14, 60));
       if (typeof parsed.rightPanePct === "number")
         setRightPanePct(clamp(parsed.rightPanePct, 16, 60));
@@ -278,12 +291,23 @@ export function LessonEditorWorkspace({
     const prefs: EditorLayoutPrefs = {
       storyboardOpen,
       toolsOpen,
+      previewOpen,
+      detailsOpen,
       leftPanePct,
       rightPanePct,
       previewPanePct,
     };
     window.localStorage.setItem(layoutKey, JSON.stringify(prefs));
-  }, [layoutKey, storyboardOpen, toolsOpen, leftPanePct, rightPanePct, previewPanePct]);
+  }, [
+    layoutKey,
+    storyboardOpen,
+    toolsOpen,
+    previewOpen,
+    detailsOpen,
+    leftPanePct,
+    rightPanePct,
+    previewPanePct,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -459,6 +483,11 @@ export function LessonEditorWorkspace({
   const computeConnectorLines = useCallback(() => {
     const shell = shellRef.current;
     if (!shell) return;
+    const hasOpenNotes = liveScreens.some((s) => activityNotes[s.id]?.open);
+    if (!hasOpenNotes) {
+      setConnectorLines((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
     const shellRect = shell.getBoundingClientRect();
     const shellW = shellRect.width;
     const shellH = shellRect.height;
@@ -489,16 +518,18 @@ export function LessonEditorWorkspace({
       const noteOnLeft = noteRight <= rowLeft;
       next.push({
         id: s.id,
-        x1: clamp(noteOnLeft ? rowLeft : rowRight, 0, shellW),
-        y1: rowCenterY,
-        x2: clamp(
-          noteOnRight ? noteLeft
-          : noteOnLeft ? noteRight
-          : noteLeft,
-          0,
-          shellW,
+        x1: stabilizeCoord(clamp(noteOnLeft ? rowLeft : rowRight, 0, shellW)),
+        y1: stabilizeCoord(rowCenterY),
+        x2: stabilizeCoord(
+          clamp(
+            noteOnRight ? noteLeft
+            : noteOnLeft ? noteRight
+            : noteLeft,
+            0,
+            shellW,
+          ),
         ),
-        y2: noteCenterY,
+        y2: stabilizeCoord(noteCenterY),
       });
     }
     setConnectorLines((prev) => (areConnectorLinesEqual(prev, next) ? prev : next));
@@ -550,31 +581,30 @@ export function LessonEditorWorkspace({
   }, []);
 
   return (
-    <div className="relative space-y-6">
-      <section className="flex justify-start">
+    <div className="relative space-y-4">
+      <section className="sticky top-0 z-40 flex flex-wrap items-center gap-2 border-b border-neutral-200 bg-white/95 py-2 backdrop-blur">
         {!addScreenOpen ? (
           <button
             type="button"
             onClick={() => setAddScreenOpen(true)}
             aria-expanded={addScreenOpen}
             aria-label="Expand add activity"
-            className="flex h-[50px] w-[50px] items-center justify-center rounded-lg border border-neutral-300 bg-neutral-50 text-2xl font-bold text-neutral-700 shadow-sm hover:bg-neutral-100 active:bg-neutral-200"
+            className={topMenuButtonClass}
             title="Add activity"
           >
-            +
+            Add activity
           </button>
         ) : (
           <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50/90 p-4 shadow-sm">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
-                Add activity
-              </h2>
               <button
                 type="button"
                 onClick={() => setAddScreenOpen(false)}
-                className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 active:bg-neutral-200"
+                className="text-sm font-semibold uppercase tracking-wide text-neutral-600 hover:text-neutral-900"
+                aria-label="Collapse add activity"
+                title="Collapse add activity"
               >
-                Collapse
+                Add activity
               </button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -591,12 +621,48 @@ export function LessonEditorWorkspace({
             </div>
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => setStoryboardOpen((v) => !v)}
+          aria-expanded={storyboardOpen}
+          className={topMenuButtonClass}
+          title={storyboardOpen ? "Collapse storyboard" : "Expand storyboard"}
+        >
+          Storyboard
+        </button>
+        <button
+          type="button"
+          onClick={() => setToolsOpen((v) => !v)}
+          aria-expanded={toolsOpen}
+          className={topMenuButtonClass}
+          title={toolsOpen ? "Collapse lesson tools" : "Expand lesson tools"}
+        >
+          Tools
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreviewOpen((v) => !v)}
+          aria-expanded={previewOpen}
+          className={topMenuButtonClass}
+          title={previewOpen ? "Collapse student preview" : "Expand student preview"}
+        >
+          Preview
+        </button>
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((v) => !v)}
+          aria-expanded={detailsOpen}
+          className={topMenuButtonClass}
+          title={detailsOpen ? "Collapse screen details" : "Expand screen details"}
+        >
+          Details
+        </button>
       </section>
 
       <div
         ref={shellRef}
         className={
-          "relative flex min-h-0 flex-col gap-0 rounded-xl border border-neutral-200 bg-neutral-100 shadow-sm " +
+          "relative flex min-h-[calc(100vh-7rem)] flex-col gap-0 border border-neutral-200 bg-white " +
           "xl:flex-row xl:items-start"
         }
       >
@@ -604,7 +670,7 @@ export function LessonEditorWorkspace({
           className={`order-1 min-h-0 min-w-0 xl:self-start ${leftSidebarScroll} shrink-0 border-neutral-200/80 bg-neutral-100/95 xl:order-none xl:border-r ${
             storyboardOpen
               ? "w-full p-4 xl:min-w-[220px] xl:py-5"
-              : "w-full p-2 xl:w-14 xl:min-w-14 xl:max-w-14 xl:p-2"
+              : "hidden"
           }`}
           style={
             storyboardOpen
@@ -612,27 +678,15 @@ export function LessonEditorWorkspace({
               : undefined
           }
         >
-          <div className={`flex items-center ${storyboardOpen ? "justify-between" : "justify-center"}`}>
-            {storyboardOpen ? (
-              <div>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Storyboard
-                </h2>
-                <p className="mt-1 text-xs text-neutral-600">Drag to reorder · Up / Down / Dup / Del</p>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setStoryboardOpen((v) => !v)}
-              aria-expanded={storyboardOpen}
-              className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
-              title={storyboardOpen ? "Collapse storyboard" : "Expand storyboard"}
-            >
-              {storyboardOpen ? "Collapse" : "Storyboard"}
-            </button>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Storyboard
+              </h2>
+              <p className="mt-1 text-xs text-neutral-600">Drag to reorder · Up / Down / Dup / Del</p>
+            </div>
           </div>
-          {storyboardOpen ? (
-            <>
+          <>
               <ol className="mt-3 space-y-2">
                 {liveScreens.map((s, i) => {
                   const thumb = screenThumbnailUrl(s);
@@ -644,32 +698,127 @@ export function LessonEditorWorkspace({
                         }}
                         onDragOver={onDragOver}
                         onDrop={(e) => onDrop(e, s.id)}
-                        className={`flex gap-2 rounded border p-2 transition-opacity ${
+                        onClick={() => setSelectedIndex(i)}
+                        className={`rounded border p-1.5 transition-opacity ${
                           draggingId === s.id ? "opacity-60" : ""
                         } ${
                           i === safeIndex ? "border-sky-600 bg-sky-50" : "border-neutral-200 bg-white"
                         }`}
                       >
-                        <span
-                          draggable
-                          onDragStart={(e) => onDragStart(e, s.id)}
-                          onDragEnd={() => setDraggingId(null)}
-                          className="cursor-grab select-none px-0.5 font-mono text-xs text-neutral-400 active:cursor-grabbing"
-                          title="Drag to reorder"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Drag to reorder screen ${i}`}
-                        >
-                          ⋮⋮
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedIndex(i)}
-                          className="flex min-w-0 flex-1 gap-2 rounded-md text-left hover:bg-neutral-50 active:bg-neutral-100"
-                        >
-                          <span className="w-5 shrink-0 font-mono text-xs text-neutral-500">{i}</span>
+                        <div className="flex items-start gap-1">
+                          <span
+                            draggable
+                            onDragStart={(e) => onDragStart(e, s.id)}
+                            onDragEnd={() => setDraggingId(null)}
+                            className="cursor-grab select-none px-0.5 pt-0.5 font-mono text-[11px] text-neutral-400 active:cursor-grabbing"
+                            title="Drag to reorder"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Drag to reorder screen ${i}`}
+                          >
+                            ⋮⋮
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedIndex(i)}
+                              className="flex w-full min-w-0 items-start gap-1 rounded-md px-0.5 py-0.5 text-left hover:bg-neutral-50 active:bg-neutral-100"
+                            >
+                              <span className="w-4 shrink-0 font-mono text-[11px] text-neutral-500">{i}</span>
+                              <span className="line-clamp-2 min-w-0 flex-1 text-[11px] leading-snug sm:text-xs">
+                                {screenOutlineLabel(s)}
+                              </span>
+                            </button>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
+                              <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
+                                <button
+                                  type="submit"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                                >
+                                  Up
+                                </button>
+                              </form>
+                              <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
+                                <button
+                                  type="submit"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                                >
+                                  Down
+                                </button>
+                              </form>
+                              <form action={duplicateScreen.bind(null, s.id, lessonId, moduleId)}>
+                                <input type="hidden" name="duplicate_screen" value={s.id} />
+                                <button
+                                  type="submit"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (typeof window !== "undefined") {
+                                      window.sessionStorage.setItem(jumpNewestKey, "1");
+                                    }
+                                  }}
+                                  className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 active:bg-blue-200"
+                                >
+                                  Dup
+                                </button>
+                              </form>
+                              <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
+                                <button
+                                  type="submit"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const shouldDelete = window.confirm(
+                                      `Delete this storyboard item?\n\n${screenOutlineLabel(s)}`,
+                                    );
+                                    if (!shouldDelete) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200"
+                                >
+                                  Del
+                                </button>
+                              </form>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const shellRect = shellRef.current?.getBoundingClientRect();
+                                  const rowRect = rowRefs.current[s.id]?.getBoundingClientRect();
+                                  const defaultX =
+                                    shellRect && rowRect ?
+                                      clamp(rowRect.right - shellRect.left + 18, 8, shellRect.width - 220)
+                                    : 260;
+                                  const defaultY =
+                                    shellRect && rowRect ?
+                                      clamp(rowRect.top - shellRect.top, 8, shellRect.height - 56)
+                                    : 120;
+                                  noteZRef.current += 1;
+                                  const nextZ = noteZRef.current;
+                                  setActivityNotes((prev) => {
+                                    const cur = prev[s.id];
+                                    return {
+                                      ...prev,
+                                      [s.id]: {
+                                        text: cur?.text ?? "",
+                                        open: !(cur?.open ?? false),
+                                        collapsed: cur?.collapsed ?? false,
+                                        x: cur?.x ?? defaultX,
+                                        y: cur?.y ?? defaultY,
+                                        z: nextZ,
+                                      },
+                                    };
+                                  });
+                                }}
+                                className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-100 active:bg-violet-200"
+                              >
+                                Notes
+                              </button>
+                            </div>
+                          </div>
                           {thumb ? (
-                            <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded border border-neutral-300">
+                            <div className="relative ml-1 h-14 w-16 shrink-0 self-stretch overflow-hidden rounded border border-neutral-300">
                               <Image
                                 src={thumb}
                                 alt=""
@@ -679,87 +828,10 @@ export function LessonEditorWorkspace({
                               />
                             </div>
                           ) : (
-                            <div className="flex h-10 w-14 shrink-0 items-center justify-center rounded border border-dashed border-neutral-300 text-xs text-neutral-400">
+                            <div className="ml-1 flex h-14 w-16 shrink-0 self-stretch items-center justify-center rounded border border-dashed border-neutral-300 text-[10px] text-neutral-400">
                               —
                             </div>
                           )}
-                          <span className="min-w-0 flex-1 text-xs leading-snug sm:text-sm">
-                            {screenOutlineLabel(s)}
-                          </span>
-                        </button>
-                        <div className="flex shrink-0 flex-col gap-0.5">
-                          <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
-                            <button
-                              type="submit"
-                              className="rounded px-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 sm:text-xs"
-                            >
-                              Up
-                            </button>
-                          </form>
-                          <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
-                            <button
-                              type="submit"
-                              className="rounded px-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 sm:text-xs"
-                            >
-                              Down
-                            </button>
-                          </form>
-                          <form action={duplicateScreen.bind(null, s.id, lessonId, moduleId)}>
-                            <input type="hidden" name="duplicate_screen" value={s.id} />
-                            <button
-                              type="submit"
-                              onClick={() => {
-                                if (typeof window !== "undefined") {
-                                  window.sessionStorage.setItem(jumpNewestKey, "1");
-                                }
-                              }}
-                              className="rounded px-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 active:bg-blue-100 sm:text-xs"
-                            >
-                              Dup
-                            </button>
-                          </form>
-                          <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
-                            <button
-                              type="submit"
-                              className="rounded px-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-50 active:bg-red-100 sm:text-xs"
-                            >
-                              Del
-                            </button>
-                          </form>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const shellRect = shellRef.current?.getBoundingClientRect();
-                              const rowRect = rowRefs.current[s.id]?.getBoundingClientRect();
-                              const defaultX =
-                                shellRect && rowRect ?
-                                  clamp(rowRect.right - shellRect.left + 18, 8, shellRect.width - 220)
-                                : 260;
-                              const defaultY =
-                                shellRect && rowRect ?
-                                  clamp(rowRect.top - shellRect.top, 8, shellRect.height - 56)
-                                : 120;
-                              noteZRef.current += 1;
-                              const nextZ = noteZRef.current;
-                              setActivityNotes((prev) => {
-                                const cur = prev[s.id];
-                                return {
-                                  ...prev,
-                                  [s.id]: {
-                                    text: cur?.text ?? "",
-                                    open: !(cur?.open ?? false),
-                                    collapsed: cur?.collapsed ?? false,
-                                    x: cur?.x ?? defaultX,
-                                    y: cur?.y ?? defaultY,
-                                    z: nextZ,
-                                  },
-                                };
-                              });
-                            }}
-                            className="rounded px-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-50 active:bg-violet-100 sm:text-xs"
-                          >
-                            Notes
-                          </button>
                         </div>
                       </div>
                     </li>
@@ -770,7 +842,6 @@ export function LessonEditorWorkspace({
                 <p className="mt-2 text-sm text-neutral-600">No screens yet.</p>
               ) : null}
             </>
-          ) : null}
         </aside>
         {storyboardOpen ? (
           <div className="hidden xl:flex xl:w-2 xl:items-stretch xl:justify-center xl:self-stretch">
@@ -785,11 +856,11 @@ export function LessonEditorWorkspace({
 
         <div
           ref={centerRef}
-          className="order-2 flex min-h-0 min-w-0 flex-1 flex-col gap-6 border-neutral-200 bg-white p-4 sm:p-5 xl:order-none xl:max-w-none xl:flex-row xl:gap-4 xl:self-start"
+          className="order-2 flex min-h-0 min-w-0 flex-1 flex-col gap-4 border-neutral-200 bg-white p-4 sm:p-5 xl:order-none xl:max-w-none xl:flex-row xl:gap-4 xl:self-stretch"
         >
           <div
-            className="min-h-0 min-w-0 flex-1 space-y-3"
-            style={{ flexBasis: `${previewPanePct}%` }}
+            className={`min-h-0 min-w-0 flex-1 flex-col space-y-3 ${previewOpen ? "flex" : "hidden"}`}
+            style={previewOpen ? { flexBasis: `${previewPanePct}%` } : undefined}
           >
             <div>
               <h2 className="text-lg font-bold text-neutral-900">Student preview</h2>
@@ -799,7 +870,7 @@ export function LessonEditorWorkspace({
                 immediately.
               </p>
             </div>
-            <div className="max-h-[min(75vh,880px)] overflow-y-auto rounded border-4 border-neutral-800 bg-amber-50/30 p-3 shadow-inner">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded border-4 border-neutral-800 bg-amber-50/30 p-3 shadow-inner">
               {liveScreens.length > 0 ? (
                 <LessonPlayer
                   key={lessonId}
@@ -814,18 +885,22 @@ export function LessonEditorWorkspace({
               )}
             </div>
           </div>
-          <div className="hidden xl:flex xl:w-2 xl:items-stretch xl:justify-center xl:self-stretch">
-            <button
-              type="button"
-              aria-label="Resize preview and details panels"
-              onPointerDown={(e) => beginResize("center", e)}
-              className="h-full w-1 cursor-col-resize rounded bg-neutral-200/80 hover:bg-sky-300 active:bg-sky-400"
-            />
-          </div>
+          {previewOpen && detailsOpen ? (
+            <div className="hidden xl:flex xl:w-2 xl:items-stretch xl:justify-center xl:self-stretch">
+              <button
+                type="button"
+                aria-label="Resize preview and details panels"
+                onPointerDown={(e) => beginResize("center", e)}
+                className="h-full w-1 cursor-col-resize rounded bg-neutral-200/80 hover:bg-sky-300 active:bg-sky-400"
+              />
+            </div>
+          ) : null}
 
           <div
-            className="order-3 min-h-0 min-w-0 flex-1 space-y-3 xl:order-none xl:min-w-[280px]"
-            style={{ flexBasis: `${100 - previewPanePct}%` }}
+            className={`order-3 min-h-0 min-w-0 flex-1 flex-col space-y-3 xl:order-none xl:min-w-[280px] ${
+              detailsOpen ? "flex" : "hidden"
+            }`}
+            style={detailsOpen ? { flexBasis: `${100 - previewPanePct}%` } : undefined}
           >
             <div>
               <h2 className="text-lg font-bold text-neutral-900">Screen details</h2>
@@ -834,7 +909,7 @@ export function LessonEditorWorkspace({
                 <strong>Save screen now</strong> for an immediate write (recommended after a cover image).
               </p>
             </div>
-            <div className="max-h-[min(75vh,880px)] overflow-y-auto rounded-lg border border-neutral-200 bg-white p-1 shadow-sm">
+            <div className="min-h-0 flex-1 overflow-visible rounded-lg border border-neutral-200 bg-white p-1 shadow-sm">
               {selectedScreen ? (
                 <ScreenEditorCard
                   key={selectedScreen.id}
@@ -867,7 +942,7 @@ export function LessonEditorWorkspace({
           className={`order-4 min-h-0 min-w-0 xl:self-start ${rightSidebarScroll} shrink-0 border-t border-neutral-200/80 bg-neutral-50/95 xl:order-none xl:border-t-0 xl:border-l ${
             toolsOpen
               ? "w-full p-4 xl:min-w-[260px] xl:py-5"
-              : "w-full p-2 xl:w-14 xl:min-w-14 xl:max-w-14 xl:p-2"
+              : "hidden"
           }`}
           style={
             toolsOpen
@@ -875,22 +950,10 @@ export function LessonEditorWorkspace({
               : undefined
           }
         >
-          <div className={`mb-3 flex items-center ${toolsOpen ? "justify-between" : "justify-center"}`}>
-            {toolsOpen ? (
-              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Lesson tools</p>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setToolsOpen((v) => !v)}
-              aria-expanded={toolsOpen}
-              className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
-              title={toolsOpen ? "Collapse lesson tools" : "Expand lesson tools"}
-            >
-              {toolsOpen ? "Collapse" : "Tools"}
-            </button>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Lesson tools</p>
           </div>
-          {toolsOpen ? (
-            <>
+          <>
               {children}
               <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-bold text-neutral-900">Publish checklist</h2>
@@ -963,7 +1026,6 @@ export function LessonEditorWorkspace({
             </form>
               </section>
             </>
-          ) : null}
         </aside>
         <div className="pointer-events-none absolute inset-0 z-[50] hidden overflow-hidden xl:block">
         <svg className="h-full w-full overflow-visible" aria-hidden>

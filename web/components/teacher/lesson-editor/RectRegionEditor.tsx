@@ -35,6 +35,8 @@ type Props = {
   disabled?: boolean;
   /** Optional content inside each region (e.g. story item image) */
   renderRegion?: (r: RectPercent) => ReactNode;
+  /** Optional extra width-only resize handle (right-middle) */
+  showHorizontalResizeHandle?: (r: RectPercent) => boolean;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -56,6 +58,7 @@ export function RectRegionEditor({
   onSelectedIdsChange,
   disabled,
   renderRegion,
+  showHorizontalResizeHandle,
 }: Props) {
   const selectedSet = new Set(
     selectedIds && selectedIds.length > 0 ? selectedIds : selectedId ? [selectedId] : [],
@@ -97,6 +100,9 @@ export function RectRegionEditor({
     startLeftPx: number;
     startTopPx: number;
     aspectPx: number;
+    mode: "proportional" | "horizontal";
+    startWpx: number;
+    startClientX: number;
   } | null>(null);
 
   useEffect(() => {
@@ -127,6 +133,18 @@ export function RectRegionEditor({
       const minHpx = Math.max(8, rect.height * 0.02);
       const maxW = rect.width - leftPx;
       const maxH = rect.height - topPx;
+
+      if (resize.mode === "horizontal") {
+        const dx = e.clientX - resize.startClientX;
+        const newWpx = clamp(resize.startWpx + dx, minWpx, maxW);
+        const nw = (newWpx / rect.width) * 100;
+        onRegionsChangeRef.current(
+          currentRegions.map((r) =>
+            r.id === resize.id ? { ...r, w_percent: nw } : r,
+          ),
+        );
+        return;
+      }
 
       let newWpx = relX - leftPx;
       let newHpx = newWpx / resize.aspectPx;
@@ -212,7 +230,11 @@ export function RectRegionEditor({
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
-  const startResize = (id: string, e: React.PointerEvent) => {
+  const startResize = (
+    id: string,
+    e: React.PointerEvent,
+    mode: "proportional" | "horizontal",
+  ) => {
     if (disabled) return;
     e.stopPropagation();
     e.preventDefault();
@@ -234,6 +256,9 @@ export function RectRegionEditor({
       startLeftPx: leftPx,
       startTopPx: topPx,
       aspectPx,
+      mode,
+      startWpx: wPx,
+      startClientX: e.clientX,
     };
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", endInteraction);
@@ -269,6 +294,7 @@ export function RectRegionEditor({
       />
       {regions.map((r) => {
         const sel = selectedSet.has(r.id);
+        const hasHorizontalResizeHandle = showHorizontalResizeHandle?.(r) ?? false;
         return (
           <div
             key={r.id}
@@ -321,13 +347,24 @@ export function RectRegionEditor({
             </div>
 
             {sel && !disabled ? (
-              <button
-                type="button"
-                aria-label="Resize region (keeps proportions)"
-                className="pointer-events-auto absolute -bottom-1.5 -right-1.5 z-30 h-4 w-4 rounded-sm border-2 border-sky-600 bg-white shadow-md touch-manipulation cursor-nwse-resize"
-                title="Resize layout box (keeps proportions)"
-                onPointerDown={(e) => startResize(r.id, e)}
-              />
+              <>
+                <button
+                  type="button"
+                  aria-label="Resize region (keeps proportions)"
+                  className="pointer-events-auto absolute -bottom-1.5 -right-1.5 z-30 h-4 w-4 cursor-nwse-resize rounded-sm border-2 border-sky-600 bg-white shadow-md touch-manipulation"
+                  title="Resize layout box (keeps proportions)"
+                  onPointerDown={(e) => startResize(r.id, e, "proportional")}
+                />
+                {hasHorizontalResizeHandle ? (
+                  <button
+                    type="button"
+                    aria-label="Resize text box width"
+                    className="pointer-events-auto absolute -right-1.5 top-1/2 z-30 h-4 w-4 -translate-y-1/2 cursor-ew-resize rounded-sm border-2 border-sky-600 bg-white shadow-md touch-manipulation"
+                    title="Resize width"
+                    onPointerDown={(e) => startResize(r.id, e, "horizontal")}
+                  />
+                ) : null}
+              </>
             ) : null}
           </div>
         );

@@ -20,7 +20,13 @@ const AUDIO_ALLOWED = new Set([
   "audio/x-m4a",
   "audio/aac",
 ]);
-export type MediaKind = "image" | "audio";
+const VIDEO_ALLOWED = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+  "video/quicktime",
+]);
+export type MediaKind = "image" | "audio" | "video";
 type MediaKindFilter = MediaKind | "all";
 type Countability = "countable" | "uncountable" | "both" | "na";
 
@@ -137,6 +143,21 @@ export type UploadTeacherMediaResult = {
   duplicate_status?: "uploaded" | "exact_duplicate_reused";
 };
 
+export type UploadTeacherMediaBulkItemResult = {
+  filename: string;
+  status: "success" | "error";
+  message?: string;
+  url?: string;
+  id?: string;
+  duplicate_status?: "uploaded" | "exact_duplicate_reused";
+};
+
+export type UploadTeacherMediaBulkResult = {
+  successCount: number;
+  failureCount: number;
+  items: UploadTeacherMediaBulkItemResult[];
+};
+
 export async function uploadTeacherMedia(
   formData: FormData,
   kind: MediaKind = "image",
@@ -156,10 +177,16 @@ export async function uploadTeacherMedia(
     throw new Error("File too large (max 10 MB)");
   }
   const contentType = f.type || "application/octet-stream";
-  const allowed = kind === "audio" ? AUDIO_ALLOWED : IMAGE_ALLOWED;
+  const allowed =
+    kind === "audio" ? AUDIO_ALLOWED
+    : kind === "video" ? VIDEO_ALLOWED
+    : IMAGE_ALLOWED;
   if (!allowed.has(contentType)) {
     if (kind === "audio") {
       throw new Error("Only MP3, WAV, OGG, WebM, M4A, MP4, or AAC audio is allowed");
+    }
+    if (kind === "video") {
+      throw new Error("Only MP4, WebM, OGG, or MOV video is allowed");
     }
     throw new Error("Only JPEG, PNG, WebP, or GIF images are allowed");
   }
@@ -235,6 +262,44 @@ export async function uploadTeacherMedia(
   return { url: publicUrl, id: row.id as string, duplicate_status: "uploaded" };
 }
 
+export async function uploadTeacherMediaBulkFromForm(
+  formData: FormData,
+): Promise<UploadTeacherMediaBulkResult> {
+  const kind = ((formData.get("kind") as MediaKind | null) ?? "image") as MediaKind;
+  const files = [...formData.getAll("files"), ...formData.getAll("file")].filter(
+    (entry): entry is File => entry instanceof File,
+  );
+  if (files.length === 0) {
+    throw new Error("No files uploaded");
+  }
+
+  const items: UploadTeacherMediaBulkItemResult[] = [];
+  for (const file of files) {
+    const single = new FormData();
+    single.set("file", file);
+    try {
+      const result = await uploadTeacherMedia(single, kind);
+      items.push({
+        filename: file.name,
+        status: "success",
+        url: result.url,
+        id: result.id,
+        duplicate_status: result.duplicate_status ?? "uploaded",
+      });
+    } catch (error) {
+      items.push({
+        filename: file.name,
+        status: "error",
+        message: error instanceof Error ? error.message : "Upload failed",
+      });
+    }
+  }
+
+  const successCount = items.filter((item) => item.status === "success").length;
+  const failureCount = items.length - successCount;
+  return { successCount, failureCount, items };
+}
+
 type SearchTeacherMediaParams = {
   q?: string;
   kind?: MediaKindFilter;
@@ -290,6 +355,7 @@ export async function searchTeacherMedia(
 
   if (kind === "image") q = q.like("content_type", "image/%");
   if (kind === "audio") q = q.like("content_type", "audio/%");
+  if (kind === "video") q = q.like("content_type", "video/%");
 
   const { data, error } = await q;
   if (error) throw new Error(error.message);

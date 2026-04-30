@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   defaultRegion,
   nextRegionId,
@@ -9,6 +9,7 @@ import {
 } from "@/components/teacher/lesson-editor/RectRegionEditor";
 import { ScaledStoryItemImage } from "@/components/story/ScaledStoryItemImage";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
+import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
 import { StoryPathDrawer } from "@/components/teacher/lesson-editor/StoryPathDrawer";
 import {
   storyAnimationPresetSchema,
@@ -29,11 +30,15 @@ import {
   isItemVisibleInEditorPhase,
   removePhaseAt,
   sanitizePageForPayload,
-  StoryPhasesColumn,
   StoryPhaseProperties,
   STORY_EDITOR_VIRTUAL_PHASE_ID,
 } from "@/components/teacher/lesson-editor/story-editor-phases";
 import { StoryItemEditorPanel } from "@/components/teacher/lesson-editor/StoryItemEditorPanel";
+import {
+  listTeacherMedia,
+  uploadTeacherMedia,
+  type MediaAssetRow,
+} from "@/lib/actions/media";
 import type { ZodType } from "zod";
 
 function emitLive(
@@ -107,6 +112,10 @@ const TAP_EMPHASIS_PRESETS: NonNullable<StoryClickAction["emphasis_preset"]>[] =
 
 function itemDisplayLabel(it: StoryItem): string {
   const n = it.name?.trim();
+  if (!n && (it.kind ?? "image") === "text") {
+    const t = it.text?.trim();
+    if (t) return t.slice(0, 24);
+  }
   return n || it.id;
 }
 
@@ -129,7 +138,11 @@ function rectToStoryItem(
   return {
     id: r.id,
     name: prev?.name,
+    kind: prev?.kind ?? "image",
     image_url: prev?.image_url ?? fallbackImage,
+    text: prev?.text,
+    text_color: prev?.text_color,
+    text_size_px: prev?.text_size_px,
     x_percent: r.x_percent,
     y_percent: r.y_percent,
     w_percent: r.w_percent,
@@ -316,11 +329,30 @@ export function StoryFields({
     setSelItemId(id);
   }, []);
   const [selPhaseId, setSelPhaseId] = useState<string | null>(null);
-  const [phasePanelCollapsed, setPhasePanelCollapsed] = useState(false);
-  const [itemsCanvasCompact, setItemsCanvasCompact] = useState(false);
+  const [pageContentMenuOpen, setPageContentMenuOpen] = useState(false);
+  const [phasePinned, setPhasePinned] = useState(false);
+  const [objectPinned, setObjectPinned] = useState(false);
+  const [pageContentPinned, setPageContentPinned] = useState(false);
+  const [bgColorMenuOpen, setBgColorMenuOpen] = useState(false);
+  const [bgVideoMenuOpen, setBgVideoMenuOpen] = useState(false);
+  const [bgImageUrlMenuOpen, setBgImageUrlMenuOpen] = useState(false);
+  const [bgVideoUploading, setBgVideoUploading] = useState(false);
+  const [bgVideoErr, setBgVideoErr] = useState<string | null>(null);
+  const [bgVideoLibraryOpen, setBgVideoLibraryOpen] = useState(false);
+  const [bgVideoLibraryAssets, setBgVideoLibraryAssets] = useState<MediaAssetRow[]>([]);
+  const [bgVideoLibraryQuery, setBgVideoLibraryQuery] = useState("");
+  const [bgVideoLibraryLoading, setBgVideoLibraryLoading] = useState(false);
+  const [bgVideoLibraryErr, setBgVideoLibraryErr] = useState<string | null>(null);
+  const [editorRightPanelPct, setEditorRightPanelPct] = useState(30);
+  const [editorPanelResizing, setEditorPanelResizing] = useState<{
+    startX: number;
+    startPct: number;
+  } | null>(null);
   const [triggerMenuCollapsedByItem, setTriggerMenuCollapsedByItem] = useState<
     Record<string, boolean>
   >({});
+  const bgVideoFileRef = useRef<HTMLInputElement | null>(null);
+  const editorSplitRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const lastLocalSigRef = useRef<string>("");
 
@@ -555,6 +587,12 @@ export function StoryFields({
   }
 
   function removePage(id: string) {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        "Delete this page? This will remove its content and cannot be undone.",
+      );
+      if (!confirmed) return;
+    }
     const next = pages.filter((p) => p.id !== id);
     if (selPageId === id) setSelPageId(next[0]?.id ?? null);
     pushEmit(next);
@@ -623,6 +661,12 @@ export function StoryFields({
 
   function removeStoryPhase(phaseId: string) {
     if (!selectedPage?.phases?.length) return;
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        "Delete this phase? Phase settings and flow links for this step will be removed.",
+      );
+      if (!confirmed) return;
+    }
     const cur = selectedPage.phases;
     const idx = cur.findIndex((p) => p.id === phaseId);
     if (idx < 0) return;
@@ -665,6 +709,84 @@ export function StoryFields({
         topPercent: Math.max(1, Math.min(82, selectedItem.y_percent)),
       }
     : null;
+  const showPageContentPanel = !!selectedPage && (pageContentPinned || pageContentMenuOpen);
+  const showObjectPanel =
+    !!selectedPage && (objectPinned || (!!selectedItem && !pageContentMenuOpen));
+  const showPhasePanel =
+    !!selectedPage && (phasePinned || (!selectedItem && !pageContentMenuOpen));
+  const visibleEditorPanels = [showPageContentPanel, showObjectPanel, showPhasePanel].filter(
+    Boolean,
+  ).length;
+
+  useEffect(() => {
+    if (!bgVideoLibraryOpen) return;
+    let cancelled = false;
+    setBgVideoLibraryLoading(true);
+    setBgVideoLibraryErr(null);
+    listTeacherMedia("video")
+      .then((rows) => {
+        if (!cancelled) setBgVideoLibraryAssets(rows);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setBgVideoLibraryErr(e instanceof Error ? e.message : "Failed to load video library");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBgVideoLibraryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bgVideoLibraryOpen]);
+
+  const filteredBgVideoAssets = useMemo(() => {
+    const q = bgVideoLibraryQuery.trim().toLowerCase();
+    if (!q) return bgVideoLibraryAssets;
+    return bgVideoLibraryAssets.filter((asset) =>
+      [asset.meta_item_name ?? "", asset.original_filename, asset.public_url]
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [bgVideoLibraryAssets, bgVideoLibraryQuery]);
+
+  async function onBackgroundVideoFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !selectedPage) return;
+    setBgVideoErr(null);
+    setBgVideoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", f);
+      const r = await uploadTeacherMedia(fd, "video");
+      updatePage(selectedPage.id, { video_url: r.url });
+    } catch (err) {
+      setBgVideoErr(err instanceof Error ? err.message : "Video upload failed");
+    } finally {
+      setBgVideoUploading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!editorPanelResizing) return;
+    const onMove = (e: PointerEvent) => {
+      const w = editorSplitRef.current?.getBoundingClientRect().width ?? 0;
+      if (w <= 0) return;
+      const dPct = ((e.clientX - editorPanelResizing.startX) / w) * 100;
+      setEditorRightPanelPct(clampPercentInput(editorPanelResizing.startPct - dPct, 22, 45));
+    };
+    const onUp = () => setEditorPanelResizing(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [editorPanelResizing]);
 
   return (
     <div ref={rootRef} className="space-y-4">
@@ -728,20 +850,10 @@ export function StoryFields({
       </div>
 
       {multi && selectedPage ? (
-        <div className="space-y-4 rounded border border-sky-200 bg-sky-50 px-4 pb-4 pt-0">
-          <div className="pt-3">
-            <MediaUrlControls
-              label="Page background image"
-              value={selectedPage.background_image_url ?? ""}
-              onChange={(v) =>
-                updatePage(selectedPage.id, { background_image_url: v || undefined })
-              }
-              disabled={busy}
-            />
-          </div>
-          <div className="sticky top-0 z-20 -mx-4 mb-0 border-b border-sky-200/70 bg-sky-50 px-4 py-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center justify-center gap-1">
+        <div className="relative space-y-4 overflow-visible rounded border border-sky-200 bg-sky-50 px-4 pb-4 pt-0">
+          <div className="sticky top-16 z-30 -mx-4 mb-0 border-b border-sky-200/70 bg-sky-50 px-4 py-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-1">
             {pages.map((p, i) => (
               <button
                 key={p.id}
@@ -812,223 +924,82 @@ export function StoryFields({
                 Del
               </button>
             ) : null}
-              </div>
+              <span className="mx-1 h-5 w-px bg-violet-200" />
+              {(editorPhasesForPage ?? []).map((ph, i) => (
+                <div key={ph.id} className="flex items-stretch">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setSelPhaseId(ph.id);
+                      setSelItemId(null);
+                    }}
+                    className={`rounded-l-md border px-2 py-1 text-xs leading-tight transition-colors ${
+                      ph.id === (selectedPhase?.id ?? STORY_EDITOR_VIRTUAL_PHASE_ID)
+                        ? "border-violet-500 bg-violet-100 font-semibold text-violet-950"
+                        : "border-violet-200 bg-violet-50/50 text-violet-900 hover:bg-violet-100"
+                    }`}
+                    title={`Phase ${i + 1}`}
+                  >
+                    {i + 1}
+                  </button>
+                  {(editorPhasesForPage?.length ?? 0) > 1 ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="rounded-r-md border border-l-0 border-violet-200 bg-violet-50 px-1 text-[10px] font-bold text-violet-800 hover:bg-violet-100"
+                      title="Remove phase"
+                      onClick={() => removeStoryPhase(ph.id)}
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
+              ))}
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => setPhasePanelCollapsed((v) => !v)}
-                className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight transition-colors ${
-                  phasePanelCollapsed
-                    ? "border-violet-300 bg-white text-violet-900 hover:bg-violet-50"
-                    : "border-violet-500 bg-violet-100 text-violet-900 hover:bg-violet-200"
-                }`}
-                aria-expanded={!phasePanelCollapsed}
-                title={phasePanelCollapsed ? "Expand phase editor" : "Collapse phase editor"}
+                className="rounded-md border border-dashed border-violet-400 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                onClick={addStoryPhase}
               >
-                {phasePanelCollapsed ? "Phases" : "Hide phases"}
+                +Ph
               </button>
-            </div>
-          </div>
-
-          <div className="relative mt-2">
-            <div
-              className={`sticky top-10 z-30 transition-[margin] duration-200 ${
-                phasePanelCollapsed ? "mb-0" : "mb-3"
-              }`}
-            >
-              <div
-                className={`overflow-hidden transition-all duration-200 ease-out ${
-                  phasePanelCollapsed ? "max-h-0 opacity-0" : "max-h-[26rem] opacity-100"
-                }`}
-              >
-                <div className="rounded-xl border border-violet-300/80 bg-violet-50/95 p-2 shadow-md">
-                  <StoryPhasesColumn
-                    phases={editorPhasesForPage ?? []}
-                    selectedPhaseId={selectedPhase?.id ?? STORY_EDITOR_VIRTUAL_PHASE_ID}
-                    onSelect={(id) => {
-                      setSelPhaseId(id);
-                      setSelItemId(null);
-                    }}
-                    onAdd={addStoryPhase}
-                    onRemove={removeStoryPhase}
-                    busy={busy}
-                  />
-                </div>
+              </div>
+              <div className="ml-auto flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPageContentMenuOpen((v) => !v)}
+                  className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight transition-colors ${
+                    pageContentMenuOpen
+                      ? "border-amber-500 bg-amber-100 text-amber-950 hover:bg-amber-200"
+                      : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                  }`}
+                  title={pageContentMenuOpen ? "Close page content controls" : "Open page content controls"}
+                >
+                  🚩 Page content
+                </button>
               </div>
             </div>
-
-          <div className="mt-1 grid min-h-0 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_min(22rem,30vw)]">
-            <div className="min-w-0 space-y-4">
-          <label className={labelClass()}>
-            Page image fit
-            <select
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              value={selectedPage.image_fit ?? image_fit}
-              onChange={(e) =>
-                updatePage(selectedPage.id, {
-                  image_fit: e.target.value as "cover" | "contain",
-                })
-              }
-            >
-              <option value="cover">Cover</option>
-              <option value="contain">Contain</option>
-            </select>
-          </label>
-          <div className="grid gap-2 rounded border border-neutral-200 bg-white/70 p-2 sm:grid-cols-3">
-            <label className="text-xs font-medium text-neutral-800">
-              Crop X (%)
-              <input
-                type="number"
-                min={-100}
-                max={100}
-                step={1}
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                value={selectedPage.background_crop?.x_percent ?? 0}
-                onChange={(e) => {
-                  const x_percent = Number(e.target.value) || 0;
-                  updatePage(selectedPage.id, {
-                    background_crop: {
-                      x_percent,
-                      y_percent: selectedPage.background_crop?.y_percent ?? 0,
-                      zoom_percent: selectedPage.background_crop?.zoom_percent ?? 100,
-                    },
-                  });
-                }}
-              />
-            </label>
-            <label className="text-xs font-medium text-neutral-800">
-              Crop Y (%)
-              <input
-                type="number"
-                min={-100}
-                max={100}
-                step={1}
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                value={selectedPage.background_crop?.y_percent ?? 0}
-                onChange={(e) => {
-                  const y_percent = Number(e.target.value) || 0;
-                  updatePage(selectedPage.id, {
-                    background_crop: {
-                      x_percent: selectedPage.background_crop?.x_percent ?? 0,
-                      y_percent,
-                      zoom_percent: selectedPage.background_crop?.zoom_percent ?? 100,
-                    },
-                  });
-                }}
-              />
-            </label>
-            <label className="text-xs font-medium text-neutral-800">
-              Zoom (%)
-              <input
-                type="number"
-                min={50}
-                max={300}
-                step={1}
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                value={selectedPage.background_crop?.zoom_percent ?? 100}
-                onChange={(e) => {
-                  const zoom_percent = Number(e.target.value) || 100;
-                  updatePage(selectedPage.id, {
-                    background_crop: {
-                      x_percent: selectedPage.background_crop?.x_percent ?? 0,
-                      y_percent: selectedPage.background_crop?.y_percent ?? 0,
-                      zoom_percent,
-                    },
-                  });
-                }}
-              />
-            </label>
           </div>
-          <label className={labelClass()}>
-            Background color (optional, hex)
-            <input
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              value={selectedPage.background_color ?? ""}
-              placeholder="#e8f6fd"
-              onChange={(e) =>
-                updatePage(selectedPage.id, {
-                  background_color: e.target.value || undefined,
-                })
-              }
-            />
-          </label>
-          <label className={labelClass()}>
-            Video URL (optional — replaces background image)
-            <input
-              type="url"
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              value={selectedPage.video_url ?? ""}
-              onChange={(e) =>
-                updatePage(selectedPage.id, { video_url: e.target.value || undefined })
-              }
-            />
-          </label>
-          <label className={labelClass()}>
-            Page text
-            <textarea
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              rows={3}
-              value={selectedPage.body_text ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                const next = pages.map((p) =>
-                  p.id === selectedPage.id ? { ...p, body_text: v } : p,
-                );
-                setBody(v);
-                pushEmit(next);
-              }}
-            />
-          </label>
-          <label className={labelClass()}>
-            Read-aloud for this page (optional)
-            <textarea
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              rows={2}
-              value={selectedPage.read_aloud_text ?? ""}
-              onChange={(e) =>
-                updatePage(selectedPage.id, {
-                  read_aloud_text: e.target.value || undefined,
-                })
-              }
-            />
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium text-neutral-800">
-            <input
-              type="checkbox"
-              checked={selectedPage.auto_play_page_text ?? false}
-              onChange={(e) =>
-                updatePage(selectedPage.id, { auto_play_page_text: e.target.checked })
-              }
-            />
-            Auto-play page text at start
-          </label>
-          <MediaUrlControls
-            label="Page sound (plays when page is shown — after first tap in player)"
-            value={selectedPage.page_audio_url ?? ""}
-            onChange={(v) =>
-              updatePage(selectedPage.id, { page_audio_url: v || undefined })
-            }
-            disabled={busy}
-            compact
-          />
 
+          <div className="relative mt-2 overflow-visible">
+          <div ref={editorSplitRef} className="mt-1 min-h-0 items-stretch gap-3 md:flex">
+            <div className="min-w-0 space-y-4 md:min-w-0 md:flex-1">
           <div className="rounded border border-neutral-200 bg-white p-3">
-            <p className="mb-0.5 text-sm font-semibold">Items on this page</p>
+            <p className="mb-0.5 text-sm font-semibold">Scene Editor</p>
             <p className="mb-2 text-[11px] text-neutral-500">
               <strong>Resize</strong> (sky corner) changes the object box on the page. Item image uses a
               simple scale value only.
             </p>
             {(selectedPage.background_image_url ?? image_url) ? (
-              <div
-                className={`relative transition-all duration-150 ${itemsCanvasCompact ? "mx-auto max-w-[520px]" : "w-full"}`}
-              >
+              <div className="relative w-full" style={{ containerType: "inline-size" }}>
                 <RectRegionEditor
                   imageUrl={(selectedPage.background_image_url ?? image_url)!}
                   imageFit={selectedPage.image_fit ?? image_fit}
                   stageAspectRatio="16 / 10"
-                  cropXPercent={selectedPage.background_crop?.x_percent ?? 0}
-                  cropYPercent={selectedPage.background_crop?.y_percent ?? 0}
-                  cropZoomPercent={selectedPage.background_crop?.zoom_percent ?? 100}
+                  cropXPercent={0}
+                  cropYPercent={0}
+                  cropZoomPercent={100}
                   regions={selectedPage.items.map(storyItemToRect)}
                   onRegionsChange={(regs) => {
                     const map = new Map(selectedPage.items.map((i) => [i.id, i]));
@@ -1040,9 +1011,28 @@ export function StoryFields({
                     );
                     const fallback =
                       "https://placehold.co/120x80/f1f5f9/334155?text=Item";
-                    const nextItems = regs.map((r) =>
-                      rectToStoryItem(r, map.get(r.id), fallback),
-                    );
+                    const nextItems = regs.map((r) => {
+                      const prev = map.get(r.id);
+                      const nextItem = rectToStoryItem(r, prev, fallback);
+                      if ((prev?.kind ?? "image") !== "text") return nextItem;
+                      const prevW = prev?.w_percent ?? 0;
+                      const prevH = prev?.h_percent ?? 0;
+                      if (prevW <= 0 || prevH <= 0) return nextItem;
+                      const wRatio = r.w_percent / prevW;
+                      const hRatio = r.h_percent / prevH;
+                      if (!Number.isFinite(wRatio) || !Number.isFinite(hRatio)) return nextItem;
+                      const sizeChanged = Math.abs(wRatio - 1) > 0.01 || Math.abs(hRatio - 1) > 0.01;
+                      if (!sizeChanged) return nextItem;
+                      // Corner scale keeps aspect ratio; horizontal-only resize should not change font size.
+                      const proportional = Math.abs(wRatio - hRatio) <= 0.12;
+                      if (!proportional) return nextItem;
+                      const baseSize = prev?.text_size_px ?? 24;
+                      const scale = Math.max(0.25, (wRatio + hRatio) / 2);
+                      return {
+                        ...nextItem,
+                        text_size_px: Math.min(128, Math.max(10, Math.round(baseSize * scale))),
+                      };
+                    });
                     const next = pages.map((p) =>
                       p.id === selectedPage.id ?
                         pruneDeletedItemReferences({ ...p, items: nextItems }, removedIds)
@@ -1058,13 +1048,32 @@ export function StoryFields({
                     setSelItemId(ids[0] ?? null);
                   }}
                   disabled={busy}
+                  showHorizontalResizeHandle={(r) => {
+                    const it = selectedPage.items.find((x) => x.id === r.id);
+                    return (it?.kind ?? "image") === "text";
+                  }}
                   renderRegion={(r) => {
                     const it = selectedPage.items.find((x) => x.id === r.id);
-                    const src = it?.image_url;
+                    if (!it) return null;
+                    if ((it.kind ?? "image") === "text") {
+                      return (
+                        <div
+                          className="flex h-full w-full items-center justify-center px-2 text-center font-semibold whitespace-pre-wrap break-words"
+                          style={{
+                            color: it.text_color ?? "#0f172a",
+                            fontSize: `calc(${it.text_size_px ?? 24} * 100cqw / 960)`,
+                            fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {it.text?.trim() || "Text"}
+                        </div>
+                      );
+                    }
+                    const src = it.image_url;
                     if (!src) return null;
                     const dim =
                       !!selectedPhase &&
-                      !!it &&
                       !isItemVisibleInEditorPhase(
                         selectedPhase,
                         it,
@@ -1504,37 +1513,6 @@ export function StoryFields({
                     </div>
                   </div>
                 ) : null}
-                <div className="mt-2 flex flex-col items-center gap-1">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      title="Larger editor preview only. Does not change the lesson for students."
-                      onClick={() => setItemsCanvasCompact(false)}
-                      className={`rounded border px-2 py-1 text-xs font-semibold ${
-                        !itemsCanvasCompact
-                          ? "border-sky-500 bg-sky-100 text-sky-900"
-                          : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-                      }`}
-                    >
-                      Wider editor
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      title="Smaller editor preview only. Does not change the lesson for students."
-                      onClick={() => setItemsCanvasCompact(true)}
-                      className={`rounded border px-2 py-1 text-xs font-semibold ${
-                        itemsCanvasCompact
-                          ? "border-sky-500 bg-sky-100 text-sky-900"
-                          : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-                      }`}
-                    >
-                      Compact editor
-                    </button>
-                  </div>
-                  <span className="text-[10px] text-neutral-500">Editor layout only</span>
-                </div>
               </div>
             ) : (
               <p className="text-sm text-amber-800">
@@ -1577,10 +1555,54 @@ export function StoryFields({
               </button>
               <button
                 type="button"
+                disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                className="rounded border border-violet-200 bg-white px-2 py-1 text-sm font-semibold text-violet-900"
+                onClick={() => {
+                  const id = nextRegionId(
+                    selectedPage.items.map(storyItemToRect),
+                    "text",
+                  );
+                  const base = defaultRegion(id);
+                  const newItem: StoryItem = {
+                    ...base,
+                    kind: "text",
+                    text: "Text",
+                    text_color: "#0f172a",
+                    text_size_px: 24,
+                    image_url: "https://placehold.co/2x2/ffffff/ffffff",
+                    image_scale: 1,
+                    show_card: false,
+                    show_on_start: true,
+                    z_index: selectedPage.items.length,
+                    enter: { preset: "fade_in", duration_ms: 500 },
+                    name: undefined,
+                  };
+                  const next = pages.map((p) =>
+                    p.id === selectedPage.id ?
+                      { ...p, items: [...p.items, newItem] }
+                    : p,
+                  );
+                  selectCanvasItem(id);
+                  pushEmit(next);
+                }}
+              >
+                Add text
+              </button>
+              <button
+                type="button"
                 disabled={busy || !selItemId}
                 className="rounded border border-red-200 px-2 py-1 text-sm text-red-800"
                 onClick={() => {
                   if (!selItemId && selItemIds.length === 0) return;
+                  if (typeof window !== "undefined") {
+                    const itemCount = selItemIds.length > 0 ? selItemIds.length : 1;
+                    const confirmed = window.confirm(
+                      itemCount > 1 ?
+                        `Remove ${itemCount} selected items from this scene? This cannot be undone.`
+                      : "Remove this item from the scene? This cannot be undone.",
+                    );
+                    if (!confirmed) return;
+                  }
                   const removeIds = new Set(selItemIds.length > 0 ? selItemIds : [selItemId!]);
                   const next = pages.map((p) =>
                     p.id === selectedPage.id ?
@@ -1617,6 +1639,195 @@ export function StoryFields({
               >
                 Deselect all
               </button>
+            </div>
+            <div className="mt-3 space-y-2">
+              <input
+                ref={bgVideoFileRef}
+                type="file"
+                accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                className="hidden"
+                disabled={busy || bgVideoUploading}
+                onChange={(e) => void onBackgroundVideoFileChange(e)}
+              />
+              <MediaUrlControls
+                label="Page background image"
+                value={selectedPage.background_image_url ?? ""}
+                onChange={(v) =>
+                  updatePage(selectedPage.id, { background_image_url: v || undefined })
+                }
+                disabled={busy}
+                compact
+                hidePreview
+                hideUrlInput
+                extraButtons={
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setBgImageUrlMenuOpen((v) => !v)}
+                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
+                    >
+                      URL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBgColorMenuOpen((v) => !v)}
+                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
+                    >
+                      Color
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBgVideoMenuOpen((v) => !v)}
+                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
+                    >
+                      {selectedPage.video_url ? "Video on" : "Video"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updatePage(selectedPage.id, {
+                          image_fit:
+                            (selectedPage.image_fit ?? image_fit) === "cover" ?
+                              "contain"
+                            : "cover",
+                        })
+                      }
+                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
+                    >
+                      Fit: {(selectedPage.image_fit ?? image_fit) === "cover" ? "Cover" : "Contain"}
+                    </button>
+                  </>
+                }
+              />
+              {bgImageUrlMenuOpen ? (
+                <div className="rounded border border-neutral-200 bg-white/90 p-2">
+                  <label className="block text-xs font-medium text-neutral-800">
+                    Background image URL
+                    <input
+                      type="url"
+                      className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                      placeholder="Paste image URL"
+                      value={selectedPage.background_image_url ?? ""}
+                      onChange={(e) =>
+                        updatePage(selectedPage.id, {
+                          background_image_url: e.target.value || undefined,
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              ) : null}
+              {bgColorMenuOpen ? (
+                <div className="rounded border border-neutral-200 bg-white/90 p-2">
+                  <label className="text-xs font-medium text-neutral-800">
+                    Background color
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={selectedPage.background_color ?? "#e8f6fd"}
+                        onChange={(e) =>
+                          updatePage(selectedPage.id, {
+                            background_color: e.target.value || undefined,
+                          })
+                        }
+                      />
+                      <input
+                        className="w-32 rounded border px-2 py-1 text-xs"
+                        value={selectedPage.background_color ?? ""}
+                        placeholder="#e8f6fd"
+                        onChange={(e) =>
+                          updatePage(selectedPage.id, {
+                            background_color: e.target.value || undefined,
+                          })
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                        onClick={() => updatePage(selectedPage.id, { background_color: undefined })}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </label>
+                </div>
+              ) : null}
+              {bgVideoMenuOpen ? (
+                <div className="space-y-2 rounded border border-neutral-200 bg-white/90 p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={busy || bgVideoUploading}
+                      onClick={() => bgVideoFileRef.current?.click()}
+                      className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold"
+                    >
+                      {bgVideoUploading ? "Uploading..." : "Upload video"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBgVideoLibraryOpen((v) => !v)}
+                      className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold"
+                    >
+                      {bgVideoLibraryOpen ? "Hide library" : "Video library"}
+                    </button>
+                    {selectedPage.video_url ? (
+                      <button
+                        type="button"
+                        onClick={() => updatePage(selectedPage.id, { video_url: undefined })}
+                        className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700"
+                      >
+                        Remove video
+                      </button>
+                    ) : null}
+                  </div>
+                  <label className="block text-xs font-medium text-neutral-800">
+                    Video URL (optional)
+                    <input
+                      type="url"
+                      className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                      value={selectedPage.video_url ?? ""}
+                      onChange={(e) =>
+                        updatePage(selectedPage.id, { video_url: e.target.value || undefined })
+                      }
+                    />
+                  </label>
+                  {bgVideoErr ? <p className="text-xs text-red-700">{bgVideoErr}</p> : null}
+                  {bgVideoLibraryOpen ? (
+                    <div className="rounded border border-neutral-200 bg-neutral-50 p-2">
+                      <input
+                        type="text"
+                        value={bgVideoLibraryQuery}
+                        onChange={(e) => setBgVideoLibraryQuery(e.target.value)}
+                        placeholder="Search videos"
+                        className="w-full rounded border px-2 py-1 text-xs"
+                      />
+                      <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+                        {bgVideoLibraryLoading ? (
+                          <p className="text-xs text-neutral-600">Loading...</p>
+                        ) : bgVideoLibraryErr ? (
+                          <p className="text-xs text-red-700">{bgVideoLibraryErr}</p>
+                        ) : filteredBgVideoAssets.length === 0 ? (
+                          <p className="text-xs text-neutral-600">No videos found.</p>
+                        ) : (
+                          filteredBgVideoAssets.map((asset) => (
+                            <button
+                              key={asset.id}
+                              type="button"
+                              onClick={() => {
+                                updatePage(selectedPage.id, { video_url: asset.public_url });
+                                setBgVideoLibraryOpen(false);
+                              }}
+                              className="block w-full rounded border border-neutral-200 bg-white px-2 py-1 text-left text-xs hover:bg-sky-50"
+                            >
+                              {asset.original_filename}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -1732,29 +1943,167 @@ export function StoryFields({
             </button>
           </div>
             </div>
-            <div className="min-w-0 space-y-3 lg:sticky lg:top-2 lg:max-h-[min(100vh,720px)] lg:overflow-y-auto">
-              {selectedPhase && selectedPage ? (
-                <StoryPhaseProperties
-                  phase={selectedPhase}
-                  allPhases={editorPhasesForPage ?? []}
-                  pageItems={selectedPage.items}
-                  pageHasRealPhases={pageHasRealPhases}
-                  onUpdatePhase={(patch) =>
-                    updateCurrentPhaseById(selectedPhase.id, patch)
-                  }
-                  onSetStart={setStartPhase}
-                  busy={busy}
-                />
+            <div
+              className="hidden md:flex md:w-2 md:self-stretch md:items-stretch md:justify-center"
+              aria-hidden
+            >
+              <button
+                type="button"
+                aria-label="Resize scene and editor panels"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  setEditorPanelResizing({
+                    startX: e.clientX,
+                    startPct: editorRightPanelPct,
+                  });
+                }}
+                className="h-full min-h-[8rem] w-1 cursor-col-resize rounded bg-neutral-200/90 hover:bg-sky-400 active:bg-sky-500"
+              />
+            </div>
+            <div
+              className="min-w-0 w-full space-y-3 md:sticky md:top-[6.5rem] md:grid md:h-[calc(100vh-8rem)] md:w-[var(--editor-right-width)] md:space-y-0"
+              style={{
+                ["--editor-right-width" as any]: `clamp(20rem, ${editorRightPanelPct}%, 52rem)`,
+                ...(visibleEditorPanels > 0
+                  ? { gridTemplateRows: `repeat(${visibleEditorPanels}, minmax(0, 1fr))`, gap: "0.75rem" }
+                  : {}),
+              }}
+            >
+              {showPageContentPanel && selectedPage ? (
+                <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-amber-300/80 bg-amber-50/60 p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
+                      Page content
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setPageContentPinned((v) => !v)}
+                        className="rounded border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-900 hover:bg-amber-50"
+                      >
+                        {pageContentPinned ? "Unpin" : "Pin"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPageContentMenuOpen(false)}
+                        className="rounded border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-900 hover:bg-amber-50"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  <div className="h-full min-h-0 space-y-3 overflow-y-auto">
+                    <label className={labelClass()}>
+                      Page text
+                      <textarea
+                        className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                        rows={3}
+                        value={selectedPage.body_text ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          const next = pages.map((p) =>
+                            p.id === selectedPage.id ? { ...p, body_text: v } : p,
+                          );
+                          setBody(v);
+                          pushEmit(next);
+                        }}
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      Read-aloud for this page (optional)
+                      <textarea
+                        className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                        rows={2}
+                        value={selectedPage.read_aloud_text ?? ""}
+                        onChange={(e) =>
+                          updatePage(selectedPage.id, {
+                            read_aloud_text: e.target.value || undefined,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 text-sm font-medium text-neutral-800">
+                      <input
+                        type="checkbox"
+                        checked={selectedPage.auto_play_page_text ?? false}
+                        onChange={(e) =>
+                          updatePage(selectedPage.id, { auto_play_page_text: e.target.checked })
+                        }
+                      />
+                      Auto-play page text at start
+                    </label>
+                    <AudioUrlControls
+                      label="Page sound (plays when page is shown — after first tap in player)"
+                      value={selectedPage.page_audio_url ?? ""}
+                      onChange={(v) =>
+                        updatePage(selectedPage.id, { page_audio_url: v || undefined })
+                      }
+                      disabled={busy}
+                      compact
+                    />
+                  </div>
+                </div>
               ) : null}
-              {selectedItem && selectedPage ? (
-                <StoryItemEditorPanel
-                  selectedItem={selectedItem}
-                  selectedPage={selectedPage}
-                  pages={pages}
-                  pushEmit={(next) => pushEmit(next)}
-                  busy={busy}
-                  image_url={image_url}
-                />
+              {showPhasePanel && selectedPhase && selectedPage ? (
+                <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-violet-300/80 bg-violet-50/60 p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-900">
+                      Phase editor
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPhasePinned((v) => !v)}
+                      className="rounded border border-violet-300 px-2 py-0.5 text-[10px] font-semibold text-violet-900 hover:bg-violet-50"
+                    >
+                      {phasePinned ? "Unpin" : "Pin"}
+                    </button>
+                  </div>
+                  <div className="h-full min-h-0 overflow-y-auto">
+                    <StoryPhaseProperties
+                      phase={selectedPhase}
+                      allPhases={editorPhasesForPage ?? []}
+                      pageItems={selectedPage.items}
+                      pageHasRealPhases={pageHasRealPhases}
+                      onUpdatePhase={(patch) =>
+                        updateCurrentPhaseById(selectedPhase.id, patch)
+                      }
+                      onSetStart={setStartPhase}
+                      busy={busy}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              {showObjectPanel && selectedPage ? (
+                <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-sky-300/80 bg-sky-50/60 p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                      Object editor
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setObjectPinned((v) => !v)}
+                      className="rounded border border-sky-300 px-2 py-0.5 text-[10px] font-semibold text-sky-900 hover:bg-sky-50"
+                    >
+                      {objectPinned ? "Unpin" : "Pin"}
+                    </button>
+                  </div>
+                  <div className="h-full min-h-0 overflow-y-auto">
+                    {selectedItem ? (
+                      <StoryItemEditorPanel
+                        selectedItem={selectedItem}
+                        selectedPage={selectedPage}
+                        pages={pages}
+                        pushEmit={(next) => pushEmit(next)}
+                        busy={busy}
+                        image_url={image_url}
+                      />
+                    ) : (
+                      <p className="px-2 py-1 text-xs text-neutral-600">
+                        Select an object in the scene to edit it.
+                      </p>
+                    )}
+                  </div>
+                </div>
               ) : null}
             </div>
           </div>
@@ -1762,8 +2111,7 @@ export function StoryFields({
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
+      <div className="space-y-4">
           {!multi ? (
             <>
               <label className={labelClass()}>
@@ -1864,30 +2212,6 @@ export function StoryFields({
             </>
           ) : null}
           <label className={labelClass()}>
-            Read-aloud override (optional — used when single-page or as fallback)
-            <textarea
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              rows={2}
-              value={read_aloud_text}
-              onChange={(e) => {
-                const v = e.target.value;
-                setRead(v);
-                emit({
-                  image_url,
-                  image_fit,
-                  video_url,
-                  body_text,
-                  read_aloud_text: v,
-                  tts_lang,
-                  tip_text,
-                  guide_image,
-                  pages,
-                  page_turn_style: pageTurn,
-                });
-              }}
-            />
-          </label>
-          <label className={labelClass()}>
             TTS language
             <input
               className="mt-1 w-full rounded border px-2 py-1 text-sm"
@@ -1910,95 +2234,6 @@ export function StoryFields({
               }}
             />
           </label>
-          <div className="rounded border border-amber-200 bg-amber-50/80 p-3">
-            <p className="mb-2 text-sm font-semibold text-amber-950">Student guide (tip)</p>
-            <label className={labelClass()}>
-              Guide tip text
-              <input
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                value={tip_text}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setTip(v);
-                  emit({
-                    image_url,
-                    image_fit,
-                    video_url,
-                    body_text,
-                    read_aloud_text,
-                    tts_lang,
-                    tip_text: v,
-                    guide_image,
-                    pages,
-                    page_turn_style: pageTurn,
-                  });
-                }}
-              />
-            </label>
-            <MediaUrlControls
-              label="Guide image"
-              value={guide_image}
-              onChange={(v) => {
-                setGuideImg(v);
-                emit({
-                  image_url,
-                  image_fit,
-                  video_url,
-                  body_text,
-                  read_aloud_text,
-                  tts_lang,
-                  tip_text,
-                  guide_image: v,
-                  pages,
-                  page_turn_style: pageTurn,
-                });
-              }}
-              disabled={busy}
-              compact
-            />
-          </div>
-        </div>
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-          <p className="mb-3 text-sm font-semibold text-neutral-800">Preview</p>
-          <p className="mb-1 text-xs font-medium text-neutral-600">Story</p>
-          <div className="relative mb-4 aspect-video w-full max-w-md overflow-hidden rounded border border-neutral-300 bg-white">
-            {multi && selectedPage?.background_image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={selectedPage.background_image_url}
-                alt=""
-                className={`h-full w-full ${
-                  (selectedPage.image_fit ?? image_fit) === "contain" ? "object-contain" : "object-cover"
-                }`}
-              />
-            ) : !multi && image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image_url}
-                alt=""
-                className={`h-full w-full ${image_fit === "contain" ? "object-contain" : "object-cover"}`}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-neutral-400">
-                No story image
-              </div>
-            )}
-          </div>
-          {(tip_text || guide_image) ? (
-            <>
-              <p className="mb-1 text-xs font-medium text-neutral-600">Guide</p>
-              <div className="flex gap-3 rounded border border-amber-200 bg-amber-50 p-2">
-                {guide_image ? (
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded border border-neutral-300">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={guide_image} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ) : null}
-                <p className="text-sm text-neutral-800">{tip_text || "—"}</p>
-              </div>
-            </>
-          ) : null}
-        </div>
       </div>
     </div>
   );

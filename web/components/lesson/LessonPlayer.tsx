@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   KidButton,
   kidLinkPrimaryClassName,
@@ -28,6 +28,8 @@ import {
   setAvatarId,
   setResumeScreen,
 } from "@/lib/progress/local-storage";
+import { awardRewards, getRewards } from "@/lib/progress/rewards";
+import { recordWordInteraction } from "@/lib/progress/word-performance";
 import {
   essayPayloadSchema,
   fillBlanksPayloadSchema,
@@ -184,6 +186,10 @@ export function LessonPlayer({
     useState<InteractionFeedbackKind>("none");
   /** Start at 0 so SSR + first client paint match; getStickerCount() reads localStorage and differs on server vs client. */
   const [stickerCount, setStickerCount] = useState(0);
+  const [gold, setGold] = useState(0);
+  const [experience, setExperience] = useState(0);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAdvanceCompletedForScreenRef = useRef<string | null>(null);
 
   const muted = useMuted();
   const isPreview = mode === "preview";
@@ -192,6 +198,9 @@ export function LessonPlayer({
   useEffect(() => {
     if (isPreview) return;
     setStickerCount(getStickerCount());
+    const rewards = getRewards();
+    setGold(rewards.gold);
+    setExperience(rewards.experience);
   }, [isPreview]);
 
   useEffect(() => {
@@ -207,6 +216,10 @@ export function LessonPlayer({
 
   useEffect(() => {
     stopSpeaking();
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
     queueMicrotask(() => {
       setInteractionPass(false);
       setDragFilled([]);
@@ -217,6 +230,15 @@ export function LessonPlayer({
     }
   }, [index, lessonId, isPreview]);
 
+  useEffect(
+    () => () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+      }
+    },
+    [],
+  );
+
   const goNext = useCallback(() => {
     if (index < screens.length - 1) {
       const next = index + 1;
@@ -226,6 +248,13 @@ export function LessonPlayer({
       if (!isPreview) {
         markLessonComplete(lessonId);
         playSfx("complete", muted);
+        const snapshot = awardRewards({
+          eventId: `${lessonId}:${Date.now()}`,
+          goldDelta: 0,
+          experienceDelta: 10,
+        });
+        setGold(snapshot.gold);
+        setExperience(snapshot.experience);
       }
       setDone(true);
     }
@@ -238,6 +267,35 @@ export function LessonPlayer({
       visualEdit?.onScreenIndexChange?.(next);
     }
   }, [index, visualEdit]);
+
+  useEffect(() => {
+    if (!interactionPass) {
+      autoAdvanceCompletedForScreenRef.current = null;
+    }
+  }, [interactionPass]);
+
+  useEffect(() => {
+    if (!parsed) return;
+    if (!screen) return;
+    if (!interactionPass) return;
+    if (parsed.type !== "interaction") return;
+    if (parsed.auto_advance_on_pass !== true) return;
+    const currentScreenId = screen.id;
+    if (
+      autoAdvanceCompletedForScreenRef.current &&
+      autoAdvanceCompletedForScreenRef.current !== currentScreenId
+    ) {
+      return;
+    }
+    if (autoAdvanceCompletedForScreenRef.current === currentScreenId) return;
+    if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      // Guard against stale timer advancing a newer screen.
+      if (screens[index]?.id !== currentScreenId) return;
+      autoAdvanceCompletedForScreenRef.current = currentScreenId;
+      goNext();
+    }, 650);
+  }, [interactionPass, parsed, goNext, screen, screens, index]);
 
   if (screens.length === 0 || !screen) {
     return (
@@ -282,6 +340,38 @@ export function LessonPlayer({
 
   if (done) {
     if (isPreview) {
+      if (lessonId.startsWith("activity-")) {
+        return (
+          <KidPanel className="space-y-4 text-center">
+            <p className="text-2xl font-bold text-kid-ink">Congratulations!</p>
+            <p className="mt-2 text-lg text-kid-ink">
+              You completed <span className="font-semibold">{lessonTitle}</span>.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <KidButton
+                type="button"
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setDone(false);
+                  setIndex(0);
+                  visualEdit?.onScreenIndexChange?.(0);
+                }}
+              >
+                Play again
+              </KidButton>
+              <Link href="/teacher" className={kidLinkSecondaryClassName}>
+                Back to dashboard
+              </Link>
+              <Link href="/teacher/courses" className={kidLinkSecondaryClassName}>
+                Courses
+              </Link>
+              <Link href="/activities" className={kidLinkSecondaryClassName}>
+                Activity library
+              </Link>
+            </div>
+          </KidPanel>
+        );
+      }
       return (
         <KidPanel className="space-y-4 text-center">
           <p className="text-2xl font-bold text-kid-ink">End of preview</p>
@@ -333,12 +423,29 @@ export function LessonPlayer({
       if (!isPreview) {
         const { stickers } = recordCorrectAnswer();
         setStickerCount(stickers);
+        const perQuestionGold =
+          typeof parsed.gold_reward_on_pass === "number" && Number.isFinite(parsed.gold_reward_on_pass) ?
+            Math.max(0, parsed.gold_reward_on_pass)
+          : 1;
+        const rewardSnapshot = awardRewards({
+          eventId: `${lessonId}:${screen.id}:pass`,
+          goldDelta: perQuestionGold,
+          experienceDelta: 0,
+        });
+        setGold(rewardSnapshot.gold);
+        setExperience(rewardSnapshot.experience);
+        const trackedWords = extractTrackedWords(parsed);
+        recordWordInteraction(trackedWords, true);
       }
     },
     onWrong: () => {
       setInteractionFeedback("wrong");
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
+      if (!isPreview) {
+        const trackedWords = extractTrackedWords(parsed);
+        recordWordInteraction(trackedWords, false);
+      }
     },
   };
 
@@ -353,6 +460,12 @@ export function LessonPlayer({
         <h1 className="text-xl font-bold text-kid-ink">{lessonTitle}</h1>
         <div className="flex flex-wrap items-center gap-3">
           <KidStickerStrip count={stickerCount} />
+          <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
+            Gold: {gold}
+          </p>
+          <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
+            XP: {experience}
+          </p>
           <KidProgressBar currentIndex={index} total={screens.length} />
         </div>
       </div>
@@ -761,4 +874,41 @@ export function LessonPlayer({
       )}
     </div>
   );
+}
+
+function extractWords(text: string): string[] {
+  const matches = text.match(/[A-Za-z']+/g) ?? [];
+  return matches.map((w) => w.toLowerCase());
+}
+
+function uniqueWords(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean))).slice(0, 40);
+}
+
+function extractTrackedWords(payload: ScreenPayload): string[] {
+  if (payload.type !== "interaction") return [];
+  switch (payload.subtype) {
+    case "mc_quiz":
+      return uniqueWords(
+        extractWords(payload.question).concat(payload.options.flatMap((option) => extractWords(option.label))),
+      );
+    case "true_false":
+      return uniqueWords(extractWords(payload.statement));
+    case "fill_blanks":
+      return uniqueWords(
+        extractWords(payload.template).concat((payload.word_bank ?? []).flatMap((word) => extractWords(word))),
+      );
+    case "fix_text":
+      return uniqueWords(
+        extractWords(payload.broken_text).concat(payload.acceptable.flatMap((option) => extractWords(option))),
+      );
+    case "drag_sentence":
+      return uniqueWords(payload.word_bank.flatMap((word) => extractWords(word)));
+    case "listen_hotspot_sequence":
+      return uniqueWords(
+        extractWords(payload.body_text ?? "").concat(payload.targets.flatMap((target) => extractWords(target.label))),
+      );
+    default:
+      return [];
+  }
 }

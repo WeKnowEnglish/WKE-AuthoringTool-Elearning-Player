@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
+import { MediaBulkUploadCard } from "@/components/teacher/media/MediaBulkUploadCard";
 import {
   deleteTeacherMedia,
   searchTeacherMedia,
   updateTeacherMediaMetadataFromForm,
-  uploadTeacherMedia,
+  uploadTeacherMediaBulkFromForm,
   type MediaKind,
 } from "@/lib/actions/media";
 
@@ -70,7 +71,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
     "use server";
     const uploadKind = (formData.get("kind") as MediaKind | null) ?? "image";
     try {
-      const result = await uploadTeacherMedia(formData, uploadKind);
+      const result = await uploadTeacherMediaBulkFromForm(formData);
       const base = {
         q,
         kind,
@@ -82,16 +83,26 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         skills,
         view,
       };
-      const statusValue =
-        result.duplicate_status === "exact_duplicate_reused" ? "exact_duplicate_reused" : "uploaded";
+      const duplicateReusedCount = result.items.filter(
+        (item) => item.status === "success" && item.duplicate_status === "exact_duplicate_reused",
+      ).length;
+      const uploadedCount = result.successCount - duplicateReusedCount;
+      const failedItems = result.items.filter((item) => item.status === "error");
+      const failedPreview = failedItems
+        .slice(0, 3)
+        .map((item) => `${item.filename}: ${item.message ?? "Upload failed"}`)
+        .join(" | ");
+      const hasPartialFailures = result.failureCount > 0;
+      const statusValue = hasPartialFailures ? "partial_upload" : "uploaded";
+      const summaryMessage = hasPartialFailures ?
+          `Uploaded ${result.successCount}/${result.items.length} file(s). Failed ${result.failureCount}. ${failedPreview}${failedItems.length > 3 ? " | ...more failures" : ""}`
+        : `Upload complete. Added ${uploadedCount} file(s)${duplicateReusedCount > 0 ? `, reused ${duplicateReusedCount} exact duplicate(s)` : ""}.`;
       redirect(
         buildSearchUrl({
           ...base,
           status: statusValue,
-          message:
-            statusValue === "exact_duplicate_reused" ?
-              "Exact duplicate found. Reused existing asset."
-            : "Upload complete.",
+          kind: uploadKind,
+          message: summaryMessage,
         }),
       );
     } catch (e) {
@@ -179,40 +190,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="text-sm font-bold text-neutral-900">Upload media</h2>
-        <p className="mt-1 text-xs text-neutral-600">
-          Exact duplicate images are auto-reused. Near-duplicate images are blocked.
-        </p>
-        <form action={uploadAction} className="mt-3 flex flex-wrap items-end gap-3">
-          <label className="text-sm font-medium text-neutral-800">
-            Type
-            <select
-              name="kind"
-              defaultValue="image"
-              className="mt-1 block rounded border px-2 py-1 text-sm"
-            >
-              <option value="image">Image</option>
-              <option value="audio">Audio</option>
-            </select>
-          </label>
-          <label className="text-sm font-medium text-neutral-800">
-            File
-            <input
-              name="file"
-              type="file"
-              required
-              className="mt-1 block rounded border px-2 py-1 text-sm"
-            />
-          </label>
-          <button
-            type="submit"
-            className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
-          >
-            Upload
-          </button>
-        </form>
-      </section>
+      <MediaBulkUploadCard action={uploadAction} />
 
       <section className="rounded-lg border border-neutral-200 bg-white p-4">
         <h2 className="text-sm font-bold text-neutral-900">Search and filters</h2>

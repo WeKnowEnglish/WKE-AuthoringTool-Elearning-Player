@@ -106,6 +106,72 @@ export function StoryItemEditorPanel({
           }}
         />
       </label>
+      <label className={labelClass()}>
+        Item type
+        <select
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={selectedItem.kind ?? "image"}
+          onChange={(e) => {
+            const kind = e.target.value as "image" | "text";
+            patchSelectedItem((it) => ({
+              ...it,
+              kind,
+              image_url:
+                kind === "image" ?
+                  (it.image_url || "https://placehold.co/120x80/f1f5f9/334155?text=Item")
+                : (it.image_url || "https://placehold.co/2x2/ffffff/ffffff"),
+              text: kind === "text" ? (it.text ?? "Text") : it.text,
+              show_card: kind === "text" ? false : (it.show_card ?? true),
+            }));
+          }}
+        >
+          <option value="image">Image</option>
+          <option value="text">Text</option>
+        </select>
+      </label>
+      {(selectedItem.kind ?? "image") === "text" ? (
+        <div className="grid gap-2 rounded border border-neutral-200 bg-white/80 p-2 sm:grid-cols-2">
+          <label className="sm:col-span-2 text-xs font-medium text-neutral-800">
+            Text
+            <textarea
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              rows={2}
+              value={selectedItem.text ?? ""}
+              onChange={(e) => {
+                const text = e.target.value || undefined;
+                patchSelectedItem((it) => ({ ...it, text }));
+              }}
+            />
+          </label>
+          <label className="text-xs font-medium text-neutral-800">
+            Text color
+            <input
+              type="color"
+              className="mt-1 h-9 w-full rounded border px-1 py-1"
+              value={selectedItem.text_color ?? "#0f172a"}
+              onChange={(e) => {
+                const text_color = e.target.value || undefined;
+                patchSelectedItem((it) => ({ ...it, text_color }));
+              }}
+            />
+          </label>
+          <label className="text-xs font-medium text-neutral-800">
+            Text size (px)
+            <input
+              type="number"
+              min={10}
+              max={128}
+              step={1}
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              value={selectedItem.text_size_px ?? 24}
+              onChange={(e) => {
+                const text_size_px = Math.min(128, Math.max(10, Number(e.target.value) || 24));
+                patchSelectedItem((it) => ({ ...it, text_size_px }));
+              }}
+            />
+          </label>
+        </div>
+      ) : null}
       <div className="rounded border border-neutral-200 bg-white/80 p-2">
         <p className="text-sm font-semibold text-neutral-900">Tap speech list (phase-aware)</p>
         <p className="mb-2 text-[11px] text-neutral-600">
@@ -266,45 +332,47 @@ export function StoryItemEditorPanel({
           </button>
         </div>
       </div>
-      <MediaUrlControls
-        label="Item image URL"
-        value={selectedItem.image_url}
-        onChange={async (v) => {
-          const next = pages.map((p) =>
-            p.id === selectedPage.id ?
-              {
-                ...p,
-                items: p.items.map((it) =>
-                  it.id === selectedItem.id ? { ...it, image_url: v } : it,
-                ),
-              }
-            : p,
-          );
-          pushEmit(next);
-          const img = new window.Image();
-          img.onload = () => {
-            const sw = img.naturalWidth || 0;
-            const sh = img.naturalHeight || 0;
-            if (sw <= 0 || sh <= 0) return;
-            const resized = next.map((p) =>
+      {(selectedItem.kind ?? "image") === "image" ? (
+        <MediaUrlControls
+          label="Item image URL"
+          value={selectedItem.image_url ?? ""}
+          onChange={async (v) => {
+            const next = pages.map((p) =>
               p.id === selectedPage.id ?
                 {
                   ...p,
                   items: p.items.map((it) =>
-                    it.id === selectedItem.id ?
-                      fitItemBoundsToImageAspect({ ...it, image_url: v }, sw, sh)
-                    : it,
+                    it.id === selectedItem.id ? { ...it, image_url: v } : it,
                   ),
                 }
               : p,
             );
-            pushEmit(resized);
-          };
-          img.src = v;
-        }}
-        disabled={busy}
-        compact
-      />
+            pushEmit(next);
+            const img = new window.Image();
+            img.onload = () => {
+              const sw = img.naturalWidth || 0;
+              const sh = img.naturalHeight || 0;
+              if (sw <= 0 || sh <= 0) return;
+              const resized = next.map((p) =>
+                p.id === selectedPage.id ?
+                  {
+                    ...p,
+                    items: p.items.map((it) =>
+                      it.id === selectedItem.id ?
+                        fitItemBoundsToImageAspect({ ...it, image_url: v }, sw, sh)
+                      : it,
+                    ),
+                  }
+                : p,
+              );
+              pushEmit(resized);
+            };
+            img.src = v;
+          }}
+          disabled={busy}
+          compact
+        />
+      ) : null}
       <div className="rounded border border-neutral-200 bg-white/70 p-2">
         <p className="text-xs font-semibold text-neutral-800">Item image scale</p>
         <p className="mb-1 text-[10px] text-neutral-500">

@@ -15,12 +15,21 @@ type Props = {
 export function AudioUrlControls({ label, value, onChange, disabled, compact }: Props) {
   const inputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
+  const librarySearchRef = useRef<HTMLInputElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [assets, setAssets] = useState<MediaAssetRow[]>([]);
+  const [libraryQuery, setLibraryQuery] = useState("");
   const [libLoading, setLibLoading] = useState(false);
   const [libErr, setLibErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recordCountdown, setRecordCountdown] = useState<number | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordChunksRef = useRef<BlobPart[]>([]);
+  const recordStreamRef = useRef<MediaStream | null>(null);
+  const countdownIntervalRef = useRef<number | null>(null);
+  const countdownStartTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!libraryOpen) return;
@@ -40,6 +49,38 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
     return () => {
       cancelled = true;
     };
+  }, [libraryOpen]);
+
+  useEffect(() => {
+    return () => {
+      recorderRef.current?.stop();
+      if (recordStreamRef.current) {
+        for (const t of recordStreamRef.current.getTracks()) t.stop();
+        recordStreamRef.current = null;
+      }
+      if (countdownIntervalRef.current != null) {
+        window.clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      if (countdownStartTimeoutRef.current != null) {
+        window.clearTimeout(countdownStartTimeoutRef.current);
+        countdownStartTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!libraryOpen) return;
+    setLibraryQuery("");
+  }, [libraryOpen]);
+
+  useEffect(() => {
+    if (!libraryOpen) return;
+    const raf = window.requestAnimationFrame(() => {
+      librarySearchRef.current?.focus();
+      librarySearchRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(raf);
   }, [libraryOpen]);
 
   useEffect(() => {
@@ -68,6 +109,93 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
       setUploading(false);
     }
   }
+
+  async function startRecordingNow() {
+    if (recording || disabled || uploading) return;
+    setUploadErr(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordStreamRef.current = stream;
+      recorderRef.current = recorder;
+      recordChunksRef.current = [];
+      recorder.ondataavailable = (ev: BlobEvent) => {
+        if (ev.data.size > 0) recordChunksRef.current.push(ev.data);
+      };
+      recorder.onstop = async () => {
+        const parts = recordChunksRef.current;
+        recordChunksRef.current = [];
+        if (recordStreamRef.current) {
+          for (const t of recordStreamRef.current.getTracks()) t.stop();
+          recordStreamRef.current = null;
+        }
+        if (!parts.length) return;
+        setUploading(true);
+        try {
+          const blob = new Blob(parts, { type: "audio/webm" });
+          const file = new File(
+            [blob],
+            `recorded-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`,
+            { type: "audio/webm" },
+          );
+          const fd = new FormData();
+          fd.set("file", file);
+          const r = await uploadTeacherMedia(fd, "audio");
+          onChange(r.url);
+        } catch (err) {
+          setUploadErr(err instanceof Error ? err.message : "Recording upload failed");
+        } finally {
+          setUploading(false);
+        }
+      };
+      recorder.start();
+      setRecording(true);
+    } catch (err) {
+      setUploadErr(err instanceof Error ? err.message : "Could not start recording");
+    }
+  }
+
+  function startRecordingWithCountdown() {
+    if (recording || recordCountdown != null || disabled || uploading) return;
+    setUploadErr(null);
+    setRecordCountdown(3);
+    countdownIntervalRef.current = window.setInterval(() => {
+      setRecordCountdown((prev) => {
+        if (prev == null) return prev;
+        if (prev <= 1) {
+          if (countdownIntervalRef.current != null) {
+            window.clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    countdownStartTimeoutRef.current = window.setTimeout(() => {
+      countdownStartTimeoutRef.current = null;
+      void startRecordingNow();
+    }, 3000);
+  }
+
+  function stopRecording() {
+    if (!recording) return;
+    setRecording(false);
+    const rec = recorderRef.current;
+    recorderRef.current = null;
+    if (rec && rec.state !== "inactive") rec.stop();
+  }
+
+  const normalizedQuery = libraryQuery.trim().toLowerCase();
+  const filteredAssets =
+    normalizedQuery ?
+      assets.filter((asset) =>
+        [asset.meta_item_name ?? "", asset.original_filename, asset.public_url, ...(asset.meta_tags ?? [])]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedQuery),
+      )
+    : assets;
 
   return (
     <div className="space-y-2">
@@ -99,7 +227,30 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
         >
           Media library
         </button>
+        <button
+          type="button"
+          disabled={disabled || uploading}
+          onClick={() =>
+            recording ? stopRecording() : startRecordingWithCountdown()
+          }
+          className={`rounded border px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ${
+            recording ?
+              "border-red-300 bg-red-50 text-red-700 hover:bg-red-100 active:bg-red-200"
+            : "border-neutral-300 bg-white hover:bg-neutral-50 active:bg-neutral-200"
+          }`}
+        >
+          {recording ?
+            "Stop recording"
+          : recordCountdown != null ?
+            `Starting in ${recordCountdown}...`
+          : "Record"}
+        </button>
       </div>
+      {recordCountdown != null ? (
+        <p className="text-xs font-semibold text-amber-700">
+          Recording starts in {recordCountdown} second{recordCountdown === 1 ? "" : "s"}...
+        </p>
+      ) : null}
       {uploadErr ? <p className="text-sm text-red-700">{uploadErr}</p> : null}
       <label htmlFor={inputId} className="sr-only">
         Audio URL
@@ -143,15 +294,28 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
                 </button>
               </div>
               <div className="max-h-[calc(85vh-3.5rem)] overflow-y-auto p-4">
+                <label className="mb-3 block text-sm">
+                  Search library
+                  <input
+                    ref={librarySearchRef}
+                    type="text"
+                    value={libraryQuery}
+                    onChange={(e) => setLibraryQuery(e.target.value)}
+                    placeholder="Search by name, filename, tag, or URL"
+                    className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+                  />
+                </label>
                 {libLoading ? (
                   <p className="text-sm text-neutral-600">Loading...</p>
                 ) : libErr ? (
                   <p className="text-sm text-red-700">{libErr}</p>
                 ) : assets.length === 0 ? (
                   <p className="text-sm text-neutral-600">No audio uploads yet. Use Upload to add audio files.</p>
+                ) : filteredAssets.length === 0 ? (
+                  <p className="text-sm text-neutral-600">No audio matched your search.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {assets.map((a) => (
+                    {filteredAssets.map((a) => (
                       <li key={a.id} className="rounded border border-neutral-200 p-2">
                         <button
                           type="button"

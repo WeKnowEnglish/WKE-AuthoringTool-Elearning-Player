@@ -34,6 +34,46 @@ export type TeacherModuleRow = {
   module_tags?: { tags?: { slug?: string; label?: string; id?: string } | null }[];
 };
 
+export type ActivitySubtype =
+  | "mc_quiz"
+  | "true_false"
+  | "fill_blanks"
+  | "fix_text"
+  | "drag_sentence"
+  | "listen_hotspot_sequence";
+
+export type ActivityLibraryRow = {
+  id: string;
+  title: string;
+  activity_subtype: ActivitySubtype;
+  level: string;
+  topic: string;
+  vocabulary: string[];
+  payload: {
+    start?: unknown;
+    items?: unknown[];
+    settings?: {
+      shuffle_questions?: boolean;
+      shuffle_answer_options_each_replay?: boolean;
+      auto_advance_on_pass_default?: boolean;
+      activity_subtypes?: string[];
+      editor_module_id?: string;
+      editor_lesson_id?: string;
+    };
+  };
+  question_count: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ActivityLibraryFilters = {
+  q?: string;
+  level?: string;
+  topic?: string;
+  subtype?: ActivitySubtype | "all";
+};
+
 type ModuleSearchFilters = {
   q?: string;
   published?: "all" | "published" | "draft";
@@ -51,6 +91,12 @@ function isMissingCourseSchema(err: PostgrestError | null): boolean {
     msg.includes("module_tags") ||
     msg.includes("tags")
   );
+}
+
+function isMissingActivityLibrarySchema(err: PostgrestError | null): boolean {
+  if (!err) return false;
+  const msg = `${err.message ?? ""} ${err.details ?? ""} ${err.hint ?? ""}`.toLowerCase();
+  return err.code === "42P01" || msg.includes("activity_library_items");
 }
 
 export async function getAllCourses() {
@@ -227,4 +273,86 @@ export async function getLessonSkills(lessonId: string) {
     .eq("lesson_id", lessonId);
   if (error) throw error;
   return (data ?? []).map((r) => r.skill_key as string);
+}
+
+export async function searchActivityLibrary(filters?: ActivityLibraryFilters) {
+  noStore();
+  const supabase = await createClient();
+  let query = supabase
+    .from("activity_library_items")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(300);
+
+  if (filters?.subtype && filters.subtype !== "all") {
+    query = query.eq("activity_subtype", filters.subtype);
+  }
+  if (filters?.level?.trim()) query = query.ilike("level", filters.level.trim());
+  if (filters?.topic?.trim()) query = query.ilike("topic", `%${filters.topic.trim()}%`);
+  if (filters?.q?.trim()) query = query.ilike("title", `%${filters.q.trim()}%`);
+
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingActivityLibrarySchema(error)) return [];
+    throw error;
+  }
+  const rows = (data ?? []) as unknown as ActivityLibraryRow[];
+  const lessonIds = rows
+    .map((row) => row.payload?.settings?.editor_lesson_id)
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  if (!lessonIds.length) return rows;
+
+  const { data: screensData, error: screensErr } = await supabase
+    .from("lesson_screens")
+    .select("lesson_id,order_index,screen_type,payload")
+    .in("lesson_id", lessonIds)
+    .order("order_index", { ascending: true });
+  if (screensErr) return rows;
+
+  const byLesson = new Map<string, Array<{ screen_type: string; payload: unknown }>>();
+  for (const row of screensData ?? []) {
+    const lessonId = row.lesson_id as string;
+    if (!byLesson.has(lessonId)) byLesson.set(lessonId, []);
+    byLesson.get(lessonId)!.push({
+      screen_type: row.screen_type as string,
+      payload: row.payload as unknown,
+    });
+  }
+
+  return rows.map((row) => {
+    const lessonId = row.payload?.settings?.editor_lesson_id;
+    if (!lessonId) return row;
+    const lessonScreens = byLesson.get(lessonId) ?? [];
+    if (!lessonScreens.length) return row;
+    const start = lessonScreens.find((s) => s.screen_type === "start")?.payload ?? row.payload?.start;
+    const items = lessonScreens
+      .filter((s) => s.screen_type === "interaction")
+      .map((s) => s.payload);
+    return {
+      ...row,
+      payload: {
+        ...row.payload,
+        start,
+        items,
+      },
+      question_count: items.length,
+    };
+  });
+}
+
+export async function getActivityLibraryItem(id: string) {
+  noStore();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("activity_library_items")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) {
+    if (isMissingActivityLibrarySchema(error)) {
+      throw new Error("Activity library schema is not available yet. Run migration 014 first.");
+    }
+    throw error;
+  }
+  return data as ActivityLibraryRow;
 }

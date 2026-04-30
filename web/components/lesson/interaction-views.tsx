@@ -265,7 +265,7 @@ export function TrueFalseView({
             src={parsed.image_url}
             alt=""
             fill
-            className="object-cover"
+            className="object-contain bg-white"
             unoptimized={unopt(parsed.image_url)}
           />
         </div>
@@ -2879,6 +2879,17 @@ export function DragSentenceView({
 
   return (
     <div>
+      {parsed.image_url ? (
+        <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
+          <Image
+            src={parsed.image_url}
+            alt=""
+            fill
+            className="object-contain bg-white"
+            unoptimized={unopt(parsed.image_url)}
+          />
+        </div>
+      ) : null}
       <KidPanel>
         {parsed.body_text ? (
           <p className="mb-4 text-lg">{parsed.body_text}</p>

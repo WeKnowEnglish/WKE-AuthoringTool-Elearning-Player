@@ -40,10 +40,16 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             Lessons
           </Link>
           <Link
+            href="/activities"
+            className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
+          >
+            Activities
+          </Link>
+          <Link
             href="/profile"
             className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
-            Profile
+            Achievements
           </Link>
           <KidButton
             type="button"

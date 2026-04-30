@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -16,6 +17,12 @@ type Props = {
   disabled?: boolean;
   /** Shorter preview height in compact forms */
   compact?: boolean;
+  /** Hide inline image preview while keeping upload/library/url controls */
+  hidePreview?: boolean;
+  /** Hide direct URL input field; caller can provide custom URL UI */
+  hideUrlInput?: boolean;
+  /** Optional extra controls rendered next to Upload/Media library buttons */
+  extraButtons?: ReactNode;
 };
 
 export function MediaUrlControls({
@@ -24,11 +31,16 @@ export function MediaUrlControls({
   onChange,
   disabled,
   compact,
+  hidePreview,
+  hideUrlInput,
+  extraButtons,
 }: Props) {
   const inputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
+  const librarySearchRef = useRef<HTMLInputElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [assets, setAssets] = useState<MediaAssetRow[]>([]);
+  const [libraryQuery, setLibraryQuery] = useState("");
   const [libLoading, setLibLoading] = useState(false);
   const [libErr, setLibErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -54,6 +66,20 @@ export function MediaUrlControls({
     return () => {
       cancelled = true;
     };
+  }, [libraryOpen]);
+
+  useEffect(() => {
+    if (!libraryOpen) return;
+    setLibraryQuery("");
+  }, [libraryOpen]);
+
+  useEffect(() => {
+    if (!libraryOpen) return;
+    const raf = window.requestAnimationFrame(() => {
+      librarySearchRef.current?.focus();
+      librarySearchRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(raf);
   }, [libraryOpen]);
 
   useEffect(() => {
@@ -84,6 +110,16 @@ export function MediaUrlControls({
   }
 
   const previewH = compact ? "h-28" : "h-40";
+  const normalizedQuery = libraryQuery.trim().toLowerCase();
+  const filteredAssets =
+    normalizedQuery ?
+      assets.filter((asset) =>
+        [asset.meta_item_name ?? "", asset.original_filename, asset.public_url, ...(asset.meta_tags ?? [])]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedQuery),
+      )
+    : assets;
 
   return (
     <div className="space-y-2">
@@ -115,23 +151,28 @@ export function MediaUrlControls({
         >
           Media library
         </button>
+        {extraButtons}
       </div>
       {uploadErr ? (
         <p className="text-sm text-red-700">{uploadErr}</p>
       ) : null}
-      <label htmlFor={inputId} className="sr-only">
-        Image URL
-      </label>
-      <input
-        id={inputId}
-        type="url"
-        className="mt-1 w-full rounded border px-2 py-1 text-sm"
-        placeholder="Or paste image URL"
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {value ? (
+      {!hideUrlInput ? (
+        <>
+          <label htmlFor={inputId} className="sr-only">
+            Image URL
+          </label>
+          <input
+            id={inputId}
+            type="url"
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            placeholder="Or paste image URL"
+            value={value}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </>
+      ) : null}
+      {value && !hidePreview ? (
         <div
           className={`relative mt-2 w-full max-w-md overflow-hidden rounded border border-neutral-300 bg-neutral-100 ${previewH}`}
         >
@@ -164,6 +205,17 @@ export function MediaUrlControls({
                 </button>
               </div>
               <div className="max-h-[calc(85vh-3.5rem)] overflow-y-auto p-4">
+                <label className="mb-3 block text-sm">
+                  Search library
+                  <input
+                    ref={librarySearchRef}
+                    type="text"
+                    value={libraryQuery}
+                    onChange={(e) => setLibraryQuery(e.target.value)}
+                    placeholder="Search by name, filename, tag, or URL"
+                    className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+                  />
+                </label>
                 {libLoading ? (
                   <p className="text-sm text-neutral-600">Loading…</p>
                 ) : libErr ? (
@@ -172,9 +224,11 @@ export function MediaUrlControls({
                   <p className="text-sm text-neutral-600">
                     No uploads yet. Use Upload on any image field to add files.
                   </p>
+                ) : filteredAssets.length === 0 ? (
+                  <p className="text-sm text-neutral-600">No media matched your search.</p>
                 ) : (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                    {assets.map((a) => (
+                    {filteredAssets.map((a) => (
                       <li key={a.id}>
                         <button
                           type="button"

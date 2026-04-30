@@ -20,8 +20,11 @@ export default function HomePage() {
           <Link href="/learn" className={kidLinkPrimaryClassName}>
             Start lessons
           </Link>
+          <Link href="/activities" className={kidLinkSecondaryClassName}>
+            Activity library
+          </Link>
           <Link href="/profile" className={kidLinkSecondaryClassName}>
-            My progress
+            Achievements
           </Link>
         </div>
         <p className="mt-8 border-t-2 border-neutral-200 pt-6 text-center text-sm text-neutral-600">

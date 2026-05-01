@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { listTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/lib/actions/media";
+import { searchTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/lib/actions/media";
 
 type Props = {
   label: string;
@@ -34,22 +34,29 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
   useEffect(() => {
     if (!libraryOpen) return;
     let cancelled = false;
-    setLibLoading(true);
-    setLibErr(null);
-    listTeacherMedia("audio")
-      .then((rows) => {
-        if (!cancelled) setAssets(rows);
+    const timeoutId = window.setTimeout(() => {
+      setLibLoading(true);
+      setLibErr(null);
+      searchTeacherMedia({
+        kind: "audio",
+        q: libraryQuery.trim(),
+        limit: 1000,
       })
-      .catch((e: unknown) => {
-        if (!cancelled) setLibErr(e instanceof Error ? e.message : "Failed to load library");
-      })
-      .finally(() => {
-        if (!cancelled) setLibLoading(false);
-      });
+        .then((rows) => {
+          if (!cancelled) setAssets(rows);
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) setLibErr(e instanceof Error ? e.message : "Failed to load library");
+        })
+        .finally(() => {
+          if (!cancelled) setLibLoading(false);
+        });
+    }, 200);
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, [libraryOpen]);
+  }, [libraryOpen, libraryQuery]);
 
   useEffect(() => {
     return () => {
@@ -186,17 +193,6 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
     if (rec && rec.state !== "inactive") rec.stop();
   }
 
-  const normalizedQuery = libraryQuery.trim().toLowerCase();
-  const filteredAssets =
-    normalizedQuery ?
-      assets.filter((asset) =>
-        [asset.meta_item_name ?? "", asset.original_filename, asset.public_url, ...(asset.meta_tags ?? [])]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-    : assets;
-
   return (
     <div className="space-y-2">
       <span className={compact ? "text-xs font-medium text-neutral-800" : "mt-2 block text-sm font-medium text-neutral-800"}>
@@ -311,11 +307,11 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
                   <p className="text-sm text-red-700">{libErr}</p>
                 ) : assets.length === 0 ? (
                   <p className="text-sm text-neutral-600">No audio uploads yet. Use Upload to add audio files.</p>
-                ) : filteredAssets.length === 0 ? (
+                ) : assets.length === 0 ? (
                   <p className="text-sm text-neutral-600">No audio matched your search.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {filteredAssets.map((a) => (
+                    {assets.map((a) => (
                       <li key={a.id} className="rounded border border-neutral-200 p-2">
                         <button
                           type="button"

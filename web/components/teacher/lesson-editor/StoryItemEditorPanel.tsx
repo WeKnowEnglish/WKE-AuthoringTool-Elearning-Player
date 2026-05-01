@@ -1,24 +1,14 @@
 "use client";
 
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
-import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
-import { StoryPathDrawer } from "@/components/teacher/lesson-editor/StoryPathDrawer";
 import { storyAnimationPresetSchema } from "@/lib/lesson-schemas";
-import type { StoryItem, StoryPage, StoryTapSpeechEntry } from "@/lib/lesson-schemas";
+import type { StoryItem, StoryPage } from "@/lib/lesson-schemas";
 
 const ANIM_PRESETS = storyAnimationPresetSchema.options;
 const STORY_STAGE_ASPECT_RATIO = 16 / 10;
 
 function labelClass() {
   return "mt-2 block text-sm font-medium text-neutral-800";
-}
-
-function newTapSpeechEntry(): StoryTapSpeechEntry {
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto ?
-      crypto.randomUUID()
-    : `tap-${Math.random().toString(36).slice(2, 10)}`;
-  return { id, priority: 100 };
 }
 
 function fitItemBoundsToImageAspect(
@@ -61,7 +51,6 @@ export function StoryItemEditorPanel({
   busy,
   image_url,
 }: P) {
-  const pagePhases = selectedPage.phases ?? [];
   const patchSelectedItem = (patcher: (it: StoryItem) => StoryItem) => {
     const next = pages.map((p) =>
       p.id === selectedPage.id ?
@@ -80,7 +69,8 @@ export function StoryItemEditorPanel({
       </p>
       <p className="text-xs text-neutral-600">
         Tap triggers: use the <strong>menu on the canvas</strong> over this picture to add or
-        edit click actions. Below: placement, look, and movement path.
+        edit click actions and move paths. Speech library is in <strong>Animations</strong>. Below:
+        placement and look.
       </p>
       <label className={`${labelClass()} w-full`}>
         Display name (for you &amp; accessibility)
@@ -172,166 +162,6 @@ export function StoryItemEditorPanel({
           </label>
         </div>
       ) : null}
-      <div className="rounded border border-neutral-200 bg-white/80 p-2">
-        <p className="text-sm font-semibold text-neutral-900">Tap speech list (phase-aware)</p>
-        <p className="mb-2 text-[11px] text-neutral-600">
-          Lower priority plays first. If a line reaches its max plays, playback falls to the next
-          priority; once the final priority is reached, it repeats.
-        </p>
-        <div className="space-y-2">
-          {(selectedItem.tap_speeches ?? []).map((entry, idx, arr) => (
-            <div key={entry.id} className="rounded border border-neutral-200 bg-neutral-50 p-2">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <label className="text-xs font-medium text-neutral-800">
-                  Priority
-                  <input
-                    type="number"
-                    className="ml-1 w-20 rounded border px-1 py-0.5 text-xs"
-                    value={entry.priority}
-                    onChange={(e) => {
-                      const priority = Number(e.target.value) || 0;
-                      patchSelectedItem((it) => ({
-                        ...it,
-                        tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
-                          i === idx ? { ...x, priority } : x,
-                        ),
-                      }));
-                    }}
-                  />
-                </label>
-                <label className="text-xs font-medium text-neutral-800">
-                  Max plays
-                  <input
-                    type="number"
-                    min={1}
-                    className="ml-1 w-20 rounded border px-1 py-0.5 text-xs"
-                    value={entry.max_plays ?? ""}
-                    onChange={(e) => {
-                      const raw = e.target.value.trim();
-                      const max_plays = raw ? Math.max(1, Number(raw) || 1) : undefined;
-                      patchSelectedItem((it) => ({
-                        ...it,
-                        tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
-                          i === idx ? { ...x, max_plays } : x,
-                        ),
-                      }));
-                    }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="rounded border border-neutral-300 px-1.5 py-0.5 text-[10px]"
-                  disabled={idx === 0}
-                  onClick={() => {
-                    patchSelectedItem((it) => {
-                      const list = [...(it.tap_speeches ?? [])];
-                      if (idx <= 0) return it;
-                      [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
-                      return { ...it, tap_speeches: list };
-                    });
-                  }}
-                >
-                  Up
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-neutral-300 px-1.5 py-0.5 text-[10px]"
-                  disabled={idx >= arr.length - 1}
-                  onClick={() => {
-                    patchSelectedItem((it) => {
-                      const list = [...(it.tap_speeches ?? [])];
-                      if (idx >= list.length - 1) return it;
-                      [list[idx], list[idx + 1]] = [list[idx + 1], list[idx]];
-                      return { ...it, tap_speeches: list };
-                    });
-                  }}
-                >
-                  Down
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-red-300 px-1.5 py-0.5 text-[10px] text-red-700"
-                  onClick={() => {
-                    patchSelectedItem((it) => {
-                      const list = (it.tap_speeches ?? []).filter((x) => x.id !== entry.id);
-                      return { ...it, tap_speeches: list.length > 0 ? list : undefined };
-                    });
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-              <label className="block text-xs font-medium text-neutral-800">
-                Phase targets (multi-select; leave empty for all/default)
-                <select
-                  multiple
-                  className="mt-1 h-20 w-full rounded border px-1 py-1 text-xs"
-                  value={entry.phase_ids ?? []}
-                  onChange={(e) => {
-                    const phase_ids = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    patchSelectedItem((it) => ({
-                      ...it,
-                      tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
-                        i === idx ? { ...x, phase_ids: phase_ids.length > 0 ? phase_ids : undefined } : x,
-                      ),
-                    }));
-                  }}
-                >
-                  {pagePhases.map((ph) => (
-                    <option key={ph.id} value={ph.id}>
-                      {ph.name?.trim() || ph.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="mt-2 block text-xs font-medium text-neutral-800">
-                Tap text (optional)
-                <textarea
-                  className="mt-1 w-full rounded border px-2 py-1 text-xs"
-                  rows={2}
-                  value={entry.text ?? ""}
-                  onChange={(e) => {
-                    const text = e.target.value.trim() ? e.target.value : undefined;
-                    patchSelectedItem((it) => ({
-                      ...it,
-                      tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
-                        i === idx ? { ...x, text } : x,
-                      ),
-                    }));
-                  }}
-                />
-              </label>
-              <AudioUrlControls
-                label="Tap audio (optional)"
-                value={entry.sound_url ?? ""}
-                onChange={(v) => {
-                  const sound_url = v.trim() || undefined;
-                  patchSelectedItem((it) => ({
-                    ...it,
-                    tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
-                      i === idx ? { ...x, sound_url } : x,
-                    ),
-                  }));
-                }}
-                disabled={busy}
-                compact
-              />
-            </div>
-          ))}
-          <button
-            type="button"
-            className="rounded border border-sky-300 bg-white px-2 py-1 text-xs font-semibold text-sky-900"
-            onClick={() => {
-              patchSelectedItem((it) => ({
-                ...it,
-                tap_speeches: [...(it.tap_speeches ?? []), newTapSpeechEntry()],
-              }));
-            }}
-          >
-            + Add tap speech entry
-          </button>
-        </div>
-      </div>
       {(selectedItem.kind ?? "image") === "image" ? (
         <MediaUrlControls
           label="Item image URL"
@@ -542,53 +372,6 @@ export function StoryItemEditorPanel({
             ))}
           </select>
         </label>
-      </div>
-      <div className="space-y-2 rounded border border-neutral-200 p-2">
-        <p className="text-xs font-medium text-neutral-700">Movement path (optional)</p>
-        {(selectedPage.background_image_url ?? image_url) ? (
-          <StoryPathDrawer
-            imageUrl={(selectedPage.background_image_url ?? image_url)!}
-            itemXPercent={selectedItem.x_percent}
-            itemYPercent={selectedItem.y_percent}
-            durationMs={selectedItem.path?.duration_ms ?? 2000}
-            onDurationChange={(d) => {
-              const w = selectedItem.path?.waypoints;
-              if (!w || w.length < 2) return;
-              const next = pages.map((p) =>
-                p.id === selectedPage.id ?
-                  {
-                    ...p,
-                    items: p.items.map((it) =>
-                      it.id === selectedItem.id ?
-                        { ...it, path: { ...it.path!, duration_ms: d } }
-                      : it,
-                    ),
-                  }
-                : p,
-              );
-              pushEmit(next);
-            }}
-            waypoints={selectedItem.path?.waypoints}
-            onCommit={(path) => {
-              const next = pages.map((p) =>
-                p.id === selectedPage.id ?
-                  {
-                    ...p,
-                    items: p.items.map((it) =>
-                      it.id === selectedItem.id ?
-                        { ...it, path: path ?? undefined }
-                      : it,
-                    ),
-                  }
-                : p,
-              );
-              pushEmit(next);
-            }}
-            disabled={busy}
-          />
-        ) : (
-          <p className="text-xs text-amber-800">Add a page background to draw a path.</p>
-        )}
       </div>
     </div>
   );

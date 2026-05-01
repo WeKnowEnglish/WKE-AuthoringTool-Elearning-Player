@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { uploadStudentVoiceSubmission } from "@/lib/actions/student-voice";
 import { playSfx } from "@/lib/audio/sfx";
+import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import { getProgressSnapshot } from "@/lib/progress/local-storage";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
@@ -108,30 +109,6 @@ function wordMatchToken(
   );
 }
 
-/** Longest prefix of word tokens that match the target sentence (first acceptable answer). */
-function countLockedPrefix(
-  regions: { word: string }[],
-  targetWords: string[],
-  caseInsensitive: boolean,
-  normalizeWhitespace: boolean,
-): number {
-  let n = 0;
-  const max = Math.min(regions.length, targetWords.length);
-  for (let i = 0; i < max; i++) {
-    if (
-      wordMatchToken(
-        regions[i].word,
-        targetWords[i],
-        caseInsensitive,
-        normalizeWhitespace,
-      )
-    ) {
-      n += 1;
-    } else break;
-  }
-  return n;
-}
-
 type NavProps = {
   muted: boolean;
   passed: boolean;
@@ -160,7 +137,33 @@ export function McQuizView({
     () => JSON.stringify(parsed.options.map((opt: { id: string; label: string }) => [opt.id, opt.label])),
     [parsed.options],
   );
+  const [wrongOptionId, setWrongOptionId] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const wrongFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shuffleSeed, setShuffleSeed] = useState("initial");
+
+  const triggerBuzz = useCallback(() => {
+    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+    navigator.vibrate([80, 50, 100]);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (wrongFlashTimerRef.current) {
+        clearTimeout(wrongFlashTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setWrongOptionId(null);
+    setIsResolving(false);
+    if (wrongFlashTimerRef.current) {
+      clearTimeout(wrongFlashTimerRef.current);
+      wrongFlashTimerRef.current = null;
+    }
+  }, [parsed.question, optionsSignature, parsed.correct_option_id]);
+
   useEffect(() => {
     const buf = new Uint32Array(2);
     crypto.getRandomValues(buf);
@@ -213,12 +216,30 @@ export function McQuizView({
               key={opt.id}
               type="button"
               variant="secondary"
-              disabled={passed}
-              className="w-full text-left"
-              onClick={() => {
+              disabled={passed || isResolving}
+              className={clsx(
+                "w-full text-left",
+                wrongOptionId === opt.id && "border-red-600 bg-red-100 text-red-900 kid-animate-shake",
+              )}
+              onClick={async () => {
+                if (passed || isResolving) return;
                 playSfx("tap", muted);
-                if (opt.id === parsed.correct_option_id) onPass();
-                else onWrong();
+                if (opt.id === parsed.correct_option_id) {
+                  setIsResolving(true);
+                  await speakTextAndWait(opt.label, { muted });
+                  onPass();
+                  setIsResolving(false);
+                  return;
+                }
+                setWrongOptionId(opt.id);
+                triggerBuzz();
+                onWrong();
+                if (wrongFlashTimerRef.current) {
+                  clearTimeout(wrongFlashTimerRef.current);
+                }
+                wrongFlashTimerRef.current = setTimeout(() => {
+                  setWrongOptionId((current) => (current === opt.id ? null : current));
+                }, 460);
               }}
             >
               {opt.label}
@@ -257,6 +278,38 @@ export function TrueFalseView({
   onPass: () => void;
   onWrong: () => void;
 } & NavProps) {
+  const [wrongChoice, setWrongChoice] = useState<"true" | "false" | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const wrongFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerBuzz = useCallback(() => {
+    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+    navigator.vibrate([80, 50, 100]);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (wrongFlashTimerRef.current) {
+        clearTimeout(wrongFlashTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setWrongChoice(null);
+    setIsResolving(false);
+    if (wrongFlashTimerRef.current) {
+      clearTimeout(wrongFlashTimerRef.current);
+      wrongFlashTimerRef.current = null;
+    }
+  }, [parsed.statement, parsed.correct, parsed.image_url]);
+
+  const wrongButtonClass = (which: "true" | "false") =>
+    clsx(
+      "min-w-[8rem]",
+      wrongChoice === which && "border-red-600 bg-red-100 text-red-900 kid-animate-shake",
+    );
+
   return (
     <div>
       {parsed.image_url ? (
@@ -276,12 +329,27 @@ export function TrueFalseView({
           <KidButton
             type="button"
             variant="secondary"
-            disabled={passed}
-            className="min-w-[8rem]"
-            onClick={() => {
+            disabled={passed || isResolving}
+            className={wrongButtonClass("true")}
+            onClick={async () => {
+              if (passed || isResolving) return;
               playSfx("tap", muted);
-              if (parsed.correct) onPass();
-              else onWrong();
+              if (parsed.correct) {
+                setIsResolving(true);
+                await speakTextAndWait("True", { muted });
+                onPass();
+                setIsResolving(false);
+                return;
+              }
+              setWrongChoice("true");
+              triggerBuzz();
+              onWrong();
+              if (wrongFlashTimerRef.current) {
+                clearTimeout(wrongFlashTimerRef.current);
+              }
+              wrongFlashTimerRef.current = setTimeout(() => {
+                setWrongChoice((current) => (current === "true" ? null : current));
+              }, 460);
             }}
           >
             True
@@ -289,12 +357,27 @@ export function TrueFalseView({
           <KidButton
             type="button"
             variant="secondary"
-            disabled={passed}
-            className="min-w-[8rem]"
-            onClick={() => {
+            disabled={passed || isResolving}
+            className={wrongButtonClass("false")}
+            onClick={async () => {
+              if (passed || isResolving) return;
               playSfx("tap", muted);
-              if (!parsed.correct) onPass();
-              else onWrong();
+              if (!parsed.correct) {
+                setIsResolving(true);
+                await speakTextAndWait("False", { muted });
+                onPass();
+                setIsResolving(false);
+                return;
+              }
+              setWrongChoice("false");
+              triggerBuzz();
+              onWrong();
+              if (wrongFlashTimerRef.current) {
+                clearTimeout(wrongFlashTimerRef.current);
+              }
+              wrongFlashTimerRef.current = setTimeout(() => {
+                setWrongChoice((current) => (current === "false" ? null : current));
+              }, 460);
             }}
           >
             False
@@ -391,6 +474,91 @@ export function ShortAnswerView({
   );
 }
 
+function fixTextWordNeedsCorrection(
+  regions: { word: string }[],
+  targetWords: string[],
+  index: number,
+  caseInsensitive: boolean,
+  normalizeWhitespace: boolean,
+): boolean {
+  if (index < 0 || index >= regions.length) return false;
+  if (targetWords.length === 0) return true;
+  if (index >= targetWords.length) return true;
+  return !wordMatchToken(
+    regions[index].word,
+    targetWords[index],
+    caseInsensitive,
+    normalizeWhitespace,
+  );
+}
+
+function shuffleArray<T>(items: T[]): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** Max distractors (wrong options); correct is added separately. */
+const FIX_TEXT_HINT_MAX_DECOYS = 14;
+
+/**
+ * Correct token plus decoys: every distinct teacher decoy is included, then (only if needed)
+ * padded to at least two wrong options from other sentence tokens and filler words.
+ * Returns shuffled list, or null if we cannot build two distinct wrong options.
+ */
+function buildFixTextHintChoices(
+  wordIndex: number,
+  regions: { word: string }[],
+  targetWords: string[],
+  decoyPool: string[],
+  caseInsensitive: boolean,
+  normalizeWhitespace: boolean,
+): string[] | null {
+  if (wordIndex < 0 || wordIndex >= regions.length) return null;
+  if (wordIndex >= targetWords.length) return null;
+  const correct = targetWords[wordIndex];
+  if (/\s/.test(correct)) return null;
+
+  const normCorrect = normalizeText(correct, caseInsensitive, normalizeWhitespace);
+  const taken = new Set<string>([normCorrect]);
+  const decoys: string[] = [];
+
+  for (const w of decoyPool) {
+    if (decoys.length >= FIX_TEXT_HINT_MAX_DECOYS) break;
+    const t = w.trim();
+    if (!t || /\s/.test(t)) continue;
+    const n = normalizeText(t, caseInsensitive, normalizeWhitespace);
+    if (taken.has(n)) continue;
+    taken.add(n);
+    decoys.push(t);
+  }
+
+  for (let j = 0; j < regions.length && decoys.length < 2; j += 1) {
+    if (j === wordIndex) continue;
+    const t = regions[j].word;
+    if (/\s/.test(t)) continue;
+    const n = normalizeText(t, caseInsensitive, normalizeWhitespace);
+    if (taken.has(n)) continue;
+    taken.add(n);
+    decoys.push(t);
+  }
+
+  const fallbacks = ["is", "are", "was", "the", "a", "an", "to", "of", "in", "on"];
+  for (const t of fallbacks) {
+    if (decoys.length >= 2) break;
+    const n = normalizeText(t, caseInsensitive, normalizeWhitespace);
+    if (taken.has(n)) continue;
+    taken.add(n);
+    decoys.push(t);
+  }
+
+  if (decoys.length < 2) return null;
+  return shuffleArray([correct, ...decoys]);
+}
+
 export function FixTextView({
   parsed,
   muted,
@@ -409,33 +577,166 @@ export function FixTextView({
 } & NavProps) {
   const [value, setValue] = useState(parsed.broken_text);
   const [checkHint, setCheckHint] = useState<null | "ok" | "bad">(null);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [shookIndex, setShookIndex] = useState<number | null>(null);
+  const [hintSpotTiles, setHintSpotTiles] = useState<number[]>([]);
+  const [hintChoices, setHintChoices] = useState<string[] | null>(null);
+  const [hintChoicesForIndex, setHintChoicesForIndex] = useState<number | null>(null);
+  const [bubbleMsg, setBubbleMsg] = useState<string | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const hintChoicesForIdxRef = useRef<number | null>(null);
+
+  const hintsEnabled = parsed.hints_enabled ?? true;
   const ci = parsed.case_insensitive ?? true;
   const nw = parsed.normalize_whitespace ?? true;
 
   const primaryTarget = parsed.acceptable[0] ?? "";
   const targetWords = useMemo(() => splitWordTokens(primaryTarget), [primaryTarget]);
+  const decoyWords = useMemo(
+    () => (parsed.hint_decoy_words ?? []).map((w) => w.trim()).filter(Boolean),
+    [parsed.hint_decoy_words],
+  );
 
   const regions = useMemo(() => wordRegions(value), [value]);
 
-  const lockedCount = useMemo(() => {
-    if (passed) return regions.length;
-    if (targetWords.length === 0) return 0;
-    return countLockedPrefix(regions, targetWords, ci, nw);
-  }, [passed, regions, targetWords, ci, nw]);
+  const wrongIndices = useMemo(
+    () =>
+      regions
+        .map((_, i) => i)
+        .filter((i) => fixTextWordNeedsCorrection(regions, targetWords, i, ci, nw)),
+    [regions, targetWords, ci, nw],
+  );
 
-  const prefixLen = useMemo(() => {
-    if (lockedCount === 0 || regions.length === 0) return 0;
-    const idx = Math.min(lockedCount, regions.length) - 1;
-    return regions[idx].end;
-  }, [lockedCount, regions]);
+  useLayoutEffect(() => {
+    hintChoicesForIdxRef.current = hintChoicesForIndex;
+  }, [hintChoicesForIndex]);
 
-  const tail = value.slice(prefixLen);
-  const useSplitEditor =
-    !passed && primaryTarget.length > 0 && targetWords.length > 0;
+  useLayoutEffect(() => {
+    if (editIndex === null) return;
+    const el = editInputRef.current;
+    if (!el) return;
+    el.focus();
+    el.select();
+  }, [editIndex]);
+
+  useEffect(() => {
+    if (shookIndex === null) return;
+    const t = window.setTimeout(() => setShookIndex(null), 480);
+    return () => window.clearTimeout(t);
+  }, [shookIndex]);
+
+  useEffect(() => {
+    if (!bubbleMsg) return;
+    const t = window.setTimeout(() => setBubbleMsg(null), 3800);
+    return () => window.clearTimeout(t);
+  }, [bubbleMsg]);
 
   function applyValue(next: string) {
     setCheckHint(null);
     setValue(next);
+  }
+
+  function replaceWordAtIndex(i: number, piece: string) {
+    const r = regions[i];
+    if (!r) return;
+    const w = piece.trim();
+    if (!w || /\s/.test(w)) return;
+    playSfx("tap", muted);
+    applyValue(value.slice(0, r.start) + w + value.slice(r.end));
+    if (hintChoicesForIdxRef.current === i) {
+      setHintChoices(null);
+      setHintChoicesForIndex(null);
+    }
+  }
+
+  function openEdit(i: number) {
+    const r = regions[i];
+    if (!r) return;
+    setCheckHint(null);
+    setHintChoices(null);
+    setHintChoicesForIndex(null);
+    setEditIndex(i);
+    setEditDraft(r.word);
+  }
+
+  function closeEdit() {
+    setEditIndex(null);
+    setEditDraft("");
+    setHintChoices(null);
+    setHintChoicesForIndex(null);
+  }
+
+  function applyEdit() {
+    if (editIndex === null) return;
+    const r = regions[editIndex];
+    if (!r) return;
+    const piece = editDraft.trim();
+    if (!piece) return;
+    if (/\s/.test(piece)) return;
+    replaceWordAtIndex(editIndex, piece);
+    closeEdit();
+  }
+
+  function applyHintChoice(word: string) {
+    if (hintChoicesForIndex === null) return;
+    const idx = hintChoicesForIndex;
+    const shouldClose = editIndex === idx;
+    replaceWordAtIndex(idx, word);
+    if (shouldClose) closeEdit();
+  }
+
+  function requestHint() {
+    if (!hintsEnabled || passed) return;
+    playSfx("tap", muted);
+    setBubbleMsg(null);
+
+    if (wrongIndices.length === 0) {
+      setBubbleMsg("Nothing left to fix — try Check.");
+      return;
+    }
+
+    const editingWrongWord =
+      editIndex !== null &&
+      fixTextWordNeedsCorrection(regions, targetWords, editIndex, ci, nw);
+
+    if (editingWrongWord) {
+      const choices = buildFixTextHintChoices(
+        editIndex,
+        regions,
+        targetWords,
+        decoyWords,
+        ci,
+        nw,
+      );
+      if (!choices) {
+        setBubbleMsg("No multiple-choice hint for this word — type the fix instead.");
+        return;
+      }
+      setHintChoicesForIndex(editIndex);
+      setHintChoices(choices);
+      setBubbleMsg("Pick the word that fits best.");
+      return;
+    }
+
+    const pool = wrongIndices.filter((i) => !hintSpotTiles.includes(i));
+    if (pool.length === 0) {
+      setBubbleMsg("All mistakes are highlighted — tap a glowing word to fix it, then Hint for choices.");
+      return;
+    }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    setHintSpotTiles((prev) => (prev.includes(pick) ? prev : [...prev, pick]));
+    setBubbleMsg("A glowing word doesn’t match the answer yet — tap it to fix, then tap Hint again.");
+  }
+
+  function onTileActivate(i: number) {
+    if (passed) return;
+    playSfx("tap", muted);
+    const needs = fixTextWordNeedsCorrection(regions, targetWords, i, ci, nw);
+    if (needs) openEdit(i);
+    else {
+      setShookIndex(i);
+    }
   }
 
   function check() {
@@ -449,6 +750,16 @@ export function FixTextView({
     else onWrong();
   }
 
+  const showChoicesUnderTiles =
+    hintChoices &&
+    hintChoicesForIndex !== null &&
+    !(editIndex === hintChoicesForIndex);
+
+  const showChoicesInModal =
+    hintChoices &&
+    hintChoicesForIndex !== null &&
+    editIndex === hintChoicesForIndex;
+
   return (
     <div>
       {parsed.image_url ? (
@@ -457,7 +768,9 @@ export function FixTextView({
             src={parsed.image_url}
             alt=""
             fill
-            className="object-cover"
+            className={
+              parsed.image_fit === "contain" ? "object-contain bg-white" : "object-cover"
+            }
             unoptimized={unopt(parsed.image_url)}
           />
         </div>
@@ -468,11 +781,20 @@ export function FixTextView({
         ) : null}
         <p className="mb-2 font-semibold">Fix the text:</p>
         <p className="mb-3 text-sm text-neutral-700">
-          Words you get right from the <strong>start</strong> of the sentence turn{" "}
-          <span className="font-semibold text-emerald-800">green</span> and stay put — keep typing in
-          the box to fix the rest. Words you still need to fix show up in{" "}
-          <span className="font-semibold text-rose-800">red</span> until they match.
+          Tap words you think are wrong to fix them. If a word is already fine, it will{" "}
+          <span className="font-semibold">shake</span> — try another.{" "}
+          <span className="font-semibold">Hint</span> first highlights a mistake; open that word, then{" "}
+          <span className="font-semibold">Hint</span> again in the box for answer choices.
         </p>
+
+        {bubbleMsg ? (
+          <p
+            className="mb-3 rounded-xl border-2 border-amber-500 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950"
+            role="status"
+          >
+            {bubbleMsg}
+          </p>
+        ) : null}
 
         {passed ? (
           <div
@@ -482,77 +804,60 @@ export function FixTextView({
             <p className="mb-1 text-base font-bold text-emerald-900">Nice work — that&apos;s correct!</p>
             <p className="whitespace-pre-wrap font-medium">{value}</p>
           </div>
-        ) : useSplitEditor ? (
-          <div className="space-y-2">
-            <div className="flex min-h-[3.5rem] flex-wrap items-center gap-2 rounded-xl border-4 border-kid-ink bg-white px-2 py-2">
-              {lockedCount > 0
-                ? regions.slice(0, lockedCount).map((r, i) => (
-                    <span
-                      key={`lock-${r.start}-${i}`}
-                      className="inline-flex items-center rounded-lg border-2 border-emerald-600 bg-emerald-100 px-2.5 py-1.5 text-lg font-semibold text-emerald-950 shadow-sm"
-                      aria-hidden
-                    >
-                      {r.word}
-                    </span>
-                  ))
-                : null}
-              <textarea
-                value={tail}
-                disabled={passed}
-                onChange={(e) => applyValue(value.slice(0, prefixLen) + e.target.value)}
-                rows={2}
-                className="min-h-[3rem] min-w-[8rem] flex-1 resize-y rounded-lg border-2 border-dashed border-neutral-400 bg-amber-50/40 px-2 py-2 text-lg outline-none focus:border-kid-ink focus:bg-white"
-                aria-label="Type the rest of the corrected sentence here"
-              />
-            </div>
-            {parsed.acceptable.length > 1 ? (
-              <p className="text-xs text-neutral-600">
-                Tip: Your teacher may count other correct answers too. Green locks follow the{" "}
-                <strong>first</strong> answer in their list.
-              </p>
-            ) : null}
-          </div>
+        ) : regions.length === 0 ? (
+          <p className="text-sm text-neutral-600">This activity has no words to fix yet.</p>
         ) : (
-          <textarea
-            value={value}
-            disabled={passed}
-            onChange={(e) => applyValue(e.target.value)}
-            rows={4}
-            className="w-full rounded-lg border-4 border-kid-ink px-3 py-3 text-lg"
-            aria-label="Corrected text"
-          />
+          <div
+            className="flex flex-wrap gap-2 rounded-xl border-4 border-kid-ink bg-white px-3 py-4"
+            role="list"
+            aria-label="Sentence words"
+          >
+            {regions.map((r, i) => {
+              const shaking = shookIndex === i;
+              const spotlight = hintSpotTiles.includes(i);
+              return (
+                <button
+                  key={`${r.start}-${r.end}-${i}`}
+                  type="button"
+                  disabled={passed}
+                  onClick={() => onTileActivate(i)}
+                  className={clsx(
+                    "max-w-full rounded-xl border-2 border-kid-ink bg-white px-3 py-2.5 text-left text-lg font-bold text-kid-ink shadow-sm transition-transform hover:bg-amber-50/70 active:scale-[0.98]",
+                    spotlight &&
+                      "ring-4 ring-amber-400 ring-offset-2 ring-offset-white animate-pulse",
+                    shaking && "kid-animate-shake border-red-600 bg-red-100 text-red-950",
+                  )}
+                  role="listitem"
+                >
+                  <span className="break-all">{r.word}</span>
+                </button>
+              );
+            })}
+          </div>
         )}
 
-        {targetWords.length > 0 && !passed ? (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm font-semibold text-neutral-800">Word check (live)</p>
-            <div className="flex flex-wrap gap-1.5" role="list" aria-label="Word by word progress">
-              {regions.length === 0 ? (
-                <span className="text-sm text-neutral-500">Start typing above…</span>
-              ) : (
-                regions.map((r, i) => {
-                  const isLocked = i < lockedCount;
-                  const matchesTarget =
-                    i < targetWords.length &&
-                    wordMatchToken(r.word, targetWords[i], ci, nw);
-                  const chip = clsx(
-                    "inline-flex max-w-full rounded-lg border-2 px-2 py-1 text-base font-semibold transition-colors",
-                    isLocked &&
-                      "border-emerald-600 bg-emerald-100 text-emerald-950 shadow-sm",
-                    !isLocked &&
-                      matchesTarget &&
-                      "border-amber-500 bg-amber-100 text-amber-950",
-                    !isLocked && !matchesTarget && "border-rose-600 bg-rose-50 text-rose-950",
-                  );
-                  return (
-                    <span key={`w-${r.start}-${i}`} className={chip} role="listitem">
-                      {r.word}
-                    </span>
-                  );
-                })
-              )}
+        {showChoicesUnderTiles ? (
+          <div
+            className="mt-4 rounded-xl border-4 border-amber-500 bg-amber-50/90 px-3 py-3"
+            role="region"
+            aria-label="Hint choices"
+          >
+            <p className="text-sm font-bold text-amber-950">Hint — pick the right word:</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {hintChoices.map((w) => (
+                <KidButton key={w} type="button" variant="accent" onClick={() => applyHintChoice(w)}>
+                  {w}
+                </KidButton>
+              ))}
             </div>
           </div>
+        ) : null}
+
+        {parsed.acceptable.length > 1 && !passed && targetWords.length > 0 ? (
+          <p className="mt-3 text-xs text-neutral-600">
+            Hints use the <strong>first</strong> acceptable answer to spot mistakes. Check still
+            accepts any answer your teacher allowed.
+          </p>
         ) : null}
 
         {checkHint === "ok" && !passed ? (
@@ -568,16 +873,103 @@ export function FixTextView({
             className="mt-4 rounded-xl border-4 border-rose-600 bg-rose-50 px-4 py-3 text-lg font-semibold text-rose-950"
             role="status"
           >
-            Not quite yet. Fix the red words (or the whole sentence), then tap Check again.
+            Not quite yet. Fix the sentence, then tap Check again.
           </div>
         ) : null}
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-3">
+          {hintsEnabled ? (
+            <KidButton type="button" variant="secondary" disabled={passed} onClick={requestHint}>
+              Hint
+            </KidButton>
+          ) : null}
           <KidButton type="button" disabled={passed} onClick={check}>
             Check
           </KidButton>
         </div>
       </KidPanel>
+
+      {editIndex !== null ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4 sm:items-center"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeEdit();
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeEdit();
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border-4 border-kid-ink bg-white p-4 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fix-text-edit-title"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h2 id="fix-text-edit-title" className="text-lg font-bold text-kid-ink">
+              Type the correction
+            </h2>
+            <p className="mt-1 text-sm text-neutral-600">One word only (no spaces).</p>
+            <input
+              ref={editInputRef}
+              type="text"
+              autoComplete="off"
+              value={editDraft}
+              onChange={(e) => setEditDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  applyEdit();
+                }
+                if (e.key === "Escape") closeEdit();
+              }}
+              className="relative z-0 mt-3 w-full rounded-xl border-4 border-kid-ink px-3 py-3 text-lg outline-none focus:ring-2 focus:ring-sky-400"
+              aria-label="Correction for this word"
+            />
+            {showChoicesInModal ? (
+              <div className="relative z-10 mt-4 rounded-xl border-2 border-amber-500 bg-amber-50 px-3 py-3 shadow-sm">
+                <p className="text-sm font-bold text-amber-950">Hint — pick one:</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {hintChoices!.map((w) => (
+                    <KidButton
+                      key={w}
+                      type="button"
+                      variant="accent"
+                      onClick={() => applyHintChoice(w)}
+                    >
+                      {w}
+                    </KidButton>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              {hintsEnabled ? (
+                <KidButton
+                  type="button"
+                  variant="secondary"
+                  className="mr-auto"
+                  onClick={() => requestHint()}
+                >
+                  Hint
+                </KidButton>
+              ) : null}
+              <KidButton type="button" variant="secondary" onClick={closeEdit}>
+                Cancel
+              </KidButton>
+              <KidButton
+                type="button"
+                disabled={!editDraft.trim() || /\s/.test(editDraft.trim())}
+                onClick={applyEdit}
+              >
+                Apply
+              </KidButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <GuideBlock guide={parsed.guide} />
       <div className="mt-6 flex flex-wrap gap-3">
         {showBack ? (
@@ -2127,62 +2519,389 @@ export function LetterMixupView({
   onWrong: () => void;
 } & NavProps) {
   const item = parsed.items[0];
+  const targetWord = item?.target_word ?? "";
+  const targetChars = useMemo(() => targetWord.split(""), [targetWord]);
   const letters = useMemo(() => {
-    const raw = item?.target_word ?? "";
-    const split = raw.split("");
-    return parsed.shuffle_letters ? deterministicShuffle(split, raw) : split;
-  }, [item?.target_word, parsed.shuffle_letters]);
-  const [selected, setSelected] = useState<string[]>([]);
-  const answer = selected.join("");
+    const split = targetChars;
+    return parsed.shuffle_letters ? deterministicShuffle([...split], targetWord) : split;
+  }, [parsed.shuffle_letters, targetChars, targetWord]);
+  const lettersKey = useMemo(() => letters.map((ch, i) => `${i}:${ch}`).join("|"), [letters]);
+
+  type WordCell = { traySlotKey: string; char: string; locked: boolean };
+  const [wordSlots, setWordSlots] = useState<(WordCell | null)[]>([]);
+  const [shakingSlotIndices, setShakingSlotIndices] = useState<Set<number>>(() => new Set());
+  const kickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setWordSlots(Array.from({ length: Math.max(1, targetChars.length) }, () => null));
+    setShakingSlotIndices(new Set());
+    if (kickTimeoutRef.current) {
+      clearTimeout(kickTimeoutRef.current);
+      kickTimeoutRef.current = null;
+    }
+  }, [lettersKey, targetChars.length]);
+
+  /** Spelling row: tiles share width and shrink (clamp text) so long words don’t wrap awkwardly. */
+  const letterTilesRowClass =
+    "flex w-full min-w-0 flex-nowrap items-stretch justify-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
+  const letterTileClass =
+    "box-border flex h-12 min-h-[2.5rem] w-full min-w-[1.125rem] max-h-12 flex-[1_1_0] basis-0 touch-manipulation select-none items-center justify-center overflow-hidden rounded-xl border-2 border-sky-500 bg-white px-0.5 text-[clamp(0.75rem,2.8vmin,1.5rem)] font-bold leading-none text-kid-ink shadow-sm transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:active:scale-100";
+
+  /** Tray: tile size computed once from full word length + row width; stays fixed while spelling (only re-centers). */
+  const trayTilesRowClass =
+    "flex w-full min-w-0 flex-nowrap items-center justify-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
+  const TRAY_GAP_PX = 4;
+  const trayLetterTileClass =
+    "box-border flex shrink-0 touch-manipulation select-none items-center justify-center rounded-xl border-2 border-sky-500 bg-white font-bold leading-none text-kid-ink shadow-sm transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:active:scale-100";
+
+  const trayRowRef = useRef<HTMLDivElement>(null);
+  const [trayTileSizePx, setTrayTileSizePx] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const n = letters.length;
+    if (n === 0) {
+      setTrayTileSizePx(null);
+      return;
+    }
+    const el = trayRowRef.current;
+    if (!el) return;
+
+    const compute = (): boolean => {
+      const w = el.clientWidth;
+      if (w <= 0) return false;
+      const totalGaps = Math.max(0, n - 1) * TRAY_GAP_PX;
+      const raw = Math.floor((w - totalGaps) / n);
+      const clamped = Math.min(48, Math.max(26, raw));
+      setTrayTileSizePx(clamped);
+      return true;
+    };
+
+    if (!compute()) {
+      requestAnimationFrame(() => {
+        compute();
+      });
+    }
+
+    const ro = new ResizeObserver(() => {
+      compute();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [lettersKey, letters.length]);
+
+  function trayKeyInUse(traySlotKey: string) {
+    return wordSlots.some((s) => s?.traySlotKey === traySlotKey);
+  }
+
+  function runLetterCheck(slots: (WordCell | null)[]) {
+    if (passed) return;
+    if (kickTimeoutRef.current) {
+      clearTimeout(kickTimeoutRef.current);
+      kickTimeoutRef.current = null;
+    }
+    const n = targetChars.length;
+    if (n === 0 || slots.length !== n) return;
+
+    const normWord = (s: string) => (parsed.case_sensitive ? s : s.toLowerCase());
+    const answers = [item?.target_word ?? "", ...(item?.accepted_words ?? [])].filter(
+      (w): w is string => typeof w === "string" && w.length > 0,
+    );
+
+    const allFilled = slots.every((s) => s !== null);
+    const allLocked = allFilled && slots.every((s) => s!.locked);
+
+    if (allLocked) {
+      const built = slots.map((s) => s!.char).join("");
+      if (answers.some((a) => normWord(a) === normWord(built))) {
+        playSfx("correct", muted);
+        onPass();
+      }
+      return;
+    }
+
+    if (!allFilled) {
+      playSfx("wrong", muted);
+      onWrong();
+      return;
+    }
+
+    const normC = (c: string) => (parsed.case_sensitive ? c : c.toLowerCase());
+    const kickIndices: number[] = [];
+    const lockIndices: number[] = [];
+
+    for (let i = 0; i < n; i++) {
+      const cell = slots[i];
+      if (!cell || cell.locked) continue;
+      const expected = targetChars[i] ?? "";
+      if (normC(cell.char) === normC(expected)) lockIndices.push(i);
+      else kickIndices.push(i);
+    }
+
+    if (kickIndices.length === 0) {
+      const newSlots: (WordCell | null)[] = slots.map((c) => {
+        if (!c) return null;
+        if (c.locked) return c;
+        return { ...c, locked: true };
+      });
+      setWordSlots(newSlots);
+      const built = newSlots.map((s) => s!.char).join("");
+      if (answers.some((a) => normWord(a) === normWord(built))) {
+        playSfx("correct", muted);
+        onPass();
+      }
+      return;
+    }
+
+    playSfx("wrong", muted);
+    onWrong();
+
+    setWordSlots((prev) => {
+      const next = [...prev];
+      for (const i of lockIndices) {
+        const c = next[i];
+        if (c && !c.locked) next[i] = { ...c, locked: true };
+      }
+      return next;
+    });
+
+    setShakingSlotIndices(new Set(kickIndices));
+    kickTimeoutRef.current = setTimeout(() => {
+      kickTimeoutRef.current = null;
+      setWordSlots((prev) => {
+        const next = [...prev];
+        for (const i of kickIndices) {
+          next[i] = null;
+        }
+        return next;
+      });
+      setShakingSlotIndices(new Set());
+    }, 460);
+  }
 
   function choose(ch: string, idx: number) {
     if (passed) return;
     playSfx("tap", muted);
-    setSelected((prev) => [...prev, `${ch}__${idx}`]);
+    const traySlotKey = `${idx}__${ch}`;
+    if (trayKeyInUse(traySlotKey)) return;
+
+    setWordSlots((prev) => {
+      const emptyIdx = prev.findIndex((c) => c === null);
+      if (emptyIdx === -1) return prev;
+      const next = [...prev];
+      next[emptyIdx] = { traySlotKey, char: ch, locked: false };
+      const allFilled = next.every((c) => c !== null);
+      if (allFilled) {
+        queueMicrotask(() => runLetterCheck(next));
+      }
+      return next;
+    });
+  }
+
+  function returnToTray(slotIndex: number) {
+    if (passed) return;
+    const cell = wordSlots[slotIndex];
+    if (!cell || cell.locked) return;
+    playSfx("tap", muted);
+    setWordSlots((prev) => {
+      const next = [...prev];
+      next[slotIndex] = null;
+      return next;
+    });
   }
 
   function clear() {
+    if (passed) return;
     playSfx("tap", muted);
-    setSelected([]);
+    if (kickTimeoutRef.current) {
+      clearTimeout(kickTimeoutRef.current);
+      kickTimeoutRef.current = null;
+    }
+    setShakingSlotIndices(new Set());
+    setWordSlots((prev) => prev.map((c) => (c?.locked ? c : null)));
   }
 
   function check() {
+    if (passed) return;
     playSfx("tap", muted);
-    const built = selected.map((s) => s.split("__")[0]).join("");
-    const answers = [item.target_word, ...(item.accepted_words ?? [])];
-    const norm = (s: string) =>
-      parsed.case_sensitive ? s : s.toLowerCase();
-    const ok = answers.some((a) => norm(a) === norm(built));
-    if (ok) onPass();
-    else onWrong();
+    runLetterCheck(wordSlots);
+  }
+
+  useEffect(
+    () => () => {
+      if (kickTimeoutRef.current) clearTimeout(kickTimeoutRef.current);
+    },
+    [],
+  );
+
+  const [imageFit, setImageFit] = useState<"cover" | "contain">(() => parsed.image_fit ?? "cover");
+  useEffect(() => {
+    setImageFit(parsed.image_fit ?? "cover");
+  }, [parsed.image_url, parsed.image_fit]);
+
+  const wordAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const el = wordAudioRef.current;
+    const url = parsed.image_audio_url?.trim();
+    if (!el) return;
+    if (url) {
+      el.src = url;
+      el.load();
+    } else {
+      el.removeAttribute("src");
+    }
+  }, [parsed.image_audio_url]);
+
+  function playPictureWord() {
+    if (passed) return;
+    playSfx("tap", muted);
+    if (parsed.image_use_tts) {
+      const line = parsed.image_read_aloud_text?.trim() || targetWord.trim();
+      if (line) speakText(line, { muted });
+      return;
+    }
+    const url = parsed.image_audio_url?.trim();
+    if (url && !muted) {
+      const el = wordAudioRef.current;
+      if (el) {
+        el.currentTime = 0;
+        void el.play().catch(() => null);
+        return;
+      }
+    }
+    const say = targetWord.trim();
+    if (say) speakText(say, { muted });
   }
 
   return (
     <div>
+      <audio ref={wordAudioRef} preload="metadata" className="hidden" />
       {parsed.image_url ? (
-        <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
-          <Image src={parsed.image_url} alt="" fill className="object-cover" unoptimized={unopt(parsed.image_url)} />
+        <div className="mb-4 space-y-2">
+          <button
+            type="button"
+            disabled={passed}
+            onClick={playPictureWord}
+            className={clsx(
+              "group relative aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
+              !passed && "cursor-pointer",
+            )}
+            aria-label={
+              parsed.image_use_tts ?
+                `Tap to hear: ${parsed.image_read_aloud_text?.trim() || targetWord || "word"}`
+              : parsed.image_audio_url?.trim() ?
+                "Tap to hear the word"
+              : `Tap to hear the word: ${targetWord || "target word"}`
+            }
+          >
+            <Image
+              src={parsed.image_url}
+              alt=""
+              fill
+              className={imageFit === "contain" ? "object-contain bg-white" : "object-cover"}
+              unoptimized={unopt(parsed.image_url)}
+            />
+            {!passed ? (
+              <span className="pointer-events-none absolute bottom-2 left-2 rounded-full border-2 border-kid-ink bg-white/95 px-2.5 py-1 text-xs font-bold text-kid-ink shadow-sm">
+                Tap · hear word
+              </span>
+            ) : null}
+          </button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <KidButton
+              type="button"
+              variant="secondary"
+              className="!min-h-11 !min-w-0 px-4 text-base"
+              onClick={() => {
+                playSfx("tap", muted);
+                setImageFit((f) => (f === "cover" ? "contain" : "cover"));
+              }}
+            >
+              {imageFit === "cover" ? "Show whole image" : "Fill frame"}
+            </KidButton>
+          </div>
         </div>
       ) : null}
       <KidPanel>
         <p className="text-xl font-semibold">{parsed.prompt}</p>
-        <div className="mt-3 min-h-12 rounded border-2 border-dashed border-kid-ink p-2 text-lg font-bold">
-          {answer || "Build the word here"}
+        <p className="sr-only">
+          Fill each slot left to right. Tap Check or fill every slot to verify letters. Green letters stay; wrong
+          letters return to the tray.
+        </p>
+        <div
+          className="mt-3 min-w-0 rounded-xl border-2 border-dashed border-kid-ink bg-kid-surface-muted/40 p-3"
+          aria-label="Your word"
+        >
+          <div className={letterTilesRowClass}>
+            {wordSlots.map((cell, slotIndex) => (
+              <div
+                key={`slot-${slotIndex}`}
+                className="flex min-h-[3.25rem] min-w-[1.125rem] flex-[1_1_0] basis-0 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-white/60 px-0.5"
+              >
+                {cell ? (
+                  <button
+                    type="button"
+                    disabled={passed || cell.locked}
+                    className={clsx(
+                      letterTileClass,
+                      cell.locked &&
+                        "border-emerald-600 bg-emerald-50 text-emerald-950 kid-feedback-glow-correct hover:bg-emerald-50 !opacity-100",
+                      shakingSlotIndices.has(slotIndex) &&
+                        "border-red-600 bg-red-100 text-red-900 kid-animate-shake",
+                    )}
+                    onClick={() => returnToTray(slotIndex)}
+                    aria-label={
+                      cell.locked ? `Letter ${cell.char} locked` : `Remove ${cell.char} from word`
+                    }
+                  >
+                    {cell.char}
+                  </button>
+                ) : (
+                  <span className="text-xs font-medium text-neutral-400 sm:text-sm" aria-hidden>
+                    ·
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {letters.map((ch, i) => {
-            const key = `${ch}__${i}`;
-            const used = selected.includes(key);
-            return (
-              <KidButton key={key} type="button" variant="secondary" disabled={passed || used} onClick={() => choose(ch, i)}>
-                {ch}
-              </KidButton>
-            );
-          })}
+        <p className="mt-2 text-center text-sm text-neutral-600">Letter tray — tap to add (first empty slot)</p>
+        <div ref={trayRowRef} className={clsx(trayTilesRowClass, "mt-2 min-h-[3.25rem]")}>
+          {letters
+            .map((ch, i) => ({ ch, i, traySlotKey: `${i}__${ch}` }))
+            .filter(({ traySlotKey }) => !trayKeyInUse(traySlotKey))
+            .map(({ ch, i, traySlotKey }) => {
+              const px = trayTileSizePx ?? 44;
+              const fs = Math.min(24, Math.max(14, Math.round(px * 0.42)));
+              return (
+                <button
+                  key={traySlotKey}
+                  type="button"
+                  disabled={passed}
+                  className={trayLetterTileClass}
+                  style={{
+                    width: px,
+                    height: px,
+                    minWidth: px,
+                    minHeight: px,
+                    fontSize: fs,
+                  }}
+                  onClick={() => choose(ch, i)}
+                  aria-label={`Add letter ${ch}`}
+                >
+                  {ch}
+                </button>
+              );
+            })}
         </div>
         <div className="mt-4 flex gap-2">
           <KidButton type="button" variant="secondary" disabled={passed} onClick={clear}>Clear</KidButton>
-          <KidButton type="button" disabled={passed || selected.length === 0} onClick={check}>Check</KidButton>
+          <KidButton
+            type="button"
+            disabled={passed || wordSlots.length === 0 || wordSlots.every((s) => s === null)}
+            onClick={check}
+          >
+            Check
+          </KidButton>
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />

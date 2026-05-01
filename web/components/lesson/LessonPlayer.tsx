@@ -705,7 +705,12 @@ export function LessonPlayer({
             </label>
           ) : null}
           <InteractionFeedbackShell kind={interactionFeedback}>
-            <FixTextView parsed={parsed} {...nav} {...passHandlers} />
+            <FixTextView
+              key={`${screen.id}:${parsed.broken_text}`}
+              parsed={parsed}
+              {...nav}
+              {...passHandlers}
+            />
           </InteractionFeedbackShell>
         </>
       )}

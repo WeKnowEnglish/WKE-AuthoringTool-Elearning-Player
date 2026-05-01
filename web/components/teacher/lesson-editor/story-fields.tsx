@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from "react";
 import {
   defaultRegion,
   nextRegionId,
@@ -10,18 +18,25 @@ import {
 import { ScaledStoryItemImage } from "@/components/story/ScaledStoryItemImage";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
-import { StoryPathDrawer } from "@/components/teacher/lesson-editor/StoryPathDrawer";
 import {
   storyAnimationPresetSchema,
   storyPayloadSchema,
   storyTimelineActionSchema,
   type ScreenPayload,
+  type StoryActionSequence,
+  type StoryActionStep,
   type StoryClickAction,
   type StoryItem,
   type StoryPage,
   type StoryPagePhase,
   type StoryTimelineStep,
 } from "@/lib/lesson-schemas";
+import {
+  getItemClickActionSequences,
+  getPageEnterActionSequences,
+  getPhaseEnterActionSequences,
+  stripLegacyAnimationFields,
+} from "@/lib/story-action-sequences";
 import {
   appendPhase,
   createTwoInitialPhases,
@@ -35,7 +50,7 @@ import {
 } from "@/components/teacher/lesson-editor/story-editor-phases";
 import { StoryItemEditorPanel } from "@/components/teacher/lesson-editor/StoryItemEditorPanel";
 import {
-  listTeacherMedia,
+  searchTeacherMedia,
   uploadTeacherMedia,
   type MediaAssetRow,
 } from "@/lib/actions/media";
@@ -86,6 +101,18 @@ function reorderById<T extends { id: string }>(
   return next;
 }
 
+function reorderByIndex<T>(list: T[], fromIndex: number, toIndex: number): T[] {
+  if (fromIndex === toIndex) return list;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+    return list;
+  }
+  const next = [...list];
+  const [moved] = next.splice(fromIndex, 1);
+  if (!moved) return list;
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
 const ANIM_PRESETS = storyAnimationPresetSchema.options;
 const TIMELINE_ACTIONS = storyTimelineActionSchema.options;
 
@@ -117,6 +144,23 @@ function itemDisplayLabel(it: StoryItem): string {
     if (t) return t.slice(0, 24);
   }
   return n || it.id;
+}
+
+function preferredTapSpeechSoundUrl(
+  item: StoryItem | null | undefined,
+  phaseId: string | null,
+): string | undefined {
+  if (!item?.tap_speeches?.length) return undefined;
+  const sorted = [...item.tap_speeches].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+  const eligible = sorted.find((entry) => {
+    const url = entry.sound_url?.trim();
+    if (!url) return false;
+    const phases = entry.phase_ids;
+    if (!phases || phases.length === 0) return true;
+    if (!phaseId) return false;
+    return phases.includes(phaseId);
+  });
+  return eligible?.sound_url?.trim() || undefined;
 }
 
 function storyItemToRect(it: StoryItem): RectPercent {
@@ -164,7 +208,27 @@ function rectToStoryItem(
     on_click: prev?.on_click,
     request_line: prev?.request_line,
     tap_speeches: prev?.tap_speeches,
+    action_sequences: prev?.action_sequences,
+    idle_animations: prev?.idle_animations,
   };
+}
+
+function pageItemsHaveClickSequenceId(
+  items: StoryItem[],
+  sequenceId: string,
+): boolean {
+  for (const it of items) {
+    for (const seq of it.action_sequences ?? []) {
+      if (seq.event === "click" && seq.id === sequenceId) return true;
+    }
+    if (
+      sequenceId === `legacy:item:${it.id}:triggers` &&
+      (it.on_click?.triggers?.length ?? 0) > 0
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function pruneDeletedItemReferences(page: StoryPage, removedIds: Set<string>): StoryPage {
@@ -205,6 +269,12 @@ function pruneDeletedItemReferences(page: StoryPage, removedIds: Set<string>): S
           undefined
         : c;
       if (c?.type === "all_matched" && c.next_phase_id && removedIds.has(c.next_phase_id)) {
+        nextComp = { type: "end_phase" as const };
+      }
+      if (
+        nextComp?.type === "sequence_complete" &&
+        !pageItemsHaveClickSequenceId(nextItems, nextComp.sequence_id)
+      ) {
         nextComp = { type: "end_phase" as const };
       }
       let nextDrag = ph.drag_match;
@@ -280,6 +350,25 @@ function triggerDisplayLabel(
   return `${itemName} • ${tr.action} #${index + 1}`;
 }
 
+type AnimationRow = {
+  id: string;
+  name: string;
+  trigger: string;
+  impacted: string;
+  sequence: StoryActionSequence;
+  scope: "item" | "phase" | "page";
+  scopeId: string;
+};
+
+type AnimationEditorState = {
+  rowId: string;
+  scope: AnimationRow["scope"];
+  scopeId: string;
+  trigger: string;
+  isLegacy: boolean;
+  sequence: StoryActionSequence;
+};
+
 export function StoryFields({
   syncKey,
   initial,
@@ -329,6 +418,11 @@ export function StoryFields({
     setSelItemId(id);
   }, []);
   const [selPhaseId, setSelPhaseId] = useState<string | null>(null);
+  const [animationsMenuOpen, setAnimationsMenuOpen] = useState(false);
+  const [selectedAnimationRowId, setSelectedAnimationRowId] = useState<string | null>(null);
+  const [animationEditor, setAnimationEditor] = useState<AnimationEditorState | null>(null);
+  const [dragSummaryStepIdx, setDragSummaryStepIdx] = useState<number | null>(null);
+  const [dragEditorStepIdx, setDragEditorStepIdx] = useState<number | null>(null);
   const [pageContentMenuOpen, setPageContentMenuOpen] = useState(false);
   const [phasePinned, setPhasePinned] = useState(false);
   const [objectPinned, setObjectPinned] = useState(false);
@@ -343,6 +437,12 @@ export function StoryFields({
   const [bgVideoLibraryQuery, setBgVideoLibraryQuery] = useState("");
   const [bgVideoLibraryLoading, setBgVideoLibraryLoading] = useState(false);
   const [bgVideoLibraryErr, setBgVideoLibraryErr] = useState<string | null>(null);
+  const [pathEditItemId, setPathEditItemId] = useState<string | null>(null);
+  const [pathEditMode, setPathEditMode] = useState<"set_start" | "draw">("set_start");
+  const [pathDraftWaypoints, setPathDraftWaypoints] = useState<
+    Array<{ x_percent: number; y_percent: number }>
+  >([]);
+  const [pathDraftDurationMs, setPathDraftDurationMs] = useState(2000);
   const [editorRightPanelPct, setEditorRightPanelPct] = useState(30);
   const [editorPanelResizing, setEditorPanelResizing] = useState<{
     startX: number;
@@ -353,6 +453,7 @@ export function StoryFields({
   >({});
   const bgVideoFileRef = useRef<HTMLInputElement | null>(null);
   const editorSplitRef = useRef<HTMLDivElement | null>(null);
+  const sceneCanvasRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const lastLocalSigRef = useRef<string>("");
 
@@ -689,6 +790,46 @@ export function StoryFields({
   }
 
   const selectedItem = selectedPage?.items.find((i) => i.id === selItemId) ?? null;
+  const pathEditingItem =
+    pathEditItemId && selectedPage ? selectedPage.items.find((i) => i.id === pathEditItemId) ?? null : null;
+  const pathEditActive = !!pathEditingItem;
+
+  const beginPathEdit = useCallback(() => {
+    if (!selectedPage || !selectedItem) return;
+    setPathEditItemId(selectedItem.id);
+    setPathEditMode("set_start");
+    setPathDraftWaypoints(selectedItem.path?.waypoints ?? []);
+    setPathDraftDurationMs(selectedItem.path?.duration_ms ?? 2000);
+  }, [selectedItem, selectedPage]);
+
+  const cancelPathEdit = useCallback(() => {
+    setPathEditItemId(null);
+    setPathEditMode("set_start");
+    setPathDraftWaypoints([]);
+  }, []);
+
+  const commitPathEdit = useCallback(() => {
+    if (!selectedPage || !pathEditingItem) return;
+    const nextPath =
+      pathDraftWaypoints.length >= 2 ?
+        { waypoints: pathDraftWaypoints, duration_ms: Math.max(0, pathDraftDurationMs) }
+      : undefined;
+    const next = pages.map((p) =>
+      p.id === selectedPage.id ?
+        {
+          ...p,
+          items: p.items.map((it) =>
+            it.id === pathEditingItem.id ? { ...it, path: nextPath } : it,
+          ),
+        }
+      : p,
+    );
+    pushEmit(next);
+    setPathEditItemId(null);
+    setPathEditMode("set_start");
+    setPathDraftWaypoints([]);
+  }, [pages, pathDraftDurationMs, pathDraftWaypoints, pathEditingItem, pushEmit, selectedPage]);
+
   const triggerMenuCollapsed = selectedItem ? !!triggerMenuCollapsedByItem[selectedItem.id] : false;
   const pageTriggerOptions = useMemo(() => {
     if (!selectedPage) return [];
@@ -709,47 +850,439 @@ export function StoryFields({
         topPercent: Math.max(1, Math.min(82, selectedItem.y_percent)),
       }
     : null;
-  const showPageContentPanel = !!selectedPage && (pageContentPinned || pageContentMenuOpen);
+  const showAnimationsPanel = !!selectedPage && animationsMenuOpen;
+  const showPageContentPanel =
+    !!selectedPage && (pageContentPinned || (pageContentMenuOpen && !animationsMenuOpen));
   const showObjectPanel =
-    !!selectedPage && (objectPinned || (!!selectedItem && !pageContentMenuOpen));
+    !!selectedPage && (objectPinned || (!!selectedItem && !pageContentMenuOpen && !animationsMenuOpen));
   const showPhasePanel =
-    !!selectedPage && (phasePinned || (!selectedItem && !pageContentMenuOpen));
-  const visibleEditorPanels = [showPageContentPanel, showObjectPanel, showPhasePanel].filter(
-    Boolean,
-  ).length;
+    !!selectedPage && (phasePinned || (!selectedItem && !pageContentMenuOpen && !animationsMenuOpen));
+  const visibleEditorPanels = [
+    showAnimationsPanel,
+    showPageContentPanel,
+    showObjectPanel,
+    showPhasePanel,
+  ].filter(Boolean).length;
+
+  const animationRows = useMemo<AnimationRow[]>(() => {
+    if (!selectedPage) return [];
+    const itemNameById = new Map(selectedPage.items.map((it) => [it.id, itemDisplayLabel(it)]));
+    const rows: AnimationRow[] = [];
+    const pushRows = (
+      sequences: StoryActionSequence[],
+      scope: AnimationRow["scope"],
+      scopeId: string,
+      ownerItemId?: string,
+      ownerItemLabel?: string,
+      phaseLabel?: string,
+    ) => {
+      for (const seq of sequences) {
+        const targets = new Set<string>();
+        for (const step of seq.steps) {
+          if (step.target_item_id) targets.add(step.target_item_id);
+          else if (ownerItemId) targets.add(ownerItemId);
+        }
+        const targetNames = [...targets].map((id) => itemNameById.get(id) ?? id);
+        const trigger =
+          seq.event === "click" ? `Click on ${ownerItemLabel ?? "item"}`
+          : seq.event === "phase_enter" ? `Phase start${phaseLabel ? ` · ${phaseLabel}` : ""}`
+          : "Page start";
+        rows.push({
+          id: `${scope}:${scopeId}:${seq.id}`,
+          name: seq.name?.trim() || seq.id,
+          trigger,
+          impacted: targetNames.length > 0 ? targetNames.join(", ") : "—",
+          sequence: seq,
+          scope,
+          scopeId,
+        });
+      }
+    };
+
+    if (selectedItem) {
+      pushRows(
+        getItemClickActionSequences(selectedItem, {
+          includeLegacy: true,
+          activePhaseId: selectedPhase?.id ?? null,
+        }),
+        "item",
+        selectedItem.id,
+        selectedItem.id,
+        itemDisplayLabel(selectedItem),
+      );
+      const phasesForPanel =
+        selectedPhase ? [selectedPhase] : (selectedPage.phases ?? []);
+      for (const phase of phasesForPanel) {
+        const phaseSeq = getPhaseEnterActionSequences(phase, { includeLegacy: true }).filter(
+          (seq) =>
+            seq.steps.some((step) => step.target_item_id === selectedItem.id),
+        );
+        pushRows(
+          phaseSeq,
+          "phase",
+          phase.id,
+          undefined,
+          undefined,
+          phase.name?.trim() || phase.id,
+        );
+      }
+      const pageSeq = getPageEnterActionSequences(selectedPage, { includeLegacy: true }).filter((seq) =>
+        seq.steps.some((step) => step.target_item_id === selectedItem.id),
+      );
+      pushRows(pageSeq, "page", selectedPage.id);
+      return rows;
+    }
+
+    pushRows(getPageEnterActionSequences(selectedPage, { includeLegacy: true }), "page", selectedPage.id);
+    if (selectedPhase) {
+      pushRows(
+        getPhaseEnterActionSequences(selectedPhase, { includeLegacy: true }),
+        "phase",
+        selectedPhase.id,
+        undefined,
+        undefined,
+        selectedPhase.name?.trim() || selectedPhase.id,
+      );
+    }
+    return rows;
+  }, [selectedPage, selectedPhase, selectedItem]);
+
+  useEffect(() => {
+    if (animationRows.length === 0) {
+      setSelectedAnimationRowId(null);
+      return;
+    }
+    setSelectedAnimationRowId((prev) =>
+      prev && animationRows.some((row) => row.id === prev) ? prev : animationRows[0]!.id,
+    );
+  }, [animationRows]);
+
+  const selectedAnimationRow =
+    animationRows.find((row) => row.id === selectedAnimationRowId) ?? null;
+
+  const updateSequenceInScope = useCallback(
+    (scope: AnimationRow["scope"], scopeId: string, updater: (list: StoryActionSequence[]) => StoryActionSequence[]) => {
+      if (!selectedPage) return;
+      const next = pages.map((p) => {
+        if (p.id !== selectedPage.id) return p;
+        if (scope === "page") {
+          return { ...p, action_sequences: updater(p.action_sequences ?? []) };
+        }
+        if (scope === "phase") {
+          return {
+            ...p,
+            phases: (p.phases ?? []).map((ph) =>
+              ph.id === scopeId ? { ...ph, action_sequences: updater(ph.action_sequences ?? []) } : ph,
+            ),
+          };
+        }
+        return {
+          ...p,
+          items: p.items.map((it) =>
+            it.id === scopeId ? { ...it, action_sequences: updater(it.action_sequences ?? []) } : it,
+          ),
+        };
+      });
+      pushEmit(next);
+    },
+    [pages, pushEmit, selectedPage],
+  );
+
+  const startAnimationEditor = useCallback((row: AnimationRow) => {
+    setAnimationEditor({
+      rowId: row.id,
+      scope: row.scope,
+      scopeId: row.scopeId,
+      trigger: row.trigger,
+      isLegacy: row.sequence.id.startsWith("legacy:"),
+      sequence: {
+        ...row.sequence,
+        steps: row.sequence.steps.map((s) => ({
+          ...s,
+          smart_line_lines: s.smart_line_lines?.map((line) => ({ ...line })),
+        })),
+      },
+    });
+  }, []);
+
+  const addAnimationSequence = useCallback(() => {
+    if (!selectedPage) return;
+    if (selectedItem) {
+      const seq: StoryActionSequence = {
+        id: newEntityId("aseq"),
+        name: `Click ${itemDisplayLabel(selectedItem)}`,
+        event: "click",
+        active_phase_ids:
+          selectedPhase && selectedPage.phases?.some((ph) => ph.id === selectedPhase.id) ?
+            [selectedPhase.id]
+          : undefined,
+        steps: [
+          {
+            id: newEntityId("astep"),
+            kind: "emphasis",
+            target_item_id: selectedItem.id,
+            timing: "simultaneous",
+          },
+        ],
+      };
+      const next = pages.map((p) =>
+        p.id === selectedPage.id ?
+          {
+            ...p,
+            items: p.items.map((it) =>
+              it.id === selectedItem.id ?
+                { ...it, action_sequences: [...(it.action_sequences ?? []), seq] }
+              : it,
+            ),
+          }
+        : p,
+      );
+      pushEmit(next);
+      setSelectedAnimationRowId(`item:${selectedItem.id}:${seq.id}`);
+      return;
+    }
+    if (selectedPhase && selectedPage.phases?.some((ph) => ph.id === selectedPhase.id)) {
+      const defaultTarget = selectedPage.items[0]?.id;
+      const seq: StoryActionSequence = {
+        id: newEntityId("aseq"),
+        name: `Phase start ${selectedPhase.name?.trim() || selectedPhase.id}`,
+        event: "phase_enter",
+        steps:
+          defaultTarget ?
+            [{
+              id: newEntityId("astep"),
+              kind: "emphasis",
+              target_item_id: defaultTarget,
+              timing: "simultaneous",
+            }]
+          : [],
+      };
+      const next = pages.map((p) =>
+        p.id === selectedPage.id ?
+          {
+            ...p,
+            phases: (p.phases ?? []).map((ph) =>
+              ph.id === selectedPhase.id ?
+                { ...ph, action_sequences: [...(ph.action_sequences ?? []), seq] }
+              : ph,
+            ),
+          }
+        : p,
+      );
+      pushEmit(next);
+      setSelectedAnimationRowId(`phase:${selectedPhase.id}:${seq.id}`);
+      return;
+    }
+    const seq: StoryActionSequence = {
+      id: newEntityId("aseq"),
+      name: "Page start animation",
+      event: "page_enter",
+      steps:
+        selectedPage.items[0] ?
+          [{
+            id: newEntityId("astep"),
+            kind: "emphasis",
+            target_item_id: selectedPage.items[0].id,
+            timing: "simultaneous",
+          }]
+        : [],
+    };
+    updatePage(selectedPage.id, {
+      action_sequences: [...(selectedPage.action_sequences ?? []), seq],
+    });
+    setSelectedAnimationRowId(`page:${selectedPage.id}:${seq.id}`);
+  }, [pages, pushEmit, selectedItem, selectedPage, selectedPhase]);
+
+  const updateAnimationEditorSequence = useCallback(
+    (patcher: (seq: StoryActionSequence) => StoryActionSequence) => {
+      setAnimationEditor((prev) => (prev ? { ...prev, sequence: patcher(prev.sequence) } : prev));
+    },
+    [],
+  );
+
+  const saveAnimationEditor = useCallback(() => {
+    if (!animationEditor) return;
+    const isLegacy = animationEditor.isLegacy || animationEditor.sequence.id.startsWith("legacy:");
+    const normalizeStep = (step: StoryActionStep): StoryActionStep => {
+      if (step.kind !== "smart_line") {
+        return { ...step, smart_line_lines: undefined };
+      }
+      return {
+        ...step,
+        smart_line_lines:
+          step.smart_line_lines && step.smart_line_lines.length > 0 ?
+            step.smart_line_lines
+          : [{ id: newEntityId("line"), priority: 100 }],
+      };
+    };
+    const prepared: StoryActionSequence =
+      isLegacy ?
+        {
+          ...animationEditor.sequence,
+          id: newEntityId("aseq"),
+          steps: animationEditor.sequence.steps.map((step) => ({
+            ...normalizeStep(step),
+            id: newEntityId("astep"),
+          })),
+        }
+      : {
+          ...animationEditor.sequence,
+          steps: animationEditor.sequence.steps.map((step) => normalizeStep(step)),
+        };
+
+    if (isLegacy) {
+      if (!selectedPage) return;
+      const next = pages.map((p) => {
+        if (p.id !== selectedPage.id) return p;
+        if (animationEditor.scope === "item") {
+          return {
+            ...p,
+            items: p.items.map((it) => {
+              if (it.id !== animationEditor.scopeId) return it;
+              const cleaned = stripLegacyAnimationFields(it);
+              return {
+                ...cleaned,
+                action_sequences: [...(cleaned.action_sequences ?? []), prepared],
+              };
+            }),
+          };
+        }
+        if (animationEditor.scope === "phase") {
+          return {
+            ...p,
+            phases: (p.phases ?? []).map((ph) => {
+              if (ph.id !== animationEditor.scopeId) return ph;
+              const cleaned = stripLegacyAnimationFields(ph);
+              return {
+                ...cleaned,
+                action_sequences: [...(cleaned.action_sequences ?? []), prepared],
+              };
+            }),
+          };
+        }
+        const cleaned = stripLegacyAnimationFields(p);
+        return {
+          ...cleaned,
+          action_sequences: [...(cleaned.action_sequences ?? []), prepared],
+        };
+      });
+      pushEmit(next);
+    } else {
+      updateSequenceInScope(animationEditor.scope, animationEditor.scopeId, (list) =>
+        list.map((seq) => (seq.id === prepared.id ? prepared : seq)),
+      );
+    }
+    const nextRowId = `${animationEditor.scope}:${animationEditor.scopeId}:${prepared.id}`;
+    setSelectedAnimationRowId(nextRowId);
+    setAnimationEditor(null);
+  }, [animationEditor, pages, pushEmit, selectedPage, updateSequenceInScope]);
+
+  const removeAnimationInEditor = useCallback(() => {
+    if (!animationEditor) return;
+    if (animationEditor.isLegacy || animationEditor.sequence.id.startsWith("legacy:")) {
+      if (!selectedPage) return;
+      const next = pages.map((p) => {
+        if (p.id !== selectedPage.id) return p;
+        if (animationEditor.scope === "item") {
+          return {
+            ...p,
+            items: p.items.map((it) =>
+              it.id === animationEditor.scopeId ? stripLegacyAnimationFields(it) : it,
+            ),
+          };
+        }
+        if (animationEditor.scope === "phase") {
+          return {
+            ...p,
+            phases: (p.phases ?? []).map((ph) =>
+              ph.id === animationEditor.scopeId ? stripLegacyAnimationFields(ph) : ph,
+            ),
+          };
+        }
+        return stripLegacyAnimationFields(p);
+      });
+      pushEmit(next);
+      setAnimationEditor(null);
+      return;
+    }
+    updateSequenceInScope(animationEditor.scope, animationEditor.scopeId, (list) =>
+      list.filter((seq) => seq.id !== animationEditor.sequence.id),
+    );
+    setAnimationEditor(null);
+  }, [animationEditor, pages, pushEmit, selectedPage, updateSequenceInScope]);
+
+  const resolveAnimationStepTargetItemId = useCallback(
+    (step: StoryActionStep): string | null => {
+      if (step.target_item_id) return step.target_item_id;
+      if (animationEditor?.scope === "item") return animationEditor.scopeId;
+      return null;
+    },
+    [animationEditor],
+  );
+
+  const moveStepHasPath = useCallback(
+    (step: StoryActionStep): boolean => {
+      if (!selectedPage) return false;
+      const targetId = resolveAnimationStepTargetItemId(step);
+      if (!targetId) return false;
+      const target = selectedPage.items.find((it) => it.id === targetId);
+      return !!(target?.path?.waypoints && target.path.waypoints.length >= 2);
+    },
+    [resolveAnimationStepTargetItemId, selectedPage],
+  );
+
+  const reorderAnimationSequenceSteps = useCallback(
+    (
+      row: AnimationRow,
+      fromIdx: number,
+      toIdx: number,
+    ) => {
+      if (row.sequence.id.startsWith("legacy:")) return;
+      updateSequenceInScope(row.scope, row.scopeId, (list) =>
+        list.map((seq) =>
+          seq.id === row.sequence.id ? { ...seq, steps: reorderByIndex(seq.steps ?? [], fromIdx, toIdx) } : seq,
+        ),
+      );
+    },
+    [updateSequenceInScope],
+  );
 
   useEffect(() => {
     if (!bgVideoLibraryOpen) return;
     let cancelled = false;
-    setBgVideoLibraryLoading(true);
-    setBgVideoLibraryErr(null);
-    listTeacherMedia("video")
-      .then((rows) => {
-        if (!cancelled) setBgVideoLibraryAssets(rows);
+    const timeoutId = window.setTimeout(() => {
+      setBgVideoLibraryLoading(true);
+      setBgVideoLibraryErr(null);
+      searchTeacherMedia({
+        kind: "video",
+        q: bgVideoLibraryQuery.trim(),
+        limit: 1000,
       })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setBgVideoLibraryErr(e instanceof Error ? e.message : "Failed to load video library");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setBgVideoLibraryLoading(false);
-      });
+        .then((rows) => {
+          if (!cancelled) setBgVideoLibraryAssets(rows);
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) {
+            setBgVideoLibraryErr(e instanceof Error ? e.message : "Failed to load video library");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setBgVideoLibraryLoading(false);
+        });
+    }, 200);
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, [bgVideoLibraryOpen]);
+  }, [bgVideoLibraryOpen, bgVideoLibraryQuery]);
 
-  const filteredBgVideoAssets = useMemo(() => {
-    const q = bgVideoLibraryQuery.trim().toLowerCase();
-    if (!q) return bgVideoLibraryAssets;
-    return bgVideoLibraryAssets.filter((asset) =>
-      [asset.meta_item_name ?? "", asset.original_filename, asset.public_url]
-        .join(" ")
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [bgVideoLibraryAssets, bgVideoLibraryQuery]);
+  useEffect(() => {
+    if (!pathEditItemId) return;
+    if (!selectedPage || !selectedPage.items.some((it) => it.id === pathEditItemId)) {
+      setPathEditItemId(null);
+      setPathDraftWaypoints([]);
+    }
+  }, [pathEditItemId, selectedPage]);
 
   async function onBackgroundVideoFileChange(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -968,6 +1501,18 @@ export function StoryFields({
               <div className="ml-auto flex shrink-0 items-center gap-1">
                 <button
                   type="button"
+                  onClick={() => setAnimationsMenuOpen((v) => !v)}
+                  className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight transition-colors ${
+                    animationsMenuOpen
+                      ? "border-fuchsia-500 bg-fuchsia-100 text-fuchsia-950 hover:bg-fuchsia-200"
+                      : "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100"
+                  }`}
+                  title={animationsMenuOpen ? "Close animations controls" : "Open animations controls"}
+                >
+                  🎬 Animations
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPageContentMenuOpen((v) => !v)}
                   className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight transition-colors ${
                     pageContentMenuOpen
@@ -992,7 +1537,7 @@ export function StoryFields({
               simple scale value only.
             </p>
             {(selectedPage.background_image_url ?? image_url) ? (
-              <div className="relative w-full" style={{ containerType: "inline-size" }}>
+              <div ref={sceneCanvasRef} className="relative w-full" style={{ containerType: "inline-size" }}>
                 <RectRegionEditor
                   imageUrl={(selectedPage.background_image_url ?? image_url)!}
                   imageFit={selectedPage.image_fit ?? image_fit}
@@ -1033,6 +1578,21 @@ export function StoryFields({
                         text_size_px: Math.min(128, Math.max(10, Math.round(baseSize * scale))),
                       };
                     });
+                    if (pathEditActive && pathEditMode === "draw" && pathEditingItem) {
+                      const moved = regs.find((r) => r.id === pathEditingItem.id);
+                      if (moved) {
+                        setPathDraftWaypoints((prev) => {
+                          if (prev.length === 0) {
+                            return [{ x_percent: moved.x_percent, y_percent: moved.y_percent }];
+                          }
+                          const last = prev[prev.length - 1]!;
+                          const dx = moved.x_percent - last.x_percent;
+                          const dy = moved.y_percent - last.y_percent;
+                          if (Math.hypot(dx, dy) < 0.35) return prev;
+                          return [...prev, { x_percent: moved.x_percent, y_percent: moved.y_percent }];
+                        });
+                      }
+                    }
                     const next = pages.map((p) =>
                       p.id === selectedPage.id ?
                         pruneDeletedItemReferences({ ...p, items: nextItems }, removedIds)
@@ -1089,7 +1649,107 @@ export function StoryFields({
                     );
                   }}
                 />
-                {selectedItem && triggerMenuPos ? (
+                {pathEditActive ? (
+                  <div className="pointer-events-none absolute inset-0 z-10">
+                    <svg className="pointer-events-none absolute inset-0 h-full w-full">
+                      {pathDraftWaypoints.length >= 2 ? (
+                        <polyline
+                          points={pathDraftWaypoints
+                            .map((p) => `${p.x_percent}% ${p.y_percent}%`)
+                            .join(" ")}
+                          fill="none"
+                          stroke="rgb(217 70 239)"
+                          strokeWidth={2}
+                          strokeDasharray="6 4"
+                        />
+                      ) : null}
+                    </svg>
+                    <div className="pointer-events-auto absolute left-2 top-2 rounded-md border border-fuchsia-300 bg-white/95 p-2 text-xs shadow">
+                      <p className="font-semibold text-fuchsia-900">
+                        Set move path · {itemDisplayLabel(pathEditingItem)}
+                      </p>
+                      <p className="mt-0.5 text-neutral-700">
+                        {pathEditMode === "set_start" ?
+                          "Step 1: Position the object, then click Confirm start position."
+                        : "Step 2: Drag the actual object on canvas to trace the path, then click Save path."}
+                      </p>
+                      <label className="mt-2 block text-[11px] text-neutral-700">
+                        Duration (ms)
+                        <input
+                          type="number"
+                          min={0}
+                          max={120000}
+                          step={50}
+                          className="mt-1 w-full rounded border px-1 py-0.5 text-xs"
+                          value={pathDraftDurationMs}
+                          onChange={(e) => setPathDraftDurationMs(Math.max(0, Number(e.target.value) || 0))}
+                        />
+                      </label>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!pathEditingItem) return;
+                            const start = {
+                              x_percent: pathEditingItem.x_percent,
+                              y_percent: pathEditingItem.y_percent,
+                            };
+                            setPathDraftWaypoints([start]);
+                            setPathEditMode("draw");
+                          }}
+                          disabled={pathEditMode === "draw"}
+                          className="rounded border border-fuchsia-400 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-900 enabled:hover:bg-fuchsia-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Confirm start position
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPathDraftWaypoints((prev) => prev.slice(0, -1));
+                          }}
+                          className="rounded border border-neutral-300 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 hover:bg-neutral-100"
+                        >
+                          Undo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const start = pathDraftWaypoints[0];
+                            setPathDraftWaypoints(start ? [start] : []);
+                          }}
+                          className="rounded border border-neutral-300 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 hover:bg-neutral-100"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelPathEdit();
+                          }}
+                          className="rounded border border-red-300 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            commitPathEdit();
+                          }}
+                          disabled={pathEditMode !== "draw" || pathDraftWaypoints.length < 2}
+                          className="rounded border border-fuchsia-400 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-900 enabled:hover:bg-fuchsia-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Save path
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                {selectedItem && triggerMenuPos && !pathEditActive ? (
                   <div className="pointer-events-none absolute inset-0 z-20">
                     <div
                       className="pointer-events-auto absolute flex flex-col items-end gap-1"
@@ -1477,36 +2137,45 @@ export function StoryFields({
                               </li>
                             ))}
                           </ul>
-                          <button
-                            type="button"
-                            className="rounded border border-sky-600 bg-white px-2 py-1 text-xs font-semibold text-sky-900"
-                            onClick={() => {
-                              const add: StoryClickAction = {
-                                trigger_id: newEntityId("taptr"),
-                                action: "show_item",
-                                trigger_timing: "simultaneous",
-                              };
-                              const nextTriggers = [...(selectedItem.on_click?.triggers ?? []), add];
-                              const next = pages.map((p) =>
-                                p.id === selectedPage.id ?
-                                  {
-                                    ...p,
-                                    items: p.items.map((it) =>
-                                      it.id === selectedItem.id ?
-                                        {
-                                          ...it,
-                                          on_click: { ...it.on_click, triggers: nextTriggers },
-                                        }
-                                      : it,
-                                    ),
-                                  }
-                                : p,
-                              );
-                              pushEmit(next);
-                            }}
-                          >
-                            + Add trigger
-                          </button>
+                          <div className="flex flex-wrap gap-1">
+                            <button
+                              type="button"
+                              className="rounded border border-sky-600 bg-white px-2 py-1 text-xs font-semibold text-sky-900"
+                              onClick={() => {
+                                const add: StoryClickAction = {
+                                  trigger_id: newEntityId("taptr"),
+                                  action: "show_item",
+                                  trigger_timing: "simultaneous",
+                                };
+                                const nextTriggers = [...(selectedItem.on_click?.triggers ?? []), add];
+                                const next = pages.map((p) =>
+                                  p.id === selectedPage.id ?
+                                    {
+                                      ...p,
+                                      items: p.items.map((it) =>
+                                        it.id === selectedItem.id ?
+                                          {
+                                            ...it,
+                                            on_click: { ...it.on_click, triggers: nextTriggers },
+                                          }
+                                        : it,
+                                      ),
+                                    }
+                                  : p,
+                                );
+                                pushEmit(next);
+                              }}
+                            >
+                              + Add trigger
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded border border-fuchsia-500 bg-white px-2 py-1 text-xs font-semibold text-fuchsia-900 hover:bg-fuchsia-50"
+                              onClick={beginPathEdit}
+                            >
+                              Set move path
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>
@@ -1807,10 +2476,10 @@ export function StoryFields({
                           <p className="text-xs text-neutral-600">Loading...</p>
                         ) : bgVideoLibraryErr ? (
                           <p className="text-xs text-red-700">{bgVideoLibraryErr}</p>
-                        ) : filteredBgVideoAssets.length === 0 ? (
+                        ) : bgVideoLibraryAssets.length === 0 ? (
                           <p className="text-xs text-neutral-600">No videos found.</p>
                         ) : (
-                          filteredBgVideoAssets.map((asset) => (
+                          bgVideoLibraryAssets.map((asset) => (
                             <button
                               key={asset.id}
                               type="button"
@@ -1963,13 +2632,432 @@ export function StoryFields({
             </div>
             <div
               className="min-w-0 w-full space-y-3 md:sticky md:top-[6.5rem] md:grid md:h-[calc(100vh-8rem)] md:w-[var(--editor-right-width)] md:space-y-0"
-              style={{
-                ["--editor-right-width" as any]: `clamp(20rem, ${editorRightPanelPct}%, 52rem)`,
-                ...(visibleEditorPanels > 0
-                  ? { gridTemplateRows: `repeat(${visibleEditorPanels}, minmax(0, 1fr))`, gap: "0.75rem" }
-                  : {}),
-              }}
+              style={
+                {
+                  "--editor-right-width": `clamp(20rem, ${editorRightPanelPct}%, 52rem)`,
+                  ...(visibleEditorPanels > 0
+                    ? { gridTemplateRows: `repeat(${visibleEditorPanels}, minmax(0, 1fr))`, gap: "0.75rem" }
+                    : {}),
+                } as CSSProperties
+              }
             >
+              {showAnimationsPanel && selectedPage ? (
+                <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-fuchsia-300/80 bg-fuchsia-50/60 p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-fuchsia-900">
+                      Animations
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => addAnimationSequence()}
+                        className="rounded border border-fuchsia-400 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-100"
+                      >
+                        + Add animation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAnimationsMenuOpen(false)}
+                        className="rounded border border-fuchsia-300 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-50"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  <div className="h-full min-h-0 space-y-2 overflow-y-auto">
+                    {selectedItem ? (
+                      <p className="px-1 text-[11px] text-fuchsia-900/90">
+                        Showing animations that trigger on or impact{" "}
+                        <strong>{itemDisplayLabel(selectedItem)}</strong>
+                        {selectedPhase ? (
+                          <>
+                            {" "}
+                            in phase <strong>{selectedPhase.name?.trim() || selectedPhase.id}</strong>.
+                          </>
+                        ) : "."}
+                      </p>
+                    ) : (
+                      <p className="px-1 text-[11px] text-fuchsia-900/90">
+                        Showing scene-level animations (page start / selected phase start).
+                      </p>
+                    )}
+                    <div className="overflow-hidden rounded border border-fuchsia-200 bg-white">
+                      <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 bg-fuchsia-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-900">
+                        <span>Animation</span>
+                        <span>Trigger</span>
+                        <span>Impacted object</span>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto">
+                        {animationRows.map((row) => (
+                          <button
+                            key={row.id}
+                            type="button"
+                            onClick={() => setSelectedAnimationRowId(row.id)}
+                            onDoubleClick={() => startAnimationEditor(row)}
+                            className={`grid w-full grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 px-2 py-1 text-left text-xs transition-colors ${
+                              selectedAnimationRowId === row.id
+                                ? "bg-fuchsia-100/60 text-fuchsia-950"
+                                : "bg-white text-neutral-800 hover:bg-fuchsia-50"
+                            }`}
+                          >
+                            <span className="truncate">{row.name}</span>
+                            <span className="truncate">{row.trigger}</span>
+                            <span className="truncate">{row.impacted}</span>
+                          </button>
+                        ))}
+                        {animationRows.length === 0 ? (
+                          <p className="px-2 py-3 text-xs text-neutral-600">
+                            No animations yet. Click <strong>+ Add animation</strong> to create one.
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    {selectedAnimationRow ? (
+                      <div className="rounded border border-fuchsia-200 bg-white p-2 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-fuchsia-900">{selectedAnimationRow.name}</p>
+                          <button
+                            type="button"
+                            onClick={() => startAnimationEditor(selectedAnimationRow)}
+                            className="rounded border border-fuchsia-300 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-50"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                        <p className="mt-0.5 text-neutral-700">
+                          Trigger: <strong>{selectedAnimationRow.trigger}</strong>
+                        </p>
+                        <p className="text-neutral-700">
+                          Impacts: <strong>{selectedAnimationRow.impacted}</strong>
+                        </p>
+                        <div className="mt-2 space-y-1">
+                          <p className="font-semibold text-neutral-800">Steps</p>
+                          {selectedAnimationRow.sequence.steps.length > 0 ? (
+                            selectedAnimationRow.sequence.steps.map((step, idx) => (
+                              <div
+                                key={`${selectedAnimationRow.id}-${step.id}-${idx}`}
+                                draggable={!selectedAnimationRow.sequence.id.startsWith("legacy:")}
+                                onDragStart={(e) => {
+                                  if (selectedAnimationRow.sequence.id.startsWith("legacy:")) return;
+                                  setDragSummaryStepIdx(idx);
+                                  e.dataTransfer.effectAllowed = "move";
+                                  e.dataTransfer.setData("text/plain", `summary-step-${idx}`);
+                                }}
+                                onDragOver={(e) => {
+                                  if (dragSummaryStepIdx === null || selectedAnimationRow.sequence.id.startsWith("legacy:")) return;
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = "move";
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  if (dragSummaryStepIdx === null) return;
+                                  reorderAnimationSequenceSteps(selectedAnimationRow, dragSummaryStepIdx, idx);
+                                  setDragSummaryStepIdx(null);
+                                }}
+                                onDragEnd={() => setDragSummaryStepIdx(null)}
+                                className={`rounded border border-neutral-200 bg-neutral-50 px-2 py-1 ${
+                                  selectedAnimationRow.sequence.id.startsWith("legacy:")
+                                    ? "cursor-not-allowed opacity-80"
+                                    : "cursor-grab active:cursor-grabbing"
+                                } ${
+                                  dragSummaryStepIdx === idx ? "opacity-70 ring-2 ring-fuchsia-300" : ""
+                                }`}
+                                title={
+                                  selectedAnimationRow.sequence.id.startsWith("legacy:")
+                                    ? "Open editor and save a copy to reorder legacy steps"
+                                    : "Drag to reorder step"
+                                }
+                              >
+                                <span className="font-medium">
+                                  {idx + 1}. {step.kind}
+                                </span>
+                                <span className="ml-2 text-neutral-600">
+                                  {step.target_item_id
+                                    ? `→ ${selectedPage.items.find((it) => it.id === step.target_item_id)?.name || step.target_item_id}`
+                                    : ""}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-neutral-600">No steps yet.</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                    {selectedItem ? (
+                      <div className="rounded border border-fuchsia-200 bg-white p-2 text-xs">
+                        <p className="font-semibold text-fuchsia-900">Speech library (tap lines)</p>
+                        <p className="mb-2 text-[11px] text-neutral-600">
+                          Lines are now managed in Animations. Lower priority plays first.
+                        </p>
+                        <div className="space-y-2">
+                          {(selectedItem.tap_speeches ?? []).map((entry, idx, arr) => (
+                            <div
+                              key={`anim-speech-${entry.id}`}
+                              className="rounded border border-fuchsia-100 bg-fuchsia-50/30 p-2"
+                            >
+                              <div className="mb-2 flex flex-wrap items-center gap-2">
+                                <label className="text-[11px] font-medium text-neutral-800">
+                                  Priority
+                                  <input
+                                    type="number"
+                                    className="ml-1 w-20 rounded border px-1 py-0.5 text-[11px]"
+                                    value={entry.priority}
+                                    onChange={(e) => {
+                                      const priority = Number(e.target.value) || 0;
+                                      const next = pages.map((p) =>
+                                        p.id === selectedPage.id ?
+                                          {
+                                            ...p,
+                                            items: p.items.map((it) =>
+                                              it.id === selectedItem.id ?
+                                                {
+                                                  ...it,
+                                                  tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
+                                                    i === idx ? { ...x, priority } : x,
+                                                  ),
+                                                }
+                                              : it,
+                                            ),
+                                          }
+                                        : p,
+                                      );
+                                      pushEmit(next);
+                                    }}
+                                  />
+                                </label>
+                                <label className="text-[11px] font-medium text-neutral-800">
+                                  Max plays
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    className="ml-1 w-20 rounded border px-1 py-0.5 text-[11px]"
+                                    value={entry.max_plays ?? ""}
+                                    onChange={(e) => {
+                                      const raw = e.target.value.trim();
+                                      const max_plays = raw ? Math.max(1, Number(raw) || 1) : undefined;
+                                      const next = pages.map((p) =>
+                                        p.id === selectedPage.id ?
+                                          {
+                                            ...p,
+                                            items: p.items.map((it) =>
+                                              it.id === selectedItem.id ?
+                                                {
+                                                  ...it,
+                                                  tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
+                                                    i === idx ? { ...x, max_plays } : x,
+                                                  ),
+                                                }
+                                              : it,
+                                            ),
+                                          }
+                                        : p,
+                                      );
+                                      pushEmit(next);
+                                    }}
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  className="rounded border border-neutral-300 px-1.5 py-0.5 text-[10px]"
+                                  disabled={idx === 0}
+                                  onClick={() => {
+                                    const next = pages.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) => {
+                                            if (it.id !== selectedItem.id) return it;
+                                            const list = [...(it.tap_speeches ?? [])];
+                                            if (idx <= 0) return it;
+                                            [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
+                                            return { ...it, tap_speeches: list };
+                                          }),
+                                        }
+                                      : p,
+                                    );
+                                    pushEmit(next);
+                                  }}
+                                >
+                                  Up
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-neutral-300 px-1.5 py-0.5 text-[10px]"
+                                  disabled={idx >= arr.length - 1}
+                                  onClick={() => {
+                                    const next = pages.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) => {
+                                            if (it.id !== selectedItem.id) return it;
+                                            const list = [...(it.tap_speeches ?? [])];
+                                            if (idx >= list.length - 1) return it;
+                                            [list[idx], list[idx + 1]] = [list[idx + 1], list[idx]];
+                                            return { ...it, tap_speeches: list };
+                                          }),
+                                        }
+                                      : p,
+                                    );
+                                    pushEmit(next);
+                                  }}
+                                >
+                                  Down
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-red-300 px-1.5 py-0.5 text-[10px] text-red-700"
+                                  onClick={() => {
+                                    const next = pages.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) => {
+                                            if (it.id !== selectedItem.id) return it;
+                                            const list = (it.tap_speeches ?? []).filter((x) => x.id !== entry.id);
+                                            return { ...it, tap_speeches: list.length > 0 ? list : undefined };
+                                          }),
+                                        }
+                                      : p,
+                                    );
+                                    pushEmit(next);
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <label className="block text-[11px] font-medium text-neutral-800">
+                                Phase targets (optional)
+                                <select
+                                  multiple
+                                  className="mt-1 h-20 w-full rounded border px-1 py-1 text-[11px]"
+                                  value={entry.phase_ids ?? []}
+                                  onChange={(e) => {
+                                    const phase_ids = Array.from(e.target.selectedOptions).map((o) => o.value);
+                                    const next = pages.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) =>
+                                            it.id === selectedItem.id ?
+                                              {
+                                                ...it,
+                                                tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
+                                                  i === idx ?
+                                                    {
+                                                      ...x,
+                                                      phase_ids: phase_ids.length > 0 ? phase_ids : undefined,
+                                                    }
+                                                  : x,
+                                                ),
+                                              }
+                                            : it,
+                                          ),
+                                        }
+                                      : p,
+                                    );
+                                    pushEmit(next);
+                                  }}
+                                >
+                                  {(selectedPage.phases ?? []).map((ph) => (
+                                    <option key={ph.id} value={ph.id}>
+                                      {ph.name?.trim() || ph.id}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="mt-2 block text-[11px] font-medium text-neutral-800">
+                                Tap text (optional)
+                                <textarea
+                                  className="mt-1 w-full rounded border px-2 py-1 text-[11px]"
+                                  rows={2}
+                                  value={entry.text ?? ""}
+                                  onChange={(e) => {
+                                    const text = e.target.value.trim() ? e.target.value : undefined;
+                                    const next = pages.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) =>
+                                            it.id === selectedItem.id ?
+                                              {
+                                                ...it,
+                                                tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
+                                                  i === idx ? { ...x, text } : x,
+                                                ),
+                                              }
+                                            : it,
+                                          ),
+                                        }
+                                      : p,
+                                    );
+                                    pushEmit(next);
+                                  }}
+                                />
+                              </label>
+                              <AudioUrlControls
+                                label="Tap audio (optional)"
+                                value={entry.sound_url ?? ""}
+                                onChange={(v) => {
+                                  const sound_url = v.trim() || undefined;
+                                  const next = pages.map((p) =>
+                                    p.id === selectedPage.id ?
+                                      {
+                                        ...p,
+                                        items: p.items.map((it) =>
+                                          it.id === selectedItem.id ?
+                                            {
+                                              ...it,
+                                              tap_speeches: (it.tap_speeches ?? []).map((x, i) =>
+                                                i === idx ? { ...x, sound_url } : x,
+                                              ),
+                                            }
+                                          : it,
+                                        ),
+                                      }
+                                    : p,
+                                  );
+                                  pushEmit(next);
+                                }}
+                                disabled={busy}
+                                compact
+                              />
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            className="rounded border border-fuchsia-400 bg-white px-2 py-1 text-[11px] font-semibold text-fuchsia-900 hover:bg-fuchsia-50"
+                            onClick={() => {
+                              const next = pages.map((p) =>
+                                p.id === selectedPage.id ?
+                                  {
+                                    ...p,
+                                    items: p.items.map((it) =>
+                                      it.id === selectedItem.id ?
+                                        {
+                                          ...it,
+                                          tap_speeches: [
+                                            ...(it.tap_speeches ?? []),
+                                            { id: newEntityId("tapline"), priority: 100 },
+                                          ],
+                                        }
+                                      : it,
+                                    ),
+                                  }
+                                : p,
+                              );
+                              pushEmit(next);
+                            }}
+                          >
+                            + Add tap speech entry
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
               {showPageContentPanel && selectedPage ? (
                 <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-amber-300/80 bg-amber-50/60 p-2">
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
@@ -2109,6 +3197,380 @@ export function StoryFields({
             </div>
           </div>
         </div>
+        </div>
+      ) : null}
+
+      {animationEditor ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-fuchsia-300 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-fuchsia-200 bg-fuchsia-50 px-4 py-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-fuchsia-900">
+                  Animation editor
+                </p>
+                <p className="text-[11px] text-fuchsia-800">
+                  Trigger: {animationEditor.trigger}
+                  {animationEditor.isLegacy ? " · Legacy row (saving creates editable copy)" : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAnimationEditor(null)}
+                className="rounded border border-fuchsia-300 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-100"
+              >
+                Close
+              </button>
+            </div>
+            <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
+              <label className={labelClass()}>
+                Animation name
+                <input
+                  className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                  value={animationEditor.sequence.name ?? ""}
+                  onChange={(e) =>
+                    updateAnimationEditorSequence((seq) => ({
+                      ...seq,
+                      name: e.target.value || undefined,
+                    }))
+                  }
+                />
+              </label>
+              <div className="space-y-2 rounded border border-neutral-200 p-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-neutral-800">Steps</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateAnimationEditorSequence((seq) => ({
+                        ...seq,
+                        steps: [
+                          ...(seq.steps ?? []),
+                          {
+                            id: newEntityId("astep"),
+                            kind: "emphasis",
+                            target_item_id: selectedItem?.id || selectedPage?.items[0]?.id,
+                            timing: "simultaneous",
+                          },
+                        ],
+                      }))
+                    }
+                    className="rounded border border-neutral-300 px-2 py-0.5 text-[10px] font-semibold text-neutral-800 hover:bg-neutral-50"
+                  >
+                    + Step
+                  </button>
+                </div>
+                {animationEditor.sequence.steps.length > 0 ? (
+                  animationEditor.sequence.steps.map((step, idx) => (
+                    <div
+                      key={`${step.id}-${idx}`}
+                      draggable
+                      onDragStart={(e) => {
+                        setDragEditorStepIdx(idx);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", `editor-step-${idx}`);
+                      }}
+                      onDragOver={(e) => {
+                        if (dragEditorStepIdx === null) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragEditorStepIdx === null) return;
+                        updateAnimationEditorSequence((seq) => ({
+                          ...seq,
+                          steps: reorderByIndex(seq.steps ?? [], dragEditorStepIdx, idx),
+                        }));
+                        setDragEditorStepIdx(null);
+                      }}
+                      onDragEnd={() => setDragEditorStepIdx(null)}
+                      className={`space-y-1 rounded border border-neutral-200 bg-neutral-50 p-2 cursor-grab active:cursor-grabbing ${
+                        dragEditorStepIdx === idx ? "opacity-70 ring-2 ring-fuchsia-300" : ""
+                      }`}
+                      title="Drag to reorder step"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-semibold text-neutral-800">Step {idx + 1}</p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateAnimationEditorSequence((seq) => ({
+                              ...seq,
+                              steps: seq.steps.filter((_, i) => i !== idx),
+                            }))
+                          }
+                          className="rounded border border-red-200 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <label className="text-[11px] text-neutral-700">
+                          Action
+                          <select
+                            className="mt-1 w-full rounded border px-1 py-1 text-xs"
+                            value={step.kind}
+                            onChange={(e) =>
+                              updateAnimationEditorSequence((seq) => ({
+                                ...seq,
+                                steps: seq.steps.map((s, i) =>
+                                  i === idx ? { ...s, kind: e.target.value as StoryActionStep["kind"] } : s,
+                                ),
+                              }))
+                            }
+                          >
+                            <option value="emphasis">emphasis</option>
+                            <option value="move">move</option>
+                            <option value="show_item">show_item</option>
+                            <option value="hide_item">hide_item</option>
+                            <option value="play_sound">play_sound</option>
+                            <option value="tts">tts</option>
+                            <option value="smart_line">smart_line</option>
+                          </select>
+                        </label>
+                        <label className="text-[11px] text-neutral-700">
+                          Timing
+                          <select
+                            className="mt-1 w-full rounded border px-1 py-1 text-xs"
+                            value={step.timing ?? "simultaneous"}
+                            onChange={(e) =>
+                              updateAnimationEditorSequence((seq) => ({
+                                ...seq,
+                                steps: seq.steps.map((s, i) =>
+                                  i === idx ?
+                                    {
+                                      ...s,
+                                      timing: e.target.value as NonNullable<StoryActionStep["timing"]>,
+                                    }
+                                  : s,
+                                ),
+                              }))
+                            }
+                          >
+                            <option value="simultaneous">simultaneous</option>
+                            <option value="after_previous">after_previous</option>
+                            <option value="next_click">next_click</option>
+                          </select>
+                        </label>
+                        <label className="text-[11px] text-neutral-700">
+                          Target
+                          <select
+                            className="mt-1 w-full rounded border px-1 py-1 text-xs"
+                            value={step.target_item_id ?? ""}
+                            onChange={(e) =>
+                              updateAnimationEditorSequence((seq) => ({
+                                ...seq,
+                                steps: seq.steps.map((s, i) =>
+                                  i === idx ? { ...s, target_item_id: e.target.value || undefined } : s,
+                                ),
+                              }))
+                            }
+                          >
+                            <option value="">(owner/default)</option>
+                            {(selectedPage?.items ?? []).map((it) => (
+                              <option key={it.id} value={it.id}>
+                                {itemDisplayLabel(it)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      {(step.kind === "emphasis" || step.kind === "move") ? (
+                        <label className="text-[11px] text-neutral-700">
+                          Duration (ms)
+                          <input
+                            type="number"
+                            min={0}
+                            className="mt-1 w-full rounded border px-2 py-1 text-xs"
+                            value={step.duration_ms ?? ""}
+                            onChange={(e) =>
+                              updateAnimationEditorSequence((seq) => ({
+                                ...seq,
+                                steps: seq.steps.map((s, i) =>
+                                  i === idx ?
+                                    { ...s, duration_ms: e.target.value ? Number(e.target.value) : undefined }
+                                  : s,
+                                ),
+                              }))
+                            }
+                          />
+                        </label>
+                      ) : null}
+                      {step.kind === "move" && !moveStepHasPath(step) ? (
+                        <p className="text-[11px] text-amber-800">
+                          Move needs a path on the target object. Use <strong>Set move path</strong> in the
+                          trigger menu first.
+                        </p>
+                      ) : null}
+                      {step.kind === "play_sound" ? (
+                        <div className="space-y-2 rounded border border-neutral-200 bg-white p-2">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[11px] font-medium text-neutral-700">Audio mode</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ?
+                                      { ...s, kind: "play_sound", tts_text: undefined, tts_lang: undefined }
+                                    : s,
+                                  ),
+                                }))
+                              }
+                              className="rounded border border-neutral-300 bg-neutral-50 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 hover:bg-neutral-100"
+                            >
+                              Audio file
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ?
+                                      { ...s, kind: "tts", sound_url: undefined, duration_ms: undefined }
+                                    : s,
+                                  ),
+                                }))
+                              }
+                              className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 hover:bg-neutral-100"
+                            >
+                              TTS
+                            </button>
+                          </div>
+                          <AudioUrlControls
+                            label="Sound file"
+                            value={step.sound_url ?? ""}
+                            onChange={(v) =>
+                              updateAnimationEditorSequence((seq) => ({
+                                ...seq,
+                                steps: seq.steps.map((s, i) =>
+                                  i === idx ? { ...s, sound_url: v.trim() || undefined } : s,
+                                ),
+                              }))
+                            }
+                            disabled={busy}
+                            compact
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetId = resolveAnimationStepTargetItemId(step);
+                              const targetItem =
+                                (selectedPage?.items ?? []).find((it) => it.id === targetId) ?? null;
+                              const fallbackUrl = preferredTapSpeechSoundUrl(
+                                targetItem,
+                                selectedPhase?.id ?? null,
+                              );
+                              if (!fallbackUrl) return;
+                              updateAnimationEditorSequence((seq) => ({
+                                ...seq,
+                                steps: seq.steps.map((s, i) =>
+                                  i === idx ? { ...s, sound_url: fallbackUrl } : s,
+                                ),
+                              }));
+                            }}
+                            disabled={
+                              (() => {
+                                const targetId = resolveAnimationStepTargetItemId(step);
+                                const targetItem =
+                                  (selectedPage?.items ?? []).find((it) => it.id === targetId) ?? null;
+                                return !preferredTapSpeechSoundUrl(targetItem, selectedPhase?.id ?? null);
+                              })()
+                            }
+                            className="rounded border border-fuchsia-300 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-900 enabled:hover:bg-fuchsia-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            title="Use first available tap speech audio from the target item"
+                          >
+                            Use saved audio on file
+                          </button>
+                        </div>
+                      ) : null}
+                      {step.kind === "tts" ? (
+                        <div className="space-y-2 rounded border border-neutral-200 bg-white p-2">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[11px] font-medium text-neutral-700">Audio mode</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ?
+                                      { ...s, kind: "play_sound", tts_text: undefined, tts_lang: undefined }
+                                    : s,
+                                  ),
+                                }))
+                              }
+                              className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 hover:bg-neutral-100"
+                            >
+                              Audio file
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ? { ...s, kind: "tts", sound_url: undefined } : s,
+                                  ),
+                                }))
+                              }
+                              className="rounded border border-neutral-300 bg-neutral-50 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-800 hover:bg-neutral-100"
+                            >
+                              TTS
+                            </button>
+                          </div>
+                          <label className="text-[11px] text-neutral-700">
+                            TTS text
+                            <input
+                              className="mt-1 w-full rounded border px-2 py-1 text-xs"
+                              value={step.tts_text ?? ""}
+                              onChange={(e) =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ? { ...s, tts_text: e.target.value || undefined } : s,
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-neutral-600">No steps yet. Add one to make this animation do something.</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-2">
+              <button
+                type="button"
+                onClick={removeAnimationInEditor}
+                className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+              >
+                Delete animation
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAnimationEditor(null)}
+                  className="rounded border border-neutral-300 px-2 py-1 text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveAnimationEditor}
+                  className="rounded border border-fuchsia-400 bg-fuchsia-100 px-2 py-1 text-xs font-semibold text-fuchsia-900 hover:bg-fuchsia-200"
+                >
+                  Save animation
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 

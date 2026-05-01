@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  listTeacherMedia,
+  searchTeacherMedia,
   uploadTeacherMedia,
   type MediaAssetRow,
 } from "@/lib/actions/media";
@@ -49,24 +49,31 @@ export function MediaUrlControls({
   useEffect(() => {
     if (!libraryOpen) return;
     let cancelled = false;
-    setLibLoading(true);
-    setLibErr(null);
-    listTeacherMedia()
-      .then((rows) => {
-        if (!cancelled) setAssets(rows);
+    const timeoutId = window.setTimeout(() => {
+      setLibLoading(true);
+      setLibErr(null);
+      searchTeacherMedia({
+        kind: "image",
+        q: libraryQuery.trim(),
+        limit: 1000,
       })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setLibErr(e instanceof Error ? e.message : "Failed to load library");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLibLoading(false);
-      });
+        .then((rows) => {
+          if (!cancelled) setAssets(rows);
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) {
+            setLibErr(e instanceof Error ? e.message : "Failed to load library");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLibLoading(false);
+        });
+    }, 200);
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, [libraryOpen]);
+  }, [libraryOpen, libraryQuery]);
 
   useEffect(() => {
     if (!libraryOpen) return;
@@ -110,17 +117,6 @@ export function MediaUrlControls({
   }
 
   const previewH = compact ? "h-28" : "h-40";
-  const normalizedQuery = libraryQuery.trim().toLowerCase();
-  const filteredAssets =
-    normalizedQuery ?
-      assets.filter((asset) =>
-        [asset.meta_item_name ?? "", asset.original_filename, asset.public_url, ...(asset.meta_tags ?? [])]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-    : assets;
-
   return (
     <div className="space-y-2">
       <span className={compact ? "text-xs font-medium text-neutral-800" : "mt-2 block text-sm font-medium text-neutral-800"}>
@@ -224,11 +220,11 @@ export function MediaUrlControls({
                   <p className="text-sm text-neutral-600">
                     No uploads yet. Use Upload on any image field to add files.
                   </p>
-                ) : filteredAssets.length === 0 ? (
+                ) : assets.length === 0 ? (
                   <p className="text-sm text-neutral-600">No media matched your search.</p>
                 ) : (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                    {filteredAssets.map((a) => (
+                    {assets.map((a) => (
                       <li key={a.id}>
                         <button
                           type="button"

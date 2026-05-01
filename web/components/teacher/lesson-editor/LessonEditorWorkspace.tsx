@@ -159,16 +159,17 @@ type ConnectorLine = {
 };
 
 function areConnectorLinesEqual(a: ConnectorLine[], b: ConnectorLine[]) {
+  const EPS = 1;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
     const left = a[i];
     const right = b[i];
     if (
       left.id !== right.id ||
-      left.x1 !== right.x1 ||
-      left.y1 !== right.y1 ||
-      left.x2 !== right.x2 ||
-      left.y2 !== right.y2
+      Math.abs(left.x1 - right.x1) > EPS ||
+      Math.abs(left.y1 - right.y1) > EPS ||
+      Math.abs(left.x2 - right.x2) > EPS ||
+      Math.abs(left.y2 - right.y2) > EPS
     ) {
       return false;
     }
@@ -223,6 +224,7 @@ export function LessonEditorWorkspace({
   const [previewPanePct, setPreviewPanePct] = useState(62);
   const [activityNotes, setActivityNotes] = useState<Record<string, ActivityNote>>({});
   const [connectorLines, setConnectorLines] = useState<ConnectorLine[]>([]);
+  const connectorLinesRef = useRef<ConnectorLine[]>([]);
   const noteZRef = useRef(20);
   const prevUserSelectRef = useRef<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -485,7 +487,9 @@ export function LessonEditorWorkspace({
     if (!shell) return;
     const hasOpenNotes = liveScreens.some((s) => activityNotes[s.id]?.open);
     if (!hasOpenNotes) {
-      setConnectorLines((prev) => (prev.length === 0 ? prev : []));
+      if (connectorLinesRef.current.length === 0) return;
+      connectorLinesRef.current = [];
+      setConnectorLines([]);
       return;
     }
     const shellRect = shell.getBoundingClientRect();
@@ -532,7 +536,9 @@ export function LessonEditorWorkspace({
         y2: stabilizeCoord(noteCenterY),
       });
     }
-    setConnectorLines((prev) => (areConnectorLinesEqual(prev, next) ? prev : next));
+    if (areConnectorLinesEqual(connectorLinesRef.current, next)) return;
+    connectorLinesRef.current = next;
+    setConnectorLines(next);
   }, [activityNotes, liveScreens]);
 
   useLayoutEffect(() => {

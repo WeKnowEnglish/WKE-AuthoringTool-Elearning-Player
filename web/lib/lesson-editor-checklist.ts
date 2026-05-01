@@ -27,6 +27,23 @@ function storyPhasesLookBroken(p: StoryPayload): boolean {
       if (ph.completion?.type === "all_matched" && !ids.has(ph.completion.next_phase_id)) {
         return true;
       }
+      if (ph.completion?.type === "sequence_complete") {
+        if (!ids.has(ph.completion.next_phase_id)) return true;
+        const sid = ph.completion.sequence_id;
+        const seqOk = pg.items.some((it) => {
+          for (const seq of it.action_sequences ?? []) {
+            if (seq.event === "click" && seq.id === sid) return true;
+          }
+          if (
+            sid === `legacy:item:${it.id}:triggers` &&
+            (it.on_click?.triggers?.length ?? 0) > 0
+          ) {
+            return true;
+          }
+          return false;
+        });
+        if (!seqOk) return true;
+      }
       if (ph.kind === "drag_match" && !ph.drag_match) {
         return true;
       }

@@ -352,14 +352,43 @@ export async function duplicateScreen(
       payloadToInsert = remapStoryPayloadIds(parsed.data);
     }
   }
-  await supabase.from("lesson_screens").insert({
-    lesson_id: lessonId,
-    order_index,
-    screen_type: row.screen_type,
-    payload: payloadToInsert,
-  });
-  await renumberScreens(supabase, lessonId);
-  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+  const { data: inserted, error: insErr } = await supabase
+    .from("lesson_screens")
+    .insert({
+      lesson_id: lessonId,
+      order_index,
+      screen_type: row.screen_type,
+      payload: payloadToInsert,
+    })
+    .select("id")
+    .single();
+  if (insErr || !inserted) throw insErr ?? new Error("Duplicate insert failed");
+  const newId = inserted.id as string;
+
+  const { data: allRows } = await supabase
+    .from("lesson_screens")
+    .select("id,screen_type,payload,order_index")
+    .eq("lesson_id", lessonId)
+    .order("order_index", { ascending: true });
+  if (!allRows?.length) {
+    await renumberScreens(supabase, lessonId);
+    revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+    return;
+  }
+  const normalRows = allRows.filter((r) => !isCongratsEndScreen(r.screen_type, r.payload));
+  const endRows = allRows.filter((r) => isCongratsEndScreen(r.screen_type, r.payload));
+  const rowsOrdered = [...normalRows, ...endRows];
+  const withoutNew = rowsOrdered.filter((r) => r.id !== newId);
+  const sourceIdx = withoutNew.findIndex((r) => r.id === screenId);
+  const newRow = rowsOrdered.find((r) => r.id === newId);
+  if (sourceIdx < 0 || !newRow) {
+    await renumberScreens(supabase, lessonId);
+    revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+    return;
+  }
+  const reordered = [...withoutNew.slice(0, sourceIdx + 1), newRow, ...withoutNew.slice(sourceIdx + 1)];
+  const reorderedIds = reordered.map((r) => r.id);
+  await reorderScreens(lessonId, moduleId, reorderedIds);
 }
 
 export async function duplicateLesson(
@@ -692,6 +721,9 @@ export async function addScreenTemplate(
           subtype: "fix_text",
           broken_text: "Helo, I am go to school.",
           acceptable: ["Hello, I am going to school.", "Hello, I am going to school"],
+          image_fit: "cover",
+          hints_enabled: true,
+          hint_decoy_words: ["went", "gone", "goes"],
         };
         break;
       case "hotspot_info":
@@ -1348,6 +1380,7 @@ function buildActivityItems(
           type: "interaction",
           subtype: "fix_text",
           image_url: getImage(word),
+          image_fit: "contain",
           broken_text: brokenText,
           acceptable,
         };

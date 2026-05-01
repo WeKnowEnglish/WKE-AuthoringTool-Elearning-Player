@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type {
   StoryItem,
   StoryPage,
@@ -218,6 +219,28 @@ export function StoryPhaseProperties({
   onSetStart,
   busy,
 }: Props) {
+  const clickSequencesForPicker = useMemo(() => {
+    if (!pageHasRealPhases) return [];
+    const out: { id: string; label: string }[] = [];
+    for (const it of pageItems) {
+      for (const seq of it.action_sequences ?? []) {
+        if (seq.event !== "click") continue;
+        out.push({
+          id: seq.id,
+          label: `${it.name?.trim() || it.id.slice(0, 8)} · ${seq.name?.trim() || "Animation"}`,
+        });
+      }
+      const legacyTriggers = it.on_click?.triggers ?? [];
+      if (legacyTriggers.length > 0) {
+        out.push({
+          id: `legacy:item:${it.id}:triggers`,
+          label: `${it.name?.trim() || it.id.slice(0, 8)} · Legacy tap triggers`,
+        });
+      }
+    }
+    return out;
+  }, [pageHasRealPhases, pageItems]);
+
   if (!pageHasRealPhases) {
     return (
       <div className="space-y-2 rounded border border-neutral-200 bg-white/90 p-3">
@@ -236,9 +259,9 @@ export function StoryPhaseProperties({
   const completion: StoryPhaseCompletion | undefined = phase.completion;
   const compType =
     completion?.type
-    ? completion.type
-    : phase.advance_on_item_tap_id && phase.next_phase_id ? "on_click" as const
-    : "end_phase" as const;
+      ? completion.type
+      : phase.advance_on_item_tap_id && phase.next_phase_id ? "on_click" as const
+      : "end_phase" as const;
 
   function setNextPhaseId(next: string | null) {
     const nextId = next || null;
@@ -291,12 +314,28 @@ export function StoryPhaseProperties({
           completion: { type: "end_phase" },
         });
       }
+    } else if (c?.type === "sequence_complete") {
+      if (nextId) {
+        onUpdatePhase({
+          next_phase_id: nextId,
+          completion: {
+            type: "sequence_complete",
+            sequence_id: c.sequence_id,
+            next_phase_id: nextId,
+          },
+        });
+      } else {
+        onUpdatePhase({
+          next_phase_id: null,
+          completion: { type: "end_phase" },
+        });
+      }
     } else {
       onUpdatePhase({ next_phase_id: nextId });
     }
   }
 
-  function setCompletionType(t: "end_phase" | "on_click" | "auto") {
+  function setCompletionType(t: "end_phase" | "on_click" | "auto" | "sequence_complete") {
     const next = phase.next_phase_id;
     if (t === "end_phase") {
       onUpdatePhase({ completion: { type: "end_phase" }, advance_on_item_tap_id: null });
@@ -308,6 +347,20 @@ export function StoryPhaseProperties({
       }
       onUpdatePhase({
         completion: { type: "on_click", target_item_id: target, next_phase_id: next },
+        advance_on_item_tap_id: null,
+      });
+    } else if (t === "sequence_complete") {
+      const firstSeq = clickSequencesForPicker[0];
+      if (!next || !firstSeq) {
+        onUpdatePhase({ completion: { type: "end_phase" } });
+        return;
+      }
+      onUpdatePhase({
+        completion: {
+          type: "sequence_complete",
+          sequence_id: firstSeq.id,
+          next_phase_id: next,
+        },
         advance_on_item_tap_id: null,
       });
     } else {
@@ -603,7 +656,11 @@ export function StoryPhaseProperties({
               value={compType}
               onChange={(e) =>
                 setCompletionType(
-                  e.target.value as "end_phase" | "on_click" | "auto",
+                  e.target.value as
+                    | "end_phase"
+                    | "on_click"
+                    | "auto"
+                    | "sequence_complete",
                 )
               }
             >
@@ -611,11 +668,57 @@ export function StoryPhaseProperties({
               <option value="on_click" disabled={!phase.next_phase_id}>
                 Student taps an item
               </option>
+              <option
+                value="sequence_complete"
+                disabled={
+                  !phase.next_phase_id || clickSequencesForPicker.length === 0
+                }
+              >
+                When a click animation finishes
+              </option>
               <option value="auto" disabled={!phase.next_phase_id}>
                 After a delay
               </option>
             </select>
           </label>
+          {compType === "sequence_complete" && phase.next_phase_id && (
+            <div className="mt-1 space-y-1">
+              <p className="text-[10px] text-sky-900">
+                Advances after the selected click animation finishes (delays and step durations
+                included). For multi-tap chains, this runs after the <strong>final</strong> tap in
+                the chain. Spoken audio length is not waited on.
+              </p>
+              <label className="block text-xs text-neutral-700">
+                Animation (click sequence)
+                <select
+                  className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                  disabled={busy || clickSequencesForPicker.length === 0}
+                  value={
+                    completion?.type === "sequence_complete" ?
+                      completion.sequence_id
+                    : clickSequencesForPicker[0]?.id ?? ""}
+                  onChange={(e) => {
+                    const sequence_id = e.target.value;
+                    if (!sequence_id || !phase.next_phase_id) return;
+                    onUpdatePhase({
+                      completion: {
+                        type: "sequence_complete",
+                        sequence_id,
+                        next_phase_id: phase.next_phase_id,
+                      },
+                      advance_on_item_tap_id: null,
+                    });
+                  }}
+                >
+                  {clickSequencesForPicker.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
           {compType === "on_click" && phase.next_phase_id && (
             <label className="mt-1 block text-xs text-neutral-700">
               Tap this item

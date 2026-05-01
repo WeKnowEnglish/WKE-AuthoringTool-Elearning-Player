@@ -1,5 +1,6 @@
 "use client";
 
+import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -40,6 +41,7 @@ import {
   RectRegionEditor,
   type RectPercent,
 } from "@/components/teacher/lesson-editor/RectRegionEditor";
+import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { StoryFields } from "@/components/teacher/lesson-editor/story-fields";
 import type { LessonScreenRow } from "@/lib/data/catalog";
@@ -292,7 +294,7 @@ export function ScreenEditorCard({
         if (pending) {
           bumpScreenPayload(pending.screenId, pending.payload);
         }
-      }, 200);
+      }, 380);
       scheduleDebouncedPersist();
     },
     [bumpScreenPayload, screen.id, scheduleDebouncedPersist],
@@ -396,9 +398,7 @@ export function ScreenEditorCard({
             parsed={parsed}
             onLivePayload={pushLive}
             busy={false}
-            storySyncKey={
-              screen.screen_type === "story" ? storySyncKey : undefined
-            }
+            payloadSyncKey={storySyncKey}
           />
           {screen.screen_type === "interaction" && parsed.type === "interaction" ? (
             <section className="mt-4 rounded border border-neutral-200 p-3">
@@ -454,22 +454,29 @@ function StructuredFields({
   parsed,
   onLivePayload,
   busy,
-  storySyncKey,
+  payloadSyncKey,
 }: {
   screenType: string;
   parsed: ScreenPayload;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
-  /** When set, StoryFields only resets from props when this key changes (server row), not on every live edit. */
-  storySyncKey?: string;
+  /** `screen.id` + `updated_at` — form state resets only when the server row revision changes, not on live preview bumps. */
+  payloadSyncKey: string;
 }) {
   if (screenType === "start" && parsed.type === "start") {
-    return <StartFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+    return (
+      <StartFields
+        syncKey={payloadSyncKey}
+        initial={parsed}
+        onLivePayload={onLivePayload}
+        busy={busy}
+      />
+    );
   }
   if (screenType === "story" && parsed.type === "story") {
     return (
       <StoryFields
-        syncKey={storySyncKey ?? `${parsed.type}-fallback`}
+        syncKey={payloadSyncKey}
         initial={parsed}
         onLivePayload={onLivePayload}
         busy={busy}
@@ -479,32 +486,112 @@ function StructuredFields({
   if (screenType === "interaction" && parsed.type === "interaction") {
     switch (parsed.subtype) {
       case "mc_quiz":
-        return <McQuizFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <McQuizFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "true_false":
-        return <TrueFalseFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <TrueFalseFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "short_answer":
-        return <ShortAnswerFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <ShortAnswerFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "essay":
-        return <EssayFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <EssayFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "fill_blanks":
-        return <FillBlanksFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <FillBlanksFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "fix_text":
-        return <FixTextFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <FixTextFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "click_targets":
-        return <ClickTargetsFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <ClickTargetsFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "drag_sentence":
-        return <DragSentenceFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <DragSentenceFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "hotspot_info":
-        return <HotspotInfoFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <HotspotInfoFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "hotspot_gate":
-        return <HotspotGateFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <HotspotGateFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "listen_hotspot_sequence":
         return (
-          <ListenHotspotSequenceFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />
+          <ListenHotspotSequenceFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
         );
       case "listen_color_write":
         return (
-          <ListenColorWriteFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />
+          <ListenColorWriteFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
         );
       case "letter_mixup":
         return <LetterMixupFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
@@ -515,16 +602,45 @@ function StructuredFields({
       case "sorting_game":
         return <SortingGameFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
       case "drag_match":
-        return <DragMatchFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <DragMatchFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "sound_sort":
-        return <SoundSortFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <SoundSortFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "voice_question":
-        return <VoiceQuestionFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <VoiceQuestionFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "guided_dialogue":
-        return <GuidedDialogueFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <GuidedDialogueFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "presentation_interactive":
         return (
           <PresentationInteractiveFields
+            syncKey={payloadSyncKey}
             initial={parsed}
             onLivePayload={onLivePayload}
             busy={busy}
@@ -546,10 +662,12 @@ function labelClass() {
 }
 
 function StartFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "start" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -564,7 +682,8 @@ function StartFields({
     setImageFit(initial.image_fit ?? "cover");
     setCta(initial.cta_label ?? "Start learning");
     setReadAloudTitle(initial.read_aloud_title ?? "");
-  }, [initial.image_url, initial.image_fit, initial.cta_label, initial.read_aloud_title]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(image: string, fit: "cover" | "contain", cta: string, readTitle: string) {
     onLivePayload({
@@ -631,10 +750,12 @@ function StartFields({
 }
 
 function McQuizFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "mc_quiz" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -664,45 +785,11 @@ function McQuizFields({
   const [correct_option_id, setCorrect] = useState(initial.correct_option_id ?? "");
   const [shuffle_options, setShuffleOptions] = useState(initial.shuffle_options ?? false);
   const [tip_text, setTip] = useState(initial.guide?.tip_text ?? "");
-  const localDraftSigRef = useRef("");
-
-  useEffect(() => {
-    const { options, resolvedCorrect } = resolveCorrectOptionId(optionsText, correct_option_id);
-    localDraftSigRef.current = JSON.stringify({
-      question,
-      image_url: image_url || undefined,
-      image_fit,
-      options,
-      correct_option_id: resolvedCorrect,
-      shuffle_options,
-      guide_tip_text: tip_text || "",
-    });
-  }, [
-    question,
-    image_url,
-    image_fit,
-    optionsText,
-    correct_option_id,
-    shuffle_options,
-    tip_text,
-    resolveCorrectOptionId,
-  ]);
 
   useEffect(() => {
     const incomingOptionsText = initial.options
       .map((o: { id: string; label: string }) => o.label)
       .join("\n");
-    const incomingSig = JSON.stringify({
-      question: initial.question,
-      image_url: initial.image_url ?? undefined,
-      image_fit: initial.image_fit ?? "cover",
-      options: initial.options,
-      correct_option_id: initial.correct_option_id ?? "",
-      shuffle_options: initial.shuffle_options ?? false,
-      guide_tip_text: initial.guide?.tip_text ?? "",
-    });
-    // Ignore parent re-renders that only reflect our in-progress local typing.
-    if (incomingSig === localDraftSigRef.current) return;
     setQ(initial.question);
     setImg(initial.image_url ?? "");
     setImageFit(initial.image_fit ?? "cover");
@@ -710,15 +797,8 @@ function McQuizFields({
     setCorrect(initial.correct_option_id ?? "");
     setShuffleOptions(initial.shuffle_options ?? false);
     setTip(initial.guide?.tip_text ?? "");
-  }, [
-    initial.question,
-    initial.image_url,
-    initial.image_fit,
-    initial.options,
-    initial.correct_option_id,
-    initial.shuffle_options,
-    initial.guide?.tip_text,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emitFrom(
     q: string,
@@ -851,10 +931,12 @@ function McQuizFields({
 }
 
 function TrueFalseFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "true_false" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -867,7 +949,8 @@ function TrueFalseFields({
     setS(initial.statement);
     setC(initial.correct);
     setImg(initial.image_url ?? "");
-  }, [initial.statement, initial.correct, initial.image_url]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(st: string, cor: boolean, img: string) {
     emitLive(onLivePayload, trueFalsePayloadSchema, {
@@ -921,10 +1004,12 @@ function TrueFalseFields({
 }
 
 function ShortAnswerFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "short_answer" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -935,20 +1020,14 @@ function ShortAnswerFields({
   const [normalize_whitespace, setNw] = useState(initial.normalize_whitespace ?? true);
   const [image_url, setImg] = useState(initial.image_url ?? "");
 
-  const acceptableAnswersSig = JSON.stringify(initial.acceptable_answers);
   useEffect(() => {
     setP(initial.prompt);
     setAcc(initial.acceptable_answers.join("\n"));
     setCi(initial.case_insensitive ?? true);
     setNw(initial.normalize_whitespace ?? true);
     setImg(initial.image_url ?? "");
-  }, [
-    initial.prompt,
-    acceptableAnswersSig,
-    initial.case_insensitive,
-    initial.normalize_whitespace,
-    initial.image_url,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     pr: string,
@@ -1038,10 +1117,12 @@ function ShortAnswerFields({
 }
 
 function EssayFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "essay" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -1064,14 +1145,8 @@ function EssayFields({
     setKeywordsText((initial.keywords ?? []).join("\n"));
     setFeedback(initial.feedback_text ?? "");
     setShowKw(initial.show_keywords_to_students ?? false);
-  }, [
-    initial.prompt,
-    initial.min_chars,
-    initial.image_url,
-    initial.keywords,
-    initial.feedback_text,
-    initial.show_keywords_to_students,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     pr: string,
@@ -1184,10 +1259,12 @@ function parseFillBlanksWordBankInput(raw: string): string[] {
 }
 
 function FillBlanksFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "fill_blanks" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -1209,9 +1286,6 @@ function FillBlanksFields({
     blanks: initial.blanks,
   });
 
-  const blanksSig = JSON.stringify(initial.blanks);
-  const wordBankSig = JSON.stringify(initial.word_bank ?? []);
-
   useEffect(() => {
     setStarred(payloadToStarredText(initial.template, initial.blanks));
     setParseError(null);
@@ -1221,15 +1295,8 @@ function FillBlanksFields({
     setImageSize(initial.image_size ?? "normal");
     setBody(initial.body_text ?? "");
     lastGoodRef.current = { template: initial.template, blanks: initial.blanks };
-  }, [
-    initial.template,
-    blanksSig,
-    wordBankSig,
-    initial.image_url,
-    initial.image_fit,
-    initial.image_size,
-    initial.body_text,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function tryEmit(
     starred: string,
@@ -1364,10 +1431,12 @@ function FillBlanksFields({
 }
 
 function FixTextFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "fix_text" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -1376,26 +1445,53 @@ function FixTextFields({
   const [acceptableText, setA] = useState(initial.acceptable.join("\n"));
   const [image_url, setImg] = useState(initial.image_url ?? "");
   const [body_text, setBody] = useState(initial.body_text ?? "");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "cover");
+  const [hints_enabled, setHintsEnabled] = useState(initial.hints_enabled ?? true);
+  const [hint_decoys_text, setHintDecoysText] = useState(
+    () => (initial.hint_decoy_words ?? []).join("\n"),
+  );
 
-  const acceptableSig = JSON.stringify(initial.acceptable);
   useEffect(() => {
     setB(initial.broken_text);
     setA(initial.acceptable.join("\n"));
     setImg(initial.image_url ?? "");
     setBody(initial.body_text ?? "");
-  }, [initial.broken_text, acceptableSig, initial.image_url, initial.body_text]);
+    setImageFit(initial.image_fit ?? "cover");
+    setHintsEnabled(initial.hints_enabled ?? true);
+    setHintDecoysText((initial.hint_decoy_words ?? []).join("\n"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
-  function emit(br: string, acc: string, img: string, intro: string) {
+  function parseHintDecoys(raw: string): string[] {
+    return raw
+      .split(/\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
+  function emit(
+    br: string,
+    acc: string,
+    img: string,
+    intro: string,
+    hints: boolean,
+    decoys: string,
+    fit: "cover" | "contain" = image_fit,
+  ) {
     const acceptable = parseAcceptableAnswersInput(acc);
+    const hint_decoy_words = parseHintDecoys(decoys);
     emitLive(onLivePayload, fixTextPayloadSchema, {
       type: "interaction",
       subtype: "fix_text",
       broken_text: br,
       acceptable,
       image_url: img || undefined,
+      image_fit: fit,
       body_text: intro || undefined,
       case_insensitive: initial.case_insensitive ?? true,
       normalize_whitespace: initial.normalize_whitespace ?? true,
+      hints_enabled: hints,
+      hint_decoy_words: hint_decoy_words.length > 0 ? hint_decoy_words : undefined,
       guide: initial.guide,
     });
   }
@@ -1411,7 +1507,7 @@ function FixTextFields({
           onChange={(e) => {
             const v = e.target.value;
             setB(v);
-            emit(v, acceptableText, image_url, body_text);
+            emit(v, acceptableText, image_url, body_text, hints_enabled, hint_decoys_text);
           }}
         />
       </label>
@@ -1425,7 +1521,7 @@ function FixTextFields({
           onChange={(e) => {
             const v = e.target.value;
             setA(v);
-            emit(broken_text, v, image_url, body_text);
+            emit(broken_text, v, image_url, body_text, hints_enabled, hint_decoys_text);
           }}
         />
       </label>
@@ -1437,7 +1533,7 @@ function FixTextFields({
           onChange={(e) => {
             const v = e.target.value;
             setBody(v);
-            emit(broken_text, acceptableText, image_url, v);
+            emit(broken_text, acceptableText, image_url, v, hints_enabled, hint_decoys_text);
           }}
         />
       </label>
@@ -1446,20 +1542,86 @@ function FixTextFields({
         value={image_url}
         onChange={(v) => {
           setImg(v);
-          emit(broken_text, acceptableText, v, body_text);
+          emit(broken_text, acceptableText, v, body_text, hints_enabled, hint_decoys_text);
         }}
         disabled={busy}
         compact
       />
+      {image_url.trim() ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-neutral-600">Image fit</span>
+          <button
+            type="button"
+            className={clsx(
+              "rounded border px-2 py-1 text-xs font-semibold",
+              image_fit === "cover" ? "border-kid-ink bg-kid-cta/40" : "border-neutral-300 bg-white",
+            )}
+            onClick={() => {
+              setImageFit("cover");
+              emit(broken_text, acceptableText, image_url, body_text, hints_enabled, hint_decoys_text, "cover");
+            }}
+          >
+            Fill
+          </button>
+          <button
+            type="button"
+            className={clsx(
+              "rounded border px-2 py-1 text-xs font-semibold",
+              image_fit === "contain" ? "border-kid-ink bg-kid-cta/40" : "border-neutral-300 bg-white",
+            )}
+            onClick={() => {
+              setImageFit("contain");
+              emit(broken_text, acceptableText, image_url, body_text, hints_enabled, hint_decoys_text, "contain");
+            }}
+          >
+            Contain
+          </button>
+        </div>
+      ) : null}
+      <div className="rounded border border-neutral-200 bg-neutral-50/80 px-2 py-2">
+        <p className="text-xs font-semibold text-neutral-700">Hints (student)</p>
+        <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={hints_enabled}
+            onChange={(e) => {
+              const v = e.target.checked;
+              setHintsEnabled(v);
+              emit(broken_text, acceptableText, image_url, body_text, v, hint_decoys_text);
+            }}
+          />
+          Enable Hint button (spotlight a mistake, then multiple-choice picks)
+        </label>
+        <label className={labelClass()}>
+          Decoy words for hint choices (optional, one per line — all are shown with the correct word)
+          <textarea
+            className="mt-1 w-full rounded border bg-white px-2 py-1 font-mono text-xs"
+            rows={3}
+            placeholder={"went\ngone\nlikes"}
+            value={hint_decoys_text}
+            onChange={(e) => {
+              const v = e.target.value;
+              setHintDecoysText(v);
+              emit(broken_text, acceptableText, image_url, body_text, hints_enabled, v);
+            }}
+          />
+        </label>
+        <p className="mt-1 text-[11px] leading-snug text-neutral-600">
+          If you skip decoys, other words from the sentence (and simple filler words) are used as
+          wrong options.
+        </p>
+      </div>
     </div>
   );
 }
 
 function ClickTargetsFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "click_targets" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -1486,13 +1648,8 @@ function ClickTargetsFields({
     setCorrect(initial.correct_target_id ?? "");
     setTreasureIds(initial.treasure_target_ids ?? []);
     setSelectedId(null);
-  }, [
-    initial.body_text,
-    initial.image_url,
-    initial.correct_target_id,
-    initial.treasure_target_ids,
-    initial.targets,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     body: string,
@@ -1724,10 +1881,12 @@ function ClickTargetsFields({
 }
 
 function DragSentenceFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "drag_sentence" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -1746,13 +1905,8 @@ function DragSentenceFields({
     setBlankCount(Math.max(1, initial.sentence_slots.length || 2));
     setBank(initial.word_bank.join("\n"));
     setOrder(initial.correct_order.join("\n"));
-  }, [
-    initial.body_text,
-    initial.image_url,
-    initial.sentence_slots,
-    initial.word_bank,
-    initial.correct_order,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   const word_bank = bank
     .split("\n")
@@ -1926,10 +2080,12 @@ function newPresentationId(prefix: string): string {
 }
 
 function PresentationInteractiveFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "presentation_interactive" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -1953,7 +2109,8 @@ function PresentationInteractiveFields({
     setSlides(nextSlides);
     setSelectedSlideId(nextSlides[0]?.id ?? null);
     setSelectedElementId(null);
-  }, [initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   const selectedSlide = slides.find((s) => s.id === selectedSlideId) ?? slides[0] ?? null;
   const selectedElement = selectedSlide?.elements.find((e) => e.id === selectedElementId) ?? null;
@@ -2518,10 +2675,12 @@ type HotspotInfoItemState = {
 };
 
 function HotspotInfoFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "hotspot_info" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -2540,7 +2699,8 @@ function HotspotInfoFields({
     setReq(initial.require_all_viewed ?? false);
     setHotspots(initial.hotspots.map((h) => ({ ...h })));
     setSelectedId(null);
-  }, [initial.image_url, initial.body_text, initial.require_all_viewed, initial.hotspots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     img: string,
@@ -2752,10 +2912,12 @@ function HotspotInfoFields({
 }
 
 function HotspotGateFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "hotspot_gate" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -2784,14 +2946,8 @@ function HotspotGateFields({
     );
     setTargets(initial.targets.map((t) => ({ ...t })));
     setSelectedId(null);
-  }, [
-    initial.image_url,
-    initial.body_text,
-    initial.mode,
-    initial.correct_target_id,
-    initial.order,
-    initial.targets,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     img: string,
@@ -3035,10 +3191,12 @@ function nextDragRowId<T extends { id: string }>(rows: T[], prefix: string) {
 }
 
 function DragMatchFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "drag_match" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -3069,13 +3227,8 @@ function DragMatchFields({
       m[t.id] = initial.correct_map[t.id] ?? initial.zones[0]?.id ?? "";
     }
     setTokenZone(m);
-  }, [
-    initial.body_text,
-    initial.image_url,
-    initial.zones,
-    initial.tokens,
-    initial.correct_map,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   const zoneIds = new Set(zones.map((z) => z.id));
 
@@ -3334,10 +3487,12 @@ function DragMatchFields({
 type SoundSortChoiceRow = { id: string; image_url: string; label: string };
 
 function SoundSortFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "sound_sort" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -3364,7 +3519,8 @@ function SoundSortFields({
       })),
     );
     setCorrect(initial.correct_choice_id);
-  }, [initial.body_text, initial.prompt_audio_url, initial.choices, initial.correct_choice_id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(intro: string, audio: string, ch: SoundSortChoiceRow[], cor: string) {
     const ids = new Set(ch.map((c) => c.id));
@@ -3535,10 +3691,12 @@ function SoundSortFields({
 }
 
 function ListenHotspotSequenceFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "listen_hotspot_sequence" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -3559,7 +3717,8 @@ function ListenHotspotSequenceFields({
     setOrderIds([...initial.order]);
     setTargets(initial.targets.map((t) => ({ ...t })));
     setSelectedId(null);
-  }, [initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     img: string,
@@ -3722,10 +3881,12 @@ type ListenColorWriteTarget = RectPercent & {
 };
 
 function ListenColorWriteFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "listen_color_write" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -3756,7 +3917,8 @@ function ListenColorWriteFields({
     setTextOptions(initial.text_options.map((t) => ({ ...t })));
     setTargets(initial.targets.map((t) => ({ ...t })));
     setSelectedId(null);
-  }, [initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     img: string,
@@ -4127,16 +4289,32 @@ function LetterMixupFields({
 }) {
   const [prompt, setPrompt] = useState(initial.prompt);
   const [image_url, setImageUrl] = useState(initial.image_url ?? "");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "cover");
+  const [image_audio_url, setImageAudioUrl] = useState(initial.image_audio_url ?? "");
+  const [image_use_tts, setImageUseTts] = useState(initial.image_use_tts ?? false);
+  const [image_read_aloud_text, setImageReadAloudText] = useState(initial.image_read_aloud_text ?? "");
   const [shuffle_letters, setShuffleLetters] = useState(initial.shuffle_letters ?? true);
   const [case_sensitive, setCaseSensitive] = useState(initial.case_sensitive ?? false);
   const [items, setItems] = useState(() => initial.items.map((it) => ({ ...it })));
 
-  function emit(next: typeof items, nextPrompt = prompt, nextImage = image_url) {
+  function emit(
+    next: typeof items,
+    nextPrompt = prompt,
+    nextImage = image_url,
+    nextImageFit = image_fit,
+    nextImageAudio = image_audio_url,
+    nextImageUseTts = image_use_tts,
+    nextImageReadAloud = image_read_aloud_text,
+  ) {
     emitLive(onLivePayload, letterMixupPayloadSchema, {
       type: "interaction",
       subtype: "letter_mixup",
       prompt: nextPrompt,
       image_url: nextImage || undefined,
+      image_fit: nextImageFit,
+      image_audio_url: nextImageAudio.trim() || undefined,
+      image_use_tts: nextImageUseTts,
+      image_read_aloud_text: nextImageReadAloud.trim() || undefined,
       shuffle_letters,
       case_sensitive,
       items: next,
@@ -4151,6 +4329,88 @@ function LetterMixupFields({
         <textarea className="mt-1 w-full rounded border px-2 py-1 text-sm" rows={2} value={prompt} onChange={(e) => { const v = e.target.value; setPrompt(v); emit(items, v, image_url); }} />
       </label>
       <MediaUrlControls label="Image (optional)" value={image_url} onChange={(v) => { setImageUrl(v); emit(items, prompt, v); }} compact />
+      {image_url.trim() ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-neutral-600">Image fit</span>
+          <button
+            type="button"
+            className={clsx(
+              "rounded border px-2 py-1 text-xs font-semibold",
+              image_fit === "cover" ? "border-kid-ink bg-kid-cta/40" : "border-neutral-300 bg-white",
+            )}
+            onClick={() => {
+              setImageFit("cover");
+              emit(items, prompt, image_url, "cover");
+            }}
+          >
+            Fill
+          </button>
+          <button
+            type="button"
+            className={clsx(
+              "rounded border px-2 py-1 text-xs font-semibold",
+              image_fit === "contain" ? "border-kid-ink bg-kid-cta/40" : "border-neutral-300 bg-white",
+            )}
+            onClick={() => {
+              setImageFit("contain");
+              emit(items, prompt, image_url, "contain");
+            }}
+          >
+            Contain
+          </button>
+        </div>
+      ) : null}
+      {image_url.trim() ? (
+        <>
+          <AudioUrlControls
+            label="Picture audio — students tap the image to hear the word"
+            value={image_audio_url}
+            onChange={(v) => {
+              setImageAudioUrl(v);
+              emit(items, prompt, image_url, image_fit, v);
+            }}
+            compact
+          />
+          <div className="space-y-2 rounded border border-neutral-200 bg-neutral-50/90 p-3">
+            <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-neutral-800">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={image_use_tts}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setImageUseTts(v);
+                  emit(items, prompt, image_url, image_fit, image_audio_url, v);
+                }}
+              />
+              <span>
+                Use text-to-speech instead of recorded audio
+                <span className="mt-0.5 block text-xs font-normal text-neutral-600">
+                  The device will read the text below (or the target word) when students tap the picture.
+                </span>
+              </span>
+            </label>
+            {image_use_tts ? (
+              <label className={labelClass()}>
+                Words to speak (optional)
+                <textarea
+                  className="mt-1 w-full rounded border bg-white px-2 py-1 text-sm"
+                  rows={2}
+                  placeholder="Leave blank to use the target word from item 1"
+                  value={image_read_aloud_text}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setImageReadAloudText(v);
+                    emit(items, prompt, image_url, image_fit, image_audio_url, true, v);
+                  }}
+                />
+              </label>
+            ) : null}
+          </div>
+        </>
+      ) : (
+        <p className="text-xs text-neutral-500">Add an image above to attach tap-to-hear audio.</p>
+      )}
       <div className="flex flex-wrap gap-4">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={shuffle_letters} onChange={(e) => { const v = e.target.checked; setShuffleLetters(v); emit(items); }} />
@@ -4771,10 +5031,12 @@ function SortingGameFields({
 }
 
 function VoiceQuestionFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "voice_question" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -4795,7 +5057,8 @@ function VoiceQuestionFields({
     setMaxDurationSeconds(initial.max_duration_seconds ?? 90);
     setMaxAttempts(initial.max_attempts ?? 3);
     setRequirePlaybackBeforeSubmit(initial.require_playback_before_submit ?? false);
-  }, [initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     nextPrompt: string,
@@ -4903,10 +5166,12 @@ function VoiceQuestionFields({
 }
 
 function GuidedDialogueFields({
+  syncKey,
   initial,
   onLivePayload,
   busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "guided_dialogue" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -4928,7 +5193,8 @@ function GuidedDialogueFields({
     setTurns(initial.turns.map((t) => ({ ...t })));
     setRequireTurnAudioPlayback(initial.require_turn_audio_playback ?? false);
     setAllowRetryEachTurn(initial.allow_retry_each_turn ?? true);
-  }, [initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(next: {
     character_name: string;

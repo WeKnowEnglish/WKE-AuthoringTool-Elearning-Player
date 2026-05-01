@@ -18,20 +18,24 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { bumpTapSpeechCounter, resolveTapSpeechEntry } from "@/lib/story-tap-speech";
 import {
+  getItemClickActionSequences,
+  getPageEnterActionSequences,
+  getPhaseEnterActionSequences,
+} from "@/lib/story-action-sequences";
+import {
   getNormalizedStoryPages,
-  getOnEnterRuntimeActions,
   getPhaseInteractionKind,
   getPhaseVisibleItemWhitelist,
   getResolvedPhaseTransition,
   getStartPhaseIdFromNormalizedPage,
   getStoryPageTurnStyle,
   storyPayloadSchema,
+  type StoryActionSequence,
+  type StoryActionStep,
   type StoryAnimationPreset,
-  type StoryClickAction,
   type StoryItem,
   type StoryPagePhase,
   type StoryPayload,
-  type StoryTimelineStep,
 } from "@/lib/lesson-schemas";
 import { ScaledStoryItemImage } from "@/components/story/ScaledStoryItemImage";
 import { GuideBlock } from "@/components/lesson/interaction-views";
@@ -41,25 +45,6 @@ function enterClassForPreset(preset: StoryAnimationPreset | undefined): string {
   const p = preset ?? "fade_in";
   if (p === "none") return "story-in-none";
   return `story-in-${p}`;
-}
-
-type RuntimeStoryAction = Pick<StoryTimelineStep, "item_id" | "sound_url"> & {
-  action: StoryTimelineStep["action"] | StoryClickAction["action"];
-  emphasis_preset?: StoryClickAction["emphasis_preset"];
-  play_once?: StoryClickAction["play_once"];
-  duration_ms?: StoryClickAction["duration_ms"];
-};
-
-function normalizeTriggerTiming(
-  mode: StoryClickAction["trigger_timing"] | string | undefined,
-): "simultaneous" | "after_previous" | "next_click" {
-  if (mode === "after_previous" || mode === "after previous" || mode === "after-previous") {
-    return "after_previous";
-  }
-  if (mode === "next_click" || mode === "next click" || mode === "next-click") {
-    return "next_click";
-  }
-  return "simultaneous";
 }
 
 type Props = {
@@ -106,9 +91,10 @@ export function StoryBookView({
   const pageAudioRef = useRef<HTMLAudioElement | null>(null);
   const itemAudioRef = useRef<HTMLAudioElement | null>(null);
   const pathAbortRef = useRef<AbortController | null>(null);
-  const tapSequenceIndexRef = useRef<Record<string, number>>({});
-  const triggerLockStateRef = useRef<Record<string, boolean>>({});
   const triggerLastEndAtRef = useRef<Record<string, number>>({});
+  const actionSequenceIndexRef = useRef<Record<string, number>>({});
+  const actionStepLockRef = useRef<Record<string, boolean>>({});
+  const clickSequenceTimersRef = useRef<Record<string, number[]>>({});
   const tapSpeechCountersRef = useRef<Record<string, number>>({});
   const phaseAutoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -122,6 +108,25 @@ export function StoryBookView({
 
   const safeIndex = Math.min(pageIndex, Math.max(0, pages.length - 1));
   const page = pages[safeIndex];
+  const getPreferredItemSoundUrl = useCallback(
+    (item: StoryItem | undefined): string | undefined => {
+      if (!item?.tap_speeches?.length) return undefined;
+      const activePhaseId =
+        page.phasesExplicit ?
+          (activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page))
+        : null;
+      const sorted = [...item.tap_speeches].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+      const selected = sorted.find((entry) => {
+        const sound = entry.sound_url?.trim();
+        if (!sound) return false;
+        if (!entry.phase_ids || entry.phase_ids.length === 0) return true;
+        if (!activePhaseId) return false;
+        return entry.phase_ids.includes(activePhaseId);
+      });
+      return selected?.sound_url?.trim() || undefined;
+    },
+    [page],
+  );
   const currentStoryPhase: StoryPagePhase | null = useMemo(() => {
     if (!page.phasesExplicit) return null;
     const sid = activeStoryPhaseId ?? getStartPhaseIdFromNormalizedPage(page);
@@ -174,7 +179,7 @@ export function StoryBookView({
   const runItemEmphasis = useCallback(
     (
       item: StoryItem,
-      emphasisPreset?: StoryClickAction["emphasis_preset"],
+      emphasisPreset?: StoryActionStep["emphasis_preset"],
       durationOverrideMs?: number,
     ) => {
       const el = document.querySelector<HTMLElement>(
@@ -251,92 +256,267 @@ export function StoryBookView({
     [screenId],
   );
 
-  const runStoryTimelineStep = useCallback(
+  const runActionStep = useCallback(
     (
-      step: RuntimeStoryAction,
+      step: StoryActionStep,
       itemById: Map<string, StoryItem>,
-      clickedItemId: string | null,
+      ownerItemId: string | null,
+      sequenceId: string,
     ) => {
-      switch (step.action) {
+      const targetId = step.target_item_id ?? ownerItemId ?? undefined;
+      const target = targetId ? itemById.get(targetId) : undefined;
+      switch (step.kind) {
         case "play_sound":
-          if (step.sound_url && !muted && itemAudioRef.current) {
-            itemAudioRef.current.src = step.sound_url;
+          if (!muted && itemAudioRef.current) {
+            const soundToPlay = step.sound_url?.trim() || getPreferredItemSoundUrl(target);
+            if (!soundToPlay) break;
+            itemAudioRef.current.src = soundToPlay;
             void itemAudioRef.current.play().catch(() => {});
           }
           break;
-        case "emphasis": {
-          const id = step.item_id ?? clickedItemId;
-          const target = id ? itemById.get(id) : undefined;
+        case "emphasis":
           if (target) runItemEmphasis(target, step.emphasis_preset, step.duration_ms);
           break;
-        }
-        case "move": {
-          const id = step.item_id ?? clickedItemId;
-          const target = id ? itemById.get(id) : undefined;
+        case "move":
           if (target && step.duration_ms != null && step.duration_ms >= 0) {
-            const el = document.querySelector<HTMLElement>(
-              `[data-story-item="${screenId}-${target.id}"]`,
-            );
-            if (el && target.path && target.path.waypoints.length >= 2) {
-              const kf = target.path.waypoints.map((w) => ({
-                left: `${w.x_percent}%`,
-                top: `${w.y_percent}%`,
-              }));
-              el.animate(kf as Keyframe[], {
-                duration: step.duration_ms,
-                fill: "forwards",
-                easing: "linear",
-              });
-            } else {
+            const runMove = () => {
+              const el = document.querySelector<HTMLElement>(
+                `[data-story-item="${screenId}-${target.id}"]`,
+              );
+              if (el && target.path && target.path.waypoints.length >= 2) {
+                const kf = target.path.waypoints.map((w) => ({
+                  left: `${w.x_percent}%`,
+                  top: `${w.y_percent}%`,
+                }));
+                el.animate(kf as Keyframe[], {
+                  duration: step.duration_ms,
+                  fill: "forwards",
+                  easing: "linear",
+                });
+                return;
+              }
               runItemPath(target);
-            }
+            };
+            // If move follows show_item, wait one paint for visibility state to apply.
+            requestAnimationFrame(runMove);
           } else if (target) {
-            runItemPath(target);
+            requestAnimationFrame(() => runItemPath(target));
           }
           break;
-        }
-        case "show_item": {
-          const id = step.item_id ?? clickedItemId;
-          if (!id) break;
+        case "show_item":
+          if (!targetId) break;
           setHiddenItemIds((prev) => {
-            if (!prev[id]) return prev;
+            if (!prev[targetId]) return prev;
             const next = { ...prev };
-            delete next[id];
+            delete next[targetId];
             return next;
           });
           break;
-        }
-        case "hide_item": {
-          const id = step.item_id ?? clickedItemId;
-          if (!id) break;
-          setHiddenItemIds((prev) => ({ ...prev, [id]: true }));
+        case "hide_item":
+          if (!targetId) break;
+          setHiddenItemIds((prev) => ({ ...prev, [targetId]: true }));
+          break;
+        case "tts":
+          if (step.tts_text?.trim() && !muted) {
+            void speakText(step.tts_text, {
+              lang: step.tts_lang || payload.tts_lang,
+              muted,
+            });
+          }
+          break;
+        case "smart_line": {
+          const itemId = ownerItemId ?? targetId;
+          if (!itemId) break;
+          const activePhaseId =
+            page.phasesExplicit ?
+              (activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page))
+            : null;
+          const entries = (step.smart_line_lines ?? []).map((line, idx) => ({
+            id: line.id || `${sequenceId}:${step.id}:${idx}`,
+            priority: line.priority,
+            text: line.text,
+            sound_url: line.sound_url,
+            max_plays: line.max_plays,
+            phase_ids: line.active_phase_ids,
+          }));
+          const resolved = resolveTapSpeechEntry({
+            entries,
+            activePhaseId,
+            itemId: `${itemId}:${step.id}`,
+            counters: tapSpeechCountersRef.current,
+          });
+          const spokenLine = resolved?.entry.text?.trim();
+          if (spokenLine && !muted) {
+            void speakText(spokenLine, {
+              lang: step.tts_lang || payload.tts_lang,
+              muted,
+            });
+          }
+          const soundUrl = resolved?.entry.sound_url?.trim();
+          if (soundUrl && !muted && itemAudioRef.current) {
+            itemAudioRef.current.src = soundUrl;
+            void itemAudioRef.current.play().catch(() => {});
+          }
+          tapSpeechCountersRef.current = bumpTapSpeechCounter(
+            tapSpeechCountersRef.current,
+            resolved,
+          );
           break;
         }
         default:
           break;
       }
     },
-    [muted, runItemEmphasis, runItemPath, screenId],
+    [getPreferredItemSoundUrl, muted, page, payload.tts_lang, runItemEmphasis, runItemPath, screenId],
   );
 
-  const getTapStepDurationMs = useCallback(
+  const getActionStepDurationMs = useCallback(
     (
-      step: {
-        action: "emphasis" | "move" | "play_sound" | "show_item" | "hide_item";
-        item_id?: string;
-        duration_ms?: number;
-      },
+      step: StoryActionStep,
       itemById: Map<string, StoryItem>,
-      clickedItemId: string,
+      ownerItemId: string | null,
     ) => {
-      const id = step.item_id ?? clickedItemId;
-      const target = itemById.get(id);
-      if (!target) return 0;
-      if (step.action === "move") return step.duration_ms ?? target.path?.duration_ms ?? 0;
-      if (step.action === "emphasis") return step.duration_ms ?? target.emphasis?.duration_ms ?? 500;
+      const targetId = step.target_item_id ?? ownerItemId ?? undefined;
+      const target = targetId ? itemById.get(targetId) : undefined;
+      if (step.kind === "move") return step.duration_ms ?? target?.path?.duration_ms ?? 0;
+      if (step.kind === "emphasis") return step.duration_ms ?? target?.emphasis?.duration_ms ?? 500;
+      if (step.kind === "show_item" || step.kind === "hide_item") return 40;
       return 0;
     },
     [],
+  );
+
+  const runActionSequence = useCallback(
+    (
+      sequence: StoryActionSequence,
+      itemById: Map<string, StoryItem>,
+      ownerItemId: string | null,
+      opts?: { baseDelayMs?: number },
+    ): {
+      timers: number[];
+      chainEndMs: number;
+      isFinalNextClickSegment: boolean;
+      hadScheduledSteps: boolean;
+    } => {
+      const timers: number[] = [];
+      const baseDelay = Math.max(0, opts?.baseDelayMs ?? 0);
+      const rows = sequence.steps.map((step, idx) => ({
+        step,
+        idx,
+        stepId: step.id || `${sequence.id}:${idx}`,
+        mode: step.timing ?? "simultaneous",
+      }));
+      const scheduled: Array<{
+        step: StoryActionStep;
+        delayMs: number;
+        key: string;
+        stepId: string;
+        durationMs: number;
+      }> = [];
+      const scheduledIds = new Set<string>();
+      let isFinalNextClickSegment = false;
+      const scheduleRow = (row: (typeof rows)[number], delayMs: number) => {
+        if (scheduledIds.has(row.stepId)) return;
+        const lockKey = `${sequence.id}:${row.stepId}`;
+        if (row.step.play_once && actionStepLockRef.current[lockKey]) return;
+        const durationMs = Math.max(
+          0,
+          getActionStepDurationMs(row.step, itemById, ownerItemId),
+        );
+        scheduledIds.add(row.stepId);
+        scheduled.push({
+          step: row.step,
+          delayMs: Math.max(0, baseDelay + delayMs + (row.step.delay_ms ?? 0)),
+          key: lockKey,
+          stepId: row.stepId,
+          durationMs,
+        });
+      };
+
+      const nextClickRows = rows.filter((x) => x.mode === "next_click");
+      const seqKey = `${sequence.id}:${ownerItemId ?? "scene"}`;
+      const clickStageIndex = actionSequenceIndexRef.current[seqKey] ?? 0;
+      if (nextClickRows.length > 0) {
+        const gateIndexes = rows
+          .map((row, idx) => (row.mode === "next_click" ? idx : -1))
+          .filter((idx) => idx >= 0);
+        const gateStartIdx = gateIndexes[clickStageIndex];
+        if (gateStartIdx != null) {
+          isFinalNextClickSegment = clickStageIndex === gateIndexes.length - 1;
+          const gateEndIdx = gateIndexes[clickStageIndex + 1] ?? rows.length;
+          const gateRow = rows[gateStartIdx];
+          if (gateRow) {
+            scheduleRow(gateRow, 0);
+            let prevStartMs = 0;
+            let prevEndMs = Math.max(
+              0,
+              getActionStepDurationMs(gateRow.step, itemById, ownerItemId),
+            );
+            for (let i = gateStartIdx + 1; i < gateEndIdx; i += 1) {
+              const row = rows[i];
+              if (!row || row.mode === "next_click") continue;
+              const durationMs = Math.max(
+                0,
+                getActionStepDurationMs(row.step, itemById, ownerItemId),
+              );
+              const startMs =
+                row.mode === "after_previous" ? prevEndMs
+                : row.mode === "simultaneous" ? prevStartMs
+                : prevEndMs;
+              scheduleRow(row, startMs);
+              prevStartMs = startMs;
+              prevEndMs = Math.max(prevEndMs, startMs + durationMs);
+            }
+          }
+        }
+        actionSequenceIndexRef.current[seqKey] =
+          clickStageIndex < gateIndexes.length ? clickStageIndex + 1 : clickStageIndex;
+      } else {
+        let prevStartMs = 0;
+        let prevEndMs = 0;
+        for (const row of rows) {
+          if (row.mode === "next_click") continue;
+          const durationMs = Math.max(
+            0,
+            getActionStepDurationMs(row.step, itemById, ownerItemId),
+          );
+          const startMs =
+            row.mode === "after_previous" ? prevEndMs
+            : row.mode === "simultaneous" ? prevStartMs
+            : prevEndMs;
+          scheduleRow(row, startMs);
+          prevStartMs = startMs;
+          prevEndMs = Math.max(prevEndMs, startMs + durationMs);
+        }
+      }
+
+      const hadScheduledSteps = scheduled.length > 0;
+      if (nextClickRows.length === 0) {
+        isFinalNextClickSegment = hadScheduledSteps;
+      }
+
+      let chainEndMs = 0;
+      for (const x of scheduled) {
+        chainEndMs = Math.max(chainEndMs, x.delayMs + x.durationMs);
+      }
+
+      for (const x of scheduled) {
+        if (x.delayMs <= 0) {
+          if (x.step.play_once) actionStepLockRef.current[x.key] = true;
+          triggerLastEndAtRef.current[x.stepId] = performance.now() + x.durationMs;
+          runActionStep(x.step, itemById, ownerItemId, sequence.id);
+        } else {
+          const t = window.setTimeout(() => {
+            if (x.step.play_once) actionStepLockRef.current[x.key] = true;
+            triggerLastEndAtRef.current[x.stepId] = performance.now() + x.durationMs;
+            runActionStep(x.step, itemById, ownerItemId, sequence.id);
+          }, x.delayMs);
+          timers.push(t);
+        }
+      }
+      return { timers, chainEndMs, isFinalNextClickSegment, hadScheduledSteps };
+    },
+    [getActionStepDurationMs, runActionStep],
   );
 
   useEffect(() => {
@@ -344,32 +524,39 @@ export function StoryBookView({
   }, [page.id]);
 
   useEffect(() => {
-    if (!page.auto_play || !page.timeline?.length) return;
+    if (!page.auto_play) return;
+    const sequences = getPageEnterActionSequences(page, { includeLegacy: true });
+    if (sequences.length === 0) return;
     const itemById = new Map(page.items.map((it) => [it.id, it]));
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const sorted = [...page.timeline].sort((a, b) => a.delay_ms - b.delay_ms);
-    for (const step of sorted) {
-      const t = setTimeout(() => {
-        if (step.action === "play_sound" && !audioUnlockedRef.current) return;
-        runStoryTimelineStep(step, itemById, null);
-      }, step.delay_ms);
-      timers.push(t);
+    const timers: number[] = [];
+    for (const sequence of sequences) {
+      const filtered: StoryActionSequence = {
+        ...sequence,
+        steps: sequence.steps.filter(
+          (step) => !(step.kind === "play_sound" && !audioUnlockedRef.current),
+        ),
+      };
+      timers.push(...runActionSequence(filtered, itemById, null).timers);
     }
     return () => {
-      for (const x of timers) clearTimeout(x);
+      for (const t of timers) window.clearTimeout(t);
     };
   }, [
     page.auto_play,
-    page.timeline,
     page.items,
     page.id,
-    runStoryTimelineStep,
+    page.action_sequences,
+    runActionSequence,
   ]);
 
   useEffect(() => {
-    tapSequenceIndexRef.current = {};
-    triggerLockStateRef.current = {};
+    for (const list of Object.values(clickSequenceTimersRef.current)) {
+      for (const t of list) window.clearTimeout(t);
+    }
+    clickSequenceTimersRef.current = {};
     triggerLastEndAtRef.current = {};
+    actionSequenceIndexRef.current = {};
+    actionStepLockRef.current = {};
     const startId =
       activeStoryPhaseId ?? getStartPhaseIdFromNormalizedPage(page);
     const phase = page.phases.find((p) => p.id === startId) ?? page.phases[0];
@@ -411,24 +598,29 @@ export function StoryBookView({
   }, [currentStoryPhase, page.id, page.phasesExplicit]);
 
   useEffect(() => {
-    if (!page.phasesExplicit || !currentStoryPhase?.on_enter?.length) return;
+    if (!page.phasesExplicit || !currentStoryPhase) return;
+    const sequences = getPhaseEnterActionSequences(currentStoryPhase, { includeLegacy: true });
+    if (sequences.length === 0) return;
+    const timers: number[] = [];
     const raf = requestAnimationFrame(() => {
       const itemById = new Map(page.items.map((it) => [it.id, it]));
-      for (const step of currentStoryPhase.on_enter ?? []) {
-        for (const a of getOnEnterRuntimeActions(step)) {
-          runStoryTimelineStep(a as RuntimeStoryAction, itemById, null);
-        }
+      for (const sequence of sequences) {
+        timers.push(...runActionSequence(sequence, itemById, null).timers);
       }
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      for (const t of timers) window.clearTimeout(t);
+    };
   }, [
     currentStoryPhase,
     currentStoryPhase?.id,
     currentStoryPhase?.on_enter,
+    currentStoryPhase?.action_sequences,
     page.id,
     page.items,
     page.phasesExplicit,
-    runStoryTimelineStep,
+    runActionSequence,
   ]);
 
   useEffect(() => {
@@ -626,6 +818,16 @@ export function StoryBookView({
     };
   }, [pageTurnKey, pageTurnDir, turnStyle]);
 
+  useEffect(
+    () => () => {
+      for (const list of Object.values(clickSequenceTimersRef.current)) {
+        for (const t of list) window.clearTimeout(t);
+      }
+      clickSequenceTimersRef.current = {};
+    },
+    [],
+  );
+
   const patchPayload = (next: StoryPayload) => {
     visualEdit?.onPayloadChange(screenId, next);
   };
@@ -650,169 +852,113 @@ export function StoryBookView({
       item: StoryItem,
       opts?: { skipRequestLine?: boolean; skipPhaseClickAdvance?: boolean },
     ) => {
-    setAudioUnlocked(true);
-    const activePhaseId =
-      page.phasesExplicit ?
-        (activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page))
-      : null;
-    const resolvedTapSpeech = resolveTapSpeechEntry({
-      entries: item.tap_speeches,
-      activePhaseId,
-      itemId: item.id,
-      counters: tapSpeechCountersRef.current,
-    });
-    const spokenLine =
-      resolvedTapSpeech?.entry.text?.trim() ||
-      (item.tap_speeches?.length ? "" : (item.request_line?.trim() ?? ""));
-    if (spokenLine && !muted && !opts?.skipRequestLine) {
-      void speakText(spokenLine, {
-        lang: payload.tts_lang,
-        muted,
-      });
-    }
-    playSfx("tap", muted);
-    const tapSoundUrl =
-      resolvedTapSpeech?.entry.sound_url?.trim() ||
-      (item.tap_speeches?.length ? undefined : item.on_click?.sound_url?.trim());
-    if (tapSoundUrl && !muted) {
+      setAudioUnlocked(true);
+      playSfx("tap", muted);
+      const existingTimers = clickSequenceTimersRef.current[item.id] ?? [];
+      for (const t of existingTimers) window.clearTimeout(t);
+      clickSequenceTimersRef.current[item.id] = [];
       if (itemAudioRef.current) {
-        itemAudioRef.current.src = tapSoundUrl;
-        void itemAudioRef.current.play().catch(() => {});
+        itemAudioRef.current.pause();
+        itemAudioRef.current.currentTime = 0;
       }
-    }
-    tapSpeechCountersRef.current = bumpTapSpeechCounter(
-      tapSpeechCountersRef.current,
-      resolvedTapSpeech,
-    );
-    if (item.on_click?.run_emphasis && item.emphasis) {
-      runItemEmphasis(item);
-    } else if (item.on_click?.run_emphasis) {
-      runItemEmphasis(item);
-    }
-    const itemById = new Map(page.items.map((it) => [it.id, it]));
-    const clickedTriggers = item.on_click?.triggers ?? [];
-    const scheduled: {
-      step: (typeof clickedTriggers)[number];
-      delayMs: number;
-      lockKey: string;
-      triggerId: string;
-      durationMs: number;
-      ownerItemId: string;
-    }[] = [];
-    const scheduledIds = new Set<string>();
-    let chainEndMs = 0;
-    const allRows = page.items.flatMap((owner) =>
-      (owner.on_click?.triggers ?? []).map((tr, idx) => ({
-        ownerItemId: owner.id,
-        tr,
-        idx,
-        triggerId: tr.trigger_id ?? `${owner.id}:${idx}`,
-        mode: normalizeTriggerTiming(tr.trigger_timing),
-      })),
-    );
-    const rowsByAfter = new Map<string, typeof allRows>();
-    for (const row of allRows) {
-      const ref = row.tr.after_trigger_id;
-      if (!ref) continue;
-      rowsByAfter.set(ref, [...(rowsByAfter.get(ref) ?? []), row]);
-    }
-    const scheduleRow = (
-      row: (typeof allRows)[number],
-      delayMs: number,
-      fromDependency: boolean,
-    ) => {
-      if (scheduledIds.has(row.triggerId)) return;
-      if (row.tr.play_once && triggerLockStateRef.current[row.triggerId]) return;
-      if (fromDependency && row.mode !== "after_previous") return;
-      const durationMs = Math.max(
-        0,
-        getTapStepDurationMs(row.tr, itemById, row.ownerItemId),
-      );
-      scheduledIds.add(row.triggerId);
-      scheduled.push({
-        step: row.tr,
-        delayMs: Math.max(0, delayMs),
-        lockKey: row.triggerId,
-        triggerId: row.triggerId,
-        durationMs,
-        ownerItemId: row.ownerItemId,
+      const itemById = new Map(page.items.map((it) => [it.id, it]));
+      const activePhaseId =
+        page.phasesExplicit ?
+          (activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page))
+        : null;
+      const hasNewClickSequences = (item.action_sequences ?? []).some((seq) => seq.event === "click");
+      const sequences = getItemClickActionSequences(item, {
+        includeLegacy: !hasNewClickSequences,
+        activePhaseId,
       });
-      const dependents = rowsByAfter.get(row.triggerId) ?? [];
-      for (const dep of dependents) {
-        scheduleRow(dep, Math.max(0, delayMs + durationMs), true);
-      }
-    };
-
-    const nextClickRows = allRows.filter(
-      (x) => x.ownerItemId === item.id && x.mode === "next_click",
-    );
-    for (const row of allRows.filter((x) => x.ownerItemId === item.id)) {
-      if (row.mode === "next_click") continue;
-      if (row.mode === "after_previous" && row.tr.after_trigger_id) continue;
-      if (row.mode === "after_previous") {
-        scheduleRow(row, chainEndMs, false);
-        const dur = Math.max(0, getTapStepDurationMs(row.tr, itemById, row.ownerItemId));
-        chainEndMs += dur;
-      } else {
-        scheduleRow(row, 0, false);
-      }
-    }
-
-    if (nextClickRows.length > 0) {
-      const idx = tapSequenceIndexRef.current[item.id] ?? 0;
-      const pick = nextClickRows[idx % nextClickRows.length];
-      scheduleRow(pick, 0, false);
-      tapSequenceIndexRef.current[item.id] = idx + 1;
-    }
-
-    for (const x of scheduled) {
-      if (x.delayMs <= 0) {
-        if (x.step.play_once) triggerLockStateRef.current[x.lockKey] = true;
-        triggerLastEndAtRef.current[x.triggerId] = performance.now() + x.durationMs;
-        runStoryTimelineStep(x.step, itemById, x.ownerItemId);
-      } else {
-        window.setTimeout(() => {
-          if (x.step.play_once) triggerLockStateRef.current[x.lockKey] = true;
-          triggerLastEndAtRef.current[x.triggerId] = performance.now() + x.durationMs;
-          runStoryTimelineStep(x.step, itemById, x.ownerItemId);
-        }, x.delayMs);
-      }
-    }
-
-    queueMicrotask(() => {
-      if (opts?.skipPhaseClickAdvance) return;
-      if (!page.phasesExplicit) return;
-      const aid =
-        activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page);
-      const ph = page.phases.find((p) => p.id === aid);
-      if (!ph) return;
-      const kind = getPhaseInteractionKind(ph);
-      if (kind === "drag_match") {
-        return;
-      }
-      if (kind === "legacy") {
-        if (ph.advance_on_item_tap_id === item.id && ph.next_phase_id) {
-          setActiveStoryPhaseId(ph.next_phase_id);
+      for (const sequence of sequences) {
+        const filtered: StoryActionSequence = {
+          ...sequence,
+          steps: sequence.steps.filter((step) =>
+            opts?.skipRequestLine ? step.kind !== "smart_line" : true,
+          ),
+        };
+        const runResult = runActionSequence(filtered, itemById, item.id);
+        if (runResult.timers.length > 0) {
+          clickSequenceTimersRef.current[item.id] = [
+            ...(clickSequenceTimersRef.current[item.id] ?? []),
+            ...runResult.timers,
+          ];
         }
-        return;
+
+        if (
+          !opts?.skipPhaseClickAdvance &&
+          page.phasesExplicit &&
+          runResult.hadScheduledSteps &&
+          runResult.isFinalNextClickSegment
+        ) {
+          const aid =
+            activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page);
+          const ph = page.phases.find((p) => p.id === aid);
+          if (ph && getPhaseInteractionKind(ph) === "click_to_advance") {
+            const r = getResolvedPhaseTransition(ph);
+            if (
+              r?.type === "sequence_complete" &&
+              r.sequence_id === sequence.id
+            ) {
+              const ms = Math.max(0, Math.ceil(runResult.chainEndMs));
+              const targetPhaseId = r.next_phase_id;
+              const phaseIdAtSchedule = ph.id;
+              const seqId = sequence.id;
+              const t = window.setTimeout(() => {
+                const pg = pageRef.current;
+                const curAid =
+                  activeStoryPhaseIdRef.current ??
+                  getStartPhaseIdFromNormalizedPage(pg);
+                if (curAid !== phaseIdAtSchedule) return;
+                const phNow = pg.phases.find((p) => p.id === phaseIdAtSchedule);
+                if (!phNow) return;
+                const rNow = getResolvedPhaseTransition(phNow);
+                if (rNow?.type !== "sequence_complete" || rNow.sequence_id !== seqId) {
+                  return;
+                }
+                setActiveStoryPhaseId(targetPhaseId);
+              }, ms);
+              clickSequenceTimersRef.current[item.id] = [
+                ...(clickSequenceTimersRef.current[item.id] ?? []),
+                t,
+              ];
+            }
+          }
+        }
       }
-      if (kind === "none") {
-        return;
-      }
-      const r = getResolvedPhaseTransition(ph);
-      if (r?.type === "on_click" && r.target_item_id === item.id) {
-        setActiveStoryPhaseId(r.next_phase_id);
-      }
-    });
-  },
-  [
-    getTapStepDurationMs,
-    muted,
-    page,
-    payload.tts_lang,
-    runItemEmphasis,
-    runStoryTimelineStep,
-  ],
+
+      queueMicrotask(() => {
+        if (opts?.skipPhaseClickAdvance) return;
+        if (!page.phasesExplicit) return;
+        const aid =
+          activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page);
+        const ph = page.phases.find((p) => p.id === aid);
+        if (!ph) return;
+        const kind = getPhaseInteractionKind(ph);
+        if (kind === "drag_match") {
+          return;
+        }
+        if (kind === "legacy") {
+          if (ph.advance_on_item_tap_id === item.id && ph.next_phase_id) {
+            setActiveStoryPhaseId(ph.next_phase_id);
+          }
+          return;
+        }
+        if (kind === "none") {
+          return;
+        }
+        const r = getResolvedPhaseTransition(ph);
+        if (r?.type === "on_click" && r.target_item_id === item.id) {
+          setActiveStoryPhaseId(r.next_phase_id);
+        }
+      });
+    },
+    [
+      muted,
+      page,
+      runActionSequence,
+    ],
   );
 
   useEffect(() => {

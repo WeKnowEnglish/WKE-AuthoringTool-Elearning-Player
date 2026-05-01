@@ -143,6 +143,8 @@ export type UploadTeacherMediaResult = {
   duplicate_status?: "uploaded" | "exact_duplicate_reused";
 };
 
+export type DuplicateHandling = "delete_duplicate" | "keep_both";
+
 export type UploadTeacherMediaBulkItemResult = {
   filename: string;
   status: "success" | "error";
@@ -158,9 +160,19 @@ export type UploadTeacherMediaBulkResult = {
   items: UploadTeacherMediaBulkItemResult[];
 };
 
+export type MediaDuplicateIssue = {
+  index: number;
+  filename: string;
+  duplicate_kind: "exact" | "near";
+  existing_id: string;
+  existing_url: string;
+  existing_filename: string;
+};
+
 export async function uploadTeacherMedia(
   formData: FormData,
   kind: MediaKind = "image",
+  duplicateHandling: DuplicateHandling = "delete_duplicate",
 ): Promise<UploadTeacherMediaResult> {
   const supabase = await requireTeacher();
   const {
@@ -196,20 +208,22 @@ export async function uploadTeacherMedia(
 
   let phash: string | null = null;
   if (kind === "image") {
-    const { data: existingExact, error: exactErr } = await supabase
-      .from("media_assets")
-      .select("id,public_url")
-      .eq("sha256_hash", sha256Hash)
-      .like("content_type", "image/%")
-      .limit(1)
-      .maybeSingle();
-    if (exactErr) throw new Error(exactErr.message);
-    if (existingExact) {
-      return {
-        id: existingExact.id as string,
-        url: existingExact.public_url as string,
-        duplicate_status: "exact_duplicate_reused",
-      };
+    if (duplicateHandling === "delete_duplicate") {
+      const { data: existingExact, error: exactErr } = await supabase
+        .from("media_assets")
+        .select("id,public_url")
+        .eq("sha256_hash", sha256Hash)
+        .like("content_type", "image/%")
+        .limit(1)
+        .maybeSingle();
+      if (exactErr) throw new Error(exactErr.message);
+      if (existingExact) {
+        return {
+          id: existingExact.id as string,
+          url: existingExact.public_url as string,
+          duplicate_status: "exact_duplicate_reused",
+        };
+      }
     }
 
     phash = await computeImageDHashHex(bytes);
@@ -228,7 +242,10 @@ export async function uploadTeacherMedia(
         const dist = hammingDistanceHex(phash, candidateHash);
         if (dist <= PHASH_DISTANCE_THRESHOLD) {
           const nearName = (c.original_filename as string | null) ?? "existing image";
-          throw new Error(`Near-duplicate image detected (similar to "${nearName}").`);
+          if (duplicateHandling === "delete_duplicate") {
+            throw new Error(`Near-duplicate image detected (similar to "${nearName}").`);
+          }
+          break;
         }
       }
     }
@@ -266,6 +283,8 @@ export async function uploadTeacherMediaBulkFromForm(
   formData: FormData,
 ): Promise<UploadTeacherMediaBulkResult> {
   const kind = ((formData.get("kind") as MediaKind | null) ?? "image") as MediaKind;
+  const defaultDuplicateHandling =
+    (formData.get("duplicate_handling") as DuplicateHandling | null) ?? "delete_duplicate";
   const files = [...formData.getAll("files"), ...formData.getAll("file")].filter(
     (entry): entry is File => entry instanceof File,
   );
@@ -274,11 +293,16 @@ export async function uploadTeacherMediaBulkFromForm(
   }
 
   const items: UploadTeacherMediaBulkItemResult[] = [];
-  for (const file of files) {
+  for (const [index, file] of files.entries()) {
     const single = new FormData();
     single.set("file", file);
+    const perItemDecision = formData.get(`duplicate_decision_${index}`);
+    const duplicateHandling =
+      perItemDecision === "keep_new" ? "keep_both"
+      : perItemDecision === "keep_existing" ? "delete_duplicate"
+      : defaultDuplicateHandling;
     try {
-      const result = await uploadTeacherMedia(single, kind);
+      const result = await uploadTeacherMedia(single, kind, duplicateHandling);
       items.push({
         filename: file.name,
         status: "success",
@@ -298,6 +322,82 @@ export async function uploadTeacherMediaBulkFromForm(
   const successCount = items.filter((item) => item.status === "success").length;
   const failureCount = items.length - successCount;
   return { successCount, failureCount, items };
+}
+
+export async function inspectTeacherMediaBulkDuplicates(
+  formData: FormData,
+): Promise<MediaDuplicateIssue[]> {
+  const kind = ((formData.get("kind") as MediaKind | null) ?? "image") as MediaKind;
+  const files = [...formData.getAll("files"), ...formData.getAll("file")].filter(
+    (entry): entry is File => entry instanceof File,
+  );
+  if (files.length === 0) return [];
+
+  const supabase = await requireTeacher();
+  const issues: MediaDuplicateIssue[] = [];
+
+  for (const [index, file] of files.entries()) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const sha256Hash = computeSha256Hex(bytes);
+
+    const contentLike =
+      kind === "audio" ? "audio/%"
+      : kind === "video" ? "video/%"
+      : "image/%";
+
+    const { data: exact, error: exactErr } = await supabase
+      .from("media_assets")
+      .select("id,public_url,original_filename")
+      .eq("sha256_hash", sha256Hash)
+      .like("content_type", contentLike)
+      .limit(1)
+      .maybeSingle();
+    if (exactErr) throw new Error(exactErr.message);
+    if (exact) {
+      issues.push({
+        index,
+        filename: file.name,
+        duplicate_kind: "exact",
+        existing_id: exact.id as string,
+        existing_url: exact.public_url as string,
+        existing_filename: (exact.original_filename as string | null) ?? "existing file",
+      });
+      continue;
+    }
+
+    if (kind !== "image") continue;
+
+    const phash = await computeImageDHashHex(bytes);
+    if (!phash) continue;
+
+    const { data: candidates, error: candErr } = await supabase
+      .from("media_assets")
+      .select("id,public_url,original_filename,phash")
+      .like("content_type", "image/%")
+      .not("phash", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (candErr) throw new Error(candErr.message);
+
+    for (const candidate of candidates ?? []) {
+      const candidateHash = (candidate.phash as string | null) ?? null;
+      if (!candidateHash) continue;
+      const dist = hammingDistanceHex(phash, candidateHash);
+      if (dist <= PHASH_DISTANCE_THRESHOLD) {
+        issues.push({
+          index,
+          filename: file.name,
+          duplicate_kind: "near",
+          existing_id: candidate.id as string,
+          existing_url: candidate.public_url as string,
+          existing_filename: (candidate.original_filename as string | null) ?? "existing image",
+        });
+        break;
+      }
+    }
+  }
+
+  return issues;
 }
 
 type SearchTeacherMediaParams = {

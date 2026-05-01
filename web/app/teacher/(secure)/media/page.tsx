@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
 import { MediaBulkUploadCard } from "@/components/teacher/media/MediaBulkUploadCard";
 import {
+  type DuplicateHandling,
   deleteTeacherMedia,
+  inspectTeacherMediaBulkDuplicates,
   searchTeacherMedia,
   updateTeacherMediaMetadataFromForm,
   uploadTeacherMediaBulkFromForm,
@@ -41,6 +43,16 @@ function buildSearchUrl(values: Record<string, string>): string {
   return qs ? `/teacher/media?${qs}` : "/teacher/media";
 }
 
+function classifyUploadFailure(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("file too large")) return "File too large";
+  if (normalized.includes("only ") && normalized.includes("allowed")) return "Unsupported file type";
+  if (normalized.includes("near-duplicate")) return "Near-duplicate blocked";
+  if (normalized.includes("duplicate")) return "Duplicate blocked";
+  if (normalized.includes("unauthorized")) return "Unauthorized";
+  return "Other upload error";
+}
+
 export default async function TeacherMediaPage({ searchParams }: Props) {
   const params = (await searchParams) ?? {};
   const q = firstParam(params.q);
@@ -70,58 +82,60 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
   async function uploadAction(formData: FormData) {
     "use server";
     const uploadKind = (formData.get("kind") as MediaKind | null) ?? "image";
+    const duplicateHandling =
+      (formData.get("duplicate_handling") as DuplicateHandling | null) ?? "delete_duplicate";
+    const base = {
+      q,
+      kind,
+      level,
+      word_type: wordType,
+      countability,
+      tags,
+      categories,
+      skills,
+      view,
+    };
+    let targetUrl = "";
+
     try {
       const result = await uploadTeacherMediaBulkFromForm(formData);
-      const base = {
-        q,
-        kind,
-        level,
-        word_type: wordType,
-        countability,
-        tags,
-        categories,
-        skills,
-        view,
-      };
       const duplicateReusedCount = result.items.filter(
         (item) => item.status === "success" && item.duplicate_status === "exact_duplicate_reused",
       ).length;
       const uploadedCount = result.successCount - duplicateReusedCount;
       const failedItems = result.items.filter((item) => item.status === "error");
-      const failedPreview = failedItems
+      const failureCounts = new Map<string, number>();
+      for (const item of failedItems) {
+        const key = classifyUploadFailure(item.message ?? "Upload failed");
+        failureCounts.set(key, (failureCounts.get(key) ?? 0) + 1);
+      }
+      const failureSummary = [...failureCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([reason, count]) => `${reason} (${count})`)
+        .join(", ");
+      const failedPreviewNames = failedItems
         .slice(0, 3)
-        .map((item) => `${item.filename}: ${item.message ?? "Upload failed"}`)
-        .join(" | ");
+        .map((item) => item.filename)
+        .join(", ");
       const hasPartialFailures = result.failureCount > 0;
       const statusValue = hasPartialFailures ? "partial_upload" : "uploaded";
       const summaryMessage = hasPartialFailures ?
-          `Uploaded ${result.successCount}/${result.items.length} file(s). Failed ${result.failureCount}. ${failedPreview}${failedItems.length > 3 ? " | ...more failures" : ""}`
-        : `Upload complete. Added ${uploadedCount} file(s)${duplicateReusedCount > 0 ? `, reused ${duplicateReusedCount} exact duplicate(s)` : ""}.`;
-      redirect(
-        buildSearchUrl({
-          ...base,
-          status: statusValue,
-          kind: uploadKind,
-          message: summaryMessage,
-        }),
-      );
+          `Uploaded ${result.successCount}/${result.items.length} file(s). Failed ${result.failureCount}. Reasons: ${failureSummary || "Unknown"}.${failedPreviewNames ? ` Example file(s): ${failedPreviewNames}${failedItems.length > 3 ? ", ..." : ""}.` : ""}`
+        : `Upload complete. Added ${uploadedCount} file(s)${duplicateReusedCount > 0 ? `, reused ${duplicateReusedCount} duplicate(s)` : ""}. Duplicate mode: ${duplicateHandling === "keep_both" ? "keep both" : "delete duplicate"}.`;
+      targetUrl = buildSearchUrl({
+        ...base,
+        status: statusValue,
+        kind: uploadKind,
+        message: summaryMessage,
+      });
     } catch (e) {
-      redirect(
-        buildSearchUrl({
-          q,
-          kind,
-          level,
-          word_type: wordType,
-          countability,
-          tags,
-          categories,
-          skills,
-          view,
-          status: "error",
-          message: e instanceof Error ? e.message : "Upload failed",
-        }),
-      );
+      targetUrl = buildSearchUrl({
+        ...base,
+        status: "error",
+        message: e instanceof Error ? e.message : "Upload failed",
+      });
     }
+    redirect(targetUrl);
   }
 
   async function saveMetadataAction(formData: FormData) {
@@ -129,44 +143,43 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
     await updateTeacherMediaMetadataFromForm(formData);
   }
 
+  async function checkDuplicatesAction(formData: FormData) {
+    "use server";
+    return inspectTeacherMediaBulkDuplicates(formData);
+  }
+
   async function deleteAssetAction(formData: FormData) {
     "use server";
     const id = firstParam(formData.get("id"));
     if (!id) return;
+    const base = {
+      q,
+      kind,
+      level,
+      word_type: wordType,
+      countability,
+      tags,
+      categories,
+      skills,
+      view,
+    };
+    let targetUrl = "";
+
     try {
       await deleteTeacherMedia(id);
-      redirect(
-        buildSearchUrl({
-          q,
-          kind,
-          level,
-          word_type: wordType,
-          countability,
-          tags,
-          categories,
-          skills,
-          view,
-          status: "deleted",
-          message: "Asset deleted.",
-        }),
-      );
+      targetUrl = buildSearchUrl({
+        ...base,
+        status: "deleted",
+        message: "Asset deleted.",
+      });
     } catch (e) {
-      redirect(
-        buildSearchUrl({
-          q,
-          kind,
-          level,
-          word_type: wordType,
-          countability,
-          tags,
-          categories,
-          skills,
-          view,
-          status: "error",
-          message: e instanceof Error ? e.message : "Delete failed",
-        }),
-      );
+      targetUrl = buildSearchUrl({
+        ...base,
+        status: "error",
+        message: e instanceof Error ? e.message : "Delete failed",
+      });
     }
+    redirect(targetUrl);
   }
 
   return (
@@ -183,6 +196,8 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
           className={`rounded border px-3 py-2 text-sm ${
             status === "error" ?
               "border-red-300 bg-red-50 text-red-800"
+            : status === "partial_upload" ?
+              "border-amber-300 bg-amber-50 text-amber-900"
             : "border-emerald-300 bg-emerald-50 text-emerald-800"
           }`}
         >
@@ -190,7 +205,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <MediaBulkUploadCard action={uploadAction} />
+      <MediaBulkUploadCard action={uploadAction} checkDuplicatesAction={checkDuplicatesAction} />
 
       <section className="rounded-lg border border-neutral-200 bg-white p-4">
         <h2 className="text-sm font-bold text-neutral-900">Search and filters</h2>

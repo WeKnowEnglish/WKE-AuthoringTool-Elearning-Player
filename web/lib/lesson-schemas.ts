@@ -84,6 +84,95 @@ export const storyClickActionSchema = z.object({
 
 export type StoryClickAction = z.infer<typeof storyClickActionSchema>;
 
+export const storySmartLineSchema = z.object({
+  id: z.string(),
+  text: z.string().optional(),
+  sound_url: z.string().optional(),
+  /** Lower value = higher priority. */
+  priority: z.number().int(),
+  /** Positive integer; omitted means unlimited. */
+  max_plays: z.number().int().positive().optional(),
+  /** Empty/omitted = available in any phase. */
+  active_phase_ids: z.array(z.string()).optional(),
+});
+
+export type StorySmartLine = z.infer<typeof storySmartLineSchema>;
+
+export const storyActionStepKindSchema = z.enum([
+  "emphasis",
+  "move",
+  "show_item",
+  "hide_item",
+  "play_sound",
+  "tts",
+  "smart_line",
+]);
+
+export type StoryActionStepKind = z.infer<typeof storyActionStepKindSchema>;
+
+export const storyActionStepSchema = z.object({
+  id: z.string(),
+  kind: storyActionStepKindSchema,
+  /** Item to animate/affect; omitted defaults to sequence owner item for item-scoped click sequences. */
+  target_item_id: z.string().optional(),
+  /** Optional override for emphasis action. */
+  emphasis_preset: z
+    .enum(["grow", "shrink", "spin", "wobble", "fade_in", "fade_out"])
+    .optional(),
+  duration_ms: z.number().min(0).max(120_000).optional(),
+  delay_ms: z.number().min(0).max(120_000).optional(),
+  easing: z.string().max(120).optional(),
+  scale_percent: z.number().min(1).max(300).optional(),
+  grow_scale_percent: z.number().min(1).max(300).optional(),
+  shrink_scale_percent: z.number().min(1).max(300).optional(),
+  sound_url: z.string().optional(),
+  tts_text: z.string().optional(),
+  tts_lang: z.string().optional(),
+  smart_line_lines: z.array(storySmartLineSchema).optional(),
+  timing: z.enum(["simultaneous", "after_previous", "next_click"]).optional(),
+  after_step_id: z.string().optional(),
+  play_once: z.boolean().optional(),
+});
+
+export type StoryActionStep = z.infer<typeof storyActionStepSchema>;
+
+export const storyActionSequenceEventSchema = z.enum([
+  "click",
+  "page_enter",
+  "phase_enter",
+]);
+
+export type StoryActionSequenceEvent = z.infer<typeof storyActionSequenceEventSchema>;
+
+export const storyActionSequenceSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  event: storyActionSequenceEventSchema,
+  /** Empty/omitted = active across all phases for this scope. */
+  active_phase_ids: z.array(z.string()).optional(),
+  steps: z.array(storyActionStepSchema).default([]),
+});
+
+export type StoryActionSequence = z.infer<typeof storyActionSequenceSchema>;
+
+export const storyIdleAnimationSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  preset: z.enum([
+    "gentle_float",
+    "pulse",
+    "wobble_loop",
+    "spin_loop",
+    "breathe",
+  ]),
+  amplitude: z.number().min(0).max(1).optional(),
+  period_ms: z.number().min(100).max(60_000).optional(),
+  /** Empty/omitted = active across all phases for this scope. */
+  active_phase_ids: z.array(z.string()).optional(),
+});
+
+export type StoryIdleAnimation = z.infer<typeof storyIdleAnimationSchema>;
+
 export const storyPhaseDialogueSchema = z.object({
   start: z.string().optional(),
   success: z.string().optional(),
@@ -138,6 +227,12 @@ export const storyPhaseCompletionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("all_matched"),
+    next_phase_id: z.string(),
+  }),
+  z.object({
+    type: z.literal("sequence_complete"),
+    /** Matches `StoryActionSequence.id` for an item `click` sequence (or legacy `legacy:item:{itemId}:triggers`). */
+    sequence_id: z.string(),
     next_phase_id: z.string(),
   }),
   z.object({ type: z.literal("end_phase") }),
@@ -203,6 +298,10 @@ export const storyPagePhaseSchema = z.object({
   kind: storyPhaseInteractionKindSchema.optional(),
   /** Run after base phase visibility is applied. */
   on_enter: z.array(storyPhaseOnEnterStepSchema).optional(),
+  /** Unified action sequences (v2). */
+  action_sequences: z.array(storyActionSequenceSchema).optional(),
+  /** Idle/looping animations (v2). */
+  idle_animations: z.array(storyIdleAnimationSchema).optional(),
   dialogue: storyPhaseDialogueSchema.optional(),
   /** Extra ring on these items in this phase (student view / preview). */
   highlight_item_ids: z.array(z.string()).optional(),
@@ -230,6 +329,7 @@ export function getResolvedPhaseTransition(
   | { type: "on_click"; target_item_id: string; next_phase_id: string }
   | { type: "auto"; delay_ms: number; next_phase_id: string }
   | { type: "all_matched"; next_phase_id: string }
+  | { type: "sequence_complete"; sequence_id: string; next_phase_id: string }
   | { type: "end_phase" }
   | null {
   if (phase.completion) {
@@ -257,6 +357,15 @@ export function getResolvedPhaseTransition(
       const next = phase.next_phase_id ?? phase.completion.next_phase_id;
       if (!next) return { type: "end_phase" };
       return { type: "all_matched", next_phase_id: next };
+    }
+    if (phase.completion.type === "sequence_complete") {
+      const next = phase.next_phase_id ?? phase.completion.next_phase_id;
+      if (!next) return { type: "end_phase" };
+      return {
+        type: "sequence_complete",
+        sequence_id: phase.completion.sequence_id,
+        next_phase_id: next,
+      };
     }
     if (
       phase.completion.type === "end_phase" &&
@@ -334,6 +443,7 @@ export const storyTapSpeechEntrySchema = z
 
 export type StoryTapSpeechEntry = z.infer<typeof storyTapSpeechEntrySchema>;
 
+
 export const storyItemSchema = z
   .object({
     id: z.string(),
@@ -363,6 +473,10 @@ export const storyItemSchema = z
     request_line: z.string().optional(),
     /** Phase-aware tap speech entries. */
     tap_speeches: z.array(storyTapSpeechEntrySchema).optional(),
+    /** Unified action sequences (v2). */
+    action_sequences: z.array(storyActionSequenceSchema).optional(),
+    /** Idle/looping animations (v2). */
+    idle_animations: z.array(storyIdleAnimationSchema).optional(),
     on_click: z
       .object({
         /** @deprecated Legacy single tap sound; prefer `tap_speeches[].sound_url`. */
@@ -428,6 +542,10 @@ export const storyPageSchema = z
     auto_play_page_text: z.boolean().optional(),
     page_audio_url: z.string().optional(),
     items: z.array(storyItemSchema).default([]),
+    /** Unified action sequences (v2). */
+    action_sequences: z.array(storyActionSequenceSchema).optional(),
+    /** Idle/looping animations (v2). */
+    idle_animations: z.array(storyIdleAnimationSchema).optional(),
     auto_play: z.boolean().optional(),
     timeline: z.array(storyTimelineStepSchema).optional(),
     /** Step-by-step interaction phases (optional; legacy pages omit). */
@@ -445,7 +563,64 @@ export const storyPageSchema = z
       }
       ids.add(it.id);
     }
+    const validateActionAndIdleRefs = (
+      sourceLabel: string,
+      sequences: StoryActionSequence[] | undefined,
+      idleAnimations: StoryIdleAnimation[] | undefined,
+      phaseIds: Set<string> | null,
+    ) => {
+      for (const seq of sequences ?? []) {
+        if (phaseIds) {
+          for (const phaseId of seq.active_phase_ids ?? []) {
+            if (!phaseIds.has(phaseId)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `${sourceLabel} action sequence references unknown phase_id: ${phaseId}`,
+              });
+              return false;
+            }
+          }
+        }
+        for (const step of seq.steps ?? []) {
+          if (step.target_item_id && !ids.has(step.target_item_id)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `${sourceLabel} action sequence references unknown item_id: ${step.target_item_id}`,
+            });
+            return false;
+          }
+          for (const line of step.smart_line_lines ?? []) {
+            if (!phaseIds) continue;
+            for (const phaseId of line.active_phase_ids ?? []) {
+              if (!phaseIds.has(phaseId)) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: `${sourceLabel} smart_line references unknown phase_id: ${phaseId}`,
+                });
+                return false;
+              }
+            }
+          }
+        }
+      }
+      for (const idle of idleAnimations ?? []) {
+        if (!phaseIds) continue;
+        for (const phaseId of idle.active_phase_ids ?? []) {
+          if (!phaseIds.has(phaseId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `${sourceLabel} idle animation references unknown phase_id: ${phaseId}`,
+            });
+            return false;
+          }
+        }
+      }
+      return true;
+    };
     const phases = page.phases;
+    if (!validateActionAndIdleRefs("Page", page.action_sequences, page.idle_animations, null)) {
+      return;
+    }
     if (phases && phases.length > 0) {
       const phaseIds = new Set<string>();
       for (const ph of phases) {
@@ -458,6 +633,11 @@ export const storyPageSchema = z
         }
         phaseIds.add(ph.id);
       }
+      if (
+        !validateActionAndIdleRefs("Page", page.action_sequences, page.idle_animations, phaseIds)
+      ) {
+        return;
+      }
       const starts = phases.filter((p) => p.is_start);
       if (starts.length !== 1) {
         ctx.addIssue({
@@ -468,6 +648,16 @@ export const storyPageSchema = z
         return;
       }
       for (const ph of phases) {
+        if (
+          !validateActionAndIdleRefs(
+            `Phase ${ph.id}`,
+            ph.action_sequences,
+            ph.idle_animations,
+            phaseIds,
+          )
+        ) {
+          return;
+        }
         if (ph.next_phase_id && !phaseIds.has(ph.next_phase_id)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -520,7 +710,8 @@ export const storyPageSchema = z
           if (
             (ph.completion.type === "on_click" ||
               ph.completion.type === "auto" ||
-              ph.completion.type === "all_matched") &&
+              ph.completion.type === "all_matched" ||
+              ph.completion.type === "sequence_complete") &&
             !phaseIds.has(ph.completion.next_phase_id)
           ) {
             ctx.addIssue({
@@ -535,6 +726,28 @@ export const storyPageSchema = z
               message: `completion on_click references unknown item_id: ${ph.completion.target_item_id}`,
             });
             return;
+          }
+          if (ph.completion.type === "sequence_complete") {
+            const sid = ph.completion.sequence_id;
+            const seqOk = page.items.some((it) => {
+              for (const seq of it.action_sequences ?? []) {
+                if (seq.event === "click" && seq.id === sid) return true;
+              }
+              if (
+                sid === `legacy:item:${it.id}:triggers` &&
+                (it.on_click?.triggers?.length ?? 0) > 0
+              ) {
+                return true;
+              }
+              return false;
+            });
+            if (!seqOk) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `completion sequence_complete references unknown sequence_id: ${sid}`,
+              });
+              return;
+            }
           }
         }
         if (ph.kind === "drag_match") {
@@ -605,6 +818,16 @@ export const storyPageSchema = z
         }
       }
       for (const it of page.items) {
+        if (
+          !validateActionAndIdleRefs(
+            `Item ${it.id}`,
+            it.action_sequences,
+            it.idle_animations,
+            phaseIds,
+          )
+        ) {
+          return;
+        }
         for (const entry of it.tap_speeches ?? []) {
           for (const phaseId of entry.phase_ids ?? []) {
             if (!phaseIds.has(phaseId)) {
@@ -680,6 +903,8 @@ export type StoryPage = z.infer<typeof storyPageSchema>;
 
 export const storyPayloadSchema = z.object({
   type: z.literal("story"),
+  /** Optional schema marker for new sequence/idle fields. */
+  payload_version: z.literal(2).optional(),
   image_url: z.string().optional(),
   image_fit: z.enum(["cover", "contain"]).optional(),
   /** Shown when set; otherwise story image is used if present */
@@ -762,6 +987,8 @@ export type NormalizedStoryPage = {
   auto_play_page_text: boolean;
   page_audio_url?: string;
   items: StoryItem[];
+  action_sequences: StoryActionSequence[];
+  idle_animations: StoryIdleAnimation[];
   auto_play: boolean;
   timeline: StoryTimelineStep[];
   /** From payload or a single legacy placeholder */
@@ -792,6 +1019,8 @@ export function getNormalizedStoryPages(payload: StoryPayload): NormalizedStoryP
         auto_play_page_text: p.auto_play_page_text ?? false,
         page_audio_url: p.page_audio_url,
         items: p.items.map((it) => ({ ...it, z_index: it.z_index ?? 0, image_scale: it.image_scale ?? 1 })),
+        action_sequences: p.action_sequences ?? [],
+        idle_animations: p.idle_animations ?? [],
         auto_play: p.auto_play ?? ((p.timeline?.length ?? 0) > 0),
         timeline: p.timeline ?? [],
         phases,
@@ -810,6 +1039,8 @@ export function getNormalizedStoryPages(payload: StoryPayload): NormalizedStoryP
       read_aloud_text: payload.read_aloud_text ?? payload.body_text,
       auto_play_page_text: false,
       items: [],
+      action_sequences: [],
+      idle_animations: [],
       auto_play: false,
       timeline: [],
       phases: [defaultLegacyPhase],
@@ -928,6 +1159,15 @@ export function remapStoryPayloadIds(payload: StoryPayload): StoryPayload {
               : ph.completion.type === "all_matched" ?
                 {
                   type: "all_matched" as const,
+                  next_phase_id:
+                    phaseIdMap.has(ph.completion.next_phase_id) ?
+                      (phaseIdMap.get(ph.completion.next_phase_id) as string)
+                    : ph.completion.next_phase_id,
+                }
+              : ph.completion.type === "sequence_complete" ?
+                {
+                  type: "sequence_complete" as const,
+                  sequence_id: ph.completion.sequence_id,
                   next_phase_id:
                     phaseIdMap.has(ph.completion.next_phase_id) ?
                       (phaseIdMap.get(ph.completion.next_phase_id) as string)
@@ -1256,11 +1496,19 @@ export const fixTextPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("fix_text"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
   body_text: z.string().optional(),
   broken_text: z.string(),
   acceptable: z.array(z.string()).min(1),
   case_insensitive: z.boolean().optional().default(true),
   normalize_whitespace: z.boolean().optional().default(true),
+  /** When true, students see a Hint control (spotlight + 3-word choices). */
+  hints_enabled: z.boolean().optional().default(true),
+  /**
+   * Extra wrong words used to build 3-choice hints (with the correct word).
+   * One per line in the editor; optional — other words from the sentence are used too.
+   */
+  hint_decoy_words: z.array(z.string()).optional(),
   guide: guideSchema,
 });
 
@@ -1454,6 +1702,13 @@ export const letterMixupPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("letter_mixup"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+  /** Plays when the student taps the picture (upload / library / record in editor). */
+  image_audio_url: z.string().optional(),
+  /** When true, tap uses device TTS instead of `image_audio_url`. */
+  image_use_tts: z.boolean().optional().default(false),
+  /** Spoken on tap when `image_use_tts` is true; if empty, uses the item target word. */
+  image_read_aloud_text: z.string().optional(),
   prompt: z.string(),
   items: z.array(letterMixupItemSchema).min(1),
   shuffle_letters: z.boolean().optional().default(true),

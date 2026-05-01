@@ -601,6 +601,37 @@ describe("getResolvedPhaseTransition", () => {
     }
   });
 
+  it("sequence_complete: next from top-level or completion", () => {
+    const r1 = getResolvedPhaseTransition({
+      id: "a",
+      is_start: true,
+      next_phase_id: "b",
+      completion: {
+        type: "sequence_complete",
+        sequence_id: "seq-1",
+        next_phase_id: "c",
+      },
+    });
+    expect(r1?.type).toBe("sequence_complete");
+    if (r1?.type === "sequence_complete") {
+      expect(r1.sequence_id).toBe("seq-1");
+      expect(r1.next_phase_id).toBe("b");
+    }
+    const r2 = getResolvedPhaseTransition({
+      id: "a",
+      is_start: true,
+      next_phase_id: null,
+      completion: {
+        type: "sequence_complete",
+        sequence_id: "seq-1",
+        next_phase_id: "c",
+      },
+    });
+    if (r2?.type === "sequence_complete") {
+      expect(r2.next_phase_id).toBe("c");
+    }
+  });
+
   it("all_matched: next from top-level or completion", () => {
     const r1 = getResolvedPhaseTransition({
       id: "a",

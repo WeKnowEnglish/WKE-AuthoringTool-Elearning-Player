@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { LessonGate } from "@/components/lesson/LessonGate";
-import { getLessonBySlugs, getPublishedCatalog } from "@/lib/data/catalog";
+import { getLessonPageContext } from "@/lib/data/catalog";
 import { lessonsForModule } from "@/lib/gating";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +9,11 @@ type Props = { params: Promise<{ moduleSlug: string; lessonSlug: string }> };
 
 export default async function LessonPage({ params }: Props) {
   const { moduleSlug, lessonSlug } = await params;
-  const data = await getLessonBySlugs(moduleSlug, lessonSlug);
-  if (!data) notFound();
+  const ctx = await getLessonPageContext(moduleSlug, lessonSlug);
+  if (!ctx) notFound();
 
-  const catalog = await getPublishedCatalog();
-  const courseModules = catalog.modules.filter((m) => m.course_id === data.module.course_id);
+  const { data, catalog } = ctx;
+  const courseModules = catalog.modules;
   const modLessons = lessonsForModule(catalog.lessons, data.module.id);
   if (!modLessons.some((l) => l.id === data.lesson.id)) notFound();
 

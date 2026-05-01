@@ -45,6 +45,10 @@ export const storyAnimationSpecSchema = z.object({
 
 export type StoryAnimationSpec = z.infer<typeof storyAnimationSpecSchema>;
 
+/** Waypoint percent bounds relative to story stage (wider band for off-screen path starts). */
+export const STORY_PATH_WAYPOINT_MIN = -60;
+export const STORY_PATH_WAYPOINT_MAX = 160;
+
 export const storyPathSchema = z.object({
   waypoints: z
     .array(
@@ -55,6 +59,8 @@ export const storyPathSchema = z.object({
     )
     .min(2),
   duration_ms: z.number().min(0).max(120_000),
+  /** CSS easing for the full path animation (e.g. ease-out). Default linear in player when omitted. */
+  easing: z.string().max(120).optional(),
 });
 
 /** Actions that can run when a student taps an item (same semantics as timeline, without delay). */
@@ -106,6 +112,10 @@ export const storyActionStepKindSchema = z.enum([
   "play_sound",
   "tts",
   "smart_line",
+  /** Presentation-style popup (authoring; runtime may treat as no-op until wired). */
+  "info_popup",
+  /** Cross-page navigation when layout_mode is slide. */
+  "goto_page",
 ]);
 
 export type StoryActionStepKind = z.infer<typeof storyActionStepKindSchema>;
@@ -132,6 +142,12 @@ export const storyActionStepSchema = z.object({
   timing: z.enum(["simultaneous", "after_previous", "next_click"]).optional(),
   after_step_id: z.string().optional(),
   play_once: z.boolean().optional(),
+  popup_title: z.string().optional(),
+  popup_body: z.string().optional(),
+  popup_image_url: z.string().optional(),
+  popup_video_url: z.string().optional(),
+  goto_target: z.enum(["next_page", "prev_page", "page_id"]).optional(),
+  goto_page_id: z.string().optional(),
 });
 
 export type StoryActionStep = z.infer<typeof storyActionStepSchema>;
@@ -169,9 +185,23 @@ export const storyIdleAnimationSchema = z.object({
   period_ms: z.number().min(100).max(60_000).optional(),
   /** Empty/omitted = active across all phases for this scope. */
   active_phase_ids: z.array(z.string()).optional(),
+  /**
+   * Required for idles stored on the page or phase; omitted/forbidden on item-scoped idles
+   * (the item itself is the target).
+   */
+  target_item_id: z.string().optional(),
 });
 
 export type StoryIdleAnimation = z.infer<typeof storyIdleAnimationSchema>;
+
+/** Preset list for editor UI (same order as schema enum). */
+export const STORY_IDLE_PRESET_IDS: StoryIdleAnimation["preset"][] = [
+  "gentle_float",
+  "pulse",
+  "wobble_loop",
+  "spin_loop",
+  "breathe",
+];
 
 export const storyPhaseDialogueSchema = z.object({
   start: z.string().optional(),
@@ -449,10 +479,15 @@ export const storyItemSchema = z
     id: z.string(),
     /** Teacher-facing name (e.g. “ball”) for labels and editor lists. */
     name: z.string().optional(),
-    kind: z.enum(["image", "text"]).optional().default("image"),
+    kind: z
+      .enum(["image", "text", "shape", "line", "button"])
+      .optional()
+      .default("image"),
     image_url: z.string().optional(),
     text: z.string().optional(),
     text_color: z.string().optional(),
+    color_hex: z.string().optional(),
+    line_width_px: z.number().min(1).max(24).optional(),
     text_size_px: z.number().min(10).max(128).optional(),
     x_percent: z.number(),
     y_percent: z.number(),
@@ -502,6 +537,12 @@ export const storyItemSchema = z
         message: `Story item ${item.id} is text kind but missing text`,
       });
     }
+    if (kind === "button" && !item.text?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Story item ${item.id} is button kind but missing text`,
+      });
+    }
   });
 export type StoryItem = z.infer<typeof storyItemSchema>;
 
@@ -541,6 +582,8 @@ export const storyPageSchema = z
     read_aloud_text: z.string().optional(),
     auto_play_page_text: z.boolean().optional(),
     page_audio_url: z.string().optional(),
+    /** Per-page layout override when root payload uses book; optional. */
+    layout_mode: z.enum(["book", "slide"]).optional(),
     items: z.array(storyItemSchema).default([]),
     /** Unified action sequences (v2). */
     action_sequences: z.array(storyActionSequenceSchema).optional(),
@@ -621,6 +664,17 @@ export const storyPageSchema = z
     if (!validateActionAndIdleRefs("Page", page.action_sequences, page.idle_animations, null)) {
       return;
     }
+    for (const idle of page.idle_animations ?? []) {
+      const tid = idle.target_item_id?.trim();
+      if (!tid || !ids.has(tid)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Page idle animation requires target_item_id referencing an item on this page",
+        });
+        return;
+      }
+    }
     if (phases && phases.length > 0) {
       const phaseIds = new Set<string>();
       for (const ph of phases) {
@@ -657,6 +711,16 @@ export const storyPageSchema = z
           )
         ) {
           return;
+        }
+        for (const idle of ph.idle_animations ?? []) {
+          const tid = idle.target_item_id?.trim();
+          if (!tid || !ids.has(tid)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Phase ${ph.id} idle animation requires target_item_id referencing an item on this page`,
+            });
+            return;
+          }
         }
         if (ph.next_phase_id && !phaseIds.has(ph.next_phase_id)) {
           ctx.addIssue({
@@ -841,6 +905,17 @@ export const storyPageSchema = z
         }
       }
     }
+    for (const it of page.items) {
+      for (const idle of it.idle_animations ?? []) {
+        if (idle.target_item_id != null && idle.target_item_id.trim() !== "") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Item ${it.id} idle animation must not set target_item_id`,
+          });
+          return;
+        }
+      }
+    }
     for (const step of page.timeline ?? []) {
       if (
         step.item_id &&
@@ -883,10 +958,10 @@ export const storyPageSchema = z
       if (it.path) {
         for (const w of it.path.waypoints) {
           if (
-            w.x_percent < -5 ||
-            w.x_percent > 105 ||
-            w.y_percent < -5 ||
-            w.y_percent > 105
+            w.x_percent < STORY_PATH_WAYPOINT_MIN ||
+            w.x_percent > STORY_PATH_WAYPOINT_MAX ||
+            w.y_percent < STORY_PATH_WAYPOINT_MIN ||
+            w.y_percent > STORY_PATH_WAYPOINT_MAX
           ) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -913,6 +988,11 @@ export const storyPayloadSchema = z.object({
   read_aloud_text: z.string().optional(),
   tts_lang: z.string().optional(),
   guide: guideSchema,
+  /** Book page-turn vs slide deck chrome (per Interactive Page). */
+  layout_mode: z.enum(["book", "slide"]).optional().default("book"),
+  pass_rule: z
+    .enum(["story_complete", "visit_all_pages", "drag_targets_complete"])
+    .optional(),
   /** Multi-page book; when absent or empty, legacy single-page fields above apply */
   pages: z.array(storyPageSchema).optional(),
   page_turn_style: z.enum(["slide", "curl"]).optional(),
@@ -1021,7 +1101,13 @@ export function getNormalizedStoryPages(payload: StoryPayload): NormalizedStoryP
         items: p.items.map((it) => ({ ...it, z_index: it.z_index ?? 0, image_scale: it.image_scale ?? 1 })),
         action_sequences: p.action_sequences ?? [],
         idle_animations: p.idle_animations ?? [],
-        auto_play: p.auto_play ?? ((p.timeline?.length ?? 0) > 0),
+        auto_play:
+          p.auto_play ??
+          ((p.timeline?.length ?? 0) > 0 ||
+            (p.action_sequences?.some(
+              (s) => s.event === "page_enter" && (s.steps?.length ?? 0) > 0,
+            ) ??
+              false)),
         timeline: p.timeline ?? [],
         phases,
         phasesExplicit: isExplicit,
@@ -1051,6 +1137,10 @@ export function getNormalizedStoryPages(payload: StoryPayload): NormalizedStoryP
 
 export function getStoryPageTurnStyle(payload: StoryPayload): "slide" | "curl" {
   return payload.page_turn_style ?? "curl";
+}
+
+export function getStoryLayoutMode(payload: StoryPayload): "book" | "slide" {
+  return payload.layout_mode ?? "book";
 }
 
 function newEntityId(): string {
@@ -1191,6 +1281,16 @@ export function remapStoryPayloadIds(payload: StoryPayload): StoryPayload {
                 ),
                 after_correct_match: ph.drag_match.after_correct_match,
               } : undefined,
+            idle_animations: ph.idle_animations?.map((idle) => ({
+              ...idle,
+              target_item_id:
+                idle.target_item_id && idMap.has(idle.target_item_id) ?
+                  (idMap.get(idle.target_item_id) as string)
+                : idle.target_item_id,
+              active_phase_ids: idle.active_phase_ids?.map((pid) =>
+                phaseIdMap.has(pid) ? (phaseIdMap.get(pid) as string) : pid,
+              ),
+            })),
           };
           return next;
         }) ?? undefined;
@@ -1202,6 +1302,12 @@ export function remapStoryPayloadIds(payload: StoryPayload): StoryPayload {
             phaseIdMap.has(pid) ? (phaseIdMap.get(pid) as string) : pid,
           ),
         })),
+        idle_animations: it.idle_animations?.map((idle) => ({
+          ...idle,
+          active_phase_ids: idle.active_phase_ids?.map((pid) =>
+            phaseIdMap.has(pid) ? (phaseIdMap.get(pid) as string) : pid,
+          ),
+        })),
       }));
       return {
         ...page,
@@ -1209,6 +1315,16 @@ export function remapStoryPayloadIds(payload: StoryPayload): StoryPayload {
         items: remappedItems,
         timeline,
         phases,
+        idle_animations: page.idle_animations?.map((idle) => ({
+          ...idle,
+          target_item_id:
+            idle.target_item_id && idMap.has(idle.target_item_id) ?
+              (idMap.get(idle.target_item_id) as string)
+            : idle.target_item_id,
+          active_phase_ids: idle.active_phase_ids?.map((pid) =>
+            phaseIdMap.has(pid) ? (phaseIdMap.get(pid) as string) : pid,
+          ),
+        })),
       };
     }),
   };
@@ -1999,6 +2115,9 @@ export const interactionPayloadSchema = z.intersection(
     auto_advance_on_pass: z.boolean().optional(),
     /** Gold awarded for a correct answer on this interaction screen. */
     gold_reward_on_pass: z.number().int().min(0).max(100).optional(),
+    quiz_group_id: z.string().optional(),
+    quiz_group_title: z.string().optional(),
+    quiz_group_order: z.number().int().min(0).optional(),
   }),
 );
 

@@ -3,10 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   KidButton,
-  kidLinkPrimaryClassName,
   kidLinkSecondaryClassName,
 } from "@/components/kid-ui/KidButton";
 import { KidConfetti } from "@/components/kid-ui/KidConfetti";
@@ -18,8 +17,10 @@ import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { KidProgressBar } from "@/components/kid-ui/KidProgressBar";
 import { KidStickerStrip } from "@/components/kid-ui/KidStickerStrip";
 import { playSfx } from "@/lib/audio/sfx";
+import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
 import { speakText, stopSpeaking } from "@/lib/audio/tts";
 import type { LessonScreenRow } from "@/lib/data/catalog";
+import { getQuizProgressForLessonIndex } from "@/lib/lesson-activity-taxonomy";
 import {
   getProgressSnapshot,
   getStickerCount,
@@ -35,39 +36,100 @@ import {
   fillBlanksPayloadSchema,
   fixTextPayloadSchema,
   mcQuizPayloadSchema,
-  parseScreenPayload,
   shortAnswerPayloadSchema,
   startPayloadSchema,
   trueFalsePayloadSchema,
-  type ScreenPayload,
 } from "@/lib/lesson-schemas";
-import {
-  ClickTargetsView,
-  DragMatchView,
-  DragSentenceView,
-  EssayView,
-  FillBlanksView,
-  FixTextView,
-  GuidedDialogueView,
-  HotspotGateView,
-  HotspotInfoView,
-  LetterMixupView,
-  ListenHotspotSequenceView,
-  ListenColorWriteView,
-  McQuizView,
-  PresentationInteractiveView,
-  ShortAnswerView,
-  SoundSortView,
-  SortingGameView,
-  TableCompleteView,
-  TrueFalseView,
-  VoiceQuestionView,
-  WordShapeHuntView,
-} from "@/components/lesson/interaction-views";
+import { parseScreenPayload, type ScreenPayload } from "@/lib/lesson-schemas-player";
+import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
 import { StoryBookView } from "@/components/lesson/StoryBookView";
 import type { LessonPlayerVisualEdit } from "@/components/lesson/lesson-player-edit";
 
 export type { LessonPlayerVisualEdit };
+
+const LazyMcQuiz = lazy(() =>
+  import("./interactions/McQuizView").then((m) => ({ default: m.McQuizView })),
+);
+const LazyTrueFalse = lazy(() =>
+  import("./interactions/TrueFalseView").then((m) => ({ default: m.TrueFalseView })),
+);
+const LazyShortAnswer = lazy(() =>
+  import("./interactions/ShortAnswerView").then((m) => ({ default: m.ShortAnswerView })),
+);
+const LazyFixText = lazy(() =>
+  import("./interactions/FixTextView").then((m) => ({ default: m.FixTextView })),
+);
+const LazyFillBlanks = lazy(() =>
+  import("./interactions/FillBlanksView").then((m) => ({ default: m.FillBlanksView })),
+);
+const LazyEssay = lazy(() =>
+  import("./interactions/EssayView").then((m) => ({ default: m.EssayView })),
+);
+const LazyHotspotInfo = lazy(() =>
+  import("./interactions/HotspotInfoView").then((m) => ({ default: m.HotspotInfoView })),
+);
+const LazyHotspotGate = lazy(() =>
+  import("./interactions/HotspotGateView").then((m) => ({ default: m.HotspotGateView })),
+);
+const LazyDragMatch = lazy(() =>
+  import("./interactions/DragMatchView").then((m) => ({ default: m.DragMatchView })),
+);
+const LazyClickTargets = lazy(() =>
+  import("./interactions/ClickTargetsView").then((m) => ({ default: m.ClickTargetsView })),
+);
+const LazySoundSort = lazy(() =>
+  import("./interactions/SoundSortView").then((m) => ({ default: m.SoundSortView })),
+);
+const LazyListenHotspotSequence = lazy(() =>
+  import("./interactions/ListenHotspotSequenceView").then((m) => ({
+    default: m.ListenHotspotSequenceView,
+  })),
+);
+const LazyListenColorWrite = lazy(() =>
+  import("./interactions/ListenColorWriteView").then((m) => ({
+    default: m.ListenColorWriteView,
+  })),
+);
+const LazyLetterMixup = lazy(() =>
+  import("./interactions/LetterMixupView").then((m) => ({ default: m.LetterMixupView })),
+);
+const LazyWordShapeHunt = lazy(() =>
+  import("./interactions/WordShapeHuntView").then((m) => ({ default: m.WordShapeHuntView })),
+);
+const LazyTableComplete = lazy(() =>
+  import("./interactions/TableCompleteView").then((m) => ({ default: m.TableCompleteView })),
+);
+const LazySortingGame = lazy(() =>
+  import("./interactions/SortingGameView").then((m) => ({ default: m.SortingGameView })),
+);
+const LazyVoiceQuestion = lazy(() =>
+  import("./interactions/VoiceQuestionView").then((m) => ({ default: m.VoiceQuestionView })),
+);
+const LazyGuidedDialogue = lazy(() =>
+  import("./interactions/GuidedDialogueView").then((m) => ({ default: m.GuidedDialogueView })),
+);
+const LazyPresentationInteractive = lazy(() =>
+  import("./interactions/PresentationInteractiveView").then((m) => ({
+    default: m.PresentationInteractiveView,
+  })),
+);
+const LazyDragSentence = lazy(() =>
+  import("./interactions/DragSentenceView").then((m) => ({ default: m.DragSentenceView })),
+);
+
+function InteractionChunkFallback() {
+  return (
+    <KidPanel className="space-y-4 border-2 border-dashed border-kid-ink/30 bg-kid-panel/80">
+      <div className="h-8 w-4/5 max-w-lg animate-pulse rounded-lg bg-kid-ink/10" />
+      <div className="h-44 w-full animate-pulse rounded-xl bg-kid-ink/5" />
+      <p className="text-sm font-semibold text-neutral-500">Loading activity…</p>
+    </KidPanel>
+  );
+}
+
+function InteractionLazyShell({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<InteractionChunkFallback />}>{children}</Suspense>;
+}
 
 const AVATAR_OPTIONS = [
   { id: "fox", emoji: "🦊" },
@@ -190,6 +252,7 @@ export function LessonPlayer({
   const [experience, setExperience] = useState(0);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoAdvanceCompletedForScreenRef = useRef<string | null>(null);
+  const playbackRootRef = useRef<HTMLDivElement | null>(null);
 
   const muted = useMuted();
   const isPreview = mode === "preview";
@@ -197,22 +260,47 @@ export function LessonPlayer({
 
   useEffect(() => {
     if (isPreview) return;
-    setStickerCount(getStickerCount());
-    const rewards = getRewards();
-    setGold(rewards.gold);
-    setExperience(rewards.experience);
+    queueMicrotask(() => {
+      setStickerCount(getStickerCount());
+      const rewards = getRewards();
+      setGold(rewards.gold);
+      setExperience(rewards.experience);
+    });
   }, [isPreview]);
 
   useEffect(() => {
     const max = Math.max(0, screens.length - 1);
     const next = Math.min(Math.max(0, initialScreenIndex), max);
-    setIndex(next);
+    queueMicrotask(() => {
+      setIndex(next);
+    });
   }, [initialScreenIndex, screens.length]);
 
   const screen = screens[index];
   const parsed: ScreenPayload | null = screen
     ? parseScreenPayload(screen.screen_type, screen.payload)
     : null;
+  const quizProgress = useMemo(
+    () => getQuizProgressForLessonIndex(screens, index),
+    [screens, index],
+  );
+
+  useEffect(() => {
+    const candidateIndices = [index + 1, index + 2, index - 1].filter(
+      (i) => i >= 0 && i < screens.length,
+    );
+    const seenSubtypes = new Set<string>();
+    const maxPrefetch = 4;
+    for (const i of candidateIndices) {
+      if (seenSubtypes.size >= maxPrefetch) break;
+      const row = screens[i];
+      const parsedRow = parseScreenPayload(row.screen_type, row.payload);
+      if (parsedRow?.type !== "interaction") continue;
+      if (seenSubtypes.has(parsedRow.subtype)) continue;
+      seenSubtypes.add(parsedRow.subtype);
+      prefetchInteractionChunk(parsedRow.subtype);
+    }
+  }, [index, screens]);
 
   useEffect(() => {
     stopSpeaking();
@@ -234,7 +322,9 @@ export function LessonPlayer({
     () => () => {
       if (autoAdvanceTimerRef.current) {
         clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
       }
+      teardownPlaybackInRoot(playbackRootRef.current);
     },
     [],
   );
@@ -452,7 +542,7 @@ export function LessonPlayer({
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <div ref={playbackRootRef} className="mx-auto w-full max-w-5xl space-y-6">
       {isPreview ? (
         <p className="rounded border-2 border-sky-700 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-950">
           Student preview — progress is not saved.
@@ -471,6 +561,21 @@ export function LessonPlayer({
           <KidProgressBar currentIndex={index} total={screens.length} />
         </div>
       </div>
+      {quizProgress ? (
+        <p
+          className="rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm"
+          role="status"
+          aria-live="polite"
+          aria-label={`${quizProgress.title ?? "Quiz"}, question ${quizProgress.questionIndex} of ${quizProgress.questionCount}`}
+        >
+          <span className="block text-xs font-medium uppercase tracking-wide text-amber-800/90">
+            {quizProgress.title ?? "Quiz"}
+          </span>
+          <span className="mt-0.5 block">
+            Question {quizProgress.questionIndex} of {quizProgress.questionCount}
+          </span>
+        </p>
+      ) : null}
 
       {parsed.type === "start" && (
         <div className="space-y-6">
@@ -615,7 +720,9 @@ export function LessonPlayer({
             </label>
           ) : null}
           <InteractionFeedbackShell kind={interactionFeedback}>
-            <McQuizView parsed={parsed} {...nav} {...passHandlers} />
+            <InteractionLazyShell>
+              <LazyMcQuiz parsed={parsed} {...nav} {...passHandlers} />
+            </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
       )}
@@ -645,7 +752,9 @@ export function LessonPlayer({
             </label>
           ) : null}
           <InteractionFeedbackShell kind={interactionFeedback}>
-            <TrueFalseView parsed={parsed} {...nav} {...passHandlers} />
+            <InteractionLazyShell>
+              <LazyTrueFalse parsed={parsed} {...nav} {...passHandlers} />
+            </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
       )}
@@ -675,7 +784,9 @@ export function LessonPlayer({
             </label>
           ) : null}
           <InteractionFeedbackShell kind={interactionFeedback}>
-            <ShortAnswerView parsed={parsed} {...nav} {...passHandlers} />
+            <InteractionLazyShell>
+              <LazyShortAnswer parsed={parsed} {...nav} {...passHandlers} />
+            </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
       )}
@@ -705,12 +816,14 @@ export function LessonPlayer({
             </label>
           ) : null}
           <InteractionFeedbackShell kind={interactionFeedback}>
-            <FixTextView
-              key={`${screen.id}:${parsed.broken_text}`}
-              parsed={parsed}
-              {...nav}
-              {...passHandlers}
-            />
+            <InteractionLazyShell>
+              <LazyFixText
+                key={`${screen.id}:${parsed.broken_text}`}
+                parsed={parsed}
+                {...nav}
+                {...passHandlers}
+              />
+            </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
       )}
@@ -740,7 +853,9 @@ export function LessonPlayer({
             </label>
           ) : null}
           <InteractionFeedbackShell kind={interactionFeedback}>
-            <FillBlanksView key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
+            <InteractionLazyShell>
+              <LazyFillBlanks key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
+            </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
       )}
@@ -770,113 +885,145 @@ export function LessonPlayer({
             </label>
           ) : null}
           <InteractionFeedbackShell kind={interactionFeedback}>
-            <EssayView
-              parsed={parsed}
-              muted={muted}
-              passed={interactionPass}
-              onPass={passHandlers.onPass}
-              onNext={goNext}
-              onBack={goBack}
-              showBack={index > 0}
-            />
+            <InteractionLazyShell>
+              <LazyEssay
+                parsed={parsed}
+                muted={muted}
+                passed={interactionPass}
+                onPass={passHandlers.onPass}
+                onNext={goNext}
+                onBack={goBack}
+                showBack={index > 0}
+              />
+            </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
       )}
       {parsed.type === "interaction" && parsed.subtype === "hotspot_info" && (
         <InteractionFeedbackShell kind="none">
-          <HotspotInfoView parsed={parsed} {...nav} />
+          <InteractionLazyShell>
+            <LazyHotspotInfo parsed={parsed} {...nav} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "hotspot_gate" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <HotspotGateView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyHotspotGate parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "drag_match" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <DragMatchView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyDragMatch parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "click_targets" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <ClickTargetsView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyClickTargets parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "sound_sort" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <SoundSortView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazySoundSort parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "listen_hotspot_sequence" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <ListenHotspotSequenceView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyListenHotspotSequence parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "listen_color_write" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <ListenColorWriteView key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyListenColorWrite key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "letter_mixup" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <LetterMixupView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyLetterMixup parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "word_shape_hunt" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <WordShapeHuntView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyWordShapeHunt parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "table_complete" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <TableCompleteView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyTableComplete parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "sorting_game" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <SortingGameView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazySortingGame parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "voice_question" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <VoiceQuestionView
-            parsed={parsed}
-            lessonId={lessonId}
-            screenId={screen.id}
-            {...nav}
-            {...passHandlers}
-          />
+          <InteractionLazyShell>
+            <LazyVoiceQuestion
+              parsed={parsed}
+              lessonId={lessonId}
+              screenId={screen.id}
+              {...nav}
+              {...passHandlers}
+            />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "guided_dialogue" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <GuidedDialogueView
-            parsed={parsed}
-            lessonId={lessonId}
-            screenId={screen.id}
-            {...nav}
-            {...passHandlers}
-          />
+          <InteractionLazyShell>
+            <LazyGuidedDialogue
+              parsed={parsed}
+              lessonId={lessonId}
+              screenId={screen.id}
+              {...nav}
+              {...passHandlers}
+            />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "presentation_interactive" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <PresentationInteractiveView parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionLazyShell>
+            <LazyPresentationInteractive parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "drag_sentence" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
-          <DragSentenceView
-            parsed={parsed}
-            muted={muted}
-            filled={dragFilled}
-            setFilled={setDragFilled}
-            passed={interactionPass}
-            {...passHandlers}
-            onNext={goNext}
-            onBack={goBack}
-            showBack={index > 0}
-          />
+          <InteractionLazyShell>
+            <LazyDragSentence
+              parsed={parsed}
+              muted={muted}
+              filled={dragFilled}
+              setFilled={setDragFilled}
+              passed={interactionPass}
+              {...passHandlers}
+              onNext={goNext}
+              onBack={goBack}
+              showBack={index > 0}
+            />
+          </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
     </div>

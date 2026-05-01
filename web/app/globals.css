@@ -78,6 +78,11 @@
     }
   }
 
+  /** Lesson editor: header icon pop when a screen persists (keyframes live outside @layer — see file bottom). */
+  .teacher-editor-save-icon-pulse {
+    animation: teacher-editor-save-icon-pulse 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
   .kid-confetti-layer {
     pointer-events: none;
     position: absolute;
@@ -325,6 +330,94 @@
     animation: story-exit-fade_out var(--story-dur, 400ms) ease forwards;
   }
 
+  /* Story item idle loops: --story-idle-amp (0–1), --story-idle-period (e.g. 2.2s) */
+  .story-item-idle-layer {
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  @keyframes story-idle-gentle_float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(calc(-1 * var(--story-idle-amp, 0.35) * 22px));
+    }
+  }
+
+  @keyframes story-idle-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(calc(1 + var(--story-idle-amp, 0.35) * 0.14));
+    }
+  }
+
+  @keyframes story-idle-wobble_loop {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(calc(-1 * var(--story-idle-amp, 0.35) * 18deg));
+    }
+    75% {
+      transform: rotate(calc(var(--story-idle-amp, 0.35) * 18deg));
+    }
+  }
+
+  @keyframes story-idle-spin_loop {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes story-idle-breathe {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(calc(1 + var(--story-idle-amp, 0.35) * 0.1));
+    }
+  }
+
+  .story-idle-gentle_float {
+    animation: story-idle-gentle_float var(--story-idle-period, 2.2s) ease-in-out infinite;
+  }
+
+  .story-idle-pulse {
+    animation: story-idle-pulse var(--story-idle-period, 2.2s) ease-in-out infinite;
+  }
+
+  .story-idle-wobble_loop {
+    animation: story-idle-wobble_loop var(--story-idle-period, 2.2s) ease-in-out infinite;
+  }
+
+  .story-idle-spin_loop {
+    animation: story-idle-spin_loop var(--story-idle-period, 3.2s) linear infinite;
+  }
+
+  .story-idle-breathe {
+    animation: story-idle-breathe var(--story-idle-period, 2.8s) ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .story-idle-gentle_float,
+    .story-idle-pulse,
+    .story-idle-wobble_loop,
+    .story-idle-spin_loop,
+    .story-idle-breathe {
+      animation: none !important;
+    }
+  }
+
   @keyframes story-page-curl-next {
     from {
       transform: perspective(1200px) rotateY(-26deg) translateX(12%) scale(0.98);
@@ -437,4 +530,36 @@ body {
    is shorter than viewport and body background would otherwise show through. */
 body:has([data-teacher-root]) {
   background: #ffffff;
+}
+
+/* Teacher editor: global keyframes so Tailwind layer order cannot drop the animation name. */
+@keyframes teacher-editor-save-icon-pulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0));
+  }
+  40% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.9));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0));
+  }
+}
+
+@keyframes teacher-editor-save-icon-pulse-reduced {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teacher-editor-save-icon-pulse {
+    animation: teacher-editor-save-icon-pulse-reduced 0.45s ease-out both;
+  }
 }

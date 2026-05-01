@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
 import type { CourseRow, LessonRow, ModuleRow } from "@/lib/data/catalog";
@@ -27,13 +27,8 @@ export function CourseLearnClient({
   loadError,
 }: Props) {
   const router = useRouter();
-  const [completed, setCompleted] = useState<string[]>([]);
-  const [enrolled, setEnrolled] = useState(false);
-  useEffect(() => {
-    const snap = getProgressSnapshot();
-    setCompleted(snap.completedLessonIds);
-    setEnrolled(isEnrolledInCourse(course.id));
-  }, [course.id]);
+  const [completed] = useState<string[]>(() => getProgressSnapshot().completedLessonIds);
+  const [enrolled] = useState(() => isEnrolledInCourse(course.id));
   const sortedMods = modulesSorted(modules);
 
   return (

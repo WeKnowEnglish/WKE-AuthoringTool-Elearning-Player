@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CourseRow } from "@/lib/data/catalog";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
@@ -14,10 +14,7 @@ type Props = {
 
 export function CourseSelectionClient({ courses, loadError }: Props) {
   const router = useRouter();
-  const [enrolled, setEnrolled] = useState<string[]>([]);
-  useEffect(() => {
-    setEnrolled(getEnrolledCourseIds());
-  }, []);
+  const [enrolled, setEnrolled] = useState<string[]>(() => getEnrolledCourseIds());
   const enrolledSet = useMemo(() => new Set(enrolled), [enrolled]);
 
   return (

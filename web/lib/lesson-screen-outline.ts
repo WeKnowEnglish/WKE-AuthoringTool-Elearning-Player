@@ -1,13 +1,16 @@
 import {
+  getQuizGroupIdFromPayload,
+  getQuizGroupTitleFromPayload,
+} from "@/lib/lesson-activity-taxonomy";
+import {
   getNormalizedStoryPages,
   getInteractionSubtype,
   parseScreenPayload,
 } from "@/lib/lesson-schemas";
 
-export function screenOutlineLabel(screen: {
-  screen_type: string;
-  payload: unknown;
-}): string {
+export type ScreenOutlineLessonContext = readonly { id: string; payload: unknown }[];
+
+function screenOutlineBase(screen: { screen_type: string; payload: unknown }): string {
   const p = parseScreenPayload(screen.screen_type, screen.payload);
   if (!p) {
     const sub = getInteractionSubtype(screen.payload);
@@ -80,6 +83,48 @@ export function screenOutlineLabel(screen: {
     }
   }
   return screen.screen_type;
+}
+
+function withQuizGroupPrefix(
+  screen: { id?: string; payload: unknown },
+  lessonScreens: ScreenOutlineLessonContext,
+  base: string,
+): string {
+  if (!screen.id || lessonScreens.length === 0) return base;
+  const idx = lessonScreens.findIndex((s) => s.id === screen.id);
+  if (idx < 0) return base;
+  const gid = getQuizGroupIdFromPayload(screen.payload);
+  if (!gid) return base;
+  let start = idx;
+  while (start > 0 && getQuizGroupIdFromPayload(lessonScreens[start - 1]?.payload) === gid) {
+    start -= 1;
+  }
+  let end = idx;
+  while (end < lessonScreens.length - 1 && getQuizGroupIdFromPayload(lessonScreens[end + 1]?.payload) === gid) {
+    end += 1;
+  }
+  const count = end - start + 1;
+  const pos = idx - start + 1;
+  const title = getQuizGroupTitleFromPayload(lessonScreens[start]?.payload)?.trim() || null;
+  if (count <= 1) {
+    return title ? `${title} · ${base}` : base;
+  }
+  const prefix = title ? `${title} (${pos}/${count})` : `Quiz (${pos}/${count})`;
+  return `${prefix} · ${base}`;
+}
+
+/** Pass `lessonScreens` (same order as the lesson) to prefix grouped quiz questions with title and position. */
+export function screenOutlineLabel(
+  screen: {
+    id?: string;
+    screen_type: string;
+    payload: unknown;
+  },
+  lessonScreens?: ScreenOutlineLessonContext,
+): string {
+  const base = screenOutlineBase(screen);
+  if (!lessonScreens?.length) return base;
+  return withQuizGroupPrefix(screen, lessonScreens, base);
 }
 
 export function screenThumbnailUrl(screen: {

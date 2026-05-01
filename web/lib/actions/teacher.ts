@@ -1,8 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { PUBLISHED_CATALOG_CACHE_TAG, type LessonScreenRow } from "@/lib/data/catalog";
+import { getLessonPublishBlockingReasons } from "@/lib/lesson-editor-checklist";
 import { createClient } from "@/lib/supabase/server";
+import { QUIZ_SUBTYPES } from "@/lib/lesson-activity-taxonomy";
 import {
   interactionPayloadSchema,
   type InteractionSubtype,
@@ -10,6 +13,13 @@ import {
   startPayloadSchema,
   storyPayloadSchema,
 } from "@/lib/lesson-schemas";
+import { rawInteractionTemplateForSubtype } from "@/lib/teacher-interaction-templates";
+
+function revalidateStudentCatalogViews() {
+  revalidateTag(PUBLISHED_CATALOG_CACHE_TAG, "max");
+  revalidatePath("/learn", "layout");
+  revalidatePath("/profile");
+}
 
 export async function requireTeacher() {
   const supabase = await createClient();
@@ -103,6 +113,7 @@ export async function saveModule(formData: FormData) {
       .eq("id", id);
     if (error) throw error;
     await saveModuleTags(id);
+    revalidateStudentCatalogViews();
     revalidatePath("/teacher/courses");
     revalidatePath("/teacher");
     revalidatePath(`/teacher/modules/${id}`);
@@ -126,6 +137,7 @@ export async function saveModule(formData: FormData) {
     .single();
   if (error) throw error;
   await saveModuleTags(data.id);
+  revalidateStudentCatalogViews();
   revalidatePath("/teacher/courses");
   revalidatePath("/teacher");
   redirect(`/teacher/modules/${data.id}`);
@@ -158,6 +170,7 @@ export async function saveCourse(formData: FormData) {
       })
       .eq("id", id);
     if (error) throw error;
+    revalidateStudentCatalogViews();
     revalidatePath("/teacher");
     revalidatePath("/teacher/courses");
     revalidatePath(`/teacher/courses/${id}`);
@@ -174,6 +187,7 @@ export async function saveCourse(formData: FormData) {
     published,
   });
   if (error) throw error;
+  revalidateStudentCatalogViews();
   revalidatePath("/teacher");
   revalidatePath("/teacher/courses");
   redirect("/teacher/courses");
@@ -192,6 +206,28 @@ export async function saveLesson(formData: FormData) {
 
   if (!module_id || !title || !slug) throw new Error("Missing fields");
 
+  if (published) {
+    if (id) {
+      const { data: screenRows, error: screensErr } = await supabase
+        .from("lesson_screens")
+        .select("id, lesson_id, order_index, screen_type, payload")
+        .eq("lesson_id", id)
+        .order("order_index", { ascending: true });
+      if (screensErr) throw screensErr;
+      const reasons = getLessonPublishBlockingReasons(
+        (screenRows ?? []) as unknown as LessonScreenRow[],
+      );
+      if (reasons.length > 0) {
+        throw new Error(`Cannot publish: ${reasons.join(" ")}`);
+      }
+    } else {
+      const reasons = getLessonPublishBlockingReasons([]);
+      if (reasons.length > 0) {
+        throw new Error(`Cannot publish: ${reasons.join(" ")}`);
+      }
+    }
+  }
+
   if (id) {
     const { error } = await supabase
       .from("lessons")
@@ -205,6 +241,7 @@ export async function saveLesson(formData: FormData) {
       })
       .eq("id", id);
     if (error) throw error;
+    revalidateStudentCatalogViews();
     revalidatePath(`/teacher/modules/${module_id}`);
     revalidatePath(`/teacher/modules/${module_id}/lessons/${id}`);
     redirect(`/teacher/modules/${module_id}/lessons/${id}`);
@@ -223,6 +260,7 @@ export async function saveLesson(formData: FormData) {
     .select("id")
     .single();
   if (error) throw error;
+  revalidateStudentCatalogViews();
   revalidatePath(`/teacher/modules/${module_id}`);
   redirect(`/teacher/modules/${module_id}/lessons/${data.id}`);
 }
@@ -232,6 +270,7 @@ export async function deleteModule(moduleId: string, _fd: FormData) {
   const supabase = await requireTeacher();
   const { error } = await supabase.from("modules").delete().eq("id", moduleId);
   if (error) throw error;
+  revalidateStudentCatalogViews();
   revalidatePath("/teacher");
   redirect("/teacher");
 }
@@ -245,6 +284,7 @@ export async function deleteLesson(lessonId: string, moduleId: string, _fd: Form
     .eq("id", lessonId)
     .eq("module_id", moduleId);
   if (error) throw error;
+  revalidateStudentCatalogViews();
   revalidatePath(`/teacher/modules/${moduleId}`);
   redirect(`/teacher/modules/${moduleId}`);
 }
@@ -457,19 +497,38 @@ export async function duplicateLesson(
   redirect(`/teacher/modules/${moduleId}/lessons/${inserted.id}`);
 }
 
+/** Pasted import often includes a BOM or markdown ```json fences — strip before parse. */
+function normalizeLessonImportJsonRaw(raw: string): string {
+  let s = raw.replace(/^\uFEFF/, "").trim();
+  if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json)?\s*/i, "");
+    const fence = s.lastIndexOf("```");
+    if (fence !== -1) s = s.slice(0, fence);
+    s = s.trim();
+  }
+  return s;
+}
+
 export async function importLessonScreensJson(
   lessonId: string,
   moduleId: string,
   formData: FormData,
 ) {
   const supabase = await requireTeacher();
-  const raw = (formData.get("import_json") as string) ?? "";
+  const rawInput = (formData.get("import_json") as string) ?? "";
+  const raw = normalizeLessonImportJsonRaw(rawInput);
   const replace = formData.get("replace_existing") === "on";
+  if (!raw) {
+    throw new Error("Import box is empty — paste the full JSON, or remove markdown code fences around it.");
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("Invalid JSON");
+  } catch (err) {
+    const detail = err instanceof SyntaxError ? err.message : "parse failed";
+    throw new Error(
+      `Invalid JSON (${detail}). Use double quotes, no trailing commas. If you copied from a chat, delete the \`\`\` lines around the JSON.`,
+    );
   }
   const obj = parsed as { screens?: unknown };
   if (!Array.isArray(obj.screens)) {
@@ -578,29 +637,9 @@ async function ensureCongratsEndScreen(
 
 export type AddScreenKind =
   | "start"
-  | "story"
-  | "mc_quiz"
-  | "click_targets"
-  | "treasure_tap"
-  | "sound_sort"
-  | "listen_hotspot_sequence"
-  | "listen_color_write"
-  | "letter_mixup"
-  | "word_shape_hunt"
-  | "table_complete"
-  | "sorting_game"
-  | "drag_sentence"
-  | "true_false"
-  | "short_answer"
-  | "fill_blanks"
-  | "fix_text"
+  | "interactive_page"
   | "hotspot_info"
-  | "hotspot_gate"
-  | "drag_match"
-  | "essay"
-  | "voice_question"
-  | "guided_dialogue"
-  | "presentation_interactive";
+  | "guided_dialogue";
 
 export async function addScreenTemplate(
   lessonId: string,
@@ -629,10 +668,11 @@ export async function addScreenTemplate(
       payload,
     });
     await ensureCongratsEndScreen(supabase, lessonId);
-  } else if (kind === "story") {
+  } else if (kind === "interactive_page") {
     const payload = storyPayloadSchema.parse({
       type: "story",
-      image_url: "https://placehold.co/800x400/f1f5f9/334155?text=Story",
+      layout_mode: "book",
+      image_url: "https://placehold.co/800x400/f1f5f9/334155?text=Interactive+page",
       body_text: "Write your story here.",
       tts_lang: "en-US",
     });
@@ -643,438 +683,7 @@ export async function addScreenTemplate(
       payload,
     });
   } else {
-    let interactionPayload: unknown;
-    switch (kind) {
-      case "mc_quiz":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "mc_quiz",
-          question: "Question?",
-          image_fit: "cover",
-          options: [
-            { id: "a", label: "Answer A" },
-            { id: "b", label: "Answer B" },
-          ],
-          correct_option_id: "a",
-          shuffle_options: false,
-        };
-        break;
-      case "click_targets":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "click_targets",
-          image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Scene",
-          body_text: "Tap the correct place.",
-          targets: [
-            {
-              id: "t1",
-              x_percent: 20,
-              y_percent: 30,
-              w_percent: 25,
-              h_percent: 20,
-              label: "Here",
-            },
-          ],
-          correct_target_id: "t1",
-        };
-        break;
-      case "drag_sentence":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "drag_sentence",
-          body_text: "Put the words in order.",
-          sentence_slots: ["", ""],
-          word_bank: ["Hello", "world"],
-          correct_order: ["Hello", "world"],
-        };
-        break;
-      case "true_false":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "true_false",
-          statement: "The sun is hot.",
-          correct: true,
-        };
-        break;
-      case "short_answer":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "short_answer",
-          prompt: "What do you say when you meet someone?",
-          acceptable_answers: ["Hello", "Hi"],
-        };
-        break;
-      case "fill_blanks":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "fill_blanks",
-          template: "Hello __1__ welcome to __2__.",
-          blanks: [
-            { id: "1", acceptable: ["and", "And"] },
-            { id: "2", acceptable: ["school", "School"] },
-          ],
-        };
-        break;
-      case "fix_text":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "fix_text",
-          broken_text: "Helo, I am go to school.",
-          acceptable: ["Hello, I am going to school.", "Hello, I am going to school"],
-          image_fit: "cover",
-          hints_enabled: true,
-          hint_decoy_words: ["went", "gone", "goes"],
-        };
-        break;
-      case "hotspot_info":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "hotspot_info",
-          image_url: "https://placehold.co/800x450/dcfce7/14532d?text=Explore",
-          body_text: "Tap the picture to learn more.",
-          hotspots: [
-            {
-              id: "h1",
-              x_percent: 10,
-              y_percent: 10,
-              w_percent: 30,
-              h_percent: 40,
-              title: "Tip",
-              body: "This is extra information.",
-            },
-          ],
-          require_all_viewed: false,
-        };
-        break;
-      case "hotspot_gate":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "hotspot_gate",
-          image_url: "https://placehold.co/800x450/fee2e2/991b1b?text=Tap",
-          body_text: "Tap the correct area.",
-          mode: "single",
-          targets: [
-            {
-              id: "t1",
-              x_percent: 15,
-              y_percent: 20,
-              w_percent: 30,
-              h_percent: 35,
-              label: "Correct",
-            },
-            {
-              id: "t2",
-              x_percent: 55,
-              y_percent: 20,
-              w_percent: 30,
-              h_percent: 35,
-              label: "Wrong",
-            },
-          ],
-          correct_target_id: "t1",
-        };
-        break;
-      case "drag_match":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "drag_match",
-          body_text: "Match each word to the right group.",
-          zones: [
-            { id: "z1", label: "Animals" },
-            { id: "z2", label: "Food" },
-          ],
-          tokens: [
-            { id: "tok1", label: "cat" },
-            { id: "tok2", label: "apple" },
-          ],
-          correct_map: { tok1: "z1", tok2: "z2" },
-        };
-        break;
-      case "sound_sort":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "sound_sort",
-          body_text: "Listen and tap the picture that matches.",
-          prompt_audio_url:
-            "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",
-          choices: [
-            { id: "a", image_url: "https://placehold.co/400x400/e2e8f0/334155?text=A" },
-            { id: "b", image_url: "https://placehold.co/400x400/fce7f3/831843?text=B" },
-          ],
-          correct_choice_id: "a",
-        };
-        break;
-      case "listen_hotspot_sequence":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "listen_hotspot_sequence",
-          image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Listen+and+tap",
-          body_text: "Listen and tap the hotspots in order.",
-          prompt_audio_url:
-            "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",
-          targets: [
-            { id: "s1", x_percent: 12, y_percent: 18, w_percent: 20, h_percent: 24, label: "First" },
-            { id: "s2", x_percent: 40, y_percent: 26, w_percent: 20, h_percent: 24, label: "Second" },
-            { id: "s3", x_percent: 68, y_percent: 22, w_percent: 20, h_percent: 24, label: "Third" },
-          ],
-          order: ["s1", "s2", "s3"],
-          allow_replay: true,
-        };
-        break;
-      case "listen_color_write":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "listen_color_write",
-          image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Listen+Color+Write",
-          body_text: "Listen. Pick a color or word. Tap each target.",
-          prompt_audio_url:
-            "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",
-          allow_replay: true,
-          allow_overwrite: true,
-          require_all_targets: true,
-          shuffle_text_options: false,
-          palette: [
-            { id: "red", label: "Red", color_hex: "#ef4444" },
-            { id: "blue", label: "Blue", color_hex: "#3b82f6" },
-            { id: "green", label: "Green", color_hex: "#22c55e" },
-          ],
-          text_options: [
-            { id: "cat", label: "cat" },
-            { id: "dog", label: "dog" },
-            { id: "sun", label: "sun" },
-          ],
-          targets: [
-            {
-              id: "lcw1",
-              x_percent: 12,
-              y_percent: 20,
-              w_percent: 20,
-              h_percent: 24,
-              label: "Color target",
-              expected_mode: "color",
-              expected_value: "red",
-            },
-            {
-              id: "lcw2",
-              x_percent: 42,
-              y_percent: 28,
-              w_percent: 20,
-              h_percent: 24,
-              label: "Write target",
-              expected_mode: "text",
-              expected_value: "cat",
-            },
-          ],
-        };
-        break;
-      case "letter_mixup":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "letter_mixup",
-          prompt: "Reorder the letters to make the correct words.",
-          image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Letter+Mixup",
-          shuffle_letters: true,
-          case_sensitive: false,
-          items: [
-            { id: "lm1", target_word: "school", accepted_words: ["School"] },
-            { id: "lm2", target_word: "teacher", accepted_words: ["Teacher"] },
-          ],
-        };
-        break;
-      case "word_shape_hunt":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "word_shape_hunt",
-          prompt: "Tap all vocabulary words.",
-          image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Word+Shape+Hunt",
-          shape_layout: "wave",
-          shuffle_chunks: false,
-          word_chunks: [
-            { id: "w1", text: "apple", is_vocab: true },
-            { id: "w2", text: "table", is_vocab: false },
-            { id: "w3", text: "banana", is_vocab: true },
-            { id: "w4", text: "window", is_vocab: false },
-          ],
-        };
-        break;
-      case "table_complete":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "table_complete",
-          prompt: "Complete the table.",
-          left_column_label: "Word",
-          right_column_label: "Meaning",
-          input_mode: "typing",
-          case_insensitive: true,
-          normalize_whitespace: true,
-          rows: [
-            { id: "r1", prompt_text: "doctor", accepted_answers: ["a person who helps sick people"] },
-            { id: "r2", prompt_text: "pilot", accepted_answers: ["a person who flies a plane"] },
-          ],
-          token_bank: [],
-        };
-        break;
-      case "sorting_game":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "sorting_game",
-          prompt: "Sort each object into the correct container.",
-          containers: [
-            { id: "c1", display: { text: "Animals" } },
-            { id: "c2", display: { text: "Food" } },
-          ],
-          objects: [
-            { id: "o1", display: { text: "cat" }, target_container_id: "c1" },
-            { id: "o2", display: { text: "apple" }, target_container_id: "c2" },
-            { id: "o3", display: { text: "dog" }, target_container_id: "c1" },
-            { id: "o4", display: { text: "bread" }, target_container_id: "c2" },
-          ],
-          shuffle_objects: true,
-          allow_reassign: true,
-        };
-        break;
-      case "treasure_tap":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "click_targets",
-          image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Scene",
-          body_text: "Find three hidden things!",
-          targets: [
-            {
-              id: "t1",
-              x_percent: 12,
-              y_percent: 18,
-              w_percent: 20,
-              h_percent: 22,
-              label: "Thing 1",
-            },
-            {
-              id: "t2",
-              x_percent: 42,
-              y_percent: 38,
-              w_percent: 20,
-              h_percent: 22,
-              label: "Thing 2",
-            },
-            {
-              id: "t3",
-              x_percent: 68,
-              y_percent: 22,
-              w_percent: 20,
-              h_percent: 22,
-              label: "Thing 3",
-            },
-            {
-              id: "d1",
-              x_percent: 20,
-              y_percent: 70,
-              w_percent: 18,
-              h_percent: 18,
-              label: "Not this",
-            },
-          ],
-          treasure_target_ids: ["t1", "t2", "t3"],
-        };
-        break;
-      case "essay":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "essay",
-          prompt: "Write two sentences about your school.",
-          min_chars: 10,
-          keywords: [],
-          feedback_text: "",
-          show_keywords_to_students: false,
-        };
-        break;
-      case "voice_question":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "voice_question",
-          prompt: "Record your answer: What did you do this morning?",
-          max_duration_seconds: 90,
-          max_attempts: 3,
-          require_playback_before_submit: false,
-        };
-        break;
-      case "guided_dialogue":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "guided_dialogue",
-          character_name: "Mia",
-          character_image_url: "https://placehold.co/500x700/fce7f3/831843?text=Character",
-          intro_text: "Talk to Mia and complete each speaking turn.",
-          turns: [
-            {
-              id: "turn_1",
-              prompt_text: "Hi! What is your name?",
-              student_response_label: "Say your name",
-              max_duration_seconds: 60,
-            },
-            {
-              id: "turn_2",
-              prompt_text: "Nice to meet you. How are you today?",
-              student_response_label: "Describe how you feel",
-              max_duration_seconds: 60,
-            },
-          ],
-          require_turn_audio_playback: false,
-          allow_retry_each_turn: true,
-        };
-        break;
-      case "presentation_interactive":
-        interactionPayload = {
-          type: "interaction",
-          subtype: "presentation_interactive",
-          title: "Interactive presentation",
-          body_text: "Tap elements and explore the slides.",
-          pass_rule: "drag_targets_complete",
-          slides: [
-            {
-              id: "slide1",
-              title: "Slide 1",
-              background_image_url: "https://placehold.co/1280x800/e2e8f0/334155?text=Slide+1",
-              image_fit: "cover",
-              elements: [
-                {
-                  id: "el1",
-                  kind: "button",
-                  label: "More info",
-                  text: "More info",
-                  x_percent: 12,
-                  y_percent: 14,
-                  w_percent: 22,
-                  h_percent: 12,
-                  z_index: 1,
-                  visible: true,
-                  draggable_mode: "none",
-                  actions: [
-                    {
-                      type: "info_popup",
-                      title: "Welcome",
-                      body: "This is an interactive presentation slide.",
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        };
-        break;
-      default:
-        interactionPayload = {
-          type: "interaction",
-          subtype: "mc_quiz",
-          question: "Question?",
-          image_fit: "cover",
-          options: [
-            { id: "a", label: "Answer A" },
-            { id: "b", label: "Answer B" },
-          ],
-          correct_option_id: "a",
-          shuffle_options: false,
-        };
-    }
+    const interactionPayload = rawInteractionTemplateForSubtype(kind);
     const payload = interactionPayloadSchema.parse(interactionPayload);
     await supabase.from("lesson_screens").insert({
       lesson_id: lessonId,
@@ -1085,6 +694,185 @@ export async function addScreenTemplate(
   }
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }
+
+export async function createQuizGroup(lessonId: string, moduleId: string, formData: FormData) {
+  const supabase = await requireTeacher();
+  const quiz_group_id = crypto.randomUUID();
+  const quiz_group_title =
+    ((formData.get("title") as string) ?? "").trim() || "Quiz";
+  const base = rawInteractionTemplateForSubtype("mc_quiz");
+  const payload = interactionPayloadSchema.parse({
+    ...base,
+    quiz_group_id,
+    quiz_group_title,
+    quiz_group_order: 0,
+  });
+  const { count } = await supabase
+    .from("lesson_screens")
+    .select("*", { count: "exact", head: true })
+    .eq("lesson_id", lessonId);
+  const order_index = count ?? 0;
+  await supabase.from("lesson_screens").insert({
+    lesson_id: lessonId,
+    order_index,
+    screen_type: "interaction",
+    payload,
+  });
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+export async function addQuestionToQuiz(
+  lessonId: string,
+  moduleId: string,
+  formData: FormData,
+) {
+  const quizGroupId = (formData.get("quiz_group_id") as string)?.trim();
+  const subtype = (formData.get("subtype") as string)?.trim();
+  if (!quizGroupId || !subtype) throw new Error("Missing quiz_group_id or subtype");
+  if (!(QUIZ_SUBTYPES as readonly string[]).includes(subtype)) {
+    throw new Error(`Invalid quiz subtype: ${subtype}`);
+  }
+  const supabase = await requireTeacher();
+  const { data: rows, error: fetchErr } = await supabase
+    .from("lesson_screens")
+    .select("id,payload,order_index")
+    .eq("lesson_id", lessonId)
+    .order("order_index", { ascending: true });
+  if (fetchErr || !rows?.length) throw fetchErr ?? new Error("No screens");
+
+  let lastInGroup = -1;
+  let maxOrderInGroup = -1;
+  let groupTitle: string | undefined;
+  for (let i = 0; i < rows.length; i += 1) {
+    const p = rows[i].payload as {
+      quiz_group_id?: string;
+      quiz_group_title?: string;
+      quiz_group_order?: number;
+    };
+    if (p.quiz_group_id === quizGroupId) {
+      lastInGroup = i;
+      maxOrderInGroup = Math.max(maxOrderInGroup, p.quiz_group_order ?? 0);
+      if (!groupTitle && typeof p.quiz_group_title === "string" && p.quiz_group_title.trim()) {
+        groupTitle = p.quiz_group_title.trim();
+      }
+    }
+  }
+  if (lastInGroup < 0) throw new Error("Quiz group not found");
+
+  const base = rawInteractionTemplateForSubtype(subtype);
+  const payload = interactionPayloadSchema.parse({
+    ...base,
+    quiz_group_id: quizGroupId,
+    quiz_group_title: groupTitle,
+    quiz_group_order: maxOrderInGroup + 1,
+  });
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("lesson_screens")
+    .insert({
+      lesson_id: lessonId,
+      order_index: rows.length,
+      screen_type: "interaction",
+      payload,
+    })
+    .select("id")
+    .single();
+  if (insErr || !inserted) throw insErr ?? new Error("Insert failed");
+  const newId = inserted.id as string;
+
+  const orderedIds = rows.map((r) => r.id as string);
+  const newOrder = [
+    ...orderedIds.slice(0, lastInGroup + 1),
+    newId,
+    ...orderedIds.slice(lastInGroup + 1),
+  ];
+  await reorderScreens(lessonId, moduleId, newOrder);
+}
+
+export async function removeFromQuiz(
+  screenId: string,
+  lessonId: string,
+  moduleId: string,
+  _fd: FormData,
+) {
+  void _fd;
+  const supabase = await requireTeacher();
+  const { data: row, error } = await supabase
+    .from("lesson_screens")
+    .select("payload, screen_type")
+    .eq("id", screenId)
+    .eq("lesson_id", lessonId)
+    .single();
+  if (error || !row) throw error ?? new Error("Screen not found");
+  if (row.screen_type !== "interaction") throw new Error("Not an interaction screen");
+  const p = { ...(row.payload as Record<string, unknown>) };
+  delete p.quiz_group_id;
+  delete p.quiz_group_title;
+  delete p.quiz_group_order;
+  const { error: upErr } = await supabase
+    .from("lesson_screens")
+    .update({ payload: p, updated_at: new Date().toISOString() })
+    .eq("id", screenId)
+    .eq("lesson_id", lessonId);
+  if (upErr) throw upErr;
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+export async function reorderQuizQuestions(
+  lessonId: string,
+  moduleId: string,
+  formData: FormData,
+) {
+  const quizGroupId = (formData.get("quiz_group_id") as string)?.trim();
+  const raw = (formData.get("ordered_screen_ids") as string) ?? "";
+  const blockIds = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!quizGroupId || blockIds.length === 0) {
+    throw new Error("Missing quiz_group_id or ordered_screen_ids");
+  }
+  const supabase = await requireTeacher();
+  const { data: rows, error: fetchErr } = await supabase
+    .from("lesson_screens")
+    .select("id,payload")
+    .eq("lesson_id", lessonId)
+    .order("order_index", { ascending: true });
+  if (fetchErr || !rows?.length) throw fetchErr ?? new Error("No screens");
+
+  let start = -1;
+  let end = -1;
+  for (let i = 0; i < rows.length; i += 1) {
+    const p = rows[i].payload as { quiz_group_id?: string };
+    if (p.quiz_group_id === quizGroupId) {
+      if (start < 0) start = i;
+      end = i;
+    }
+  }
+  if (start < 0) throw new Error("Quiz group not found");
+  const prevBlock = rows.slice(start, end + 1).map((r) => r.id as string);
+  const prevSet = new Set(prevBlock);
+  if (prevSet.size !== blockIds.length) throw new Error("Question count mismatch");
+  for (const id of blockIds) {
+    if (!prevSet.has(id)) throw new Error("Unknown screen in quiz reorder");
+  }
+
+  const allIds = rows.map((r) => r.id as string);
+  const newOrder = [...allIds.slice(0, start), ...blockIds, ...allIds.slice(end + 1)];
+  await reorderScreens(lessonId, moduleId, newOrder);
+
+  const now = new Date().toISOString();
+  for (let i = 0; i < blockIds.length; i += 1) {
+    const id = blockIds[i];
+    const { data: one } = await supabase
+      .from("lesson_screens")
+      .select("payload")
+      .eq("id", id)
+      .single();
+    if (!one) continue;
+    const pl = { ...(one.payload as Record<string, unknown>), quiz_group_order: i };
+    await supabase.from("lesson_screens").update({ payload: pl, updated_at: now }).eq("id", id);
+  }
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
 
 export async function updateScreenPayload(
   screenId: string,
@@ -1143,6 +931,7 @@ export async function saveLessonSkills(
       keys.map((skill_key) => ({ lesson_id: lessonId, skill_key })),
     );
   }
+  revalidateStudentCatalogViews();
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }
 

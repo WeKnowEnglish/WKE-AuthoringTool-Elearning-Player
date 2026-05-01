@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -10,27 +11,36 @@ import {
   type CSSProperties,
 } from "react";
 import {
+  CanvasViewport,
+  type CanvasViewportHandle,
+} from "@/components/teacher/lesson-editor/CanvasViewport";
+import {
   defaultRegion,
   nextRegionId,
   RectRegionEditor,
   type RectPercent,
 } from "@/components/teacher/lesson-editor/RectRegionEditor";
-import { ScaledStoryItemImage } from "@/components/story/ScaledStoryItemImage";
+import { StoryItemLayerContent } from "@/components/story/StoryItemLayerContent";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
 import {
   storyAnimationPresetSchema,
   storyPayloadSchema,
-  storyTimelineActionSchema,
   type ScreenPayload,
   type StoryActionSequence,
   type StoryActionStep,
   type StoryClickAction,
+  type StoryIdleAnimation,
   type StoryItem,
   type StoryPage,
   type StoryPagePhase,
-  type StoryTimelineStep,
+  STORY_IDLE_PRESET_IDS,
 } from "@/lib/lesson-schemas";
+import {
+  pickPathPanelPlacement,
+  rectsOverlap,
+  type PathPanelPlacement,
+} from "@/lib/path-panel-avoidance";
 import {
   getItemClickActionSequences,
   getPageEnterActionSequences,
@@ -77,6 +87,101 @@ function newEntityId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
+const STORY_CANVAS_UNDO_MAX = 50;
+
+function deepCloneStoryPages(src: StoryPage[]): StoryPage[] {
+  return JSON.parse(JSON.stringify(src)) as StoryPage[];
+}
+
+/** Deep-clone items with new ids; remaps internal item_id / trigger wiring within the copied set. */
+function cloneStoryItemsWithFreshIds(source: StoryItem[]): StoryItem[] {
+  const raw = JSON.parse(JSON.stringify(source)) as StoryItem[];
+  const itemIdMap = new Map<string, string>();
+  for (const it of raw) {
+    itemIdMap.set(it.id, newEntityId("item"));
+  }
+
+  return raw.map((it) => {
+    const oldItemId = it.id;
+    const newItemId = itemIdMap.get(oldItemId)!;
+
+    let on_click = it.on_click;
+    if (it.on_click?.triggers?.length) {
+      const triggerIdMap = new Map<string, string>();
+      const oldTriggers = it.on_click.triggers;
+      for (let idx = 0; idx < oldTriggers.length; idx++) {
+        const tr = oldTriggers[idx]!;
+        const oldTid = tr.trigger_id ?? `${oldItemId}:tr:${idx}`;
+        const newTid = newEntityId("taptr");
+        if (tr.trigger_id) triggerIdMap.set(tr.trigger_id, newTid);
+        triggerIdMap.set(oldTid, newTid);
+      }
+      const triggers = oldTriggers.map((tr, idx) => {
+        const oldTid = tr.trigger_id ?? `${oldItemId}:tr:${idx}`;
+        const newTid = triggerIdMap.get(oldTid)!;
+        return {
+          ...tr,
+          trigger_id: newTid,
+          item_id:
+            tr.item_id && itemIdMap.has(tr.item_id) ? itemIdMap.get(tr.item_id)! : tr.item_id,
+          after_trigger_id:
+            tr.after_trigger_id && triggerIdMap.has(tr.after_trigger_id) ?
+              triggerIdMap.get(tr.after_trigger_id)
+            : tr.after_trigger_id,
+        };
+      });
+      on_click = { ...it.on_click, triggers };
+    }
+
+    const tap_speeches = it.tap_speeches?.map((entry) => ({
+      ...entry,
+      id: newEntityId("tapspeech"),
+    }));
+
+    const action_sequences = it.action_sequences?.map((seq) => {
+      const newSeqId = newEntityId("seq");
+      const stepIdMap = new Map<string, string>();
+      for (const step of seq.steps) {
+        stepIdMap.set(step.id, newEntityId("step"));
+      }
+      return {
+        ...seq,
+        id: newSeqId,
+        steps: seq.steps.map((step) => ({
+          ...step,
+          id: stepIdMap.get(step.id)!,
+          target_item_id:
+            step.target_item_id && itemIdMap.has(step.target_item_id) ?
+              itemIdMap.get(step.target_item_id)
+            : step.target_item_id,
+          after_step_id:
+            step.after_step_id && stepIdMap.has(step.after_step_id) ?
+              stepIdMap.get(step.after_step_id)
+            : step.after_step_id,
+          smart_line_lines: step.smart_line_lines?.map((line) => ({
+            ...line,
+            id: newEntityId("smartline"),
+          })),
+        })),
+      };
+    });
+
+    const idle_animations = it.idle_animations?.map((idle) => ({
+      ...idle,
+      id: newEntityId("idle"),
+    }));
+
+    return {
+      ...it,
+      id: newItemId,
+      on_click,
+      tap_speeches,
+      action_sequences,
+      idle_animations,
+    };
+  });
+}
+
 function labelClass() {
   return "mt-2 block text-sm font-medium text-neutral-800";
 }
@@ -114,7 +219,6 @@ function reorderByIndex<T>(list: T[], fromIndex: number, toIndex: number): T[] {
 }
 
 const ANIM_PRESETS = storyAnimationPresetSchema.options;
-const TIMELINE_ACTIONS = storyTimelineActionSchema.options;
 
 const TAP_ACTIONS: StoryClickAction["action"][] = [
   "emphasis",
@@ -137,12 +241,123 @@ const TAP_EMPHASIS_PRESETS: NonNullable<StoryClickAction["emphasis_preset"]>[] =
   "fade_out",
 ];
 
+function storyStepWithKind(prev: StoryActionStep, kind: StoryActionStep["kind"]): StoryActionStep {
+  const id = prev.id;
+  const timing = prev.timing ?? "simultaneous";
+  const delay_ms = prev.delay_ms;
+  const play_once = prev.play_once;
+  const after_step_id = prev.after_step_id;
+  switch (kind) {
+    case "emphasis":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        target_item_id: prev.target_item_id,
+        emphasis_preset: prev.emphasis_preset ?? "grow",
+        duration_ms: prev.duration_ms ?? 500,
+      };
+    case "move":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        target_item_id: prev.target_item_id,
+        duration_ms: prev.duration_ms,
+      };
+    case "show_item":
+    case "hide_item":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        target_item_id: prev.target_item_id,
+      };
+    case "play_sound":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        target_item_id: prev.target_item_id,
+        sound_url: prev.sound_url,
+      };
+    case "tts":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        tts_text: prev.tts_text,
+        tts_lang: prev.tts_lang,
+      };
+    case "smart_line":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        target_item_id: prev.target_item_id,
+        smart_line_lines: prev.smart_line_lines,
+        tts_lang: prev.tts_lang,
+      };
+    case "info_popup":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        popup_title: prev.popup_title ?? "Info",
+        popup_body: prev.popup_body ?? "",
+        popup_image_url: prev.popup_image_url,
+        popup_video_url: prev.popup_video_url,
+      };
+    case "goto_page":
+      return {
+        id,
+        kind,
+        timing,
+        delay_ms,
+        play_once,
+        after_step_id,
+        goto_target: prev.goto_target ?? "next_page",
+        goto_page_id: prev.goto_page_id,
+      };
+    default:
+      return { ...prev, kind };
+  }
+}
+
 function itemDisplayLabel(it: StoryItem): string {
   const n = it.name?.trim();
-  if (!n && (it.kind ?? "image") === "text") {
+  const k = it.kind ?? "image";
+  if (!n && k === "text") {
     const t = it.text?.trim();
     if (t) return t.slice(0, 24);
   }
+  if (!n && k === "button") {
+    const t = it.text?.trim();
+    if (t) return t.slice(0, 24);
+  }
+  if (!n && k === "shape") return "Shape";
+  if (!n && k === "line") return "Line";
   return n || it.id;
 }
 
@@ -187,6 +402,8 @@ function rectToStoryItem(
     text: prev?.text,
     text_color: prev?.text_color,
     text_size_px: prev?.text_size_px,
+    color_hex: prev?.color_hex,
+    line_width_px: prev?.line_width_px,
     x_percent: r.x_percent,
     y_percent: r.y_percent,
     w_percent: r.w_percent,
@@ -211,6 +428,23 @@ function rectToStoryItem(
     action_sequences: prev?.action_sequences,
     idle_animations: prev?.idle_animations,
   };
+}
+
+function pathPanelClassForPlacement(p: PathPanelPlacement): string {
+  const base =
+    "pointer-events-auto absolute z-[11] max-w-[min(100%,20rem)] rounded-md border border-fuchsia-300 bg-white/95 p-2 text-xs shadow";
+  switch (p) {
+    case "tl":
+      return `${base} left-2 top-2`;
+    case "tr":
+      return `${base} right-2 top-2 left-auto`;
+    case "bl":
+      return `${base} left-2 bottom-2 top-auto`;
+    case "br":
+      return `${base} right-2 bottom-2 left-auto top-auto`;
+    case "strip":
+      return `${base} left-2 right-2 bottom-2 top-auto max-h-[min(42%,14rem)] overflow-y-auto`;
+  }
 }
 
 function pageItemsHaveClickSequenceId(
@@ -404,8 +638,15 @@ export function StoryFields({
         },
       ],
   );
+  const pagesRef = useRef(pages);
+  useEffect(() => {
+    pagesRef.current = pages;
+  }, [pages]);
   const [pageTurn, setPageTurn] = useState<"slide" | "curl">(
     initial.page_turn_style ?? "curl",
+  );
+  const [layoutMode, setLayoutMode] = useState<"book" | "slide">(
+    initial.layout_mode ?? "book",
   );
   const [selPageId, setSelPageId] = useState<string | null>(
     () => initial.pages?.[0]?.id ?? null,
@@ -427,9 +668,11 @@ export function StoryFields({
   const [phasePinned, setPhasePinned] = useState(false);
   const [objectPinned, setObjectPinned] = useState(false);
   const [pageContentPinned, setPageContentPinned] = useState(false);
-  const [bgColorMenuOpen, setBgColorMenuOpen] = useState(false);
-  const [bgVideoMenuOpen, setBgVideoMenuOpen] = useState(false);
-  const [bgImageUrlMenuOpen, setBgImageUrlMenuOpen] = useState(false);
+  const [bgChangeOverlayOpen, setBgChangeOverlayOpen] = useState(false);
+  const [bgPresetAssets, setBgPresetAssets] = useState<MediaAssetRow[]>([]);
+  const [bgPresetLoading, setBgPresetLoading] = useState(false);
+  const [bgPresetErr, setBgPresetErr] = useState<string | null>(null);
+  const [bgPresetQuery, setBgPresetQuery] = useState("");
   const [bgVideoUploading, setBgVideoUploading] = useState(false);
   const [bgVideoErr, setBgVideoErr] = useState<string | null>(null);
   const [bgVideoLibraryOpen, setBgVideoLibraryOpen] = useState(false);
@@ -443,6 +686,10 @@ export function StoryFields({
     Array<{ x_percent: number; y_percent: number }>
   >([]);
   const [pathDraftDurationMs, setPathDraftDurationMs] = useState(2000);
+  /** CSS easing string; empty = omit (player uses linear). */
+  const [pathDraftEasing, setPathDraftEasing] = useState("");
+  const [pathSyncItemToStartOnSave, setPathSyncItemToStartOnSave] = useState(true);
+  const [pathPanelPlacement, setPathPanelPlacement] = useState<PathPanelPlacement>("tl");
   const [editorRightPanelPct, setEditorRightPanelPct] = useState(30);
   const [editorPanelResizing, setEditorPanelResizing] = useState<{
     startX: number;
@@ -454,8 +701,21 @@ export function StoryFields({
   const bgVideoFileRef = useRef<HTMLInputElement | null>(null);
   const editorSplitRef = useRef<HTMLDivElement | null>(null);
   const sceneCanvasRef = useRef<HTMLDivElement | null>(null);
+  const pathPanelOverlayRef = useRef<HTMLDivElement | null>(null);
+  const pathPanelRef = useRef<HTMLDivElement | null>(null);
+  const storyEditorColumnRef = useRef<HTMLDivElement | null>(null);
+  const storySubBarRef = useRef<HTMLDivElement | null>(null);
+  const storyFixedBarRef = useRef<HTMLDivElement | null>(null);
+  const storyCanvasViewportRef = useRef<CanvasViewportHandle | null>(null);
+  const [storyColumnBarRect, setStoryColumnBarRect] = useState({ left: 0, width: 0 });
+  const [storyFixedBarHeight, setStoryFixedBarHeight] = useState(72);
+  /** Pixel height of the sticky story chrome (View / pages / Animations row) — drives right-column `position:sticky` `top` and max-height. */
+  const [storySubBarHeightPx, setStorySubBarHeightPx] = useState(48);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const lastLocalSigRef = useRef<string>("");
+  const storyCanvasUndoRef = useRef<StoryPage[][]>([]);
+  const storyCanvasRedoRef = useRef<StoryPage[][]>([]);
+  const storyItemsClipboardRef = useRef<StoryItem[] | null>(null);
 
   useEffect(() => {
     /* Reset form fields only when the server-backed row changes (syncKey), not when live preview payload updates. */
@@ -506,6 +766,7 @@ export function StoryFields({
         : undefined,
       pages: loadedPages.length > 0 ? loadedPages : undefined,
       page_turn_style: loadedPages.length > 0 ? (initial.page_turn_style ?? "curl") : undefined,
+      layout_mode: initial.layout_mode ?? "book",
     };
     const incomingSig = stableStorySignature(storyPayloadSchema, incomingRaw);
     const active = document.activeElement as HTMLElement | null;
@@ -529,6 +790,7 @@ export function StoryFields({
     setGuideImg(initial.guide?.image_url ?? "");
     setPages(loadedPages);
     setPageTurn(initial.page_turn_style ?? "curl");
+    setLayoutMode(initial.layout_mode ?? "book");
     /* Keep page + item selection when the server save only bumps updated_at (same ids still present). */
     setSelPageId((prev) => {
       if (loadedPages.length === 0) return null;
@@ -595,10 +857,12 @@ export function StoryFields({
       guide_image: string;
       pages: StoryPage[];
       page_turn_style: "slide" | "curl";
+      layout_mode?: "book" | "slide";
     }) => {
       const pg = opts.pages.map(sanitizePageForPayload);
       const multiOn = pg.length > 0;
       const first = pg[0];
+      const lm = opts.layout_mode ?? layoutMode;
       const raw = {
         type: "story" as const,
         image_url:
@@ -620,13 +884,14 @@ export function StoryFields({
             : undefined,
         pages: multiOn ? pg : undefined,
         page_turn_style: multiOn ? opts.page_turn_style : undefined,
+        layout_mode: lm,
       };
       emitLive(onLivePayload, storyPayloadSchema, raw);
       const sig = stableStorySignature(storyPayloadSchema, raw);
       lastLocalSigRef.current = sig;
       return sig;
     },
-    [onLivePayload],
+    [layoutMode, onLivePayload],
   );
 
   const pushEmit = useCallback(
@@ -643,6 +908,7 @@ export function StoryFields({
         guide_image,
         pages: nextPages,
         page_turn_style: pageTurn,
+        layout_mode: layoutMode,
         ...overrides,
       });
     },
@@ -652,6 +918,7 @@ export function StoryFields({
       guide_image,
       image_url,
       image_fit,
+      layoutMode,
       read_aloud_text,
       tip_text,
       tts_lang,
@@ -659,6 +926,220 @@ export function StoryFields({
       pageTurn,
     ],
   );
+
+  const recordStoryCanvasUndo = useCallback(() => {
+    const snap = deepCloneStoryPages(pagesRef.current);
+    storyCanvasUndoRef.current.push(snap);
+    if (storyCanvasUndoRef.current.length > STORY_CANVAS_UNDO_MAX) {
+      storyCanvasUndoRef.current.shift();
+    }
+    storyCanvasRedoRef.current = [];
+  }, []);
+
+  const performStoryCanvasUndo = useCallback(() => {
+    if (storyCanvasUndoRef.current.length === 0) return;
+    const prev = storyCanvasUndoRef.current.pop()!;
+    storyCanvasRedoRef.current.push(deepCloneStoryPages(pagesRef.current));
+    const page = prev.find((p) => p.id === selPageId) ?? prev[0];
+    const validIds = new Set(page?.items.map((i) => i.id) ?? []);
+    const nextIds = selItemIds.filter((id) => validIds.has(id));
+    const nextSingle =
+      selItemId && validIds.has(selItemId) ? selItemId : (nextIds[0] ?? null);
+    setSelItemIds(nextIds.length > 0 ? nextIds : nextSingle ? [nextSingle] : []);
+    setSelItemId(nextSingle);
+    pushEmit(prev);
+  }, [pushEmit, selItemId, selItemIds, selPageId]);
+
+  const performStoryCanvasRedo = useCallback(() => {
+    if (storyCanvasRedoRef.current.length === 0) return;
+    const nextSnap = storyCanvasRedoRef.current.pop()!;
+    storyCanvasUndoRef.current.push(deepCloneStoryPages(pagesRef.current));
+    if (storyCanvasUndoRef.current.length > STORY_CANVAS_UNDO_MAX) {
+      storyCanvasUndoRef.current.shift();
+    }
+    const page = nextSnap.find((p) => p.id === selPageId) ?? nextSnap[0];
+    const validIds = new Set(page?.items.map((i) => i.id) ?? []);
+    const nextIds = selItemIds.filter((id) => validIds.has(id));
+    const nextSingle =
+      selItemId && validIds.has(selItemId) ? selItemId : (nextIds[0] ?? null);
+    setSelItemIds(nextIds.length > 0 ? nextIds : nextSingle ? [nextSingle] : []);
+    setSelItemId(nextSingle);
+    pushEmit(nextSnap);
+  }, [pushEmit, selItemId, selItemIds, selPageId]);
+
+  const copySelectedCanvasItems = useCallback(() => {
+    if (!selectedPage) return;
+    const ids =
+      selItemIds.length > 0 ? selItemIds : selItemId ? [selItemId] : [];
+    if (ids.length === 0) return;
+    const picked = ids
+      .map((id) => selectedPage.items.find((it) => it.id === id))
+      .filter((x): x is StoryItem => !!x);
+    if (picked.length === 0) return;
+    storyItemsClipboardRef.current = JSON.parse(JSON.stringify(picked)) as StoryItem[];
+  }, [selectedPage, selItemId, selItemIds]);
+
+  const pasteCanvasItems = useCallback(() => {
+    if (!selectedPage || busy) return;
+    const clip = storyItemsClipboardRef.current;
+    if (!clip?.length) return;
+    if (!(selectedPage.background_image_url ?? image_url)) return;
+    recordStoryCanvasUndo();
+    const dup = cloneStoryItemsWithFreshIds(clip);
+    const maxZ = selectedPage.items.reduce((m, it) => Math.max(m, it.z_index ?? 0), -1);
+    const withZ = dup.map((it, i) => ({
+      ...it,
+      x_percent: clampPercentInput(it.x_percent + 2, 0, 100 - it.w_percent),
+      y_percent: clampPercentInput(it.y_percent + 2, 0, 100 - it.h_percent),
+      z_index: maxZ + 1 + i,
+    }));
+    const next = pages.map((p) =>
+      p.id === selectedPage.id ? { ...p, items: [...p.items, ...withZ] } : p,
+    );
+    const newIds = withZ.map((it) => it.id);
+    setSelItemIds(newIds);
+    setSelItemId(newIds[0] ?? null);
+    pushEmit(next);
+  }, [
+    busy,
+    image_url,
+    pages,
+    pushEmit,
+    recordStoryCanvasUndo,
+    selectedPage,
+  ]);
+
+  const duplicateCanvasItems = useCallback(() => {
+    if (!selectedPage || busy) return;
+    if (!(selectedPage.background_image_url ?? image_url)) return;
+    const ids =
+      selItemIds.length > 0 ? selItemIds : selItemId ? [selItemId] : [];
+    if (ids.length === 0) return;
+    const picked = ids
+      .map((id) => selectedPage.items.find((it) => it.id === id))
+      .filter((x): x is StoryItem => !!x);
+    if (picked.length === 0) return;
+    recordStoryCanvasUndo();
+    const dup = cloneStoryItemsWithFreshIds(
+      JSON.parse(JSON.stringify(picked)) as StoryItem[],
+    );
+    const maxZ = selectedPage.items.reduce((m, it) => Math.max(m, it.z_index ?? 0), -1);
+    const withZ = dup.map((it, i) => ({
+      ...it,
+      x_percent: clampPercentInput(it.x_percent + 2, 0, 100 - it.w_percent),
+      y_percent: clampPercentInput(it.y_percent + 2, 0, 100 - it.h_percent),
+      z_index: maxZ + 1 + i,
+    }));
+    const next = pages.map((p) =>
+      p.id === selectedPage.id ? { ...p, items: [...p.items, ...withZ] } : p,
+    );
+    const newIds = withZ.map((it) => it.id);
+    setSelItemIds(newIds);
+    setSelItemId(newIds[0] ?? null);
+    pushEmit(next);
+  }, [
+    busy,
+    image_url,
+    pages,
+    pushEmit,
+    recordStoryCanvasUndo,
+    selectedPage,
+    selItemId,
+    selItemIds,
+  ]);
+
+  const deleteSelectedCanvasItems = useCallback(() => {
+    if (!selectedPage || busy) return;
+    if (!selItemId && selItemIds.length === 0) return;
+    recordStoryCanvasUndo();
+    const removeIds = new Set(selItemIds.length > 0 ? selItemIds : [selItemId!]);
+    const next = pages.map((p) =>
+      p.id === selectedPage.id ? pruneDeletedItemReferences(p, removeIds) : p,
+    );
+    setSelItemId(null);
+    setSelItemIds([]);
+    pushEmit(next);
+  }, [
+    busy,
+    pages,
+    pushEmit,
+    recordStoryCanvasUndo,
+    selectedPage,
+    selItemId,
+    selItemIds,
+  ]);
+
+  useEffect(() => {
+    if (!multi || !selectedPage) return;
+    const canvasActive = !!(selectedPage.background_image_url ?? image_url);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (bgChangeOverlayOpen) return;
+      if (e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, select, [contenteditable='true']")) return;
+
+      if (canvasActive && !busy && (e.key === "Delete" || e.key === "Backspace")) {
+        const ids =
+          selItemIds.length > 0 ? selItemIds : selItemId ? [selItemId] : [];
+        if (ids.length === 0) return;
+        e.preventDefault();
+        deleteSelectedCanvasItems();
+        return;
+      }
+
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      if (e.key === "z" || e.key === "Z") {
+        e.preventDefault();
+        if (e.shiftKey) performStoryCanvasRedo();
+        else performStoryCanvasUndo();
+        return;
+      }
+      if (e.key === "y" || e.key === "Y") {
+        e.preventDefault();
+        performStoryCanvasRedo();
+        return;
+      }
+      if (!canvasActive || busy) return;
+      if (e.key === "c" || e.key === "C") {
+        const ids =
+          selItemIds.length > 0 ? selItemIds : selItemId ? [selItemId] : [];
+        if (ids.length === 0) return;
+        e.preventDefault();
+        copySelectedCanvasItems();
+        return;
+      }
+      if (e.key === "v" || e.key === "V") {
+        if (!storyItemsClipboardRef.current?.length) return;
+        e.preventDefault();
+        pasteCanvasItems();
+        return;
+      }
+      if (e.key === "d" || e.key === "D") {
+        const ids =
+          selItemIds.length > 0 ? selItemIds : selItemId ? [selItemId] : [];
+        if (ids.length === 0) return;
+        e.preventDefault();
+        duplicateCanvasItems();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    multi,
+    selectedPage,
+    image_url,
+    busy,
+    bgChangeOverlayOpen,
+    selItemId,
+    selItemIds,
+    performStoryCanvasUndo,
+    performStoryCanvasRedo,
+    copySelectedCanvasItems,
+    pasteCanvasItems,
+    duplicateCanvasItems,
+    deleteSelectedCanvasItems,
+  ]);
 
   function startMultiFromLegacy() {
     const p: StoryPage = {
@@ -800,27 +1281,52 @@ export function StoryFields({
     setPathEditMode("set_start");
     setPathDraftWaypoints(selectedItem.path?.waypoints ?? []);
     setPathDraftDurationMs(selectedItem.path?.duration_ms ?? 2000);
+    setPathDraftEasing(selectedItem.path?.easing?.trim() ?? "");
+    setPathPanelPlacement("tl");
   }, [selectedItem, selectedPage]);
 
   const cancelPathEdit = useCallback(() => {
     setPathEditItemId(null);
     setPathEditMode("set_start");
     setPathDraftWaypoints([]);
+    setPathDraftEasing("");
+    setPathPanelPlacement("tl");
   }, []);
 
   const commitPathEdit = useCallback(() => {
     if (!selectedPage || !pathEditingItem) return;
+    const easingTrim = pathDraftEasing.trim();
     const nextPath =
       pathDraftWaypoints.length >= 2 ?
-        { waypoints: pathDraftWaypoints, duration_ms: Math.max(0, pathDraftDurationMs) }
+        {
+          waypoints: pathDraftWaypoints,
+          duration_ms: Math.max(0, pathDraftDurationMs),
+          ...(easingTrim ? { easing: easingTrim } : {}),
+        }
       : undefined;
+    const first = pathDraftWaypoints[0];
     const next = pages.map((p) =>
       p.id === selectedPage.id ?
         {
           ...p,
-          items: p.items.map((it) =>
-            it.id === pathEditingItem.id ? { ...it, path: nextPath } : it,
-          ),
+          items: p.items.map((it) => {
+            if (it.id !== pathEditingItem.id) return it;
+            if (
+              pathSyncItemToStartOnSave &&
+              first &&
+              nextPath &&
+              Number.isFinite(first.x_percent) &&
+              Number.isFinite(first.y_percent)
+            ) {
+              return {
+                ...it,
+                x_percent: first.x_percent,
+                y_percent: first.y_percent,
+                path: nextPath,
+              };
+            }
+            return { ...it, path: nextPath };
+          }),
         }
       : p,
     );
@@ -828,7 +1334,47 @@ export function StoryFields({
     setPathEditItemId(null);
     setPathEditMode("set_start");
     setPathDraftWaypoints([]);
-  }, [pages, pathDraftDurationMs, pathDraftWaypoints, pathEditingItem, pushEmit, selectedPage]);
+    setPathDraftEasing("");
+    setPathPanelPlacement("tl");
+  }, [
+    pages,
+    pathDraftDurationMs,
+    pathDraftEasing,
+    pathDraftWaypoints,
+    pathEditingItem,
+    pathSyncItemToStartOnSave,
+    pushEmit,
+    selectedPage,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!pathEditActive || !pathEditingItem?.id) return;
+    const root = sceneCanvasRef.current;
+    const panel = pathPanelRef.current;
+    const overlay = pathPanelOverlayRef.current;
+    if (!root || !panel || !overlay) return;
+    const itemEl = root.querySelector(`[data-region-id="${CSS.escape(pathEditingItem.id)}"]`);
+    if (!itemEl) return;
+    const id = requestAnimationFrame(() => {
+      const ir = itemEl.getBoundingClientRect();
+      const pr = panel.getBoundingClientRect();
+      const or = overlay.getBoundingClientRect();
+      const pad = 8;
+      if (!rectsOverlap(ir, pr, pad)) return;
+      const next = pickPathPanelPlacement(or, ir, pr.width, pr.height, pad);
+      setPathPanelPlacement((prev) => (prev === next ? prev : next));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [
+    pathEditActive,
+    pathEditingItem?.id,
+    pathEditingItem?.h_percent,
+    pathEditingItem?.w_percent,
+    pathEditingItem?.x_percent,
+    pathEditingItem?.y_percent,
+    pathEditMode,
+    pathPanelPlacement,
+  ]);
 
   const triggerMenuCollapsed = selectedItem ? !!triggerMenuCollapsedByItem[selectedItem.id] : false;
   const pageTriggerOptions = useMemo(() => {
@@ -854,14 +1400,16 @@ export function StoryFields({
   const showPageContentPanel =
     !!selectedPage && (pageContentPinned || (pageContentMenuOpen && !animationsMenuOpen));
   const showObjectPanel =
-    !!selectedPage && (objectPinned || (!!selectedItem && !pageContentMenuOpen && !animationsMenuOpen));
+    !!selectedPage && (objectPinned || !!selectedItem);
   const showPhasePanel =
     !!selectedPage && (phasePinned || (!selectedItem && !pageContentMenuOpen && !animationsMenuOpen));
+  /** Must match which panels actually render (e.g. phase needs `selectedPhase`). */
+  const phasePanelRendered = !!(showPhasePanel && selectedPhase);
   const visibleEditorPanels = [
     showAnimationsPanel,
     showPageContentPanel,
     showObjectPanel,
-    showPhasePanel,
+    phasePanelRendered,
   ].filter(Boolean).length;
 
   const animationRows = useMemo<AnimationRow[]>(() => {
@@ -946,6 +1494,20 @@ export function StoryFields({
     }
     return rows;
   }, [selectedPage, selectedPhase, selectedItem]);
+
+  const autoplayAnimationRows = useMemo(
+    () =>
+      animationRows.filter(
+        (r) =>
+          r.sequence.event === "page_enter" || r.sequence.event === "phase_enter",
+      ),
+    [animationRows],
+  );
+
+  const tapAnimationRows = useMemo(
+    () => animationRows.filter((r) => r.sequence.event === "click"),
+    [animationRows],
+  );
 
   useEffect(() => {
     if (animationRows.length === 0) {
@@ -1093,6 +1655,139 @@ export function StoryFields({
     setSelectedAnimationRowId(`page:${selectedPage.id}:${seq.id}`);
   }, [pages, pushEmit, selectedItem, selectedPage, selectedPhase]);
 
+  const idleRowsForPanel = useMemo((): StoryIdleAnimation[] => {
+    if (!selectedPage) return [];
+    if (selectedItem) return selectedItem.idle_animations ?? [];
+    if (
+      selectedPhase &&
+      pageHasRealPhases &&
+      selectedPage.phases?.some((ph) => ph.id === selectedPhase.id)
+    ) {
+      const ph = selectedPage.phases.find((p) => p.id === selectedPhase.id);
+      return ph?.idle_animations ?? [];
+    }
+    return selectedPage.idle_animations ?? [];
+  }, [selectedPage, selectedItem, selectedPhase, pageHasRealPhases]);
+
+  const idleScopeDescription = useMemo(() => {
+    if (!selectedPage) return "";
+    if (selectedItem) {
+      return `Object “${itemDisplayLabel(selectedItem)}” — idles are stored on this item.`;
+    }
+    if (
+      selectedPhase &&
+      pageHasRealPhases &&
+      selectedPage.phases?.some((ph) => ph.id === selectedPhase.id)
+    ) {
+      return `Phase “${selectedPhase.name?.trim() || selectedPhase.id.slice(0, 8)}” — each row needs a target object.`;
+    }
+    return "Whole page — each row needs a target object.";
+  }, [selectedPage, selectedItem, selectedPhase, pageHasRealPhases]);
+
+  const patchIdleRow = useCallback(
+    (idleId: string, patch: Partial<StoryIdleAnimation>) => {
+      if (!selectedPage) return;
+      const apply = (list: StoryIdleAnimation[]) =>
+        list.map((row) => (row.id === idleId ? { ...row, ...patch } : row));
+      if (selectedItem) {
+        updatePage(selectedPage.id, {
+          items: selectedPage.items.map((it) =>
+            it.id === selectedItem.id ?
+              { ...it, idle_animations: apply(it.idle_animations ?? []) }
+            : it,
+          ),
+        });
+        return;
+      }
+      if (
+        selectedPhase &&
+        pageHasRealPhases &&
+        selectedPage.phases?.some((ph) => ph.id === selectedPhase.id)
+      ) {
+        const ph = selectedPage.phases.find((p) => p.id === selectedPhase.id);
+        updateCurrentPhaseById(selectedPhase.id, {
+          idle_animations: apply(ph?.idle_animations ?? []),
+        });
+        return;
+      }
+      updatePage(selectedPage.id, {
+        idle_animations: apply(selectedPage.idle_animations ?? []),
+      });
+    },
+    [pageHasRealPhases, selectedItem, selectedPage, selectedPhase, updatePage, updateCurrentPhaseById],
+  );
+
+  const removeIdleRow = useCallback(
+    (idleId: string) => {
+      if (!selectedPage) return;
+      const apply = (list: StoryIdleAnimation[]) => list.filter((row) => row.id !== idleId);
+      if (selectedItem) {
+        updatePage(selectedPage.id, {
+          items: selectedPage.items.map((it) =>
+            it.id === selectedItem.id ?
+              { ...it, idle_animations: apply(it.idle_animations ?? []) }
+            : it,
+          ),
+        });
+        return;
+      }
+      if (
+        selectedPhase &&
+        pageHasRealPhases &&
+        selectedPage.phases?.some((ph) => ph.id === selectedPhase.id)
+      ) {
+        const ph = selectedPage.phases.find((p) => p.id === selectedPhase.id);
+        updateCurrentPhaseById(selectedPhase.id, {
+          idle_animations: apply(ph?.idle_animations ?? []),
+        });
+        return;
+      }
+      updatePage(selectedPage.id, {
+        idle_animations: apply(selectedPage.idle_animations ?? []),
+      });
+    },
+    [pageHasRealPhases, selectedItem, selectedPage, selectedPhase, updatePage, updateCurrentPhaseById],
+  );
+
+  const addIdleAnimation = useCallback(() => {
+    if (!selectedPage || selectedPage.items.length === 0) return;
+    const row: StoryIdleAnimation = {
+      id: newEntityId("idle"),
+      name: "Idle loop",
+      preset: "gentle_float",
+      period_ms: 2200,
+      amplitude: 0.35,
+    };
+    if (selectedItem) {
+      updatePage(selectedPage.id, {
+        items: selectedPage.items.map((it) =>
+          it.id === selectedItem.id ?
+            { ...it, idle_animations: [...(it.idle_animations ?? []), row] }
+          : it,
+        ),
+      });
+      return;
+    }
+    const withTarget: StoryIdleAnimation = {
+      ...row,
+      target_item_id: selectedPage.items[0]!.id,
+    };
+    if (
+      selectedPhase &&
+      pageHasRealPhases &&
+      selectedPage.phases?.some((ph) => ph.id === selectedPhase.id)
+    ) {
+      const ph = selectedPage.phases.find((p) => p.id === selectedPhase.id);
+      updateCurrentPhaseById(selectedPhase.id, {
+        idle_animations: [...(ph?.idle_animations ?? []), withTarget],
+      });
+      return;
+    }
+    updatePage(selectedPage.id, {
+      idle_animations: [...(selectedPage.idle_animations ?? []), withTarget],
+    });
+  }, [pageHasRealPhases, selectedItem, selectedPage, selectedPhase, updatePage, updateCurrentPhaseById]);
+
   const updateAnimationEditorSequence = useCallback(
     (patcher: (seq: StoryActionSequence) => StoryActionSequence) => {
       setAnimationEditor((prev) => (prev ? { ...prev, sequence: patcher(prev.sequence) } : prev));
@@ -1104,16 +1799,34 @@ export function StoryFields({
     if (!animationEditor) return;
     const isLegacy = animationEditor.isLegacy || animationEditor.sequence.id.startsWith("legacy:");
     const normalizeStep = (step: StoryActionStep): StoryActionStep => {
-      if (step.kind !== "smart_line") {
-        return { ...step, smart_line_lines: undefined };
+      if (step.kind === "smart_line") {
+        return {
+          ...step,
+          smart_line_lines:
+            step.smart_line_lines && step.smart_line_lines.length > 0 ?
+              step.smart_line_lines
+            : [{ id: newEntityId("line"), priority: 100 }],
+        };
       }
-      return {
-        ...step,
-        smart_line_lines:
-          step.smart_line_lines && step.smart_line_lines.length > 0 ?
-            step.smart_line_lines
-          : [{ id: newEntityId("line"), priority: 100 }],
-      };
+      let next: StoryActionStep = { ...step, smart_line_lines: undefined };
+      if (step.kind === "info_popup") {
+        next = {
+          ...next,
+          target_item_id: undefined,
+          goto_target: undefined,
+          goto_page_id: undefined,
+        };
+      } else if (step.kind === "goto_page") {
+        next = {
+          ...next,
+          target_item_id: undefined,
+          popup_title: undefined,
+          popup_body: undefined,
+          popup_image_url: undefined,
+          popup_video_url: undefined,
+        };
+      }
+      return next;
     };
     const prepared: StoryActionSequence =
       isLegacy ?
@@ -1277,6 +1990,36 @@ export function StoryFields({
   }, [bgVideoLibraryOpen, bgVideoLibraryQuery]);
 
   useEffect(() => {
+    if (!bgChangeOverlayOpen) return;
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      setBgPresetLoading(true);
+      setBgPresetErr(null);
+      searchTeacherMedia({
+        kind: "image",
+        tags: ["background"],
+        q: bgPresetQuery.trim(),
+        limit: 500,
+      })
+        .then((rows) => {
+          if (!cancelled) setBgPresetAssets(rows);
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) {
+            setBgPresetErr(e instanceof Error ? e.message : "Failed to load preset backgrounds");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setBgPresetLoading(false);
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [bgChangeOverlayOpen, bgPresetQuery]);
+
+  useEffect(() => {
     if (!pathEditItemId) return;
     if (!selectedPage || !selectedPage.items.some((it) => it.id === pathEditItemId)) {
       setPathEditItemId(null);
@@ -1321,72 +2064,135 @@ export function StoryFields({
     };
   }, [editorPanelResizing]);
 
-  return (
-    <div ref={rootRef} className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded border border-neutral-200 bg-white p-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={multi}
-            disabled={busy}
-            onChange={(e) => {
-              if (e.target.checked) startMultiFromLegacy();
-              else {
-                setPages([]);
-                setSelPageId(null);
-                emit({
-                  image_url,
-                  image_fit,
-                  video_url,
-                  body_text,
-                  read_aloud_text,
-                  tts_lang,
-                  tip_text,
-                  guide_image,
-                  pages: [],
-                  page_turn_style: pageTurn,
-                });
-              }
-            }}
-          />
-          Multi-page story book
-        </label>
-        {multi ? (
-          <label className="text-sm">
-            Page turn
-            <select
-              className="ml-2 rounded border px-2 py-1 text-sm"
-              value={pageTurn}
-              disabled={busy}
-              onChange={(e) => {
-                const v = e.target.value as "slide" | "curl";
-                setPageTurn(v);
-                emit({
-                  image_url,
-                  image_fit,
-                  video_url,
-                  body_text,
-                  read_aloud_text,
-                  tts_lang,
-                  tip_text,
-                  guide_image,
-                  pages,
-                  page_turn_style: v,
-                });
-              }}
-            >
-              <option value="curl">Book curl</option>
-              <option value="slide">Slide</option>
-            </select>
-          </label>
-        ) : null}
-      </div>
+  useLayoutEffect(() => {
+    const col = storyEditorColumnRef.current;
+    if (!col) return;
 
+    const updateColumnRect = () => {
+      const r = col.getBoundingClientRect();
+      setStoryColumnBarRect({ left: r.left, width: r.width });
+    };
+
+    const roCol = new ResizeObserver(updateColumnRect);
+    roCol.observe(col);
+    updateColumnRect();
+
+    const bottomBar = storyFixedBarRef.current;
+    let roBottom: ResizeObserver | undefined;
+    if (bottomBar) {
+      const syncBottom = () => {
+        setStoryFixedBarHeight(Math.ceil(bottomBar.getBoundingClientRect().height));
+      };
+      syncBottom();
+      roBottom = new ResizeObserver(syncBottom);
+      roBottom.observe(bottomBar);
+    }
+
+    const subBar = storySubBarRef.current;
+    let roSub: ResizeObserver | undefined;
+    if (subBar) {
+      const syncSub = () => {
+        setStorySubBarHeightPx(Math.ceil(subBar.getBoundingClientRect().height));
+      };
+      syncSub();
+      roSub = new ResizeObserver(syncSub);
+      roSub.observe(subBar);
+    }
+
+    window.addEventListener("resize", updateColumnRect);
+    window.addEventListener("scroll", updateColumnRect, true);
+
+    return () => {
+      roCol.disconnect();
+      roBottom?.disconnect();
+      roSub?.disconnect();
+      window.removeEventListener("resize", updateColumnRect);
+      window.removeEventListener("scroll", updateColumnRect, true);
+    };
+  }, [multi, selectedPage?.id, editorRightPanelPct, visibleEditorPanels]);
+
+  const storySceneChromeBottomPad = storyFixedBarHeight + 12;
+
+  return (
+    <div ref={rootRef} className="flex min-h-0 min-w-0 flex-1 flex-col space-y-0">
       {multi && selectedPage ? (
-        <div className="relative space-y-4 overflow-visible rounded border border-sky-200 bg-sky-50 px-4 pb-4 pt-0">
-          <div className="sticky top-16 z-30 -mx-4 mb-0 border-b border-sky-200/70 bg-sky-50 px-4 py-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-1">
+        <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-visible bg-sky-50/50 pb-4 pt-0">
+          <div
+            ref={storySubBarRef}
+            className="sticky top-0 z-30 border-b border-sky-200/80 bg-sky-50/95 px-2 py-0.5 backdrop-blur-sm sm:px-3"
+          >
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <div className="flex shrink-0 items-center gap-1 border-r border-sky-300/80 pr-1.5">
+                <span className="hidden text-[9px] font-bold uppercase tracking-wide text-neutral-500 sm:inline">
+                  View
+                </span>
+                <div className="inline-flex rounded border border-neutral-300 bg-white p-px text-[10px] leading-none">
+                  {(["book", "slide"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      disabled={busy}
+                      className={
+                        layoutMode === m ?
+                          "rounded px-1.5 py-0.5 font-semibold text-white bg-violet-600"
+                        : "rounded px-1.5 py-0.5 font-medium text-neutral-700 hover:bg-neutral-100"
+                      }
+                      title={
+                        m === "book" ?
+                          "Book-style player (page turn motion)"
+                        : "Slide deck (dots between pages)"
+                      }
+                      onClick={() => {
+                        setLayoutMode(m);
+                        emit({
+                          image_url,
+                          image_fit,
+                          video_url,
+                          body_text,
+                          read_aloud_text,
+                          tts_lang,
+                          tip_text,
+                          guide_image,
+                          pages,
+                          page_turn_style: pageTurn,
+                          layout_mode: m,
+                        });
+                      }}
+                    >
+                      {m === "book" ? "Book" : "Slides"}
+                    </button>
+                  ))}
+                </div>
+                <label className="flex shrink-0 items-center gap-0.5 text-[9px] text-neutral-600">
+                  <span className="hidden font-semibold uppercase tracking-wide sm:inline">Turn</span>
+                  <select
+                    className="max-w-[6.5rem] rounded border border-neutral-300 bg-white px-0.5 py-px text-[10px] leading-tight"
+                    value={pageTurn}
+                    disabled={busy}
+                    title="Motion between pages in the student player"
+                    onChange={(e) => {
+                      const v = e.target.value as "slide" | "curl";
+                      setPageTurn(v);
+                      emit({
+                        image_url,
+                        image_fit,
+                        video_url,
+                        body_text,
+                        read_aloud_text,
+                        tts_lang,
+                        tip_text,
+                        guide_image,
+                        pages,
+                        page_turn_style: v,
+                      });
+                    }}
+                  >
+                    <option value="curl">Curl</option>
+                    <option value="slide">Swipe</option>
+                  </select>
+                </label>
+              </div>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-0.5">
             {pages.map((p, i) => (
               <button
                 key={p.id}
@@ -1421,7 +2227,7 @@ export function StoryFields({
                   setSelPageId(p.id);
                   setSelItemId(null);
                 }}
-                className={`rounded-t-md border px-3 py-1 text-xs leading-tight transition-colors ${
+                className={`rounded-t border px-2 py-0.5 text-[10px] leading-tight transition-colors ${
                   p.id === selectedPage.id
                     ? "border-sky-500 bg-white font-semibold text-sky-900 shadow-sm"
                     : "border-transparent bg-sky-100/40 text-neutral-700 hover:border-sky-200 hover:bg-white/70"
@@ -1441,7 +2247,7 @@ export function StoryFields({
             <button
               type="button"
               disabled={busy}
-                className="rounded-t-md border border-dashed border-sky-300 bg-sky-100/30 px-3 py-1 text-xs leading-tight text-sky-900 transition-colors hover:bg-white/70"
+                className="rounded-t border border-dashed border-sky-300 bg-sky-100/30 px-2 py-0.5 text-[10px] leading-tight text-sky-900 transition-colors hover:bg-white/70"
               onClick={addPage}
             >
               +Pg
@@ -1450,14 +2256,14 @@ export function StoryFields({
               <button
                 type="button"
                 disabled={busy}
-                className="rounded-t-md border border-transparent bg-sky-100/30 px-3 py-1 text-xs font-semibold leading-tight text-red-700 transition-colors hover:border-red-200 hover:bg-white/80"
+                className="rounded-t border border-transparent bg-sky-100/30 px-2 py-0.5 text-[10px] font-semibold leading-tight text-red-700 transition-colors hover:border-red-200 hover:bg-white/80"
                 onClick={() => removePage(selectedPage.id)}
                 title="Remove selected page"
               >
                 Del
               </button>
             ) : null}
-              <span className="mx-1 h-5 w-px bg-violet-200" />
+              <span className="mx-0.5 h-4 w-px shrink-0 bg-violet-200" aria-hidden />
               {(editorPhasesForPage ?? []).map((ph, i) => (
                 <div key={ph.id} className="flex items-stretch">
                   <button
@@ -1467,7 +2273,7 @@ export function StoryFields({
                       setSelPhaseId(ph.id);
                       setSelItemId(null);
                     }}
-                    className={`rounded-l-md border px-2 py-1 text-xs leading-tight transition-colors ${
+                    className={`rounded-l border px-1.5 py-0.5 text-[10px] leading-tight transition-colors ${
                       ph.id === (selectedPhase?.id ?? STORY_EDITOR_VIRTUAL_PHASE_ID)
                         ? "border-violet-500 bg-violet-100 font-semibold text-violet-950"
                         : "border-violet-200 bg-violet-50/50 text-violet-900 hover:bg-violet-100"
@@ -1480,7 +2286,7 @@ export function StoryFields({
                     <button
                       type="button"
                       disabled={busy}
-                      className="rounded-r-md border border-l-0 border-violet-200 bg-violet-50 px-1 text-[10px] font-bold text-violet-800 hover:bg-violet-100"
+                      className="rounded-r border border-l-0 border-violet-200 bg-violet-50 px-0.5 text-[9px] font-bold text-violet-800 hover:bg-violet-100"
                       title="Remove phase"
                       onClick={() => removeStoryPhase(ph.id)}
                     >
@@ -1492,17 +2298,17 @@ export function StoryFields({
               <button
                 type="button"
                 disabled={busy}
-                className="rounded-md border border-dashed border-violet-400 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                className="rounded border border-dashed border-violet-400 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-900 hover:bg-violet-100"
                 onClick={addStoryPhase}
               >
                 +Ph
               </button>
               </div>
-              <div className="ml-auto flex shrink-0 items-center gap-1">
+              <div className="ml-auto flex shrink-0 items-center gap-0.5">
                 <button
                   type="button"
                   onClick={() => setAnimationsMenuOpen((v) => !v)}
-                  className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight transition-colors ${
+                  className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none transition-colors ${
                     animationsMenuOpen
                       ? "border-fuchsia-500 bg-fuchsia-100 text-fuchsia-950 hover:bg-fuchsia-200"
                       : "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100"
@@ -1514,7 +2320,7 @@ export function StoryFields({
                 <button
                   type="button"
                   onClick={() => setPageContentMenuOpen((v) => !v)}
-                  className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight transition-colors ${
+                  className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none transition-colors ${
                     pageContentMenuOpen
                       ? "border-amber-500 bg-amber-100 text-amber-950 hover:bg-amber-200"
                       : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
@@ -1527,18 +2333,27 @@ export function StoryFields({
             </div>
           </div>
 
-          <div className="relative mt-2 overflow-visible">
-          <div ref={editorSplitRef} className="mt-1 min-h-0 items-stretch gap-3 md:flex">
-            <div className="min-w-0 space-y-4 md:min-w-0 md:flex-1">
-          <div className="rounded border border-neutral-200 bg-white p-3">
-            <p className="mb-0.5 text-sm font-semibold">Scene Editor</p>
-            <p className="mb-2 text-[11px] text-neutral-500">
-              <strong>Resize</strong> (sky corner) changes the object box on the page. Item image uses a
-              simple scale value only.
-            </p>
+          <div className="relative z-0 mt-0 min-h-0 flex-1 overflow-visible pl-1 pr-0.5 sm:pl-2 sm:pr-1">
+          <div ref={editorSplitRef} className="mt-0 min-h-0 items-start gap-1 md:flex">
+            <div
+              ref={storyEditorColumnRef}
+              className="min-w-0 max-w-full space-y-4 overflow-visible md:min-w-0 md:flex-1"
+              style={{ paddingBottom: storySceneChromeBottomPad }}
+            >
             {(selectedPage.background_image_url ?? image_url) ? (
-              <div ref={sceneCanvasRef} className="relative w-full" style={{ containerType: "inline-size" }}>
+              <CanvasViewport
+                ref={storyCanvasViewportRef}
+                key={selectedPage.id}
+                disabled={busy}
+                clip={false}
+              >
+              <div
+                ref={sceneCanvasRef}
+                className="relative w-full overflow-visible"
+                style={{ containerType: "inline-size" }}
+              >
                 <RectRegionEditor
+                  clipToStage={false}
                   imageUrl={(selectedPage.background_image_url ?? image_url)!}
                   imageFit={selectedPage.image_fit ?? image_fit}
                   stageAspectRatio="16 / 10"
@@ -1559,7 +2374,8 @@ export function StoryFields({
                     const nextItems = regs.map((r) => {
                       const prev = map.get(r.id);
                       const nextItem = rectToStoryItem(r, prev, fallback);
-                      if ((prev?.kind ?? "image") !== "text") return nextItem;
+                      const pk = prev?.kind ?? "image";
+                      if (pk !== "text" && pk !== "button") return nextItem;
                       const prevW = prev?.w_percent ?? 0;
                       const prevH = prev?.h_percent ?? 0;
                       if (prevW <= 0 || prevH <= 0) return nextItem;
@@ -1607,31 +2423,18 @@ export function StoryFields({
                     setSelItemIds(ids);
                     setSelItemId(ids[0] ?? null);
                   }}
+                  onInteractionStart={recordStoryCanvasUndo}
                   disabled={busy}
                   showHorizontalResizeHandle={(r) => {
                     const it = selectedPage.items.find((x) => x.id === r.id);
-                    return (it?.kind ?? "image") === "text";
+                    const k = it?.kind ?? "image";
+                    return k === "text" || k === "button";
                   }}
                   renderRegion={(r) => {
                     const it = selectedPage.items.find((x) => x.id === r.id);
                     if (!it) return null;
-                    if ((it.kind ?? "image") === "text") {
-                      return (
-                        <div
-                          className="flex h-full w-full items-center justify-center px-2 text-center font-semibold whitespace-pre-wrap break-words"
-                          style={{
-                            color: it.text_color ?? "#0f172a",
-                            fontSize: `calc(${it.text_size_px ?? 24} * 100cqw / 960)`,
-                            fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
-                            lineHeight: 1.2,
-                          }}
-                        >
-                          {it.text?.trim() || "Text"}
-                        </div>
-                      );
-                    }
-                    const src = it.image_url;
-                    if (!src) return null;
+                    const k = it.kind ?? "image";
+                    if (k === "image" && !it.image_url?.trim()) return null;
                     const dim =
                       !!selectedPhase &&
                       !isItemVisibleInEditorPhase(
@@ -1640,17 +2443,20 @@ export function StoryFields({
                         pageHasRealPhases,
                       );
                     return (
-                      <ScaledStoryItemImage
-                        imageUrl={src}
-                        imageScale={it?.image_scale ?? 1}
-                        dimmed={dim}
+                      <div
+                        className={`h-full w-full${dim ? " opacity-40" : ""}`}
                         title={dim ? "Hidden in this phase (see right panel)" : undefined}
-                      />
+                      >
+                        <StoryItemLayerContent item={it} />
+                      </div>
                     );
                   }}
                 />
                 {pathEditActive ? (
-                  <div className="pointer-events-none absolute inset-0 z-10">
+                  <div
+                    ref={pathPanelOverlayRef}
+                    className="pointer-events-none absolute inset-0 z-10"
+                  >
                     <svg className="pointer-events-none absolute inset-0 h-full w-full">
                       {pathDraftWaypoints.length >= 2 ? (
                         <polyline
@@ -1664,11 +2470,20 @@ export function StoryFields({
                         />
                       ) : null}
                     </svg>
-                    <div className="pointer-events-auto absolute left-2 top-2 rounded-md border border-fuchsia-300 bg-white/95 p-2 text-xs shadow">
+                    <div
+                      ref={pathPanelRef}
+                      className={pathPanelClassForPlacement(pathPanelPlacement)}
+                    >
                       <p className="font-semibold text-fuchsia-900">
                         Set move path · {itemDisplayLabel(pathEditingItem)}
                       </p>
-                      <p className="mt-0.5 text-neutral-700">
+                      <p className="mt-0.5 text-[11px] leading-snug text-neutral-600">
+                        Waypoints use stage percent coordinates; values below 0 or above 100 start
+                        off-screen. Add a <span className="font-semibold">move</span> step to the
+                        page&apos;s <span className="font-semibold">page enter</span> sequence (or
+                        legacy timeline) so the path runs when students open the page.
+                      </p>
+                      <p className="mt-1 text-neutral-700">
                         {pathEditMode === "set_start" ?
                           "Step 1: Position the object, then click Confirm start position."
                         : "Step 2: Drag the actual object on canvas to trace the path, then click Save path."}
@@ -1684,6 +2499,33 @@ export function StoryFields({
                           value={pathDraftDurationMs}
                           onChange={(e) => setPathDraftDurationMs(Math.max(0, Number(e.target.value) || 0))}
                         />
+                      </label>
+                      <label className="mt-2 block text-[11px] text-neutral-700">
+                        Easing
+                        <select
+                          className="mt-1 w-full rounded border bg-white px-1 py-0.5 text-xs"
+                          value={pathDraftEasing}
+                          onChange={(e) => setPathDraftEasing(e.target.value)}
+                        >
+                          <option value="">Linear (default)</option>
+                          <option value="ease">ease</option>
+                          <option value="ease-in">ease-in</option>
+                          <option value="ease-out">ease-out</option>
+                          <option value="ease-in-out">ease-in-out</option>
+                          <option value="cubic-bezier(0.22, 1, 0.36, 1)">smooth out</option>
+                        </select>
+                      </label>
+                      <label className="mt-2 flex cursor-pointer items-start gap-2 text-[11px] text-neutral-700">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={pathSyncItemToStartOnSave}
+                          onChange={(e) => setPathSyncItemToStartOnSave(e.target.checked)}
+                        />
+                        <span>
+                          On save, move object to path start (first waypoint) so layout matches the
+                          beginning of the path.
+                        </span>
                       </label>
                       <div className="mt-2 flex flex-wrap gap-1">
                         <button
@@ -2183,435 +3025,12 @@ export function StoryFields({
                   </div>
                 ) : null}
               </div>
+              </CanvasViewport>
             ) : (
               <p className="text-sm text-amber-800">
                 Add a background image to place and drag items.
               </p>
             )}
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={busy || !(selectedPage.background_image_url ?? image_url)}
-                className="rounded border bg-white px-2 py-1 text-sm font-semibold"
-                onClick={() => {
-                  const id = nextRegionId(
-                    selectedPage.items.map(storyItemToRect),
-                    "item",
-                  );
-                  const base = defaultRegion(id);
-                  const fallback =
-                    "https://placehold.co/120x80/f1f5f9/334155?text=Item";
-                  const newItem: StoryItem = {
-                    ...base,
-                    kind: "image",
-                    image_url: fallback,
-                    image_scale: 1,
-                    show_card: true,
-                    show_on_start: true,
-                    z_index: selectedPage.items.length,
-                    enter: { preset: "fade_in", duration_ms: 500 },
-                    name: undefined,
-                  };
-                  const next = pages.map((p) =>
-                    p.id === selectedPage.id ?
-                      { ...p, items: [...p.items, newItem] }
-                    : p,
-                  );
-                  selectCanvasItem(id);
-                  pushEmit(next);
-                }}
-              >
-                Add item
-              </button>
-              <button
-                type="button"
-                disabled={busy || !(selectedPage.background_image_url ?? image_url)}
-                className="rounded border border-violet-200 bg-white px-2 py-1 text-sm font-semibold text-violet-900"
-                onClick={() => {
-                  const id = nextRegionId(
-                    selectedPage.items.map(storyItemToRect),
-                    "text",
-                  );
-                  const base = defaultRegion(id);
-                  const newItem: StoryItem = {
-                    ...base,
-                    kind: "text",
-                    text: "Text",
-                    text_color: "#0f172a",
-                    text_size_px: 24,
-                    image_url: "https://placehold.co/2x2/ffffff/ffffff",
-                    image_scale: 1,
-                    show_card: false,
-                    show_on_start: true,
-                    z_index: selectedPage.items.length,
-                    enter: { preset: "fade_in", duration_ms: 500 },
-                    name: undefined,
-                  };
-                  const next = pages.map((p) =>
-                    p.id === selectedPage.id ?
-                      { ...p, items: [...p.items, newItem] }
-                    : p,
-                  );
-                  selectCanvasItem(id);
-                  pushEmit(next);
-                }}
-              >
-                Add text
-              </button>
-              <button
-                type="button"
-                disabled={busy || !selItemId}
-                className="rounded border border-red-200 px-2 py-1 text-sm text-red-800"
-                onClick={() => {
-                  if (!selItemId && selItemIds.length === 0) return;
-                  if (typeof window !== "undefined") {
-                    const itemCount = selItemIds.length > 0 ? selItemIds.length : 1;
-                    const confirmed = window.confirm(
-                      itemCount > 1 ?
-                        `Remove ${itemCount} selected items from this scene? This cannot be undone.`
-                      : "Remove this item from the scene? This cannot be undone.",
-                    );
-                    if (!confirmed) return;
-                  }
-                  const removeIds = new Set(selItemIds.length > 0 ? selItemIds : [selItemId!]);
-                  const next = pages.map((p) =>
-                    p.id === selectedPage.id ?
-                      pruneDeletedItemReferences(p, removeIds)
-                    : p,
-                  );
-                  setSelItemId(null);
-                  setSelItemIds([]);
-                  pushEmit(next);
-                }}
-              >
-                Remove item
-              </button>
-              <button
-                type="button"
-                disabled={busy || selectedPage.items.length === 0}
-                className="rounded border border-sky-300 px-2 py-1 text-sm text-sky-900"
-                onClick={() => {
-                  const allIds = selectedPage.items.map((it) => it.id);
-                  setSelItemIds(allIds);
-                  setSelItemId(allIds[0] ?? null);
-                }}
-              >
-                Select all
-              </button>
-              <button
-                type="button"
-                disabled={busy || selItemIds.length === 0}
-                className="rounded border border-neutral-300 px-2 py-1 text-sm text-neutral-700"
-                onClick={() => {
-                  setSelItemIds([]);
-                  setSelItemId(null);
-                }}
-              >
-                Deselect all
-              </button>
-            </div>
-            <div className="mt-3 space-y-2">
-              <input
-                ref={bgVideoFileRef}
-                type="file"
-                accept="video/mp4,video/webm,video/ogg,video/quicktime"
-                className="hidden"
-                disabled={busy || bgVideoUploading}
-                onChange={(e) => void onBackgroundVideoFileChange(e)}
-              />
-              <MediaUrlControls
-                label="Page background image"
-                value={selectedPage.background_image_url ?? ""}
-                onChange={(v) =>
-                  updatePage(selectedPage.id, { background_image_url: v || undefined })
-                }
-                disabled={busy}
-                compact
-                hidePreview
-                hideUrlInput
-                extraButtons={
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setBgImageUrlMenuOpen((v) => !v)}
-                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
-                    >
-                      URL
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBgColorMenuOpen((v) => !v)}
-                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
-                    >
-                      Color
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBgVideoMenuOpen((v) => !v)}
-                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
-                    >
-                      {selectedPage.video_url ? "Video on" : "Video"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updatePage(selectedPage.id, {
-                          image_fit:
-                            (selectedPage.image_fit ?? image_fit) === "cover" ?
-                              "contain"
-                            : "cover",
-                        })
-                      }
-                      className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
-                    >
-                      Fit: {(selectedPage.image_fit ?? image_fit) === "cover" ? "Cover" : "Contain"}
-                    </button>
-                  </>
-                }
-              />
-              {bgImageUrlMenuOpen ? (
-                <div className="rounded border border-neutral-200 bg-white/90 p-2">
-                  <label className="block text-xs font-medium text-neutral-800">
-                    Background image URL
-                    <input
-                      type="url"
-                      className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                      placeholder="Paste image URL"
-                      value={selectedPage.background_image_url ?? ""}
-                      onChange={(e) =>
-                        updatePage(selectedPage.id, {
-                          background_image_url: e.target.value || undefined,
-                        })
-                      }
-                    />
-                  </label>
-                </div>
-              ) : null}
-              {bgColorMenuOpen ? (
-                <div className="rounded border border-neutral-200 bg-white/90 p-2">
-                  <label className="text-xs font-medium text-neutral-800">
-                    Background color
-                    <div className="mt-1 flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={selectedPage.background_color ?? "#e8f6fd"}
-                        onChange={(e) =>
-                          updatePage(selectedPage.id, {
-                            background_color: e.target.value || undefined,
-                          })
-                        }
-                      />
-                      <input
-                        className="w-32 rounded border px-2 py-1 text-xs"
-                        value={selectedPage.background_color ?? ""}
-                        placeholder="#e8f6fd"
-                        onChange={(e) =>
-                          updatePage(selectedPage.id, {
-                            background_color: e.target.value || undefined,
-                          })
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="rounded border border-neutral-300 px-2 py-1 text-xs"
-                        onClick={() => updatePage(selectedPage.id, { background_color: undefined })}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </label>
-                </div>
-              ) : null}
-              {bgVideoMenuOpen ? (
-                <div className="space-y-2 rounded border border-neutral-200 bg-white/90 p-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={busy || bgVideoUploading}
-                      onClick={() => bgVideoFileRef.current?.click()}
-                      className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold"
-                    >
-                      {bgVideoUploading ? "Uploading..." : "Upload video"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBgVideoLibraryOpen((v) => !v)}
-                      className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold"
-                    >
-                      {bgVideoLibraryOpen ? "Hide library" : "Video library"}
-                    </button>
-                    {selectedPage.video_url ? (
-                      <button
-                        type="button"
-                        onClick={() => updatePage(selectedPage.id, { video_url: undefined })}
-                        className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700"
-                      >
-                        Remove video
-                      </button>
-                    ) : null}
-                  </div>
-                  <label className="block text-xs font-medium text-neutral-800">
-                    Video URL (optional)
-                    <input
-                      type="url"
-                      className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                      value={selectedPage.video_url ?? ""}
-                      onChange={(e) =>
-                        updatePage(selectedPage.id, { video_url: e.target.value || undefined })
-                      }
-                    />
-                  </label>
-                  {bgVideoErr ? <p className="text-xs text-red-700">{bgVideoErr}</p> : null}
-                  {bgVideoLibraryOpen ? (
-                    <div className="rounded border border-neutral-200 bg-neutral-50 p-2">
-                      <input
-                        type="text"
-                        value={bgVideoLibraryQuery}
-                        onChange={(e) => setBgVideoLibraryQuery(e.target.value)}
-                        placeholder="Search videos"
-                        className="w-full rounded border px-2 py-1 text-xs"
-                      />
-                      <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
-                        {bgVideoLibraryLoading ? (
-                          <p className="text-xs text-neutral-600">Loading...</p>
-                        ) : bgVideoLibraryErr ? (
-                          <p className="text-xs text-red-700">{bgVideoLibraryErr}</p>
-                        ) : bgVideoLibraryAssets.length === 0 ? (
-                          <p className="text-xs text-neutral-600">No videos found.</p>
-                        ) : (
-                          bgVideoLibraryAssets.map((asset) => (
-                            <button
-                              key={asset.id}
-                              type="button"
-                              onClick={() => {
-                                updatePage(selectedPage.id, { video_url: asset.public_url });
-                                setBgVideoLibraryOpen(false);
-                              }}
-                              className="block w-full rounded border border-neutral-200 bg-white px-2 py-1 text-left text-xs hover:bg-sky-50"
-                            >
-                              {asset.original_filename}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="rounded border border-neutral-200 bg-white p-3">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={selectedPage.auto_play ?? false}
-                onChange={(e) =>
-                  updatePage(selectedPage.id, { auto_play: e.target.checked })
-                }
-              />
-              Auto-play timeline (respects student tap for sounds)
-            </label>
-            <p className="mt-1 text-xs text-neutral-600">
-              Add steps below; delays are from page start (ms).
-            </p>
-            <ul className="mt-2 space-y-2">
-              {(selectedPage.timeline ?? []).map((step, idx) => (
-                <li
-                  key={`${selectedPage.id}-tl-${idx}`}
-                  className="flex flex-wrap items-end gap-2 rounded border border-neutral-100 p-2"
-                >
-                  <label className="text-xs">
-                    delay ms
-                    <input
-                      type="number"
-                      className="ml-1 w-20 rounded border px-1 text-sm"
-                      value={step.delay_ms}
-                      onChange={(e) => {
-                        const delay_ms = Number(e.target.value) || 0;
-                        const tl = [...(selectedPage.timeline ?? [])];
-                        tl[idx] = { ...tl[idx], delay_ms };
-                        updatePage(selectedPage.id, { timeline: tl });
-                      }}
-                    />
-                  </label>
-                  <select
-                    className="rounded border px-1 text-sm"
-                    value={step.action}
-                    onChange={(e) => {
-                      const action = e.target
-                        .value as StoryTimelineStep["action"];
-                      const tl = [...(selectedPage.timeline ?? [])];
-                      tl[idx] = { ...tl[idx], action };
-                      updatePage(selectedPage.id, { timeline: tl });
-                    }}
-                  >
-                    {TIMELINE_ACTIONS.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="max-w-[10rem] rounded border px-1 text-sm"
-                    value={step.item_id ?? ""}
-                    onChange={(e) => {
-                      const item_id = e.target.value || undefined;
-                      const tl = [...(selectedPage.timeline ?? [])];
-                      tl[idx] = { ...tl[idx], item_id };
-                      updatePage(selectedPage.id, { timeline: tl });
-                    }}
-                  >
-                    <option value="">— item —</option>
-                    {selectedPage.items.map((it) => (
-                      <option key={it.id} value={it.id}>
-                        {it.id}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    className="min-w-0 flex-1 rounded border px-1 text-xs"
-                    placeholder="sound URL"
-                    value={step.sound_url ?? ""}
-                    onChange={(e) => {
-                      const sound_url = e.target.value || undefined;
-                      const tl = [...(selectedPage.timeline ?? [])];
-                      tl[idx] = { ...tl[idx], sound_url };
-                      updatePage(selectedPage.id, { timeline: tl });
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="text-xs text-red-700"
-                    onClick={() => {
-                      const tl = (selectedPage.timeline ?? []).filter(
-                        (_, i) => i !== idx,
-                      );
-                      updatePage(selectedPage.id, { timeline: tl });
-                    }}
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              className="mt-2 rounded border px-2 py-1 text-sm"
-              onClick={() => {
-                const step: StoryTimelineStep = {
-                  delay_ms: 0,
-                  action: "emphasis",
-                  item_id: selectedPage.items[0]?.id,
-                };
-                updatePage(selectedPage.id, {
-                  timeline: [...(selectedPage.timeline ?? []), step],
-                });
-              }}
-            >
-              + Timeline step
-            </button>
-          </div>
             </div>
             <div
               className="hidden md:flex md:w-2 md:self-stretch md:items-stretch md:justify-center"
@@ -2631,14 +3050,12 @@ export function StoryFields({
               />
             </div>
             <div
-              className="min-w-0 w-full space-y-3 md:sticky md:top-[6.5rem] md:grid md:h-[calc(100vh-8rem)] md:w-[var(--editor-right-width)] md:space-y-0"
+              className="min-w-0 w-full space-y-2 md:flex md:min-h-0 md:w-[var(--editor-right-width)] md:flex-col md:gap-2 md:overflow-y-auto md:self-start md:space-y-0"
               style={
                 {
                   "--editor-right-width": `clamp(20rem, ${editorRightPanelPct}%, 52rem)`,
-                  ...(visibleEditorPanels > 0
-                    ? { gridTemplateRows: `repeat(${visibleEditorPanels}, minmax(0, 1fr))`, gap: "0.75rem" }
-                    : {}),
-                } as CSSProperties
+                  maxHeight: `calc(100dvh - var(--lesson-editor-toolbar-height, 2.75rem) - ${storySubBarHeightPx}px)`,
+                } as unknown as CSSProperties
               }
             >
               {showAnimationsPanel && selectedPage ? (
@@ -2651,6 +3068,7 @@ export function StoryFields({
                       <button
                         type="button"
                         onClick={() => addAnimationSequence()}
+                        title="Adds a page-start, phase-start, or tap animation from your current selection (object / phase / scene)."
                         className="rounded border border-fuchsia-400 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-100"
                       >
                         + Add animation
@@ -2664,52 +3082,294 @@ export function StoryFields({
                       </button>
                     </div>
                   </div>
-                  <div className="h-full min-h-0 space-y-2 overflow-y-auto">
+                  <div className="h-full min-h-0 space-y-3 overflow-y-auto">
                     {selectedItem ? (
                       <p className="px-1 text-[11px] text-fuchsia-900/90">
-                        Showing animations that trigger on or impact{" "}
+                        Autoplay lists page and phase starts that touch{" "}
                         <strong>{itemDisplayLabel(selectedItem)}</strong>
                         {selectedPhase ? (
                           <>
                             {" "}
-                            in phase <strong>{selectedPhase.name?.trim() || selectedPhase.id}</strong>.
+                            (phase <strong>{selectedPhase.name?.trim() || selectedPhase.id}</strong>
+                            ).
                           </>
-                        ) : "."}
+                        ) : (
+                          "."
+                        )}{" "}
+                        Tap animations are interactions on this object.
                       </p>
                     ) : (
                       <p className="px-1 text-[11px] text-fuchsia-900/90">
-                        Showing scene-level animations (page start / selected phase start).
+                        <strong>Autoplay</strong> runs when the page or a phase begins (motion, show/hide,
+                        timed sounds). <strong>Tap</strong> lists click-driven animations; select an object
+                        to edit those.
                       </p>
                     )}
-                    <div className="overflow-hidden rounded border border-fuchsia-200 bg-white">
-                      <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 bg-fuchsia-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-900">
-                        <span>Animation</span>
-                        <span>Trigger</span>
-                        <span>Impacted object</span>
-                      </div>
-                      <div className="max-h-40 overflow-y-auto">
-                        {animationRows.map((row) => (
+                    <div className="space-y-1.5 rounded-lg border border-violet-200 bg-violet-50/50 p-2">
+                      <p className="px-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
+                        Autoplay
+                      </p>
+                      <label className="flex cursor-pointer items-start gap-2 px-0.5 text-[11px] font-medium text-violet-950">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={selectedPage.auto_play ?? false}
+                          onChange={(e) =>
+                            updatePage(selectedPage.id, { auto_play: e.target.checked })
+                          }
+                        />
+                        <span>
+                          Run autoplay when the student opens this page (page- and phase-start sequences
+                          below). Sounds that need a user gesture still wait until they tap Listen.
+                        </span>
+                      </label>
+                      <div className="space-y-2 rounded-lg border border-violet-200/90 bg-white/80 p-2">
+                        <p className="px-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
+                          Idle loops
+                        </p>
+                        <p className="px-0.5 text-[10px] leading-snug text-violet-900/85">
+                          {idleScopeDescription} Motion runs in the lesson preview and student player. Respects
+                          “reduce motion” in the OS.
+                        </p>
+                        <div className="px-0.5">
                           <button
-                            key={row.id}
                             type="button"
-                            onClick={() => setSelectedAnimationRowId(row.id)}
-                            onDoubleClick={() => startAnimationEditor(row)}
-                            className={`grid w-full grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 px-2 py-1 text-left text-xs transition-colors ${
-                              selectedAnimationRowId === row.id
-                                ? "bg-fuchsia-100/60 text-fuchsia-950"
-                                : "bg-white text-neutral-800 hover:bg-fuchsia-50"
-                            }`}
+                            disabled={busy || !selectedPage.items.length}
+                            title={
+                              !selectedPage.items.length ?
+                                "Add at least one object to attach idle motion."
+                              : "Add a looping animation for the current scope (object, phase, or page)."
+                            }
+                            onClick={() => addIdleAnimation()}
+                            className="rounded border border-violet-400 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-950 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <span className="truncate">{row.name}</span>
-                            <span className="truncate">{row.trigger}</span>
-                            <span className="truncate">{row.impacted}</span>
+                            + Add idle
                           </button>
-                        ))}
-                        {animationRows.length === 0 ? (
-                          <p className="px-2 py-3 text-xs text-neutral-600">
-                            No animations yet. Click <strong>+ Add animation</strong> to create one.
+                        </div>
+                        {idleRowsForPanel.length === 0 ? (
+                          <p className="px-0.5 text-[11px] text-neutral-600">
+                            No idle loops in this scope. Select an object for item-level idles, or deselect
+                            and choose a phase (if any) for phase-wide targets.
                           </p>
-                        ) : null}
+                        ) : (
+                          <div className="max-h-48 space-y-2 overflow-y-auto pr-0.5">
+                            {idleRowsForPanel.map((idle) => (
+                              <div
+                                key={idle.id}
+                                className="space-y-1.5 rounded border border-violet-100 bg-violet-50/40 p-2 text-[11px]"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <input
+                                    type="text"
+                                    className="min-w-0 flex-1 rounded border border-violet-200 bg-white px-1.5 py-0.5 text-[11px]"
+                                    value={idle.name ?? ""}
+                                    placeholder="Label"
+                                    onChange={(e) =>
+                                      patchIdleRow(idle.id, {
+                                        name: e.target.value || undefined,
+                                      })
+                                    }
+                                  />
+                                  <button
+                                    type="button"
+                                    className="shrink-0 rounded border border-red-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-red-800 hover:bg-red-50"
+                                    onClick={() => removeIdleRow(idle.id)}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                                {!selectedItem ? (
+                                  <label className="flex flex-col gap-0.5 text-[10px] font-medium text-violet-950">
+                                    Target object
+                                    <select
+                                      className="rounded border border-violet-200 bg-white px-1 py-0.5 text-[11px]"
+                                      value={idle.target_item_id ?? ""}
+                                      onChange={(e) =>
+                                        patchIdleRow(idle.id, {
+                                          target_item_id: e.target.value || undefined,
+                                        })
+                                      }
+                                    >
+                                      {selectedPage.items.map((it) => (
+                                        <option key={it.id} value={it.id}>
+                                          {itemDisplayLabel(it)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                ) : null}
+                                <label className="flex flex-col gap-0.5 text-[10px] font-medium text-violet-950">
+                                  Preset
+                                  <select
+                                    className="rounded border border-violet-200 bg-white px-1 py-0.5 text-[11px]"
+                                    value={idle.preset}
+                                    onChange={(e) =>
+                                      patchIdleRow(idle.id, {
+                                        preset: e.target.value as StoryIdleAnimation["preset"],
+                                      })
+                                    }
+                                  >
+                                    {STORY_IDLE_PRESET_IDS.map((p) => (
+                                      <option key={p} value={p}>
+                                        {p.replace(/_/g, " ")}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                  <label className="flex flex-col gap-0.5 text-[10px] font-medium text-violet-950">
+                                    Period (ms)
+                                    <input
+                                      type="number"
+                                      min={100}
+                                      max={60_000}
+                                      className="w-24 rounded border border-violet-200 bg-white px-1 py-0.5 text-[11px]"
+                                      value={idle.period_ms ?? 2200}
+                                      onChange={(e) => {
+                                        const v = Number(e.target.value);
+                                        patchIdleRow(idle.id, {
+                                          period_ms: Number.isFinite(v) ? v : 2200,
+                                        });
+                                      }}
+                                    />
+                                  </label>
+                                  <label className="flex flex-col gap-0.5 text-[10px] font-medium text-violet-950">
+                                    Strength
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={1}
+                                      step={0.05}
+                                      className="w-20 rounded border border-violet-200 bg-white px-1 py-0.5 text-[11px]"
+                                      value={idle.amplitude ?? 0.35}
+                                      onChange={(e) => {
+                                        const v = Number(e.target.value);
+                                        patchIdleRow(idle.id, {
+                                          amplitude: Number.isFinite(v) ? v : 0.35,
+                                        });
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                                {pageHasRealPhases && selectedPage.phases && selectedPage.phases.length > 0 ?
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-semibold text-violet-900">
+                                      Phases (empty = all)
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {selectedPage.phases.map((ph) => {
+                                        const allIds = selectedPage.phases!.map((p) => p.id);
+                                        const cur = idle.active_phase_ids;
+                                        const active =
+                                          !cur || cur.length === 0 ?
+                                            true
+                                          : cur.includes(ph.id);
+                                        return (
+                                          <label
+                                            key={ph.id}
+                                            className="flex cursor-pointer items-center gap-1 rounded border border-violet-200/80 bg-white px-1.5 py-0.5 text-[10px]"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={active}
+                                              onChange={() => {
+                                                const base =
+                                                  cur && cur.length > 0 ? [...cur] : [...allIds];
+                                                const set = new Set(base);
+                                                if (set.has(ph.id)) set.delete(ph.id);
+                                                else set.add(ph.id);
+                                                if (set.size === 0 || set.size === allIds.length) {
+                                                  patchIdleRow(idle.id, {
+                                                    active_phase_ids: undefined,
+                                                  });
+                                                } else {
+                                                  patchIdleRow(idle.id, {
+                                                    active_phase_ids: [...set],
+                                                  });
+                                                }
+                                              }}
+                                            />
+                                            <span>{ph.name?.trim() || ph.id.slice(0, 8)}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                : null}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="overflow-hidden rounded border border-violet-200/80 bg-white">
+                        <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-violet-100 bg-violet-50/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-violet-900">
+                          <span>Animation</span>
+                          <span>Trigger</span>
+                          <span>Impacted object</span>
+                        </div>
+                        <div className="max-h-36 overflow-y-auto">
+                          {autoplayAnimationRows.map((row) => (
+                            <button
+                              key={row.id}
+                              type="button"
+                              onClick={() => setSelectedAnimationRowId(row.id)}
+                              onDoubleClick={() => startAnimationEditor(row)}
+                              className={`grid w-full grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-violet-100 px-2 py-1 text-left text-xs transition-colors ${
+                                selectedAnimationRowId === row.id
+                                  ? "bg-violet-100/70 text-violet-950"
+                                  : "bg-white text-neutral-800 hover:bg-violet-50/80"
+                              }`}
+                            >
+                              <span className="truncate">{row.name}</span>
+                              <span className="truncate">{row.trigger}</span>
+                              <span className="truncate">{row.impacted}</span>
+                            </button>
+                          ))}
+                          {autoplayAnimationRows.length === 0 ? (
+                            <p className="px-2 py-2 text-[11px] text-neutral-600">
+                              No sequences yet. Deselect objects, pick an optional phase, then{" "}
+                              <strong>+ Add animation</strong> for page- or phase-start steps.
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="px-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-900">
+                        Tap / interaction
+                      </p>
+                      <div className="overflow-hidden rounded border border-fuchsia-200 bg-white">
+                        <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 bg-fuchsia-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-900">
+                          <span>Animation</span>
+                          <span>Trigger</span>
+                          <span>Impacted object</span>
+                        </div>
+                        <div className="max-h-36 overflow-y-auto">
+                          {tapAnimationRows.map((row) => (
+                            <button
+                              key={row.id}
+                              type="button"
+                              onClick={() => setSelectedAnimationRowId(row.id)}
+                              onDoubleClick={() => startAnimationEditor(row)}
+                              className={`grid w-full grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 px-2 py-1 text-left text-xs transition-colors ${
+                                selectedAnimationRowId === row.id
+                                  ? "bg-fuchsia-100/60 text-fuchsia-950"
+                                  : "bg-white text-neutral-800 hover:bg-fuchsia-50"
+                              }`}
+                            >
+                              <span className="truncate">{row.name}</span>
+                              <span className="truncate">{row.trigger}</span>
+                              <span className="truncate">{row.impacted}</span>
+                            </button>
+                          ))}
+                          {tapAnimationRows.length === 0 ? (
+                            <p className="px-2 py-2 text-[11px] text-neutral-600">
+                              {selectedItem ?
+                                "No tap animations for this object yet. Use + Add animation while it is selected."
+                              : "Select an object on the canvas to add or list tap / click animations."}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                     {selectedAnimationRow ? (
@@ -3184,7 +3844,6 @@ export function StoryFields({
                         pages={pages}
                         pushEmit={(next) => pushEmit(next)}
                         busy={busy}
-                        image_url={image_url}
                       />
                     ) : (
                       <p className="px-2 py-1 text-xs text-neutral-600">
@@ -3196,7 +3855,542 @@ export function StoryFields({
               ) : null}
             </div>
           </div>
+          <div
+            ref={storyFixedBarRef}
+            className="pointer-events-auto fixed z-[45] border-t border-neutral-200/90 bg-white/95 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+            style={
+              {
+                left: storyColumnBarRect.left,
+                width: storyColumnBarRect.width,
+                bottom: 0,
+                paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
+              } as CSSProperties
+            }
+          >
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-2 py-2 sm:px-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  className="rounded border bg-white px-2 py-1 text-sm font-semibold"
+                  onClick={() => {
+                    recordStoryCanvasUndo();
+                    const id = nextRegionId(
+                      selectedPage.items.map(storyItemToRect),
+                      "item",
+                    );
+                    const base = defaultRegion(id);
+                    const fallback =
+                      "https://placehold.co/120x80/f1f5f9/334155?text=Item";
+                    const newItem: StoryItem = {
+                      ...base,
+                      kind: "image",
+                      image_url: fallback,
+                      image_scale: 1,
+                      show_card: true,
+                      show_on_start: true,
+                      z_index: selectedPage.items.length,
+                      enter: { preset: "fade_in", duration_ms: 500 },
+                      name: undefined,
+                    };
+                    const next = pages.map((p) =>
+                      p.id === selectedPage.id ?
+                        { ...p, items: [...p.items, newItem] }
+                      : p,
+                    );
+                    selectCanvasItem(id);
+                    pushEmit(next);
+                  }}
+                >
+                  Add item
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  className="rounded border border-violet-200 bg-white px-2 py-1 text-sm font-semibold text-violet-900"
+                  onClick={() => {
+                    recordStoryCanvasUndo();
+                    const id = nextRegionId(
+                      selectedPage.items.map(storyItemToRect),
+                      "text",
+                    );
+                    const base = defaultRegion(id);
+                    const newItem: StoryItem = {
+                      ...base,
+                      kind: "text",
+                      text: "Text",
+                      text_color: "#0f172a",
+                      text_size_px: 24,
+                      image_url: "https://placehold.co/2x2/ffffff/ffffff",
+                      image_scale: 1,
+                      show_card: false,
+                      show_on_start: true,
+                      z_index: selectedPage.items.length,
+                      enter: { preset: "fade_in", duration_ms: 500 },
+                      name: undefined,
+                    };
+                    const next = pages.map((p) =>
+                      p.id === selectedPage.id ?
+                        { ...p, items: [...p.items, newItem] }
+                      : p,
+                    );
+                    selectCanvasItem(id);
+                    pushEmit(next);
+                  }}
+                >
+                  Add text
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  className="rounded border border-teal-200 bg-white px-2 py-1 text-sm font-semibold text-teal-900"
+                  onClick={() => {
+                    recordStoryCanvasUndo();
+                    const id = nextRegionId(
+                      selectedPage.items.map(storyItemToRect),
+                      "shape",
+                    );
+                    const base = defaultRegion(id);
+                    const newItem: StoryItem = {
+                      ...base,
+                      kind: "shape",
+                      color_hex: "#3b82f6",
+                      image_scale: 1,
+                      show_card: false,
+                      show_on_start: true,
+                      z_index: selectedPage.items.length,
+                      enter: { preset: "fade_in", duration_ms: 500 },
+                      name: undefined,
+                    };
+                    const next = pages.map((p) =>
+                      p.id === selectedPage.id ?
+                        { ...p, items: [...p.items, newItem] }
+                      : p,
+                    );
+                    selectCanvasItem(id);
+                    pushEmit(next);
+                  }}
+                >
+                  Add shape
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-sm font-semibold text-slate-900"
+                  onClick={() => {
+                    recordStoryCanvasUndo();
+                    const id = nextRegionId(
+                      selectedPage.items.map(storyItemToRect),
+                      "line",
+                    );
+                    const base = defaultRegion(id);
+                    const newItem: StoryItem = {
+                      ...base,
+                      kind: "line",
+                      w_percent: Math.max(base.w_percent, 24),
+                      h_percent: Math.max(base.h_percent, 10),
+                      color_hex: "#0f172a",
+                      line_width_px: 3,
+                      image_scale: 1,
+                      show_card: false,
+                      show_on_start: true,
+                      z_index: selectedPage.items.length,
+                      enter: { preset: "fade_in", duration_ms: 500 },
+                      name: undefined,
+                    };
+                    const next = pages.map((p) =>
+                      p.id === selectedPage.id ?
+                        { ...p, items: [...p.items, newItem] }
+                      : p,
+                    );
+                    selectCanvasItem(id);
+                    pushEmit(next);
+                  }}
+                >
+                  Add line
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  className="rounded border border-sky-300 bg-white px-2 py-1 text-sm font-semibold text-sky-900"
+                  onClick={() => {
+                    recordStoryCanvasUndo();
+                    const id = nextRegionId(
+                      selectedPage.items.map(storyItemToRect),
+                      "btn",
+                    );
+                    const base = defaultRegion(id);
+                    const newItem: StoryItem = {
+                      ...base,
+                      kind: "button",
+                      text: "Button",
+                      color_hex: "#0ea5e9",
+                      text_color: "#ffffff",
+                      text_size_px: 18,
+                      image_scale: 1,
+                      show_card: true,
+                      show_on_start: true,
+                      z_index: selectedPage.items.length,
+                      enter: { preset: "fade_in", duration_ms: 500 },
+                      name: undefined,
+                    };
+                    const next = pages.map((p) =>
+                      p.id === selectedPage.id ?
+                        { ...p, items: [...p.items, newItem] }
+                      : p,
+                    );
+                    selectCanvasItem(id);
+                    pushEmit(next);
+                  }}
+                >
+                  Add button
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || (!selItemId && selItemIds.length === 0)}
+                  className="rounded border border-red-200 px-2 py-1 text-sm text-red-800"
+                  onClick={() => {
+                    if (!selItemId && selItemIds.length === 0) return;
+                    if (typeof window !== "undefined") {
+                      const itemCount = selItemIds.length > 0 ? selItemIds.length : 1;
+                      const confirmed = window.confirm(
+                        itemCount > 1 ?
+                          `Remove ${itemCount} selected items from this scene? This cannot be undone.`
+                        : "Remove this item from the scene? This cannot be undone.",
+                      );
+                      if (!confirmed) return;
+                    }
+                    recordStoryCanvasUndo();
+                    const removeIds = new Set(selItemIds.length > 0 ? selItemIds : [selItemId!]);
+                    const next = pages.map((p) =>
+                      p.id === selectedPage.id ?
+                        pruneDeletedItemReferences(p, removeIds)
+                      : p,
+                    );
+                    setSelItemId(null);
+                    setSelItemIds([]);
+                    pushEmit(next);
+                  }}
+                >
+                  Remove item
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || selectedPage.items.length === 0}
+                  className="rounded border border-sky-300 px-2 py-1 text-sm text-sky-900"
+                  onClick={() => {
+                    const allIds = selectedPage.items.map((it) => it.id);
+                    setSelItemIds(allIds);
+                    setSelItemId(allIds[0] ?? null);
+                  }}
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || selItemIds.length === 0}
+                  className="rounded border border-neutral-300 px-2 py-1 text-sm text-neutral-700"
+                  onClick={() => {
+                    setSelItemIds([]);
+                    setSelItemId(null);
+                  }}
+                >
+                  Deselect all
+                </button>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  title="Wheel: zoom · Middle-drag or Space+drag empty canvas: pan · Ctrl+Z/Y: undo/redo · Ctrl+C/V/D: copy/paste/duplicate · Delete: remove selection"
+                  onClick={() => storyCanvasViewportRef.current?.resetView()}
+                  className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 shadow-sm hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  Reset view
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setBgChangeOverlayOpen(true)}
+                  className="rounded border border-sky-400 bg-white px-3 py-1.5 text-sm font-semibold text-sky-900 shadow-sm hover:bg-sky-50"
+                >
+                  Change background
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+        </div>
+      ) : null}
+
+      {bgChangeOverlayOpen && selectedPage ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Change page background"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setBgChangeOverlayOpen(false);
+              setBgVideoLibraryOpen(false);
+            }
+          }}
+        >
+          <div
+            className="flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-sky-200 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-sky-100 bg-sky-50/80 px-4 py-3">
+              <div>
+                <p className="text-sm font-bold text-sky-950">Change background</p>
+                <p className="text-[11px] text-sky-900/80">
+                  Presets are images in your media library tagged <strong>background</strong>. Other options
+                  apply to this page only.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded border border-sky-300 bg-white px-2 py-1 text-xs font-semibold text-sky-900 hover:bg-sky-50"
+                onClick={() => {
+                  setBgChangeOverlayOpen(false);
+                  setBgVideoLibraryOpen(false);
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <input
+              ref={bgVideoFileRef}
+              type="file"
+              accept="video/mp4,video/webm,video/ogg,video/quicktime"
+              className="hidden"
+              disabled={busy || bgVideoUploading}
+              onChange={(e) => void onBackgroundVideoFileChange(e)}
+            />
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+              <section>
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                  Preset backgrounds
+                </p>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  Choose from library images that include the tag <strong>background</strong>.
+                </p>
+                <input
+                  type="text"
+                  value={bgPresetQuery}
+                  onChange={(e) => setBgPresetQuery(e.target.value)}
+                  placeholder="Search by name or filename…"
+                  className="mt-2 w-full rounded border border-neutral-200 px-2 py-1.5 text-sm"
+                />
+                <div className="mt-2 max-h-52 overflow-y-auto rounded border border-neutral-100 bg-neutral-50/50 p-2">
+                  {bgPresetLoading ? (
+                    <p className="text-xs text-neutral-600">Loading presets…</p>
+                  ) : bgPresetErr ? (
+                    <p className="text-xs text-red-700">{bgPresetErr}</p>
+                  ) : bgPresetAssets.length === 0 ? (
+                    <p className="text-xs text-neutral-600">
+                      No preset images match. Tag assets with <strong>background</strong> in the media
+                      library, or use a custom URL below.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                      {bgPresetAssets.map((asset) => {
+                        const active =
+                          (selectedPage.background_image_url ?? "") === asset.public_url;
+                        return (
+                          <button
+                            key={asset.id}
+                            type="button"
+                            title={asset.meta_item_name || asset.original_filename}
+                            onClick={() =>
+                              updatePage(selectedPage.id, {
+                                background_image_url: asset.public_url,
+                              })
+                            }
+                            className={`overflow-hidden rounded-lg border-2 text-left transition-colors ${
+                              active ?
+                                "border-sky-600 ring-2 ring-sky-200"
+                              : "border-transparent hover:border-sky-300"
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element -- library URLs from teacher storage */}
+                            <img
+                              src={asset.public_url}
+                              alt=""
+                              className="h-24 w-full object-cover"
+                            />
+                            <span className="line-clamp-2 block px-1 py-0.5 text-[10px] text-neutral-700">
+                              {asset.meta_item_name?.trim() || asset.original_filename}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+              <section>
+                <label className="block text-xs font-semibold text-neutral-700">
+                  Custom image URL
+                  <input
+                    type="url"
+                    className="mt-1 w-full rounded border border-neutral-200 px-2 py-1.5 text-sm"
+                    placeholder="https://…"
+                    value={selectedPage.background_image_url ?? ""}
+                    onChange={(e) =>
+                      updatePage(selectedPage.id, {
+                        background_image_url: e.target.value || undefined,
+                      })
+                    }
+                  />
+                </label>
+              </section>
+              <section>
+                <p className="text-xs font-semibold text-neutral-700">Solid color (underlay)</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <input
+                    type="color"
+                    value={selectedPage.background_color ?? "#e8f6fd"}
+                    onChange={(e) =>
+                      updatePage(selectedPage.id, {
+                        background_color: e.target.value || undefined,
+                      })
+                    }
+                  />
+                  <input
+                    className="w-36 rounded border border-neutral-200 px-2 py-1 text-xs"
+                    value={selectedPage.background_color ?? ""}
+                    placeholder="#e8f6fd"
+                    onChange={(e) =>
+                      updatePage(selectedPage.id, {
+                        background_color: e.target.value || undefined,
+                      })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                    onClick={() => updatePage(selectedPage.id, { background_color: undefined })}
+                  >
+                    Clear color
+                  </button>
+                </div>
+              </section>
+              <section className="rounded border border-neutral-200 bg-neutral-50/80 p-3">
+                <p className="text-xs font-semibold text-neutral-700">Background video</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy || bgVideoUploading}
+                    onClick={() => bgVideoFileRef.current?.click()}
+                    className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold"
+                  >
+                    {bgVideoUploading ? "Uploading…" : "Upload video"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBgVideoLibraryOpen((v) => !v)}
+                    className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold"
+                  >
+                    {bgVideoLibraryOpen ? "Hide video library" : "Video library"}
+                  </button>
+                  {selectedPage.video_url ? (
+                    <button
+                      type="button"
+                      onClick={() => updatePage(selectedPage.id, { video_url: undefined })}
+                      className="rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-800"
+                    >
+                      Remove video
+                    </button>
+                  ) : null}
+                </div>
+                <label className="mt-2 block text-xs font-medium text-neutral-800">
+                  Video URL
+                  <input
+                    type="url"
+                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                    value={selectedPage.video_url ?? ""}
+                    onChange={(e) =>
+                      updatePage(selectedPage.id, { video_url: e.target.value || undefined })
+                    }
+                  />
+                </label>
+                {bgVideoErr ? <p className="mt-1 text-xs text-red-700">{bgVideoErr}</p> : null}
+                {bgVideoLibraryOpen ? (
+                  <div className="mt-2 rounded border border-neutral-200 bg-white p-2">
+                    <input
+                      type="text"
+                      value={bgVideoLibraryQuery}
+                      onChange={(e) => setBgVideoLibraryQuery(e.target.value)}
+                      placeholder="Search videos"
+                      className="w-full rounded border px-2 py-1 text-xs"
+                    />
+                    <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+                      {bgVideoLibraryLoading ? (
+                        <p className="text-xs text-neutral-600">Loading…</p>
+                      ) : bgVideoLibraryErr ? (
+                        <p className="text-xs text-red-700">{bgVideoLibraryErr}</p>
+                      ) : bgVideoLibraryAssets.length === 0 ? (
+                        <p className="text-xs text-neutral-600">No videos found.</p>
+                      ) : (
+                        bgVideoLibraryAssets.map((asset) => (
+                          <button
+                            key={asset.id}
+                            type="button"
+                            onClick={() => {
+                              updatePage(selectedPage.id, { video_url: asset.public_url });
+                              setBgVideoLibraryOpen(false);
+                            }}
+                            className="block w-full rounded border border-neutral-200 bg-white px-2 py-1 text-left text-xs hover:bg-sky-50"
+                          >
+                            {asset.original_filename}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+              <section>
+                <p className="text-xs font-semibold text-neutral-700">Background image fit</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updatePage(selectedPage.id, { image_fit: "cover" })}
+                    className={`rounded border px-3 py-1 text-xs font-semibold ${
+                      (selectedPage.image_fit ?? image_fit) === "cover" ?
+                        "border-sky-600 bg-sky-100 text-sky-950"
+                      : "border-neutral-300 bg-white text-neutral-800"
+                    }`}
+                  >
+                    Cover
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updatePage(selectedPage.id, { image_fit: "contain" })}
+                    className={`rounded border px-3 py-1 text-xs font-semibold ${
+                      (selectedPage.image_fit ?? image_fit) === "contain" ?
+                        "border-sky-600 bg-sky-100 text-sky-950"
+                      : "border-neutral-300 bg-white text-neutral-800"
+                    }`}
+                  >
+                    Contain
+                  </button>
+                </div>
+              </section>
+              <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-3">
+                <button
+                  type="button"
+                  className="rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-800 hover:bg-red-50"
+                  onClick={() =>
+                    updatePage(selectedPage.id, { background_image_url: undefined })
+                  }
+                >
+                  Clear background image
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -3314,7 +4508,9 @@ export function StoryFields({
                               updateAnimationEditorSequence((seq) => ({
                                 ...seq,
                                 steps: seq.steps.map((s, i) =>
-                                  i === idx ? { ...s, kind: e.target.value as StoryActionStep["kind"] } : s,
+                                  i === idx ?
+                                    storyStepWithKind(s, e.target.value as StoryActionStep["kind"])
+                                  : s,
                                 ),
                               }))
                             }
@@ -3326,6 +4522,8 @@ export function StoryFields({
                             <option value="play_sound">play_sound</option>
                             <option value="tts">tts</option>
                             <option value="smart_line">smart_line</option>
+                            <option value="info_popup">info_popup</option>
+                            <option value="goto_page">goto_page</option>
                           </select>
                         </label>
                         <label className="text-[11px] text-neutral-700">
@@ -3538,6 +4736,144 @@ export function StoryFields({
                           </label>
                         </div>
                       ) : null}
+                      {step.kind === "info_popup" ? (
+                        <div className="space-y-2 rounded border border-sky-200 bg-sky-50/50 p-2">
+                          <p className="text-[10px] text-sky-950">
+                            Shows a modal over the story. Good for tap-to-explain on slide layouts.
+                          </p>
+                          <label className="text-[11px] text-neutral-700">
+                            Title
+                            <input
+                              className="mt-1 w-full rounded border px-2 py-1 text-xs"
+                              value={step.popup_title ?? ""}
+                              onChange={(e) =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ?
+                                      { ...s, popup_title: e.target.value || undefined }
+                                    : s,
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="text-[11px] text-neutral-700">
+                            Body
+                            <textarea
+                              className="mt-1 w-full rounded border px-2 py-1 text-xs"
+                              rows={3}
+                              value={step.popup_body ?? ""}
+                              onChange={(e) =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ?
+                                      { ...s, popup_body: e.target.value || undefined }
+                                    : s,
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="text-[11px] text-neutral-700">
+                            Image URL (optional)
+                            <input
+                              className="mt-1 w-full rounded border px-2 py-1 text-xs"
+                              value={step.popup_image_url ?? ""}
+                              onChange={(e) =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ?
+                                      { ...s, popup_image_url: e.target.value || undefined }
+                                    : s,
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="text-[11px] text-neutral-700">
+                            Video URL (optional)
+                            <input
+                              className="mt-1 w-full rounded border px-2 py-1 text-xs"
+                              value={step.popup_video_url ?? ""}
+                              onChange={(e) =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) =>
+                                    i === idx ?
+                                      { ...s, popup_video_url: e.target.value || undefined }
+                                    : s,
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+                      {step.kind === "goto_page" ? (
+                        <div className="space-y-2 rounded border border-violet-200 bg-violet-50/50 p-2">
+                          <p className="text-[10px] text-violet-950">
+                            Moves within this story&apos;s pages (or advances the lesson on last page →
+                            next).
+                          </p>
+                          <label className="text-[11px] text-neutral-700">
+                            Go to
+                            <select
+                              className="mt-1 w-full rounded border px-1 py-1 text-xs"
+                              value={step.goto_target ?? "next_page"}
+                              onChange={(e) =>
+                                updateAnimationEditorSequence((seq) => ({
+                                  ...seq,
+                                  steps: seq.steps.map((s, i) => {
+                                    if (i !== idx) return s;
+                                    const goto_target = e.target.value as NonNullable<
+                                      StoryActionStep["goto_target"]
+                                    >;
+                                    return {
+                                      ...s,
+                                      goto_target,
+                                      goto_page_id:
+                                        goto_target === "page_id" ? s.goto_page_id : undefined,
+                                    };
+                                  }),
+                                }))
+                              }
+                            >
+                              <option value="next_page">Next page</option>
+                              <option value="prev_page">Previous page</option>
+                              <option value="page_id">Specific page…</option>
+                            </select>
+                          </label>
+                          {step.goto_target === "page_id" ? (
+                            <label className="text-[11px] text-neutral-700">
+                              Page
+                              <select
+                                className="mt-1 w-full rounded border px-1 py-1 text-xs"
+                                value={step.goto_page_id ?? ""}
+                                onChange={(e) =>
+                                  updateAnimationEditorSequence((seq) => ({
+                                    ...seq,
+                                    steps: seq.steps.map((s, i) =>
+                                      i === idx ?
+                                        { ...s, goto_page_id: e.target.value || undefined }
+                                      : s,
+                                    ),
+                                  }))
+                                }
+                              >
+                                <option value="">Select page…</option>
+                                {pages.map((pg) => (
+                                  <option key={pg.id} value={pg.id}>
+                                    {pg.title?.trim() || pg.id.slice(0, 8)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   ))
                 ) : (
@@ -3574,9 +4910,81 @@ export function StoryFields({
         </div>
       ) : null}
 
-      <div className="space-y-4">
-          {!multi ? (
+      {!multi ? (
+        <div className="space-y-4">
             <>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-neutral-200 bg-neutral-50/90 p-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-3">
+                  <span className="text-xs font-semibold text-neutral-800">Student view</span>
+                  <div className="inline-flex rounded border border-neutral-300 bg-white p-0.5 text-xs">
+                    {(["book", "slide"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        disabled={busy}
+                        className={
+                          layoutMode === m ?
+                            "rounded bg-violet-600 px-2 py-1 font-semibold text-white"
+                          : "rounded px-2 py-1 font-medium text-neutral-700 hover:bg-neutral-100"
+                        }
+                        onClick={() => {
+                          setLayoutMode(m);
+                          emit({
+                            image_url,
+                            image_fit,
+                            video_url,
+                            body_text,
+                            read_aloud_text,
+                            tts_lang,
+                            tip_text,
+                            guide_image,
+                            pages: [],
+                            page_turn_style: pageTurn,
+                            layout_mode: m,
+                          });
+                        }}
+                      >
+                        {m === "book" ? "Book" : "Slides"}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-1.5 text-xs text-neutral-700">
+                    <span className="shrink-0 font-medium">Page change</span>
+                    <select
+                      className="max-w-[9rem] rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-xs"
+                      value={pageTurn}
+                      disabled={busy}
+                      onChange={(e) => {
+                        const v = e.target.value as "slide" | "curl";
+                        setPageTurn(v);
+                        emit({
+                          image_url,
+                          image_fit,
+                          video_url,
+                          body_text,
+                          read_aloud_text,
+                          tts_lang,
+                          tip_text,
+                          guide_image,
+                          pages: [],
+                          page_turn_style: v,
+                        });
+                      }}
+                    >
+                      <option value="curl">Book curl</option>
+                      <option value="slide">Slide swipe</option>
+                    </select>
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="shrink-0 rounded border border-sky-600 bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
+                  onClick={() => startMultiFromLegacy()}
+                >
+                  Scene &amp; pages editor…
+                </button>
+              </div>
               <label className={labelClass()}>
                 Video URL (optional — when set, video is shown instead of the image)
                 <input
@@ -3673,31 +5081,8 @@ export function StoryFields({
                 />
               </label>
             </>
-          ) : null}
-          <label className={labelClass()}>
-            TTS language
-            <input
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              value={tts_lang}
-              onChange={(e) => {
-                const v = e.target.value;
-                setTts(v);
-                emit({
-                  image_url,
-                  image_fit,
-                  video_url,
-                  body_text,
-                  read_aloud_text,
-                  tts_lang: v,
-                  tip_text,
-                  guide_image,
-                  pages,
-                  page_turn_style: pageTurn,
-                });
-              }}
-            />
-          </label>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

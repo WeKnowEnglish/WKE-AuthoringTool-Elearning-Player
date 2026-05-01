@@ -29,6 +29,7 @@ export default async function CourseLearnPage({ params }: Props) {
         Target: {course.target}. Finish each module to unlock the next one.
       </p>
       <CourseLearnClient
+        key={course.id}
         course={course}
         modules={modules}
         lessons={lessons}

@@ -8,6 +8,10 @@ import {
   useEffect,
   useRef,
 } from "react";
+import {
+  STORY_PATH_WAYPOINT_MAX,
+  STORY_PATH_WAYPOINT_MIN,
+} from "@/lib/lesson-schemas";
 
 export type RectPercent = {
   id: string;
@@ -37,10 +41,23 @@ type Props = {
   renderRegion?: (r: RectPercent) => ReactNode;
   /** Optional extra width-only resize handle (right-middle) */
   showHorizontalResizeHandle?: (r: RectPercent) => boolean;
+  /** Called once when a drag or resize gesture begins (for undo snapshots). */
+  onInteractionStart?: () => void;
+  /**
+   * When false, regions can paint outside the stage box (e.g. story items parked off-screen).
+   * Default true keeps regions clipped to the stage (hotspots, etc.).
+   */
+  clipToStage?: boolean;
 };
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
+}
+
+function computeToggleSelection(id: string, append: boolean, current: string[]): string[] {
+  if (!append) return [id];
+  const exists = current.includes(id);
+  return exists ? current.filter((x) => x !== id) : [...current, id];
 }
 
 export function RectRegionEditor({
@@ -59,6 +76,8 @@ export function RectRegionEditor({
   disabled,
   renderRegion,
   showHorizontalResizeHandle,
+  onInteractionStart,
+  clipToStage = true,
 }: Props) {
   const selectedSet = new Set(
     selectedIds && selectedIds.length > 0 ? selectedIds : selectedId ? [selectedId] : [],
@@ -89,11 +108,10 @@ export function RectRegionEditor({
   const regionsRef = useRef(regions);
   const onRegionsChangeRef = useRef(onRegionsChange);
   const dragRef = useRef<{
-    id: string;
+    ids: string[];
     startClientX: number;
     startClientY: number;
-    startX: number;
-    startY: number;
+    startPositions: Map<string, { x: number; y: number }>;
   } | null>(null);
   const resizeRef = useRef<{
     id: string;
@@ -191,14 +209,18 @@ export function RectRegionEditor({
     const dx = ((e.clientX - d.startClientX) / rect.width) * 100;
     const dy = ((e.clientY - d.startClientY) / rect.height) * 100;
     const currentRegions = regionsRef.current;
-    const item = currentRegions.find((r) => r.id === d.id);
-    if (!item) return;
-    const nx = clamp(d.startX + dx, 0, 100 - item.w_percent);
-    const ny = clamp(d.startY + dy, 0, 100 - item.h_percent);
     onRegionsChangeRef.current(
-      currentRegions.map((r) =>
-        r.id === d.id ? { ...r, x_percent: nx, y_percent: ny } : r,
-      ),
+      currentRegions.map((r) => {
+        const start = d.startPositions.get(r.id);
+        if (!start) return r;
+        const xLo = STORY_PATH_WAYPOINT_MIN;
+        const xHi = STORY_PATH_WAYPOINT_MAX - r.w_percent;
+        const yLo = STORY_PATH_WAYPOINT_MIN;
+        const yHi = STORY_PATH_WAYPOINT_MAX - r.h_percent;
+        const nx = clamp(start.x + dx, Math.min(xLo, xHi), Math.max(xLo, xHi));
+        const ny = clamp(start.y + dy, Math.min(yLo, yHi), Math.max(yLo, yHi));
+        return { ...r, x_percent: nx, y_percent: ny };
+      }),
     );
   }, []);
 
@@ -214,15 +236,28 @@ export function RectRegionEditor({
     if (disabled) return;
     e.stopPropagation();
     e.preventDefault();
-    applySelection(id, { append: e.ctrlKey || e.metaKey });
+    const append = e.ctrlKey || e.metaKey;
+    const currentList =
+      selectedIds && selectedIds.length > 0 ? selectedIds : selectedId ? [selectedId] : [];
+    const nextSel = computeToggleSelection(id, append, currentList);
+    applySelection(id, { append });
     const item = regionsRef.current.find((r) => r.id === id);
     if (!item) return;
+    onInteractionStart?.();
+    const dragIds =
+      nextSel.length > 1 && nextSel.includes(id) ?
+        nextSel.filter((rid) => regionsRef.current.some((r) => r.id === rid))
+      : [id];
+    const startPositions = new Map<string, { x: number; y: number }>();
+    for (const rid of dragIds) {
+      const r = regionsRef.current.find((x) => x.id === rid);
+      if (r) startPositions.set(rid, { x: r.x_percent, y: r.y_percent });
+    }
     dragRef.current = {
-      id,
+      ids: dragIds,
       startClientX: e.clientX,
       startClientY: e.clientY,
-      startX: item.x_percent,
-      startY: item.y_percent,
+      startPositions,
     };
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", endInteraction);
@@ -238,7 +273,9 @@ export function RectRegionEditor({
     if (disabled) return;
     e.stopPropagation();
     e.preventDefault();
-    applySelection(id, { append: e.ctrlKey || e.metaKey });
+    const append = e.ctrlKey || e.metaKey;
+    applySelection(id, { append });
+    onInteractionStart?.();
     const wrap = wrapRef.current;
     const item = regionsRef.current.find((r) => r.id === id);
     if (!wrap || !item) return;
@@ -271,7 +308,10 @@ export function RectRegionEditor({
   return (
     <div
       ref={wrapRef}
-      className="relative w-full overflow-hidden rounded border border-neutral-300 bg-neutral-100"
+      className={clsx(
+        "relative w-full rounded-md border border-neutral-200/90 bg-neutral-50/90",
+        clipToStage ? "overflow-hidden" : "overflow-visible",
+      )}
       style={{ aspectRatio: stageAspectRatio }}
       onClick={(e) => {
         if (disabled) return;
@@ -299,6 +339,7 @@ export function RectRegionEditor({
           <div
             key={r.id}
             data-region-editor-item="true"
+            data-region-id={r.id}
             className={clsx(
               "group absolute touch-none select-none",
               sel ? "z-20" : "z-10",

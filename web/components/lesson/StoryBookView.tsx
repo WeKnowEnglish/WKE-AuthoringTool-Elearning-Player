@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
+import { StoryItemLayerContent } from "@/components/story/StoryItemLayerContent";
+import { GuideBlock } from "@/components/lesson/interactions/shared";
+import type { LessonPlayerVisualEdit } from "@/components/lesson/lesson-player-edit";
 import { createPortal } from "react-dom";
 import {
   useCallback,
@@ -9,13 +12,15 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
+  type CSSProperties,
 } from "react";
 import {
   KidButton,
 } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
-import { speakText, speakTextAndWait } from "@/lib/audio/tts";
+import { speakText, speakTextAndWait, stopSpeaking } from "@/lib/audio/tts";
 import { bumpTapSpeechCounter, resolveTapSpeechEntry } from "@/lib/story-tap-speech";
 import {
   getItemClickActionSequences,
@@ -28,18 +33,42 @@ import {
   getPhaseVisibleItemWhitelist,
   getResolvedPhaseTransition,
   getStartPhaseIdFromNormalizedPage,
+  getStoryLayoutMode,
   getStoryPageTurnStyle,
   storyPayloadSchema,
   type StoryActionSequence,
   type StoryActionStep,
   type StoryAnimationPreset,
   type StoryItem,
+  type StoryPage,
   type StoryPagePhase,
   type StoryPayload,
 } from "@/lib/lesson-schemas";
-import { ScaledStoryItemImage } from "@/components/story/ScaledStoryItemImage";
-import { GuideBlock } from "@/components/lesson/interaction-views";
-import type { LessonPlayerVisualEdit } from "@/components/lesson/lesson-player-edit";
+import { resolveStoryIdleForItem, storyIdleClassForPreset } from "@/lib/story-idle";
+
+function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") return () => {};
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      mq.addEventListener("change", onStoreChange);
+      return () => mq.removeEventListener("change", onStoreChange);
+    },
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+}
+
+function pageEnterHasScheduledSounds(page: StoryPage): boolean {
+  const sequences = getPageEnterActionSequences(page, { includeLegacy: true });
+  return sequences.some((seq) =>
+    seq.steps.some(
+      (step) => step.kind === "play_sound" && !!(step.sound_url?.trim()),
+    ),
+  );
+}
 
 function enterClassForPreset(preset: StoryAnimationPreset | undefined): string {
   const p = preset ?? "fade_in";
@@ -72,6 +101,7 @@ export function StoryBookView({
 }: Props) {
   const pages = useMemo(() => getNormalizedStoryPages(payload), [payload]);
   const turnStyle = getStoryPageTurnStyle(payload);
+  const layoutMode = getStoryLayoutMode(payload);
   const isMulti = (payload.pages?.length ?? 0) > 0;
   // Keep page-turn and enter animations visible in both teacher preview and student view.
   const shouldReduceMotion = false;
@@ -166,15 +196,52 @@ export function StoryBookView({
     | null
   >(null);
   useEffect(() => {
-    setMatchAssignments({});
+    queueMicrotask(() => {
+      setMatchAssignments({});
+    });
     tapSpeechCountersRef.current = {};
   }, [activeStoryPhaseId, page.id]);
-  const storyHighlightIdSet = useMemo(() => {
-    if (!currentStoryPhase?.highlight_item_ids?.length) return new Set<string>();
-    return new Set(currentStoryPhase.highlight_item_ids);
-  }, [currentStoryPhase?.highlight_item_ids]);
+  const storyHighlightIdSet =
+    !currentStoryPhase?.highlight_item_ids?.length ?
+      new Set<string>()
+    : new Set(currentStoryPhase.highlight_item_ids);
   const lastPage = safeIndex >= pages.length - 1;
   const firstPage = safeIndex === 0;
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const activePhaseForIdle = useMemo(() => {
+    if (!page.phasesExplicit) return null;
+    return activeStoryPhaseId ?? getStartPhaseIdFromNormalizedPage(page);
+  }, [page, activeStoryPhaseId]);
+
+  const pagesNavRef = useRef(pages);
+  const safeIndexRef = useRef(safeIndex);
+  const lessonBackDisabledRef = useRef(lessonBackDisabled);
+  const jumpToPageRef = useRef<(i: number) => void>(() => {});
+  const onNextScreenRef = useRef<() => void>(() => {});
+  const onBackScreenRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    pagesNavRef.current = pages;
+  }, [pages]);
+  useEffect(() => {
+    safeIndexRef.current = safeIndex;
+  }, [safeIndex]);
+  useEffect(() => {
+    lessonBackDisabledRef.current = lessonBackDisabled;
+  }, [lessonBackDisabled]);
+
+  const [infoPopup, setInfoPopup] = useState<{
+    title: string;
+    body: string;
+    image_url?: string;
+    video_url?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setInfoPopup(null);
+    });
+  }, [page.id]);
 
   const runItemEmphasis = useCallback(
     (
@@ -241,15 +308,16 @@ export function StoryBookView({
         `[data-story-item="${screenId}-${item.id}"]`,
       );
       if (!el) return;
-      const { waypoints, duration_ms } = item.path;
+      const { waypoints, duration_ms, easing: pathEasing } = item.path;
       const kf = waypoints.map((w) => ({
         left: `${w.x_percent}%`,
         top: `${w.y_percent}%`,
       }));
+      const easing = pathEasing?.trim() || "linear";
       const anim = el.animate(kf as Keyframe[], {
         duration: duration_ms,
         fill: "forwards",
-        easing: "linear",
+        easing,
       });
       anim.addEventListener("finish", () => ac.abort(), { signal: ac.signal });
     },
@@ -288,10 +356,11 @@ export function StoryBookView({
                   left: `${w.x_percent}%`,
                   top: `${w.y_percent}%`,
                 }));
+                const easing = target.path.easing?.trim() || "linear";
                 el.animate(kf as Keyframe[], {
                   duration: step.duration_ms,
                   fill: "forwards",
-                  easing: "linear",
+                  easing,
                 });
                 return;
               }
@@ -361,6 +430,30 @@ export function StoryBookView({
             tapSpeechCountersRef.current,
             resolved,
           );
+          break;
+        }
+        case "info_popup":
+          setInfoPopup({
+            title: step.popup_title?.trim() || "Info",
+            body: step.popup_body?.trim() || "",
+            image_url: step.popup_image_url?.trim() || undefined,
+            video_url: step.popup_video_url?.trim() || undefined,
+          });
+          break;
+        case "goto_page": {
+          const pgs = pagesNavRef.current;
+          const idx = safeIndexRef.current;
+          const t = step.goto_target ?? "next_page";
+          if (t === "next_page") {
+            if (idx < pgs.length - 1) jumpToPageRef.current(idx + 1);
+            else onNextScreenRef.current();
+          } else if (t === "prev_page") {
+            if (idx > 0) jumpToPageRef.current(idx - 1);
+            else if (!lessonBackDisabledRef.current) onBackScreenRef.current();
+          } else if (t === "page_id" && step.goto_page_id) {
+            const j = pgs.findIndex((pg) => pg.id === step.goto_page_id);
+            if (j >= 0) jumpToPageRef.current(j);
+          }
           break;
         }
         default:
@@ -520,7 +613,9 @@ export function StoryBookView({
   );
 
   useEffect(() => {
-    setActiveStoryPhaseId(null);
+    queueMicrotask(() => {
+      setActiveStoryPhaseId(null);
+    });
   }, [page.id]);
 
   useEffect(() => {
@@ -546,6 +641,7 @@ export function StoryBookView({
     page.items,
     page.id,
     page.action_sequences,
+    page.timeline,
     runActionSequence,
   ]);
 
@@ -573,7 +669,9 @@ export function StoryBookView({
         if (it.show_on_start === false) initialHidden[it.id] = true;
       }
     }
-    setHiddenItemIds(initialHidden);
+    queueMicrotask(() => {
+      setHiddenItemIds(initialHidden);
+    });
   }, [page.id, page.items, page.phases, page.phasesExplicit, activeStoryPhaseId]);
 
   useEffect(() => {
@@ -699,6 +797,28 @@ export function StoryBookView({
     }
   }, [firstPage, lessonBackDisabled, muted, onBackScreen, safeIndex]);
 
+  const jumpToPage = useCallback(
+    (i: number) => {
+      if (i === safeIndex || i < 0 || i >= pages.length) return;
+      playSfx("tap", muted);
+      setAudioUnlocked(true);
+      setPageTurnDir(i > safeIndex ? "next" : "back");
+      setPageTurnKey((k) => k + 1);
+      setPageIndex(i);
+    },
+    [muted, pages.length, safeIndex],
+  );
+
+  useEffect(() => {
+    jumpToPageRef.current = jumpToPage;
+  }, [jumpToPage]);
+  useEffect(() => {
+    onNextScreenRef.current = onNextScreen;
+  }, [onNextScreen]);
+  useEffect(() => {
+    onBackScreenRef.current = onBackScreen;
+  }, [onBackScreen]);
+
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.changedTouches[0]?.clientX ?? null;
   };
@@ -820,6 +940,31 @@ export function StoryBookView({
 
   useEffect(
     () => () => {
+      stopSpeaking();
+      pathAbortRef.current?.abort();
+      pathAbortRef.current = null;
+      const pa = pageAudioRef.current;
+      if (pa) {
+        pa.pause();
+        try {
+          pa.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+      }
+      const ia = itemAudioRef.current;
+      if (ia) {
+        ia.pause();
+        try {
+          ia.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+      }
+      if (phaseAutoTimerRef.current) {
+        clearTimeout(phaseAutoTimerRef.current);
+        phaseAutoTimerRef.current = null;
+      }
       for (const list of Object.values(clickSequenceTimersRef.current)) {
         for (const t of list) window.clearTimeout(t);
       }
@@ -1094,7 +1239,9 @@ export function StoryBookView({
     for (const did of dm.draggable_item_ids) {
       if (matchAssignments[did] !== dm.correct_map[did]) return;
     }
-    setActiveStoryPhaseId(r.next_phase_id);
+    queueMicrotask(() => {
+      setActiveStoryPhaseId(r.next_phase_id);
+    });
   }, [currentStoryPhase, matchAssignments, activeStoryPhaseId, page.id]);
 
   const stage = (
@@ -1197,17 +1344,33 @@ export function StoryBookView({
           const enter = item.enter?.preset ?? "fade_in";
           const dur = item.enter?.duration_ms ?? 500;
           const enterCls = enterClassForPreset(enter);
+          const itemKind = item.kind ?? "image";
+          const defaultAria =
+            itemKind === "text" ? "Story text"
+            : itemKind === "shape" ? "Story shape"
+            : itemKind === "line" ? "Story line"
+            : itemKind === "button" ? "Story button"
+            : "Story picture";
+          const resolvedIdle =
+            prefersReducedMotion ?
+              null
+            : resolveStoryIdleForItem(item, page, activePhaseForIdle);
+          const idleCls =
+            resolvedIdle ? storyIdleClassForPreset(resolvedIdle.preset) : null;
+          const idleStyle: CSSProperties | undefined =
+            resolvedIdle ?
+              {
+                ["--story-idle-amp" as string]: String(resolvedIdle.amplitude ?? 0.35),
+                ["--story-idle-period" as string]: `${resolvedIdle.period_ms ?? 2200}ms`,
+              }
+            : undefined;
           return (
             <button
               key={`${page.id}:${pageTurnKey}:${item.id}`}
               type="button"
               data-story-item={`${screenId}-${item.id}`}
               aria-label={
-                item.name?.trim() ?
-                  `${item.name.trim()} (story item)`
-                : (item.kind ?? "image") === "text" ?
-                  "Story text"
-                : "Story picture"
+                item.name?.trim() ? `${item.name.trim()} (story item)` : defaultAria
               }
               className={clsx(
                 "story-item-anim absolute box-border touch-manipulation appearance-none border-0 bg-transparent p-0 m-0",
@@ -1238,29 +1401,20 @@ export function StoryBookView({
                 data-story-item-inner={`${screenId}-${item.id}`}
                 className={clsx(
                   "relative block h-full w-full",
-                  (item.kind ?? "image") !== "text" && "overflow-hidden",
                   item.show_card !== false &&
                     "rounded-md border-2 border-kid-ink/40 bg-white/90 shadow-md",
                 )}
               >
-                {(item.kind ?? "image") === "text" ? (
-                  <span
-                    className="flex h-full w-full items-center justify-center px-2 text-center font-semibold whitespace-pre-wrap break-words"
-                    style={{
-                      color: item.text_color ?? "#0f172a",
-                      fontSize: `calc(${item.text_size_px ?? 24} * 100cqw / 960)`,
-                      fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {item.text?.trim() || "Text"}
-                  </span>
-                ) : (
-                  <ScaledStoryItemImage
-                    imageUrl={item.image_url ?? ""}
-                    imageScale={item.image_scale ?? 1}
-                  />
-                )}
+                <span
+                  className={clsx(
+                    "story-item-idle-layer relative block h-full w-full",
+                    itemKind !== "text" && itemKind !== "line" && "overflow-hidden",
+                    idleCls,
+                  )}
+                  style={idleStyle}
+                >
+                  <StoryItemLayerContent item={item} />
+                </span>
               </span>
             </button>
           );
@@ -1297,26 +1451,12 @@ export function StoryBookView({
         <div
           className={clsx(
             "relative h-full w-full",
-            (gi.kind ?? "image") !== "text" && "overflow-hidden",
+            (gi.kind ?? "image") !== "text" && (gi.kind ?? "image") !== "line" && "overflow-hidden",
             gi.show_card !== false &&
               "rounded-md border-2 border-kid-ink/50 bg-white/95 shadow-xl",
           )}
         >
-          {(gi.kind ?? "image") === "text" ? (
-            <span
-              className="flex h-full w-full items-center justify-center px-2 text-center font-semibold whitespace-pre-wrap break-words"
-              style={{
-                color: gi.text_color ?? "#0f172a",
-                fontSize: `calc(${gi.text_size_px ?? 24} * 100cqw / 960)`,
-                fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif",
-                lineHeight: 1.2,
-              }}
-            >
-              {gi.text?.trim() || "Text"}
-            </span>
-          ) : (
-            <ScaledStoryItemImage imageUrl={gi.image_url ?? ""} imageScale={gi.image_scale ?? 1} />
-          )}
+          <StoryItemLayerContent item={gi} />
         </div>
       </div>,
       document.body,
@@ -1332,12 +1472,66 @@ export function StoryBookView({
     };
   }, [draggingItemId]);
 
+  useEffect(() => {
+    if (!infoPopup) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setInfoPopup(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [infoPopup]);
+
   return (
     <div>
       <p className="sr-only" aria-live="polite">
         Page {safeIndex + 1} of {pages.length}
       </p>
       {storyDragPreviewPortal}
+      {infoPopup && typeof document !== "undefined" ?
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4"
+            role="presentation"
+            onClick={() => setInfoPopup(null)}
+          >
+            <KidPanel
+              className="relative max-h-[85vh] max-w-lg w-full overflow-y-auto p-4 shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="story-info-popup-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="story-info-popup-title" className="text-lg font-bold text-kid-ink">
+                {infoPopup.title}
+              </h2>
+              {infoPopup.body ?
+                <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-800">{infoPopup.body}</p>
+              : null}
+              {infoPopup.image_url ?
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={infoPopup.image_url}
+                  alt=""
+                  className="mt-3 max-h-52 w-full rounded object-contain"
+                />
+              : null}
+              {infoPopup.video_url ?
+                <video
+                  controls
+                  className="mt-3 w-full rounded"
+                  src={infoPopup.video_url}
+                />
+              : null}
+              <div className="mt-4 flex justify-end">
+                <KidButton type="button" variant="accent" onClick={() => setInfoPopup(null)}>
+                  Close
+                </KidButton>
+              </div>
+            </KidPanel>
+          </div>,
+          document.body,
+        )
+      : null}
 
       <div
         key={`${pageTurnKey}-${safeIndex}`}
@@ -1482,7 +1676,7 @@ export function StoryBookView({
         >
           Listen
         </KidButton>
-        {!audioUnlocked && page.auto_play && (page.timeline?.length ?? 0) > 0 ? (
+        {!audioUnlocked && page.auto_play && pageEnterHasScheduledSounds(page) ? (
           <span className="text-sm text-neutral-600">
             Tap Listen or turn the page to hear sounds.
           </span>
@@ -1504,6 +1698,28 @@ export function StoryBookView({
           {lastPage ? "Next" : "Next page"}
         </KidButton>
       </div>
+      {isMulti && layoutMode === "slide" ? (
+        <div
+          className="mt-4 flex flex-wrap items-center justify-center gap-2"
+          role="tablist"
+          aria-label="Slides"
+        >
+          {pages.map((_, i) => (
+            <button
+              key={pages[i]!.id}
+              type="button"
+              role="tab"
+              aria-selected={i === safeIndex}
+              className={
+                i === safeIndex ?
+                  "h-2.5 w-2.5 rounded-full bg-kid-ink ring-2 ring-kid-ink/30"
+                : "h-2.5 w-2.5 rounded-full bg-kid-ink/25 hover:bg-kid-ink/40"
+              }
+              onClick={() => jumpToPage(i)}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

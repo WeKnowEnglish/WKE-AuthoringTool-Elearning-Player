@@ -103,6 +103,89 @@ describe("storyPayloadSchema", () => {
     });
     expect(r.success).toBe(false);
   });
+
+  it("rejects page idle without target_item_id", () => {
+    const r = storyPayloadSchema.safeParse({
+      type: "story",
+      body_text: "x",
+      pages: [
+        {
+          id: "p1",
+          items: [
+            {
+              id: "i1",
+              image_url: "https://a",
+              x_percent: 0,
+              y_percent: 0,
+              w_percent: 10,
+              h_percent: 10,
+            },
+          ],
+          idle_animations: [{ id: "id1", preset: "pulse" }],
+        },
+      ],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects item idle with target_item_id", () => {
+    const r = storyPayloadSchema.safeParse({
+      type: "story",
+      body_text: "x",
+      pages: [
+        {
+          id: "p1",
+          items: [
+            {
+              id: "i1",
+              image_url: "https://a",
+              x_percent: 0,
+              y_percent: 0,
+              w_percent: 10,
+              h_percent: 10,
+              idle_animations: [
+                {
+                  id: "id1",
+                  preset: "pulse",
+                  target_item_id: "i1",
+                },
+              ],
+            },
+          ],
+          phases: [
+            { id: "a", is_start: true, next_phase_id: null },
+          ],
+        },
+      ],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts page idle with valid target_item_id", () => {
+    const r = storyPayloadSchema.safeParse({
+      type: "story",
+      body_text: "x",
+      pages: [
+        {
+          id: "p1",
+          items: [
+            {
+              id: "i1",
+              image_url: "https://a",
+              x_percent: 0,
+              y_percent: 0,
+              w_percent: 10,
+              h_percent: 10,
+            },
+          ],
+          idle_animations: [
+            { id: "id1", preset: "gentle_float", target_item_id: "i1" },
+          ],
+        },
+      ],
+    });
+    expect(r.success).toBe(true);
+  });
 });
 
 describe("getNormalizedStoryPages", () => {
@@ -165,6 +248,98 @@ describe("getNormalizedStoryPages", () => {
     });
     const pages = getNormalizedStoryPages(p);
     expect(pages[0].auto_play_page_text).toBe(false);
+  });
+
+  it("normalizes auto_play true when page has page_enter action_sequences only", () => {
+    const p = storyPayloadSchema.parse({
+      type: "story",
+      body_text: "Root",
+      pages: [
+        {
+          id: "p1",
+          body_text: "Hi",
+          items: [],
+          action_sequences: [
+            {
+              id: "seq1",
+              event: "page_enter",
+              steps: [
+                {
+                  id: "s1",
+                  kind: "play_sound",
+                  sound_url: "https://example.com/a.mp3",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const pages = getNormalizedStoryPages(p);
+    expect(pages[0].auto_play).toBe(true);
+  });
+
+  it("respects explicit auto_play false when page_enter sequences exist", () => {
+    const p = storyPayloadSchema.parse({
+      type: "story",
+      body_text: "Root",
+      pages: [
+        {
+          id: "p1",
+          body_text: "Hi",
+          items: [],
+          auto_play: false,
+          action_sequences: [
+            {
+              id: "seq1",
+              event: "page_enter",
+              steps: [
+                {
+                  id: "s1",
+                  kind: "play_sound",
+                  sound_url: "https://example.com/a.mp3",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const pages = getNormalizedStoryPages(p);
+    expect(pages[0].auto_play).toBe(false);
+  });
+
+  it("accepts path waypoints beyond legacy -5..105 for off-screen motion", () => {
+    const p = storyPayloadSchema.parse({
+      type: "story",
+      body_text: "Root",
+      pages: [
+        {
+          id: "p1",
+          body_text: "Hi",
+          items: [
+            {
+              id: "i1",
+              image_url: "https://x",
+              x_percent: 50,
+              y_percent: 50,
+              w_percent: 10,
+              h_percent: 10,
+              path: {
+                waypoints: [
+                  { x_percent: -30, y_percent: 120 },
+                  { x_percent: 50, y_percent: 50 },
+                ],
+                duration_ms: 1000,
+                easing: "ease-out",
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(p.pages?.[0].items[0].path?.waypoints[0].x_percent).toBe(-30);
+    expect(p.pages?.[0].items[0].path?.easing).toBe("ease-out");
   });
 
   it("accepts Phase 2 fields when item and phase ids line up", () => {

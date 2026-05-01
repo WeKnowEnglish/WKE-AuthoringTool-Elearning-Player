@@ -2,6 +2,7 @@
 
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { storyAnimationPresetSchema } from "@/lib/lesson-schemas";
+import { migrateStoryItemKind } from "@/lib/story-item-kind-migrate";
 import type { StoryItem, StoryPage } from "@/lib/lesson-schemas";
 
 const ANIM_PRESETS = storyAnimationPresetSchema.options;
@@ -33,6 +34,11 @@ function fitItemBoundsToImageAspect(
   return { ...item, w_percent: nextW, h_percent: nextH };
 }
 
+function safeHex(value: string | undefined, fallback: string): string {
+  const v = value?.trim() || fallback;
+  return v.startsWith("#") ? v : fallback;
+}
+
 type P = {
   selectedItem: StoryItem;
   selectedPage: StoryPage;
@@ -40,7 +46,6 @@ type P = {
   pages: StoryPage[];
   pushEmit: (next: StoryPage[]) => void;
   busy: boolean;
-  image_url: string;
 };
 
 export function StoryItemEditorPanel({
@@ -49,7 +54,6 @@ export function StoryItemEditorPanel({
   pages,
   pushEmit,
   busy,
-  image_url,
 }: P) {
   const patchSelectedItem = (patcher: (it: StoryItem) => StoryItem) => {
     const next = pages.map((p) =>
@@ -62,6 +66,9 @@ export function StoryItemEditorPanel({
     );
     pushEmit(next);
   };
+
+  const k = selectedItem.kind ?? "image";
+
   return (
     <div className="grid max-w-full gap-2 rounded border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-1">
       <p className="text-sm font-semibold text-neutral-900">
@@ -79,20 +86,11 @@ export function StoryItemEditorPanel({
           className="mt-1 w-full rounded border px-2 py-1 text-sm"
           placeholder="e.g. ball"
           value={selectedItem.name ?? ""}
+          disabled={busy}
           onChange={(e) => {
             const rawName = e.target.value;
             const name = rawName.length > 0 ? rawName : undefined;
-            const next = pages.map((p) =>
-              p.id === selectedPage.id ?
-                {
-                  ...p,
-                  items: p.items.map((it) =>
-                    it.id === selectedItem.id ? { ...it, name } : it,
-                  ),
-                }
-              : p,
-            );
-            pushEmit(next);
+            patchSelectedItem((it) => ({ ...it, name }));
           }}
         />
       </label>
@@ -100,69 +98,22 @@ export function StoryItemEditorPanel({
         Item type
         <select
           className="mt-1 w-full rounded border px-2 py-1 text-sm"
-          value={selectedItem.kind ?? "image"}
+          value={k}
+          disabled={busy}
           onChange={(e) => {
-            const kind = e.target.value as "image" | "text";
-            patchSelectedItem((it) => ({
-              ...it,
-              kind,
-              image_url:
-                kind === "image" ?
-                  (it.image_url || "https://placehold.co/120x80/f1f5f9/334155?text=Item")
-                : (it.image_url || "https://placehold.co/2x2/ffffff/ffffff"),
-              text: kind === "text" ? (it.text ?? "Text") : it.text,
-              show_card: kind === "text" ? false : (it.show_card ?? true),
-            }));
+            const kind = e.target.value as NonNullable<StoryItem["kind"]>;
+            patchSelectedItem((it) => migrateStoryItemKind(it, kind));
           }}
         >
           <option value="image">Image</option>
           <option value="text">Text</option>
+          <option value="shape">Shape</option>
+          <option value="line">Line</option>
+          <option value="button">Button</option>
         </select>
       </label>
-      {(selectedItem.kind ?? "image") === "text" ? (
-        <div className="grid gap-2 rounded border border-neutral-200 bg-white/80 p-2 sm:grid-cols-2">
-          <label className="sm:col-span-2 text-xs font-medium text-neutral-800">
-            Text
-            <textarea
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              rows={2}
-              value={selectedItem.text ?? ""}
-              onChange={(e) => {
-                const text = e.target.value || undefined;
-                patchSelectedItem((it) => ({ ...it, text }));
-              }}
-            />
-          </label>
-          <label className="text-xs font-medium text-neutral-800">
-            Text color
-            <input
-              type="color"
-              className="mt-1 h-9 w-full rounded border px-1 py-1"
-              value={selectedItem.text_color ?? "#0f172a"}
-              onChange={(e) => {
-                const text_color = e.target.value || undefined;
-                patchSelectedItem((it) => ({ ...it, text_color }));
-              }}
-            />
-          </label>
-          <label className="text-xs font-medium text-neutral-800">
-            Text size (px)
-            <input
-              type="number"
-              min={10}
-              max={128}
-              step={1}
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
-              value={selectedItem.text_size_px ?? 24}
-              onChange={(e) => {
-                const text_size_px = Math.min(128, Math.max(10, Number(e.target.value) || 24));
-                patchSelectedItem((it) => ({ ...it, text_size_px }));
-              }}
-            />
-          </label>
-        </div>
-      ) : null}
-      {(selectedItem.kind ?? "image") === "image" ? (
+
+      {k === "image" ? (
         <MediaUrlControls
           label="Item image URL"
           value={selectedItem.image_url ?? ""}
@@ -203,100 +154,157 @@ export function StoryItemEditorPanel({
           compact
         />
       ) : null}
-      <div className="rounded border border-neutral-200 bg-white/70 p-2">
-        <p className="text-xs font-semibold text-neutral-800">Item image scale</p>
-        <p className="mb-1 text-[10px] text-neutral-500">
-          Simple stable scaling only. Use pre-cropped images for exact framing.
-        </p>
-        <label className="text-xs font-medium text-neutral-800">
-          Scale
-          <input
-            type="number"
-            min={0.25}
-            max={8}
-            step={0.05}
+
+      {k === "text" || k === "button" ? (
+        <label className={labelClass()}>
+          Label text
+          <textarea
             className="mt-1 w-full rounded border px-2 py-1 text-sm"
-            value={selectedItem.image_scale ?? 1}
+            rows={2}
+            value={selectedItem.text ?? ""}
+            disabled={busy}
             onChange={(e) => {
-              const image_scale = Math.min(8, Math.max(0.25, Number(e.target.value) || 1));
-              const next = pages.map((p) =>
-                p.id === selectedPage.id ?
-                  {
-                    ...p,
-                    items: p.items.map((it) =>
-                      it.id === selectedItem.id ? { ...it, image_scale } : it,
-                    ),
-                  }
-                : p,
-              );
-              pushEmit(next);
+              const text = e.target.value || undefined;
+              patchSelectedItem((it) => ({ ...it, text }));
             }}
           />
         </label>
-      </div>
+      ) : null}
+
+      {k === "shape" || k === "line" || k === "button" ? (
+        <label className={labelClass()}>
+          Fill / stroke color
+          <input
+            type="color"
+            className="mt-1 h-9 w-full cursor-pointer rounded border bg-white px-1 py-1"
+            value={safeHex(selectedItem.color_hex, "#3b82f6")}
+            disabled={busy}
+            onChange={(e) => {
+              const color_hex = e.target.value;
+              patchSelectedItem((it) => ({ ...it, color_hex }));
+            }}
+          />
+        </label>
+      ) : null}
+
+      {k === "line" ? (
+        <label className={labelClass()}>
+          Line width (px)
+          <input
+            type="number"
+            min={1}
+            max={24}
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={selectedItem.line_width_px ?? 3}
+            disabled={busy}
+            onChange={(e) => {
+              const line_width_px = Math.min(24, Math.max(1, Number(e.target.value) || 3));
+              patchSelectedItem((it) => ({ ...it, line_width_px }));
+            }}
+          />
+        </label>
+      ) : null}
+
+      {k === "text" || k === "button" ? (
+        <div className="grid gap-2 rounded border border-neutral-200 bg-white/80 p-2 sm:grid-cols-2">
+          <label className="text-xs font-medium text-neutral-800">
+            Text color
+            <input
+              type="color"
+              className="mt-1 h-9 w-full rounded border px-1 py-1"
+              value={safeHex(selectedItem.text_color, k === "button" ? "#ffffff" : "#0f172a")}
+              disabled={busy}
+              onChange={(e) => {
+                const text_color = e.target.value;
+                patchSelectedItem((it) => ({ ...it, text_color }));
+              }}
+            />
+          </label>
+          <label className="text-xs font-medium text-neutral-800">
+            Text size (px)
+            <input
+              type="number"
+              min={10}
+              max={128}
+              step={1}
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              value={selectedItem.text_size_px ?? (k === "button" ? 18 : 24)}
+              disabled={busy}
+              onChange={(e) => {
+                const fallback = k === "button" ? 18 : 24;
+                const text_size_px = Math.min(
+                  128,
+                  Math.max(10, Number(e.target.value) || fallback),
+                );
+                patchSelectedItem((it) => ({ ...it, text_size_px }));
+              }}
+            />
+          </label>
+        </div>
+      ) : null}
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-800">
+        <input
+          type="checkbox"
+          className="mb-0.5"
+          checked={selectedItem.show_card !== false}
+          disabled={busy}
+          onChange={(e) => {
+            const show_card = e.target.checked;
+            patchSelectedItem((it) => ({ ...it, show_card }));
+          }}
+        />
+        Card frame (border + shadow)
+      </label>
+
+      {k === "image" ? (
+        <div className="rounded border border-neutral-200 bg-white/70 p-2">
+          <p className="text-xs font-semibold text-neutral-800">Item image scale</p>
+          <p className="mb-1 text-[10px] text-neutral-500">
+            Simple stable scaling only. Use pre-cropped images for exact framing.
+          </p>
+          <label className="text-xs font-medium text-neutral-800">
+            Scale
+            <input
+              type="number"
+              min={0.25}
+              max={8}
+              step={0.05}
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              value={selectedItem.image_scale ?? 1}
+              disabled={busy}
+              onChange={(e) => {
+                const image_scale = Math.min(8, Math.max(0.25, Number(e.target.value) || 1));
+                patchSelectedItem((it) => ({ ...it, image_scale }));
+              }}
+            />
+          </label>
+        </div>
+      ) : null}
+
       <div className="grid gap-2 sm:grid-cols-2">
         <label className={labelClass()}>
           z-index
           <input
             type="number"
             className="mt-1 w-full rounded border px-2 py-1 text-sm"
-            value={selectedItem.z_index}
+            value={selectedItem.z_index ?? 0}
+            disabled={busy}
             onChange={(e) => {
               const z = Number(e.target.value) || 0;
-              const next = pages.map((p) =>
-                p.id === selectedPage.id ?
-                  {
-                    ...p,
-                    items: p.items.map((it) =>
-                      it.id === selectedItem.id ? { ...it, z_index: z } : it,
-                    ),
-                  }
-                : p,
-              );
-              pushEmit(next);
+              patchSelectedItem((it) => ({ ...it, z_index: z }));
             }}
           />
-        </label>
-        <label className="flex items-end gap-2 text-sm text-neutral-800">
-          <input
-            type="checkbox"
-            className="mb-0.5"
-            checked={selectedItem.show_card !== false}
-            onChange={(e) => {
-              const show_card = e.target.checked;
-              const next = pages.map((p) =>
-                p.id === selectedPage.id ?
-                  {
-                    ...p,
-                    items: p.items.map((it) =>
-                      it.id === selectedItem.id ? { ...it, show_card } : it,
-                    ),
-                  }
-                : p,
-              );
-              pushEmit(next);
-            }}
-          />
-          Show card
         </label>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={selectedItem.show_on_start ?? true}
+          disabled={busy}
           onChange={(e) => {
             const show_on_start = e.target.checked;
-            const next = pages.map((p) =>
-              p.id === selectedPage.id ?
-                {
-                  ...p,
-                  items: p.items.map((it) =>
-                    it.id === selectedItem.id ? { ...it, show_on_start } : it,
-                  ),
-                }
-              : p,
-            );
-            pushEmit(next);
+            patchSelectedItem((it) => ({ ...it, show_on_start }));
           }}
         />
         Show on page start
@@ -307,27 +315,16 @@ export function StoryItemEditorPanel({
           <select
             className="mt-1 w-full rounded border px-2 py-1 text-sm"
             value={selectedItem.enter?.preset ?? "fade_in"}
+            disabled={busy}
             onChange={(e) => {
               const preset = e.target.value as (typeof ANIM_PRESETS)[number];
-              const next = pages.map((p) =>
-                p.id === selectedPage.id ?
-                  {
-                    ...p,
-                    items: p.items.map((it) =>
-                      it.id === selectedItem.id ?
-                        {
-                          ...it,
-                          enter: {
-                            preset,
-                            duration_ms: it.enter?.duration_ms ?? 500,
-                          },
-                        }
-                      : it,
-                    ),
-                  }
-                : p,
-              );
-              pushEmit(next);
+              patchSelectedItem((it) => ({
+                ...it,
+                enter: {
+                  preset,
+                  duration_ms: it.enter?.duration_ms ?? 500,
+                },
+              }));
             }}
           >
             {ANIM_PRESETS.map((a) => (
@@ -342,27 +339,16 @@ export function StoryItemEditorPanel({
           <select
             className="mt-1 w-full rounded border px-2 py-1 text-sm"
             value={selectedItem.emphasis?.preset ?? "grow"}
+            disabled={busy}
             onChange={(e) => {
               const preset = e.target.value as (typeof ANIM_PRESETS)[number];
-              const next = pages.map((p) =>
-                p.id === selectedPage.id ?
-                  {
-                    ...p,
-                    items: p.items.map((it) =>
-                      it.id === selectedItem.id ?
-                        {
-                          ...it,
-                          emphasis: {
-                            preset,
-                            duration_ms: it.emphasis?.duration_ms ?? 500,
-                          },
-                        }
-                      : it,
-                    ),
-                  }
-                : p,
-              );
-              pushEmit(next);
+              patchSelectedItem((it) => ({
+                ...it,
+                emphasis: {
+                  preset,
+                  duration_ms: it.emphasis?.duration_ms ?? 500,
+                },
+              }));
             }}
           >
             {ANIM_PRESETS.map((a) => (

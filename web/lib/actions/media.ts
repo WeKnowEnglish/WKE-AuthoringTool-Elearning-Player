@@ -532,8 +532,13 @@ export async function updateTeacherMediaMetadata(
     .select(
       "id,storage_path,public_url,original_filename,content_type,uploaded_by,created_at,sha256_hash,phash,meta_categories,meta_tags,meta_alternative_names,meta_plural,meta_countability,meta_level,meta_word_type,meta_skills,meta_past_tense,meta_notes,meta_item_name",
     )
-    .single();
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) {
+    throw new Error(
+      "Could not update this media item. It may not exist, or you may not have permission to edit it.",
+    );
+  }
   revalidatePath("/teacher/media");
   return data as unknown as MediaAssetRow;
 }

@@ -1,0 +1,1749 @@
+{
+  "screens": [
+    {
+      "screen_type": "start",
+      "payload": {
+        "type": "start",
+        "cta_label": "Start the story",
+        "image_url": "https://placehold.co/800x520/fecdd3/9f1239?text=My+Toys",
+        "read_aloud_title": "My Toys with Mai"
+      }
+    },
+    {
+      "screen_type": "story",
+      "payload": {
+        "type": "story",
+        "guide": {
+          "tip_text": "Tap highlighted toys to go on. On drag pages, match each word to the right picture. Replace placeholder images with your library photos anytime.",
+          "image_url": "https://placehold.co/120x120/e0f2fe/0c4a6e?text=Tip"
+        },
+        "pages": [
+          {
+            "id": "page-toy-room",
+            "items": [
+              {
+                "id": "p0-teddy",
+                "kind": "image",
+                "name": "teddy",
+                "enter": {
+                  "preset": "slide_up",
+                  "delay_ms": 0,
+                  "duration_ms": 550
+                },
+                "z_index": 2,
+                "h_percent": 26.290682760247975,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ad17c91b-fb1c-408e-8f38-ddbdee684212-Teddy_bear.png",
+                "show_card": true,
+                "w_percent": 16.431676725154983,
+                "x_percent": 8,
+                "y_percent": 58,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p0-doll",
+                "kind": "image",
+                "name": "doll",
+                "enter": {
+                  "preset": "slide_right",
+                  "duration_ms": 500
+                },
+                "z_index": 2,
+                "h_percent": 27.36421020237931,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4c99ca79-d5b5-429b-968d-abcbf9b55d42-Doll.png",
+                "show_card": true,
+                "w_percent": 17.10263137648707,
+                "x_percent": 28,
+                "y_percent": 56,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p0-puppet",
+                "kind": "image",
+                "name": "puppet",
+                "enter": {
+                  "preset": "grow",
+                  "duration_ms": 450,
+                  "grow_scale_percent": 115
+                },
+                "z_index": 2,
+                "h_percent": 28.397182958878158,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e387d063-6428-4652-816a-f9bec87eb3d7-Puppet.png",
+                "show_card": true,
+                "w_percent": 17.74823934929885,
+                "x_percent": 48,
+                "y_percent": 54,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p0-blocks",
+                "kind": "image",
+                "name": "blocks",
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 600
+                },
+                "z_index": 1,
+                "h_percent": 22.627416997969522,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/dc3057b5-7679-479e-99cf-c9d75f387983-Blocks.png",
+                "show_card": true,
+                "w_percent": 14.142135623730951,
+                "x_percent": 10,
+                "y_percent": 28,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p0-legos",
+                "kind": "image",
+                "name": "legos",
+                "enter": {
+                  "preset": "slide_down",
+                  "duration_ms": 500
+                },
+                "z_index": 1,
+                "h_percent": 22.627416997969522,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/67738e25-5087-4336-ad97-1ae597fefe09-Legos.png",
+                "show_card": true,
+                "w_percent": 14.142135623730951,
+                "x_percent": 30,
+                "y_percent": 26,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p0-puzzle",
+                "kind": "image",
+                "name": "puzzle",
+                "enter": {
+                  "preset": "wobble",
+                  "duration_ms": 500
+                },
+                "z_index": 1,
+                "h_percent": 22.627416997969522,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/8898752e-ec6c-4b05-b23c-2ce5e7d67ec4-Puzzles.png",
+                "show_card": true,
+                "w_percent": 14.142135623730951,
+                "x_percent": 50,
+                "y_percent": 28,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p0-robot",
+                "kind": "image",
+                "name": "robot",
+                "path": {
+                  "waypoints": [
+                    {
+                      "x_percent": 85,
+                      "y_percent": 55
+                    },
+                    {
+                      "x_percent": 78,
+                      "y_percent": 52
+                    }
+                  ],
+                  "duration_ms": 1200
+                },
+                "enter": {
+                  "preset": "slide_left",
+                  "duration_ms": 550
+                },
+                "z_index": 3,
+                "h_percent": 33.56188314144485,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/6afaac11-a124-47e1-a830-132c2abfc212-Robot.png",
+                "show_card": true,
+                "w_percent": 20.97617696340303,
+                "x_percent": 72,
+                "y_percent": 50,
+                "image_scale": 1,
+                "show_on_start": false
+              }
+            ],
+            "title": "My toy room",
+            "phases": [
+              {
+                "id": "p0-intro",
+                "name": "Intro",
+                "dialogue": {
+                  "start": "This is my toy room. I love my toys!"
+                },
+                "is_start": true,
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3200,
+                  "next_phase_id": "p0-teddy"
+                },
+                "next_phase_id": "p0-teddy"
+              },
+              {
+                "id": "p0-teddy",
+                "name": "Teddy",
+                "dialogue": {
+                  "start": "I've got a teddy."
+                },
+                "is_start": false,
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-teddy"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-teddy",
+                    "duration_ms": 600,
+                    "emphasis_preset": "grow"
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p0-doll",
+                  "target_item_id": "p0-teddy"
+                },
+                "next_phase_id": "p0-doll",
+                "highlight_item_ids": [
+                  "p0-teddy"
+                ]
+              },
+              {
+                "id": "p0-doll",
+                "name": "Doll",
+                "dialogue": {
+                  "start": "I've got a doll."
+                },
+                "is_start": false,
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-doll"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-doll",
+                    "duration_ms": 500,
+                    "emphasis_preset": "wobble"
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p0-puppet",
+                  "target_item_id": "p0-doll"
+                },
+                "next_phase_id": "p0-puppet",
+                "highlight_item_ids": [
+                  "p0-doll"
+                ]
+              },
+              {
+                "id": "p0-puppet",
+                "name": "Puppet",
+                "dialogue": {
+                  "start": "I've got a puppet."
+                },
+                "is_start": false,
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-puppet"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-puppet",
+                    "duration_ms": 700,
+                    "emphasis_preset": "spin"
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p0-build",
+                  "target_item_id": "p0-puppet"
+                },
+                "next_phase_id": "p0-build",
+                "highlight_item_ids": [
+                  "p0-puppet"
+                ]
+              },
+              {
+                "id": "p0-build",
+                "name": "Blocks, Legos, puzzle",
+                "dialogue": {
+                  "start": "I've got blocks. I've got Legos. I've got a puzzle. Tap the puzzle!"
+                },
+                "is_start": false,
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_ids": [
+                      "p0-blocks",
+                      "p0-legos",
+                      "p0-puzzle"
+                    ]
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p0-robot",
+                  "target_item_id": "p0-puzzle"
+                },
+                "next_phase_id": "p0-robot",
+                "highlight_item_ids": [
+                  "p0-puzzle"
+                ]
+              },
+              {
+                "id": "p0-robot",
+                "name": "Robot",
+                "dialogue": {
+                  "start": "I've got a robot!"
+                },
+                "is_start": false,
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-robot"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-robot",
+                    "duration_ms": 650,
+                    "emphasis_preset": "grow"
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p0-done",
+                  "target_item_id": "p0-robot"
+                },
+                "next_phase_id": "p0-done",
+                "highlight_item_ids": [
+                  "p0-robot"
+                ]
+              },
+              {
+                "id": "p0-done",
+                "name": "End",
+                "dialogue": {
+                  "start": "Turn the page for colors and outdoor toys."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "end_phase"
+                },
+                "next_phase_id": null
+              }
+            ],
+            "body_text": "This is my toy room. I love my toys!",
+            "image_fit": "cover",
+            "read_aloud_text": "This is my toy room. I love my toys!",
+            "background_image_url": "https://placehold.co/1200x800/f1f5f9/334155?text=Toy+room"
+          },
+          {
+            "id": "page-colors",
+            "items": [
+              {
+                "id": "p1-plane",
+                "kind": "image",
+                "name": "airplane",
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 700
+                },
+                "z_index": 2,
+                "h_percent": 30.25227264190246,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/7ad7d1c9-56ed-4009-a6bf-84c41285af11-Plane.png",
+                "show_card": true,
+                "w_percent": 18.907670401189037,
+                "x_percent": 12,
+                "y_percent": 38,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p1-car",
+                "kind": "image",
+                "name": "car",
+                "enter": {
+                  "preset": "slide_right",
+                  "duration_ms": 550
+                },
+                "z_index": 2,
+                "h_percent": 29.06544339933592,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/eb4f7066-f397-4dae-aabe-acd50b3946fa-Car.png",
+                "show_card": true,
+                "w_percent": 18.16590212458495,
+                "x_percent": 38,
+                "y_percent": 42,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p1-kite",
+                "kind": "image",
+                "name": "kite",
+                "enter": {
+                  "preset": "grow",
+                  "duration_ms": 600,
+                  "grow_scale_percent": 110
+                },
+                "z_index": 3,
+                "h_percent": 32,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b4b8964d-c19c-4db0-95c9-fa93f46cd9f9-Kite.png",
+                "show_card": true,
+                "w_percent": 20,
+                "x_percent": 66,
+                "y_percent": 22,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p1-ball",
+                "kind": "image",
+                "name": "ball",
+                "z_index": 1,
+                "h_percent": 20.079840636817814,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b8e254a3-cd7b-4a06-a2bd-fe4d252678e4-Ball.png",
+                "show_card": true,
+                "w_percent": 12.549900398011133,
+                "x_percent": 14,
+                "y_percent": 72,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p1-scooter",
+                "kind": "image",
+                "name": "scooter",
+                "z_index": 1,
+                "h_percent": 29.06544339933592,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/08d92f2f-823e-41cd-a72a-94d7fdc73b9a-scooter.png",
+                "show_card": true,
+                "w_percent": 18.16590212458495,
+                "x_percent": 40,
+                "y_percent": 70,
+                "image_scale": 1,
+                "show_on_start": false
+              },
+              {
+                "id": "p1-skate",
+                "kind": "image",
+                "name": "skateboard",
+                "z_index": 1,
+                "h_percent": 29.06544339933592,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/9557c9ae-6105-4d0e-90c5-1da3ca75a3ce-skateboard.png",
+                "show_card": true,
+                "w_percent": 18.16590212458495,
+                "x_percent": 70,
+                "y_percent": 68,
+                "image_scale": 1,
+                "show_on_start": false
+              }
+            ],
+            "title": "Colors",
+            "phases": [
+              {
+                "id": "p1-a",
+                "name": "Airplane",
+                "dialogue": {
+                  "start": "My airplane is white."
+                },
+                "is_start": true,
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3400,
+                  "next_phase_id": "p1-b"
+                },
+                "next_phase_id": "p1-b",
+                "visible_item_ids": [
+                  "p1-plane"
+                ]
+              },
+              {
+                "id": "p1-b",
+                "name": "Car",
+                "dialogue": {
+                  "start": "My car is red."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3400,
+                  "next_phase_id": "p1-c"
+                },
+                "next_phase_id": "p1-c",
+                "visible_item_ids": [
+                  "p1-plane",
+                  "p1-car"
+                ]
+              },
+              {
+                "id": "p1-c",
+                "name": "Kite",
+                "dialogue": {
+                  "start": "My kite is blue and yellow."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3800,
+                  "next_phase_id": "p1-d"
+                },
+                "next_phase_id": "p1-d",
+                "visible_item_ids": [
+                  "p1-plane",
+                  "p1-car",
+                  "p1-kite"
+                ]
+              },
+              {
+                "id": "p1-d",
+                "name": "Outside toys",
+                "dialogue": {
+                  "start": "I've got a ball, a scooter, and a skateboard. Let's play outside!"
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "end_phase"
+                },
+                "next_phase_id": null,
+                "visible_item_ids": [
+                  "p1-plane",
+                  "p1-car",
+                  "p1-kite",
+                  "p1-ball",
+                  "p1-scooter",
+                  "p1-skate"
+                ]
+              }
+            ],
+            "body_text": "Some toys have colors. Look!",
+            "image_fit": "cover",
+            "read_aloud_text": "Some toys have colors. Look!",
+            "background_image_url": "https://placehold.co/1200x800/fef3c7/78350f?text=Shelf"
+          },
+          {
+            "id": "page-bridge-puppet-robot",
+            "title": "Puppet & Robot",
+            "background_image_url": "https://placehold.co/1200x800/fef9c3/854d0e?text=On+the+way+to+the+park",
+            "image_fit": "cover",
+            "body_text": "Puppet and Robot can't wait for the park.",
+            "read_aloud_text": "Puppet and Robot can't wait for the park.",
+            "items": [
+              {
+                "id": "br1-puppet",
+                "kind": "image",
+                "name": "Puppet",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e387d063-6428-4652-816a-f9bec87eb3d7-Puppet.png",
+                "x_percent": 8,
+                "y_percent": 38,
+                "w_percent": 22,
+                "h_percent": 38,
+                "z_index": 2,
+                "show_card": true,
+                "image_scale": 1,
+                "show_on_start": false,
+                "enter": {
+                  "preset": "slide_left",
+                  "duration_ms": 550
+                }
+              },
+              {
+                "id": "br1-robot",
+                "kind": "image",
+                "name": "Robot",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/6afaac11-a124-47e1-a830-132c2abfc212-Robot.png",
+                "x_percent": 58,
+                "y_percent": 36,
+                "w_percent": 28,
+                "h_percent": 42,
+                "z_index": 2,
+                "show_card": true,
+                "image_scale": 1,
+                "show_on_start": false,
+                "enter": {
+                  "preset": "slide_right",
+                  "duration_ms": 550
+                },
+                "path": {
+                  "waypoints": [
+                    {
+                      "x_percent": 62,
+                      "y_percent": 40
+                    },
+                    {
+                      "x_percent": 58,
+                      "y_percent": 36
+                    }
+                  ],
+                  "duration_ms": 900
+                }
+              },
+              {
+                "id": "br1-label",
+                "kind": "text",
+                "name": "label",
+                "text": "Puppet & Robot",
+                "text_color": "#713f12",
+                "text_size_px": 20,
+                "x_percent": 6,
+                "y_percent": 6,
+                "w_percent": 88,
+                "h_percent": 8,
+                "show_card": false,
+                "z_index": 4,
+                "show_on_start": true
+              }
+            ],
+            "phases": [
+              {
+                "id": "br1-a",
+                "name": "Puppet talks",
+                "is_start": true,
+                "next_phase_id": "br1-b",
+                "visible_item_ids": [
+                  "br1-label",
+                  "br1-puppet"
+                ],
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "br1-puppet"
+                  }
+                ],
+                "dialogue": {
+                  "start": "Puppet: The sun is out! Let's go play outside with the scooters and the ball!"
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 4200,
+                  "next_phase_id": "br1-b"
+                }
+              },
+              {
+                "id": "br1-b",
+                "name": "Robot talks",
+                "is_start": false,
+                "next_phase_id": "br1-c",
+                "visible_item_ids": [
+                  "br1-label",
+                  "br1-puppet",
+                  "br1-robot"
+                ],
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "br1-robot"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "br1-robot",
+                    "emphasis_preset": "grow",
+                    "duration_ms": 550
+                  }
+                ],
+                "dialogue": {
+                  "start": "Robot: Beep-boop! Outdoor toys — charging up for fun! Tap me!"
+                },
+                "highlight_item_ids": [
+                  "br1-robot"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "br1-robot",
+                  "next_phase_id": "br1-c"
+                }
+              },
+              {
+                "id": "br1-c",
+                "name": "Together",
+                "is_start": false,
+                "next_phase_id": null,
+                "visible_item_ids": [
+                  "br1-label",
+                  "br1-puppet",
+                  "br1-robot"
+                ],
+                "dialogue": {
+                  "start": "Puppet: Race you to the grass! Robot: Affirmative! Turn the page for the park!"
+                },
+                "highlight_item_ids": [
+                  "br1-puppet"
+                ],
+                "on_enter": [
+                  {
+                    "action": "emphasis",
+                    "item_id": "br1-puppet",
+                    "emphasis_preset": "wobble",
+                    "duration_ms": 500
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "br1-puppet",
+                  "next_phase_id": "br1-d"
+                }
+              },
+              {
+                "id": "br1-d",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-outdoor",
+            "items": [
+              {
+                "id": "p2-ball",
+                "kind": "image",
+                "name": "ball",
+                "path": {
+                  "waypoints": [
+                    {
+                      "x_percent": 25,
+                      "y_percent": 58
+                    },
+                    {
+                      "x_percent": 20,
+                      "y_percent": 62
+                    }
+                  ],
+                  "duration_ms": 1400
+                },
+                "enter": {
+                  "preset": "slide_left",
+                  "duration_ms": 600
+                },
+                "z_index": 2,
+                "h_percent": 22.627416997969522,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b108ab9b-b604-43fe-b1c4-5ffafec8e112-ball.png",
+                "show_card": true,
+                "w_percent": 14.142135623730951,
+                "x_percent": 18,
+                "y_percent": 62,
+                "image_scale": 1,
+                "show_on_start": true,
+                "action_sequences": [
+                  {
+                    "id": "seq-outdoor-ball",
+                    "name": "Ball two taps",
+                    "event": "click",
+                    "steps": [
+                      {
+                        "id": "p2-b1",
+                        "kind": "emphasis",
+                        "timing": "next_click",
+                        "duration_ms": 550,
+                        "emphasis_preset": "grow"
+                      },
+                      {
+                        "id": "p2-b2",
+                        "kind": "tts",
+                        "timing": "next_click",
+                        "delay_ms": 200,
+                        "tts_text": "I've got a ball!"
+                      }
+                    ],
+                    "active_phase_ids": [
+                      "p2-gate"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "p2-scooter",
+                "kind": "image",
+                "name": "scooter",
+                "enter": {
+                  "preset": "slide_up",
+                  "duration_ms": 500
+                },
+                "z_index": 2,
+                "h_percent": 31.597468253010398,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/08d92f2f-823e-41cd-a72a-94d7fdc73b9a-scooter.png",
+                "show_card": true,
+                "w_percent": 19.748417658131498,
+                "x_percent": 42,
+                "y_percent": 58,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p2-skate",
+                "kind": "image",
+                "name": "skateboard",
+                "enter": {
+                  "preset": "slide_right",
+                  "duration_ms": 520
+                },
+                "z_index": 2,
+                "h_percent": 30.35786553761644,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/9557c9ae-6105-4d0e-90c5-1da3ca75a3ce-skateboard.png",
+                "show_card": true,
+                "w_percent": 18.973665961010276,
+                "x_percent": 70,
+                "y_percent": 60,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p2-kite",
+                "kind": "image",
+                "name": "kite",
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 800
+                },
+                "z_index": 3,
+                "h_percent": 28.397182958878158,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b4b8964d-c19c-4db0-95c9-fa93f46cd9f9-Kite.png",
+                "show_card": true,
+                "w_percent": 17.74823934929885,
+                "x_percent": 55,
+                "y_percent": 12,
+                "image_scale": 1,
+                "show_on_start": true
+              }
+            ],
+            "title": "Outside",
+            "phases": [
+              {
+                "id": "p2-intro",
+                "name": "Intro",
+                "dialogue": {
+                  "start": "We can play outside!"
+                },
+                "is_start": true,
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 2600,
+                  "next_phase_id": "p2-scooter-ph"
+                },
+                "next_phase_id": "p2-scooter-ph"
+              },
+              {
+                "id": "p2-scooter-ph",
+                "name": "Scooter",
+                "dialogue": {
+                  "start": "I've got a scooter."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p2-skate-ph",
+                  "target_item_id": "p2-scooter"
+                },
+                "next_phase_id": "p2-skate-ph",
+                "highlight_item_ids": [
+                  "p2-scooter"
+                ]
+              },
+              {
+                "id": "p2-skate-ph",
+                "name": "Skateboard",
+                "dialogue": {
+                  "start": "I've got a skateboard."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p2-kite-ph",
+                  "target_item_id": "p2-skate"
+                },
+                "next_phase_id": "p2-kite-ph",
+                "highlight_item_ids": [
+                  "p2-skate"
+                ]
+              },
+              {
+                "id": "p2-kite-ph",
+                "name": "Kite",
+                "dialogue": {
+                  "start": "I've got a kite. It can fly high!"
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p2-gate",
+                  "target_item_id": "p2-kite"
+                },
+                "next_phase_id": "p2-gate",
+                "highlight_item_ids": [
+                  "p2-kite"
+                ]
+              },
+              {
+                "id": "p2-gate",
+                "kind": "click_to_advance",
+                "name": "Ball sequence",
+                "dialogue": {
+                  "start": "Tap the ball two times. First it bounces, then it talks!"
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "sequence_complete",
+                  "sequence_id": "seq-outdoor-ball",
+                  "next_phase_id": "p2-done"
+                },
+                "next_phase_id": "p2-done",
+                "highlight_item_ids": [
+                  "p2-ball"
+                ]
+              },
+              {
+                "id": "p2-done",
+                "name": "End",
+                "dialogue": {
+                  "start": "Nice playing outside! Turn the page — Teddy and Doll want to talk to you."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "end_phase"
+                },
+                "next_phase_id": null
+              }
+            ],
+            "body_text": "We can play outside!",
+            "image_fit": "cover",
+            "read_aloud_text": "We can play outside!",
+            "background_image_url": "https://placehold.co/1200x800/dcfce7/14532d?text=Park"
+          },
+          {
+            "id": "page-bridge-teddy-doll",
+            "title": "Teddy & Doll",
+            "background_image_url": "https://placehold.co/1200x800/fce7f3/9d174d?text=Cozy+after+play",
+            "image_fit": "cover",
+            "body_text": "Soft friends after a busy day outside.",
+            "read_aloud_text": "Soft friends after a busy day outside.",
+            "items": [
+              {
+                "id": "br2-teddy",
+                "kind": "image",
+                "name": "teddy",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ad17c91b-fb1c-408e-8f38-ddbdee684212-Teddy_bear.png",
+                "x_percent": 10,
+                "y_percent": 40,
+                "w_percent": 26,
+                "h_percent": 40,
+                "z_index": 2,
+                "show_card": true,
+                "image_scale": 1,
+                "show_on_start": true,
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 600
+                }
+              },
+              {
+                "id": "br2-doll",
+                "kind": "image",
+                "name": "doll",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4c99ca79-d5b5-429b-968d-abcbf9b55d42-Doll.png",
+                "x_percent": 58,
+                "y_percent": 38,
+                "w_percent": 26,
+                "h_percent": 42,
+                "z_index": 2,
+                "show_card": true,
+                "image_scale": 1,
+                "show_on_start": true,
+                "enter": {
+                  "preset": "slide_up",
+                  "duration_ms": 550
+                }
+              }
+            ],
+            "phases": [
+              {
+                "id": "br2-a",
+                "name": "Teddy",
+                "is_start": true,
+                "next_phase_id": "br2-b",
+                "dialogue": {
+                  "start": "Teddy: Phew! You ran so fast with the ball and the kite. I'm ready to rest."
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 4500,
+                  "next_phase_id": "br2-b"
+                }
+              },
+              {
+                "id": "br2-b",
+                "name": "Doll",
+                "is_start": false,
+                "next_phase_id": "br2-c",
+                "dialogue": {
+                  "start": "Doll: Come sit with us. The soft toys want to say hello. Tap me!"
+                },
+                "highlight_item_ids": [
+                  "br2-doll"
+                ],
+                "on_enter": [
+                  {
+                    "action": "emphasis",
+                    "item_id": "br2-doll",
+                    "emphasis_preset": "grow",
+                    "duration_ms": 500
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "br2-doll",
+                  "next_phase_id": "br2-c"
+                }
+              },
+              {
+                "id": "br2-c",
+                "name": "Teddy hug",
+                "is_start": false,
+                "next_phase_id": "br2-d",
+                "dialogue": {
+                  "start": "Teddy: Tap me for a big teddy hug — then we match words to pictures!"
+                },
+                "highlight_item_ids": [
+                  "br2-teddy"
+                ],
+                "on_enter": [
+                  {
+                    "action": "emphasis",
+                    "item_id": "br2-teddy",
+                    "emphasis_preset": "wobble",
+                    "duration_ms": 600
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "br2-teddy",
+                  "next_phase_id": "br2-d"
+                }
+              },
+              {
+                "id": "br2-d",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-stuffed",
+            "items": [
+              {
+                "id": "p3-caption",
+                "kind": "text",
+                "name": "caption",
+                "text": "Stuffed animals",
+                "z_index": 4,
+                "h_percent": 8,
+                "show_card": false,
+                "w_percent": 84,
+                "x_percent": 8,
+                "y_percent": 6,
+                "text_color": "#831843",
+                "image_scale": 1,
+                "text_size_px": 22,
+                "show_on_start": true
+              },
+              {
+                "id": "p3-teddy-img",
+                "kind": "image",
+                "name": "teddy",
+                "z_index": 1,
+                "h_percent": 36.48561360317242,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ad17c91b-fb1c-408e-8f38-ddbdee684212-Teddy_bear.png",
+                "show_card": true,
+                "w_percent": 22.80350850198276,
+                "x_percent": 10,
+                "y_percent": 38,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p3-doll-img",
+                "kind": "image",
+                "name": "doll",
+                "z_index": 1,
+                "h_percent": 36.48561360317242,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4c99ca79-d5b5-429b-968d-abcbf9b55d42-Doll.png",
+                "show_card": true,
+                "w_percent": 22.80350850198276,
+                "x_percent": 60,
+                "y_percent": 38,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p3-word-teddy",
+                "kind": "text",
+                "name": "word teddy",
+                "text": "teddy",
+                "z_index": 3,
+                "h_percent": 10,
+                "show_card": true,
+                "w_percent": 16,
+                "x_percent": 12,
+                "y_percent": 78,
+                "text_color": "#0f172a",
+                "image_scale": 1,
+                "text_size_px": 20,
+                "show_on_start": false
+              },
+              {
+                "id": "p3-word-doll",
+                "kind": "text",
+                "name": "word doll",
+                "text": "doll",
+                "z_index": 3,
+                "h_percent": 10,
+                "show_card": true,
+                "w_percent": 14,
+                "x_percent": 32,
+                "y_percent": 78,
+                "text_color": "#0f172a",
+                "image_scale": 1,
+                "text_size_px": 20,
+                "show_on_start": false
+              }
+            ],
+            "title": "Stuffed friends",
+            "phases": [
+              {
+                "id": "p3-intro",
+                "name": "Intro",
+                "dialogue": {
+                  "start": "That's my teddy! That's my doll! Now match the words."
+                },
+                "is_start": true,
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 4200,
+                  "next_phase_id": "p3-drag"
+                },
+                "next_phase_id": "p3-drag",
+                "visible_item_ids": [
+                  "p3-caption",
+                  "p3-teddy-img",
+                  "p3-doll-img"
+                ]
+              },
+              {
+                "id": "p3-drag",
+                "kind": "drag_match",
+                "name": "Drag match",
+                "dialogue": {
+                  "start": "Drag each word to the right toy."
+                },
+                "is_start": false,
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_ids": [
+                      "p3-word-teddy",
+                      "p3-word-doll"
+                    ]
+                  }
+                ],
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "p3-end"
+                },
+                "drag_match": {
+                  "correct_map": {
+                    "p3-word-doll": "p3-doll-img",
+                    "p3-word-teddy": "p3-teddy-img"
+                  },
+                  "target_item_ids": [
+                    "p3-teddy-img",
+                    "p3-doll-img"
+                  ],
+                  "draggable_item_ids": [
+                    "p3-word-teddy",
+                    "p3-word-doll"
+                  ],
+                  "after_correct_match": "return_home"
+                },
+                "next_phase_id": "p3-end",
+                "visible_item_ids": [
+                  "p3-caption",
+                  "p3-teddy-img",
+                  "p3-doll-img",
+                  "p3-word-teddy",
+                  "p3-word-doll"
+                ]
+              },
+              {
+                "id": "p3-end",
+                "name": "End",
+                "dialogue": {
+                  "start": "Great matching! Turn the page — Robot has a garage surprise."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "end_phase"
+                },
+                "next_phase_id": null
+              }
+            ],
+            "body_text": "I love stuffed animals.",
+            "image_fit": "cover",
+            "read_aloud_text": "I love stuffed animals.",
+            "background_image_url": "https://placehold.co/1200x800/fce7f3/9d174d?text=Cozy+corner"
+          },
+          {
+            "id": "page-bridge-robot-garage",
+            "title": "Robot's clue",
+            "background_image_url": "https://placehold.co/1200x800/e2e8f0/334155?text=Hallway+to+the+garage",
+            "image_fit": "cover",
+            "body_text": "A surprise is waiting.",
+            "read_aloud_text": "A surprise is waiting.",
+            "items": [
+              {
+                "id": "br3-robot",
+                "kind": "image",
+                "name": "robot",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/6afaac11-a124-47e1-a830-132c2abfc212-Robot.png",
+                "x_percent": 12,
+                "y_percent": 34,
+                "w_percent": 30,
+                "h_percent": 48,
+                "z_index": 2,
+                "show_card": true,
+                "image_scale": 1,
+                "show_on_start": true,
+                "enter": {
+                  "preset": "slide_left",
+                  "duration_ms": 500
+                }
+              },
+              {
+                "id": "br3-car-teaser",
+                "kind": "image",
+                "name": "car teaser",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/eb4f7066-f397-4dae-aabe-acd50b3946fa-Car.png",
+                "x_percent": 62,
+                "y_percent": 48,
+                "w_percent": 22,
+                "h_percent": 28,
+                "z_index": 1,
+                "show_card": true,
+                "image_scale": 0.85,
+                "show_on_start": false,
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 700
+                }
+              }
+            ],
+            "phases": [
+              {
+                "id": "br3-a",
+                "name": "Robot mission",
+                "is_start": true,
+                "next_phase_id": "br3-b",
+                "visible_item_ids": [
+                  "br3-robot"
+                ],
+                "dialogue": {
+                  "start": "Robot: Excellent matching! New mission: the garage. Something red is hiding under a blanket."
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 5200,
+                  "next_phase_id": "br3-b"
+                }
+              },
+              {
+                "id": "br3-b",
+                "name": "Peek",
+                "is_start": false,
+                "next_phase_id": "br3-c",
+                "visible_item_ids": [
+                  "br3-robot",
+                  "br3-car-teaser"
+                ],
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "br3-car-teaser"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "br3-car-teaser",
+                    "emphasis_preset": "grow",
+                    "duration_ms": 500
+                  }
+                ],
+                "dialogue": {
+                  "start": "Robot: Is that… a car? Tap the robot if you're ready to see!"
+                },
+                "highlight_item_ids": [
+                  "br3-robot"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "br3-robot",
+                  "next_phase_id": "br3-c"
+                }
+              },
+              {
+                "id": "br3-c",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "dialogue": {
+                  "start": "Robot: Let's go! Turn the page for the big reveal."
+                },
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-toy-car",
+            "items": [
+              {
+                "id": "p4-blanket",
+                "kind": "image",
+                "name": "cover",
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 400
+                },
+                "z_index": 2,
+                "h_percent": 22,
+                "image_url": "https://placehold.co/400x200/cbd5e1/64748b?text=???",
+                "show_card": true,
+                "w_percent": 32,
+                "x_percent": 34,
+                "y_percent": 48,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p4-car",
+                "kind": "image",
+                "name": "toy car",
+                "enter": {
+                  "preset": "grow",
+                  "duration_ms": 700,
+                  "grow_scale_percent": 108
+                },
+                "z_index": 1,
+                "h_percent": 41.569219381653056,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/eb4f7066-f397-4dae-aabe-acd50b3946fa-Car.png",
+                "show_card": true,
+                "w_percent": 25.98076211353316,
+                "x_percent": 32,
+                "y_percent": 46,
+                "image_scale": 1,
+                "tap_speeches": [
+                  {
+                    "id": "p4-tap-line",
+                    "text": "That's my toy car!",
+                    "priority": 1,
+                    "max_plays": 3,
+                    "phase_ids": [
+                      "p4-hero"
+                    ]
+                  }
+                ],
+                "show_on_start": false
+              },
+              {
+                "id": "p4-line",
+                "kind": "text",
+                "name": "line",
+                "text": "That's my toy car!",
+                "enter": {
+                  "preset": "slide_down",
+                  "duration_ms": 500
+                },
+                "z_index": 4,
+                "h_percent": 10,
+                "show_card": false,
+                "w_percent": 80,
+                "x_percent": 10,
+                "y_percent": 18,
+                "text_color": "#1e1b4b",
+                "image_scale": 1,
+                "text_size_px": 24,
+                "show_on_start": false
+              }
+            ],
+            "title": "Toy car",
+            "phases": [
+              {
+                "id": "p4-reveal",
+                "name": "Reveal",
+                "dialogue": {
+                  "start": "That's my toy car!"
+                },
+                "is_start": true,
+                "on_enter": [
+                  {
+                    "action": "hide_item",
+                    "item_id": "p4-blanket"
+                  },
+                  {
+                    "action": "show_item",
+                    "item_id": "p4-car"
+                  },
+                  {
+                    "action": "show_item",
+                    "item_id": "p4-line"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p4-car",
+                    "duration_ms": 600,
+                    "emphasis_preset": "wobble"
+                  }
+                ],
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 2000,
+                  "next_phase_id": "p4-hero"
+                },
+                "next_phase_id": "p4-hero"
+              },
+              {
+                "id": "p4-hero",
+                "name": "Tap car",
+                "dialogue": {
+                  "start": "Tap the car. Say it with me: That's my toy car!"
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "on_click",
+                  "next_phase_id": "p4-end",
+                  "target_item_id": "p4-car"
+                },
+                "next_phase_id": "p4-end",
+                "highlight_item_ids": [
+                  "p4-car"
+                ]
+              },
+              {
+                "id": "p4-end",
+                "name": "End",
+                "dialogue": {
+                  "start": "You said it! Turn the page — the kite welcomes you to the toy fair."
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "end_phase"
+                },
+                "next_phase_id": null
+              }
+            ],
+            "body_text": "My favorite car!",
+            "image_fit": "cover",
+            "read_aloud_text": "My favorite car!",
+            "background_image_url": "https://placehold.co/1200x800/e0e7ff/312e81?text=Garage"
+          },
+          {
+            "id": "page-bridge-kite-fair",
+            "title": "At the fair",
+            "background_image_url": "https://placehold.co/1200x800/fef08a/854d0e?text=Fair+flags",
+            "image_fit": "cover",
+            "body_text": "The toy fair begins!",
+            "read_aloud_text": "The toy fair begins!",
+            "items": [
+              {
+                "id": "br4-kite",
+                "kind": "image",
+                "name": "kite",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b4b8964d-c19c-4db0-95c9-fa93f46cd9f9-Kite.png",
+                "x_percent": 18,
+                "y_percent": 10,
+                "w_percent": 22,
+                "h_percent": 34,
+                "z_index": 3,
+                "show_card": true,
+                "image_scale": 1,
+                "show_on_start": true,
+                "enter": {
+                  "preset": "slide_down",
+                  "duration_ms": 600
+                },
+                "path": {
+                  "waypoints": [
+                    {
+                      "x_percent": 24,
+                      "y_percent": 14
+                    },
+                    {
+                      "x_percent": 18,
+                      "y_percent": 10
+                    }
+                  ],
+                  "duration_ms": 1600
+                }
+              },
+              {
+                "id": "br4-puzzle",
+                "kind": "image",
+                "name": "puzzle booth",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/8898752e-ec6c-4b05-b23c-2ce5e7d67ec4-Puzzles.png",
+                "x_percent": 58,
+                "y_percent": 44,
+                "w_percent": 26,
+                "h_percent": 34,
+                "z_index": 2,
+                "show_card": true,
+                "image_scale": 1,
+                "show_on_start": false,
+                "enter": {
+                  "preset": "grow",
+                  "duration_ms": 500,
+                  "grow_scale_percent": 105
+                }
+              },
+              {
+                "id": "br4-sign",
+                "kind": "text",
+                "name": "sign",
+                "text": "Toy Fair — match the words!",
+                "text_color": "#713f12",
+                "text_size_px": 18,
+                "x_percent": 8,
+                "y_percent": 82,
+                "w_percent": 84,
+                "h_percent": 10,
+                "show_card": false,
+                "z_index": 4,
+                "show_on_start": true
+              }
+            ],
+            "phases": [
+              {
+                "id": "br4-a",
+                "name": "Kite welcome",
+                "is_start": true,
+                "next_phase_id": "br4-b",
+                "visible_item_ids": [
+                  "br4-kite",
+                  "br4-sign"
+                ],
+                "dialogue": {
+                  "start": "Kite: Whoosh! Welcome! Drag each word to the right toy at my fair!"
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 4500,
+                  "next_phase_id": "br4-b"
+                }
+              },
+              {
+                "id": "br4-b",
+                "name": "Puzzle booth",
+                "is_start": false,
+                "next_phase_id": "br4-c",
+                "visible_item_ids": [
+                  "br4-kite",
+                  "br4-puzzle",
+                  "br4-sign"
+                ],
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "br4-puzzle"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "br4-puzzle",
+                    "emphasis_preset": "wobble",
+                    "duration_ms": 500
+                  }
+                ],
+                "dialogue": {
+                  "start": "Puzzle booth: I've got puzzles, balls, and dolls today. Tap the kite when you're ready!"
+                },
+                "highlight_item_ids": [
+                  "br4-kite"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "br4-kite",
+                  "next_phase_id": "br4-c"
+                }
+              },
+              {
+                "id": "br4-c",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-fair",
+            "items": [
+              {
+                "id": "p5-puzzle-img",
+                "kind": "image",
+                "name": "puzzle",
+                "z_index": 1,
+                "h_percent": 33.94112549695428,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/8898752e-ec6c-4b05-b23c-2ce5e7d67ec4-Puzzles.png",
+                "show_card": true,
+                "w_percent": 21.213203435596427,
+                "x_percent": 8,
+                "y_percent": 36,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p5-ball-img",
+                "kind": "image",
+                "name": "ball",
+                "z_index": 1,
+                "h_percent": 28.844410203711913,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b8e254a3-cd7b-4a06-a2bd-fe4d252678e4-Ball.png",
+                "show_card": true,
+                "w_percent": 18.027756377319946,
+                "x_percent": 38,
+                "y_percent": 40,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p5-doll-img",
+                "kind": "image",
+                "name": "doll",
+                "z_index": 1,
+                "h_percent": 33.94112549695428,
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4c99ca79-d5b5-429b-968d-abcbf9b55d42-Doll.png",
+                "show_card": true,
+                "w_percent": 21.213203435596427,
+                "x_percent": 68,
+                "y_percent": 36,
+                "image_scale": 1,
+                "show_on_start": true
+              },
+              {
+                "id": "p5-w-puzzle",
+                "kind": "text",
+                "name": "word puzzle",
+                "text": "puzzle",
+                "z_index": 3,
+                "h_percent": 9,
+                "show_card": true,
+                "w_percent": 14,
+                "x_percent": 10,
+                "y_percent": 76,
+                "text_color": "#0f172a",
+                "image_scale": 1,
+                "text_size_px": 18,
+                "show_on_start": true
+              },
+              {
+                "id": "p5-w-ball",
+                "kind": "text",
+                "name": "word ball",
+                "text": "ball",
+                "z_index": 3,
+                "h_percent": 9,
+                "show_card": true,
+                "w_percent": 12,
+                "x_percent": 30,
+                "y_percent": 76,
+                "text_color": "#0f172a",
+                "image_scale": 1,
+                "text_size_px": 18,
+                "show_on_start": true
+              },
+              {
+                "id": "p5-w-doll",
+                "kind": "text",
+                "name": "word doll",
+                "text": "doll",
+                "z_index": 3,
+                "h_percent": 9,
+                "show_card": true,
+                "w_percent": 12,
+                "x_percent": 48,
+                "y_percent": 76,
+                "text_color": "#0f172a",
+                "image_scale": 1,
+                "text_size_px": 18,
+                "show_on_start": true
+              }
+            ],
+            "title": "Toy fair",
+            "phases": [
+              {
+                "id": "p5-drag",
+                "kind": "drag_match",
+                "name": "Fair drag match",
+                "dialogue": {
+                  "start": "Drag puzzle, ball, and doll to the pictures."
+                },
+                "is_start": true,
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "p5-fin"
+                },
+                "drag_match": {
+                  "correct_map": {
+                    "p5-w-ball": "p5-ball-img",
+                    "p5-w-doll": "p5-doll-img",
+                    "p5-w-puzzle": "p5-puzzle-img"
+                  },
+                  "target_item_ids": [
+                    "p5-puzzle-img",
+                    "p5-ball-img",
+                    "p5-doll-img"
+                  ],
+                  "draggable_item_ids": [
+                    "p5-w-puzzle",
+                    "p5-w-ball",
+                    "p5-w-doll"
+                  ],
+                  "after_correct_match": "stick_on_target"
+                },
+                "next_phase_id": "p5-fin"
+              },
+              {
+                "id": "p5-fin",
+                "name": "Finale",
+                "dialogue": {
+                  "start": "You did it! I've got a teddy, a robot, a kite — so many toys!"
+                },
+                "is_start": false,
+                "completion": {
+                  "type": "end_phase"
+                },
+                "next_phase_id": null
+              }
+            ],
+            "body_text": "Match the words at the toy fair!",
+            "image_fit": "cover",
+            "read_aloud_text": "Match the words at the toy fair!",
+            "background_image_url": "https://placehold.co/1200x800/fef9c3/854d0e?text=Toy+fair"
+          }
+        ],
+        "tts_lang": "en-US",
+        "body_text": "This is my toy room. I love my toys!",
+        "image_fit": "cover",
+        "image_url": "https://placehold.co/1200x800/f1f5f9/334155?text=Toy+room",
+        "page_turn_style": "curl",
+        "read_aloud_text": "This is my toy room. I love my toys!"
+      }
+    }
+  ]
+}

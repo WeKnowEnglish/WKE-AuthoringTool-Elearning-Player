@@ -96,7 +96,7 @@ export function getPageEnterActionSequences(
     ...next,
     {
       id: `legacy:page:${page.id}:timeline`,
-      name: "Legacy timeline",
+      name: "Autoplay (legacy timeline)",
       event: "page_enter",
       steps: timeline.map((step, idx) => ({
         id: `legacy:page:${page.id}:tl:${idx}`,
@@ -141,7 +141,7 @@ export function getPhaseEnterActionSequences(
     ...next,
     {
       id: `legacy:phase:${phase.id}:on_enter`,
-      name: "Legacy on enter",
+      name: "Autoplay (legacy phase on_enter)",
       event: "phase_enter",
       steps: legacySteps,
     },

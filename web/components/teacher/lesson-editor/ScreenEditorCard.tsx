@@ -2,7 +2,16 @@
 
 import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  startTransition,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   clickTargetsPayloadSchema,
   dragMatchPayloadSchema,
@@ -30,6 +39,7 @@ import {
   type ScreenPayload,
 } from "@/lib/lesson-schemas";
 import { updateScreenPayload } from "@/lib/actions/teacher";
+import { treasureHuntClickTargetsTemplate } from "@/lib/teacher-interaction-templates";
 import { parseAcceptableAnswersInput } from "@/lib/acceptable-answers-parse";
 import {
   payloadToStarredText,
@@ -61,6 +71,16 @@ function emitLive(
   onLivePayload(r.success ? r.data : raw);
 }
 
+export type ScreenEditorCardHandle = {
+  saveNow: () => Promise<void>;
+};
+
+export type ScreenEditorStatus = {
+  isSaving: boolean;
+  saveHint: string | null;
+  err: string | null;
+};
+
 type Props = {
   screen: LessonScreenRow;
   index: number;
@@ -69,22 +89,40 @@ type Props = {
   isSelected: boolean;
   onSelect: () => void;
   bumpScreenPayload: (screenId: string, payload: unknown) => void;
+  /** When true, Save / Advanced JSON controls stay on the card (e.g. Quiz builder). */
+  showInlineSaveToolbar?: boolean;
+  /** When `showInlineSaveToolbar` is false, parent controls advanced JSON visibility (Help menu). */
+  advancedJsonOpen?: boolean;
+  onAdvancedJsonOpenChange?: (open: boolean) => void;
+  onStatusChange?: (status: ScreenEditorStatus) => void;
+  /** Called after the server confirms a successful payload save (for subtle header feedback). */
+  onPersistSuccess?: () => void;
 };
 
-export function ScreenEditorCard({
-  screen,
-  index,
-  lessonId,
-  moduleId,
-  isSelected,
-  onSelect,
-  bumpScreenPayload,
-}: Props) {
+export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
+  function ScreenEditorCard(
+    {
+      screen,
+      index,
+      lessonId,
+      moduleId,
+      isSelected,
+      onSelect,
+      bumpScreenPayload,
+      showInlineSaveToolbar = false,
+      advancedJsonOpen = false,
+      onAdvancedJsonOpenChange,
+      onStatusChange,
+      onPersistSuccess,
+    },
+    ref,
+  ) {
   const router = useRouter();
   const [err, setErr] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveHint, setSaveHint] = useState<string | null>(null);
-  const [showJson, setShowJson] = useState(false);
+  const [internalShowJson, setInternalShowJson] = useState(false);
+  const showJson = showInlineSaveToolbar ? internalShowJson : advancedJsonOpen;
   const [jsonDraft, setJsonDraft] = useState(() =>
     JSON.stringify(screen.payload, null, 2),
   );
@@ -197,6 +235,7 @@ export function ScreenEditorCard({
         }
         lastSavedJson.current = JSON.stringify(payload);
         setJsonDraft(JSON.stringify(payload, null, 2));
+        onPersistSuccess?.();
         return true;
       } catch (e) {
         if (DEBUG_SAVE_PIPELINE) {
@@ -208,7 +247,7 @@ export function ScreenEditorCard({
         setIsSaving(false);
       }
     },
-    [lessonId, moduleId, screen.id, screen.screen_type],
+    [lessonId, moduleId, onPersistSuccess, screen.id, screen.screen_type],
   );
 
   /**
@@ -268,6 +307,24 @@ export function ScreenEditorCard({
     screen.id,
   ]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      saveNow: () => saveNow(),
+    }),
+    [saveNow],
+  );
+
+  useEffect(() => {
+    if (showInlineSaveToolbar || !onStatusChange) return;
+    onStatusChange({ isSaving, saveHint, err });
+  }, [showInlineSaveToolbar, onStatusChange, isSaving, saveHint, err]);
+
+  useEffect(() => {
+    if (showInlineSaveToolbar || !advancedJsonOpen) return;
+    setJsonDraft(JSON.stringify(pendingRef.current, null, 2));
+  }, [showInlineSaveToolbar, advancedJsonOpen, screen.id]);
+
   /** After typing pauses (~3s) — avoids saving mid-word and clobbering the editor on refresh. */
   const scheduleDebouncedPersist = useCallback(() => {
     clearSaveTimer();
@@ -322,42 +379,42 @@ export function ScreenEditorCard({
 
   return (
     <div
-      className={`rounded border bg-white p-4 ${
-        isSelected ? "ring-2 ring-sky-600" : ""
-      }`}
+      className={clsx(
+        /* overflow-y must stay visible so story toolbar position:sticky works */
+        "flex min-h-0 min-w-0 flex-1 flex-col bg-white",
+        isSelected && "bg-sky-50/40",
+      )}
       id={`screen-${screen.id}`}
       onBlurCapture={onBlurCapture}
     >
-      <button
-        type="button"
-        onClick={onSelect}
-        className="mb-2 w-full rounded-md text-left font-semibold hover:underline active:bg-neutral-100"
-      >
-        #{index} · {screen.screen_type}
+      <span className="sr-only">
+        Screen {index + 1}, {screen.screen_type}
         {screen.screen_type === "interaction"
-          ? ` · ${getInteractionSubtype(screen.payload) ?? "?"}`
+          ? `, ${getInteractionSubtype(screen.payload) ?? "interaction"}`
           : ""}
-      </button>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => void saveNow()}
-          className="rounded border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-neutral-800"
-        >
-          Save screen now
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowJson((v) => !v)}
-          className="rounded px-1 text-sm text-neutral-600 underline hover:bg-neutral-50 active:bg-neutral-100"
-        >
-          {showJson ? "Hide" : "Show"} advanced JSON
-        </button>
-        {isSaving ? (
-          <span className="text-xs font-medium text-neutral-500">Saving…</span>
-        ) : null}
-      </div>
-      {saveHint ? (
+      </span>
+      {showInlineSaveToolbar ? (
+        <div className="mb-2 flex flex-wrap items-center gap-2 px-3 pt-3">
+          <button
+            type="button"
+            onClick={() => void saveNow()}
+            className="rounded border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-neutral-800"
+          >
+            Save screen now
+          </button>
+          <button
+            type="button"
+            onClick={() => setInternalShowJson((v) => !v)}
+            className="rounded px-1 text-sm text-neutral-600 underline hover:bg-neutral-50 active:bg-neutral-100"
+          >
+            {showJson ? "Hide" : "Show"} advanced JSON
+          </button>
+          {isSaving ? (
+            <span className="text-xs font-medium text-neutral-500">Saving…</span>
+          ) : null}
+        </div>
+      ) : null}
+      {showInlineSaveToolbar && saveHint ? (
         <p
           className={`mb-2 text-xs font-medium ${
             saveHint.startsWith("Already") ? "text-neutral-600" : "text-green-800"
@@ -367,10 +424,10 @@ export function ScreenEditorCard({
         </p>
       ) : null}
       {err ? (
-        <p className="mb-2 rounded bg-red-50 px-2 py-1 text-sm text-red-800">{err}</p>
+        <p className="mb-2 rounded bg-red-50 px-3 py-1 text-sm text-red-800">{err}</p>
       ) : null}
       {showJson ? (
-        <div className="mb-3 space-y-2">
+        <div className="mb-3 space-y-2 px-3">
           <textarea
             value={jsonDraft}
             onChange={(e) => {
@@ -392,7 +449,7 @@ export function ScreenEditorCard({
         </div>
       ) : null}
       {!showJson && parsed ? (
-        <>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <StructuredFields
             screenType={screen.screen_type}
             parsed={parsed}
@@ -401,7 +458,7 @@ export function ScreenEditorCard({
             payloadSyncKey={storySyncKey}
           />
           {screen.screen_type === "interaction" && parsed.type === "interaction" ? (
-            <section className="mt-4 rounded border border-neutral-200 p-3">
+            <section className="mx-3 mt-4 shrink-0 rounded border border-neutral-200 p-3">
               <h3 className="text-xs font-bold uppercase tracking-wide text-neutral-600">Behavior</h3>
               <label className="mt-2 flex items-center gap-2 text-sm">
                 <input
@@ -439,15 +496,15 @@ export function ScreenEditorCard({
               </label>
             </section>
           ) : null}
-        </>
+        </div>
       ) : !showJson && !parsed ? (
-        <p className="text-sm text-red-700">
+        <p className="px-3 text-sm text-red-700">
           Payload is invalid for this screen type. Fix it in advanced JSON.
         </p>
       ) : null}
     </div>
   );
-}
+});
 
 function StructuredFields({
   screenType,
@@ -1745,6 +1802,35 @@ function ClickTargetsFields({
             Find all (treasure hunt — tap every listed target; others are decoys)
           </label>
         </div>
+        <button
+          type="button"
+          disabled={busy}
+          className="mt-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-950 hover:bg-amber-100"
+          onClick={() => {
+            const tpl = treasureHuntClickTargetsTemplate();
+            const parsed = clickTargetsPayloadSchema.parse({
+              ...tpl,
+              guide: initial.guide,
+            });
+            setBody(parsed.body_text ?? "");
+            setImg(parsed.image_url ?? "");
+            setTargets(parsed.targets.map((t) => ({ ...t })));
+            setMode("treasure");
+            setTreasureIds([...(parsed.treasure_target_ids ?? [])]);
+            setCorrect("");
+            setSelectedId(null);
+            emit(
+              parsed.body_text ?? "",
+              parsed.image_url ?? "",
+              parsed.targets.map((t) => ({ ...t })),
+              "treasure",
+              "",
+              [...(parsed.treasure_target_ids ?? [])],
+            );
+          }}
+        >
+          Load treasure hunt demo layout
+        </button>
       </div>
       {image_url ? (
         <RectRegionEditor

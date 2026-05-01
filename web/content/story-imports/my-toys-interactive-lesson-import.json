@@ -1,0 +1,1127 @@
+{
+  "screens": [
+    {
+      "screen_type": "start",
+      "payload": {
+        "type": "start",
+        "image_url": "https://placehold.co/800x520/fecdd3/9f1239?text=My+Toys",
+        "cta_label": "Start the story",
+        "read_aloud_title": "My Toys with Mai"
+      }
+    },
+    {
+      "screen_type": "story",
+      "payload": {
+        "type": "story",
+        "payload_version": 2,
+        "body_text": "Mai's toys — practice: I've got a …, My … is …, and That's my toy car!",
+        "read_aloud_text": "Welcome to Mai's toy room. Listen and tap the toys.",
+        "tts_lang": "en-US",
+        "page_turn_style": "curl",
+        "guide": {
+          "tip_text": "Tap highlighted toys to go on. On drag pages, match each word to the right picture. Replace placeholder images with your library photos anytime.",
+          "image_url": "https://placehold.co/120x120/e0f2fe/0c4a6e?text=Tip"
+        },
+        "pages": [
+          {
+            "id": "page-toy-room",
+            "title": "My toy room",
+            "background_image_url": "https://placehold.co/1200x800/f1f5f9/334155?text=Toy+room",
+            "image_fit": "cover",
+            "body_text": "This is my toy room. I love my toys!",
+            "read_aloud_text": "This is my toy room. I love my toys!",
+            "items": [
+              {
+                "id": "p0-teddy",
+                "name": "teddy",
+                "image_url": "https://placehold.co/320x240/fbcfe8/831843?text=Teddy",
+                "x_percent": 8,
+                "y_percent": 58,
+                "w_percent": 18,
+                "h_percent": 24,
+                "show_on_start": false,
+                "z_index": 2,
+                "enter": {
+                  "preset": "slide_up",
+                  "duration_ms": 550,
+                  "delay_ms": 0
+                }
+              },
+              {
+                "id": "p0-doll",
+                "name": "doll",
+                "image_url": "https://placehold.co/320x240/fce7f3/9d174d?text=Doll",
+                "x_percent": 28,
+                "y_percent": 56,
+                "w_percent": 18,
+                "h_percent": 26,
+                "show_on_start": false,
+                "z_index": 2,
+                "enter": {
+                  "preset": "slide_right",
+                  "duration_ms": 500
+                }
+              },
+              {
+                "id": "p0-puppet",
+                "name": "puppet",
+                "image_url": "https://placehold.co/320x240/e9d5ff/6b21a8?text=Puppet",
+                "x_percent": 48,
+                "y_percent": 54,
+                "w_percent": 18,
+                "h_percent": 28,
+                "show_on_start": false,
+                "z_index": 2,
+                "enter": {
+                  "preset": "grow",
+                  "duration_ms": 450,
+                  "grow_scale_percent": 115
+                }
+              },
+              {
+                "id": "p0-blocks",
+                "name": "blocks",
+                "image_url": "https://placehold.co/320x240/fed7aa/9a3412?text=Blocks",
+                "x_percent": 10,
+                "y_percent": 28,
+                "w_percent": 16,
+                "h_percent": 20,
+                "show_on_start": false,
+                "z_index": 1,
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 600
+                }
+              },
+              {
+                "id": "p0-legos",
+                "name": "legos",
+                "image_url": "https://placehold.co/320x240/bfdbfe/1d4ed8?text=Legos",
+                "x_percent": 30,
+                "y_percent": 26,
+                "w_percent": 16,
+                "h_percent": 20,
+                "show_on_start": false,
+                "z_index": 1,
+                "enter": {
+                  "preset": "slide_down",
+                  "duration_ms": 500
+                }
+              },
+              {
+                "id": "p0-puzzle",
+                "name": "puzzle",
+                "image_url": "https://placehold.co/320x240/d1fae5/065f46?text=Puzzle",
+                "x_percent": 50,
+                "y_percent": 28,
+                "w_percent": 16,
+                "h_percent": 20,
+                "show_on_start": false,
+                "z_index": 1,
+                "enter": {
+                  "preset": "wobble",
+                  "duration_ms": 500
+                }
+              },
+              {
+                "id": "p0-robot",
+                "name": "robot",
+                "image_url": "https://placehold.co/320x280/e5e7eb/374151?text=Robot",
+                "x_percent": 72,
+                "y_percent": 50,
+                "w_percent": 22,
+                "h_percent": 32,
+                "show_on_start": false,
+                "z_index": 3,
+                "enter": {
+                  "preset": "slide_left",
+                  "duration_ms": 550
+                },
+                "path": {
+                  "waypoints": [
+                    {
+                      "x_percent": 85,
+                      "y_percent": 55
+                    },
+                    {
+                      "x_percent": 78,
+                      "y_percent": 52
+                    }
+                  ],
+                  "duration_ms": 1200
+                }
+              }
+            ],
+            "phases": [
+              {
+                "id": "p0-intro",
+                "name": "Intro",
+                "is_start": true,
+                "next_phase_id": "p0-teddy",
+                "dialogue": {
+                  "start": "This is my toy room. I love my toys!"
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3200,
+                  "next_phase_id": "p0-teddy"
+                }
+              },
+              {
+                "id": "p0-teddy",
+                "name": "Teddy",
+                "is_start": false,
+                "next_phase_id": "p0-doll",
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-teddy"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-teddy",
+                    "emphasis_preset": "grow",
+                    "duration_ms": 600
+                  }
+                ],
+                "dialogue": {
+                  "start": "I've got a teddy."
+                },
+                "highlight_item_ids": [
+                  "p0-teddy"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p0-teddy",
+                  "next_phase_id": "p0-doll"
+                }
+              },
+              {
+                "id": "p0-doll",
+                "name": "Doll",
+                "is_start": false,
+                "next_phase_id": "p0-puppet",
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-doll"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-doll",
+                    "emphasis_preset": "wobble",
+                    "duration_ms": 500
+                  }
+                ],
+                "dialogue": {
+                  "start": "I've got a doll."
+                },
+                "highlight_item_ids": [
+                  "p0-doll"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p0-doll",
+                  "next_phase_id": "p0-puppet"
+                }
+              },
+              {
+                "id": "p0-puppet",
+                "name": "Puppet",
+                "is_start": false,
+                "next_phase_id": "p0-build",
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-puppet"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-puppet",
+                    "emphasis_preset": "spin",
+                    "duration_ms": 700
+                  }
+                ],
+                "dialogue": {
+                  "start": "I've got a puppet."
+                },
+                "highlight_item_ids": [
+                  "p0-puppet"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p0-puppet",
+                  "next_phase_id": "p0-build"
+                }
+              },
+              {
+                "id": "p0-build",
+                "name": "Blocks, Legos, puzzle",
+                "is_start": false,
+                "next_phase_id": "p0-robot",
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_ids": [
+                      "p0-blocks",
+                      "p0-legos",
+                      "p0-puzzle"
+                    ]
+                  }
+                ],
+                "dialogue": {
+                  "start": "I've got blocks. I've got Legos. I've got a puzzle. Tap the puzzle!"
+                },
+                "highlight_item_ids": [
+                  "p0-puzzle"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p0-puzzle",
+                  "next_phase_id": "p0-robot"
+                }
+              },
+              {
+                "id": "p0-robot",
+                "name": "Robot",
+                "is_start": false,
+                "next_phase_id": "p0-done",
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_id": "p0-robot"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p0-robot",
+                    "emphasis_preset": "grow",
+                    "duration_ms": 650
+                  }
+                ],
+                "dialogue": {
+                  "start": "I've got a robot!"
+                },
+                "highlight_item_ids": [
+                  "p0-robot"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p0-robot",
+                  "next_phase_id": "p0-done"
+                }
+              },
+              {
+                "id": "p0-done",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "dialogue": {
+                  "start": "Turn the page for colors and outdoor toys."
+                },
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-colors",
+            "title": "Colors",
+            "background_image_url": "https://placehold.co/1200x800/fef3c7/78350f?text=Shelf",
+            "image_fit": "cover",
+            "body_text": "Some toys have colors. Look!",
+            "read_aloud_text": "Some toys have colors. Look!",
+            "items": [
+              {
+                "id": "p1-plane",
+                "name": "airplane",
+                "image_url": "https://placehold.co/320x220/e0f2fe/0c4a6e?text=Airplane",
+                "x_percent": 12,
+                "y_percent": 38,
+                "w_percent": 22,
+                "h_percent": 26,
+                "show_on_start": false,
+                "z_index": 2,
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 700
+                }
+              },
+              {
+                "id": "p1-car",
+                "name": "car",
+                "image_url": "https://placehold.co/320x220/fee2e2/991b1b?text=Car",
+                "x_percent": 38,
+                "y_percent": 42,
+                "w_percent": 22,
+                "h_percent": 24,
+                "show_on_start": false,
+                "z_index": 2,
+                "enter": {
+                  "preset": "slide_right",
+                  "duration_ms": 550
+                }
+              },
+              {
+                "id": "p1-kite",
+                "name": "kite",
+                "image_url": "https://placehold.co/300x280/fef08a/854d0e?text=Kite",
+                "x_percent": 66,
+                "y_percent": 22,
+                "w_percent": 20,
+                "h_percent": 32,
+                "show_on_start": false,
+                "z_index": 3,
+                "enter": {
+                  "preset": "grow",
+                  "duration_ms": 600,
+                  "grow_scale_percent": 110
+                }
+              },
+              {
+                "id": "p1-ball",
+                "name": "ball",
+                "image_url": "https://placehold.co/240x240/fca5a5/7f1d1d?text=Ball",
+                "x_percent": 14,
+                "y_percent": 72,
+                "w_percent": 14,
+                "h_percent": 18,
+                "show_on_start": false,
+                "z_index": 1
+              },
+              {
+                "id": "p1-scooter",
+                "name": "scooter",
+                "image_url": "https://placehold.co/300x200/dcfce7/14532d?text=Scooter",
+                "x_percent": 40,
+                "y_percent": 70,
+                "w_percent": 24,
+                "h_percent": 22,
+                "show_on_start": false,
+                "z_index": 1
+              },
+              {
+                "id": "p1-skate",
+                "name": "skateboard",
+                "image_url": "https://placehold.co/300x200/f3e8ff/5b21b6?text=Skateboard",
+                "x_percent": 70,
+                "y_percent": 68,
+                "w_percent": 24,
+                "h_percent": 22,
+                "show_on_start": false,
+                "z_index": 1
+              }
+            ],
+            "phases": [
+              {
+                "id": "p1-a",
+                "name": "Airplane",
+                "is_start": true,
+                "next_phase_id": "p1-b",
+                "visible_item_ids": [
+                  "p1-plane"
+                ],
+                "dialogue": {
+                  "start": "My airplane is white."
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3400,
+                  "next_phase_id": "p1-b"
+                }
+              },
+              {
+                "id": "p1-b",
+                "name": "Car",
+                "is_start": false,
+                "next_phase_id": "p1-c",
+                "visible_item_ids": [
+                  "p1-plane",
+                  "p1-car"
+                ],
+                "dialogue": {
+                  "start": "My car is red."
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3400,
+                  "next_phase_id": "p1-c"
+                }
+              },
+              {
+                "id": "p1-c",
+                "name": "Kite",
+                "is_start": false,
+                "next_phase_id": "p1-d",
+                "visible_item_ids": [
+                  "p1-plane",
+                  "p1-car",
+                  "p1-kite"
+                ],
+                "dialogue": {
+                  "start": "My kite is blue and yellow."
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3800,
+                  "next_phase_id": "p1-d"
+                }
+              },
+              {
+                "id": "p1-d",
+                "name": "Outside toys",
+                "is_start": false,
+                "next_phase_id": null,
+                "visible_item_ids": [
+                  "p1-plane",
+                  "p1-car",
+                  "p1-kite",
+                  "p1-ball",
+                  "p1-scooter",
+                  "p1-skate"
+                ],
+                "dialogue": {
+                  "start": "I've got a ball, a scooter, and a skateboard. Let's play outside!"
+                },
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-outdoor",
+            "title": "Outside",
+            "background_image_url": "https://placehold.co/1200x800/dcfce7/14532d?text=Park",
+            "image_fit": "cover",
+            "body_text": "We can play outside!",
+            "read_aloud_text": "We can play outside!",
+            "items": [
+              {
+                "id": "p2-ball",
+                "name": "ball",
+                "image_url": "https://placehold.co/260x260/fca5a5/7f1d1d?text=Ball",
+                "x_percent": 18,
+                "y_percent": 62,
+                "w_percent": 16,
+                "h_percent": 20,
+                "show_on_start": true,
+                "z_index": 2,
+                "enter": {
+                  "preset": "slide_left",
+                  "duration_ms": 600
+                },
+                "path": {
+                  "waypoints": [
+                    {
+                      "x_percent": 25,
+                      "y_percent": 58
+                    },
+                    {
+                      "x_percent": 20,
+                      "y_percent": 62
+                    }
+                  ],
+                  "duration_ms": 1400
+                },
+                "action_sequences": [
+                  {
+                    "id": "seq-outdoor-ball",
+                    "name": "Ball two taps",
+                    "event": "click",
+                    "active_phase_ids": [
+                      "p2-gate"
+                    ],
+                    "steps": [
+                      {
+                        "id": "p2-b1",
+                        "kind": "emphasis",
+                        "emphasis_preset": "grow",
+                        "duration_ms": 550,
+                        "timing": "next_click"
+                      },
+                      {
+                        "id": "p2-b2",
+                        "kind": "tts",
+                        "tts_text": "I've got a ball!",
+                        "delay_ms": 200,
+                        "timing": "next_click"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "p2-scooter",
+                "name": "scooter",
+                "image_url": "https://placehold.co/320x220/a7f3d0/166534?text=Scooter",
+                "x_percent": 42,
+                "y_percent": 58,
+                "w_percent": 24,
+                "h_percent": 26,
+                "show_on_start": true,
+                "z_index": 2,
+                "enter": {
+                  "preset": "slide_up",
+                  "duration_ms": 500
+                }
+              },
+              {
+                "id": "p2-skate",
+                "name": "skateboard",
+                "image_url": "https://placehold.co/320x220/e9d5ff/6b21a8?text=Skateboard",
+                "x_percent": 70,
+                "y_percent": 60,
+                "w_percent": 24,
+                "h_percent": 24,
+                "show_on_start": true,
+                "z_index": 2,
+                "enter": {
+                  "preset": "slide_right",
+                  "duration_ms": 520
+                }
+              },
+              {
+                "id": "p2-kite",
+                "name": "kite",
+                "image_url": "https://placehold.co/280x300/fef08a/854d0e?text=Kite",
+                "x_percent": 55,
+                "y_percent": 12,
+                "w_percent": 18,
+                "h_percent": 28,
+                "show_on_start": true,
+                "z_index": 3,
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 800
+                }
+              }
+            ],
+            "phases": [
+              {
+                "id": "p2-intro",
+                "name": "Intro",
+                "is_start": true,
+                "next_phase_id": "p2-scooter-ph",
+                "dialogue": {
+                  "start": "We can play outside!"
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 2600,
+                  "next_phase_id": "p2-scooter-ph"
+                }
+              },
+              {
+                "id": "p2-scooter-ph",
+                "name": "Scooter",
+                "is_start": false,
+                "next_phase_id": "p2-skate-ph",
+                "dialogue": {
+                  "start": "I've got a scooter."
+                },
+                "highlight_item_ids": [
+                  "p2-scooter"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2-scooter",
+                  "next_phase_id": "p2-skate-ph"
+                }
+              },
+              {
+                "id": "p2-skate-ph",
+                "name": "Skateboard",
+                "is_start": false,
+                "next_phase_id": "p2-kite-ph",
+                "dialogue": {
+                  "start": "I've got a skateboard."
+                },
+                "highlight_item_ids": [
+                  "p2-skate"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2-skate",
+                  "next_phase_id": "p2-kite-ph"
+                }
+              },
+              {
+                "id": "p2-kite-ph",
+                "name": "Kite",
+                "is_start": false,
+                "next_phase_id": "p2-gate",
+                "dialogue": {
+                  "start": "I've got a kite. It can fly high!"
+                },
+                "highlight_item_ids": [
+                  "p2-kite"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2-kite",
+                  "next_phase_id": "p2-gate"
+                }
+              },
+              {
+                "id": "p2-gate",
+                "name": "Ball sequence",
+                "is_start": false,
+                "next_phase_id": "p2-done",
+                "kind": "click_to_advance",
+                "dialogue": {
+                  "start": "Tap the ball two times. First it bounces, then it talks!"
+                },
+                "highlight_item_ids": [
+                  "p2-ball"
+                ],
+                "completion": {
+                  "type": "sequence_complete",
+                  "sequence_id": "seq-outdoor-ball",
+                  "next_phase_id": "p2-done"
+                }
+              },
+              {
+                "id": "p2-done",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "dialogue": {
+                  "start": "Nice! Turn the page for stuffed animals."
+                },
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-stuffed",
+            "title": "Stuffed friends",
+            "background_image_url": "https://placehold.co/1200x800/fce7f3/9d174d?text=Cozy+corner",
+            "image_fit": "cover",
+            "body_text": "I love stuffed animals.",
+            "read_aloud_text": "I love stuffed animals.",
+            "items": [
+              {
+                "id": "p3-caption",
+                "name": "caption",
+                "kind": "text",
+                "text": "Stuffed animals",
+                "text_color": "#831843",
+                "text_size_px": 22,
+                "x_percent": 8,
+                "y_percent": 6,
+                "w_percent": 84,
+                "h_percent": 8,
+                "show_on_start": true,
+                "show_card": false,
+                "z_index": 4
+              },
+              {
+                "id": "p3-teddy-img",
+                "name": "teddy",
+                "image_url": "https://placehold.co/360x280/fbcfe8/831843?text=Teddy",
+                "x_percent": 10,
+                "y_percent": 38,
+                "w_percent": 26,
+                "h_percent": 32,
+                "show_on_start": true,
+                "z_index": 1
+              },
+              {
+                "id": "p3-doll-img",
+                "name": "doll",
+                "image_url": "https://placehold.co/360x280/fce7f3/9d174d?text=Doll",
+                "x_percent": 60,
+                "y_percent": 38,
+                "w_percent": 26,
+                "h_percent": 32,
+                "show_on_start": true,
+                "z_index": 1
+              },
+              {
+                "id": "p3-word-teddy",
+                "name": "word teddy",
+                "kind": "text",
+                "text": "teddy",
+                "text_color": "#0f172a",
+                "text_size_px": 20,
+                "x_percent": 12,
+                "y_percent": 78,
+                "w_percent": 16,
+                "h_percent": 10,
+                "show_on_start": false,
+                "show_card": true,
+                "z_index": 3
+              },
+              {
+                "id": "p3-word-doll",
+                "name": "word doll",
+                "kind": "text",
+                "text": "doll",
+                "text_color": "#0f172a",
+                "text_size_px": 20,
+                "x_percent": 32,
+                "y_percent": 78,
+                "w_percent": 14,
+                "h_percent": 10,
+                "show_on_start": false,
+                "show_card": true,
+                "z_index": 3
+              }
+            ],
+            "phases": [
+              {
+                "id": "p3-intro",
+                "name": "Intro",
+                "is_start": true,
+                "next_phase_id": "p3-drag",
+                "visible_item_ids": [
+                  "p3-caption",
+                  "p3-teddy-img",
+                  "p3-doll-img"
+                ],
+                "dialogue": {
+                  "start": "That's my teddy! That's my doll! Now match the words."
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 4200,
+                  "next_phase_id": "p3-drag"
+                }
+              },
+              {
+                "id": "p3-drag",
+                "name": "Drag match",
+                "is_start": false,
+                "next_phase_id": "p3-end",
+                "kind": "drag_match",
+                "visible_item_ids": [
+                  "p3-caption",
+                  "p3-teddy-img",
+                  "p3-doll-img",
+                  "p3-word-teddy",
+                  "p3-word-doll"
+                ],
+                "on_enter": [
+                  {
+                    "action": "show_item",
+                    "item_ids": [
+                      "p3-word-teddy",
+                      "p3-word-doll"
+                    ]
+                  }
+                ],
+                "dialogue": {
+                  "start": "Drag each word to the right toy."
+                },
+                "drag_match": {
+                  "draggable_item_ids": [
+                    "p3-word-teddy",
+                    "p3-word-doll"
+                  ],
+                  "target_item_ids": [
+                    "p3-teddy-img",
+                    "p3-doll-img"
+                  ],
+                  "correct_map": {
+                    "p3-word-teddy": "p3-teddy-img",
+                    "p3-word-doll": "p3-doll-img"
+                  },
+                  "after_correct_match": "return_home"
+                },
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "p3-end"
+                }
+              },
+              {
+                "id": "p3-end",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "dialogue": {
+                  "start": "Great matching! Turn the page."
+                },
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-toy-car",
+            "title": "Toy car",
+            "background_image_url": "https://placehold.co/1200x800/e0e7ff/312e81?text=Garage",
+            "image_fit": "cover",
+            "body_text": "My favorite car!",
+            "read_aloud_text": "My favorite car!",
+            "items": [
+              {
+                "id": "p4-blanket",
+                "name": "cover",
+                "image_url": "https://placehold.co/400x200/cbd5e1/64748b?text=???",
+                "x_percent": 34,
+                "y_percent": 48,
+                "w_percent": 32,
+                "h_percent": 22,
+                "show_on_start": true,
+                "z_index": 2,
+                "enter": {
+                  "preset": "fade_in",
+                  "duration_ms": 400
+                }
+              },
+              {
+                "id": "p4-car",
+                "name": "toy car",
+                "image_url": "https://placehold.co/420x280/fee2e2/991b1b?text=Toy+car",
+                "x_percent": 32,
+                "y_percent": 46,
+                "w_percent": 36,
+                "h_percent": 30,
+                "show_on_start": false,
+                "z_index": 1,
+                "enter": {
+                  "preset": "grow",
+                  "duration_ms": 700,
+                  "grow_scale_percent": 108
+                },
+                "tap_speeches": [
+                  {
+                    "id": "p4-tap-line",
+                    "priority": 1,
+                    "phase_ids": [
+                      "p4-hero"
+                    ],
+                    "text": "That's my toy car!",
+                    "max_plays": 3
+                  }
+                ]
+              },
+              {
+                "id": "p4-line",
+                "name": "line",
+                "kind": "text",
+                "text": "That's my toy car!",
+                "text_color": "#1e1b4b",
+                "text_size_px": 24,
+                "x_percent": 10,
+                "y_percent": 18,
+                "w_percent": 80,
+                "h_percent": 10,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 4,
+                "enter": {
+                  "preset": "slide_down",
+                  "duration_ms": 500
+                }
+              }
+            ],
+            "phases": [
+              {
+                "id": "p4-reveal",
+                "name": "Reveal",
+                "is_start": true,
+                "next_phase_id": "p4-hero",
+                "on_enter": [
+                  {
+                    "action": "hide_item",
+                    "item_id": "p4-blanket"
+                  },
+                  {
+                    "action": "show_item",
+                    "item_id": "p4-car"
+                  },
+                  {
+                    "action": "show_item",
+                    "item_id": "p4-line"
+                  },
+                  {
+                    "action": "emphasis",
+                    "item_id": "p4-car",
+                    "emphasis_preset": "wobble",
+                    "duration_ms": 600
+                  }
+                ],
+                "dialogue": {
+                  "start": "That's my toy car!"
+                },
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 2000,
+                  "next_phase_id": "p4-hero"
+                }
+              },
+              {
+                "id": "p4-hero",
+                "name": "Tap car",
+                "is_start": false,
+                "next_phase_id": "p4-end",
+                "dialogue": {
+                  "start": "Tap the car. Say it with me: That's my toy car!"
+                },
+                "highlight_item_ids": [
+                  "p4-car"
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p4-car",
+                  "next_phase_id": "p4-end"
+                }
+              },
+              {
+                "id": "p4-end",
+                "name": "End",
+                "is_start": false,
+                "next_phase_id": null,
+                "dialogue": {
+                  "start": "Perfect! One more page — the toy fair."
+                },
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          },
+          {
+            "id": "page-fair",
+            "title": "Toy fair",
+            "background_image_url": "https://placehold.co/1200x800/fef9c3/854d0e?text=Toy+fair",
+            "image_fit": "cover",
+            "body_text": "Match the words at the toy fair!",
+            "read_aloud_text": "Match the words at the toy fair!",
+            "items": [
+              {
+                "id": "p5-puzzle-img",
+                "name": "puzzle",
+                "image_url": "https://placehold.co/300x240/d1fae5/065f46?text=Puzzle",
+                "x_percent": 8,
+                "y_percent": 36,
+                "w_percent": 24,
+                "h_percent": 30,
+                "show_on_start": true,
+                "z_index": 1
+              },
+              {
+                "id": "p5-ball-img",
+                "name": "ball",
+                "image_url": "https://placehold.co/260x260/fca5a5/7f1d1d?text=Ball",
+                "x_percent": 38,
+                "y_percent": 40,
+                "w_percent": 20,
+                "h_percent": 26,
+                "show_on_start": true,
+                "z_index": 1
+              },
+              {
+                "id": "p5-doll-img",
+                "name": "doll",
+                "image_url": "https://placehold.co/300x260/fce7f3/9d174d?text=Doll",
+                "x_percent": 68,
+                "y_percent": 36,
+                "w_percent": 24,
+                "h_percent": 30,
+                "show_on_start": true,
+                "z_index": 1
+              },
+              {
+                "id": "p5-w-puzzle",
+                "name": "word puzzle",
+                "kind": "text",
+                "text": "puzzle",
+                "text_color": "#0f172a",
+                "text_size_px": 18,
+                "x_percent": 10,
+                "y_percent": 76,
+                "w_percent": 14,
+                "h_percent": 9,
+                "show_on_start": true,
+                "show_card": true,
+                "z_index": 3
+              },
+              {
+                "id": "p5-w-ball",
+                "name": "word ball",
+                "kind": "text",
+                "text": "ball",
+                "text_color": "#0f172a",
+                "text_size_px": 18,
+                "x_percent": 30,
+                "y_percent": 76,
+                "w_percent": 12,
+                "h_percent": 9,
+                "show_on_start": true,
+                "show_card": true,
+                "z_index": 3
+              },
+              {
+                "id": "p5-w-doll",
+                "name": "word doll",
+                "kind": "text",
+                "text": "doll",
+                "text_color": "#0f172a",
+                "text_size_px": 18,
+                "x_percent": 48,
+                "y_percent": 76,
+                "w_percent": 12,
+                "h_percent": 9,
+                "show_on_start": true,
+                "show_card": true,
+                "z_index": 3
+              }
+            ],
+            "phases": [
+              {
+                "id": "p5-drag",
+                "name": "Fair drag match",
+                "is_start": true,
+                "next_phase_id": "p5-fin",
+                "kind": "drag_match",
+                "dialogue": {
+                  "start": "Drag puzzle, ball, and doll to the pictures."
+                },
+                "drag_match": {
+                  "draggable_item_ids": [
+                    "p5-w-puzzle",
+                    "p5-w-ball",
+                    "p5-w-doll"
+                  ],
+                  "target_item_ids": [
+                    "p5-puzzle-img",
+                    "p5-ball-img",
+                    "p5-doll-img"
+                  ],
+                  "correct_map": {
+                    "p5-w-puzzle": "p5-puzzle-img",
+                    "p5-w-ball": "p5-ball-img",
+                    "p5-w-doll": "p5-doll-img"
+                  },
+                  "after_correct_match": "stick_on_target"
+                },
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "p5-fin"
+                }
+              },
+              {
+                "id": "p5-fin",
+                "name": "Finale",
+                "is_start": false,
+                "next_phase_id": null,
+                "dialogue": {
+                  "start": "You did it! I've got a teddy, a robot, a kite — so many toys!"
+                },
+                "completion": {
+                  "type": "end_phase"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

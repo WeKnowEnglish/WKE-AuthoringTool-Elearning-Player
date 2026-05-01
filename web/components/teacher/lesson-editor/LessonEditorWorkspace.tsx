@@ -8,25 +8,44 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react";
-import {
-  LessonPlayer,
-} from "@/components/lesson/LessonPlayer";
+import { createPortal } from "react-dom";
 import type { LessonScreenRow } from "@/lib/data/catalog";
+import {
+  findStoryboardSegmentIndexForScreenIndex,
+  segmentLessonScreensForStoryboard,
+} from "@/lib/lesson-activity-taxonomy";
 import { screenOutlineLabel, screenThumbnailUrl } from "@/lib/lesson-screen-outline";
-import { lessonPublishChecklist } from "@/lib/lesson-editor-checklist";
+import {
+  getLessonPublishBlockingReasons,
+  lessonPublishChecklist,
+} from "@/lib/lesson-editor-checklist";
 import {
   addScreenTemplate,
+  createQuizGroup,
+  deleteLesson,
   deleteScreen,
   duplicateLesson,
   duplicateScreen,
   importLessonScreensJson,
   moveScreen,
   reorderScreens,
+  saveLesson,
   type AddScreenKind,
 } from "@/lib/actions/teacher";
-import { ScreenEditorCard } from "./ScreenEditorCard";
+import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
+import { useTeacherEditorHeader } from "@/components/teacher/TeacherEditorHeaderContext";
+import { LessonPreviewOverlay } from "./LessonPreviewOverlay";
+import { QuizBuilder } from "./QuizBuilder";
+import {
+  ScreenEditorCard,
+  type ScreenEditorCardHandle,
+  type ScreenEditorStatus,
+} from "./ScreenEditorCard";
 import Image from "next/image";
 
 type Props = {
@@ -35,37 +54,19 @@ type Props = {
   moduleSlug: string;
   lessonSlug: string;
   lessonTitle: string;
+  lessonOrderIndex: number;
+  lessonEstimatedMinutes: number | null;
   published: boolean;
   screens: LessonScreenRow[];
   /** Right sidebar: AI draft and skill tags (from the page server component). */
   children?: ReactNode;
 };
 
-const ADD_BUTTONS: { kind: AddScreenKind; label: string }[] = [
+const ADD_SCREEN_BUTTONS: { kind: AddScreenKind; label: string }[] = [
   { kind: "start", label: "+ Start" },
-  { kind: "story", label: "+ Story" },
-  { kind: "mc_quiz", label: "+ Quiz (MC)" },
-  { kind: "true_false", label: "+ True/False" },
-  { kind: "short_answer", label: "+ Short answer" },
-  { kind: "fill_blanks", label: "+ Fill blanks" },
-  { kind: "fix_text", label: "+ Fix text" },
-  { kind: "essay", label: "+ Essay" },
-  { kind: "click_targets", label: "+ Click target" },
-  { kind: "treasure_tap", label: "+ Treasure tap" },
-  { kind: "sound_sort", label: "+ Sound sort" },
-  { kind: "listen_hotspot_sequence", label: "+ Listen hotspot sequence" },
-  { kind: "listen_color_write", label: "+ Listen color/write" },
-  { kind: "letter_mixup", label: "+ Letter mix-up" },
-  { kind: "word_shape_hunt", label: "+ Word shape hunt" },
-  { kind: "table_complete", label: "+ Table complete" },
-  { kind: "sorting_game", label: "+ Sorting game" },
-  { kind: "hotspot_info", label: "+ Hotspots (info)" },
-  { kind: "hotspot_gate", label: "+ Hotspots (gate)" },
-  { kind: "voice_question", label: "+ Voice question" },
+  { kind: "interactive_page", label: "+ Interactive page" },
+  { kind: "hotspot_info", label: "+ Hotspot info" },
   { kind: "guided_dialogue", label: "+ Guided dialogue" },
-  { kind: "presentation_interactive", label: "+ Interactive presentation" },
-  { kind: "drag_sentence", label: "+ Drag sentence" },
-  { kind: "drag_match", label: "+ Drag match" },
 ];
 
 function screensSyncKey(list: LessonScreenRow[]) {
@@ -141,6 +142,124 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+const LESSON_HDR_BTN =
+  "inline-flex h-7 shrink-0 items-center justify-center rounded-md border border-neutral-300 bg-neutral-50 px-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-2 sm:text-xs";
+
+type LessonWorkspaceHeaderToolbarProps = {
+  addScreenOpen: boolean;
+  setAddScreenOpen: Dispatch<SetStateAction<boolean>>;
+  editorHelpOpen: boolean;
+  setEditorHelpOpen: Dispatch<SetStateAction<boolean>>;
+  quizSelection: { groupId: string; groupScreens: LessonScreenRow[] } | null;
+  setPreviewOverlayOpen: Dispatch<SetStateAction<boolean>>;
+  setStoryboardOpen: Dispatch<SetStateAction<boolean>>;
+  setToolsOpen: Dispatch<SetStateAction<boolean>>;
+  storyboardOpen: boolean;
+  storyboardPinned: boolean;
+  toolsOpen: boolean;
+  toolsPinned: boolean;
+};
+
+function LessonWorkspaceHeaderToolbar({
+  addScreenOpen,
+  setAddScreenOpen,
+  editorHelpOpen,
+  setEditorHelpOpen,
+  quizSelection,
+  setPreviewOverlayOpen,
+  setStoryboardOpen,
+  setToolsOpen,
+  storyboardOpen,
+  storyboardPinned,
+  toolsOpen,
+  toolsPinned,
+}: LessonWorkspaceHeaderToolbarProps) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAddScreenOpen((v) => !v)}
+        aria-expanded={addScreenOpen}
+        aria-label={addScreenOpen ? "Close add activity" : "Add activity"}
+        className={LESSON_HDR_BTN}
+        title="Add screen or quiz"
+      >
+        Add
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setStoryboardOpen((prev) => {
+            const next = !prev;
+            if (next && !toolsPinned && toolsOpen) {
+              setToolsOpen(false);
+            }
+            return next;
+          });
+        }}
+        aria-expanded={storyboardOpen}
+        className={LESSON_HDR_BTN}
+        title={
+          storyboardOpen ?
+            storyboardPinned ?
+              "Hide storyboard (pinned)"
+            : "Hide storyboard"
+          : "Open storyboard"
+        }
+      >
+        Storyboard
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setToolsOpen((prev) => {
+            const next = !prev;
+            if (next && !storyboardPinned && storyboardOpen) {
+              setStoryboardOpen(false);
+            }
+            return next;
+          });
+        }}
+        aria-expanded={toolsOpen}
+        className={LESSON_HDR_BTN}
+        title={
+          toolsOpen ?
+            toolsPinned ?
+              "Hide tools (pinned)"
+            : "Hide tools"
+          : "Open lesson tools"
+        }
+      >
+        Tools
+      </button>
+      <button
+        type="button"
+        onClick={() => setPreviewOverlayOpen(true)}
+        disabled={!!quizSelection}
+        className={LESSON_HDR_BTN + (quizSelection ? " cursor-not-allowed opacity-50" : "")}
+        title={
+          quizSelection ?
+            "Student preview is in the Quiz builder while a quiz is selected."
+          : "Open floating student preview"
+        }
+      >
+        Preview
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditorHelpOpen((v) => !v)}
+        aria-expanded={editorHelpOpen}
+        className={LESSON_HDR_BTN}
+        title={
+          editorHelpOpen ? "Hide lesson & screen actions" : "Lesson & screen actions, publish, TTS"
+        }
+      >
+        Help
+      </button>
+    </>
+  );
+}
+
 type ActivityNote = {
   text: string;
   open: boolean;
@@ -184,12 +303,11 @@ function stabilizeCoord(n: number): number {
 
 type EditorLayoutPrefs = {
   storyboardOpen: boolean;
+  storyboardPinned: boolean;
   toolsOpen: boolean;
-  previewOpen: boolean;
-  detailsOpen: boolean;
+  toolsPinned: boolean;
   leftPanePct: number;
   rightPanePct: number;
-  previewPanePct: number;
 };
 
 const EDITOR_LAYOUT_KEY_PREFIX = "lesson-editor-layout";
@@ -202,26 +320,38 @@ export function LessonEditorWorkspace({
   moduleSlug,
   lessonSlug,
   lessonTitle,
+  lessonOrderIndex,
+  lessonEstimatedMinutes,
   published,
   screens,
   children,
 }: Props) {
-  const topMenuButtonClass =
-    "inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg border border-neutral-300 bg-neutral-50 px-3 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-100 active:bg-neutral-200";
   const shellRef = useRef<HTMLDivElement>(null);
-  const centerRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [addScreenOpen, setAddScreenOpen] = useState(false);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const [liveScreens, setLiveScreens] = useState<LessonScreenRow[]>(screens);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [storyboardOpen, setStoryboardOpen] = useState(true);
-  const [toolsOpen, setToolsOpen] = useState(true);
-  const [previewOpen, setPreviewOpen] = useState(true);
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [storyboardOpen, setStoryboardOpen] = useState(false);
+  const [storyboardPinned, setStoryboardPinned] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [toolsPinned, setToolsPinned] = useState(false);
+  const [previewOverlayOpen, setPreviewOverlayOpen] = useState(false);
+  const [editorHelpOpen, setEditorHelpOpen] = useState(false);
+  const [advancedJsonOpen, setAdvancedJsonOpen] = useState(false);
+  const { setLessonToolbarSlot, notifyScreenSaved } = useTeacherEditorHeader();
+
+  const [screenEditorStatus, setScreenEditorStatus] = useState<ScreenEditorStatus>({
+    isSaving: false,
+    saveHint: null,
+    err: null,
+  });
+  const screenEditorRef = useRef<ScreenEditorCardHandle>(null);
+  const onScreenEditorStatus = useCallback((s: ScreenEditorStatus) => {
+    setScreenEditorStatus(s);
+  }, []);
   const [leftPanePct, setLeftPanePct] = useState(23);
   const [rightPanePct, setRightPanePct] = useState(23);
-  const [previewPanePct, setPreviewPanePct] = useState(62);
   const [activityNotes, setActivityNotes] = useState<Record<string, ActivityNote>>({});
   const [connectorLines, setConnectorLines] = useState<ConnectorLine[]>([]);
   const connectorLinesRef = useRef<ConnectorLine[]>([]);
@@ -231,85 +361,85 @@ export function LessonEditorWorkspace({
   const noteRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragNoteRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
   const [resizing, setResizing] = useState<{
-    pane: "left" | "center" | "right";
+    pane: "left" | "right";
     startX: number;
     startLeft: number;
     startRight: number;
-    startPreview: number;
   } | null>(null);
   const layoutKey = `${EDITOR_LAYOUT_KEY_PREFIX}:${lessonId}`;
   const notesKey = `${EDITOR_NOTES_KEY_PREFIX}:${lessonId}`;
   const jumpNewestKey = `${EDITOR_JUMP_NEWEST_KEY_PREFIX}:${lessonId}`;
+  const canUseDomPortal = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const serverKey = useMemo(() => screensSyncKey(screens), [screens]);
   useEffect(() => {
-    setLiveScreens((prev) => {
-      const merged = mergeServerScreensWithLocal(screens, prev);
-      if (areScreensEquivalent(prev, merged)) return prev;
-      if (typeof window !== "undefined" && window.sessionStorage.getItem(jumpNewestKey) === "1") {
-        window.sessionStorage.removeItem(jumpNewestKey);
-        setSelectedIndex(Math.max(0, merged.length - 1));
+    queueMicrotask(() => {
+      let jumpToIndex: number | null = null;
+      setLiveScreens((prev) => {
+        const merged = mergeServerScreensWithLocal(screens, prev);
+        if (areScreensEquivalent(prev, merged)) return prev;
+        if (typeof window !== "undefined" && window.sessionStorage.getItem(jumpNewestKey) === "1") {
+          window.sessionStorage.removeItem(jumpNewestKey);
+          jumpToIndex = Math.max(0, merged.length - 1);
+        }
+        return merged;
+      });
+      if (jumpToIndex != null) {
+        setSelectedIndex(jumpToIndex);
       }
-      return merged;
     });
-    // Merge server snapshot with local edits; `screens` is the snapshot for this `serverKey`.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-merge when server identity key changes
   }, [serverKey, jumpNewestKey, screens]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(layoutKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<EditorLayoutPrefs>;
-      if (typeof parsed.storyboardOpen === "boolean") setStoryboardOpen(parsed.storyboardOpen);
-      if (typeof parsed.toolsOpen === "boolean") setToolsOpen(parsed.toolsOpen);
-      if (typeof parsed.previewOpen === "boolean") setPreviewOpen(parsed.previewOpen);
-      if (typeof parsed.detailsOpen === "boolean") setDetailsOpen(parsed.detailsOpen);
-      if (typeof parsed.leftPanePct === "number") setLeftPanePct(clamp(parsed.leftPanePct, 14, 60));
-      if (typeof parsed.rightPanePct === "number")
-        setRightPanePct(clamp(parsed.rightPanePct, 16, 60));
-      if (typeof parsed.previewPanePct === "number")
-        setPreviewPanePct(clamp(parsed.previewPanePct, 30, 75));
-    } catch {
-      // Ignore corrupted local storage.
-    }
+    queueMicrotask(() => {
+      try {
+        const raw = window.localStorage.getItem(layoutKey);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as Partial<EditorLayoutPrefs>;
+        if (typeof parsed.storyboardOpen === "boolean") setStoryboardOpen(parsed.storyboardOpen);
+        if (typeof parsed.storyboardPinned === "boolean") setStoryboardPinned(parsed.storyboardPinned);
+        if (typeof parsed.toolsOpen === "boolean") setToolsOpen(parsed.toolsOpen);
+        if (typeof parsed.toolsPinned === "boolean") setToolsPinned(parsed.toolsPinned);
+        if (typeof parsed.leftPanePct === "number") setLeftPanePct(clamp(parsed.leftPanePct, 14, 60));
+        if (typeof parsed.rightPanePct === "number")
+          setRightPanePct(clamp(parsed.rightPanePct, 16, 60));
+      } catch {
+        // Ignore corrupted local storage.
+      }
+    });
   }, [layoutKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(notesKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Record<string, ActivityNote>;
-      setActivityNotes(parsed);
-    } catch {
-      // Ignore corrupted local storage.
-    }
+    queueMicrotask(() => {
+      try {
+        const raw = window.localStorage.getItem(notesKey);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as Record<string, ActivityNote>;
+        setActivityNotes(parsed);
+      } catch {
+        // Ignore corrupted local storage.
+      }
+    });
   }, [notesKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const prefs: EditorLayoutPrefs = {
       storyboardOpen,
+      storyboardPinned,
       toolsOpen,
-      previewOpen,
-      detailsOpen,
+      toolsPinned,
       leftPanePct,
       rightPanePct,
-      previewPanePct,
     };
     window.localStorage.setItem(layoutKey, JSON.stringify(prefs));
-  }, [
-    layoutKey,
-    storyboardOpen,
-    toolsOpen,
-    previewOpen,
-    detailsOpen,
-    leftPanePct,
-    rightPanePct,
-    previewPanePct,
-  ]);
+  }, [layoutKey, storyboardOpen, storyboardPinned, toolsOpen, toolsPinned, leftPanePct, rightPanePct]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -329,9 +459,74 @@ export function LessonEditorWorkspace({
     [published, liveScreens],
   );
 
+  const publishBlockingReasons = useMemo(
+    () => getLessonPublishBlockingReasons(liveScreens),
+    [liveScreens],
+  );
+  const publishBlocked = publishBlockingReasons.length > 0;
+
   const safeIndex = Math.min(
     Math.max(0, selectedIndex),
     Math.max(0, liveScreens.length - 1),
+  );
+
+  const storySegments = useMemo(
+    () => segmentLessonScreensForStoryboard(liveScreens),
+    [liveScreens],
+  );
+  const selectedSegment =
+    storySegments[findStoryboardSegmentIndexForScreenIndex(storySegments, safeIndex)] ?? {
+      type: "single" as const,
+      screenIndex: 0,
+    };
+  const quizSelection =
+    selectedSegment.type === "quiz" ?
+      {
+        groupId: selectedSegment.groupId,
+        groupScreens: selectedSegment.screenIndices.map((i) => liveScreens[i]!),
+      }
+    : null;
+
+  useLayoutEffect(() => {
+    setLessonToolbarSlot(
+      <LessonWorkspaceHeaderToolbar
+        addScreenOpen={addScreenOpen}
+        setAddScreenOpen={setAddScreenOpen}
+        editorHelpOpen={editorHelpOpen}
+        setEditorHelpOpen={setEditorHelpOpen}
+        quizSelection={quizSelection}
+        setPreviewOverlayOpen={setPreviewOverlayOpen}
+        setStoryboardOpen={setStoryboardOpen}
+        setToolsOpen={setToolsOpen}
+        storyboardOpen={storyboardOpen}
+        storyboardPinned={storyboardPinned}
+        toolsOpen={toolsOpen}
+        toolsPinned={toolsPinned}
+      />,
+    );
+    return () => setLessonToolbarSlot(null);
+  }, [
+    addScreenOpen,
+    editorHelpOpen,
+    quizSelection,
+    setLessonToolbarSlot,
+    storyboardOpen,
+    storyboardPinned,
+    toolsOpen,
+    toolsPinned,
+  ]);
+
+  const navigateFromStoryboard = useCallback(
+    (screenIndex: number) => {
+      setSelectedIndex(screenIndex);
+      if (!storyboardPinned) {
+        setStoryboardOpen(false);
+      }
+      if (!toolsPinned) {
+        setToolsOpen(false);
+      }
+    },
+    [storyboardPinned, toolsPinned],
   );
 
   /** Relative path only — same on server and client (avoids hydration mismatch from `window`). */
@@ -420,36 +615,40 @@ export function LessonEditorWorkspace({
 
   const selectedScreen = liveScreens[safeIndex];
 
-  const leftSidebarScroll =
-    "space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:overscroll-contain";
-  const rightSidebarScroll =
-    "space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1";
+  useEffect(() => {
+    queueMicrotask(() => {
+      setAdvancedJsonOpen(false);
+    });
+  }, [selectedScreen?.id]);
+
+  const quizGroupId = quizSelection?.groupId ?? null;
+  useEffect(() => {
+    if (quizGroupId == null) return;
+    queueMicrotask(() => {
+      setScreenEditorStatus({ isSaving: false, saveHint: null, err: null });
+    });
+  }, [quizGroupId]);
+
+  const leftSidebarScroll = "space-y-4 xl:overscroll-contain";
+  const rightSidebarScroll = "space-y-4 xl:overscroll-contain xl:pr-1";
 
   const beginResize = useCallback(
-    (pane: "left" | "center" | "right", e: React.PointerEvent) => {
+    (pane: "left" | "right", e: React.PointerEvent) => {
       if (window.innerWidth < 1280) return;
       setResizing({
         pane,
         startX: e.clientX,
         startLeft: leftPanePct,
         startRight: rightPanePct,
-        startPreview: previewPanePct,
       });
       e.preventDefault();
     },
-    [leftPanePct, previewPanePct, rightPanePct],
+    [leftPanePct, rightPanePct],
   );
 
   useEffect(() => {
     if (!resizing) return;
     const onMove = (e: PointerEvent) => {
-      if (resizing.pane === "center") {
-        const w = centerRef.current?.getBoundingClientRect().width ?? 0;
-        if (w <= 0) return;
-        const dPct = ((e.clientX - resizing.startX) / w) * 100;
-        setPreviewPanePct(clamp(resizing.startPreview + dPct, 30, 75));
-        return;
-      }
       const w = shellRef.current?.getBoundingClientRect().width ?? 0;
       if (w <= 0) return;
       const dPct = ((e.clientX - resizing.startX) / w) * 100;
@@ -489,7 +688,9 @@ export function LessonEditorWorkspace({
     if (!hasOpenNotes) {
       if (connectorLinesRef.current.length === 0) return;
       connectorLinesRef.current = [];
-      setConnectorLines([]);
+      queueMicrotask(() => {
+        setConnectorLines([]);
+      });
       return;
     }
     const shellRect = shell.getBoundingClientRect();
@@ -538,12 +739,22 @@ export function LessonEditorWorkspace({
     }
     if (areConnectorLinesEqual(connectorLinesRef.current, next)) return;
     connectorLinesRef.current = next;
-    setConnectorLines(next);
+    queueMicrotask(() => {
+      setConnectorLines(next);
+    });
   }, [activityNotes, liveScreens]);
 
   useLayoutEffect(() => {
     computeConnectorLines();
-  }, [computeConnectorLines, leftPanePct, rightPanePct, previewPanePct, storyboardOpen, toolsOpen]);
+  }, [
+    computeConnectorLines,
+    leftPanePct,
+    rightPanePct,
+    storyboardOpen,
+    storyboardPinned,
+    toolsOpen,
+    toolsPinned,
+  ]);
 
   useEffect(() => {
     const onScrollOrResize = () => computeConnectorLines();
@@ -554,6 +765,18 @@ export function LessonEditorWorkspace({
       window.removeEventListener("scroll", onScrollOrResize, true);
     };
   }, [computeConnectorLines]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setStoryboardOpen(false);
+      setToolsOpen(false);
+      setPreviewOverlayOpen(false);
+      setEditorHelpOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -586,270 +809,697 @@ export function LessonEditorWorkspace({
     };
   }, []);
 
-  return (
-    <div className="relative space-y-4">
-      <section className="sticky top-0 z-40 flex flex-wrap items-center gap-2 border-b border-neutral-200 bg-white/95 py-2 backdrop-blur">
-        {!addScreenOpen ? (
-          <button
-            type="button"
-            onClick={() => setAddScreenOpen(true)}
-            aria-expanded={addScreenOpen}
-            aria-label="Expand add activity"
-            className={topMenuButtonClass}
-            title="Add activity"
+  function storyboardRowForSegment(seg: (typeof storySegments)[number]) {
+    if (seg.type === "single") {
+      const i = seg.screenIndex;
+      const s = liveScreens[i];
+      if (!s) return null;
+      const thumb = screenThumbnailUrl(s);
+      const active = i === safeIndex;
+      return (
+        <li key={s.id}>
+          <div
+            ref={(el) => {
+              rowRefs.current[s.id] = el;
+            }}
+            onDragOver={onDragOver}
+            onDrop={(e) => onDrop(e, s.id)}
+            onClick={() => navigateFromStoryboard(i)}
+            className={`rounded border p-1.5 transition-opacity ${
+              draggingId === s.id ? "opacity-60" : ""
+            } ${active ? "border-sky-600 bg-sky-50" : "border-neutral-200 bg-white"}`}
           >
-            Add activity
-          </button>
-        ) : (
-          <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50/90 p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setAddScreenOpen(false)}
-                className="text-sm font-semibold uppercase tracking-wide text-neutral-600 hover:text-neutral-900"
-                aria-label="Collapse add activity"
-                title="Collapse add activity"
+            <div className="flex items-start gap-1">
+              <span
+                draggable
+                onDragStart={(e) => onDragStart(e, s.id)}
+                onDragEnd={() => setDraggingId(null)}
+                className="cursor-grab select-none px-0.5 pt-0.5 font-mono text-[11px] text-neutral-400 active:cursor-grabbing"
+                title="Drag to reorder"
+                role="button"
+                tabIndex={0}
+                aria-label={`Drag to reorder screen ${i}`}
               >
-                Add activity
-              </button>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {ADD_BUTTONS.map(({ kind, label }) => (
-                <form key={kind} action={addScreenTemplate.bind(null, lessonId, moduleId, kind)}>
+                ⋮⋮
+              </span>
+              <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => navigateFromStoryboard(i)}
+                  className="flex w-full min-w-0 items-start gap-1 rounded-md px-0.5 py-0.5 text-left hover:bg-neutral-50 active:bg-neutral-100"
+                >
+                  <span className="w-4 shrink-0 font-mono text-[11px] text-neutral-500">{i}</span>
+                  <span className="line-clamp-2 min-w-0 flex-1 text-[11px] leading-snug sm:text-xs">
+                    {screenOutlineLabel(s, liveScreens)}
+                  </span>
+                </button>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
+                  <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
+                    <button
+                      type="submit"
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                    >
+                      Up
+                    </button>
+                  </form>
+                  <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
+                    <button
+                      type="submit"
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                    >
+                      Down
+                    </button>
+                  </form>
+                  <form action={duplicateScreen.bind(null, s.id, lessonId, moduleId)}>
+                    <input type="hidden" name="duplicate_screen" value={s.id} />
+                    <button
+                      type="submit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (typeof window !== "undefined") {
+                          window.sessionStorage.setItem(jumpNewestKey, "1");
+                        }
+                      }}
+                      className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 active:bg-blue-200"
+                    >
+                      Dup
+                    </button>
+                  </form>
+                  <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
+                    <button
+                      type="submit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const shouldDelete = window.confirm(
+                          `Delete this storyboard item?\n\n${screenOutlineLabel(s, liveScreens)}`,
+                        );
+                        if (!shouldDelete) {
+                          e.preventDefault();
+                        }
+                      }}
+                      className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200"
+                    >
+                      Del
+                    </button>
+                  </form>
                   <button
-                    type="submit"
-                    className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold shadow-sm hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const shellRect = shellRef.current?.getBoundingClientRect();
+                      const rowRect = rowRefs.current[s.id]?.getBoundingClientRect();
+                      const defaultX =
+                        shellRect && rowRect ?
+                          clamp(rowRect.right - shellRect.left + 18, 8, shellRect.width - 220)
+                        : 260;
+                      const defaultY =
+                        shellRect && rowRect ?
+                          clamp(rowRect.top - shellRect.top, 8, shellRect.height - 56)
+                        : 120;
+                      noteZRef.current += 1;
+                      const nextZ = noteZRef.current;
+                      setActivityNotes((prev) => {
+                        const cur = prev[s.id];
+                        return {
+                          ...prev,
+                          [s.id]: {
+                            text: cur?.text ?? "",
+                            open: !(cur?.open ?? false),
+                            collapsed: cur?.collapsed ?? false,
+                            x: cur?.x ?? defaultX,
+                            y: cur?.y ?? defaultY,
+                            z: nextZ,
+                          },
+                        };
+                      });
+                    }}
+                    className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-100 active:bg-violet-200"
                   >
-                    {label}
+                    Notes
                   </button>
-                </form>
-              ))}
+                </div>
+              </div>
+              {thumb ? (
+                <div className="relative ml-1 h-14 w-16 shrink-0 self-stretch overflow-hidden rounded border border-neutral-300">
+                  <Image
+                    src={thumb}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    unoptimized={thumb.includes("placehold.co")}
+                  />
+                </div>
+              ) : (
+                <div className="ml-1 flex h-14 w-16 shrink-0 self-stretch items-center justify-center rounded border border-dashed border-neutral-300 text-[10px] text-neutral-400">
+                  —
+                </div>
+              )}
             </div>
           </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setStoryboardOpen((v) => !v)}
-          aria-expanded={storyboardOpen}
-          className={topMenuButtonClass}
-          title={storyboardOpen ? "Collapse storyboard" : "Expand storyboard"}
+        </li>
+      );
+    }
+
+    const firstIdx = seg.screenIndices[0] ?? 0;
+    const s = liveScreens[firstIdx];
+    if (!s) return null;
+    const thumb = screenThumbnailUrl(s);
+    const quizActive = seg.screenIndices.includes(safeIndex);
+    const n = seg.screenIndices.length;
+    return (
+      <li key={`quiz-${seg.groupId}`}>
+        <div
+          ref={(el) => {
+            rowRefs.current[s.id] = el;
+          }}
+          onDragOver={onDragOver}
+          onDrop={(e) => onDrop(e, s.id)}
+          onClick={() => navigateFromStoryboard(firstIdx)}
+          className={`rounded border border-dashed border-sky-300 p-1.5 ${
+            quizActive ? "border-sky-600 bg-sky-50" : "border-sky-200 bg-white"
+          }`}
         >
-          Storyboard
-        </button>
-        <button
-          type="button"
-          onClick={() => setToolsOpen((v) => !v)}
-          aria-expanded={toolsOpen}
-          className={topMenuButtonClass}
-          title={toolsOpen ? "Collapse lesson tools" : "Expand lesson tools"}
-        >
-          Tools
-        </button>
-        <button
-          type="button"
-          onClick={() => setPreviewOpen((v) => !v)}
-          aria-expanded={previewOpen}
-          className={topMenuButtonClass}
-          title={previewOpen ? "Collapse student preview" : "Expand student preview"}
-        >
-          Preview
-        </button>
-        <button
-          type="button"
-          onClick={() => setDetailsOpen((v) => !v)}
-          aria-expanded={detailsOpen}
-          className={topMenuButtonClass}
-          title={detailsOpen ? "Collapse screen details" : "Expand screen details"}
-        >
-          Details
-        </button>
-      </section>
+          <div className="flex items-start gap-1">
+            <span
+              className="select-none px-0.5 pt-0.5 font-mono text-[11px] text-neutral-300"
+              title="Quiz groups reorder as a block when you move the first question (Up/Down)."
+            >
+              ⎗
+            </span>
+            <div className="min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={() => navigateFromStoryboard(firstIdx)}
+                className="flex w-full min-w-0 items-start gap-1 rounded-md px-0.5 py-0.5 text-left hover:bg-sky-50/80 active:bg-sky-100/80"
+              >
+                <span className="w-4 shrink-0 font-mono text-[11px] text-sky-700">{firstIdx}</span>
+                <span className="line-clamp-2 min-w-0 flex-1 text-[11px] font-semibold leading-snug text-sky-950 sm:text-xs">
+                  {seg.title ?? "Quiz"} ({n} questions)
+                </span>
+              </button>
+              <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
+                <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
+                  <button
+                    type="submit"
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                  >
+                    Up
+                  </button>
+                </form>
+                <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
+                  <button
+                    type="submit"
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                  >
+                    Down
+                  </button>
+                </form>
+                <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
+                  <button
+                    type="submit"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const shouldDelete = window.confirm(
+                        `Delete first question in this quiz (from the lesson)?\n\n${screenOutlineLabel(s, liveScreens)}`,
+                      );
+                      if (!shouldDelete) {
+                        e.preventDefault();
+                      }
+                    }}
+                    className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200"
+                  >
+                    Del
+                  </button>
+                </form>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const shellRect = shellRef.current?.getBoundingClientRect();
+                    const rowRect = rowRefs.current[s.id]?.getBoundingClientRect();
+                    const defaultX =
+                      shellRect && rowRect ?
+                        clamp(rowRect.right - shellRect.left + 18, 8, shellRect.width - 220)
+                      : 260;
+                    const defaultY =
+                      shellRect && rowRect ?
+                        clamp(rowRect.top - shellRect.top, 8, shellRect.height - 56)
+                      : 120;
+                    noteZRef.current += 1;
+                    const nextZ = noteZRef.current;
+                    setActivityNotes((prev) => {
+                      const cur = prev[s.id];
+                      return {
+                        ...prev,
+                        [s.id]: {
+                          text: cur?.text ?? "",
+                          open: !(cur?.open ?? false),
+                          collapsed: cur?.collapsed ?? false,
+                          x: cur?.x ?? defaultX,
+                          y: cur?.y ?? defaultY,
+                          z: nextZ,
+                        },
+                      };
+                    });
+                  }}
+                  className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-100 active:bg-violet-200"
+                >
+                  Notes
+                </button>
+              </div>
+            </div>
+            {thumb ? (
+              <div className="relative ml-1 h-14 w-16 shrink-0 self-stretch overflow-hidden rounded border border-neutral-300">
+                <Image
+                  src={thumb}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  unoptimized={thumb.includes("placehold.co")}
+                />
+              </div>
+            ) : (
+              <div className="ml-1 flex h-14 w-16 shrink-0 self-stretch items-center justify-center rounded border border-dashed border-neutral-300 text-[10px] text-neutral-400">
+                —
+              </div>
+            )}
+          </div>
+        </div>
+      </li>
+    );
+  }
+
+  function renderStoryboardMenuBody() {
+    return (
+      <>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              Storyboard
+            </h2>
+            <p className="mt-1 text-xs text-neutral-600">
+              {storyboardPinned ?
+                "Pinned: stays open beside the editor. Drag to reorder; quiz groups are one tile."
+              : "Tap a screen to open it — this menu closes. Pin to keep it open as a column."}
+            </p>
+          </div>
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded border border-neutral-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm">
+            <input
+              type="checkbox"
+              className="rounded border-neutral-400"
+              checked={storyboardPinned}
+              onChange={(e) => setStoryboardPinned(e.target.checked)}
+            />
+            Pin open
+          </label>
+        </div>
+        <ol className="mt-3 space-y-2">
+          {storySegments.map((seg) => storyboardRowForSegment(seg))}
+        </ol>
+        {liveScreens.length === 0 ? (
+          <p className="mt-2 text-sm text-neutral-600">No screens yet.</p>
+        ) : null}
+      </>
+    );
+  }
+
+  function renderToolsPanelBody() {
+    return (
+      <>
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Lesson tools</p>
+            <p className="mt-1 text-xs text-neutral-600">
+              {toolsPinned ?
+                "Pinned: stays open beside the editor. Import, checklist, and links stay here."
+              : "Pin to dock this panel. Unpinned: closes when you pick a storyboard screen or tap outside."}
+            </p>
+          </div>
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded border border-neutral-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm">
+            <input
+              type="checkbox"
+              className="rounded border-neutral-400"
+              checked={toolsPinned}
+              onChange={(e) => setToolsPinned(e.target.checked)}
+            />
+            Pin open
+          </label>
+        </div>
+        {children}
+        <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900">Publish checklist</h2>
+          <ul className="mt-2 list-inside list-disc text-xs">
+            {checklist.map((c, i) => (
+              <li key={i} className={c.ok ? "text-green-800" : "text-amber-900"}>
+                {c.ok ? "✓" : "○"} {c.label}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => void copyStudentLink()}
+              className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
+            >
+              Copy student link
+            </button>
+            <button
+              type="button"
+              onClick={exportJson}
+              className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
+            >
+              Export screens JSON
+            </button>
+            <form action={duplicateLesson.bind(null, lessonId, moduleId)}>
+              <button
+                type="submit"
+                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
+              >
+                Duplicate lesson
+              </button>
+            </form>
+          </div>
+          {copyMsg ? <p className="mt-2 text-xs text-green-800">{copyMsg}</p> : null}
+          <p className="mt-2 text-[11px] leading-snug text-neutral-500">
+            Student URL (when published):{" "}
+            <code className="break-all rounded bg-neutral-100 px-1">{studentPath}</code>
+          </p>
+          <p className="mt-2 text-[11px] leading-snug text-neutral-500">
+            Images: Upload or Media library per screen (shared bucket), or paste an HTTPS URL.
+          </p>
+        </section>
+
+        <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900">Import screens</h2>
+          <p className="mt-1 text-xs text-neutral-600">
+            JSON: {"{"} &quot;screens&quot;: [ {"{"} &quot;screen_type&quot;, &quot;payload&quot; {"}"}… ] {"}"}.
+            Paste only the raw object (no{" "}
+            <code className="rounded bg-neutral-100 px-0.5">```json</code> wrappers).
+          </p>
+          <form
+            className="mt-3 space-y-2"
+            action={importLessonScreensJson.bind(null, lessonId, moduleId)}
+          >
+            <label className="flex items-center gap-2 text-xs">
+              <input type="checkbox" name="replace_existing" />
+              Replace all existing screens
+            </label>
+            <textarea
+              name="import_json"
+              rows={14}
+              className="w-full rounded border font-mono text-[11px] leading-snug"
+              placeholder='{"screens":[...]}'
+              spellCheck={false}
+            />
+            <button
+              type="submit"
+              className="w-full rounded bg-neutral-900 px-3 py-2 text-xs font-semibold text-white active:bg-neutral-950 sm:text-sm"
+            >
+              Import
+            </button>
+          </form>
+        </section>
+      </>
+    );
+  }
+
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col space-y-0">
+      {canUseDomPortal && addScreenOpen ?
+        createPortal(
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-[44] bg-black/20"
+              aria-label="Close add activity"
+              onClick={() => setAddScreenOpen(false)}
+            />
+            <div
+              className="fixed right-3 left-3 z-[45] max-h-[min(85dvh,560px)] overflow-y-auto overscroll-contain rounded-xl border border-neutral-200 bg-neutral-50/98 p-4 shadow-xl backdrop-blur-sm sm:left-auto sm:w-[min(100%-1.5rem,36rem)]"
+              style={{
+                top: "calc(var(--lesson-editor-toolbar-height, 3.5rem) + 0.5rem)",
+              }}
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                <p className="text-sm font-semibold text-neutral-900">Add activity</p>
+                <button
+                  type="button"
+                  onClick={() => setAddScreenOpen(false)}
+                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {ADD_SCREEN_BUTTONS.map(({ kind, label }) => (
+                  <form key={kind} action={addScreenTemplate.bind(null, lessonId, moduleId, kind)}>
+                    <button
+                      type="submit"
+                      className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold shadow-sm hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
+                    >
+                      {label}
+                    </button>
+                  </form>
+                ))}
+                <form
+                  action={createQuizGroup.bind(null, lessonId, moduleId)}
+                  className="flex flex-wrap items-end gap-2 rounded border border-sky-200 bg-sky-50/80 px-2 py-2"
+                >
+                  <label className="text-xs font-medium text-neutral-700">
+                    Quiz title
+                    <input
+                      name="title"
+                      type="text"
+                      placeholder="e.g. Unit check"
+                      className="ml-1 mt-0.5 w-40 rounded border border-neutral-300 px-2 py-1 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded bg-sky-700 px-2 py-1.5 text-xs font-semibold text-white hover:bg-sky-800 sm:text-sm"
+                  >
+                    + New quiz
+                  </button>
+                </form>
+              </div>
+            </div>
+          </>,
+          document.body,
+        )
+      : null}
+
+      {editorHelpOpen ? (
+        <div className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto overscroll-contain rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-base font-bold text-neutral-900">Lesson &amp; screen actions</h3>
+            <button
+              type="button"
+              className="shrink-0 rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+              onClick={() => setEditorHelpOpen(false)}
+              aria-label="Close help"
+            >
+              Close
+            </button>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-neutral-600">
+            {quizSelection ?
+              "Quiz builder: add questions from the bank, then edit the selected card. Save and advanced JSON for the active question stay on the card. Use Preview in the toolbar when not in a quiz strip."
+            : "Auto-save runs a few seconds after you stop typing and when focus leaves the card. Use Save screen now after heavy edits (e.g. cover image). Open Preview for a floating student view."}
+          </p>
+
+          <div className="mt-4 space-y-3 border-t border-neutral-200 pt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">Lesson</p>
+            <div className="flex flex-wrap gap-2">
+              <form action={saveLesson}>
+                <input type="hidden" name="id" value={lessonId} />
+                <input type="hidden" name="module_id" value={moduleId} />
+                <input type="hidden" name="title" value={lessonTitle} />
+                <input type="hidden" name="slug" value={lessonSlug} />
+                <input type="hidden" name="order_index" value={String(lessonOrderIndex)} />
+                <input
+                  type="hidden"
+                  name="estimated_minutes"
+                  value={
+                    lessonEstimatedMinutes === null || lessonEstimatedMinutes === undefined ?
+                      ""
+                    : String(lessonEstimatedMinutes)
+                  }
+                />
+                <input type="hidden" name="published" value={published ? "" : "on"} />
+                <button
+                  type="submit"
+                  disabled={!published && publishBlocked}
+                  title={
+                    !published && publishBlocked ?
+                      publishBlockingReasons.join(" ")
+                    : undefined
+                  }
+                  className={
+                    published ?
+                      "rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:bg-amber-200"
+                    : publishBlocked ?
+                      "cursor-not-allowed rounded border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-500"
+                    : "rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 active:bg-emerald-200"
+                  }
+                >
+                  {published ? "Unpublish lesson" : "Publish lesson"}
+                </button>
+              </form>
+              <form action={deleteLesson.bind(null, lessonId, moduleId)}>
+                <ConfirmSubmitButton
+                  type="submit"
+                  confirmMessage={`Delete lesson "${lessonTitle}"? This cannot be undone.`}
+                  className="rounded border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100 active:bg-red-200"
+                >
+                  Delete lesson
+                </ConfirmSubmitButton>
+              </form>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3 border-t border-neutral-200 pt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">Current screen</p>
+            {quizSelection ?
+              <p className="text-xs text-neutral-600">
+                Select a non-quiz screen in the storyboard to use Save, advanced JSON, and story TTS here.
+              </p>
+            : selectedScreen ?
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-800 sm:text-sm"
+                    onClick={() => void screenEditorRef.current?.saveNow()}
+                  >
+                    Save screen now
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 sm:text-sm"
+                    onClick={() => setAdvancedJsonOpen((v) => !v)}
+                  >
+                    {advancedJsonOpen ? "Hide" : "Show"} advanced JSON
+                  </button>
+                </div>
+                {screenEditorStatus.isSaving || screenEditorStatus.saveHint ?
+                  <p
+                    className={`text-xs font-medium ${
+                      screenEditorStatus.saveHint?.startsWith("Already") ?
+                        "text-neutral-600"
+                      : "text-green-800"
+                    }`}
+                  >
+                    {screenEditorStatus.isSaving ? "Saving… " : null}
+                    {screenEditorStatus.saveHint}
+                  </p>
+                : null}
+                {screenEditorStatus.err ?
+                  <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-800">
+                    {screenEditorStatus.err}
+                  </p>
+                : null}
+                {selectedScreen.screen_type === "story" ?
+                  <label className="block text-xs font-medium text-neutral-700">
+                    TTS language
+                    <input
+                      className="mt-1 w-full max-w-xs rounded border border-neutral-300 bg-white px-2 py-1.5 text-sm"
+                      value={
+                        (
+                          selectedScreen.payload &&
+                          typeof selectedScreen.payload === "object" &&
+                          !Array.isArray(selectedScreen.payload) &&
+                          "tts_lang" in selectedScreen.payload &&
+                          typeof (selectedScreen.payload as { tts_lang?: unknown }).tts_lang ===
+                            "string" ?
+                            (selectedScreen.payload as { tts_lang: string }).tts_lang
+                          : "en-US"
+                        )
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const raw = selectedScreen.payload;
+                        const base =
+                          raw && typeof raw === "object" && !Array.isArray(raw) ?
+                            { ...(raw as Record<string, unknown>) }
+                          : {};
+                        base.tts_lang = v.trim() || undefined;
+                        bumpScreenPayload(selectedScreen.id, base);
+                      }}
+                    />
+                  </label>
+                : null}
+              </div>
+            : <p className="text-xs text-neutral-600">Select a screen in the storyboard.</p>}
+          </div>
+        </div>
+      ) : null}
+
+      {canUseDomPortal && storyboardOpen && !storyboardPinned ?
+        createPortal(
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-[55] bg-black/25"
+              aria-label="Close storyboard"
+              onClick={() => setStoryboardOpen(false)}
+            />
+            <aside
+              className={
+                "fixed top-0 bottom-0 left-0 z-[56] flex min-h-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain border-r border-neutral-200/90 bg-neutral-100/98 p-4 shadow-2xl backdrop-blur-sm"
+              }
+              style={{ width: `clamp(220px, ${leftPanePct}%, 520px)` }}
+            >
+              {renderStoryboardMenuBody()}
+            </aside>
+          </>,
+          document.body,
+        )
+      : null}
+      {canUseDomPortal && toolsOpen && !toolsPinned ?
+        createPortal(
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-[57] bg-black/25"
+              aria-label="Close lesson tools"
+              onClick={() => setToolsOpen(false)}
+            />
+            <aside
+              className={
+                "fixed top-0 right-0 bottom-0 z-[58] flex min-h-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain border-l border-neutral-200/90 bg-neutral-50/98 p-4 shadow-2xl backdrop-blur-sm"
+              }
+              style={{ width: `clamp(260px, ${rightPanePct}%, 560px)` }}
+            >
+              {renderToolsPanelBody()}
+            </aside>
+          </>,
+          document.body,
+        )
+      : null}
 
       <div
         ref={shellRef}
         className={
-          "relative flex min-h-[calc(100vh-7rem)] flex-col gap-0 border border-neutral-200 bg-white " +
-          "xl:flex-row xl:items-start"
+          "relative flex min-h-0 flex-1 flex-col gap-0 overflow-hidden bg-white " +
+          "xl:flex-row xl:items-stretch"
         }
       >
-        <aside
-          className={`order-1 min-h-0 min-w-0 xl:self-start ${leftSidebarScroll} shrink-0 border-neutral-200/80 bg-neutral-100/95 xl:order-none xl:border-r ${
-            storyboardOpen
-              ? "w-full p-4 xl:min-w-[220px] xl:py-5"
-              : "hidden"
-          }`}
-          style={
-            storyboardOpen
-              ? { width: `clamp(220px, ${leftPanePct}%, 520px)` }
-              : undefined
-          }
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Storyboard
-              </h2>
-              <p className="mt-1 text-xs text-neutral-600">Drag to reorder · Up / Down / Dup / Del</p>
-            </div>
-          </div>
-          <>
-              <ol className="mt-3 space-y-2">
-                {liveScreens.map((s, i) => {
-                  const thumb = screenThumbnailUrl(s);
-                  return (
-                    <li key={s.id}>
-                      <div
-                        ref={(el) => {
-                          rowRefs.current[s.id] = el;
-                        }}
-                        onDragOver={onDragOver}
-                        onDrop={(e) => onDrop(e, s.id)}
-                        onClick={() => setSelectedIndex(i)}
-                        className={`rounded border p-1.5 transition-opacity ${
-                          draggingId === s.id ? "opacity-60" : ""
-                        } ${
-                          i === safeIndex ? "border-sky-600 bg-sky-50" : "border-neutral-200 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-start gap-1">
-                          <span
-                            draggable
-                            onDragStart={(e) => onDragStart(e, s.id)}
-                            onDragEnd={() => setDraggingId(null)}
-                            className="cursor-grab select-none px-0.5 pt-0.5 font-mono text-[11px] text-neutral-400 active:cursor-grabbing"
-                            title="Drag to reorder"
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Drag to reorder screen ${i}`}
-                          >
-                            ⋮⋮
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedIndex(i)}
-                              className="flex w-full min-w-0 items-start gap-1 rounded-md px-0.5 py-0.5 text-left hover:bg-neutral-50 active:bg-neutral-100"
-                            >
-                              <span className="w-4 shrink-0 font-mono text-[11px] text-neutral-500">{i}</span>
-                              <span className="line-clamp-2 min-w-0 flex-1 text-[11px] leading-snug sm:text-xs">
-                                {screenOutlineLabel(s)}
-                              </span>
-                            </button>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
-                              <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
-                                <button
-                                  type="submit"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
-                                >
-                                  Up
-                                </button>
-                              </form>
-                              <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
-                                <button
-                                  type="submit"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
-                                >
-                                  Down
-                                </button>
-                              </form>
-                              <form action={duplicateScreen.bind(null, s.id, lessonId, moduleId)}>
-                                <input type="hidden" name="duplicate_screen" value={s.id} />
-                                <button
-                                  type="submit"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (typeof window !== "undefined") {
-                                      window.sessionStorage.setItem(jumpNewestKey, "1");
-                                    }
-                                  }}
-                                  className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 active:bg-blue-200"
-                                >
-                                  Dup
-                                </button>
-                              </form>
-                              <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
-                                <button
-                                  type="submit"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const shouldDelete = window.confirm(
-                                      `Delete this storyboard item?\n\n${screenOutlineLabel(s)}`,
-                                    );
-                                    if (!shouldDelete) {
-                                      e.preventDefault();
-                                    }
-                                  }}
-                                  className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200"
-                                >
-                                  Del
-                                </button>
-                              </form>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const shellRect = shellRef.current?.getBoundingClientRect();
-                                  const rowRect = rowRefs.current[s.id]?.getBoundingClientRect();
-                                  const defaultX =
-                                    shellRect && rowRect ?
-                                      clamp(rowRect.right - shellRect.left + 18, 8, shellRect.width - 220)
-                                    : 260;
-                                  const defaultY =
-                                    shellRect && rowRect ?
-                                      clamp(rowRect.top - shellRect.top, 8, shellRect.height - 56)
-                                    : 120;
-                                  noteZRef.current += 1;
-                                  const nextZ = noteZRef.current;
-                                  setActivityNotes((prev) => {
-                                    const cur = prev[s.id];
-                                    return {
-                                      ...prev,
-                                      [s.id]: {
-                                        text: cur?.text ?? "",
-                                        open: !(cur?.open ?? false),
-                                        collapsed: cur?.collapsed ?? false,
-                                        x: cur?.x ?? defaultX,
-                                        y: cur?.y ?? defaultY,
-                                        z: nextZ,
-                                      },
-                                    };
-                                  });
-                                }}
-                                className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-100 active:bg-violet-200"
-                              >
-                                Notes
-                              </button>
-                            </div>
-                          </div>
-                          {thumb ? (
-                            <div className="relative ml-1 h-14 w-16 shrink-0 self-stretch overflow-hidden rounded border border-neutral-300">
-                              <Image
-                                src={thumb}
-                                alt=""
-                                fill
-                                className="object-cover"
-                                unoptimized={thumb.includes("placehold.co")}
-                              />
-                            </div>
-                          ) : (
-                            <div className="ml-1 flex h-14 w-16 shrink-0 self-stretch items-center justify-center rounded border border-dashed border-neutral-300 text-[10px] text-neutral-400">
-                              —
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-              {liveScreens.length === 0 ? (
-                <p className="mt-2 text-sm text-neutral-600">No screens yet.</p>
-              ) : null}
-            </>
-        </aside>
-        {storyboardOpen ? (
+        {storyboardOpen && storyboardPinned ? (
+          <aside
+            className={
+              "order-1 min-h-0 w-full shrink-0 overflow-y-auto border-r border-neutral-200/80 bg-neutral-100/95 p-4 xl:order-none xl:min-w-[220px] xl:self-stretch xl:py-5 " +
+              leftSidebarScroll
+            }
+            style={{ width: `clamp(220px, ${leftPanePct}%, 520px)` }}
+          >
+            {renderStoryboardMenuBody()}
+          </aside>
+        ) : null}
+        {storyboardOpen && storyboardPinned ? (
           <div className="hidden xl:flex xl:w-2 xl:items-stretch xl:justify-center xl:self-stretch">
             <button
               type="button"
@@ -860,80 +1510,40 @@ export function LessonEditorWorkspace({
           </div>
         ) : null}
 
-        <div
-          ref={centerRef}
-          className="order-2 flex min-h-0 min-w-0 flex-1 flex-col gap-4 border-neutral-200 bg-white p-4 sm:p-5 xl:order-none xl:max-w-none xl:flex-row xl:gap-4 xl:self-stretch"
-        >
-          <div
-            className={`min-h-0 min-w-0 flex-1 flex-col space-y-3 ${previewOpen ? "flex" : "hidden"}`}
-            style={previewOpen ? { flexBasis: `${previewPanePct}%` } : undefined}
-          >
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900">Student preview</h2>
-              <p className="mt-1 text-sm text-neutral-600">
-                This preview matches the student view. Edit content in{" "}
-                <strong className="font-medium text-neutral-800">Screen details</strong>; the preview updates
-                immediately.
-              </p>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto rounded border-4 border-neutral-800 bg-amber-50/30 p-3 shadow-inner">
-              {liveScreens.length > 0 ? (
-                <LessonPlayer
-                  key={lessonId}
-                  mode="preview"
-                  lessonId={lessonId}
-                  lessonTitle={lessonTitle}
-                  screens={liveScreens}
-                  initialScreenIndex={safeIndex}
-                />
-              ) : (
-                <p className="text-sm text-neutral-600">Add screens to preview.</p>
-              )}
-            </div>
-          </div>
-          {previewOpen && detailsOpen ? (
-            <div className="hidden xl:flex xl:w-2 xl:items-stretch xl:justify-center xl:self-stretch">
-              <button
-                type="button"
-                aria-label="Resize preview and details panels"
-                onPointerDown={(e) => beginResize("center", e)}
-                className="h-full w-1 cursor-col-resize rounded bg-neutral-200/80 hover:bg-sky-300 active:bg-sky-400"
+        <div className="order-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-neutral-200 bg-white p-0 xl:order-none xl:max-w-none xl:self-stretch">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            {quizSelection ?
+              <QuizBuilder
+                lessonId={lessonId}
+                moduleId={moduleId}
+                moduleSlug={moduleSlug}
+                lessonSlug={lessonSlug}
+                lessonTitle={lessonTitle}
+                quizGroupId={quizSelection.groupId}
+                groupScreens={quizSelection.groupScreens}
+                liveScreens={liveScreens}
+                bumpScreenPayload={bumpScreenPayload}
               />
-            </div>
-          ) : null}
-
-          <div
-            className={`order-3 min-h-0 min-w-0 flex-1 flex-col space-y-3 xl:order-none xl:min-w-[280px] ${
-              detailsOpen ? "flex" : "hidden"
-            }`}
-            style={detailsOpen ? { flexBasis: `${100 - previewPanePct}%` } : undefined}
-          >
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900">Screen details</h2>
-              <p className="mt-1 text-xs text-neutral-500">
-                Auto-save a few seconds after you stop typing, and when focus leaves this card. Use{" "}
-                <strong>Save screen now</strong> for an immediate write (recommended after a cover image).
-              </p>
-            </div>
-            <div className="min-h-0 flex-1 overflow-visible rounded-lg border border-neutral-200 bg-white p-1 shadow-sm">
-              {selectedScreen ? (
-                <ScreenEditorCard
-                  key={selectedScreen.id}
-                  screen={selectedScreen}
-                  index={safeIndex}
-                  lessonId={lessonId}
-                  moduleId={moduleId}
-                  isSelected
-                  onSelect={() => setSelectedIndex(safeIndex)}
-                  bumpScreenPayload={bumpScreenPayload}
-                />
-              ) : (
-                <p className="p-4 text-sm text-neutral-600">Select a screen in the storyboard.</p>
-              )}
-            </div>
+            : selectedScreen ?
+              <ScreenEditorCard
+                ref={screenEditorRef}
+                key={selectedScreen.id}
+                screen={selectedScreen}
+                index={safeIndex}
+                lessonId={lessonId}
+                moduleId={moduleId}
+                isSelected
+                onSelect={() => setSelectedIndex(safeIndex)}
+                bumpScreenPayload={bumpScreenPayload}
+                advancedJsonOpen={advancedJsonOpen}
+                onAdvancedJsonOpenChange={setAdvancedJsonOpen}
+                onStatusChange={onScreenEditorStatus}
+                onPersistSuccess={notifyScreenSaved}
+              />
+            : <p className="p-4 text-sm text-neutral-600">Select a screen in the storyboard.</p>}
           </div>
         </div>
-        {toolsOpen ? (
+        {toolsOpen && toolsPinned ? (
           <div className="hidden xl:flex xl:w-2 xl:items-stretch xl:justify-center xl:self-stretch">
             <button
               type="button"
@@ -944,95 +1554,17 @@ export function LessonEditorWorkspace({
           </div>
         ) : null}
 
-        <aside
-          className={`order-4 min-h-0 min-w-0 xl:self-start ${rightSidebarScroll} shrink-0 border-t border-neutral-200/80 bg-neutral-50/95 xl:order-none xl:border-t-0 xl:border-l ${
-            toolsOpen
-              ? "w-full p-4 xl:min-w-[260px] xl:py-5"
-              : "hidden"
-          }`}
-          style={
-            toolsOpen
-              ? { width: `clamp(260px, ${rightPanePct}%, 560px)` }
-              : undefined
-          }
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Lesson tools</p>
-          </div>
-          <>
-              {children}
-              <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-neutral-900">Publish checklist</h2>
-            <ul className="mt-2 list-inside list-disc text-xs">
-              {checklist.map((c, i) => (
-                <li key={i} className={c.ok ? "text-green-800" : "text-amber-900"}>
-                  {c.ok ? "✓" : "○"} {c.label}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => void copyStudentLink()}
-                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
-              >
-                Copy student link
-              </button>
-              <button
-                type="button"
-                onClick={exportJson}
-                className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
-              >
-                Export screens JSON
-              </button>
-              <form action={duplicateLesson.bind(null, lessonId, moduleId)}>
-                <button
-                  type="submit"
-                  className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
-                >
-                  Duplicate lesson
-                </button>
-              </form>
-            </div>
-            {copyMsg ? <p className="mt-2 text-xs text-green-800">{copyMsg}</p> : null}
-            <p className="mt-2 text-[11px] leading-snug text-neutral-500">
-              Student URL (when published):{" "}
-              <code className="break-all rounded bg-neutral-100 px-1">{studentPath}</code>
-            </p>
-            <p className="mt-2 text-[11px] leading-snug text-neutral-500">
-              Images: Upload or Media library per screen (shared bucket), or paste an HTTPS URL.
-            </p>
-              </section>
-
-              <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-neutral-900">Import screens</h2>
-            <p className="mt-1 text-xs text-neutral-600">
-              JSON: {"{"} &quot;screens&quot;: [ {"{"} &quot;screen_type&quot;, &quot;payload&quot; {"}"}… ] {"}"}
-            </p>
-            <form
-              className="mt-3 space-y-2"
-              action={importLessonScreensJson.bind(null, lessonId, moduleId)}
-            >
-              <label className="flex items-center gap-2 text-xs">
-                <input type="checkbox" name="replace_existing" />
-                Replace all existing screens
-              </label>
-              <textarea
-                name="import_json"
-                rows={5}
-                className="w-full rounded border font-mono text-[11px] leading-snug"
-                placeholder='{"screens":[...]}'
-              />
-              <button
-                type="submit"
-                className="w-full rounded bg-neutral-900 px-3 py-2 text-xs font-semibold text-white active:bg-neutral-950 sm:text-sm"
-              >
-                Import
-              </button>
-            </form>
-              </section>
-            </>
-        </aside>
+        {toolsOpen && toolsPinned ? (
+          <aside
+            className={
+              "order-4 min-h-0 w-full shrink-0 overflow-y-auto border-t border-neutral-200/80 bg-neutral-50/95 p-4 xl:order-none xl:min-w-[260px] xl:self-stretch xl:border-t-0 xl:border-l xl:py-5 " +
+              rightSidebarScroll
+            }
+            style={{ width: `clamp(260px, ${rightPanePct}%, 560px)` }}
+          >
+            {renderToolsPanelBody()}
+          </aside>
+        ) : null}
         <div className="pointer-events-none absolute inset-0 z-[50] hidden overflow-hidden xl:block">
         <svg className="h-full w-full overflow-visible" aria-hidden>
           {connectorLines.map((line) => (
@@ -1081,7 +1613,7 @@ export function LessonEditorWorkspace({
                   };
                 }}
               >
-                <span className="truncate text-xs font-semibold text-violet-900">Notes · {screenOutlineLabel(s)}</span>
+                <span className="truncate text-xs font-semibold text-violet-900">Notes · {screenOutlineLabel(s, liveScreens)}</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -1129,6 +1661,14 @@ export function LessonEditorWorkspace({
         })}
         </div>
       </div>
+      <LessonPreviewOverlay
+        open={previewOverlayOpen}
+        onClose={() => setPreviewOverlayOpen(false)}
+        lessonId={lessonId}
+        lessonTitle={lessonTitle}
+        screens={liveScreens}
+        initialScreenIndex={safeIndex}
+      />
     </div>
   );
 }

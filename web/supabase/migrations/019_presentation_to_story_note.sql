@@ -1,0 +1,6 @@
+-- Legacy `presentation_interactive` interaction payloads are converted at read time in the app
+-- (`parseScreenPayload` in lib/lesson-schemas.ts) into `story` payloads with `layout_mode: "slide"`.
+--
+-- Optional cleanup: update persisted rows so `screen_type` is `story` and `payload` is the migrated JSON:
+--   use migratePresentationInteractiveToStory / migratePresentationInteractiveFromParsed in a one-off script
+--   with service-role access to `lesson_screens`, or re-save affected screens from the teacher editor.

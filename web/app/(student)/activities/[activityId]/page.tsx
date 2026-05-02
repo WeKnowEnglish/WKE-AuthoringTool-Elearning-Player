@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActivityLibraryPreview } from "@/components/teacher/activities/ActivityLibraryPreview";
-import { searchActivityLibrary } from "@/lib/data/teacher";
+import { getPublishedActivityLibraryItemById } from "@/lib/data/teacher";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +11,7 @@ type Props = {
 
 export default async function StudentActivityPage({ params }: Props) {
   const { activityId } = await params;
-  const items = await searchActivityLibrary();
-  const item = items.find((entry) => entry.id === activityId) ?? null;
+  const item = await getPublishedActivityLibraryItemById(activityId);
   if (!item) notFound();
 
   return (

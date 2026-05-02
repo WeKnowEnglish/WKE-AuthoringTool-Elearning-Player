@@ -9,7 +9,7 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt } from "./shared";
+import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
 
 export function FillBlanksView({
   parsed,
@@ -104,7 +104,6 @@ export function FillBlanksView({
     onPass();
   }
 
-  const imageFitClass = parsed.image_fit === "contain" ? "object-contain bg-white" : "object-cover";
   const imageSizeClass = parsed.image_size === "small" ? "max-w-xl" : "max-w-4xl";
 
   return (
@@ -115,7 +114,7 @@ export function FillBlanksView({
             src={parsed.image_url}
             alt=""
             fill
-            className={imageFitClass}
+            className={interactionImageFitClass(parsed.image_fit)}
             unoptimized={unopt(parsed.image_url)}
           />
         </div>

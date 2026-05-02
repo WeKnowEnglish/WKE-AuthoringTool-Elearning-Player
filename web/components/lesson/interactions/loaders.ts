@@ -36,9 +36,6 @@ export function prefetchInteractionChunk(subtype: InteractionSubtype): void {
     case "click_targets":
       void import("./ClickTargetsView");
       break;
-    case "presentation_interactive":
-      void import("./PresentationInteractiveView");
-      break;
     case "sound_sort":
       void import("./SoundSortView");
       break;

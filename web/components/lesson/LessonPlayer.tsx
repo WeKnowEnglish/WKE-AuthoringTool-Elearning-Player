@@ -42,6 +42,7 @@ import {
 } from "@/lib/lesson-schemas";
 import { parseScreenPayload, type ScreenPayload } from "@/lib/lesson-schemas-player";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
+import { interactionImageFitClass } from "@/components/lesson/interactions/shared";
 import { StoryBookView } from "@/components/lesson/StoryBookView";
 import type { LessonPlayerVisualEdit } from "@/components/lesson/lesson-player-edit";
 
@@ -107,11 +108,6 @@ const LazyVoiceQuestion = lazy(() =>
 );
 const LazyGuidedDialogue = lazy(() =>
   import("./interactions/GuidedDialogueView").then((m) => ({ default: m.GuidedDialogueView })),
-);
-const LazyPresentationInteractive = lazy(() =>
-  import("./interactions/PresentationInteractiveView").then((m) => ({
-    default: m.PresentationInteractiveView,
-  })),
 );
 const LazyDragSentence = lazy(() =>
   import("./interactions/DragSentenceView").then((m) => ({ default: m.DragSentenceView })),
@@ -368,7 +364,7 @@ export function LessonPlayer({
     if (!parsed) return;
     if (!screen) return;
     if (!interactionPass) return;
-    if (parsed.type !== "interaction") return;
+    if (parsed.type !== "interaction" && parsed.type !== "story") return;
     if (parsed.auto_advance_on_pass !== true) return;
     const currentScreenId = screen.id;
     if (
@@ -514,7 +510,7 @@ export function LessonPlayer({
         const { stickers } = recordCorrectAnswer();
         setStickerCount(stickers);
         const perQuestionGold =
-          parsed.type === "interaction" &&
+          (parsed.type === "interaction" || parsed.type === "story") &&
           typeof parsed.gold_reward_on_pass === "number" &&
           Number.isFinite(parsed.gold_reward_on_pass) ?
             Math.max(0, parsed.gold_reward_on_pass)
@@ -606,7 +602,7 @@ export function LessonPlayer({
                 src={parsed.image_url}
                 alt=""
                 fill
-                className={parsed.image_fit === "contain" ? "object-contain bg-white" : "object-cover"}
+                className={interactionImageFitClass(parsed.image_fit)}
                 sizes="(max-width:768px) 100vw, 42rem"
                 priority
                 unoptimized={parsed.image_url.includes("placehold.co")}
@@ -627,7 +623,7 @@ export function LessonPlayer({
                         const next = startPayloadSchema.parse({
                           type: "start",
                           image_url: parsed.image_url,
-                          image_fit: parsed.image_fit ?? "cover",
+                          image_fit: parsed.image_fit ?? "contain",
                           cta_label: parsed.cta_label,
                           read_aloud_title: e.target.value || undefined,
                         });
@@ -648,7 +644,7 @@ export function LessonPlayer({
                       const next = startPayloadSchema.parse({
                         type: "start",
                         image_url: parsed.image_url,
-                          image_fit: parsed.image_fit ?? "cover",
+                          image_fit: parsed.image_fit ?? "contain",
                         cta_label: e.target.value,
                         read_aloud_title: parsed.read_aloud_title,
                       });
@@ -673,26 +669,51 @@ export function LessonPlayer({
         </div>
       )}
 
-      {parsed.type === "story" && (
-        <StoryBookView
-          key={screen.id}
-          screenId={screen.id}
-          payload={parsed}
-          muted={muted}
-          compactPreview={isPreview}
-          canvasEdit={!!canvasEdit}
-          visualEdit={visualEdit}
-          lessonBackDisabled={index <= 0}
-          onNextScreen={() => {
-            playSfx("tap", muted);
-            goNext();
-          }}
-          onBackScreen={() => {
-            playSfx("tap", muted);
-            goBack();
-          }}
-        />
-      )}
+      {parsed.type === "story" &&
+        (parsed.pass_rule ? (
+          <InteractionFeedbackShell kind={interactionFeedback}>
+            <StoryBookView
+              key={screen.id}
+              screenId={screen.id}
+              payload={parsed}
+              muted={muted}
+              compactPreview={isPreview}
+              canvasEdit={!!canvasEdit}
+              visualEdit={visualEdit}
+              lessonBackDisabled={index <= 0}
+              interactionScreenPassed={interactionPass}
+              onInteractionPass={passHandlers.onPass}
+              onInteractionWrong={passHandlers.onWrong}
+              onNextScreen={() => {
+                playSfx("tap", muted);
+                goNext();
+              }}
+              onBackScreen={() => {
+                playSfx("tap", muted);
+                goBack();
+              }}
+            />
+          </InteractionFeedbackShell>
+        ) : (
+          <StoryBookView
+            key={screen.id}
+            screenId={screen.id}
+            payload={parsed}
+            muted={muted}
+            compactPreview={isPreview}
+            canvasEdit={!!canvasEdit}
+            visualEdit={visualEdit}
+            lessonBackDisabled={index <= 0}
+            onNextScreen={() => {
+              playSfx("tap", muted);
+              goNext();
+            }}
+            onBackScreen={() => {
+              playSfx("tap", muted);
+              goBack();
+            }}
+          />
+        ))}
 
       {parsed.type === "interaction" && parsed.subtype === "mc_quiz" && (
         <>
@@ -999,13 +1020,6 @@ export function LessonPlayer({
               {...nav}
               {...passHandlers}
             />
-          </InteractionLazyShell>
-        </InteractionFeedbackShell>
-      )}
-      {parsed.type === "interaction" && parsed.subtype === "presentation_interactive" && (
-        <InteractionFeedbackShell kind={interactionFeedback}>
-          <InteractionLazyShell>
-            <LazyPresentationInteractive parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}

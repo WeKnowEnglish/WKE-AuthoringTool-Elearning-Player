@@ -9,7 +9,7 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt } from "./shared";
+import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
 
 export function ListenHotspotSequenceView({
   parsed,
@@ -74,7 +74,13 @@ export function ListenHotspotSequenceView({
           </p>
         </div>
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
-          <Image src={parsed.image_url} alt="Scene" fill className="object-cover" unoptimized={unopt(parsed.image_url)} />
+          <Image
+            src={parsed.image_url}
+            alt="Scene"
+            fill
+            className={interactionImageFitClass(parsed.image_fit)}
+            unoptimized={unopt(parsed.image_url)}
+          />
           {parsed.targets.map((t) => (
             <button
               key={t.id}

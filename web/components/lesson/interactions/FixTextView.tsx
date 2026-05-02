@@ -11,6 +11,7 @@ import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
+  interactionImageFitClass,
   NavProps,
   unopt,
   normalizeText,
@@ -229,9 +230,7 @@ export function FixTextView({
             src={parsed.image_url}
             alt=""
             fill
-            className={
-              parsed.image_fit === "contain" ? "object-contain bg-white" : "object-cover"
-            }
+            className={interactionImageFitClass(parsed.image_fit)}
             unoptimized={unopt(parsed.image_url)}
           />
         </div>

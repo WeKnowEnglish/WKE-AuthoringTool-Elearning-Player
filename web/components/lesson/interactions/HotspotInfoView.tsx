@@ -9,7 +9,7 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt } from "./shared";
+import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
 
 export function HotspotInfoView({
   parsed,
@@ -48,7 +48,7 @@ export function HotspotInfoView({
             src={parsed.image_url}
             alt="Scene"
             fill
-            className="object-cover"
+            className={interactionImageFitClass(parsed.image_fit)}
             unoptimized={unopt(parsed.image_url)}
           />
           {parsed.hotspots.map((h: (typeof parsed.hotspots)[number]) => (

@@ -9,7 +9,7 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt, normalizeText } from "./shared";
+import { GuideBlock, interactionImageFitClass, NavProps, unopt, normalizeText } from "./shared";
 
 export function TrueFalseView({
   parsed,
@@ -53,7 +53,7 @@ export function TrueFalseView({
       clearTimeout(wrongFlashTimerRef.current);
       wrongFlashTimerRef.current = null;
     }
-  }, [parsed.statement, parsed.correct, parsed.image_url]);
+  }, [parsed.statement, parsed.correct, parsed.image_url, parsed.image_fit]);
 
   const wrongButtonClass = (which: "true" | "false") =>
     clsx(
@@ -69,7 +69,7 @@ export function TrueFalseView({
             src={parsed.image_url}
             alt=""
             fill
-            className="object-contain bg-white"
+            className={interactionImageFitClass(parsed.image_fit)}
             unoptimized={unopt(parsed.image_url)}
           />
         </div>

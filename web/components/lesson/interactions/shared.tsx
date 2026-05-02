@@ -6,10 +6,15 @@ import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { uploadStudentVoiceSubmission } from "@/lib/actions/student-voice";
 import { getProgressSnapshot } from "@/lib/progress/local-storage";
 
+/** Student-facing image in a fixed frame: default show whole image (contain). */
+export function interactionImageFitClass(imageFit: "cover" | "contain" | undefined) {
+  return (imageFit ?? "contain") === "contain" ? "object-contain bg-white" : "object-cover";
+}
+
 export function GuideBlock({
   guide,
 }: {
-  guide?: { image_url?: string; tip_text?: string };
+  guide?: { image_url?: string; tip_text?: string; image_fit?: "cover" | "contain" };
 }) {
   if (!guide?.tip_text && !guide?.image_url) return null;
   return (
@@ -21,7 +26,7 @@ export function GuideBlock({
             alt="Guide"
             width={80}
             height={80}
-            className="object-cover"
+            className={interactionImageFitClass(guide.image_fit)}
             unoptimized={guide.image_url.includes("placehold.co")}
           />
         </div>

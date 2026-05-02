@@ -9,7 +9,7 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt, deterministicShuffle } from "./shared";
+import { GuideBlock, interactionImageFitClass, NavProps, unopt, deterministicShuffle } from "./shared";
 
 export function LetterMixupView({
   parsed,
@@ -246,10 +246,10 @@ export function LetterMixupView({
     [],
   );
 
-  const [imageFit, setImageFit] = useState<"cover" | "contain">(() => parsed.image_fit ?? "cover");
+  const [imageFit, setImageFit] = useState<"cover" | "contain">(() => parsed.image_fit ?? "contain");
   useEffect(() => {
     queueMicrotask(() => {
-      setImageFit(parsed.image_fit ?? "cover");
+      setImageFit(parsed.image_fit ?? "contain");
     });
   }, [parsed.image_url, parsed.image_fit]);
 
@@ -312,7 +312,7 @@ export function LetterMixupView({
               src={parsed.image_url}
               alt=""
               fill
-              className={imageFit === "contain" ? "object-contain bg-white" : "object-cover"}
+              className={interactionImageFitClass(imageFit)}
               unoptimized={unopt(parsed.image_url)}
             />
             {!passed ? (

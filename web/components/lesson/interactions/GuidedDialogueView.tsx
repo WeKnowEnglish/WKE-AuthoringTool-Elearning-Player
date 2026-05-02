@@ -9,7 +9,14 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt, useAudioRecorder, uploadVoiceAnswer } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  NavProps,
+  unopt,
+  useAudioRecorder,
+  uploadVoiceAnswer,
+} from "./shared";
 
 export function GuidedDialogueView({
   parsed,
@@ -71,7 +78,13 @@ export function GuidedDialogueView({
       <KidPanel>
         <div className="mb-4 flex items-center gap-3">
           <div className="relative h-20 w-20 overflow-hidden rounded-lg border-2 border-kid-ink">
-            <Image src={parsed.character_image_url} alt={parsed.character_name} fill className="object-cover" unoptimized={unopt(parsed.character_image_url)} />
+            <Image
+              src={parsed.character_image_url}
+              alt={parsed.character_name}
+              fill
+              className={interactionImageFitClass(parsed.character_image_fit)}
+              unoptimized={unopt(parsed.character_image_url)}
+            />
           </div>
           <div>
             <p className="text-xl font-bold">{parsed.character_name}</p>

@@ -45,6 +45,7 @@ import {
   type StoryPayload,
 } from "@/lib/lesson-schemas";
 import { resolveStoryIdleForItem, storyIdleClassForPreset } from "@/lib/story-idle";
+import { isStoryPassSatisfied } from "@/lib/story-pass";
 
 function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
@@ -86,6 +87,10 @@ type Props = {
   lessonBackDisabled: boolean;
   onNextScreen: () => void;
   onBackScreen: () => void;
+  /** When `payload.pass_rule` is set, parent marks lesson-level pass (rewards / advance). */
+  interactionScreenPassed?: boolean;
+  onInteractionPass?: () => void;
+  onInteractionWrong?: () => void;
 };
 
 export function StoryBookView({
@@ -98,6 +103,9 @@ export function StoryBookView({
   lessonBackDisabled,
   onNextScreen,
   onBackScreen,
+  interactionScreenPassed = false,
+  onInteractionPass,
+  onInteractionWrong,
 }: Props) {
   const pages = useMemo(() => getNormalizedStoryPages(payload), [payload]);
   const turnStyle = getStoryPageTurnStyle(payload);
@@ -112,9 +120,27 @@ export function StoryBookView({
   const [activeStoryPhaseId, setActiveStoryPhaseId] = useState<string | null>(null);
   const activeStoryPhaseIdRef = useRef<string | null>(null);
   const [hiddenItemIds, setHiddenItemIds] = useState<Record<string, boolean>>({});
+  const [visitedPageIds, setVisitedPageIds] = useState<Record<string, true>>({});
+  const [deckDragCheckDone, setDeckDragCheckDone] = useState<Record<string, boolean>>({});
+  const [deckFreeDragPos, setDeckFreeDragPos] = useState<
+    Record<string, { x_percent: number; y_percent: number }>
+  >({});
+  const deckFreeDragPosRef = useRef(deckFreeDragPos);
+  useEffect(() => {
+    deckFreeDragPosRef.current = deckFreeDragPos;
+  }, [deckFreeDragPos]);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audioUnlockedRef = useRef(false);
   const pageFrameRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const deckDragSessionRef = useRef<{
+    id: string;
+    dx: number;
+    dy: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const passReportedRef = useRef(false);
   const pageSheenRef = useRef<HTMLDivElement | null>(null);
   const pageFoldShadowRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -207,6 +233,49 @@ export function StoryBookView({
     : new Set(currentStoryPhase.highlight_item_ids);
   const lastPage = safeIndex >= pages.length - 1;
   const firstPage = safeIndex === 0;
+  const lessonGated = !!payload.pass_rule;
+  const passSatisfied = useMemo(
+    () =>
+      isStoryPassSatisfied({
+        pass_rule: payload.pass_rule,
+        pages: pages.map((p) => ({
+          id: p.id,
+          items: p.items.map((it) => ({
+            id: it.id,
+            draggable_mode: it.draggable_mode,
+            drop_target_id: it.drop_target_id,
+          })),
+        })),
+        dragCheckDone: deckDragCheckDone,
+        visitedPageIds,
+      }),
+    [payload.pass_rule, pages, deckDragCheckDone, visitedPageIds],
+  );
+  const lessonAdvanceOk =
+    !lessonGated || interactionScreenPassed || passSatisfied;
+  const interactionLocked = interactionScreenPassed || (lessonGated && passSatisfied);
+
+  useEffect(() => {
+    passReportedRef.current = false;
+    const pid = pages[safeIndex]?.id;
+    queueMicrotask(() => {
+      setDeckDragCheckDone({});
+      setDeckFreeDragPos({});
+      setVisitedPageIds(pid ? { [pid]: true } : {});
+    });
+  }, [screenId]);
+
+  useEffect(() => {
+    const pid = pages[safeIndex]?.id;
+    if (!pid) return;
+    setVisitedPageIds((prev) => (prev[pid] ? prev : { ...prev, [pid]: true }));
+  }, [safeIndex, pages]);
+
+  useEffect(() => {
+    if (!lessonGated || passReportedRef.current || !passSatisfied) return;
+    passReportedRef.current = true;
+    onInteractionPass?.();
+  }, [lessonGated, passSatisfied, onInteractionPass]);
   const prefersReducedMotion = usePrefersReducedMotion();
   const activePhaseForIdle = useMemo(() => {
     if (!page.phasesExplicit) return null;
@@ -385,6 +454,17 @@ export function StoryBookView({
           if (!targetId) break;
           setHiddenItemIds((prev) => ({ ...prev, [targetId]: true }));
           break;
+        case "toggle_item":
+          if (!targetId) break;
+          setHiddenItemIds((prev) => {
+            if (prev[targetId]) {
+              const next = { ...prev };
+              delete next[targetId];
+              return next;
+            }
+            return { ...prev, [targetId]: true };
+          });
+          break;
         case "tts":
           if (step.tts_text?.trim() && !muted) {
             void speakText(step.tts_text, {
@@ -473,7 +553,13 @@ export function StoryBookView({
       const target = targetId ? itemById.get(targetId) : undefined;
       if (step.kind === "move") return step.duration_ms ?? target?.path?.duration_ms ?? 0;
       if (step.kind === "emphasis") return step.duration_ms ?? target?.emphasis?.duration_ms ?? 500;
-      if (step.kind === "show_item" || step.kind === "hide_item") return 40;
+      if (
+        step.kind === "show_item" ||
+        step.kind === "hide_item" ||
+        step.kind === "toggle_item"
+      ) {
+        return 40;
+      }
       return 0;
     },
     [],
@@ -781,9 +867,18 @@ export function StoryBookView({
       setPageTurnKey((k) => k + 1);
       setPageIndex(Math.min(safeIndex + 1, pages.length - 1));
     } else {
+      if (lessonGated && !lessonAdvanceOk) return;
       onNextScreen();
     }
-  }, [lastPage, muted, onNextScreen, pages.length, safeIndex]);
+  }, [
+    lastPage,
+    lessonAdvanceOk,
+    lessonGated,
+    muted,
+    onNextScreen,
+    pages.length,
+    safeIndex,
+  ]);
 
   const goPageBack = useCallback(() => {
     playSfx("tap", muted);
@@ -1112,6 +1207,10 @@ export function StoryBookView({
 
   const handleItemPointerUp = useCallback(
     (item: StoryItem) => {
+      const deckMode = item.draggable_mode ?? "none";
+      if (deckMode === "free" || deckMode === "check_target") {
+        return;
+      }
       const ph = currentStoryPhaseRef.current;
       if (
         page.phasesExplicit &&
@@ -1130,6 +1229,10 @@ export function StoryBookView({
     (e: React.PointerEvent<HTMLButtonElement>, item: StoryItem) => {
       e.preventDefault();
       if (e.button !== 0) return;
+      const deckMode = item.draggable_mode ?? "none";
+      if (deckMode === "free" || deckMode === "check_target") {
+        return;
+      }
       const ph = currentStoryPhaseRef.current;
       if (
         !ph?.drag_match ||
@@ -1228,6 +1331,91 @@ export function StoryBookView({
     [muted, payload.tts_lang, screenId],
   );
 
+  const onDeckPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>, item: StoryItem) => {
+      e.preventDefault();
+      if (e.button !== 0) return;
+      if (interactionLocked) return;
+      const mode = item.draggable_mode ?? "none";
+      if (mode !== "free" && mode !== "check_target") return;
+      setAudioUnlocked(true);
+      const rect = stageRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const cur =
+        deckFreeDragPos[item.id] ?? {
+          x_percent: item.x_percent,
+          y_percent: item.y_percent,
+        };
+      deckDragSessionRef.current = {
+        id: item.id,
+        dx: e.clientX - rect.left - (cur.x_percent / 100) * rect.width,
+        dy: e.clientY - rect.top - (cur.y_percent / 100) * rect.height,
+        startX: e.clientX,
+        startY: e.clientY,
+      };
+      const onMove = (ev: PointerEvent) => {
+        const sess = deckDragSessionRef.current;
+        if (!sess || sess.id !== item.id) return;
+        const r = stageRef.current?.getBoundingClientRect();
+        if (!r) return;
+        const nx = ((ev.clientX - r.left - sess.dx) / r.width) * 100;
+        const ny = ((ev.clientY - r.top - sess.dy) / r.height) * 100;
+        const dragged = pageRef.current.items.find((x) => x.id === item.id);
+        if (!dragged) return;
+        setDeckFreeDragPos((prev) => ({
+          ...prev,
+          [sess.id]: {
+            x_percent: Math.max(0, Math.min(100 - dragged.w_percent, nx)),
+            y_percent: Math.max(0, Math.min(100 - dragged.h_percent, ny)),
+          },
+        }));
+      };
+      const onUp = (ev: PointerEvent) => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        const sess = deckDragSessionRef.current;
+        deckDragSessionRef.current = null;
+        if (!sess || sess.id !== item.id) return;
+        const dist = Math.hypot(ev.clientX - sess.startX, ev.clientY - sess.startY);
+        const curPage = pageRef.current;
+        const dragged = curPage.items.find((x) => x.id === item.id);
+        if (!dragged) return;
+        if (dist < 8) {
+          runItemTapEffectsRef.current?.(dragged, {});
+          return;
+        }
+        if (mode !== "check_target") return;
+        const pos =
+          deckFreeDragPosRef.current[dragged.id] ?? {
+            x_percent: dragged.x_percent,
+            y_percent: dragged.y_percent,
+          };
+        const targetId = dragged.drop_target_id;
+        const target = targetId ? curPage.items.find((x) => x.id === targetId) : undefined;
+        const cx = pos.x_percent + dragged.w_percent / 2;
+        const cy = pos.y_percent + dragged.h_percent / 2;
+        const hit =
+          target &&
+          cx >= target.x_percent &&
+          cx <= target.x_percent + target.w_percent &&
+          cy >= target.y_percent &&
+          cy <= target.y_percent + target.h_percent;
+        if (hit) {
+          setDeckDragCheckDone((prev) => ({ ...prev, [dragged.id]: true }));
+          playSfx("correct", muted);
+        } else {
+          playSfx("wrong", muted);
+          onInteractionWrong?.();
+        }
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    },
+    [deckFreeDragPos, interactionLocked, muted, onInteractionWrong],
+  );
+
   useEffect(() => {
     if (!currentStoryPhase?.drag_match) return;
     if (getPhaseInteractionKind(currentStoryPhase) !== "drag_match") {
@@ -1246,9 +1434,10 @@ export function StoryBookView({
 
   const stage = (
     <div
+      ref={stageRef}
       className={clsx(
         "relative w-full overflow-hidden rounded-lg border-4 border-kid-ink",
-        page.image_fit === "contain" ? "bg-white" : "bg-neutral-900/5",
+        (page.image_fit ?? "contain") === "contain" ? "bg-white" : "bg-neutral-900/5",
         shouldReduceMotion && "story-reduce-motion",
       )}
       style={{
@@ -1294,7 +1483,7 @@ export function StoryBookView({
           src={page.background_image_url}
           alt=""
           fill
-          className={page.image_fit === "contain" ? "object-contain" : "object-cover"}
+          className={(page.image_fit ?? "contain") === "contain" ? "object-contain" : "object-cover"}
           sizes="(max-width:768px) 100vw, 42rem"
           unoptimized={page.background_image_url.includes("placehold.co")}
         />
@@ -1308,6 +1497,10 @@ export function StoryBookView({
         .sort((a, b) => (a.z_index ?? 0) - (b.z_index ?? 0))
         .map((item) => {
           if (hiddenItemIds[item.id]) return null;
+          const deckMode = item.draggable_mode ?? "none";
+          const isDeckDraggable = deckMode === "free" || deckMode === "check_target";
+          const isDeckMatched =
+            deckMode === "check_target" && !!deckDragCheckDone[item.id];
           const isDraggable =
             page.phasesExplicit &&
             currentStoryPhase &&
@@ -1328,6 +1521,7 @@ export function StoryBookView({
             dm
               ? page.items.find((t) => t.id === dm.correct_map[item.id])
               : null;
+          const deckPos = deckFreeDragPos[item.id];
           const layout = stickTarget
             ? {
                 left: stickTarget.x_percent,
@@ -1336,8 +1530,8 @@ export function StoryBookView({
                 h: stickTarget.h_percent,
               }
             : {
-                left: item.x_percent,
-                top: item.y_percent,
+                left: deckPos?.x_percent ?? item.x_percent,
+                top: deckPos?.y_percent ?? item.y_percent,
                 w: item.w_percent,
                 h: item.h_percent,
               };
@@ -1374,13 +1568,15 @@ export function StoryBookView({
               }
               className={clsx(
                 "story-item-anim absolute box-border touch-manipulation appearance-none border-0 bg-transparent p-0 m-0",
-                isDraggable && !isMatched && "touch-none cursor-grab active:cursor-grabbing",
+                (isDraggable && !isMatched) || (isDeckDraggable && !isDeckMatched) ?
+                  "touch-none cursor-grab active:cursor-grabbing"
+                : "",
                 enter !== "none" && enterCls,
                 page.phasesExplicit &&
                   storyHighlightIdSet.has(item.id) &&
                   "ring-2 ring-amber-400 ring-offset-1",
                 draggingItemId === item.id && "invisible",
-                isMatched && "ring-2 ring-green-500 ring-offset-1",
+                (isMatched || isDeckMatched) && "ring-2 ring-green-500 ring-offset-1",
               )}
               style={{
                 left: `${layout.left}%`,
@@ -1391,11 +1587,16 @@ export function StoryBookView({
                 ["--story-dur" as string]: `${dur}ms`,
               }}
               onPointerDown={
-                isDraggable && !isMatched ?
+                interactionLocked ? undefined
+                : isDraggable && !isMatched ?
                   (e) => onDraggablePointerDown(e, item)
+                : isDeckDraggable && !isDeckMatched ?
+                  (e) => onDeckPointerDown(e, item)
                 : undefined
               }
-              onPointerUp={isDraggable && !isMatched ? undefined : () => handleItemPointerUp(item)}
+              onPointerUp={
+                isDraggable && !isMatched ? undefined : () => handleItemPointerUp(item)
+              }
             >
               <span
                 data-story-item-inner={`${screenId}-${item.id}`}
@@ -1694,7 +1895,11 @@ export function StoryBookView({
         >
           Back
         </KidButton>
-        <KidButton type="button" onClick={goPageNext}>
+        <KidButton
+          type="button"
+          disabled={lastPage && !lessonAdvanceOk}
+          onClick={goPageNext}
+        >
           {lastPage ? "Next" : "Next page"}
         </KidButton>
       </div>

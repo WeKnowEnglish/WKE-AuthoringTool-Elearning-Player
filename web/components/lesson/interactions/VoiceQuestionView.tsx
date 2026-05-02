@@ -9,7 +9,14 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt, useAudioRecorder, uploadVoiceAnswer } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  NavProps,
+  unopt,
+  useAudioRecorder,
+  uploadVoiceAnswer,
+} from "./shared";
 
 export function VoiceQuestionView({
   parsed,
@@ -62,7 +69,13 @@ export function VoiceQuestionView({
     <div>
       {parsed.image_url ? (
         <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
-          <Image src={parsed.image_url} alt="" fill className="object-cover" unoptimized={unopt(parsed.image_url)} />
+          <Image
+            src={parsed.image_url}
+            alt=""
+            fill
+            className={interactionImageFitClass(parsed.image_fit)}
+            unoptimized={unopt(parsed.image_url)}
+          />
         </div>
       ) : null}
       <KidPanel>

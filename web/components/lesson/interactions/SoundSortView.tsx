@@ -9,7 +9,7 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt } from "./shared";
+import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
 
 export function SoundSortView({
   parsed,
@@ -75,7 +75,7 @@ export function SoundSortView({
                 src={c.image_url}
                 alt={c.label ?? ""}
                 fill
-                className="object-cover"
+                className={interactionImageFitClass(parsed.image_fit)}
                 unoptimized={unopt(c.image_url)}
               />
             </button>

@@ -16,10 +16,12 @@ export type TeacherEditorHeaderPayload = {
   published: boolean;
 };
 
+/** Only the chrome header subscribes — avoids re-rendering the whole lesson editor when toolbar JSX updates. */
+const LessonToolbarSlotContext = createContext<ReactNode | null>(null);
+
 type CtxValue = {
   state: TeacherEditorHeaderPayload | null;
   register: (next: TeacherEditorHeaderPayload | null) => void;
-  lessonToolbarSlot: ReactNode | null;
   setLessonToolbarSlot: (next: ReactNode | null) => void;
   /** Increments when the lesson editor reports a successful screen save (for header icon pulse). */
   savePulseSerial: number;
@@ -48,17 +50,16 @@ export function TeacherEditorHeaderProvider({
     () => ({
       state,
       register,
-      lessonToolbarSlot,
       setLessonToolbarSlot,
       savePulseSerial,
       notifyScreenSaved,
     }),
-    [state, register, lessonToolbarSlot, savePulseSerial, notifyScreenSaved],
+    [state, register, savePulseSerial, notifyScreenSaved],
   );
   return (
-    <TeacherEditorHeaderContext.Provider value={value}>
-      {children}
-    </TeacherEditorHeaderContext.Provider>
+    <LessonToolbarSlotContext.Provider value={lessonToolbarSlot}>
+      <TeacherEditorHeaderContext.Provider value={value}>{children}</TeacherEditorHeaderContext.Provider>
+    </LessonToolbarSlotContext.Provider>
   );
 }
 
@@ -70,6 +71,10 @@ export function useTeacherEditorHeader() {
     );
   }
   return ctx;
+}
+
+export function useLessonToolbarSlot(): ReactNode | null {
+  return useContext(LessonToolbarSlotContext);
 }
 
 /** Call from lesson (or activity) editor pages; clears when the page unmounts. */

@@ -14,7 +14,10 @@ import {
   type SetStateAction,
 } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { LessonScreenRow } from "@/lib/data/catalog";
+import type { AiGenerationDiagnosticsV1 } from "@/lib/ai/ai-generation-diagnostics";
 import {
   findStoryboardSegmentIndexForScreenIndex,
   segmentLessonScreensForStoryboard,
@@ -25,20 +28,34 @@ import {
   lessonPublishChecklist,
 } from "@/lib/lesson-editor-checklist";
 import {
+  findCongratsEndScreen,
+  findOpeningStartScreen,
+  isCongratsEndScreen,
+  isOpeningStartScreen,
+  normalizeLessonScreenOrderIds,
+} from "@/lib/lesson-bookends";
+import {
   addScreenTemplate,
+  appendScreensFromAi,
   createQuizGroup,
   deleteLesson,
   deleteScreen,
   duplicateLesson,
   duplicateScreen,
+  getLessonPlanForEditor,
   importLessonScreensJson,
   moveScreen,
+  publishActivityLibraryFromLesson,
   reorderScreens,
   saveLesson,
+  saveLessonPlan,
+  unpublishActivityLibraryFromLesson,
   type AddScreenKind,
 } from "@/lib/actions/teacher";
+import { CEFR_LEVEL_OPTIONS } from "@/lib/cefr-level-options";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
 import { useTeacherEditorHeader } from "@/components/teacher/TeacherEditorHeaderContext";
+import { LessonLearningGoalsTable } from "@/app/teacher/(secure)/modules/[id]/lessons/[lessonId]/LessonLearningGoalsTable";
 import { LessonPreviewOverlay } from "./LessonPreviewOverlay";
 import { QuizBuilder } from "./QuizBuilder";
 import {
@@ -52,13 +69,26 @@ type Props = {
   moduleId: string;
   lessonId: string;
   moduleSlug: string;
+  moduleTitle: string;
   lessonSlug: string;
+  currentLessonId: string;
+  moduleLessons: { id: string; title: string; order_index: number }[];
   lessonTitle: string;
   lessonOrderIndex: number;
   lessonEstimatedMinutes: number | null;
   published: boolean;
+  /** When set, this lesson is the course-editor mirror for an activity library item (`slug` = `activity-{uuid}`). */
+  activityLibraryMirrorId?: string | null;
+  /** Library visibility for the linked activity (teacher-only; null when not a mirror lesson). */
+  activityLibraryPublished?: boolean | null;
   screens: LessonScreenRow[];
-  /** Right sidebar: AI draft and skill tags (from the page server component). */
+  /** Changes when `lessons.updated_at` changes — client refetches plan text (kept out of RSC). */
+  lessonPlanSyncKey: string;
+  /** Saved objectives; AI plan/generate require at least one non-empty line. */
+  learningGoals: string[];
+  /** When true, generator omits an opening start screen (editor already has one). */
+  hasOpeningStart: boolean;
+  /** Right sidebar: skills and tools only (objectives live in the Plan panel). */
   children?: ReactNode;
 };
 
@@ -146,36 +176,57 @@ const LESSON_HDR_BTN =
   "inline-flex h-7 shrink-0 items-center justify-center rounded-md border border-neutral-300 bg-neutral-50 px-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:px-2 sm:text-xs";
 
 type LessonWorkspaceHeaderToolbarProps = {
+  lessonMenuOpen: boolean;
+  setLessonMenuOpen: Dispatch<SetStateAction<boolean>>;
   addScreenOpen: boolean;
   setAddScreenOpen: Dispatch<SetStateAction<boolean>>;
   editorHelpOpen: boolean;
   setEditorHelpOpen: Dispatch<SetStateAction<boolean>>;
-  quizSelection: { groupId: string; groupScreens: LessonScreenRow[] } | null;
+  /** Stable flag — student preview is disabled while a quiz group is selected (avoid new object identity each render). */
+  previewDisabledForQuiz: boolean;
   setPreviewOverlayOpen: Dispatch<SetStateAction<boolean>>;
   setStoryboardOpen: Dispatch<SetStateAction<boolean>>;
+  setPlanOpen: Dispatch<SetStateAction<boolean>>;
   setToolsOpen: Dispatch<SetStateAction<boolean>>;
   storyboardOpen: boolean;
   storyboardPinned: boolean;
+  planOpen: boolean;
+  planPinned: boolean;
   toolsOpen: boolean;
   toolsPinned: boolean;
 };
 
 function LessonWorkspaceHeaderToolbar({
+  lessonMenuOpen,
+  setLessonMenuOpen,
   addScreenOpen,
   setAddScreenOpen,
   editorHelpOpen,
   setEditorHelpOpen,
-  quizSelection,
+  previewDisabledForQuiz,
   setPreviewOverlayOpen,
   setStoryboardOpen,
+  setPlanOpen,
   setToolsOpen,
   storyboardOpen,
   storyboardPinned,
+  planOpen,
+  planPinned,
   toolsOpen,
   toolsPinned,
 }: LessonWorkspaceHeaderToolbarProps) {
   return (
     <>
+      <button
+        type="button"
+        onClick={() => setLessonMenuOpen((v) => !v)}
+        aria-expanded={lessonMenuOpen}
+        aria-label={lessonMenuOpen ? "Close lesson menu" : "Open lesson menu"}
+        className={LESSON_HDR_BTN}
+        title="Switch lesson in this module"
+      >
+        Lessons
+      </button>
       <button
         type="button"
         onClick={() => setAddScreenOpen((v) => !v)}
@@ -191,8 +242,9 @@ function LessonWorkspaceHeaderToolbar({
         onClick={() => {
           setStoryboardOpen((prev) => {
             const next = !prev;
-            if (next && !toolsPinned && toolsOpen) {
-              setToolsOpen(false);
+            if (next) {
+              if (!planPinned && planOpen) setPlanOpen(false);
+              if (!toolsPinned && toolsOpen) setToolsOpen(false);
             }
             return next;
           });
@@ -212,10 +264,35 @@ function LessonWorkspaceHeaderToolbar({
       <button
         type="button"
         onClick={() => {
+          setPlanOpen((prev) => {
+            const next = !prev;
+            if (next) {
+              if (!storyboardPinned && storyboardOpen) setStoryboardOpen(false);
+              if (!toolsPinned && toolsOpen) setToolsOpen(false);
+            }
+            return next;
+          });
+        }}
+        aria-expanded={planOpen}
+        className={LESSON_HDR_BTN}
+        title={
+          planOpen ?
+            planPinned ?
+              "Hide lesson plan (pinned)"
+            : "Hide lesson plan"
+          : "Lesson plan & AI"
+        }
+      >
+        Plan
+      </button>
+      <button
+        type="button"
+        onClick={() => {
           setToolsOpen((prev) => {
             const next = !prev;
-            if (next && !storyboardPinned && storyboardOpen) {
-              setStoryboardOpen(false);
+            if (next) {
+              if (!storyboardPinned && storyboardOpen) setStoryboardOpen(false);
+              if (!planPinned && planOpen) setPlanOpen(false);
             }
             return next;
           });
@@ -235,10 +312,10 @@ function LessonWorkspaceHeaderToolbar({
       <button
         type="button"
         onClick={() => setPreviewOverlayOpen(true)}
-        disabled={!!quizSelection}
-        className={LESSON_HDR_BTN + (quizSelection ? " cursor-not-allowed opacity-50" : "")}
+        disabled={previewDisabledForQuiz}
+        className={LESSON_HDR_BTN + (previewDisabledForQuiz ? " cursor-not-allowed opacity-50" : "")}
         title={
-          quizSelection ?
+          previewDisabledForQuiz ?
             "Student preview is in the Quiz builder while a quiz is selected."
           : "Open floating student preview"
         }
@@ -304,28 +381,43 @@ function stabilizeCoord(n: number): number {
 type EditorLayoutPrefs = {
   storyboardOpen: boolean;
   storyboardPinned: boolean;
+  planOpen: boolean;
+  planPinned: boolean;
   toolsOpen: boolean;
   toolsPinned: boolean;
   leftPanePct: number;
   rightPanePct: number;
+  /** Width % of the bookend split row for the opening panel (closing gets the rest). */
+  bookendSplitPct?: number;
 };
 
 const EDITOR_LAYOUT_KEY_PREFIX = "lesson-editor-layout";
 const EDITOR_NOTES_KEY_PREFIX = "lesson-editor-notes";
 const EDITOR_JUMP_NEWEST_KEY_PREFIX = "lesson-editor-jump-newest";
+const EDITOR_JUMP_OPENING_KEY_PREFIX = "lesson-editor-jump-opening";
 
 export function LessonEditorWorkspace({
   moduleId,
   lessonId,
   moduleSlug,
+  moduleTitle,
   lessonSlug,
+  currentLessonId,
+  moduleLessons,
   lessonTitle,
   lessonOrderIndex,
   lessonEstimatedMinutes,
   published,
+  activityLibraryMirrorId = null,
+  activityLibraryPublished = null,
   screens,
+  lessonPlanSyncKey,
+  learningGoals,
+  hasOpeningStart,
   children,
 }: Props) {
+  const router = useRouter();
+  const isActivityLibraryMirror = Boolean(activityLibraryMirrorId);
   const shellRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [addScreenOpen, setAddScreenOpen] = useState(false);
@@ -334,9 +426,23 @@ export function LessonEditorWorkspace({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [storyboardPinned, setStoryboardPinned] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
+  const [planPinned, setPlanPinned] = useState(false);
+  const [planText, setPlanText] = useState("");
+  const [planLoadState, setPlanLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [planLoadError, setPlanLoadError] = useState<string | null>(null);
+  const [planFetchNonce, setPlanFetchNonce] = useState(0);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [planMsg, setPlanMsg] = useState("");
+  const [lastAiGenerationDiagnostics, setLastAiGenerationDiagnostics] =
+    useState<AiGenerationDiagnosticsV1 | null>(null);
+  const [planCefr, setPlanCefr] = useState<string>("a1");
+  const [planVocab, setPlanVocab] = useState("");
+  const [planPremise, setPlanPremise] = useState("");
   const [toolsOpen, setToolsOpen] = useState(false);
   const [toolsPinned, setToolsPinned] = useState(false);
   const [previewOverlayOpen, setPreviewOverlayOpen] = useState(false);
+  const [lessonMenuOpen, setLessonMenuOpen] = useState(false);
   const [editorHelpOpen, setEditorHelpOpen] = useState(false);
   const [advancedJsonOpen, setAdvancedJsonOpen] = useState(false);
   const { setLessonToolbarSlot, notifyScreenSaved } = useTeacherEditorHeader();
@@ -347,11 +453,14 @@ export function LessonEditorWorkspace({
     err: null,
   });
   const screenEditorRef = useRef<ScreenEditorCardHandle>(null);
+  const bookendOpeningRef = useRef<ScreenEditorCardHandle>(null);
+  const bookendCongratsRef = useRef<ScreenEditorCardHandle>(null);
   const onScreenEditorStatus = useCallback((s: ScreenEditorStatus) => {
     setScreenEditorStatus(s);
   }, []);
   const [leftPanePct, setLeftPanePct] = useState(23);
   const [rightPanePct, setRightPanePct] = useState(23);
+  const [bookendSplitPct, setBookendSplitPct] = useState(50);
   const [activityNotes, setActivityNotes] = useState<Record<string, ActivityNote>>({});
   const [connectorLines, setConnectorLines] = useState<ConnectorLine[]>([]);
   const connectorLinesRef = useRef<ConnectorLine[]>([]);
@@ -366,9 +475,16 @@ export function LessonEditorWorkspace({
     startLeft: number;
     startRight: number;
   } | null>(null);
+  const [resizingBookendSplit, setResizingBookendSplit] = useState<{
+    startX: number;
+    startPct: number;
+  } | null>(null);
+  const bookendSplitRef = useRef<HTMLDivElement>(null);
+  const [bookendLayoutWide, setBookendLayoutWide] = useState(false);
   const layoutKey = `${EDITOR_LAYOUT_KEY_PREFIX}:${lessonId}`;
   const notesKey = `${EDITOR_NOTES_KEY_PREFIX}:${lessonId}`;
   const jumpNewestKey = `${EDITOR_JUMP_NEWEST_KEY_PREFIX}:${lessonId}`;
+  const jumpOpeningKey = `${EDITOR_JUMP_OPENING_KEY_PREFIX}:${lessonId}`;
   const canUseDomPortal = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -376,6 +492,7 @@ export function LessonEditorWorkspace({
   );
 
   const serverKey = useMemo(() => screensSyncKey(screens), [screens]);
+
   useEffect(() => {
     queueMicrotask(() => {
       let jumpToIndex: number | null = null;
@@ -385,6 +502,14 @@ export function LessonEditorWorkspace({
         if (typeof window !== "undefined" && window.sessionStorage.getItem(jumpNewestKey) === "1") {
           window.sessionStorage.removeItem(jumpNewestKey);
           jumpToIndex = Math.max(0, merged.length - 1);
+        } else if (
+          typeof window !== "undefined" &&
+          window.sessionStorage.getItem(jumpOpeningKey) === "1"
+        ) {
+          window.sessionStorage.removeItem(jumpOpeningKey);
+          const opening = findOpeningStartScreen(merged);
+          jumpToIndex =
+            opening ? Math.max(0, merged.findIndex((x) => x.id === opening.id)) : 0;
         }
         return merged;
       });
@@ -392,7 +517,7 @@ export function LessonEditorWorkspace({
         setSelectedIndex(jumpToIndex);
       }
     });
-  }, [serverKey, jumpNewestKey, screens]);
+  }, [serverKey, jumpNewestKey, jumpOpeningKey, screens]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -403,16 +528,30 @@ export function LessonEditorWorkspace({
         const parsed = JSON.parse(raw) as Partial<EditorLayoutPrefs>;
         if (typeof parsed.storyboardOpen === "boolean") setStoryboardOpen(parsed.storyboardOpen);
         if (typeof parsed.storyboardPinned === "boolean") setStoryboardPinned(parsed.storyboardPinned);
+        if (typeof parsed.planOpen === "boolean") setPlanOpen(parsed.planOpen);
+        if (typeof parsed.planPinned === "boolean") setPlanPinned(parsed.planPinned);
         if (typeof parsed.toolsOpen === "boolean") setToolsOpen(parsed.toolsOpen);
         if (typeof parsed.toolsPinned === "boolean") setToolsPinned(parsed.toolsPinned);
         if (typeof parsed.leftPanePct === "number") setLeftPanePct(clamp(parsed.leftPanePct, 14, 60));
         if (typeof parsed.rightPanePct === "number")
           setRightPanePct(clamp(parsed.rightPanePct, 16, 60));
+        if (typeof parsed.bookendSplitPct === "number") {
+          setBookendSplitPct(clamp(parsed.bookendSplitPct, 28, 72));
+        }
       } catch {
         // Ignore corrupted local storage.
       }
     });
   }, [layoutKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setBookendLayoutWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -433,18 +572,56 @@ export function LessonEditorWorkspace({
     const prefs: EditorLayoutPrefs = {
       storyboardOpen,
       storyboardPinned,
+      planOpen,
+      planPinned,
       toolsOpen,
       toolsPinned,
       leftPanePct,
       rightPanePct,
+      bookendSplitPct,
     };
     window.localStorage.setItem(layoutKey, JSON.stringify(prefs));
-  }, [layoutKey, storyboardOpen, storyboardPinned, toolsOpen, toolsPinned, leftPanePct, rightPanePct]);
+  }, [
+    layoutKey,
+    storyboardOpen,
+    storyboardPinned,
+    planOpen,
+    planPinned,
+    toolsOpen,
+    toolsPinned,
+    leftPanePct,
+    rightPanePct,
+    bookendSplitPct,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(notesKey, JSON.stringify(activityNotes));
   }, [notesKey, activityNotes]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlanLoadState("loading");
+    setPlanLoadError(null);
+    void (async () => {
+      try {
+        const { lessonPlan } = await getLessonPlanForEditor(lessonId, moduleId);
+        if (!cancelled) {
+          setPlanText(lessonPlan);
+          setPlanLoadState("ready");
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setPlanText("");
+          setPlanLoadError(e instanceof Error ? e.message : "Could not load lesson plan");
+          setPlanLoadState("error");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonId, moduleId, lessonPlanSyncKey, planFetchNonce]);
 
   const bumpScreenPayload = useCallback((screenId: string, payload: unknown) => {
     startTransition(() => {
@@ -453,6 +630,13 @@ export function LessonEditorWorkspace({
       );
     });
   }, []);
+
+  const addScreenButtonOptions = useMemo(() => {
+    const hasOpening = liveScreens.some((s) =>
+      isOpeningStartScreen(s.screen_type, s.payload),
+    );
+    return ADD_SCREEN_BUTTONS.filter((b) => b.kind !== "start" || !hasOpening);
+  }, [liveScreens]);
 
   const checklist = useMemo(
     () => lessonPublishChecklist({ published, screens: liveScreens }),
@@ -487,31 +671,54 @@ export function LessonEditorWorkspace({
       }
     : null;
 
+  const previewDisabledForQuiz = selectedSegment.type === "quiz";
+  const sortedModuleLessons = useMemo(
+    () => [...moduleLessons].sort((a, b) => a.order_index - b.order_index),
+    [moduleLessons],
+  );
+
+  useEffect(() => {
+    if (!lessonMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLessonMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [lessonMenuOpen]);
+
   useLayoutEffect(() => {
     setLessonToolbarSlot(
       <LessonWorkspaceHeaderToolbar
+        lessonMenuOpen={lessonMenuOpen}
+        setLessonMenuOpen={setLessonMenuOpen}
         addScreenOpen={addScreenOpen}
         setAddScreenOpen={setAddScreenOpen}
         editorHelpOpen={editorHelpOpen}
         setEditorHelpOpen={setEditorHelpOpen}
-        quizSelection={quizSelection}
+        previewDisabledForQuiz={previewDisabledForQuiz}
         setPreviewOverlayOpen={setPreviewOverlayOpen}
         setStoryboardOpen={setStoryboardOpen}
+        setPlanOpen={setPlanOpen}
         setToolsOpen={setToolsOpen}
         storyboardOpen={storyboardOpen}
         storyboardPinned={storyboardPinned}
+        planOpen={planOpen}
+        planPinned={planPinned}
         toolsOpen={toolsOpen}
         toolsPinned={toolsPinned}
       />,
     );
     return () => setLessonToolbarSlot(null);
   }, [
+    lessonMenuOpen,
     addScreenOpen,
     editorHelpOpen,
-    quizSelection,
+    previewDisabledForQuiz,
     setLessonToolbarSlot,
     storyboardOpen,
     storyboardPinned,
+    planOpen,
+    planPinned,
     toolsOpen,
     toolsPinned,
   ]);
@@ -522,15 +729,73 @@ export function LessonEditorWorkspace({
       if (!storyboardPinned) {
         setStoryboardOpen(false);
       }
+      if (!planPinned) {
+        setPlanOpen(false);
+      }
       if (!toolsPinned) {
         setToolsOpen(false);
       }
     },
-    [storyboardPinned, toolsPinned],
+    [storyboardPinned, planPinned, toolsPinned],
   );
 
   /** Relative path only — same on server and client (avoids hydration mismatch from `window`). */
   const studentPath = `/learn/${moduleSlug}/${lessonSlug}`;
+  const modulePath = `/teacher/modules/${moduleId}`;
+
+  const lessonMenuOverlay =
+    lessonMenuOpen && canUseDomPortal ?
+      createPortal(
+        <div className="fixed inset-0 z-[85]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/20"
+            aria-label="Close lesson menu"
+            onClick={() => setLessonMenuOpen(false)}
+          />
+          <div className="absolute left-2 top-[calc(var(--lesson-editor-toolbar-height,3.5rem)+0.4rem)] w-[min(24rem,calc(100vw-1rem))] max-h-[min(78vh,40rem)] overflow-y-auto rounded-lg border border-neutral-300 bg-white p-3 shadow-2xl">
+            <div className="mb-3 flex items-center gap-2 border-b border-neutral-200 pb-2">
+              <Link
+                href={modulePath}
+                className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-neutral-300 bg-neutral-50 px-2 text-sm font-bold text-neutral-800 hover:bg-neutral-100"
+                onClick={() => setLessonMenuOpen(false)}
+                aria-label="Back to module"
+              >
+                ←
+              </Link>
+              <h3 className="min-w-0 flex-1 truncate text-sm font-extrabold text-neutral-900">
+                {moduleTitle}
+              </h3>
+            </div>
+            <div className="space-y-1" role="tablist" aria-label={`Lessons in ${moduleTitle}`}>
+              {sortedModuleLessons.map((lesson, index) => {
+                const active = lesson.id === currentLessonId;
+                return (
+                  <Link
+                    key={lesson.id}
+                    href={`/teacher/modules/${moduleId}/lessons/${lesson.id}`}
+                    role="tab"
+                    aria-selected={active}
+                    className={
+                      active ?
+                        "block rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-950"
+                      : "block rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-50"
+                    }
+                    onClick={() => setLessonMenuOpen(false)}
+                  >
+                    <span className="mr-1 text-xs font-bold uppercase tracking-wide text-neutral-500">
+                      Lesson {index + 1}
+                    </span>
+                    {lesson.title}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
 
   function exportJson() {
     const blob = new Blob(
@@ -572,14 +837,18 @@ export function LessonEditorWorkspace({
   async function applyReorder(orderedIds: string[]) {
     const prev = liveScreens;
     const map = new Map(liveScreens.map((s) => [s.id, s]));
-    const nextRows = orderedIds.map((id, i) => {
+    const proposedRows = orderedIds
+      .map((id) => map.get(id))
+      .filter((r): r is LessonScreenRow => r != null);
+    const fixedIds = normalizeLessonScreenOrderIds(proposedRows);
+    const nextRows = fixedIds.map((id, i) => {
       const row = map.get(id);
       if (!row) throw new Error("Missing screen");
       return { ...row, order_index: i };
     });
     setLiveScreens(nextRows);
     try {
-      await reorderScreens(lessonId, moduleId, orderedIds);
+      await reorderScreens(lessonId, moduleId, fixedIds);
     } catch {
       setLiveScreens(prev);
     }
@@ -608,12 +877,41 @@ export function LessonEditorWorkspace({
     const next = [...ids];
     next.splice(from, 1);
     next.splice(to, 0, fromId);
+    const map = new Map(liveScreens.map((s) => [s.id, s]));
+    const proposed = next
+      .map((id) => map.get(id))
+      .filter((r): r is LessonScreenRow => r != null);
+    const fixedIds = normalizeLessonScreenOrderIds(proposed);
     const selectedId = liveScreens[safeIndex]?.id;
-    if (selectedId) setSelectedIndex(next.indexOf(selectedId));
+    if (selectedId) setSelectedIndex(Math.max(0, fixedIds.indexOf(selectedId)));
     void applyReorder(next);
   }
 
   const selectedScreen = liveScreens[safeIndex];
+
+  const openingScreen = useMemo(
+    () => findOpeningStartScreen(liveScreens),
+    [liveScreens],
+  );
+  const congratsScreen = useMemo(
+    () => findCongratsEndScreen(liveScreens),
+    [liveScreens],
+  );
+  const bookendEditorMode = Boolean(
+    openingScreen &&
+      congratsScreen &&
+      selectedScreen &&
+      (selectedScreen.id === openingScreen.id || selectedScreen.id === congratsScreen.id),
+  );
+
+  async function saveVisibleScreenEditors() {
+    if (bookendEditorMode) {
+      await bookendOpeningRef.current?.saveNow();
+      await bookendCongratsRef.current?.saveNow();
+    } else {
+      await screenEditorRef.current?.saveNow();
+    }
+  }
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -670,6 +968,36 @@ export function LessonEditorWorkspace({
       window.removeEventListener("pointercancel", onUp);
     };
   }, [resizing]);
+
+  const beginBookendSplitResize = useCallback(
+    (e: React.PointerEvent) => {
+      if (typeof window !== "undefined" && window.innerWidth < 1024) return;
+      setResizingBookendSplit({ startX: e.clientX, startPct: bookendSplitPct });
+      e.preventDefault();
+    },
+    [bookendSplitPct],
+  );
+
+  useEffect(() => {
+    if (!resizingBookendSplit) return;
+    const onMove = (e: PointerEvent) => {
+      const el = bookendSplitRef.current;
+      if (!el) return;
+      const w = el.getBoundingClientRect().width;
+      if (w <= 0) return;
+      const dPct = ((e.clientX - resizingBookendSplit.startX) / w) * 100;
+      setBookendSplitPct(clamp(resizingBookendSplit.startPct + dPct, 28, 72));
+    };
+    const onUp = () => setResizingBookendSplit(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [resizingBookendSplit]);
 
   const focusNote = useCallback((id: string) => {
     noteZRef.current += 1;
@@ -752,17 +1080,27 @@ export function LessonEditorWorkspace({
     rightPanePct,
     storyboardOpen,
     storyboardPinned,
+    planOpen,
+    planPinned,
     toolsOpen,
     toolsPinned,
   ]);
 
   useEffect(() => {
-    const onScrollOrResize = () => computeConnectorLines();
-    window.addEventListener("resize", onScrollOrResize);
-    window.addEventListener("scroll", onScrollOrResize, true);
+    let raf = 0;
+    const scheduleConnectorSync = () => {
+      if (raf !== 0) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        computeConnectorLines();
+      });
+    };
+    window.addEventListener("resize", scheduleConnectorSync);
+    window.addEventListener("scroll", scheduleConnectorSync, true);
     return () => {
-      window.removeEventListener("resize", onScrollOrResize);
-      window.removeEventListener("scroll", onScrollOrResize, true);
+      if (raf !== 0) cancelAnimationFrame(raf);
+      window.removeEventListener("resize", scheduleConnectorSync);
+      window.removeEventListener("scroll", scheduleConnectorSync, true);
     };
   }, [computeConnectorLines]);
 
@@ -770,6 +1108,7 @@ export function LessonEditorWorkspace({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       setStoryboardOpen(false);
+      setPlanOpen(false);
       setToolsOpen(false);
       setPreviewOverlayOpen(false);
       setEditorHelpOpen(false);
@@ -816,6 +1155,9 @@ export function LessonEditorWorkspace({
       if (!s) return null;
       const thumb = screenThumbnailUrl(s);
       const active = i === safeIndex;
+      const pinnedBookend =
+        isOpeningStartScreen(s.screen_type, s.payload) ||
+        isCongratsEndScreen(s.screen_type, s.payload);
       return (
         <li key={s.id}>
           <div
@@ -831,14 +1173,22 @@ export function LessonEditorWorkspace({
           >
             <div className="flex items-start gap-1">
               <span
-                draggable
-                onDragStart={(e) => onDragStart(e, s.id)}
+                draggable={!pinnedBookend}
+                onDragStart={
+                  pinnedBookend ? undefined : (e) => onDragStart(e, s.id)
+                }
                 onDragEnd={() => setDraggingId(null)}
-                className="cursor-grab select-none px-0.5 pt-0.5 font-mono text-[11px] text-neutral-400 active:cursor-grabbing"
-                title="Drag to reorder"
+                className={
+                  pinnedBookend ?
+                    "select-none px-0.5 pt-0.5 font-mono text-[11px] text-neutral-300"
+                  : "cursor-grab select-none px-0.5 pt-0.5 font-mono text-[11px] text-neutral-400 active:cursor-grabbing"
+                }
+                title={pinnedBookend ? "Opening and closing screens stay fixed" : "Drag to reorder"}
                 role="button"
                 tabIndex={0}
-                aria-label={`Drag to reorder screen ${i}`}
+                aria-label={
+                  pinnedBookend ? `Screen ${i} (fixed position)` : `Drag to reorder screen ${i}`
+                }
               >
                 ⋮⋮
               </span>
@@ -857,8 +1207,9 @@ export function LessonEditorWorkspace({
                   <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
                     <button
                       type="submit"
+                      disabled={pinnedBookend}
                       onClick={(e) => e.stopPropagation()}
-                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Up
                     </button>
@@ -866,8 +1217,9 @@ export function LessonEditorWorkspace({
                   <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
                     <button
                       type="submit"
+                      disabled={pinnedBookend}
                       onClick={(e) => e.stopPropagation()}
-                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
+                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Down
                     </button>
@@ -876,13 +1228,14 @@ export function LessonEditorWorkspace({
                     <input type="hidden" name="duplicate_screen" value={s.id} />
                     <button
                       type="submit"
+                      disabled={pinnedBookend}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (typeof window !== "undefined") {
                           window.sessionStorage.setItem(jumpNewestKey, "1");
                         }
                       }}
-                      className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 active:bg-blue-200"
+                      className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 active:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Dup
                     </button>
@@ -890,6 +1243,7 @@ export function LessonEditorWorkspace({
                   <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
                     <button
                       type="submit"
+                      disabled={pinnedBookend}
                       onClick={(e) => {
                         e.stopPropagation();
                         const shouldDelete = window.confirm(
@@ -897,9 +1251,13 @@ export function LessonEditorWorkspace({
                         );
                         if (!shouldDelete) {
                           e.preventDefault();
+                          return;
+                        }
+                        if (i === safeIndex && typeof window !== "undefined") {
+                          window.sessionStorage.setItem(jumpOpeningKey, "1");
                         }
                       }}
-                      className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200"
+                      className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Del
                     </button>
@@ -969,7 +1327,7 @@ export function LessonEditorWorkspace({
     const quizActive = seg.screenIndices.includes(safeIndex);
     const n = seg.screenIndices.length;
     return (
-      <li key={`quiz-${seg.groupId}`}>
+      <li key={`quiz-${seg.groupId}-${firstIdx}`}>
         <div
           ref={(el) => {
             rowRefs.current[s.id] = el;
@@ -1028,6 +1386,10 @@ export function LessonEditorWorkspace({
                       );
                       if (!shouldDelete) {
                         e.preventDefault();
+                        return;
+                      }
+                      if (seg.screenIndices.includes(safeIndex) && typeof window !== "undefined") {
+                        window.sessionStorage.setItem(jumpOpeningKey, "1");
                       }
                     }}
                     className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200"
@@ -1090,6 +1452,400 @@ export function LessonEditorWorkspace({
           </div>
         </div>
       </li>
+    );
+  }
+
+  async function savePlanDoc() {
+    if (planLoadState !== "ready") return;
+    setPlanBusy(true);
+    setPlanMsg("");
+    try {
+      const fd = new FormData();
+      fd.set("lesson_plan", planText);
+      await saveLessonPlan(lessonId, moduleId, fd);
+      setPlanMsg("Plan saved.");
+      router.refresh();
+    } catch (e) {
+      setPlanMsg(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  async function draftPlanWithAi() {
+    if (planLoadState !== "ready") return;
+    setPlanBusy(true);
+    setPlanMsg("");
+    const goals = learningGoals.map((g) => g.trim()).filter(Boolean);
+    if (goals.length === 0) {
+      setPlanMsg("Add and save at least one learning objective first (in the Plan panel).");
+      setPlanBusy(false);
+      return;
+    }
+    if (!planText.trim() && !planPremise.trim()) {
+      setPlanMsg("Add a story premise/seed for a fresh draft, or write something in the plan first to enhance it.");
+      setPlanBusy(false);
+      return;
+    }
+    try {
+      const res = await fetch("/api/teacher/ai/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          lessonId,
+          cefrBand: planCefr,
+          premise: planPremise.trim(),
+          vocabulary: planVocab.trim(),
+          existingLessonPlan: planText.trim(),
+        }),
+      });
+      const data = (await res.json()) as { lessonPlan?: string; error?: string };
+      if (!res.ok) {
+        setPlanMsg(data.error ?? "Draft failed");
+        return;
+      }
+      if (typeof data.lessonPlan === "string") {
+        setPlanText(data.lessonPlan);
+      }
+      setPlanMsg("Draft saved to this lesson. Review and edit, then save or generate.");
+      router.refresh();
+    } catch (e) {
+      setPlanMsg(e instanceof Error ? e.message : "Draft failed");
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  async function generateActivitiesFromPlan() {
+    if (planLoadState !== "ready") return;
+    setPlanBusy(true);
+    setPlanMsg("");
+    setLastAiGenerationDiagnostics(null);
+    const goals = learningGoals.map((g) => g.trim()).filter(Boolean);
+    if (goals.length === 0) {
+      setPlanMsg("Add and save at least one learning objective first.");
+      setPlanBusy(false);
+      return;
+    }
+    if (!planText.trim()) {
+      setPlanMsg("Lesson plan is empty — draft with AI or paste a plan.");
+      setPlanBusy(false);
+      return;
+    }
+    try {
+      const fd = new FormData();
+      fd.set("lesson_plan", planText);
+      await saveLessonPlan(lessonId, moduleId, fd);
+      const res = await fetch("/api/teacher/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          lessonId,
+          cefrBand: planCefr,
+          vocabulary: planVocab.trim(),
+          hasOpeningStart,
+          premiseLine: planPremise.trim() || undefined,
+        }),
+      });
+      const data = (await res.json()) as {
+        screens?: unknown[];
+        generationWarnings?: string[];
+        aiGenerationDiagnostics?: AiGenerationDiagnosticsV1;
+        error?: string;
+      };
+
+      if (!res.ok) {
+        setPlanMsg(data.error ?? "Generate failed");
+        return;
+      }
+      if (!Array.isArray(data.screens)) {
+        setPlanMsg("Invalid response from server");
+        return;
+      }
+      await appendScreensFromAi(
+        lessonId,
+        moduleId,
+        data.screens as { screen_type: string; payload: unknown }[],
+      );
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(jumpNewestKey, "1");
+      }
+      const diag = data.aiGenerationDiagnostics ?? null;
+      setLastAiGenerationDiagnostics(diag);
+      const warn = data.generationWarnings?.filter(Boolean) ?? [];
+      const diagSummary =
+        diag ?
+          ` Model rows: ${diag.modelScreensArrayLength} → validated: ${diag.validatedScreenCount} → saved: ${diag.returnedScreenCount}${
+            diag.openingStartScreensStripped ?
+              ` (${diag.openingStartScreensStripped} opening start(s) removed)`
+            : ""
+          }.`
+        : "";
+      const failedN = diag ? (diag.failedScreenCount ?? diag.failedScreens?.length ?? 0) : 0;
+      const warnHint =
+        diag && (diag.parseWarningCount > 0 || failedN > 0) ?
+          ` ${diag.parseWarningCount} parser warning(s)${
+            failedN > 0 ? `; ${failedN} invalid model row(s) shown as drafts below (not saved)` : ""
+          } — see Generation diagnostics.`
+        : warn.length > 0 ?
+          ` Some model screens were skipped (validation). First issues: ${warn
+            .slice(0, 2)
+            .map((w) => w.replace(/\s+/g, " ").slice(0, 120))
+            .join(" · ")}${warn.length > 2 ? "…" : ""}.`
+        : "";
+      setPlanMsg(
+        `Added ${data.screens.length} screens from the plan.${diagSummary}${warnHint}`,
+      );
+      router.refresh();
+    } catch (e) {
+      setPlanMsg(e instanceof Error ? e.message : "Generate failed");
+    } finally {
+      setPlanBusy(false);
+    }
+  }
+
+  function renderPlanPanelBody() {
+    const planReady = planLoadState === "ready";
+    return (
+      <>
+        {planLoadState === "loading" ?
+          <p className="mb-2 text-xs font-medium text-emerald-900">Loading lesson plan…</p>
+        : null}
+        {planLoadState === "error" && planLoadError ?
+          <div className="mb-3 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-900">
+            <p>{planLoadError}</p>
+            <button
+              type="button"
+              onClick={() => setPlanFetchNonce((n) => n + 1)}
+              className="mt-2 rounded border border-red-300 bg-white px-2 py-1 font-semibold text-red-900 hover:bg-red-100"
+            >
+              Retry
+            </button>
+          </div>
+        : null}
+        <div className="mb-4">
+          <LessonLearningGoalsTable
+            key={learningGoals.join("\u0001")}
+            lessonId={lessonId}
+            moduleId={moduleId}
+            initialGoals={learningGoals}
+            compact
+          />
+        </div>
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800">Lesson plan</p>
+            <p className="mt-1 text-xs text-emerald-950/90">
+              {planPinned ?
+                "Pinned beside the editor. Generate activities uses this text plus your saved objectives."
+              : "Edit freely, save, or let AI draft. Unpinned: closes when you open a storyboard screen (unless pinned)."}
+            </p>
+          </div>
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded border border-emerald-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-emerald-900 shadow-sm">
+            <input
+              type="checkbox"
+              className="rounded border-emerald-400"
+              checked={planPinned}
+              onChange={(e) => setPlanPinned(e.target.checked)}
+            />
+            Pin open
+          </label>
+        </div>
+        <label className="block text-[11px] font-semibold text-emerald-950">
+          Plan document
+          <textarea
+            value={planText}
+            onChange={(e) => setPlanText(e.target.value)}
+            rows={14}
+            disabled={!planReady}
+            className="mt-1 w-full resize-y rounded border border-emerald-200 bg-white px-2 py-1.5 font-mono text-xs text-neutral-900 shadow-inner outline-none ring-emerald-500/30 focus:ring disabled:cursor-not-allowed disabled:bg-neutral-100"
+            spellCheck
+          />
+        </label>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <label className="text-[11px] font-semibold text-emerald-950">
+            CEFR / level
+            <select
+              value={planCefr}
+              onChange={(e) => setPlanCefr(e.target.value)}
+              className="mt-1 w-full rounded border border-emerald-200 bg-white px-2 py-1 text-xs"
+            >
+              {CEFR_LEVEL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-[11px] font-semibold text-emerald-950 sm:col-span-2">
+            Vocabulary (optional)
+            <input
+              value={planVocab}
+              onChange={(e) => setPlanVocab(e.target.value)}
+              className="mt-1 w-full rounded border border-emerald-200 bg-white px-2 py-1 text-xs"
+              placeholder="school, teacher, friend"
+            />
+          </label>
+          <label className="text-[11px] font-semibold text-emerald-950 sm:col-span-2">
+            Story premise / seed (required for empty plan; optional when enhancing existing text)
+            <textarea
+              value={planPremise}
+              onChange={(e) => setPlanPremise(e.target.value)}
+              rows={2}
+              className="mt-1 w-full resize-y rounded border border-emerald-200 bg-white px-2 py-1 text-xs"
+              placeholder="Two friends meet on the way to school…"
+            />
+          </label>
+        </div>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <button
+            type="button"
+            disabled={planBusy || !planReady}
+            onClick={() => void savePlanDoc()}
+            className="rounded bg-emerald-800 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-900 disabled:opacity-50"
+          >
+            Save plan
+          </button>
+          <button
+            type="button"
+            disabled={planBusy || !planReady}
+            onClick={() => void draftPlanWithAi()}
+            className="rounded border border-emerald-700 bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-950 hover:bg-emerald-200 disabled:opacity-50"
+          >
+            Draft plan with AI
+          </button>
+          <button
+            type="button"
+            disabled={planBusy || !planReady}
+            onClick={() => void generateActivitiesFromPlan()}
+            className="rounded bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+          >
+            Generate activities
+          </button>
+        </div>
+        {planMsg ? (
+          <p className="mt-2 text-xs text-emerald-950" role="status">
+            {planMsg}
+          </p>
+        ) : null}
+        {lastAiGenerationDiagnostics ?
+          <div
+            className="mt-2 rounded border border-amber-200 bg-amber-50/90 p-2 text-left text-emerald-950 shadow-sm"
+            role="region"
+            aria-label="Generation diagnostics"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900">
+              Generation diagnostics
+            </p>
+            <ul className="mt-1 list-inside list-disc text-[11px] text-emerald-950/95">
+              <li>
+                Model JSON screen rows:{" "}
+                {lastAiGenerationDiagnostics.modelScreensArrayLength}
+              </li>
+              <li>
+                Passed validation: {lastAiGenerationDiagnostics.validatedScreenCount}
+              </li>
+              <li>
+                Saved to lesson: {lastAiGenerationDiagnostics.returnedScreenCount}
+              </li>
+              <li>
+                Opening starts removed:{" "}
+                {lastAiGenerationDiagnostics.openingStartScreensStripped}
+              </li>
+              <li>
+                Parser warnings: {lastAiGenerationDiagnostics.parseWarningCount}
+              </li>
+              <li>
+                Failed drafts (not saved):{" "}
+                {lastAiGenerationDiagnostics.failedScreenCount ??
+                  lastAiGenerationDiagnostics.failedScreens?.length ??
+                  0}
+              </li>
+            </ul>
+            {lastAiGenerationDiagnostics.parseWarnings.length > 0 ?
+              <ol className="mt-2 max-h-40 list-decimal overflow-y-auto pl-5 text-[10px] leading-snug text-emerald-950">
+                {lastAiGenerationDiagnostics.parseWarnings.map((w, i) => (
+                  <li key={`${i}-${w.slice(0, 24)}`} className="break-words font-mono">
+                    {w}
+                  </li>
+                ))}
+              </ol>
+            : null}
+            {(lastAiGenerationDiagnostics.failedScreens?.length ?? 0) > 0 ?
+              <div className="mt-2 space-y-2" role="list">
+                <p className="text-[10px] font-semibold text-amber-950">
+                  Invalid model rows (drafts — not added to the lesson)
+                </p>
+                {(lastAiGenerationDiagnostics.failedScreens ?? []).map((f, idx) => (
+                  <details
+                    key={`ai-fail-${f.modelIndex}-${idx}`}
+                    className="rounded border border-amber-200 bg-white/90 text-left shadow-sm"
+                    role="listitem"
+                  >
+                    <summary className="cursor-pointer select-none px-2 py-1.5 text-[10px] font-semibold text-emerald-950 hover:bg-amber-50/80">
+                      Row {f.modelIndex} · {f.screen_type}
+                      {f.storyFirstContext ?
+                        ` · materialization step ${f.storyFirstContext.stepIndex} (${f.storyFirstContext.stepKind}${
+                          f.storyFirstContext.expectedSubtype ?
+                            ` / expect ${f.storyFirstContext.expectedSubtype}`
+                          : ""
+                        })`
+                      : ""}
+                    </summary>
+                    <div className="space-y-1.5 border-t border-amber-100 px-2 py-2 text-[10px] text-emerald-950">
+                      <p className="break-words leading-snug">{f.summary}</p>
+                      {f.storyFirstContext?.beatId ?
+                        <p className="text-[9px] text-emerald-800/90">
+                          Beat: <span className="font-mono">{f.storyFirstContext.beatId}</span>
+                        </p>
+                      : null}
+                      {f.issues.length > 0 ?
+                        <ul className="max-h-28 list-inside list-disc overflow-y-auto pl-0.5 font-mono text-[9px] leading-snug text-red-900/95">
+                          {f.issues.map((iss, i) => (
+                            <li key={`${i}-${iss.path}-${iss.message.slice(0, 24)}`}>
+                              {iss.path}: {iss.message}
+                              {iss.code ? ` (${iss.code})` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      : null}
+                      <pre className="max-h-40 overflow-auto rounded bg-neutral-900/95 p-2 text-[9px] leading-snug text-neutral-100">
+                        {JSON.stringify(f.payload, null, 2)}
+                      </pre>
+                      <button
+                        type="button"
+                        className="rounded border border-amber-300 bg-white px-2 py-0.5 text-[9px] font-semibold text-amber-950 hover:bg-amber-50"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(JSON.stringify(f, null, 2));
+                        }}
+                      >
+                        Copy this draft JSON
+                      </button>
+                    </div>
+                  </details>
+                ))}
+              </div>
+            : null}
+            <button
+              type="button"
+              className="mt-2 rounded border border-amber-300 bg-white px-2 py-1 text-[10px] font-semibold text-amber-950 hover:bg-amber-100"
+              onClick={() => {
+                void navigator.clipboard.writeText(
+                  JSON.stringify(lastAiGenerationDiagnostics, null, 2),
+                );
+              }}
+            >
+              Copy diagnostics JSON
+            </button>
+          </div>
+        : null}
+        <p className="mt-3 text-[10px] leading-snug text-emerald-900/80">
+          Server needs <code className="rounded bg-white/80 px-1">GEMINI_API_KEY</code>. Generating
+          activities re-reads your plan text so edits stay authoritative.
+        </p>
+      </>
     );
   }
 
@@ -1196,8 +1952,8 @@ export function LessonEditorWorkspace({
         <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
           <h2 className="text-sm font-bold text-neutral-900">Import screens</h2>
           <p className="mt-1 text-xs text-neutral-600">
-            JSON: {"{"} &quot;screens&quot;: [ {"{"} &quot;screen_type&quot;, &quot;payload&quot; {"}"}… ] {"}"}.
-            Paste only the raw object (no{" "}
+            JSON: {"{"} &quot;screens&quot;: [ {"{"} &quot;screen_type&quot;, &quot;payload&quot; {"}"}… ],
+            optional &quot;learning_goals&quot;: [&quot;…&quot;] {"}"}. Paste only the raw object (no{" "}
             <code className="rounded bg-neutral-100 px-0.5">```json</code> wrappers).
           </p>
           <form
@@ -1229,6 +1985,7 @@ export function LessonEditorWorkspace({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col space-y-0">
+      {lessonMenuOverlay}
       {canUseDomPortal && addScreenOpen ?
         createPortal(
           <>
@@ -1255,7 +2012,7 @@ export function LessonEditorWorkspace({
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                {ADD_SCREEN_BUTTONS.map(({ kind, label }) => (
+                {addScreenButtonOptions.map(({ kind, label }) => (
                   <form key={kind} action={addScreenTemplate.bind(null, lessonId, moduleId, kind)}>
                     <button
                       type="submit"
@@ -1313,42 +2070,87 @@ export function LessonEditorWorkspace({
 
           <div className="mt-4 space-y-3 border-t border-neutral-200 pt-3">
             <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">Lesson</p>
+            {isActivityLibraryMirror ? (
+              <div className="space-y-3 rounded border border-sky-200 bg-sky-50/80 p-3">
+                <p className="text-xs font-semibold text-sky-950">Activity library</p>
+                <p className="text-[11px] text-sky-900">
+                  This draft lesson edits questions for an activity set. It is not published on the course
+                  catalog. Use the buttons below to show or hide the activity on the student Activity library
+                  ({activityLibraryPublished ? "currently published" : "currently draft"}).
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <form action={publishActivityLibraryFromLesson}>
+                    <input type="hidden" name="lesson_id" value={lessonId} />
+                    <input type="hidden" name="module_id" value={moduleId} />
+                    <button
+                      type="submit"
+                      disabled={publishBlocked}
+                      title={publishBlocked ? publishBlockingReasons.join(" ") : undefined}
+                      className={
+                        publishBlocked ?
+                          "cursor-not-allowed rounded border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-500"
+                        : "rounded border border-emerald-400 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-950 hover:bg-emerald-100 active:bg-emerald-200"
+                      }
+                    >
+                      Publish to activity library
+                    </button>
+                  </form>
+                  <form action={unpublishActivityLibraryFromLesson}>
+                    <input type="hidden" name="lesson_id" value={lessonId} />
+                    <input type="hidden" name="module_id" value={moduleId} />
+                    <button
+                      type="submit"
+                      className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-100 active:bg-amber-200"
+                    >
+                      Unpublish from activity library
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-2">
-              <form action={saveLesson}>
-                <input type="hidden" name="id" value={lessonId} />
-                <input type="hidden" name="module_id" value={moduleId} />
-                <input type="hidden" name="title" value={lessonTitle} />
-                <input type="hidden" name="slug" value={lessonSlug} />
-                <input type="hidden" name="order_index" value={String(lessonOrderIndex)} />
-                <input
-                  type="hidden"
-                  name="estimated_minutes"
-                  value={
-                    lessonEstimatedMinutes === null || lessonEstimatedMinutes === undefined ?
-                      ""
-                    : String(lessonEstimatedMinutes)
-                  }
-                />
-                <input type="hidden" name="published" value={published ? "" : "on"} />
-                <button
-                  type="submit"
-                  disabled={!published && publishBlocked}
-                  title={
-                    !published && publishBlocked ?
-                      publishBlockingReasons.join(" ")
-                    : undefined
-                  }
-                  className={
-                    published ?
-                      "rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:bg-amber-200"
-                    : publishBlocked ?
-                      "cursor-not-allowed rounded border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-500"
-                    : "rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 active:bg-emerald-200"
-                  }
-                >
-                  {published ? "Unpublish lesson" : "Publish lesson"}
-                </button>
-              </form>
+              {isActivityLibraryMirror ? (
+                <p className="text-[11px] text-neutral-600">
+                  <strong>Course catalog:</strong> this mirror lesson stays off /learn. There is no separate
+                  &quot;Publish lesson&quot; for it.
+                </p>
+              ) : (
+                <form action={saveLesson}>
+                  <input type="hidden" name="id" value={lessonId} />
+                  <input type="hidden" name="module_id" value={moduleId} />
+                  <input type="hidden" name="title" value={lessonTitle} />
+                  <input type="hidden" name="slug" value={lessonSlug} />
+                  <input type="hidden" name="order_index" value={String(lessonOrderIndex)} />
+                  <input
+                    type="hidden"
+                    name="estimated_minutes"
+                    value={
+                      lessonEstimatedMinutes === null || lessonEstimatedMinutes === undefined ?
+                        ""
+                      : String(lessonEstimatedMinutes)
+                    }
+                  />
+                  <input type="hidden" name="published" value={published ? "" : "on"} />
+                  <button
+                    type="submit"
+                    disabled={!published && publishBlocked}
+                    title={
+                      !published && publishBlocked ?
+                        publishBlockingReasons.join(" ")
+                      : undefined
+                    }
+                    className={
+                      published ?
+                        "rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:bg-amber-200"
+                      : publishBlocked ?
+                        "cursor-not-allowed rounded border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-500"
+                      : "rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 active:bg-emerald-200"
+                    }
+                  >
+                    {published ? "Unpublish lesson" : "Publish lesson"}
+                  </button>
+                </form>
+              )}
               <form action={deleteLesson.bind(null, lessonId, moduleId)}>
                 <ConfirmSubmitButton
                   type="submit"
@@ -1373,7 +2175,7 @@ export function LessonEditorWorkspace({
                   <button
                     type="button"
                     className="rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-800 sm:text-sm"
-                    onClick={() => void screenEditorRef.current?.saveNow()}
+                    onClick={() => void saveVisibleScreenEditors()}
                   >
                     Save screen now
                   </button>
@@ -1459,6 +2261,27 @@ export function LessonEditorWorkspace({
           document.body,
         )
       : null}
+      {canUseDomPortal && planOpen && !planPinned ?
+        createPortal(
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-[59] bg-black/25"
+              aria-label="Close lesson plan"
+              onClick={() => setPlanOpen(false)}
+            />
+            <aside
+              className={
+                "fixed top-6 bottom-6 z-[60] flex min-h-0 w-[min(42rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] flex-col overflow-y-auto overflow-x-hidden overscroll-contain rounded-lg border border-emerald-200/90 bg-emerald-50/98 p-4 shadow-2xl backdrop-blur-sm sm:p-5"
+              }
+              style={{ left: "50%", transform: "translateX(-50%)" }}
+            >
+              {renderPlanPanelBody()}
+            </aside>
+          </>,
+          document.body,
+        )
+      : null}
       {canUseDomPortal && toolsOpen && !toolsPinned ?
         createPortal(
           <>
@@ -1524,6 +2347,90 @@ export function LessonEditorWorkspace({
                 liveScreens={liveScreens}
                 bumpScreenPayload={bumpScreenPayload}
               />
+            : bookendEditorMode && openingScreen && congratsScreen ?
+              <div
+                ref={bookendSplitRef}
+                className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row lg:items-stretch"
+              >
+                <section
+                  className={
+                    "flex min-h-0 w-full min-w-0 flex-col items-center overflow-y-auto overscroll-contain border-b border-neutral-200/80 px-3 py-4 lg:min-h-0 lg:border-b-0 lg:border-r lg:border-neutral-200/80 " +
+                    (bookendLayoutWide ? "" : "shrink-0")
+                  }
+                  style={
+                    bookendLayoutWide ?
+                      { flex: `${bookendSplitPct} 1 0%`, minWidth: 0 }
+                    : undefined
+                  }
+                >
+                  <div className="flex w-full max-w-xl flex-col items-center space-y-2">
+                    <p className="w-full text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Lesson opening
+                    </p>
+                    <ScreenEditorCard
+                      ref={bookendOpeningRef}
+                      key={openingScreen.id}
+                      screen={openingScreen}
+                      index={liveScreens.findIndex((x) => x.id === openingScreen.id)}
+                      lessonId={lessonId}
+                      moduleId={moduleId}
+                      isSelected={selectedScreen?.id === openingScreen.id}
+                      onSelect={() =>
+                        setSelectedIndex(
+                          Math.max(0, liveScreens.findIndex((x) => x.id === openingScreen.id)),
+                        )
+                      }
+                      bumpScreenPayload={bumpScreenPayload}
+                      advancedJsonOpen={advancedJsonOpen}
+                      onAdvancedJsonOpenChange={setAdvancedJsonOpen}
+                      onStatusChange={onScreenEditorStatus}
+                      onPersistSuccess={notifyScreenSaved}
+                    />
+                  </div>
+                </section>
+                <div className="hidden w-2 shrink-0 items-stretch justify-center self-stretch lg:flex">
+                  <button
+                    type="button"
+                    aria-label="Resize opening and closing panels"
+                    title="Drag to resize"
+                    onPointerDown={beginBookendSplitResize}
+                    className="h-full min-h-[120px] w-1 cursor-col-resize rounded bg-neutral-200/80 hover:bg-sky-300 active:bg-sky-400"
+                  />
+                </div>
+                <section
+                  className="flex min-h-0 w-full min-w-0 flex-col items-center overflow-y-auto overscroll-contain px-3 py-4 lg:min-h-0"
+                  style={
+                    bookendLayoutWide ?
+                      { flex: `${100 - bookendSplitPct} 1 0%`, minWidth: 0 }
+                    : undefined
+                  }
+                >
+                  <div className="flex w-full max-w-xl flex-col items-center space-y-2">
+                    <p className="w-full text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Lesson closing
+                    </p>
+                    <ScreenEditorCard
+                      ref={bookendCongratsRef}
+                      key={congratsScreen.id}
+                      screen={congratsScreen}
+                      index={liveScreens.findIndex((x) => x.id === congratsScreen.id)}
+                      lessonId={lessonId}
+                      moduleId={moduleId}
+                      isSelected={selectedScreen?.id === congratsScreen.id}
+                      onSelect={() =>
+                        setSelectedIndex(
+                          Math.max(0, liveScreens.findIndex((x) => x.id === congratsScreen.id)),
+                        )
+                      }
+                      bumpScreenPayload={bumpScreenPayload}
+                      advancedJsonOpen={advancedJsonOpen}
+                      onAdvancedJsonOpenChange={setAdvancedJsonOpen}
+                      onStatusChange={onScreenEditorStatus}
+                      onPersistSuccess={notifyScreenSaved}
+                    />
+                  </div>
+                </section>
+              </div>
             : selectedScreen ?
               <ScreenEditorCard
                 ref={screenEditorRef}
@@ -1543,6 +2450,18 @@ export function LessonEditorWorkspace({
             : <p className="p-4 text-sm text-neutral-600">Select a screen in the storyboard.</p>}
           </div>
         </div>
+        {planOpen && planPinned ? (
+          <aside
+            className={
+              "order-3 min-h-0 w-full shrink-0 overflow-y-auto border-t border-emerald-200/80 bg-emerald-50/95 p-4 xl:order-none xl:min-w-[280px] xl:self-stretch xl:border-t-0 xl:border-l xl:py-5 " +
+              rightSidebarScroll
+            }
+            style={{ width: `clamp(280px, 38%, 520px)` }}
+          >
+            {renderPlanPanelBody()}
+          </aside>
+        ) : null}
+
         {toolsOpen && toolsPinned ? (
           <div className="hidden xl:flex xl:w-2 xl:items-stretch xl:justify-center xl:self-stretch">
             <button

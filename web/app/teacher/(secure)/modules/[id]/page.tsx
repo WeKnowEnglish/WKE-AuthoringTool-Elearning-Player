@@ -153,6 +153,7 @@ export default async function EditModulePage({ params }: Props) {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xl font-bold">Lessons</h2>
           <Link
+            prefetch={false}
             href={`/teacher/modules/${id}/lessons/new`}
             className="rounded bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-emerald-800 active:scale-[0.96] active:bg-emerald-900 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
@@ -166,6 +167,7 @@ export default async function EditModulePage({ params }: Props) {
               className="relative flex flex-wrap items-center justify-between gap-2 rounded border bg-white px-4 py-3 transition-colors hover:border-neutral-300"
             >
               <Link
+                prefetch={false}
                 href={`/teacher/modules/${id}/lessons/${l.id}`}
                 aria-label={`Edit screens for ${l.title}`}
                 className="absolute inset-0 rounded"
@@ -176,6 +178,7 @@ export default async function EditModulePage({ params }: Props) {
               </span>
               <div className="relative z-10 flex items-center gap-2">
                 <Link
+                  prefetch={false}
                   href={`/teacher/modules/${id}/lessons/${l.id}`}
                   className="rounded px-2 py-1 text-sm font-semibold text-blue-700 underline transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-blue-50 active:scale-[0.97] active:bg-blue-100 motion-reduce:transition-none motion-reduce:active:scale-100"
                 >

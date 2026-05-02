@@ -7,7 +7,7 @@ import { teacherSignOut } from "@/lib/actions/auth";
 import {
   TeacherEditorHeaderProvider,
   TeacherNavEditorTitle,
-  useTeacherEditorHeader,
+  useLessonToolbarSlot,
 } from "@/components/teacher/TeacherEditorHeaderContext";
 import { TeacherPrimaryTabs } from "@/components/teacher/TeacherPrimaryTabs";
 
@@ -26,7 +26,7 @@ function TeacherChromeHeader({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
   const lessonEditorFullBleed = isLessonEditorPath(pathname);
   const headerRef = useRef<HTMLElement | null>(null);
-  const { lessonToolbarSlot } = useTeacherEditorHeader();
+  const lessonToolbarSlot = useLessonToolbarSlot();
 
   useLayoutEffect(() => {
     if (!lessonEditorFullBleed) {
@@ -46,7 +46,8 @@ function TeacherChromeHeader({ userEmail }: { userEmail: string }) {
       ro.disconnect();
       document.documentElement.style.removeProperty("--lesson-editor-toolbar-height");
     };
-  }, [lessonEditorFullBleed, lessonToolbarSlot]);
+    /** Toolbar slot updates change header height; ResizeObserver sees that without re-subscribing. */
+  }, [lessonEditorFullBleed]);
 
   return (
     <header

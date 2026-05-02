@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 import { searchTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/lib/actions/media";
 
 type Props = {
@@ -18,8 +19,10 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
   const librarySearchRef = useRef<HTMLInputElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [assets, setAssets] = useState<MediaAssetRow[]>([]);
+  const [libTotal, setLibTotal] = useState(0);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libLoading, setLibLoading] = useState(false);
+  const [libLoadingMore, setLibLoadingMore] = useState(false);
   const [libErr, setLibErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
@@ -40,10 +43,14 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
       searchTeacherMedia({
         kind: "audio",
         q: libraryQuery.trim(),
-        limit: 1000,
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: 0,
       })
-        .then((rows) => {
-          if (!cancelled) setAssets(rows);
+        .then(({ rows, total }) => {
+          if (!cancelled) {
+            setAssets(rows);
+            setLibTotal(total);
+          }
         })
         .catch((e: unknown) => {
           if (!cancelled) setLibErr(e instanceof Error ? e.message : "Failed to load library");
@@ -57,6 +64,26 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
       window.clearTimeout(timeoutId);
     };
   }, [libraryOpen, libraryQuery]);
+
+  const loadMoreLibrary = useCallback(async () => {
+    if (libLoadingMore || libLoading || assets.length >= libTotal) return;
+    setLibLoadingMore(true);
+    setLibErr(null);
+    try {
+      const { rows, total } = await searchTeacherMedia({
+        kind: "audio",
+        q: libraryQuery.trim(),
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: assets.length,
+      });
+      setLibTotal(total);
+      setAssets((prev) => [...prev, ...rows]);
+    } catch (e: unknown) {
+      setLibErr(e instanceof Error ? e.message : "Failed to load more");
+    } finally {
+      setLibLoadingMore(false);
+    }
+  }, [libLoadingMore, libLoading, assets.length, libTotal, libraryQuery]);
 
   useEffect(() => {
     return () => {
@@ -306,29 +333,48 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
                 ) : libErr ? (
                   <p className="text-sm text-red-700">{libErr}</p>
                 ) : assets.length === 0 ? (
-                  <p className="text-sm text-neutral-600">No audio uploads yet. Use Upload to add audio files.</p>
-                ) : assets.length === 0 ? (
-                  <p className="text-sm text-neutral-600">No audio matched your search.</p>
+                  <p className="text-sm text-neutral-600">
+                    {libTotal === 0 && !libraryQuery.trim() ?
+                      "No audio uploads yet. Use Upload to add audio files."
+                    : "No audio matched your search."}
+                  </p>
                 ) : (
-                  <ul className="space-y-2">
-                    {assets.map((a) => (
-                      <li key={a.id} className="rounded border border-neutral-200 p-2">
+                  <>
+                    <p className="mb-2 text-xs text-neutral-500">
+                      Showing {assets.length} of {libTotal}
+                    </p>
+                    <ul className="space-y-2">
+                      {assets.map((a) => (
+                        <li key={a.id} className="rounded border border-neutral-200 p-2">
+                          <button
+                            type="button"
+                            className="w-full text-left text-sm font-medium text-sky-900 underline underline-offset-2"
+                            onClick={() => {
+                              onChange(a.public_url);
+                              setLibraryOpen(false);
+                            }}
+                          >
+                            {a.original_filename}
+                          </button>
+                          <audio className="mt-2 w-full" controls preload="none" src={a.public_url}>
+                            Your browser does not support audio playback.
+                          </audio>
+                        </li>
+                      ))}
+                    </ul>
+                    {assets.length < libTotal ? (
+                      <div className="mt-4 flex justify-center">
                         <button
                           type="button"
-                          className="w-full text-left text-sm font-medium text-sky-900 underline underline-offset-2"
-                          onClick={() => {
-                            onChange(a.public_url);
-                            setLibraryOpen(false);
-                          }}
+                          disabled={libLoadingMore}
+                          onClick={() => void loadMoreLibrary()}
+                          className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-neutral-50 disabled:opacity-50"
                         >
-                          {a.original_filename}
+                          {libLoadingMore ? "Loading…" : "Load more"}
                         </button>
-                        <audio className="mt-2 w-full" controls preload="metadata" src={a.public_url}>
-                          Your browser does not support audio playback.
-                        </audio>
-                      </li>
-                    ))}
-                  </ul>
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </div>
             </div>

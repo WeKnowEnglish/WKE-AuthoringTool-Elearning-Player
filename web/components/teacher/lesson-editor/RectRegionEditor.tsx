@@ -62,7 +62,7 @@ function computeToggleSelection(id: string, append: boolean, current: string[]):
 
 export function RectRegionEditor({
   imageUrl,
-  imageFit = "cover",
+  imageFit = "contain",
   stageAspectRatio = "16 / 10",
   cropXPercent = 0,
   cropYPercent = 0,

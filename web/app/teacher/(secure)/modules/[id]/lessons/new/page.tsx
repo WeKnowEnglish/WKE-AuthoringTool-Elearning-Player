@@ -50,7 +50,10 @@ export default async function NewLessonPage({ params }: Props) {
           )}
         </p>
       </div>
-      <form action={saveLesson} className="max-w-md space-y-4 rounded border bg-white p-6">
+      <form
+        action={saveLesson}
+        className="mx-auto max-w-md space-y-4 rounded border bg-white p-6"
+      >
         <input type="hidden" name="module_id" value={moduleId} />
         <TitleSlugFields />
         <div>
@@ -87,7 +90,7 @@ export default async function NewLessonPage({ params }: Props) {
           Create lesson
         </button>
       </form>
-      <p className="max-w-md text-sm text-neutral-600">
+      <p className="mx-auto max-w-md text-sm text-neutral-600">
         After creating, use <strong>Edit screens</strong> to add story slides,
         quizzes, and AI drafts.
       </p>

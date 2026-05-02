@@ -10,19 +10,33 @@ import {
 } from "react";
 import { LessonPlayer } from "@/components/lesson/LessonPlayer";
 import type { LessonScreenRow } from "@/lib/data/catalog";
+import { FitScaledLessonPreview } from "./FitScaledLessonPreview";
 
 const PREVIEW_MIN_W = 360;
 const PREVIEW_MIN_H = 280;
 
 type Prefs = { x: number; y: number; w: number; h: number };
 
+function defaultPreviewPrefs(): Prefs {
+  if (typeof window === "undefined") {
+    return { x: 16, y: 16, w: 1100, h: 820 };
+  }
+  const m = 16;
+  return {
+    x: m,
+    y: m,
+    w: Math.max(PREVIEW_MIN_W, window.innerWidth - m * 2),
+    h: Math.max(PREVIEW_MIN_H, window.innerHeight - m * 2),
+  };
+}
+
 function loadPrefs(lessonId: string): Prefs {
   if (typeof window === "undefined") {
-    return { x: 80, y: 80, w: 720, h: 540 };
+    return { x: 16, y: 16, w: 1100, h: 820 };
   }
   try {
     const raw = window.localStorage.getItem(`lesson-editor-preview:${lessonId}`);
-    if (!raw) return { x: 80, y: 80, w: 720, h: 540 };
+    if (!raw) return defaultPreviewPrefs();
     const p = JSON.parse(raw) as Partial<Prefs>;
     return {
       x: typeof p.x === "number" ? p.x : 80,
@@ -31,7 +45,7 @@ function loadPrefs(lessonId: string): Prefs {
       h: typeof p.h === "number" ? Math.max(PREVIEW_MIN_H, p.h) : 540,
     };
   } catch {
-    return { x: 80, y: 80, w: 720, h: 540 };
+    return defaultPreviewPrefs();
   }
 }
 
@@ -160,7 +174,10 @@ function LessonPreviewOverlayPortal({
             Close
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto bg-amber-50/40 p-2">
+        <FitScaledLessonPreview
+          measureKey={`${lessonId}-${initialScreenIndex}`}
+          className="bg-amber-50/40 p-2"
+        >
           {screens.length > 0 ? (
             <LessonPlayer
               key={`${lessonId}-${initialScreenIndex}`}
@@ -173,7 +190,7 @@ function LessonPreviewOverlayPortal({
           ) : (
             <p className="text-sm text-neutral-600">No screens.</p>
           )}
-        </div>
+        </FitScaledLessonPreview>
         <button
           type="button"
           aria-label="Resize preview"

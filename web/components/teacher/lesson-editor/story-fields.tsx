@@ -59,6 +59,7 @@ import {
   STORY_EDITOR_VIRTUAL_PHASE_ID,
 } from "@/components/teacher/lesson-editor/story-editor-phases";
 import { StoryItemEditorPanel } from "@/components/teacher/lesson-editor/StoryItemEditorPanel";
+import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 import {
   searchTeacherMedia,
   uploadTeacherMedia,
@@ -412,6 +413,8 @@ function rectToStoryItem(
     show_on_start: prev?.show_on_start ?? true,
     image_scale: prev?.image_scale ?? 1,
     z_index: prev?.z_index ?? 0,
+    draggable_mode: prev?.draggable_mode ?? "none",
+    drop_target_id: prev?.drop_target_id,
     enter: prev?.enter,
     exit: prev?.exit,
     emphasis: prev?.emphasis,
@@ -616,7 +619,7 @@ export function StoryFields({
   busy: boolean;
 }) {
   const [image_url, setImageUrl] = useState(initial.image_url ?? "");
-  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "cover");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
   const [video_url, setVideoUrl] = useState(initial.video_url ?? "");
   const [body_text, setBody] = useState(initial.body_text);
   const [read_aloud_text, setRead] = useState(initial.read_aloud_text ?? "");
@@ -630,7 +633,7 @@ export function StoryFields({
         {
           id: "legacy-page",
           background_image_url: initial.image_url || undefined,
-          image_fit: initial.image_fit ?? "cover",
+          image_fit: initial.image_fit ?? "contain",
           video_url: initial.video_url || undefined,
           body_text: initial.body_text,
           read_aloud_text: initial.read_aloud_text || undefined,
@@ -670,15 +673,19 @@ export function StoryFields({
   const [pageContentPinned, setPageContentPinned] = useState(false);
   const [bgChangeOverlayOpen, setBgChangeOverlayOpen] = useState(false);
   const [bgPresetAssets, setBgPresetAssets] = useState<MediaAssetRow[]>([]);
+  const [bgPresetTotal, setBgPresetTotal] = useState(0);
   const [bgPresetLoading, setBgPresetLoading] = useState(false);
+  const [bgPresetLoadingMore, setBgPresetLoadingMore] = useState(false);
   const [bgPresetErr, setBgPresetErr] = useState<string | null>(null);
   const [bgPresetQuery, setBgPresetQuery] = useState("");
   const [bgVideoUploading, setBgVideoUploading] = useState(false);
   const [bgVideoErr, setBgVideoErr] = useState<string | null>(null);
   const [bgVideoLibraryOpen, setBgVideoLibraryOpen] = useState(false);
   const [bgVideoLibraryAssets, setBgVideoLibraryAssets] = useState<MediaAssetRow[]>([]);
+  const [bgVideoLibraryTotal, setBgVideoLibraryTotal] = useState(0);
   const [bgVideoLibraryQuery, setBgVideoLibraryQuery] = useState("");
   const [bgVideoLibraryLoading, setBgVideoLibraryLoading] = useState(false);
+  const [bgVideoLibraryLoadingMore, setBgVideoLibraryLoadingMore] = useState(false);
   const [bgVideoLibraryErr, setBgVideoLibraryErr] = useState<string | null>(null);
   const [pathEditItemId, setPathEditItemId] = useState<string | null>(null);
   const [pathEditMode, setPathEditMode] = useState<"set_start" | "draw">("set_start");
@@ -729,7 +736,7 @@ export function StoryFields({
           {
             id: "legacy-page",
             background_image_url: initial.image_url || undefined,
-            image_fit: initial.image_fit ?? "cover",
+            image_fit: initial.image_fit ?? "contain",
             video_url: initial.video_url || undefined,
             body_text: initial.body_text,
             read_aloud_text: initial.read_aloud_text || undefined,
@@ -744,8 +751,8 @@ export function StoryFields({
         : (initial.image_url || undefined),
       image_fit:
         loadedPages.length > 0 ?
-          (loadedPages[0]?.image_fit ?? initial.image_fit ?? "cover")
-        : (initial.image_fit ?? "cover"),
+          (loadedPages[0]?.image_fit ?? initial.image_fit ?? "contain")
+        : (initial.image_fit ?? "contain"),
       video_url:
         loadedPages.length > 0 ?
           (loadedPages[0]?.video_url || undefined)
@@ -781,7 +788,7 @@ export function StoryFields({
 
     lastLocalSigRef.current = incomingSig;
     setImageUrl(initial.image_url ?? "");
-    setImageFit(initial.image_fit ?? "cover");
+    setImageFit(initial.image_fit ?? "contain");
     setVideoUrl(initial.video_url ?? "");
     setBody(initial.body_text);
     setRead(initial.read_aloud_text ?? "");
@@ -1969,10 +1976,14 @@ export function StoryFields({
       searchTeacherMedia({
         kind: "video",
         q: bgVideoLibraryQuery.trim(),
-        limit: 1000,
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: 0,
       })
-        .then((rows) => {
-          if (!cancelled) setBgVideoLibraryAssets(rows);
+        .then(({ rows, total }) => {
+          if (!cancelled) {
+            setBgVideoLibraryAssets(rows);
+            setBgVideoLibraryTotal(total);
+          }
         })
         .catch((e: unknown) => {
           if (!cancelled) {
@@ -1999,10 +2010,14 @@ export function StoryFields({
         kind: "image",
         tags: ["background"],
         q: bgPresetQuery.trim(),
-        limit: 500,
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: 0,
       })
-        .then((rows) => {
-          if (!cancelled) setBgPresetAssets(rows);
+        .then(({ rows, total }) => {
+          if (!cancelled) {
+            setBgPresetAssets(rows);
+            setBgPresetTotal(total);
+          }
         })
         .catch((e: unknown) => {
           if (!cancelled) {
@@ -2018,6 +2033,65 @@ export function StoryFields({
       window.clearTimeout(timeoutId);
     };
   }, [bgChangeOverlayOpen, bgPresetQuery]);
+
+  const loadMoreBgVideoLibrary = useCallback(async () => {
+    if (
+      bgVideoLibraryLoadingMore ||
+      bgVideoLibraryLoading ||
+      bgVideoLibraryAssets.length >= bgVideoLibraryTotal
+    ) {
+      return;
+    }
+    setBgVideoLibraryLoadingMore(true);
+    setBgVideoLibraryErr(null);
+    try {
+      const { rows, total } = await searchTeacherMedia({
+        kind: "video",
+        q: bgVideoLibraryQuery.trim(),
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: bgVideoLibraryAssets.length,
+      });
+      setBgVideoLibraryTotal(total);
+      setBgVideoLibraryAssets((prev) => [...prev, ...rows]);
+    } catch (e: unknown) {
+      setBgVideoLibraryErr(e instanceof Error ? e.message : "Failed to load more");
+    } finally {
+      setBgVideoLibraryLoadingMore(false);
+    }
+  }, [
+    bgVideoLibraryLoadingMore,
+    bgVideoLibraryLoading,
+    bgVideoLibraryAssets.length,
+    bgVideoLibraryTotal,
+    bgVideoLibraryQuery,
+  ]);
+
+  const loadMoreBgPreset = useCallback(async () => {
+    if (bgPresetLoadingMore || bgPresetLoading || bgPresetAssets.length >= bgPresetTotal) return;
+    setBgPresetLoadingMore(true);
+    setBgPresetErr(null);
+    try {
+      const { rows, total } = await searchTeacherMedia({
+        kind: "image",
+        tags: ["background"],
+        q: bgPresetQuery.trim(),
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: bgPresetAssets.length,
+      });
+      setBgPresetTotal(total);
+      setBgPresetAssets((prev) => [...prev, ...rows]);
+    } catch (e: unknown) {
+      setBgPresetErr(e instanceof Error ? e.message : "Failed to load more");
+    } finally {
+      setBgPresetLoadingMore(false);
+    }
+  }, [
+    bgPresetLoadingMore,
+    bgPresetLoading,
+    bgPresetAssets.length,
+    bgPresetTotal,
+    bgPresetQuery,
+  ]);
 
   useEffect(() => {
     if (!pathEditItemId) return;
@@ -4189,43 +4263,69 @@ export function StoryFields({
                     <p className="text-xs text-red-700">{bgPresetErr}</p>
                   ) : bgPresetAssets.length === 0 ? (
                     <p className="text-xs text-neutral-600">
-                      No preset images match. Tag assets with <strong>background</strong> in the media
-                      library, or use a custom URL below.
+                      {bgPresetTotal === 0 && !bgPresetQuery.trim() ?
+                        <>
+                          No preset images yet. Tag assets with <strong>background</strong> in the media
+                          library, or use a custom URL below.
+                        </>
+                      : <>
+                          No preset images match this search. Tag assets with <strong>background</strong> in
+                          the media library, or use a custom URL below.
+                        </>}
                     </p>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                      {bgPresetAssets.map((asset) => {
-                        const active =
-                          (selectedPage.background_image_url ?? "") === asset.public_url;
-                        return (
+                    <>
+                      <p className="mb-1 text-[10px] text-neutral-500">
+                        Showing {bgPresetAssets.length} of {bgPresetTotal}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                        {bgPresetAssets.map((asset) => {
+                          const active =
+                            (selectedPage.background_image_url ?? "") === asset.public_url;
+                          return (
+                            <button
+                              key={asset.id}
+                              type="button"
+                              title={asset.meta_item_name || asset.original_filename}
+                              onClick={() =>
+                                updatePage(selectedPage.id, {
+                                  background_image_url: asset.public_url,
+                                })
+                              }
+                              className={`overflow-hidden rounded-lg border-2 text-left transition-colors ${
+                                active ?
+                                  "border-sky-600 ring-2 ring-sky-200"
+                                : "border-transparent hover:border-sky-300"
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- library URLs from teacher storage */}
+                              <img
+                                src={asset.public_url}
+                                alt=""
+                                className="h-24 w-full object-cover"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                              <span className="line-clamp-2 block px-1 py-0.5 text-[10px] text-neutral-700">
+                                {asset.meta_item_name?.trim() || asset.original_filename}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {bgPresetAssets.length < bgPresetTotal ? (
+                        <div className="mt-2 flex justify-center">
                           <button
-                            key={asset.id}
                             type="button"
-                            title={asset.meta_item_name || asset.original_filename}
-                            onClick={() =>
-                              updatePage(selectedPage.id, {
-                                background_image_url: asset.public_url,
-                              })
-                            }
-                            className={`overflow-hidden rounded-lg border-2 text-left transition-colors ${
-                              active ?
-                                "border-sky-600 ring-2 ring-sky-200"
-                              : "border-transparent hover:border-sky-300"
-                            }`}
+                            disabled={bgPresetLoadingMore}
+                            onClick={() => void loadMoreBgPreset()}
+                            className="rounded border border-neutral-300 bg-white px-2 py-1 text-[11px] font-semibold hover:bg-neutral-50 disabled:opacity-50"
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element -- library URLs from teacher storage */}
-                            <img
-                              src={asset.public_url}
-                              alt=""
-                              className="h-24 w-full object-cover"
-                            />
-                            <span className="line-clamp-2 block px-1 py-0.5 text-[10px] text-neutral-700">
-                              {asset.meta_item_name?.trim() || asset.original_filename}
-                            </span>
+                            {bgPresetLoadingMore ? "Loading…" : "Load more"}
                           </button>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      ) : null}
+                    </>
                   )}
                 </div>
               </section>
@@ -4331,21 +4431,42 @@ export function StoryFields({
                       ) : bgVideoLibraryErr ? (
                         <p className="text-xs text-red-700">{bgVideoLibraryErr}</p>
                       ) : bgVideoLibraryAssets.length === 0 ? (
-                        <p className="text-xs text-neutral-600">No videos found.</p>
+                        <p className="text-xs text-neutral-600">
+                          {bgVideoLibraryTotal === 0 && !bgVideoLibraryQuery.trim() ?
+                            "No videos in the library yet."
+                          : "No videos match this search."}
+                        </p>
                       ) : (
-                        bgVideoLibraryAssets.map((asset) => (
-                          <button
-                            key={asset.id}
-                            type="button"
-                            onClick={() => {
-                              updatePage(selectedPage.id, { video_url: asset.public_url });
-                              setBgVideoLibraryOpen(false);
-                            }}
-                            className="block w-full rounded border border-neutral-200 bg-white px-2 py-1 text-left text-xs hover:bg-sky-50"
-                          >
-                            {asset.original_filename}
-                          </button>
-                        ))
+                        <>
+                          <p className="text-[10px] text-neutral-500">
+                            Showing {bgVideoLibraryAssets.length} of {bgVideoLibraryTotal}
+                          </p>
+                          {bgVideoLibraryAssets.map((asset) => (
+                            <button
+                              key={asset.id}
+                              type="button"
+                              onClick={() => {
+                                updatePage(selectedPage.id, { video_url: asset.public_url });
+                                setBgVideoLibraryOpen(false);
+                              }}
+                              className="block w-full rounded border border-neutral-200 bg-white px-2 py-1 text-left text-xs hover:bg-sky-50"
+                            >
+                              {asset.original_filename}
+                            </button>
+                          ))}
+                          {bgVideoLibraryAssets.length < bgVideoLibraryTotal ? (
+                            <div className="pt-1">
+                              <button
+                                type="button"
+                                disabled={bgVideoLibraryLoadingMore}
+                                onClick={() => void loadMoreBgVideoLibrary()}
+                                className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-[11px] font-semibold hover:bg-neutral-50 disabled:opacity-50"
+                              >
+                                {bgVideoLibraryLoadingMore ? "Loading…" : "Load more"}
+                              </button>
+                            </div>
+                          ) : null}
+                        </>
                       )}
                     </div>
                   </div>

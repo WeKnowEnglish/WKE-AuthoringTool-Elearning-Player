@@ -3,13 +3,13 @@ import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
 import { MediaBulkUploadCard } from "@/components/teacher/media/MediaBulkUploadCard";
 import {
-  type DuplicateHandling,
   deleteTeacherMedia,
   inspectTeacherMediaBulkDuplicates,
   searchTeacherMedia,
   updateTeacherMediaMetadataFromForm,
-  uploadTeacherMediaBulkFromForm,
-  type MediaKind,
+  uploadTeacherMediaSingleFromForm,
+  type MediaDuplicateIssue,
+  type UploadTeacherMediaBulkItemResult,
 } from "@/lib/actions/media";
 
 type Props = {
@@ -43,14 +43,12 @@ function buildSearchUrl(values: Record<string, string>): string {
   return qs ? `/teacher/media?${qs}` : "/teacher/media";
 }
 
-function classifyUploadFailure(message: string): string {
-  const normalized = message.toLowerCase();
-  if (normalized.includes("file too large")) return "File too large";
-  if (normalized.includes("only ") && normalized.includes("allowed")) return "Unsupported file type";
-  if (normalized.includes("near-duplicate")) return "Near-duplicate blocked";
-  if (normalized.includes("duplicate")) return "Duplicate blocked";
-  if (normalized.includes("unauthorized")) return "Unauthorized";
-  return "Other upload error";
+const MEDIA_PAGE_SIZE = 48;
+
+function parseMediaPage(raw: string): number {
+  const n = Number.parseInt(String(raw).trim(), 10);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return n;
 }
 
 export default async function TeacherMediaPage({ searchParams }: Props) {
@@ -66,8 +64,9 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
   const view = firstParam(params.view) || "icons_medium";
   const status = firstParam(params.status);
   const message = firstParam(params.message);
+  const pageNum = parseMediaPage(firstParam(params.page));
 
-  const assets = await searchTeacherMedia({
+  const { rows: assets, total } = await searchTeacherMedia({
     q,
     kind: kind as "all" | "image" | "audio",
     level,
@@ -76,66 +75,32 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
     tags: csvToList(tags),
     categories: csvToList(categories),
     skills: csvToList(skills),
-    limit: 800,
+    limit: MEDIA_PAGE_SIZE,
+    offset: (pageNum - 1) * MEDIA_PAGE_SIZE,
   });
 
-  async function uploadAction(formData: FormData) {
-    "use server";
-    const uploadKind = (formData.get("kind") as MediaKind | null) ?? "image";
-    const duplicateHandling =
-      (formData.get("duplicate_handling") as DuplicateHandling | null) ?? "delete_duplicate";
-    const base = {
-      q,
-      kind,
-      level,
-      word_type: wordType,
-      countability,
-      tags,
-      categories,
-      skills,
-      view,
-    };
-    let targetUrl = "";
+  const totalPages = Math.max(1, Math.ceil(total / MEDIA_PAGE_SIZE));
+  const pageQs = pageNum > 1 ? String(pageNum) : "";
+  if (total > 0 && pageNum > totalPages) {
+    redirect(
+      buildSearchUrl({
+        q,
+        kind,
+        level,
+        word_type: wordType,
+        countability,
+        tags,
+        categories,
+        skills,
+        view,
+        page: String(totalPages),
+      }),
+    );
+  }
 
-    try {
-      const result = await uploadTeacherMediaBulkFromForm(formData);
-      const duplicateReusedCount = result.items.filter(
-        (item) => item.status === "success" && item.duplicate_status === "exact_duplicate_reused",
-      ).length;
-      const uploadedCount = result.successCount - duplicateReusedCount;
-      const failedItems = result.items.filter((item) => item.status === "error");
-      const failureCounts = new Map<string, number>();
-      for (const item of failedItems) {
-        const key = classifyUploadFailure(item.message ?? "Upload failed");
-        failureCounts.set(key, (failureCounts.get(key) ?? 0) + 1);
-      }
-      const failureSummary = [...failureCounts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .map(([reason, count]) => `${reason} (${count})`)
-        .join(", ");
-      const failedPreviewNames = failedItems
-        .slice(0, 3)
-        .map((item) => item.filename)
-        .join(", ");
-      const hasPartialFailures = result.failureCount > 0;
-      const statusValue = hasPartialFailures ? "partial_upload" : "uploaded";
-      const summaryMessage = hasPartialFailures ?
-          `Uploaded ${result.successCount}/${result.items.length} file(s). Failed ${result.failureCount}. Reasons: ${failureSummary || "Unknown"}.${failedPreviewNames ? ` Example file(s): ${failedPreviewNames}${failedItems.length > 3 ? ", ..." : ""}.` : ""}`
-        : `Upload complete. Added ${uploadedCount} file(s)${duplicateReusedCount > 0 ? `, reused ${duplicateReusedCount} duplicate(s)` : ""}. Duplicate mode: ${duplicateHandling === "keep_both" ? "keep both" : "delete duplicate"}.`;
-      targetUrl = buildSearchUrl({
-        ...base,
-        status: statusValue,
-        kind: uploadKind,
-        message: summaryMessage,
-      });
-    } catch (e) {
-      targetUrl = buildSearchUrl({
-        ...base,
-        status: "error",
-        message: e instanceof Error ? e.message : "Upload failed",
-      });
-    }
-    redirect(targetUrl);
+  async function uploadSingleMediaAction(formData: FormData): Promise<UploadTeacherMediaBulkItemResult> {
+    "use server";
+    return uploadTeacherMediaSingleFromForm(formData);
   }
 
   async function saveMetadataAction(formData: FormData) {
@@ -143,7 +108,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
     await updateTeacherMediaMetadataFromForm(formData);
   }
 
-  async function checkDuplicatesAction(formData: FormData) {
+  async function inspectDuplicatesAction(formData: FormData): Promise<MediaDuplicateIssue[]> {
     "use server";
     return inspectTeacherMediaBulkDuplicates(formData);
   }
@@ -205,7 +170,10 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <MediaBulkUploadCard action={uploadAction} checkDuplicatesAction={checkDuplicatesAction} />
+      <MediaBulkUploadCard
+        inspectDuplicatesAction={inspectDuplicatesAction}
+        uploadSingleAction={uploadSingleMediaAction}
+      />
 
       <section className="rounded-lg border border-neutral-200 bg-white p-4">
         <h2 className="text-sm font-bold text-neutral-900">Search and filters</h2>
@@ -314,7 +282,13 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
 
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-neutral-900">Assets ({assets.length})</h2>
+          <h2 className="text-sm font-bold text-neutral-900">
+            Assets (
+            {total === 0 ?
+              "0"
+            : `${(pageNum - 1) * MEDIA_PAGE_SIZE + 1}–${(pageNum - 1) * MEDIA_PAGE_SIZE + assets.length} of ${total}`}
+            )
+          </h2>
           <div className="flex items-center gap-1">
             <Link
               href={buildSearchUrl({
@@ -327,6 +301,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
                 categories,
                 skills,
                 view: "list",
+                page: pageQs,
               })}
               className={`rounded border px-2 py-1 text-xs font-semibold ${
                 view === "list" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300"
@@ -345,6 +320,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
                 categories,
                 skills,
                 view: "icons_small",
+                page: pageQs,
               })}
               className={`rounded border px-2 py-1 text-xs font-semibold ${
                 view === "icons_small" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300"
@@ -363,6 +339,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
                 categories,
                 skills,
                 view: "icons_medium",
+                page: pageQs,
               })}
               className={`rounded border px-2 py-1 text-xs font-semibold ${
                 view === "icons_medium" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300"
@@ -420,10 +397,16 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={asset.public_url} alt="" className="h-full w-full object-contain" />
+                    <img
+                      src={asset.public_url}
+                      alt=""
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </div>
                 ) : (
-                  <audio className="mt-3 w-full" controls preload="metadata" src={asset.public_url} />
+                  <audio className="mt-3 w-full" controls preload="none" src={asset.public_url} />
                 )}
 
                 <details className="mt-3 rounded border border-neutral-200">
@@ -539,6 +522,60 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
             ))}
           </ul>
         )}
+        {total > MEDIA_PAGE_SIZE ? (
+          <nav
+            className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded border border-neutral-200 bg-white px-3 py-2 text-sm"
+            aria-label="Pagination"
+          >
+            <span className="text-neutral-600">
+              Page {pageNum} of {totalPages}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {pageNum > 1 ? (
+                <Link
+                  href={buildSearchUrl({
+                    q,
+                    kind,
+                    level,
+                    word_type: wordType,
+                    countability,
+                    tags,
+                    categories,
+                    skills,
+                    view,
+                    page: pageNum - 1 > 1 ? String(pageNum - 1) : "",
+                  })}
+                  className="rounded border border-neutral-300 px-3 py-1.5 font-semibold hover:bg-neutral-50"
+                >
+                  Previous
+                </Link>
+              ) : (
+                <span className="rounded border border-neutral-100 px-3 py-1.5 text-neutral-400">Previous</span>
+              )}
+              {pageNum < totalPages ? (
+                <Link
+                  href={buildSearchUrl({
+                    q,
+                    kind,
+                    level,
+                    word_type: wordType,
+                    countability,
+                    tags,
+                    categories,
+                    skills,
+                    view,
+                    page: String(pageNum + 1),
+                  })}
+                  className="rounded border border-neutral-300 px-3 py-1.5 font-semibold hover:bg-neutral-50"
+                >
+                  Next
+                </Link>
+              ) : (
+                <span className="rounded border border-neutral-100 px-3 py-1.5 text-neutral-400">Next</span>
+              )}
+            </div>
+          </nav>
+        ) : null}
       </section>
     </div>
   );

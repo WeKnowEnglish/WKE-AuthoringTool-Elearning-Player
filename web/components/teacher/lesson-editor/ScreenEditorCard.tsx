@@ -34,7 +34,6 @@ import {
   trueFalsePayloadSchema,
   voiceQuestionPayloadSchema,
   parseScreenPayload,
-  presentationInteractivePayloadSchema,
   getInteractionSubtype,
   type ScreenPayload,
 } from "@/lib/lesson-schemas";
@@ -694,15 +693,6 @@ function StructuredFields({
             busy={busy}
           />
         );
-      case "presentation_interactive":
-        return (
-          <PresentationInteractiveFields
-            syncKey={payloadSyncKey}
-            initial={parsed}
-            onLivePayload={onLivePayload}
-            busy={busy}
-          />
-        );
       default:
         return (
           <p className="text-sm text-neutral-600">
@@ -730,13 +720,13 @@ function StartFields({
   busy: boolean;
 }) {
   const [image_url, setImageUrl] = useState(initial.image_url ?? "");
-  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "cover");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
   const [cta_label, setCta] = useState(initial.cta_label ?? "Start learning");
   const [read_aloud_title, setReadAloudTitle] = useState(initial.read_aloud_title ?? "");
 
   useEffect(() => {
     setImageUrl(initial.image_url ?? "");
-    setImageFit(initial.image_fit ?? "cover");
+    setImageFit(initial.image_fit ?? "contain");
     setCta(initial.cta_label ?? "Start learning");
     setReadAloudTitle(initial.read_aloud_title ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
@@ -835,7 +825,7 @@ function McQuizFields({
   );
   const [question, setQ] = useState(initial.question);
   const [image_url, setImg] = useState(initial.image_url ?? "");
-  const [image_fit, setImageFit] = useState(initial.image_fit ?? "cover");
+  const [image_fit, setImageFit] = useState(initial.image_fit ?? "contain");
   const [optionsText, setOpts] = useState(
     initial.options.map((o: { id: string; label: string }) => o.label).join("\n"),
   );
@@ -849,7 +839,7 @@ function McQuizFields({
       .join("\n");
     setQ(initial.question);
     setImg(initial.image_url ?? "");
-    setImageFit(initial.image_fit ?? "cover");
+    setImageFit(initial.image_fit ?? "contain");
     setOpts(incomingOptionsText);
     setCorrect(initial.correct_option_id ?? "");
     setShuffleOptions(initial.shuffle_options ?? false);
@@ -1334,7 +1324,7 @@ function FillBlanksFields({
     (initial.word_bank ?? []).join("\n"),
   );
   const [image_url, setImg] = useState(initial.image_url ?? "");
-  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "cover");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
   const [image_size, setImageSize] = useState<"small" | "normal">(initial.image_size ?? "normal");
   const [body_text, setBody] = useState(initial.body_text ?? "");
 
@@ -1348,7 +1338,7 @@ function FillBlanksFields({
     setParseError(null);
     setWb((initial.word_bank ?? []).join("\n"));
     setImg(initial.image_url ?? "");
-    setImageFit(initial.image_fit ?? "cover");
+    setImageFit(initial.image_fit ?? "contain");
     setImageSize(initial.image_size ?? "normal");
     setBody(initial.body_text ?? "");
     lastGoodRef.current = { template: initial.template, blanks: initial.blanks };
@@ -1502,7 +1492,7 @@ function FixTextFields({
   const [acceptableText, setA] = useState(initial.acceptable.join("\n"));
   const [image_url, setImg] = useState(initial.image_url ?? "");
   const [body_text, setBody] = useState(initial.body_text ?? "");
-  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "cover");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
   const [hints_enabled, setHintsEnabled] = useState(initial.hints_enabled ?? true);
   const [hint_decoys_text, setHintDecoysText] = useState(
     () => (initial.hint_decoy_words ?? []).join("\n"),
@@ -1513,7 +1503,7 @@ function FixTextFields({
     setA(initial.acceptable.join("\n"));
     setImg(initial.image_url ?? "");
     setBody(initial.body_text ?? "");
-    setImageFit(initial.image_fit ?? "cover");
+    setImageFit(initial.image_fit ?? "contain");
     setHintsEnabled(initial.hints_enabled ?? true);
     setHintDecoysText((initial.hint_decoy_words ?? []).join("\n"));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
@@ -2111,639 +2101,6 @@ function DragSentenceFields({
         <p className="text-xs text-amber-800">
           Tip: Every word in “correct order” should also appear in the word bank.
         </p>
-      ) : null}
-    </div>
-  );
-}
-
-type PresentationElementState = {
-  id: string;
-  kind: "image" | "text" | "shape" | "line" | "button";
-  x_percent: number;
-  y_percent: number;
-  w_percent: number;
-  h_percent: number;
-  z_index: number;
-  visible?: boolean;
-  label?: string;
-  text?: string;
-  image_url?: string;
-  color_hex?: string;
-  line_width_px?: number;
-  draggable_mode?: "none" | "free" | "check_target";
-  drop_target_id?: string;
-  actions?: Array<
-    | {
-        type: "info_popup";
-        title?: string;
-        body?: string;
-        image_url?: string;
-        video_url?: string;
-      }
-    | { type: "navigate_slide"; target: "next" | "prev" | "slide_id"; slide_id?: string }
-    | { type: "show_element"; element_id: string }
-    | { type: "hide_element"; element_id: string }
-    | { type: "toggle_element"; element_id: string }
-  >;
-};
-
-type PresentationSlideState = {
-  id: string;
-  title?: string;
-  body_text?: string;
-  background_image_url?: string;
-  background_color?: string;
-  video_url?: string;
-  image_fit?: "cover" | "contain";
-  elements: PresentationElementState[];
-};
-
-function newPresentationId(prefix: string): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
-  }
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function PresentationInteractiveFields({
-  syncKey,
-  initial,
-  onLivePayload,
-  busy,
-}: {
-  syncKey: string;
-  initial: Extract<ScreenPayload, { type: "interaction"; subtype: "presentation_interactive" }>;
-  onLivePayload: (p: unknown) => void;
-  busy: boolean;
-}) {
-  const [title, setTitle] = useState(initial.title ?? "");
-  const [bodyText, setBodyText] = useState(initial.body_text ?? "");
-  const [passRule, setPassRule] = useState(initial.pass_rule ?? "drag_targets_complete");
-  const [slides, setSlides] = useState<PresentationSlideState[]>(() =>
-    initial.slides.map((s) => ({ ...s, elements: s.elements.map((e) => ({ ...e })) })),
-  );
-  const [selectedSlideId, setSelectedSlideId] = useState<string | null>(
-    () => initial.slides[0]?.id ?? null,
-  );
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const nextSlides = initial.slides.map((s) => ({ ...s, elements: s.elements.map((e) => ({ ...e })) }));
-    setTitle(initial.title ?? "");
-    setBodyText(initial.body_text ?? "");
-    setPassRule(initial.pass_rule ?? "drag_targets_complete");
-    setSlides(nextSlides);
-    setSelectedSlideId(nextSlides[0]?.id ?? null);
-    setSelectedElementId(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
-  }, [syncKey]);
-
-  const selectedSlide = slides.find((s) => s.id === selectedSlideId) ?? slides[0] ?? null;
-  const selectedElement = selectedSlide?.elements.find((e) => e.id === selectedElementId) ?? null;
-
-  function emit(nextSlides: PresentationSlideState[], nextTitle = title, nextBodyText = bodyText, nextPassRule = passRule) {
-    emitLive(onLivePayload, presentationInteractivePayloadSchema, {
-      type: "interaction",
-      subtype: "presentation_interactive",
-      title: nextTitle || undefined,
-      body_text: nextBodyText || undefined,
-      pass_rule: nextPassRule,
-      slides: nextSlides,
-      guide: initial.guide,
-    });
-  }
-
-  function patchSlide(slideId: string, patcher: (slide: PresentationSlideState) => PresentationSlideState) {
-    const nextSlides = slides.map((s) => (s.id === slideId ? patcher(s) : s));
-    setSlides(nextSlides);
-    emit(nextSlides);
-  }
-
-  function patchSelectedElement(patcher: (el: PresentationElementState) => PresentationElementState) {
-    if (!selectedSlide || !selectedElement) return;
-    patchSlide(selectedSlide.id, (slide) => ({
-      ...slide,
-      elements: slide.elements.map((el) => (el.id === selectedElement.id ? patcher(el) : el)),
-    }));
-  }
-
-  return (
-    <div className="space-y-3">
-      <label className={labelClass()}>
-        Presentation title (optional)
-        <input
-          className="mt-1 w-full rounded border px-2 py-1 text-sm"
-          value={title}
-          onChange={(e) => {
-            const v = e.target.value;
-            setTitle(v);
-            emit(slides, v);
-          }}
-        />
-      </label>
-      <label className={labelClass()}>
-        Intro text (optional)
-        <textarea
-          className="mt-1 w-full rounded border px-2 py-1 text-sm"
-          rows={2}
-          value={bodyText}
-          onChange={(e) => {
-            const v = e.target.value;
-            setBodyText(v);
-            emit(slides, title, v);
-          }}
-        />
-      </label>
-      <label className={labelClass()}>
-        Pass rule
-        <select
-          className="mt-1 w-full rounded border px-2 py-1 text-sm"
-          value={passRule}
-          onChange={(e) => {
-            const v = e.target.value as "drag_targets_complete" | "visit_all_slides";
-            setPassRule(v);
-            emit(slides, title, bodyText, v);
-          }}
-        >
-          <option value="drag_targets_complete">Complete drag target checks</option>
-          <option value="visit_all_slides">Visit all slides</option>
-        </select>
-      </label>
-
-      <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {slides.map((slide, idx) => (
-            <button
-              key={slide.id}
-              type="button"
-              disabled={busy}
-              className={`rounded border px-2 py-1 text-xs font-semibold ${
-                slide.id === selectedSlide?.id ? "border-sky-500 bg-sky-100 text-sky-900" : "border-neutral-300 bg-white"
-              }`}
-              onClick={() => {
-                setSelectedSlideId(slide.id);
-                setSelectedElementId(null);
-              }}
-            >
-              {slide.title?.trim() || `Slide ${idx + 1}`}
-            </button>
-          ))}
-          <button
-            type="button"
-            disabled={busy}
-            className="rounded border border-dashed border-neutral-400 bg-white px-2 py-1 text-xs font-semibold"
-            onClick={() => {
-              const nextSlide: PresentationSlideState = {
-                id: newPresentationId("slide"),
-                title: `Slide ${slides.length + 1}`,
-                image_fit: "cover",
-                elements: [],
-              };
-              const nextSlides = [...slides, nextSlide];
-              setSlides(nextSlides);
-              setSelectedSlideId(nextSlide.id);
-              setSelectedElementId(null);
-              emit(nextSlides);
-            }}
-          >
-            + Slide
-          </button>
-          <button
-            type="button"
-            disabled={busy || !selectedSlide || slides.length <= 1}
-            className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-semibold text-red-800"
-            onClick={() => {
-              if (!selectedSlide || slides.length <= 1) return;
-              const nextSlides = slides.filter((s) => s.id !== selectedSlide.id);
-              setSlides(nextSlides);
-              setSelectedSlideId(nextSlides[0]?.id ?? null);
-              setSelectedElementId(null);
-              emit(nextSlides);
-            }}
-          >
-            Delete slide
-          </button>
-        </div>
-      </div>
-
-      {selectedSlide ? (
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="space-y-3">
-            <MediaUrlControls
-              label="Slide background image"
-              value={selectedSlide.background_image_url ?? ""}
-              onChange={(v) =>
-                patchSlide(selectedSlide.id, (slide) => ({
-                  ...slide,
-                  background_image_url: v || undefined,
-                }))
-              }
-              disabled={busy}
-              compact
-            />
-            <label className={labelClass()}>
-              Slide title
-              <input
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                value={selectedSlide.title ?? ""}
-                onChange={(e) =>
-                  patchSlide(selectedSlide.id, (slide) => ({ ...slide, title: e.target.value || undefined }))
-                }
-              />
-            </label>
-            <label className={labelClass()}>
-              Image fit
-              <select
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                value={selectedSlide.image_fit ?? "cover"}
-                onChange={(e) =>
-                  patchSlide(selectedSlide.id, (slide) => ({
-                    ...slide,
-                    image_fit: e.target.value as "cover" | "contain",
-                  }))
-                }
-              >
-                <option value="cover">Cover</option>
-                <option value="contain">Contain</option>
-              </select>
-            </label>
-
-            {selectedSlide.background_image_url ? (
-              <RectRegionEditor
-                imageUrl={selectedSlide.background_image_url}
-                imageFit={selectedSlide.image_fit ?? "cover"}
-                regions={selectedSlide.elements.map((el) => ({
-                  id: el.id,
-                  x_percent: el.x_percent,
-                  y_percent: el.y_percent,
-                  w_percent: el.w_percent,
-                  h_percent: el.h_percent,
-                  label: el.label ?? `${el.kind}:${el.id}`,
-                }))}
-                onRegionsChange={(nextRegions) => {
-                  patchSlide(selectedSlide.id, (slide) => ({
-                    ...slide,
-                    elements: nextRegions.map((region) => {
-                      const prev = slide.elements.find((el) => el.id === region.id);
-                      return {
-                        ...(prev ?? {
-                          id: region.id,
-                          kind: "button" as const,
-                          z_index: slide.elements.length,
-                        }),
-                        x_percent: region.x_percent,
-                        y_percent: region.y_percent,
-                        w_percent: region.w_percent,
-                        h_percent: region.h_percent,
-                        label: region.label,
-                      };
-                    }),
-                  }));
-                }}
-                selectedId={selectedElementId}
-                onSelect={setSelectedElementId}
-                disabled={busy}
-              />
-            ) : (
-              <p className="text-sm text-amber-800">Add a slide background image to place elements.</p>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {(["text", "image", "button", "shape", "line"] as const).map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  disabled={busy}
-                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold"
-                  onClick={() => {
-                    const base = defaultRegion(nextRegionId(
-                      selectedSlide.elements.map((e) => ({
-                        id: e.id,
-                        x_percent: e.x_percent,
-                        y_percent: e.y_percent,
-                        w_percent: e.w_percent,
-                        h_percent: e.h_percent,
-                      })),
-                      "el",
-                    ));
-                    const id = newPresentationId("el");
-                    const nextElement: PresentationElementState = {
-                      ...base,
-                      id,
-                      kind,
-                      z_index: selectedSlide.elements.length,
-                      visible: true,
-                      label: kind === "button" ? "Button" : kind,
-                      text: kind === "text" || kind === "button" ? "Text" : undefined,
-                      color_hex: kind === "shape" || kind === "line" ? "#0ea5e9" : undefined,
-                      draggable_mode: "none",
-                    };
-                    patchSlide(selectedSlide.id, (slide) => ({
-                      ...slide,
-                      elements: [...slide.elements, nextElement],
-                    }));
-                    setSelectedElementId(id);
-                  }}
-                >
-                  + {kind}
-                </button>
-              ))}
-              <button
-                type="button"
-                disabled={busy || !selectedElement}
-                className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-semibold text-red-700"
-                onClick={() => {
-                  if (!selectedElement) return;
-                  patchSlide(selectedSlide.id, (slide) => ({
-                    ...slide,
-                    elements: slide.elements.filter((el) => el.id !== selectedElement.id),
-                  }));
-                  setSelectedElementId(null);
-                }}
-              >
-                Remove selected
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3 rounded border border-neutral-200 bg-neutral-50 p-3">
-            {selectedElement ? (
-              <>
-                <p className="text-sm font-semibold">Element: {selectedElement.id}</p>
-                <label className={labelClass()}>
-                  Kind
-                  <select
-                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                    value={selectedElement.kind}
-                    onChange={(e) =>
-                      patchSelectedElement((el) => ({
-                        ...el,
-                        kind: e.target.value as PresentationElementState["kind"],
-                      }))
-                    }
-                  >
-                    <option value="text">text</option>
-                    <option value="image">image</option>
-                    <option value="button">button</option>
-                    <option value="shape">shape</option>
-                    <option value="line">line</option>
-                  </select>
-                </label>
-                <label className={labelClass()}>
-                  Label
-                  <input
-                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                    value={selectedElement.label ?? ""}
-                    onChange={(e) =>
-                      patchSelectedElement((el) => ({ ...el, label: e.target.value || undefined }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedElement.visible ?? true}
-                    onChange={(e) =>
-                      patchSelectedElement((el) => ({ ...el, visible: e.target.checked }))
-                    }
-                  />
-                  Visible
-                </label>
-                <label className={labelClass()}>
-                  Text
-                  <input
-                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                    value={selectedElement.text ?? ""}
-                    onChange={(e) =>
-                      patchSelectedElement((el) => ({ ...el, text: e.target.value || undefined }))
-                    }
-                  />
-                </label>
-                <MediaUrlControls
-                  label="Element image URL"
-                  value={selectedElement.image_url ?? ""}
-                  onChange={(v) => patchSelectedElement((el) => ({ ...el, image_url: v || undefined }))}
-                  disabled={busy}
-                  compact
-                />
-                <label className={labelClass()}>
-                  Color (hex)
-                  <input
-                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                    value={selectedElement.color_hex ?? ""}
-                    onChange={(e) =>
-                      patchSelectedElement((el) => ({ ...el, color_hex: e.target.value || undefined }))
-                    }
-                  />
-                </label>
-                <label className={labelClass()}>
-                  Drag mode
-                  <select
-                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                    value={selectedElement.draggable_mode ?? "none"}
-                    onChange={(e) =>
-                      patchSelectedElement((el) => ({
-                        ...el,
-                        draggable_mode: e.target.value as "none" | "free" | "check_target",
-                      }))
-                    }
-                  >
-                    <option value="none">none</option>
-                    <option value="free">free drag</option>
-                    <option value="check_target">drag check target</option>
-                  </select>
-                </label>
-                {(selectedElement.draggable_mode ?? "none") === "check_target" ? (
-                  <label className={labelClass()}>
-                    Drop target element
-                    <select
-                      className="mt-1 w-full rounded border px-2 py-1 text-sm"
-                      value={selectedElement.drop_target_id ?? ""}
-                      onChange={(e) =>
-                        patchSelectedElement((el) => ({
-                          ...el,
-                          drop_target_id: e.target.value || undefined,
-                        }))
-                      }
-                    >
-                      <option value="">Choose target...</option>
-                      {selectedSlide.elements
-                        .filter((el) => el.id !== selectedElement.id)
-                        .map((el) => (
-                          <option key={el.id} value={el.id}>
-                            {el.label || el.id}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                ) : null}
-
-                <div className="space-y-2 rounded border border-neutral-200 bg-white p-2">
-                  <p className="text-xs font-semibold text-neutral-800">Actions on click</p>
-                  {(selectedElement.actions ?? []).map((action, idx) => (
-                    <div key={`action-${idx}`} className="space-y-1 rounded border border-neutral-200 p-2">
-                      <div className="flex gap-2">
-                        <select
-                          className="min-w-0 flex-1 rounded border px-1 py-1 text-xs"
-                          value={action.type}
-                          onChange={(e) => {
-                            const type = e.target.value as NonNullable<
-                              PresentationElementState["actions"]
-                            >[number]["type"];
-                            patchSelectedElement((el) => {
-                              const actions = [...(el.actions ?? [])];
-                              actions[idx] =
-                                type === "info_popup" ?
-                                  { type: "info_popup" }
-                                : type === "navigate_slide" ?
-                                  { type: "navigate_slide", target: "next" }
-                                : { type, element_id: el.id };
-                              return { ...el, actions };
-                            });
-                          }}
-                        >
-                          <option value="info_popup">info_popup</option>
-                          <option value="navigate_slide">navigate_slide</option>
-                          <option value="show_element">show_element</option>
-                          <option value="hide_element">hide_element</option>
-                          <option value="toggle_element">toggle_element</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="rounded border border-red-300 px-1 text-xs text-red-700"
-                          onClick={() =>
-                            patchSelectedElement((el) => ({
-                              ...el,
-                              actions: (el.actions ?? []).filter((_, i) => i !== idx),
-                            }))
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>
-                      {action.type === "info_popup" ? (
-                        <>
-                          <input
-                            className="w-full rounded border px-1 py-1 text-xs"
-                            placeholder="Popup title"
-                            value={action.title ?? ""}
-                            onChange={(e) =>
-                              patchSelectedElement((el) => {
-                                const actions = [...(el.actions ?? [])];
-                                const a = actions[idx];
-                                if (!a || a.type !== "info_popup") return el;
-                                actions[idx] = { ...a, title: e.target.value || undefined };
-                                return { ...el, actions };
-                              })
-                            }
-                          />
-                          <textarea
-                            className="w-full rounded border px-1 py-1 text-xs"
-                            rows={2}
-                            placeholder="Popup body"
-                            value={action.body ?? ""}
-                            onChange={(e) =>
-                              patchSelectedElement((el) => {
-                                const actions = [...(el.actions ?? [])];
-                                const a = actions[idx];
-                                if (!a || a.type !== "info_popup") return el;
-                                actions[idx] = { ...a, body: e.target.value || undefined };
-                                return { ...el, actions };
-                              })
-                            }
-                          />
-                        </>
-                      ) : null}
-                      {action.type === "navigate_slide" ? (
-                        <select
-                          className="w-full rounded border px-1 py-1 text-xs"
-                          value={action.target}
-                          onChange={(e) =>
-                            patchSelectedElement((el) => {
-                              const actions = [...(el.actions ?? [])];
-                              const a = actions[idx];
-                              if (!a || a.type !== "navigate_slide") return el;
-                              actions[idx] = { ...a, target: e.target.value as "next" | "prev" | "slide_id" };
-                              return { ...el, actions };
-                            })
-                          }
-                        >
-                          <option value="next">next</option>
-                          <option value="prev">prev</option>
-                          <option value="slide_id">specific slide</option>
-                        </select>
-                      ) : null}
-                      {action.type === "navigate_slide" && action.target === "slide_id" ? (
-                        <select
-                          className="w-full rounded border px-1 py-1 text-xs"
-                          value={action.slide_id ?? ""}
-                          onChange={(e) =>
-                            patchSelectedElement((el) => {
-                              const actions = [...(el.actions ?? [])];
-                              const a = actions[idx];
-                              if (!a || a.type !== "navigate_slide") return el;
-                              actions[idx] = { ...a, slide_id: e.target.value || undefined };
-                              return { ...el, actions };
-                            })
-                          }
-                        >
-                          <option value="">Choose slide...</option>
-                          {slides.map((slide) => (
-                            <option key={slide.id} value={slide.id}>
-                              {slide.title || slide.id}
-                            </option>
-                          ))}
-                        </select>
-                      ) : null}
-                      {(action.type === "show_element" ||
-                        action.type === "hide_element" ||
-                        action.type === "toggle_element") ? (
-                        <select
-                          className="w-full rounded border px-1 py-1 text-xs"
-                          value={action.element_id}
-                          onChange={(e) =>
-                            patchSelectedElement((el) => {
-                              const actions = [...(el.actions ?? [])];
-                              const a = actions[idx];
-                              if (
-                                !a ||
-                                (a.type !== "show_element" && a.type !== "hide_element" && a.type !== "toggle_element")
-                              ) {
-                                return el;
-                              }
-                              actions[idx] = { ...a, element_id: e.target.value };
-                              return { ...el, actions };
-                            })
-                          }
-                        >
-                          {selectedSlide.elements.map((el) => (
-                            <option key={el.id} value={el.id}>
-                              {el.label || el.id}
-                            </option>
-                          ))}
-                        </select>
-                      ) : null}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className="rounded border border-sky-300 bg-white px-2 py-1 text-xs font-semibold text-sky-900"
-                    onClick={() =>
-                      patchSelectedElement((el) => ({
-                        ...el,
-                        actions: [...(el.actions ?? []), { type: "info_popup" }],
-                      }))
-                    }
-                  >
-                    + Add action
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-neutral-600">Select an element on the canvas to edit it.</p>
-            )}
-          </div>
-        </div>
       ) : null}
     </div>
   );
@@ -4375,7 +3732,7 @@ function LetterMixupFields({
 }) {
   const [prompt, setPrompt] = useState(initial.prompt);
   const [image_url, setImageUrl] = useState(initial.image_url ?? "");
-  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "cover");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
   const [image_audio_url, setImageAudioUrl] = useState(initial.image_audio_url ?? "");
   const [image_use_tts, setImageUseTts] = useState(initial.image_use_tts ?? false);
   const [image_read_aloud_text, setImageReadAloudText] = useState(initial.image_read_aloud_text ?? "");

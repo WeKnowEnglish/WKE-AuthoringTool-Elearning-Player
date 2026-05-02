@@ -2,6 +2,7 @@
 
 import { LessonPlayer } from "@/components/lesson/LessonPlayer";
 import type { LessonScreenRow } from "@/lib/data/catalog";
+import { buildCongratsEndPayload } from "@/lib/lesson-bookends";
 import { interactionPayloadSchema, startPayloadSchema } from "@/lib/lesson-schemas";
 
 type Props = {
@@ -51,6 +52,10 @@ export function ActivityLibraryPreview({
     // Shuffle only interaction screens; keep start fixed as first screen.
     interactionScreens = stableShuffleInteractions(interactionScreens, activityId);
   }
+  interactionScreens = interactionScreens.map((row, i) => ({
+    ...row,
+    order_index: i + 1,
+  }));
   const startScreen: LessonScreenRow = {
     id: `${activityId}-start`,
     lesson_id: `activity-${activityId}`,
@@ -67,7 +72,14 @@ export function ActivityLibraryPreview({
           read_aloud_title: title,
         }),
   };
-  const screens = [startScreen, ...interactionScreens];
+  const congratsScreen: LessonScreenRow = {
+    id: `${activityId}-end`,
+    lesson_id: `activity-${activityId}`,
+    order_index: interactionScreens.length + 1,
+    screen_type: "start",
+    payload: buildCongratsEndPayload(),
+  };
+  const screens = [startScreen, ...interactionScreens, congratsScreen];
 
   return (
     <div className="mt-4 w-full rounded-lg border border-neutral-200 bg-neutral-50 p-3">

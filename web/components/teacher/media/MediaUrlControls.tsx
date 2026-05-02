@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   searchTeacherMedia,
   uploadTeacherMedia,
   type MediaAssetRow,
 } from "@/lib/actions/media";
+import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 
 type Props = {
   label: string;
@@ -40,8 +41,10 @@ export function MediaUrlControls({
   const librarySearchRef = useRef<HTMLInputElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [assets, setAssets] = useState<MediaAssetRow[]>([]);
+  const [libTotal, setLibTotal] = useState(0);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libLoading, setLibLoading] = useState(false);
+  const [libLoadingMore, setLibLoadingMore] = useState(false);
   const [libErr, setLibErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
@@ -55,10 +58,14 @@ export function MediaUrlControls({
       searchTeacherMedia({
         kind: "image",
         q: libraryQuery.trim(),
-        limit: 1000,
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: 0,
       })
-        .then((rows) => {
-          if (!cancelled) setAssets(rows);
+        .then(({ rows, total }) => {
+          if (!cancelled) {
+            setAssets(rows);
+            setLibTotal(total);
+          }
         })
         .catch((e: unknown) => {
           if (!cancelled) {
@@ -74,6 +81,26 @@ export function MediaUrlControls({
       window.clearTimeout(timeoutId);
     };
   }, [libraryOpen, libraryQuery]);
+
+  const loadMoreLibrary = useCallback(async () => {
+    if (libLoadingMore || libLoading || assets.length >= libTotal) return;
+    setLibLoadingMore(true);
+    setLibErr(null);
+    try {
+      const { rows, total } = await searchTeacherMedia({
+        kind: "image",
+        q: libraryQuery.trim(),
+        limit: MEDIA_PICKER_PAGE_SIZE,
+        offset: assets.length,
+      });
+      setLibTotal(total);
+      setAssets((prev) => [...prev, ...rows]);
+    } catch (e: unknown) {
+      setLibErr(e instanceof Error ? e.message : "Failed to load more");
+    } finally {
+      setLibLoadingMore(false);
+    }
+  }, [libLoadingMore, libLoading, assets.length, libTotal, libraryQuery]);
 
   useEffect(() => {
     if (!libraryOpen) return;
@@ -218,38 +245,57 @@ export function MediaUrlControls({
                   <p className="text-sm text-red-700">{libErr}</p>
                 ) : assets.length === 0 ? (
                   <p className="text-sm text-neutral-600">
-                    No uploads yet. Use Upload on any image field to add files.
+                    {libTotal === 0 && !libraryQuery.trim() ?
+                      "No uploads yet. Use Upload on any image field to add files."
+                    : "No media matched your search."}
                   </p>
-                ) : assets.length === 0 ? (
-                  <p className="text-sm text-neutral-600">No media matched your search.</p>
                 ) : (
-                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                    {assets.map((a) => (
-                      <li key={a.id}>
+                  <>
+                    <p className="mb-2 text-xs text-neutral-500">
+                      Showing {assets.length} of {libTotal}
+                    </p>
+                    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      {assets.map((a) => (
+                        <li key={a.id}>
+                          <button
+                            type="button"
+                            className="w-full rounded border border-neutral-200 bg-white p-2 text-left hover:border-sky-500 hover:ring-1 hover:ring-sky-500 active:border-sky-600 active:bg-sky-50"
+                            onClick={() => {
+                              onChange(a.public_url);
+                              setLibraryOpen(false);
+                            }}
+                          >
+                            <div className="relative aspect-square w-full overflow-hidden rounded bg-neutral-100">
+                              <Image
+                                src={a.public_url}
+                                alt=""
+                                fill
+                                sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, 150px"
+                                className="object-cover"
+                                loading="lazy"
+                                unoptimized={a.public_url.includes("supabase.co")}
+                              />
+                            </div>
+                            <p className="mt-1 truncate text-xs text-neutral-700" title={a.original_filename}>
+                              {a.original_filename}
+                            </p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    {assets.length < libTotal ? (
+                      <div className="mt-4 flex justify-center">
                         <button
                           type="button"
-                          className="w-full rounded border border-neutral-200 bg-white p-2 text-left hover:border-sky-500 hover:ring-1 hover:ring-sky-500 active:border-sky-600 active:bg-sky-50"
-                          onClick={() => {
-                            onChange(a.public_url);
-                            setLibraryOpen(false);
-                          }}
+                          disabled={libLoadingMore}
+                          onClick={() => void loadMoreLibrary()}
+                          className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-neutral-50 disabled:opacity-50"
                         >
-                          <div className="relative aspect-square w-full overflow-hidden rounded bg-neutral-100">
-                            <Image
-                              src={a.public_url}
-                              alt=""
-                              fill
-                              className="object-cover"
-                              unoptimized={a.public_url.includes("supabase.co")}
-                            />
-                          </div>
-                          <p className="mt-1 truncate text-xs text-neutral-700" title={a.original_filename}>
-                            {a.original_filename}
-                          </p>
+                          {libLoadingMore ? "Loading…" : "Load more"}
                         </button>
-                      </li>
-                    ))}
-                  </ul>
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </div>
             </div>

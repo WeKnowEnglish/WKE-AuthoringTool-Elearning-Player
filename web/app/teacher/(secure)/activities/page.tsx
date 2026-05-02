@@ -10,6 +10,8 @@ import {
   type ActivitySubtype,
   searchActivityLibrary,
 } from "@/lib/data/teacher";
+import { ACTIVITY_LEVEL_SECTIONS, groupItemsByActivityLevel } from "@/lib/activity-library-levels";
+import { ActivityLevelCarousel } from "@/components/activities/ActivityLevelCarousel";
 
 type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -36,6 +38,9 @@ export default async function TeacherActivitiesPage({ searchParams }: Props) {
   const topic = firstParam(params.topic);
   const subtype = (firstParam(params.subtype) || "all") as ActivitySubtype | "all";
   const items = await searchActivityLibrary({ q, level, topic, subtype });
+  const byLevel = groupItemsByActivityLevel(items);
+  const carouselCardClass =
+    "min-w-[min(280px,calc(100vw-2.5rem))] max-w-md shrink-0 snap-start";
 
   return (
     <div className="space-y-6">
@@ -148,132 +153,157 @@ export default async function TeacherActivitiesPage({ searchParams }: Props) {
           </section>
         </aside>
 
-        <section className="lg:col-span-2 grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {items.map((item) => (
-            <article key={item.id} className="rounded-lg border border-neutral-200 bg-white p-4">
-              <ActivityLibraryPreview activityId={item.id} title={item.title} payload={item.payload} />
-
-              <p className="mt-3 text-sm text-neutral-700">
-                {(item.payload?.settings?.activity_subtypes?.length ?? 0) > 1 ?
-                  `Mixed (${item.payload?.settings?.activity_subtypes?.length} types)`
-                : item.activity_subtype}{" "}
-                · {item.level || "No level"} · {item.topic || "No topic"} · {item.question_count} question
-                {item.question_count === 1 ? "" : "s"}
-              </p>
-
-              <details className="mt-4 rounded border border-neutral-200 p-3">
-                <summary className="cursor-pointer text-sm font-semibold">Edit activity</summary>
-                <form action={updateActivityLibraryItem} className="mt-3 grid gap-3 md:grid-cols-2">
-                  <input type="hidden" name="id" value={item.id} />
-                  <input
-                    type="hidden"
-                    name="editor_module_id"
-                    value={item.payload?.settings?.editor_module_id ?? ""}
-                  />
-                  <input
-                    type="hidden"
-                    name="editor_lesson_id"
-                    value={item.payload?.settings?.editor_lesson_id ?? ""}
-                  />
-                  <label className="text-sm">
-                    Title
-                    <input
-                      name="title"
-                      defaultValue={item.title}
-                      required
-                      className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Level
-                    <input
-                      name="level"
-                      defaultValue={item.level}
-                      className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm md:col-span-2">
-                    Topic
-                    <input
-                      name="topic"
-                      defaultValue={item.topic}
-                      className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm md:col-span-2">
-                    Vocabulary
-                    <textarea
-                      name="vocabulary_raw"
-                      rows={2}
-                      defaultValue={(item.vocabulary ?? []).join(", ")}
-                      className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm md:col-span-2">
-                    <span className="mb-1 block">Question editing</span>
-                    <button
-                      type="submit"
-                      formAction={openActivityInCourseEditor}
-                      className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-800"
-                    >
-                      Edit questions in course editor
-                    </button>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm md:col-span-2">
-                    <input type="hidden" name="shuffle_questions" value="0" />
-                    <input
-                      type="checkbox"
-                      name="shuffle_questions"
-                      value="1"
-                      defaultChecked={item.payload?.settings?.shuffle_questions === true}
-                    />
-                    Shuffle questions in activity set
-                  </label>
-                  <label className="flex items-center gap-2 text-sm md:col-span-2">
-                    <input type="hidden" name="shuffle_answer_options_each_replay" value="0" />
-                    <input
-                      type="checkbox"
-                      name="shuffle_answer_options_each_replay"
-                      value="1"
-                      defaultChecked={item.payload?.settings?.shuffle_answer_options_each_replay !== false}
-                    />
-                    Shuffle answer option order each time the game is replayed
-                  </label>
-                  <label className="flex items-center gap-2 text-sm md:col-span-2">
-                    <input type="hidden" name="auto_advance_on_pass_default" value="0" />
-                    <input
-                      type="checkbox"
-                      name="auto_advance_on_pass_default"
-                      value="1"
-                      defaultChecked={item.payload?.settings?.auto_advance_on_pass_default === true}
-                    />
-                    Auto-advance after correct answer (default for this activity)
-                  </label>
-                  <div className="md:col-span-2 flex flex-wrap gap-2">
-                    <button type="submit" className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white">
-                      Save edits
-                    </button>
-                  </div>
-                </form>
-
-                <form action={deleteActivityLibraryItem} className="mt-4">
-                  <input type="hidden" name="id" value={item.id} />
-                  <ConfirmSubmitButton
-                    type="submit"
-                    confirmMessage={`Delete activity "${item.title}"? This cannot be undone.`}
-                    className="rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-800"
-                  >
-                    Delete activity
-                  </ConfirmSubmitButton>
-                </form>
-              </details>
-            </article>
-          ))}
+        <section className="lg:col-span-2 space-y-10">
           {items.length === 0 ? (
-            <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-600 lg:col-span-2">
+            <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-600">
               No activities found. Create your first activity set above.
             </p>
-          ) : null}
+          ) : (
+            ACTIVITY_LEVEL_SECTIONS.map(({ band, label }) => {
+              const bandItems = byLevel.get(band) ?? [];
+              if (bandItems.length === 0) return null;
+              return (
+                <ActivityLevelCarousel key={band} sectionId={band} title={label}>
+                  {bandItems.map((item) => (
+                    <div key={item.id} className={carouselCardClass}>
+                      <article className="h-full rounded-lg border border-neutral-200 bg-white p-4">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                              item.published ?
+                                "bg-emerald-100 text-emerald-900"
+                              : "bg-neutral-200 text-neutral-700"
+                            }`}
+                          >
+                            {item.published ? "Published to library" : "Draft (library)"}
+                          </span>
+                        </div>
+                        <ActivityLibraryPreview activityId={item.id} title={item.title} payload={item.payload} />
+
+                        <p className="mt-3 text-sm text-neutral-700">
+                          {(item.payload?.settings?.activity_subtypes?.length ?? 0) > 1 ?
+                            `Mixed (${item.payload?.settings?.activity_subtypes?.length} types)`
+                          : item.activity_subtype}{" "}
+                          · {item.level || "No level"} · {item.topic || "No topic"} · {item.question_count} question
+                          {item.question_count === 1 ? "" : "s"}
+                        </p>
+
+                        <details className="mt-4 rounded border border-neutral-200 p-3">
+                          <summary className="cursor-pointer text-sm font-semibold">Edit activity</summary>
+                          <form action={updateActivityLibraryItem} className="mt-3 grid gap-3 md:grid-cols-2">
+                            <input type="hidden" name="id" value={item.id} />
+                            <input
+                              type="hidden"
+                              name="editor_module_id"
+                              value={item.payload?.settings?.editor_module_id ?? ""}
+                            />
+                            <input
+                              type="hidden"
+                              name="editor_lesson_id"
+                              value={item.payload?.settings?.editor_lesson_id ?? ""}
+                            />
+                            <label className="text-sm">
+                              Title
+                              <input
+                                name="title"
+                                defaultValue={item.title}
+                                required
+                                className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+                              />
+                            </label>
+                            <label className="text-sm">
+                              Level
+                              <input
+                                name="level"
+                                defaultValue={item.level ?? ""}
+                                className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+                              />
+                            </label>
+                            <label className="text-sm md:col-span-2">
+                              Topic
+                              <input
+                                name="topic"
+                                defaultValue={item.topic ?? ""}
+                                className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+                              />
+                            </label>
+                            <label className="text-sm md:col-span-2">
+                              Vocabulary
+                              <textarea
+                                name="vocabulary_raw"
+                                rows={2}
+                                defaultValue={(item.vocabulary ?? []).join(", ")}
+                                className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+                              />
+                            </label>
+                            <label className="text-sm md:col-span-2">
+                              <span className="mb-1 block">Question editing</span>
+                              <button
+                                type="submit"
+                                formAction={openActivityInCourseEditor}
+                                className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-800"
+                              >
+                                Edit questions in course editor
+                              </button>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm md:col-span-2">
+                              <input type="hidden" name="shuffle_questions" value="0" />
+                              <input
+                                type="checkbox"
+                                name="shuffle_questions"
+                                value="1"
+                                defaultChecked={item.payload?.settings?.shuffle_questions === true}
+                              />
+                              Shuffle questions in activity set
+                            </label>
+                            <label className="flex items-center gap-2 text-sm md:col-span-2">
+                              <input type="hidden" name="shuffle_answer_options_each_replay" value="0" />
+                              <input
+                                type="checkbox"
+                                name="shuffle_answer_options_each_replay"
+                                value="1"
+                                defaultChecked={item.payload?.settings?.shuffle_answer_options_each_replay !== false}
+                              />
+                              Shuffle answer option order each time the game is replayed
+                            </label>
+                            <label className="flex items-center gap-2 text-sm md:col-span-2">
+                              <input type="hidden" name="auto_advance_on_pass_default" value="0" />
+                              <input
+                                type="checkbox"
+                                name="auto_advance_on_pass_default"
+                                value="1"
+                                defaultChecked={item.payload?.settings?.auto_advance_on_pass_default === true}
+                              />
+                              Auto-advance after correct answer (default for this activity)
+                            </label>
+                            <div className="md:col-span-2 flex flex-wrap gap-2">
+                              <button
+                                type="submit"
+                                className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+                              >
+                                Save edits
+                              </button>
+                            </div>
+                          </form>
+
+                          <form action={deleteActivityLibraryItem} className="mt-4">
+                            <input type="hidden" name="id" value={item.id} />
+                            <ConfirmSubmitButton
+                              type="submit"
+                              confirmMessage={`Delete activity "${item.title}"? This cannot be undone.`}
+                              className="rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-800"
+                            >
+                              Delete activity
+                            </ConfirmSubmitButton>
+                          </form>
+                        </details>
+                      </article>
+                    </div>
+                  ))}
+                </ActivityLevelCarousel>
+              );
+            })
+          )}
         </section>
       </div>
     </div>

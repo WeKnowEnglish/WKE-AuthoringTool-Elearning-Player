@@ -14,6 +14,7 @@ import {
 import { screenOutlineLabel } from "@/lib/lesson-screen-outline";
 import { getInteractionSubtype } from "@/lib/lesson-schemas";
 import { ScreenEditorCard } from "@/components/teacher/lesson-editor/ScreenEditorCard";
+import { FitScaledLessonPreview } from "@/components/teacher/lesson-editor/FitScaledLessonPreview";
 import { useTeacherEditorHeader } from "@/components/teacher/TeacherEditorHeaderContext";
 
 type Props = {
@@ -67,25 +68,30 @@ export function QuizBuilder({
     "Quiz";
 
   return (
-    <div className="flex min-h-[min(80vh,720px)] flex-col gap-4 lg:flex-row">
-      <div className="min-h-0 min-w-0 flex-1 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50/80 p-3">
-        <h3 className="text-sm font-bold text-neutral-900">Live preview</h3>
-        <p className="text-xs text-neutral-600">
+    <div className="flex min-h-[min(85vh,780px)] flex-col gap-4 lg:flex-row lg:items-stretch">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-2 rounded-lg border border-neutral-200 bg-neutral-50/80 p-3">
+        <h3 className="shrink-0 text-sm font-bold text-neutral-900">Live preview</h3>
+        <p className="shrink-0 text-xs text-neutral-600">
           Full lesson navigation; selected question is the starting screen.
         </p>
-        <div className="max-h-[min(70vh,640px)] overflow-auto rounded border border-neutral-300 bg-white p-2">
-          {liveScreens.length > 0 && previewIndex >= 0 ? (
-            <LessonPlayer
-              key={`${effectiveId}-${previewIndex}`}
-              mode="preview"
-              lessonId={lessonId}
-              lessonTitle={lessonTitle}
-              screens={liveScreens}
-              initialScreenIndex={previewIndex}
-            />
-          ) : (
-            <p className="text-sm text-neutral-600">No screens.</p>
-          )}
+        <div className="flex min-h-[280px] flex-1 flex-col overflow-hidden rounded border border-neutral-300 bg-white">
+          <FitScaledLessonPreview
+            measureKey={`${effectiveId}-${previewIndex}`}
+            className="p-2"
+          >
+            {liveScreens.length > 0 && previewIndex >= 0 ? (
+              <LessonPlayer
+                key={`${effectiveId}-${previewIndex}`}
+                mode="preview"
+                lessonId={lessonId}
+                lessonTitle={lessonTitle}
+                screens={liveScreens}
+                initialScreenIndex={previewIndex}
+              />
+            ) : (
+              <p className="text-sm text-neutral-600">No screens.</p>
+            )}
+          </FitScaledLessonPreview>
         </div>
       </div>
       <div className="flex w-full min-w-0 flex-col gap-3 lg:w-[380px] lg:shrink-0">

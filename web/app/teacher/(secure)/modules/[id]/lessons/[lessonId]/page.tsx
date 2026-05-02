@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
-import { saveLessonSkills } from "@/lib/actions/teacher";
+import { ensureLessonBookendsForEditor, saveLessonSkills } from "@/lib/actions/teacher";
+import { findOpeningStartScreen } from "@/lib/lesson-bookends";
+import { parseLearningGoalsFromDb } from "@/lib/learning-goals";
+import { parseActivityLibraryIdFromLessonSlug } from "@/lib/activity-library-mirror";
 import {
+  getActivityLibraryItem,
   getLesson,
+  getLessonsForModule,
   getLessonSkills,
   getModule,
   getScreens,
@@ -26,20 +31,46 @@ export default async function EditLessonPage({ params }: Props) {
   }
   if (lesson.module_id !== moduleId) notFound();
 
+  await ensureLessonBookendsForEditor(lessonId, moduleId);
   const screens = await getScreens(lessonId);
+  const moduleLessons = await getLessonsForModule(moduleId);
   const skillKeys = await getLessonSkills(lessonId);
+  const learningGoals = parseLearningGoalsFromDb(
+    (lesson as { learning_goals?: unknown }).learning_goals,
+  );
+  const hasOpeningStart = Boolean(findOpeningStartScreen(screens));
+  /** Bumps when the lesson row changes so the client refetches `lesson_plan` (not sent in RSC). */
+  const lessonPlanSyncKey = `${(lesson as { updated_at?: string | null }).updated_at ?? ""}:${lessonId}`;
+
+  const activityLibraryMirrorId = parseActivityLibraryIdFromLessonSlug(lesson.slug);
+  let activityLibraryPublished: boolean | null = null;
+  if (activityLibraryMirrorId) {
+    try {
+      const row = await getActivityLibraryItem(activityLibraryMirrorId);
+      activityLibraryPublished = row.published === true;
+    } catch {
+      activityLibraryPublished = false;
+    }
+  }
+
+  const headerPublished =
+    activityLibraryMirrorId ? activityLibraryPublished === true : lesson.published === true;
 
   return (
     <>
-      <RegisterTeacherEditorHeader
-        title={lesson.title}
-        published={lesson.published === true}
-      />
+      <RegisterTeacherEditorHeader title={lesson.title} published={headerPublished} />
       <LessonEditorWorkspace
         moduleId={moduleId}
         lessonId={lessonId}
         moduleSlug={mod.slug}
+        moduleTitle={mod.title}
         lessonSlug={lesson.slug}
+        currentLessonId={lessonId}
+        moduleLessons={moduleLessons.map((item) => ({
+          id: item.id,
+          title: item.title,
+          order_index: Number(item.order_index ?? 0),
+        }))}
         lessonTitle={lesson.title}
         lessonOrderIndex={lesson.order_index ?? 0}
         lessonEstimatedMinutes={
@@ -48,14 +79,14 @@ export default async function EditLessonPage({ params }: Props) {
           : Number(lesson.estimated_minutes)
         }
         published={lesson.published === true}
+        activityLibraryMirrorId={activityLibraryMirrorId}
+        activityLibraryPublished={activityLibraryPublished}
         screens={screens}
+        lessonPlanSyncKey={lessonPlanSyncKey}
+        learningGoals={learningGoals}
+        hasOpeningStart={hasOpeningStart}
       >
-        <AiLessonPanel
-          moduleId={moduleId}
-          lessonId={lessonId}
-          lessonTitle={lesson.title}
-          sidebar
-        />
+        <AiLessonPanel sidebar />
 
         <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
           <h2 className="text-sm font-bold text-neutral-900">Skill tags</h2>

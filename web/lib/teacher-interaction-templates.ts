@@ -11,7 +11,7 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
         type: "interaction",
         subtype: "mc_quiz",
         question: "Question?",
-        image_fit: "cover",
+        image_fit: "contain",
         options: [
           { id: "a", label: "Answer A" },
           { id: "b", label: "Answer B" },
@@ -76,7 +76,7 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
         subtype: "fix_text",
         broken_text: "Helo, I am go to school.",
         acceptable: ["Hello, I am going to school.", "Hello, I am going to school"],
-        image_fit: "cover",
+        image_fit: "contain",
         hints_enabled: true,
         hint_decoy_words: ["went", "gone", "goes"],
       };
@@ -319,44 +319,6 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
         ],
         require_turn_audio_playback: false,
         allow_retry_each_turn: true,
-      };
-    case "presentation_interactive":
-      return {
-        type: "interaction",
-        subtype: "presentation_interactive",
-        title: "Interactive presentation",
-        body_text: "Tap elements and explore the slides.",
-        pass_rule: "drag_targets_complete",
-        slides: [
-          {
-            id: "slide1",
-            title: "Slide 1",
-            background_image_url: "https://placehold.co/1280x800/e2e8f0/334155?text=Slide+1",
-            image_fit: "cover",
-            elements: [
-              {
-                id: "el1",
-                kind: "button",
-                label: "More info",
-                text: "More info",
-                x_percent: 12,
-                y_percent: 14,
-                w_percent: 22,
-                h_percent: 12,
-                z_index: 1,
-                visible: true,
-                draggable_mode: "none",
-                actions: [
-                  {
-                    type: "info_popup",
-                    title: "Welcome",
-                    body: "This is an interactive presentation slide.",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
       };
     default:
       return rawInteractionTemplateForSubtype("mc_quiz");

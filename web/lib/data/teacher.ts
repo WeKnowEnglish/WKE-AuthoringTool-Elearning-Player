@@ -65,6 +65,8 @@ export type ActivityLibraryRow = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  /** When true, activity appears in the student activity library (`/activities`). */
+  published?: boolean;
 };
 
 export type ActivityLibraryFilters = {
@@ -72,6 +74,8 @@ export type ActivityLibraryFilters = {
   level?: string;
   topic?: string;
   subtype?: ActivitySubtype | "all";
+  /** `student` lists only published rows for anon/learners; `teacher` lists the signed-in teacher's rows (RLS). */
+  audience?: "teacher" | "student";
 };
 
 type ModuleSearchFilters = {
@@ -278,11 +282,16 @@ export async function getLessonSkills(lessonId: string) {
 export async function searchActivityLibrary(filters?: ActivityLibraryFilters) {
   noStore();
   const supabase = await createClient();
+  const audience = filters?.audience ?? "teacher";
   let query = supabase
     .from("activity_library_items")
     .select("*")
     .order("updated_at", { ascending: false })
     .limit(300);
+
+  if (audience === "student") {
+    query = query.eq("published", true);
+  }
 
   if (filters?.subtype && filters.subtype !== "all") {
     query = query.eq("activity_subtype", filters.subtype);
@@ -296,48 +305,7 @@ export async function searchActivityLibrary(filters?: ActivityLibraryFilters) {
     if (isMissingActivityLibrarySchema(error)) return [];
     throw error;
   }
-  const rows = (data ?? []) as unknown as ActivityLibraryRow[];
-  const lessonIds = rows
-    .map((row) => row.payload?.settings?.editor_lesson_id)
-    .filter((v): v is string => typeof v === "string" && v.length > 0);
-  if (!lessonIds.length) return rows;
-
-  const { data: screensData, error: screensErr } = await supabase
-    .from("lesson_screens")
-    .select("lesson_id,order_index,screen_type,payload")
-    .in("lesson_id", lessonIds)
-    .order("order_index", { ascending: true });
-  if (screensErr) return rows;
-
-  const byLesson = new Map<string, Array<{ screen_type: string; payload: unknown }>>();
-  for (const row of screensData ?? []) {
-    const lessonId = row.lesson_id as string;
-    if (!byLesson.has(lessonId)) byLesson.set(lessonId, []);
-    byLesson.get(lessonId)!.push({
-      screen_type: row.screen_type as string,
-      payload: row.payload as unknown,
-    });
-  }
-
-  return rows.map((row) => {
-    const lessonId = row.payload?.settings?.editor_lesson_id;
-    if (!lessonId) return row;
-    const lessonScreens = byLesson.get(lessonId) ?? [];
-    if (!lessonScreens.length) return row;
-    const start = lessonScreens.find((s) => s.screen_type === "start")?.payload ?? row.payload?.start;
-    const items = lessonScreens
-      .filter((s) => s.screen_type === "interaction")
-      .map((s) => s.payload);
-    return {
-      ...row,
-      payload: {
-        ...row.payload,
-        start,
-        items,
-      },
-      question_count: items.length,
-    };
-  });
+  return (data ?? []) as unknown as ActivityLibraryRow[];
 }
 
 export async function getActivityLibraryItem(id: string) {
@@ -355,4 +323,21 @@ export async function getActivityLibraryItem(id: string) {
     throw error;
   }
   return data as ActivityLibraryRow;
+}
+
+/** Student activity detail: only published activities (anon-friendly RLS). */
+export async function getPublishedActivityLibraryItemById(id: string): Promise<ActivityLibraryRow | null> {
+  noStore();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("activity_library_items")
+    .select("*")
+    .eq("id", id)
+    .eq("published", true)
+    .maybeSingle();
+  if (error) {
+    if (isMissingActivityLibrarySchema(error)) return null;
+    throw error;
+  }
+  return (data ?? null) as ActivityLibraryRow | null;
 }

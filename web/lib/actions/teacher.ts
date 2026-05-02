@@ -1,9 +1,19 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { parseActivityLibraryIdFromLessonSlug } from "@/lib/activity-library-mirror";
 import { PUBLISHED_CATALOG_CACHE_TAG, type LessonScreenRow } from "@/lib/data/catalog";
 import { getLessonPublishBlockingReasons } from "@/lib/lesson-editor-checklist";
+import {
+  buildCongratsEndPayload,
+  buildDefaultOpeningStartPayload,
+  findOpeningStartScreen,
+  isCongratsEndScreen,
+  isOpeningStartScreen,
+  normalizeLessonScreenOrderIds,
+} from "@/lib/lesson-bookends";
 import { createClient } from "@/lib/supabase/server";
 import { QUIZ_SUBTYPES } from "@/lib/lesson-activity-taxonomy";
 import {
@@ -13,6 +23,8 @@ import {
   startPayloadSchema,
   storyPayloadSchema,
 } from "@/lib/lesson-schemas";
+import { normalizeLessonPlanText } from "@/lib/lesson-plan";
+import { normalizeLearningGoals, parseLearningGoalsFromDb } from "@/lib/learning-goals";
 import { rawInteractionTemplateForSubtype } from "@/lib/teacher-interaction-templates";
 
 function revalidateStudentCatalogViews() {
@@ -193,6 +205,57 @@ export async function saveCourse(formData: FormData) {
   redirect("/teacher/courses");
 }
 
+/** Call from the lesson editor page so older lessons gain pinned opening/closing screens. */
+export async function ensureLessonBookendsForEditor(lessonId: string, moduleId: string) {
+  const supabase = await requireTeacher();
+  const { data: lesson, error } = await supabase
+    .from("lessons")
+    .select("title")
+    .eq("id", lessonId)
+    .eq("module_id", moduleId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!lesson) return;
+  await ensureLessonBookends(supabase, lessonId, {
+    lessonTitle: lesson.title as string | undefined,
+  });
+}
+
+async function ensureLessonBookends(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lessonId: string,
+  opts?: { lessonTitle?: string },
+) {
+  const { data, error } = await supabase
+    .from("lesson_screens")
+    .select("id,screen_type,payload,order_index")
+    .eq("lesson_id", lessonId)
+    .order("order_index", { ascending: true });
+  if (error) throw error;
+  const rows = data ?? [];
+  if (!rows.some((r) => isOpeningStartScreen(r.screen_type, r.payload))) {
+    await supabase.from("lesson_screens").insert({
+      lesson_id: lessonId,
+      order_index: 0,
+      screen_type: "start",
+      payload: buildDefaultOpeningStartPayload(opts?.lessonTitle),
+    });
+  }
+  if (!rows.some((r) => isCongratsEndScreen(r.screen_type, r.payload))) {
+    const { count } = await supabase
+      .from("lesson_screens")
+      .select("*", { count: "exact", head: true })
+      .eq("lesson_id", lessonId);
+    await supabase.from("lesson_screens").insert({
+      lesson_id: lessonId,
+      order_index: count ?? rows.length,
+      screen_type: "start",
+      payload: buildCongratsEndPayload(),
+    });
+  }
+  await renumberScreens(supabase, lessonId);
+}
+
 export async function saveLesson(formData: FormData) {
   const supabase = await requireTeacher();
   const id = formData.get("id") as string | null;
@@ -200,31 +263,27 @@ export async function saveLesson(formData: FormData) {
   const title = (formData.get("title") as string)?.trim();
   const slug = (formData.get("slug") as string)?.trim().toLowerCase();
   const order_index = Number(formData.get("order_index") ?? 0);
-  const published = formData.get("published") === "on";
+  const publishedRequested = formData.get("published") === "on";
+  /** Activity-library mirror lessons must never be published on the /learn catalog. */
+  const published =
+    parseActivityLibraryIdFromLessonSlug(slug) ? false : publishedRequested;
   const estimated = formData.get("estimated_minutes");
   const estimated_minutes = estimated ? Number(estimated) : null;
 
   if (!module_id || !title || !slug) throw new Error("Missing fields");
 
-  if (published) {
-    if (id) {
-      const { data: screenRows, error: screensErr } = await supabase
-        .from("lesson_screens")
-        .select("id, lesson_id, order_index, screen_type, payload")
-        .eq("lesson_id", id)
-        .order("order_index", { ascending: true });
-      if (screensErr) throw screensErr;
-      const reasons = getLessonPublishBlockingReasons(
-        (screenRows ?? []) as unknown as LessonScreenRow[],
-      );
-      if (reasons.length > 0) {
-        throw new Error(`Cannot publish: ${reasons.join(" ")}`);
-      }
-    } else {
-      const reasons = getLessonPublishBlockingReasons([]);
-      if (reasons.length > 0) {
-        throw new Error(`Cannot publish: ${reasons.join(" ")}`);
-      }
+  if (published && id) {
+    const { data: screenRows, error: screensErr } = await supabase
+      .from("lesson_screens")
+      .select("id, lesson_id, order_index, screen_type, payload")
+      .eq("lesson_id", id)
+      .order("order_index", { ascending: true });
+    if (screensErr) throw screensErr;
+    const reasons = getLessonPublishBlockingReasons(
+      (screenRows ?? []) as unknown as LessonScreenRow[],
+    );
+    if (reasons.length > 0) {
+      throw new Error(`Cannot publish: ${reasons.join(" ")}`);
     }
   }
 
@@ -254,12 +313,35 @@ export async function saveLesson(formData: FormData) {
       title,
       slug,
       order_index,
-      published,
+      published: false,
       estimated_minutes,
     })
     .select("id")
     .single();
   if (error) throw error;
+  await ensureLessonBookends(supabase, data.id as string, { lessonTitle: title });
+  if (published) {
+    const { data: screenRows, error: screensErr } = await supabase
+      .from("lesson_screens")
+      .select("id, lesson_id, order_index, screen_type, payload")
+      .eq("lesson_id", data.id)
+      .order("order_index", { ascending: true });
+    if (screensErr) throw screensErr;
+    const reasons = getLessonPublishBlockingReasons(
+      (screenRows ?? []) as unknown as LessonScreenRow[],
+    );
+    if (reasons.length > 0) {
+      throw new Error(`Cannot publish: ${reasons.join(" ")}`);
+    }
+    const { error: pubErr } = await supabase
+      .from("lessons")
+      .update({
+        published: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id);
+    if (pubErr) throw pubErr;
+  }
   revalidateStudentCatalogViews();
   revalidatePath(`/teacher/modules/${module_id}`);
   redirect(`/teacher/modules/${module_id}/lessons/${data.id}`);
@@ -297,6 +379,31 @@ export async function deleteScreen(
 ) {
   void _fd;
   const supabase = await requireTeacher();
+  const { data: row, error: fetchErr } = await supabase
+    .from("lesson_screens")
+    .select("screen_type,payload")
+    .eq("id", screenId)
+    .eq("lesson_id", lessonId)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (!row) {
+    const { data: stray } = await supabase
+      .from("lesson_screens")
+      .select("id")
+      .eq("id", screenId)
+      .maybeSingle();
+    if (stray) throw new Error("Screen not found");
+    // Already removed (e.g. double submit) — renumber and revalidate so the editor recovers.
+    await renumberScreens(supabase, lessonId);
+    revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+    return;
+  }
+  if (
+    isOpeningStartScreen(row.screen_type as string, row.payload) ||
+    isCongratsEndScreen(row.screen_type as string, row.payload)
+  ) {
+    throw new Error("Cannot delete the lesson opening or closing screen.");
+  }
   const { error } = await supabase.from("lesson_screens").delete().eq("id", screenId);
   if (error) throw error;
   await renumberScreens(supabase, lessonId);
@@ -314,7 +421,7 @@ export async function moveScreen(
   const supabase = await requireTeacher();
   const { data: rows, error: fetchErr } = await supabase
     .from("lesson_screens")
-    .select("id,order_index")
+    .select("id,order_index,screen_type,payload")
     .eq("lesson_id", lessonId)
     .order("order_index", { ascending: true });
   if (fetchErr || !rows?.length) throw fetchErr ?? new Error("No screens");
@@ -322,6 +429,21 @@ export async function moveScreen(
   if (idx < 0) throw new Error("Screen not found");
   const swapWith = direction === "up" ? idx - 1 : idx + 1;
   if (swapWith < 0 || swapWith >= rows.length) return;
+
+  const openingIdx = rows.findIndex((r) => isOpeningStartScreen(r.screen_type, r.payload));
+  const congratsIndices = rows
+    .map((r, i) => (isCongratsEndScreen(r.screen_type, r.payload) ? i : -1))
+    .filter((i) => i >= 0);
+  const congratsIdx = congratsIndices.length ? congratsIndices[congratsIndices.length - 1]! : -1;
+  if (openingIdx >= 0) {
+    if (idx === openingIdx && swapWith === openingIdx + 1) return;
+    if (idx === openingIdx + 1 && swapWith === openingIdx) return;
+  }
+  if (congratsIdx >= 0) {
+    if (idx === congratsIdx && swapWith === congratsIdx - 1) return;
+    if (idx === congratsIdx - 1 && swapWith === congratsIdx) return;
+  }
+
   const a = rows[idx];
   const b = rows[swapWith];
   await supabase
@@ -344,8 +466,9 @@ export async function reorderScreens(
   const supabase = await requireTeacher();
   const { data: rows, error: fetchErr } = await supabase
     .from("lesson_screens")
-    .select("id")
-    .eq("lesson_id", lessonId);
+    .select("id,screen_type,payload")
+    .eq("lesson_id", lessonId)
+    .order("order_index", { ascending: true });
   if (fetchErr || !rows?.length) throw fetchErr ?? new Error("No screens");
   const valid = new Set(rows.map((r) => r.id));
   if (orderedScreenIds.length !== valid.size) {
@@ -354,12 +477,15 @@ export async function reorderScreens(
   for (const id of orderedScreenIds) {
     if (!valid.has(id)) throw new Error("Unknown screen id in reorder list");
   }
+  const idToRow = new Map(rows.map((r) => [r.id, r]));
+  const proposed = orderedScreenIds.map((id) => idToRow.get(id)!);
+  const fixedIds = normalizeLessonScreenOrderIds(proposed);
   const now = new Date().toISOString();
-  for (let i = 0; i < orderedScreenIds.length; i++) {
+  for (let i = 0; i < fixedIds.length; i++) {
     const { error } = await supabase
       .from("lesson_screens")
       .update({ order_index: i, updated_at: now })
-      .eq("id", orderedScreenIds[i])
+      .eq("id", fixedIds[i])
       .eq("lesson_id", lessonId);
     if (error) throw error;
   }
@@ -380,6 +506,12 @@ export async function duplicateScreen(
     .eq("id", screenId)
     .single();
   if (error || !row) throw error ?? new Error("Screen not found");
+  if (
+    isOpeningStartScreen(row.screen_type as string, row.payload) ||
+    isCongratsEndScreen(row.screen_type as string, row.payload)
+  ) {
+    throw new Error("Cannot duplicate the lesson opening or closing screen.");
+  }
   const { count } = await supabase
     .from("lesson_screens")
     .select("*", { count: "exact", head: true })
@@ -455,6 +587,11 @@ export async function duplicateLesson(
     lessonRows?.length ?
       Math.max(...lessonRows.map((l) => l.order_index ?? 0)) + 1
     : 0;
+  const sourceGoals = parseLearningGoalsFromDb(
+    (lesson as { learning_goals?: unknown }).learning_goals,
+  );
+  const srcPlan = (lesson as { lesson_plan?: unknown }).lesson_plan;
+  const srcPlanMeta = (lesson as { lesson_plan_meta?: unknown }).lesson_plan_meta;
   const { data: inserted, error: insErr } = await supabase
     .from("lessons")
     .insert({
@@ -464,6 +601,9 @@ export async function duplicateLesson(
       order_index: nextOrder,
       published: false,
       estimated_minutes: lesson.estimated_minutes,
+      learning_goals: sourceGoals.length > 0 ? sourceGoals : [],
+      lesson_plan: typeof srcPlan === "string" ? srcPlan : "",
+      lesson_plan_meta: srcPlanMeta ?? null,
     })
     .select("id")
     .single();
@@ -492,6 +632,9 @@ export async function duplicateLesson(
       skills.map((r) => ({ lesson_id: inserted.id, skill_key: r.skill_key })),
     );
   }
+  await ensureLessonBookends(supabase, inserted.id as string, {
+    lessonTitle: `Copy of ${lesson.title}`,
+  });
   revalidatePath(`/teacher/modules/${moduleId}`);
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${inserted.id}`);
   redirect(`/teacher/modules/${moduleId}/lessons/${inserted.id}`);
@@ -530,7 +673,12 @@ export async function importLessonScreensJson(
       `Invalid JSON (${detail}). Use double quotes, no trailing commas. If you copied from a chat, delete the \`\`\` lines around the JSON.`,
     );
   }
-  const obj = parsed as { screens?: unknown };
+  const obj = parsed as {
+    screens?: unknown;
+    learning_goals?: unknown;
+    lesson_plan?: unknown;
+    lesson_plan_meta?: unknown;
+  };
   if (!Array.isArray(obj.screens)) {
     throw new Error('JSON must be { "screens": [ { "screen_type", "payload" }, ... ] }');
   }
@@ -563,7 +711,40 @@ export async function importLessonScreensJson(
       payload: row.payload,
     });
   }
-  await renumberScreens(supabase, lessonId);
+  const { data: lessonRow } = await supabase
+    .from("lessons")
+    .select("title")
+    .eq("id", lessonId)
+    .single();
+  await ensureLessonBookends(supabase, lessonId, {
+    lessonTitle: lessonRow?.title as string | undefined,
+  });
+  const planPatch: {
+    learning_goals?: string[];
+    lesson_plan?: string;
+    lesson_plan_meta?: unknown | null;
+  } = {};
+  if (obj.learning_goals !== undefined) {
+    planPatch.learning_goals = normalizeLearningGoals(
+      Array.isArray(obj.learning_goals) ?
+        obj.learning_goals.filter((x): x is string => typeof x === "string")
+      : [],
+    );
+  }
+  if (typeof obj.lesson_plan === "string") {
+    planPatch.lesson_plan = normalizeLessonPlanText(obj.lesson_plan);
+  }
+  if ("lesson_plan_meta" in obj) {
+    planPatch.lesson_plan_meta =
+      obj.lesson_plan_meta === null ? null : obj.lesson_plan_meta;
+  }
+  if (Object.keys(planPatch).length > 0) {
+    await supabase
+      .from("lessons")
+      .update({ ...planPatch, updated_at: new Date().toISOString() })
+      .eq("id", lessonId)
+      .eq("module_id", moduleId);
+  }
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }
 
@@ -576,63 +757,19 @@ async function renumberScreens(
     .select("id,screen_type,payload,order_index")
     .eq("lesson_id", lessonId)
     .order("order_index", { ascending: true });
-  if (!data) return;
-  const normalRows = data.filter((row) => !isCongratsEndScreen(row.screen_type, row.payload));
-  const endRows = data.filter((row) => isCongratsEndScreen(row.screen_type, row.payload));
-  const orderedRows = [...normalRows, ...endRows];
+  if (!data?.length) return;
+  const opening = findOpeningStartScreen(data);
+  const endRowsAll = data.filter((row) => isCongratsEndScreen(row.screen_type, row.payload));
+  const congrats = endRowsAll[endRowsAll.length - 1];
+  const bookendIds = new Set<string>([opening?.id, congrats?.id].filter(Boolean) as string[]);
+  const middle = data.filter((row) => !bookendIds.has(row.id));
+  const orderedRows = [...(opening ? [opening] : []), ...middle, ...(congrats ? [congrats] : [])];
   for (let i = 0; i < orderedRows.length; i++) {
     await supabase
       .from("lesson_screens")
       .update({ order_index: i, updated_at: new Date().toISOString() })
       .eq("id", orderedRows[i].id);
   }
-}
-
-function isCongratsEndScreen(screenType: string, payload: unknown): boolean {
-  if (screenType !== "start") return false;
-  const parsed = startPayloadSchema.safeParse(payload);
-  if (!parsed.success) return false;
-  return (
-    (parsed.data.cta_label ?? "").trim().toLowerCase() === "finish activity" &&
-    (parsed.data.read_aloud_title ?? "").trim().toLowerCase() === "congratulations"
-  );
-}
-
-function buildCongratsEndPayload() {
-  return startPayloadSchema.parse({
-    type: "start",
-    image_url: "https://placehold.co/800x520/e2e8f0/1e293b?text=Congratulations",
-    image_fit: "contain",
-    cta_label: "Finish activity",
-    read_aloud_title: "Congratulations",
-  });
-}
-
-async function ensureCongratsEndScreen(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  lessonId: string,
-) {
-  const { data, error } = await supabase
-    .from("lesson_screens")
-    .select("id,screen_type,payload")
-    .eq("lesson_id", lessonId)
-    .order("order_index", { ascending: true });
-  if (error) throw error;
-  const rows = data ?? [];
-  const hasCongrats = rows.some((row) => isCongratsEndScreen(row.screen_type, row.payload));
-  if (!hasCongrats) {
-    const { count } = await supabase
-      .from("lesson_screens")
-      .select("*", { count: "exact", head: true })
-      .eq("lesson_id", lessonId);
-    await supabase.from("lesson_screens").insert({
-      lesson_id: lessonId,
-      order_index: count ?? rows.length,
-      screen_type: "start",
-      payload: buildCongratsEndPayload(),
-    });
-  }
-  await renumberScreens(supabase, lessonId);
 }
 
 export type AddScreenKind =
@@ -656,18 +793,14 @@ export async function addScreenTemplate(
   const order_index = count ?? 0;
 
   if (kind === "start") {
-    const payload = startPayloadSchema.parse({
-      type: "start",
-      image_url: "https://placehold.co/800x520/e2e8f0/1e293b?text=Start",
-      cta_label: "Start learning",
+    const { data: lessonRow } = await supabase
+      .from("lessons")
+      .select("title")
+      .eq("id", lessonId)
+      .single();
+    await ensureLessonBookends(supabase, lessonId, {
+      lessonTitle: lessonRow?.title as string | undefined,
     });
-    await supabase.from("lesson_screens").insert({
-      lesson_id: lessonId,
-      order_index,
-      screen_type: "start",
-      payload,
-    });
-    await ensureCongratsEndScreen(supabase, lessonId);
   } else if (kind === "interactive_page") {
     const payload = storyPayloadSchema.parse({
       type: "story",
@@ -682,6 +815,7 @@ export async function addScreenTemplate(
       screen_type: "story",
       payload,
     });
+    await renumberScreens(supabase, lessonId);
   } else {
     const interactionPayload = rawInteractionTemplateForSubtype(kind);
     const payload = interactionPayloadSchema.parse(interactionPayload);
@@ -691,13 +825,14 @@ export async function addScreenTemplate(
       screen_type: "interaction",
       payload,
     });
+    await renumberScreens(supabase, lessonId);
   }
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }
 
 export async function createQuizGroup(lessonId: string, moduleId: string, formData: FormData) {
   const supabase = await requireTeacher();
-  const quiz_group_id = crypto.randomUUID();
+  const quiz_group_id = randomUUID();
   const quiz_group_title =
     ((formData.get("title") as string) ?? "").trim() || "Quiz";
   const base = rawInteractionTemplateForSubtype("mc_quiz");
@@ -718,6 +853,7 @@ export async function createQuizGroup(lessonId: string, moduleId: string, formDa
     screen_type: "interaction",
     payload,
   });
+  await renumberScreens(supabase, lessonId);
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }
 
@@ -935,6 +1071,77 @@ export async function saveLessonSkills(
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }
 
+export async function saveLessonLearningGoals(
+  lessonId: string,
+  moduleId: string,
+  formData: FormData,
+) {
+  const supabase = await requireTeacher();
+  const rawJson = (formData.get("learning_goals_json") as string) ?? "";
+  let rawList: string[] = [];
+  if (rawJson.trim()) {
+    try {
+      const parsed = JSON.parse(rawJson) as unknown;
+      rawList = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+    } catch {
+      throw new Error("Invalid learning goals JSON");
+    }
+  } else {
+    const fromForm = formData.getAll("goal_line").map((v) => `${v}`);
+    rawList = fromForm;
+  }
+  const learning_goals = normalizeLearningGoals(rawList);
+  const { error } = await supabase
+    .from("lessons")
+    .update({
+      learning_goals,
+      lesson_plan_meta: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", lessonId)
+    .eq("module_id", moduleId);
+  if (error) throw error;
+  revalidateStudentCatalogViews();
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+export async function saveLessonPlan(
+  lessonId: string,
+  moduleId: string,
+  formData: FormData,
+) {
+  const supabase = await requireTeacher();
+  const raw = (formData.get("lesson_plan") as string) ?? "";
+  const lesson_plan = normalizeLessonPlanText(raw);
+  const { error } = await supabase
+    .from("lessons")
+    .update({
+      lesson_plan,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", lessonId)
+    .eq("module_id", moduleId);
+  if (error) throw error;
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+/** Load plan text client-side so the lesson editor RSC payload stays small (avoids Flight/RSC fetch failures). */
+export async function getLessonPlanForEditor(lessonId: string, moduleId: string) {
+  const supabase = await requireTeacher();
+  const { data, error } = await supabase
+    .from("lessons")
+    .select("lesson_plan, module_id")
+    .eq("id", lessonId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Lesson not found");
+  if (data.module_id !== moduleId) throw new Error("Module mismatch");
+  const raw = (data as { lesson_plan?: unknown }).lesson_plan;
+  return {
+    lessonPlan: normalizeLessonPlanText(typeof raw === "string" ? raw : ""),
+  };
+}
+
 export async function appendScreensFromAi(
   lessonId: string,
   moduleId: string,
@@ -961,6 +1168,7 @@ export async function appendScreensFromAi(
       payload: p,
     });
   }
+  await renumberScreens(supabase, lessonId);
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }
 
@@ -1314,6 +1522,24 @@ function applySettingsToItems(items: unknown[], settings: ActivityLibrarySetting
   });
 }
 
+/** Ensure every interaction has quiz_group_* so the lesson editor Quiz builder groups them. */
+function ensureActivityItemsQuizGroupItems(items: unknown[], quizTitle: string): unknown[] {
+  const gid = randomUUID();
+  const gTitle = quizTitle.trim() || "Quiz";
+  return items.map((item, idx) => {
+    const parsed = interactionPayloadSchema.parse(item) as { quiz_group_id?: string };
+    if (typeof parsed.quiz_group_id === "string" && parsed.quiz_group_id.length > 0) {
+      return parsed;
+    }
+    return interactionPayloadSchema.parse({
+      ...parsed,
+      quiz_group_id: gid,
+      quiz_group_title: gTitle,
+      quiz_group_order: idx,
+    });
+  });
+}
+
 function normalizeActivityPayload(raw: unknown): {
   start: unknown;
   items: unknown[];
@@ -1361,9 +1587,19 @@ export async function createActivityLibraryItem(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
   const imageByWord = await findImageByVocabulary(supabase, vocabulary);
-  const items = selectedSubtypes
-    .flatMap((selectedSubtype) => buildActivityItems(selectedSubtype, vocabulary, imageByWord))
-    .map((item) => interactionPayloadSchema.parse(item));
+  const quizGroupId = randomUUID();
+  const quizGroupTitle = title.trim() || "Quiz";
+  const rawItems = selectedSubtypes.flatMap((selectedSubtype) =>
+    buildActivityItems(selectedSubtype, vocabulary, imageByWord),
+  );
+  const items = rawItems.map((item, idx) =>
+    interactionPayloadSchema.parse({
+      ...(typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {}),
+      quiz_group_id: quizGroupId,
+      quiz_group_title: quizGroupTitle,
+      quiz_group_order: idx,
+    }),
+  );
   const firstWord = vocabulary[0] ?? "activity";
   const startImage =
     imageByWord[firstWord.toLowerCase()] ??
@@ -1399,6 +1635,7 @@ export async function createActivityLibraryItem(formData: FormData) {
     payload,
     question_count: items.length,
     created_by: user.id,
+    published: false,
   });
   if (error) throw asMissingActivityLibrarySchemaError(error) ?? error;
   revalidatePath("/teacher/activities");
@@ -1570,21 +1807,23 @@ export async function openActivityInCourseEditor(formData: FormData) {
     .single();
   if (activityErr) throw activityErr;
   const normalized = normalizeActivityPayload(activity.payload);
+  normalized.items = ensureActivityItemsQuizGroupItems(normalized.items, activity.title);
   const settings = normalized.settings as ActivityLibrarySettings & {
     editor_module_id?: string;
     editor_lesson_id?: string;
   };
 
+  const workspaceSlug = `activity-library-workspace-${user.id.slice(0, 8)}`;
   let courseId: string | null = null;
   {
-    const existingCourse = await supabase
+    const existingWorkspace = await supabase
       .from("courses")
       .select("id")
-      .order("order_index", { ascending: true })
+      .eq("slug", workspaceSlug)
       .limit(1)
       .maybeSingle();
-    if (existingCourse.data?.id) {
-      courseId = existingCourse.data.id as string;
+    if (existingWorkspace.data?.id) {
+      courseId = existingWorkspace.data.id as string;
     } else {
       const courseRows = await supabase.from("courses").select("order_index");
       const orderIndex =
@@ -1595,7 +1834,7 @@ export async function openActivityInCourseEditor(formData: FormData) {
         .from("courses")
         .insert({
           title: "Activity Library Workspace",
-          slug: `activity-library-workspace-${user.id.slice(0, 8)}`,
+          slug: workspaceSlug,
           target: "Activity Library",
           order_index: orderIndex,
           published: false,
@@ -1684,18 +1923,17 @@ export async function openActivityInCourseEditor(formData: FormData) {
   const hasExistingScreens = (existingScreens.count ?? 0) > 0;
   if (!hasExistingScreens) {
     const screensToInsert = [
-      { screen_type: "start", payload: normalized.start },
-      ...normalized.items.map((payload) => ({ screen_type: "interaction", payload })),
+      { screen_type: "start" as const, payload: normalized.start },
+      ...normalized.items.map((payload) => ({ screen_type: "interaction" as const, payload })),
     ];
-    for (let i = 0; i < screensToInsert.length; i += 1) {
-      const row = screensToInsert[i]!;
-      await supabase.from("lesson_screens").insert({
-        lesson_id: lessonId,
-        order_index: i,
-        screen_type: row.screen_type,
-        payload: row.payload,
-      });
-    }
+    const insertRows = screensToInsert.map((row, i) => ({
+      lesson_id: lessonId,
+      order_index: i,
+      screen_type: row.screen_type,
+      payload: row.payload,
+    }));
+    const { error: batchInsErr } = await supabase.from("lesson_screens").insert(insertRows);
+    if (batchInsErr) throw batchInsErr;
   } else {
     const desiredAutoAdvance = normalized.settings.auto_advance_on_pass_default;
     const lessonScreens = await supabase
@@ -1722,6 +1960,10 @@ export async function openActivityInCourseEditor(formData: FormData) {
     }
   }
 
+  await ensureLessonBookends(supabase, lessonId, {
+    lessonTitle: `${activity.title} (Activity Library)`,
+  });
+
   const nextSettings = {
     ...normalized.settings,
     editor_module_id: moduleId,
@@ -1736,5 +1978,153 @@ export async function openActivityInCourseEditor(formData: FormData) {
     .eq("id", activityId);
 
   revalidatePath("/teacher/activities");
+  revalidatePath("/activities");
+  revalidatePath(`/activities/${activityId}`);
+  redirect(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+export async function publishActivityLibraryFromLesson(formData: FormData) {
+  const supabase = await requireTeacher();
+  const lessonId = `${formData.get("lesson_id") ?? ""}`.trim();
+  const moduleId = `${formData.get("module_id") ?? ""}`.trim();
+  if (!lessonId || !moduleId) throw new Error("Missing lesson or module");
+
+  const { data: lesson, error: lessonErr } = await supabase
+    .from("lessons")
+    .select("id,slug,module_id,published")
+    .eq("id", lessonId)
+    .single();
+  if (lessonErr || !lesson) throw lessonErr ?? new Error("Lesson not found");
+  if (lesson.module_id !== moduleId) throw new Error("Lesson does not belong to this module");
+
+  const activityId = parseActivityLibraryIdFromLessonSlug(lesson.slug as string);
+  if (!activityId) throw new Error("This lesson is not an activity library mirror");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: activity, error: activityErr } = await supabase
+    .from("activity_library_items")
+    .select("id,payload,created_by")
+    .eq("id", activityId)
+    .single();
+  if (activityErr || !activity) throw activityErr ?? new Error("Activity not found");
+  if (activity.created_by !== user.id) throw new Error("Forbidden");
+
+  const { data: screenRows, error: screensErr } = await supabase
+    .from("lesson_screens")
+    .select("id,lesson_id,order_index,screen_type,payload,updated_at")
+    .eq("lesson_id", lessonId)
+    .order("order_index", { ascending: true });
+  if (screensErr) throw screensErr;
+
+  const screens = (screenRows ?? []) as unknown as LessonScreenRow[];
+  const reasons = getLessonPublishBlockingReasons(screens);
+  if (reasons.length > 0) {
+    throw new Error(`Cannot publish to activity library: ${reasons.join(" ")}`);
+  }
+
+  const prev = normalizeActivityPayload(activity.payload);
+  const startRaw = screenRows?.find((r) => r.screen_type === "start")?.payload ?? prev.start;
+  const start = startPayloadSchema.parse(startRaw);
+  const interactionRows = screenRows?.filter((r) => r.screen_type === "interaction") ?? [];
+  const items = interactionRows.map((r) => interactionPayloadSchema.parse(r.payload));
+
+  const settings = { ...(prev.settings as Record<string, unknown>) };
+  settings.editor_module_id = (settings.editor_module_id as string | undefined) ?? moduleId;
+  settings.editor_lesson_id = (settings.editor_lesson_id as string | undefined) ?? lessonId;
+
+  const payload = {
+    start,
+    items: applySettingsToItems(items, prev.settings),
+    settings: {
+      ...prev.settings,
+      ...settings,
+    },
+  };
+
+  const { error: upActErr } = await supabase
+    .from("activity_library_items")
+    .update({
+      payload,
+      question_count: items.length,
+      published: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", activityId);
+  if (upActErr) throw upActErr;
+
+  const { error: lesErr } = await supabase
+    .from("lessons")
+    .update({
+      published: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", lessonId);
+  if (lesErr) throw lesErr;
+
+  revalidateStudentCatalogViews();
+  revalidatePath("/activities");
+  revalidatePath(`/activities/${activityId}`);
+  revalidatePath("/teacher/activities");
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+  redirect(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+export async function unpublishActivityLibraryFromLesson(formData: FormData) {
+  const supabase = await requireTeacher();
+  const lessonId = `${formData.get("lesson_id") ?? ""}`.trim();
+  const moduleId = `${formData.get("module_id") ?? ""}`.trim();
+  if (!lessonId || !moduleId) throw new Error("Missing lesson or module");
+
+  const { data: lesson, error: lessonErr } = await supabase
+    .from("lessons")
+    .select("id,slug,module_id")
+    .eq("id", lessonId)
+    .single();
+  if (lessonErr || !lesson) throw lessonErr ?? new Error("Lesson not found");
+  if (lesson.module_id !== moduleId) throw new Error("Lesson does not belong to this module");
+
+  const activityId = parseActivityLibraryIdFromLessonSlug(lesson.slug as string);
+  if (!activityId) throw new Error("This lesson is not an activity library mirror");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: activity, error: activityErr } = await supabase
+    .from("activity_library_items")
+    .select("id,created_by")
+    .eq("id", activityId)
+    .single();
+  if (activityErr || !activity) throw activityErr ?? new Error("Activity not found");
+  if (activity.created_by !== user.id) throw new Error("Forbidden");
+
+  const { error: upErr } = await supabase
+    .from("activity_library_items")
+    .update({
+      published: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", activityId);
+  if (upErr) throw upErr;
+
+  const { error: lesErr } = await supabase
+    .from("lessons")
+    .update({
+      published: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", lessonId);
+  if (lesErr) throw lesErr;
+
+  revalidateStudentCatalogViews();
+  revalidatePath("/activities");
+  revalidatePath(`/activities/${activityId}`);
+  revalidatePath("/teacher/activities");
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
   redirect(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }

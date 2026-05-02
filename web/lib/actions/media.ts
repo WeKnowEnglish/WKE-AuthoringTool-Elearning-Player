@@ -140,7 +140,7 @@ function hammingDistanceHex(a: string, b: string): number {
 export type UploadTeacherMediaResult = {
   url: string;
   id: string;
-  duplicate_status?: "uploaded" | "exact_duplicate_reused";
+  duplicate_status?: "uploaded" | "exact_duplicate_reused" | "near_duplicate_reused";
 };
 
 export type DuplicateHandling = "delete_duplicate" | "keep_both";
@@ -151,7 +151,7 @@ export type UploadTeacherMediaBulkItemResult = {
   message?: string;
   url?: string;
   id?: string;
-  duplicate_status?: "uploaded" | "exact_duplicate_reused";
+  duplicate_status?: "uploaded" | "exact_duplicate_reused" | "near_duplicate_reused";
 };
 
 export type UploadTeacherMediaBulkResult = {
@@ -218,6 +218,7 @@ export async function uploadTeacherMedia(
         .maybeSingle();
       if (exactErr) throw new Error(exactErr.message);
       if (existingExact) {
+        revalidatePath("/teacher/media");
         return {
           id: existingExact.id as string,
           url: existingExact.public_url as string,
@@ -230,7 +231,7 @@ export async function uploadTeacherMedia(
     if (phash) {
       const { data: candidates, error: candErr } = await supabase
         .from("media_assets")
-        .select("id,original_filename,phash")
+        .select("id,public_url,original_filename,phash")
         .like("content_type", "image/%")
         .not("phash", "is", null)
         .order("created_at", { ascending: false })
@@ -241,9 +242,13 @@ export async function uploadTeacherMedia(
         if (!candidateHash) continue;
         const dist = hammingDistanceHex(phash, candidateHash);
         if (dist <= PHASH_DISTANCE_THRESHOLD) {
-          const nearName = (c.original_filename as string | null) ?? "existing image";
           if (duplicateHandling === "delete_duplicate") {
-            throw new Error(`Near-duplicate image detected (similar to "${nearName}").`);
+            revalidatePath("/teacher/media");
+            return {
+              id: c.id as string,
+              url: c.public_url as string,
+              duplicate_status: "near_duplicate_reused",
+            };
           }
           break;
         }
@@ -276,7 +281,38 @@ export async function uploadTeacherMedia(
     .single();
   if (insErr) throw new Error(insErr.message);
 
+  revalidatePath("/teacher/media");
   return { url: publicUrl, id: row.id as string, duplicate_status: "uploaded" };
+}
+
+/** One file + kind + duplicate_handling (for incremental / single uploads). */
+export async function uploadTeacherMediaSingleFromForm(
+  formData: FormData,
+): Promise<UploadTeacherMediaBulkItemResult> {
+  const kind = ((formData.get("kind") as MediaKind | null) ?? "image") as MediaKind;
+  const duplicateHandling =
+    (formData.get("duplicate_handling") as DuplicateHandling | null) ?? "delete_duplicate";
+  const file = formData.get("file");
+  if (!file || typeof file === "string" || !("arrayBuffer" in file)) {
+    return { filename: "", status: "error", message: "No file uploaded" };
+  }
+  const f = file as File;
+  try {
+    const result = await uploadTeacherMedia(formData, kind, duplicateHandling);
+    return {
+      filename: f.name,
+      status: "success",
+      url: result.url,
+      id: result.id,
+      duplicate_status: result.duplicate_status ?? "uploaded",
+    };
+  } catch (error) {
+    return {
+      filename: f.name,
+      status: "error",
+      message: error instanceof Error ? error.message : "Upload failed",
+    };
+  }
 }
 
 export async function uploadTeacherMediaBulkFromForm(
@@ -400,7 +436,7 @@ export async function inspectTeacherMediaBulkDuplicates(
   return issues;
 }
 
-type SearchTeacherMediaParams = {
+export type SearchTeacherMediaParams = {
   q?: string;
   kind?: MediaKindFilter;
   level?: string;
@@ -410,77 +446,69 @@ type SearchTeacherMediaParams = {
   categories?: string[];
   skills?: string[];
   limit?: number;
+  /** Zero-based offset for pagination (default 0). */
+  offset?: number;
 };
 
-function listIncludesAll(haystack: string[] | null | undefined, needles: string[]): boolean {
-  if (needles.length === 0) return true;
-  const set = new Set((haystack ?? []).map((x) => normalizeListValue(x)));
-  return needles.every((n) => set.has(normalizeListValue(n)));
-}
+export type SearchTeacherMediaResult = {
+  rows: MediaAssetRow[];
+  total: number;
+};
 
-function matchesQuery(row: MediaAssetRow, q: string): boolean {
-  const needle = normalizeListValue(q);
-  if (!needle) return true;
-  const searchParts = [
-    row.meta_item_name ?? "",
-    row.original_filename,
-    row.public_url,
-    row.meta_plural ?? "",
-    row.meta_level ?? "",
-    row.meta_word_type ?? "",
-    row.meta_past_tense ?? "",
-    row.meta_notes ?? "",
-    ...(row.meta_tags ?? []),
-    ...(row.meta_categories ?? []),
-    ...(row.meta_alternative_names ?? []),
-    ...(row.meta_skills ?? []),
-  ];
-  return normalizeListValue(searchParts.join(" ")).includes(needle);
+function parseRpcTotal(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string") {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
 }
 
 export async function searchTeacherMedia(
   params: SearchTeacherMediaParams = {},
-): Promise<MediaAssetRow[]> {
+): Promise<SearchTeacherMediaResult> {
   const supabase = await requireTeacher();
   const kind = params.kind ?? "all";
-  const maxRows = Math.min(Math.max(params.limit ?? 200, 1), 1000);
+  const limit = Math.min(Math.max(params.limit ?? 200, 1), 1000);
+  const offset = Math.max(params.offset ?? 0, 0);
 
-  let q = supabase
-    .from("media_assets")
-    .select(
-      "id,storage_path,public_url,original_filename,content_type,uploaded_by,created_at,sha256_hash,phash,meta_categories,meta_tags,meta_alternative_names,meta_plural,meta_countability,meta_level,meta_word_type,meta_skills,meta_past_tense,meta_notes,meta_item_name",
-    )
-    .order("created_at", { ascending: false })
-    .limit(maxRows);
-
-  if (kind === "image") q = q.like("content_type", "image/%");
-  if (kind === "audio") q = q.like("content_type", "audio/%");
-  if (kind === "video") q = q.like("content_type", "video/%");
-
-  const { data, error } = await q;
-  if (error) throw new Error(error.message);
-
-  const level = normalizeOptionalText(params.level, 40);
-  const wordType = normalizeOptionalText(params.wordType, 40);
   const countability = params.countability ?? "all";
   const tags = normalizeAndDedupList(params.tags ?? []);
   const categories = normalizeAndDedupList(params.categories ?? []);
   const skills = normalizeAndDedupList(params.skills ?? []);
-  const query = params.q?.trim() ?? "";
+  const levelRaw = normalizeOptionalText(params.level, 40);
+  const wordTypeRaw = normalizeOptionalText(params.wordType, 40);
 
-  return ((data ?? []) as unknown as MediaAssetRow[]).filter((row) => {
-    if (level && normalizeListValue(row.meta_level ?? "") !== normalizeListValue(level)) return false;
-    if (wordType && normalizeListValue(row.meta_word_type ?? "") !== normalizeListValue(wordType)) return false;
-    if (countability !== "all" && (row.meta_countability ?? "na") !== countability) return false;
-    if (!listIncludesAll(row.meta_tags, tags)) return false;
-    if (!listIncludesAll(row.meta_categories, categories)) return false;
-    if (!listIncludesAll(row.meta_skills, skills)) return false;
-    return matchesQuery(row, query);
+  const { data, error } = await supabase.rpc("teacher_search_media_assets", {
+    p_kind: kind,
+    p_q: params.q?.trim() ?? "",
+    p_level: levelRaw ?? "",
+    p_word_type: wordTypeRaw ?? "",
+    p_countability: countability,
+    p_tags: tags,
+    p_categories: categories,
+    p_skills: skills,
+    p_limit: limit,
+    p_offset: offset,
   });
+
+  if (error) {
+    const hint =
+      /teacher_search_media_assets|42883|function.*does not exist/i.test(`${error.message} ${error.code ?? ""}`) ?
+        " Run migration web/supabase/migrations/016_teacher_search_media_assets.sql in the Supabase SQL editor."
+      : "";
+    throw new Error(`${error.message}${hint}`);
+  }
+
+  const payload = data as { total?: unknown; items?: unknown } | null;
+  const total = parseRpcTotal(payload?.total);
+  const items = (Array.isArray(payload?.items) ? payload?.items : []) as MediaAssetRow[];
+  return { rows: items, total };
 }
 
 export async function listTeacherMedia(kind: MediaKind = "image"): Promise<MediaAssetRow[]> {
-  return searchTeacherMedia({ kind, limit: 200 });
+  const { rows } = await searchTeacherMedia({ kind, limit: 200 });
+  return rows;
 }
 
 type UpdateTeacherMediaMetadataInput = {

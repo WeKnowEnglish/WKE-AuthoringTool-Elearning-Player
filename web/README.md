@@ -6,6 +6,7 @@
    - `SUPABASE_URL` + `SUPABASE_ANON_KEY` — same project URL and anon/publishable key (server + middleware; **no** `NEXT_PUBLIC_` prefix)
    - `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` — **same values** (required for teacher sign-in in the browser)
    - `GEMINI_API_KEY` — Google AI Studio key (**never** prefix with `NEXT_PUBLIC_`)
+   - Optional: `GEMINI_MODEL` — defaults to `gemini-2.5-flash` (see `lib/ai/gemini.ts`)
 
    See **[SECURITY.md](./SECURITY.md)** for why the Supabase “public” key is not a secret and what actually protects your data (RLS, no service role in the client).
 
@@ -14,6 +15,8 @@
    - `supabase/migrations/002_grants_anon_authenticated.sql` (fixes **permission denied** for API access if you see catalog load errors)
    - Optional seeds: `003_*`, `004_*` if you want bundled curriculum
    - `supabase/migrations/005_teacher_media.sql` — **teacher Upload / Media library** (Storage bucket `lesson_media` + `media_assets` table)
+   - `supabase/migrations/018_lesson_learning_goals.sql` — **lesson learning objectives** (`lessons.learning_goals` JSON array for the editor + AI generator)
+   - `supabase/migrations/019_lesson_plan.sql` — **shared lesson plan** (`lessons.lesson_plan` text + optional `lesson_plan_meta` for AI)
 
 3. **Teacher account** — pick one:
    - **Script (recommended):** add **`SUPABASE_SERVICE_ROLE_KEY`** to `.env.local` (Supabase → Project Settings → API → **service_role** secret). Then run:

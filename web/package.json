@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev --turbopack",
+    "dev:webpack": "next dev --webpack",
+    "clean": "node -e \"try { require('fs').rmSync('.next', { recursive: true, force: true }); } catch (e) { if (e.code !== 'ENOENT') throw e; }\"",
     "build": "next build",
     "analyze": "cross-env ANALYZE=true next build",
     "start": "next start",

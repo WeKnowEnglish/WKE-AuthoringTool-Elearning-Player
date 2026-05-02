@@ -28,7 +28,7 @@ These are **not** prefixed with `NEXT_PUBLIC_`, so they are **not** embedded in 
 
 ### Gemini (`GEMINI_API_KEY`)
 
-Must be **server-only** (no `NEXT_PUBLIC_`). The app calls Gemini only from `/api/teacher/ai/generate` after verifying a **teacher** session. Rate limiting reduces abuse if a session is compromised.
+Must be **server-only** (no `NEXT_PUBLIC_`). The app calls Gemini only from teacher API routes (`/api/teacher/ai/plan` drafts a saved lesson plan; `/api/teacher/ai/generate` builds screens from the plan document or, with legacy JSON fields, runs plan + screen generation in one request) after verifying a **teacher** session. Rate limiting reduces abuse if a session is compromised. Optional `GEMINI_MODEL` defaults to `gemini-2.5-flash` in code.
 
 If this key leaks, revoke it in Google AI Studio and create a new one.
 

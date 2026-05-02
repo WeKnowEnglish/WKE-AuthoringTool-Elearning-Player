@@ -1,15 +1,11 @@
-# Interactive Presentation V1 QA Checklist
+# Legacy interactive presentation QA (now interactive page / slide deck)
+
+The `presentation_interactive` subtype is removed from the player and editor. Legacy rows are still read as **`story`** payloads with **`layout_mode: "slide"`** via `parseScreenPayload` → `migratePresentationInteractiveFromParsed` in `lib/lesson-schemas.ts`.
 
 ## Authoring (Teacher Editor)
-- Create a new `Interactive presentation` screen from the Add activity panel.
-- Add at least 2 slides and switch between them.
-- Set slide background image and confirm canvas loads.
-- Add each element kind: `text`, `image`, `button`, `shape`, `line`.
-- Move and resize elements on canvas, then confirm coordinates persist after switching slides.
-- Edit selected element metadata: label, text, image URL, color, visibility.
-- Configure drag modes: `none`, `free`, `check_target`.
-- For `check_target`, set drop target and ensure save does not fail.
-- Add multiple actions to one element and edit/remove actions.
+- Use **+ Interactive page**, then choose **Slide deck** layout in screen details (dots between pages).
+- Use the pan/zoom scene for items; use **action sequences** on items for `info_popup`, `goto_page`, `show_item`, `hide_item`, `toggle_item`.
+- For deck-style drag, set **`draggable_mode`** and **`drop_target_id`** on items (JSON / future UI); `pass_rule` on the story payload: `visit_all_pages`, `drag_targets_complete`, or `story_complete`.
 
 ## Runtime (Student / Preview)
 - Verify slide renders background + elements in z-order.
@@ -19,9 +15,9 @@
 - Verify `free` drag updates element position during interaction.
 - Verify `check_target` drag marks success when dropped on target and wrong feedback when missed.
 - Verify `pass_rule: drag_targets_complete` unlocks Next only after all checked drags are completed.
-- Verify `pass_rule: visit_all_slides` unlocks Next only after every slide has been visited.
+- Verify story `pass_rule: visit_all_pages` unlocks lesson Next only after every page has been visited.
 
 ## Regression Checks
 - Existing interaction subtypes still render in editor and preview.
-- Story screens still load editor and preview correctly.
-- Screen outline row label and thumbnail render for the new subtype.
+- Story screens (book and slide layout) still load editor and preview correctly.
+- Migrated legacy presentation rows play as slide-deck stories; outline/thumbnail use story rules once parsed.

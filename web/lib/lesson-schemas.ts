@@ -4,13 +4,14 @@ export const guideSchema = z
   .object({
     image_url: z.string().optional(),
     tip_text: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   })
   .optional();
 
 export const startPayloadSchema = z.object({
   type: z.literal("start"),
   image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   cta_label: z.string().optional().default("Start learning"),
   /** Optional TTS line; player also offers lesson title read-aloud */
   read_aloud_title: z.string().optional(),
@@ -109,6 +110,7 @@ export const storyActionStepKindSchema = z.enum([
   "move",
   "show_item",
   "hide_item",
+  "toggle_item",
   "play_sound",
   "tts",
   "smart_line",
@@ -500,6 +502,9 @@ export const storyItemSchema = z
     /** Simple, stable image scale multiplier inside the item box. */
     image_scale: z.number().min(0.25).max(8).default(1),
     z_index: z.number().int().default(0),
+    /** Deck-style drag (migrated presentations); independent of phase `drag_match`. */
+    draggable_mode: z.enum(["none", "free", "check_target"]).optional(),
+    drop_target_id: z.string().optional(),
     enter: storyAnimationSpecSchema.optional(),
     exit: storyAnimationSpecSchema.optional(),
     emphasis: storyAnimationSpecSchema.optional(),
@@ -568,7 +573,7 @@ export const storyPageSchema = z
     id: z.string(),
     title: z.string().optional(),
     background_image_url: z.string().optional(),
-    image_fit: z.enum(["cover", "contain"]).optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
     background_crop: z
       .object({
         x_percent: z.number().min(-100).max(100).default(0),
@@ -981,7 +986,7 @@ export const storyPayloadSchema = z.object({
   /** Optional schema marker for new sequence/idle fields. */
   payload_version: z.literal(2).optional(),
   image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   /** Shown when set; otherwise story image is used if present */
   video_url: z.string().optional(),
   body_text: z.string(),
@@ -993,6 +998,10 @@ export const storyPayloadSchema = z.object({
   pass_rule: z
     .enum(["story_complete", "visit_all_pages", "drag_targets_complete"])
     .optional(),
+  /** When pass_rule is satisfied, optionally advance to the next lesson screen (student player). */
+  auto_advance_on_pass: z.boolean().optional(),
+  /** Gold awarded when pass_rule is satisfied (student player). */
+  gold_reward_on_pass: z.number().int().min(0).max(100).optional(),
   /** Multi-page book; when absent or empty, legacy single-page fields above apply */
   pages: z.array(storyPageSchema).optional(),
   page_turn_style: z.enum(["slide", "curl"]).optional(),
@@ -1089,7 +1098,7 @@ export function getNormalizedStoryPages(payload: StoryPayload): NormalizedStoryP
         id: p.id,
         title: p.title,
         background_image_url: p.background_image_url,
-        image_fit: p.image_fit ?? payload.image_fit ?? "cover",
+        image_fit: p.image_fit ?? payload.image_fit ?? "contain",
         background_crop: p.background_crop,
         background_color: p.background_color,
         video_url: p.video_url,
@@ -1118,7 +1127,7 @@ export function getNormalizedStoryPages(payload: StoryPayload): NormalizedStoryP
     {
       id: "legacy",
       background_image_url: payload.image_url,
-      image_fit: payload.image_fit ?? "cover",
+      image_fit: payload.image_fit ?? "contain",
       background_crop: undefined,
       video_url: payload.video_url,
       body_text: payload.body_text,
@@ -1401,7 +1410,7 @@ const presentationSlideSchema = z.object({
   background_image_url: z.string().optional(),
   background_color: z.string().optional(),
   video_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   elements: z.array(presentationElementSchema).default([]),
 });
 
@@ -1478,11 +1487,160 @@ export const presentationInteractivePayloadSchema = z
     }
   });
 
+export type PresentationInteractivePayload = z.infer<typeof presentationInteractivePayloadSchema>;
+
+function presentationActionToStorySteps(
+  action: NonNullable<
+    PresentationInteractivePayload["slides"][number]["elements"][number]["actions"]
+  >[number],
+  stepKey: string,
+): StoryActionStep[] {
+  switch (action.type) {
+    case "info_popup":
+      return [
+        {
+          id: `${stepKey}_popup`,
+          kind: "info_popup",
+          popup_title: action.title,
+          popup_body: action.body,
+          popup_image_url: action.image_url,
+          popup_video_url: action.video_url,
+        },
+      ];
+    case "navigate_slide": {
+      if (action.target === "next") {
+        return [{ id: `${stepKey}_go`, kind: "goto_page", goto_target: "next_page" }];
+      }
+      if (action.target === "prev") {
+        return [{ id: `${stepKey}_go`, kind: "goto_page", goto_target: "prev_page" }];
+      }
+      return [
+        {
+          id: `${stepKey}_go`,
+          kind: "goto_page",
+          goto_target: "page_id",
+          goto_page_id: action.slide_id,
+        },
+      ];
+    }
+    case "show_element":
+      return [
+        { id: `${stepKey}_show`, kind: "show_item", target_item_id: action.element_id },
+      ];
+    case "hide_element":
+      return [
+        { id: `${stepKey}_hide`, kind: "hide_item", target_item_id: action.element_id },
+      ];
+    case "toggle_element":
+      return [
+        { id: `${stepKey}_tog`, kind: "toggle_item", target_item_id: action.element_id },
+      ];
+    default: {
+      const _exhaustive: never = action;
+      return _exhaustive;
+    }
+  }
+}
+
+function presentationElementToStoryItem(
+  el: PresentationInteractivePayload["slides"][number]["elements"][number],
+): StoryItem {
+  const kind = el.kind;
+  let image_url = el.image_url;
+  if (kind === "image" && !image_url?.trim()) {
+    image_url = "https://placehold.co/120x120/e2e8f0/64748b?text=·";
+  }
+  const base: Record<string, unknown> = {
+    id: el.id,
+    name: el.label,
+    kind,
+    x_percent: el.x_percent,
+    y_percent: el.y_percent,
+    w_percent: el.w_percent,
+    h_percent: el.h_percent,
+    z_index: el.z_index ?? 0,
+    show_on_start: el.visible !== false,
+    image_url,
+    text: el.text,
+    color_hex: el.color_hex,
+    line_width_px: el.line_width_px,
+    draggable_mode: el.draggable_mode ?? "none",
+    drop_target_id: el.drop_target_id,
+  };
+  const sequences: StoryActionSequence[] = [];
+  if (el.actions?.length) {
+    const steps: StoryActionStep[] = [];
+    el.actions.forEach((action, i) => {
+      steps.push(...presentationActionToStorySteps(action, `${el.id}_a${i}`));
+    });
+    if (steps.length > 0) {
+      sequences.push({
+        id: `${el.id}_click`,
+        event: "click",
+        steps,
+      });
+    }
+  }
+  if (sequences.length > 0) {
+    base.action_sequences = sequences;
+  }
+  return storyItemSchema.parse(base);
+}
+
+function presentationSlideToStoryPage(
+  slide: PresentationInteractivePayload["slides"][number],
+): StoryPage {
+  return storyPageSchema.parse({
+    id: slide.id,
+    title: slide.title,
+    background_image_url: slide.background_image_url,
+    background_color: slide.background_color,
+    video_url: slide.video_url,
+    image_fit: slide.image_fit ?? "contain",
+    body_text: slide.body_text ?? "",
+    items: slide.elements.map(presentationElementToStoryItem),
+  });
+}
+
+/** Convert legacy `presentation_interactive` JSON into a `story` payload (slide deck). */
+export function migratePresentationInteractiveFromParsed(
+  p: PresentationInteractivePayload,
+  rawEnvelope?: unknown,
+): z.infer<typeof storyPayloadSchema> {
+  const pages = p.slides.map(presentationSlideToStoryPage);
+  const pass_rule =
+    p.pass_rule === "visit_all_slides" ? ("visit_all_pages" as const) : ("drag_targets_complete" as const);
+  const env =
+    rawEnvelope && typeof rawEnvelope === "object" ?
+      (rawEnvelope as { gold_reward_on_pass?: number; auto_advance_on_pass?: boolean })
+    : {};
+  return storyPayloadSchema.parse({
+    type: "story",
+    layout_mode: "slide",
+    body_text: p.body_text ?? p.title ?? "",
+    read_aloud_text: undefined,
+    tts_lang: "en-US",
+    guide: p.guide,
+    pass_rule,
+    gold_reward_on_pass: env.gold_reward_on_pass,
+    auto_advance_on_pass: env.auto_advance_on_pass,
+    pages,
+    image_url: pages[0]?.background_image_url,
+    image_fit: pages[0]?.image_fit,
+    video_url: pages[0]?.video_url,
+  });
+}
+
+export function migratePresentationInteractiveToStory(raw: unknown): z.infer<typeof storyPayloadSchema> {
+  const p = presentationInteractivePayloadSchema.parse(raw);
+  return migratePresentationInteractiveFromParsed(p, raw);
+}
+
 export const mcQuizPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("mc_quiz"),
   image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   body_text: z.string().optional(),
   question: z.string(),
   options: z.array(
@@ -1501,6 +1659,7 @@ export const clickTargetsPayloadSchema = z
     type: z.literal("interaction"),
     subtype: z.literal("click_targets"),
     image_url: z.string(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
     body_text: z.string(),
     targets: z.array(rectTargetSchema),
     /** Single-correct tap (legacy) */
@@ -1545,6 +1704,7 @@ export const dragSentencePayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("drag_sentence"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   body_text: z.string().optional(),
   sentence_slots: z.array(z.string()),
   word_bank: z.array(z.string()),
@@ -1556,6 +1716,7 @@ export const trueFalsePayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("true_false"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   statement: z.string(),
   correct: z.boolean(),
   guide: guideSchema,
@@ -1565,6 +1726,7 @@ export const shortAnswerPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("short_answer"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   prompt: z.string(),
   acceptable_answers: z.array(z.string()).min(1),
   case_insensitive: z.boolean().optional().default(true),
@@ -1581,7 +1743,7 @@ export const fillBlanksPayloadSchema = z
     type: z.literal("interaction"),
     subtype: z.literal("fill_blanks"),
     image_url: z.string().optional(),
-    image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
     image_size: z.enum(["small", "normal"]).optional().default("normal"),
     body_text: z.string().optional(),
     /** e.g. "Hello __1__" — placeholders __1__, __2__, ... */
@@ -1612,7 +1774,7 @@ export const fixTextPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("fix_text"),
   image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   body_text: z.string().optional(),
   broken_text: z.string(),
   acceptable: z.array(z.string()).min(1),
@@ -1676,6 +1838,7 @@ export const hotspotInfoPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("hotspot_info"),
   image_url: z.string(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   body_text: z.string().optional(),
   hotspots: z.array(hotspotInfoItemSchema).min(1),
   require_all_viewed: z.boolean().optional().default(false),
@@ -1687,6 +1850,7 @@ export const hotspotGatePayloadSchema = z
     type: z.literal("interaction"),
     subtype: z.literal("hotspot_gate"),
     image_url: z.string(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
     body_text: z.string().optional(),
     targets: z.array(rectTargetSchema).min(1),
     mode: z.enum(["single", "sequence", "all"]),
@@ -1704,6 +1868,7 @@ export const listenHotspotSequencePayloadSchema = z
     type: z.literal("interaction"),
     subtype: z.literal("listen_hotspot_sequence"),
     image_url: z.string(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
     body_text: z.string().optional(),
     prompt_audio_url: z.string(),
     targets: z.array(rectTargetSchema).min(1),
@@ -1741,6 +1906,7 @@ export const listenColorWritePayloadSchema = z
     type: z.literal("interaction"),
     subtype: z.literal("listen_color_write"),
     image_url: z.string(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
     body_text: z.string().optional(),
     prompt_audio_url: z.string().optional(),
     allow_replay: z.boolean().optional().default(true),
@@ -1818,7 +1984,7 @@ export const letterMixupPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("letter_mixup"),
   image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   /** Plays when the student taps the picture (upload / library / record in editor). */
   image_audio_url: z.string().optional(),
   /** When true, tap uses device TTS instead of `image_audio_url`. */
@@ -2000,6 +2166,7 @@ export const dragMatchPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("drag_match"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   body_text: z.string().optional(),
   zones: z.array(dragZoneSchema).min(1),
   tokens: z.array(dragTokenSchema).min(1),
@@ -2012,6 +2179,8 @@ export const soundSortPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("sound_sort"),
   body_text: z.string().optional(),
+  /** How choice thumbnails are scaled in the grid */
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   prompt_audio_url: z.string(),
   choices: z
     .array(
@@ -2030,6 +2199,7 @@ export const essayPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("essay"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   prompt: z.string(),
   min_chars: z.number().int().min(0).optional(),
   /** Terms the teacher expects — used for optional hints and post-submit keyword summary */
@@ -2045,6 +2215,7 @@ export const voiceQuestionPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("voice_question"),
   image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   prompt: z.string(),
   prompt_audio_url: z.string().optional(),
   max_duration_seconds: z.number().int().min(5).max(300).optional().default(90),
@@ -2067,6 +2238,7 @@ export const guidedDialoguePayloadSchema = z
     subtype: z.literal("guided_dialogue"),
     character_name: z.string(),
     character_image_url: z.string(),
+    character_image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
     intro_text: z.string().optional(),
     turns: z.array(guidedDialogueTurnSchema).min(2).max(8),
     require_turn_audio_playback: z.boolean().optional().default(false),
@@ -2109,7 +2281,6 @@ export const interactionPayloadSchema = z.intersection(
     essayPayloadSchema,
     voiceQuestionPayloadSchema,
     guidedDialoguePayloadSchema,
-    presentationInteractivePayloadSchema,
   ]),
   z.object({
     auto_advance_on_pass: z.boolean().optional(),
@@ -2146,6 +2317,20 @@ export function parseScreenPayload(
     return r.success ? r.data : null;
   }
   if (screenType === "interaction") {
+    if (
+      raw &&
+      typeof raw === "object" &&
+      (raw as { subtype?: string }).subtype === "presentation_interactive"
+    ) {
+      const migrated = presentationInteractivePayloadSchema.safeParse(raw);
+      if (migrated.success) {
+        try {
+          return migratePresentationInteractiveFromParsed(migrated.data, raw);
+        } catch {
+          /* fall through */
+        }
+      }
+    }
     const r = interactionPayloadSchema.safeParse(raw);
     return r.success ? r.data : null;
   }

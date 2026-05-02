@@ -76,8 +76,6 @@ function screenOutlineBase(screen: { screen_type: string; payload: unknown }): s
         return `Voice question: ${p.prompt.slice(0, 32)}${p.prompt.length > 32 ? "…" : ""}`;
       case "guided_dialogue":
         return `Guided dialogue: ${p.character_name}`;
-      case "presentation_interactive":
-        return `Interactive presentation${p.slides.length > 1 ? ` · ${p.slides.length} slides` : ""}`;
       default:
         return `Interaction: ${(p as { subtype: string }).subtype}`;
     }
@@ -145,9 +143,6 @@ export function screenThumbnailUrl(screen: {
     );
   }
   if (p.type === "interaction") {
-    if (p.subtype === "presentation_interactive") {
-      return p.slides[0]?.background_image_url ?? null;
-    }
     if ("image_url" in p && p.image_url) return p.image_url;
     if (p.subtype === "sound_sort") return p.choices[0]?.image_url ?? null;
   }

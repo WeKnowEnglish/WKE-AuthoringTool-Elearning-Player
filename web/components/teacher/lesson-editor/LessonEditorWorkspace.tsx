@@ -15,6 +15,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import type { LessonScreenRow } from "@/lib/data/catalog";
 import type { AiGenerationDiagnosticsV1 } from "@/lib/ai/ai-generation-diagnostics";
@@ -57,14 +58,28 @@ import { CEFR_LEVEL_OPTIONS } from "@/lib/cefr-level-options";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
 import { useTeacherEditorHeader } from "@/components/teacher/TeacherEditorHeaderContext";
 import { LessonLearningGoalsTable } from "@/app/teacher/(secure)/modules/[id]/lessons/[lessonId]/LessonLearningGoalsTable";
-import { LessonPreviewOverlay } from "./LessonPreviewOverlay";
-import { QuizBuilder } from "./QuizBuilder";
 import {
   ScreenEditorCard,
   type ScreenEditorCardHandle,
+  type ScreenPendingSaveSnapshot,
   type ScreenEditorStatus,
 } from "./ScreenEditorCard";
 import Image from "next/image";
+
+const QuizBuilder = dynamic(
+  () => import("./QuizBuilder").then((m) => m.QuizBuilder),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-4 text-sm text-neutral-600">Loading quiz builder…</div>
+    ),
+  },
+);
+
+const LessonPreviewOverlay = dynamic(
+  () => import("./LessonPreviewOverlay").then((m) => m.LessonPreviewOverlay),
+  { ssr: false },
+);
 
 type Props = {
   moduleId: string;
@@ -94,13 +109,6 @@ type Props = {
   /** Right sidebar: skills and tools only (objectives live in the Plan panel). */
   children?: ReactNode;
 };
-
-const ADD_SCREEN_BUTTONS: { kind: AddScreenKind; label: string }[] = [
-  { kind: "start", label: "+ Start" },
-  { kind: "interactive_page", label: "+ Interactive page" },
-  { kind: "hotspot_info", label: "+ Hotspot info" },
-  { kind: "guided_dialogue", label: "+ Guided dialogue" },
-];
 
 function screensSyncKey(list: LessonScreenRow[]) {
   return list.map((s) => `${s.id}:${s.order_index}:${s.updated_at ?? ""}`).join("|");
@@ -181,8 +189,6 @@ const LESSON_HDR_BTN =
 type LessonWorkspaceHeaderToolbarProps = {
   lessonMenuOpen: boolean;
   setLessonMenuOpen: Dispatch<SetStateAction<boolean>>;
-  addScreenOpen: boolean;
-  setAddScreenOpen: Dispatch<SetStateAction<boolean>>;
   editorHelpOpen: boolean;
   setEditorHelpOpen: Dispatch<SetStateAction<boolean>>;
   /** Stable flag — student preview is disabled while a quiz group is selected (avoid new object identity each render). */
@@ -202,8 +208,6 @@ type LessonWorkspaceHeaderToolbarProps = {
 function LessonWorkspaceHeaderToolbar({
   lessonMenuOpen,
   setLessonMenuOpen,
-  addScreenOpen,
-  setAddScreenOpen,
   editorHelpOpen,
   setEditorHelpOpen,
   previewDisabledForQuiz,
@@ -229,16 +233,6 @@ function LessonWorkspaceHeaderToolbar({
         title="Switch lesson in this module"
       >
         Lessons
-      </button>
-      <button
-        type="button"
-        onClick={() => setAddScreenOpen((v) => !v)}
-        aria-expanded={addScreenOpen}
-        aria-label={addScreenOpen ? "Close add activity" : "Add activity"}
-        className={LESSON_HDR_BTN}
-        title="Add screen or quiz"
-      >
-        Add
       </button>
       <button
         type="button"
@@ -424,7 +418,6 @@ export function LessonEditorWorkspace({
   const isActivityLibraryMirror = Boolean(activityLibraryMirrorId);
   const shellRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [addScreenOpen, setAddScreenOpen] = useState(false);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const [liveScreens, setLiveScreens] = useState<LessonScreenRow[]>(screens);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -449,13 +442,15 @@ export function LessonEditorWorkspace({
   const [lessonMenuOpen, setLessonMenuOpen] = useState(false);
   const [editorHelpOpen, setEditorHelpOpen] = useState(false);
   const [advancedJsonOpen, setAdvancedJsonOpen] = useState(false);
-  const { setLessonToolbarSlot, notifyScreenSaved } = useTeacherEditorHeader();
+  const { setLessonToolbarSlot, notifyScreenSaved, setSaveState } = useTeacherEditorHeader();
 
   const [screenEditorStatus, setScreenEditorStatus] = useState<ScreenEditorStatus>({
     isSaving: false,
-    saveHint: null,
+    isDirty: false,
+    lastSavedAt: null,
     err: null,
   });
+  const [storyboardBusy, setStoryboardBusy] = useState(false);
   const screenEditorRef = useRef<ScreenEditorCardHandle>(null);
   const bookendOpeningRef = useRef<ScreenEditorCardHandle>(null);
   const bookendCongratsRef = useRef<ScreenEditorCardHandle>(null);
@@ -494,6 +489,7 @@ export function LessonEditorWorkspace({
     () => true,
     () => false,
   );
+  const lastUserActivityAtRef = useRef(Date.now());
 
   const serverKey = useMemo(() => screensSyncKey(screens), [screens]);
 
@@ -502,19 +498,20 @@ export function LessonEditorWorkspace({
       let jumpToIndex: number | null = null;
       setLiveScreens((prev) => {
         const merged = mergeServerScreensWithLocal(screens, prev);
-        if (areScreensEquivalent(prev, merged)) return prev;
-        if (typeof window !== "undefined" && window.sessionStorage.getItem(jumpNewestKey) === "1") {
-          window.sessionStorage.removeItem(jumpNewestKey);
-          jumpToIndex = Math.max(0, merged.length - 1);
-        } else if (
-          typeof window !== "undefined" &&
-          window.sessionStorage.getItem(jumpOpeningKey) === "1"
-        ) {
-          window.sessionStorage.removeItem(jumpOpeningKey);
-          const opening = findOpeningStartScreen(merged);
-          jumpToIndex =
-            opening ? Math.max(0, merged.findIndex((x) => x.id === opening.id)) : 0;
+        if (typeof window !== "undefined") {
+          const shouldJumpNewest = window.sessionStorage.getItem(jumpNewestKey) === "1";
+          const shouldJumpOpening = window.sessionStorage.getItem(jumpOpeningKey) === "1";
+          if (shouldJumpNewest) {
+            window.sessionStorage.removeItem(jumpNewestKey);
+            jumpToIndex = Math.max(0, merged.length - 1);
+          } else if (shouldJumpOpening) {
+            window.sessionStorage.removeItem(jumpOpeningKey);
+            const opening = findOpeningStartScreen(merged);
+            jumpToIndex =
+              opening ? Math.max(0, merged.findIndex((x) => x.id === opening.id)) : 0;
+          }
         }
+        if (areScreensEquivalent(prev, merged)) return prev;
         return merged;
       });
       if (jumpToIndex != null) {
@@ -635,13 +632,6 @@ export function LessonEditorWorkspace({
     });
   }, []);
 
-  const addScreenButtonOptions = useMemo(() => {
-    const hasOpening = liveScreens.some((s) =>
-      isOpeningStartScreen(s.screen_type, s.payload),
-    );
-    return ADD_SCREEN_BUTTONS.filter((b) => b.kind !== "start" || !hasOpening);
-  }, [liveScreens]);
-
   const checklist = useMemo(
     () => lessonPublishChecklist({ published, screens: liveScreens }),
     [published, liveScreens],
@@ -695,8 +685,6 @@ export function LessonEditorWorkspace({
       <LessonWorkspaceHeaderToolbar
         lessonMenuOpen={lessonMenuOpen}
         setLessonMenuOpen={setLessonMenuOpen}
-        addScreenOpen={addScreenOpen}
-        setAddScreenOpen={setAddScreenOpen}
         editorHelpOpen={editorHelpOpen}
         setEditorHelpOpen={setEditorHelpOpen}
         previewDisabledForQuiz={previewDisabledForQuiz}
@@ -715,7 +703,6 @@ export function LessonEditorWorkspace({
     return () => setLessonToolbarSlot(null);
   }, [
     lessonMenuOpen,
-    addScreenOpen,
     editorHelpOpen,
     previewDisabledForQuiz,
     setLessonToolbarSlot,
@@ -746,6 +733,10 @@ export function LessonEditorWorkspace({
   /** Relative path only — same on server and client (avoids hydration mismatch from `window`). */
   const studentPath = `/learn/${moduleSlug}/${lessonSlug}`;
   const modulePath = `/teacher/modules/${moduleId}`;
+
+  useEffect(() => {
+    router.prefetch(modulePath);
+  }, [router, modulePath]);
 
   const lessonMenuOverlay =
     lessonMenuOpen && canUseDomPortal ?
@@ -839,6 +830,8 @@ export function LessonEditorWorkspace({
   }
 
   async function applyReorder(orderedIds: string[]) {
+    const flushed = await saveVisibleScreenEditors();
+    if (!flushed) return;
     const prev = liveScreens;
     const map = new Map(liveScreens.map((s) => [s.id, s]));
     const proposedRows = orderedIds
@@ -891,6 +884,117 @@ export function LessonEditorWorkspace({
     void applyReorder(next);
   }
 
+  function applyRowsAfterMutation(
+    rows: LessonScreenRow[],
+    previousRows: LessonScreenRow[],
+    fallbackSelectedId: string | null,
+  ) {
+    setLiveScreens(rows);
+    if (!rows.length) {
+      setSelectedIndex(0);
+      return;
+    }
+    const previousIds = new Set(previousRows.map((r) => r.id));
+    const inserted = rows.find((r) => !previousIds.has(r.id))?.id ?? null;
+    const preferredId = inserted ?? fallbackSelectedId;
+    if (preferredId) {
+      const idx = rows.findIndex((r) => r.id === preferredId);
+      if (idx >= 0) {
+        setSelectedIndex(idx);
+        return;
+      }
+    }
+    setSelectedIndex((prev) => Math.min(prev, rows.length - 1));
+  }
+
+  async function runStoryboardMutation(
+    run: () => Promise<LessonScreenRow[]>,
+    fallbackSelectedId: string | null,
+    onError: string,
+  ) {
+    if (storyboardBusy) return;
+    const flushed = await saveVisibleScreenEditors();
+    if (!flushed) return;
+    const before = liveScreens;
+    setStoryboardBusy(true);
+    try {
+      const rows = await run();
+      applyRowsAfterMutation(rows, before, fallbackSelectedId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : onError;
+      setScreenEditorStatus((s) => ({ ...s, err: msg }));
+    } finally {
+      setStoryboardBusy(false);
+    }
+  }
+
+  async function onMoveScreenClick(
+    e: React.MouseEvent<HTMLButtonElement>,
+    screenId: string,
+    direction: "up" | "down",
+  ) {
+    e.stopPropagation();
+    const selectedId = liveScreens[safeIndex]?.id ?? null;
+    await runStoryboardMutation(
+      () => moveScreen(screenId, lessonId, moduleId, direction, new FormData()),
+      selectedId,
+      "Could not move screen.",
+    );
+  }
+
+  async function onDeleteScreenClick(
+    e: React.MouseEvent<HTMLButtonElement>,
+    screenId: string,
+    label: string,
+    shouldJumpToOpening: boolean,
+    promptTitle = "Delete this storyboard item?",
+  ) {
+    e.stopPropagation();
+    const shouldDelete = window.confirm(`${promptTitle}\n\n${label}`);
+    if (!shouldDelete) return;
+    if (shouldJumpToOpening && typeof window !== "undefined") {
+      window.sessionStorage.setItem(jumpOpeningKey, "1");
+    }
+    const selectedId = liveScreens[safeIndex]?.id ?? null;
+    await runStoryboardMutation(
+      () => deleteScreen(screenId, lessonId, moduleId, new FormData()),
+      selectedId,
+      "Could not delete screen.",
+    );
+  }
+
+  async function onDuplicateScreenClick(
+    e: React.MouseEvent<HTMLButtonElement>,
+    screenId: string,
+  ) {
+    e.stopPropagation();
+    const selectedId = liveScreens[safeIndex]?.id ?? null;
+    await runStoryboardMutation(
+      () => duplicateScreen(screenId, lessonId, moduleId, new FormData()),
+      selectedId,
+      "Could not duplicate screen.",
+    );
+  }
+
+  async function onAddTemplateClick(kind: AddScreenKind) {
+    const selectedId = liveScreens[safeIndex]?.id ?? null;
+    await runStoryboardMutation(
+      () => addScreenTemplate(lessonId, moduleId, kind, new FormData()),
+      selectedId,
+      "Could not add activity.",
+    );
+  }
+
+  async function onCreateQuizGroupClick() {
+    const fd = new FormData();
+    const selectedId = liveScreens[safeIndex]?.id ?? null;
+    await runStoryboardMutation(
+      () => createQuizGroup(lessonId, moduleId, fd),
+      selectedId,
+      "Could not create quiz.",
+    );
+  }
+
   const selectedScreen = liveScreens[safeIndex];
 
   const openingScreen = useMemo(
@@ -908,14 +1012,39 @@ export function LessonEditorWorkspace({
       (selectedScreen.id === openingScreen.id || selectedScreen.id === congratsScreen.id),
   );
 
-  async function saveVisibleScreenEditors() {
+  const saveVisibleScreenEditors = useCallback(async () => {
     if (bookendEditorMode) {
-      await bookendOpeningRef.current?.saveNow();
-      await bookendCongratsRef.current?.saveNow();
+      const openingOk = (await bookendOpeningRef.current?.saveNow()) ?? true;
+      const congratsOk = (await bookendCongratsRef.current?.saveNow()) ?? true;
+      return openingOk && congratsOk;
     } else {
-      await screenEditorRef.current?.saveNow();
+      return (await screenEditorRef.current?.saveNow()) ?? true;
     }
-  }
+    return true;
+  }, [bookendEditorMode]);
+
+  const pendingSnapshotsForVisibleEditors = useCallback((): ScreenPendingSaveSnapshot[] => {
+    if (bookendEditorMode) {
+      return [bookendOpeningRef.current, bookendCongratsRef.current]
+        .map((r) => r?.getPendingSaveSnapshot())
+        .filter((v): v is ScreenPendingSaveSnapshot => v != null);
+    }
+    const one = screenEditorRef.current?.getPendingSaveSnapshot();
+    return one ? [one] : [];
+  }, [bookendEditorMode]);
+
+  const sendPendingSnapshotsWithBeacon = useCallback(() => {
+    if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return;
+    const snapshots = pendingSnapshotsForVisibleEditors();
+    for (const snap of snapshots) {
+      const fd = new FormData();
+      fd.set("lesson_id", snap.lessonId);
+      fd.set("module_id", snap.moduleId);
+      fd.set("screen_type", snap.screenType);
+      fd.set("payload_json", snap.payloadJson);
+      navigator.sendBeacon(`/api/teacher/screens/${snap.screenId}/save`, fd);
+    }
+  }, [pendingSnapshotsForVisibleEditors]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -927,9 +1056,75 @@ export function LessonEditorWorkspace({
   useEffect(() => {
     if (quizGroupId == null) return;
     queueMicrotask(() => {
-      setScreenEditorStatus({ isSaving: false, saveHint: null, err: null });
+      setScreenEditorStatus({ isSaving: false, isDirty: false, lastSavedAt: null, err: null });
     });
   }, [quizGroupId]);
+
+  useEffect(() => {
+    if (!setSaveState) return;
+    if (screenEditorStatus.err) {
+      setSaveState({
+        status: "error",
+        lastSavedAt: screenEditorStatus.lastSavedAt,
+        error: screenEditorStatus.err,
+      });
+      return;
+    }
+    if (screenEditorStatus.isSaving) {
+      setSaveState({
+        status: "saving",
+        lastSavedAt: screenEditorStatus.lastSavedAt,
+        error: null,
+      });
+      return;
+    }
+    if (screenEditorStatus.isDirty) {
+      setSaveState({
+        status: "editing",
+        lastSavedAt: screenEditorStatus.lastSavedAt,
+        error: null,
+      });
+      return;
+    }
+    setSaveState({
+      status: "saved",
+      lastSavedAt: screenEditorStatus.lastSavedAt,
+      error: null,
+    });
+  }, [screenEditorStatus, setSaveState]);
+
+  useEffect(
+    () => () => {
+      setSaveState(null);
+    },
+    [setSaveState],
+  );
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const onPointerMove = () => {
+      lastUserActivityAtRef.current = Date.now();
+    };
+    shell.addEventListener("pointermove", onPointerMove, { passive: true });
+    return () => shell.removeEventListener("pointermove", onPointerMove);
+  }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "hidden") return;
+      sendPendingSnapshotsWithBeacon();
+    };
+    const onPageHide = () => {
+      sendPendingSnapshotsWithBeacon();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [sendPendingSnapshotsWithBeacon]);
 
   const leftSidebarScroll = "space-y-4 xl:overscroll-contain";
   const rightSidebarScroll = "space-y-4 xl:overscroll-contain xl:pr-1";
@@ -1208,64 +1403,45 @@ export function LessonEditorWorkspace({
                   </span>
                 </button>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
-                  <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
-                    <button
-                      type="submit"
-                      disabled={pinnedBookend}
-                      onClick={(e) => e.stopPropagation()}
-                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Up
-                    </button>
-                  </form>
-                  <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
-                    <button
-                      type="submit"
-                      disabled={pinnedBookend}
-                      onClick={(e) => e.stopPropagation()}
-                      className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Down
-                    </button>
-                  </form>
-                  <form action={duplicateScreen.bind(null, s.id, lessonId, moduleId)}>
-                    <input type="hidden" name="duplicate_screen" value={s.id} />
-                    <button
-                      type="submit"
-                      disabled={pinnedBookend}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (typeof window !== "undefined") {
-                          window.sessionStorage.setItem(jumpNewestKey, "1");
-                        }
-                      }}
-                      className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 active:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Dup
-                    </button>
-                  </form>
-                  <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
-                    <button
-                      type="submit"
-                      disabled={pinnedBookend}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const shouldDelete = window.confirm(
-                          `Delete this storyboard item?\n\n${screenOutlineLabel(s, liveScreens)}`,
-                        );
-                        if (!shouldDelete) {
-                          e.preventDefault();
-                          return;
-                        }
-                        if (i === safeIndex && typeof window !== "undefined") {
-                          window.sessionStorage.setItem(jumpOpeningKey, "1");
-                        }
-                      }}
-                      className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Del
-                    </button>
-                  </form>
+                  <button
+                    type="button"
+                    disabled={pinnedBookend || storyboardBusy}
+                    onClick={(e) => void onMoveScreenClick(e, s.id, "up")}
+                    className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pinnedBookend || storyboardBusy}
+                    onClick={(e) => void onMoveScreenClick(e, s.id, "down")}
+                    className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Down
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pinnedBookend || storyboardBusy}
+                    onClick={(e) => void onDuplicateScreenClick(e, s.id)}
+                    className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 active:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Dup
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pinnedBookend || storyboardBusy}
+                    onClick={(e) =>
+                      void onDeleteScreenClick(
+                        e,
+                        s.id,
+                        screenOutlineLabel(s, liveScreens),
+                        i === safeIndex,
+                      )
+                    }
+                    className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Del
+                  </button>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1362,45 +1538,38 @@ export function LessonEditorWorkspace({
                 </span>
               </button>
               <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
-                <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
-                  <button
-                    type="submit"
-                    onClick={(e) => e.stopPropagation()}
-                    className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
-                  >
-                    Up
-                  </button>
-                </form>
-                <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
-                  <button
-                    type="submit"
-                    onClick={(e) => e.stopPropagation()}
-                    className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
-                  >
-                    Down
-                  </button>
-                </form>
-                <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
-                  <button
-                    type="submit"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const shouldDelete = window.confirm(
-                        `Delete first question in this quiz (from the lesson)?\n\n${screenOutlineLabel(s, liveScreens)}`,
-                      );
-                      if (!shouldDelete) {
-                        e.preventDefault();
-                        return;
-                      }
-                      if (seg.screenIndices.includes(safeIndex) && typeof window !== "undefined") {
-                        window.sessionStorage.setItem(jumpOpeningKey, "1");
-                      }
-                    }}
-                    className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200"
-                  >
-                    Del
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  disabled={storyboardBusy}
+                  onClick={(e) => void onMoveScreenClick(e, s.id, "up")}
+                  className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Up
+                </button>
+                <button
+                  type="button"
+                  disabled={storyboardBusy}
+                  onClick={(e) => void onMoveScreenClick(e, s.id, "down")}
+                  className="rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Down
+                </button>
+                <button
+                  type="button"
+                  disabled={storyboardBusy}
+                  onClick={(e) =>
+                    void onDeleteScreenClick(
+                      e,
+                      s.id,
+                      screenOutlineLabel(s, liveScreens),
+                      seg.screenIndices.includes(safeIndex),
+                      "Delete first question in this quiz (from the lesson)?",
+                    )
+                  }
+                  className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 active:bg-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Del
+                </button>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -1566,6 +1735,11 @@ export function LessonEditorWorkspace({
       }
       if (!Array.isArray(data.screens)) {
         setPlanMsg("Invalid response from server");
+        return;
+      }
+      const flushed = await saveVisibleScreenEditors();
+      if (!flushed) {
+        setPlanMsg("Could not save latest edits before applying generated screens.");
         return;
       }
       await appendScreensFromAi(
@@ -1866,6 +2040,24 @@ export function LessonEditorWorkspace({
                 "Pinned: stays open beside the editor. Drag to reorder; quiz groups are one tile."
               : "Tap a screen to open it — this menu closes. Pin to keep it open as a column."}
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={storyboardBusy}
+                onClick={() => void onAddTemplateClick("interactive_page")}
+                className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold shadow-sm hover:bg-neutral-50 active:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+              >
+                Interactive Story
+              </button>
+              <button
+                type="button"
+                disabled={storyboardBusy}
+                onClick={() => void onCreateQuizGroupClick()}
+                className="rounded border border-sky-300 bg-sky-50 px-2 py-1.5 text-xs font-semibold text-sky-900 shadow-sm hover:bg-sky-100 active:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+              >
+                Quiz
+              </button>
+            </div>
           </div>
           <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded border border-neutral-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm">
             <input
@@ -2003,69 +2195,6 @@ export function LessonEditorWorkspace({
   return (
     <div className="relative flex min-h-0 flex-1 flex-col space-y-0">
       {lessonMenuOverlay}
-      {canUseDomPortal && addScreenOpen ?
-        createPortal(
-          <>
-            <button
-              type="button"
-              className="fixed inset-0 z-[44] bg-black/20"
-              aria-label="Close add activity"
-              onClick={() => setAddScreenOpen(false)}
-            />
-            <div
-              className="fixed right-3 left-3 z-[45] max-h-[min(85dvh,560px)] overflow-y-auto overscroll-contain rounded-xl border border-neutral-200 bg-neutral-50/98 p-4 shadow-xl backdrop-blur-sm sm:left-auto sm:w-[min(100%-1.5rem,36rem)]"
-              style={{
-                top: "calc(var(--lesson-editor-toolbar-height, 3.5rem) + 0.5rem)",
-              }}
-            >
-              <div className="flex items-center justify-between gap-2 border-b border-neutral-200 pb-2">
-                <p className="text-sm font-semibold text-neutral-900">Add activity</p>
-                <button
-                  type="button"
-                  onClick={() => setAddScreenOpen(false)}
-                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
-                >
-                  Close
-                </button>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {addScreenButtonOptions.map(({ kind, label }) => (
-                  <form key={kind} action={addScreenTemplate.bind(null, lessonId, moduleId, kind)}>
-                    <button
-                      type="submit"
-                      className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold shadow-sm hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
-                    >
-                      {label}
-                    </button>
-                  </form>
-                ))}
-                <form
-                  action={createQuizGroup.bind(null, lessonId, moduleId)}
-                  className="flex flex-wrap items-end gap-2 rounded border border-sky-200 bg-sky-50/80 px-2 py-2"
-                >
-                  <label className="text-xs font-medium text-neutral-700">
-                    Quiz title
-                    <input
-                      name="title"
-                      type="text"
-                      placeholder="e.g. Unit check"
-                      className="ml-1 mt-0.5 w-40 rounded border border-neutral-300 px-2 py-1 text-sm"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="rounded bg-sky-700 px-2 py-1.5 text-xs font-semibold text-white hover:bg-sky-800 sm:text-sm"
-                  >
-                    + New quiz
-                  </button>
-                </form>
-              </div>
-            </div>
-          </>,
-          document.body,
-        )
-      : null}
-
       {editorHelpOpen ? (
         <div className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto overscroll-contain rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm shadow-sm">
           <div className="flex items-start justify-between gap-3">
@@ -2082,7 +2211,7 @@ export function LessonEditorWorkspace({
           <p className="mt-2 text-xs leading-relaxed text-neutral-600">
             {quizSelection ?
               "Quiz builder: add questions from the bank, then edit the selected card. Save and advanced JSON for the active question stay on the card. Use Preview in the toolbar when not in a quiz strip."
-            : "Auto-save runs a few seconds after you stop typing and when focus leaves the card. Use Save screen now after heavy edits (e.g. cover image). Open Preview for a floating student view."}
+            : "Auto-save runs after 5s of inactivity and also flushes when the tab is hidden or closed. Use Preview for a floating student view."}
           </p>
 
           <div className="mt-4 space-y-3 border-t border-neutral-200 pt-3">
@@ -2191,36 +2320,12 @@ export function LessonEditorWorkspace({
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="rounded border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-800 sm:text-sm"
-                    onClick={() => void saveVisibleScreenEditors()}
-                  >
-                    Save screen now
-                  </button>
-                  <button
-                    type="button"
                     className="rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 sm:text-sm"
                     onClick={() => setAdvancedJsonOpen((v) => !v)}
                   >
                     {advancedJsonOpen ? "Hide" : "Show"} advanced JSON
                   </button>
                 </div>
-                {screenEditorStatus.isSaving || screenEditorStatus.saveHint ?
-                  <p
-                    className={`text-xs font-medium ${
-                      screenEditorStatus.saveHint?.startsWith("Already") ?
-                        "text-neutral-600"
-                      : "text-green-800"
-                    }`}
-                  >
-                    {screenEditorStatus.isSaving ? "Saving… " : null}
-                    {screenEditorStatus.saveHint}
-                  </p>
-                : null}
-                {screenEditorStatus.err ?
-                  <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-800">
-                    {screenEditorStatus.err}
-                  </p>
-                : null}
                 {selectedScreen.screen_type === "story" ?
                   <label className="block text-xs font-medium text-neutral-700">
                     TTS language
@@ -2401,6 +2506,7 @@ export function LessonEditorWorkspace({
                       advancedJsonOpen={advancedJsonOpen}
                       onAdvancedJsonOpenChange={setAdvancedJsonOpen}
                       onStatusChange={onScreenEditorStatus}
+                      getLastUserActivityAt={() => lastUserActivityAtRef.current}
                       onPersistSuccess={notifyScreenSaved}
                     />
                   </div>
@@ -2443,6 +2549,7 @@ export function LessonEditorWorkspace({
                       advancedJsonOpen={advancedJsonOpen}
                       onAdvancedJsonOpenChange={setAdvancedJsonOpen}
                       onStatusChange={onScreenEditorStatus}
+                      getLastUserActivityAt={() => lastUserActivityAtRef.current}
                       onPersistSuccess={notifyScreenSaved}
                     />
                   </div>
@@ -2462,6 +2569,7 @@ export function LessonEditorWorkspace({
                 advancedJsonOpen={advancedJsonOpen}
                 onAdvancedJsonOpenChange={setAdvancedJsonOpen}
                 onStatusChange={onScreenEditorStatus}
+                getLastUserActivityAt={() => lastUserActivityAtRef.current}
                 onPersistSuccess={notifyScreenSaved}
               />
             : <p className="p-4 text-sm text-neutral-600">Select a screen in the storyboard.</p>}

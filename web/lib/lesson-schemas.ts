@@ -2225,23 +2225,66 @@ export function migratePresentationInteractiveToStory(raw: unknown): z.infer<typ
   return migratePresentationInteractiveFromParsed(p, raw);
 }
 
-export const mcQuizPayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("mc_quiz"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  question: z.string(),
-  options: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string(),
-    }),
-  ),
-  correct_option_id: z.string(),
-  shuffle_options: z.boolean().optional().default(false),
-  guide: guideSchema,
-});
+export const mcQuizPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("mc_quiz"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    body_text: z.string().optional(),
+    question: z.string(),
+    options: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+        }),
+      )
+      .min(1),
+    correct_option_id: z.string(),
+    shuffle_options: z.boolean().optional().default(false),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.question.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Question cannot be empty",
+      });
+      return;
+    }
+    const optionIds = new Set<string>();
+    for (const opt of data.options) {
+      if (!opt.id.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Option id cannot be empty",
+        });
+        return;
+      }
+      if (!opt.label.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Option ${opt.id} cannot have an empty label`,
+        });
+        return;
+      }
+      if (optionIds.has(opt.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate option id: ${opt.id}`,
+        });
+        return;
+      }
+      optionIds.add(opt.id);
+    }
+    if (!optionIds.has(data.correct_option_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "correct_option_id must match one of the option ids",
+      });
+    }
+  });
 
 export const clickTargetsPayloadSchema = z
   .object({
@@ -2289,27 +2332,79 @@ export const clickTargetsPayloadSchema = z
     }
   });
 
-export const dragSentencePayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("drag_sentence"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  sentence_slots: z.array(z.string()),
-  word_bank: z.array(z.string()),
-  correct_order: z.array(z.string()),
-  guide: guideSchema,
-});
+export const dragSentencePayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("drag_sentence"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    body_text: z.string().optional(),
+    sentence_slots: z.array(z.string()).min(1),
+    word_bank: z.array(z.string()).min(1),
+    correct_order: z.array(z.string()).min(1),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.correct_order.length !== data.sentence_slots.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "correct_order length must match sentence_slots length",
+      });
+      return;
+    }
+    const bankCounts = new Map<string, number>();
+    for (const raw of data.word_bank) {
+      const word = raw.trim();
+      if (!word) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "word_bank cannot contain empty values",
+        });
+        return;
+      }
+      bankCounts.set(word, (bankCounts.get(word) ?? 0) + 1);
+    }
+    for (const raw of data.correct_order) {
+      const word = raw.trim();
+      const count = bankCounts.get(word) ?? 0;
+      if (count <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `correct_order token "${raw}" is not available in word_bank`,
+        });
+        return;
+      }
+      bankCounts.set(word, count - 1);
+    }
+    for (const [word, count] of bankCounts.entries()) {
+      if (count !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `word_bank token "${word}" must appear exactly once in correct_order`,
+        });
+        return;
+      }
+    }
+  });
 
-export const trueFalsePayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("true_false"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  statement: z.string(),
-  correct: z.boolean(),
-  guide: guideSchema,
-});
+export const trueFalsePayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("true_false"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    statement: z.string(),
+    correct: z.boolean(),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.statement.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Statement cannot be empty",
+      });
+    }
+  });
 
 export const shortAnswerPayloadSchema = z.object({
   type: z.literal("interaction"),
@@ -2347,7 +2442,37 @@ export const fillBlanksPayloadSchema = z
     guide: guideSchema,
   })
   .superRefine((data, ctx) => {
+    if (!data.template.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Template cannot be empty",
+      });
+      return;
+    }
+    const blankIds = new Set<string>();
     for (const b of data.blanks) {
+      if (!b.id.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Blank id cannot be empty",
+        });
+        return;
+      }
+      if (blankIds.has(b.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate blank id: ${b.id}`,
+        });
+        return;
+      }
+      blankIds.add(b.id);
+      if (b.acceptable.some((a) => !a.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Blank ${b.id} contains an empty acceptable answer`,
+        });
+        return;
+      }
       const re = new RegExp(`__${escapeRegExp(b.id)}__`, "g");
       if (!re.test(data.template)) {
         ctx.addIssue({
@@ -2359,25 +2484,55 @@ export const fillBlanksPayloadSchema = z
     }
   });
 
-export const fixTextPayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("fix_text"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  broken_text: z.string(),
-  acceptable: z.array(z.string()).min(1),
-  case_insensitive: z.boolean().optional().default(true),
-  normalize_whitespace: z.boolean().optional().default(true),
-  /** When true, students see a Hint control (spotlight + 3-word choices). */
-  hints_enabled: z.boolean().optional().default(true),
-  /**
-   * Extra wrong words used to build 3-choice hints (with the correct word).
-   * One per line in the editor; optional — other words from the sentence are used too.
-   */
-  hint_decoy_words: z.array(z.string()).optional(),
-  guide: guideSchema,
-});
+export const fixTextPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("fix_text"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    body_text: z.string().optional(),
+    broken_text: z.string(),
+    acceptable: z.array(z.string()).min(1),
+    case_insensitive: z.boolean().optional().default(true),
+    normalize_whitespace: z.boolean().optional().default(true),
+    /** When true, students see a Hint control (spotlight + 3-word choices). */
+    hints_enabled: z.boolean().optional().default(true),
+    /**
+     * Extra wrong words used to build 3-choice hints (with the correct word).
+     * One per line in the editor; optional — other words from the sentence are used too.
+     */
+    hint_decoy_words: z.array(z.string()).optional(),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.broken_text.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "broken_text cannot be empty",
+      });
+      return;
+    }
+    const normalized = new Set<string>();
+    for (const answer of data.acceptable) {
+      const trimmed = answer.trim();
+      if (!trimmed) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "acceptable cannot contain empty answers",
+        });
+        return;
+      }
+      const key = trimmed.toLowerCase();
+      if (normalized.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate acceptable answer: ${trimmed}`,
+        });
+        return;
+      }
+      normalized.add(key);
+    }
+  });
 
 const hotspotInfoItemSchema = z.object({
   id: z.string(),
@@ -2411,8 +2566,11 @@ export function validateHotspotGatePayload(
     if (ord.length === 0) {
       return { ok: false, message: "sequence mode requires order array" };
     }
+    const seen = new Set<string>();
     for (const id of ord) {
       if (!ids.has(id)) return { ok: false, message: `order references unknown id ${id}` };
+      if (seen.has(id)) return { ok: false, message: `order contains duplicate id ${id}` };
+      seen.add(id);
     }
   }
   if (data.mode === "all") {
@@ -2569,23 +2727,51 @@ const letterMixupItemSchema = z.object({
   hint: z.string().optional(),
 });
 
-export const letterMixupPayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("letter_mixup"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  /** Plays when the student taps the picture (upload / library / record in editor). */
-  image_audio_url: z.string().optional(),
-  /** When true, tap uses device TTS instead of `image_audio_url`. */
-  image_use_tts: z.boolean().optional().default(false),
-  /** Spoken on tap when `image_use_tts` is true; if empty, uses the item target word. */
-  image_read_aloud_text: z.string().optional(),
-  prompt: z.string(),
-  items: z.array(letterMixupItemSchema).min(1),
-  shuffle_letters: z.boolean().optional().default(true),
-  case_sensitive: z.boolean().optional().default(false),
-  guide: guideSchema,
-});
+export const letterMixupPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("letter_mixup"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    /** Plays when the student taps the picture (upload / library / record in editor). */
+    image_audio_url: z.string().optional(),
+    /** When true, tap uses device TTS instead of `image_audio_url`. */
+    image_use_tts: z.boolean().optional().default(false),
+    /** Spoken on tap when `image_use_tts` is true; if empty, uses the item target word. */
+    image_read_aloud_text: z.string().optional(),
+    prompt: z.string(),
+    items: z.array(letterMixupItemSchema).min(1),
+    shuffle_letters: z.boolean().optional().default(true),
+    case_sensitive: z.boolean().optional().default(false),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.prompt.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Prompt cannot be empty",
+      });
+      return;
+    }
+    const ids = new Set<string>();
+    for (const item of data.items) {
+      if (!item.id.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Item id cannot be empty",
+        });
+        return;
+      }
+      if (ids.has(item.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate item id: ${item.id}`,
+        });
+        return;
+      }
+      ids.add(item.id);
+    }
+  });
 
 const wordShapeChunkSchema = z.object({
   id: z.string(),

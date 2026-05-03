@@ -1,12 +1,15 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { cache } from "react";
 
 export type CourseRow = {
   id: string;
   title: string;
   slug: string;
   target: string;
+  cover_image_url?: string;
+  cover_video_url?: string;
   standards?: string;
   outcomes?: string;
   order_index: number;
@@ -34,12 +37,23 @@ export type TeacherModuleRow = {
   module_tags?: { tags?: { slug?: string; label?: string; id?: string } | null }[];
 };
 
+export type TeacherLessonRow = {
+  id: string;
+  module_id: string;
+  title: string;
+  slug: string;
+  order_index: number;
+  published: boolean;
+  estimated_minutes?: number | null;
+};
+
 export type ActivitySubtype =
   | "mc_quiz"
   | "true_false"
   | "fill_blanks"
   | "fix_text"
   | "drag_sentence"
+  | "letter_mixup"
   | "listen_hotspot_sequence";
 
 export type ActivityLibraryRow = {
@@ -85,6 +99,42 @@ type ModuleSearchFilters = {
   courseId?: string;
 };
 
+type ModuleFiltersCacheShape = {
+  q: string;
+  published: "all" | "published" | "draft";
+  courseId: string;
+  tagSlugs: string[];
+};
+
+function toModuleFiltersCacheKey(filters?: ModuleSearchFilters): string {
+  const shape: ModuleFiltersCacheShape = {
+    q: (filters?.q ?? "").trim().toLowerCase(),
+    published: filters?.published ?? "all",
+    courseId: filters?.courseId ?? "",
+    tagSlugs: [...(filters?.tagSlugs ?? [])].map((v) => v.trim()).filter(Boolean).sort(),
+  };
+  return JSON.stringify(shape);
+}
+
+function fromModuleFiltersCacheKey(key: string): ModuleSearchFilters {
+  const parsed = JSON.parse(key) as ModuleFiltersCacheShape;
+  return {
+    q: parsed.q || undefined,
+    published: parsed.published,
+    courseId: parsed.courseId || undefined,
+    tagSlugs: parsed.tagSlugs.length ? parsed.tagSlugs : undefined,
+  };
+}
+
+function toModuleIdsCacheKey(moduleIds: string[]): string {
+  return [...new Set(moduleIds)].sort().join(",");
+}
+
+function fromModuleIdsCacheKey(key: string): string[] {
+  if (!key) return [];
+  return key.split(",").map((v) => v.trim()).filter(Boolean);
+}
+
 function isMissingCourseSchema(err: PostgrestError | null): boolean {
   if (!err) return false;
   const msg = `${err.message ?? ""} ${err.details ?? ""} ${err.hint ?? ""}`.toLowerCase();
@@ -103,7 +153,7 @@ function isMissingActivityLibrarySchema(err: PostgrestError | null): boolean {
   return err.code === "42P01" || msg.includes("activity_library_items");
 }
 
-export async function getAllCourses() {
+export const getAllCourses = cache(async function getAllCourses() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("courses")
@@ -114,9 +164,9 @@ export async function getAllCourses() {
     throw error;
   }
   return (data ?? []) as unknown as CourseRow[];
-}
+});
 
-export async function getCourse(id: string) {
+export const getCourse = cache(async function getCourse(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.from("courses").select("*").eq("id", id).single();
   if (error) {
@@ -126,9 +176,9 @@ export async function getCourse(id: string) {
     throw error;
   }
   return data as CourseRow;
-}
+});
 
-export async function getAllTags() {
+export const getAllTags = cache(async function getAllTags() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("tags").select("id,label,slug").order("label");
   if (error) {
@@ -136,9 +186,10 @@ export async function getAllTags() {
     throw error;
   }
   return (data ?? []) as unknown as TagRow[];
-}
+});
 
-export async function getAllModules(filters?: ModuleSearchFilters) {
+const getAllModulesCached = cache(async (filtersCacheKey: string) => {
+  const filters = fromModuleFiltersCacheKey(filtersCacheKey);
   const supabase = await createClient();
   let query = supabase
     .from("modules")
@@ -192,6 +243,10 @@ export async function getAllModules(filters?: ModuleSearchFilters) {
   }
 
   return rows;
+});
+
+export async function getAllModules(filters?: ModuleSearchFilters) {
+  return getAllModulesCached(toModuleFiltersCacheKey(filters));
 }
 
 /** Next `order_index` so a new module sorts after existing ones. */
@@ -216,7 +271,7 @@ export async function getNextLessonOrderIndex(moduleId: string): Promise<number>
   return Math.max(...rows.map((l) => l.order_index ?? 0)) + 1;
 }
 
-export async function getModule(id: string) {
+export const getModule = cache(async function getModule(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("modules")
@@ -233,9 +288,9 @@ export async function getModule(id: string) {
     };
   }
   return data;
-}
+});
 
-export async function getLessonsForModule(moduleId: string) {
+export const getLessonsForModule = cache(async function getLessonsForModule(moduleId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lessons")
@@ -243,10 +298,27 @@ export async function getLessonsForModule(moduleId: string) {
     .eq("module_id", moduleId)
     .order("order_index", { ascending: true });
   if (error) throw error;
-  return data;
+  return (data ?? []) as unknown as TeacherLessonRow[];
+});
+
+const getLessonsForModulesCached = cache(async (moduleIdsKey: string) => {
+  const moduleIds = fromModuleIdsCacheKey(moduleIdsKey);
+  if (moduleIds.length === 0) return [] as TeacherLessonRow[];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lessons")
+    .select("*")
+    .in("module_id", moduleIds)
+    .order("order_index", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as TeacherLessonRow[];
+});
+
+export async function getLessonsForModules(moduleIds: string[]) {
+  return getLessonsForModulesCached(toModuleIdsCacheKey(moduleIds));
 }
 
-export async function getLesson(lessonId: string) {
+export const getLesson = cache(async function getLesson(lessonId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lessons")
@@ -255,7 +327,7 @@ export async function getLesson(lessonId: string) {
     .single();
   if (error) throw error;
   return data;
-}
+});
 
 export async function getScreens(lessonId: string) {
   noStore();
@@ -269,7 +341,7 @@ export async function getScreens(lessonId: string) {
   return data;
 }
 
-export async function getLessonSkills(lessonId: string) {
+export const getLessonSkills = cache(async function getLessonSkills(lessonId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lesson_skills")
@@ -277,7 +349,7 @@ export async function getLessonSkills(lessonId: string) {
     .eq("lesson_id", lessonId);
   if (error) throw error;
   return (data ?? []).map((r) => r.skill_key as string);
-}
+});
 
 export async function searchActivityLibrary(filters?: ActivityLibraryFilters) {
   noStore();

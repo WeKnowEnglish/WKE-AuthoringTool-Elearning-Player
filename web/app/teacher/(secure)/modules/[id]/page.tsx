@@ -8,14 +8,16 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function EditModulePage({ params }: Props) {
   const { id } = await params;
+  const modPromise = getModule(id);
+  const lessonsPromise = getLessonsForModule(id);
+  const coursesPromise = getAllCourses();
   let mod;
   try {
-    mod = await getModule(id);
+    mod = await modPromise;
   } catch {
     notFound();
   }
-  const lessons = await getLessonsForModule(id);
-  const courses = await getAllCourses();
+  const [lessons, courses] = await Promise.all([lessonsPromise, coursesPromise]);
   const selectedTags = ((mod.module_tags as { tags?: { slug?: string } | null }[]) ?? [])
     .map((rel) => rel.tags?.slug)
     .filter(Boolean)

@@ -16,6 +16,12 @@ export type TeacherEditorHeaderPayload = {
   published: boolean;
 };
 
+export type EditorSaveState = {
+  status: "editing" | "saving" | "saved" | "error";
+  lastSavedAt: number | null;
+  error: string | null;
+};
+
 /** Only the chrome header subscribes — avoids re-rendering the whole lesson editor when toolbar JSX updates. */
 const LessonToolbarSlotContext = createContext<ReactNode | null>(null);
 
@@ -23,6 +29,8 @@ type CtxValue = {
   state: TeacherEditorHeaderPayload | null;
   register: (next: TeacherEditorHeaderPayload | null) => void;
   setLessonToolbarSlot: (next: ReactNode | null) => void;
+  saveState: EditorSaveState | null;
+  setSaveState: (next: EditorSaveState | null) => void;
   /** Increments when the lesson editor reports a successful screen save (for header icon pulse). */
   savePulseSerial: number;
   notifyScreenSaved: () => void;
@@ -37,6 +45,7 @@ export function TeacherEditorHeaderProvider({
 }) {
   const [state, setState] = useState<TeacherEditorHeaderPayload | null>(null);
   const [lessonToolbarSlot, setLessonToolbarSlot] = useState<ReactNode | null>(null);
+  const [saveState, setSaveState] = useState<EditorSaveState | null>(null);
   const [savePulseSerial, setSavePulseSerial] = useState(0);
   const register = useCallback((next: TeacherEditorHeaderPayload | null) => {
     setState(next);
@@ -51,10 +60,12 @@ export function TeacherEditorHeaderProvider({
       state,
       register,
       setLessonToolbarSlot,
+      saveState,
+      setSaveState,
       savePulseSerial,
       notifyScreenSaved,
     }),
-    [state, register, savePulseSerial, notifyScreenSaved],
+    [state, register, saveState, savePulseSerial, notifyScreenSaved],
   );
   return (
     <LessonToolbarSlotContext.Provider value={lessonToolbarSlot}>
@@ -124,10 +135,30 @@ function DraftIcon() {
   );
 }
 
+function formatSavedTime(ts: number | null): string {
+  if (!ts) return "Saved";
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `Saved ${hh}:${mm}`;
+}
+
 export function TeacherNavEditorTitle() {
-  const { state, savePulseSerial } = useTeacherEditorHeader();
+  const { state, savePulseSerial, saveState } = useTeacherEditorHeader();
   if (!state) return null;
   const pulse = savePulseSerial > 0;
+  const saveChip =
+    !saveState ? null
+    : saveState.status === "saving" ? { label: "Saving...", className: "bg-amber-100 text-amber-900 border-amber-200" }
+    : saveState.status === "editing" ? { label: "Editing", className: "bg-neutral-100 text-neutral-700 border-neutral-200" }
+    : saveState.status === "error" ? {
+        label: "Save failed",
+        className: "bg-red-100 text-red-900 border-red-200",
+      }
+    : {
+        label: formatSavedTime(saveState.lastSavedAt),
+        className: "bg-emerald-100 text-emerald-900 border-emerald-200",
+      };
   return (
     <div
       className="flex min-w-0 max-w-[min(36vw,14rem)] items-center gap-1.5 border-l border-neutral-200 pl-2 sm:max-w-[min(42vw,20rem)] sm:gap-2 sm:pl-3"
@@ -142,6 +173,14 @@ export function TeacherNavEditorTitle() {
       <span className="truncate text-sm font-semibold text-neutral-900 md:text-base">
         {state.title}
       </span>
+      {saveChip ? (
+        <span
+          className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold sm:inline ${saveChip.className}`}
+          title={saveState?.error ?? undefined}
+        >
+          {saveChip.label}
+        </span>
+      ) : null}
     </div>
   );
 }

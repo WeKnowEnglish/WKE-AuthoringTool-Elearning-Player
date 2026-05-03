@@ -6,13 +6,15 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function CourseWorkspacePage({ params }: Props) {
   const { id } = await params;
+  const coursePromise = getCourse(id);
+  const modulesPromise = getAllModules({ courseId: id });
   let course;
   try {
-    course = await getCourse(id);
+    course = await coursePromise;
   } catch {
     notFound();
   }
-  const modules = await getAllModules({ courseId: id });
+  const modules = await modulesPromise;
 
   return (
     <div className="space-y-8">

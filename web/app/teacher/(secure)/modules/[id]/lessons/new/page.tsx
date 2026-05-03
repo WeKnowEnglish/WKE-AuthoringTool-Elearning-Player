@@ -5,22 +5,24 @@ import { TitleSlugFields } from "@/components/teacher/TitleSlugFields";
 import {
   getLessonsForModule,
   getModule,
-  getNextLessonOrderIndex,
 } from "@/lib/data/teacher";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function NewLessonPage({ params }: Props) {
   const { id: moduleId } = await params;
+  const modPromise = getModule(moduleId);
+  const lessonsPromise = getLessonsForModule(moduleId);
   let mod;
   try {
-    mod = await getModule(moduleId);
+    mod = await modPromise;
   } catch {
     notFound();
   }
 
-  const nextOrder = await getNextLessonOrderIndex(moduleId);
-  const lessons = await getLessonsForModule(moduleId);
+  const lessons = await lessonsPromise;
+  const nextOrder =
+    lessons.length > 0 ? Math.max(...lessons.map((l) => l.order_index ?? 0)) + 1 : 0;
   const lastLesson =
     lessons.length > 0
       ? lessons.reduce((a, b) => (a.order_index > b.order_index ? a : b))

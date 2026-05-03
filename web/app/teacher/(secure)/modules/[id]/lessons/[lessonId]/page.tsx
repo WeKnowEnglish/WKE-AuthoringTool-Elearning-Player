@@ -1,9 +1,5 @@
 import { notFound } from "next/navigation";
-import {
-  ensureLessonBookendsForEditor,
-  saveLessonCompletionPlayground,
-  saveLessonSkills,
-} from "@/lib/actions/teacher";
+import { ensureLessonBookendsForEditor, saveLessonSkills } from "@/lib/actions/teacher";
 import { findOpeningStartScreen } from "@/lib/lesson-bookends";
 import { parseLearningGoalsFromDb } from "@/lib/learning-goals";
 import { parseActivityLibraryIdFromLessonSlug } from "@/lib/activity-library-mirror";
@@ -16,6 +12,7 @@ import {
   getScreens,
 } from "@/lib/data/teacher";
 import { completionPlaygroundSchema } from "@/lib/lesson-schemas";
+import { CompletionPlaygroundForm } from "@/components/teacher/lesson-editor/CompletionPlaygroundForm";
 import { RegisterTeacherEditorHeader } from "@/components/teacher/TeacherEditorHeaderContext";
 import { AiLessonPanel } from "./AiLessonPanel";
 import { LessonEditorWorkspace } from "@/components/teacher/lesson-editor/LessonEditorWorkspace";
@@ -26,20 +23,23 @@ type Props = {
 
 export default async function EditLessonPage({ params }: Props) {
   const { id: moduleId, lessonId } = await params;
+  const modPromise = getModule(moduleId);
+  const lessonPromise = getLesson(lessonId);
   let lesson;
   let mod;
   try {
-    mod = await getModule(moduleId);
-    lesson = await getLesson(lessonId);
+    [mod, lesson] = await Promise.all([modPromise, lessonPromise]);
   } catch {
     notFound();
   }
   if (lesson.module_id !== moduleId) notFound();
 
   await ensureLessonBookendsForEditor(lessonId, moduleId);
-  const screens = await getScreens(lessonId);
-  const moduleLessons = await getLessonsForModule(moduleId);
-  const skillKeys = await getLessonSkills(lessonId);
+  const [screens, moduleLessons, skillKeys] = await Promise.all([
+    getScreens(lessonId),
+    getLessonsForModule(moduleId),
+    getLessonSkills(lessonId),
+  ]);
   const learningGoals = parseLearningGoalsFromDb(
     (lesson as { learning_goals?: unknown }).learning_goals,
   );
@@ -48,15 +48,16 @@ export default async function EditLessonPage({ params }: Props) {
   const lessonPlanSyncKey = `${(lesson as { updated_at?: string | null }).updated_at ?? ""}:${lessonId}`;
 
   const activityLibraryMirrorId = parseActivityLibraryIdFromLessonSlug(lesson.slug);
-  let activityLibraryPublished: boolean | null = null;
-  if (activityLibraryMirrorId) {
-    try {
-      const row = await getActivityLibraryItem(activityLibraryMirrorId);
-      activityLibraryPublished = row.published === true;
-    } catch {
-      activityLibraryPublished = false;
-    }
-  }
+  const activityLibraryPublished: boolean | null =
+    !activityLibraryMirrorId ? null
+    : await (async () => {
+        try {
+          const row = await getActivityLibraryItem(activityLibraryMirrorId);
+          return row.published === true;
+        } catch {
+          return false;
+        }
+      })();
 
   const headerPublished =
     activityLibraryMirrorId ? activityLibraryPublished === true : lesson.published === true;
@@ -64,8 +65,7 @@ export default async function EditLessonPage({ params }: Props) {
   const rawCompletion = (lesson as { completion_playground?: unknown }).completion_playground;
   const completionPg = completionPlaygroundSchema.safeParse(rawCompletion);
   const completionPlayground = completionPg.success ? completionPg.data : null;
-  const completionPlaygroundFormDefault =
-    completionPlayground ? JSON.stringify(completionPlayground, null, 2) : "";
+  const lessonUpdatedAt = (lesson as { updated_at?: string | null }).updated_at ?? "";
 
   return (
     <>
@@ -103,29 +103,16 @@ export default async function EditLessonPage({ params }: Props) {
         <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
           <h2 className="text-sm font-bold text-neutral-900">Completion playground</h2>
           <p className="mt-1 text-xs text-neutral-600">
-            Optional JSON shown after the lesson on the reward screen (same shape as start-screen
-            playground: <code className="text-[11px]">page</code>,{" "}
-            <code className="text-[11px]">cast</code>,{" "}
-            <code className="text-[11px]">tap_rewards</code>). Leave empty to hide.
+            Optional layer on the reward screen after the lesson (same shape as the opening
+            playground: background, tap-friendly items, optional tiny prizes). Remove the playground
+            to hide it.
           </p>
-          <form
-            action={saveLessonCompletionPlayground.bind(null, lessonId, moduleId)}
-            className="mt-3 space-y-2"
-          >
-            <textarea
-              name="completion_playground_json"
-              defaultValue={completionPlaygroundFormDefault}
-              rows={10}
-              className="w-full resize-y rounded border border-neutral-300 px-2 py-1.5 font-mono text-xs text-neutral-900"
-              placeholder='{"page":{"id":"end","background_image_url":"https://…","items":[]}}'
-            />
-            <button
-              type="submit"
-              className="rounded bg-neutral-800 px-3 py-2 text-sm font-semibold text-white active:bg-neutral-900"
-            >
-              Save completion playground
-            </button>
-          </form>
+          <CompletionPlaygroundForm
+            key={`${lessonId}:${lessonUpdatedAt}`}
+            lessonId={lessonId}
+            moduleId={moduleId}
+            initialPlayground={completionPlayground}
+          />
         </section>
 
         <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">

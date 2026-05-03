@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CourseCoverMediaFields } from "@/components/teacher/CourseCoverMediaFields";
 import { saveCourse } from "@/lib/actions/teacher";
 import { TitleSlugFields } from "@/components/teacher/TitleSlugFields";
 import { getNextCourseOrderIndex } from "@/lib/data/teacher";
@@ -43,6 +44,7 @@ export default async function NewCoursePage() {
             className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
           />
         </div>
+        <CourseCoverMediaFields />
         <div>
           <label className="block text-sm font-medium" htmlFor="standards">
             Standards

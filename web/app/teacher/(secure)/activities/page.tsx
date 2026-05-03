@@ -5,6 +5,7 @@ import {
   updateActivityLibraryItem,
 } from "@/lib/actions/teacher";
 import { ActivityLibraryPreview } from "@/components/teacher/activities/ActivityLibraryPreview";
+import { ActivityLibraryTableImport } from "@/components/teacher/activities/ActivityLibraryTableImport";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
 import {
   type ActivitySubtype,
@@ -28,6 +29,7 @@ const subtypeOptions: Array<{ value: ActivitySubtype; label: string }> = [
   { value: "fill_blanks", label: "Fill in the Blanks" },
   { value: "fix_text", label: "Find the Mistake" },
   { value: "drag_sentence", label: "Drag Words to Sentence" },
+  { value: "letter_mixup", label: "Scramble Letters" },
   { value: "listen_hotspot_sequence", label: "Listen and Find" },
 ];
 
@@ -50,6 +52,8 @@ export default async function TeacherActivitiesPage({ searchParams }: Props) {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
         <aside className="lg:sticky lg:top-4 lg:col-span-1 space-y-6">
+          <ActivityLibraryTableImport />
+
           <section className="rounded-lg border border-neutral-200 bg-white p-4">
             <h2 className="text-sm font-bold text-neutral-900">Create Activity Set</h2>
             <form action={createActivityLibraryItem} className="mt-3 grid gap-3">

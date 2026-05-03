@@ -106,6 +106,17 @@ function computeSha256Hex(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function isHex(value: string, len: number): boolean {
+  return value.length === len && /^[0-9a-f]+$/i.test(value);
+}
+
+function parseClientHexHash(formData: FormData, key: string, len: number): string | null {
+  const raw = formData.get(key);
+  if (typeof raw !== "string") return null;
+  const v = raw.trim().toLowerCase();
+  return isHex(v, len) ? v : null;
+}
+
 async function computeImageDHashHex(bytes: Uint8Array): Promise<string | null> {
   try {
     const img = await Jimp.read(Buffer.from(bytes));
@@ -136,6 +147,36 @@ function hammingDistanceHex(a: string, b: string): number {
     dist += (xor & 1) + ((xor >> 1) & 1) + ((xor >> 2) & 1) + ((xor >> 3) & 1);
   }
   return dist;
+}
+
+type RecentImageCandidate = {
+  id: string;
+  public_url: string;
+  original_filename: string;
+  phash: string;
+};
+
+async function fetchRecentImageCandidates(supabase: Awaited<ReturnType<typeof requireTeacher>>) {
+  const { data: candidates, error: candErr } = await supabase
+    .from("media_assets")
+    .select("id,public_url,original_filename,phash")
+    .like("content_type", "image/%")
+    .not("phash", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (candErr) throw new Error(candErr.message);
+  return (candidates ?? []).flatMap((c) => {
+    const phash = (c.phash as string | null)?.toLowerCase() ?? null;
+    if (!phash || !isHex(phash, 16)) return [];
+    return [
+      {
+        id: c.id as string,
+        public_url: c.public_url as string,
+        original_filename: ((c.original_filename as string | null) ?? "existing image").slice(0, 255),
+        phash,
+      } satisfies RecentImageCandidate,
+    ];
+  });
 }
 
 export type UploadTeacherMediaResult = {
@@ -205,7 +246,10 @@ export async function uploadTeacherMedia(
   }
 
   const bytes = new Uint8Array(await f.arrayBuffer());
-  const sha256Hash = computeSha256Hex(bytes);
+  const clientSha256 = parseClientHexHash(formData, "client_sha256", 64);
+  const clientDHash = parseClientHexHash(formData, "client_dhash", 16);
+  const skipNearDuplicate = formData.get("skip_near_duplicate") === "1";
+  const sha256Hash = clientSha256 ?? computeSha256Hex(bytes);
 
   let phash: string | null = null;
   if (kind === "image") {
@@ -228,26 +272,20 @@ export async function uploadTeacherMedia(
       }
     }
 
-    phash = await computeImageDHashHex(bytes);
+    if (!skipNearDuplicate) {
+      phash = clientDHash ?? (await computeImageDHashHex(bytes));
+    }
     if (phash) {
-      const { data: candidates, error: candErr } = await supabase
-        .from("media_assets")
-        .select("id,public_url,original_filename,phash")
-        .like("content_type", "image/%")
-        .not("phash", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (candErr) throw new Error(candErr.message);
-      for (const c of candidates ?? []) {
-        const candidateHash = (c.phash as string | null) ?? null;
-        if (!candidateHash) continue;
+      const candidates = await fetchRecentImageCandidates(supabase);
+      for (const c of candidates) {
+        const candidateHash = c.phash;
         const dist = hammingDistanceHex(phash, candidateHash);
         if (dist <= PHASH_DISTANCE_THRESHOLD) {
           if (duplicateHandling === "delete_duplicate") {
             revalidatePath("/teacher/media");
             return {
-              id: c.id as string,
-              url: c.public_url as string,
+              id: c.id,
+              url: c.public_url,
               duplicate_status: "near_duplicate_reused",
             };
           }
@@ -333,7 +371,16 @@ export async function uploadTeacherMediaBulkFromForm(
   for (const [index, file] of files.entries()) {
     const single = new FormData();
     single.set("file", file);
+    single.set("kind", kind);
     const perItemDecision = formData.get(`duplicate_decision_${index}`);
+    const clientSha = parseClientHexHash(formData, `client_sha256_${index}`, 64);
+    const clientDHash = parseClientHexHash(formData, `client_dhash_${index}`, 16);
+    if (clientSha) {
+      single.set("client_sha256", clientSha);
+    }
+    if (clientDHash) {
+      single.set("client_dhash", clientDHash);
+    }
     const duplicateHandling =
       perItemDecision === "keep_new" ? "keep_both"
       : perItemDecision === "keep_existing" ? "delete_duplicate"
@@ -372,10 +419,23 @@ export async function inspectTeacherMediaBulkDuplicates(
 
   const supabase = await requireTeacher();
   const issues: MediaDuplicateIssue[] = [];
+  const imageCandidates =
+    kind === "image" ? await fetchRecentImageCandidates(supabase) : [];
 
   for (const [index, file] of files.entries()) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const sha256Hash = computeSha256Hex(bytes);
+    const clientSha = parseClientHexHash(formData, `client_sha256_${index}`, 64);
+    const clientDHash = parseClientHexHash(formData, `client_dhash_${index}`, 16);
+    const bytes =
+      !clientSha || (kind === "image" && !clientDHash) ?
+        new Uint8Array(await file.arrayBuffer())
+      : null;
+    let sha256Hash = clientSha;
+    if (!sha256Hash) {
+      if (!bytes) {
+        throw new Error("Missing bytes for sha256 duplicate check");
+      }
+      sha256Hash = computeSha256Hex(bytes);
+    }
 
     const contentLike =
       kind === "audio" ? "audio/%"
@@ -404,30 +464,19 @@ export async function inspectTeacherMediaBulkDuplicates(
 
     if (kind !== "image") continue;
 
-    const phash = await computeImageDHashHex(bytes);
+    const phash = clientDHash ?? (bytes ? await computeImageDHashHex(bytes) : null);
     if (!phash) continue;
 
-    const { data: candidates, error: candErr } = await supabase
-      .from("media_assets")
-      .select("id,public_url,original_filename,phash")
-      .like("content_type", "image/%")
-      .not("phash", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(500);
-    if (candErr) throw new Error(candErr.message);
-
-    for (const candidate of candidates ?? []) {
-      const candidateHash = (candidate.phash as string | null) ?? null;
-      if (!candidateHash) continue;
-      const dist = hammingDistanceHex(phash, candidateHash);
+    for (const candidate of imageCandidates) {
+      const dist = hammingDistanceHex(phash, candidate.phash);
       if (dist <= PHASH_DISTANCE_THRESHOLD) {
         issues.push({
           index,
           filename: file.name,
           duplicate_kind: "near",
-          existing_id: candidate.id as string,
-          existing_url: candidate.public_url as string,
-          existing_filename: (candidate.original_filename as string | null) ?? "existing image",
+          existing_id: candidate.id,
+          existing_url: candidate.public_url,
+          existing_filename: candidate.original_filename,
         });
         break;
       }

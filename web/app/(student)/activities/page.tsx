@@ -22,6 +22,7 @@ const subtypeOptions: Array<{ value: ActivitySubtype; label: string }> = [
   { value: "fill_blanks", label: "Fill in the Blanks" },
   { value: "fix_text", label: "Find the Mistake" },
   { value: "drag_sentence", label: "Drag Words to Sentence" },
+  { value: "letter_mixup", label: "Scramble Letters" },
   { value: "listen_hotspot_sequence", label: "Listen and Find" },
 ];
 

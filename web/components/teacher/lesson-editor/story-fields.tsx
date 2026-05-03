@@ -83,18 +83,17 @@ import {
 import type { StoryUnifiedReactionRow } from "@/lib/story-unified/schema";
 import { validateReactionRow } from "@/lib/story-unified/validate-reaction-row";
 
-function emitLive(
-  onLivePayload: (p: unknown) => void,
-  schema: ZodType,
-  raw: unknown,
-) {
+function parseStoryPayload(schema: ZodType, raw: unknown): unknown {
   const r = schema.safeParse(raw);
-  onLivePayload(r.success ? r.data : raw);
+  return r.success ? r.data : raw;
+}
+
+function emitLive(onLivePayload: (p: unknown) => void, schema: ZodType, raw: unknown) {
+  onLivePayload(parseStoryPayload(schema, raw));
 }
 
 function stableStorySignature(schema: ZodType, raw: unknown): string {
-  const r = schema.safeParse(raw);
-  return JSON.stringify(r.success ? r.data : raw);
+  return JSON.stringify(parseStoryPayload(schema, raw));
 }
 
 function newEntityId(prefix: string): string {
@@ -106,13 +105,18 @@ function newEntityId(prefix: string): string {
 
 const STORY_CANVAS_UNDO_MAX = 50;
 
+function deepClone<T>(value: T): T {
+  if (typeof structuredClone === "function") return structuredClone(value);
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function deepCloneStoryPages(src: StoryPage[]): StoryPage[] {
-  return JSON.parse(JSON.stringify(src)) as StoryPage[];
+  return deepClone(src);
 }
 
 /** Deep-clone items with new ids; remaps internal item_id / trigger wiring within the copied set. */
 function cloneStoryItemsWithFreshIds(source: StoryItem[]): StoryItem[] {
-  const raw = JSON.parse(JSON.stringify(source)) as StoryItem[];
+  const raw = deepClone(source);
   const itemIdMap = new Map<string, string>();
   for (const it of raw) {
     itemIdMap.set(it.id, newEntityId("item"));
@@ -893,13 +897,10 @@ export function StoryFields({
       cast: initial.cast ?? [],
     };
     const incomingSig = stableStorySignature(storyPayloadSchema, incomingRaw);
-    const active = document.activeElement as HTMLElement | null;
-    const focusedInside = !!(active && rootRef.current?.contains(active));
-    if (
-      focusedInside &&
-      lastLocalSigRef.current &&
-      incomingSig !== lastLocalSigRef.current
-    ) {
+    const hasUnsavedLocal =
+      !!lastLocalSigRef.current && incomingSig !== lastLocalSigRef.current;
+    if (hasUnsavedLocal) {
+      // Keep in-progress local edits stable until server reflects the same payload signature.
       return;
     }
 
@@ -1058,8 +1059,9 @@ export function StoryFields({
         cast: castOut,
         payload_version: castOut && castOut.length > 0 ? (2 as const) : undefined,
       };
-      emitLive(onLivePayload, storyPayloadSchema, raw);
-      const sig = stableStorySignature(storyPayloadSchema, raw);
+      const normalized = parseStoryPayload(storyPayloadSchema, raw);
+      onLivePayload(normalized);
+      const sig = JSON.stringify(normalized);
       lastLocalSigRef.current = sig;
       return sig;
     },
@@ -1197,7 +1199,7 @@ export function StoryFields({
       .map((id) => selectedPage.items.find((it) => it.id === id))
       .filter((x): x is StoryItem => !!x);
     if (picked.length === 0) return;
-    storyItemsClipboardRef.current = JSON.parse(JSON.stringify(picked)) as StoryItem[];
+    storyItemsClipboardRef.current = deepClone(picked);
   }, [selectedPage, selItemId, selItemIds]);
 
   const pasteCanvasItems = useCallback(() => {
@@ -1241,9 +1243,7 @@ export function StoryFields({
       .filter((x): x is StoryItem => !!x);
     if (picked.length === 0) return;
     recordStoryCanvasUndo();
-    const dup = cloneStoryItemsWithFreshIds(
-      JSON.parse(JSON.stringify(picked)) as StoryItem[],
-    );
+    const dup = cloneStoryItemsWithFreshIds(deepClone(picked));
     const maxZ = selectedPage.items.reduce((m, it) => Math.max(m, it.z_index ?? 0), -1);
     const withZ = dup.map((it, i) => ({
       ...it,

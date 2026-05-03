@@ -14,7 +14,9 @@ function isHex(value: string, expectedLen: number): boolean {
 }
 
 async function digestSha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const normalized = new Uint8Array(bytes.byteLength);
+  normalized.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", normalized);
   return bytesToHex(new Uint8Array(digest));
 }
 

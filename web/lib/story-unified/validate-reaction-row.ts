@@ -209,7 +209,7 @@ function containsNavLessonScreenOutsideTapChain(node: StoryUnifiedReactionBodyNo
       return { hit: n.leaf.kind === "nav" && n.leaf.nav.kind === "lesson_screen", bad };
     }
     if (n.type === "tap_chain") {
-      return n.children.reduce(
+      return n.children.reduce<{ hit: boolean; bad: boolean }>(
         (acc, ch) => {
           const r = walk(ch, true);
           return { hit: acc.hit || r.hit, bad: acc.bad || r.bad };
@@ -217,7 +217,7 @@ function containsNavLessonScreenOutsideTapChain(node: StoryUnifiedReactionBodyNo
         { hit: false, bad: false },
       );
     }
-    return n.children.reduce(
+    return n.children.reduce<{ hit: boolean; bad: boolean }>(
       (acc, ch) => {
         const r = walk(ch, inTapChain);
         return { hit: acc.hit || r.hit, bad: acc.bad || r.bad };

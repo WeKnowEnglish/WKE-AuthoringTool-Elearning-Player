@@ -39,6 +39,7 @@ import {
   type StoryItem,
   type StoryPage,
   type StoryPagePhase,
+  type StoryPayload,
   STORY_IDLE_PRESET_IDS,
 } from "@/lib/lesson-schemas";
 import {
@@ -538,20 +539,20 @@ function pruneDeletedItemReferences(page: StoryPage, removedIds: Set<string>): S
             triggers: nextTriggers.length > 0 ? nextTriggers : undefined,
           }
         : undefined;
+      const vc = it.variable_config;
       return {
         ...it,
         on_click: nextOnClick,
         variable_config:
           (it.kind ?? "image") === "variable" ?
             {
-              ...it.variable_config,
-              outcome_item_ids:
-                it.variable_config?.outcome_item_ids.filter((id) => !removedIds.has(id)) ?? [],
+              outcome_item_ids: vc?.outcome_item_ids.filter((id) => !removedIds.has(id)) ?? [],
               initial_outcome_item_id:
-                it.variable_config?.initial_outcome_item_id &&
-                removedIds.has(it.variable_config.initial_outcome_item_id) ?
+                vc?.initial_outcome_item_id && removedIds.has(vc.initial_outcome_item_id) ?
                   undefined
-                : it.variable_config?.initial_outcome_item_id,
+                : vc?.initial_outcome_item_id,
+              /** Always set so output matches StoryItem (`lock_choice` is required after parse). */
+              lock_choice: vc?.lock_choice ?? true,
             }
           : it.variable_config,
       };
@@ -974,15 +975,18 @@ export function StoryFields({
 
   const unifiedBuild = useMemo(() => {
     if (!selectedPage) return null;
-    const payload = {
-      type: "story" as const,
+    const payload: StoryPayload = {
+      type: "story",
+      image_fit: selectedPage.image_fit ?? image_fit,
+      layout_mode: layoutMode,
       body_text: (selectedPage.body_text ?? body_text ?? " ").trim() || " ",
       pages: [selectedPage],
+      cast: cast.length > 0 ? cast : undefined,
     };
     const normalized = getNormalizedStoryPages(payload)[0];
     if (!normalized) return null;
     return buildUnifiedReactionsFromStoryPage(normalized);
-  }, [selectedPage, body_text]);
+  }, [selectedPage, body_text, image_fit, layoutMode, cast]);
 
   const unifiedRows = unifiedBuild?.rows ?? [];
 

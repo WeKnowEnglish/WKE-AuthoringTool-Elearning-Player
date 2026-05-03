@@ -25,7 +25,8 @@ describe("magic-house-lesson-import.json", () => {
     );
     expect(parsed.success && parsed.data.pages?.length).toBe(4);
     expect(parsed.success && parsed.data.cast?.length).toBe(2);
-    const aj = parsed.success && parsed.data.pages?.[0].items.find((i) => i.id === "p1_aj");
+    if (!parsed.success) return;
+    const aj = parsed.data.pages?.[0]?.items.find((i) => i.id === "p1_aj");
     expect(aj?.registry_id).toBe("cast_magic_aj");
   });
 

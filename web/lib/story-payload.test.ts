@@ -967,6 +967,8 @@ describe("getResolvedPhaseTransition", () => {
       completion: {
         type: "pool_interaction_quota",
         pool_item_ids: ["x", "y"],
+        min_taps_per_distinct_item: 1,
+        advance_after_satisfaction: false,
         min_distinct_items: 2,
         min_aggregate_taps: 5,
         next_phase_id: "z",

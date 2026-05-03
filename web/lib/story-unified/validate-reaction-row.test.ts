@@ -6,6 +6,7 @@ import { itemKindAllowsInfoPopup, validateReactionRow } from "@/lib/story-unifie
 const basePage = (): StoryPage => ({
   id: "p1",
   body_text: "",
+  image_fit: "contain",
   items: [
     {
       id: "img1",
@@ -15,6 +16,10 @@ const basePage = (): StoryPage => ({
       y_percent: 0,
       w_percent: 20,
       h_percent: 20,
+      show_card: true,
+      show_on_start: true,
+      image_scale: 1,
+      z_index: 0,
     },
     {
       id: "btn1",
@@ -24,6 +29,10 @@ const basePage = (): StoryPage => ({
       y_percent: 10,
       w_percent: 20,
       h_percent: 10,
+      show_card: true,
+      show_on_start: true,
+      image_scale: 1,
+      z_index: 0,
     },
     {
       id: "mover",
@@ -33,6 +42,10 @@ const basePage = (): StoryPage => ({
       y_percent: 0,
       w_percent: 10,
       h_percent: 10,
+      show_card: true,
+      show_on_start: true,
+      image_scale: 1,
+      z_index: 0,
       path: {
         waypoints: [
           { x_percent: 30, y_percent: 0 },
@@ -48,6 +61,7 @@ const phase = (over: Partial<StoryPagePhase> = {}): StoryPagePhase => ({
   id: "ph1",
   name: "Intro",
   ...over,
+  is_start: over.is_start ?? false,
 });
 
 describe("itemKindAllowsInfoPopup", () => {
@@ -118,6 +132,7 @@ describe("validateReactionRow", () => {
         draggable_item_ids: ["mover"],
         target_item_ids: ["img1"],
         correct_map: { mover: "img1" },
+        after_correct_match: "stick_on_target",
       },
     });
     const issues = validateReactionRow(row, basePage(), ph);
@@ -144,6 +159,8 @@ describe("validateReactionRow", () => {
       completion: {
         type: "pool_interaction_quota",
         pool_item_ids: ["btn1"],
+        min_taps_per_distinct_item: 1,
+        advance_after_satisfaction: false,
         min_aggregate_taps: 2,
         next_phase_id: "ph2",
       },

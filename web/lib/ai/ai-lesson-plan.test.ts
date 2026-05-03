@@ -218,6 +218,12 @@ describe("storyFirstBlueprintSchema pedagogical page rules", () => {
     },
   } as const;
 
+  /** `as const` makes structuredClone()'s inferred type deeply readonly — relax for mutation tests. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zod parses arbitrary JSON-shaped input
+  function blueprintCloneMutable(): any {
+    return structuredClone(baseBlueprint);
+  }
+
   it("accepts beats with >=3 pages and post-page reinforcement timing", () => {
     const parsed = storyFirstBlueprintSchema.safeParse(baseBlueprint);
     expect(parsed.success).toBe(true);
@@ -228,21 +234,21 @@ describe("storyFirstBlueprintSchema pedagogical page rules", () => {
   });
 
   it("rejects beat page depth below 3 when pedagogical pages are used", () => {
-    const bad = structuredClone(baseBlueprint);
+    const bad = blueprintCloneMutable();
     bad.ordered_story_beats[0]!.pages = bad.ordered_story_beats[0]!.pages.slice(0, 2);
     const parsed = storyFirstBlueprintSchema.safeParse(bad);
     expect(parsed.success).toBe(false);
   });
 
   it("rejects recap beat page depth below 3", () => {
-    const bad = structuredClone(baseBlueprint);
+    const bad = blueprintCloneMutable();
     bad.ordered_story_beats[1]!.pages = bad.ordered_story_beats[1]!.pages.slice(0, 2);
     const parsed = storyFirstBlueprintSchema.safeParse(bad);
     expect(parsed.success).toBe(false);
   });
 
   it("rejects first/last page narrative function violations", () => {
-    const bad = structuredClone(baseBlueprint);
+    const bad = blueprintCloneMutable();
     bad.ordered_story_beats[0]!.pages[0]!.narrative_function = "learner_action";
     bad.ordered_story_beats[0]!.pages[2]!.narrative_function = "recap";
     const parsed = storyFirstBlueprintSchema.safeParse(bad);
@@ -250,18 +256,17 @@ describe("storyFirstBlueprintSchema pedagogical page rules", () => {
   });
 
   it("rejects reinforcement timing that is not post-final-page", () => {
-    const bad = structuredClone(baseBlueprint);
+    const bad = blueprintCloneMutable();
     if (bad.ordered_story_beats[0]?.reinforcement) {
-      (bad.ordered_story_beats[0].reinforcement as { timing?: string }).timing =
-        "before_page_progression";
+      bad.ordered_story_beats[0].reinforcement.timing = "before_page_progression";
     }
     const parsed = storyFirstBlueprintSchema.safeParse(bad);
     expect(parsed.success).toBe(false);
   });
 
   it("keeps legacy blueprint parseable when pages are omitted", () => {
-    const legacy = structuredClone(baseBlueprint);
-    legacy.ordered_story_beats.forEach((beat) => {
+    const legacy = blueprintCloneMutable();
+    legacy.ordered_story_beats.forEach((beat: { pages?: unknown; reinforcement?: { timing?: string } }) => {
       delete beat.pages;
       if (beat.reinforcement) {
         delete beat.reinforcement.timing;

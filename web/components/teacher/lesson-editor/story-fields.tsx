@@ -635,6 +635,45 @@ type AnimationEditorState = {
   sequence: StoryActionSequence;
 };
 
+type StoryAuthoringMode = "object" | "animations" | "page" | "cast" | "phase";
+const STORY_AUTHORING_TABS: ReadonlyArray<{
+  id: StoryAuthoringMode;
+  label: string;
+  activeClass: string;
+  idleClass: string;
+}> = [
+  {
+    id: "object",
+    label: "Scene",
+    activeClass: "border-sky-500 bg-sky-100 text-sky-950",
+    idleClass: "border-sky-300 bg-sky-50 text-sky-900 hover:bg-sky-100",
+  },
+  {
+    id: "animations",
+    label: "Animations",
+    activeClass: "border-fuchsia-500 bg-fuchsia-100 text-fuchsia-950",
+    idleClass: "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100",
+  },
+  {
+    id: "page",
+    label: "Page",
+    activeClass: "border-amber-500 bg-amber-100 text-amber-950",
+    idleClass: "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100",
+  },
+  {
+    id: "cast",
+    label: "Cast",
+    activeClass: "border-emerald-500 bg-emerald-100 text-emerald-950",
+    idleClass: "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100",
+  },
+  {
+    id: "phase",
+    label: "Phase",
+    activeClass: "border-violet-500 bg-violet-100 text-violet-950",
+    idleClass: "border-violet-300 bg-violet-50 text-violet-900 hover:bg-violet-100",
+  },
+] as const;
+
 export function StoryFields({
   syncKey,
   initial,
@@ -691,17 +730,12 @@ export function StoryFields({
     setSelItemId(id);
   }, []);
   const [selPhaseId, setSelPhaseId] = useState<string | null>(null);
-  const [animationsMenuOpen, setAnimationsMenuOpen] = useState(false);
-  const [castRegistryMenuOpen, setCastRegistryMenuOpen] = useState(false);
+  const [authoringMode, setAuthoringMode] = useState<StoryAuthoringMode>("object");
   const [cast, setCast] = useState<StoryCastEntry[]>(() => [...(initial.cast ?? [])]);
   const [selectedAnimationRowId, setSelectedAnimationRowId] = useState<string | null>(null);
   const [animationEditor, setAnimationEditor] = useState<AnimationEditorState | null>(null);
   const [dragSummaryStepIdx, setDragSummaryStepIdx] = useState<number | null>(null);
   const [dragEditorStepIdx, setDragEditorStepIdx] = useState<number | null>(null);
-  const [pageContentMenuOpen, setPageContentMenuOpen] = useState(false);
-  const [phasePinned, setPhasePinned] = useState(false);
-  const [objectPinned, setObjectPinned] = useState(false);
-  const [pageContentPinned, setPageContentPinned] = useState(false);
   const [bgChangeOverlayOpen, setBgChangeOverlayOpen] = useState(false);
   const [bgPresetAssets, setBgPresetAssets] = useState<MediaAssetRow[]>([]);
   const [bgPresetTotal, setBgPresetTotal] = useState(0);
@@ -747,7 +781,7 @@ export function StoryFields({
   const storyCanvasViewportRef = useRef<CanvasViewportHandle | null>(null);
   const [storyColumnBarRect, setStoryColumnBarRect] = useState({ left: 0, width: 0 });
   const [storyFixedBarHeight, setStoryFixedBarHeight] = useState(72);
-  /** Pixel height of the sticky story chrome (View / pages / Animations row) — drives right-column `position:sticky` `top` and max-height. */
+  /** Pixel height of the sticky story chrome (pages + mode tabs row) — drives right-column `position:sticky` `top` and max-height. */
   const [storySubBarHeightPx, setStorySubBarHeightPx] = useState(48);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const lastLocalSigRef = useRef<string>("");
@@ -1166,13 +1200,14 @@ export function StoryFields({
   useEffect(() => {
     if (!multi || !selectedPage) return;
     const canvasActive = !!(selectedPage.background_image_url ?? image_url);
+    const sceneModeActive = authoringMode === "object";
     const onKeyDown = (e: KeyboardEvent) => {
       if (bgChangeOverlayOpen) return;
       if (e.defaultPrevented) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest("input, textarea, select, [contenteditable='true']")) return;
 
-      if (canvasActive && !busy && (e.key === "Delete" || e.key === "Backspace")) {
+      if (sceneModeActive && canvasActive && !busy && (e.key === "Delete" || e.key === "Backspace")) {
         const ids =
           selItemIds.length > 0 ? selItemIds : selItemId ? [selItemId] : [];
         if (ids.length === 0) return;
@@ -1183,6 +1218,7 @@ export function StoryFields({
 
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;
+      if (!sceneModeActive) return;
       if (e.key === "z" || e.key === "Z") {
         e.preventDefault();
         if (e.shiftKey) performStoryCanvasRedo();
@@ -1233,6 +1269,7 @@ export function StoryFields({
     pasteCanvasItems,
     duplicateCanvasItems,
     deleteSelectedCanvasItems,
+    authoringMode,
   ]);
 
   function startMultiFromLegacy() {
@@ -1490,17 +1527,11 @@ export function StoryFields({
         topPercent: Math.max(1, Math.min(82, selectedItem.y_percent)),
       }
     : null;
-  const showAnimationsPanel = !!selectedPage && animationsMenuOpen;
-  const showCastPanel = !!selectedPage && castRegistryMenuOpen;
-  const showPageContentPanel =
-    !!selectedPage &&
-    (pageContentPinned || (pageContentMenuOpen && !animationsMenuOpen && !castRegistryMenuOpen));
-  const showObjectPanel =
-    !!selectedPage && (objectPinned || !!selectedItem);
-  const showPhasePanel =
-    !!selectedPage &&
-    (phasePinned ||
-      (!selectedItem && !pageContentMenuOpen && !animationsMenuOpen && !castRegistryMenuOpen));
+  const showAnimationsPanel = !!selectedPage && authoringMode === "animations";
+  const showCastPanel = !!selectedPage && authoringMode === "cast";
+  const showPageContentPanel = !!selectedPage && authoringMode === "page";
+  const showObjectPanel = !!selectedPage && authoringMode === "object";
+  const showPhasePanel = !!selectedPage && authoringMode === "phase";
   /** Must match which panels actually render (e.g. phase needs `selectedPhase`). */
   const phasePanelRendered = !!(showPhasePanel && selectedPhase);
   const visibleEditorPanels = [
@@ -2315,76 +2346,6 @@ export function StoryFields({
             className="sticky top-0 z-30 border-b border-sky-200/80 bg-sky-50/95 px-2 py-0.5 backdrop-blur-sm sm:px-3"
           >
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-              <div className="flex shrink-0 items-center gap-1 border-r border-sky-300/80 pr-1.5">
-                <span className="hidden text-[9px] font-bold uppercase tracking-wide text-neutral-500 sm:inline">
-                  View
-                </span>
-                <div className="inline-flex rounded border border-neutral-300 bg-white p-px text-[10px] leading-none">
-                  {(["book", "slide"] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      disabled={busy}
-                      className={
-                        layoutMode === m ?
-                          "rounded px-1.5 py-0.5 font-semibold text-white bg-violet-600"
-                        : "rounded px-1.5 py-0.5 font-medium text-neutral-700 hover:bg-neutral-100"
-                      }
-                      title={
-                        m === "book" ?
-                          "Book-style player (page turn motion)"
-                        : "Slide deck (dots between pages)"
-                      }
-                      onClick={() => {
-                        setLayoutMode(m);
-                        emit({
-                          image_url,
-                          image_fit,
-                          video_url,
-                          body_text,
-                          read_aloud_text,
-                          tts_lang,
-                          tip_text,
-                          guide_image,
-                          pages,
-                          page_turn_style: pageTurn,
-                          layout_mode: m,
-                        });
-                      }}
-                    >
-                      {m === "book" ? "Book" : "Slides"}
-                    </button>
-                  ))}
-                </div>
-                <label className="flex shrink-0 items-center gap-0.5 text-[9px] text-neutral-600">
-                  <span className="hidden font-semibold uppercase tracking-wide sm:inline">Turn</span>
-                  <select
-                    className="max-w-[6.5rem] rounded border border-neutral-300 bg-white px-0.5 py-px text-[10px] leading-tight"
-                    value={pageTurn}
-                    disabled={busy}
-                    title="Motion between pages in the student player"
-                    onChange={(e) => {
-                      const v = e.target.value as "slide" | "curl";
-                      setPageTurn(v);
-                      emit({
-                        image_url,
-                        image_fit,
-                        video_url,
-                        body_text,
-                        read_aloud_text,
-                        tts_lang,
-                        tip_text,
-                        guide_image,
-                        pages,
-                        page_turn_style: v,
-                      });
-                    }}
-                  >
-                    <option value="curl">Curl</option>
-                    <option value="slide">Swipe</option>
-                  </select>
-                </label>
-              </div>
               <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-0.5">
             {pages.map((p, i) => (
               <button
@@ -2497,57 +2458,58 @@ export function StoryFields({
                 +Ph
               </button>
               </div>
-              <div className="ml-auto flex shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAnimationsMenuOpen((v) => {
-                      const next = !v;
-                      if (next) setCastRegistryMenuOpen(false);
-                      return next;
-                    });
-                  }}
-                  className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none transition-colors ${
-                    animationsMenuOpen
-                      ? "border-fuchsia-500 bg-fuchsia-100 text-fuchsia-950 hover:bg-fuchsia-200"
-                      : "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100"
-                  }`}
-                  title={animationsMenuOpen ? "Close animations controls" : "Open animations controls"}
+              <div className="ml-auto max-w-full overflow-x-auto">
+                <div
+                  className="flex shrink-0 items-end gap-0.5 whitespace-nowrap"
+                  role="tablist"
+                  aria-label="Scene editor modes"
                 >
-                  🎬 Animations
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCastRegistryMenuOpen((v) => {
-                      const next = !v;
-                      if (next) setAnimationsMenuOpen(false);
-                      return next;
-                    });
-                  }}
-                  className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none transition-colors ${
-                    castRegistryMenuOpen
-                      ? "border-emerald-500 bg-emerald-100 text-emerald-950 hover:bg-emerald-200"
-                      : "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
-                  }`}
-                  title={
-                    castRegistryMenuOpen ? "Close cast / props list" : "Open cast & props (shared characters)"
-                  }
-                >
-                  🎭 Cast
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPageContentMenuOpen((v) => !v)}
-                  className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none transition-colors ${
-                    pageContentMenuOpen
-                      ? "border-amber-500 bg-amber-100 text-amber-950 hover:bg-amber-200"
-                      : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
-                  }`}
-                  title={pageContentMenuOpen ? "Close page content controls" : "Open page content controls"}
-                >
-                  🚩 Page content
-                </button>
+                {STORY_AUTHORING_TABS.map((tab) => {
+                  const active = authoringMode === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      title={`Switch to ${tab.label} mode`}
+                      onClick={() => {
+                        if (tab.id !== "object" && pathEditActive) {
+                          cancelPathEdit();
+                        }
+                        if (tab.id === "phase") {
+                          setSelItemId(null);
+                          setSelItemIds([]);
+                        }
+                        setAuthoringMode(tab.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+                        e.preventDefault();
+                        const idx = STORY_AUTHORING_TABS.findIndex((x) => x.id === tab.id);
+                        const nextIdx =
+                          e.key === "ArrowRight" ?
+                            (idx + 1) % STORY_AUTHORING_TABS.length
+                          : (idx - 1 + STORY_AUTHORING_TABS.length) % STORY_AUTHORING_TABS.length;
+                        const nextTab = STORY_AUTHORING_TABS[nextIdx]!;
+                        if (nextTab.id !== "object" && pathEditActive) {
+                          cancelPathEdit();
+                        }
+                        if (nextTab.id === "phase") {
+                          setSelItemId(null);
+                          setSelItemIds([]);
+                        }
+                        setAuthoringMode(nextTab.id);
+                      }}
+                      className={`rounded-t-md border border-b-0 px-2 py-1 text-[10px] font-semibold leading-none transition-colors ${
+                        active ? tab.activeClass : tab.idleClass
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+                </div>
               </div>
             </div>
           </div>
@@ -2661,7 +2623,7 @@ export function StoryFields({
                     setSelItemId(ids[0] ?? null);
                   }}
                   onInteractionStart={recordStoryCanvasUndo}
-                  disabled={busy}
+                  disabled={busy || authoringMode !== "object"}
                   showHorizontalResizeHandle={(r) => {
                     const it = selectedPage.items.find((x) => x.id === r.id);
                     const k = it?.kind ?? "image";
@@ -2697,6 +2659,12 @@ export function StoryFields({
                     );
                   }}
                 />
+                {authoringMode !== "object" ? (
+                  <div
+                    className="pointer-events-none absolute inset-0 z-[15] rounded-md bg-black/5"
+                    aria-hidden
+                  />
+                ) : null}
                 {pathEditActive ? (
                   <div
                     ref={pathPanelOverlayRef}
@@ -2836,7 +2804,7 @@ export function StoryFields({
                     </div>
                   </div>
                 ) : null}
-                {selectedItem && triggerMenuPos && !pathEditActive ? (
+                {authoringMode === "object" && selectedItem && triggerMenuPos && !pathEditActive ? (
                   <div className="pointer-events-none absolute inset-0 z-20">
                     <div
                       className="pointer-events-auto absolute flex flex-col items-end gap-1"
@@ -3313,17 +3281,17 @@ export function StoryFields({
                       <button
                         type="button"
                         onClick={() => addAnimationSequence()}
-                        title="Adds a page-start, phase-start, or tap animation from your current selection (object / phase / scene)."
+                        title="Adds a page-start, phase-start, or tap animation from your current selection (scene item / phase / page)."
                         className="rounded border border-fuchsia-400 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-100"
                       >
                         + Add animation
                       </button>
                       <button
                         type="button"
-                        onClick={() => setAnimationsMenuOpen(false)}
+                        onClick={() => setAuthoringMode("object")}
                         className="rounded border border-fuchsia-300 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-50"
                       >
-                        Close
+                        Scene
                       </button>
                     </div>
                   </div>
@@ -4289,16 +4257,16 @@ export function StoryFields({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setCastRegistryMenuOpen(false)}
+                        onClick={() => setAuthoringMode("object")}
                         className="rounded border border-emerald-300 px-2 py-0.5 text-[10px] font-semibold text-emerald-900 hover:bg-emerald-50"
                       >
-                        Close
+                        Scene
                       </button>
                     </div>
                   </div>
                   <p className="mb-2 px-1 text-[11px] leading-snug text-emerald-900/90">
                     Shared identities for characters and props. Drag a row onto the scene to place an
-                    instance. Use <strong>Object</strong> to link, unlink, or promote art into the cast.
+                    instance. Use <strong>Scene</strong> mode to link, unlink, or promote art into the cast.
                   </p>
                   <div className="h-full min-h-0 space-y-2 overflow-y-auto">
                     {cast.length === 0 ? (
@@ -4403,26 +4371,99 @@ export function StoryFields({
                 <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-amber-300/80 bg-amber-50/60 p-2">
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
-                      Page content
+                      Page
                     </p>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setPageContentPinned((v) => !v)}
-                        className="rounded border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-900 hover:bg-amber-50"
-                      >
-                        {pageContentPinned ? "Unpin" : "Pin"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPageContentMenuOpen(false)}
-                        className="rounded border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-900 hover:bg-amber-50"
-                      >
-                        Close
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAuthoringMode("object")}
+                      className="rounded border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-900 hover:bg-amber-50"
+                    >
+                      Scene
+                    </button>
                   </div>
                   <div className="h-full min-h-0 space-y-3 overflow-y-auto">
+                    <div className="rounded-lg border border-amber-200/90 bg-white/85 p-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => setBgChangeOverlayOpen(true)}
+                        className="rounded border border-sky-400 bg-white px-2 py-1 text-xs font-semibold text-sky-900 shadow-sm hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Change background
+                      </button>
+                    </div>
+                    <div className="space-y-1 rounded-lg border border-amber-200/90 bg-white/85 p-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                        Student view
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex rounded border border-neutral-300 bg-white p-px text-[10px] leading-none">
+                          {(["book", "slide"] as const).map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              disabled={busy}
+                              className={
+                                layoutMode === m ?
+                                  "rounded px-1.5 py-0.5 font-semibold text-white bg-violet-600"
+                                : "rounded px-1.5 py-0.5 font-medium text-neutral-700 hover:bg-neutral-100"
+                              }
+                              title={
+                                m === "book" ?
+                                  "Book-style player (page turn motion)"
+                                : "Slide deck (dots between pages)"
+                              }
+                              onClick={() => {
+                                setLayoutMode(m);
+                                emit({
+                                  image_url,
+                                  image_fit,
+                                  video_url,
+                                  body_text,
+                                  read_aloud_text,
+                                  tts_lang,
+                                  tip_text,
+                                  guide_image,
+                                  pages,
+                                  page_turn_style: pageTurn,
+                                  layout_mode: m,
+                                });
+                              }}
+                            >
+                              {m === "book" ? "Book" : "Slides"}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="flex shrink-0 items-center gap-1 text-[10px] text-neutral-700">
+                          <span className="font-semibold uppercase tracking-wide">Turn</span>
+                          <select
+                            className="max-w-[8rem] rounded border border-neutral-300 bg-white px-1 py-0.5 text-[10px] leading-tight"
+                            value={pageTurn}
+                            disabled={busy}
+                            title="Motion between pages in the student player"
+                            onChange={(e) => {
+                              const v = e.target.value as "slide" | "curl";
+                              setPageTurn(v);
+                              emit({
+                                image_url,
+                                image_fit,
+                                video_url,
+                                body_text,
+                                read_aloud_text,
+                                tts_lang,
+                                tip_text,
+                                guide_image,
+                                pages,
+                                page_turn_style: v,
+                              });
+                            }}
+                          >
+                            <option value="curl">Book curl</option>
+                            <option value="slide">Slide swipe</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
                     <label className={labelClass()}>
                       Page text
                       <textarea
@@ -4482,10 +4523,10 @@ export function StoryFields({
                     </p>
                     <button
                       type="button"
-                      onClick={() => setPhasePinned((v) => !v)}
+                      onClick={() => setAuthoringMode("object")}
                       className="rounded border border-violet-300 px-2 py-0.5 text-[10px] font-semibold text-violet-900 hover:bg-violet-50"
                     >
-                      {phasePinned ? "Unpin" : "Pin"}
+                      Scene
                     </button>
                   </div>
                   <div className="h-full min-h-0 overflow-y-auto">
@@ -4507,15 +4548,11 @@ export function StoryFields({
                 <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-sky-300/80 bg-sky-50/60 p-2">
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                      Object editor
+                      Scene editor
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setObjectPinned((v) => !v)}
-                      className="rounded border border-sky-300 px-2 py-0.5 text-[10px] font-semibold text-sky-900 hover:bg-sky-50"
-                    >
-                      {objectPinned ? "Unpin" : "Pin"}
-                    </button>
+                    <span className="rounded border border-sky-300 bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-sky-900">
+                      Active
+                    </span>
                   </div>
                   <div className="h-full min-h-0 overflow-y-auto">
                     {selectedItem ? (
@@ -4529,7 +4566,7 @@ export function StoryFields({
                       />
                     ) : (
                       <p className="px-2 py-1 text-xs text-neutral-600">
-                        Select an object in the scene to edit it.
+                        Select an item in the scene to edit it.
                       </p>
                     )}
                   </div>
@@ -4550,10 +4587,15 @@ export function StoryFields({
             }
           >
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-2 py-2 sm:px-3">
+              {authoringMode !== "object" ? (
+                <p className="text-xs font-semibold text-neutral-600">
+                  Scene toolbar is disabled in {STORY_AUTHORING_TABS.find((t) => t.id === authoringMode)?.label} mode.
+                </p>
+              ) : null}
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  disabled={busy || authoringMode !== "object" || !(selectedPage.background_image_url ?? image_url)}
                   className="rounded border bg-white px-2 py-1 text-sm font-semibold"
                   onClick={() => {
                     recordStoryCanvasUndo();
@@ -4588,7 +4630,7 @@ export function StoryFields({
                 </button>
                 <button
                   type="button"
-                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  disabled={busy || authoringMode !== "object" || !(selectedPage.background_image_url ?? image_url)}
                   className="rounded border border-violet-200 bg-white px-2 py-1 text-sm font-semibold text-violet-900"
                   onClick={() => {
                     recordStoryCanvasUndo();
@@ -4624,7 +4666,7 @@ export function StoryFields({
                 </button>
                 <button
                   type="button"
-                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  disabled={busy || authoringMode !== "object" || !(selectedPage.background_image_url ?? image_url)}
                   className="rounded border border-teal-200 bg-white px-2 py-1 text-sm font-semibold text-teal-900"
                   onClick={() => {
                     recordStoryCanvasUndo();
@@ -4657,7 +4699,7 @@ export function StoryFields({
                 </button>
                 <button
                   type="button"
-                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  disabled={busy || authoringMode !== "object" || !(selectedPage.background_image_url ?? image_url)}
                   className="rounded border border-slate-300 bg-white px-2 py-1 text-sm font-semibold text-slate-900"
                   onClick={() => {
                     recordStoryCanvasUndo();
@@ -4693,7 +4735,7 @@ export function StoryFields({
                 </button>
                 <button
                   type="button"
-                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
+                  disabled={busy || authoringMode !== "object" || !(selectedPage.background_image_url ?? image_url)}
                   className="rounded border border-sky-300 bg-white px-2 py-1 text-sm font-semibold text-sky-900"
                   onClick={() => {
                     recordStoryCanvasUndo();
@@ -4729,7 +4771,7 @@ export function StoryFields({
                 </button>
                 <button
                   type="button"
-                  disabled={busy || (!selItemId && selItemIds.length === 0)}
+                  disabled={busy || authoringMode !== "object" || (!selItemId && selItemIds.length === 0)}
                   className="rounded border border-red-200 px-2 py-1 text-sm text-red-800"
                   onClick={() => {
                     if (!selItemId && selItemIds.length === 0) return;
@@ -4758,7 +4800,7 @@ export function StoryFields({
                 </button>
                 <button
                   type="button"
-                  disabled={busy || selectedPage.items.length === 0}
+                  disabled={busy || authoringMode !== "object" || selectedPage.items.length === 0}
                   className="rounded border border-sky-300 px-2 py-1 text-sm text-sky-900"
                   onClick={() => {
                     const allIds = selectedPage.items.map((it) => it.id);
@@ -4770,7 +4812,7 @@ export function StoryFields({
                 </button>
                 <button
                   type="button"
-                  disabled={busy || selItemIds.length === 0}
+                  disabled={busy || authoringMode !== "object" || selItemIds.length === 0}
                   className="rounded border border-neutral-300 px-2 py-1 text-sm text-neutral-700"
                   onClick={() => {
                     setSelItemIds([]);
@@ -4783,20 +4825,12 @@ export function StoryFields({
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  disabled={busy || !(selectedPage.background_image_url ?? image_url)}
-                  title="Wheel: zoom · Middle-drag or Space+drag empty canvas: pan · Ctrl+Z/Y: undo/redo · Ctrl+C/V/D: copy/paste/duplicate · Delete: remove selection"
+                  disabled={busy || authoringMode !== "object" || !(selectedPage.background_image_url ?? image_url)}
+                  title="Wheel: zoom · Middle-drag or Space+drag empty canvas: pan · Scene mode: Ctrl+Z/Y undo/redo · Ctrl+C/V/D copy/paste/duplicate · Delete remove selection"
                   onClick={() => storyCanvasViewportRef.current?.resetView()}
                   className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 shadow-sm hover:bg-neutral-50 disabled:opacity-50"
                 >
                   Reset view
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setBgChangeOverlayOpen(true)}
-                  className="rounded border border-sky-400 bg-white px-3 py-1.5 text-sm font-semibold text-sky-900 shadow-sm hover:bg-sky-50"
-                >
-                  Change background
                 </button>
               </div>
             </div>

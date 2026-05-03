@@ -5,6 +5,7 @@ import {
   parseScreenPayload,
   type StoryPayload,
 } from "@/lib/lesson-schemas";
+import { buildUnifiedReactionsFromStoryPage } from "@/lib/story-unified/build-unified-reactions";
 
 function storyPhasesLookBroken(p: StoryPayload): boolean {
   if (!p.pages?.length) return false;
@@ -74,6 +75,17 @@ function storyPhasesLookBroken(p: StoryPayload): boolean {
   return false;
 }
 
+/** True when unified IR compiler reports parse errors or error-level validation on any story page. */
+function storyUnifiedIrHardFailures(story: StoryPayload): boolean {
+  const pages = getNormalizedStoryPages(story);
+  for (const page of pages) {
+    const { parseErrors, issues } = buildUnifiedReactionsFromStoryPage(page);
+    if (parseErrors.length > 0) return true;
+    if (issues.some((i) => i.level === "error")) return true;
+  }
+  return false;
+}
+
 export type ChecklistItem = { ok: boolean; label: string };
 
 type LessonScreenEval = {
@@ -86,6 +98,7 @@ type LessonScreenEval = {
   storyPhaseIssues: boolean;
   quizMultiMissingTitle: boolean;
   quizTitleInconsistent: boolean;
+  storyUnifiedIrFailures: boolean;
 };
 
 function evaluateLessonScreens(screens: LessonScreenRow[]): LessonScreenEval {
@@ -142,6 +155,13 @@ function evaluateLessonScreens(screens: LessonScreenRow[]): LessonScreenEval {
     return false;
   })();
 
+  const storyUnifiedIrFailures = screens.some((s) => {
+    if (s.screen_type !== "story") return false;
+    const p = parseScreenPayload("story", s.payload);
+    if (!p || p.type !== "story") return false;
+    return storyUnifiedIrHardFailures(p);
+  });
+
   const quizTitleInconsistent = (() => {
     const byGid = new Map<string, LessonScreenRow[]>();
     for (const s of screens) {
@@ -171,6 +191,7 @@ function evaluateLessonScreens(screens: LessonScreenRow[]): LessonScreenEval {
     storyPhaseIssues,
     quizMultiMissingTitle,
     quizTitleInconsistent,
+    storyUnifiedIrFailures,
   };
 }
 
@@ -202,6 +223,11 @@ export function getLessonPublishBlockingReasons(screens: LessonScreenRow[]): str
   if (e.quizTitleInconsistent) {
     reasons.push("Use the same quiz title for every question in each quiz group.");
   }
+  if (e.storyUnifiedIrFailures) {
+    reasons.push(
+      "Fix unified story reaction IR: one or more story pages fail the compiler or have error-level validation (see `web/lib/story-unified/README.md`).",
+    );
+  }
   return reasons;
 }
 
@@ -230,6 +256,10 @@ export function lessonPublishChecklist(input: {
     {
       ok: !e.quizTitleInconsistent,
       label: "Each quiz uses one consistent title across all questions in the group",
+    },
+    {
+      ok: !e.storyUnifiedIrFailures,
+      label: "Stories compile to unified reaction IR (no compiler/validation errors)",
     },
   ];
   if (published) {

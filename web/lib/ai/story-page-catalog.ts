@@ -1,4 +1,6 @@
-/** LLM-facing hints for Story-First `story` payloads (`storyPayloadSchema` with pages[]). */
+/** LLM-facing hints for Story-First `story` payloads (`storyPayloadSchema` with pages[]).
+ * Runtime can compile valid payloads to unified reaction IR (`web/lib/story-unified/README.md`).
+ * Prefer `action_sequences` on page, phase, and items for timed/tap choreography; keep ids stable. */
 export function storyPageCatalogPromptSnippet(): string {
   return `Story screens (screen_type "story") are the primary lesson delivery system:
 - Use type "story" with layout_mode "book" or "slide" (default book). Prefer pages[] for new work.

@@ -8,15 +8,6 @@ export const guideSchema = z
   })
   .optional();
 
-export const startPayloadSchema = z.object({
-  type: z.literal("start"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  cta_label: z.string().optional().default("Start learning"),
-  /** Optional TTS line; player also offers lesson title read-aloud */
-  read_aloud_title: z.string().optional(),
-});
-
 /** Story book: CSS-friendly animation presets (no arbitrary keyframes from JSON). */
 export const storyAnimationPresetSchema = z.enum([
   "none",
@@ -1314,6 +1305,138 @@ export const storyPayloadSchema = z
   });
 
 export type StoryPayload = z.infer<typeof storyPayloadSchema>;
+
+/** Tap easter-egg rewards on start-screen playground (gated in player; not used on full story payloads). */
+export const startPlaygroundTapRewardSchema = z.object({
+  item_id: z.string().min(1).max(200),
+  gold: z.number().int().min(0).max(100).optional(),
+  experience: z.number().int().min(0).max(500).optional(),
+  sticker: z.boolean().optional(),
+  max_triggers: z.number().int().min(1).max(20).optional().default(1),
+  play_sound_url: z.string().max(2000).optional(),
+});
+
+export type StartPlaygroundTapReward = z.infer<typeof startPlaygroundTapRewardSchema>;
+
+export const startPlaygroundSchema = z
+  .object({
+    page: storyPageSchema,
+    cast: z.array(storyCastEntrySchema).optional(),
+    tap_rewards: z.array(startPlaygroundTapRewardSchema).max(30).optional(),
+  })
+  .superRefine((pg, ctx) => {
+    if (pg.page.phases != null && pg.page.phases.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["page", "phases"],
+        message:
+          "Playground page cannot include phases; use items, tap sounds, and action sequences only.",
+      });
+    }
+    const seen = new Set<string>();
+    for (const tr of pg.tap_rewards ?? []) {
+      if (seen.has(tr.item_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tap_rewards"],
+          message: `Duplicate tap_rewards item_id: ${tr.item_id}`,
+        });
+        return;
+      }
+      seen.add(tr.item_id);
+      const hasEffect =
+        (tr.gold != null && tr.gold > 0) ||
+        (tr.experience != null && tr.experience > 0) ||
+        tr.sticker === true ||
+        !!(tr.play_sound_url?.trim());
+      if (!hasEffect) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tap_rewards"],
+          message: `tap_rewards entry for ${tr.item_id} needs gold, experience, sticker, and/or play_sound_url`,
+        });
+      }
+    }
+  });
+
+export type StartPlayground = z.infer<typeof startPlaygroundSchema>;
+
+/** Post-lesson completion overlay (same shape as start `playground`). */
+export const completionPlaygroundSchema = startPlaygroundSchema;
+export type CompletionPlayground = z.infer<typeof completionPlaygroundSchema>;
+
+function countPlaygroundActionSteps(page: StoryPage): number {
+  let n = 0;
+  for (const it of page.items) {
+    for (const seq of it.action_sequences ?? []) n += seq.steps.length;
+  }
+  for (const seq of page.action_sequences ?? []) n += seq.steps.length;
+  return n;
+}
+
+export const startPayloadSchema = z
+  .object({
+    type: z.literal("start"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    cta_label: z.string().optional().default("Start learning"),
+    /** Optional TTS line; player also offers lesson title read-aloud */
+    read_aloud_title: z.string().optional(),
+    /** Optional single-page interactive layer (sound-board style). */
+    playground: startPlaygroundSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    const pg = data.playground;
+    if (!pg) return;
+    if (pg.page.items.length > 40) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["playground", "page", "items"],
+        message: "Playground supports at most 40 items",
+      });
+    }
+    const steps = countPlaygroundActionSteps(pg.page);
+    if (steps > 120) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["playground", "page"],
+        message: "Playground action steps are capped at 120 (sum of action_sequences steps)",
+      });
+    }
+  });
+
+export type StartPayload = z.infer<typeof startPayloadSchema>;
+
+/**
+ * Build a minimal story payload so {@link StoryBookView} can render a start-screen playground.
+ * Phases are stripped; layout defaults to slide (single full-bleed stage).
+ */
+export function storyPayloadFromStartPlayground(playground: StartPlayground): StoryPayload {
+  const page: StoryPage = {
+    ...playground.page,
+    phases: undefined,
+  };
+  return storyPayloadSchema.parse({
+    type: "story",
+    body_text: "\u00a0",
+    read_aloud_text: "",
+    pages: [page],
+    cast: playground.cast,
+    layout_mode: "slide",
+    guide: undefined,
+  });
+}
+
+/** Map tap_rewards array to item_id → rule for the story player bookend hook. */
+export function tapRewardsByItemId(
+  tapRewards: StartPlaygroundTapReward[] | undefined,
+): Record<string, StartPlaygroundTapReward> {
+  const out: Record<string, StartPlaygroundTapReward> = {};
+  for (const tr of tapRewards ?? []) {
+    out[tr.item_id] = tr;
+  }
+  return out;
+}
 
 /** Resolved image URL for an image item (own URL wins; else cast default). */
 export function resolveStoryItemImageUrl(
@@ -2670,7 +2793,6 @@ export type ScreenPayload =
   | z.infer<typeof storyPayloadSchema>
   | z.infer<typeof interactionPayloadSchema>;
 
-export type StartPayload = z.infer<typeof startPayloadSchema>;
 export type McQuizPayload = z.infer<typeof mcQuizPayloadSchema>;
 
 export type InteractionSubtype = z.infer<

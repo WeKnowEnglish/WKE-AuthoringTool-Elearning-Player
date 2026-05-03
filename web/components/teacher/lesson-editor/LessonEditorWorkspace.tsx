@@ -23,6 +23,7 @@ import {
   segmentLessonScreensForStoryboard,
 } from "@/lib/lesson-activity-taxonomy";
 import { screenOutlineLabel, screenThumbnailUrl } from "@/lib/lesson-screen-outline";
+import type { CompletionPlayground } from "@/lib/lesson-schemas";
 import {
   getLessonPublishBlockingReasons,
   lessonPublishChecklist,
@@ -88,6 +89,8 @@ type Props = {
   learningGoals: string[];
   /** When true, generator omits an opening start screen (editor already has one). */
   hasOpeningStart: boolean;
+  /** Post-lesson reward-screen playground (optional). */
+  completionPlayground?: CompletionPlayground | null;
   /** Right sidebar: skills and tools only (objectives live in the Plan panel). */
   children?: ReactNode;
 };
@@ -414,6 +417,7 @@ export function LessonEditorWorkspace({
   lessonPlanSyncKey,
   learningGoals,
   hasOpeningStart,
+  completionPlayground = null,
   children,
 }: Props) {
   const router = useRouter();
@@ -2600,6 +2604,7 @@ export function LessonEditorWorkspace({
         lessonTitle={lessonTitle}
         screens={liveScreens}
         initialScreenIndex={safeIndex}
+        completionPlayground={completionPlayground}
       />
     </div>
   );

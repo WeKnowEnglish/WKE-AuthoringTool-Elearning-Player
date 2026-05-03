@@ -13,7 +13,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "create-teacher": "node scripts/create-teacher-user.mjs",
-    "media:finalize-metadata": "node scripts/finalize-media-metadata.mjs"
+    "media:finalize-metadata": "node scripts/finalize-media-metadata.mjs",
+    "story:unified-dry-run": "vitest run lib/story-unified/story-import-smoke.test.ts lib/story-unified/build-unified-reactions.test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

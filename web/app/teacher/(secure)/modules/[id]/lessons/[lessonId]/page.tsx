@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
-import { ensureLessonBookendsForEditor, saveLessonSkills } from "@/lib/actions/teacher";
+import {
+  ensureLessonBookendsForEditor,
+  saveLessonCompletionPlayground,
+  saveLessonSkills,
+} from "@/lib/actions/teacher";
 import { findOpeningStartScreen } from "@/lib/lesson-bookends";
 import { parseLearningGoalsFromDb } from "@/lib/learning-goals";
 import { parseActivityLibraryIdFromLessonSlug } from "@/lib/activity-library-mirror";
@@ -11,6 +15,7 @@ import {
   getModule,
   getScreens,
 } from "@/lib/data/teacher";
+import { completionPlaygroundSchema } from "@/lib/lesson-schemas";
 import { RegisterTeacherEditorHeader } from "@/components/teacher/TeacherEditorHeaderContext";
 import { AiLessonPanel } from "./AiLessonPanel";
 import { LessonEditorWorkspace } from "@/components/teacher/lesson-editor/LessonEditorWorkspace";
@@ -56,6 +61,12 @@ export default async function EditLessonPage({ params }: Props) {
   const headerPublished =
     activityLibraryMirrorId ? activityLibraryPublished === true : lesson.published === true;
 
+  const rawCompletion = (lesson as { completion_playground?: unknown }).completion_playground;
+  const completionPg = completionPlaygroundSchema.safeParse(rawCompletion);
+  const completionPlayground = completionPg.success ? completionPg.data : null;
+  const completionPlaygroundFormDefault =
+    completionPlayground ? JSON.stringify(completionPlayground, null, 2) : "";
+
   return (
     <>
       <RegisterTeacherEditorHeader title={lesson.title} published={headerPublished} />
@@ -85,8 +96,37 @@ export default async function EditLessonPage({ params }: Props) {
         lessonPlanSyncKey={lessonPlanSyncKey}
         learningGoals={learningGoals}
         hasOpeningStart={hasOpeningStart}
+        completionPlayground={completionPlayground}
       >
         <AiLessonPanel sidebar />
+
+        <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-neutral-900">Completion playground</h2>
+          <p className="mt-1 text-xs text-neutral-600">
+            Optional JSON shown after the lesson on the reward screen (same shape as start-screen
+            playground: <code className="text-[11px]">page</code>,{" "}
+            <code className="text-[11px]">cast</code>,{" "}
+            <code className="text-[11px]">tap_rewards</code>). Leave empty to hide.
+          </p>
+          <form
+            action={saveLessonCompletionPlayground.bind(null, lessonId, moduleId)}
+            className="mt-3 space-y-2"
+          >
+            <textarea
+              name="completion_playground_json"
+              defaultValue={completionPlaygroundFormDefault}
+              rows={10}
+              className="w-full resize-y rounded border border-neutral-300 px-2 py-1.5 font-mono text-xs text-neutral-900"
+              placeholder='{"page":{"id":"end","background_image_url":"https://…","items":[]}}'
+            />
+            <button
+              type="submit"
+              className="rounded bg-neutral-800 px-3 py-2 text-sm font-semibold text-white active:bg-neutral-900"
+            >
+              Save completion playground
+            </button>
+          </form>
+        </section>
 
         <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
           <h2 className="text-sm font-bold text-neutral-900">Skill tags</h2>

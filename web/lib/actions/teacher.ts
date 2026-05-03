@@ -17,6 +17,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { QUIZ_SUBTYPES } from "@/lib/lesson-activity-taxonomy";
 import {
+  completionPlaygroundSchema,
   interactionPayloadSchema,
   type InteractionSubtype,
   remapStoryPayloadIds,
@@ -1131,6 +1132,36 @@ export async function saveLessonSkills(
       keys.map((skill_key) => ({ lesson_id: lessonId, skill_key })),
     );
   }
+  revalidateStudentCatalogViews();
+  revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
+}
+
+export async function saveLessonCompletionPlayground(
+  lessonId: string,
+  moduleId: string,
+  formData: FormData,
+) {
+  const supabase = await requireTeacher();
+  const raw = (formData.get("completion_playground_json") as string) ?? "";
+  let toStore: unknown = null;
+  if (raw.trim()) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch {
+      throw new Error("Invalid JSON");
+    }
+    toStore = completionPlaygroundSchema.parse(parsed);
+  }
+  const { error } = await supabase
+    .from("lessons")
+    .update({
+      completion_playground: toStore,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", lessonId)
+    .eq("module_id", moduleId);
+  if (error) throw error;
   revalidateStudentCatalogViews();
   revalidatePath(`/teacher/modules/${moduleId}/lessons/${lessonId}`);
 }

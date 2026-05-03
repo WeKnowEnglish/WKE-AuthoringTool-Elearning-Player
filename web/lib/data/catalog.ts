@@ -49,6 +49,8 @@ export type LessonRow = {
   order_index: number;
   published: boolean;
   estimated_minutes: number | null;
+  /** Optional post-lesson bookend playground (parsed with `completionPlaygroundSchema`). */
+  completion_playground?: unknown;
 };
 
 export type LessonScreenRow = {
@@ -449,7 +451,7 @@ export async function getLessonBySlugs(moduleSlug: string, lessonSlug: string) {
 
   const { data: lesson, error: lErr } = await supabase
     .from("lessons")
-    .select("id,module_id,title,slug,order_index,published,estimated_minutes")
+    .select("id,module_id,title,slug,order_index,published,estimated_minutes,completion_playground")
     .eq("module_id", mod.id)
     .eq("slug", lessonSlug)
     .eq("published", true)

@@ -35,6 +35,8 @@ import {
   voiceQuestionPayloadSchema,
   parseScreenPayload,
   getInteractionSubtype,
+  startPayloadSchema,
+  startPlaygroundSchema,
   type ScreenPayload,
 } from "@/lib/lesson-schemas";
 import { updateScreenPayload } from "@/lib/actions/teacher";
@@ -723,23 +725,55 @@ function StartFields({
   const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
   const [cta_label, setCta] = useState(initial.cta_label ?? "Start learning");
   const [read_aloud_title, setReadAloudTitle] = useState(initial.read_aloud_title ?? "");
+  const [playgroundJson, setPlaygroundJson] = useState(() =>
+    initial.playground ? JSON.stringify(initial.playground, null, 2) : "",
+  );
+  const [playgroundError, setPlaygroundError] = useState<string | null>(null);
+  const playgroundRef = useRef(initial.playground);
 
   useEffect(() => {
     setImageUrl(initial.image_url ?? "");
     setImageFit(initial.image_fit ?? "contain");
     setCta(initial.cta_label ?? "Start learning");
     setReadAloudTitle(initial.read_aloud_title ?? "");
+    setPlaygroundJson(initial.playground ? JSON.stringify(initial.playground, null, 2) : "");
+    playgroundRef.current = initial.playground;
+    setPlaygroundError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
   }, [syncKey]);
 
   function emit(image: string, fit: "cover" | "contain", cta: string, readTitle: string) {
-    onLivePayload({
-      type: "start",
-      image_url: image.trim() || undefined,
-      image_fit: fit,
-      cta_label: cta.trim() || "Start learning",
-      read_aloud_title: readTitle.trim() || undefined,
-    });
+    try {
+      onLivePayload(
+        startPayloadSchema.parse({
+          type: "start",
+          image_url: image.trim() || undefined,
+          image_fit: fit,
+          cta_label: cta.trim() || "Start learning",
+          read_aloud_title: readTitle.trim() || undefined,
+          playground: playgroundRef.current,
+        }),
+      );
+    } catch {
+      /* ignore invalid combo */
+    }
+  }
+
+  function applyPlaygroundJson() {
+    if (!playgroundJson.trim()) {
+      playgroundRef.current = undefined;
+      setPlaygroundError(null);
+      emit(image_url, image_fit, cta_label, read_aloud_title);
+      return;
+    }
+    try {
+      const parsed = startPlaygroundSchema.parse(JSON.parse(playgroundJson));
+      playgroundRef.current = parsed;
+      setPlaygroundError(null);
+      emit(image_url, image_fit, cta_label, read_aloud_title);
+    } catch (e) {
+      setPlaygroundError(e instanceof Error ? e.message : "Invalid playground JSON");
+    }
   }
 
   return (
@@ -792,6 +826,32 @@ function StartFields({
           }}
         />
       </label>
+      <div className="mt-3 rounded border border-neutral-200 bg-neutral-50 p-2">
+        <label className="text-xs font-semibold text-neutral-800">
+          Playground JSON (optional — story-style single page, no phases)
+          <textarea
+            className="mt-1 w-full resize-y rounded border border-neutral-300 px-2 py-1 font-mono text-xs text-neutral-900"
+            rows={8}
+            value={playgroundJson}
+            disabled={busy}
+            onChange={(e) => {
+              setPlaygroundJson(e.target.value);
+              setPlaygroundError(null);
+            }}
+          />
+        </label>
+        {playgroundError ? (
+          <p className="mt-1 text-xs text-red-700">{playgroundError}</p>
+        ) : null}
+        <button
+          type="button"
+          className="mt-2 rounded bg-sky-700 px-2 py-1 text-xs font-semibold text-white hover:bg-sky-800 disabled:opacity-50"
+          disabled={busy}
+          onClick={applyPlaygroundJson}
+        >
+          Apply playground
+        </button>
+      </div>
     </div>
   );
 }

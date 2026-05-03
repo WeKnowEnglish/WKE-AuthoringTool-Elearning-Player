@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { LessonGate } from "@/components/lesson/LessonGate";
 import { getLessonPageContext } from "@/lib/data/catalog";
 import { lessonsForModule } from "@/lib/gating";
+import { completionPlaygroundSchema } from "@/lib/lesson-schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,11 @@ export default async function LessonPage({ params }: Props) {
   const modLessons = lessonsForModule(catalog.lessons, data.module.id);
   if (!modLessons.some((l) => l.id === data.lesson.id)) notFound();
 
+  const rawCompletion = (data.lesson as { completion_playground?: unknown })
+    .completion_playground;
+  const completionParsed = completionPlaygroundSchema.safeParse(rawCompletion);
+  const completionPlayground = completionParsed.success ? completionParsed.data : null;
+
   return (
     <LessonGate
       module={data.module}
@@ -24,6 +30,7 @@ export default async function LessonPage({ params }: Props) {
       lessons={catalog.lessons}
       lesson={data.lesson}
       screens={data.screens}
+      completionPlayground={completionPlayground}
     />
   );
 }

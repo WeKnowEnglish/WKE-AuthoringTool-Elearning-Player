@@ -1,0 +1,29 @@
+{
+  "description": "Example start-screen `playground` (merge into a start payload). Single page, no phases.",
+  "playground": {
+    "page": {
+      "id": "opening_play",
+      "background_image_url": "https://placehold.co/1200x750/e0f2fe/0c4a6e?text=Welcome",
+      "items": [
+        {
+          "id": "tap_star",
+          "name": "Star",
+          "kind": "image",
+          "image_url": "https://placehold.co/100x100/fef9c2/854d0e?text=★",
+          "x_percent": 44,
+          "y_percent": 38,
+          "w_percent": 12,
+          "h_percent": 16,
+          "z_index": 2
+        }
+      ]
+    },
+    "tap_rewards": [
+      {
+        "item_id": "tap_star",
+        "gold": 1,
+        "max_triggers": 3
+      }
+    ]
+  }
+}

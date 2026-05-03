@@ -10,6 +10,7 @@ import {
 } from "react";
 import { LessonPlayer } from "@/components/lesson/LessonPlayer";
 import type { LessonScreenRow } from "@/lib/data/catalog";
+import type { CompletionPlayground } from "@/lib/lesson-schemas";
 import { FitScaledLessonPreview } from "./FitScaledLessonPreview";
 
 const PREVIEW_MIN_W = 360;
@@ -64,6 +65,7 @@ type Props = {
   lessonTitle: string;
   screens: LessonScreenRow[];
   initialScreenIndex: number;
+  completionPlayground?: CompletionPlayground | null;
 };
 
 function LessonPreviewOverlayPortal({
@@ -72,6 +74,7 @@ function LessonPreviewOverlayPortal({
   lessonTitle,
   screens,
   initialScreenIndex,
+  completionPlayground = null,
 }: Props) {
   const [prefs, setPrefs] = useState<Prefs>(() => loadPrefs(lessonId));
   const dragRef = useRef<{
@@ -186,6 +189,7 @@ function LessonPreviewOverlayPortal({
               lessonTitle={lessonTitle}
               screens={screens}
               initialScreenIndex={initialScreenIndex}
+              completionPlayground={completionPlayground}
             />
           ) : (
             <p className="text-sm text-neutral-600">No screens.</p>

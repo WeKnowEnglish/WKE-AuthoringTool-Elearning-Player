@@ -25,6 +25,7 @@ import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
 import {
   storyAnimationPresetSchema,
+  getNormalizedStoryPages,
   storyPayloadSchema,
   resolveStoryItemImageUrl,
   getItemTapGroupSatisfiedSequences,
@@ -63,6 +64,11 @@ import {
   STORY_EDITOR_VIRTUAL_PHASE_ID,
 } from "@/components/teacher/lesson-editor/story-editor-phases";
 import { StoryItemEditorPanel } from "@/components/teacher/lesson-editor/StoryItemEditorPanel";
+import {
+  StoryReactionsTable,
+  reactionRowKey,
+  type ReactionIssueBadge,
+} from "@/components/teacher/lesson-editor/StoryReactionsTable";
 import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 import {
   searchTeacherMedia,
@@ -70,6 +76,12 @@ import {
   type MediaAssetRow,
 } from "@/lib/actions/media";
 import type { ZodType } from "zod";
+import {
+  buildUnifiedReactionsFromStoryPage,
+  reactionTriggerLabel,
+} from "@/lib/story-unified";
+import type { StoryUnifiedReactionRow } from "@/lib/story-unified/schema";
+import { validateReactionRow } from "@/lib/story-unified/validate-reaction-row";
 
 function emitLive(
   onLivePayload: (p: unknown) => void,
@@ -380,6 +392,7 @@ function itemDisplayLabel(it: StoryItem): string {
   }
   if (!n && k === "shape") return "Shape";
   if (!n && k === "line") return "Line";
+  if (!n && k === "variable") return "Variable";
   return n || it.id;
 }
 
@@ -421,6 +434,7 @@ function rectToStoryItem(
     name: prev?.name,
     registry_id: prev?.registry_id,
     kind: prev?.kind ?? "image",
+    item_role: prev?.item_role,
     image_url:
       prev?.image_url?.trim() ?
         prev.image_url
@@ -459,6 +473,7 @@ function rectToStoryItem(
     tap_speeches: prev?.tap_speeches,
     action_sequences: prev?.action_sequences,
     idle_animations: prev?.idle_animations,
+    variable_config: prev?.variable_config,
   };
 }
 
@@ -522,6 +537,19 @@ function pruneDeletedItemReferences(page: StoryPage, removedIds: Set<string>): S
       return {
         ...it,
         on_click: nextOnClick,
+        variable_config:
+          (it.kind ?? "image") === "variable" ?
+            {
+              ...it.variable_config,
+              outcome_item_ids:
+                it.variable_config?.outcome_item_ids.filter((id) => !removedIds.has(id)) ?? [],
+              initial_outcome_item_id:
+                it.variable_config?.initial_outcome_item_id &&
+                removedIds.has(it.variable_config.initial_outcome_item_id) ?
+                  undefined
+                : it.variable_config?.initial_outcome_item_id,
+            }
+          : it.variable_config,
       };
     });
   const nextTimeline = (page.timeline ?? []).filter(
@@ -635,7 +663,21 @@ type AnimationEditorState = {
   sequence: StoryActionSequence;
 };
 
-type StoryAuthoringMode = "object" | "animations" | "page" | "cast" | "phase";
+function sequenceImpactLabel(
+  sequence: StoryActionSequence,
+  itemNameById: Map<string, string>,
+  ownerItemId?: string,
+): string {
+  const targets = new Set<string>();
+  for (const step of sequence.steps) {
+    if (step.target_item_id) targets.add(step.target_item_id);
+    else if (ownerItemId) targets.add(ownerItemId);
+  }
+  const labels = [...targets].map((id) => itemNameById.get(id) ?? id);
+  return labels.length > 0 ? labels.join(", ") : "—";
+}
+
+type StoryAuthoringMode = "object" | "animations" | "cast" | "phase";
 const STORY_AUTHORING_TABS: ReadonlyArray<{
   id: StoryAuthoringMode;
   label: string;
@@ -655,12 +697,6 @@ const STORY_AUTHORING_TABS: ReadonlyArray<{
     idleClass: "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100",
   },
   {
-    id: "page",
-    label: "Page",
-    activeClass: "border-amber-500 bg-amber-100 text-amber-950",
-    idleClass: "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100",
-  },
-  {
     id: "cast",
     label: "Cast",
     activeClass: "border-emerald-500 bg-emerald-100 text-emerald-950",
@@ -673,6 +709,20 @@ const STORY_AUTHORING_TABS: ReadonlyArray<{
     idleClass: "border-violet-300 bg-violet-50 text-violet-900 hover:bg-violet-100",
   },
 ] as const;
+
+function modeOverlayClass(mode: StoryAuthoringMode): string {
+  if (mode === "cast") return "bg-emerald-300/15";
+  if (mode === "phase") return "bg-violet-300/15";
+  if (mode === "animations") return "bg-fuchsia-300/15";
+  return "bg-sky-300/15";
+}
+
+function modeViewportBackdropClass(mode: StoryAuthoringMode): string {
+  if (mode === "cast") return "bg-emerald-50/50";
+  if (mode === "phase") return "bg-violet-50/50";
+  if (mode === "animations") return "bg-fuchsia-50/50";
+  return "bg-sky-50/50";
+}
 
 export function StoryFields({
   syncKey,
@@ -733,6 +783,7 @@ export function StoryFields({
   const [authoringMode, setAuthoringMode] = useState<StoryAuthoringMode>("object");
   const [cast, setCast] = useState<StoryCastEntry[]>(() => [...(initial.cast ?? [])]);
   const [selectedAnimationRowId, setSelectedAnimationRowId] = useState<string | null>(null);
+  const [selectedReactionRowKey, setSelectedReactionRowKey] = useState<string | null>(null);
   const [animationEditor, setAnimationEditor] = useState<AnimationEditorState | null>(null);
   const [dragSummaryStepIdx, setDragSummaryStepIdx] = useState<number | null>(null);
   const [dragEditorStepIdx, setDragEditorStepIdx] = useState<number | null>(null);
@@ -908,6 +959,48 @@ export function StoryFields({
     }
     return list.find((p) => p.is_start) ?? list[0] ?? null;
   }, [editorPhasesForPage, selPhaseId]);
+
+  const itemNameById = useMemo(
+    () => new Map((selectedPage?.items ?? []).map((it) => [it.id, itemDisplayLabel(it)])),
+    [selectedPage],
+  );
+
+  const phaseNameById = useMemo(
+    () =>
+      new Map((selectedPage?.phases ?? []).map((ph) => [ph.id, ph.name?.trim() || ph.id])),
+    [selectedPage],
+  );
+
+  const unifiedBuild = useMemo(() => {
+    if (!selectedPage) return null;
+    const payload = {
+      type: "story" as const,
+      body_text: (selectedPage.body_text ?? body_text ?? " ").trim() || " ",
+      pages: [selectedPage],
+    };
+    const normalized = getNormalizedStoryPages(payload)[0];
+    if (!normalized) return null;
+    return buildUnifiedReactionsFromStoryPage(normalized);
+  }, [selectedPage, body_text]);
+
+  const unifiedRows = unifiedBuild?.rows ?? [];
+
+  const rowIssueByKey = useMemo(() => {
+    const map = new Map<string, ReactionIssueBadge>();
+    if (!selectedPage) return map;
+    for (const [idx, row] of unifiedRows.entries()) {
+      const key = reactionRowKey(row, idx);
+      const phase = selectedPage.phases?.find((p) => p.id === row.phase_id) ?? null;
+      const issues = validateReactionRow(row, selectedPage, phase);
+      if (issues.length === 0) continue;
+      const level = issues.some((x) => x.level === "error") ? "error" : "warn";
+      map.set(key, {
+        level,
+        messages: issues.map((x) => x.message),
+      });
+    }
+    return map;
+  }, [selectedPage, unifiedRows]);
 
   useEffect(() => {
     if (!selectedPage) {
@@ -1529,8 +1622,8 @@ export function StoryFields({
     : null;
   const showAnimationsPanel = !!selectedPage && authoringMode === "animations";
   const showCastPanel = !!selectedPage && authoringMode === "cast";
-  const showPageContentPanel = !!selectedPage && authoringMode === "page";
-  const showObjectPanel = !!selectedPage && authoringMode === "object";
+  const showPageContentPanel = !!selectedPage && authoringMode === "object" && !selectedItem;
+  const showObjectPanel = !!selectedPage && authoringMode === "object" && !!selectedItem;
   const showPhasePanel = !!selectedPage && authoringMode === "phase";
   /** Must match which panels actually render (e.g. phase needs `selectedPhase`). */
   const phasePanelRendered = !!(showPhasePanel && selectedPhase);
@@ -1676,6 +1769,15 @@ export function StoryFields({
     );
   }, [animationRows]);
 
+  useEffect(() => {
+    if (unifiedRows.length === 0) {
+      setSelectedReactionRowKey(null);
+      return;
+    }
+    const keys = unifiedRows.map((r, i) => reactionRowKey(r, i));
+    setSelectedReactionRowKey((prev) => (prev && keys.includes(prev) ? prev : keys[0]!));
+  }, [unifiedRows]);
+
   const selectedAnimationRow =
     animationRows.find((row) => row.id === selectedAnimationRowId) ?? null;
 
@@ -1723,6 +1825,201 @@ export function StoryFields({
       },
     });
   }, []);
+
+  const sequenceEntries = useMemo(() => {
+    if (!selectedPage) return [] as Array<{
+      scope: AnimationRow["scope"];
+      scopeId: string;
+      ownerItemId?: string;
+      sequence: StoryActionSequence;
+    }>;
+    const out: Array<{
+      scope: AnimationRow["scope"];
+      scopeId: string;
+      ownerItemId?: string;
+      sequence: StoryActionSequence;
+    }> = [];
+    for (const seq of selectedPage.action_sequences ?? []) {
+      out.push({ scope: "page", scopeId: selectedPage.id, sequence: seq });
+    }
+    for (const ph of selectedPage.phases ?? []) {
+      for (const seq of ph.action_sequences ?? []) {
+        out.push({ scope: "phase", scopeId: ph.id, sequence: seq });
+      }
+    }
+    for (const it of selectedPage.items) {
+      for (const seq of it.action_sequences ?? []) {
+        out.push({ scope: "item", scopeId: it.id, ownerItemId: it.id, sequence: seq });
+      }
+    }
+    return out;
+  }, [selectedPage]);
+
+  const findAnimationRowForUnifiedRow = useCallback(
+    (row: StoryUnifiedReactionRow): AnimationRow | null => {
+      if (!row.source_sequence_id || !selectedPage) return null;
+      const candidates = sequenceEntries.filter((x) => x.sequence.id === row.source_sequence_id);
+      if (candidates.length === 0) return null;
+      let best = candidates[0]!;
+      let bestScore = -1;
+      for (const c of candidates) {
+        let score = 0;
+        if (c.scope === "phase" && c.scopeId === row.phase_id) score += 4;
+        if (c.scope === "item" && row.owner_item_id && c.scopeId === row.owner_item_id) score += 4;
+        if (c.scope === "page" && row.trigger === "phase_enter") score += 1;
+        if (score > bestScore) {
+          best = c;
+          bestScore = score;
+        }
+      }
+      const trigger = reactionTriggerLabel(row, { phaseNameById, itemNameById });
+      return {
+        id: `${best.scope}:${best.scopeId}:${best.sequence.id}`,
+        name: best.sequence.name?.trim() || best.sequence.id,
+        trigger,
+        impacted: sequenceImpactLabel(best.sequence, itemNameById, best.ownerItemId),
+        sequence: best.sequence,
+        scope: best.scope,
+        scopeId: best.scopeId,
+      };
+    },
+    [itemNameById, phaseNameById, selectedPage, sequenceEntries],
+  );
+
+  const openUnifiedReactionRow = useCallback(
+    (row: StoryUnifiedReactionRow) => {
+      const animationRow = findAnimationRowForUnifiedRow(row);
+      if (!animationRow) return;
+      setSelectedAnimationRowId(animationRow.id);
+      startAnimationEditor(animationRow);
+    },
+    [findAnimationRowForUnifiedRow, startAnimationEditor],
+  );
+
+  const configureUnifiedReactionRow = useCallback(
+    (row: StoryUnifiedReactionRow) => {
+      const fallback = findAnimationRowForUnifiedRow(row);
+      if (fallback) {
+        setSelectedAnimationRowId(fallback.id);
+        startAnimationEditor(fallback);
+        return;
+      }
+      setAuthoringMode("phase");
+      setSelPhaseId(row.phase_id);
+      if (row.owner_item_id) {
+        setSelItemId(row.owner_item_id);
+      } else {
+        setSelItemId(null);
+        setSelItemIds([]);
+      }
+    },
+    [findAnimationRowForUnifiedRow, startAnimationEditor],
+  );
+
+  const addReactionByMode = useCallback(
+    (mode: "page_start" | "phase_start" | "item_click" | "phase_pool" | "item_pool") => {
+      if (!selectedPage) return;
+      if (mode === "page_start") {
+        const seq: StoryActionSequence = {
+          id: newEntityId("aseq"),
+          name: "Page start animation",
+          event: "page_enter",
+          steps:
+            selectedPage.items[0] ?
+              [{
+                id: newEntityId("astep"),
+                kind: "emphasis",
+                target_item_id: selectedPage.items[0].id,
+                timing: "simultaneous",
+              }]
+            : [],
+        };
+        updatePage(selectedPage.id, {
+          action_sequences: [...(selectedPage.action_sequences ?? []), seq],
+        });
+        return;
+      }
+
+      if (mode === "phase_start" || mode === "phase_pool") {
+        const ph =
+          (selectedPhase && selectedPage.phases?.find((p) => p.id === selectedPhase.id)) ||
+          selectedPage.phases?.find((p) => p.is_start) ||
+          selectedPage.phases?.[0];
+        if (!ph) return;
+        const seq: StoryActionSequence = {
+          id: newEntityId("aseq"),
+          name:
+            mode === "phase_start" ?
+              `Phase start ${ph.name?.trim() || ph.id}`
+            : `Pool done ${ph.name?.trim() || ph.id}`,
+          event: mode === "phase_start" ? "phase_enter" : "pool_quota_met",
+          steps:
+            selectedPage.items[0] ?
+              [{
+                id: newEntityId("astep"),
+                kind: "emphasis",
+                target_item_id: selectedPage.items[0].id,
+                timing: "simultaneous",
+              }]
+            : [],
+        };
+        const next = pages.map((p) =>
+          p.id === selectedPage.id ?
+            {
+              ...p,
+              phases: (p.phases ?? []).map((x) =>
+                x.id === ph.id ? { ...x, action_sequences: [...(x.action_sequences ?? []), seq] } : x,
+              ),
+            }
+          : p,
+        );
+        pushEmit(next);
+        setSelPhaseId(ph.id);
+        return;
+      }
+
+      const targetItem =
+        selectedItem ?? selectedPage.items.find((it) => !!it.tap_interaction_group) ?? selectedPage.items[0];
+      if (!targetItem) return;
+      const seq: StoryActionSequence = {
+        id: newEntityId("aseq"),
+        name:
+          mode === "item_click" ?
+            `Click ${itemDisplayLabel(targetItem)}`
+          : `Pool done ${itemDisplayLabel(targetItem)}`,
+        event: mode === "item_click" ? "click" : "tap_group_satisfied",
+        active_phase_ids:
+          mode === "item_click" &&
+          selectedPhase &&
+          selectedPage.phases?.some((ph) => ph.id === selectedPhase.id) ?
+            [selectedPhase.id]
+          : undefined,
+        steps: [
+          {
+            id: newEntityId("astep"),
+            kind: "emphasis",
+            target_item_id: targetItem.id,
+            timing: "simultaneous",
+          },
+        ],
+      };
+      const next = pages.map((p) =>
+        p.id === selectedPage.id ?
+          {
+            ...p,
+            items: p.items.map((it) =>
+              it.id === targetItem.id ?
+                { ...it, action_sequences: [...(it.action_sequences ?? []), seq] }
+              : it,
+            ),
+          }
+        : p,
+      );
+      pushEmit(next);
+      setSelItemId(targetItem.id);
+    },
+    [pages, pushEmit, selectedItem, selectedPage, selectedPhase, updatePage],
+  );
 
   const addAnimationSequence = useCallback(() => {
     if (!selectedPage) return;
@@ -2340,7 +2637,9 @@ export function StoryFields({
   return (
     <div ref={rootRef} className="flex min-h-0 min-w-0 flex-1 flex-col space-y-0">
       {multi && selectedPage ? (
-        <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-visible bg-sky-50/50 pb-4 pt-0">
+        <div
+          className={`relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-visible pb-4 pt-0 ${modeViewportBackdropClass(authoringMode)}`}
+        >
           <div
             ref={storySubBarRef}
             className="sticky top-0 z-30 border-b border-sky-200/80 bg-sky-50/95 px-2 py-0.5 backdrop-blur-sm sm:px-3"
@@ -2661,7 +2960,7 @@ export function StoryFields({
                 />
                 {authoringMode !== "object" ? (
                   <div
-                    className="pointer-events-none absolute inset-0 z-[15] rounded-md bg-black/5"
+                    className={`pointer-events-none absolute inset-0 z-[15] rounded-md ${modeOverlayClass(authoringMode)}`}
                     aria-hidden
                   />
                 ) : null}
@@ -3280,11 +3579,15 @@ export function StoryFields({
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => addAnimationSequence()}
-                        title="Adds a page-start, phase-start, or tap animation from your current selection (scene item / phase / page)."
+                        onClick={() =>
+                          addReactionByMode(
+                            selectedItem ? "item_click" : selectedPhase ? "phase_start" : "page_start",
+                          )
+                        }
+                        title="Adds a new reaction from the current scope."
                         className="rounded border border-fuchsia-400 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-100"
                       >
-                        + Add animation
+                        + Add reaction
                       </button>
                       <button
                         type="button"
@@ -3298,7 +3601,7 @@ export function StoryFields({
                   <div className="h-full min-h-0 space-y-3 overflow-y-auto">
                     {selectedItem ? (
                       <p className="px-1 text-[11px] text-fuchsia-900/90">
-                        Autoplay lists page and phase starts that touch{" "}
+                        Reactions are filtered for{" "}
                         <strong>{itemDisplayLabel(selectedItem)}</strong>
                         {selectedPhase ? (
                           <>
@@ -3308,14 +3611,12 @@ export function StoryFields({
                           </>
                         ) : (
                           "."
-                        )}{" "}
-                        Tap animations are interactions on this object.
+                        )} Use scope and phase filters to narrow the table.
                       </p>
                     ) : (
                       <p className="px-1 text-[11px] text-fuchsia-900/90">
-                        <strong>Autoplay</strong> runs when the page or a phase begins (motion, show/hide,
-                        timed sounds). <strong>Tap</strong> lists click-driven animations; select an object
-                        to edit those.
+                        One table shows all reactions for this page: trigger on the left, output summary on
+                        the right. Double-click a row to edit its sequence or jump to the right phase settings.
                       </p>
                     )}
                     <div className="space-y-1.5 rounded-lg border border-violet-200 bg-violet-50/50 p-2">
@@ -3514,149 +3815,24 @@ export function StoryFields({
                           </div>
                         )}
                       </div>
-                      <div className="overflow-hidden rounded border border-violet-200/80 bg-white">
-                        <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-violet-100 bg-violet-50/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-violet-900">
-                          <span>Animation</span>
-                          <span>Trigger</span>
-                          <span>Impacted object</span>
-                        </div>
-                        <div className="max-h-36 overflow-y-auto">
-                          {autoplayAnimationRows.map((row) => (
-                            <button
-                              key={row.id}
-                              type="button"
-                              onClick={() => setSelectedAnimationRowId(row.id)}
-                              onDoubleClick={() => startAnimationEditor(row)}
-                              className={`grid w-full grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-violet-100 px-2 py-1 text-left text-xs transition-colors ${
-                                selectedAnimationRowId === row.id
-                                  ? "bg-violet-100/70 text-violet-950"
-                                  : "bg-white text-neutral-800 hover:bg-violet-50/80"
-                              }`}
-                            >
-                              <span className="truncate">{row.name}</span>
-                              <span className="truncate">{row.trigger}</span>
-                              <span className="truncate">{row.impacted}</span>
-                            </button>
-                          ))}
-                          {autoplayAnimationRows.length === 0 ? (
-                            <p className="px-2 py-2 text-[11px] text-neutral-600">
-                              No sequences yet. Deselect objects, pick an optional phase, then{" "}
-                              <strong>+ Add animation</strong> for page- or phase-start steps.
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
+                      <StoryReactionsTable
+                        rows={unifiedRows}
+                        selectedRowKey={selectedReactionRowKey}
+                        onSelectRowKey={setSelectedReactionRowKey}
+                        onOpenRow={openUnifiedReactionRow}
+                        onConfigureRow={configureUnifiedReactionRow}
+                        onAddReaction={addReactionByMode}
+                        issueByRowKey={rowIssueByKey}
+                        phaseNameById={phaseNameById}
+                        itemNameById={itemNameById}
+                        selectedItemId={selectedItem?.id ?? null}
+                        selectedItemLabel={selectedItem ? itemDisplayLabel(selectedItem) : null}
+                        selectedPhaseId={selectedPhase?.id ?? null}
+                        hasAnyItems={selectedPage.items.length > 0}
+                        hasAnyPhases={(selectedPage.phases?.length ?? 0) > 0}
+                        hasAnyTapGroupParent={selectedPage.items.some((it) => !!it.tap_interaction_group)}
+                      />
                     </div>
-                    <div className="space-y-1.5">
-                      <p className="px-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-900">
-                        Tap / interaction
-                      </p>
-                      <div className="overflow-hidden rounded border border-fuchsia-200 bg-white">
-                        <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 bg-fuchsia-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-900">
-                          <span>Animation</span>
-                          <span>Trigger</span>
-                          <span>Impacted object</span>
-                        </div>
-                        <div className="max-h-36 overflow-y-auto">
-                          {tapAnimationRows.map((row) => (
-                            <button
-                              key={row.id}
-                              type="button"
-                              onClick={() => setSelectedAnimationRowId(row.id)}
-                              onDoubleClick={() => startAnimationEditor(row)}
-                              className={`grid w-full grid-cols-[1.2fr_1fr_1fr] gap-2 border-b border-fuchsia-100 px-2 py-1 text-left text-xs transition-colors ${
-                                selectedAnimationRowId === row.id
-                                  ? "bg-fuchsia-100/60 text-fuchsia-950"
-                                  : "bg-white text-neutral-800 hover:bg-fuchsia-50"
-                              }`}
-                            >
-                              <span className="truncate">{row.name}</span>
-                              <span className="truncate">{row.trigger}</span>
-                              <span className="truncate">{row.impacted}</span>
-                            </button>
-                          ))}
-                          {tapAnimationRows.length === 0 ? (
-                            <p className="px-2 py-2 text-[11px] text-neutral-600">
-                              {selectedItem ?
-                                "No tap animations for this object yet. Use + Add animation while it is selected."
-                              : "Select an object on the canvas to add or list tap / click animations."}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                    {selectedAnimationRow ? (
-                      <div className="rounded border border-fuchsia-200 bg-white p-2 text-xs">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-semibold text-fuchsia-900">{selectedAnimationRow.name}</p>
-                          <button
-                            type="button"
-                            onClick={() => startAnimationEditor(selectedAnimationRow)}
-                            className="rounded border border-fuchsia-300 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-900 hover:bg-fuchsia-50"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                        <p className="mt-0.5 text-neutral-700">
-                          Trigger: <strong>{selectedAnimationRow.trigger}</strong>
-                        </p>
-                        <p className="text-neutral-700">
-                          Impacts: <strong>{selectedAnimationRow.impacted}</strong>
-                        </p>
-                        <div className="mt-2 space-y-1">
-                          <p className="font-semibold text-neutral-800">Steps</p>
-                          {selectedAnimationRow.sequence.steps.length > 0 ? (
-                            selectedAnimationRow.sequence.steps.map((step, idx) => (
-                              <div
-                                key={`${selectedAnimationRow.id}-${step.id}-${idx}`}
-                                draggable={!selectedAnimationRow.sequence.id.startsWith("legacy:")}
-                                onDragStart={(e) => {
-                                  if (selectedAnimationRow.sequence.id.startsWith("legacy:")) return;
-                                  setDragSummaryStepIdx(idx);
-                                  e.dataTransfer.effectAllowed = "move";
-                                  e.dataTransfer.setData("text/plain", `summary-step-${idx}`);
-                                }}
-                                onDragOver={(e) => {
-                                  if (dragSummaryStepIdx === null || selectedAnimationRow.sequence.id.startsWith("legacy:")) return;
-                                  e.preventDefault();
-                                  e.dataTransfer.dropEffect = "move";
-                                }}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  if (dragSummaryStepIdx === null) return;
-                                  reorderAnimationSequenceSteps(selectedAnimationRow, dragSummaryStepIdx, idx);
-                                  setDragSummaryStepIdx(null);
-                                }}
-                                onDragEnd={() => setDragSummaryStepIdx(null)}
-                                className={`rounded border border-neutral-200 bg-neutral-50 px-2 py-1 ${
-                                  selectedAnimationRow.sequence.id.startsWith("legacy:")
-                                    ? "cursor-not-allowed opacity-80"
-                                    : "cursor-grab active:cursor-grabbing"
-                                } ${
-                                  dragSummaryStepIdx === idx ? "opacity-70 ring-2 ring-fuchsia-300" : ""
-                                }`}
-                                title={
-                                  selectedAnimationRow.sequence.id.startsWith("legacy:")
-                                    ? "Open editor and save a copy to reorder legacy steps"
-                                    : "Drag to reorder step"
-                                }
-                              >
-                                <span className="font-medium">
-                                  {idx + 1}. {step.kind}
-                                </span>
-                                <span className="ml-2 text-neutral-600">
-                                  {step.target_item_id
-                                    ? `→ ${selectedPage.items.find((it) => it.id === step.target_item_id)?.name || step.target_item_id}`
-                                    : ""}
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-neutral-600">No steps yet.</p>
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
                     {selectedItem && selectedPage ? (
                       <div className="mt-2 rounded border border-emerald-200 bg-emerald-50/50 p-2 text-xs">
                         <p className="font-semibold text-emerald-950">Tap pool (parent object)</p>
@@ -4268,6 +4444,10 @@ export function StoryFields({
                     Shared identities for characters and props. Drag a row onto the scene to place an
                     instance. Use <strong>Scene</strong> mode to link, unlink, or promote art into the cast.
                   </p>
+                  <div className="mb-2 rounded border border-emerald-200 bg-white/80 px-2 py-1.5 text-[10px] text-emerald-950">
+                    Character shell only in this update: <strong>id, role, label, default image</strong>.
+                    Poses/outfits/catchphrases are intentionally deferred to the later Character+ pass.
+                  </div>
                   <div className="h-full min-h-0 space-y-2 overflow-y-auto">
                     {cast.length === 0 ? (
                       <p className="px-1 text-xs text-neutral-600">
@@ -4627,6 +4807,90 @@ export function StoryFields({
                   }}
                 >
                   Add item
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || authoringMode !== "object" || !(selectedPage.background_image_url ?? image_url)}
+                  className="rounded border border-violet-300 bg-white px-2 py-1 text-sm font-semibold text-violet-900"
+                  onClick={() => {
+                    recordStoryCanvasUndo();
+                    const used = new Set(selectedPage.items.map((it) => it.id));
+                    const mintId = (prefix: string) => {
+                      let n = used.size + 1;
+                      let id = `${prefix}${n}`;
+                      while (used.has(id)) {
+                        n += 1;
+                        id = `${prefix}${n}`;
+                      }
+                      used.add(id);
+                      return id;
+                    };
+                    const hostId = mintId("var");
+                    const outcomeAId = mintId("varA");
+                    const outcomeBId = mintId("varB");
+                    const hostBase = defaultRegion(hostId);
+                    const outcomeA: StoryItem = {
+                      ...hostBase,
+                      id: outcomeAId,
+                      kind: "button",
+                      text: "Choice A",
+                      color_hex: "#7c3aed",
+                      text_color: "#ffffff",
+                      text_size_px: 16,
+                      x_percent: Math.min(88, hostBase.x_percent + 3),
+                      y_percent: Math.min(88, hostBase.y_percent + 2),
+                      w_percent: Math.max(14, hostBase.w_percent),
+                      h_percent: Math.max(10, hostBase.h_percent - 2),
+                      image_scale: 1,
+                      show_card: true,
+                      show_on_start: true,
+                      z_index: selectedPage.items.length + 1,
+                      enter: { preset: "fade_in", duration_ms: 500 },
+                      name: "Variable choice A",
+                    };
+                    const outcomeB: StoryItem = {
+                      ...hostBase,
+                      id: outcomeBId,
+                      kind: "button",
+                      text: "Choice B",
+                      color_hex: "#4f46e5",
+                      text_color: "#ffffff",
+                      text_size_px: 16,
+                      x_percent: Math.min(88, hostBase.x_percent + hostBase.w_percent + 4),
+                      y_percent: Math.min(88, hostBase.y_percent + 2),
+                      w_percent: Math.max(14, hostBase.w_percent),
+                      h_percent: Math.max(10, hostBase.h_percent - 2),
+                      image_scale: 1,
+                      show_card: true,
+                      show_on_start: true,
+                      z_index: selectedPage.items.length + 2,
+                      enter: { preset: "fade_in", duration_ms: 500 },
+                      name: "Variable choice B",
+                    };
+                    const host: StoryItem = {
+                      ...hostBase,
+                      kind: "variable",
+                      show_card: false,
+                      show_on_start: true,
+                      image_scale: 1,
+                      z_index: selectedPage.items.length,
+                      enter: { preset: "none", duration_ms: 0 },
+                      name: "Variable host",
+                      variable_config: {
+                        outcome_item_ids: [outcomeAId, outcomeBId],
+                        lock_choice: true,
+                      },
+                    };
+                    const next = pages.map((p) =>
+                      p.id === selectedPage.id ?
+                        { ...p, items: [...p.items, host, outcomeA, outcomeB] }
+                      : p,
+                    );
+                    selectCanvasItem(hostId);
+                    pushEmit(next);
+                  }}
+                >
+                  Add variable
                 </button>
                 <button
                   type="button"

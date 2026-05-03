@@ -169,6 +169,9 @@ export function StoryBookView({
   const [activeStoryPhaseId, setActiveStoryPhaseId] = useState<string | null>(null);
   const activeStoryPhaseIdRef = useRef<string | null>(null);
   const [hiddenItemIds, setHiddenItemIds] = useState<Record<string, boolean>>({});
+  const [activeVariableOutcomeByHost, setActiveVariableOutcomeByHost] = useState<
+    Record<string, string>
+  >({});
   const [visitedPageIds, setVisitedPageIds] = useState<Record<string, true>>({});
   const [deckDragCheckDone, setDeckDragCheckDone] = useState<Record<string, boolean>>({});
   const [deckFreeDragPos, setDeckFreeDragPos] = useState<
@@ -224,6 +227,16 @@ export function StoryBookView({
 
   const safeIndex = Math.min(pageIndex, Math.max(0, pages.length - 1));
   const page = pages[safeIndex];
+  useEffect(() => {
+    const initialByHost: Record<string, string> = {};
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const initial = it.variable_config?.initial_outcome_item_id?.trim();
+      if (initial) initialByHost[it.id] = initial;
+    }
+    setActiveVariableOutcomeByHost(initialByHost);
+  }, [page.id, page.items]);
+
   const getPreferredItemSoundUrl = useCallback(
     (item: StoryItem | undefined): string | undefined => {
       if (!item?.tap_speeches?.length) return undefined;
@@ -258,6 +271,34 @@ export function StoryBookView({
       ),
     [page],
   );
+  const variableOutcomeMetaByItemId = useMemo(() => {
+    const out = new Map<string, { hostId: string; lockChoice: boolean }>();
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const cfg = it.variable_config;
+      if (!cfg?.outcome_item_ids?.length) continue;
+      const lockChoice = cfg.lock_choice ?? true;
+      for (const outcomeId of cfg.outcome_item_ids) {
+        out.set(outcomeId, { hostId: it.id, lockChoice });
+      }
+    }
+    return out;
+  }, [page.items]);
+  const variableHiddenItemIds = useMemo(() => {
+    const hidden: Record<string, boolean> = {};
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const cfg = it.variable_config;
+      if (!cfg?.outcome_item_ids?.length) continue;
+      const selected =
+        activeVariableOutcomeByHost[it.id] ?? cfg.initial_outcome_item_id?.trim() ?? undefined;
+      if (!selected) continue;
+      for (const outcomeId of cfg.outcome_item_ids) {
+        if (outcomeId !== selected) hidden[outcomeId] = true;
+      }
+    }
+    return hidden;
+  }, [page.items, activeVariableOutcomeByHost]);
 
   /** When set, page/phase enter + phase auto timer run from compiled rows; taps, pools, and drag-match still use legacy paths. */
   const storyUnifiedRows = useMemo(() => {
@@ -1673,6 +1714,15 @@ export function StoryBookView({
 
   const handleItemPointerUp = useCallback(
     (item: StoryItem) => {
+      const variableOwner = variableOutcomeMetaByItemId.get(item.id);
+      if (variableOwner) {
+        setActiveVariableOutcomeByHost((prev) => {
+          const current = prev[variableOwner.hostId];
+          if (current === item.id) return prev;
+          if (variableOwner.lockChoice && current && current !== item.id) return prev;
+          return { ...prev, [variableOwner.hostId]: item.id };
+        });
+      }
       const deckMode = item.draggable_mode ?? "none";
       if (deckMode === "free" || deckMode === "check_target") {
         return;
@@ -1688,7 +1738,7 @@ export function StoryBookView({
       }
       runItemTapEffects(item, {});
     },
-    [page.phasesExplicit, runItemTapEffects],
+    [page.phasesExplicit, runItemTapEffects, variableOutcomeMetaByItemId],
   );
 
   const onDraggablePointerDown = useCallback(
@@ -1963,7 +2013,7 @@ export function StoryBookView({
       {[...page.items]
         .sort((a, b) => (a.z_index ?? 0) - (b.z_index ?? 0))
         .map((item) => {
-          if (hiddenItemIds[item.id]) return null;
+          if (hiddenItemIds[item.id] || variableHiddenItemIds[item.id]) return null;
           const deckMode = item.draggable_mode ?? "none";
           const isDeckDraggable = deckMode === "free" || deckMode === "check_target";
           const isDeckMatched =
@@ -2011,6 +2061,7 @@ export function StoryBookView({
             : itemKind === "shape" ? "Story shape"
             : itemKind === "line" ? "Story line"
             : itemKind === "button" ? "Story button"
+            : itemKind === "variable" ? "Variable host"
             : "Story picture";
           const resolvedIdle =
             prefersReducedMotion ?

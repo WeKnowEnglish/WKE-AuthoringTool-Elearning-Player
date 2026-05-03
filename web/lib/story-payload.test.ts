@@ -1173,6 +1173,83 @@ describe("storyPageSchema tap pool validation", () => {
   });
 });
 
+describe("storyPageSchema variable item validation", () => {
+  const baseImage = (id: string) => ({
+    id,
+    image_url: "https://example.com/i.png",
+    x_percent: 5,
+    y_percent: 5,
+    w_percent: 20,
+    h_percent: 12,
+  });
+
+  it("accepts variable host with valid outcomes", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [
+        {
+          ...baseImage("var1"),
+          kind: "variable" as const,
+          variable_config: {
+            outcome_item_ids: ["choice_a", "choice_b"],
+            initial_outcome_item_id: "choice_a",
+          },
+        },
+        { ...baseImage("choice_a"), kind: "button" as const, text: "A" },
+        { ...baseImage("choice_b"), kind: "button" as const, text: "B" },
+      ],
+    };
+    expect(storyPageSchema.safeParse(page).success).toBe(true);
+  });
+
+  it("rejects variable host when outcome id is missing", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [
+        {
+          ...baseImage("var1"),
+          kind: "variable" as const,
+          variable_config: { outcome_item_ids: ["missing_item"] },
+        },
+      ],
+    };
+    const r = storyPageSchema.safeParse(page);
+    expect(r.success).toBe(false);
+    expect(
+      r.error?.issues.some((i) =>
+        String(i.message).includes("references unknown outcome item id"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects outcome item shared by multiple variable hosts", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [
+        {
+          ...baseImage("var1"),
+          kind: "variable" as const,
+          variable_config: { outcome_item_ids: ["choice"] },
+        },
+        {
+          ...baseImage("var2"),
+          kind: "variable" as const,
+          variable_config: { outcome_item_ids: ["choice"] },
+        },
+        { ...baseImage("choice"), kind: "button" as const, text: "Choice" },
+      ],
+    };
+    const r = storyPageSchema.safeParse(page);
+    expect(r.success).toBe(false);
+    expect(
+      r.error?.issues.some((i) => String(i.message).includes("already owned")),
+    ).toBe(true);
+  });
+});
+
 describe("getOnEnterRuntimeActions", () => {
   it("fans out show_item to each id", () => {
     const a = getOnEnterRuntimeActions({

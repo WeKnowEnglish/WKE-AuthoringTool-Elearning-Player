@@ -45,5 +45,16 @@ export function migrateStoryItemKind(
       show_card: true,
     };
   }
+  if (kind === "variable") {
+    return {
+      ...base,
+      show_card: false,
+      variable_config: {
+        outcome_item_ids: prev.variable_config?.outcome_item_ids ?? [],
+        initial_outcome_item_id: prev.variable_config?.initial_outcome_item_id,
+        lock_choice: prev.variable_config?.lock_choice ?? true,
+      },
+    };
+  }
   return base;
 }

@@ -602,6 +602,13 @@ export const storyTapInteractionGroupSchema = z
 
 export type StoryTapInteractionGroup = z.infer<typeof storyTapInteractionGroupSchema>;
 
+const storyVariableConfigSchema = z.object({
+  outcome_item_ids: z.array(z.string()).min(1),
+  initial_outcome_item_id: z.string().optional(),
+  /** When true, first picked outcome becomes final for this page visit. */
+  lock_choice: z.boolean().optional().default(true),
+});
+
 export const storyItemSchema = z
   .object({
     id: z.string(),
@@ -610,9 +617,13 @@ export const storyItemSchema = z
     /** When set, links to `StoryPayload.cast[].id` for shared identity; layout stays per page item. */
     registry_id: z.string().optional(),
     kind: z
-      .enum(["image", "text", "shape", "line", "button"])
+      .enum(["image", "text", "shape", "line", "button", "variable"])
       .optional()
       .default("image"),
+    /** Teacher-facing semantic role to organize authoring workflows. */
+    item_role: z
+      .enum(["decor", "interactive", "informational", "narration"])
+      .optional(),
     image_url: z.string().optional(),
     text: z.string().optional(),
     text_color: z.string().optional(),
@@ -661,6 +672,8 @@ export const storyItemSchema = z
       .optional(),
     /** Optional tap pool anchored on this item (parent); see `storyTapInteractionGroupSchema`. */
     tap_interaction_group: storyTapInteractionGroupSchema.optional(),
+    /** Variable host configuration; outcomes are normal sibling items referenced by id. */
+    variable_config: storyVariableConfigSchema.optional(),
   })
   .superRefine((item, ctx) => {
     const kind = item.kind ?? "image";
@@ -680,6 +693,12 @@ export const storyItemSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: `Story item ${item.id} is button kind but missing text`,
+      });
+    }
+    if (kind === "variable" && !item.variable_config?.outcome_item_ids?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Story item ${item.id} is variable kind but missing variable_config.outcome_item_ids`,
       });
     }
   });
@@ -744,6 +763,80 @@ export const storyPageSchema = z
         return;
       }
       ids.add(it.id);
+    }
+    const itemById = new Map(page.items.map((it) => [it.id, it]));
+    const variableOutcomeOwnerByItemId = new Map<string, string>();
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const cfg = it.variable_config;
+      if (!cfg || cfg.outcome_item_ids.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Variable item ${it.id} requires variable_config.outcome_item_ids`,
+        });
+        return;
+      }
+      const normalized = cfg.outcome_item_ids
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0);
+      if (normalized.length !== cfg.outcome_item_ids.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Variable item ${it.id} outcome_item_ids must not contain empty ids`,
+        });
+        return;
+      }
+      const seen = new Set<string>();
+      for (const outcomeId of normalized) {
+        if (seen.has(outcomeId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} has duplicate outcome item id: ${outcomeId}`,
+          });
+          return;
+        }
+        seen.add(outcomeId);
+        if (outcomeId === it.id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} cannot include itself as an outcome`,
+          });
+          return;
+        }
+        if (!ids.has(outcomeId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} references unknown outcome item id: ${outcomeId}`,
+          });
+          return;
+        }
+        const owner = variableOutcomeOwnerByItemId.get(outcomeId);
+        if (owner && owner !== it.id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Outcome item ${outcomeId} is already owned by variable item ${owner}`,
+          });
+          return;
+        }
+        const outcomeItem = itemById.get(outcomeId);
+        if (outcomeItem && (outcomeItem.kind ?? "image") === "variable") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} cannot use variable item ${outcomeId} as an outcome`,
+          });
+          return;
+        }
+        variableOutcomeOwnerByItemId.set(outcomeId, it.id);
+      }
+      const initialOutcome = cfg.initial_outcome_item_id?.trim();
+      if (initialOutcome && !seen.has(initialOutcome)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            `Variable item ${it.id} initial_outcome_item_id must be one of its outcome_item_ids`,
+        });
+        return;
+      }
     }
     const tapGroupParentByGroupId = new Map<string, string>();
     for (const it of page.items) {

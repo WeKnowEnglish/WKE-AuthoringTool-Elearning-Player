@@ -44,6 +44,35 @@ function safeHex(value: string | undefined, fallback: string): string {
   return v.startsWith("#") ? v : fallback;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const raw = hex.trim().replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
+  return {
+    r: Number.parseInt(raw.slice(0, 2), 16),
+    g: Number.parseInt(raw.slice(2, 4), 16),
+    b: Number.parseInt(raw.slice(4, 6), 16),
+  };
+}
+
+function relativeLuminance(rgb: { r: number; g: number; b: number }): number {
+  const channel = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+}
+
+function contrastRatio(aHex: string, bHex: string): number | null {
+  const a = hexToRgb(aHex);
+  const b = hexToRgb(bHex);
+  if (!a || !b) return null;
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  const light = Math.max(la, lb);
+  const dark = Math.min(la, lb);
+  return (light + 0.05) / (dark + 0.05);
+}
+
 function newLocalEntityId(prefix: string): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -86,6 +115,14 @@ export function StoryItemEditorPanel({
   const linkedCast = regId ? cast.find((c) => c.id === regId) : undefined;
   const resolvedImageUrl =
     resolveStoryItemImageUrl(selectedItem, cast) ?? selectedItem.image_url?.trim() ?? "";
+  const buttonContrast =
+    k === "button" ?
+      contrastRatio(
+        safeHex(selectedItem.text_color, "#ffffff"),
+        safeHex(selectedItem.color_hex, "#0ea5e9"),
+      )
+    : null;
+  const cardSupported = k !== "line" && k !== "variable";
 
   return (
     <div className="grid max-w-full gap-2 rounded border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-1">
@@ -128,8 +165,108 @@ export function StoryItemEditorPanel({
           <option value="shape">Shape</option>
           <option value="line">Line</option>
           <option value="button">Button</option>
+          <option value="variable">Variable host</option>
         </select>
       </label>
+      {k !== "variable" ? (
+        <label className={labelClass()}>
+          Item role
+          <select
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={selectedItem.item_role ?? ""}
+            disabled={busy}
+            onChange={(e) => {
+              const v = e.target.value.trim();
+              const item_role =
+                v === "" ? undefined : (v as NonNullable<StoryItem["item_role"]>);
+              patchSelectedItem((it) => ({ ...it, item_role }));
+            }}
+          >
+            <option value="">Default</option>
+            <option value="decor">Decor</option>
+            <option value="interactive">Interactive</option>
+            <option value="informational">Informational</option>
+            <option value="narration">Narration</option>
+          </select>
+        </label>
+      ) : null}
+      {k === "variable" ? (
+        <div className="space-y-2 rounded border border-violet-200 bg-violet-50/70 p-2">
+          <p className="text-xs font-semibold text-violet-950">Variable outcomes</p>
+          <p className="text-[11px] text-violet-900/90">
+            Enter outcome item IDs (one per line). At runtime, selecting one outcome hides its
+            siblings for this variable host.
+          </p>
+          <label className="block text-xs font-medium text-violet-950">
+            Outcome item IDs
+            <textarea
+              className="mt-1 w-full rounded border border-violet-200 bg-white px-2 py-1 text-xs"
+              rows={4}
+              value={(selectedItem.variable_config?.outcome_item_ids ?? []).join("\n")}
+              disabled={busy}
+              onChange={(e) => {
+                const outcome_item_ids = e.target.value
+                  .split(/[\n,]+/)
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0);
+                patchSelectedItem((it) => ({
+                  ...it,
+                  variable_config: {
+                    outcome_item_ids,
+                    initial_outcome_item_id: it.variable_config?.initial_outcome_item_id,
+                    lock_choice: it.variable_config?.lock_choice ?? true,
+                  },
+                }));
+              }}
+            />
+          </label>
+          <label className="block text-xs font-medium text-violet-950">
+            Initial outcome (optional)
+            <select
+              className="mt-1 w-full rounded border border-violet-200 bg-white px-2 py-1 text-sm"
+              value={selectedItem.variable_config?.initial_outcome_item_id ?? ""}
+              disabled={busy}
+              onChange={(e) => {
+                const next = e.target.value.trim() || undefined;
+                patchSelectedItem((it) => ({
+                  ...it,
+                  variable_config: {
+                    outcome_item_ids: it.variable_config?.outcome_item_ids ?? [],
+                    initial_outcome_item_id: next,
+                    lock_choice: it.variable_config?.lock_choice ?? true,
+                  },
+                }));
+              }}
+            >
+              <option value="">No pre-selection</option>
+              {(selectedItem.variable_config?.outcome_item_ids ?? []).map((id) => (
+                <option key={id} value={id}>
+                  {id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-violet-950">
+            <input
+              type="checkbox"
+              checked={selectedItem.variable_config?.lock_choice ?? true}
+              disabled={busy}
+              onChange={(e) => {
+                const lock_choice = e.target.checked;
+                patchSelectedItem((it) => ({
+                  ...it,
+                  variable_config: {
+                    outcome_item_ids: it.variable_config?.outcome_item_ids ?? [],
+                    initial_outcome_item_id: it.variable_config?.initial_outcome_item_id,
+                    lock_choice,
+                  },
+                }));
+              }}
+            />
+            Lock choice after first selection
+          </label>
+        </div>
+      ) : null}
 
       {k === "image" && regId ? (
         <div className="rounded border border-emerald-200 bg-emerald-50/60 p-2 text-xs text-emerald-950">
@@ -384,20 +521,36 @@ export function StoryItemEditorPanel({
           </label>
         </div>
       ) : null}
+      {k === "button" && buttonContrast != null ? (
+        <p
+          className={`text-[11px] ${buttonContrast < 4.5 ? "text-amber-700" : "text-emerald-700"}`}
+        >
+          Button text contrast: <strong>{buttonContrast.toFixed(2)}:1</strong>
+          {buttonContrast < 4.5 ?
+            " (consider darker text or lighter button color for readability)."
+          : " (good for most learners)."}
+        </p>
+      ) : null}
 
       <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-800">
         <input
           type="checkbox"
           className="mb-0.5"
-          checked={selectedItem.show_card !== false}
-          disabled={busy}
+          checked={cardSupported ? selectedItem.show_card !== false : false}
+          disabled={busy || !cardSupported}
           onChange={(e) => {
+            if (!cardSupported) return;
             const show_card = e.target.checked;
             patchSelectedItem((it) => ({ ...it, show_card }));
           }}
         />
         Card frame (border + shadow)
       </label>
+      {!cardSupported ? (
+        <p className="text-[11px] text-neutral-600">
+          Card frame is fixed off for {k === "line" ? "line" : "variable host"} items.
+        </p>
+      ) : null}
 
       {k === "image" ? (
         <div className="rounded border border-neutral-200 bg-white/70 p-2">

@@ -2,6 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { parse } from "csv-parse/sync";
 import { Jimp, intToRGBA } from "jimp";
 import { requireTeacher } from "@/lib/actions/teacher";
 
@@ -588,6 +589,205 @@ export async function updateTeacherMediaMetadataFromForm(formData: FormData): Pr
     pastTense: normalizeOptionalText(formData.get("past_tense"), 80),
     notes: normalizeOptionalText(formData.get("notes"), 500),
   });
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const MAX_METADATA_CSV_BYTES = 4 * 1024 * 1024;
+const MAX_METADATA_CSV_ROWS = 2500;
+const METADATA_CSV_IMPORT_BATCH = 15;
+
+export type MediaMetadataCsvImportResult = {
+  ok: boolean;
+  message: string;
+  updated: number;
+  skipped: number;
+  failed: number;
+};
+
+function parseJsonArrayCell(raw: unknown): string[] {
+  if (raw == null || raw === "") return [];
+  const s = String(raw).trim();
+  if (!s || s === "[]") return [];
+  try {
+    const v = JSON.parse(s) as unknown;
+    return Array.isArray(v) ? v.map((x) => String(x).trim()) : [];
+  } catch {
+    return [];
+  }
+}
+
+function csvRowToMetadataUpdate(record: Record<string, string>) {
+  const categories = normalizeAndDedupList(parseJsonArrayCell(record.meta_categories));
+  const tags = normalizeAndDedupList(parseJsonArrayCell(record.meta_tags));
+  const alternativeNames = normalizeAndDedupList(parseJsonArrayCell(record.meta_alternative_names));
+  const skills = normalizeAndDedupList(parseJsonArrayCell(record.meta_skills));
+
+  return {
+    meta_item_name: normalizeOptionalText(record.meta_item_name, 120),
+    meta_categories: categories,
+    meta_tags: tags.length ? tags : ["vocabulary"],
+    meta_alternative_names: alternativeNames,
+    meta_plural: normalizeOptionalText(record.meta_plural, 80),
+    meta_countability: ensureCountability(normalizeOptionalText(record.meta_countability, 20)),
+    meta_level: normalizeOptionalText(record.meta_level, 40),
+    meta_word_type: normalizeOptionalText(record.meta_word_type, 40),
+    meta_skills: skills,
+    meta_past_tense: normalizeOptionalText(record.meta_past_tense, 80),
+    meta_notes: normalizeOptionalText(record.meta_notes, 500),
+  };
+}
+
+/**
+ * Apply metadata columns from a Supabase-style media export CSV (teacher session).
+ * Only updates rows where `uploaded_by` matches the signed-in teacher (same as RLS).
+ */
+export async function applyTeacherMediaMetadataCsv(
+  formData: FormData,
+): Promise<MediaMetadataCsvImportResult> {
+  const supabase = await requireTeacher();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Not signed in.", updated: 0, skipped: 0, failed: 0 };
+  }
+
+  const file = formData.get("csv");
+  const dryRun = formData.get("dry_run") === "on";
+
+  if (!file || typeof file === "string") {
+    return { ok: false, message: "Choose a CSV file.", updated: 0, skipped: 0, failed: 0 };
+  }
+
+  const blob = file as File;
+  if (blob.size > MAX_METADATA_CSV_BYTES) {
+    return {
+      ok: false,
+      message: `CSV too large (max ${Math.round(MAX_METADATA_CSV_BYTES / (1024 * 1024))} MB).`,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+    };
+  }
+
+  let text: string;
+  try {
+    text = await blob.text();
+  } catch {
+    return { ok: false, message: "Could not read the file.", updated: 0, skipped: 0, failed: 0 };
+  }
+
+  let rows: Record<string, string>[];
+  try {
+    rows = parse(text, {
+      columns: true,
+      skip_empty_lines: true,
+      relax_column_count: true,
+    }) as Record<string, string>[];
+  } catch {
+    return { ok: false, message: "Invalid CSV format.", updated: 0, skipped: 0, failed: 0 };
+  }
+
+  if (rows.length > MAX_METADATA_CSV_ROWS) {
+    return {
+      ok: false,
+      message: `Too many rows (max ${MAX_METADATA_CSV_ROWS}).`,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+    };
+  }
+
+  const ownedRows: { id: string; payload: ReturnType<typeof csvRowToMetadataUpdate> }[] = [];
+  let skipped = 0;
+
+  for (const record of rows) {
+    const id = String(record.id ?? "").trim();
+    const owner = String(record.uploaded_by ?? "").trim();
+    if (!id || !UUID_RE.test(id)) {
+      skipped += 1;
+      continue;
+    }
+    if (owner !== user.id) {
+      skipped += 1;
+      continue;
+    }
+    ownedRows.push({ id, payload: csvRowToMetadataUpdate(record) });
+  }
+
+  if (ownedRows.length === 0) {
+    return {
+      ok: false,
+      message:
+        "No rows to update. The CSV must include an `id` and `uploaded_by` column, and `uploaded_by` must match your account for each row.",
+      updated: 0,
+      skipped,
+      failed: 0,
+    };
+  }
+
+  if (dryRun) {
+    return {
+      ok: true,
+      message: `Dry run: would update ${ownedRows.length} of your media rows (${skipped} skipped: other owner or invalid id).`,
+      updated: ownedRows.length,
+      skipped,
+      failed: 0,
+    };
+  }
+
+  let updated = 0;
+  let failed = 0;
+  const errorSamples: string[] = [];
+
+  for (let i = 0; i < ownedRows.length; i += METADATA_CSV_IMPORT_BATCH) {
+    const batch = ownedRows.slice(i, i + METADATA_CSV_IMPORT_BATCH);
+    const outcomes = await Promise.all(
+      batch.map(async ({ id, payload }) => {
+        const { data, error } = await supabase
+          .from("media_assets")
+          .update(payload)
+          .eq("id", id)
+          .eq("uploaded_by", user.id)
+          .select("id")
+          .maybeSingle();
+        if (error) return { id, err: error.message };
+        if (!data) return { id, err: "not found or not owned" };
+        return { id, err: null };
+      }),
+    );
+    for (const o of outcomes) {
+      if (o.err) {
+        failed += 1;
+        if (errorSamples.length < 8) errorSamples.push(`${o.id}: ${o.err}`);
+      } else {
+        updated += 1;
+      }
+    }
+  }
+
+  if (updated > 0) {
+    revalidatePath("/teacher/media");
+  }
+
+  const parts = [
+    `Updated ${updated} row(s).`,
+    skipped ? `${skipped} skipped.` : "",
+    failed ? `${failed} failed.` : "",
+  ].filter(Boolean);
+  if (errorSamples.length && failed > 0) {
+    parts.push(`Examples: ${errorSamples.join("; ")}`);
+  }
+
+  return {
+    ok: failed === 0,
+    message: parts.join(" "),
+    updated,
+    skipped,
+    failed,
+  };
 }
 
 export async function deleteTeacherMedia(assetId: string): Promise<void> {

@@ -28,8 +28,11 @@ import {
   getPhaseEnterActionSequences,
 } from "@/lib/story-action-sequences";
 import {
+  findTapInteractionGroupOnPage,
+  getItemTapGroupSatisfiedSequences,
   getNormalizedStoryPages,
   getPhaseInteractionKind,
+  getPhasePoolQuotaMetSequences,
   getPhaseVisibleItemWhitelist,
   getResolvedPhaseTransition,
   getStartPhaseIdFromNormalizedPage,
@@ -75,6 +78,27 @@ function enterClassForPreset(preset: StoryAnimationPreset | undefined): string {
   const p = preset ?? "fade_in";
   if (p === "none") return "story-in-none";
   return `story-in-${p}`;
+}
+
+function tapQuotaThresholdsMet(
+  poolItemIds: string[],
+  perItem: Record<string, number>,
+  aggregate: number,
+  minDistinct: number | undefined,
+  minTapsPerDistinct: number,
+  minAggregate: number | undefined,
+): boolean {
+  let ok = true;
+  if (minAggregate != null && minAggregate >= 1) {
+    ok = ok && aggregate >= minAggregate;
+  }
+  if (minDistinct != null && minDistinct >= 1) {
+    const n = poolItemIds.filter(
+      (id) => (perItem[id] ?? 0) >= minTapsPerDistinct,
+    ).length;
+    ok = ok && n >= minDistinct;
+  }
+  return ok;
 }
 
 type Props = {
@@ -153,6 +177,16 @@ export function StoryBookView({
   const clickSequenceTimersRef = useRef<Record<string, number[]>>({});
   const tapSpeechCountersRef = useRef<Record<string, number>>({});
   const phaseAutoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Tap pool counters for `tap_interaction_group` (key `g:${groupId}`). */
+  const tapGroupBucketsRef = useRef<
+    Record<string, { perItem: Record<string, number>; aggregate: number }>
+  >({});
+  const tapGroupFiredRef = useRef<Set<string>>(new Set());
+  /** Tap pool counters for phase `pool_interaction_quota` (key `p:${phaseId}`). */
+  const phasePoolBucketsRef = useRef<
+    Record<string, { perItem: Record<string, number>; aggregate: number }>
+  >({});
+  const phasePoolFiredRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     audioUnlockedRef.current = audioUnlocked;
@@ -196,6 +230,17 @@ export function StoryBookView({
   useEffect(() => {
     currentStoryPhaseRef.current = currentStoryPhase;
   }, [currentStoryPhase]);
+
+  useEffect(() => {
+    tapGroupBucketsRef.current = {};
+    tapGroupFiredRef.current = new Set();
+  }, [page.id]);
+
+  useEffect(() => {
+    phasePoolBucketsRef.current = {};
+    phasePoolFiredRef.current = new Set();
+  }, [currentStoryPhase?.id, page.id]);
+
   const [matchAssignments, setMatchAssignments] = useState<Record<string, string>>(
     {},
   );
@@ -698,6 +743,184 @@ export function StoryBookView({
     [getActionStepDurationMs, runActionStep],
   );
 
+  const evaluateTapPoolQuotas = useCallback(
+    (tappedItemId: string) => {
+      const pg = pageRef.current;
+      const itemById = new Map(pg.items.map((it) => [it.id, it]));
+
+      for (const parentItem of pg.items) {
+        const tg = parentItem.tap_interaction_group;
+        if (!tg) continue;
+        const pool: string[] = [...tg.child_item_ids];
+        if (tg.include_parent_in_pool) pool.push(parentItem.id);
+        if (!pool.includes(tappedItemId)) continue;
+
+        const gKey = `g:${tg.id}`;
+        const bucket =
+          tapGroupBucketsRef.current[gKey] ?? { perItem: {}, aggregate: 0 };
+        bucket.perItem[tappedItemId] = (bucket.perItem[tappedItemId] ?? 0) + 1;
+        bucket.aggregate += 1;
+        tapGroupBucketsRef.current[gKey] = bucket;
+
+        if (
+          !tapQuotaThresholdsMet(
+            pool,
+            bucket.perItem,
+            bucket.aggregate,
+            tg.min_distinct_items,
+            tg.min_taps_per_distinct_item ?? 1,
+            tg.min_aggregate_taps,
+          )
+        ) {
+          continue;
+        }
+        if (tapGroupFiredRef.current.has(gKey)) continue;
+        tapGroupFiredRef.current.add(gKey);
+
+        let itemChainMs = 0;
+        const onSat = tg.on_satisfy_sequence_id?.trim();
+        if (onSat) {
+          const satSeq = getItemTapGroupSatisfiedSequences(parentItem).find(
+            (s) => s.id === onSat,
+          );
+          if (satSeq) {
+            const filtered: StoryActionSequence = {
+              ...satSeq,
+              steps: satSeq.steps.filter(
+                (step) =>
+                  !(step.kind === "play_sound" && !audioUnlockedRef.current),
+              ),
+            };
+            const r0 = runActionSequence(filtered, itemById, parentItem.id);
+            itemChainMs = Math.max(0, Math.ceil(r0.chainEndMs));
+            const bucketTimers = clickSequenceTimersRef.current[parentItem.id] ?? [];
+            clickSequenceTimersRef.current[parentItem.id] = [
+              ...bucketTimers,
+              ...r0.timers,
+            ];
+          }
+        }
+
+        let phaseChainMs = 0;
+        let advanceTo: string | null = null;
+        let doPhaseAdvance = false;
+        if (pg.phasesExplicit) {
+          const aid =
+            activeStoryPhaseIdRef.current ??
+            getStartPhaseIdFromNormalizedPage(pg);
+          const phTap = pg.phases.find((p) => p.id === aid);
+          if (
+            phTap &&
+            getPhaseInteractionKind(phTap) === "click_to_advance"
+          ) {
+            const tr = getResolvedPhaseTransition(phTap);
+            if (tr?.type === "tap_group" && tr.group_id === tg.id) {
+              const psat = tr.satisfaction_sequence_id?.trim();
+              if (psat) {
+                const pseq = getPhasePoolQuotaMetSequences(phTap).find(
+                  (s) => s.id === psat,
+                );
+                if (pseq) {
+                  const pf: StoryActionSequence = {
+                    ...pseq,
+                    steps: pseq.steps.filter(
+                      (step) =>
+                        !(step.kind === "play_sound" && !audioUnlockedRef.current),
+                    ),
+                  };
+                  const r1 = runActionSequence(pf, itemById, null);
+                  phaseChainMs = Math.max(0, Math.ceil(r1.chainEndMs));
+                }
+              }
+              if (tr.advance_after_satisfaction !== false) {
+                doPhaseAdvance = true;
+                advanceTo = tr.next_phase_id;
+              }
+            }
+          }
+        }
+
+        const pageIdAtFire = pg.id;
+        const runAdvance = () => {
+          if (pageRef.current.id !== pageIdAtFire) return;
+          if (doPhaseAdvance && advanceTo) {
+            activeStoryPhaseIdRef.current = advanceTo;
+            setActiveStoryPhaseId(advanceTo);
+          }
+        };
+        const delayMs = itemChainMs + phaseChainMs;
+        if (delayMs > 0) {
+          window.setTimeout(runAdvance, delayMs);
+        } else {
+          runAdvance();
+        }
+      }
+
+      if (!pg.phasesExplicit) return;
+
+      const aidPool =
+        activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(pg);
+      const phPool = pg.phases.find((p) => p.id === aidPool);
+      if (!phPool || getPhaseInteractionKind(phPool) !== "click_to_advance") {
+        return;
+      }
+      const rPool = getResolvedPhaseTransition(phPool);
+      if (rPool?.type !== "pool_interaction_quota") return;
+      if (!rPool.pool_item_ids.includes(tappedItemId)) return;
+
+      const pKey = `p:${phPool.id}`;
+      const bPool =
+        phasePoolBucketsRef.current[pKey] ?? { perItem: {}, aggregate: 0 };
+      bPool.perItem[tappedItemId] = (bPool.perItem[tappedItemId] ?? 0) + 1;
+      bPool.aggregate += 1;
+      phasePoolBucketsRef.current[pKey] = bPool;
+
+      if (
+        !tapQuotaThresholdsMet(
+          rPool.pool_item_ids,
+          bPool.perItem,
+          bPool.aggregate,
+          rPool.min_distinct_items,
+          rPool.min_taps_per_distinct_item,
+          rPool.min_aggregate_taps,
+        )
+      ) {
+        return;
+      }
+      if (phasePoolFiredRef.current.has(pKey)) return;
+      phasePoolFiredRef.current.add(pKey);
+
+      let poolSatMs = 0;
+      const poolSat = rPool.satisfaction_sequence_id?.trim();
+      if (poolSat) {
+        const pseq = getPhasePoolQuotaMetSequences(phPool).find(
+          (s) => s.id === poolSat,
+        );
+        if (pseq) {
+          const pf: StoryActionSequence = {
+            ...pseq,
+            steps: pseq.steps.filter(
+              (step) =>
+                !(step.kind === "play_sound" && !audioUnlockedRef.current),
+            ),
+          };
+          const rSat = runActionSequence(pf, itemById, null);
+          poolSatMs = Math.max(0, Math.ceil(rSat.chainEndMs));
+        }
+      }
+      const pageIdPool = pg.id;
+      const advancePool = () => {
+        if (pageRef.current.id !== pageIdPool) return;
+        if (rPool.advance_after_satisfaction === false) return;
+        activeStoryPhaseIdRef.current = rPool.next_phase_id;
+        setActiveStoryPhaseId(rPool.next_phase_id);
+      };
+      if (poolSatMs > 0) window.setTimeout(advancePool, poolSatMs);
+      else advancePool();
+    },
+    [runActionSequence, setActiveStoryPhaseId],
+  );
+
   useEffect(() => {
     queueMicrotask(() => {
       setActiveStoryPhaseId(null);
@@ -771,6 +994,7 @@ export function StoryBookView({
     const r = getResolvedPhaseTransition(currentStoryPhase);
     if (r?.type !== "auto") return;
     phaseAutoTimerRef.current = setTimeout(() => {
+      activeStoryPhaseIdRef.current = r.next_phase_id;
       setActiveStoryPhaseId(r.next_phase_id);
     }, r.delay_ms);
     return () => {
@@ -1157,6 +1381,7 @@ export function StoryBookView({
                 if (rNow?.type !== "sequence_complete" || rNow.sequence_id !== seqId) {
                   return;
                 }
+                activeStoryPhaseIdRef.current = targetPhaseId;
                 setActiveStoryPhaseId(targetPhaseId);
               }, ms);
               clickSequenceTimersRef.current[item.id] = [
@@ -1170,34 +1395,46 @@ export function StoryBookView({
 
       queueMicrotask(() => {
         if (opts?.skipPhaseClickAdvance) return;
-        if (!page.phasesExplicit) return;
+        if (!page.phasesExplicit) {
+          evaluateTapPoolQuotas(item.id);
+          return;
+        }
         const aid =
           activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(page);
         const ph = page.phases.find((p) => p.id === aid);
-        if (!ph) return;
+        if (!ph) {
+          evaluateTapPoolQuotas(item.id);
+          return;
+        }
         const kind = getPhaseInteractionKind(ph);
         if (kind === "drag_match") {
           return;
         }
         if (kind === "legacy") {
           if (ph.advance_on_item_tap_id === item.id && ph.next_phase_id) {
+            activeStoryPhaseIdRef.current = ph.next_phase_id;
             setActiveStoryPhaseId(ph.next_phase_id);
           }
+          evaluateTapPoolQuotas(item.id);
           return;
         }
         if (kind === "none") {
+          evaluateTapPoolQuotas(item.id);
           return;
         }
         const r = getResolvedPhaseTransition(ph);
         if (r?.type === "on_click" && r.target_item_id === item.id) {
+          activeStoryPhaseIdRef.current = r.next_phase_id;
           setActiveStoryPhaseId(r.next_phase_id);
         }
+        evaluateTapPoolQuotas(item.id);
       });
     },
     [
       muted,
       page,
       runActionSequence,
+      evaluateTapPoolQuotas,
     ],
   );
 
@@ -1428,6 +1665,7 @@ export function StoryBookView({
       if (matchAssignments[did] !== dm.correct_map[did]) return;
     }
     queueMicrotask(() => {
+      activeStoryPhaseIdRef.current = r.next_phase_id;
       setActiveStoryPhaseId(r.next_phase_id);
     });
   }, [currentStoryPhase, matchAssignments, activeStoryPhaseId, page.id]);

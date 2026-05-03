@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "create-teacher": "node scripts/create-teacher-user.mjs"
+    "create-teacher": "node scripts/create-teacher-user.mjs",
+    "media:finalize-metadata": "node scripts/finalize-media-metadata.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -32,6 +33,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cross-env": "^10.1.0",
+    "csv-parse": "^6.2.1",
+    "csv-stringify": "^6.7.0",
     "dotenv": "^16.4.7",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",

@@ -64,6 +64,11 @@ export function StoryItemLayerContent({ item }: { item: StoryItem }) {
   const src = item.image_url;
   if (!src) return null;
   return (
-    <ScaledStoryItemImage imageUrl={src} imageScale={item.image_scale ?? 1} />
+    <ScaledStoryItemImage
+      imageUrl={src}
+      imageScale={item.image_scale ?? 1}
+      imageFlipHorizontal={item.image_flip_horizontal === true}
+      imageFlipVertical={item.image_flip_vertical === true}
+    />
   );
 }

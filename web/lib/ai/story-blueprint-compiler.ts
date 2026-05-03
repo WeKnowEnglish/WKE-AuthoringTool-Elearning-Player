@@ -134,6 +134,14 @@ export function compilePhaseTriggerToCompletion(
         next_phase_id: nextPhaseId as string,
       };
 
+    case "tap_group":
+      return {
+        type: "tap_group",
+        group_id: trigger.group_id,
+        next_phase_id: nextPhaseId as string,
+        advance_after_satisfaction: true,
+      };
+
     case "end_phase":
       // Explicit terminal trigger — always end_phase regardless of nextPhaseId.
       return buildEndPhase();

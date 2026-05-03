@@ -26,6 +26,14 @@ import {
 import { normalizeLessonPlanText } from "@/lib/lesson-plan";
 import { normalizeLearningGoals, parseLearningGoalsFromDb } from "@/lib/learning-goals";
 import { rawInteractionTemplateForSubtype } from "@/lib/teacher-interaction-templates";
+import {
+  applyMediaBindingsToPayload,
+  assertBindingsMatchScreenType,
+  collectMediaBindingAssetIds,
+  fetchMediaPublicUrlsByIds,
+  fillUnmappedStoryPageBackgrounds,
+  gatherAllBindingUuids,
+} from "@/lib/lesson-import-media";
 
 function revalidateStudentCatalogViews() {
   revalidateTag(PUBLISHED_CATALOG_CACHE_TAG, "max");
@@ -678,10 +686,66 @@ export async function importLessonScreensJson(
     learning_goals?: unknown;
     lesson_plan?: unknown;
     lesson_plan_meta?: unknown;
+    media_bindings?: unknown;
   };
   if (!Array.isArray(obj.screens)) {
     throw new Error('JSON must be { "screens": [ { "screen_type", "payload" }, ... ] }');
   }
+  const rawMediaBindings = obj.media_bindings;
+  if ("media_bindings" in obj) {
+    delete (obj as Record<string, unknown>).media_bindings;
+  }
+
+  const structuredBindings = collectMediaBindingAssetIds(rawMediaBindings);
+  if (structuredBindings.length > 0) {
+    const uuidList = gatherAllBindingUuids(structuredBindings);
+    const urlById = await fetchMediaPublicUrlsByIds(supabase, uuidList);
+    for (const { screenIndex, bindings } of structuredBindings) {
+      const scr = obj.screens[screenIndex];
+      if (!scr || typeof scr !== "object") {
+        throw new Error(
+          `media_bindings: screens[${screenIndex}] is missing — import has fewer screens than binding keys.`,
+        );
+      }
+      const r = scr as { screen_type?: string; payload?: unknown };
+      if (
+        !r.screen_type ||
+        r.payload == null ||
+        typeof r.payload !== "object" ||
+        Array.isArray(r.payload)
+      ) {
+        throw new Error(`media_bindings: screens[${screenIndex}] must be an object with screen_type and payload.`);
+      }
+      assertBindingsMatchScreenType(r.screen_type, bindings, screenIndex);
+      applyMediaBindingsToPayload(
+        r.screen_type,
+        r.payload as Record<string, unknown>,
+        bindings,
+        urlById,
+      );
+    }
+  }
+
+  const bindingsByScreenIndex = new Map(
+    structuredBindings.map((b) => [b.screenIndex, b.bindings]),
+  );
+  for (let screenIndex = 0; screenIndex < obj.screens.length; screenIndex++) {
+    const scr = obj.screens[screenIndex] as { screen_type?: string; payload?: unknown };
+    if (
+      scr.screen_type !== "story" ||
+      scr.payload == null ||
+      typeof scr.payload !== "object" ||
+      Array.isArray(scr.payload)
+    ) {
+      continue;
+    }
+    await fillUnmappedStoryPageBackgrounds(
+      supabase,
+      scr.payload as Record<string, unknown>,
+      bindingsByScreenIndex.get(screenIndex),
+    );
+  }
+
   const rows: { screen_type: string; payload: unknown }[] = [];
   for (const item of obj.screens) {
     const r = item as { screen_type?: string; payload?: unknown };

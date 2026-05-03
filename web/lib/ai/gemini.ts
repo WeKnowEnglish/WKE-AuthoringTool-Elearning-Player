@@ -119,6 +119,7 @@ const STORY_FIRST_BLUEPRINT_SHAPE = `
                          | { "type": "on_click_item", "target_item_id": string }
                          | { "type": "all_matched" }
                          | { "type": "sequence_complete", "sequence_id": string }
+                         | { "type": "tap_group", "group_id": string }
                          | { "type": "end_phase" },
                 "success_response"?: { "dialogue"?: string, "expression_hint"?: string },
                 "failure_response"?: { "dialogue"?: string },
@@ -184,14 +185,14 @@ Phase orchestration rules (apply to pages[].phases[]):
 - phase_id must be unique within its page. Use short snake_case descriptors.
 - Phases must be ordered: the first phase opens the scene; subsequent phases build on it.
 - Every learner_action page must include at least one phase whose trigger.type is NOT "auto_present" (the learner must do something to progress).
-- trigger.type choices: "auto_present" (system presents, no learner gate), "on_click_item" (tap a named item), "all_matched" (all drag/hotspot targets hit), "sequence_complete" (ordered action set complete), "end_phase" (no gate; closes on enter). Do NOT use any other trigger types.
+- trigger.type choices: "auto_present" (system presents, no learner gate), "on_click_item" (tap a named item), "all_matched" (all drag/hotspot targets hit), "sequence_complete" (ordered action set complete), "tap_group" (tap pool / quota on a parent item's tap_interaction_group.id), "end_phase" (no gate; closes on enter). Do NOT use any other trigger types.
 - NEVER put visit_all_pages inside a phase. visit_all_pages belongs only at beat_completion_rule or page pass_rule level.
 - completion.type choices: "end_phase" (close; no progression), "unlock_next_phase" (advance to next phase on this page), "unlock_next_page" (advance to next page). When the player UI should show a continue/next arrow, use unlock_next_page with show_continue_arrow: true. Do NOT use a separate completion type for "show continue arrow" — this is a UI presentation flag only, not a separate progression state.
 - success_response.dialogue is the character line shown after a correct action. failure_response.dialogue is shown for wrong action (maps to runtime dialogue.error).
 - For setup/discovery pages with no learner gate, phases are optional; use them only when staging a reveal or dialogue progression adds clear value.
 - For consequence pages, the final phase should use completion.type "unlock_next_page" (with show_continue_arrow: true if this is the last page of the beat before reinforcement or next beat).`;
 
-const RICH_STORY_OUTLINE_POLICY = `Rich story rows: use "pages" when a beat needs multiple scenes, staged reveals, or in-page interaction. Each page may set interaction_mode (tap_to_advance = learner taps to advance; drag_match = match items on the same page; mixed; present_only = no required interaction). Optional "phases" per page describe instructional beats; "transition" hints map to story phase completion (e.g. on_click_item → on_click, auto_delay → auto, all_matched → all_matched, end → end_phase).
+const RICH_STORY_OUTLINE_POLICY = `Rich story rows: use "pages" when a beat needs multiple scenes, staged reveals, or in-page interaction. Each page may set interaction_mode (tap_to_advance = learner taps to advance; drag_match = match items on the same page; mixed; present_only = no required interaction). Optional "phases" per page describe instructional beats; "transition" hints map to story phase completion (e.g. on_click_item → on_click, auto_delay → auto, all_matched → all_matched, tap_pool / explore N objects → tap_group, end → end_phase).
 learning_goal_indices are 0-based indexes into the lesson's ordered learning goals list (first goal = 0). Put indices on the story row and/or on individual pages where the goal is primary.
 Keep screenOutline in true playback order; interleave story and interaction. For quizGroups, each group's questionCount must equal the number of interaction rows in that consecutive run (a story row ends a run and starts a new group block if the title repeats later).`;
 
@@ -1068,6 +1069,7 @@ function formatPhaseTrigger(trigger: PhaseTrigger | undefined): string {
     case "on_click_item": return `on_click_item(target="${trigger.target_item_id}")`;
     case "all_matched": return "all_matched";
     case "sequence_complete": return `sequence_complete(seq="${trigger.sequence_id}")`;
+    case "tap_group": return `tap_group(group="${trigger.group_id}")`;
     case "end_phase": return "end_phase";
   }
 }
@@ -1208,7 +1210,7 @@ export async function generateLessonScreensFromPlan(input: {
   const richStoryRules = richStory ?
     `RICH STORY OUTLINE: The plan specifies per-page interaction_mode and/or phases. For each story step in SCREEN ORDER below:
 - Use pages[] with at least as many pages as the outline lists for that beat; align body_text / read_aloud_text with each page summary.
-- When the outline lists phases for a page, implement phases[] on that page with completion rules matching the transition hints (on_click_item → on_click; auto_delay → auto; all_matched → all_matched; end → end_phase or end of flow as appropriate).
+- When the outline lists phases for a page, implement phases[] on that page with completion rules matching the transition hints (on_click_item → on_click; auto_delay → auto; all_matched → all_matched; tap_group / multi-object tap pool → completion.type "tap_group" with group_id matching items[].tap_interaction_group.id; end → end_phase or end of flow as appropriate).
 - For interaction_mode drag_match or mixed, place draggable items and match targets on the same page (items[]), using phase or pass_rule completion so the learner can finish the match in-scene.
 - Respect learning_goal_indices from the outline by covering that vocabulary/skill on the indicated page or beat.
 `
@@ -1227,7 +1229,7 @@ ${formatStoryFirstMaterializationOrder(storyFirstSteps)}
 PHASE ORCHESTRATION INSTRUCTIONS (Story-First only):
 When beat_pages lists phases for a page, you MUST implement those phases in pages[].phases[]:
 - Match the blueprint phase count and order exactly. Do not add or drop phases.
-- Map blueprint trigger types to runtime completion: on_click_item → completion {type:"on_click", target_item_id:"<same slug>"}, all_matched → {type:"all_matched"}, sequence_complete → {type:"sequence_complete", sequence_id:"<same slug>"}, auto_present / end_phase → {type:"end_phase"} or {type:"auto", delay_ms:500}.
+- Map blueprint trigger types to runtime completion: on_click_item → completion {type:"on_click", target_item_id:"<same slug>"}, all_matched → {type:"all_matched"}, sequence_complete → {type:"sequence_complete", sequence_id:"<same slug>"}, tap_group → {type:"tap_group", group_id:"<same slug as parent tap_interaction_group.id>"}, auto_present / end_phase → {type:"end_phase"} or {type:"auto", delay_ms:500}.
 - completion.type "unlock_next_phase" → set next_phase_id linking to the following phase.
 - completion.type "unlock_next_page" → final phase on the page; use {type:"end_phase"} (or {type:"auto", delay_ms:0}) and the book UI will handle page advance. When show_continue_arrow is true, ensure the page is not auto-advancing so the continue button is visible.
 - SEMANTIC IDs: use the exact phase_id, target_item_id, and sequence_id slugs from the blueprint in the generated items[].id and phase.id fields. Do NOT invent new IDs.

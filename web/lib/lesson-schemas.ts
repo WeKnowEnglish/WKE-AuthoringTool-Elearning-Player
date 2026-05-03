@@ -158,6 +158,10 @@ export const storyActionSequenceEventSchema = z.enum([
   "click",
   "page_enter",
   "phase_enter",
+  /** Fires when a parent item's tap_interaction_group quota is satisfied (item-scoped sequences). */
+  "tap_group_satisfied",
+  /** Fires when a phase tap_group / pool_interaction_quota quota is satisfied (phase-scoped sequences). */
+  "pool_quota_met",
 ]);
 
 export type StoryActionSequenceEvent = z.infer<typeof storyActionSequenceEventSchema>;
@@ -267,6 +271,25 @@ export const storyPhaseCompletionSchema = z.discriminatedUnion("type", [
     sequence_id: z.string(),
     next_phase_id: z.string(),
   }),
+  z.object({
+    type: z.literal("tap_group"),
+    /** Must match `tap_interaction_group.id` on an item on this page. */
+    group_id: z.string(),
+    next_phase_id: z.string(),
+    /** Phase `action_sequences` id with `event === "pool_quota_met"`. */
+    satisfaction_sequence_id: z.string().optional(),
+    advance_after_satisfaction: z.boolean().optional().default(true),
+  }),
+  z.object({
+    type: z.literal("pool_interaction_quota"),
+    pool_item_ids: z.array(z.string()).min(1),
+    min_distinct_items: z.number().int().min(1).optional(),
+    min_taps_per_distinct_item: z.number().int().min(1).optional().default(1),
+    min_aggregate_taps: z.number().int().min(1).optional(),
+    next_phase_id: z.string(),
+    satisfaction_sequence_id: z.string().optional(),
+    advance_after_satisfaction: z.boolean().optional().default(true),
+  }),
   z.object({ type: z.literal("end_phase") }),
 ]);
 
@@ -362,6 +385,23 @@ export function getResolvedPhaseTransition(
   | { type: "auto"; delay_ms: number; next_phase_id: string }
   | { type: "all_matched"; next_phase_id: string }
   | { type: "sequence_complete"; sequence_id: string; next_phase_id: string }
+  | {
+      type: "tap_group";
+      group_id: string;
+      next_phase_id: string;
+      satisfaction_sequence_id?: string;
+      advance_after_satisfaction: boolean;
+    }
+  | {
+      type: "pool_interaction_quota";
+      pool_item_ids: string[];
+      min_distinct_items?: number;
+      min_taps_per_distinct_item: number;
+      min_aggregate_taps?: number;
+      next_phase_id: string;
+      satisfaction_sequence_id?: string;
+      advance_after_satisfaction: boolean;
+    }
   | { type: "end_phase" }
   | null {
   if (phase.completion) {
@@ -399,6 +439,33 @@ export function getResolvedPhaseTransition(
         next_phase_id: next,
       };
     }
+    if (phase.completion.type === "tap_group") {
+      const next = phase.next_phase_id ?? phase.completion.next_phase_id;
+      if (!next) return { type: "end_phase" };
+      return {
+        type: "tap_group",
+        group_id: phase.completion.group_id,
+        next_phase_id: next,
+        satisfaction_sequence_id: phase.completion.satisfaction_sequence_id,
+        advance_after_satisfaction:
+          phase.completion.advance_after_satisfaction ?? true,
+      };
+    }
+    if (phase.completion.type === "pool_interaction_quota") {
+      const next = phase.next_phase_id ?? phase.completion.next_phase_id;
+      if (!next) return { type: "end_phase" };
+      const c = phase.completion;
+      return {
+        type: "pool_interaction_quota",
+        pool_item_ids: [...c.pool_item_ids],
+        min_distinct_items: c.min_distinct_items,
+        min_taps_per_distinct_item: c.min_taps_per_distinct_item ?? 1,
+        min_aggregate_taps: c.min_aggregate_taps,
+        next_phase_id: next,
+        satisfaction_sequence_id: c.satisfaction_sequence_id,
+        advance_after_satisfaction: c.advance_after_satisfaction ?? true,
+      };
+    }
     if (
       phase.completion.type === "end_phase" &&
       phase.advance_on_item_tap_id &&
@@ -418,6 +485,31 @@ export function getResolvedPhaseTransition(
       target_item_id: phase.advance_on_item_tap_id,
       next_phase_id: phase.next_phase_id,
     };
+  }
+  return null;
+}
+
+/** Phase-level sequences that run when a tap_group / pool_interaction_quota completes. */
+export function getPhasePoolQuotaMetSequences(
+  phase: StoryPagePhase,
+): StoryActionSequence[] {
+  return (phase.action_sequences ?? []).filter((x) => x.event === "pool_quota_met");
+}
+
+/** Item-level sequences that run when that item's tap_interaction_group quota completes. */
+export function getItemTapGroupSatisfiedSequences(
+  item: StoryItem,
+): StoryActionSequence[] {
+  return (item.action_sequences ?? []).filter((x) => x.event === "tap_group_satisfied");
+}
+
+export function findTapInteractionGroupOnPage(
+  page: { items: StoryItem[] },
+  groupId: string,
+): { parentItem: StoryItem; group: StoryTapInteractionGroup } | null {
+  for (const it of page.items) {
+    const g = it.tap_interaction_group;
+    if (g?.id === groupId) return { parentItem: it, group: g };
   }
   return null;
 }
@@ -475,12 +567,57 @@ export const storyTapSpeechEntrySchema = z
 
 export type StoryTapSpeechEntry = z.infer<typeof storyTapSpeechEntrySchema>;
 
+/** Story-wide cast / prop registry entry (shared identity; page items link via `registry_id`). */
+export const storyCastEntrySchema = z.object({
+  id: z.string(),
+  role: z.enum(["character", "prop"]),
+  /** Teacher-facing label in the cast list. */
+  name: z.string().optional(),
+  /** Default art for instances that omit `image_url` while linked to this entry. */
+  image_url: z.string().optional(),
+});
+
+export type StoryCastEntry = z.infer<typeof storyCastEntrySchema>;
+
+/**
+ * Parent item defines a tap pool (children + optional parent taps). Counted in StoryBookView;
+ * phase completion may reference `tap_group` with the same `id` as `group_id`.
+ */
+export const storyTapInteractionGroupSchema = z
+  .object({
+    /** Stable id; referenced from phase `completion.type === "tap_group"`. */
+    id: z.string().min(1),
+    child_item_ids: z.array(z.string()).min(1),
+    include_parent_in_pool: z.boolean().optional().default(false),
+    min_distinct_items: z.number().int().min(1).optional(),
+    min_taps_per_distinct_item: z.number().int().min(1).optional().default(1),
+    min_aggregate_taps: z.number().int().min(1).optional(),
+    /** Must reference this item's `action_sequences` with `event === "tap_group_satisfied"`. */
+    on_satisfy_sequence_id: z.string().optional(),
+  })
+  .superRefine((tg, ctx) => {
+    const hasDistinct =
+      tg.min_distinct_items != null && tg.min_distinct_items >= 1;
+    const hasAgg =
+      tg.min_aggregate_taps != null && tg.min_aggregate_taps >= 1;
+    if (!hasDistinct && !hasAgg) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "tap_interaction_group requires min_distinct_items and/or min_aggregate_taps",
+      });
+    }
+  });
+
+export type StoryTapInteractionGroup = z.infer<typeof storyTapInteractionGroupSchema>;
 
 export const storyItemSchema = z
   .object({
     id: z.string(),
     /** Teacher-facing name (e.g. “ball”) for labels and editor lists. */
     name: z.string().optional(),
+    /** When set, links to `StoryPayload.cast[].id` for shared identity; layout stays per page item. */
+    registry_id: z.string().optional(),
     kind: z
       .enum(["image", "text", "shape", "line", "button"])
       .optional()
@@ -501,6 +638,10 @@ export const storyItemSchema = z
     show_on_start: z.boolean().optional().default(true),
     /** Simple, stable image scale multiplier inside the item box. */
     image_scale: z.number().min(0.25).max(8).default(1),
+    /** Mirror image left↔right inside the item box (student + editor preview). */
+    image_flip_horizontal: z.boolean().optional(),
+    /** Mirror image top↔bottom inside the item box. */
+    image_flip_vertical: z.boolean().optional(),
     z_index: z.number().int().default(0),
     /** Deck-style drag (migrated presentations); independent of phase `drag_match`. */
     draggable_mode: z.enum(["none", "free", "check_target"]).optional(),
@@ -527,13 +668,15 @@ export const storyItemSchema = z
         triggers: z.array(storyClickActionSchema).optional(),
       })
       .optional(),
+    /** Optional tap pool anchored on this item (parent); see `storyTapInteractionGroupSchema`. */
+    tap_interaction_group: storyTapInteractionGroupSchema.optional(),
   })
   .superRefine((item, ctx) => {
     const kind = item.kind ?? "image";
-    if (kind === "image" && !item.image_url?.trim()) {
+    if (kind === "image" && !item.image_url?.trim() && !item.registry_id?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Story item ${item.id} is image kind but missing image_url`,
+        message: `Story item ${item.id} is image kind but needs image_url and/or registry_id (cast default)`,
       });
     }
     if (kind === "text" && !item.text?.trim()) {
@@ -610,6 +753,52 @@ export const storyPageSchema = z
         return;
       }
       ids.add(it.id);
+    }
+    const tapGroupParentByGroupId = new Map<string, string>();
+    for (const it of page.items) {
+      const tg = it.tap_interaction_group;
+      if (!tg) continue;
+      if (tapGroupParentByGroupId.has(tg.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate tap_interaction_group id on page: ${tg.id}`,
+        });
+        return;
+      }
+      tapGroupParentByGroupId.set(tg.id, it.id);
+      for (const cid of tg.child_item_ids) {
+        if (!ids.has(cid)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `tap_interaction_group ${tg.id} references unknown child item_id: ${cid}`,
+          });
+          return;
+        }
+        if (cid === it.id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `tap_interaction_group ${tg.id}: child_item_ids must not include the parent item ${it.id}`,
+          });
+          return;
+        }
+      }
+      if (tg.on_satisfy_sequence_id?.trim()) {
+        const sid = tg.on_satisfy_sequence_id.trim();
+        const ok = (it.action_sequences ?? []).some(
+          (seq) =>
+            seq.id === sid &&
+            seq.event === "tap_group_satisfied" &&
+            (seq.active_phase_ids == null ||
+              seq.active_phase_ids.length === 0),
+        );
+        if (!ok) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Item ${it.id} tap_interaction_group.on_satisfy_sequence_id must reference this item's action_sequences with event tap_group_satisfied (id: ${sid})`,
+          });
+          return;
+        }
+      }
     }
     const validateActionAndIdleRefs = (
       sourceLabel: string,
@@ -780,7 +969,9 @@ export const storyPageSchema = z
             (ph.completion.type === "on_click" ||
               ph.completion.type === "auto" ||
               ph.completion.type === "all_matched" ||
-              ph.completion.type === "sequence_complete") &&
+              ph.completion.type === "sequence_complete" ||
+              ph.completion.type === "tap_group" ||
+              ph.completion.type === "pool_interaction_quota") &&
             !phaseIds.has(ph.completion.next_phase_id)
           ) {
             ctx.addIssue({
@@ -816,6 +1007,75 @@ export const storyPageSchema = z
                 message: `completion sequence_complete references unknown sequence_id: ${sid}`,
               });
               return;
+            }
+          }
+          if (ph.completion.type === "tap_group") {
+            const gid = ph.completion.group_id;
+            if (!tapGroupParentByGroupId.has(gid)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `completion tap_group references unknown group_id: ${gid}`,
+              });
+              return;
+            }
+            const sat = ph.completion.satisfaction_sequence_id?.trim();
+            if (sat) {
+              const ok = (ph.action_sequences ?? []).some(
+                (seq) => seq.id === sat && seq.event === "pool_quota_met",
+              );
+              if (!ok) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: `Phase ${ph.id} tap_group satisfaction_sequence_id must reference this phase's action_sequences with event pool_quota_met (id: ${sat})`,
+                });
+                return;
+              }
+            }
+          }
+          if (ph.completion.type === "pool_interaction_quota") {
+            const c = ph.completion;
+            const hasDistinct =
+              c.min_distinct_items != null && c.min_distinct_items >= 1;
+            const hasAgg =
+              c.min_aggregate_taps != null && c.min_aggregate_taps >= 1;
+            if (!hasDistinct && !hasAgg) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Phase ${ph.id} pool_interaction_quota requires min_distinct_items and/or min_aggregate_taps`,
+              });
+              return;
+            }
+            for (const pid of c.pool_item_ids) {
+              if (!ids.has(pid)) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: `pool_interaction_quota references unknown item_id: ${pid}`,
+                });
+                return;
+              }
+            }
+            if (
+              hasDistinct &&
+              c.min_distinct_items! > c.pool_item_ids.length
+            ) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `pool_interaction_quota min_distinct_items exceeds pool size`,
+              });
+              return;
+            }
+            const sat = c.satisfaction_sequence_id?.trim();
+            if (sat) {
+              const ok = (ph.action_sequences ?? []).some(
+                (seq) => seq.id === sat && seq.event === "pool_quota_met",
+              );
+              if (!ok) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: `Phase ${ph.id} pool_interaction_quota satisfaction_sequence_id must reference this phase's action_sequences with event pool_quota_met (id: ${sat})`,
+                });
+                return;
+              }
             }
           }
         }
@@ -880,7 +1140,8 @@ export const storyPageSchema = z
           ) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: "drag_match phases should use completion all_matched or end_phase",
+              message:
+                "drag_match phases should use completion all_matched or end_phase",
             });
             return;
           }
@@ -981,33 +1242,92 @@ export const storyPageSchema = z
 
 export type StoryPage = z.infer<typeof storyPageSchema>;
 
-export const storyPayloadSchema = z.object({
-  type: z.literal("story"),
-  /** Optional schema marker for new sequence/idle fields. */
-  payload_version: z.literal(2).optional(),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  /** Shown when set; otherwise story image is used if present */
-  video_url: z.string().optional(),
-  body_text: z.string(),
-  read_aloud_text: z.string().optional(),
-  tts_lang: z.string().optional(),
-  guide: guideSchema,
-  /** Book page-turn vs slide deck chrome (per Interactive Page). */
-  layout_mode: z.enum(["book", "slide"]).optional().default("book"),
-  pass_rule: z
-    .enum(["story_complete", "visit_all_pages", "drag_targets_complete"])
-    .optional(),
-  /** When pass_rule is satisfied, optionally advance to the next lesson screen (student player). */
-  auto_advance_on_pass: z.boolean().optional(),
-  /** Gold awarded when pass_rule is satisfied (student player). */
-  gold_reward_on_pass: z.number().int().min(0).max(100).optional(),
-  /** Multi-page book; when absent or empty, legacy single-page fields above apply */
-  pages: z.array(storyPageSchema).optional(),
-  page_turn_style: z.enum(["slide", "curl"]).optional(),
-});
+export const storyPayloadSchema = z
+  .object({
+    type: z.literal("story"),
+    /** Optional schema marker for new sequence/idle fields. */
+    payload_version: z.literal(2).optional(),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    /** Shown when set; otherwise story image is used if present */
+    video_url: z.string().optional(),
+    body_text: z.string(),
+    read_aloud_text: z.string().optional(),
+    tts_lang: z.string().optional(),
+    guide: guideSchema,
+    /** Book page-turn vs slide deck chrome (per Interactive Page). */
+    layout_mode: z.enum(["book", "slide"]).optional().default("book"),
+    pass_rule: z
+      .enum(["story_complete", "visit_all_pages", "drag_targets_complete"])
+      .optional(),
+    /** When pass_rule is satisfied, optionally advance to the next lesson screen (student player). */
+    auto_advance_on_pass: z.boolean().optional(),
+    /** Gold awarded when pass_rule is satisfied (student player). */
+    gold_reward_on_pass: z.number().int().min(0).max(100).optional(),
+    /** Multi-page book; when absent or empty, legacy single-page fields above apply */
+    pages: z.array(storyPageSchema).optional(),
+    page_turn_style: z.enum(["slide", "curl"]).optional(),
+    /** Optional cast / props registry; page items may set `registry_id` to link. */
+    cast: z.array(storyCastEntrySchema).optional(),
+  })
+  .superRefine((payload, ctx) => {
+    const cast = payload.cast ?? [];
+    const castIds = new Set<string>();
+    for (const c of cast) {
+      if (castIds.has(c.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate cast id: ${c.id}`,
+        });
+        return;
+      }
+      castIds.add(c.id);
+    }
+    const castById = new Map(cast.map((c) => [c.id, c]));
+    for (const page of payload.pages ?? []) {
+      for (const it of page.items) {
+        const rid = it.registry_id?.trim();
+        if (rid) {
+          if (!castById.has(rid)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Story item ${it.id} registry_id "${rid}" not found in cast`,
+            });
+            return;
+          }
+        }
+        const kind = it.kind ?? "image";
+        if (kind === "image") {
+          const ownUrl = it.image_url?.trim();
+          const entry = rid ? castById.get(rid) : undefined;
+          const castUrl = entry?.image_url?.trim();
+          if (!ownUrl && !castUrl) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Story item ${it.id} needs image_url or a cast entry with image_url`,
+            });
+            return;
+          }
+        }
+      }
+    }
+  });
 
 export type StoryPayload = z.infer<typeof storyPayloadSchema>;
+
+/** Resolved image URL for an image item (own URL wins; else cast default). */
+export function resolveStoryItemImageUrl(
+  item: { kind?: string; image_url?: string | null; registry_id?: string | null },
+  cast: StoryCastEntry[] | undefined | null,
+): string | undefined {
+  const own = item.image_url?.trim();
+  if (own) return own;
+  const rid = item.registry_id?.trim();
+  if (!rid || !cast?.length) return undefined;
+  const entry = cast.find((c) => c.id === rid);
+  const u = entry?.image_url?.trim();
+  return u || undefined;
+}
 
 /** Default phase id when a page has no `phases` in JSON (synthetic, not stored). */
 export const LEGACY_STORY_PHASE_ID = "__legacy";
@@ -1107,7 +1427,16 @@ export function getNormalizedStoryPages(payload: StoryPayload): NormalizedStoryP
           p.read_aloud_text ?? p.body_text ?? payload.read_aloud_text ?? payload.body_text,
         auto_play_page_text: p.auto_play_page_text ?? false,
         page_audio_url: p.page_audio_url,
-        items: p.items.map((it) => ({ ...it, z_index: it.z_index ?? 0, image_scale: it.image_scale ?? 1 })),
+        items: p.items.map((it) => {
+          const base = { ...it, z_index: it.z_index ?? 0, image_scale: it.image_scale ?? 1 };
+          if ((base.kind ?? "image") === "image") {
+            const merged = resolveStoryItemImageUrl(base, payload.cast);
+            if (merged && !base.image_url?.trim()) {
+              return { ...base, image_url: merged };
+            }
+          }
+          return base;
+        }),
         action_sequences: p.action_sequences ?? [],
         idle_animations: p.idle_animations ?? [],
         auto_play:
@@ -1188,7 +1517,21 @@ export function remapStoryPayloadIds(payload: StoryPayload): StoryPayload {
               : {}),
             }
           : undefined;
-        return { ...it, id: nid, on_click };
+        return {
+          ...it,
+          id: nid,
+          on_click,
+          tap_interaction_group:
+            it.tap_interaction_group ?
+              {
+                ...it.tap_interaction_group,
+                child_item_ids: it.tap_interaction_group.child_item_ids.map(
+                  (cid) =>
+                    idMap.has(cid) ? (idMap.get(cid) as string) : cid,
+                ),
+              }
+            : undefined,
+        };
       });
       const timeline = page.timeline?.map((step) => ({
         ...step,
@@ -1271,6 +1614,36 @@ export function remapStoryPayloadIds(payload: StoryPayload): StoryPayload {
                     phaseIdMap.has(ph.completion.next_phase_id) ?
                       (phaseIdMap.get(ph.completion.next_phase_id) as string)
                     : ph.completion.next_phase_id,
+                }
+              : ph.completion.type === "tap_group" ?
+                {
+                  type: "tap_group" as const,
+                  group_id: ph.completion.group_id,
+                  next_phase_id:
+                    phaseIdMap.has(ph.completion.next_phase_id) ?
+                      (phaseIdMap.get(ph.completion.next_phase_id) as string)
+                    : ph.completion.next_phase_id,
+                  satisfaction_sequence_id: ph.completion.satisfaction_sequence_id,
+                  advance_after_satisfaction:
+                    ph.completion.advance_after_satisfaction ?? true,
+                }
+              : ph.completion.type === "pool_interaction_quota" ?
+                {
+                  type: "pool_interaction_quota" as const,
+                  pool_item_ids: ph.completion.pool_item_ids.map(
+                    (pid) => (idMap.has(pid) ? (idMap.get(pid) as string) : pid),
+                  ),
+                  min_distinct_items: ph.completion.min_distinct_items,
+                  min_taps_per_distinct_item:
+                    ph.completion.min_taps_per_distinct_item ?? 1,
+                  min_aggregate_taps: ph.completion.min_aggregate_taps,
+                  next_phase_id:
+                    phaseIdMap.has(ph.completion.next_phase_id) ?
+                      (phaseIdMap.get(ph.completion.next_phase_id) as string)
+                    : ph.completion.next_phase_id,
+                  satisfaction_sequence_id: ph.completion.satisfaction_sequence_id,
+                  advance_after_satisfaction:
+                    ph.completion.advance_after_satisfaction ?? true,
                 }
               : ph.completion,
             drag_match: ph.drag_match ? {

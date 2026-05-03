@@ -295,6 +295,7 @@ describe("phaseTriggerSchema", () => {
     expect(phaseTriggerSchema.safeParse({ type: "on_click_item", target_item_id: "school_shirt" }).success).toBe(true);
     expect(phaseTriggerSchema.safeParse({ type: "all_matched" }).success).toBe(true);
     expect(phaseTriggerSchema.safeParse({ type: "sequence_complete", sequence_id: "collect_seq" }).success).toBe(true);
+    expect(phaseTriggerSchema.safeParse({ type: "tap_group", group_id: "bathroom_pool" }).success).toBe(true);
     expect(phaseTriggerSchema.safeParse({ type: "end_phase" }).success).toBe(true);
   });
 
@@ -304,6 +305,7 @@ describe("phaseTriggerSchema", () => {
 
   it("rejects sequence_complete without sequence_id", () => {
     expect(phaseTriggerSchema.safeParse({ type: "sequence_complete" }).success).toBe(false);
+    expect(phaseTriggerSchema.safeParse({ type: "tap_group" }).success).toBe(false);
   });
 
   it("rejects unknown trigger types (e.g. hotspot_unlock is deferred)", () => {

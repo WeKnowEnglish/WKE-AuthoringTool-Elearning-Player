@@ -4,6 +4,7 @@ import {
   getOnEnterRuntimeActions,
   getResolvedPhaseTransition,
   remapStoryPayloadIds,
+  storyPageSchema,
   storyPayloadSchema,
 } from "@/lib/lesson-schemas";
 
@@ -71,6 +72,88 @@ describe("storyPayloadSchema", () => {
     });
     const it = p.pages![0].items[0];
     expect(it.image_scale).toBe(1.35);
+  });
+
+  it("accepts cast + image item with registry_id when cast provides default image_url", () => {
+    const p = storyPayloadSchema.parse({
+      type: "story",
+      body_text: "x",
+      cast: [{ id: "c1", role: "character", image_url: "https://hero.png" }],
+      pages: [
+        {
+          id: "p1",
+          body_text: "p",
+          items: [
+            {
+              id: "i1",
+              registry_id: "c1",
+              x_percent: 0,
+              y_percent: 0,
+              w_percent: 10,
+              h_percent: 10,
+              enter: { preset: "fade_in", duration_ms: 400 },
+            },
+          ],
+        },
+      ],
+    });
+    expect(p.cast?.[0].id).toBe("c1");
+    expect(p.pages?.[0].items[0].registry_id).toBe("c1");
+  });
+
+  it("rejects registry_id not listed in cast", () => {
+    const r = storyPayloadSchema.safeParse({
+      type: "story",
+      body_text: "x",
+      cast: [{ id: "c1", role: "character", image_url: "https://a.png" }],
+      pages: [
+        {
+          id: "p1",
+          body_text: "p",
+          items: [
+            {
+              id: "i1",
+              registry_id: "missing",
+              x_percent: 0,
+              y_percent: 0,
+              w_percent: 10,
+              h_percent: 10,
+              enter: { preset: "fade_in", duration_ms: 400 },
+            },
+          ],
+        },
+      ],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects duplicate cast entry ids", () => {
+    const r = storyPayloadSchema.safeParse({
+      type: "story",
+      body_text: "x",
+      cast: [
+        { id: "same", role: "character", image_url: "https://a.png" },
+        { id: "same", role: "prop", image_url: "https://b.png" },
+      ],
+      pages: [
+        {
+          id: "p1",
+          body_text: "p",
+          items: [
+            {
+              id: "i1",
+              image_url: "https://i.png",
+              x_percent: 0,
+              y_percent: 0,
+              w_percent: 10,
+              h_percent: 10,
+              enter: { preset: "fade_in", duration_ms: 400 },
+            },
+          ],
+        },
+      ],
+    });
+    expect(r.success).toBe(false);
   });
 
   it("rejects duplicate item ids on a page", () => {
@@ -201,6 +284,33 @@ describe("getNormalizedStoryPages", () => {
     expect(pages[0].body_text).toBe("Legacy text");
     expect(pages[0].background_image_url).toBe("https://bg.png");
     expect(pages[0].phasesExplicit).toBe(false);
+  });
+
+  it("merges cast default image_url into normalized image items", () => {
+    const p = storyPayloadSchema.parse({
+      type: "story",
+      body_text: "x",
+      cast: [{ id: "c1", role: "character", image_url: "https://hero.png" }],
+      pages: [
+        {
+          id: "p1",
+          body_text: "p",
+          items: [
+            {
+              id: "i1",
+              registry_id: "c1",
+              x_percent: 0,
+              y_percent: 0,
+              w_percent: 10,
+              h_percent: 10,
+              enter: { preset: "fade_in", duration_ms: 400 },
+            },
+          ],
+        },
+      ],
+    });
+    const pages = getNormalizedStoryPages(p);
+    expect(pages[0].items[0].image_url).toBe("https://hero.png");
   });
 
   it("includes explicit phases on a page", () => {
@@ -827,6 +937,239 @@ describe("getResolvedPhaseTransition", () => {
     if (r2?.type === "all_matched") {
       expect(r2.next_phase_id).toBe("c");
     }
+  });
+
+  it("tap_group: prefers top-level next_phase_id over completion.next_phase_id", () => {
+    const r = getResolvedPhaseTransition({
+      id: "a",
+      is_start: true,
+      next_phase_id: "b",
+      completion: {
+        type: "tap_group",
+        group_id: "g1",
+        next_phase_id: "c",
+        advance_after_satisfaction: false,
+      },
+    });
+    expect(r?.type).toBe("tap_group");
+    if (r?.type === "tap_group") {
+      expect(r.group_id).toBe("g1");
+      expect(r.next_phase_id).toBe("b");
+      expect(r.advance_after_satisfaction).toBe(false);
+    }
+  });
+
+  it("pool_interaction_quota: resolves pool, thresholds, and next_phase_id", () => {
+    const r = getResolvedPhaseTransition({
+      id: "a",
+      is_start: true,
+      next_phase_id: "next",
+      completion: {
+        type: "pool_interaction_quota",
+        pool_item_ids: ["x", "y"],
+        min_distinct_items: 2,
+        min_aggregate_taps: 5,
+        next_phase_id: "z",
+      },
+    });
+    expect(r?.type).toBe("pool_interaction_quota");
+    if (r?.type === "pool_interaction_quota") {
+      expect(r.pool_item_ids).toEqual(["x", "y"]);
+      expect(r.min_distinct_items).toBe(2);
+      expect(r.min_aggregate_taps).toBe(5);
+      expect(r.min_taps_per_distinct_item).toBe(1);
+      expect(r.next_phase_id).toBe("next");
+    }
+  });
+});
+
+describe("storyPageSchema tap pool validation", () => {
+  const imgItem = (id: string) => ({
+    id,
+    image_url: "https://example.com/i.png",
+    x_percent: 0,
+    y_percent: 0,
+    w_percent: 10,
+    h_percent: 10,
+  });
+
+  it("accepts tap_interaction_group with on_satisfy + tap_group phase completion", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [
+        {
+          ...imgItem("parent"),
+          tap_interaction_group: {
+            id: "g1",
+            child_item_ids: ["a", "b"],
+            min_distinct_items: 2,
+            on_satisfy_sequence_id: "sat",
+          },
+          action_sequences: [
+            {
+              id: "sat",
+              event: "tap_group_satisfied" as const,
+              steps: [{ id: "s1", kind: "emphasis" as const, target_item_id: "a" }],
+            },
+          ],
+        },
+        imgItem("a"),
+        imgItem("b"),
+      ],
+      phases: [
+        {
+          id: "ph0",
+          is_start: true,
+          next_phase_id: "ph1",
+          completion: { type: "auto", delay_ms: 0, next_phase_id: "ph1" },
+        },
+        {
+          id: "ph1",
+          next_phase_id: "ph2",
+          completion: {
+            type: "tap_group",
+            group_id: "g1",
+            next_phase_id: "ph2",
+          },
+        },
+        { id: "ph2", completion: { type: "end_phase" } },
+      ],
+    };
+    expect(storyPageSchema.safeParse(page).success).toBe(true);
+  });
+
+  it("rejects duplicate tap_interaction_group id on one page", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [
+        {
+          ...imgItem("p1"),
+          tap_interaction_group: {
+            id: "g1",
+            child_item_ids: ["a"],
+            min_distinct_items: 1,
+          },
+        },
+        {
+          ...imgItem("p2"),
+          tap_interaction_group: {
+            id: "g1",
+            child_item_ids: ["a"],
+            min_distinct_items: 1,
+          },
+        },
+        imgItem("a"),
+      ],
+    };
+    const r = storyPageSchema.safeParse(page);
+    expect(r.success).toBe(false);
+    expect(
+      r.error?.issues.some((i) =>
+        String(i.message).includes("Duplicate tap_interaction_group"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects tap_group completion when group_id is not defined on any item", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [imgItem("a")],
+      phases: [
+        {
+          id: "ph0",
+          is_start: true,
+          next_phase_id: "ph1",
+          completion: { type: "auto", delay_ms: 0, next_phase_id: "ph1" },
+        },
+        {
+          id: "ph1",
+          next_phase_id: "ph2",
+          completion: {
+            type: "tap_group",
+            group_id: "missing_group",
+            next_phase_id: "ph2",
+          },
+        },
+        { id: "ph2", completion: { type: "end_phase" } },
+      ],
+    };
+    const r = storyPageSchema.safeParse(page);
+    expect(r.success).toBe(false);
+    expect(
+      r.error?.issues.some((i) =>
+        String(i.message).includes("completion tap_group references unknown group_id"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects pool_interaction_quota when min_distinct_items exceeds pool size", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [imgItem("a")],
+      phases: [
+        {
+          id: "ph0",
+          is_start: true,
+          next_phase_id: "ph1",
+          completion: { type: "auto", delay_ms: 0, next_phase_id: "ph1" },
+        },
+        {
+          id: "ph1",
+          next_phase_id: "ph2",
+          completion: {
+            type: "pool_interaction_quota",
+            pool_item_ids: ["a"],
+            min_distinct_items: 2,
+            next_phase_id: "ph2",
+          },
+        },
+        { id: "ph2", completion: { type: "end_phase" } },
+      ],
+    };
+    const r = storyPageSchema.safeParse(page);
+    expect(r.success).toBe(false);
+    expect(
+      r.error?.issues.some((i) =>
+        String(i.message).includes("min_distinct_items exceeds pool size"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects on_satisfy_sequence_id that does not point at tap_group_satisfied sequence", () => {
+    const page = {
+      id: "p1",
+      body_text: "x",
+      items: [
+        {
+          ...imgItem("parent"),
+          tap_interaction_group: {
+            id: "g1",
+            child_item_ids: ["a"],
+            min_distinct_items: 1,
+            on_satisfy_sequence_id: "wrong",
+          },
+          action_sequences: [
+            {
+              id: "wrong",
+              event: "click" as const,
+              steps: [],
+            },
+          ],
+        },
+        imgItem("a"),
+      ],
+    };
+    const r = storyPageSchema.safeParse(page);
+    expect(r.success).toBe(false);
+    expect(
+      r.error?.issues.some((i) =>
+        String(i.message).includes("tap_group_satisfied"),
+      ),
+    ).toBe(true);
   });
 });
 

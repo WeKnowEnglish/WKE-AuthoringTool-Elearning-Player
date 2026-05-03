@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { teacherSignOut } from "@/lib/actions/auth";
 import {
   TeacherEditorHeaderProvider,
@@ -10,6 +10,12 @@ import {
   useLessonToolbarSlot,
 } from "@/components/teacher/TeacherEditorHeaderContext";
 import { TeacherPrimaryTabs } from "@/components/teacher/TeacherPrimaryTabs";
+import { SoftChromePresetSwatches } from "@/components/ui/SoftChromePresetSwatches";
+import {
+  getSoftChromePreset,
+  teacherSoftChromeStore,
+  type SoftChromePresetId,
+} from "@/lib/soft-chrome-theme";
 
 type Props = {
   userEmail: string;
@@ -22,7 +28,17 @@ function isLessonEditorPath(pathname: string | null) {
   return /^\/teacher\/modules\/[^/]+\/lessons\/[^/]+/.test(pathname);
 }
 
-function TeacherChromeHeader({ userEmail }: { userEmail: string }) {
+function TeacherChromeHeader({
+  userEmail,
+  headerBackground,
+  presetId,
+  onPresetChange,
+}: {
+  userEmail: string;
+  headerBackground: string;
+  presetId: SoftChromePresetId;
+  onPresetChange: (id: SoftChromePresetId) => void;
+}) {
   const pathname = usePathname();
   const lessonEditorFullBleed = isLessonEditorPath(pathname);
   const headerRef = useRef<HTMLElement | null>(null);
@@ -52,7 +68,8 @@ function TeacherChromeHeader({ userEmail }: { userEmail: string }) {
   return (
     <header
       ref={headerRef}
-      className="shrink-0 border-b border-neutral-200 bg-white px-2 py-1 sm:px-3"
+      className="shrink-0 border-b border-black/[0.08] px-2 py-1 sm:px-3"
+      style={{ backgroundColor: headerBackground }}
     >
       <div className="grid w-full grid-cols-1 items-center gap-y-2 gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-x-1 sm:gap-y-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:justify-self-start">
@@ -71,6 +88,11 @@ function TeacherChromeHeader({ userEmail }: { userEmail: string }) {
           <TeacherPrimaryTabs />
         </div>
         <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs sm:justify-self-end sm:text-sm">
+          <SoftChromePresetSwatches
+            headerBackground={headerBackground}
+            presetId={presetId}
+            onPresetChange={onPresetChange}
+          />
           <span className="max-w-[min(42vw,12rem)] truncate text-neutral-600 sm:max-w-[14rem]">
             {userEmail}
           </span>
@@ -94,23 +116,37 @@ function TeacherChromeHeader({ userEmail }: { userEmail: string }) {
 export function TeacherSecureShell({ userEmail, children }: Props) {
   const pathname = usePathname();
   const lessonEditorFullBleed = isLessonEditorPath(pathname);
+  const presetId = useSyncExternalStore(
+    teacherSoftChromeStore.subscribe,
+    teacherSoftChromeStore.getSnapshot,
+    teacherSoftChromeStore.getServerSnapshot,
+  );
+  const preset = getSoftChromePreset(presetId);
+  const pageBackground = preset.page;
 
   return (
     <TeacherEditorHeaderProvider>
       <div
         className={
           lessonEditorFullBleed ?
-            "flex h-dvh min-h-0 flex-col overflow-hidden bg-white"
-          : "min-h-screen bg-white"
+            "flex h-dvh min-h-0 flex-col overflow-hidden"
+          : "min-h-screen"
         }
+        style={{ backgroundColor: pageBackground }}
       >
-        <TeacherChromeHeader userEmail={userEmail} />
+        <TeacherChromeHeader
+          userEmail={userEmail}
+          headerBackground={preset.header}
+          presetId={presetId}
+          onPresetChange={teacherSoftChromeStore.persist}
+        />
         <div
           className={
             lessonEditorFullBleed ?
-              "flex min-h-0 flex-1 flex-col overflow-hidden bg-white px-0"
-            : "w-full max-w-none bg-white px-4 pt-0 pb-8 sm:px-6 lg:px-8"
+              "flex min-h-0 flex-1 flex-col overflow-hidden px-0"
+            : "w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
           }
+          style={{ backgroundColor: pageBackground }}
         >
           {children}
         </div>

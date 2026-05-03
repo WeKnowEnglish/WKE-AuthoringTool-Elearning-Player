@@ -125,6 +125,29 @@ describe("compilePhaseTriggerToCompletion", () => {
     });
   });
 
+  describe("tap_group", () => {
+    it("produces tap_group with group_id and next_phase_id", () => {
+      const result = compilePhaseTriggerToCompletion(
+        { type: "tap_group", group_id: "bathroom_pool" },
+        "ph_next",
+      );
+      expect(result).toEqual({
+        type: "tap_group",
+        group_id: "bathroom_pool",
+        next_phase_id: "ph_next",
+        advance_after_satisfaction: true,
+      });
+    });
+
+    it("produces end_phase when terminal", () => {
+      const result = compilePhaseTriggerToCompletion(
+        { type: "tap_group", group_id: "bathroom_pool" },
+        null,
+      );
+      expect(result).toEqual({ type: "end_phase" });
+    });
+  });
+
   describe("end_phase trigger", () => {
     it("always produces end_phase even when nextPhaseId is non-null", () => {
       const result = compilePhaseTriggerToCompletion({ type: "end_phase" }, "ph_next");
@@ -156,6 +179,7 @@ describe("compilePhaseTriggerToCompletion", () => {
         { type: "on_click_item" as const, target_item_id: "btn" },
         { type: "all_matched" as const },
         { type: "sequence_complete" as const, sequence_id: "seq" },
+        { type: "tap_group" as const, group_id: "g" },
         { type: "end_phase" as const },
       ] as const;
 
@@ -492,6 +516,7 @@ describe("compiler invariants", () => {
       compilePhaseTriggerToCompletion({ type: "on_click_item", target_item_id: "x" }, null),
       compilePhaseTriggerToCompletion({ type: "all_matched" }, null),
       compilePhaseTriggerToCompletion({ type: "sequence_complete", sequence_id: "s" }, null),
+      compilePhaseTriggerToCompletion({ type: "tap_group", group_id: "g" }, null),
       compilePhaseTriggerToCompletion({ type: "end_phase" }, null),
       compilePhaseTriggerToCompletion(undefined, null),
     ];

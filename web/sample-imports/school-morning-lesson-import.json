@@ -1,0 +1,1339 @@
+{
+  "screens": [
+    {
+      "screen_type": "story",
+      "payload": {
+        "type": "story",
+        "payload_version": 2,
+        "layout_mode": "book",
+        "page_turn_style": "curl",
+        "body_text": "Getting ready for school.",
+        "read_aloud_text": "Getting ready for school.",
+        "tts_lang": "en-US",
+        "cast": [
+          {
+            "id": "cast_school_mai",
+            "role": "character",
+            "name": "Mai",
+            "image_url": "https://placehold.co/400x400/fecdd3/9f1239?text=Mai"
+          },
+          {
+            "id": "cast_school_tom",
+            "role": "character",
+            "name": "Tom",
+            "image_url": "https://placehold.co/400x400/dcfce7/14532d?text=Tom"
+          },
+          {
+            "id": "cast_school_linh",
+            "role": "character",
+            "name": "Linh",
+            "image_url": "https://placehold.co/400x400/fbcfe8/9d174d?text=Linh"
+          }
+        ],
+        "pass_rule": "visit_all_pages",
+        "pages": [
+          {
+            "id": "school_p1_wake",
+            "title": "Wake up",
+            "image_fit": "cover",
+            "background_image_url": "https://placehold.co/1600x1000/e0e7ff/312e81?text=Bedroom",
+            "body_text": "Good morning! Time to wake up.",
+            "read_aloud_text": "Good morning! Time to wake up.",
+            "items": [
+              {
+                "id": "p1_mai",
+                "name": "Mai",
+                "kind": "image",
+                "registry_id": "cast_school_mai",
+                "x_percent": 38,
+                "y_percent": 44,
+                "w_percent": 22,
+                "h_percent": 42,
+                "show_card": true,
+                "z_index": 6
+              },
+              {
+                "id": "p1_alarm",
+                "name": "Alarm clock",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x160/fef3c7/92400e?text=Alarm",
+                "x_percent": 12,
+                "y_percent": 18,
+                "w_percent": 14,
+                "h_percent": 14,
+                "show_card": false,
+                "z_index": 8,
+                "action_sequences": [
+                  {
+                    "id": "seq_p1_alarm_ring",
+                    "event": "click",
+                    "active_phase_ids": ["school_p1_ph_alarm"],
+                    "steps": [
+                      {
+                        "id": "p1_alarm_em",
+                        "kind": "emphasis",
+                        "emphasis_preset": "wobble",
+                        "duration_ms": 650,
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "p1_mai_wake_tap",
+                "name": "Mai stretches",
+                "kind": "image",
+                "registry_id": "cast_school_mai",
+                "x_percent": 38,
+                "y_percent": 44,
+                "w_percent": 22,
+                "h_percent": 42,
+                "show_on_start": false,
+                "show_card": true,
+                "z_index": 7,
+                "action_sequences": [
+                  {
+                    "id": "seq_p1_mai_stretch",
+                    "event": "click",
+                    "active_phase_ids": ["school_p1_ph_mai"],
+                    "steps": [
+                      {
+                        "id": "p1_mai_em",
+                        "kind": "emphasis",
+                        "emphasis_preset": "grow",
+                        "duration_ms": 500,
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "p1_door_bathroom",
+                "name": "Bathroom door",
+                "kind": "image",
+                "image_url": "https://placehold.co/280x420/78716c/fafaf9?text=Bathroom",
+                "x_percent": 72,
+                "y_percent": 28,
+                "w_percent": 18,
+                "h_percent": 48,
+                "show_card": false,
+                "z_index": 5,
+                "idle_animations": [
+                  {
+                    "id": "idle_p1_door",
+                    "preset": "pulse",
+                    "active_phase_ids": ["school_p1_ph_door_gate"]
+                  }
+                ],
+                "action_sequences": [
+                  {
+                    "id": "seq_p1_door_bathroom",
+                    "event": "click",
+                    "active_phase_ids": ["school_p1_ph_door_gate"],
+                    "steps": [
+                      {
+                        "id": "p1_goto_bath",
+                        "kind": "goto_page",
+                        "goto_target": "next_page",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "school_p1_ph_alarm",
+                "name": "Alarm",
+                "is_start": true,
+                "next_phase_id": "school_p1_ph_mai",
+                "visible_item_ids": ["p1_mai", "p1_alarm"],
+                "dialogue": {
+                  "start": "Good morning! Tap the alarm clock to start your day.",
+                  "error": "Tap the alarm clock."
+                },
+                "highlight_item_ids": ["p1_alarm"],
+                "idle_animations": [
+                  {
+                    "id": "idle_p1_alarm",
+                    "preset": "pulse",
+                    "target_item_id": "p1_alarm"
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p1_alarm",
+                  "next_phase_id": "school_p1_ph_mai"
+                }
+              },
+              {
+                "id": "school_p1_ph_mai",
+                "name": "Get up",
+                "next_phase_id": "school_p1_ph_door_gate",
+                "visible_item_ids": ["p1_mai_wake_tap", "p1_alarm"],
+                "dialogue": {
+                  "start": "Nice! Now tap Mai to stretch and get out of bed.",
+                  "error": "Tap Mai."
+                },
+                "highlight_item_ids": ["p1_mai_wake_tap"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p1_mai_wake_tap",
+                  "next_phase_id": "school_p1_ph_door_gate"
+                }
+              },
+              {
+                "id": "school_p1_ph_door_gate",
+                "name": "Bathroom",
+                "kind": "none",
+                "visible_item_ids": ["p1_mai_wake_tap", "p1_alarm", "p1_door_bathroom"],
+                "dialogue": {
+                  "start": "Time for the bathroom. Tap the bathroom door.",
+                  "error": "Tap the bathroom door."
+                },
+                "highlight_item_ids": ["p1_door_bathroom"],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          },
+          {
+            "id": "school_p2_bathroom",
+            "title": "Bathroom",
+            "image_fit": "cover",
+            "background_image_url": "https://placehold.co/1600x1000/e0f2fe/0c4a6e?text=Bathroom",
+            "body_text": "Mai, Linh, and Tom sort out the bathroom before school.",
+            "read_aloud_text": "Mai, Linh, and Tom sort out the bathroom before school.",
+            "items": [
+              {
+                "id": "p2_mai",
+                "name": "Mai",
+                "kind": "image",
+                "registry_id": "cast_school_mai",
+                "x_percent": 36,
+                "y_percent": 34,
+                "w_percent": 18,
+                "h_percent": 44,
+                "show_card": true,
+                "z_index": 6
+              },
+              {
+                "id": "p2_linh",
+                "name": "Linh",
+                "kind": "image",
+                "registry_id": "cast_school_linh",
+                "x_percent": 66,
+                "y_percent": 32,
+                "w_percent": 16,
+                "h_percent": 42,
+                "show_on_start": false,
+                "show_card": true,
+                "z_index": 6
+              },
+              {
+                "id": "p2_linh_drop_zone",
+                "name": "Give towel to Linh",
+                "kind": "image",
+                "image_url": "https://placehold.co/220x200/f472b6/ffffff?text=Drop+towel+here",
+                "x_percent": 62,
+                "y_percent": 48,
+                "w_percent": 24,
+                "h_percent": 26,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 4
+              },
+              {
+                "id": "p2_tom",
+                "name": "Tom",
+                "kind": "image",
+                "registry_id": "cast_school_tom",
+                "x_percent": 4,
+                "y_percent": 30,
+                "w_percent": 16,
+                "h_percent": 46,
+                "show_on_start": false,
+                "show_card": true,
+                "z_index": 6
+              },
+              {
+                "id": "p2_boy_zone",
+                "name": "Tom laundry hands",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x160/dcfce7/14532d?text=Drop+clothes+here",
+                "x_percent": 2,
+                "y_percent": 52,
+                "w_percent": 22,
+                "h_percent": 30,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 5
+              },
+              {
+                "id": "p2_towel",
+                "name": "Pink towel",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x240/f9a8d4/9d174d?text=Pink+towel",
+                "x_percent": 52,
+                "y_percent": 40,
+                "w_percent": 12,
+                "h_percent": 20,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 9
+              },
+              {
+                "id": "p2_clothes_shirt",
+                "name": "Shirt on floor",
+                "kind": "image",
+                "image_url": "https://placehold.co/140x100/93c5fd/1e3a8a?text=Shirt",
+                "x_percent": 30,
+                "y_percent": 76,
+                "w_percent": 10,
+                "h_percent": 12,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p2_clothes_sock",
+                "name": "Sock on floor",
+                "kind": "image",
+                "image_url": "https://placehold.co/120x90/fca5a5/7f1d1d?text=Sock",
+                "x_percent": 44,
+                "y_percent": 78,
+                "w_percent": 9,
+                "h_percent": 10,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p2_clothes_shorts",
+                "name": "Shorts on floor",
+                "kind": "image",
+                "image_url": "https://placehold.co/140x90/6366f1/312e81?text=Shorts",
+                "x_percent": 56,
+                "y_percent": 77,
+                "w_percent": 11,
+                "h_percent": 11,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p2_sink",
+                "name": "Sink",
+                "kind": "image",
+                "image_url": "https://placehold.co/320x220/94a3b8/f8fafc?text=Sink",
+                "x_percent": 8,
+                "y_percent": 36,
+                "w_percent": 26,
+                "h_percent": 26,
+                "show_card": false,
+                "z_index": 4,
+                "action_sequences": [
+                  {
+                    "id": "seq_p2_sink_click",
+                    "event": "click",
+                    "active_phase_ids": ["school_p2_ph_sink"],
+                    "steps": [
+                      {
+                        "id": "p2_sink_em",
+                        "kind": "emphasis",
+                        "emphasis_preset": "grow",
+                        "duration_ms": 550,
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "p2_toothbrush",
+                "name": "Toothbrush",
+                "kind": "image",
+                "image_url": "https://placehold.co/180x200/fef08a/854d0e?text=Brush",
+                "x_percent": 38,
+                "y_percent": 50,
+                "w_percent": 10,
+                "h_percent": 18,
+                "show_card": false,
+                "z_index": 8,
+                "action_sequences": [
+                  {
+                    "id": "seq_p2_brush_click",
+                    "event": "click",
+                    "active_phase_ids": ["school_p2_ph_brush"],
+                    "steps": [
+                      {
+                        "id": "p2_brush_move",
+                        "kind": "move",
+                        "target_item_id": "p2_toothbrush",
+                        "duration_ms": 700,
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ],
+                "path": {
+                  "waypoints": [
+                    { "x_percent": 38, "y_percent": 50 },
+                    { "x_percent": 44, "y_percent": 46 },
+                    { "x_percent": 38, "y_percent": 50 }
+                  ],
+                  "duration_ms": 700,
+                  "easing": "ease-in-out"
+                }
+              },
+              {
+                "id": "p2_light",
+                "name": "Light switch",
+                "kind": "image",
+                "image_url": "https://placehold.co/120x100/fef9c3/854d0e?text=Light",
+                "x_percent": 84,
+                "y_percent": 12,
+                "w_percent": 10,
+                "h_percent": 10,
+                "show_card": false,
+                "z_index": 10,
+                "action_sequences": [
+                  {
+                    "id": "seq_p2_light_click",
+                    "event": "click",
+                    "active_phase_ids": ["school_p2_ph_light"],
+                    "steps": [
+                      {
+                        "id": "p2_light_em",
+                        "kind": "emphasis",
+                        "emphasis_preset": "grow",
+                        "duration_ms": 400,
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "p2_btn_continue",
+                "name": "Continue",
+                "kind": "button",
+                "text": "OK",
+                "text_size_px": 18,
+                "x_percent": 40,
+                "y_percent": 88,
+                "w_percent": 20,
+                "h_percent": 9,
+                "z_index": 20,
+                "color_hex": "#1c1917",
+                "text_color": "#fafaf9",
+                "show_card": false
+              },
+              {
+                "id": "p2_closet_door",
+                "name": "Closet door",
+                "kind": "image",
+                "image_url": "https://placehold.co/260x400/57534e/fafaf9?text=Closet",
+                "x_percent": 76,
+                "y_percent": 28,
+                "w_percent": 18,
+                "h_percent": 52,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 3,
+                "idle_animations": [
+                  {
+                    "id": "idle_p2_closet",
+                    "preset": "pulse",
+                    "active_phase_ids": ["school_p2_ph_exit"]
+                  }
+                ],
+                "action_sequences": [
+                  {
+                    "id": "seq_p2_closet_goto",
+                    "event": "click",
+                    "active_phase_ids": ["school_p2_ph_exit"],
+                    "steps": [
+                      {
+                        "id": "p2_goto_dressed",
+                        "kind": "goto_page",
+                        "goto_target": "page_id",
+                        "goto_page_id": "school_p3_dressed",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "school_p2_ph_arrive",
+                "name": "Arrive",
+                "is_start": true,
+                "next_phase_id": "school_p2_ph_banter",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_light"],
+                "dialogue": {
+                  "start": "The bathroom is quiet and a little cold. Mai rubs her eyes. Tap the light switch to wake the room up.",
+                  "error": "Tap the light switch."
+                },
+                "highlight_item_ids": ["p2_light"],
+                "idle_animations": [
+                  {
+                    "id": "idle_p2_light_arrive",
+                    "preset": "pulse",
+                    "target_item_id": "p2_light",
+                    "active_phase_ids": ["school_p2_ph_arrive"]
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_light",
+                  "next_phase_id": "school_p2_ph_banter"
+                }
+              },
+              {
+                "id": "school_p2_ph_banter",
+                "name": "Banter",
+                "next_phase_id": "school_p2_ph_drag_towel",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_light", "p2_linh", "p2_towel", "p2_btn_continue"],
+                "dialogue": {
+                  "start": "Linh: Do not use my pink towel—that one is mine! Mai: I was not going to! Tom from the hall: I can hear you both! Tap OK when you are ready to fix it.",
+                  "error": "Tap OK."
+                },
+                "highlight_item_ids": ["p2_btn_continue"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_btn_continue",
+                  "next_phase_id": "school_p2_ph_drag_towel"
+                }
+              },
+              {
+                "id": "school_p2_ph_drag_towel",
+                "name": "Pink towel",
+                "next_phase_id": "school_p2_ph_react_towel",
+                "kind": "drag_match",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_light", "p2_linh", "p2_linh_drop_zone", "p2_towel"],
+                "dialogue": {
+                  "start": "Drag the pink towel to Linh so she knows you respect her things.",
+                  "error": "Not there—drag the towel onto Linh's hands."
+                },
+                "drag_match": {
+                  "draggable_item_ids": ["p2_towel"],
+                  "target_item_ids": ["p2_linh_drop_zone"],
+                  "correct_map": { "p2_towel": "p2_linh_drop_zone" },
+                  "after_correct_match": "stick_on_target"
+                },
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "school_p2_ph_react_towel"
+                }
+              },
+              {
+                "id": "school_p2_ph_react_towel",
+                "name": "Towel fixed",
+                "next_phase_id": "school_p2_ph_listen",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_light", "p2_linh", "p2_linh_drop_zone", "p2_towel", "p2_btn_continue"],
+                "dialogue": {
+                  "start": "Linh: Thank you. Mai: Sorry about that! Tap OK.",
+                  "error": "Tap OK."
+                },
+                "highlight_item_ids": ["p2_btn_continue"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_btn_continue",
+                  "next_phase_id": "school_p2_ph_listen"
+                }
+              },
+              {
+                "id": "school_p2_ph_listen",
+                "name": "Listen",
+                "next_phase_id": "school_p2_ph_sink",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light", "p2_btn_continue"],
+                "dialogue": {
+                  "start": "Listen for the bathroom jobs: wash at the sink, brush your teeth, pick up the clothes for Tom, then turn off the light. Tap OK.",
+                  "error": "Tap OK."
+                },
+                "highlight_item_ids": ["p2_btn_continue"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_btn_continue",
+                  "next_phase_id": "school_p2_ph_sink"
+                }
+              },
+              {
+                "id": "school_p2_ph_sink",
+                "name": "Sink",
+                "next_phase_id": "school_p2_ph_brush",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light"],
+                "dialogue": {
+                  "start": "First: tap the sink. Turn on the water and wash your hands. Nice—clean hands first!",
+                  "error": "Tap the sink."
+                },
+                "highlight_item_ids": ["p2_sink"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_sink",
+                  "next_phase_id": "school_p2_ph_brush"
+                }
+              },
+              {
+                "id": "school_p2_ph_brush",
+                "name": "Brush",
+                "next_phase_id": "school_p2_ph_laundry_prompt",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light"],
+                "dialogue": {
+                  "start": "Next: tap the toothbrush. Brush your teeth!",
+                  "error": "Tap the toothbrush."
+                },
+                "highlight_item_ids": ["p2_toothbrush"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_toothbrush",
+                  "next_phase_id": "school_p2_ph_laundry_prompt"
+                }
+              },
+              {
+                "id": "school_p2_ph_laundry_prompt",
+                "name": "Tom chore",
+                "next_phase_id": "school_p2_ph_drag_clothes",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light", "p2_tom", "p2_btn_continue"],
+                "dialogue": {
+                  "start": "Tom peeks in: Pick up all the clothes and hand them to me—I will take them to the basket. Tap OK.",
+                  "error": "Tap OK."
+                },
+                "highlight_item_ids": ["p2_btn_continue"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_btn_continue",
+                  "next_phase_id": "school_p2_ph_drag_clothes"
+                }
+              },
+              {
+                "id": "school_p2_ph_drag_clothes",
+                "name": "Laundry",
+                "next_phase_id": "school_p2_ph_light",
+                "kind": "drag_match",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light", "p2_tom", "p2_boy_zone", "p2_clothes_shirt", "p2_clothes_sock", "p2_clothes_shorts"],
+                "dialogue": {
+                  "start": "Drag every shirt, sock, and pair of shorts to Tom.",
+                  "error": "Drop each piece on Tom's hands."
+                },
+                "drag_match": {
+                  "draggable_item_ids": ["p2_clothes_shirt", "p2_clothes_sock", "p2_clothes_shorts"],
+                  "target_item_ids": ["p2_boy_zone"],
+                  "correct_map": {
+                    "p2_clothes_shirt": "p2_boy_zone",
+                    "p2_clothes_sock": "p2_boy_zone",
+                    "p2_clothes_shorts": "p2_boy_zone"
+                  },
+                  "after_correct_match": "stick_on_target"
+                },
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "school_p2_ph_react_laundry"
+                }
+              },
+              {
+                "id": "school_p2_ph_react_laundry",
+                "name": "Laundry done",
+                "next_phase_id": "school_p2_ph_light",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light", "p2_tom", "p2_boy_zone", "p2_clothes_shirt", "p2_clothes_sock", "p2_clothes_shorts", "p2_btn_continue"],
+                "dialogue": {
+                  "start": "Tom: Got them—thanks! Linh from the hall: The floor looks safe again. Tap OK.",
+                  "error": "Tap OK."
+                },
+                "highlight_item_ids": ["p2_btn_continue"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_btn_continue",
+                  "next_phase_id": "school_p2_ph_light"
+                }
+              },
+              {
+                "id": "school_p2_ph_light",
+                "name": "Light",
+                "next_phase_id": "school_p2_ph_exit",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light", "p2_tom", "p2_boy_zone", "p2_clothes_shirt", "p2_clothes_sock", "p2_clothes_shorts"],
+                "dialogue": {
+                  "start": "Last: tap the light switch. Turn off the light when you leave for the closet.",
+                  "error": "Tap the light switch."
+                },
+                "highlight_item_ids": ["p2_light"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_light",
+                  "next_phase_id": "school_p2_ph_exit"
+                }
+              },
+              {
+                "id": "school_p2_ph_exit",
+                "name": "Closet",
+                "kind": "none",
+                "visible_item_ids": ["p2_mai", "p2_sink", "p2_toothbrush", "p2_light", "p2_tom", "p2_boy_zone", "p2_clothes_shirt", "p2_clothes_sock", "p2_clothes_shorts", "p2_closet_door"],
+                "dialogue": {
+                  "start": "All set! Tap the closet door to get dressed.",
+                  "error": "Tap the closet door."
+                },
+                "highlight_item_ids": ["p2_closet_door"],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          },
+          {
+            "id": "school_p3_dressed",
+            "title": "Get dressed",
+            "image_fit": "cover",
+            "background_image_url": "https://placehold.co/1600x1000/fef3c7/92400e?text=Closet",
+            "body_text": "Put on your school clothes.",
+            "read_aloud_text": "Put on your school clothes.",
+            "items": [
+              {
+                "id": "p3_mai",
+                "name": "Mai",
+                "kind": "image",
+                "registry_id": "cast_school_mai",
+                "x_percent": 40,
+                "y_percent": 28,
+                "w_percent": 22,
+                "h_percent": 48,
+                "show_card": true,
+                "z_index": 4
+              },
+              {
+                "id": "p3_slot_shirt",
+                "name": "Shirt area",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x180/e7e5e4/57534e?text=Shirt+zone",
+                "x_percent": 38,
+                "y_percent": 34,
+                "w_percent": 14,
+                "h_percent": 16,
+                "show_card": false,
+                "z_index": 2
+              },
+              {
+                "id": "p3_slot_pants",
+                "name": "Pants area",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x160/e7e5e4/57534e?text=Pants+zone",
+                "x_percent": 38,
+                "y_percent": 50,
+                "w_percent": 14,
+                "h_percent": 14,
+                "show_card": false,
+                "z_index": 2
+              },
+              {
+                "id": "p3_slot_shoes",
+                "name": "Shoes area",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x120/e7e5e4/57534e?text=Shoes+zone",
+                "x_percent": 38,
+                "y_percent": 66,
+                "w_percent": 14,
+                "h_percent": 12,
+                "show_card": false,
+                "z_index": 2
+              },
+              {
+                "id": "p3_shirt",
+                "name": "Shirt",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x140/93c5fd/1e3a8a?text=Shirt",
+                "x_percent": 8,
+                "y_percent": 72,
+                "w_percent": 12,
+                "h_percent": 14,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p3_pants",
+                "name": "Pants",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x140/6366f1/312e81?text=Pants",
+                "x_percent": 22,
+                "y_percent": 72,
+                "w_percent": 12,
+                "h_percent": 14,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p3_shoes",
+                "name": "Shoes",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x120/78716c/fafaf9?text=Shoes",
+                "x_percent": 36,
+                "y_percent": 74,
+                "w_percent": 12,
+                "h_percent": 12,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p3_btn_start",
+                "name": "Start",
+                "kind": "button",
+                "text": "Let's dress!",
+                "text_size_px": 18,
+                "x_percent": 68,
+                "y_percent": 76,
+                "w_percent": 22,
+                "h_percent": 10,
+                "z_index": 12,
+                "color_hex": "#1c1917",
+                "text_color": "#fafaf9",
+                "show_card": false
+              },
+              {
+                "id": "p3_mirror",
+                "name": "Mirror",
+                "kind": "image",
+                "image_url": "https://placehold.co/220x320/c4b5fd/5b21b6?text=Mirror",
+                "x_percent": 72,
+                "y_percent": 22,
+                "w_percent": 18,
+                "h_percent": 42,
+                "show_card": false,
+                "z_index": 5,
+                "idle_animations": [
+                  {
+                    "id": "idle_p3_mirror",
+                    "preset": "pulse",
+                    "active_phase_ids": ["school_p3_ph_mirror"]
+                  }
+                ]
+              },
+              {
+                "id": "p3_door_kitchen",
+                "name": "Kitchen door",
+                "kind": "image",
+                "image_url": "https://placehold.co/240x380/78350f/fafaf9?text=Kitchen",
+                "x_percent": 6,
+                "y_percent": 30,
+                "w_percent": 16,
+                "h_percent": 48,
+                "show_card": false,
+                "z_index": 3,
+                "idle_animations": [
+                  {
+                    "id": "idle_p3_kitchen",
+                    "preset": "pulse",
+                    "active_phase_ids": ["school_p3_ph_kitchen_gate"]
+                  }
+                ],
+                "action_sequences": [
+                  {
+                    "id": "seq_p3_kitchen_goto",
+                    "event": "click",
+                    "active_phase_ids": ["school_p3_ph_kitchen_gate"],
+                    "steps": [
+                      {
+                        "id": "p3_goto_breakfast",
+                        "kind": "goto_page",
+                        "goto_target": "page_id",
+                        "goto_page_id": "school_p4_breakfast",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "school_p3_ph_intro",
+                "name": "Intro",
+                "is_start": true,
+                "next_phase_id": "school_p3_ph_drag",
+                "visible_item_ids": [
+                  "p3_mai",
+                  "p3_slot_shirt",
+                  "p3_slot_pants",
+                  "p3_slot_shoes",
+                  "p3_shirt",
+                  "p3_pants",
+                  "p3_shoes",
+                  "p3_btn_start"
+                ],
+                "dialogue": {
+                  "start": "Drag the shirt, pants, and shoes onto Mai. Tap Let's dress when you are ready to try.",
+                  "error": "Tap Let's dress!"
+                },
+                "highlight_item_ids": ["p3_btn_start"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p3_btn_start",
+                  "next_phase_id": "school_p3_ph_drag"
+                }
+              },
+              {
+                "id": "school_p3_ph_drag",
+                "name": "Dress",
+                "next_phase_id": "school_p3_ph_mirror",
+                "kind": "drag_match",
+                "visible_item_ids": [
+                  "p3_mai",
+                  "p3_slot_shirt",
+                  "p3_slot_pants",
+                  "p3_slot_shoes",
+                  "p3_shirt",
+                  "p3_pants",
+                  "p3_shoes"
+                ],
+                "dialogue": {
+                  "start": "Drag each piece onto the matching shadow on Mai.",
+                  "error": "Try another spot — match shirt, pants, and shoes."
+                },
+                "drag_match": {
+                  "draggable_item_ids": ["p3_shirt", "p3_pants", "p3_shoes"],
+                  "target_item_ids": ["p3_slot_shirt", "p3_slot_pants", "p3_slot_shoes"],
+                  "correct_map": {
+                    "p3_shirt": "p3_slot_shirt",
+                    "p3_pants": "p3_slot_pants",
+                    "p3_shoes": "p3_slot_shoes"
+                  },
+                  "after_correct_match": "stick_on_target"
+                },
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "school_p3_ph_mirror"
+                }
+              },
+              {
+                "id": "school_p3_ph_mirror",
+                "name": "Mirror",
+                "next_phase_id": "school_p3_ph_kitchen_gate",
+                "visible_item_ids": ["p3_mai", "p3_slot_shirt", "p3_slot_pants", "p3_slot_shoes", "p3_shirt", "p3_pants", "p3_shoes", "p3_mirror"],
+                "dialogue": {
+                  "start": "You look great! Tap the mirror to check yourself.",
+                  "error": "Tap the mirror."
+                },
+                "highlight_item_ids": ["p3_mirror"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p3_mirror",
+                  "next_phase_id": "school_p3_ph_kitchen_gate"
+                }
+              },
+              {
+                "id": "school_p3_ph_kitchen_gate",
+                "name": "Kitchen",
+                "kind": "none",
+                "visible_item_ids": [
+                  "p3_mai",
+                  "p3_slot_shirt",
+                  "p3_slot_pants",
+                  "p3_slot_shoes",
+                  "p3_shirt",
+                  "p3_pants",
+                  "p3_shoes",
+                  "p3_mirror",
+                  "p3_door_kitchen"
+                ],
+                "dialogue": {
+                  "start": "Time for breakfast. Tap the kitchen door.",
+                  "error": "Tap the kitchen door."
+                },
+                "highlight_item_ids": ["p3_door_kitchen"],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          },
+          {
+            "id": "school_p4_breakfast",
+            "title": "Breakfast",
+            "image_fit": "cover",
+            "background_image_url": "https://placehold.co/1600x1000/ffedd5/c2410c?text=Kitchen",
+            "body_text": "Eat breakfast before school.",
+            "read_aloud_text": "Eat breakfast before school.",
+            "items": [
+              {
+                "id": "p4_mai",
+                "name": "Mai",
+                "kind": "image",
+                "registry_id": "cast_school_mai",
+                "x_percent": 52,
+                "y_percent": 36,
+                "w_percent": 18,
+                "h_percent": 40,
+                "show_card": true,
+                "z_index": 6
+              },
+              {
+                "id": "p4_chair",
+                "name": "Chair",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x220/b45309/fef3c7?text=Chair",
+                "x_percent": 38,
+                "y_percent": 48,
+                "w_percent": 14,
+                "h_percent": 28,
+                "show_card": false,
+                "z_index": 4
+              },
+              {
+                "id": "p4_plate",
+                "name": "Plate",
+                "kind": "image",
+                "image_url": "https://placehold.co/240x160/fef9c3/854d0e?text=Plate",
+                "x_percent": 58,
+                "y_percent": 56,
+                "w_percent": 18,
+                "h_percent": 14,
+                "show_card": false,
+                "z_index": 5
+              },
+              {
+                "id": "p4_milk",
+                "name": "Milk",
+                "kind": "image",
+                "image_url": "https://placehold.co/120x180/e0f2fe/0369a1?text=Milk",
+                "x_percent": 78,
+                "y_percent": 50,
+                "w_percent": 10,
+                "h_percent": 18,
+                "show_card": false,
+                "z_index": 5
+              },
+              {
+                "id": "p4_door_hall",
+                "name": "Hallway door",
+                "kind": "image",
+                "image_url": "https://placehold.co/260x400/44403c/fafaf9?text=Hallway",
+                "x_percent": 6,
+                "y_percent": 28,
+                "w_percent": 16,
+                "h_percent": 50,
+                "show_card": false,
+                "z_index": 3,
+                "idle_animations": [
+                  {
+                    "id": "idle_p4_door",
+                    "preset": "pulse",
+                    "active_phase_ids": ["school_p4_ph_door_gate"]
+                  }
+                ],
+                "action_sequences": [
+                  {
+                    "id": "seq_p4_hall_goto",
+                    "event": "click",
+                    "active_phase_ids": ["school_p4_ph_door_gate"],
+                    "steps": [
+                      {
+                        "id": "p4_goto_pack",
+                        "kind": "goto_page",
+                        "goto_target": "page_id",
+                        "goto_page_id": "school_p5_pack_go",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "school_p4_ph_chair",
+                "name": "Sit",
+                "is_start": true,
+                "next_phase_id": "school_p4_ph_plate",
+                "visible_item_ids": ["p4_mai", "p4_chair", "p4_plate", "p4_milk"],
+                "dialogue": {
+                  "start": "Breakfast time! First, tap the chair to sit down.",
+                  "error": "Tap the chair."
+                },
+                "highlight_item_ids": ["p4_chair"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p4_chair",
+                  "next_phase_id": "school_p4_ph_plate"
+                }
+              },
+              {
+                "id": "school_p4_ph_plate",
+                "name": "Eat",
+                "next_phase_id": "school_p4_ph_milk",
+                "visible_item_ids": ["p4_mai", "p4_chair", "p4_plate", "p4_milk"],
+                "dialogue": {
+                  "start": "Tap the plate to eat your breakfast.",
+                  "error": "Tap the plate."
+                },
+                "highlight_item_ids": ["p4_plate"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p4_plate",
+                  "next_phase_id": "school_p4_ph_milk"
+                }
+              },
+              {
+                "id": "school_p4_ph_milk",
+                "name": "Drink",
+                "next_phase_id": "school_p4_ph_door_gate",
+                "visible_item_ids": ["p4_mai", "p4_chair", "p4_plate", "p4_milk"],
+                "dialogue": {
+                  "start": "Tap the milk to drink.",
+                  "error": "Tap the milk."
+                },
+                "highlight_item_ids": ["p4_milk"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p4_milk",
+                  "next_phase_id": "school_p4_ph_door_gate"
+                }
+              },
+              {
+                "id": "school_p4_ph_door_gate",
+                "name": "Hallway",
+                "kind": "none",
+                "visible_item_ids": ["p4_mai", "p4_chair", "p4_plate", "p4_milk", "p4_door_hall"],
+                "dialogue": {
+                  "start": "Yummy! Now tap the door to pack your bag.",
+                  "error": "Tap the hallway door."
+                },
+                "highlight_item_ids": ["p4_door_hall"],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          },
+          {
+            "id": "school_p5_pack_go",
+            "title": "Pack and go",
+            "image_fit": "cover",
+            "background_image_url": "https://placehold.co/1600x1000/f5f5f4/44403c?text=Entryway",
+            "body_text": "Pack your backpack and head to school.",
+            "read_aloud_text": "Pack your backpack and head to school.",
+            "items": [
+              {
+                "id": "p5_mai",
+                "name": "Mai",
+                "kind": "image",
+                "registry_id": "cast_school_mai",
+                "x_percent": 12,
+                "y_percent": 36,
+                "w_percent": 16,
+                "h_percent": 38,
+                "show_card": true,
+                "z_index": 5
+              },
+              {
+                "id": "p5_bag_zone",
+                "name": "Backpack",
+                "kind": "image",
+                "image_url": "https://placehold.co/320x360/854d0e/fef3c7?text=Backpack",
+                "x_percent": 52,
+                "y_percent": 44,
+                "w_percent": 22,
+                "h_percent": 36,
+                "show_card": false,
+                "z_index": 3
+              },
+              {
+                "id": "p5_book",
+                "name": "Book",
+                "kind": "image",
+                "image_url": "https://placehold.co/140x100/93c5fd/1e3a8a?text=Book",
+                "x_percent": 22,
+                "y_percent": 72,
+                "w_percent": 10,
+                "h_percent": 12,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p5_pencil",
+                "name": "Pencil",
+                "kind": "image",
+                "image_url": "https://placehold.co/120x100/fca5a5/7f1d1d?text=Pencil",
+                "x_percent": 36,
+                "y_percent": 74,
+                "w_percent": 10,
+                "h_percent": 10,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p5_bottle",
+                "name": "Water bottle",
+                "kind": "image",
+                "image_url": "https://placehold.co/100x180/67e8f9/0e7490?text=Bottle",
+                "x_percent": 50,
+                "y_percent": 68,
+                "w_percent": 8,
+                "h_percent": 18,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p5_btn_pack",
+                "name": "Pack",
+                "kind": "button",
+                "text": "Pack my bag",
+                "text_size_px": 16,
+                "x_percent": 68,
+                "y_percent": 72,
+                "w_percent": 22,
+                "h_percent": 10,
+                "z_index": 10,
+                "color_hex": "#1c1917",
+                "text_color": "#fafaf9",
+                "show_card": false
+              },
+              {
+                "id": "p5_zip",
+                "name": "Zipper",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x80/57534e/fafaf9?text=Zip",
+                "x_percent": 56,
+                "y_percent": 38,
+                "w_percent": 14,
+                "h_percent": 8,
+                "show_card": false,
+                "z_index": 9
+              },
+              {
+                "id": "p5_door_school",
+                "name": "Front door",
+                "kind": "image",
+                "image_url": "https://placehold.co/280x420/166534/f0fdf4?text=School+door",
+                "x_percent": 78,
+                "y_percent": 26,
+                "w_percent": 18,
+                "h_percent": 52,
+                "show_card": false,
+                "z_index": 4,
+                "idle_animations": [
+                  {
+                    "id": "idle_p5_door",
+                    "preset": "pulse",
+                    "active_phase_ids": ["school_p5_ph_door_gate"]
+                  }
+                ],
+                "action_sequences": [
+                  {
+                    "id": "seq_p5_school_goto",
+                    "event": "click",
+                    "active_phase_ids": ["school_p5_ph_door_gate"],
+                    "steps": [
+                      {
+                        "id": "p5_goto_next",
+                        "kind": "goto_page",
+                        "goto_target": "next_page",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "school_p5_ph_intro",
+                "name": "Intro",
+                "is_start": true,
+                "next_phase_id": "school_p5_ph_drag",
+                "visible_item_ids": ["p5_mai", "p5_bag_zone", "p5_book", "p5_pencil", "p5_bottle", "p5_btn_pack"],
+                "dialogue": {
+                  "start": "Drag the book, pencil, and water bottle into the backpack. Tap Pack my bag when you are ready.",
+                  "error": "Tap Pack my bag."
+                },
+                "highlight_item_ids": ["p5_btn_pack"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p5_btn_pack",
+                  "next_phase_id": "school_p5_ph_drag"
+                }
+              },
+              {
+                "id": "school_p5_ph_drag",
+                "name": "Pack",
+                "next_phase_id": "school_p5_ph_zip",
+                "kind": "drag_match",
+                "visible_item_ids": ["p5_mai", "p5_bag_zone", "p5_book", "p5_pencil", "p5_bottle"],
+                "dialogue": {
+                  "start": "Put everything in the backpack.",
+                  "error": "Drop it on the backpack."
+                },
+                "drag_match": {
+                  "draggable_item_ids": ["p5_book", "p5_pencil", "p5_bottle"],
+                  "target_item_ids": ["p5_bag_zone"],
+                  "correct_map": {
+                    "p5_book": "p5_bag_zone",
+                    "p5_pencil": "p5_bag_zone",
+                    "p5_bottle": "p5_bag_zone"
+                  },
+                  "after_correct_match": "stick_on_target"
+                },
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "school_p5_ph_zip"
+                }
+              },
+              {
+                "id": "school_p5_ph_zip",
+                "name": "Zip",
+                "next_phase_id": "school_p5_ph_door_gate",
+                "visible_item_ids": ["p5_mai", "p5_bag_zone", "p5_book", "p5_pencil", "p5_bottle", "p5_zip"],
+                "dialogue": {
+                  "start": "Tap the zipper to close your bag.",
+                  "error": "Tap the zipper."
+                },
+                "highlight_item_ids": ["p5_zip"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p5_zip",
+                  "next_phase_id": "school_p5_ph_door_gate"
+                }
+              },
+              {
+                "id": "school_p5_ph_door_gate",
+                "name": "Go",
+                "kind": "none",
+                "visible_item_ids": ["p5_mai", "p5_bag_zone", "p5_book", "p5_pencil", "p5_bottle", "p5_zip", "p5_door_school"],
+                "dialogue": {
+                  "start": "You are ready! Tap the door to go to school.",
+                  "error": "Tap the door."
+                },
+                "highlight_item_ids": ["p5_door_school"],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "media_bindings": {
+    "0": {
+      "cast": {
+        "cast_school_mai": "e1789bff-4c6f-4f96-8913-7acac340fc97",
+        "cast_school_tom": "5a09819c-a711-4ad8-a889-fca307eb5ec9",
+        "cast_school_linh": "052c4278-72ce-435d-8798-627362283179"
+      },
+      "pages": {
+        "school_p1_wake": { "background_image_url": "7a69d7c8-a31b-4e96-b204-f934dc8d600d" },
+        "school_p2_bathroom": { "background_image_url": "a2c57b12-ce6d-4761-af38-584da5adf800" },
+        "school_p3_dressed": { "background_image_url": "a63e00e6-0359-4077-8776-6ac55fdc5424" },
+        "school_p4_breakfast": { "background_image_url": "cdf7f40e-b21a-4fad-816e-c56ffb740d7e" },
+        "school_p5_pack_go": { "background_image_url": "97a96641-2b44-463f-bdcd-07829222c30b" }
+      },
+      "items": {
+        "p3_shirt": "0893a03b-953f-4f8a-a009-bdc974ac7f9d",
+        "p3_pants": "d15374db-0dde-4f59-82be-a1d4c4f05e29",
+        "p3_shoes": "5447e007-747d-45fc-9f01-047bad199acb",
+        "p5_book": "435d240b-6f90-4476-9dce-32dd534218ac",
+        "p5_pencil": "38023d58-054a-466a-9a14-8ed4a4173bdd",
+        "p5_bottle": "dcd5d40f-4b41-4e27-8a74-ec839302576a",
+        "p5_bag_zone": "56cc277e-3905-4e3a-a449-180f9d1eab48"
+      }
+    }
+  },
+  "learning_goals": [
+    "Follow a morning routine in English: wake up, bathroom, get dressed, breakfast, pack, go.",
+    "Practice listening for short commands (tap the sink, drag the shirt) and classroom-ready phrases."
+  ]
+}

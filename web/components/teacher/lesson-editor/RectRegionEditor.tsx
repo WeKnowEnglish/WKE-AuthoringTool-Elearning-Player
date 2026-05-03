@@ -149,8 +149,15 @@ export function RectRegionEditor({
 
       const minWpx = Math.max(8, rect.width * 0.02);
       const minHpx = Math.max(8, rect.height * 0.02);
-      const maxW = rect.width - leftPx;
-      const maxH = rect.height - topPx;
+      /** Story editor allows items past the stage; match drag bounds (STORY_PATH_*). Hotspots stay on-slide. */
+      const maxXPx = (STORY_PATH_WAYPOINT_MAX / 100) * rect.width;
+      const maxYPx = (STORY_PATH_WAYPOINT_MAX / 100) * rect.height;
+      const maxW = clipToStage
+        ? rect.width - leftPx
+        : Math.max(minWpx, maxXPx - leftPx);
+      const maxH = clipToStage
+        ? rect.height - topPx
+        : Math.max(minHpx, maxYPx - topPx);
 
       if (resize.mode === "horizontal") {
         const dx = e.clientX - resize.startClientX;
@@ -222,7 +229,7 @@ export function RectRegionEditor({
         return { ...r, x_percent: nx, y_percent: ny };
       }),
     );
-  }, []);
+  }, [clipToStage]);
 
   function endInteraction() {
     dragRef.current = null;

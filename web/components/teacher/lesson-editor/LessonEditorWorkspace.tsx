@@ -1956,6 +1956,19 @@ export function LessonEditorWorkspace({
             optional &quot;learning_goals&quot;: [&quot;…&quot;] {"}"}. Paste only the raw object (no{" "}
             <code className="rounded bg-neutral-100 px-0.5">```json</code> wrappers).
           </p>
+          <p className="mt-1 text-[11px] leading-snug text-neutral-600">
+            Optional{" "}
+            <code className="rounded bg-neutral-100 px-0.5">media_bindings</code>: map{" "}
+            <code className="rounded bg-neutral-100 px-0.5">media_assets</code> UUIDs to URLs before
+            save. Keys are screen indices{" "}
+            <code className="rounded bg-neutral-100 px-0.5">&quot;0&quot;</code>,{" "}
+            <code className="rounded bg-neutral-100 px-0.5">&quot;1&quot;</code>… matching{" "}
+            <code className="rounded bg-neutral-100 px-0.5">screens[]</code>. Per screen:{" "}
+            <code className="rounded bg-neutral-100 px-0.5">root.image_url</code> (start / story /
+            interaction), story <code className="rounded bg-neutral-100 px-0.5">pages[pageId]</code>{" "}
+            backgrounds, story <code className="rounded bg-neutral-100 px-0.5">items[itemId]</code>{" "}
+            for image props and characters.
+          </p>
           <form
             className="mt-3 space-y-2"
             action={importLessonScreensJson.bind(null, lessonId, moduleId)}

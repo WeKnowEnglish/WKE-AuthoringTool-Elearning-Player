@@ -145,6 +145,7 @@ export type LegacyPhaseCompletionRule = BeatCompletionRule;
  * `on_click_item`    — learner taps a specific semantic item (target_item_id required).
  * `all_matched`      — all drag/hotspot targets reached; compiler maps to runtime all_matched.
  * `sequence_complete`— an ordered click/action sequence completes (sequence_id required).
+ * `tap_group`        — tap pool / quota satisfied (group_id must match a parent item's tap_interaction_group.id in runtime payload).
  * `end_phase`        — terminal step; no further learner gate; phase closes on enter.
  *
  * Deferred (add in a later revision only): hotspot_unlock, dialogue_complete.
@@ -161,6 +162,11 @@ export const phaseTriggerSchema = z.discriminatedUnion("type", [
     type: z.literal("sequence_complete"),
     /** Stable semantic slug for the sequence (e.g. "collect_clothes_seq"). */
     sequence_id: z.string().min(1).max(80),
+  }),
+  z.object({
+    type: z.literal("tap_group"),
+    /** Stable semantic slug; must match `tap_interaction_group.id` on the parent story item. */
+    group_id: z.string().min(1).max(80),
   }),
   z.object({ type: z.literal("end_phase") }),
 ]);

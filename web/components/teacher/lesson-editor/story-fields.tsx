@@ -26,9 +26,13 @@ import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
 import {
   storyAnimationPresetSchema,
   storyPayloadSchema,
+  resolveStoryItemImageUrl,
+  getItemTapGroupSatisfiedSequences,
+  getPhasePoolQuotaMetSequences,
   type ScreenPayload,
   type StoryActionSequence,
   type StoryActionStep,
+  type StoryCastEntry,
   type StoryClickAction,
   type StoryIdleAnimation,
   type StoryItem,
@@ -189,6 +193,23 @@ function labelClass() {
 
 function clampPercentInput(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
+}
+
+/** Drag payload for placing a cast-linked image on the scene canvas. */
+const STORY_CAST_DRAG_MIME = "application/x-lesson-story-cast-id";
+
+function clientPointToStagePercent(
+  el: HTMLElement,
+  clientX: number,
+  clientY: number,
+): { x_percent: number; y_percent: number } {
+  const r = el.getBoundingClientRect();
+  const x = ((clientX - r.left) / Math.max(1, r.width)) * 100;
+  const y = ((clientY - r.top) / Math.max(1, r.height)) * 100;
+  return {
+    x_percent: clampPercentInput(x, 0, 100),
+    y_percent: clampPercentInput(y, 0, 100),
+  };
 }
 
 function reorderById<T extends { id: string }>(
@@ -398,8 +419,14 @@ function rectToStoryItem(
   return {
     id: r.id,
     name: prev?.name,
+    registry_id: prev?.registry_id,
     kind: prev?.kind ?? "image",
-    image_url: prev?.image_url ?? fallbackImage,
+    image_url:
+      prev?.image_url?.trim() ?
+        prev.image_url
+      : prev?.registry_id?.trim() ?
+        undefined
+      : fallbackImage,
     text: prev?.text,
     text_color: prev?.text_color,
     text_size_px: prev?.text_size_px,
@@ -412,6 +439,8 @@ function rectToStoryItem(
     show_card: prev?.show_card ?? true,
     show_on_start: prev?.show_on_start ?? true,
     image_scale: prev?.image_scale ?? 1,
+    image_flip_horizontal: prev?.image_flip_horizontal,
+    image_flip_vertical: prev?.image_flip_vertical,
     z_index: prev?.z_index ?? 0,
     draggable_mode: prev?.draggable_mode ?? "none",
     drop_target_id: prev?.drop_target_id,
@@ -663,6 +692,8 @@ export function StoryFields({
   }, []);
   const [selPhaseId, setSelPhaseId] = useState<string | null>(null);
   const [animationsMenuOpen, setAnimationsMenuOpen] = useState(false);
+  const [castRegistryMenuOpen, setCastRegistryMenuOpen] = useState(false);
+  const [cast, setCast] = useState<StoryCastEntry[]>(() => [...(initial.cast ?? [])]);
   const [selectedAnimationRowId, setSelectedAnimationRowId] = useState<string | null>(null);
   const [animationEditor, setAnimationEditor] = useState<AnimationEditorState | null>(null);
   const [dragSummaryStepIdx, setDragSummaryStepIdx] = useState<number | null>(null);
@@ -774,6 +805,7 @@ export function StoryFields({
       pages: loadedPages.length > 0 ? loadedPages : undefined,
       page_turn_style: loadedPages.length > 0 ? (initial.page_turn_style ?? "curl") : undefined,
       layout_mode: initial.layout_mode ?? "book",
+      cast: initial.cast ?? [],
     };
     const incomingSig = stableStorySignature(storyPayloadSchema, incomingRaw);
     const active = document.activeElement as HTMLElement | null;
@@ -798,6 +830,7 @@ export function StoryFields({
     setPages(loadedPages);
     setPageTurn(initial.page_turn_style ?? "curl");
     setLayoutMode(initial.layout_mode ?? "book");
+    setCast([...(initial.cast ?? [])]);
     /* Keep page + item selection when the server save only bumps updated_at (same ids still present). */
     setSelPageId((prev) => {
       if (loadedPages.length === 0) return null;
@@ -865,11 +898,14 @@ export function StoryFields({
       pages: StoryPage[];
       page_turn_style: "slide" | "curl";
       layout_mode?: "book" | "slide";
+      cast?: StoryCastEntry[];
     }) => {
       const pg = opts.pages.map(sanitizePageForPayload);
       const multiOn = pg.length > 0;
       const first = pg[0];
       const lm = opts.layout_mode ?? layoutMode;
+      const castForPayload = "cast" in opts ? (opts.cast ?? []) : cast;
+      const castOut = castForPayload.length > 0 ? castForPayload : undefined;
       const raw = {
         type: "story" as const,
         image_url:
@@ -892,18 +928,23 @@ export function StoryFields({
         pages: multiOn ? pg : undefined,
         page_turn_style: multiOn ? opts.page_turn_style : undefined,
         layout_mode: lm,
+        cast: castOut,
+        payload_version: castOut && castOut.length > 0 ? (2 as const) : undefined,
       };
       emitLive(onLivePayload, storyPayloadSchema, raw);
       const sig = stableStorySignature(storyPayloadSchema, raw);
       lastLocalSigRef.current = sig;
       return sig;
     },
-    [layoutMode, onLivePayload],
+    [cast, layoutMode, onLivePayload],
   );
 
   const pushEmit = useCallback(
     (nextPages: StoryPage[], overrides?: Partial<Parameters<typeof emit>[0]>) => {
       setPages(nextPages);
+      const hasCast = overrides != null && "cast" in overrides;
+      const resolvedCast = hasCast ? (overrides!.cast ?? []) : cast;
+      if (hasCast) setCast(overrides!.cast ?? []);
       emit({
         image_url,
         image_fit,
@@ -917,10 +958,12 @@ export function StoryFields({
         page_turn_style: pageTurn,
         layout_mode: layoutMode,
         ...overrides,
+        cast: resolvedCast,
       });
     },
     [
       body_text,
+      cast,
       emit,
       guide_image,
       image_url,
@@ -973,6 +1016,50 @@ export function StoryFields({
     setSelItemId(nextSingle);
     pushEmit(nextSnap);
   }, [pushEmit, selItemId, selItemIds, selPageId]);
+
+  const spawnItemFromCastDrop = useCallback(
+    (castId: string, clientX: number, clientY: number) => {
+      if (!selectedPage || busy) return;
+      const entry = cast.find((c) => c.id === castId);
+      if (!entry) return;
+      const root = sceneCanvasRef.current;
+      if (!root) return;
+      const { x_percent: cx, y_percent: cy } = clientPointToStagePercent(root, clientX, clientY);
+      recordStoryCanvasUndo();
+      const id = nextRegionId(selectedPage.items.map(storyItemToRect), "item");
+      const w = 18;
+      const h = 14;
+      let x = cx - w / 2;
+      let y = cy - h / 2;
+      x = clampPercentInput(x, 0, 100 - w);
+      y = clampPercentInput(y, 0, 100 - h);
+      const fallback =
+        "https://placehold.co/120x80/f1f5f9/334155?text=Item";
+      const castHasImg = !!entry.image_url?.trim();
+      const newItem: StoryItem = {
+        id,
+        x_percent: x,
+        y_percent: y,
+        w_percent: w,
+        h_percent: h,
+        kind: "image",
+        registry_id: entry.id,
+        image_url: castHasImg ? undefined : fallback,
+        image_scale: 1,
+        show_card: true,
+        show_on_start: true,
+        z_index: selectedPage.items.length,
+        enter: { preset: "fade_in", duration_ms: 500 },
+        name: entry.name?.trim() || undefined,
+      };
+      const next = pages.map((p) =>
+        p.id === selectedPage.id ? { ...p, items: [...p.items, newItem] } : p,
+      );
+      selectCanvasItem(id);
+      pushEmit(next);
+    },
+    [busy, cast, pages, pushEmit, recordStoryCanvasUndo, selectCanvasItem, selectedPage],
+  );
 
   const copySelectedCanvasItems = useCallback(() => {
     if (!selectedPage) return;
@@ -1404,16 +1491,21 @@ export function StoryFields({
       }
     : null;
   const showAnimationsPanel = !!selectedPage && animationsMenuOpen;
+  const showCastPanel = !!selectedPage && castRegistryMenuOpen;
   const showPageContentPanel =
-    !!selectedPage && (pageContentPinned || (pageContentMenuOpen && !animationsMenuOpen));
+    !!selectedPage &&
+    (pageContentPinned || (pageContentMenuOpen && !animationsMenuOpen && !castRegistryMenuOpen));
   const showObjectPanel =
     !!selectedPage && (objectPinned || !!selectedItem);
   const showPhasePanel =
-    !!selectedPage && (phasePinned || (!selectedItem && !pageContentMenuOpen && !animationsMenuOpen));
+    !!selectedPage &&
+    (phasePinned ||
+      (!selectedItem && !pageContentMenuOpen && !animationsMenuOpen && !castRegistryMenuOpen));
   /** Must match which panels actually render (e.g. phase needs `selectedPhase`). */
   const phasePanelRendered = !!(showPhasePanel && selectedPhase);
   const visibleEditorPanels = [
     showAnimationsPanel,
+    showCastPanel,
     showPageContentPanel,
     showObjectPanel,
     phasePanelRendered,
@@ -1441,6 +1533,10 @@ export function StoryFields({
         const trigger =
           seq.event === "click" ? `Click on ${ownerItemLabel ?? "item"}`
           : seq.event === "phase_enter" ? `Phase start${phaseLabel ? ` · ${phaseLabel}` : ""}`
+          : seq.event === "tap_group_satisfied" ?
+            `Tap pool done · ${ownerItemLabel ?? "item"}`
+          : seq.event === "pool_quota_met" ?
+            `Phase pool done${phaseLabel ? ` · ${phaseLabel}` : ""}`
           : "Page start";
         rows.push({
           id: `${scope}:${scopeId}:${seq.id}`,
@@ -1465,6 +1561,13 @@ export function StoryFields({
         selectedItem.id,
         itemDisplayLabel(selectedItem),
       );
+      pushRows(
+        getItemTapGroupSatisfiedSequences(selectedItem),
+        "item",
+        selectedItem.id,
+        selectedItem.id,
+        itemDisplayLabel(selectedItem),
+      );
       const phasesForPanel =
         selectedPhase ? [selectedPhase] : (selectedPage.phases ?? []);
       for (const phase of phasesForPanel) {
@@ -1474,6 +1577,14 @@ export function StoryFields({
         );
         pushRows(
           phaseSeq,
+          "phase",
+          phase.id,
+          undefined,
+          undefined,
+          phase.name?.trim() || phase.id,
+        );
+        pushRows(
+          getPhasePoolQuotaMetSequences(phase),
           "phase",
           phase.id,
           undefined,
@@ -1492,6 +1603,14 @@ export function StoryFields({
     if (selectedPhase) {
       pushRows(
         getPhaseEnterActionSequences(selectedPhase, { includeLegacy: true }),
+        "phase",
+        selectedPhase.id,
+        undefined,
+        undefined,
+        selectedPhase.name?.trim() || selectedPhase.id,
+      );
+      pushRows(
+        getPhasePoolQuotaMetSequences(selectedPhase),
         "phase",
         selectedPhase.id,
         undefined,
@@ -2381,7 +2500,13 @@ export function StoryFields({
               <div className="ml-auto flex shrink-0 items-center gap-0.5">
                 <button
                   type="button"
-                  onClick={() => setAnimationsMenuOpen((v) => !v)}
+                  onClick={() => {
+                    setAnimationsMenuOpen((v) => {
+                      const next = !v;
+                      if (next) setCastRegistryMenuOpen(false);
+                      return next;
+                    });
+                  }}
                   className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none transition-colors ${
                     animationsMenuOpen
                       ? "border-fuchsia-500 bg-fuchsia-100 text-fuchsia-950 hover:bg-fuchsia-200"
@@ -2390,6 +2515,26 @@ export function StoryFields({
                   title={animationsMenuOpen ? "Close animations controls" : "Open animations controls"}
                 >
                   🎬 Animations
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCastRegistryMenuOpen((v) => {
+                      const next = !v;
+                      if (next) setAnimationsMenuOpen(false);
+                      return next;
+                    });
+                  }}
+                  className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none transition-colors ${
+                    castRegistryMenuOpen
+                      ? "border-emerald-500 bg-emerald-100 text-emerald-950 hover:bg-emerald-200"
+                      : "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                  }`}
+                  title={
+                    castRegistryMenuOpen ? "Close cast / props list" : "Open cast & props (shared characters)"
+                  }
+                >
+                  🎭 Cast
                 </button>
                 <button
                   type="button"
@@ -2425,6 +2570,24 @@ export function StoryFields({
                 ref={sceneCanvasRef}
                 className="relative w-full overflow-visible"
                 style={{ containerType: "inline-size" }}
+                onDragOver={(e) => {
+                  if (busy) return;
+                  const types = e.dataTransfer.types ?? [];
+                  if (!Array.from(types).includes(STORY_CAST_DRAG_MIME)) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "copy";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (busy) return;
+                  let castId = e.dataTransfer.getData(STORY_CAST_DRAG_MIME).trim();
+                  if (!castId) {
+                    const plain = e.dataTransfer.getData("text/plain").trim();
+                    castId = plain.startsWith("story-cast:") ? plain.slice("story-cast:".length).trim() : "";
+                  }
+                  if (!castId) return;
+                  spawnItemFromCastDrop(castId, e.clientX, e.clientY);
+                }}
               >
                 <RectRegionEditor
                   clipToStage={false}
@@ -2508,7 +2671,11 @@ export function StoryFields({
                     const it = selectedPage.items.find((x) => x.id === r.id);
                     if (!it) return null;
                     const k = it.kind ?? "image";
-                    if (k === "image" && !it.image_url?.trim()) return null;
+                    const displayUrl =
+                      k === "image" ?
+                        (resolveStoryItemImageUrl(it, cast) ?? it.image_url?.trim())
+                      : it.image_url?.trim();
+                    if (k === "image" && !displayUrl) return null;
                     const dim =
                       !!selectedPhase &&
                       !isItemVisibleInEditorPhase(
@@ -2516,12 +2683,16 @@ export function StoryFields({
                         it,
                         pageHasRealPhases,
                       );
+                    const layerItem =
+                      k === "image" && displayUrl ?
+                        { ...it, image_url: displayUrl }
+                      : it;
                     return (
                       <div
                         className={`h-full w-full${dim ? " opacity-40" : ""}`}
                         title={dim ? "Hidden in this phase (see right panel)" : undefined}
                       >
-                        <StoryItemLayerContent item={it} />
+                        <StoryItemLayerContent item={layerItem} />
                       </div>
                     );
                   }}
@@ -3518,6 +3689,307 @@ export function StoryFields({
                         </div>
                       </div>
                     ) : null}
+                    {selectedItem && selectedPage ? (
+                      <div className="mt-2 rounded border border-emerald-200 bg-emerald-50/50 p-2 text-xs">
+                        <p className="font-semibold text-emerald-950">Tap pool (parent object)</p>
+                        <p className="mb-2 text-[10px] text-neutral-600">
+                          Defines a counted tap pool for this object’s children. Add a{" "}
+                          <strong>tap_group_satisfied</strong> animation on this object for
+                          optional “all done” effects. Phases can reference this pool via{" "}
+                          <strong>Tap pool (item group)</strong>.
+                        </p>
+                        {selectedItem.tap_interaction_group ? (
+                          <div className="space-y-2">
+                            <label className="block text-[11px] font-medium text-neutral-800">
+                              Group id
+                              <input
+                                className="mt-0.5 w-full rounded border px-1 py-0.5 text-[11px]"
+                                value={selectedItem.tap_interaction_group.id}
+                                onChange={(e) => {
+                                  const id = e.target.value.trim();
+                                  if (!id) return;
+                                  const tg = selectedItem.tap_interaction_group!;
+                                  setPages((prev) =>
+                                    prev.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) =>
+                                            it.id === selectedItem.id ?
+                                              {
+                                                ...it,
+                                                tap_interaction_group: { ...tg, id },
+                                              }
+                                            : it,
+                                          ),
+                                        }
+                                      : p,
+                                    ),
+                                  );
+                                }}
+                              />
+                            </label>
+                            <p className="text-[10px] font-medium text-neutral-800">
+                              Count taps on these objects
+                            </p>
+                            <ul className="max-h-28 space-y-0.5 overflow-y-auto text-[11px]">
+                              {selectedPage.items
+                                .filter((it) => it.id !== selectedItem.id)
+                                .map((it) => {
+                                  const tg = selectedItem.tap_interaction_group!;
+                                  const on = tg.child_item_ids.includes(it.id);
+                                  return (
+                                    <li key={`tg-ch-${it.id}`}>
+                                      <label className="flex items-center gap-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={on}
+                                          onChange={() => {
+                                            const nextChild = on ?
+                                              tg.child_item_ids.filter((x) => x !== it.id)
+                                            : [...tg.child_item_ids, it.id];
+                                            if (nextChild.length === 0) return;
+                                            setPages((prev) =>
+                                              prev.map((p) =>
+                                                p.id === selectedPage.id ?
+                                                  {
+                                                    ...p,
+                                                    items: p.items.map((x) =>
+                                                      x.id === selectedItem.id ?
+                                                        {
+                                                          ...x,
+                                                          tap_interaction_group: {
+                                                            ...tg,
+                                                            child_item_ids: nextChild,
+                                                          },
+                                                        }
+                                                      : x,
+                                                    ),
+                                                  }
+                                                : p,
+                                              ),
+                                            );
+                                          }}
+                                        />
+                                        {it.name?.trim() || it.id}
+                                      </label>
+                                    </li>
+                                  );
+                                })}
+                            </ul>
+                            <label className="flex items-center gap-1 text-[11px]">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  !!selectedItem.tap_interaction_group.include_parent_in_pool
+                                }
+                                onChange={(e) => {
+                                  const tg = selectedItem.tap_interaction_group!;
+                                  setPages((prev) =>
+                                    prev.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) =>
+                                            it.id === selectedItem.id ?
+                                              {
+                                                ...it,
+                                                tap_interaction_group: {
+                                                  ...tg,
+                                                  include_parent_in_pool: e.target.checked,
+                                                },
+                                              }
+                                            : it,
+                                          ),
+                                        }
+                                      : p,
+                                    ),
+                                  );
+                                }}
+                              />
+                              Parent taps count toward pool
+                            </label>
+                            <label className="block text-[11px] font-medium text-neutral-800">
+                              Min distinct objects tapped
+                              <input
+                                type="number"
+                                min={1}
+                                className="mt-0.5 w-full rounded border px-1 py-0.5 text-[11px]"
+                                value={
+                                  selectedItem.tap_interaction_group.min_distinct_items ?? ""
+                                }
+                                placeholder="(optional)"
+                                onChange={(e) => {
+                                  const raw = e.target.value.trim();
+                                  const v =
+                                    raw === "" ? undefined : Math.max(1, Number(raw) || 1);
+                                  const tg = selectedItem.tap_interaction_group!;
+                                  setPages((prev) =>
+                                    prev.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) =>
+                                            it.id === selectedItem.id ?
+                                              {
+                                                ...it,
+                                                tap_interaction_group: {
+                                                  ...tg,
+                                                  min_distinct_items: v,
+                                                },
+                                              }
+                                            : it,
+                                          ),
+                                        }
+                                      : p,
+                                    ),
+                                  );
+                                }}
+                              />
+                            </label>
+                            <label className="block text-[11px] font-medium text-neutral-800">
+                              Min total taps on pool (optional)
+                              <input
+                                type="number"
+                                min={1}
+                                className="mt-0.5 w-full rounded border px-1 py-0.5 text-[11px]"
+                                value={
+                                  selectedItem.tap_interaction_group.min_aggregate_taps ?? ""
+                                }
+                                placeholder="—"
+                                onChange={(e) => {
+                                  const raw = e.target.value.trim();
+                                  const v =
+                                    raw === "" ? undefined : Math.max(1, Number(raw) || 1);
+                                  const tg = selectedItem.tap_interaction_group!;
+                                  setPages((prev) =>
+                                    prev.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) =>
+                                            it.id === selectedItem.id ?
+                                              {
+                                                ...it,
+                                                tap_interaction_group: {
+                                                  ...tg,
+                                                  min_aggregate_taps: v,
+                                                },
+                                              }
+                                            : it,
+                                          ),
+                                        }
+                                      : p,
+                                    ),
+                                  );
+                                }}
+                              />
+                            </label>
+                            <label className="block text-[11px] font-medium text-neutral-800">
+                              On satisfy sequence (
+                              <code className="text-[10px]">tap_group_satisfied</code>)
+                              <select
+                                className="mt-0.5 w-full rounded border px-1 py-0.5 text-[11px]"
+                                value={
+                                  selectedItem.tap_interaction_group.on_satisfy_sequence_id ?? ""
+                                }
+                                onChange={(e) => {
+                                  const v = e.target.value.trim();
+                                  const tg = selectedItem.tap_interaction_group!;
+                                  setPages((prev) =>
+                                    prev.map((p) =>
+                                      p.id === selectedPage.id ?
+                                        {
+                                          ...p,
+                                          items: p.items.map((it) =>
+                                            it.id === selectedItem.id ?
+                                              {
+                                                ...it,
+                                                tap_interaction_group: {
+                                                  ...tg,
+                                                  on_satisfy_sequence_id: v || undefined,
+                                                },
+                                              }
+                                            : it,
+                                          ),
+                                        }
+                                      : p,
+                                    ),
+                                  );
+                                }}
+                              >
+                                <option value="">None</option>
+                                {getItemTapGroupSatisfiedSequences(selectedItem).map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name?.trim() || s.id}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-900 hover:bg-red-100"
+                              onClick={() => {
+                                setPages((prev) =>
+                                  prev.map((p) =>
+                                    p.id === selectedPage.id ?
+                                      {
+                                        ...p,
+                                        items: p.items.map((it) =>
+                                          it.id === selectedItem.id ?
+                                            { ...it, tap_interaction_group: undefined }
+                                          : it,
+                                        ),
+                                      }
+                                    : p,
+                                  ),
+                                );
+                              }}
+                            >
+                              Remove tap pool
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="rounded border border-emerald-300 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100"
+                            onClick={() => {
+                              const others = selectedPage.items
+                                .filter((it) => it.id !== selectedItem.id)
+                                .map((it) => it.id);
+                              const child_item_ids = others.slice(0, 1);
+                              if (child_item_ids.length === 0) return;
+                              const gid = `grp_${selectedItem.id.slice(0, 8)}`;
+                              setPages((prev) =>
+                                prev.map((p) =>
+                                  p.id === selectedPage.id ?
+                                    {
+                                      ...p,
+                                      items: p.items.map((it) =>
+                                        it.id === selectedItem.id ?
+                                          {
+                                            ...it,
+                                            tap_interaction_group: {
+                                              id: gid,
+                                              child_item_ids,
+                                              include_parent_in_pool: false,
+                                              min_distinct_items: 1,
+                                              min_taps_per_distinct_item: 1,
+                                            },
+                                          }
+                                        : it,
+                                      ),
+                                    }
+                                  : p,
+                                ),
+                              );
+                            }}
+                          >
+                            Add tap pool on this object
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
                     {selectedItem ? (
                       <div className="rounded border border-fuchsia-200 bg-white p-2 text-xs">
                         <p className="font-semibold text-fuchsia-900">Speech library (tap lines)</p>
@@ -3792,6 +4264,141 @@ export function StoryFields({
                   </div>
                 </div>
               ) : null}
+              {showCastPanel && selectedPage ? (
+                <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-emerald-300/80 bg-emerald-50/60 p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900">
+                      Cast &amp; props
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded border border-emerald-400 px-2 py-0.5 text-[10px] font-semibold text-emerald-900 hover:bg-emerald-100"
+                        onClick={() => {
+                          const row: StoryCastEntry = {
+                            id: newEntityId("cast"),
+                            role: "character",
+                            name: undefined,
+                            image_url: undefined,
+                          };
+                          pushEmit(pages, { cast: [...cast, row] });
+                        }}
+                      >
+                        + Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCastRegistryMenuOpen(false)}
+                        className="rounded border border-emerald-300 px-2 py-0.5 text-[10px] font-semibold text-emerald-900 hover:bg-emerald-50"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mb-2 px-1 text-[11px] leading-snug text-emerald-900/90">
+                    Shared identities for characters and props. Drag a row onto the scene to place an
+                    instance. Use <strong>Object</strong> to link, unlink, or promote art into the cast.
+                  </p>
+                  <div className="h-full min-h-0 space-y-2 overflow-y-auto">
+                    {cast.length === 0 ? (
+                      <p className="px-1 text-xs text-neutral-600">
+                        No cast entries yet. Add one here, then set its default image, or promote from a
+                        selected canvas object.
+                      </p>
+                    ) : null}
+                    {cast.map((row) => (
+                      <div
+                        key={row.id}
+                        draggable={!busy}
+                        onDragStart={(ev) => {
+                          if (busy) return;
+                          ev.dataTransfer.effectAllowed = "copy";
+                          ev.dataTransfer.setData(STORY_CAST_DRAG_MIME, row.id);
+                          ev.dataTransfer.setData("text/plain", `story-cast:${row.id}`);
+                        }}
+                        className="space-y-2 rounded-lg border border-emerald-200 bg-white/90 p-2 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-mono text-neutral-500">{row.id.slice(0, 8)}…</span>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            className="rounded border border-red-200 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              const fallback =
+                                "https://placehold.co/120x80/f1f5f9/334155?text=Item";
+                              const nextCast = cast.filter((c) => c.id !== row.id);
+                              const nextPages = pages.map((p) => ({
+                                ...p,
+                                items: p.items.map((it) => {
+                                  if (it.registry_id !== row.id) return it;
+                                  const resolved =
+                                    it.image_url?.trim() || row.image_url?.trim() || fallback;
+                                  const { registry_id: _r, ...rest } = it;
+                                  return { ...rest, image_url: resolved };
+                                }),
+                              }));
+                              pushEmit(nextPages, { cast: nextCast });
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <label className={labelClass()}>
+                          Label
+                          <input
+                            type="text"
+                            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                            placeholder="e.g. Hero"
+                            value={row.name ?? ""}
+                            disabled={busy}
+                            onChange={(e) => {
+                              const name = e.target.value.trim() || undefined;
+                              pushEmit(pages, {
+                                cast: cast.map((c) => (c.id === row.id ? { ...c, name } : c)),
+                              });
+                            }}
+                          />
+                        </label>
+                        <label className={labelClass()}>
+                          Role
+                          <select
+                            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                            value={row.role}
+                            disabled={busy}
+                            onChange={(e) => {
+                              const role = e.target.value as StoryCastEntry["role"];
+                              pushEmit(pages, {
+                                cast: cast.map((c) => (c.id === row.id ? { ...c, role } : c)),
+                              });
+                            }}
+                          >
+                            <option value="character">Character</option>
+                            <option value="prop">Prop</option>
+                          </select>
+                        </label>
+                        <MediaUrlControls
+                          label="Default image URL"
+                          value={row.image_url ?? ""}
+                          onChange={async (v) => {
+                            pushEmit(pages, {
+                              cast: cast.map((c) =>
+                                c.id === row.id ? { ...c, image_url: v || undefined } : c,
+                              ),
+                            });
+                          }}
+                          disabled={busy}
+                          compact
+                        />
+                        <p className="text-[10px] text-neutral-500">
+                          Drag this card onto the scene (with a background) to add a linked instance.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {showPageContentPanel && selectedPage ? (
                 <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-amber-300/80 bg-amber-50/60 p-2">
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
@@ -3916,7 +4523,8 @@ export function StoryFields({
                         selectedItem={selectedItem}
                         selectedPage={selectedPage}
                         pages={pages}
-                        pushEmit={(next) => pushEmit(next)}
+                        pushEmit={(next, overrides) => pushEmit(next, overrides)}
+                        cast={cast}
                         busy={busy}
                       />
                     ) : (

@@ -526,6 +526,12 @@ body {
   color: var(--foreground);
 }
 
+/* Learner shell: match body to chosen soft-chrome page color so short pages
+   do not show a tall empty band below content (main no longer flex-grows). */
+body:has([data-student-shell]) {
+  background: var(--student-chrome-page, var(--background));
+}
+
 /* Keep teacher workspace backgrounds fully neutral even when route content
    is shorter than viewport and body background would otherwise show through. */
 body:has([data-teacher-root]) {

@@ -3,7 +3,12 @@
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { storyAnimationPresetSchema } from "@/lib/lesson-schemas";
 import { migrateStoryItemKind } from "@/lib/story-item-kind-migrate";
-import type { StoryItem, StoryPage } from "@/lib/lesson-schemas";
+import {
+  resolveStoryItemImageUrl,
+  type StoryCastEntry,
+  type StoryItem,
+  type StoryPage,
+} from "@/lib/lesson-schemas";
 
 const ANIM_PRESETS = storyAnimationPresetSchema.options;
 const STORY_STAGE_ASPECT_RATIO = 16 / 10;
@@ -39,12 +44,20 @@ function safeHex(value: string | undefined, fallback: string): string {
   return v.startsWith("#") ? v : fallback;
 }
 
+function newLocalEntityId(prefix: string): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${prefix}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 type P = {
   selectedItem: StoryItem;
   selectedPage: StoryPage;
   /** Current pages; patch via callback */
   pages: StoryPage[];
-  pushEmit: (next: StoryPage[]) => void;
+  pushEmit: (next: StoryPage[], overrides?: { cast?: StoryCastEntry[] }) => void;
+  cast: StoryCastEntry[];
   busy: boolean;
 };
 
@@ -53,6 +66,7 @@ export function StoryItemEditorPanel({
   selectedPage,
   pages,
   pushEmit,
+  cast,
   busy,
 }: P) {
   const patchSelectedItem = (patcher: (it: StoryItem) => StoryItem) => {
@@ -68,6 +82,10 @@ export function StoryItemEditorPanel({
   };
 
   const k = selectedItem.kind ?? "image";
+  const regId = selectedItem.registry_id?.trim();
+  const linkedCast = regId ? cast.find((c) => c.id === regId) : undefined;
+  const resolvedImageUrl =
+    resolveStoryItemImageUrl(selectedItem, cast) ?? selectedItem.image_url?.trim() ?? "";
 
   return (
     <div className="grid max-w-full gap-2 rounded border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-1">
@@ -113,46 +131,170 @@ export function StoryItemEditorPanel({
         </select>
       </label>
 
-      {k === "image" ? (
-        <MediaUrlControls
-          label="Item image URL"
-          value={selectedItem.image_url ?? ""}
-          onChange={async (v) => {
+      {k === "image" && regId ? (
+        <div className="rounded border border-emerald-200 bg-emerald-50/60 p-2 text-xs text-emerald-950">
+          <p className="font-semibold">Cast link</p>
+          <p className="mt-1 text-[11px] text-emerald-900/90">
+            Linked to <span className="font-mono">{regId}</span>
+            {linkedCast?.name ? ` (${linkedCast.name})` : ""}. Default art comes from the cast entry
+            unless you set an override below.
+          </p>
+          <label className={`${labelClass()} mt-2`}>
+            Use cast entry
+            <select
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              value={regId}
+              disabled={busy}
+              onChange={(e) => {
+                const nextReg = e.target.value.trim() || undefined;
+                patchSelectedItem((it) => ({ ...it, registry_id: nextReg }));
+              }}
+            >
+              {regId && !cast.some((c) => c.id === regId) ? (
+                <option value={regId}>Missing entry: {regId}</option>
+              ) : null}
+              {cast.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {(c.name?.trim() || c.id) + ` · ${c.role}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="mt-2 flex flex-wrap gap-1">
+            <button
+              type="button"
+              disabled={busy}
+              className="rounded border border-emerald-500 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100"
+              onClick={() => {
+                patchSelectedItem((it) => {
+                  const u =
+                    it.image_url?.trim() ||
+                    resolveStoryItemImageUrl(it, cast) ||
+                    "https://placehold.co/120x80/f1f5f9/334155?text=Item";
+                  return { ...it, registry_id: undefined, image_url: u };
+                });
+              }}
+            >
+              Unlink (keep art on this object)
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {k === "image" && !regId && cast.length > 0 ? (
+        <div className="rounded border border-emerald-200 bg-white/80 p-2 text-xs">
+          <p className="font-semibold text-emerald-900">Link to cast</p>
+          <label className={`${labelClass()} mt-1`}>
+            Choose entry
+            <select
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              value=""
+              disabled={busy}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                if (!v) return;
+                patchSelectedItem((it) => ({ ...it, registry_id: v, image_url: undefined }));
+              }}
+            >
+              <option value="">Select…</option>
+              {cast.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {(c.name?.trim() || c.id) + ` · ${c.role}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
+
+      {k === "image" && !regId ? (
+        <button
+          type="button"
+          disabled={
+            busy ||
+            !(selectedItem.image_url?.trim() || resolveStoryItemImageUrl(selectedItem, cast))
+          }
+          className="w-full rounded border border-emerald-400 bg-emerald-50 px-2 py-1.5 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => {
+            const url =
+              selectedItem.image_url?.trim() ||
+              resolveStoryItemImageUrl(selectedItem, cast) ||
+              "";
+            if (!url) return;
+            const cid = newLocalEntityId("cast");
+            const row: StoryCastEntry = {
+              id: cid,
+              role: "character",
+              name: selectedItem.name?.trim() || undefined,
+              image_url: url,
+            };
             const next = pages.map((p) =>
               p.id === selectedPage.id ?
                 {
                   ...p,
                   items: p.items.map((it) =>
-                    it.id === selectedItem.id ? { ...it, image_url: v } : it,
+                    it.id === selectedItem.id ?
+                      { ...it, registry_id: cid, image_url: undefined }
+                    : it,
                   ),
                 }
               : p,
             );
-            pushEmit(next);
-            const img = new window.Image();
-            img.onload = () => {
-              const sw = img.naturalWidth || 0;
-              const sh = img.naturalHeight || 0;
-              if (sw <= 0 || sh <= 0) return;
-              const resized = next.map((p) =>
+            pushEmit(next, { cast: [...cast, row] });
+          }}
+        >
+          Promote art to new cast entry &amp; link
+        </button>
+      ) : null}
+
+      {k === "image" ? (
+        <>
+          <MediaUrlControls
+            label={regId ? "Override image URL (optional)" : "Item image URL"}
+            value={selectedItem.image_url ?? ""}
+            onChange={async (v) => {
+              const next = pages.map((p) =>
                 p.id === selectedPage.id ?
                   {
                     ...p,
                     items: p.items.map((it) =>
-                      it.id === selectedItem.id ?
-                        fitItemBoundsToImageAspect({ ...it, image_url: v }, sw, sh)
-                      : it,
+                      it.id === selectedItem.id ? { ...it, image_url: v } : it,
                     ),
                   }
                 : p,
               );
-              pushEmit(resized);
-            };
-            img.src = v;
-          }}
-          disabled={busy}
-          compact
-        />
+              pushEmit(next);
+              const img = new window.Image();
+              img.onload = () => {
+                const sw = img.naturalWidth || 0;
+                const sh = img.naturalHeight || 0;
+                if (sw <= 0 || sh <= 0) return;
+                const resized = next.map((p) =>
+                  p.id === selectedPage.id ?
+                    {
+                      ...p,
+                      items: p.items.map((it) =>
+                        it.id === selectedItem.id ?
+                          fitItemBoundsToImageAspect({ ...it, image_url: v }, sw, sh)
+                        : it,
+                      ),
+                    }
+                  : p,
+                );
+                pushEmit(resized);
+              };
+              img.src = v;
+            }}
+            disabled={busy}
+            compact
+          />
+          {regId && !selectedItem.image_url?.trim() && resolvedImageUrl ? (
+            <p className="mt-1 text-[10px] text-neutral-600">
+              No override: students see the cast default ({resolvedImageUrl.slice(0, 56)}
+              {resolvedImageUrl.length > 56 ? "…" : ""}).
+            </p>
+          ) : null}
+        </>
       ) : null}
 
       {k === "text" || k === "button" ? (
@@ -279,6 +421,46 @@ export function StoryItemEditorPanel({
               }}
             />
           </label>
+          <div className="mt-2 flex flex-wrap gap-1">
+            <button
+              type="button"
+              disabled={busy}
+              aria-pressed={selectedItem.image_flip_horizontal === true}
+              title="Mirror image left ↔ right"
+              className={`rounded border px-2 py-1 text-[11px] font-semibold transition-colors ${
+                selectedItem.image_flip_horizontal ?
+                  "border-sky-600 bg-sky-100 text-sky-950"
+                : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
+              }`}
+              onClick={() =>
+                patchSelectedItem((it) => {
+                  const next = !(it.image_flip_horizontal ?? false);
+                  return { ...it, image_flip_horizontal: next ? true : undefined };
+                })
+              }
+            >
+              Mirror ↔
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              aria-pressed={selectedItem.image_flip_vertical === true}
+              title="Mirror image top ↔ bottom"
+              className={`rounded border px-2 py-1 text-[11px] font-semibold transition-colors ${
+                selectedItem.image_flip_vertical ?
+                  "border-sky-600 bg-sky-100 text-sky-950"
+                : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
+              }`}
+              onClick={() =>
+                patchSelectedItem((it) => {
+                  const next = !(it.image_flip_vertical ?? false);
+                  return { ...it, image_flip_vertical: next ? true : undefined };
+                })
+              }
+            >
+              Mirror ↕
+            </button>
+          </div>
         </div>
       ) : null}
 

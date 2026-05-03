@@ -2,13 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
 import { MediaBulkUploadCard } from "@/components/teacher/media/MediaBulkUploadCard";
+import { MediaMetadataCsvImport } from "@/components/teacher/media/MediaMetadataCsvImport";
 import {
+  applyTeacherMediaMetadataCsv,
   deleteTeacherMedia,
   inspectTeacherMediaBulkDuplicates,
   searchTeacherMedia,
   updateTeacherMediaMetadataFromForm,
   uploadTeacherMediaSingleFromForm,
   type MediaDuplicateIssue,
+  type MediaMetadataCsvImportResult,
   type UploadTeacherMediaBulkItemResult,
 } from "@/lib/actions/media";
 
@@ -147,13 +150,24 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
     redirect(targetUrl);
   }
 
+  async function importMediaMetadataCsvAction(
+    _prev: MediaMetadataCsvImportResult,
+    formData: FormData,
+  ): Promise<MediaMetadataCsvImportResult> {
+    "use server";
+    return applyTeacherMediaMetadataCsv(formData);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Media Library</h1>
-        <Link href="/teacher/courses" className="text-sm text-blue-700 underline">
-          Go to Courses
-        </Link>
+        <div className="flex flex-shrink-0 items-center gap-3">
+          <MediaMetadataCsvImport importAction={importMediaMetadataCsvAction} />
+          <Link href="/teacher/courses" className="text-sm text-blue-700 underline">
+            Go to Courses
+          </Link>
+        </div>
       </div>
 
       {status && message ? (

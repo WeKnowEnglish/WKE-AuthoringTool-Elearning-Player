@@ -45,6 +45,18 @@ function storyPhasesLookBroken(p: StoryPayload): boolean {
         });
         if (!seqOk) return true;
       }
+      if (ph.completion?.type === "tap_group") {
+        if (!ids.has(ph.completion.next_phase_id)) return true;
+        const gid = ph.completion.group_id;
+        const ok = pg.items.some((it) => it.tap_interaction_group?.id === gid);
+        if (!ok) return true;
+      }
+      if (ph.completion?.type === "pool_interaction_quota") {
+        if (!ids.has(ph.completion.next_phase_id)) return true;
+        for (const pid of ph.completion.pool_item_ids) {
+          if (!items.has(pid)) return true;
+        }
+      }
       if (ph.kind === "drag_match" && !ph.drag_match) {
         return true;
       }

@@ -1,0 +1,764 @@
+{
+  "screens": [
+    {
+      "screen_type": "story",
+      "payload": {
+        "type": "story",
+        "payload_version": 2,
+        "layout_mode": "book",
+        "page_turn_style": "curl",
+        "body_text": "A magic house.",
+        "read_aloud_text": "A magic house.",
+        "tts_lang": "en-US",
+        "cast": [
+          {
+            "id": "cast_magic_aj",
+            "role": "character",
+            "name": "AJ",
+            "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/101498fd-dde3-4bf9-8d53-85fa33afd304-student_2.png"
+          },
+          {
+            "id": "cast_magic_linh",
+            "role": "character",
+            "name": "Linh",
+            "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e518a1d1-56ec-4a74-b6ce-72c7c564d95a-student_3.png"
+          }
+        ],
+        "pass_rule": "visit_all_pages",
+        "pages": [
+          {
+            "id": "magic_p1_outside",
+            "title": "Outside",
+            "background_image_url": "https://placehold.co/1600x1000/1e293b/94a3b8?text=Spooky+house",
+            "body_text": "Two kids find a spooky house.",
+            "read_aloud_text": "Two kids find a spooky house.",
+            "items": [
+              {
+                "id": "p1_aj",
+                "name": "AJ",
+                "kind": "image",
+                "registry_id": "cast_magic_aj",
+                "x_percent": -12,
+                "y_percent": 58,
+                "w_percent": 20,
+                "h_percent": 38,
+                "show_on_start": false,
+                "show_card": true,
+                "z_index": 5,
+                "path": {
+                  "waypoints": [
+                    { "x_percent": -12, "y_percent": 58 },
+                    { "x_percent": 18, "y_percent": 54 }
+                  ],
+                  "duration_ms": 1200,
+                  "easing": "ease-out"
+                }
+              },
+              {
+                "id": "p1_linh",
+                "name": "Linh",
+                "kind": "image",
+                "registry_id": "cast_magic_linh",
+                "x_percent": 118,
+                "y_percent": 58,
+                "w_percent": 20,
+                "h_percent": 38,
+                "show_on_start": false,
+                "show_card": true,
+                "z_index": 5,
+                "path": {
+                  "waypoints": [
+                    { "x_percent": 118, "y_percent": 58 },
+                    { "x_percent": 62, "y_percent": 54 }
+                  ],
+                  "duration_ms": 1200,
+                  "easing": "ease-out"
+                }
+              },
+              {
+                "id": "p1_rock",
+                "name": "Glowing rock",
+                "kind": "image",
+                "image_url": "https://placehold.co/200x200/71717a/d4d4d8?text=Rock",
+                "x_percent": 40,
+                "y_percent": 71,
+                "w_percent": 14,
+                "h_percent": 14,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p1_key",
+                "name": "Key",
+                "kind": "image",
+                "image_url": "https://placehold.co/180x120/facc15/422006?text=Key",
+                "x_percent": 42,
+                "y_percent": 68,
+                "w_percent": 12,
+                "h_percent": 12,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 8
+              },
+              {
+                "id": "p1_gate",
+                "name": "Gate lock",
+                "kind": "image",
+                "image_url": "https://placehold.co/420x340/78350f/b45309?text=Gate",
+                "x_percent": 70,
+                "y_percent": 38,
+                "w_percent": 28,
+                "h_percent": 44,
+                "show_on_start": false,
+                "show_card": false,
+                "z_index": 4,
+                "action_sequences": [
+                  {
+                    "id": "seq_p1_gate_goto_inside",
+                    "event": "click",
+                    "active_phase_ids": ["magic_p1_ph_gate"],
+                    "steps": [
+                      {
+                        "id": "step_goto_inside",
+                        "kind": "goto_page",
+                        "goto_target": "next_page",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "magic_p1_ph_intro",
+                "name": "Arrive",
+                "is_start": true,
+                "next_phase_id": "magic_p1_ph_rock",
+                "visible_item_ids": ["p1_aj", "p1_linh"],
+                "dialogue": {
+                  "start": "AJ: Look at that house! Linh: It's so creepy."
+                },
+                "action_sequences": [
+                  {
+                    "id": "seq_magic_p1_intro_enter",
+                    "event": "phase_enter",
+                    "steps": [
+                      {
+                        "id": "st_move_aj",
+                        "kind": "move",
+                        "target_item_id": "p1_aj",
+                        "duration_ms": 1200,
+                        "timing": "simultaneous"
+                      },
+                      {
+                        "id": "st_move_linh",
+                        "kind": "move",
+                        "target_item_id": "p1_linh",
+                        "duration_ms": 1200,
+                        "timing": "after_previous"
+                      }
+                    ]
+                  }
+                ],
+                "completion": {
+                  "type": "auto",
+                  "delay_ms": 3200,
+                  "next_phase_id": "magic_p1_ph_rock"
+                }
+              },
+              {
+                "id": "magic_p1_ph_rock",
+                "name": "Rock",
+                "next_phase_id": "magic_p1_ph_key",
+                "visible_item_ids": ["p1_aj", "p1_linh", "p1_rock"],
+                "dialogue": {
+                  "start": "A glowing rock bounces nearby. Tap the rock!",
+                  "error": "Try tapping the bouncing rock."
+                },
+                "highlight_item_ids": ["p1_rock"],
+                "idle_animations": [
+                  {
+                    "id": "idle_p1_rock",
+                    "preset": "pulse",
+                    "target_item_id": "p1_rock"
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p1_rock",
+                  "next_phase_id": "magic_p1_ph_key"
+                }
+              },
+              {
+                "id": "magic_p1_ph_key",
+                "name": "Key",
+                "next_phase_id": "magic_p1_ph_gate",
+                "visible_item_ids": ["p1_aj", "p1_linh", "p1_key"],
+                "dialogue": {
+                  "start": "AJ: What are you doing? Linh: Don't throw rocks! Tap the glowing key.",
+                  "error": "Tap the key!"
+                },
+                "highlight_item_ids": ["p1_key"],
+                "idle_animations": [
+                  {
+                    "id": "idle_p1_key",
+                    "preset": "pulse",
+                    "target_item_id": "p1_key"
+                  }
+                ],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p1_key",
+                  "next_phase_id": "magic_p1_ph_gate"
+                }
+              },
+              {
+                "id": "magic_p1_ph_gate",
+                "name": "Gate",
+                "kind": "none",
+                "visible_item_ids": ["p1_aj", "p1_linh", "p1_gate"],
+                "dialogue": {
+                  "start": "Linh: Wow! A key! AJ: Uh oh! Tap the lock on the gate to go inside.",
+                  "error": "Tap the gate lock."
+                },
+                "highlight_item_ids": ["p1_gate"],
+                "idle_animations": [
+                  {
+                    "id": "idle_p1_gate",
+                    "preset": "pulse",
+                    "target_item_id": "p1_gate"
+                  }
+                ],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          },
+          {
+            "id": "magic_p2_inside",
+            "title": "Inside",
+            "background_image_url": "https://placehold.co/1600x1000/f5f5f4/78716c?text=Hallway",
+            "body_text": "Inside the magic house.",
+            "read_aloud_text": "Inside the magic house.",
+            "items": [
+              {
+                "id": "p2_aj",
+                "name": "AJ",
+                "kind": "image",
+                "registry_id": "cast_magic_aj",
+                "x_percent": 38,
+                "y_percent": 48,
+                "w_percent": 18,
+                "h_percent": 38,
+                "z_index": 6
+              },
+              {
+                "id": "p2_linh",
+                "name": "Linh",
+                "kind": "image",
+                "registry_id": "cast_magic_linh",
+                "x_percent": 118,
+                "y_percent": 56,
+                "w_percent": 18,
+                "h_percent": 38,
+                "show_on_start": false,
+                "path": {
+                  "waypoints": [
+                    { "x_percent": 118, "y_percent": 56 },
+                    { "x_percent": 74, "y_percent": 50 }
+                  ],
+                  "duration_ms": 1100,
+                  "easing": "ease-out"
+                },
+                "z_index": 6
+              },
+              {
+                "id": "p2_pic_mom",
+                "name": "Photo Mom",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x140/fecdd3/be123c?text=Mom",
+                "x_percent": 8,
+                "y_percent": 76,
+                "w_percent": 14,
+                "h_percent": 16,
+                "show_card": false,
+                "z_index": 12
+              },
+              {
+                "id": "p2_pic_dad",
+                "name": "Photo Dad",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x140/e0f2fe/0369a1?text=Dad",
+                "x_percent": 25,
+                "y_percent": 76,
+                "w_percent": 14,
+                "h_percent": 16,
+                "show_card": false,
+                "z_index": 12
+              },
+              {
+                "id": "p2_pic_brother",
+                "name": "Photo Brother",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x140/dcffd8/15803d?text=Brother",
+                "x_percent": 42,
+                "y_percent": 76,
+                "w_percent": 14,
+                "h_percent": 16,
+                "show_card": false,
+                "z_index": 12
+              },
+              {
+                "id": "p2_pic_sister",
+                "name": "Photo Sister",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x140/fae8ff/86198f?text=Sister",
+                "x_percent": 59,
+                "y_percent": 76,
+                "w_percent": 14,
+                "h_percent": 16,
+                "show_card": false,
+                "z_index": 12
+              },
+              {
+                "id": "p2_pic_baby",
+                "name": "Photo Baby",
+                "kind": "image",
+                "image_url": "https://placehold.co/160x140/ffedd5/c2410c?text=Baby",
+                "x_percent": 76,
+                "y_percent": 76,
+                "w_percent": 14,
+                "h_percent": 16,
+                "show_card": false,
+                "z_index": 12
+              },
+              {
+                "id": "p2_slot_mom",
+                "name": "Frame Mom",
+                "kind": "image",
+                "image_url": "https://placehold.co/220x240/e7e5e4/57534e?text=Mom",
+                "x_percent": 6,
+                "y_percent": 18,
+                "w_percent": 15,
+                "h_percent": 22,
+                "show_card": false,
+                "z_index": 3
+              },
+              {
+                "id": "p2_slot_dad",
+                "name": "Frame Dad",
+                "kind": "image",
+                "image_url": "https://placehold.co/220x240/e7e5e4/57534e?text=Dad",
+                "x_percent": 23,
+                "y_percent": 18,
+                "w_percent": 15,
+                "h_percent": 22,
+                "show_card": false,
+                "z_index": 3
+              },
+              {
+                "id": "p2_slot_brother",
+                "name": "Frame Brother",
+                "kind": "image",
+                "image_url": "https://placehold.co/220x240/e7e5e4/57534e?text=Brother",
+                "x_percent": 40,
+                "y_percent": 18,
+                "w_percent": 15,
+                "h_percent": 22,
+                "show_card": false,
+                "z_index": 3
+              },
+              {
+                "id": "p2_slot_sister",
+                "name": "Frame Sister",
+                "kind": "image",
+                "image_url": "https://placehold.co/220x240/e7e5e4/57534e?text=Sister",
+                "x_percent": 57,
+                "y_percent": 18,
+                "w_percent": 15,
+                "h_percent": 22,
+                "show_card": false,
+                "z_index": 3
+              },
+              {
+                "id": "p2_slot_baby",
+                "name": "Frame Baby",
+                "kind": "image",
+                "image_url": "https://placehold.co/220x240/e7e5e4/57534e?text=Baby",
+                "x_percent": 74,
+                "y_percent": 18,
+                "w_percent": 15,
+                "h_percent": 22,
+                "show_card": false,
+                "z_index": 3
+              },
+              {
+                "id": "p2_btn_ok",
+                "name": "OK",
+                "kind": "button",
+                "text": "OK",
+                "text_size_px": 18,
+                "x_percent": 42,
+                "y_percent": 86,
+                "w_percent": 16,
+                "h_percent": 10,
+                "z_index": 20,
+                "color_hex": "#1c1917",
+                "text_color": "#fafaf9",
+                "show_card": false
+              },
+              {
+                "id": "p2_btn_hide",
+                "name": "Hide",
+                "kind": "button",
+                "text": "Hide",
+                "text_size_px": 18,
+                "x_percent": 40,
+                "y_percent": 86,
+                "w_percent": 20,
+                "h_percent": 10,
+                "z_index": 20,
+                "show_on_start": false,
+                "color_hex": "#450a0a",
+                "text_color": "#fecaca",
+                "show_card": false,
+                "action_sequences": [
+                  {
+                    "id": "seq_p2_hide_goto_outside",
+                    "event": "click",
+                    "active_phase_ids": ["magic_p2_ph_hide"],
+                    "steps": [
+                      {
+                        "id": "step_goto_p3",
+                        "kind": "goto_page",
+                        "goto_target": "page_id",
+                        "goto_page_id": "magic_p3_outside_return",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "magic_p2_ph_crash",
+                "name": "Crash",
+                "is_start": true,
+                "next_phase_id": "magic_p2_ph_drag_wall",
+                "visible_item_ids": ["p2_aj", "p2_btn_ok"],
+                "dialogue": {
+                  "start": "Crash! AJ knocks family photos down. AJ: You've gotta help me fix it!",
+                  "error": "Tap OK."
+                },
+                "highlight_item_ids": ["p2_btn_ok"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p2_btn_ok",
+                  "next_phase_id": "magic_p2_ph_drag_wall"
+                }
+              },
+              {
+                "id": "magic_p2_ph_drag_wall",
+                "name": "Fix frames",
+                "next_phase_id": "magic_p2_ph_hide",
+                "kind": "drag_match",
+                "visible_item_ids": [
+                  "p2_aj",
+                  "p2_pic_mom",
+                  "p2_pic_dad",
+                  "p2_pic_brother",
+                  "p2_pic_sister",
+                  "p2_pic_baby",
+                  "p2_slot_mom",
+                  "p2_slot_dad",
+                  "p2_slot_brother",
+                  "p2_slot_sister",
+                  "p2_slot_baby"
+                ],
+                "dialogue": {
+                  "start": "Drag each photo to its name on the wall.",
+                  "error": "Not that frame — try another."
+                },
+                "drag_match": {
+                  "draggable_item_ids": [
+                    "p2_pic_mom",
+                    "p2_pic_dad",
+                    "p2_pic_brother",
+                    "p2_pic_sister",
+                    "p2_pic_baby"
+                  ],
+                  "target_item_ids": [
+                    "p2_slot_mom",
+                    "p2_slot_dad",
+                    "p2_slot_brother",
+                    "p2_slot_sister",
+                    "p2_slot_baby"
+                  ],
+                  "correct_map": {
+                    "p2_pic_mom": "p2_slot_mom",
+                    "p2_pic_dad": "p2_slot_dad",
+                    "p2_pic_brother": "p2_slot_brother",
+                    "p2_pic_sister": "p2_slot_sister",
+                    "p2_pic_baby": "p2_slot_baby"
+                  },
+                  "after_correct_match": "stick_on_target"
+                },
+                "completion": {
+                  "type": "all_matched",
+                  "next_phase_id": "magic_p2_ph_hide"
+                }
+              },
+              {
+                "id": "magic_p2_ph_hide",
+                "name": "Hide!",
+                "kind": "none",
+                "visible_item_ids": ["p2_aj", "p2_linh", "p2_pic_mom", "p2_pic_dad", "p2_pic_brother", "p2_pic_sister", "p2_pic_baby", "p2_slot_mom", "p2_slot_dad", "p2_slot_brother", "p2_slot_sister", "p2_slot_baby", "p2_btn_hide"],
+                "dialogue": {
+                  "start": "Linh: Hurry! I think I heard something. Tap Hide to go quietly outside!",
+                  "error": "Tap the Hide button."
+                },
+                "highlight_item_ids": ["p2_btn_hide"],
+                "action_sequences": [
+                  {
+                    "id": "seq_magic_p2_linh_enter",
+                    "event": "phase_enter",
+                    "steps": [
+                      {
+                        "id": "st_move_linh",
+                        "kind": "move",
+                        "target_item_id": "p2_linh",
+                        "duration_ms": 1100,
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          },
+          {
+            "id": "magic_p3_outside_return",
+            "title": "Hide outside",
+            "background_image_url": "https://placehold.co/1600x1000/0f172a/94a3b8?text=Garden+yard",
+            "body_text": "Quick — hide!",
+            "read_aloud_text": "Quick — hide!",
+            "items": [
+              {
+                "id": "p3_spooky_silhouette",
+                "name": "Stranger nearing",
+                "kind": "image",
+                "image_url": "https://placehold.co/440x520/27272a/d4d4d8?text=…",
+                "x_percent": 72,
+                "y_percent": 58,
+                "w_percent": 28,
+                "h_percent": 38,
+                "show_card": false,
+                "image_scale": 1.08,
+                "z_index": 120
+              },
+              {
+                "id": "p3_aj",
+                "name": "AJ",
+                "kind": "image",
+                "registry_id": "cast_magic_aj",
+                "x_percent": 18,
+                "y_percent": 46,
+                "w_percent": 16,
+                "h_percent": 36,
+                "z_index": 8
+              },
+              {
+                "id": "p3_linh",
+                "name": "Linh",
+                "kind": "image",
+                "registry_id": "cast_magic_linh",
+                "x_percent": 38,
+                "y_percent": 48,
+                "w_percent": 16,
+                "h_percent": 36,
+                "z_index": 8
+              },
+              {
+                "id": "p3_wall",
+                "name": "Wall hiding spot",
+                "kind": "image",
+                "image_url": "https://placehold.co/340x420/b45309/ffffff?text=Wall",
+                "x_percent": 6,
+                "y_percent": 28,
+                "w_percent": 28,
+                "h_percent": 44,
+                "show_card": false,
+                "z_index": 4
+              },
+              {
+                "id": "p3_tree",
+                "name": "Tree hiding spot",
+                "kind": "image",
+                "image_url": "https://placehold.co/420x460/166534/ca8a04?text=Tree",
+                "x_percent": 52,
+                "y_percent": 22,
+                "w_percent": 32,
+                "h_percent": 48,
+                "show_card": false,
+                "z_index": 4
+              },
+              {
+                "id": "p3_btn_run",
+                "name": "Run",
+                "kind": "button",
+                "text": "RUN!",
+                "text_size_px": 20,
+                "x_percent": 38,
+                "y_percent": 87,
+                "w_percent": 24,
+                "h_percent": 10,
+                "z_index": 90,
+                "color_hex": "#7f1d1d",
+                "text_color": "#fecaca",
+                "show_card": false,
+                "action_sequences": [
+                  {
+                    "id": "seq_p3_run_finale",
+                    "event": "click",
+                    "active_phase_ids": ["magic_p3_ph_run"],
+                    "steps": [
+                      {
+                        "id": "step_goto_p4",
+                        "kind": "goto_page",
+                        "goto_target": "page_id",
+                        "goto_page_id": "magic_p4_finale",
+                        "timing": "simultaneous"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "phases": [
+              {
+                "id": "magic_p3_ph_wall",
+                "name": "By the wall",
+                "is_start": true,
+                "next_phase_id": "magic_p3_ph_tree",
+                "visible_item_ids": ["p3_spooky_silhouette", "p3_aj", "p3_linh", "p3_wall"],
+                "dialogue": {
+                  "start": "(Unknown voice:) Huh, who's there? Linh: Quickly, hide next to the wall!",
+                  "error": "Tap the wall to hide beside it."
+                },
+                "highlight_item_ids": ["p3_wall"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p3_wall",
+                  "next_phase_id": "magic_p3_ph_tree"
+                }
+              },
+              {
+                "id": "magic_p3_ph_tree",
+                "name": "Behind tree",
+                "next_phase_id": "magic_p3_ph_run",
+                "visible_item_ids": ["p3_spooky_silhouette", "p3_aj", "p3_linh", "p3_wall", "p3_tree"],
+                "dialogue": {
+                  "start": "(Unknown voice:) I thought I saw something. AJ: Now! Get behind that tree!",
+                  "error": "Tap the tree."
+                },
+                "highlight_item_ids": ["p3_tree"],
+                "completion": {
+                  "type": "on_click",
+                  "target_item_id": "p3_tree",
+                  "next_phase_id": "magic_p3_ph_run"
+                }
+              },
+              {
+                "id": "magic_p3_ph_run",
+                "name": "Run!",
+                "kind": "none",
+                "visible_item_ids": ["p3_spooky_silhouette", "p3_aj", "p3_linh", "p3_wall", "p3_tree", "p3_btn_run"],
+                "dialogue": {
+                  "start": "(Unknown voice:) Get out of here, you kids! Both: RUN! Tap RUN to escape!",
+                  "error": "Tap RUN!"
+                },
+                "highlight_item_ids": ["p3_btn_run"],
+                "idle_animations": [
+                  {
+                    "id": "idle_run_btn",
+                    "preset": "pulse",
+                    "target_item_id": "p3_btn_run"
+                  }
+                ],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          },
+          {
+            "id": "magic_p4_finale",
+            "title": "Safe",
+            "background_image_url": "https://placehold.co/1600x1000/f0fdf4/166534?text=Sunrise+street",
+            "body_text": "You made it!",
+            "read_aloud_text": "You made it!",
+            "items": [
+              {
+                "id": "p4_silhouette_fade",
+                "name": "Stranger fades away",
+                "kind": "image",
+                "image_url": "https://placehold.co/460x560/475569/e2e8f0?text=Villain",
+                "x_percent": 68,
+                "y_percent": 52,
+                "w_percent": 30,
+                "h_percent": 42,
+                "show_card": false,
+                "z_index": 80,
+                "image_scale": 0.92
+              },
+              {
+                "id": "p4_happy_twins",
+                "name": "AJ and Linh relieved",
+                "kind": "image",
+                "image_url": "https://placehold.co/520x400/fef08a/92400e?text=Kids+together",
+                "x_percent": 10,
+                "y_percent": 34,
+                "w_percent": 52,
+                "h_percent": 38,
+                "z_index": 10
+              }
+            ],
+            "phases": [
+              {
+                "id": "magic_p4_ph_end",
+                "name": "The end",
+                "is_start": true,
+                "dialogue": {
+                  "start": "You're safe beyond the gates. The spooky figure stayed behind—and the adventure is finished for tonight."
+                },
+                "visible_item_ids": ["p4_silhouette_fade", "p4_happy_twins"],
+                "completion": { "type": "end_phase" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "media_bindings": {
+    "0": {
+      "cast": {
+        "cast_magic_aj": "5a09819c-a711-4ad8-a889-fca307eb5ec9",
+        "cast_magic_linh": "052c4278-72ce-435d-8798-627362283179"
+      },
+      "pages": {
+        "magic_p2_inside": {
+          "background_image_url": "a2c57b12-ce6d-4761-af38-584da5adf800"
+        },
+        "magic_p3_outside_return": {
+          "background_image_url": "31d3e150-acab-4fd0-a7ea-71ddfa3718bf"
+        }
+      }
+    }
+  },
+  "learning_goals": [
+    "Understand short narrative sequences and follow gestures (tap/drag/run).",
+    "Family vocabulary practice: Mom, Dad, Brother, Sister, Baby."
+  ]
+}

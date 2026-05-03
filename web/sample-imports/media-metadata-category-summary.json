@@ -1,0 +1,32 @@
+{
+  "rowCount": 374,
+  "byCategory": {
+    "actions": 7,
+    "animals": 101,
+    "birds": 15,
+    "body": 39,
+    "clothes": 30,
+    "colors": 12,
+    "desserts": 5,
+    "drinks": 5,
+    "farm": 3,
+    "food": 53,
+    "home": 2,
+    "insects": 2,
+    "jobs": 28,
+    "marine": 19,
+    "misc": 20,
+    "nature": 5,
+    "numbers": 13,
+    "people": 36,
+    "pets": 8,
+    "school": 9,
+    "snacks": 5,
+    "sports": 3,
+    "swimwear": 2,
+    "toys": 15,
+    "transport": 8,
+    "weather": 23,
+    "zoo": 87
+  }
+}

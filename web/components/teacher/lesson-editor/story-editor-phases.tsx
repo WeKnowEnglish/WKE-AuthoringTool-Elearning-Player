@@ -241,6 +241,29 @@ export function StoryPhaseProperties({
     return out;
   }, [pageHasRealPhases, pageItems]);
 
+  const tapGroupIdsForPicker = useMemo(() => {
+    const out: { id: string; label: string }[] = [];
+    for (const it of pageItems) {
+      const tg = it.tap_interaction_group;
+      if (!tg?.id) continue;
+      out.push({
+        id: tg.id,
+        label: `${it.name?.trim() || it.id.slice(0, 8)} · pool “${tg.id}”`,
+      });
+    }
+    return out;
+  }, [pageItems]);
+
+  const poolQuotaMetSequencesForPhase = useMemo(() => {
+    const out: { id: string; label: string }[] = [];
+    for (const seq of phase.action_sequences ?? []) {
+      if (seq.event === "pool_quota_met") {
+        out.push({ id: seq.id, label: seq.name?.trim() || seq.id });
+      }
+    }
+    return out;
+  }, [phase.action_sequences]);
+
   if (!pageHasRealPhases) {
     return (
       <div className="space-y-2 rounded border border-neutral-200 bg-white/90 p-3">
@@ -330,12 +353,59 @@ export function StoryPhaseProperties({
           completion: { type: "end_phase" },
         });
       }
+    } else if (c?.type === "tap_group") {
+      if (nextId) {
+        onUpdatePhase({
+          next_phase_id: nextId,
+          completion: {
+            type: "tap_group",
+            group_id: c.group_id,
+            next_phase_id: nextId,
+            satisfaction_sequence_id: c.satisfaction_sequence_id,
+            advance_after_satisfaction: c.advance_after_satisfaction ?? true,
+          },
+        });
+      } else {
+        onUpdatePhase({
+          next_phase_id: null,
+          completion: { type: "end_phase" },
+        });
+      }
+    } else if (c?.type === "pool_interaction_quota") {
+      if (nextId) {
+        onUpdatePhase({
+          next_phase_id: nextId,
+          completion: {
+            type: "pool_interaction_quota",
+            pool_item_ids: [...c.pool_item_ids],
+            min_distinct_items: c.min_distinct_items,
+            min_taps_per_distinct_item: c.min_taps_per_distinct_item ?? 1,
+            min_aggregate_taps: c.min_aggregate_taps,
+            next_phase_id: nextId,
+            satisfaction_sequence_id: c.satisfaction_sequence_id,
+            advance_after_satisfaction: c.advance_after_satisfaction ?? true,
+          },
+        });
+      } else {
+        onUpdatePhase({
+          next_phase_id: null,
+          completion: { type: "end_phase" },
+        });
+      }
     } else {
       onUpdatePhase({ next_phase_id: nextId });
     }
   }
 
-  function setCompletionType(t: "end_phase" | "on_click" | "auto" | "sequence_complete") {
+  function setCompletionType(
+    t:
+      | "end_phase"
+      | "on_click"
+      | "auto"
+      | "sequence_complete"
+      | "tap_group"
+      | "pool_interaction_quota",
+  ) {
     const next = phase.next_phase_id;
     if (t === "end_phase") {
       onUpdatePhase({ completion: { type: "end_phase" }, advance_on_item_tap_id: null });
@@ -360,6 +430,38 @@ export function StoryPhaseProperties({
           type: "sequence_complete",
           sequence_id: firstSeq.id,
           next_phase_id: next,
+        },
+        advance_on_item_tap_id: null,
+      });
+    } else if (t === "tap_group") {
+      const gid = tapGroupIdsForPicker[0]?.id;
+      if (!next || !gid) {
+        onUpdatePhase({ completion: { type: "end_phase" } });
+        return;
+      }
+      onUpdatePhase({
+        completion: {
+          type: "tap_group",
+          group_id: gid,
+          next_phase_id: next,
+          advance_after_satisfaction: true,
+        },
+        advance_on_item_tap_id: null,
+      });
+    } else if (t === "pool_interaction_quota") {
+      const ids = pageItems.map((i) => i.id);
+      if (!next || ids.length === 0) {
+        onUpdatePhase({ completion: { type: "end_phase" } });
+        return;
+      }
+      onUpdatePhase({
+        completion: {
+          type: "pool_interaction_quota",
+          pool_item_ids: ids,
+          min_distinct_items: ids.length,
+          min_taps_per_distinct_item: 1,
+          next_phase_id: next,
+          advance_after_satisfaction: true,
         },
         advance_on_item_tap_id: null,
       });
@@ -660,7 +762,9 @@ export function StoryPhaseProperties({
                     | "end_phase"
                     | "on_click"
                     | "auto"
-                    | "sequence_complete",
+                    | "sequence_complete"
+                    | "tap_group"
+                    | "pool_interaction_quota",
                 )
               }
             >
@@ -675,6 +779,18 @@ export function StoryPhaseProperties({
                 }
               >
                 When a click animation finishes
+              </option>
+              <option
+                value="tap_group"
+                disabled={!phase.next_phase_id || tapGroupIdsForPicker.length === 0}
+              >
+                Tap pool (item group)
+              </option>
+              <option
+                value="pool_interaction_quota"
+                disabled={!phase.next_phase_id || pageItems.length === 0}
+              >
+                Tap pool (all objects on page)
               </option>
               <option value="auto" disabled={!phase.next_phase_id}>
                 After a delay
@@ -774,6 +890,188 @@ export function StoryPhaseProperties({
               />
             </label>
           )}
+          {compType === "tap_group" &&
+            phase.next_phase_id &&
+            completion?.type === "tap_group" && (
+              <div className="mt-1 space-y-2">
+                <label className="block text-xs text-neutral-700">
+                  Item tap pool (parent)
+                  <select
+                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                    disabled={busy || tapGroupIdsForPicker.length === 0}
+                    value={completion.group_id}
+                    onChange={(e) => {
+                      const group_id = e.target.value;
+                      if (!group_id || !phase.next_phase_id) return;
+                      onUpdatePhase({
+                        completion: {
+                          type: "tap_group",
+                          group_id,
+                          next_phase_id: phase.next_phase_id,
+                          satisfaction_sequence_id:
+                            completion.satisfaction_sequence_id,
+                          advance_after_satisfaction:
+                            completion.advance_after_satisfaction ?? true,
+                        },
+                      });
+                    }}
+                  >
+                    {tapGroupIdsForPicker.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs text-neutral-700">
+                  Phase satisfaction (optional,{" "}
+                  <code className="text-[10px]">pool_quota_met</code> on this phase)
+                  <select
+                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                    disabled={busy}
+                    value={completion.satisfaction_sequence_id ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value.trim();
+                      onUpdatePhase({
+                        completion: {
+                          type: "tap_group",
+                          group_id: completion.group_id,
+                          next_phase_id: phase.next_phase_id!,
+                          satisfaction_sequence_id: v || undefined,
+                          advance_after_satisfaction:
+                            completion.advance_after_satisfaction ?? true,
+                        },
+                      });
+                    }}
+                  >
+                    <option value="">None</option>
+                    {poolQuotaMetSequencesForPhase.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-[11px] text-neutral-800">
+                  <input
+                    type="checkbox"
+                    disabled={busy}
+                    checked={completion.advance_after_satisfaction !== false}
+                    onChange={(e) => {
+                      onUpdatePhase({
+                        completion: {
+                          type: "tap_group",
+                          group_id: completion.group_id,
+                          next_phase_id: phase.next_phase_id!,
+                          satisfaction_sequence_id:
+                            completion.satisfaction_sequence_id,
+                          advance_after_satisfaction: e.target.checked,
+                        },
+                      });
+                    }}
+                  />
+                  Advance to next phase after satisfaction
+                </label>
+              </div>
+            )}
+          {compType === "pool_interaction_quota" &&
+            phase.next_phase_id &&
+            completion?.type === "pool_interaction_quota" && (
+              <div className="mt-1 space-y-2">
+                <label className="block text-xs text-neutral-700">
+                  Min distinct taps (pool is all objects on this page)
+                  <input
+                    type="number"
+                    min={1}
+                    max={completion.pool_item_ids.length}
+                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                    disabled={busy}
+                    value={completion.min_distinct_items ?? 1}
+                    onChange={(e) => {
+                      const min_distinct_items = Math.max(
+                        1,
+                        Math.min(
+                          completion.pool_item_ids.length,
+                          Number(e.target.value) || 1,
+                        ),
+                      );
+                      onUpdatePhase({
+                        completion: {
+                          ...completion,
+                          min_distinct_items,
+                          next_phase_id: phase.next_phase_id!,
+                        },
+                      });
+                    }}
+                  />
+                </label>
+                <label className="block text-xs text-neutral-700">
+                  Min total taps on pool (optional)
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                    disabled={busy}
+                    value={completion.min_aggregate_taps ?? ""}
+                    placeholder="—"
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      const min_aggregate_taps =
+                        raw === "" ? undefined : Math.max(1, Number(raw) || 1);
+                      onUpdatePhase({
+                        completion: {
+                          ...completion,
+                          min_aggregate_taps,
+                          next_phase_id: phase.next_phase_id!,
+                        },
+                      });
+                    }}
+                  />
+                </label>
+                <label className="block text-xs text-neutral-700">
+                  Phase satisfaction (optional)
+                  <select
+                    className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                    disabled={busy}
+                    value={completion.satisfaction_sequence_id ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value.trim();
+                      onUpdatePhase({
+                        completion: {
+                          ...completion,
+                          satisfaction_sequence_id: v || undefined,
+                          next_phase_id: phase.next_phase_id!,
+                        },
+                      });
+                    }}
+                  >
+                    <option value="">None</option>
+                    {poolQuotaMetSequencesForPhase.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-[11px] text-neutral-800">
+                  <input
+                    type="checkbox"
+                    disabled={busy}
+                    checked={completion.advance_after_satisfaction !== false}
+                    onChange={(e) => {
+                      onUpdatePhase({
+                        completion: {
+                          ...completion,
+                          advance_after_satisfaction: e.target.checked,
+                          next_phase_id: phase.next_phase_id!,
+                        },
+                      });
+                    }}
+                  />
+                  Advance to next phase after satisfaction
+                </label>
+              </div>
+            )}
         </div>
       )}
       <div className="space-y-1 border-t border-neutral-200 pt-2">

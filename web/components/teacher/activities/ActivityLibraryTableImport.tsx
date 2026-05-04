@@ -121,7 +121,12 @@ function parseClipboardGrid(raw: string): string[][] {
     .map((line) => line.split("\t"));
 }
 
-export function ActivityLibraryTableImport() {
+type TableImportProps = {
+  /** When true, omit outer card chrome (for use inside a tabbed parent card). */
+  embedded?: boolean;
+};
+
+export function ActivityLibraryTableImport({ embedded = false }: TableImportProps) {
   const [rows, setRows] = useState<string[][]>(() => makeEmptyRows(12));
   const [focusCell, setFocusCell] = useState({ row: 0, col: 0 });
   const [sampleSubtype, setSampleSubtype] = useState<SupportedSubtype>("mc_quiz");
@@ -213,8 +218,12 @@ export function ActivityLibraryTableImport() {
 
   const canSubmit = title.trim().length > 0 && nonEmptyRowIndexes.length > 0 && !pending;
 
+  const shellClass = embedded
+    ? "space-y-3"
+    : "rounded-lg border border-sky-300 bg-sky-50/60 p-4";
+
   return (
-    <section className="rounded-lg border border-sky-300 bg-sky-50/60 p-4">
+    <section className={shellClass}>
       <h2 className="text-sm font-bold text-sky-950">Spreadsheet Import (up to 50 rows)</h2>
       <p className="mt-1 text-xs text-sky-900/90">
         Paste table data directly from Sheets/Excel. One row is one question.

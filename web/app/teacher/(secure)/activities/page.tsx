@@ -1,11 +1,10 @@
 import {
-  createActivityLibraryItem,
   deleteActivityLibraryItem,
   openActivityInCourseEditor,
   updateActivityLibraryItem,
 } from "@/lib/actions/teacher";
+import { ActivityLibraryCreateCard } from "@/components/teacher/activities/ActivityLibraryCreateCard";
 import { ActivityLibraryPreview } from "@/components/teacher/activities/ActivityLibraryPreview";
-import { ActivityLibraryTableImport } from "@/components/teacher/activities/ActivityLibraryTableImport";
 import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
 import {
   type ActivitySubtype,
@@ -52,63 +51,7 @@ export default async function TeacherActivitiesPage({ searchParams }: Props) {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
         <aside className="lg:sticky lg:top-4 lg:col-span-1 space-y-6">
-          <ActivityLibraryTableImport />
-
-          <section className="rounded-lg border border-neutral-200 bg-white p-4">
-            <h2 className="text-sm font-bold text-neutral-900">Create Activity Set</h2>
-            <form action={createActivityLibraryItem} className="mt-3 grid gap-3">
-              <label className="text-sm">
-                Title
-                <input name="title" required className="mt-1 block w-full rounded border px-2 py-1 text-sm" />
-              </label>
-              <label className="text-sm">
-                Activity types (select one or more)
-                <div className="mt-2 grid grid-cols-1 gap-2 rounded border p-2">
-                  {subtypeOptions.map((option, index) => (
-                    <label key={option.value} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="activity_subtypes"
-                        value={option.value}
-                        defaultChecked={index === 0}
-                      />
-                      {option.label}
-                    </label>
-                  ))}
-                </div>
-              </label>
-              <label className="text-sm">
-                Level
-                <input
-                  name="level"
-                  placeholder="A1, A2..."
-                  className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                />
-              </label>
-              <label className="text-sm">
-                Topic
-                <input
-                  name="topic"
-                  placeholder="Food, Travel..."
-                  className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                />
-              </label>
-              <label className="text-sm">
-                Vocabulary list (comma or new line)
-                <textarea
-                  name="vocabulary_raw"
-                  rows={5}
-                  placeholder="apple, banana, orange"
-                  className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                />
-              </label>
-              <div>
-                <button type="submit" className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">
-                  Generate and save
-                </button>
-              </div>
-            </form>
-          </section>
+          <ActivityLibraryCreateCard />
 
           <section className="rounded-lg border border-neutral-200 bg-white p-4">
             <h2 className="text-sm font-bold text-neutral-900">Filter Library</h2>
@@ -160,7 +103,7 @@ export default async function TeacherActivitiesPage({ searchParams }: Props) {
         <section className="lg:col-span-2 space-y-10">
           {items.length === 0 ? (
             <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-600">
-              No activities found. Create your first activity set above.
+              No activities found. Create your first activity using the card above.
             </p>
           ) : (
             ACTIVITY_LEVEL_SECTIONS.map(({ band, label }) => {

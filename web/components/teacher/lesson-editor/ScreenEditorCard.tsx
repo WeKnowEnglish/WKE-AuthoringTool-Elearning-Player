@@ -1,10 +1,9 @@
 "use client";
 
 import { clsx } from "clsx";
-import { useRouter } from "next/navigation";
 import {
   forwardRef,
-  startTransition,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -35,7 +34,10 @@ import {
   voiceQuestionPayloadSchema,
   parseScreenPayload,
   getInteractionSubtype,
+  startPayloadSchema,
+  startPlaygroundSchema,
   type ScreenPayload,
+  type StartPlayground,
 } from "@/lib/lesson-schemas";
 import { updateScreenPayload } from "@/lib/actions/teacher";
 import { treasureHuntClickTargetsTemplate } from "@/lib/teacher-interaction-templates";
@@ -52,6 +54,7 @@ import {
 } from "@/components/teacher/lesson-editor/RectRegionEditor";
 import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
+import { BookendPlaygroundEditor } from "@/components/teacher/lesson-editor/BookendPlaygroundEditor";
 import { StoryFields } from "@/components/teacher/lesson-editor/story-fields";
 import type { LessonScreenRow } from "@/lib/data/catalog";
 import type { ZodType } from "zod";
@@ -71,13 +74,23 @@ function emitLive(
 }
 
 export type ScreenEditorCardHandle = {
-  saveNow: () => Promise<void>;
+  saveNow: () => Promise<boolean>;
+  getPendingSaveSnapshot: () => ScreenPendingSaveSnapshot | null;
 };
 
 export type ScreenEditorStatus = {
   isSaving: boolean;
-  saveHint: string | null;
+  isDirty: boolean;
+  lastSavedAt: number | null;
   err: string | null;
+};
+
+export type ScreenPendingSaveSnapshot = {
+  screenId: string;
+  lessonId: string;
+  moduleId: string;
+  screenType: string;
+  payloadJson: string;
 };
 
 type Props = {
@@ -94,11 +107,12 @@ type Props = {
   advancedJsonOpen?: boolean;
   onAdvancedJsonOpenChange?: (open: boolean) => void;
   onStatusChange?: (status: ScreenEditorStatus) => void;
+  getLastUserActivityAt?: () => number;
   /** Called after the server confirms a successful payload save (for subtle header feedback). */
   onPersistSuccess?: () => void;
 };
 
-export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
+const ScreenEditorCardInner = forwardRef<ScreenEditorCardHandle, Props>(
   function ScreenEditorCard(
     {
       screen,
@@ -106,20 +120,19 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
       lessonId,
       moduleId,
       isSelected,
-      onSelect,
       bumpScreenPayload,
       showInlineSaveToolbar = false,
       advancedJsonOpen = false,
-      onAdvancedJsonOpenChange,
       onStatusChange,
+      getLastUserActivityAt,
       onPersistSuccess,
     },
     ref,
   ) {
-  const router = useRouter();
   const [err, setErr] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveHint, setSaveHint] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [internalShowJson, setInternalShowJson] = useState(false);
   const showJson = showInlineSaveToolbar ? internalShowJson : advancedJsonOpen;
   const [jsonDraft, setJsonDraft] = useState(() =>
@@ -130,8 +143,8 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
   const lastSavedJson = useRef(JSON.stringify(screen.payload));
   const saveInFlightRef = useRef(false);
   const saveQueuedRef = useRef(false);
-  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastInputAtRef = useRef(Date.now());
   /** Debounce live preview bumps so dragging regions / story items does not re-render the whole workspace every frame. */
   const previewBumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPreviewRef = useRef<{ screenId: string; payload: unknown } | null>(
@@ -156,8 +169,19 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
 
     const serverRowChanged = lastKnownUpdatedAtRef.current !== screen.updated_at;
     if (serverRowChanged) {
+      if (JSON.stringify(pendingRef.current) !== lastSavedJson.current) {
+        // Keep local unsaved edits stable even if external row updates arrive.
+        return;
+      }
       lastKnownUpdatedAtRef.current = screen.updated_at;
       lastSavedJson.current = payloadSig;
+      setIsDirty(false);
+      if (screen.updated_at) {
+        const ts = Date.parse(screen.updated_at);
+        if (!Number.isNaN(ts)) {
+          setLastSavedAt(ts);
+        }
+      }
     }
     // Do not depend on payloadSig alone: parent can briefly re-render with stale
     // RSC data while the server row revision is unchanged; merge in LessonEditorWorkspace
@@ -166,24 +190,11 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
   }, [screen.id, screen.updated_at]);
 
   const clearSaveTimer = useCallback(() => {
-    if (blurTimerRef.current) {
-      clearTimeout(blurTimerRef.current);
-      blurTimerRef.current = null;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
     }
   }, []);
-
-  const scheduleBackgroundRefresh = useCallback(() => {
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
-    }
-    // Refresh in the background after save settles; this avoids disrupting active typing.
-    refreshTimerRef.current = setTimeout(() => {
-      refreshTimerRef.current = null;
-      startTransition(() => {
-        router.refresh();
-      });
-    }, 1500);
-  }, [router]);
 
   const flushPreviewBump = useCallback(() => {
     if (previewBumpTimerRef.current) {
@@ -202,13 +213,11 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
       if (previewBumpTimerRef.current) {
         clearTimeout(previewBumpTimerRef.current);
       }
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
-      }
+      clearSaveTimer();
       const pending = pendingPreviewRef.current;
       if (pending) bumpScreenPayload(pending.screenId, pending.payload);
     },
-    [bumpScreenPayload],
+    [bumpScreenPayload, clearSaveTimer],
   );
 
   const persistPayload = useCallback(
@@ -234,6 +243,8 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
         }
         lastSavedJson.current = JSON.stringify(payload);
         setJsonDraft(JSON.stringify(payload, null, 2));
+        setIsDirty(false);
+        setLastSavedAt(Date.now());
         onPersistSuccess?.();
         return true;
       } catch (e) {
@@ -278,68 +289,82 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
 
   const saveNow = useCallback(async () => {
     flushPreviewBump();
-    setSaveHint(null);
     clearSaveTimer();
     const raw = pendingRef.current;
     if (JSON.stringify(raw) === lastSavedJson.current) {
-      setSaveHint("Already saved — no pending changes.");
-      window.setTimeout(() => setSaveHint(null), 3000);
-      return;
+      return true;
     }
     const ok = await persistLatestPending();
     if (ok) {
       bumpScreenPayload(screen.id, pendingRef.current);
-      setSaveHint("Saved. Refreshing…");
-      startTransition(() => {
-        router.refresh();
-      });
-      window.setTimeout(() => {
-        setSaveHint(null);
-      }, 2500);
     }
+    return ok;
   }, [
     bumpScreenPayload,
     clearSaveTimer,
     flushPreviewBump,
     persistLatestPending,
-    router,
     screen.id,
   ]);
+
+  const getPendingSaveSnapshot = useCallback((): ScreenPendingSaveSnapshot | null => {
+    flushPreviewBump();
+    const payloadJson = JSON.stringify(pendingRef.current);
+    if (payloadJson === lastSavedJson.current) return null;
+    return {
+      screenId: screen.id,
+      lessonId,
+      moduleId,
+      screenType: screen.screen_type,
+      payloadJson,
+    };
+  }, [flushPreviewBump, lessonId, moduleId, screen.id, screen.screen_type]);
 
   useImperativeHandle(
     ref,
     () => ({
       saveNow: () => saveNow(),
+      getPendingSaveSnapshot: () => getPendingSaveSnapshot(),
     }),
-    [saveNow],
+    [getPendingSaveSnapshot, saveNow],
   );
 
   useEffect(() => {
-    if (showInlineSaveToolbar || !onStatusChange) return;
-    onStatusChange({ isSaving, saveHint, err });
-  }, [showInlineSaveToolbar, onStatusChange, isSaving, saveHint, err]);
+    if (!onStatusChange) return;
+    onStatusChange({ isSaving, isDirty, lastSavedAt, err });
+  }, [onStatusChange, isSaving, isDirty, lastSavedAt, err]);
 
   useEffect(() => {
     if (showInlineSaveToolbar || !advancedJsonOpen) return;
     setJsonDraft(JSON.stringify(pendingRef.current, null, 2));
   }, [showInlineSaveToolbar, advancedJsonOpen, screen.id]);
 
-  /** After typing pauses (~3s) — avoids saving mid-word and clobbering the editor on refresh. */
+  /** Save after 5s of no keyboard edits and no pointer movement in the workspace. */
   const scheduleDebouncedPersist = useCallback(() => {
     clearSaveTimer();
-    blurTimerRef.current = setTimeout(() => {
-      blurTimerRef.current = null;
+    const run = () => {
+      saveTimerRef.current = null;
+      const now = Date.now();
+      const quietForInput = now - lastInputAtRef.current;
+      const quietForPointer =
+        now - (getLastUserActivityAt ? getLastUserActivityAt() : now);
+      const quietFor = Math.min(quietForInput, quietForPointer);
+      if (quietFor < 5000) {
+        saveTimerRef.current = setTimeout(run, Math.max(250, 5000 - quietFor));
+        return;
+      }
       const raw = pendingRef.current;
       if (JSON.stringify(raw) === lastSavedJson.current) return;
-      void persistLatestPending().then((ok) => {
-        if (ok) scheduleBackgroundRefresh();
-      });
-    }, 3000);
-  }, [clearSaveTimer, persistLatestPending, scheduleBackgroundRefresh]);
+      void persistLatestPending();
+    };
+    saveTimerRef.current = setTimeout(run, 5000);
+  }, [clearSaveTimer, getLastUserActivityAt, persistLatestPending]);
 
   const pushLive = useCallback(
     (p: unknown) => {
       pendingRef.current = p;
+      setIsDirty(JSON.stringify(p) !== lastSavedJson.current);
+      lastInputAtRef.current = Date.now();
       pendingPreviewRef.current = { screenId: screen.id, payload: p };
       if (previewBumpTimerRef.current) {
         clearTimeout(previewBumpTimerRef.current);
@@ -356,19 +381,6 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
     [bumpScreenPayload, screen.id, scheduleDebouncedPersist],
   );
 
-  /** When focus leaves this screen card, save immediately so nothing is lost if the user navigates away. */
-  function onBlurCapture(e: React.FocusEvent<HTMLDivElement>) {
-    const next = e.relatedTarget;
-    if (next instanceof Node && e.currentTarget.contains(next)) return;
-    flushPreviewBump();
-    clearSaveTimer();
-    const raw = pendingRef.current;
-    if (JSON.stringify(raw) === lastSavedJson.current) return;
-    void persistLatestPending().then((ok) => {
-      if (ok) scheduleBackgroundRefresh();
-    });
-  }
-
   const storySyncKey = `${screen.id}:${screen.updated_at ?? ""}`;
 
   const parsed = useMemo(
@@ -384,7 +396,6 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
         isSelected && "bg-sky-50/40",
       )}
       id={`screen-${screen.id}`}
-      onBlurCapture={onBlurCapture}
     >
       <span className="sr-only">
         Screen {index + 1}, {screen.screen_type}
@@ -396,13 +407,6 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
         <div className="mb-2 flex flex-wrap items-center gap-2 px-3 pt-3">
           <button
             type="button"
-            onClick={() => void saveNow()}
-            className="rounded border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-neutral-800"
-          >
-            Save screen now
-          </button>
-          <button
-            type="button"
             onClick={() => setInternalShowJson((v) => !v)}
             className="rounded px-1 text-sm text-neutral-600 underline hover:bg-neutral-50 active:bg-neutral-100"
           >
@@ -412,15 +416,6 @@ export const ScreenEditorCard = forwardRef<ScreenEditorCardHandle, Props>(
             <span className="text-xs font-medium text-neutral-500">Saving…</span>
           ) : null}
         </div>
-      ) : null}
-      {showInlineSaveToolbar && saveHint ? (
-        <p
-          className={`mb-2 text-xs font-medium ${
-            saveHint.startsWith("Already") ? "text-neutral-600" : "text-green-800"
-          }`}
-        >
-          {saveHint}
-        </p>
       ) : null}
       {err ? (
         <p className="mb-2 rounded bg-red-50 px-3 py-1 text-sm text-red-800">{err}</p>
@@ -650,7 +645,14 @@ function StructuredFields({
           />
         );
       case "letter_mixup":
-        return <LetterMixupFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+        return (
+          <LetterMixupFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "word_shape_hunt":
         return <WordShapeHuntFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
       case "table_complete":
@@ -704,6 +706,9 @@ function StructuredFields({
   return null;
 }
 
+ScreenEditorCardInner.displayName = "ScreenEditorCard";
+export const ScreenEditorCard = memo(ScreenEditorCardInner);
+
 function labelClass() {
   return "mt-2 block text-sm font-medium text-neutral-800";
 }
@@ -723,23 +728,78 @@ function StartFields({
   const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
   const [cta_label, setCta] = useState(initial.cta_label ?? "Start learning");
   const [read_aloud_title, setReadAloudTitle] = useState(initial.read_aloud_title ?? "");
+  const [playground, setPlayground] = useState<StartPlayground | undefined>(initial.playground);
+  const [playgroundJson, setPlaygroundJson] = useState(() =>
+    initial.playground ? JSON.stringify(initial.playground, null, 2) : "",
+  );
+  const [playgroundError, setPlaygroundError] = useState<string | null>(null);
+  const [playgroundVisualError, setPlaygroundVisualError] = useState<string | null>(null);
+  const [advancedPlaygroundOpen, setAdvancedPlaygroundOpen] = useState(false);
 
   useEffect(() => {
     setImageUrl(initial.image_url ?? "");
     setImageFit(initial.image_fit ?? "contain");
     setCta(initial.cta_label ?? "Start learning");
     setReadAloudTitle(initial.read_aloud_title ?? "");
+    setPlayground(initial.playground);
+    setPlaygroundJson(initial.playground ? JSON.stringify(initial.playground, null, 2) : "");
+    setPlaygroundError(null);
+    setPlaygroundVisualError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
   }, [syncKey]);
 
+  const tryEmit = useCallback(
+    (next: {
+      image: string;
+      fit: "cover" | "contain";
+      cta: string;
+      readTitle: string;
+      pg: StartPlayground | undefined;
+    }) => {
+      const parsed = startPayloadSchema.safeParse({
+        type: "start",
+        image_url: next.image.trim() || undefined,
+        image_fit: next.fit,
+        cta_label: next.cta.trim() || "Start learning",
+        read_aloud_title: next.readTitle.trim() || undefined,
+        playground: next.pg,
+      });
+      if (parsed.success) {
+        onLivePayload(parsed.data);
+        setPlaygroundVisualError(null);
+      } else {
+        const msg = parsed.error.issues.map((i) => i.message).join("; ");
+        setPlaygroundVisualError(msg);
+      }
+    },
+    [onLivePayload],
+  );
+
   function emit(image: string, fit: "cover" | "contain", cta: string, readTitle: string) {
-    onLivePayload({
-      type: "start",
-      image_url: image.trim() || undefined,
-      image_fit: fit,
-      cta_label: cta.trim() || "Start learning",
-      read_aloud_title: readTitle.trim() || undefined,
-    });
+    tryEmit({ image, fit, cta, readTitle, pg: playground });
+  }
+
+  function applyPlaygroundJson() {
+    if (!playgroundJson.trim()) {
+      setPlayground(undefined);
+      setPlaygroundError(null);
+      tryEmit({ image: image_url, fit: image_fit, cta: cta_label, readTitle: read_aloud_title, pg: undefined });
+      return;
+    }
+    try {
+      const parsed = startPlaygroundSchema.parse(JSON.parse(playgroundJson));
+      setPlayground(parsed);
+      setPlaygroundError(null);
+      tryEmit({
+        image: image_url,
+        fit: image_fit,
+        cta: cta_label,
+        readTitle: read_aloud_title,
+        pg: parsed,
+      });
+    } catch (e) {
+      setPlaygroundError(e instanceof Error ? e.message : "Invalid playground JSON");
+    }
   }
 
   return (
@@ -792,6 +852,73 @@ function StartFields({
           }}
         />
       </label>
+
+      <div className="mt-4 rounded-lg border-2 border-sky-200 bg-white p-3 shadow-sm">
+        <p className="text-sm font-bold text-sky-950">Playground (visual editor)</p>
+        <p className="mt-1 text-xs text-neutral-600">
+          Build a tap-friendly opening layer: pictures, labels, sounds, and optional tiny prizes.
+        </p>
+        {playgroundVisualError ? (
+          <p className="mt-2 rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs text-amber-950">
+            {playgroundVisualError}
+          </p>
+        ) : null}
+        <div className="mt-3">
+          <BookendPlaygroundEditor
+            value={playground}
+            busy={busy}
+            onChange={(pg) => {
+              setPlayground(pg);
+              setPlaygroundJson(pg ? JSON.stringify(pg, null, 2) : "");
+              tryEmit({
+                image: image_url,
+                fit: image_fit,
+                cta: cta_label,
+                readTitle: read_aloud_title,
+                pg,
+              });
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-2 rounded border border-neutral-200 bg-neutral-50">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-bold text-neutral-800"
+          onClick={() => setAdvancedPlaygroundOpen((o) => !o)}
+        >
+          Advanced: playground JSON
+          <span aria-hidden>{advancedPlaygroundOpen ? "▾" : "▸"}</span>
+        </button>
+        {advancedPlaygroundOpen ? (
+          <div className="border-t border-neutral-200 p-2">
+            <label className="text-xs font-semibold text-neutral-800">
+              <textarea
+                className="mt-1 w-full resize-y rounded border border-neutral-300 px-2 py-1 font-mono text-xs text-neutral-900"
+                rows={8}
+                value={playgroundJson}
+                disabled={busy}
+                onChange={(e) => {
+                  setPlaygroundJson(e.target.value);
+                  setPlaygroundError(null);
+                }}
+              />
+            </label>
+            {playgroundError ? (
+              <p className="mt-1 text-xs text-red-700">{playgroundError}</p>
+            ) : null}
+            <button
+              type="button"
+              className="mt-2 rounded bg-sky-700 px-2 py-1 text-xs font-semibold text-white hover:bg-sky-800 disabled:opacity-50"
+              disabled={busy}
+              onClick={applyPlaygroundJson}
+            >
+              Apply JSON
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -991,21 +1118,27 @@ function TrueFalseFields({
   const [statement, setS] = useState(initial.statement);
   const [correct, setC] = useState(initial.correct);
   const [image_url, setImg] = useState(initial.image_url ?? "");
+  const [image_fit, setImageFit] = useState<"cover" | "contain">(initial.image_fit ?? "contain");
+  const [tip_text, setTip] = useState(initial.guide?.tip_text ?? "");
 
   useEffect(() => {
     setS(initial.statement);
     setC(initial.correct);
     setImg(initial.image_url ?? "");
+    setImageFit(initial.image_fit ?? "contain");
+    setTip(initial.guide?.tip_text ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
   }, [syncKey]);
 
-  function emit(st: string, cor: boolean, img: string) {
+  function emit(st: string, cor: boolean, img: string, fit: "cover" | "contain", tip: string) {
     emitLive(onLivePayload, trueFalsePayloadSchema, {
       type: "interaction",
       subtype: "true_false",
       statement: st,
       correct: cor,
       image_url: img || undefined,
+      image_fit: fit,
+      guide: tip ? { tip_text: tip } : undefined,
     });
   }
 
@@ -1020,7 +1153,7 @@ function TrueFalseFields({
           onChange={(e) => {
             const v = e.target.value;
             setS(v);
-            emit(v, correct, image_url);
+            emit(v, correct, image_url, image_fit, tip_text);
           }}
         />
       </label>
@@ -1031,7 +1164,7 @@ function TrueFalseFields({
           onChange={(e) => {
             const v = e.target.checked;
             setC(v);
-            emit(statement, v, image_url);
+            emit(statement, v, image_url, image_fit, tip_text);
           }}
         />
         Correct answer is True
@@ -1041,11 +1174,40 @@ function TrueFalseFields({
         value={image_url}
         onChange={(v) => {
           setImg(v);
-          emit(statement, correct, v);
+          emit(statement, correct, v, image_fit, tip_text);
         }}
         disabled={busy}
         compact
       />
+      <label className={labelClass()}>
+        Image display
+        <select
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={image_fit}
+          onChange={(e) => {
+            const v = (e.target.value === "contain" ? "contain" : "cover") as "cover" | "contain";
+            setImageFit(v);
+            emit(statement, correct, image_url, v, tip_text);
+          }}
+          disabled={busy}
+        >
+          <option value="cover">Fill frame (crop if needed)</option>
+          <option value="contain">Show whole image (fit inside)</option>
+        </select>
+      </label>
+      <label className={labelClass()}>
+        Guide tip (optional)
+        <input
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={tip_text}
+          onChange={(e) => {
+            const v = e.target.value;
+            setTip(v);
+            emit(statement, correct, image_url, image_fit, v);
+          }}
+          disabled={busy}
+        />
+      </label>
     </div>
   );
 }
@@ -3723,9 +3885,12 @@ function ListenColorWriteFields({
 }
 
 function LetterMixupFields({
+  syncKey,
   initial,
   onLivePayload,
+  busy,
 }: {
+  syncKey: string;
   initial: Extract<ScreenPayload, { type: "interaction"; subtype: "letter_mixup" }>;
   onLivePayload: (p: unknown) => void;
   busy: boolean;
@@ -3739,6 +3904,19 @@ function LetterMixupFields({
   const [shuffle_letters, setShuffleLetters] = useState(initial.shuffle_letters ?? true);
   const [case_sensitive, setCaseSensitive] = useState(initial.case_sensitive ?? false);
   const [items, setItems] = useState(() => initial.items.map((it) => ({ ...it })));
+
+  useEffect(() => {
+    setPrompt(initial.prompt);
+    setImageUrl(initial.image_url ?? "");
+    setImageFit(initial.image_fit ?? "contain");
+    setImageAudioUrl(initial.image_audio_url ?? "");
+    setImageUseTts(initial.image_use_tts ?? false);
+    setImageReadAloudText(initial.image_read_aloud_text ?? "");
+    setShuffleLetters(initial.shuffle_letters ?? true);
+    setCaseSensitive(initial.case_sensitive ?? false);
+    setItems(initial.items.map((it) => ({ ...it })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
 
   function emit(
     next: typeof items,
@@ -3771,7 +3949,7 @@ function LetterMixupFields({
         Prompt
         <textarea className="mt-1 w-full rounded border px-2 py-1 text-sm" rows={2} value={prompt} onChange={(e) => { const v = e.target.value; setPrompt(v); emit(items, v, image_url); }} />
       </label>
-      <MediaUrlControls label="Image (optional)" value={image_url} onChange={(v) => { setImageUrl(v); emit(items, prompt, v); }} compact />
+      <MediaUrlControls label="Image (optional)" value={image_url} onChange={(v) => { setImageUrl(v); emit(items, prompt, v); }} compact disabled={busy} />
       {image_url.trim() ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-neutral-600">Image fit</span>
@@ -3785,6 +3963,7 @@ function LetterMixupFields({
               setImageFit("cover");
               emit(items, prompt, image_url, "cover");
             }}
+            disabled={busy}
           >
             Fill
           </button>
@@ -3798,6 +3977,7 @@ function LetterMixupFields({
               setImageFit("contain");
               emit(items, prompt, image_url, "contain");
             }}
+            disabled={busy}
           >
             Contain
           </button>
@@ -3813,6 +3993,7 @@ function LetterMixupFields({
               emit(items, prompt, image_url, image_fit, v);
             }}
             compact
+            disabled={busy}
           />
           <div className="space-y-2 rounded border border-neutral-200 bg-neutral-50/90 p-3">
             <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-neutral-800">

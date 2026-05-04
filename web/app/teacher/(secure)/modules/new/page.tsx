@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { saveModule } from "@/lib/actions/teacher";
 import { TitleSlugFields } from "@/components/teacher/TitleSlugFields";
-import { getAllCourses, getAllModules, getNextModuleOrderIndex } from "@/lib/data/teacher";
+import { getAllCourses, getAllModules } from "@/lib/data/teacher";
 
 type Props = {
   searchParams?: Promise<{ courseId?: string }>;
@@ -12,8 +12,9 @@ export default async function NewModulePage({ searchParams }: Props) {
   const courses = await getAllCourses();
   const selectedCourse =
     courses.find((course) => course.id === params.courseId) ?? courses[0];
-  const nextOrder = await getNextModuleOrderIndex(selectedCourse?.id);
   const modules = await getAllModules({ courseId: selectedCourse?.id });
+  const nextOrder =
+    modules.length > 0 ? Math.max(...modules.map((m) => m.order_index ?? 0)) + 1 : 0;
   const last =
     modules.length > 0
       ? modules.reduce((a, b) => (a.order_index > b.order_index ? a : b))

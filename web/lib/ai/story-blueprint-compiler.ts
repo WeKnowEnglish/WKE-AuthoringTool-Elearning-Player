@@ -14,6 +14,10 @@
  * - heavily tested
  *
  * Do not move runtime decision logic back into prompts.
+ *
+ * Unified story reaction rows are derived from emitted payloads at runtime
+ * (`web/lib/story-unified/README.md`). Preserve valid `storyPayloadSchema` shapes and
+ * consistent phase / item / `action_sequences` ids so the IR compiler stays deterministic.
  */
 
 import type {

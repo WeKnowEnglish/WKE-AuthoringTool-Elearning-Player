@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CourseCoverMediaFields } from "@/components/teacher/CourseCoverMediaFields";
 import { saveCourse } from "@/lib/actions/teacher";
 import { getCourse } from "@/lib/data/teacher";
 
@@ -58,6 +59,10 @@ export default async function EditCoursePage({ params }: Props) {
             className="mt-1 w-full rounded border px-3 py-2"
           />
         </div>
+        <CourseCoverMediaFields
+          initialCoverImageUrl={course.cover_image_url ?? ""}
+          initialCoverVideoUrl={course.cover_video_url ?? ""}
+        />
         <div>
           <label className="block text-sm font-medium">Standards</label>
           <textarea

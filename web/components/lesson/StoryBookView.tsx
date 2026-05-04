@@ -45,10 +45,17 @@ import {
   type StoryItem,
   type StoryPage,
   type StoryPagePhase,
+  type StartPlaygroundTapReward,
   type StoryPayload,
 } from "@/lib/lesson-schemas";
 import { resolveStoryIdleForItem, storyIdleClassForPreset } from "@/lib/story-idle";
 import { isStoryPassSatisfied } from "@/lib/story-pass";
+import {
+  buildUnifiedReactionsFromStoryPage,
+  compileUnifiedReactionBody,
+  isStoryUnifiedDispatchEnabled,
+} from "@/lib/story-unified";
+import type { StoryUnifiedNavPayload, StoryUnifiedReactionRow } from "@/lib/story-unified/schema";
 
 function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
@@ -115,6 +122,19 @@ type Props = {
   interactionScreenPassed?: boolean;
   onInteractionPass?: () => void;
   onInteractionWrong?: () => void;
+  /** Start / completion playground: minimal chrome, optional tap rewards. */
+  embedMode?: "bookend";
+  /** Replaces the last-page primary label (e.g. start CTA). */
+  bookendPrimaryLabel?: string;
+  bookendTapRewardByItemId?: Record<string, StartPlaygroundTapReward>;
+  onBookendTapReward?: (detail: {
+    itemId: string;
+    rule: StartPlaygroundTapReward;
+    /** 1-based tap count for this item within max_triggers (for reward event idempotency). */
+    triggerOrdinal: number;
+  }) => void;
+  /** When true with `embedMode: "bookend"`, hide Back/Next (parent supplies navigation). */
+  bookendHideNav?: boolean;
 };
 
 export function StoryBookView({
@@ -130,6 +150,11 @@ export function StoryBookView({
   interactionScreenPassed = false,
   onInteractionPass,
   onInteractionWrong,
+  embedMode,
+  bookendPrimaryLabel,
+  bookendTapRewardByItemId,
+  onBookendTapReward,
+  bookendHideNav = false,
 }: Props) {
   const pages = useMemo(() => getNormalizedStoryPages(payload), [payload]);
   const turnStyle = getStoryPageTurnStyle(payload);
@@ -144,6 +169,9 @@ export function StoryBookView({
   const [activeStoryPhaseId, setActiveStoryPhaseId] = useState<string | null>(null);
   const activeStoryPhaseIdRef = useRef<string | null>(null);
   const [hiddenItemIds, setHiddenItemIds] = useState<Record<string, boolean>>({});
+  const [activeVariableOutcomeByHost, setActiveVariableOutcomeByHost] = useState<
+    Record<string, string>
+  >({});
   const [visitedPageIds, setVisitedPageIds] = useState<Record<string, true>>({});
   const [deckDragCheckDone, setDeckDragCheckDone] = useState<Record<string, boolean>>({});
   const [deckFreeDragPos, setDeckFreeDragPos] = useState<
@@ -182,6 +210,7 @@ export function StoryBookView({
     Record<string, { perItem: Record<string, number>; aggregate: number }>
   >({});
   const tapGroupFiredRef = useRef<Set<string>>(new Set());
+  const bookendTapRewardCountsRef = useRef<Record<string, number>>({});
   /** Tap pool counters for phase `pool_interaction_quota` (key `p:${phaseId}`). */
   const phasePoolBucketsRef = useRef<
     Record<string, { perItem: Record<string, number>; aggregate: number }>
@@ -198,6 +227,16 @@ export function StoryBookView({
 
   const safeIndex = Math.min(pageIndex, Math.max(0, pages.length - 1));
   const page = pages[safeIndex];
+  useEffect(() => {
+    const initialByHost: Record<string, string> = {};
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const initial = it.variable_config?.initial_outcome_item_id?.trim();
+      if (initial) initialByHost[it.id] = initial;
+    }
+    setActiveVariableOutcomeByHost(initialByHost);
+  }, [page.id, page.items]);
+
   const getPreferredItemSoundUrl = useCallback(
     (item: StoryItem | undefined): string | undefined => {
       if (!item?.tap_speeches?.length) return undefined;
@@ -222,6 +261,53 @@ export function StoryBookView({
     const sid = activeStoryPhaseId ?? getStartPhaseIdFromNormalizedPage(page);
     return page.phases.find((p) => p.id === sid) ?? page.phases[0] ?? null;
   }, [page, activeStoryPhaseId, page.phases, page.phasesExplicit]);
+
+  const pageEnterSequenceIds = useMemo(
+    () =>
+      new Set(
+        getPageEnterActionSequences(page as unknown as StoryPage, { includeLegacy: true }).map(
+          (s) => s.id,
+        ),
+      ),
+    [page],
+  );
+  const variableOutcomeMetaByItemId = useMemo(() => {
+    const out = new Map<string, { hostId: string; lockChoice: boolean }>();
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const cfg = it.variable_config;
+      if (!cfg?.outcome_item_ids?.length) continue;
+      const lockChoice = cfg.lock_choice ?? true;
+      for (const outcomeId of cfg.outcome_item_ids) {
+        out.set(outcomeId, { hostId: it.id, lockChoice });
+      }
+    }
+    return out;
+  }, [page.items]);
+  const variableHiddenItemIds = useMemo(() => {
+    const hidden: Record<string, boolean> = {};
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const cfg = it.variable_config;
+      if (!cfg?.outcome_item_ids?.length) continue;
+      const selected =
+        activeVariableOutcomeByHost[it.id] ?? cfg.initial_outcome_item_id?.trim() ?? undefined;
+      if (!selected) continue;
+      for (const outcomeId of cfg.outcome_item_ids) {
+        if (outcomeId !== selected) hidden[outcomeId] = true;
+      }
+    }
+    return hidden;
+  }, [page.items, activeVariableOutcomeByHost]);
+
+  /** When set, page/phase enter + phase auto timer run from compiled rows; taps, pools, and drag-match still use legacy paths. */
+  const storyUnifiedRows = useMemo(() => {
+    if (!isStoryUnifiedDispatchEnabled()) return null;
+    const built = buildUnifiedReactionsFromStoryPage(page);
+    if (built.parseErrors.length > 0) return null;
+    return built.rows;
+  }, [page]);
+
   const pageRef = useRef(page);
   const currentStoryPhaseRef = useRef(currentStoryPhase);
   useEffect(() => {
@@ -235,6 +321,10 @@ export function StoryBookView({
     tapGroupBucketsRef.current = {};
     tapGroupFiredRef.current = new Set();
   }, [page.id]);
+
+  useEffect(() => {
+    bookendTapRewardCountsRef.current = {};
+  }, [screenId, embedMode]);
 
   useEffect(() => {
     phasePoolBucketsRef.current = {};
@@ -743,6 +833,89 @@ export function StoryBookView({
     [getActionStepDurationMs, runActionStep],
   );
 
+  const applyUnifiedNavRef = useRef<(nav: StoryUnifiedNavPayload) => void>(() => {});
+
+  const applyUnifiedNav = useCallback(
+    (nav: StoryUnifiedNavPayload) => {
+      switch (nav.kind) {
+        case "phase_id":
+          activeStoryPhaseIdRef.current = nav.phase_id;
+          setActiveStoryPhaseId(nav.phase_id);
+          break;
+        case "next_phase": {
+          const pg = pageRef.current;
+          const cur = activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(pg);
+          const ph = pg.phases.find((p) => p.id === cur);
+          const next = ph?.next_phase_id;
+          if (next) {
+            activeStoryPhaseIdRef.current = next;
+            setActiveStoryPhaseId(next);
+          }
+          break;
+        }
+        case "story_page": {
+          const idx = safeIndexRef.current;
+          const pgs = pagesNavRef.current;
+          if (nav.target === "next") {
+            if (idx < pgs.length - 1) jumpToPageRef.current(idx + 1);
+            else onNextScreenRef.current();
+          } else if (nav.target === "prev") {
+            if (idx > 0) jumpToPageRef.current(idx - 1);
+            else if (!lessonBackDisabledRef.current) onBackScreenRef.current();
+          } else if (nav.target === "page_id" && nav.page_id) {
+            const j = pgs.findIndex((pg) => pg.id === nav.page_id);
+            if (j >= 0) jumpToPageRef.current(j);
+          }
+          break;
+        }
+        case "lesson_screen":
+          onNextScreenRef.current();
+          break;
+        case "lesson_pass":
+          onInteractionPass?.();
+          break;
+        case "end_phase":
+        default:
+          break;
+      }
+    },
+    [onInteractionPass],
+  );
+
+  useEffect(() => {
+    applyUnifiedNavRef.current = applyUnifiedNav;
+  }, [applyUnifiedNav]);
+
+  const runStoryUnifiedReactionRow = useCallback(
+    (row: StoryUnifiedReactionRow, itemById: Map<string, StoryItem>, ownerItemId: string | null) => {
+      const seqId = row.id ?? row.source_sequence_id ?? "story-unified";
+      const { sequence, navAfter } = compileUnifiedReactionBody(
+        seqId,
+        row.reaction_body,
+        ownerItemId ?? row.owner_item_id ?? null,
+      );
+      const filtered: StoryActionSequence = {
+        ...sequence,
+        steps: sequence.steps.filter(
+          (step) => !(step.kind === "play_sound" && !audioUnlockedRef.current),
+        ),
+      };
+      const timers: number[] = [];
+      if (filtered.steps.length > 0) {
+        timers.push(
+          ...runActionSequence(filtered, itemById, ownerItemId ?? row.owner_item_id ?? null).timers,
+        );
+      }
+      if (navAfter) {
+        queueMicrotask(() => {
+          applyUnifiedNavRef.current(navAfter);
+        });
+      }
+      return timers;
+    },
+    [runActionSequence],
+  );
+
   const evaluateTapPoolQuotas = useCallback(
     (tappedItemId: string) => {
       const pg = pageRef.current;
@@ -929,18 +1102,38 @@ export function StoryBookView({
 
   useEffect(() => {
     if (!page.auto_play) return;
-    const sequences = getPageEnterActionSequences(page, { includeLegacy: true });
-    if (sequences.length === 0) return;
     const itemById = new Map(page.items.map((it) => [it.id, it]));
     const timers: number[] = [];
-    for (const sequence of sequences) {
-      const filtered: StoryActionSequence = {
-        ...sequence,
-        steps: sequence.steps.filter(
-          (step) => !(step.kind === "play_sound" && !audioUnlockedRef.current),
-        ),
-      };
-      timers.push(...runActionSequence(filtered, itemById, null).timers);
+    const startId = getStartPhaseIdFromNormalizedPage(page);
+
+    let ranUnifiedPageEnter = false;
+    if (storyUnifiedRows) {
+      const rows = storyUnifiedRows.filter(
+        (r) =>
+          r.trigger === "phase_enter" &&
+          r.phase_id === startId &&
+          !!r.source_sequence_id &&
+          pageEnterSequenceIds.has(r.source_sequence_id),
+      );
+      if (rows.length > 0) {
+        ranUnifiedPageEnter = true;
+        for (const row of rows) {
+          timers.push(...runStoryUnifiedReactionRow(row, itemById, row.owner_item_id ?? null));
+        }
+      }
+    }
+    if (!ranUnifiedPageEnter) {
+      const sequences = getPageEnterActionSequences(page, { includeLegacy: true });
+      if (sequences.length === 0) return;
+      for (const sequence of sequences) {
+        const filtered: StoryActionSequence = {
+          ...sequence,
+          steps: sequence.steps.filter(
+            (step) => !(step.kind === "play_sound" && !audioUnlockedRef.current),
+          ),
+        };
+        timers.push(...runActionSequence(filtered, itemById, null).timers);
+      }
     }
     return () => {
       for (const t of timers) window.clearTimeout(t);
@@ -951,7 +1144,11 @@ export function StoryBookView({
     page.id,
     page.action_sequences,
     page.timeline,
+    page.phases,
+    pageEnterSequenceIds,
     runActionSequence,
+    runStoryUnifiedReactionRow,
+    storyUnifiedRows,
   ]);
 
   useEffect(() => {
@@ -991,6 +1188,28 @@ export function StoryBookView({
     if (!page.phasesExplicit) return;
     if (!currentStoryPhase) return;
     if (getPhaseInteractionKind(currentStoryPhase) === "legacy") return;
+
+    if (storyUnifiedRows) {
+      const timerRow = storyUnifiedRows.find(
+        (r) =>
+          r.trigger === "timer" &&
+          r.phase_id === currentStoryPhase.id &&
+          typeof r.timer_delay_ms === "number",
+      );
+      if (timerRow) {
+        phaseAutoTimerRef.current = setTimeout(() => {
+          const itemById = new Map(pageRef.current.items.map((it) => [it.id, it]));
+          runStoryUnifiedReactionRow(timerRow, itemById, timerRow.owner_item_id ?? null);
+        }, timerRow.timer_delay_ms ?? 0);
+        return () => {
+          if (phaseAutoTimerRef.current) {
+            clearTimeout(phaseAutoTimerRef.current);
+            phaseAutoTimerRef.current = null;
+          }
+        };
+      }
+    }
+
     const r = getResolvedPhaseTransition(currentStoryPhase);
     if (r?.type !== "auto") return;
     phaseAutoTimerRef.current = setTimeout(() => {
@@ -1003,17 +1222,40 @@ export function StoryBookView({
         phaseAutoTimerRef.current = null;
       }
     };
-  }, [currentStoryPhase, page.id, page.phasesExplicit]);
+  }, [
+    currentStoryPhase,
+    page.id,
+    page.phasesExplicit,
+    storyUnifiedRows,
+    runStoryUnifiedReactionRow,
+  ]);
 
   useEffect(() => {
     if (!page.phasesExplicit || !currentStoryPhase) return;
-    const sequences = getPhaseEnterActionSequences(currentStoryPhase, { includeLegacy: true });
-    if (sequences.length === 0) return;
     const timers: number[] = [];
     const raf = requestAnimationFrame(() => {
       const itemById = new Map(page.items.map((it) => [it.id, it]));
-      for (const sequence of sequences) {
-        timers.push(...runActionSequence(sequence, itemById, null).timers);
+      let ranUnifiedPhaseEnter = false;
+      if (storyUnifiedRows) {
+        const rows = storyUnifiedRows.filter(
+          (r) =>
+            r.trigger === "phase_enter" &&
+            r.phase_id === currentStoryPhase.id &&
+            (!r.source_sequence_id || !pageEnterSequenceIds.has(r.source_sequence_id)),
+        );
+        if (rows.length > 0) {
+          ranUnifiedPhaseEnter = true;
+          for (const row of rows) {
+            timers.push(...runStoryUnifiedReactionRow(row, itemById, row.owner_item_id ?? null));
+          }
+        }
+      }
+      if (!ranUnifiedPhaseEnter) {
+        const sequences = getPhaseEnterActionSequences(currentStoryPhase, { includeLegacy: true });
+        if (sequences.length === 0) return;
+        for (const sequence of sequences) {
+          timers.push(...runActionSequence(sequence, itemById, null).timers);
+        }
       }
     });
     return () => {
@@ -1028,7 +1270,10 @@ export function StoryBookView({
     page.id,
     page.items,
     page.phasesExplicit,
+    pageEnterSequenceIds,
     runActionSequence,
+    runStoryUnifiedReactionRow,
+    storyUnifiedRows,
   ]);
 
   useEffect(() => {
@@ -1393,6 +1638,28 @@ export function StoryBookView({
         }
       }
 
+      if (embedMode === "bookend" && bookendTapRewardByItemId && onBookendTapReward) {
+        const rule = bookendTapRewardByItemId[item.id];
+        if (rule) {
+          const maxT = rule.max_triggers ?? 1;
+          const prevN = bookendTapRewardCountsRef.current[item.id] ?? 0;
+          if (prevN < maxT) {
+            const triggerOrdinal = prevN + 1;
+            bookendTapRewardCountsRef.current[item.id] = triggerOrdinal;
+            const su = rule.play_sound_url?.trim();
+            if (su && !muted && itemAudioRef.current) {
+              try {
+                itemAudioRef.current.src = su;
+                void itemAudioRef.current.play().catch(() => {});
+              } catch {
+                /* ignore */
+              }
+            }
+            onBookendTapReward({ itemId: item.id, rule, triggerOrdinal });
+          }
+        }
+      }
+
       queueMicrotask(() => {
         if (opts?.skipPhaseClickAdvance) return;
         if (!page.phasesExplicit) {
@@ -1435,6 +1702,9 @@ export function StoryBookView({
       page,
       runActionSequence,
       evaluateTapPoolQuotas,
+      embedMode,
+      bookendTapRewardByItemId,
+      onBookendTapReward,
     ],
   );
 
@@ -1444,6 +1714,15 @@ export function StoryBookView({
 
   const handleItemPointerUp = useCallback(
     (item: StoryItem) => {
+      const variableOwner = variableOutcomeMetaByItemId.get(item.id);
+      if (variableOwner) {
+        setActiveVariableOutcomeByHost((prev) => {
+          const current = prev[variableOwner.hostId];
+          if (current === item.id) return prev;
+          if (variableOwner.lockChoice && current && current !== item.id) return prev;
+          return { ...prev, [variableOwner.hostId]: item.id };
+        });
+      }
       const deckMode = item.draggable_mode ?? "none";
       if (deckMode === "free" || deckMode === "check_target") {
         return;
@@ -1459,7 +1738,7 @@ export function StoryBookView({
       }
       runItemTapEffects(item, {});
     },
-    [page.phasesExplicit, runItemTapEffects],
+    [page.phasesExplicit, runItemTapEffects, variableOutcomeMetaByItemId],
   );
 
   const onDraggablePointerDown = useCallback(
@@ -1734,7 +2013,7 @@ export function StoryBookView({
       {[...page.items]
         .sort((a, b) => (a.z_index ?? 0) - (b.z_index ?? 0))
         .map((item) => {
-          if (hiddenItemIds[item.id]) return null;
+          if (hiddenItemIds[item.id] || variableHiddenItemIds[item.id]) return null;
           const deckMode = item.draggable_mode ?? "none";
           const isDeckDraggable = deckMode === "free" || deckMode === "check_target";
           const isDeckMatched =
@@ -1782,6 +2061,7 @@ export function StoryBookView({
             : itemKind === "shape" ? "Story shape"
             : itemKind === "line" ? "Story line"
             : itemKind === "button" ? "Story button"
+            : itemKind === "variable" ? "Variable host"
             : "Story picture";
           const resolvedIdle =
             prefersReducedMotion ?
@@ -2003,7 +2283,7 @@ export function StoryBookView({
         {stage}
       </div>
 
-      {canvasEdit || page.body_text?.trim() ? (
+      {embedMode !== "bookend" && (canvasEdit || page.body_text?.trim()) ? (
         <KidPanel>
           {canvasEdit && !isMulti ? (
             <div className="space-y-3">
@@ -2107,41 +2387,49 @@ export function StoryBookView({
           )}
         </KidPanel>
       ) : null}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <KidButton
-          type="button"
-          variant="accent"
-          onClick={listenCurrent}
-        >
-          Listen
-        </KidButton>
-        {!audioUnlocked && page.auto_play && pageEnterHasScheduledSounds(page) ? (
-          <span className="text-sm text-neutral-600">
-            Tap Listen or turn the page to hear sounds.
-          </span>
-        ) : null}
-      </div>
+      {embedMode !== "bookend" ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <KidButton
+            type="button"
+            variant="accent"
+            onClick={listenCurrent}
+          >
+            Listen
+          </KidButton>
+          {!audioUnlocked && page.auto_play && pageEnterHasScheduledSounds(page) ? (
+            <span className="text-sm text-neutral-600">
+              Tap Listen or turn the page to hear sounds.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
-      <GuideBlock guide={payload.guide} />
+      {embedMode !== "bookend" ? <GuideBlock guide={payload.guide} /> : null}
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <KidButton
-          type="button"
-          variant="secondary"
-          disabled={firstPage && lessonBackDisabled}
-          onClick={goPageBack}
-        >
-          Back
-        </KidButton>
-        <KidButton
-          type="button"
-          disabled={lastPage && !lessonAdvanceOk}
-          onClick={goPageNext}
-        >
-          {lastPage ? "Next" : "Next page"}
-        </KidButton>
-      </div>
-      {isMulti && layoutMode === "slide" ? (
+      {embedMode !== "bookend" || !bookendHideNav ? (
+        <div className="mt-6 flex flex-wrap gap-3">
+          <KidButton
+            type="button"
+            variant="secondary"
+            disabled={firstPage && lessonBackDisabled}
+            onClick={goPageBack}
+          >
+            Back
+          </KidButton>
+          <KidButton
+            type="button"
+            disabled={lastPage && !lessonAdvanceOk}
+            onClick={goPageNext}
+          >
+            {lastPage ?
+              embedMode === "bookend" && bookendPrimaryLabel?.trim() ?
+                bookendPrimaryLabel.trim()
+              : "Next"
+            : "Next page"}
+          </KidButton>
+        </div>
+      ) : null}
+      {isMulti && layoutMode === "slide" && pages.length > 1 ? (
         <div
           className="mt-4 flex flex-wrap items-center justify-center gap-2"
           role="tablist"

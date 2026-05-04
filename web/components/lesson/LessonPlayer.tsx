@@ -38,7 +38,11 @@ import {
   mcQuizPayloadSchema,
   shortAnswerPayloadSchema,
   startPayloadSchema,
+  storyPayloadFromStartPlayground,
+  tapRewardsByItemId,
   trueFalsePayloadSchema,
+  type CompletionPlayground,
+  type StartPlaygroundTapReward,
 } from "@/lib/lesson-schemas";
 import { parseScreenPayload, type ScreenPayload } from "@/lib/lesson-schemas-player";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
@@ -133,25 +137,114 @@ const AVATAR_OPTIONS = [
   { id: "star", emoji: "⭐" },
 ] as const;
 
+function applyPlaygroundTapReward(opts: {
+  lessonId: string;
+  screenOrCompletionKey: string;
+  itemId: string;
+  rule: StartPlaygroundTapReward;
+  triggerOrdinal: number;
+  isPreview: boolean;
+}) {
+  if (opts.isPreview) return;
+  const { lessonId, screenOrCompletionKey, itemId, rule, triggerOrdinal } = opts;
+  const goldDelta = Math.max(0, rule.gold ?? 0);
+  const experienceDelta = Math.max(0, rule.experience ?? 0);
+  if (goldDelta > 0 || experienceDelta > 0) {
+    const eventId = `${lessonId}:${screenOrCompletionKey}:${itemId}:playground:${triggerOrdinal}`;
+    awardRewards({
+      goldDelta,
+      experienceDelta,
+      eventId,
+    });
+  }
+  if (rule.sticker === true) {
+    recordCorrectAnswer();
+  }
+}
+
 function RewardScreen({
   lessonTitle,
   stickerCount,
   onPlayAgain,
   muted,
+  lessonId,
+  isPreview,
+  completionPlayground,
+  onEconomyRefresh,
 }: {
   lessonTitle: string;
   stickerCount: number;
   onPlayAgain: () => void;
   muted: boolean;
+  lessonId: string;
+  isPreview: boolean;
+  completionPlayground?: CompletionPlayground | null;
+  onEconomyRefresh: () => void;
 }) {
   const [avatar, setAvatar] = useState<string | null>(
     () => getProgressSnapshot().avatarId ?? null,
+  );
+
+  const completionStoryPayload = useMemo(() => {
+    if (!completionPlayground) return null;
+    try {
+      return storyPayloadFromStartPlayground(completionPlayground);
+    } catch {
+      return null;
+    }
+  }, [completionPlayground]);
+
+  const completionTapRewards = useMemo(
+    () => tapRewardsByItemId(completionPlayground?.tap_rewards),
+    [completionPlayground?.tap_rewards],
+  );
+
+  const onBookendTapReward = useCallback(
+    ({
+      itemId,
+      rule,
+      triggerOrdinal,
+    }: {
+      itemId: string;
+      rule: StartPlaygroundTapReward;
+      triggerOrdinal: number;
+    }) => {
+      applyPlaygroundTapReward({
+        lessonId,
+        screenOrCompletionKey: "completion",
+        itemId,
+        rule,
+        triggerOrdinal,
+        isPreview,
+      });
+      onEconomyRefresh();
+    },
+    [lessonId, isPreview, onEconomyRefresh],
   );
 
   return (
     <div className="relative overflow-hidden rounded-xl">
       <KidConfetti active />
       <KidPanel className="relative text-center">
+        {completionStoryPayload ? (
+          <div className="mb-6 text-left">
+            <StoryBookView
+              key="completion-playground"
+              screenId={`${lessonId}-completion-playground`}
+              payload={completionStoryPayload}
+              muted={muted}
+              compactPreview={isPreview}
+              canvasEdit={false}
+              lessonBackDisabled
+              embedMode="bookend"
+              bookendHideNav
+              bookendTapRewardByItemId={completionTapRewards}
+              onBookendTapReward={onBookendTapReward}
+              onNextScreen={() => {}}
+              onBackScreen={() => {}}
+            />
+          </div>
+        ) : null}
         <p className="text-3xl font-extrabold text-kid-ink">Great job!</p>
         {avatar ? (
           <p className="mt-4 text-8xl leading-none" aria-hidden>
@@ -211,6 +304,8 @@ type Props = {
   lessonId: string;
   lessonTitle: string;
   screens: LessonScreenRow[];
+  /** Optional post-lesson interactive layer (same schema as start-screen `playground`). */
+  completionPlayground?: CompletionPlayground | null;
   /** Preview: no progress writes, different end screen */
   mode?: LessonPlayerMode;
   /** When set (e.g. teacher preview), open this screen index first */
@@ -227,6 +322,7 @@ export function LessonPlayer({
   lessonId,
   lessonTitle,
   screens,
+  completionPlayground = null,
   mode = "student",
   initialScreenIndex = 0,
   visualEdit,
@@ -254,6 +350,15 @@ export function LessonPlayer({
   const isPreview = mode === "preview";
   const canvasEdit = isPreview && visualEdit != null;
 
+  const refreshEconomy = useCallback(() => {
+    queueMicrotask(() => {
+      setStickerCount(getStickerCount());
+      const rewards = getRewards();
+      setGold(rewards.gold);
+      setExperience(rewards.experience);
+    });
+  }, []);
+
   useEffect(() => {
     if (isPreview) return;
     queueMicrotask(() => {
@@ -279,6 +384,44 @@ export function LessonPlayer({
   const quizProgress = useMemo(
     () => getQuizProgressForLessonIndex(screens, index),
     [screens, index],
+  );
+
+  const startBookendStoryPayload = useMemo(() => {
+    if (!parsed || parsed.type !== "start" || !parsed.playground) return null;
+    try {
+      return storyPayloadFromStartPlayground(parsed.playground);
+    } catch {
+      return null;
+    }
+  }, [parsed]);
+
+  const startBookendTapRewards = useMemo(() => {
+    if (!parsed || parsed.type !== "start" || !parsed.playground) return {};
+    return tapRewardsByItemId(parsed.playground.tap_rewards);
+  }, [parsed]);
+
+  const onStartBookendTapReward = useCallback(
+    ({
+      itemId,
+      rule,
+      triggerOrdinal,
+    }: {
+      itemId: string;
+      rule: StartPlaygroundTapReward;
+      triggerOrdinal: number;
+    }) => {
+      if (!screen) return;
+      applyPlaygroundTapReward({
+        lessonId,
+        screenOrCompletionKey: screen.id,
+        itemId,
+        rule,
+        triggerOrdinal,
+        isPreview,
+      });
+      refreshEconomy();
+    },
+    [lessonId, screen, isPreview, refreshEconomy],
   );
 
   useEffect(() => {
@@ -483,6 +626,10 @@ export function LessonPlayer({
         lessonTitle={lessonTitle}
         stickerCount={stickerCount}
         muted={muted}
+        lessonId={lessonId}
+        isPreview={isPreview}
+        completionPlayground={completionPlayground}
+        onEconomyRefresh={refreshEconomy}
         onPlayAgain={() => {
           setDone(false);
           setIndex(0);
@@ -590,7 +737,29 @@ export function LessonPlayer({
               </KidButton>
             </div>
           ) : null}
-          {parsed.image_url ? (
+          {startBookendStoryPayload ? (
+            <StoryBookView
+              key={`start-pg-${screen.id}`}
+              screenId={screen.id}
+              payload={startBookendStoryPayload}
+              muted={muted}
+              compactPreview={isPreview}
+              canvasEdit={false}
+              lessonBackDisabled={index <= 0}
+              embedMode="bookend"
+              bookendPrimaryLabel={parsed.cta_label ?? "Start learning"}
+              bookendTapRewardByItemId={startBookendTapRewards}
+              onBookendTapReward={onStartBookendTapReward}
+              onNextScreen={() => {
+                playSfx("tap", muted);
+                goNext();
+              }}
+              onBackScreen={() => {
+                playSfx("tap", muted);
+                goBack();
+              }}
+            />
+          ) : parsed.image_url ? (
             <div
               className={clsx(
                 "relative aspect-[16/10] w-full overflow-hidden rounded-lg border-4 border-kid-ink",
@@ -626,6 +795,7 @@ export function LessonPlayer({
                           image_fit: parsed.image_fit ?? "contain",
                           cta_label: parsed.cta_label,
                           read_aloud_title: e.target.value || undefined,
+                          playground: parsed.playground,
                         });
                         visualEdit!.onPayloadChange(screen.id, next);
                       } catch {
@@ -644,9 +814,10 @@ export function LessonPlayer({
                       const next = startPayloadSchema.parse({
                         type: "start",
                         image_url: parsed.image_url,
-                          image_fit: parsed.image_fit ?? "contain",
+                        image_fit: parsed.image_fit ?? "contain",
                         cta_label: e.target.value,
                         read_aloud_title: parsed.read_aloud_title,
+                        playground: parsed.playground,
                       });
                       visualEdit!.onPayloadChange(screen.id, next);
                     } catch {
@@ -655,7 +826,7 @@ export function LessonPlayer({
                   }}
                 />
               </div>
-            ) : (
+            ) : !startBookendStoryPayload ? (
               <KidButton
                 onClick={() => {
                   playSfx("tap", muted);
@@ -664,7 +835,7 @@ export function LessonPlayer({
               >
                 {parsed.cta_label ?? "Start learning"}
               </KidButton>
-            )}
+            ) : null}
           </div>
         </div>
       )}

@@ -40,7 +40,16 @@ export function StoryItemLayerContent({ item }: { item: StoryItem }) {
         preserveAspectRatio="none"
         aria-hidden
       >
-        <line x1="0" y1="0" x2="100" y2="100" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+        <line
+          x1="0"
+          y1="0"
+          x2="100"
+          y2="100"
+          stroke={stroke}
+          strokeWidth={sw}
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
     );
   }
@@ -49,7 +58,7 @@ export function StoryItemLayerContent({ item }: { item: StoryItem }) {
     const bg = item.color_hex?.trim() || "#0ea5e9";
     return (
       <span
-        className="flex h-full w-full items-center justify-center rounded-lg px-2 text-center text-sm font-bold shadow-inner"
+        className="flex h-full w-full items-center justify-center rounded-lg px-2 text-center text-sm font-bold leading-tight whitespace-pre-wrap break-words shadow-inner"
         style={{
           backgroundColor: bg,
           color: item.text_color ?? "#ffffff",
@@ -57,6 +66,15 @@ export function StoryItemLayerContent({ item }: { item: StoryItem }) {
         }}
       >
         {item.text?.trim() || "Button"}
+      </span>
+    );
+  }
+
+  if (kind === "variable") {
+    const outcomes = item.variable_config?.outcome_item_ids?.length ?? 0;
+    return (
+      <span className="flex h-full w-full items-center justify-center rounded-lg border border-dashed border-violet-300 bg-violet-50/70 px-2 text-center text-[11px] font-semibold text-violet-900">
+        Variable host ({outcomes} outcome{outcomes === 1 ? "" : "s"})
       </span>
     );
   }

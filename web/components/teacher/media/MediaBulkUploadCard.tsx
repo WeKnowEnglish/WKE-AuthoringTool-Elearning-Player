@@ -7,6 +7,7 @@ import type {
   MediaDuplicateIssue,
   UploadTeacherMediaBulkItemResult,
 } from "@/lib/actions/media";
+import { computeClientImageHashes, type ClientImageHashes } from "@/components/teacher/media/client-image-hash";
 
 type Props = {
   inspectDuplicatesAction: (formData: FormData) => Promise<MediaDuplicateIssue[]>;
@@ -37,11 +38,22 @@ function runPool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): 
   return Promise.all(Array.from({ length: n }, () => worker())).then(() => undefined);
 }
 
-function buildSingleUploadFormData(file: File, kind: string, duplicateHandling: DuplicateHandling): FormData {
+function buildSingleUploadFormData(
+  file: File,
+  kind: string,
+  duplicateHandling: DuplicateHandling,
+  hashes: ClientImageHashes | null,
+): FormData {
   const fd = new FormData();
   fd.set("file", file);
   fd.set("kind", kind);
   fd.set("duplicate_handling", duplicateHandling);
+  if (kind === "image" && hashes?.sha256Hex) {
+    fd.set("client_sha256", hashes.sha256Hex);
+  }
+  if (kind === "image" && hashes?.dHashHex) {
+    fd.set("client_dhash", hashes.dHashHex);
+  }
   return fd;
 }
 
@@ -63,6 +75,9 @@ export function MediaBulkUploadCard({ inspectDuplicatesAction, uploadSingleActio
   const [reviewIssues, setReviewIssues] = useState<ReviewIssue[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedFilePreviewByIndex, setSelectedFilePreviewByIndex] = useState<Map<number, string>>(new Map());
+  const [clientHashesByIndex, setClientHashesByIndex] = useState<Map<number, ClientImageHashes | null>>(
+    () => new Map(),
+  );
   const [progressByIndex, setProgressByIndex] = useState<Partial<Record<number, RowProgress>>>({});
   const [dupApplyBusy, setDupApplyBusy] = useState<Set<number>>(() => new Set());
 
@@ -89,6 +104,7 @@ export function MediaBulkUploadCard({ inspectDuplicatesAction, uploadSingleActio
     setSessionActive(false);
     setReviewIssues([]);
     setProgressByIndex({});
+    setClientHashesByIndex(new Map());
     setDropError("");
   }
 
@@ -97,6 +113,7 @@ export function MediaBulkUploadCard({ inspectDuplicatesAction, uploadSingleActio
     setSessionActive(false);
     setReviewIssues([]);
     setProgressByIndex({});
+    setClientHashesByIndex(new Map());
     const input = fileInputRef.current;
     if (!input?.files?.length) {
       setSelectedFiles([]);
@@ -167,9 +184,26 @@ export function MediaBulkUploadCard({ inspectDuplicatesAction, uploadSingleActio
 
     setStartBusy(true);
     try {
+      const hashMap = new Map<number, ClientImageHashes | null>();
+      if (kind === "image") {
+        await runPool(files.map((_, i) => i), 6, async (i) => {
+          const hashes = await computeClientImageHashes(files[i]!);
+          hashMap.set(i, hashes);
+        });
+      }
+      setClientHashesByIndex(hashMap);
       const inspectFd = new FormData();
       inspectFd.set("kind", kind);
-      files.forEach((f) => inspectFd.append("files", f));
+      files.forEach((f, i) => {
+        inspectFd.append("files", f);
+        const hashes = hashMap.get(i);
+        if (hashes?.sha256Hex) {
+          inspectFd.set(`client_sha256_${i}`, hashes.sha256Hex);
+        }
+        if (hashes?.dHashHex) {
+          inspectFd.set(`client_dhash_${i}`, hashes.dHashHex);
+        }
+      });
       const issues = await inspectDuplicatesAction(inspectFd);
 
       setSessionActive(true);
@@ -184,7 +218,9 @@ export function MediaBulkUploadCard({ inspectDuplicatesAction, uploadSingleActio
 
       await runPool(cleanIndices, UPLOAD_CONCURRENCY, async (i) => {
         setProgressByIndex((prev) => ({ ...prev, [i]: { phase: "uploading" } }));
-        const result = await uploadSingleAction(buildSingleUploadFormData(files[i]!, kind, defaultDup));
+        const result = await uploadSingleAction(
+          buildSingleUploadFormData(files[i]!, kind, defaultDup, hashMap.get(i) ?? null),
+        );
         setProgressByIndex((prev) => ({ ...prev, [i]: { phase: "done", result } }));
       });
 
@@ -193,6 +229,7 @@ export function MediaBulkUploadCard({ inspectDuplicatesAction, uploadSingleActio
       setSessionActive(false);
       setReviewIssues([]);
       setProgressByIndex({});
+      setClientHashesByIndex(new Map());
       setDropError(error instanceof Error ? error.message : "Upload failed to start.");
     } finally {
       setStartBusy(false);
@@ -211,7 +248,10 @@ export function MediaBulkUploadCard({ inspectDuplicatesAction, uploadSingleActio
     setDupApplyBusy((prev) => new Set(prev).add(issue.index));
     setProgressByIndex((prev) => ({ ...prev, [issue.index]: { phase: "uploading" } }));
     try {
-      const result = await uploadSingleAction(buildSingleUploadFormData(file, kind, duplicateHandling));
+      const hashes = clientHashesByIndex.get(issue.index) ?? null;
+      const result = await uploadSingleAction(
+        buildSingleUploadFormData(file, kind, duplicateHandling, hashes),
+      );
       setProgressByIndex((prev) => ({
         ...prev,
         [issue.index]: { phase: "done", result },

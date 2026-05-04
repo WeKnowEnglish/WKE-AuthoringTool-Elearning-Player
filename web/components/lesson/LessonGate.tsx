@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { LessonPlayer } from "@/components/lesson/LessonPlayer";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import type { LessonRow, LessonScreenRow, ModuleRow } from "@/lib/data/catalog";
+import type { CompletionPlayground } from "@/lib/lesson-schemas";
 import { isModuleUnlocked } from "@/lib/gating";
 import { getProgressSnapshot } from "@/lib/progress/local-storage";
 
@@ -14,6 +15,7 @@ type Props = {
   lessons: LessonRow[];
   lesson: LessonRow;
   screens: LessonScreenRow[];
+  completionPlayground?: CompletionPlayground | null;
 };
 
 export function LessonGate({
@@ -22,6 +24,7 @@ export function LessonGate({
   lessons,
   lesson,
   screens,
+  completionPlayground = null,
 }: Props) {
   const [ready, setReady] = useState(false);
   const [allowed, setAllowed] = useState(false);
@@ -65,6 +68,7 @@ export function LessonGate({
       lessonId={lesson.id}
       lessonTitle={lesson.title}
       screens={screens}
+      completionPlayground={completionPlayground}
     />
   );
 }

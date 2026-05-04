@@ -8,15 +8,6 @@ export const guideSchema = z
   })
   .optional();
 
-export const startPayloadSchema = z.object({
-  type: z.literal("start"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  cta_label: z.string().optional().default("Start learning"),
-  /** Optional TTS line; player also offers lesson title read-aloud */
-  read_aloud_title: z.string().optional(),
-});
-
 /** Story book: CSS-friendly animation presets (no arbitrary keyframes from JSON). */
 export const storyAnimationPresetSchema = z.enum([
   "none",
@@ -611,6 +602,13 @@ export const storyTapInteractionGroupSchema = z
 
 export type StoryTapInteractionGroup = z.infer<typeof storyTapInteractionGroupSchema>;
 
+const storyVariableConfigSchema = z.object({
+  outcome_item_ids: z.array(z.string()).min(1),
+  initial_outcome_item_id: z.string().optional(),
+  /** When true, first picked outcome becomes final for this page visit. */
+  lock_choice: z.boolean().optional().default(true),
+});
+
 export const storyItemSchema = z
   .object({
     id: z.string(),
@@ -619,9 +617,13 @@ export const storyItemSchema = z
     /** When set, links to `StoryPayload.cast[].id` for shared identity; layout stays per page item. */
     registry_id: z.string().optional(),
     kind: z
-      .enum(["image", "text", "shape", "line", "button"])
+      .enum(["image", "text", "shape", "line", "button", "variable"])
       .optional()
       .default("image"),
+    /** Teacher-facing semantic role to organize authoring workflows. */
+    item_role: z
+      .enum(["decor", "interactive", "informational", "narration"])
+      .optional(),
     image_url: z.string().optional(),
     text: z.string().optional(),
     text_color: z.string().optional(),
@@ -670,6 +672,8 @@ export const storyItemSchema = z
       .optional(),
     /** Optional tap pool anchored on this item (parent); see `storyTapInteractionGroupSchema`. */
     tap_interaction_group: storyTapInteractionGroupSchema.optional(),
+    /** Variable host configuration; outcomes are normal sibling items referenced by id. */
+    variable_config: storyVariableConfigSchema.optional(),
   })
   .superRefine((item, ctx) => {
     const kind = item.kind ?? "image";
@@ -689,6 +693,12 @@ export const storyItemSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: `Story item ${item.id} is button kind but missing text`,
+      });
+    }
+    if (kind === "variable" && !item.variable_config?.outcome_item_ids?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Story item ${item.id} is variable kind but missing variable_config.outcome_item_ids`,
       });
     }
   });
@@ -753,6 +763,80 @@ export const storyPageSchema = z
         return;
       }
       ids.add(it.id);
+    }
+    const itemById = new Map(page.items.map((it) => [it.id, it]));
+    const variableOutcomeOwnerByItemId = new Map<string, string>();
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const cfg = it.variable_config;
+      if (!cfg || cfg.outcome_item_ids.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Variable item ${it.id} requires variable_config.outcome_item_ids`,
+        });
+        return;
+      }
+      const normalized = cfg.outcome_item_ids
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0);
+      if (normalized.length !== cfg.outcome_item_ids.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Variable item ${it.id} outcome_item_ids must not contain empty ids`,
+        });
+        return;
+      }
+      const seen = new Set<string>();
+      for (const outcomeId of normalized) {
+        if (seen.has(outcomeId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} has duplicate outcome item id: ${outcomeId}`,
+          });
+          return;
+        }
+        seen.add(outcomeId);
+        if (outcomeId === it.id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} cannot include itself as an outcome`,
+          });
+          return;
+        }
+        if (!ids.has(outcomeId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} references unknown outcome item id: ${outcomeId}`,
+          });
+          return;
+        }
+        const owner = variableOutcomeOwnerByItemId.get(outcomeId);
+        if (owner && owner !== it.id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Outcome item ${outcomeId} is already owned by variable item ${owner}`,
+          });
+          return;
+        }
+        const outcomeItem = itemById.get(outcomeId);
+        if (outcomeItem && (outcomeItem.kind ?? "image") === "variable") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Variable item ${it.id} cannot use variable item ${outcomeId} as an outcome`,
+          });
+          return;
+        }
+        variableOutcomeOwnerByItemId.set(outcomeId, it.id);
+      }
+      const initialOutcome = cfg.initial_outcome_item_id?.trim();
+      if (initialOutcome && !seen.has(initialOutcome)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            `Variable item ${it.id} initial_outcome_item_id must be one of its outcome_item_ids`,
+        });
+        return;
+      }
     }
     const tapGroupParentByGroupId = new Map<string, string>();
     for (const it of page.items) {
@@ -1314,6 +1398,138 @@ export const storyPayloadSchema = z
   });
 
 export type StoryPayload = z.infer<typeof storyPayloadSchema>;
+
+/** Tap easter-egg rewards on start-screen playground (gated in player; not used on full story payloads). */
+export const startPlaygroundTapRewardSchema = z.object({
+  item_id: z.string().min(1).max(200),
+  gold: z.number().int().min(0).max(100).optional(),
+  experience: z.number().int().min(0).max(500).optional(),
+  sticker: z.boolean().optional(),
+  max_triggers: z.number().int().min(1).max(20).optional().default(1),
+  play_sound_url: z.string().max(2000).optional(),
+});
+
+export type StartPlaygroundTapReward = z.infer<typeof startPlaygroundTapRewardSchema>;
+
+export const startPlaygroundSchema = z
+  .object({
+    page: storyPageSchema,
+    cast: z.array(storyCastEntrySchema).optional(),
+    tap_rewards: z.array(startPlaygroundTapRewardSchema).max(30).optional(),
+  })
+  .superRefine((pg, ctx) => {
+    if (pg.page.phases != null && pg.page.phases.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["page", "phases"],
+        message:
+          "Playground page cannot include phases; use items, tap sounds, and action sequences only.",
+      });
+    }
+    const seen = new Set<string>();
+    for (const tr of pg.tap_rewards ?? []) {
+      if (seen.has(tr.item_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tap_rewards"],
+          message: `Duplicate tap_rewards item_id: ${tr.item_id}`,
+        });
+        return;
+      }
+      seen.add(tr.item_id);
+      const hasEffect =
+        (tr.gold != null && tr.gold > 0) ||
+        (tr.experience != null && tr.experience > 0) ||
+        tr.sticker === true ||
+        !!(tr.play_sound_url?.trim());
+      if (!hasEffect) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tap_rewards"],
+          message: `tap_rewards entry for ${tr.item_id} needs gold, experience, sticker, and/or play_sound_url`,
+        });
+      }
+    }
+  });
+
+export type StartPlayground = z.infer<typeof startPlaygroundSchema>;
+
+/** Post-lesson completion overlay (same shape as start `playground`). */
+export const completionPlaygroundSchema = startPlaygroundSchema;
+export type CompletionPlayground = z.infer<typeof completionPlaygroundSchema>;
+
+function countPlaygroundActionSteps(page: StoryPage): number {
+  let n = 0;
+  for (const it of page.items) {
+    for (const seq of it.action_sequences ?? []) n += seq.steps.length;
+  }
+  for (const seq of page.action_sequences ?? []) n += seq.steps.length;
+  return n;
+}
+
+export const startPayloadSchema = z
+  .object({
+    type: z.literal("start"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    cta_label: z.string().optional().default("Start learning"),
+    /** Optional TTS line; player also offers lesson title read-aloud */
+    read_aloud_title: z.string().optional(),
+    /** Optional single-page interactive layer (sound-board style). */
+    playground: startPlaygroundSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    const pg = data.playground;
+    if (!pg) return;
+    if (pg.page.items.length > 40) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["playground", "page", "items"],
+        message: "Playground supports at most 40 items",
+      });
+    }
+    const steps = countPlaygroundActionSteps(pg.page);
+    if (steps > 120) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["playground", "page"],
+        message: "Playground action steps are capped at 120 (sum of action_sequences steps)",
+      });
+    }
+  });
+
+export type StartPayload = z.infer<typeof startPayloadSchema>;
+
+/**
+ * Build a minimal story payload so {@link StoryBookView} can render a start-screen playground.
+ * Phases are stripped; layout defaults to slide (single full-bleed stage).
+ */
+export function storyPayloadFromStartPlayground(playground: StartPlayground): StoryPayload {
+  const page: StoryPage = {
+    ...playground.page,
+    phases: undefined,
+  };
+  return storyPayloadSchema.parse({
+    type: "story",
+    body_text: "\u00a0",
+    read_aloud_text: "",
+    pages: [page],
+    cast: playground.cast,
+    layout_mode: "slide",
+    guide: undefined,
+  });
+}
+
+/** Map tap_rewards array to item_id → rule for the story player bookend hook. */
+export function tapRewardsByItemId(
+  tapRewards: StartPlaygroundTapReward[] | undefined,
+): Record<string, StartPlaygroundTapReward> {
+  const out: Record<string, StartPlaygroundTapReward> = {};
+  for (const tr of tapRewards ?? []) {
+    out[tr.item_id] = tr;
+  }
+  return out;
+}
 
 /** Resolved image URL for an image item (own URL wins; else cast default). */
 export function resolveStoryItemImageUrl(
@@ -2009,23 +2225,66 @@ export function migratePresentationInteractiveToStory(raw: unknown): z.infer<typ
   return migratePresentationInteractiveFromParsed(p, raw);
 }
 
-export const mcQuizPayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("mc_quiz"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  question: z.string(),
-  options: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string(),
-    }),
-  ),
-  correct_option_id: z.string(),
-  shuffle_options: z.boolean().optional().default(false),
-  guide: guideSchema,
-});
+export const mcQuizPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("mc_quiz"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    body_text: z.string().optional(),
+    question: z.string(),
+    options: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+        }),
+      )
+      .min(1),
+    correct_option_id: z.string(),
+    shuffle_options: z.boolean().optional().default(false),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.question.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Question cannot be empty",
+      });
+      return;
+    }
+    const optionIds = new Set<string>();
+    for (const opt of data.options) {
+      if (!opt.id.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Option id cannot be empty",
+        });
+        return;
+      }
+      if (!opt.label.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Option ${opt.id} cannot have an empty label`,
+        });
+        return;
+      }
+      if (optionIds.has(opt.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate option id: ${opt.id}`,
+        });
+        return;
+      }
+      optionIds.add(opt.id);
+    }
+    if (!optionIds.has(data.correct_option_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "correct_option_id must match one of the option ids",
+      });
+    }
+  });
 
 export const clickTargetsPayloadSchema = z
   .object({
@@ -2073,27 +2332,79 @@ export const clickTargetsPayloadSchema = z
     }
   });
 
-export const dragSentencePayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("drag_sentence"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  sentence_slots: z.array(z.string()),
-  word_bank: z.array(z.string()),
-  correct_order: z.array(z.string()),
-  guide: guideSchema,
-});
+export const dragSentencePayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("drag_sentence"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    body_text: z.string().optional(),
+    sentence_slots: z.array(z.string()).min(1),
+    word_bank: z.array(z.string()).min(1),
+    correct_order: z.array(z.string()).min(1),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.correct_order.length !== data.sentence_slots.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "correct_order length must match sentence_slots length",
+      });
+      return;
+    }
+    const bankCounts = new Map<string, number>();
+    for (const raw of data.word_bank) {
+      const word = raw.trim();
+      if (!word) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "word_bank cannot contain empty values",
+        });
+        return;
+      }
+      bankCounts.set(word, (bankCounts.get(word) ?? 0) + 1);
+    }
+    for (const raw of data.correct_order) {
+      const word = raw.trim();
+      const count = bankCounts.get(word) ?? 0;
+      if (count <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `correct_order token "${raw}" is not available in word_bank`,
+        });
+        return;
+      }
+      bankCounts.set(word, count - 1);
+    }
+    for (const [word, count] of bankCounts.entries()) {
+      if (count !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `word_bank token "${word}" must appear exactly once in correct_order`,
+        });
+        return;
+      }
+    }
+  });
 
-export const trueFalsePayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("true_false"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  statement: z.string(),
-  correct: z.boolean(),
-  guide: guideSchema,
-});
+export const trueFalsePayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("true_false"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    statement: z.string(),
+    correct: z.boolean(),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.statement.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Statement cannot be empty",
+      });
+    }
+  });
 
 export const shortAnswerPayloadSchema = z.object({
   type: z.literal("interaction"),
@@ -2131,7 +2442,37 @@ export const fillBlanksPayloadSchema = z
     guide: guideSchema,
   })
   .superRefine((data, ctx) => {
+    if (!data.template.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Template cannot be empty",
+      });
+      return;
+    }
+    const blankIds = new Set<string>();
     for (const b of data.blanks) {
+      if (!b.id.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Blank id cannot be empty",
+        });
+        return;
+      }
+      if (blankIds.has(b.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate blank id: ${b.id}`,
+        });
+        return;
+      }
+      blankIds.add(b.id);
+      if (b.acceptable.some((a) => !a.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Blank ${b.id} contains an empty acceptable answer`,
+        });
+        return;
+      }
       const re = new RegExp(`__${escapeRegExp(b.id)}__`, "g");
       if (!re.test(data.template)) {
         ctx.addIssue({
@@ -2143,25 +2484,55 @@ export const fillBlanksPayloadSchema = z
     }
   });
 
-export const fixTextPayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("fix_text"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  broken_text: z.string(),
-  acceptable: z.array(z.string()).min(1),
-  case_insensitive: z.boolean().optional().default(true),
-  normalize_whitespace: z.boolean().optional().default(true),
-  /** When true, students see a Hint control (spotlight + 3-word choices). */
-  hints_enabled: z.boolean().optional().default(true),
-  /**
-   * Extra wrong words used to build 3-choice hints (with the correct word).
-   * One per line in the editor; optional — other words from the sentence are used too.
-   */
-  hint_decoy_words: z.array(z.string()).optional(),
-  guide: guideSchema,
-});
+export const fixTextPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("fix_text"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    body_text: z.string().optional(),
+    broken_text: z.string(),
+    acceptable: z.array(z.string()).min(1),
+    case_insensitive: z.boolean().optional().default(true),
+    normalize_whitespace: z.boolean().optional().default(true),
+    /** When true, students see a Hint control (spotlight + 3-word choices). */
+    hints_enabled: z.boolean().optional().default(true),
+    /**
+     * Extra wrong words used to build 3-choice hints (with the correct word).
+     * One per line in the editor; optional — other words from the sentence are used too.
+     */
+    hint_decoy_words: z.array(z.string()).optional(),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.broken_text.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "broken_text cannot be empty",
+      });
+      return;
+    }
+    const normalized = new Set<string>();
+    for (const answer of data.acceptable) {
+      const trimmed = answer.trim();
+      if (!trimmed) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "acceptable cannot contain empty answers",
+        });
+        return;
+      }
+      const key = trimmed.toLowerCase();
+      if (normalized.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate acceptable answer: ${trimmed}`,
+        });
+        return;
+      }
+      normalized.add(key);
+    }
+  });
 
 const hotspotInfoItemSchema = z.object({
   id: z.string(),
@@ -2195,8 +2566,11 @@ export function validateHotspotGatePayload(
     if (ord.length === 0) {
       return { ok: false, message: "sequence mode requires order array" };
     }
+    const seen = new Set<string>();
     for (const id of ord) {
       if (!ids.has(id)) return { ok: false, message: `order references unknown id ${id}` };
+      if (seen.has(id)) return { ok: false, message: `order contains duplicate id ${id}` };
+      seen.add(id);
     }
   }
   if (data.mode === "all") {
@@ -2353,23 +2727,51 @@ const letterMixupItemSchema = z.object({
   hint: z.string().optional(),
 });
 
-export const letterMixupPayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("letter_mixup"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  /** Plays when the student taps the picture (upload / library / record in editor). */
-  image_audio_url: z.string().optional(),
-  /** When true, tap uses device TTS instead of `image_audio_url`. */
-  image_use_tts: z.boolean().optional().default(false),
-  /** Spoken on tap when `image_use_tts` is true; if empty, uses the item target word. */
-  image_read_aloud_text: z.string().optional(),
-  prompt: z.string(),
-  items: z.array(letterMixupItemSchema).min(1),
-  shuffle_letters: z.boolean().optional().default(true),
-  case_sensitive: z.boolean().optional().default(false),
-  guide: guideSchema,
-});
+export const letterMixupPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("letter_mixup"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    /** Plays when the student taps the picture (upload / library / record in editor). */
+    image_audio_url: z.string().optional(),
+    /** When true, tap uses device TTS instead of `image_audio_url`. */
+    image_use_tts: z.boolean().optional().default(false),
+    /** Spoken on tap when `image_use_tts` is true; if empty, uses the item target word. */
+    image_read_aloud_text: z.string().optional(),
+    prompt: z.string(),
+    items: z.array(letterMixupItemSchema).min(1),
+    shuffle_letters: z.boolean().optional().default(true),
+    case_sensitive: z.boolean().optional().default(false),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.prompt.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Prompt cannot be empty",
+      });
+      return;
+    }
+    const ids = new Set<string>();
+    for (const item of data.items) {
+      if (!item.id.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Item id cannot be empty",
+        });
+        return;
+      }
+      if (ids.has(item.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate item id: ${item.id}`,
+        });
+        return;
+      }
+      ids.add(item.id);
+    }
+  });
 
 const wordShapeChunkSchema = z.object({
   id: z.string(),
@@ -2670,7 +3072,6 @@ export type ScreenPayload =
   | z.infer<typeof storyPayloadSchema>
   | z.infer<typeof interactionPayloadSchema>;
 
-export type StartPayload = z.infer<typeof startPayloadSchema>;
 export type McQuizPayload = z.infer<typeof mcQuizPayloadSchema>;
 
 export type InteractionSubtype = z.infer<

@@ -22,8 +22,8 @@ export default async function NewModulePage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <Link href="/teacher" className="text-sm text-blue-700 underline">
-        ← Teacher dashboard
+      <Link href="/teacher/courses" className="text-sm text-blue-700 underline">
+        ← Courses
       </Link>
       <div>
         <h1 className="text-2xl font-bold">Create next module</h1>

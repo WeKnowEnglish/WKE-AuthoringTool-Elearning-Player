@@ -8,9 +8,6 @@ export default async function TeacherCoursesPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/teacher" className="text-sm text-blue-700 underline">
-        ← Teacher dashboard
-      </Link>
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Courses</h1>
         <Link

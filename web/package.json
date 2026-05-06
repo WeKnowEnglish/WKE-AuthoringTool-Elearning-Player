@@ -14,7 +14,8 @@
     "test": "vitest run",
     "create-teacher": "node scripts/create-teacher-user.mjs",
     "media:finalize-metadata": "node scripts/finalize-media-metadata.mjs",
-    "story:unified-dry-run": "vitest run lib/story-unified/story-import-smoke.test.ts lib/story-unified/build-unified-reactions.test.ts"
+    "story:unified-dry-run": "vitest run lib/story-unified/story-import-smoke.test.ts lib/story-unified/build-unified-reactions.test.ts",
+    "snapshot": "tsx scripts/snapshot.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -40,6 +41,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
     "typescript": "^5",
     "vitest": "^3.2.4"
   }

@@ -4,6 +4,7 @@ import { LessonPlayer } from "@/components/lesson/LessonPlayer";
 import type { LessonScreenRow } from "@/lib/data/catalog";
 import { buildCongratsEndPayload } from "@/lib/lesson-bookends";
 import { interactionPayloadSchema, startPayloadSchema } from "@/lib/lesson-schemas";
+import { DEFAULT_QUIZ_BOOKEND_IMAGE_URL } from "@/lib/quiz-activity-defaults";
 
 type Props = {
   activityId: string;
@@ -66,7 +67,7 @@ export function ActivityLibraryPreview({
         start.data
       : startPayloadSchema.parse({
           type: "start",
-          image_url: "https://placehold.co/800x520/e2e8f0/1e293b?text=Start+Activity",
+          image_url: DEFAULT_QUIZ_BOOKEND_IMAGE_URL,
           image_fit: "contain",
           cta_label: "Start activity",
           read_aloud_title: title,
@@ -77,7 +78,7 @@ export function ActivityLibraryPreview({
     lesson_id: `activity-${activityId}`,
     order_index: interactionScreens.length + 1,
     screen_type: "start",
-    payload: buildCongratsEndPayload(),
+    payload: buildCongratsEndPayload({ image_url: DEFAULT_QUIZ_BOOKEND_IMAGE_URL }),
   };
   const screens = [startScreen, ...interactionScreens, congratsScreen];
 

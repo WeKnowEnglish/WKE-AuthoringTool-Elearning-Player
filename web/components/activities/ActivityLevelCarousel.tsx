@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 const DRAG_THRESHOLD_PX = 8;
 const SNAP_TOLERANCE_PX = 4;
-/** After native scroll / momentum stops, align to the nearest card. */
-const SCROLL_SETTLE_MS = 100;
 
 type Props = {
   /** Stable id fragment for headings (avoids duplicate ids when title repeats). */
@@ -56,21 +54,27 @@ export function ActivityLevelCarousel({ sectionId, title, children, showScrollHi
     gestureListenersRef.current = null;
   }, []);
 
+  /** Align targets must use the same coordinate system as scrollLeft (flex children's offsetLeft often isn't). */
   const nearestSnapScrollLeft = useCallback((el: HTMLDivElement): number => {
     const { children: items } = el;
     if (items.length === 0) return el.scrollLeft;
     const sl = el.scrollLeft;
-    let best = 0;
+    const railRect = el.getBoundingClientRect();
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+
+    let bestScroll = sl;
     let bestDist = Infinity;
     for (let i = 0; i < items.length; i++) {
-      const left = (items[i] as HTMLElement).offsetLeft;
-      const d = Math.abs(left - sl);
-      if (d < bestDist) {
-        bestDist = d;
-        best = left;
+      const child = items[i] as HTMLElement;
+      const delta = child.getBoundingClientRect().left - railRect.left;
+      const dist = Math.abs(delta);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestScroll = sl + delta;
       }
     }
-    return best;
+
+    return Math.min(Math.max(0, bestScroll), maxScroll);
   }, []);
 
   const alignToNearestCard = useCallback(
@@ -168,29 +172,6 @@ export function ActivityLevelCarousel({ sectionId, title, children, showScrollHi
     },
     [alignToNearestCard, applySelectBlock, clearGestureListeners, clearSelectBlock],
   );
-
-  useEffect(() => {
-    const el = railRef.current;
-    if (!el) return;
-
-    let settleTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const scheduleSettleAlign = () => {
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => {
-        const phase = dragRef.current.phase;
-        if (phase === "pending" || phase === "dragging") return;
-        alignToNearestCard("smooth");
-      }, SCROLL_SETTLE_MS);
-    };
-
-    el.addEventListener("scroll", scheduleSettleAlign, { passive: true });
-
-    return () => {
-      el.removeEventListener("scroll", scheduleSettleAlign);
-      clearTimeout(settleTimer);
-    };
-  }, [alignToNearestCard]);
 
   const headingId = `level-heading-${sectionId}`;
 

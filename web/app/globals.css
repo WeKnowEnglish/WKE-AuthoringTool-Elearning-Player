@@ -115,6 +115,45 @@
     }
   }
 
+  /** Activity quiz: floating gold label when energy bar completes (non-blocking overlay). */
+  @keyframes kid-energy-gold-pop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 0.5rem) scale(0.92);
+    }
+    12% {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1.06);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -3rem) scale(1);
+    }
+  }
+
+  .kid-energy-gold-pop {
+    pointer-events: none;
+    animation: kid-energy-gold-pop 1.65s ease-out forwards;
+  }
+
+  @keyframes kid-energy-gold-pop-reduced {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    15%,
+    70% {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kid-energy-gold-pop {
+      animation: kid-energy-gold-pop-reduced 1s ease-out forwards;
+      transform: translate(-50%, 0);
+    }
+  }
+
   /* Story book: preset item animations (driven by --story-dur-ms) */
   .story-item-anim {
     --story-dur: 500ms;

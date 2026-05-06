@@ -30,6 +30,16 @@ import {
   buildPayloadFromImportRow,
   parseRowsJson,
 } from "@/lib/activity-table-import";
+import {
+  mapQuizQuestionToInteractionPayload,
+  vocabularyFromQuizQuestions,
+} from "@/lib/quiz-builder-activity-mapper";
+import { DEFAULT_QUIZ_BOOKEND_IMAGE_URL } from "@/lib/quiz-activity-defaults";
+import {
+  parseQuizPreviewBundle,
+  validateQuizPreviewBundle,
+  type QuizPreviewSaveBundle,
+} from "@/lib/quiz-preview-bundle";
 import { normalizeLessonPlanText } from "@/lib/lesson-plan";
 import { normalizeLearningGoals, parseLearningGoalsFromDb } from "@/lib/learning-goals";
 import { rawInteractionTemplateForSubtype } from "@/lib/teacher-interaction-templates";
@@ -142,7 +152,6 @@ export async function saveModule(formData: FormData) {
     await saveModuleTags(id);
     revalidateStudentCatalogViews();
     revalidatePath("/teacher/courses");
-    revalidatePath("/teacher");
     revalidatePath(`/teacher/modules/${id}`);
     redirect(`/teacher/modules/${id}`);
   }
@@ -166,7 +175,6 @@ export async function saveModule(formData: FormData) {
   await saveModuleTags(data.id);
   revalidateStudentCatalogViews();
   revalidatePath("/teacher/courses");
-  revalidatePath("/teacher");
   redirect(`/teacher/modules/${data.id}`);
 }
 
@@ -226,7 +234,6 @@ export async function saveCourse(formData: FormData) {
     }
     if (error) throw new Error(`Could not save course: ${formatPostgrestForUser(error)}`);
     revalidateStudentCatalogViews();
-    revalidatePath("/teacher");
     revalidatePath("/teacher/courses");
     revalidatePath(`/teacher/courses/${id}`);
     redirect(`/teacher/courses/${id}`);
@@ -256,7 +263,6 @@ export async function saveCourse(formData: FormData) {
   }
   if (error) throw new Error(`Could not create course: ${formatPostgrestForUser(error)}`);
   revalidateStudentCatalogViews();
-  revalidatePath("/teacher");
   revalidatePath("/teacher/courses");
   redirect("/teacher/courses");
 }
@@ -409,8 +415,8 @@ export async function deleteModule(moduleId: string, _fd: FormData) {
   const { error } = await supabase.from("modules").delete().eq("id", moduleId);
   if (error) throw error;
   revalidateStudentCatalogViews();
-  revalidatePath("/teacher");
-  redirect("/teacher");
+  revalidatePath("/teacher/courses");
+  redirect("/teacher/courses");
 }
 
 export async function deleteLesson(lessonId: string, moduleId: string, _fd: FormData) {
@@ -1346,6 +1352,74 @@ export type CreateActivityFromTableState = {
   rowErrors?: Array<{ rowNumber: number; message: string }>;
 };
 
+export type CreateQuizGeneratorState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+};
+
+function buildActivityLibraryInsertFromQuizSession(
+  bundle: QuizPreviewSaveBundle,
+): {
+  vocabulary: string[];
+  payload: {
+    start: ReturnType<typeof startPayloadSchema.parse>;
+    items: unknown[];
+    settings: ActivityLibrarySettings & { activity_subtypes: ActivityLibrarySubtype[] };
+  };
+  activity_subtype: ActivityLibrarySubtype;
+  question_count: number;
+  topic: string;
+  level: string;
+} {
+  const { title, quizSession } = bundle;
+  const quizGroupId = randomUUID();
+  const quizGroupTitle = title.trim() || "Quiz";
+  const items = quizSession.questions.map((q, idx) =>
+    mapQuizQuestionToInteractionPayload(q, idx, quizGroupId, quizGroupTitle),
+  );
+  const settings: ActivityLibrarySettings = {
+    shuffle_questions: false,
+    shuffle_answer_options_each_replay: true,
+    auto_advance_on_pass_default: true,
+  };
+  const withSettings = applySettingsToItems(items, settings);
+  const vocabulary = vocabularyFromQuizQuestions(quizSession.questions);
+  const subtypes = Array.from(
+    new Set(
+      withSettings.map((item) => {
+        const row = item as { subtype?: string };
+        return row.subtype ?? "mc_quiz";
+      }),
+    ),
+  ) as ActivityLibrarySubtype[];
+  const activity_subtype = (withSettings[0] as { subtype: ActivityLibrarySubtype }).subtype;
+
+  const start = startPayloadSchema.parse({
+    type: "start",
+    image_url: DEFAULT_QUIZ_BOOKEND_IMAGE_URL,
+    image_fit: "contain",
+    cta_label: "Start activity",
+    read_aloud_title: title,
+  });
+  const payload = {
+    start,
+    items: withSettings,
+    settings: {
+      ...settings,
+      activity_subtypes: subtypes,
+    },
+  };
+
+  return {
+    vocabulary,
+    payload,
+    activity_subtype,
+    question_count: withSettings.length,
+    topic: quizSession.meta.topic,
+    level: bundle.options.level,
+  };
+}
+
 function isTruthyFormValue(value: FormDataEntryValue | undefined): boolean {
   const v = `${value ?? ""}`.toLowerCase();
   return v === "on" || v === "1" || v === "true" || v === "yes";
@@ -1814,6 +1888,60 @@ export async function createActivityLibraryItem(formData: FormData) {
   });
   if (error) throw asMissingActivityLibrarySchemaError(error) ?? error;
   revalidatePath("/teacher/activities");
+}
+
+/**
+ * Saves a quiz built on the client: parses `{ title, options, quizSession }` from the form,
+ * validates, maps once (no `generateQuiz` here) so preview === saved payload.
+ */
+export async function createActivityLibraryFromQuizPreview(
+  prevState: CreateQuizGeneratorState,
+  formData: FormData,
+): Promise<CreateQuizGeneratorState> {
+  void prevState;
+  const supabase = await requireTeacher();
+  const raw = `${formData.get("quiz_preview_bundle") ?? ""}`.trim();
+  const bundle = parseQuizPreviewBundle(raw);
+  if (!bundle) {
+    return { status: "error", message: "Missing or invalid save payload. Use Preview, then Save." };
+  }
+
+  const err = validateQuizPreviewBundle(bundle);
+  if (err) {
+    return { status: "error", message: err };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { status: "error", message: "Unauthorized." };
+  }
+
+  const row = buildActivityLibraryInsertFromQuizSession(bundle);
+  const { error } = await supabase.from("activity_library_items").insert({
+    title: bundle.title.trim(),
+    activity_subtype: row.activity_subtype,
+    level: row.level,
+    topic: row.topic,
+    vocabulary: row.vocabulary,
+    payload: row.payload,
+    question_count: row.question_count,
+    created_by: user.id,
+    published: false,
+  });
+  if (error) {
+    const mapped = asMissingActivityLibrarySchemaError(error);
+    return {
+      status: "error",
+      message: mapped?.message ?? formatPostgrestForUser(error),
+    };
+  }
+  revalidatePath("/teacher/activities");
+  return {
+    status: "success",
+    message: `Saved activity with ${row.question_count} question(s).`,
+  };
 }
 
 function startImageFromItems(items: Array<{ image_url?: string | null }>): string {

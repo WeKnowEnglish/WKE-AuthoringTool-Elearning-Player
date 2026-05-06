@@ -15,10 +15,14 @@ export function isOpeningStartScreen(screenType: string, payload: unknown): bool
   return screenType === "start" && !isCongratsEndScreen(screenType, payload);
 }
 
-export function buildCongratsEndPayload() {
+const DEFAULT_CONGRATS_IMAGE =
+  "https://placehold.co/800x520/e2e8f0/1e293b?text=Congratulations";
+
+export function buildCongratsEndPayload(opts?: { image_url?: string }) {
+  const image_url = opts?.image_url?.trim() || DEFAULT_CONGRATS_IMAGE;
   return startPayloadSchema.parse({
     type: "start",
-    image_url: "https://placehold.co/800x520/e2e8f0/1e293b?text=Congratulations",
+    image_url,
     image_fit: "contain",
     cta_label: "Finish activity",
     read_aloud_title: "Congratulations",

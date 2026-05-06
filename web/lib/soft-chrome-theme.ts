@@ -4,18 +4,22 @@ export const SOFT_CHROME_PRESETS = [
     label: "Warm cream background",
     page: "#faf8f5",
     header: "#f0ebe3",
+    /** Elevated panels (darker than `page`, same family as header). */
+    card: "#f3efe6",
   },
   {
     id: "mist",
     label: "Soft blue-gray background",
     page: "#f3f6fa",
     header: "#e6ecf4",
+    card: "#e8eef6",
   },
   {
     id: "sage",
     label: "Soft sage background",
     page: "#f4f8f5",
     header: "#e5ede8",
+    card: "#eaf1ec",
   },
 ] as const;
 

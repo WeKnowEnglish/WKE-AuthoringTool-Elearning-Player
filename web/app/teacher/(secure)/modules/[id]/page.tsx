@@ -25,8 +25,8 @@ export default async function EditModulePage({ params }: Props) {
 
   return (
     <div className="space-y-8">
-      <Link href="/teacher" className="text-sm text-blue-700 underline">
-        ← Modules
+      <Link href="/teacher/courses" className="text-sm text-blue-700 underline">
+        ← Courses
       </Link>
       <h1 className="text-2xl font-bold">Edit module</h1>
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">

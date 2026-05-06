@@ -3,6 +3,15 @@ import type { Question } from "@/types/quiz-builder-brain";
 
 const OPTION_IDS = ["a", "b", "c"] as const;
 
+function shuffleCopy<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+  }
+  return arr;
+}
+
 /** Map QuizBuilderBrain output into activity-library interaction payloads (Zod-validated). */
 export function mapQuizQuestionToInteractionPayload(
   q: Question,
@@ -34,13 +43,14 @@ export function mapQuizQuestionToInteractionPayload(
 
   if (q.type === "fill_blank") {
     const template = q.prompt.includes("___") ? q.prompt.replace("___", "__1__") : q.prompt;
+    const word_bank = shuffleCopy([q.correctAnswer, ...q.options]);
     return interactionPayloadSchema.parse({
       type: "interaction",
       subtype: "fill_blanks",
       image_fit: "contain",
       template,
       blanks: [{ id: "1", acceptable: [q.correctAnswer] }],
-      word_bank: [q.correctAnswer],
+      word_bank,
       quiz_group_id: quizGroupId,
       quiz_group_title: quizGroupTitle,
       quiz_group_order: idx,

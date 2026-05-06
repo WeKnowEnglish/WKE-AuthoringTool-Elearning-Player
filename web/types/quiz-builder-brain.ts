@@ -69,4 +69,6 @@ export type GenerateQuizOptions = {
   level: CefrLevel;
   mode: QuizMode;
   questionCount: number;
+  /** True in production generation; false only for teacher preview/debug widening. */
+  strictTopic?: boolean;
 };

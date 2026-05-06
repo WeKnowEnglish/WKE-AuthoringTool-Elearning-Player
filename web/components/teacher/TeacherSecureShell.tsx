@@ -73,7 +73,7 @@ function TeacherChromeHeader({
     >
       <div className="grid w-full grid-cols-1 items-center gap-y-2 gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-x-1 sm:gap-y-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:justify-self-start">
-          <Link href="/teacher" className="shrink-0 text-sm font-bold sm:text-base">
+          <Link href="/teacher/courses" className="shrink-0 text-sm font-bold sm:text-base">
             Teacher
           </Link>
           <TeacherNavEditorTitle />
@@ -123,6 +123,11 @@ export function TeacherSecureShell({ userEmail, children }: Props) {
   );
   const preset = getSoftChromePreset(presetId);
   const pageBackground = preset.page;
+  const teacherChromeVars = {
+    "--teacher-chrome-page": preset.page,
+    "--teacher-chrome-header": preset.header,
+    "--teacher-chrome-card": preset.card,
+  } as React.CSSProperties;
 
   return (
     <TeacherEditorHeaderProvider>
@@ -132,7 +137,7 @@ export function TeacherSecureShell({ userEmail, children }: Props) {
             "flex h-dvh min-h-0 flex-col overflow-hidden"
           : "min-h-screen"
         }
-        style={{ backgroundColor: pageBackground }}
+        style={{ backgroundColor: pageBackground, ...teacherChromeVars }}
       >
         <TeacherChromeHeader
           userEmail={userEmail}
@@ -146,7 +151,7 @@ export function TeacherSecureShell({ userEmail, children }: Props) {
               "flex min-h-0 flex-1 flex-col overflow-hidden px-0"
             : "w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
           }
-          style={{ backgroundColor: pageBackground }}
+          style={{ backgroundColor: pageBackground, ...teacherChromeVars }}
         >
           {children}
         </div>

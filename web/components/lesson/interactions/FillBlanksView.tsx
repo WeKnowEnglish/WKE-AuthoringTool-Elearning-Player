@@ -139,6 +139,12 @@ export function FillBlanksView({
                     return { ...prev, [p.value]: e.target.value };
                   })
                 }
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  if (passed || lockedCorrectIds.has(p.value)) return;
+                  check();
+                }}
                 className={clsx(
                   "mx-1 inline-block w-28 rounded border-2 px-1 py-0.5 align-baseline text-lg",
                   lockedCorrectIds.has(p.value)

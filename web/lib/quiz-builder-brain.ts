@@ -74,12 +74,12 @@ function effectiveCountable(v: VocabularyItem): boolean {
   return v.countable !== false;
 }
 
-function matchesTarget(structure: Structure, v: VocabularyItem): boolean {
+export function matchesTarget(structure: Structure, v: VocabularyItem): boolean {
   if (structure.target === "verb") return v.type === "verb";
   return v.type === "noun";
 }
 
-function matchesIntent(structure: Structure, v: VocabularyItem): boolean {
+export function matchesIntent(structure: Structure, v: VocabularyItem): boolean {
   const rules = INTENT_RULES[structure.intent];
   if (rules.verbCategories && v.type === "verb") {
     if (!rules.verbCategories.includes(effectiveVerbCategory(v))) return false;
@@ -90,6 +90,21 @@ function matchesIntent(structure: Structure, v: VocabularyItem): boolean {
   return true;
 }
 
+export function vocabPoolsForGeneration(args: {
+  topic: string;
+  level: CefrLevel;
+  strictTopic?: boolean;
+}): { nouns: VocabularyItem[]; verbs: VocabularyItem[]; wide: VocabularyItem[] } {
+  const wide = VOCAB.filter((v) => v.level === args.level);
+  const narrow = wide.filter((v) => v.topic === args.topic);
+  const primary = args.strictTopic !== false ? narrow : narrow.length < 3 ? wide : narrow;
+  return {
+    nouns: primary.filter((v) => v.type === "noun"),
+    verbs: primary.filter((v) => v.type === "verb"),
+    wide,
+  };
+}
+
 /**
  * Topic-primary pool with fallbacks: topic+filters → level+filters → level+target only.
  */
@@ -97,9 +112,11 @@ export function pickCompatibleVocab(
   structure: Structure,
   primaryTopicPool: VocabularyItem[],
   wideLevelPool: VocabularyItem[],
+  options?: { strictTopic?: boolean },
 ): VocabularyItem[] {
   let pool = primaryTopicPool.filter((v) => matchesTarget(structure, v) && matchesIntent(structure, v));
   if (pool.length > 0) return pool;
+  if (options?.strictTopic) return [];
   pool = wideLevelPool.filter((v) => matchesTarget(structure, v) && matchesIntent(structure, v));
   if (pool.length > 0) return pool;
   return wideLevelPool.filter((v) => matchesTarget(structure, v));
@@ -225,6 +242,15 @@ function sameCountableClass(a: VocabularyItem, b: VocabularyItem): boolean {
   return effectiveCountable(a) === effectiveCountable(b);
 }
 
+/** Small deterministic gerund builder for A1-safe forms. */
+export function toGerund(verb: string): string {
+  const v = normalize(verb);
+  if (v.endsWith("ie")) return `${verb.slice(0, -2)}ying`;
+  if (v.endsWith("e") && !v.endsWith("ee")) return `${verb.slice(0, -1)}ing`;
+  if (/[^aeiou][aeiou][^aeiouwxy]$/i.test(v)) return `${verb}${verb[verb.length - 1]}ing`;
+  return `${verb}ing`;
+}
+
 function buildDistractorStrings(
   structure: Structure,
   vocab: VocabularyItem,
@@ -246,12 +272,13 @@ function buildDistractorStrings(
   const intent = structure.intent;
 
   if (vocab.type === "verb") {
+    const gerund = toGerund(vocab.baseForm ?? vocab.word);
     if (intent === "present_simple_3sg") {
       push(vocab.baseForm);
-      push(`${correctAnswer}ing`);
+      push(gerund);
     } else if (intent === "present_simple_base") {
       push(vocab.presentSimple3sg);
-      push(`${correctAnswer}ing`);
+      push(gerund);
     }
     const sameTopicVerbs = wideVocab.filter(
       (x) => x.type === "verb" && x.topic === vocab.topic && x.id !== vocab.id,
@@ -331,6 +358,38 @@ function buildMcq(
   };
 }
 
+function buildFillBlank(
+  structure: Structure,
+  vocab: VocabularyItem,
+  correctAnswer: string,
+  filledSentence: string,
+  wideVocab: VocabularyItem[],
+  rejectCounts: RejectCounts,
+): Question | null {
+  const prompt = fillBlankPrompt(filledSentence, correctAnswer);
+  if (!prompt) return null;
+
+  const distractors = buildDistractorStrings(structure, vocab, correctAnswer, wideVocab);
+  if (distractors.length < 2) {
+    rejectCounts.no_distractors++;
+    return null;
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    type: "fill_blank",
+    prompt,
+    correctAnswer,
+    options: [distractors[0]!, distractors[1]!],
+    metadata: {
+      structureId: structure.id,
+      vocabId: vocab.id,
+      topic: "",
+      level: vocab.level,
+    },
+  };
+}
+
 const GRAMMAR_HEURISTIC: RegExp[] = [/\bI goes\b/i, /\ba\s+(rice|milk|bread|juice)\b/i];
 
 /** Lightweight safety net; increments `rejectCounts` on reject paths. */
@@ -351,6 +410,18 @@ export function validateQuestion(q: Question, rejectCounts: RejectCounts): Valid
     }
     const norms = q.options.map(normalize);
     if (new Set(norms).size !== norms.length) {
+      rejectCounts.dup_options++;
+      return { valid: false, reason: "dup_options" };
+    }
+  }
+
+  if (q.type === "fill_blank") {
+    const norms = q.options.map(normalize);
+    if (norms.length !== 2 || new Set(norms).size !== norms.length) {
+      rejectCounts.dup_options++;
+      return { valid: false, reason: "dup_options" };
+    }
+    if (norms.some((n) => n === normalize(q.correctAnswer))) {
       rejectCounts.dup_options++;
       return { valid: false, reason: "dup_options" };
     }
@@ -380,16 +451,9 @@ function tryBuildQuestion(
   let q: Question | null = null;
 
   if (type === "fill_blank") {
-    const prompt = fillBlankPrompt(filledSentence, correctAnswer);
-    if (!prompt) return null;
-    q = {
-      id: crypto.randomUUID(),
-      type: "fill_blank",
-      prompt,
-      correctAnswer,
-      options: [],
-      metadata,
-    };
+    const fb = buildFillBlank(structure, vocab, correctAnswer, filledSentence, wideVocab, rejectCounts);
+    if (!fb) return null;
+    q = { ...fb, metadata: { ...fb.metadata, topic: metaTopic, level: metaLevel } };
   } else if (type === "letter_scramble") {
     const prompt = scramblePreservingCase(correctAnswer);
     q = {
@@ -418,6 +482,7 @@ function tryBuildQuestion(
 
 export function generateQuiz(options: GenerateQuizOptions): QuizSession {
   const { topic, level, mode, questionCount } = options;
+  const strictTopic = options.strictTopic !== false;
 
   const rejectCounts: RejectCounts = {
     mcq_leak: 0,
@@ -433,7 +498,7 @@ export function generateQuiz(options: GenerateQuizOptions): QuizSession {
 
   const narrow = VOCAB.filter((v) => v.topic === topic && v.level === level);
   const wide = VOCAB.filter((v) => v.level === level);
-  const primary = narrow.length < 3 ? wide : narrow;
+  const primary = strictTopic ? narrow : narrow.length < 3 ? wide : narrow;
   if (wide.length < 3) {
     throw new Error(
       `QuizBuilderBrain: vocabulary pool too small for level ${level} (wide.length=${wide.length}).`,
@@ -451,7 +516,7 @@ export function generateQuiz(options: GenerateQuizOptions): QuizSession {
     const structure = pickRandom(structures);
     if (!structure) break;
 
-    let pool = pickCompatibleVocab(structure, primary, wide);
+    let pool = pickCompatibleVocab(structure, primary, wide, { strictTopic });
     if (pool.length === 0) continue;
 
     const vocab = pickRandom(pool);

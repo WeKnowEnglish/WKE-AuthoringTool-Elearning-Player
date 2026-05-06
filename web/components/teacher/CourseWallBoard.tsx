@@ -43,7 +43,10 @@ export function CourseWallBoard({ courses, modules, lessons }: Props) {
 
         return (
           <li key={course.id}>
-            <article className="flex h-full flex-col rounded-[2rem] border border-neutral-300 bg-[#fffde9] p-3 shadow-[0_12px_12px_rgba(0,0,0,0.45)]">
+            <article
+              className="flex h-full flex-col rounded-[2rem] border border-black/[0.12] p-3 shadow-[0_8px_28px_rgba(0,0,0,0.09)]"
+              style={{ backgroundColor: "var(--teacher-chrome-card)" }}
+            >
               <div className="mb-3 overflow-hidden rounded-2xl border border-neutral-300 bg-neutral-100">
                 {course.cover_video_url ? (
                   <video

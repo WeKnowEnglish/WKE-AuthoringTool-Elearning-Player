@@ -13,6 +13,7 @@ export function buildGenerateQuizOptions(args: {
   topicPractice: string;
   level: CefrLevel;
   questionCount: number;
+  strictTopic?: boolean;
 }): GenerateQuizOptions {
   const topic = args.preset === "quick" ? resolveQuickTopic() : args.topicPractice.trim();
   const mode: QuizMode = args.preset === "quick" ? "quick" : "practice";
@@ -21,5 +22,6 @@ export function buildGenerateQuizOptions(args: {
     level: args.level,
     mode,
     questionCount: args.questionCount,
+    strictTopic: args.strictTopic ?? true,
   };
 }

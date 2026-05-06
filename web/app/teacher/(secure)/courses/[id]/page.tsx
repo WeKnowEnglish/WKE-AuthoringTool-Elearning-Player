@@ -21,14 +21,14 @@ export default async function CourseWorkspacePage({ params }: Props) {
       <Link href="/teacher/courses" className="text-sm text-blue-700 underline">
         ← Courses
       </Link>
-      <section className="rounded border border-neutral-200 bg-white p-5">
+      <section className="rounded border border-black/[0.1] bg-[var(--teacher-chrome-card)] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
         <h1 className="text-2xl font-bold">{course.title}</h1>
         <p className="mt-1 text-sm text-neutral-600">
           Target: {course.target} · /{course.slug}
           {course.published ? "" : " · draft"}
         </p>
         {course.standards ? (
-          <div className="mt-3 rounded border border-neutral-200 bg-neutral-50 p-3">
+          <div className="mt-3 rounded border border-black/[0.08] bg-white/55 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
               Standards
             </p>
@@ -38,7 +38,7 @@ export default async function CourseWorkspacePage({ params }: Props) {
           </div>
         ) : null}
         {course.outcomes ? (
-          <div className="mt-3 rounded border border-neutral-200 bg-neutral-50 p-3">
+          <div className="mt-3 rounded border border-black/[0.08] bg-white/55 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
               Outcomes
             </p>
@@ -69,7 +69,7 @@ export default async function CourseWorkspacePage({ params }: Props) {
           {modules.map((m) => (
             <li
               key={m.id}
-              className="relative flex flex-wrap items-center justify-between gap-3 rounded border border-neutral-200 bg-white px-4 py-3 transition-colors hover:border-neutral-300"
+              className="relative flex flex-wrap items-center justify-between gap-3 rounded border border-black/[0.1] bg-[var(--teacher-chrome-card)] px-4 py-3 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-colors hover:border-black/[0.14]"
             >
               <Link
                 href={`/teacher/modules/${m.id}`}

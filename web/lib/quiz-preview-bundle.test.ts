@@ -8,7 +8,9 @@ function makeQuestion(over: Partial<Question> & Pick<Question, "id" | "type">): 
     type: over.type,
     prompt: over.prompt ?? "p",
     correctAnswer: over.correctAnswer ?? "x",
-    options: over.options ?? (over.type === "mcq" ? ["a", "b", "c"] : []),
+    options:
+      over.options ??
+      (over.type === "mcq" ? ["a", "b", "c"] : over.type === "fill_blank" ? ["run", "jump"] : []),
     metadata: over.metadata ?? {
       structureId: "s1",
       vocabId: "v1",

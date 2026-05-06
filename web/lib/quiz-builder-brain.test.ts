@@ -221,6 +221,9 @@ describe("generateQuiz", () => {
 
       if (q.type === "fill_blank") {
         expect(q.prompt).toContain("___");
+        expect(q.options).toHaveLength(2);
+        const bank = new Set([normalize(q.correctAnswer), ...q.options.map(normalize)]);
+        expect(bank.size).toBe(3);
       }
 
       if (q.type === "letter_scramble" && q.correctAnswer.length > 2) {

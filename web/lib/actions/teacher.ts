@@ -34,6 +34,7 @@ import {
   mapQuizQuestionToInteractionPayload,
   vocabularyFromQuizQuestions,
 } from "@/lib/quiz-builder-activity-mapper";
+import { DEFAULT_QUIZ_BOOKEND_IMAGE_URL } from "@/lib/quiz-activity-defaults";
 import {
   parseQuizPreviewBundle,
   validateQuizPreviewBundle,
@@ -151,7 +152,6 @@ export async function saveModule(formData: FormData) {
     await saveModuleTags(id);
     revalidateStudentCatalogViews();
     revalidatePath("/teacher/courses");
-    revalidatePath("/teacher");
     revalidatePath(`/teacher/modules/${id}`);
     redirect(`/teacher/modules/${id}`);
   }
@@ -175,7 +175,6 @@ export async function saveModule(formData: FormData) {
   await saveModuleTags(data.id);
   revalidateStudentCatalogViews();
   revalidatePath("/teacher/courses");
-  revalidatePath("/teacher");
   redirect(`/teacher/modules/${data.id}`);
 }
 
@@ -235,7 +234,6 @@ export async function saveCourse(formData: FormData) {
     }
     if (error) throw new Error(`Could not save course: ${formatPostgrestForUser(error)}`);
     revalidateStudentCatalogViews();
-    revalidatePath("/teacher");
     revalidatePath("/teacher/courses");
     revalidatePath(`/teacher/courses/${id}`);
     redirect(`/teacher/courses/${id}`);
@@ -265,7 +263,6 @@ export async function saveCourse(formData: FormData) {
   }
   if (error) throw new Error(`Could not create course: ${formatPostgrestForUser(error)}`);
   revalidateStudentCatalogViews();
-  revalidatePath("/teacher");
   revalidatePath("/teacher/courses");
   redirect("/teacher/courses");
 }
@@ -418,8 +415,8 @@ export async function deleteModule(moduleId: string, _fd: FormData) {
   const { error } = await supabase.from("modules").delete().eq("id", moduleId);
   if (error) throw error;
   revalidateStudentCatalogViews();
-  revalidatePath("/teacher");
-  redirect("/teacher");
+  revalidatePath("/teacher/courses");
+  redirect("/teacher/courses");
 }
 
 export async function deleteLesson(lessonId: string, moduleId: string, _fd: FormData) {
@@ -1383,7 +1380,7 @@ function buildActivityLibraryInsertFromQuizSession(
   const settings: ActivityLibrarySettings = {
     shuffle_questions: false,
     shuffle_answer_options_each_replay: true,
-    auto_advance_on_pass_default: false,
+    auto_advance_on_pass_default: true,
   };
   const withSettings = applySettingsToItems(items, settings);
   const vocabulary = vocabularyFromQuizQuestions(quizSession.questions);
@@ -1399,7 +1396,7 @@ function buildActivityLibraryInsertFromQuizSession(
 
   const start = startPayloadSchema.parse({
     type: "start",
-    image_url: "https://placehold.co/800x520/e2e8f0/1e293b?text=Start+Activity",
+    image_url: DEFAULT_QUIZ_BOOKEND_IMAGE_URL,
     image_fit: "contain",
     cta_label: "Start activity",
     read_aloud_title: title,

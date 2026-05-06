@@ -19,7 +19,14 @@ function isQuestion(x: unknown): x is Question {
   if (typeof q.correctAnswer !== "string" || !q.correctAnswer.trim()) return false;
   if (!Array.isArray(q.options)) return false;
   if (q.type === "mcq" && q.options.length !== 3) return false;
-  if (q.type !== "mcq" && q.options.length !== 0) return false;
+  if (q.type === "fill_blank" && q.options.length !== 2) return false;
+  if (q.type === "letter_scramble" && q.options.length !== 0) return false;
+  if (q.type === "fill_blank") {
+    const ca = `${q.correctAnswer}`.trim().toLowerCase();
+    const o0 = `${q.options[0]}`.trim().toLowerCase();
+    const o1 = `${q.options[1]}`.trim().toLowerCase();
+    if (!o0 || !o1 || o0 === o1 || o0 === ca || o1 === ca) return false;
+  }
   const m = q.metadata;
   if (!m || typeof m !== "object") return false;
   const meta = m as Record<string, unknown>;

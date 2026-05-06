@@ -15,6 +15,8 @@ import {
 } from "@/components/kid-ui/InteractionFeedbackShell";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { KidProgressBar } from "@/components/kid-ui/KidProgressBar";
+import { KidActivityEnergyRewardPop } from "@/components/kid-ui/KidActivityEnergyRewardPop";
+import { KidQuizActivityHud } from "@/components/kid-ui/KidQuizActivityHud";
 import { KidStickerStrip } from "@/components/kid-ui/KidStickerStrip";
 import { playSfx } from "@/lib/audio/sfx";
 import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
@@ -45,6 +47,11 @@ import {
   type StartPlaygroundTapReward,
 } from "@/lib/lesson-schemas";
 import { parseScreenPayload, type ScreenPayload } from "@/lib/lesson-schemas-player";
+import {
+  ACTIVITY_QUIZ_ENERGY_BASE,
+  ACTIVITY_QUIZ_ENERGY_GOLD,
+  ACTIVITY_QUIZ_ENERGY_XP,
+} from "@/lib/quiz-activity-defaults";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
 import { interactionImageFitClass } from "@/components/lesson/interactions/shared";
 import { StoryBookView } from "@/components/lesson/StoryBookView";
@@ -171,6 +178,7 @@ function RewardScreen({
   isPreview,
   completionPlayground,
   onEconomyRefresh,
+  hideStickerEconomy,
 }: {
   lessonTitle: string;
   stickerCount: number;
@@ -180,6 +188,8 @@ function RewardScreen({
   isPreview: boolean;
   completionPlayground?: CompletionPlayground | null;
   onEconomyRefresh: () => void;
+  /** Activity quizzes use energy/streak HUD; omit sticker copy here. */
+  hideStickerEconomy?: boolean;
 }) {
   const [avatar, setAvatar] = useState<string | null>(
     () => getProgressSnapshot().avatarId ?? null,
@@ -252,11 +262,13 @@ function RewardScreen({
           </p>
         ) : null}
         <p className="mt-3 text-xl text-kid-ink">You finished {lessonTitle}!</p>
-        <p className="mt-2 text-lg font-semibold text-kid-ink">
-          {stickerCount > 0
-            ? `You have ${stickerCount} sticker${stickerCount === 1 ? "" : "s"} in your book!`
-            : "Keep going to earn stickers!"}
-        </p>
+        {!hideStickerEconomy ? (
+          <p className="mt-2 text-lg font-semibold text-kid-ink">
+            {stickerCount > 0
+              ? `You have ${stickerCount} sticker${stickerCount === 1 ? "" : "s"} in your book!`
+              : "Keep going to earn stickers!"}
+          </p>
+        ) : null}
         {!avatar ? (
           <div className="mt-6">
             <p className="mb-3 text-lg font-bold text-kid-ink">Pick a buddy</p>
@@ -342,6 +354,13 @@ export function LessonPlayer({
   const [stickerCount, setStickerCount] = useState(0);
   const [gold, setGold] = useState(0);
   const [experience, setExperience] = useState(0);
+  const [activityEnergy, setActivityEnergy] = useState(0);
+  const [activityStreak, setActivityStreak] = useState(0);
+  const [energyRewardBurst, setEnergyRewardBurst] = useState<{
+    id: number;
+    gold: number;
+  } | null>(null);
+  const energyRewardBurstIdRef = useRef(0);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoAdvanceCompletedForScreenRef = useRef<string | null>(null);
   const playbackRootRef = useRef<HTMLDivElement | null>(null);
@@ -349,6 +368,14 @@ export function LessonPlayer({
   const muted = useMuted();
   const isPreview = mode === "preview";
   const canvasEdit = isPreview && visualEdit != null;
+  const isActivityQuiz = lessonId.startsWith("activity-");
+
+  const resetActivityQuizRun = useCallback(() => {
+    if (!lessonId.startsWith("activity-")) return;
+    setActivityEnergy(0);
+    setActivityStreak(0);
+    setEnergyRewardBurst(null);
+  }, [lessonId]);
 
   const refreshEconomy = useCallback(() => {
     queueMicrotask(() => {
@@ -581,6 +608,7 @@ export function LessonPlayer({
                 type="button"
                 onClick={() => {
                   playSfx("tap", muted);
+                  resetActivityQuizRun();
                   setDone(false);
                   setIndex(0);
                   visualEdit?.onScreenIndexChange?.(0);
@@ -588,11 +616,8 @@ export function LessonPlayer({
               >
                 Play again
               </KidButton>
-              <Link href="/teacher" className={kidLinkSecondaryClassName}>
-                Back to dashboard
-              </Link>
               <Link href="/teacher/courses" className={kidLinkSecondaryClassName}>
-                Courses
+                Back to courses
               </Link>
               <Link href="/activities" className={kidLinkSecondaryClassName}>
                 Activity library
@@ -630,7 +655,9 @@ export function LessonPlayer({
         isPreview={isPreview}
         completionPlayground={completionPlayground}
         onEconomyRefresh={refreshEconomy}
+        hideStickerEconomy={isActivityQuiz}
         onPlayAgain={() => {
+          resetActivityQuizRun();
           setDone(false);
           setIndex(0);
           visualEdit?.onScreenIndexChange?.(0);
@@ -653,6 +680,50 @@ export function LessonPlayer({
       window.setTimeout(() => setInteractionFeedback("none"), 750);
       setInteractionPass(true);
       playSfx("correct", muted);
+      if (isActivityQuiz) {
+        setActivityStreak((prevStreak) => {
+          const nextStreak = prevStreak + 1;
+          setActivityEnergy((prevEnergy) => {
+            const increment = ACTIVITY_QUIZ_ENERGY_BASE * nextStreak;
+            let next = prevEnergy + increment;
+            let pulses = 0;
+            while (next >= 1) {
+              next -= 1;
+              pulses += 1;
+            }
+            if (pulses > 0) {
+              queueMicrotask(() => {
+                energyRewardBurstIdRef.current += 1;
+                const burstId = energyRewardBurstIdRef.current;
+                setEnergyRewardBurst({
+                  id: burstId,
+                  gold: ACTIVITY_QUIZ_ENERGY_GOLD * pulses,
+                });
+                playSfx("complete", muted);
+                if (!isPreview) {
+                  let snapshot = getRewards();
+                  for (let p = 0; p < pulses; p += 1) {
+                    snapshot = awardRewards({
+                      eventId: `${lessonId}:${screen.id}:energy:${p}:${crypto.randomUUID()}`,
+                      goldDelta: ACTIVITY_QUIZ_ENERGY_GOLD,
+                      experienceDelta: ACTIVITY_QUIZ_ENERGY_XP,
+                    });
+                  }
+                  setGold(snapshot.gold);
+                  setExperience(snapshot.experience);
+                }
+              });
+            }
+            return next;
+          });
+          return nextStreak;
+        });
+        if (!isPreview) {
+          const trackedWords = extractTrackedWords(parsed);
+          recordWordInteraction(trackedWords, true);
+        }
+        return;
+      }
       if (!isPreview) {
         const { stickers } = recordCorrectAnswer();
         setStickerCount(stickers);
@@ -677,6 +748,9 @@ export function LessonPlayer({
       setInteractionFeedback("wrong");
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
+      if (isActivityQuiz) {
+        setActivityStreak(0);
+      }
       if (!isPreview) {
         const trackedWords = extractTrackedWords(parsed);
         recordWordInteraction(trackedWords, false);
@@ -693,18 +767,30 @@ export function LessonPlayer({
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-kid-ink pb-3">
         <h1 className="text-xl font-bold text-kid-ink">{lessonTitle}</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <KidStickerStrip count={stickerCount} />
-          <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
-            Gold: {gold}
-          </p>
-          <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
-            XP: {experience}
-          </p>
-          <KidProgressBar currentIndex={index} total={screens.length} />
-        </div>
+        {isActivityQuiz ? (
+          <div className="relative">
+            {energyRewardBurst ? (
+              <KidActivityEnergyRewardPop
+                key={energyRewardBurst.id}
+                goldAmount={energyRewardBurst.gold}
+              />
+            ) : null}
+            <KidQuizActivityHud energyFill={activityEnergy} streak={activityStreak} />
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <KidStickerStrip count={stickerCount} />
+            <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
+              Gold: {gold}
+            </p>
+            <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
+              XP: {experience}
+            </p>
+            <KidProgressBar currentIndex={index} total={screens.length} />
+          </div>
+        )}
       </div>
-      {quizProgress ? (
+      {quizProgress && !isActivityQuiz ? (
         <p
           className="rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm"
           role="status"

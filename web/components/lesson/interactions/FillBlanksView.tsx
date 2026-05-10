@@ -2,12 +2,10 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
-import { speakText, speakTextAndWait } from "@/lib/audio/tts";
-import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
 
@@ -20,12 +18,15 @@ export function FillBlanksView({
   onNext,
   onBack,
   showBack,
+  /** When true, Enter in a blank runs Check (if not passed). */
+  submitOnEnter,
 }: {
   parsed: Extract<ScreenPayload, { type: "interaction"; subtype: "fill_blanks" }>;
   muted: boolean;
   passed: boolean;
   onPass: () => void;
   onWrong: () => void;
+  submitOnEnter?: boolean;
 } & NavProps) {
   const [answers, setAnswers] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -41,6 +42,7 @@ export function FillBlanksView({
         .join("||"),
     [parsed.blanks],
   );
+  const wordBankSignature = useMemo(() => (parsed.word_bank ?? []).join("|"), [parsed.word_bank]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -50,7 +52,7 @@ export function FillBlanksView({
       setLockedCorrectIds(new Set());
       setWrongHint(null);
     });
-  }, [parsed.template, blanksSignature]);
+  }, [parsed.template, blanksSignature, wordBankSignature]);
 
   const parts = useMemo((): { type: "text" | "blank"; value: string }[] => {
     const template = parsed.template;
@@ -70,6 +72,31 @@ export function FillBlanksView({
     }
     return out;
   }, [parsed.template]);
+
+  const pickTargetBlankId = useCallback((): string | null => {
+    if (passed) return null;
+    let firstEditable: string | null = null;
+    for (const p of parts) {
+      if (p.type !== "blank") continue;
+      const id = p.value;
+      if (lockedCorrectIds.has(id)) continue;
+      if (firstEditable === null) firstEditable = id;
+      if (!(answers[id] ?? "").trim()) return id;
+    }
+    return firstEditable;
+  }, [parts, answers, lockedCorrectIds, passed]);
+
+  const applyWordFromBank = useCallback(
+    (word: string) => {
+      if (passed) return;
+      const id = pickTargetBlankId();
+      if (!id) return;
+      playSfx("tap", muted);
+      setWrongHint(null);
+      setAnswers((prev) => ({ ...prev, [id]: word }));
+    },
+    [passed, muted, pickTargetBlankId],
+  );
 
   function check() {
     playSfx("tap", muted);
@@ -96,7 +123,11 @@ export function FillBlanksView({
         }
         return next;
       });
-      setWrongHint("Not quite yet. Correct words are locked in green. Try again for the empty blanks.");
+      setWrongHint(
+        parsed.word_bank?.length
+          ? "Not quite yet. Correct words stay green. Use the word box or type, then tap Check."
+          : "Not quite yet. Correct words are locked in green. Try again for the empty blanks.",
+      );
       onWrong();
       return;
     }
@@ -140,9 +171,10 @@ export function FillBlanksView({
                   })
                 }
                 onKeyDown={(e) => {
+                  if (!submitOnEnter || passed) return;
                   if (e.key !== "Enter") return;
                   e.preventDefault();
-                  if (passed || lockedCorrectIds.has(p.value)) return;
+                  if (lockedCorrectIds.has(p.value)) return;
                   check();
                 }}
                 className={clsx(
@@ -157,11 +189,27 @@ export function FillBlanksView({
           )}
         </p>
         {parsed.word_bank && parsed.word_bank.length > 0 ? (
-          <div className="mt-4">
-            <p className="mb-2 font-semibold">Word bank</p>
-            <p className="rounded-lg border-2 border-kid-ink/20 bg-kid-panel px-3 py-2 text-lg font-semibold text-neutral-800">
-              {parsed.word_bank.join(" · ")}
-            </p>
+          <div
+            className="mt-4 rounded-xl border-2 border-kid-ink/25 bg-kid-surface-muted/40 px-3 py-3"
+            role="group"
+            aria-label="Word choices"
+          >
+            <p className="mb-1 font-semibold text-kid-ink">Word box</p>
+            <p className="mb-3 text-sm text-neutral-700">Tap a word to fill the blank. You can still type instead.</p>
+            <div className="flex flex-wrap gap-2">
+              {parsed.word_bank.map((w, i) => (
+                <KidButton
+                  key={`${w}-${i}`}
+                  type="button"
+                  variant="secondary"
+                  disabled={passed || pickTargetBlankId() === null}
+                  className="!min-h-11 !min-w-[3.25rem] px-3 py-2 text-base font-bold"
+                  onClick={() => applyWordFromBank(w)}
+                >
+                  {w}
+                </KidButton>
+              ))}
+            </div>
           </div>
         ) : null}
         {wrongHint ? (

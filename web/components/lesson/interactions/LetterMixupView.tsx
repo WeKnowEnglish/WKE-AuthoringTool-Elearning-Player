@@ -20,12 +20,15 @@ export function LetterMixupView({
   onNext,
   onBack,
   showBack,
+  /** When true, Enter runs Check when every slot is filled. */
+  submitOnEnter,
 }: {
   parsed: Extract<ScreenPayload, { type: "interaction"; subtype: "letter_mixup" }>;
   muted: boolean;
   passed: boolean;
   onPass: () => void;
   onWrong: () => void;
+  submitOnEnter?: boolean;
 } & NavProps) {
   const item = parsed.items[0];
   const targetWord = item?.target_word ?? "";
@@ -38,6 +41,10 @@ export function LetterMixupView({
 
   type WordCell = { traySlotKey: string; char: string; locked: boolean };
   const [wordSlots, setWordSlots] = useState<(WordCell | null)[]>([]);
+  const wordSlotsRef = useRef<(WordCell | null)[]>([]);
+  wordSlotsRef.current = wordSlots;
+  const passedRef = useRef(passed);
+  passedRef.current = passed;
   const [shakingSlotIndices, setShakingSlotIndices] = useState<Set<number>>(() => new Set());
   const kickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -106,8 +113,10 @@ export function LetterMixupView({
     return wordSlots.some((s) => s?.traySlotKey === traySlotKey);
   }
 
+  const checkRef = useRef<() => void>(() => {});
+
   function runLetterCheck(slots: (WordCell | null)[]) {
-    if (passed) return;
+    if (passedRef.current) return;
     if (kickTimeoutRef.current) {
       clearTimeout(kickTimeoutRef.current);
       kickTimeoutRef.current = null;
@@ -234,10 +243,11 @@ export function LetterMixupView({
   }
 
   function check() {
-    if (passed) return;
+    if (passedRef.current) return;
     playSfx("tap", muted);
-    runLetterCheck(wordSlots);
+    runLetterCheck(wordSlotsRef.current);
   }
+  checkRef.current = check;
 
   useEffect(
     () => () => {
@@ -245,6 +255,20 @@ export function LetterMixupView({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!submitOnEnter) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      if (passedRef.current) return;
+      const slots = wordSlotsRef.current;
+      if (slots.length === 0 || slots.every((s) => s === null)) return;
+      e.preventDefault();
+      checkRef.current();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [submitOnEnter]);
 
   const [imageFit, setImageFit] = useState<"cover" | "contain">(() => parsed.image_fit ?? "contain");
   useEffect(() => {

@@ -25,12 +25,15 @@ export function McQuizView({
   onNext,
   onBack,
   showBack,
+  /** When true, correct answer does not block on TTS (snappier quizzes). */
+  snappyCorrect,
 }: {
   parsed: Extract<ScreenPayload, { type: "interaction"; subtype: "mc_quiz" }>;
   muted: boolean;
   passed: boolean;
   onPass: () => void;
   onWrong: () => void;
+  snappyCorrect?: boolean;
 } & NavProps) {
   const optionsSignature = useMemo(
     () => JSON.stringify(parsed.options.map((opt: { id: string; label: string }) => [opt.id, opt.label])),
@@ -125,8 +128,13 @@ export function McQuizView({
                 playSfx("tap", muted);
                 if (opt.id === parsed.correct_option_id) {
                   setIsResolving(true);
-                  await speakTextAndWait(opt.label, { muted });
-                  onPass();
+                  if (snappyCorrect) {
+                    speakText(opt.label, { muted });
+                    onPass();
+                  } else {
+                    await speakTextAndWait(opt.label, { muted });
+                    onPass();
+                  }
                   setIsResolving(false);
                   return;
                 }

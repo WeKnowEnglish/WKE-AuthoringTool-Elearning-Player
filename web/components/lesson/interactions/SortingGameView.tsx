@@ -9,7 +9,14 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt, deterministicShuffle } from "./shared";
+import {
+  GuideBlock,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+  deterministicShuffle,
+} from "./shared";
 
 export function SortingGameView({
   parsed,
@@ -101,7 +108,7 @@ export function SortingGameView({
     (c.display.show_image ?? true) && !!c.display.image_url?.trim();
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       <KidPanel>
         <p className="text-xl font-semibold">{parsed.prompt}</p>
         <p className="mt-2 text-sm text-neutral-700">Tap an object, then tap a container. Drag-and-drop also works.</p>
@@ -205,10 +212,7 @@ export function SortingGameView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? <KidButton type="button" variant="secondary" onClick={onBack}>Back</KidButton> : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>Next</KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

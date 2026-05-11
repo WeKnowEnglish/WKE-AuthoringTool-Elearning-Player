@@ -51,6 +51,8 @@ export type QuizCompilerDebug = {
   tier: QuizCompilerFilterTier;
   candidateCount: number;
   pickedRowIndices: number[];
+  /** Stable ids for each slide row (for cross-run de-duplication). */
+  pickedRowIdentities?: string[];
   warnings: string[];
   quizQuestionCount?: QuizQuestionCount;
   quizDifficultyLevel?: QuizDifficultyLevel;
@@ -65,6 +67,11 @@ export type QuizDifficultyLevel = 1 | 2 | 3;
 export type QuizBuildOptions = {
   questionCount: QuizQuestionCount;
   difficultyLevel: QuizDifficultyLevel;
+  /**
+   * Row identity strings (`rowIndex\\0lemmaKey\\0target_word`) to avoid reusing
+   * questions from recent games (see test-start recent-run storage).
+   */
+  excludeRowIdentities?: string[];
 };
 
 export const DEFAULT_QUIZ_BUILD_OPTIONS: QuizBuildOptions = {

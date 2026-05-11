@@ -16,7 +16,8 @@ export type MenuTopicCluster = {
 
 export const MENU_TOPIC_CLUSTERS: Record<QuizTopicId, MenuTopicCluster> = {
   food: {
-    vocabSlugs: ["food", "drinks", "kitchen"],
+    /** Omit `kitchen` so tableware (cups, plates) tagged only as kitchen does not drive Food quizzes. */
+    vocabSlugs: ["food", "drinks"],
     tagHints: [
       "food",
       "eat",

@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { clsx } from "clsx";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { uploadStudentVoiceSubmission } from "@/lib/actions/student-voice";
 import { getProgressSnapshot } from "@/lib/progress/local-storage";
@@ -10,6 +12,15 @@ import { getProgressSnapshot } from "@/lib/progress/local-storage";
 export function interactionImageFitClass(imageFit: "cover" | "contain" | undefined) {
   return (imageFit ?? "contain") === "contain" ? "object-contain bg-white" : "object-cover";
 }
+
+/**
+ * Height for full-width hero images (MCQ, fill blanks, letter mix-up, …).
+ * Uses the smaller of: a modest dvh cap, viewport minus typical quiz/lesson chrome + fixed nav,
+ * and a 16∶9 width-based cap — reduces whole-page scroll on short screens.
+ */
+export const interactionHeroImageFrameStyle: CSSProperties = {
+  height: "min(28dvh, calc(100dvh - 21rem), calc((100vw - 2.5rem) * 9 / 16))",
+};
 
 export function GuideBlock({
   guide,
@@ -109,6 +120,47 @@ export type NavProps = {
   onBack: () => void;
   showBack: boolean;
 };
+
+/** Bottom padding so activity content stays above {@link InteractionLessonNav}. */
+export const interactionNavReservePaddingClass = "pb-24";
+
+/** Back / Next pinned to the bottom-left of the viewport (lesson / quiz player). */
+export function InteractionLessonNav({
+  showBack,
+  onBack,
+  passed,
+  onNext,
+  nextDisabled,
+  nextLabel = "Next",
+  backLabel = "Back",
+}: Omit<NavProps, "muted"> & {
+  /** When set, overrides the default Next disable rule (`!passed`). */
+  nextDisabled?: boolean;
+  nextLabel?: string;
+  backLabel?: string;
+}) {
+  const nextBtnDisabled = nextDisabled !== undefined ? nextDisabled : !passed;
+  return (
+    <div
+      className={clsx(
+        "pointer-events-none fixed z-[100] flex justify-start",
+        "left-[max(0.75rem,env(safe-area-inset-left))]",
+        "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
+      )}
+    >
+      <div className="pointer-events-auto flex flex-wrap gap-3 drop-shadow-md">
+        {showBack ? (
+          <KidButton type="button" variant="secondary" onClick={onBack}>
+            {backLabel}
+          </KidButton>
+        ) : null}
+        <KidButton type="button" disabled={nextBtnDisabled} onClick={() => onNext()}>
+          {nextLabel}
+        </KidButton>
+      </div>
+    </div>
+  );
+}
 
 export function fixTextWordNeedsCorrection(
   regions: { word: string }[],

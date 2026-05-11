@@ -9,7 +9,14 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt, normalizeText } from "./shared";
+import {
+  GuideBlock,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+  normalizeText,
+} from "./shared";
 
 export function TableCompleteView({
   parsed,
@@ -47,7 +54,7 @@ export function TableCompleteView({
   }
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       <KidPanel>
         <p className="text-xl font-semibold">{parsed.prompt}</p>
         {parsed.input_mode === "tokens" && (parsed.token_bank?.length ?? 0) > 0 ? (
@@ -100,10 +107,7 @@ export function TableCompleteView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? <KidButton type="button" variant="secondary" onClick={onBack}>Back</KidButton> : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>Next</KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

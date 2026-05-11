@@ -9,7 +9,14 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, NavProps, unopt, deterministicShuffle } from "./shared";
+import {
+  GuideBlock,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+  deterministicShuffle,
+} from "./shared";
 
 export function WordShapeHuntView({
   parsed,
@@ -61,7 +68,7 @@ export function WordShapeHuntView({
         : "";
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       {parsed.prompt_audio_url ? <audio ref={audioRef} src={parsed.prompt_audio_url} preload="auto" className="hidden" /> : null}
       <KidPanel>
         <p className="text-xl font-semibold">{parsed.prompt}</p>
@@ -92,10 +99,7 @@ export function WordShapeHuntView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? <KidButton type="button" variant="secondary" onClick={onBack}>Back</KidButton> : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>Next</KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

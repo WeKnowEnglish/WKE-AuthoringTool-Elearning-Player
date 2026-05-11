@@ -2,14 +2,23 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, interactionImageFitClass, NavProps, unopt, deterministicShuffle } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  interactionHeroImageFrameStyle,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+  deterministicShuffle,
+} from "./shared";
 
 export function LetterMixupView({
   parsed,
@@ -59,29 +68,28 @@ export function LetterMixupView({
     }
   }, [lettersKey, targetChars.length]);
 
-  /** Spelling row: tiles share width and shrink (clamp text) so long words don’t wrap awkwardly. */
+  /** Answer + tray: fixed square tiles sized from row width ÷ letter count (capped), centered — no stretch on short words. */
   const letterTilesRowClass =
-    "flex w-full min-w-0 flex-nowrap items-stretch justify-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
+    "flex w-full min-w-0 flex-nowrap items-center justify-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
   const letterTileClass =
-    "box-border flex h-12 min-h-[2.5rem] w-full min-w-[1.125rem] max-h-12 flex-[1_1_0] basis-0 touch-manipulation select-none items-center justify-center overflow-hidden rounded-xl border-2 border-sky-500 bg-white px-0.5 text-[clamp(0.75rem,2.8vmin,1.5rem)] font-bold leading-none text-kid-ink shadow-sm transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:active:scale-100";
+    "box-border flex h-full w-full min-h-0 min-w-0 touch-manipulation select-none items-center justify-center overflow-hidden rounded-xl border-2 border-sky-500 bg-white px-0.5 font-bold leading-none text-kid-ink shadow-sm transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:active:scale-100";
 
-  /** Tray: tile size computed once from full word length + row width; stays fixed while spelling (only re-centers). */
   const trayTilesRowClass =
     "flex w-full min-w-0 flex-nowrap items-center justify-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
   const TRAY_GAP_PX = 4;
   const trayLetterTileClass =
     "box-border flex shrink-0 touch-manipulation select-none items-center justify-center rounded-xl border-2 border-sky-500 bg-white font-bold leading-none text-kid-ink shadow-sm transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:active:scale-100";
 
-  const trayRowRef = useRef<HTMLDivElement>(null);
-  const [trayTileSizePx, setTrayTileSizePx] = useState<number | null>(null);
+  const letterSlotsRowRef = useRef<HTMLDivElement>(null);
+  const [letterTileSizePx, setLetterTileSizePx] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const n = letters.length;
     if (n === 0) {
-      queueMicrotask(() => setTrayTileSizePx(null));
+      queueMicrotask(() => setLetterTileSizePx(null));
       return;
     }
-    const el = trayRowRef.current;
+    const el = letterSlotsRowRef.current;
     if (!el) return;
 
     const compute = (): boolean => {
@@ -91,7 +99,7 @@ export function LetterMixupView({
       const raw = Math.floor((w - totalGaps) / n);
       const clamped = Math.min(48, Math.max(26, raw));
       queueMicrotask(() => {
-        setTrayTileSizePx(clamped);
+        setLetterTileSizePx(clamped);
       });
       return true;
     };
@@ -270,13 +278,6 @@ export function LetterMixupView({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [submitOnEnter]);
 
-  const [imageFit, setImageFit] = useState<"cover" | "contain">(() => parsed.image_fit ?? "contain");
-  useEffect(() => {
-    queueMicrotask(() => {
-      setImageFit(parsed.image_fit ?? "contain");
-    });
-  }, [parsed.image_url, parsed.image_fit]);
-
   const wordAudioRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     const el = wordAudioRef.current;
@@ -312,18 +313,19 @@ export function LetterMixupView({
   }
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       <audio ref={wordAudioRef} preload="metadata" className="hidden" />
       {parsed.image_url ? (
-        <div className="mb-4 space-y-2">
+        <div className="mb-4">
           <button
             type="button"
             disabled={passed}
             onClick={playPictureWord}
             className={clsx(
-              "group relative aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
+              "group relative w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
               !passed && "cursor-pointer",
             )}
+            style={interactionHeroImageFrameStyle}
             aria-label={
               parsed.image_use_tts ?
                 `Tap to hear: ${parsed.image_read_aloud_text?.trim() || targetWord || "word"}`
@@ -336,7 +338,7 @@ export function LetterMixupView({
               src={parsed.image_url}
               alt=""
               fill
-              className={interactionImageFitClass(imageFit)}
+              className={interactionImageFitClass("contain")}
               unoptimized={unopt(parsed.image_url)}
             />
             {!passed ? (
@@ -345,19 +347,6 @@ export function LetterMixupView({
               </span>
             ) : null}
           </button>
-          <div className="flex flex-wrap justify-center gap-2">
-            <KidButton
-              type="button"
-              variant="secondary"
-              className="!min-h-11 !min-w-0 px-4 text-base"
-              onClick={() => {
-                playSfx("tap", muted);
-                setImageFit((f) => (f === "cover" ? "contain" : "cover"));
-              }}
-            >
-              {imageFit === "cover" ? "Show whole image" : "Fill frame"}
-            </KidButton>
-          </div>
         </div>
       ) : null}
       <KidPanel>
@@ -370,46 +359,57 @@ export function LetterMixupView({
           className="mt-3 min-w-0 rounded-xl border-2 border-dashed border-kid-ink bg-kid-surface-muted/40 p-3"
           aria-label="Your word"
         >
-          <div className={letterTilesRowClass}>
-            {wordSlots.map((cell, slotIndex) => (
-              <div
-                key={`slot-${slotIndex}`}
-                className="flex min-h-[3.25rem] min-w-[1.125rem] flex-[1_1_0] basis-0 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-white/60 px-0.5"
-              >
-                {cell ? (
-                  <button
-                    type="button"
-                    disabled={passed || cell.locked}
-                    className={clsx(
-                      letterTileClass,
-                      cell.locked &&
-                        "border-emerald-600 bg-emerald-50 text-emerald-950 kid-feedback-glow-correct hover:bg-emerald-50 !opacity-100",
-                      shakingSlotIndices.has(slotIndex) &&
-                        "border-red-600 bg-red-100 text-red-900 kid-animate-shake",
-                    )}
-                    onClick={() => returnToTray(slotIndex)}
-                    aria-label={
-                      cell.locked ? `Letter ${cell.char} locked` : `Remove ${cell.char} from word`
-                    }
-                  >
-                    {cell.char}
-                  </button>
-                ) : (
-                  <span className="text-xs font-medium text-neutral-400 sm:text-sm" aria-hidden>
-                    ·
-                  </span>
-                )}
-              </div>
-            ))}
+          <div ref={letterSlotsRowRef} className={letterTilesRowClass}>
+            {wordSlots.map((cell, slotIndex) => {
+              const px = letterTileSizePx ?? 44;
+              const fs = Math.min(24, Math.max(14, Math.round(px * 0.42)));
+              return (
+                <div
+                  key={`slot-${slotIndex}`}
+                  className="flex shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-white/60 p-0.5"
+                  style={{
+                    width: px,
+                    height: px,
+                    minWidth: px,
+                    minHeight: px,
+                  }}
+                >
+                  {cell ? (
+                    <button
+                      type="button"
+                      disabled={passed || cell.locked}
+                      className={clsx(
+                        letterTileClass,
+                        cell.locked &&
+                          "border-emerald-600 bg-emerald-50 text-emerald-950 kid-feedback-glow-correct hover:bg-emerald-50 !opacity-100",
+                        shakingSlotIndices.has(slotIndex) &&
+                          "border-red-600 bg-red-100 text-red-900 kid-animate-shake",
+                      )}
+                      style={{ fontSize: fs }}
+                      onClick={() => returnToTray(slotIndex)}
+                      aria-label={
+                        cell.locked ? `Letter ${cell.char} locked` : `Remove ${cell.char} from word`
+                      }
+                    >
+                      {cell.char}
+                    </button>
+                  ) : (
+                    <span className="text-xs font-medium text-neutral-400 sm:text-sm" aria-hidden>
+                      ·
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
         <p className="mt-2 text-center text-sm text-neutral-600">Letter tray — tap to add (first empty slot)</p>
-        <div ref={trayRowRef} className={clsx(trayTilesRowClass, "mt-2 min-h-[3.25rem]")}>
+        <div className={clsx(trayTilesRowClass, "mt-2 min-h-[3.25rem]")}>
           {letters
             .map((ch, i) => ({ ch, i, traySlotKey: `${i}__${ch}` }))
             .filter(({ traySlotKey }) => !trayKeyInUse(traySlotKey))
             .map(({ ch, i, traySlotKey }) => {
-              const px = trayTileSizePx ?? 44;
+              const px = letterTileSizePx ?? 44;
               const fs = Math.min(24, Math.max(14, Math.round(px * 0.42)));
               return (
                 <button
@@ -444,10 +444,7 @@ export function LetterMixupView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? <KidButton type="button" variant="secondary" onClick={onBack}>Back</KidButton> : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>Next</KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

@@ -26,8 +26,6 @@ const ACTIONS_STRUCTURE_IDS = new Set([
   "present_continuous",
   "daily_routines_actions",
   "classroom_commands",
-  "likes_preferences",
-  "wh_questions",
 ]);
 
 function vocabularyTopicsMatchMenuTopic(v: VocabularyEntry | null | undefined, topic: QuizTopicId): boolean {
@@ -38,14 +36,19 @@ function vocabularyTopicsMatchMenuTopic(v: VocabularyEntry | null | undefined, t
 
 /** Whether a vocabulary entry supports the menu topic (for synthetic rows + distractors). */
 export function vocabEntryMatchesTopic(entry: VocabularyEntry, topic: QuizTopicId): boolean {
-  if (vocabularyTopicsMatchMenuTopic(entry, topic)) return true;
-  if (topic === "actions" && entry.pos === "verb") return true;
-  return false;
+  return vocabularyTopicsMatchMenuTopic(entry, topic);
 }
 
 function rowMatchesMenuTopicNonActions(row: IndexedSentenceRow, topic: QuizTopicId): boolean {
   const v = row.vocabulary;
   if (vocabularyTopicsMatchMenuTopic(v, topic)) return true;
+  /**
+   * `row.vocabulary` is always the **assessed target** (`target_word` in the bank). If that lemma
+   * exists in master vocab but is not tagged for this menu topic, do **not** admit the row via
+   * sentence-level tags (e.g. “cat” in tags while the blank target is “milk” on an Animals quiz).
+   * Legacy / unlinked rows (`v == null`) still use tags + structure hints.
+   */
+  if (v != null) return false;
   const sid = row.structure_id.trim().toLowerCase();
   if (sid === topic) return true;
   if (rowStructureIdMatchesCluster(row, topic)) return true;
@@ -56,8 +59,7 @@ function rowMatchesMenuTopicNonActions(row: IndexedSentenceRow, topic: QuizTopic
 export function rowMatchesTopic(row: IndexedSentenceRow, topic: QuizTopicId): boolean {
   if (topic === "actions") {
     if (rowMatchesMenuTopicNonActions(row, "actions")) return true;
-    if (row.vocabulary?.pos === "verb") return true;
-    if (ACTIONS_STRUCTURE_IDS.has(row.structure_id)) return true;
+    if (ACTIONS_STRUCTURE_IDS.has(row.structure_id.trim().toLowerCase())) return true;
     return false;
   }
   return rowMatchesMenuTopicNonActions(row, topic);
@@ -119,8 +121,16 @@ export function pickCandidatesWithFallback(
     return { rows: synthetic, tier: "synthetic_vocab", warnings };
   }
 
-  const lastResort = indexed.filter(rowUsableForQuestion);
-  warnings.push(`Falling back to any sentence with target_word (${lastResort.length} rows).`);
+  const lastResort = indexed.filter((r) => rowMatchesTopic(r, topic) && rowUsableForQuestion(r));
+  if (lastResort.length === 0) {
+    warnings.push(`No on-topic usable rows for topic "${topic}" after all tiers and synthetic fallback.`);
+    return { rows: [], tier: "topic_only", warnings };
+  }
+  if (lastResort.length < need) {
+    warnings.push(
+      `Partial on-topic pool: ${lastResort.length} usable rows (wanted ${need}); MC/fill may use fewer distinct sentences.`,
+    );
+  }
   return { rows: lastResort, tier: "topic_only", warnings };
 }
 

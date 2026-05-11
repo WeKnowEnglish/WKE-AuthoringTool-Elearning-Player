@@ -11,10 +11,11 @@ import {
   pickCandidatesWithFallback,
   rowMatchesTopic,
   rowUsableForQuestion,
+  vocabEntryMatchesTopic,
 } from "./quiz-compiler-filters";
 import { buildLemmaAliasMap, indexSentenceRows, normalizeJsonRows } from "./quiz-compiler-index";
 import { parseSentenceBankCsv, validateNormalizedRows } from "./quiz-compiler-loader";
-import { buildSyntheticLetterMixupIndexedRows, runQuizCompiler } from "./quiz-compiler";
+import { buildQuizCompilation, buildSyntheticLetterMixupIndexedRows, runQuizCompiler } from "./quiz-compiler";
 import {
   normalizeRowSentenceKey,
   pickRowsDifficultyWeighted,
@@ -25,6 +26,7 @@ import { MASTER_VOCABULARY } from "./master-vocabulary";
 import { SENTENCE_BANK_ROWS_RAW } from "./sentence-bank-data";
 import { TOPICS } from "@/lib/teststartpage/bank";
 import type { IndexedSentenceRow, SentenceBankCsvRow } from "./quiz-compiler-types";
+import type { VocabularyEntry } from "./master-vocabulary";
 import { STUDENT_MENU_TOPIC_IDS } from "./quiz-compiler-types";
 
 function loadIndexed(): IndexedSentenceRow[] {
@@ -87,6 +89,23 @@ describe("runQuizCompiler", () => {
       expect(questions[i].subtype).toBe(expected[i]);
       const again = parseScreenPayload("interaction", questions[i]);
       expect(again?.type).toBe("interaction");
+    }
+  });
+
+  it("excludeRowIdentities yields no overlap with those rows when the pool is large enough", () => {
+    const topic = "food";
+    const opts = { questionCount: 6 as const, difficultyLevel: 2 as const };
+    const first = buildQuizCompilation(topic, "vitest-recent-exclude-a", opts);
+    const exclude = first.debug.pickedRowIdentities;
+    expect(exclude).toBeDefined();
+    expect(exclude!.length).toBe(6);
+    const second = buildQuizCompilation(topic, "vitest-recent-exclude-b", {
+      ...opts,
+      excludeRowIdentities: exclude,
+    });
+    const secondSet = new Set(second.debug.pickedRowIdentities);
+    for (const id of exclude!) {
+      expect(secondSet.has(id)).toBe(false);
     }
   });
 });
@@ -188,6 +207,46 @@ describe("menu topic polish (animals + actions)", () => {
     expect(rowMatchesTopic(row, "animals")).toBe(false);
   });
 
+  it("assessed target wins: milk is food/drinks, not animals, even with cat / pet tags", () => {
+    const milk = MASTER_VOCABULARY.entries.find((e) => e.lemma === "milk")!;
+    const row: IndexedSentenceRow = {
+      sentence: "The cat is drinking milk.",
+      target_word: "milk",
+      acceptable_targets: [],
+      variant_lexemes: [],
+      structure_id: "daily_routines",
+      tags: ["cat", "drink", "pet"],
+      cefr: "a1",
+      difficulty: 1,
+      rowIndex: 42_010,
+      variant_group: "",
+      lemmaKey: "milk",
+      vocabulary: milk,
+    };
+    expect(rowMatchesTopic(row, "animals")).toBe(false);
+    expect(rowMatchesTopic(row, "food")).toBe(true);
+  });
+
+  it("assessed target wins: sun is weather, not food, even with food-ish tags", () => {
+    const sun = MASTER_VOCABULARY.entries.find((e) => e.lemma === "sun")!;
+    const row: IndexedSentenceRow = {
+      sentence: "Is it a sunny day?",
+      target_word: "sun",
+      acceptable_targets: [],
+      variant_lexemes: [],
+      structure_id: "weather_small_talk",
+      tags: ["food", "lunch", "eat"],
+      cefr: "a1",
+      difficulty: 1,
+      rowIndex: 42_011,
+      variant_group: "",
+      lemmaKey: "sun",
+      vocabulary: sun,
+    };
+    expect(rowMatchesTopic(row, "food")).toBe(false);
+    expect(rowMatchesTopic(row, "weather")).toBe(true);
+  });
+
   it("be_adjective state rows are excluded from actions when not verb/cluster matched", () => {
     const row: IndexedSentenceRow = {
       sentence: "He is cold.",
@@ -204,6 +263,21 @@ describe("menu topic polish (animals + actions)", () => {
       vocabulary: null,
     };
     expect(rowMatchesTopic(row, "actions")).toBe(false);
+  });
+
+  it("verbs outside the actions menu vocab topics do not match actions for distractors/synthetic", () => {
+    const eatFoodOnly: VocabularyEntry = {
+      id: "eat_unit",
+      lemma: "eat",
+      pos: "verb",
+      cefr: "a1",
+      difficulty: 1,
+      forms: { base: "eat" },
+      grammar: {},
+      topics: ["food"],
+      tags: [],
+    };
+    expect(vocabEntryMatchesTopic(eatFoodOnly, "actions")).toBe(false);
   });
 });
 

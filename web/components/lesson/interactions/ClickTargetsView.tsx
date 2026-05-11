@@ -9,7 +9,14 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+} from "./shared";
 
 export function ClickTargetsView({
   parsed,
@@ -52,7 +59,7 @@ export function ClickTargetsView({
     treasureMode && treasureIds ? foundTreasure.has(id) : passed && id === parsed.correct_target_id;
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       <KidPanel>
         <p className="mb-4 text-xl font-semibold text-kid-ink">{parsed.body_text}</p>
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
@@ -90,16 +97,7 @@ export function ClickTargetsView({
         ) : null}
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            Back
-          </KidButton>
-        ) : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>
-          Next
-        </KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

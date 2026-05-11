@@ -9,7 +9,14 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+} from "./shared";
 
 export function HotspotGateView({
   parsed,
@@ -64,7 +71,7 @@ export function HotspotGateView({
   }
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       <KidPanel>
         {parsed.body_text ? (
           <p className="mb-4 text-xl font-semibold">{parsed.body_text}</p>
@@ -96,16 +103,7 @@ export function HotspotGateView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            Back
-          </KidButton>
-        ) : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>
-          Next
-        </KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

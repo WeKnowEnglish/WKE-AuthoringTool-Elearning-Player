@@ -12,6 +12,8 @@ import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
   interactionImageFitClass,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
   NavProps,
   unopt,
   useAudioRecorder,
@@ -74,7 +76,7 @@ export function GuidedDialogueView({
   }
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       <KidPanel>
         <div className="mb-4 flex items-center gap-3">
           <div className="relative h-20 w-20 overflow-hidden rounded-lg border-2 border-kid-ink">
@@ -122,16 +124,7 @@ export function GuidedDialogueView({
         {submitError || recorder.error ? <p className="mt-2 text-sm text-red-700">{submitError ?? recorder.error}</p> : null}
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            Back
-          </KidButton>
-        ) : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>
-          Next
-        </KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

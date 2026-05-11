@@ -7,7 +7,15 @@ import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, interactionImageFitClass, NavProps, unopt } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  interactionHeroImageFrameStyle,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+} from "./shared";
 
 export function FillBlanksView({
   parsed,
@@ -138,9 +146,15 @@ export function FillBlanksView({
   const imageSizeClass = parsed.image_size === "small" ? "max-w-xl" : "max-w-4xl";
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       {parsed.image_url ? (
-        <div className={clsx("relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink", imageSizeClass)}>
+        <div
+          className={clsx(
+            "relative mb-3 w-full overflow-hidden rounded-lg border-4 border-kid-ink",
+            imageSizeClass,
+          )}
+          style={interactionHeroImageFrameStyle}
+        >
           <Image
             src={parsed.image_url}
             alt=""
@@ -224,16 +238,7 @@ export function FillBlanksView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            Back
-          </KidButton>
-        ) : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>
-          Next
-        </KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

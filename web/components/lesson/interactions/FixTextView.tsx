@@ -12,6 +12,8 @@ import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
   interactionImageFitClass,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
   NavProps,
   unopt,
   normalizeText,
@@ -223,7 +225,7 @@ export function FixTextView({
     editIndex === hintChoicesForIndex;
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       {parsed.image_url ? (
         <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
           <Image
@@ -431,16 +433,7 @@ export function FixTextView({
       ) : null}
 
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            Back
-          </KidButton>
-        ) : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>
-          Next
-        </KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

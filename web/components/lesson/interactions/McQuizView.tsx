@@ -2,13 +2,22 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, interactionImageFitClass, NavProps, unopt, deterministicShuffle } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  interactionHeroImageFrameStyle,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+  deterministicShuffle,
+} from "./shared";
 
 const lastMcQuizOrderBySignature = new Map<string, string>();
 
@@ -98,9 +107,12 @@ export function McQuizView({
     return next;
   }, [parsed.shuffle_options, parsed.options, optionsSignature, shuffleSeed]);
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       {parsed.image_url ? (
-        <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
+        <div
+          className="relative mb-3 w-full shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink"
+          style={interactionHeroImageFrameStyle}
+        >
           <Image
             src={parsed.image_url}
             alt=""
@@ -155,16 +167,7 @@ export function McQuizView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            Back
-          </KidButton>
-        ) : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>
-          Next
-        </KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

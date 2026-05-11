@@ -218,8 +218,7 @@ function findLetterMixupRow(
   );
   if (fromVocab) return fromVocab;
 
-  const any = tryTake(indexed.filter(rowUsableForLetterMixup), "letter_mixup: used any playable row in bank.");
-  return any;
+  return null;
 }
 
 function buildLetterRawOrFallback(
@@ -258,6 +257,9 @@ export function buildQuizCompilation(
   const opts: QuizBuildOptions = { ...DEFAULT_QUIZ_BUILD_OPTIONS, ...buildOptions };
   const questionCount = opts.questionCount;
   const difficultyLevel = opts.difficultyLevel;
+  const excludeSet = new Set(opts.excludeRowIdentities ?? []);
+  const filterRecentExclusion = (rows: IndexedSentenceRow[]) =>
+    excludeSet.size === 0 ? rows : rows.filter((r) => !excludeSet.has(rowIdentity(r)));
 
   const indexed = getIndexedRowsForQuizCompiler();
   const minPool = Math.max(3, questionCount);
@@ -278,8 +280,15 @@ export function buildQuizCompilation(
   const syntheticLetterRows = buildSyntheticLetterMixupIndexedRows(topicId, MASTER_VOCABULARY.entries);
   const letterPoolMin = Math.max(nLetter * 2, 10);
   const letterPool = widenLetterPool(topicId, pool, indexed, letterPoolMin, syntheticLetterRows);
+  let letterPoolForPick = filterRecentExclusion(letterPool);
+  if (excludeSet.size > 0 && letterPoolForPick.length < nLetter) {
+    warnings.push(
+      "quiz_recent_exclusion: letter pool short after excluding recent games; using full letter pool for this run.",
+    );
+    letterPoolForPick = letterPool;
+  }
   const letterPicked = pickRowsDifficultyWeighted(
-    letterPool,
+    letterPoolForPick,
     nLetter,
     difficultyLevel,
     `${effectiveSeed}:letter`,
@@ -296,9 +305,22 @@ export function buildQuizCompilation(
   const needText = nMcq + nFill;
   /** Vocabulary-only spelling rows must not block MCQ/fill lemmas (they exist only for letter_mixup). */
   const letterRowsForVarietySeeds = letterPicked.filter((r) => r.rowIndex >= 0);
-  let textPicked = pickRowsDifficultyWeighted(mcFillWidened, needText, difficultyLevel, `${effectiveSeed}:text`, {
-    varietySeeds: varietySetsFromRows(letterRowsForVarietySeeds),
-  });
+  let mcFillForFirstTextPick = filterRecentExclusion(mcFillWidened);
+  if (excludeSet.size > 0 && mcFillForFirstTextPick.length < needText) {
+    warnings.push(
+      "quiz_recent_exclusion: MC/fill pool short after excluding recent games; using full on-topic pool for first picks.",
+    );
+    mcFillForFirstTextPick = mcFillWidened;
+  }
+  let textPicked = pickRowsDifficultyWeighted(
+    mcFillForFirstTextPick,
+    needText,
+    difficultyLevel,
+    `${effectiveSeed}:text`,
+    {
+      varietySeeds: varietySetsFromRows(letterRowsForVarietySeeds),
+    },
+  );
 
   if (textPicked.length < needText) {
     const usedTextIds = new Set(textPicked.map(rowIdentity));
@@ -346,17 +368,36 @@ export function buildQuizCompilation(
 
   if (textPicked.length < needText) {
     const usedIds = new Set<string>([...textPicked.map(rowIdentity), ...letterIds]);
-    const fillerPool = indexed.filter(
+    const fillerStrict = indexed.filter(
       (r) =>
         rowMatchesTopic(r, topicId) &&
         rowUsableForQuestion(r) &&
-        !usedIds.has(rowIdentity(r)),
+        !usedIds.has(rowIdentity(r)) &&
+        !excludeSet.has(rowIdentity(r)),
     );
     const before = textPicked.length;
-    for (const r of fillerPool) {
+    for (const r of fillerStrict) {
       if (textPicked.length >= needText) break;
       textPicked.push(r);
       usedIds.add(rowIdentity(r));
+    }
+    if (textPicked.length < needText) {
+      const fillerLoose = indexed.filter(
+        (r) =>
+          rowMatchesTopic(r, topicId) &&
+          rowUsableForQuestion(r) &&
+          !usedIds.has(rowIdentity(r)),
+      );
+      if (excludeSet.size > 0 && fillerLoose.length > 0) {
+        warnings.push(
+          "quiz_recent_exclusion: filler included rows from recent games (topic pool exhausted).",
+        );
+      }
+      for (const r of fillerLoose) {
+        if (textPicked.length >= needText) break;
+        textPicked.push(r);
+        usedIds.add(rowIdentity(r));
+      }
     }
     if (textPicked.length < needText) {
       throw new Error(
@@ -408,7 +449,13 @@ export function buildQuizCompilation(
       let row: IndexedSentenceRow | undefined = letterPicked[letterIdx];
       letterIdx += 1;
       if (!row) {
-        const fb = findLetterMixupRow(topicId, pool, indexed, usedLetter, syntheticLetterRows);
+        const fb = findLetterMixupRow(
+          topicId,
+          pool,
+          indexed,
+          new Set([...excludeSet, ...usedLetter]),
+          syntheticLetterRows,
+        );
         if (fb) {
           row = fb.row;
           if (fb.letterFallbackNote && !debugWarnings.includes(fb.letterFallbackNote)) {
@@ -425,7 +472,7 @@ export function buildQuizCompilation(
         pool,
         indexed,
         row,
-        usedLetter,
+        new Set([...excludeSet, ...usedLetter]),
         debugWarnings,
         syntheticLetterRows,
       );
@@ -439,6 +486,7 @@ export function buildQuizCompilation(
     tier,
     candidateCount: pool.length,
     pickedRowIndices: slides.map((s) => s.row.rowIndex),
+    pickedRowIdentities: slides.map((s) => rowIdentity(s.row)),
     warnings: debugWarnings,
     quizQuestionCount: questionCount,
     quizDifficultyLevel: difficultyLevel,

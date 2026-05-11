@@ -9,7 +9,15 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait } from "@/lib/audio/tts";
 import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
-import { GuideBlock, interactionImageFitClass, NavProps, unopt, deterministicShuffle } from "./shared";
+import {
+  GuideBlock,
+  interactionImageFitClass,
+  InteractionLessonNav,
+  interactionNavReservePaddingClass,
+  NavProps,
+  unopt,
+  deterministicShuffle,
+} from "./shared";
 
 type ListenColorWriteTool =
   | { mode: "color"; id: string }
@@ -99,7 +107,7 @@ export function ListenColorWriteView({
   const answeredCount = Object.keys(answers).length;
 
   return (
-    <div>
+    <div className={interactionNavReservePaddingClass}>
       {parsed.prompt_audio_url ? (
         <audio ref={audioRef} src={parsed.prompt_audio_url} preload="auto" className="hidden" />
       ) : null}
@@ -230,16 +238,7 @@ export function ListenColorWriteView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            Back
-          </KidButton>
-        ) : null}
-        <KidButton type="button" disabled={!passed} onClick={() => onNext()}>
-          Next
-        </KidButton>
-      </div>
+      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
     </div>
   );
 }

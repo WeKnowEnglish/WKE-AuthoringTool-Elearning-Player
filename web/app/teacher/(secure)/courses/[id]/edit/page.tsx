@@ -51,6 +51,19 @@ export default async function EditCoursePage({ params }: Props) {
           />
         </div>
         <div>
+          <label className="block text-sm font-medium">Course cover image URL</label>
+          <input
+            name="cover_image_url"
+            type="url"
+            defaultValue={course.cover_image_url ?? ""}
+            placeholder="https://... (leave blank for default image)"
+            className="mt-1 w-full rounded border px-3 py-2"
+          />
+          <p className="mt-1 text-xs text-neutral-500">
+            Recommended landscape image. Leave empty to use the default classroom cover.
+          </p>
+        </div>
+        <div>
           <label className="block text-sm font-medium">Order</label>
           <input
             name="order_index"

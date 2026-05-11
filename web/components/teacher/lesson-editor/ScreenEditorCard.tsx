@@ -3485,6 +3485,20 @@ type ListenColorWriteTarget = RectPercent & {
   expected_value: string;
 };
 
+const LISTEN_COLOR_WRITE_BACKGROUND_PRESETS = [
+  { label: "Easy scene", url: "/listen-color-backgrounds/scene-easy.svg" },
+  { label: "Medium scene", url: "/listen-color-backgrounds/scene-medium.svg" },
+  { label: "Busy scene", url: "/listen-color-backgrounds/scene-busy.svg" },
+] as const;
+
+const LISTEN_COLOR_WRITE_OBJECT_PRESETS = [
+  { label: "Ball", url: "/listen-color-objects/ball.svg" },
+  { label: "Bird", url: "/listen-color-objects/bird.svg" },
+  { label: "Car", url: "/listen-color-objects/car.svg" },
+  { label: "Box", url: "/listen-color-objects/box.svg" },
+  { label: "Cup", url: "/listen-color-objects/cup.svg" },
+] as const;
+
 function ListenColorWriteFields({
   syncKey,
   initial,
@@ -3569,6 +3583,64 @@ function ListenColorWriteFields({
         }}
         disabled={busy}
         compact
+        extraButtons={
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {LISTEN_COLOR_WRITE_BACKGROUND_PRESETS.map((preset) => (
+                <button
+                  key={preset.url}
+                  type="button"
+                  disabled={busy}
+                  className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50 active:bg-neutral-200 disabled:opacity-50"
+                  onClick={() => {
+                    setImg(preset.url);
+                    emit(
+                      preset.url,
+                      body_text,
+                      prompt_audio_url,
+                      allow_replay,
+                      allow_overwrite,
+                      require_all_targets,
+                      shuffle_text_options,
+                      palette,
+                      text_options,
+                      targets,
+                    );
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {LISTEN_COLOR_WRITE_OBJECT_PRESETS.map((preset) => (
+                <button
+                  key={preset.url}
+                  type="button"
+                  disabled={busy}
+                  className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50 active:bg-neutral-200 disabled:opacity-50"
+                  onClick={() => {
+                    setImg(preset.url);
+                    emit(
+                      preset.url,
+                      body_text,
+                      prompt_audio_url,
+                      allow_replay,
+                      allow_overwrite,
+                      require_all_targets,
+                      shuffle_text_options,
+                      palette,
+                      text_options,
+                      targets,
+                    );
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
       />
       <label className={labelClass()}>
         Prompt audio URL (optional)

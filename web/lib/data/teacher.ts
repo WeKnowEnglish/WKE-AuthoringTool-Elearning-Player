@@ -8,7 +8,7 @@ export type CourseRow = {
   title: string;
   slug: string;
   target: string;
-  cover_image_url?: string;
+  cover_image_url?: string | null;
   cover_video_url?: string;
   standards?: string;
   outcomes?: string;
@@ -316,6 +316,16 @@ const getLessonsForModulesCached = cache(async (moduleIdsKey: string) => {
 
 export async function getLessonsForModules(moduleIds: string[]) {
   return getLessonsForModulesCached(toModuleIdsCacheKey(moduleIds));
+}
+
+export async function getAllLessons() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lessons")
+    .select("id,module_id,title,slug,order_index,published")
+    .order("order_index", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as TeacherLessonRow[];
 }
 
 export const getLesson = cache(async function getLesson(lessonId: string) {

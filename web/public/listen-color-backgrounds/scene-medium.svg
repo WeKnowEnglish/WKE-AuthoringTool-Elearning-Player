@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none">
+  <rect width="1600" height="900" fill="#FFFFFF"/>
+  <g stroke="#111111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="60" y="640" width="1480" height="220" rx="26"/>
+    <rect x="150" y="410" width="300" height="190" rx="16"/>
+    <line x1="230" y1="600" x2="210" y2="790"/>
+    <line x1="370" y1="600" x2="390" y2="790"/>
+    <path d="M560 600H860L800 680H620L560 600Z"/>
+    <line x1="710" y1="600" x2="710" y2="540"/>
+    <path d="M710 540L755 565"/>
+    <circle cx="930" cy="650" r="56"/>
+    <rect x="1040" y="420" width="150" height="210" rx="12"/>
+    <line x1="1040" y1="525" x2="1190" y2="525"/>
+    <line x1="1115" y1="420" x2="1115" y2="630"/>
+    <path d="M1290 660V585C1290 557 1270 535 1244 535C1218 535 1198 557 1198 585V660"/>
+    <ellipse cx="1244" cy="715" rx="82" ry="20"/>
+    <path d="M220 170H470V320H220Z"/>
+    <line x1="345" y1="170" x2="345" y2="320"/>
+    <line x1="220" y1="245" x2="470" y2="245"/>
+    <rect x="840" y="250" width="220" height="130" rx="10"/>
+    <line x1="860" y1="290" x2="1040" y2="290"/>
+    <line x1="860" y1="330" x2="1000" y2="330"/>
+    <path d="M500 700H560"/>
+    <path d="M530 670V730"/>
+    <rect x="610" y="715" width="90" height="48" rx="8"/>
+    <path d="M1380 280L1430 240L1480 280V350H1380Z"/>
+    <line x1="1430" y1="350" x2="1430" y2="390"/>
+  </g>
+</svg>

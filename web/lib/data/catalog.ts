@@ -26,6 +26,7 @@ export type CourseRow = {
   title: string;
   slug: string;
   target: string;
+  cover_image_url?: string | null;
   order_index: number;
   published: boolean;
 };

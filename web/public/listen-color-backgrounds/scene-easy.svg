@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none">
+  <rect width="1600" height="900" fill="#FFFFFF"/>
+  <g stroke="#111111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="80" y="640" width="1440" height="220" rx="24"/>
+    <rect x="170" y="380" width="340" height="230" rx="20"/>
+    <line x1="260" y1="610" x2="240" y2="780"/>
+    <line x1="420" y1="610" x2="440" y2="780"/>
+    <rect x="1060" y="370" width="310" height="170" rx="14"/>
+    <line x1="1215" y1="370" x2="1215" y2="540"/>
+    <path d="M640 610H980L920 690H700L640 610Z"/>
+    <line x1="810" y1="610" x2="810" y2="560"/>
+    <path d="M810 560L860 590"/>
+    <circle cx="1100" cy="650" r="64"/>
+    <rect x="560" y="300" width="180" height="260" rx="12"/>
+    <line x1="560" y1="430" x2="740" y2="430"/>
+    <line x1="650" y1="300" x2="650" y2="560"/>
+    <path d="M150 180H460V330H150Z"/>
+    <line x1="305" y1="180" x2="305" y2="330"/>
+    <line x1="150" y1="255" x2="460" y2="255"/>
+    <path d="M1320 640V560C1320 530 1298 505 1270 505C1242 505 1220 530 1220 560V640"/>
+    <ellipse cx="1270" cy="700" rx="90" ry="22"/>
+    <line x1="870" y1="770" x2="930" y2="770"/>
+    <line x1="900" y1="740" x2="900" y2="800"/>
+  </g>
+</svg>

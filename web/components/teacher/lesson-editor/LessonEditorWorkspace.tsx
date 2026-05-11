@@ -2059,15 +2059,25 @@ export function LessonEditorWorkspace({
               </button>
             </div>
           </div>
-          <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded border border-neutral-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm">
-            <input
-              type="checkbox"
-              className="rounded border-neutral-400"
-              checked={storyboardPinned}
-              onChange={(e) => setStoryboardPinned(e.target.checked)}
-            />
-            Pin open
-          </label>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAddScreenOpen(true)}
+              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
+              title="Add screen or quiz"
+            >
+              Add activity
+            </button>
+            <label className="flex cursor-pointer items-center gap-2 rounded border border-neutral-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm">
+              <input
+                type="checkbox"
+                className="rounded border-neutral-400"
+                checked={storyboardPinned}
+                onChange={(e) => setStoryboardPinned(e.target.checked)}
+              />
+              Pin open
+            </label>
+          </div>
         </div>
         <ol className="mt-3 space-y-2">
           {storySegments.map((seg) => storyboardRowForSegment(seg))}

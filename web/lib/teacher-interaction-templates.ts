@@ -174,7 +174,7 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
       return {
         type: "interaction",
         subtype: "listen_color_write",
-        image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Listen+Color+Write",
+        image_url: "/listen-color-backgrounds/scene-easy.svg",
         body_text: "Listen. Pick a color or word. Tap each target.",
         prompt_audio_url:
           "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",

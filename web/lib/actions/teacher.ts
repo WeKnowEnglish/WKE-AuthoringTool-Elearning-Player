@@ -213,6 +213,7 @@ export async function saveCourse(formData: FormData) {
     title,
     slug,
     target,
+    cover_image_url,
     standards,
     outcomes,
     order_index,
@@ -926,6 +927,7 @@ async function getLessonScreensOrdered(
 export type AddScreenKind =
   | "start"
   | "interactive_page"
+  | "listen_color_write"
   | "hotspot_info"
   | "guided_dialogue";
 

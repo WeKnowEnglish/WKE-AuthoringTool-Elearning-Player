@@ -7,6 +7,12 @@ type Props = {
   imageFlipVertical?: boolean;
   className?: string;
   dimmed?: boolean;
+  /** Dark fill on opaque pixels only; requires PNG/WebP alpha (not JPEG on white). */
+  silhouette?: boolean;
+  /** Opacity within silhouette filter (default 0.38). Ignored when `silhouetteFilter` is set. */
+  silhouetteOpacity?: number;
+  /** Full CSS filter override for silhouettes (e.g. vocab learn yellow shadows). */
+  silhouetteFilter?: string;
   title?: string;
 };
 
@@ -20,6 +26,9 @@ export function ScaledStoryItemImage({
   imageFlipVertical,
   className,
   dimmed,
+  silhouette,
+  silhouetteOpacity = 0.38,
+  silhouetteFilter,
   title,
 }: Props) {
   const safeScale = Math.min(8, Math.max(0.25, imageScale || 1));
@@ -39,6 +48,10 @@ export function ScaledStoryItemImage({
         style={{
           transform: `scaleX(${sx}) scaleY(${sy}) scale(${safeScale})`,
           transformOrigin: "center center",
+          filter:
+            silhouette ?
+              silhouetteFilter ?? `brightness(0) opacity(${silhouetteOpacity})`
+            : undefined,
         }}
       />
     </div>

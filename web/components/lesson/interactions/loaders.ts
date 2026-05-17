@@ -66,6 +66,9 @@ export function prefetchInteractionChunk(subtype: InteractionSubtype): void {
     case "drag_sentence":
       void import("./DragSentenceView");
       break;
+    case "word_bucket_catch":
+      void import("./WordBucketCatchView");
+      break;
     default: {
       const _exhaustive: never = subtype;
       void _exhaustive;

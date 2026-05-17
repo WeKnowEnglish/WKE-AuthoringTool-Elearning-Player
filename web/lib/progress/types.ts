@@ -7,8 +7,6 @@ export type ProgressSnapshotV1 = {
   enrolledCourseIds?: string[];
   lessonResume?: Record<string, number>;
   audioMuted?: boolean;
-  /** Total correct interaction answers (all lessons); stickers = floor(correctAnswersTotal / 3) */
-  correctAnswersTotal?: number;
   /** "fox" | "robot" | "star" — shown on reward */
   avatarId?: string | null;
 };
@@ -21,7 +19,6 @@ export function emptySnapshot(deviceId: string): ProgressSnapshotV1 {
     enrolledCourseIds: [],
     lessonResume: {},
     audioMuted: false,
-    correctAnswersTotal: 0,
     avatarId: null,
   };
 }

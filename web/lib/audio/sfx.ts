@@ -27,11 +27,18 @@ function beep(freq: number, duration: number, type: OscillatorType = "sine") {
   osc.stop(c.currentTime + duration);
 }
 
+/** Resume Web Audio after a user gesture (call from pointerdown). */
+export function primeAudioOutput(): void {
+  const c = getCtx();
+  if (c?.state === "suspended") void c.resume();
+}
+
 export function playSfx(
   key: "tap" | "correct" | "wrong" | "complete",
   muted: boolean,
 ) {
   if (muted) return;
+  primeAudioOutput();
   switch (key) {
     case "tap":
       beep(440, 0.04);

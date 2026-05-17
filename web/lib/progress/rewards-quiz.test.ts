@@ -3,18 +3,23 @@ import {
   computeTestStartQuizCorrectOutcome,
   purchaseRandomStickerPacks,
   QUIZ_BASE_GOLD_PER_CORRECT,
+  QUIZ_BASE_XP_PER_CORRECT,
   QUIZ_ENERGY_FILL_BONUS_GOLD,
+  QUIZ_ENERGY_FILL_BONUS_XP,
   QUIZ_ENERGY_MAX,
   REWARDS_STORAGE_KEY,
   getRewards,
+  sellDuplicateStickersKeepOne,
 } from "./rewards";
+import { STICKER_LIBRARY } from "./sticker-library";
 
 describe("computeTestStartQuizCorrectOutcome", () => {
-  it("first correct: streak 1, one energy, base gold", () => {
+  it("first correct: streak 1, one energy, base gold and xp", () => {
     const o = computeTestStartQuizCorrectOutcome({ quizStreak: 0, quizEnergy: 0 });
     expect(o.quizStreak).toBe(1);
     expect(o.quizEnergy).toBe(1);
     expect(o.goldDelta).toBe(QUIZ_BASE_GOLD_PER_CORRECT);
+    expect(o.experienceDelta).toBe(QUIZ_BASE_XP_PER_CORRECT);
   });
 
   it("streak multiplies base gold", () => {
@@ -30,6 +35,9 @@ describe("computeTestStartQuizCorrectOutcome", () => {
     });
     expect(o.quizEnergy).toBe(0);
     expect(o.goldDelta).toBe(QUIZ_BASE_GOLD_PER_CORRECT + QUIZ_ENERGY_FILL_BONUS_GOLD);
+    expect(o.experienceDelta).toBe(
+      QUIZ_BASE_XP_PER_CORRECT + QUIZ_ENERGY_FILL_BONUS_XP,
+    );
   });
 });
 
@@ -91,5 +99,70 @@ describe("purchaseRandomStickerPacks", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+});
+
+describe("sellDuplicateStickersKeepOne", () => {
+  beforeEach(() => {
+    installMemoryRewardsStorage();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns null when every sticker id appears at most once", () => {
+    const a = STICKER_LIBRARY[0]!.id;
+    const b = STICKER_LIBRARY[1]!.id;
+    localStorage.setItem(
+      REWARDS_STORAGE_KEY,
+      JSON.stringify({
+        gold: 0,
+        experience: 0,
+        rewardedEventIds: [],
+        ownedStickerIds: [a, b],
+        quizEnergy: 0,
+        quizStreak: 0,
+      }),
+    );
+    expect(sellDuplicateStickersKeepOne(() => 10)).toBeNull();
+  });
+
+  it("sells extras for gold and keeps one copy per priced id", () => {
+    const a = STICKER_LIBRARY[0]!.id;
+    localStorage.setItem(
+      REWARDS_STORAGE_KEY,
+      JSON.stringify({
+        gold: 5,
+        experience: 0,
+        rewardedEventIds: [],
+        ownedStickerIds: [a, a, a],
+        quizEnergy: 0,
+        quizStreak: 0,
+      }),
+    );
+    const snap = sellDuplicateStickersKeepOne((id) => (id === a ? 12 : null));
+    expect(snap).not.toBeNull();
+    expect(snap!.gold).toBe(5 + 12 * 2);
+    expect(snap!.ownedStickerIds).toEqual([a]);
+    expect(getRewards().ownedStickerIds).toEqual([a]);
+  });
+
+  it("does not remove copies when price callback returns null", () => {
+    const a = STICKER_LIBRARY[0]!.id;
+    localStorage.setItem(
+      REWARDS_STORAGE_KEY,
+      JSON.stringify({
+        gold: 0,
+        experience: 0,
+        rewardedEventIds: [],
+        ownedStickerIds: [a, a],
+        quizEnergy: 0,
+        quizStreak: 0,
+      }),
+    );
+    expect(sellDuplicateStickersKeepOne(() => null)).toBeNull();
+    expect(getRewards().ownedStickerIds).toEqual([a, a]);
   });
 });

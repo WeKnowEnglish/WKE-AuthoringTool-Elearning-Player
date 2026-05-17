@@ -26,6 +26,7 @@ export const AI_INTERACTION_SUBTYPES = [
   "essay",
   "voice_question",
   "guided_dialogue",
+  "word_bucket_catch",
 ] as const;
 
 export type AiInteractionSubtype = (typeof AI_INTERACTION_SUBTYPES)[number];
@@ -88,7 +89,7 @@ export function legacyInteractionCatalogPromptSnippet(): string {
 - drag_match: zones[], tokens[], correct_map tokenId->zoneId
 - drag_sentence: sentence_slots, word_bank, correct_order
 - sound_sort / listen_* : prompt_audio_url + choices or targets (use placehold audio if needed)
-- letter_mixup, word_shape_hunt, table_complete, sorting_game: see templates
+- letter_mixup, word_shape_hunt, table_complete, sorting_game, word_bucket_catch: see templates
 - essay, voice_question, guided_dialogue: richer speaking/writing (use when level fits)
 
 Prefer mc_quiz, true_false, short_answer, fill_blanks, fix_text, click_targets for young learners unless the outline specifies otherwise.`;

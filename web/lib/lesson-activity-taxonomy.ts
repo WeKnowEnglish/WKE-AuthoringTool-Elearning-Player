@@ -19,6 +19,7 @@ export const QUIZ_SUBTYPES = [
   "drag_match",
   "sound_sort",
   "drag_sentence",
+  "word_bucket_catch",
 ] as const;
 
 export type QuizSubtype = (typeof QUIZ_SUBTYPES)[number];
@@ -144,4 +145,5 @@ export const QUIZ_SUBTYPE_LABELS: Record<QuizSubtype, string> = {
   drag_match: "Drag match",
   sound_sort: "Sound sort",
   drag_sentence: "Sentence scramble",
+  word_bucket_catch: "Word bucket catch",
 };

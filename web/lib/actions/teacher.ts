@@ -929,7 +929,8 @@ export type AddScreenKind =
   | "interactive_page"
   | "listen_color_write"
   | "hotspot_info"
-  | "guided_dialogue";
+  | "guided_dialogue"
+  | "word_bucket_catch";
 
 export async function addScreenTemplate(
   lessonId: string,

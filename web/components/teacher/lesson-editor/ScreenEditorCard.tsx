@@ -32,6 +32,7 @@ import {
   soundSortPayloadSchema,
   trueFalsePayloadSchema,
   voiceQuestionPayloadSchema,
+  wordBucketCatchPayloadSchema,
   parseScreenPayload,
   getInteractionSubtype,
   startPayloadSchema,
@@ -659,6 +660,15 @@ function StructuredFields({
         return <TableCompleteFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
       case "sorting_game":
         return <SortingGameFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+      case "word_bucket_catch":
+        return (
+          <WordBucketCatchFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "drag_match":
         return (
           <DragMatchFields
@@ -4721,6 +4731,310 @@ function SortingGameFields({
           />{" "}
           Allow reassign
         </label>
+      </div>
+    </div>
+  );
+}
+
+function WordBucketCatchFields({
+  syncKey,
+  initial,
+  onLivePayload,
+  busy,
+}: {
+  syncKey: string;
+  initial: Extract<ScreenPayload, { type: "interaction"; subtype: "word_bucket_catch" }>;
+  onLivePayload: (p: unknown) => void;
+  busy: boolean;
+}) {
+  const [target_word, setTargetWord] = useState(initial.target_word);
+  const [body_text, setBodyText] = useState(initial.body_text ?? "");
+  const [image_url, setImageUrl] = useState(initial.image_url ?? "");
+  const [image_fit, setImageFit] = useState(initial.image_fit ?? "contain");
+  const [required_correct_catches, setRequiredCorrect] = useState(
+    initial.required_correct_catches ?? 5,
+  );
+  const [fall_speed_px_per_sec, setFallSpeed] = useState(initial.fall_speed_px_per_sec ?? 155);
+  const [spawn_interval_ms, setSpawnInterval] = useState(initial.spawn_interval_ms ?? 1350);
+  const [item_size_px, setItemSize] = useState(initial.item_size_px ?? 56);
+  const [bucket_width_px, setBucketW] = useState(initial.bucket_width_px ?? 88);
+  const [bucket_height_px, setBucketH] = useState(initial.bucket_height_px ?? 52);
+  const [choices, setChoices] = useState(() => initial.choices.map((c) => ({ ...c })));
+
+  useEffect(() => {
+    setTargetWord(initial.target_word);
+    setBodyText(initial.body_text ?? "");
+    setImageUrl(initial.image_url ?? "");
+    setImageFit(initial.image_fit ?? "contain");
+    setRequiredCorrect(initial.required_correct_catches ?? 5);
+    setFallSpeed(initial.fall_speed_px_per_sec ?? 155);
+    setSpawnInterval(initial.spawn_interval_ms ?? 1350);
+    setItemSize(initial.item_size_px ?? 56);
+    setBucketW(initial.bucket_width_px ?? 88);
+    setBucketH(initial.bucket_height_px ?? 52);
+    setChoices(initial.choices.map((c) => ({ ...c })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync only when server row revision changes
+  }, [syncKey]);
+
+  function emitPayload(
+    overrides: Partial<{
+      target_word: string;
+      body_text: string;
+      image_url: string;
+      image_fit: "cover" | "contain";
+      required_correct_catches: number;
+      fall_speed_px_per_sec: number;
+      spawn_interval_ms: number;
+      item_size_px: number;
+      bucket_width_px: number;
+      bucket_height_px: number;
+      choices: { id: string; image_url: string; correct: boolean }[];
+    }> = {},
+  ) {
+    const tw = overrides.target_word ?? target_word;
+    const bt = overrides.body_text !== undefined ? overrides.body_text : body_text;
+    const iu = overrides.image_url !== undefined ? overrides.image_url : image_url;
+    const ifit = overrides.image_fit ?? image_fit;
+    const req = overrides.required_correct_catches ?? required_correct_catches;
+    const fall = overrides.fall_speed_px_per_sec ?? fall_speed_px_per_sec;
+    const spawn = overrides.spawn_interval_ms ?? spawn_interval_ms;
+    const item = overrides.item_size_px ?? item_size_px;
+    const bw = overrides.bucket_width_px ?? bucket_width_px;
+    const bh = overrides.bucket_height_px ?? bucket_height_px;
+    const ch = overrides.choices ?? choices;
+    emitLive(onLivePayload, wordBucketCatchPayloadSchema, {
+      type: "interaction",
+      subtype: "word_bucket_catch",
+      target_word: tw,
+      body_text: bt.trim() || undefined,
+      image_url: iu.trim() || undefined,
+      image_fit: ifit,
+      required_correct_catches: req,
+      fall_speed_px_per_sec: fall,
+      spawn_interval_ms: spawn,
+      item_size_px: item,
+      bucket_width_px: bw,
+      bucket_height_px: bh,
+      choices: ch,
+      guide: initial.guide,
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className={labelClass()}>
+        Target word (shown large)
+        <input
+          type="text"
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={target_word}
+          onChange={(e) => {
+            const v = e.target.value;
+            setTargetWord(v);
+            emitPayload({ target_word: v });
+          }}
+        />
+      </label>
+      <label className={labelClass()}>
+        Instructions (optional)
+        <textarea
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          rows={2}
+          value={body_text}
+          onChange={(e) => {
+            const v = e.target.value;
+            setBodyText(v);
+            emitPayload({ body_text: v });
+          }}
+        />
+      </label>
+      <MediaUrlControls
+        label="Hero image (optional)"
+        value={image_url}
+        onChange={(v) => {
+          setImageUrl(v);
+          emitPayload({ image_url: v });
+        }}
+        disabled={busy}
+      />
+      <label className={labelClass()}>
+        Hero image fit
+        <select
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={image_fit}
+          onChange={(e) => {
+            const v = e.target.value as "cover" | "contain";
+            setImageFit(v);
+            emitPayload({ image_fit: v });
+          }}
+        >
+          <option value="contain">Contain</option>
+          <option value="cover">Cover</option>
+        </select>
+      </label>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className={labelClass()}>
+          Correct catches to win
+          <input
+            type="number"
+            min={1}
+            max={20}
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={required_correct_catches}
+            onChange={(e) => {
+              const n = Math.min(20, Math.max(1, Number(e.target.value) || 1));
+              setRequiredCorrect(n);
+              emitPayload({ required_correct_catches: n });
+            }}
+          />
+        </label>
+        <label className={labelClass()}>
+          Fall speed (px/s)
+          <input
+            type="number"
+            min={40}
+            max={400}
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={fall_speed_px_per_sec}
+            onChange={(e) => {
+              const n = Math.min(400, Math.max(40, Number(e.target.value) || 155));
+              setFallSpeed(n);
+              emitPayload({ fall_speed_px_per_sec: n });
+            }}
+          />
+        </label>
+        <label className={labelClass()}>
+          Spawn interval (ms)
+          <input
+            type="number"
+            min={400}
+            max={5000}
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={spawn_interval_ms}
+            onChange={(e) => {
+              const n = Math.min(5000, Math.max(400, Number(e.target.value) || 1350));
+              setSpawnInterval(n);
+              emitPayload({ spawn_interval_ms: n });
+            }}
+          />
+        </label>
+        <label className={labelClass()}>
+          Falling image size (px)
+          <input
+            type="number"
+            min={32}
+            max={120}
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={item_size_px}
+            onChange={(e) => {
+              const n = Math.min(120, Math.max(32, Number(e.target.value) || 56));
+              setItemSize(n);
+              emitPayload({ item_size_px: n });
+            }}
+          />
+        </label>
+        <label className={labelClass()}>
+          Bucket width (px)
+          <input
+            type="number"
+            min={48}
+            max={160}
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={bucket_width_px}
+            onChange={(e) => {
+              const n = Math.min(160, Math.max(48, Number(e.target.value) || 88));
+              setBucketW(n);
+              emitPayload({ bucket_width_px: n });
+            }}
+          />
+        </label>
+        <label className={labelClass()}>
+          Bucket height (px)
+          <input
+            type="number"
+            min={36}
+            max={120}
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={bucket_height_px}
+            onChange={(e) => {
+              const n = Math.min(120, Math.max(36, Number(e.target.value) || 52));
+              setBucketH(n);
+              emitPayload({ bucket_height_px: n });
+            }}
+          />
+        </label>
+      </div>
+      <div className="space-y-2 rounded border border-neutral-200 p-3">
+        <p className="text-sm font-semibold">Falling choices (min 2; at least one “correct”)</p>
+        {choices.map((c) => (
+          <div key={c.id} className="space-y-2 rounded border border-neutral-200 bg-white p-2">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                className="rounded border px-2 py-1 text-sm"
+                value={c.id}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  const next = choices.map((row) => (row.id === c.id ? { ...row, id: v || row.id } : row));
+                  setChoices(next);
+                  emitPayload({ choices: next });
+                }}
+              />
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={c.correct}
+                  onChange={(e) => {
+                    const next = choices.map((row) =>
+                      row.id === c.id ? { ...row, correct: e.target.checked } : row,
+                    );
+                    setChoices(next);
+                    emitPayload({ choices: next });
+                  }}
+                />
+                Correct (matches target)
+              </label>
+            </div>
+            <MediaUrlControls
+              label="Image URL"
+              compact
+              value={c.image_url}
+              onChange={(v) => {
+                const next = choices.map((row) =>
+                  row.id === c.id ? { ...row, image_url: v } : row,
+                );
+                setChoices(next);
+                emitPayload({ choices: next });
+              }}
+              disabled={busy}
+            />
+          </div>
+        ))}
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="rounded border px-2 py-1 text-sm"
+            onClick={() => {
+              const id = `choice_${choices.length + 1}`;
+              const next = [...choices, { id, image_url: "", correct: false }];
+              setChoices(next);
+              emitPayload({ choices: next });
+            }}
+          >
+            Add choice
+          </button>
+          <button
+            type="button"
+            className="rounded border px-2 py-1 text-sm"
+            onClick={() => {
+              if (choices.length <= 2) return;
+              const next = choices.slice(0, -1);
+              setChoices(next);
+              emitPayload({ choices: next });
+            }}
+          >
+            Remove last choice
+          </button>
+        </div>
       </div>
     </div>
   );

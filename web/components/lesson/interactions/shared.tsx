@@ -22,6 +22,15 @@ export const interactionHeroImageFrameStyle: CSSProperties = {
   height: "min(28dvh, calc(100dvh - 21rem), calc((100vw - 2.5rem) * 9 / 16))",
 };
 
+/** Min height for hero image inside vocab overlay flex stage (fill + flex-1). */
+export const interactionImmersiveHeroMinStyle: CSSProperties = {
+  minHeight: "min(32dvh, calc(100dvh - 26rem), calc((100vw - 2.5rem) * 9 / 16))",
+};
+
+/** Fills the lesson player stage column (vocabulary overlay interactions). */
+export const interactionImmersiveStageClass =
+  "flex h-full min-h-0 flex-1 flex-col overflow-hidden";
+
 export function GuideBlock({
   guide,
 }: {
@@ -53,6 +62,22 @@ export function GuideBlock({
 
 export function unopt(url: string) {
   return url.includes("placehold.co");
+}
+
+/** Brief scale pop on interaction hero images (correct answer feedback). */
+export function pulseInteractionHero(
+  el: HTMLElement | null,
+  prefersReducedMotion: boolean,
+): void {
+  if (!el || prefersReducedMotion) return;
+  el.classList.remove("kid-animate-pop");
+  void el.offsetWidth;
+  el.classList.add("kid-animate-pop");
+  const onEnd = () => {
+    el.classList.remove("kid-animate-pop");
+    el.removeEventListener("animationend", onEnd);
+  };
+  el.addEventListener("animationend", onEnd);
 }
 
 function seededHash(input: string): number {
@@ -113,16 +138,65 @@ function wordMatchToken(
   );
 }
 
+export type InteractionControlsPlacement = "fixed" | "stage-footer";
+
 export type NavProps = {
   muted: boolean;
   passed: boolean;
   onNext: () => void;
   onBack: () => void;
   showBack: boolean;
+  /** Vocab overlay: Back/Next in orange stage footer instead of fixed viewport nav. */
+  controlsPlacement?: InteractionControlsPlacement;
 };
+
+/** Matches story immersive footer buttons (click-to-reveal learn screen). */
+export const STAGE_OVERLAY_BTN =
+  "!min-h-9 !min-w-0 shrink-0 px-3 py-1.5 text-sm shadow-[3px_3px_0_#0a2f86]";
+
+export const STAGE_CHROME_FOOTER_CLASS = "h-14 shrink-0";
 
 /** Bottom padding so activity content stays above {@link InteractionLessonNav}. */
 export const interactionNavReservePaddingClass = "pb-24";
+
+/** Orange footer row for immersive lesson interactions (vocabulary overlay). */
+export function InteractionStageFooter({
+  showBack,
+  onBack,
+  passed,
+  onNext,
+  nextDisabled,
+  nextLabel = "Next",
+  backLabel = "Back",
+}: Omit<NavProps, "muted" | "controlsPlacement"> & {
+  nextDisabled?: boolean;
+  nextLabel?: string;
+  backLabel?: string;
+}) {
+  const nextBtnDisabled = nextDisabled !== undefined ? nextDisabled : !passed;
+  return (
+    <div
+      className={clsx(
+        STAGE_CHROME_FOOTER_CLASS,
+        "relative z-20 flex shrink-0 items-center justify-end gap-2 border-t-2 border-amber-700/25 bg-gradient-to-b from-[#fff8eb] to-[#f7bf4d] px-3",
+      )}
+    >
+      {showBack ? (
+        <KidButton type="button" variant="secondary" className={STAGE_OVERLAY_BTN} onClick={onBack}>
+          {backLabel}
+        </KidButton>
+      ) : null}
+      <KidButton
+        type="button"
+        className={STAGE_OVERLAY_BTN}
+        disabled={nextBtnDisabled}
+        onClick={() => onNext()}
+      >
+        {nextLabel}
+      </KidButton>
+    </div>
+  );
+}
 
 /** Back / Next pinned to the bottom-left of the viewport (lesson / quiz player). */
 export function InteractionLessonNav({
@@ -133,7 +207,7 @@ export function InteractionLessonNav({
   nextDisabled,
   nextLabel = "Next",
   backLabel = "Back",
-}: Omit<NavProps, "muted"> & {
+}: Omit<NavProps, "muted" | "controlsPlacement"> & {
   /** When set, overrides the default Next disable rule (`!passed`). */
   nextDisabled?: boolean;
   nextLabel?: string;
@@ -346,3 +420,4 @@ export async function uploadVoiceAnswer(args: {
     return { uploaded: false, submissionId: null, error: e instanceof Error ? e.message : "Upload failed." };
   }
 }
+

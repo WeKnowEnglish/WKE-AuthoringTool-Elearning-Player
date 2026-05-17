@@ -277,6 +277,26 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
         shuffle_objects: true,
         allow_reassign: true,
       };
+    case "word_bucket_catch":
+      return {
+        type: "interaction",
+        subtype: "word_bucket_catch",
+        target_word: "ball",
+        body_text:
+          "Line up the top of the bucket under the pictures. Catch enough matches; wrong pictures can fall away. You lose only if you catch a wrong picture.",
+        required_correct_catches: 5,
+        fall_speed_px_per_sec: 155,
+        spawn_interval_ms: 1350,
+        item_size_px: 56,
+        bucket_width_px: 88,
+        bucket_height_px: 52,
+        choices: [
+          { id: "ball", image_url: "/listen-color-objects/ball.svg", correct: true },
+          { id: "car", image_url: "/listen-color-objects/car.svg", correct: false },
+          { id: "cup", image_url: "/listen-color-objects/cup.svg", correct: false },
+          { id: "bird", image_url: "/listen-color-objects/bird.svg", correct: false },
+        ],
+      };
     case "essay":
       return {
         type: "interaction",

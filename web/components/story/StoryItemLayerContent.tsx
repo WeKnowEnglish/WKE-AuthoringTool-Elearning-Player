@@ -4,7 +4,17 @@ import type { StoryItem } from "@/lib/lesson-schemas";
 import { ScaledStoryItemImage } from "@/components/story/ScaledStoryItemImage";
 
 /** Inner visual for a story canvas item (student + teacher preview). Parent supplies card chrome. */
-export function StoryItemLayerContent({ item }: { item: StoryItem }) {
+export function StoryItemLayerContent({
+  item,
+  silhouette,
+  silhouetteOpacity,
+  silhouetteFilter,
+}: {
+  item: StoryItem;
+  silhouette?: boolean;
+  silhouetteOpacity?: number;
+  silhouetteFilter?: string;
+}) {
   const kind = item.kind ?? "image";
 
   if (kind === "text") {
@@ -87,6 +97,9 @@ export function StoryItemLayerContent({ item }: { item: StoryItem }) {
       imageScale={item.image_scale ?? 1}
       imageFlipHorizontal={item.image_flip_horizontal === true}
       imageFlipVertical={item.image_flip_vertical === true}
+      silhouette={silhouette}
+      silhouetteOpacity={silhouetteOpacity}
+      silhouetteFilter={silhouetteFilter}
     />
   );
 }

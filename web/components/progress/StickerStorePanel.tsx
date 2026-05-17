@@ -10,6 +10,7 @@ import { isAudioMuted } from "@/lib/progress/local-storage";
 import {
   getRewards,
   purchaseRandomStickerPacks,
+  sellDuplicateStickersKeepOne,
   sellSticker,
   type RewardsSnapshot,
 } from "@/lib/progress/rewards";
@@ -21,8 +22,14 @@ import {
   type StickerRarity,
 } from "@/lib/progress/sticker-library";
 
-const STICKER_COST_GOLD = 5;
-const SELL_PRICE_GOLD = 1;
+const STICKER_COST_GOLD = 200;
+
+const STICKER_SELL_GOLD_BY_RARITY: Record<StickerRarity, number> = {
+  common: 25,
+  uncommon: 50,
+  rare: 100,
+  epic: 1000,
+};
 
 const RARITY_SORT_ORDER: Record<StickerRarity, number> = {
   common: 0,
@@ -30,6 +37,11 @@ const RARITY_SORT_ORDER: Record<StickerRarity, number> = {
   rare: 2,
   epic: 3,
 };
+
+function sellGoldForStickerId(stickerId: string): number | null {
+  const def = STICKER_LIBRARY.find((s) => s.id === stickerId);
+  return def ? STICKER_SELL_GOLD_BY_RARITY[def.rarity] : null;
+}
 
 export type StickerStorePanelProps = {
   /** When set, used for completion SFX instead of reading progress snapshot. */
@@ -61,6 +73,7 @@ export function StickerStorePanel({
     () => getRewards().ownedStickerIds ?? [],
   );
   const [bookOpen, setBookOpen] = useState(false);
+  const [bulkSellDialogOpen, setBulkSellDialogOpen] = useState(false);
   const [pendingSellStickerId, setPendingSellStickerId] = useState<string | null>(null);
   const [unboxedBatchIds, setUnboxedBatchIds] = useState<string[] | null>(null);
   const [rollingStickerId, setRollingStickerId] = useState<string | null>(null);
@@ -98,9 +111,40 @@ export function StickerStorePanel({
     return sortedStickerBookEntries.find((e) => e.def.id === pendingSellStickerId) ?? null;
   }, [pendingSellStickerId, sortedStickerBookEntries]);
 
+  const pendingSellGold = useMemo(() => {
+    if (!pendingSellEntry || pendingSellEntry.count < 1) return 0;
+    return STICKER_SELL_GOLD_BY_RARITY[pendingSellEntry.def.rarity];
+  }, [pendingSellEntry]);
+
+  const sellExtrasPreview = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const id of ownedStickerIds) {
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    let gold = 0;
+    let extraCopies = 0;
+    for (const [id, c] of counts) {
+      if (c < 2) continue;
+      const unit = sellGoldForStickerId(id);
+      if (unit == null || unit <= 0) continue;
+      extraCopies += c - 1;
+      gold += (c - 1) * unit;
+    }
+    return { gold, extraCopies };
+  }, [ownedStickerIds]);
+
   useEffect(() => {
-    if (!bookOpen) setPendingSellStickerId(null);
+    if (!bookOpen) {
+      setPendingSellStickerId(null);
+      setBulkSellDialogOpen(false);
+    }
   }, [bookOpen]);
+
+  useEffect(() => {
+    if (bulkSellDialogOpen && sellExtrasPreview.gold <= 0) {
+      setBulkSellDialogOpen(false);
+    }
+  }, [bulkSellDialogOpen, sellExtrasPreview.gold]);
 
   const unboxedDefs = useMemo(
     () =>
@@ -159,8 +203,19 @@ export function StickerStorePanel({
     beginUnboxReveal(pack.purchasedIds, pack.snapshot);
   }
 
+  function sellAllExtrasKeepOne() {
+    const next = sellDuplicateStickersKeepOne(sellGoldForStickerId);
+    if (!next) return;
+    setGold(next.gold);
+    setOwnedStickerIds(next.ownedStickerIds);
+    setBulkSellDialogOpen(false);
+    notifyRewardsChange();
+  }
+
   function sellOneSticker(stickerId: string) {
-    const next = sellSticker({ stickerId, goldBack: SELL_PRICE_GOLD });
+    const goldBack = sellGoldForStickerId(stickerId);
+    if (goldBack == null) return;
+    const next = sellSticker({ stickerId, goldBack });
     if (!next) return;
     setGold(next.gold);
     setOwnedStickerIds(next.ownedStickerIds);
@@ -338,6 +393,20 @@ export function StickerStorePanel({
                 <p className="mt-1 text-sm font-semibold text-kid-ink/75 sm:text-base">
                   {stickerBookCollectedCount} of {STICKER_LIBRARY.length} stickers collected
                 </p>
+                {stickerBookCollectedCount > 0 && sellExtrasPreview.gold > 0 ? (
+                  <KidButton
+                    type="button"
+                    variant="secondary"
+                    className="mt-3"
+                    onClick={() => {
+                      setPendingSellStickerId(null);
+                      setBulkSellDialogOpen(true);
+                    }}
+                    title="Sell every duplicate copy. You keep one of each sticker type."
+                  >
+                    Sell extras (keep 1 each) — +{sellExtrasPreview.gold} gold
+                  </KidButton>
+                ) : null}
               </div>
               <KidButton type="button" variant="secondary" className="shrink-0" onClick={() => setBookOpen(false)}>
                 Close
@@ -352,6 +421,7 @@ export function StickerStorePanel({
               <div className="grid grid-cols-2 gap-4 pb-2 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
                 {sortedStickerBookEntries.map(({ def, count }) => {
                   const owned = count > 0;
+                  const sellGold = sellGoldForStickerId(def.id) ?? 0;
                   return (
                     <div
                       key={def.id}
@@ -410,9 +480,9 @@ export function StickerStorePanel({
                           type="button"
                           className="mt-auto w-full max-w-[12rem] rounded-xl border-2 border-amber-500 bg-amber-100 py-2.5 text-sm font-extrabold text-amber-950 shadow-[2px_2px_0_rgba(120,53,15,0.25)] transition-transform [touch-action:manipulation] hover:bg-amber-200 active:scale-[0.98]"
                           onClick={() => setPendingSellStickerId(def.id)}
-                          title={`Sell one copy for ${SELL_PRICE_GOLD} gold`}
+                          title={`Sell one copy for ${sellGold} gold`}
                         >
-                          Sell +{SELL_PRICE_GOLD} gold
+                          Sell +{sellGold} gold
                         </button>
                       )}
                     </div>
@@ -421,6 +491,42 @@ export function StickerStorePanel({
               </div>
             </div>
           </div>
+        </div>
+      ) : null}
+      {bookOpen && bulkSellDialogOpen ? (
+        <div
+          className="fixed inset-0 z-[86] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sell-extras-confirm-title"
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setBulkSellDialogOpen(false);
+          }}
+        >
+          <KidPanel className="max-w-md space-y-4 border-4 border-kid-ink p-5 shadow-2xl">
+            <h4 id="sell-extras-confirm-title" className="text-xl font-extrabold text-kid-ink">
+              Sell all extras?
+            </h4>
+            <p className="text-sm font-semibold text-kid-ink/85">
+              You keep one copy of each sticker in your book.{" "}
+              <span className="tabular-nums">{sellExtrasPreview.extraCopies}</span> extra
+              {sellExtrasPreview.extraCopies === 1 ? " copy" : " copies"} will be sold for a total of{" "}
+              <span className="tabular-nums">{sellExtrasPreview.gold}</span> gold.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <KidButton type="button" variant="secondary" onClick={() => setBulkSellDialogOpen(false)}>
+                Cancel
+              </KidButton>
+              <KidButton
+                type="button"
+                variant="accent"
+                disabled={sellExtrasPreview.gold < 1}
+                onClick={sellAllExtrasKeepOne}
+              >
+                Sell extras for {sellExtrasPreview.gold} gold
+              </KidButton>
+            </div>
+          </KidPanel>
         </div>
       ) : null}
       {bookOpen && pendingSellEntry && pendingSellEntry.count > 0 ? (
@@ -453,7 +559,7 @@ export function StickerStorePanel({
             </div>
             <p className="text-sm font-semibold text-kid-ink/85">
               One copy will be removed from your book and you will get{" "}
-              <span className="tabular-nums">{SELL_PRICE_GOLD}</span> gold.
+              <span className="tabular-nums">{pendingSellGold}</span> gold.
             </p>
             <div className="flex flex-wrap gap-2">
               <KidButton type="button" variant="secondary" onClick={() => setPendingSellStickerId(null)}>
@@ -467,7 +573,7 @@ export function StickerStorePanel({
                   setPendingSellStickerId(null);
                 }}
               >
-                Sell for {SELL_PRICE_GOLD} gold
+                Sell for {pendingSellGold} gold
               </KidButton>
             </div>
           </KidPanel>

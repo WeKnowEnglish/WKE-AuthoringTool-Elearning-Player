@@ -22,7 +22,6 @@ function normalizeSnapshot(raw: unknown): ProgressSnapshotV1 | null {
     ...r,
     completedLessonIds: r.completedLessonIds,
     enrolledCourseIds: Array.isArray(r.enrolledCourseIds) ? r.enrolledCourseIds : [],
-    correctAnswersTotal: r.correctAnswersTotal ?? 0,
     avatarId: r.avatarId === undefined ? null : r.avatarId,
   };
 }
@@ -81,30 +80,10 @@ export function isAudioMuted(): boolean {
   return getProgressSnapshot().audioMuted === true;
 }
 
-const STICKER_EVERY = 3;
-
-/** Call when the learner answers an interaction correctly. Returns sticker count and whether a new sticker was earned. */
-export function recordCorrectAnswer(): { stickers: number; newSticker: boolean } {
-  const s = getProgressSnapshot();
-  const prev = s.correctAnswersTotal ?? 0;
-  const next = prev + 1;
-  s.correctAnswersTotal = next;
-  writeRaw(s);
-  const prevStickers = Math.floor(prev / STICKER_EVERY);
-  const nextStickers = Math.floor(next / STICKER_EVERY);
-  return { stickers: nextStickers, newSticker: nextStickers > prevStickers };
-}
-
 export function setAvatarId(id: string | null) {
   const s = getProgressSnapshot();
   s.avatarId = id;
   writeRaw(s);
-}
-
-export function getStickerCount(snapshot?: ProgressSnapshotV1): number {
-  const s = snapshot ?? getProgressSnapshot();
-  const t = s.correctAnswersTotal ?? 0;
-  return Math.floor(t / STICKER_EVERY);
 }
 
 export function getEnrolledCourseIds(): string[] {

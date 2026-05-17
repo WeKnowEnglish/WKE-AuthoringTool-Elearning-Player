@@ -14,10 +14,6 @@ import {
   type InteractionFeedbackKind,
 } from "@/components/kid-ui/InteractionFeedbackShell";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
-import { KidProgressBar } from "@/components/kid-ui/KidProgressBar";
-import { KidActivityEnergyRewardPop } from "@/components/kid-ui/KidActivityEnergyRewardPop";
-import { KidQuizActivityHud } from "@/components/kid-ui/KidQuizActivityHud";
-import { KidStickerStrip } from "@/components/kid-ui/KidStickerStrip";
 import { playSfx } from "@/lib/audio/sfx";
 import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
 import { speakText, stopSpeaking } from "@/lib/audio/tts";
@@ -25,13 +21,13 @@ import type { LessonScreenRow } from "@/lib/data/catalog";
 import { getQuizProgressForLessonIndex } from "@/lib/lesson-activity-taxonomy";
 import {
   getProgressSnapshot,
-  getStickerCount,
   markLessonComplete,
-  recordCorrectAnswer,
   setAvatarId,
   setResumeScreen,
 } from "@/lib/progress/local-storage";
+import { LevelUpModal } from "@/components/progress/LevelUpModal";
 import { awardRewards, getRewards } from "@/lib/progress/rewards";
+import { xpProgressInLevel } from "@/lib/progress/leveling";
 import { recordWordInteraction } from "@/lib/progress/word-performance";
 import {
   essayPayloadSchema,
@@ -40,21 +36,32 @@ import {
   mcQuizPayloadSchema,
   shortAnswerPayloadSchema,
   startPayloadSchema,
-  storyPayloadFromStartPlayground,
-  tapRewardsByItemId,
   trueFalsePayloadSchema,
-  type CompletionPlayground,
-  type StartPlaygroundTapReward,
 } from "@/lib/lesson-schemas";
 import { parseScreenPayload, type ScreenPayload } from "@/lib/lesson-schemas-player";
+import type { VocabWord } from "@/lib/vocabulary-templates";
 import {
-  ACTIVITY_QUIZ_ENERGY_BASE,
-  ACTIVITY_QUIZ_ENERGY_GOLD,
-  ACTIVITY_QUIZ_ENERGY_XP,
-} from "@/lib/quiz-activity-defaults";
+  buildVocabRunStats,
+  computeVocabSetRewards,
+  createVocabRunSession,
+  extractVocabWordId,
+  isVocabGradedInteraction,
+  recordVocabPracticeGold,
+  recordVocabRunPass,
+  recordVocabRunWrong,
+  vocabCompletionGoldDelta,
+  type VocabPracticeWordMeta,
+  type VocabRewardBreakdown,
+  type VocabRunStats,
+} from "@/lib/vocabulary-templates/vocab-run-session";
+import { VocabActivityRewardScreen } from "@/components/lesson/VocabActivityRewardScreen";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
+import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import { interactionImageFitClass } from "@/components/lesson/interactions/shared";
-import { StoryBookView } from "@/components/lesson/StoryBookView";
+import {
+  StoryBookView,
+  type StoryControlsPlacement,
+} from "@/components/lesson/StoryBookView";
 import type { LessonPlayerVisualEdit } from "@/components/lesson/lesson-player-edit";
 
 export type { LessonPlayerVisualEdit };
@@ -123,6 +130,9 @@ const LazyGuidedDialogue = lazy(() =>
 const LazyDragSentence = lazy(() =>
   import("./interactions/DragSentenceView").then((m) => ({ default: m.DragSentenceView })),
 );
+const LazyWordBucketCatch = lazy(() =>
+  import("./interactions/WordBucketCatchView").then((m) => ({ default: m.WordBucketCatchView })),
+);
 
 function InteractionChunkFallback() {
   return (
@@ -134,8 +144,19 @@ function InteractionChunkFallback() {
   );
 }
 
-function InteractionLazyShell({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<InteractionChunkFallback />}>{children}</Suspense>;
+function InteractionLazyShell({
+  children,
+  fillStage = false,
+}: {
+  children: React.ReactNode;
+  fillStage?: boolean;
+}) {
+  const inner = fillStage ? (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+  ) : (
+    children
+  );
+  return <Suspense fallback={<InteractionChunkFallback />}>{inner}</Suspense>;
 }
 
 const AVATAR_OPTIONS = [
@@ -144,117 +165,23 @@ const AVATAR_OPTIONS = [
   { id: "star", emoji: "⭐" },
 ] as const;
 
-function applyPlaygroundTapReward(opts: {
-  lessonId: string;
-  screenOrCompletionKey: string;
-  itemId: string;
-  rule: StartPlaygroundTapReward;
-  triggerOrdinal: number;
-  isPreview: boolean;
-}) {
-  if (opts.isPreview) return;
-  const { lessonId, screenOrCompletionKey, itemId, rule, triggerOrdinal } = opts;
-  const goldDelta = Math.max(0, rule.gold ?? 0);
-  const experienceDelta = Math.max(0, rule.experience ?? 0);
-  if (goldDelta > 0 || experienceDelta > 0) {
-    const eventId = `${lessonId}:${screenOrCompletionKey}:${itemId}:playground:${triggerOrdinal}`;
-    awardRewards({
-      goldDelta,
-      experienceDelta,
-      eventId,
-    });
-  }
-  if (rule.sticker === true) {
-    recordCorrectAnswer();
-  }
-}
-
 function RewardScreen({
   lessonTitle,
-  stickerCount,
   onPlayAgain,
   muted,
-  lessonId,
-  isPreview,
-  completionPlayground,
-  onEconomyRefresh,
-  hideStickerEconomy,
 }: {
   lessonTitle: string;
-  stickerCount: number;
   onPlayAgain: () => void;
   muted: boolean;
-  lessonId: string;
-  isPreview: boolean;
-  completionPlayground?: CompletionPlayground | null;
-  onEconomyRefresh: () => void;
-  /** Activity quizzes use energy/streak HUD; omit sticker copy here. */
-  hideStickerEconomy?: boolean;
 }) {
   const [avatar, setAvatar] = useState<string | null>(
     () => getProgressSnapshot().avatarId ?? null,
-  );
-
-  const completionStoryPayload = useMemo(() => {
-    if (!completionPlayground) return null;
-    try {
-      return storyPayloadFromStartPlayground(completionPlayground);
-    } catch {
-      return null;
-    }
-  }, [completionPlayground]);
-
-  const completionTapRewards = useMemo(
-    () => tapRewardsByItemId(completionPlayground?.tap_rewards),
-    [completionPlayground?.tap_rewards],
-  );
-
-  const onBookendTapReward = useCallback(
-    ({
-      itemId,
-      rule,
-      triggerOrdinal,
-    }: {
-      itemId: string;
-      rule: StartPlaygroundTapReward;
-      triggerOrdinal: number;
-    }) => {
-      applyPlaygroundTapReward({
-        lessonId,
-        screenOrCompletionKey: "completion",
-        itemId,
-        rule,
-        triggerOrdinal,
-        isPreview,
-      });
-      onEconomyRefresh();
-    },
-    [lessonId, isPreview, onEconomyRefresh],
   );
 
   return (
     <div className="relative overflow-hidden rounded-xl">
       <KidConfetti active />
       <KidPanel className="relative text-center">
-        {completionStoryPayload ? (
-          <div className="mb-6 text-left">
-            <StoryBookView
-              key="completion-playground"
-              screenId={`${lessonId}-completion-playground`}
-              payload={completionStoryPayload}
-              muted={muted}
-              compactPreview={isPreview}
-              canvasEdit={false}
-              lessonBackDisabled
-              embedMode="bookend"
-              bookendHideNav
-              bookendTapRewardByItemId={completionTapRewards}
-              onBookendTapReward={onBookendTapReward}
-              onNextScreen={() => {}}
-              onBackScreen={() => {}}
-            />
-          </div>
-        ) : null}
         <p className="text-3xl font-extrabold text-kid-ink">Great job!</p>
         {avatar ? (
           <p className="mt-4 text-8xl leading-none" aria-hidden>
@@ -262,13 +189,6 @@ function RewardScreen({
           </p>
         ) : null}
         <p className="mt-3 text-xl text-kid-ink">You finished {lessonTitle}!</p>
-        {!hideStickerEconomy ? (
-          <p className="mt-2 text-lg font-semibold text-kid-ink">
-            {stickerCount > 0
-              ? `You have ${stickerCount} sticker${stickerCount === 1 ? "" : "s"} in your book!`
-              : "Keep going to earn stickers!"}
-          </p>
-        ) : null}
         {!avatar ? (
           <div className="mt-6">
             <p className="mb-3 text-lg font-bold text-kid-ink">Pick a buddy</p>
@@ -316,14 +236,26 @@ type Props = {
   lessonId: string;
   lessonTitle: string;
   screens: LessonScreenRow[];
-  /** Optional post-lesson interactive layer (same schema as start-screen `playground`). */
-  completionPlayground?: CompletionPlayground | null;
   /** Preview: no progress writes, different end screen */
   mode?: LessonPlayerMode;
   /** When set (e.g. teacher preview), open this screen index first */
   initialScreenIndex?: number;
   /** When mode is preview, show inline editors on the student layout */
   visualEdit?: LessonPlayerVisualEdit;
+  /** Story screens: inset nav on the stage (vocabulary overlay). */
+  storyControlsPlacement?: StoryControlsPlacement;
+  /** Full-height flex shell, no page scroll (vocabulary overlay). */
+  immersiveLayout?: boolean;
+  /** Per-run shuffle seed (vocabulary learn reveal order). */
+  runSeed?: string;
+  /** Learn word metadata for sticker-match TTS (vocabulary overlay). */
+  vocabWordsById?: Record<string, Pick<VocabWord, "id" | "lemma" | "grammar" | "mealVerb">>;
+  /** Words in this run (for completion stats / review list). */
+  vocabPracticeWords?: VocabPracticeWordMeta[];
+  onVocabFinish?: () => void;
+  vocabFinishLabel?: string;
+  /** New run seed (remount player); used by vocabulary Play again. */
+  onVocabPlayAgain?: () => void;
 };
 
 function useMuted() {
@@ -334,10 +266,17 @@ export function LessonPlayer({
   lessonId,
   lessonTitle,
   screens,
-  completionPlayground = null,
   mode = "student",
   initialScreenIndex = 0,
   visualEdit,
+  storyControlsPlacement = "below",
+  immersiveLayout = false,
+  runSeed,
+  vocabWordsById,
+  vocabPracticeWords,
+  onVocabFinish,
+  vocabFinishLabel,
+  onVocabPlayAgain,
 }: Props) {
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -350,46 +289,27 @@ export function LessonPlayer({
   const [dragFilled, setDragFilled] = useState<string[]>([]);
   const [interactionFeedback, setInteractionFeedback] =
     useState<InteractionFeedbackKind>("none");
-  /** Start at 0 so SSR + first client paint match; getStickerCount() reads localStorage and differs on server vs client. */
-  const [stickerCount, setStickerCount] = useState(0);
   const [gold, setGold] = useState(0);
   const [experience, setExperience] = useState(0);
-  const [activityEnergy, setActivityEnergy] = useState(0);
-  const [activityStreak, setActivityStreak] = useState(0);
-  const [energyRewardBurst, setEnergyRewardBurst] = useState<{
-    id: number;
-    gold: number;
-  } | null>(null);
-  const energyRewardBurstIdRef = useRef(0);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoAdvanceCompletedForScreenRef = useRef<string | null>(null);
   const playbackRootRef = useRef<HTMLDivElement | null>(null);
+  const vocabSessionRef = useRef(createVocabRunSession());
+  const screenHadWrongRef = useRef(false);
+  const [vocabComplete, setVocabComplete] = useState<{
+    stats: VocabRunStats;
+    breakdown: VocabRewardBreakdown;
+  } | null>(null);
 
   const muted = useMuted();
   const isPreview = mode === "preview";
+  const isVocabLesson =
+    lessonId.startsWith("vocab-") && (vocabPracticeWords?.length ?? 0) > 0;
   const canvasEdit = isPreview && visualEdit != null;
-  const isActivityQuiz = lessonId.startsWith("activity-");
-
-  const resetActivityQuizRun = useCallback(() => {
-    if (!lessonId.startsWith("activity-")) return;
-    setActivityEnergy(0);
-    setActivityStreak(0);
-    setEnergyRewardBurst(null);
-  }, [lessonId]);
-
-  const refreshEconomy = useCallback(() => {
-    queueMicrotask(() => {
-      setStickerCount(getStickerCount());
-      const rewards = getRewards();
-      setGold(rewards.gold);
-      setExperience(rewards.experience);
-    });
-  }, []);
 
   useEffect(() => {
     if (isPreview) return;
     queueMicrotask(() => {
-      setStickerCount(getStickerCount());
       const rewards = getRewards();
       setGold(rewards.gold);
       setExperience(rewards.experience);
@@ -413,44 +333,6 @@ export function LessonPlayer({
     [screens, index],
   );
 
-  const startBookendStoryPayload = useMemo(() => {
-    if (!parsed || parsed.type !== "start" || !parsed.playground) return null;
-    try {
-      return storyPayloadFromStartPlayground(parsed.playground);
-    } catch {
-      return null;
-    }
-  }, [parsed]);
-
-  const startBookendTapRewards = useMemo(() => {
-    if (!parsed || parsed.type !== "start" || !parsed.playground) return {};
-    return tapRewardsByItemId(parsed.playground.tap_rewards);
-  }, [parsed]);
-
-  const onStartBookendTapReward = useCallback(
-    ({
-      itemId,
-      rule,
-      triggerOrdinal,
-    }: {
-      itemId: string;
-      rule: StartPlaygroundTapReward;
-      triggerOrdinal: number;
-    }) => {
-      if (!screen) return;
-      applyPlaygroundTapReward({
-        lessonId,
-        screenOrCompletionKey: screen.id,
-        itemId,
-        rule,
-        triggerOrdinal,
-        isPreview,
-      });
-      refreshEconomy();
-    },
-    [lessonId, screen, isPreview, refreshEconomy],
-  );
-
   useEffect(() => {
     const candidateIndices = [index + 1, index + 2, index - 1].filter(
       (i) => i >= 0 && i < screens.length,
@@ -469,6 +351,23 @@ export function LessonPlayer({
   }, [index, screens]);
 
   useEffect(() => {
+    if (!lessonId.startsWith("vocab-")) return;
+    const urls: string[] = [];
+    for (let i = index + 1; i < screens.length && urls.length < 3; i++) {
+      const row = screens[i];
+      const ahead = parseScreenPayload(row.screen_type, row.payload);
+      if (
+        ahead?.type === "interaction" &&
+        ahead.subtype === "true_false" &&
+        ahead.image_url?.trim()
+      ) {
+        urls.push(ahead.image_url.trim());
+      }
+    }
+    if (urls.length > 0) void prefetchImageUrls(urls);
+  }, [index, lessonId, screens]);
+
+  useEffect(() => {
     stopSpeaking();
     if (autoAdvanceTimerRef.current) {
       clearTimeout(autoAdvanceTimerRef.current);
@@ -484,6 +383,10 @@ export function LessonPlayer({
     }
   }, [index, lessonId, isPreview]);
 
+  useEffect(() => {
+    screenHadWrongRef.current = false;
+  }, [screen?.id, index]);
+
   useEffect(
     () => () => {
       if (autoAdvanceTimerRef.current) {
@@ -495,13 +398,41 @@ export function LessonPlayer({
     [],
   );
 
+  const resetVocabRun = useCallback(() => {
+    vocabSessionRef.current = createVocabRunSession();
+    screenHadWrongRef.current = false;
+    setVocabComplete(null);
+  }, []);
+
+  const completeVocabLesson = useCallback(() => {
+    const practiceCount = vocabPracticeWords?.length ?? 0;
+    const stats = buildVocabRunStats(vocabSessionRef.current, practiceCount);
+    const breakdown = computeVocabSetRewards(stats);
+    if (!isPreview) {
+      markLessonComplete(lessonId);
+      playSfx("complete", muted);
+      const completionGold = vocabCompletionGoldDelta(breakdown, stats.practiceGold);
+      const completionSeed = runSeed?.trim() || lessonId;
+      const snapshot = awardRewards({
+        eventId: `${lessonId}:${completionSeed}:complete`,
+        goldDelta: completionGold,
+        experienceDelta: breakdown.experienceDelta,
+      });
+      setGold(snapshot.gold);
+      setExperience(snapshot.experience);
+    }
+    setVocabComplete({ stats, breakdown });
+  }, [isPreview, lessonId, muted, runSeed, vocabPracticeWords?.length]);
+
   const goNext = useCallback(() => {
     if (index < screens.length - 1) {
       const next = index + 1;
       setIndex(next);
       visualEdit?.onScreenIndexChange?.(next);
     } else {
-      if (!isPreview) {
+      if (isVocabLesson) {
+        completeVocabLesson();
+      } else if (!isPreview) {
         markLessonComplete(lessonId);
         playSfx("complete", muted);
         const snapshot = awardRewards({
@@ -514,7 +445,16 @@ export function LessonPlayer({
       }
       setDone(true);
     }
-  }, [index, screens.length, lessonId, muted, isPreview, visualEdit]);
+  }, [
+    index,
+    screens.length,
+    lessonId,
+    muted,
+    isPreview,
+    visualEdit,
+    isVocabLesson,
+    completeVocabLesson,
+  ]);
 
   const goBack = useCallback(() => {
     if (index > 0) {
@@ -545,13 +485,14 @@ export function LessonPlayer({
     }
     if (autoAdvanceCompletedForScreenRef.current === currentScreenId) return;
     if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+    const advanceMs = lessonId.startsWith("vocab-") ? 120 : 650;
     autoAdvanceTimerRef.current = setTimeout(() => {
       // Guard against stale timer advancing a newer screen.
       if (screens[index]?.id !== currentScreenId) return;
       autoAdvanceCompletedForScreenRef.current = currentScreenId;
       goNext();
-    }, 650);
-  }, [interactionPass, parsed, goNext, screen, screens, index]);
+    }, advanceMs);
+  }, [interactionPass, parsed, goNext, lessonId, screen, screens, index]);
 
   if (screens.length === 0 || !screen) {
     return (
@@ -608,7 +549,6 @@ export function LessonPlayer({
                 type="button"
                 onClick={() => {
                   playSfx("tap", muted);
-                  resetActivityQuizRun();
                   setDone(false);
                   setIndex(0);
                   visualEdit?.onScreenIndexChange?.(0);
@@ -616,8 +556,11 @@ export function LessonPlayer({
               >
                 Play again
               </KidButton>
+              <Link href="/teacher" className={kidLinkSecondaryClassName}>
+                Back to dashboard
+              </Link>
               <Link href="/teacher/courses" className={kidLinkSecondaryClassName}>
-                Back to courses
+                Courses
               </Link>
               <Link href="/activities" className={kidLinkSecondaryClassName}>
                 Activity library
@@ -646,18 +589,36 @@ export function LessonPlayer({
         </KidPanel>
       );
     }
+    if (isVocabLesson && vocabComplete && vocabPracticeWords) {
+      return (
+        <div className={clsx(immersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
+        <VocabActivityRewardScreen
+          lessonTitle={lessonTitle}
+          stats={vocabComplete.stats}
+          breakdown={vocabComplete.breakdown}
+          practiceWords={vocabPracticeWords}
+          muted={muted}
+          onPlayAgain={() => {
+            if (onVocabPlayAgain) {
+              onVocabPlayAgain();
+              return;
+            }
+            resetVocabRun();
+            setDone(false);
+            setIndex(0);
+            visualEdit?.onScreenIndexChange?.(0);
+          }}
+          onFinish={onVocabFinish}
+          finishLabel={vocabFinishLabel}
+        />
+        </div>
+      );
+    }
     return (
       <RewardScreen
         lessonTitle={lessonTitle}
-        stickerCount={stickerCount}
         muted={muted}
-        lessonId={lessonId}
-        isPreview={isPreview}
-        completionPlayground={completionPlayground}
-        onEconomyRefresh={refreshEconomy}
-        hideStickerEconomy={isActivityQuiz}
         onPlayAgain={() => {
-          resetActivityQuizRun();
           setDone(false);
           setIndex(0);
           visualEdit?.onScreenIndexChange?.(0);
@@ -672,6 +633,7 @@ export function LessonPlayer({
     onNext: goNext,
     onBack: goBack,
     showBack: index > 0,
+    ...(immersiveLayout ? { controlsPlacement: "stage-footer" as const } : {}),
   };
 
   const passHandlers = {
@@ -680,53 +642,7 @@ export function LessonPlayer({
       window.setTimeout(() => setInteractionFeedback("none"), 750);
       setInteractionPass(true);
       playSfx("correct", muted);
-      if (isActivityQuiz) {
-        setActivityStreak((prevStreak) => {
-          const nextStreak = prevStreak + 1;
-          setActivityEnergy((prevEnergy) => {
-            const increment = ACTIVITY_QUIZ_ENERGY_BASE * nextStreak;
-            let next = prevEnergy + increment;
-            let pulses = 0;
-            while (next >= 1) {
-              next -= 1;
-              pulses += 1;
-            }
-            if (pulses > 0) {
-              queueMicrotask(() => {
-                energyRewardBurstIdRef.current += 1;
-                const burstId = energyRewardBurstIdRef.current;
-                setEnergyRewardBurst({
-                  id: burstId,
-                  gold: ACTIVITY_QUIZ_ENERGY_GOLD * pulses,
-                });
-                playSfx("complete", muted);
-                if (!isPreview) {
-                  let snapshot = getRewards();
-                  for (let p = 0; p < pulses; p += 1) {
-                    snapshot = awardRewards({
-                      eventId: `${lessonId}:${screen.id}:energy:${p}:${crypto.randomUUID()}`,
-                      goldDelta: ACTIVITY_QUIZ_ENERGY_GOLD,
-                      experienceDelta: ACTIVITY_QUIZ_ENERGY_XP,
-                    });
-                  }
-                  setGold(snapshot.gold);
-                  setExperience(snapshot.experience);
-                }
-              });
-            }
-            return next;
-          });
-          return nextStreak;
-        });
-        if (!isPreview) {
-          const trackedWords = extractTrackedWords(parsed);
-          recordWordInteraction(trackedWords, true);
-        }
-        return;
-      }
       if (!isPreview) {
-        const { stickers } = recordCorrectAnswer();
-        setStickerCount(stickers);
         const perQuestionGold =
           (parsed.type === "interaction" || parsed.type === "story") &&
           typeof parsed.gold_reward_on_pass === "number" &&
@@ -736,10 +652,14 @@ export function LessonPlayer({
         const rewardSnapshot = awardRewards({
           eventId: `${lessonId}:${screen.id}:pass`,
           goldDelta: perQuestionGold,
-          experienceDelta: 0,
+          experienceDelta: 2,
         });
         setGold(rewardSnapshot.gold);
         setExperience(rewardSnapshot.experience);
+        if (isVocabLesson && isVocabGradedInteraction(parsed)) {
+          recordVocabRunPass(vocabSessionRef.current, screenHadWrongRef.current);
+          recordVocabPracticeGold(vocabSessionRef.current, perQuestionGold);
+        }
         const trackedWords = extractTrackedWords(parsed);
         recordWordInteraction(trackedWords, true);
       }
@@ -748,8 +668,11 @@ export function LessonPlayer({
       setInteractionFeedback("wrong");
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
-      if (isActivityQuiz) {
-        setActivityStreak(0);
+      if (isVocabLesson && isVocabGradedInteraction(parsed)) {
+        if (!screenHadWrongRef.current) {
+          recordVocabRunWrong(vocabSessionRef.current, extractVocabWordId(parsed));
+        }
+        screenHadWrongRef.current = true;
       }
       if (!isPreview) {
         const trackedWords = extractTrackedWords(parsed);
@@ -759,40 +682,43 @@ export function LessonPlayer({
   };
 
   return (
-    <div ref={playbackRootRef} className="mx-auto w-full max-w-5xl space-y-6">
+    <div
+      ref={playbackRootRef}
+      className={clsx(
+        "mx-auto w-full max-w-5xl",
+        immersiveLayout ?
+          "flex h-full min-h-0 flex-col gap-2 overflow-hidden"
+        : "space-y-6",
+      )}
+    >
+      {!isPreview ? <LevelUpModal muted={muted} /> : null}
       {isPreview ? (
-        <p className="rounded border-2 border-sky-700 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-950">
+        <p className="shrink-0 rounded border-2 border-sky-700 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-950">
           Student preview — progress is not saved.
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-kid-ink pb-3">
-        <h1 className="text-xl font-bold text-kid-ink">{lessonTitle}</h1>
-        {isActivityQuiz ? (
-          <div className="relative">
-            {energyRewardBurst ? (
-              <KidActivityEnergyRewardPop
-                key={energyRewardBurst.id}
-                goldAmount={energyRewardBurst.gold}
-              />
-            ) : null}
-            <KidQuizActivityHud energyFill={activityEnergy} streak={activityStreak} />
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-3">
-            <KidStickerStrip count={stickerCount} />
-            <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
-              Gold: {gold}
-            </p>
-            <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
-              XP: {experience}
-            </p>
-            <KidProgressBar currentIndex={index} total={screens.length} />
-          </div>
+      <div
+        className={clsx(
+          "flex flex-wrap items-center justify-between gap-3 border-b-4 border-kid-ink pb-3",
+          immersiveLayout && "shrink-0",
         )}
+      >
+        <h1 className="text-xl font-bold text-kid-ink">{lessonTitle}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
+            Gold: {gold}
+          </p>
+          <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
+            Lv {xpProgressInLevel(experience).level} · {experience} XP
+          </p>
+        </div>
       </div>
-      {quizProgress && !isActivityQuiz ? (
+      {quizProgress ? (
         <p
-          className="rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm"
+          className={clsx(
+            "rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm",
+            immersiveLayout && "shrink-0",
+          )}
           role="status"
           aria-live="polite"
           aria-label={`${quizProgress.title ?? "Quiz"}, question ${quizProgress.questionIndex} of ${quizProgress.questionCount}`}
@@ -806,46 +732,14 @@ export function LessonPlayer({
         </p>
       ) : null}
 
+      <div
+        className={clsx(
+          immersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden",
+        )}
+      >
       {parsed.type === "start" && (
         <div className="space-y-6">
-          {!canvasEdit ? (
-            <div className="flex flex-wrap justify-center gap-3">
-              <KidButton
-                type="button"
-                variant="accent"
-                className="!min-h-12 !min-w-0 px-5"
-                onClick={() => {
-                  playSfx("tap", muted);
-                  speakText(parsed.read_aloud_title ?? lessonTitle, { muted });
-                }}
-              >
-                Hear title
-              </KidButton>
-            </div>
-          ) : null}
-          {startBookendStoryPayload ? (
-            <StoryBookView
-              key={`start-pg-${screen.id}`}
-              screenId={screen.id}
-              payload={startBookendStoryPayload}
-              muted={muted}
-              compactPreview={isPreview}
-              canvasEdit={false}
-              lessonBackDisabled={index <= 0}
-              embedMode="bookend"
-              bookendPrimaryLabel={parsed.cta_label ?? "Start learning"}
-              bookendTapRewardByItemId={startBookendTapRewards}
-              onBookendTapReward={onStartBookendTapReward}
-              onNextScreen={() => {
-                playSfx("tap", muted);
-                goNext();
-              }}
-              onBackScreen={() => {
-                playSfx("tap", muted);
-                goBack();
-              }}
-            />
-          ) : parsed.image_url ? (
+          {parsed.image_url ? (
             <div
               className={clsx(
                 "relative aspect-[16/10] w-full overflow-hidden rounded-lg border-4 border-kid-ink",
@@ -862,10 +756,38 @@ export function LessonPlayer({
                 priority
                 unoptimized={parsed.image_url.includes("placehold.co")}
               />
+              {!canvasEdit ? (
+                <>
+                  <KidButton
+                    type="button"
+                    variant="secondary"
+                    className="absolute right-3 top-3 z-10 !min-h-10 !min-w-0 border-2 border-white/90 bg-white/95 px-3 text-sm shadow-md"
+                    onClick={() => {
+                      playSfx("tap", muted);
+                      speakText(parsed.read_aloud_title ?? lessonTitle, { muted });
+                    }}
+                  >
+                    Hear title
+                  </KidButton>
+                  <div className="absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-black/75 via-black/40 to-transparent px-4 pb-5 pt-16 sm:pb-6 sm:pt-20">
+                    <KidButton
+                      type="button"
+                      variant="accent"
+                      className="min-w-[12rem] shadow-[6px_6px_0_#0a2f86] sm:min-w-[14rem] sm:text-xl"
+                      onClick={() => {
+                        playSfx("tap", muted);
+                        goNext();
+                      }}
+                    >
+                      {parsed.cta_label ?? "Start learning"}
+                    </KidButton>
+                  </div>
+                </>
+              ) : null}
             </div>
           ) : null}
-          <div className="flex flex-col items-center gap-4">
-            {canvasEdit ? (
+          {canvasEdit ? (
+            <div className="flex flex-col items-center gap-4">
               <div className="flex w-full max-w-md flex-col gap-2">
                 <label className="text-xs font-semibold text-kid-ink">
                   Title for read-aloud (optional)
@@ -881,7 +803,6 @@ export function LessonPlayer({
                           image_fit: parsed.image_fit ?? "contain",
                           cta_label: parsed.cta_label,
                           read_aloud_title: e.target.value || undefined,
-                          playground: parsed.playground,
                         });
                         visualEdit!.onPayloadChange(screen.id, next);
                       } catch {
@@ -903,7 +824,6 @@ export function LessonPlayer({
                         image_fit: parsed.image_fit ?? "contain",
                         cta_label: e.target.value,
                         read_aloud_title: parsed.read_aloud_title,
-                        playground: parsed.playground,
                       });
                       visualEdit!.onPayloadChange(screen.id, next);
                     } catch {
@@ -912,7 +832,21 @@ export function LessonPlayer({
                   }}
                 />
               </div>
-            ) : !startBookendStoryPayload ? (
+            </div>
+          ) : null}
+          {!canvasEdit && !parsed.image_url ? (
+            <div className="flex flex-col items-center gap-4">
+              <KidButton
+                type="button"
+                variant="accent"
+                className="!min-h-12 !min-w-0 px-5"
+                onClick={() => {
+                  playSfx("tap", muted);
+                  speakText(parsed.read_aloud_title ?? lessonTitle, { muted });
+                }}
+              >
+                Hear title
+              </KidButton>
               <KidButton
                 onClick={() => {
                   playSfx("tap", muted);
@@ -921,17 +855,19 @@ export function LessonPlayer({
               >
                 {parsed.cta_label ?? "Start learning"}
               </KidButton>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       )}
 
       {parsed.type === "story" &&
-        (parsed.pass_rule ? (
+        (parsed.pass_rule || parsed.auto_advance_on_pass === true ? (
           <InteractionFeedbackShell kind={interactionFeedback}>
             <StoryBookView
               key={screen.id}
               screenId={screen.id}
+              runSeed={runSeed}
+              vocabWordsById={vocabWordsById}
               payload={parsed}
               muted={muted}
               compactPreview={isPreview}
@@ -941,6 +877,7 @@ export function LessonPlayer({
               interactionScreenPassed={interactionPass}
               onInteractionPass={passHandlers.onPass}
               onInteractionWrong={passHandlers.onWrong}
+              controlsPlacement={storyControlsPlacement}
               onNextScreen={() => {
                 playSfx("tap", muted);
                 goNext();
@@ -955,12 +892,15 @@ export function LessonPlayer({
           <StoryBookView
             key={screen.id}
             screenId={screen.id}
+            runSeed={runSeed}
+            vocabWordsById={vocabWordsById}
             payload={parsed}
             muted={muted}
             compactPreview={isPreview}
             canvasEdit={!!canvasEdit}
             visualEdit={visualEdit}
             lessonBackDisabled={index <= 0}
+            controlsPlacement={storyControlsPlacement}
             onNextScreen={() => {
               playSfx("tap", muted);
               goNext();
@@ -1029,9 +969,16 @@ export function LessonPlayer({
               />
             </label>
           ) : null}
-          <InteractionFeedbackShell kind={interactionFeedback}>
-            <InteractionLazyShell>
-              <LazyTrueFalse parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout}>
+            <InteractionLazyShell fillStage={immersiveLayout}>
+              <LazyTrueFalse
+                parsed={parsed}
+                {...nav}
+                {...passHandlers}
+                snappyCorrect={lessonId.startsWith("vocab-")}
+                correctiveOnWrong={lessonId.startsWith("vocab-")}
+                vocabStageTint={lessonId.startsWith("vocab-")}
+              />
             </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
@@ -1130,9 +1077,15 @@ export function LessonPlayer({
               />
             </label>
           ) : null}
-          <InteractionFeedbackShell kind={interactionFeedback}>
-            <InteractionLazyShell>
-              <LazyFillBlanks key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
+          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout}>
+            <InteractionLazyShell fillStage={immersiveLayout}>
+              <LazyFillBlanks
+                key={screen.id}
+                parsed={parsed}
+                {...nav}
+                {...passHandlers}
+                vocabStageTint={lessonId.startsWith("vocab-")}
+              />
             </InteractionLazyShell>
           </InteractionFeedbackShell>
         </>
@@ -1227,9 +1180,14 @@ export function LessonPlayer({
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "letter_mixup" && (
-        <InteractionFeedbackShell kind={interactionFeedback}>
-          <InteractionLazyShell>
-            <LazyLetterMixup parsed={parsed} {...nav} {...passHandlers} />
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout}>
+          <InteractionLazyShell fillStage={immersiveLayout}>
+            <LazyLetterMixup
+              parsed={parsed}
+              {...nav}
+              {...passHandlers}
+              vocabStageTint={lessonId.startsWith("vocab-")}
+            />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
@@ -1297,6 +1255,14 @@ export function LessonPlayer({
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
+      {parsed.type === "interaction" && parsed.subtype === "word_bucket_catch" && (
+        <InteractionFeedbackShell kind={interactionFeedback}>
+          <InteractionLazyShell>
+            <LazyWordBucketCatch parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      </div>
     </div>
   );
 }
@@ -1335,7 +1301,17 @@ function extractTrackedWords(payload: ScreenPayload): string[] {
           payload.targets.flatMap((target) => extractWords(target.label ?? "")),
         ),
       );
+    case "word_bucket_catch":
+      return uniqueWords(extractWords(payload.target_word));
+    case "letter_mixup": {
+      const words = payload.items.flatMap((item) =>
+        [item.target_word, ...(item.accepted_words ?? [])].flatMap((w) => extractWords(w)),
+      );
+      return uniqueWords(words);
+    }
     default:
       return [];
   }
 }
+
+

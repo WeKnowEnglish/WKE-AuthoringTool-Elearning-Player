@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { LessonRow, ModuleRow } from "@/lib/data/catalog";
 import { getProgressSnapshot, setAvatarId } from "@/lib/progress/local-storage";
+import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
+import { nextLockedUnlocks } from "@/lib/progress/unlock-registry";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { LevelUpModal } from "@/components/progress/LevelUpModal";
+import { PlayerLevelBar } from "@/components/progress/PlayerLevelBar";
 import { StickerStorePanel } from "@/components/progress/StickerStorePanel";
 
 const BUDDIES = [
@@ -29,6 +33,19 @@ export function ProfileClient({
   const [buddy, setBuddy] = useState<string | null>(
     () => getProgressSnapshot().avatarId ?? null,
   );
+  const [rewardsTick, setRewardsTick] = useState(0);
+
+  const refreshRewards = useCallback(() => {
+    setRewardsTick((k) => k + 1);
+  }, []);
+
+  const rewards = useMemo(() => {
+    void rewardsTick;
+    return getRewards();
+  }, [rewardsTick]);
+
+  const playerLevel = getPlayerLevel(rewards);
+  const upcomingUnlocks = nextLockedUnlocks(playerLevel).slice(0, 4);
 
   const { completed, skillCounts, totalPublishedLessons } = useMemo(() => {
     const snap = getProgressSnapshot();
@@ -55,6 +72,7 @@ export function ProfileClient({
 
   return (
     <div className="space-y-6">
+      <LevelUpModal />
       {loadError ? (
         <KidPanel className="border-red-800 bg-red-50">
           <p className="text-lg font-bold text-red-950">
@@ -65,10 +83,41 @@ export function ProfileClient({
           </p>
         </KidPanel>
       ) : null}
+      <KidPanel>
+        <h2 className="text-xl font-bold text-kid-ink">Your level</h2>
+        <p className="mt-1 text-sm text-kid-ink/80">
+          Earn XP in lessons, quizzes, and daily quests on Quick start.
+        </p>
+        <div className="mt-4">
+          <PlayerLevelBar experience={rewards.experience} />
+        </div>
+        <p className="mt-3 text-lg font-extrabold text-violet-950">
+          Skill points:{" "}
+          <span className="tabular-nums text-kid-ink">{rewards.skillPoints ?? 0}</span>
+        </p>
+        <p className="mt-1 text-sm text-kid-ink/75">
+          Earn more when you level up. Spending skill points is coming soon.
+        </p>
+        {upcomingUnlocks.length > 0 ? (
+          <div className="mt-4 border-t-2 border-kid-ink/15 pt-3">
+            <p className="text-sm font-extrabold uppercase tracking-wide text-kid-ink/90">
+              Coming up
+            </p>
+            <ul className="mt-2 space-y-1 text-sm font-semibold text-kid-ink">
+              {upcomingUnlocks.map((u) => (
+                <li key={u.id}>
+                  Level {u.minLevel}: {u.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </KidPanel>
       <StickerStorePanel
         title="Achievements"
-        description="Earn gold in lessons, then spend it on random sticker packs."
+        description="Earn gold in lessons and activities, then spend it on random sticker packs."
         emptyBookMessage="No stickers yet. Buy one from Achievements."
+        onRewardsChange={refreshRewards}
       />
       <KidPanel>
         <h2 className="text-xl font-bold text-kid-ink">Your buddy</h2>

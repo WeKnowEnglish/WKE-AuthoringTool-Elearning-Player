@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" shape-rendering="crispEdges">
+  <!-- Pixel-style runner (reference: blue shirt, tan skin, brown hair, dark legs) -->
+  <rect width="32" height="40" fill="#87CEEB"/>
+  <!-- hair -->
+  <rect x="10" y="4" width="12" height="4" fill="#6B4423"/>
+  <!-- face -->
+  <rect x="10" y="8" width="12" height="8" fill="#DEB887"/>
+  <!-- shirt -->
+  <rect x="8" y="16" width="16" height="12" fill="#2563EB"/>
+  <!-- legs -->
+  <rect x="10" y="28" width="5" height="10" fill="#1e293b"/>
+  <rect x="17" y="28" width="5" height="10" fill="#1e293b"/>
+</svg>

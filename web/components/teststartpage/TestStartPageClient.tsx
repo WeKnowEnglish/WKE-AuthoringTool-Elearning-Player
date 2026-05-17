@@ -9,19 +9,30 @@ import {
   type InteractionFeedbackKind,
 } from "@/components/kid-ui/InteractionFeedbackShell";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { LevelUpModal } from "@/components/progress/LevelUpModal";
+import { PlayerLevelBar } from "@/components/progress/PlayerLevelBar";
 import { StickerStorePanel } from "@/components/progress/StickerStorePanel";
+import { UnlockSplashButton } from "@/components/progress/UnlockSplashButton";
 import { FillBlanksView } from "@/components/lesson/interactions/FillBlanksView";
 import { LetterMixupView } from "@/components/lesson/interactions/LetterMixupView";
 import { McQuizView } from "@/components/lesson/interactions/McQuizView";
+import { ChaseGameOverlay } from "@/components/teststartpage/ChaseGameOverlay";
+import { DailyQuestsPanel } from "@/components/teststartpage/DailyQuestsPanel";
+import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
+import { WordBucketCatchOverlay } from "@/components/teststartpage/WordBucketCatchOverlay";
+import { PuppetPresenterOverlay } from "@/components/teststartpage/PuppetPresenterOverlay";
 import { QuizStickerFallback } from "@/components/teststartpage/QuizStickerFallback";
 import { playSfx } from "@/lib/audio/sfx";
+import { speakText } from "@/lib/audio/tts";
 import { getProgressSnapshot, setAudioMuted } from "@/lib/progress/local-storage";
 import {
   applyTestStartQuizCorrectAnswer,
   applyTestStartQuizWrongAnswer,
+  getPlayerLevel,
   getRewards,
   QUIZ_ENERGY_MAX,
 } from "@/lib/progress/rewards";
+import { isUnlockAvailable, minLevelForUnlock } from "@/lib/progress/unlock-registry";
 import { pickQuizStickerVisual } from "@/lib/teststartpage/quiz-question-sticker";
 import {
   compileQuizForTopicWithDebug,
@@ -34,6 +45,8 @@ import {
   type TestStartTopicId,
 } from "@/lib/teststartpage/bank";
 import { loadTestStartQuizWithMedia } from "@/lib/teststartpage/load-teststart-quiz-action";
+import { loadWordBucketCatchDeck } from "@/lib/teststartpage/load-word-bucket-catch-deck-action";
+import type { WordBucketCatchConfig } from "@/lib/lesson/word-bucket-catch";
 import {
   getExcludedRowIdentitiesForQuiz,
   recordQuizRowIdentities,
@@ -46,8 +59,16 @@ import {
   type QuizQuestionReportCategory,
   summarizeQuizQuestionForReport,
 } from "@/lib/teststartpage/quiz-question-reports";
+import { getTestStartQuizSpeakText } from "@/lib/teststartpage/quiz-question-speak-text";
+import { bumpDailyQuestProgress } from "@/lib/teststartpage/daily-quests";
+import {
+  VOCAB_SET_MENU,
+  vocabSetCoverImageSrc,
+  type VocabSetId,
+} from "@/lib/vocabulary-templates";
+import type { PuppetScriptId } from "@/lib/puppet-activity/types";
 
-type Phase = "splash" | "topics" | "quizOptions" | "quiz" | "done";
+type Phase = "splash" | "topics" | "bucketTopics" | "vocabTopics" | "quizOptions" | "quiz" | "done";
 
 type PlayerMenuPage = "root" | "sticker-store";
 
@@ -79,9 +100,31 @@ export function TestStartPageClient() {
   const [reportLogTick, setReportLogTick] = useState(0);
   /** Browser timer id (`window.setTimeout`); typed as number for DOM typings. */
   const autoAdvanceTimerRef = useRef<number | null>(null);
-  const [rewardsUi, setRewardsUi] = useState({ gold: 0, energy: 0, streak: 0 });
+  const lastQuizSpeakKeyRef = useRef<string>("");
+  const [doneReplayLock, setDoneReplayLock] = useState(false);
+  const [rewardsUi, setRewardsUi] = useState({
+    gold: 0,
+    experience: 0,
+    level: 1,
+    skillPoints: 0,
+    energy: 0,
+    streak: 0,
+  });
+  const [dailyQuestUiKey, setDailyQuestUiKey] = useState(0);
   const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
   const [playerMenuPage, setPlayerMenuPage] = useState<PlayerMenuPage>("root");
+  const [chaseGameOpen, setChaseGameOpen] = useState(false);
+  const [wordBucketCatchOpen, setWordBucketCatchOpen] = useState(false);
+  const [bucketGameConfig, setBucketGameConfig] = useState<WordBucketCatchConfig | null>(null);
+  const [bucketCompletionEventId, setBucketCompletionEventId] = useState<string | null>(null);
+  const [bucketDeckLoading, setBucketDeckLoading] = useState(false);
+  const [bucketDeckError, setBucketDeckError] = useState<string | null>(null);
+  const [vocabSetOpen, setVocabSetOpen] = useState(false);
+  const [activeVocabSetId, setActiveVocabSetId] = useState<VocabSetId | null>(null);
+  const [vocabSessionSeed, setVocabSessionSeed] = useState<string | null>(null);
+  const [puppetOpen, setPuppetOpen] = useState(false);
+  const [activePuppetScriptId, setActivePuppetScriptId] =
+    useState<PuppetScriptId>("demo_am_with_i");
 
   const qaReportCount = useMemo(() => loadQuizQuestionReports().length, [reportLogTick, phase]);
 
@@ -89,9 +132,13 @@ export function TestStartPageClient() {
     const r = getRewards();
     setRewardsUi({
       gold: r.gold,
+      experience: r.experience,
+      level: getPlayerLevel(r),
+      skillPoints: r.skillPoints ?? 0,
       energy: r.quizEnergy ?? 0,
       streak: r.quizStreak ?? 0,
     });
+    setDailyQuestUiKey((k) => k + 1);
   }, []);
 
   useEffect(() => {
@@ -140,12 +187,14 @@ export function TestStartPageClient() {
     playSfx("tap", muted);
     if (!interactionPass) return;
     if (index >= questions.length - 1) {
+      bumpDailyQuestProgress("quiz_completions", 1);
+      refreshRewardsUi();
       setPhase("done");
     } else {
       setIndex((i) => i + 1);
     }
     resetInteractionState();
-  }, [interactionPass, index, questions.length, muted, resetInteractionState]);
+  }, [interactionPass, index, questions.length, muted, resetInteractionState, refreshRewardsUi]);
 
   const goBack = useCallback(() => {
     playSfx("tap", muted);
@@ -159,16 +208,16 @@ export function TestStartPageClient() {
     window.setTimeout(() => setInteractionFeedback("none"), 480);
     if (phase === "quiz" && activeQuizSeed && selectedTopicId !== null) {
       const eventId = `teststart:${activeQuizSeed}:${selectedTopicId}:q${index}`;
-      const snap = applyTestStartQuizCorrectAnswer(eventId);
-      setRewardsUi({
-        gold: snap.gold,
-        energy: snap.quizEnergy ?? 0,
-        streak: snap.quizStreak ?? 0,
-      });
+      applyTestStartQuizCorrectAnswer(eventId);
+      const q = questions[index];
+      if (q?.type === "interaction" && q.subtype === "letter_mixup") {
+        bumpDailyQuestProgress("letter_mixup", 1);
+      }
+      refreshRewardsUi();
     }
     setInteractionPass(true);
     playSfx("correct", muted);
-  }, [phase, activeQuizSeed, selectedTopicId, index, muted]);
+  }, [phase, activeQuizSeed, selectedTopicId, index, muted, questions, refreshRewardsUi]);
 
   const onInteractionWrong = useCallback(() => {
     setInteractionFeedback("wrong");
@@ -188,9 +237,11 @@ export function TestStartPageClient() {
     [onInteractionPass, onInteractionWrong],
   );
 
+  const current = questions[index] ?? null;
+
   useEffect(() => {
     if (phase !== "quiz" || !interactionPass) return;
-    if (questions.length === 0 || index >= questions.length - 1) return;
+    if (questions.length === 0) return;
     autoAdvanceTimerRef.current = window.setTimeout(() => {
       autoAdvanceTimerRef.current = null;
       goNext();
@@ -215,6 +266,27 @@ export function TestStartPageClient() {
       img.src = u;
     }
   }, [phase, questions, index]);
+
+  useEffect(() => {
+    if (phase !== "done") return;
+    setDoneReplayLock(true);
+    const id = window.setTimeout(() => setDoneReplayLock(false), 1000);
+    return () => window.clearTimeout(id);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== "quiz" || quizLoading || !current || !activeQuizSeed) return;
+    const text = getTestStartQuizSpeakText(current);
+    if (!text) return;
+    const key = `${activeQuizSeed}:${index}:${text}`;
+    if (lastQuizSpeakKeyRef.current === key) return;
+    lastQuizSpeakKeyRef.current = key;
+    speakText(text, { muted });
+  }, [phase, quizLoading, current, index, muted, activeQuizSeed]);
+
+  useEffect(() => {
+    if (phase !== "quiz") lastQuizSpeakKeyRef.current = "";
+  }, [phase]);
 
   const nav = {
     muted,
@@ -248,6 +320,46 @@ export function TestStartPageClient() {
       setQuizLoading(false);
     }
   }, []);
+
+  const openVocabularySet = useCallback(
+    (id: VocabSetId) => {
+      const unlockId = `vocab_set:${id}` as const;
+      if (!isUnlockAvailable(unlockId, getPlayerLevel())) {
+        playSfx("wrong", muted);
+        return;
+      }
+      playSfx("tap", muted);
+      setActiveVocabSetId(id);
+      setVocabSessionSeed(newQuizSeed());
+      setVocabSetOpen(true);
+    },
+    [muted],
+  );
+
+  const selectBucketTopic = useCallback(async (id: TestStartTopicId) => {
+    playSfx("tap", muted);
+    setBucketDeckError(null);
+    setBucketDeckLoading(true);
+    try {
+      const r = await loadWordBucketCatchDeck(id, newQuizSeed());
+      if (r.ok) {
+        const completionId =
+          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ?
+            `teststart:bucket-complete:${crypto.randomUUID()}`
+          : `teststart:bucket-complete:${Date.now()}`;
+        setBucketCompletionEventId(completionId);
+        setBucketGameConfig(r.config);
+        setWordBucketCatchOpen(true);
+        setPhase("splash");
+      } else {
+        setBucketDeckError(r.error);
+      }
+    } catch {
+      setBucketDeckError("Could not load pictures. Try again.");
+    } finally {
+      setBucketDeckLoading(false);
+    }
+  }, [muted]);
 
   function selectTopic(id: TestStartTopicId) {
     playSfx("tap", muted);
@@ -295,8 +407,6 @@ export function TestStartPageClient() {
     setPhase("topics");
   }
 
-  const current = questions[index] ?? null;
-
   const activeQuizTitle =
     selectedTopicId ?
       `${TOPICS.find((t) => t.id === selectedTopicId)?.label ?? selectedTopicId} quiz`
@@ -311,8 +421,12 @@ export function TestStartPageClient() {
   const quizOptionsActionClass =
     "w-full !min-h-[4.25rem] !rounded-xl !px-10 !py-4 !text-xl !font-bold tracking-wide sm:w-auto sm:!min-h-[5rem] sm:!min-w-[16rem] sm:!text-2xl";
 
+  const splashBtnClass =
+    "min-h-[5.5rem] flex-1 rounded-[999px] border-4 px-6 text-center text-2xl font-black tracking-wide shadow-[8px_8px_0_#0a2f86] transition-transform [touch-action:manipulation] active:translate-y-[1px] active:scale-[0.99] sm:min-h-[6.5rem] sm:max-w-md";
+
   return (
     <div className="flex min-h-dvh flex-col bg-[#f7bf4d] text-kid-ink">
+      <LevelUpModal muted={muted} />
       {playerMenuOpen ? (
         <>
           <button
@@ -361,19 +475,26 @@ export function TestStartPageClient() {
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {playerMenuPage === "root" ? (
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-xl border-4 border-kid-ink bg-kid-panel p-4 text-left transition-transform [touch-action:manipulation] hover:bg-kid-surface-muted active:scale-[0.99]"
-                  onClick={() => {
-                    playSfx("tap", muted);
-                    setPlayerMenuPage("sticker-store");
-                  }}
-                >
-                  <span className="text-3xl" aria-hidden>
-                    🎁
-                  </span>
-                  <span className="text-lg font-bold text-kid-ink">Sticker store</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl border-4 border-kid-ink bg-kid-panel p-4 text-left transition-transform [touch-action:manipulation] hover:bg-kid-surface-muted active:scale-[0.99]"
+                    onClick={() => {
+                      playSfx("tap", muted);
+                      setPlayerMenuPage("sticker-store");
+                    }}
+                  >
+                    <span className="text-3xl" aria-hidden>
+                      🎁
+                    </span>
+                    <span className="text-lg font-bold text-kid-ink">Sticker store</span>
+                  </button>
+                  <DailyQuestsPanel
+                    key={dailyQuestUiKey}
+                    muted={muted}
+                    onEconomyChange={refreshRewardsUi}
+                  />
+                </>
               ) : (
                 <StickerStorePanel muted={muted} onRewardsChange={refreshRewardsUi} />
               )}
@@ -420,6 +541,7 @@ export function TestStartPageClient() {
             <span className="text-kid-ink/80">Gold</span>
             <span>{rewardsUi.gold}</span>
           </div>
+          <PlayerLevelBar experience={rewardsUi.experience} compact />
         </div>
         <KidButton type="button" variant="secondary" className="!min-h-9 shrink-0 text-sm" onClick={toggleMute}>
           {muted ? "Sound off" : "Sound on"}
@@ -428,18 +550,87 @@ export function TestStartPageClient() {
 
       <main className="flex min-h-0 flex-1 flex-col items-center px-4 py-4 sm:py-6">
         {phase === "splash" ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-8">
-            <p className="max-w-md text-center text-2xl font-bold text-kid-ink">Quick quiz</p>
-            <button
-              type="button"
-              className="h-40 w-[40rem] max-w-[96vw] rounded-[999px] border-4 border-[#0a2f86] bg-[#0f4ecf] px-8 text-center text-6xl font-black tracking-wide text-white shadow-[10px_10px_0_#0a2f86] transition-transform [touch-action:manipulation] hover:bg-[#1658dc] active:translate-y-[1px] active:scale-[0.99]"
-              onClick={() => {
-                playSfx("tap", muted);
-                setPhase("topics");
-              }}
-            >
-              PLAY
-            </button>
+          <div className="flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 px-2">
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-extrabold text-kid-ink sm:text-3xl">Quick start</p>
+              <p className="text-base font-semibold text-kid-ink/85 sm:text-lg">
+                Start a topic quiz, vocabulary sets, the chase game, word bucket catch, or the grammar puppet.
+              </p>
+            </div>
+            <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+              <UnlockSplashButton
+                unlockId="topic_quiz"
+                playerLevel={rewardsUi.level}
+                label="Start a quiz"
+                className={clsx(
+                  splashBtnClass,
+                  "border-[#0a2f86] bg-[#0f4ecf] text-white hover:bg-[#1658dc] sm:text-4xl",
+                )}
+                onLockedClick={() => playSfx("wrong", muted)}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setPhase("topics");
+                }}
+              />
+              <UnlockSplashButton
+                unlockId="vocab_sets_menu"
+                playerLevel={rewardsUi.level}
+                label="Vocabulary sets"
+                className={clsx(
+                  splashBtnClass,
+                  "border-kid-ink bg-lime-300 text-kid-ink hover:bg-lime-200 sm:text-3xl",
+                )}
+                onLockedClick={() => playSfx("wrong", muted)}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setPhase("vocabTopics");
+                }}
+              />
+              <UnlockSplashButton
+                unlockId="chase_game"
+                playerLevel={rewardsUi.level}
+                label="Start chase game"
+                className={clsx(
+                  splashBtnClass,
+                  "border-kid-ink bg-kid-panel text-kid-ink hover:bg-kid-surface-muted sm:text-4xl",
+                )}
+                onLockedClick={() => playSfx("wrong", muted)}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setChaseGameOpen(true);
+                }}
+              />
+              <UnlockSplashButton
+                unlockId="word_bucket_catch"
+                playerLevel={rewardsUi.level}
+                label="Word bucket catch"
+                className={clsx(
+                  splashBtnClass,
+                  "border-kid-ink bg-amber-300 text-kid-ink hover:bg-amber-200 sm:text-4xl",
+                )}
+                onLockedClick={() => playSfx("wrong", muted)}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setBucketDeckError(null);
+                  setPhase("bucketTopics");
+                }}
+              />
+              <UnlockSplashButton
+                unlockId="grammar_puppet"
+                playerLevel={rewardsUi.level}
+                label="Grammar puppet"
+                className={clsx(
+                  splashBtnClass,
+                  "border-kid-ink bg-sky-200 text-kid-ink hover:bg-sky-100 sm:col-span-2 sm:text-3xl",
+                )}
+                onLockedClick={() => playSfx("wrong", muted)}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setActivePuppetScriptId("demo_am_with_i");
+                  setPuppetOpen(true);
+                }}
+              />
+            </div>
           </div>
         ) : null}
 
@@ -472,6 +663,125 @@ export function TestStartPageClient() {
             </div>
             <div className="mt-auto flex justify-center pt-4">
               <KidButton type="button" variant="secondary" onClick={() => setPhase("splash")}>
+                Back
+              </KidButton>
+            </div>
+          </div>
+        ) : null}
+
+        {phase === "bucketTopics" ? (
+          <div className="flex w-full max-w-7xl flex-1 flex-col gap-6">
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-extrabold text-kid-ink sm:text-3xl">Word bucket catch</p>
+              <p className="text-base font-semibold text-kid-ink/85 sm:text-lg">
+                Pick a topic — pictures come from the media library for that topic.
+              </p>
+            </div>
+            {bucketDeckError ? (
+              <KidPanel className="border-red-700 bg-red-50">
+                <p className="text-center text-sm font-semibold text-red-900">{bucketDeckError}</p>
+              </KidPanel>
+            ) : null}
+            {bucketDeckLoading ? (
+              <p className="text-center text-lg font-bold text-kid-ink">Loading pictures…</p>
+            ) : null}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-5">
+              {TOPICS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  disabled={bucketDeckLoading}
+                  aria-label={`${t.label} topic for bucket game`}
+                  className={clsx(
+                    "rounded-2xl border-4 border-kid-ink bg-kid-panel p-2 transition-transform [touch-action:manipulation] hover:bg-kid-surface-muted active:scale-[0.98] sm:p-3 md:p-4",
+                    bucketDeckLoading && "pointer-events-none opacity-60",
+                  )}
+                  onClick={() => void selectBucketTopic(t.id)}
+                >
+                  <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border-2 border-kid-ink/50 bg-white">
+                    <NextImage
+                      src={topicMenuImageSrc(t.id)}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <p className="mt-2 text-center text-sm font-bold text-kid-ink">{t.label}</p>
+                </button>
+              ))}
+            </div>
+            <div className="mt-auto flex justify-center pt-4">
+              <KidButton
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setBucketDeckError(null);
+                  setPhase("splash");
+                }}
+              >
+                Back
+              </KidButton>
+            </div>
+          </div>
+        ) : null}
+
+        {phase === "vocabTopics" ? (
+          <div className="flex w-full max-w-3xl flex-1 flex-col gap-6">
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-extrabold text-kid-ink sm:text-3xl">Vocabulary sets</p>
+              <p className="text-base font-semibold text-kid-ink/85 sm:text-lg">
+                Hand-crafted lessons — tap a set to start learning.
+              </p>
+            </div>
+            <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-4 sm:max-w-lg">
+              {VOCAB_SET_MENU.map((entry) => {
+                const setUnlockId = `vocab_set:${entry.id}` as const;
+                const setLocked = !isUnlockAvailable(setUnlockId, rewardsUi.level);
+                return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  aria-label={
+                    setLocked ?
+                      `${entry.label} — unlocks at level ${minLevelForUnlock(setUnlockId)}`
+                    : `${entry.label} vocabulary set`
+                  }
+                  className={clsx(
+                    "rounded-2xl border-4 border-kid-ink bg-kid-panel p-3 transition-transform [touch-action:manipulation] hover:bg-kid-surface-muted active:scale-[0.98] sm:p-4",
+                    setLocked && "cursor-not-allowed opacity-55 grayscale",
+                  )}
+                  onClick={() => openVocabularySet(entry.id)}
+                >
+                  <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border-2 border-kid-ink/50 bg-white">
+                    <NextImage
+                      src={vocabSetCoverImageSrc(entry.id)}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <p className="mt-3 text-center text-lg font-bold text-kid-ink">{entry.label}</p>
+                  {setLocked ? (
+                    <p className="mt-1 text-center text-sm font-bold text-kid-ink/80">
+                      Level {minLevelForUnlock(setUnlockId)} to unlock
+                    </p>
+                  ) : null}
+                </button>
+              );
+              })}
+            </div>
+            <div className="mt-auto flex justify-center pt-4">
+              <KidButton
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setPhase("splash");
+                }}
+              >
                 Back
               </KidButton>
             </div>
@@ -741,7 +1051,9 @@ export function TestStartPageClient() {
                 </KidButton>
                 <KidButton
                   type="button"
+                  disabled={doneReplayLock}
                   onClick={() => {
+                    if (doneReplayLock) return;
                     playSfx("tap", muted);
                     if (!selectedTopicId || !quizBuildOptions) {
                       setPhase("topics");
@@ -761,6 +1073,62 @@ export function TestStartPageClient() {
           </div>
         ) : null}
       </main>
+
+      {chaseGameOpen ? (
+        <ChaseGameOverlay
+          muted={muted}
+          onClose={() => {
+            playSfx("tap", muted);
+            setChaseGameOpen(false);
+          }}
+          onRewardsGranted={refreshRewardsUi}
+        />
+      ) : null}
+      {wordBucketCatchOpen && bucketGameConfig && bucketCompletionEventId ? (
+        <WordBucketCatchOverlay
+          muted={muted}
+          config={bucketGameConfig}
+          completionEventId={bucketCompletionEventId}
+          onRewardsGranted={refreshRewardsUi}
+          onTestCorrectCatch={() => {
+            bumpDailyQuestProgress("bucket_catches", 1);
+            refreshRewardsUi();
+          }}
+          onClose={() => {
+            playSfx("tap", muted);
+            setWordBucketCatchOpen(false);
+            setBucketGameConfig(null);
+            setBucketCompletionEventId(null);
+          }}
+        />
+      ) : null}
+      {vocabSetOpen && activeVocabSetId && vocabSessionSeed ? (
+        <VocabularySetOverlay
+          setId={activeVocabSetId}
+          sessionSeed={vocabSessionSeed}
+          muted={muted}
+          onRequestNewRun={() => setVocabSessionSeed(newQuizSeed())}
+          onClose={() => {
+            playSfx("tap", muted);
+            setVocabSetOpen(false);
+            setActiveVocabSetId(null);
+            setVocabSessionSeed(null);
+            setPhase("vocabTopics");
+            refreshRewardsUi();
+          }}
+        />
+      ) : null}
+      {puppetOpen ? (
+        <PuppetPresenterOverlay
+          scriptId={activePuppetScriptId}
+          muted={muted}
+          onClose={() => {
+            playSfx("tap", muted);
+            setPuppetOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
+

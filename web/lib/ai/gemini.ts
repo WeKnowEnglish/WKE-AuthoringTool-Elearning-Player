@@ -178,7 +178,7 @@ const STORY_FIRST_BLUEPRINT_POLICY = `Story-First Blueprint policy:
 - letter_mixup follows clear vocabulary introduction only.
 - fill_blanks follows modeled sentence exposure only.
 - fix_text follows correct examples and should not appear before recognition or controlled practice.
-- Do not use short_answer, click_targets, hotspot_gate, drag_match, drag_sentence, sound_sort, listen_color_write, listen_hotspot_sequence, word_shape_hunt, table_complete, sorting_game, essay, voice_question, guided_dialogue, or presentation_interactive in Story-First Blueprints.
+- Do not use short_answer, click_targets, hotspot_gate, drag_match, drag_sentence, sound_sort, listen_color_write, listen_hotspot_sequence, word_shape_hunt, table_complete, sorting_game, word_bucket_catch, essay, voice_question, guided_dialogue, or presentation_interactive in Story-First Blueprints.
 
 Phase orchestration rules (apply to pages[].phases[]):
 - SEMANTIC IDs ONLY: phase_id, target_item_id, and sequence_id MUST be stable semantic slugs (e.g. "intro", "tap_toothbrush", "collect_clothes_seq"). NEVER invent opaque runtime IDs such as "item_47" or "phase_uuid_abc". These slugs are used by the compiler to map blueprint → runtime items[].id deterministically.

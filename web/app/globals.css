@@ -72,8 +72,26 @@
     }
   }
 
+  .kid-animate-pop {
+    animation: kid-pop 0.45s cubic-bezier(0.34, 1.45, 0.64, 1);
+    transform-origin: center center;
+  }
+
+  @keyframes kid-pop {
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .kid-animate-shake {
+    .kid-animate-shake,
+    .kid-animate-pop {
       animation: none;
     }
   }
@@ -606,5 +624,96 @@ body:has([data-teacher-root]) {
 @media (prefers-reduced-motion: reduce) {
   .teacher-editor-save-icon-pulse {
     animation: teacher-editor-save-icon-pulse-reduced 0.45s ease-out both;
+  }
+}
+
+/* Grammar puppet (AJ): layered rig idle loops — transform-origin set inline per part. */
+@keyframes puppet-idle-body {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2.5%) scale(1.028);
+  }
+}
+
+@keyframes puppet-idle-head {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2.5deg);
+  }
+  50% {
+    transform: translateY(-3%) rotate(2.5deg);
+  }
+}
+
+@keyframes puppet-idle-upper-arm {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  40% {
+    transform: rotate(10deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+}
+
+@keyframes puppet-idle-lower-arm {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  80% {
+    transform: rotate(-3deg);
+  }
+}
+
+@keyframes puppet-idle-hand {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+.puppet-idle--body {
+  animation: puppet-idle-body 2.8s ease-in-out infinite;
+}
+
+.puppet-idle--head {
+  animation: puppet-idle-head 3.2s ease-in-out infinite;
+  animation-delay: 0.12s;
+}
+
+.puppet-idle--upper-arm {
+  animation: puppet-idle-upper-arm 3.6s ease-in-out infinite;
+  animation-delay: 0.08s;
+}
+
+.puppet-idle--lower-arm {
+  animation: puppet-idle-lower-arm 3.1s ease-in-out infinite;
+  animation-delay: 0.22s;
+}
+
+.puppet-idle--hand {
+  animation: puppet-idle-hand 2.7s ease-in-out infinite;
+  animation-delay: 0.35s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puppet-idle--body,
+  .puppet-idle--head,
+  .puppet-idle--upper-arm,
+  .puppet-idle--lower-arm,
+  .puppet-idle--hand {
+    animation: none;
   }
 }

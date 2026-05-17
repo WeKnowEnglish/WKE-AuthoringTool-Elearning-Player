@@ -19,7 +19,7 @@ import {
   KidButton,
 } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
-import { playSfx } from "@/lib/audio/sfx";
+import { playSfx, primeAudioOutput } from "@/lib/audio/sfx";
 import { speakText, speakTextAndWait, stopSpeaking } from "@/lib/audio/tts";
 import { bumpTapSpeechCounter, resolveTapSpeechEntry } from "@/lib/story-tap-speech";
 import {
@@ -45,17 +45,62 @@ import {
   type StoryItem,
   type StoryPage,
   type StoryPagePhase,
-  type StartPlaygroundTapReward,
   type StoryPayload,
 } from "@/lib/lesson-schemas";
 import { resolveStoryIdleForItem, storyIdleClassForPreset } from "@/lib/story-idle";
 import { isStoryPassSatisfied } from "@/lib/story-pass";
+import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import {
-  buildUnifiedReactionsFromStoryPage,
-  compileUnifiedReactionBody,
-  isStoryUnifiedDispatchEnabled,
-} from "@/lib/story-unified";
-import type { StoryUnifiedNavPayload, StoryUnifiedReactionRow } from "@/lib/story-unified/schema";
+  inferLemmaGrammar,
+  pickStickerMatchPhraseVariant,
+  stickerMatchLemmaStatement,
+} from "@/lib/vocabulary-templates/lemma-statement";
+import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
+import type { VocabWord } from "@/lib/vocabulary-templates";
+import {
+  VOCAB_LEARN_BTN_ID,
+  VOCAB_LEARN_BTN_LABEL_NEW_WORD,
+  VOCAB_LEARN_BTN_LABEL_NEXT,
+  VOCAB_LEARN_BTN_LABEL_STICKER_MODE,
+  VOCAB_LEARN_DWELL_MS,
+  VOCAB_LEARN_DWELL_REDUCED_MS,
+  VOCAB_LEARN_FLY_FAST_MS,
+  VOCAB_LEARN_FLY_MS,
+  VOCAB_LEARN_PLAY_PHASE_ID,
+  VOCAB_LEARN_REPLAY_EMPHASIS_MS,
+  VOCAB_LEARN_TAP_POP_PRESET,
+  VOCAB_LEARN_PAGE_BACKGROUND,
+  VOCAB_LEARN_SHADOW_FILTER,
+  VOCAB_LEARN_SHADOW_STICKER_FILTER,
+  VOCAB_LEARN_SPOTLIGHT,
+  getOrderedLearnWordIds,
+  isVocabLearnReplayPhase,
+  isVocabLearnSettledImagePhase,
+  getVocabLearnImageItems,
+  isVocabLearnImageItemId,
+  isVocabLearnNewWordPage,
+  isVocabLearnSlotItemId,
+  learnBorderLayoutForWordId,
+  learnSettledImageLayout,
+  type VocabLearnImagePhase,
+  wordIdFromLearnImageId,
+  wordIdFromLearnSlotItemId,
+} from "@/lib/vocabulary-templates/vocab-learn-new-word";
+import {
+  VOCAB_LEARN_STICKER_FALL_MS,
+  VOCAB_LEARN_STICKER_HINT,
+  allStickerWordsMatched,
+  scatterLearnStickerPositions,
+  stickerImageHitsShadow,
+} from "@/lib/vocabulary-templates/vocab-learn-sticker-scatter";
+import {
+  VOCAB_DRAG_LABEL_CARD_BG,
+  VOCAB_DRAG_LABEL_CARD_BORDER,
+  VOCAB_DRAG_PLAY_PHASE_ID,
+  isVocabDragMatchPage,
+  isVocabDragTextItemId,
+  layoutDragLabelBelowTarget,
+} from "@/lib/vocabulary-templates/vocab-drag-match";
 
 function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
@@ -108,6 +153,14 @@ function tapQuotaThresholdsMet(
   return ok;
 }
 
+export type StoryControlsPlacement = "below" | "stage-overlay";
+
+const STAGE_OVERLAY_BTN =
+  "!min-h-9 !min-w-0 shrink-0 px-3 py-1.5 text-sm shadow-[3px_3px_0_#0a2f86]";
+
+/** Reserved footer inside immersive (vocab) story stage — matches `bottom-14` content inset. */
+const STAGE_CHROME_FOOTER_CLASS = "h-14 shrink-0";
+
 type Props = {
   screenId: string;
   payload: StoryPayload;
@@ -122,19 +175,12 @@ type Props = {
   interactionScreenPassed?: boolean;
   onInteractionPass?: () => void;
   onInteractionWrong?: () => void;
-  /** Start / completion playground: minimal chrome, optional tap rewards. */
-  embedMode?: "bookend";
-  /** Replaces the last-page primary label (e.g. start CTA). */
-  bookendPrimaryLabel?: string;
-  bookendTapRewardByItemId?: Record<string, StartPlaygroundTapReward>;
-  onBookendTapReward?: (detail: {
-    itemId: string;
-    rule: StartPlaygroundTapReward;
-    /** 1-based tap count for this item within max_triggers (for reward event idempotency). */
-    triggerOrdinal: number;
-  }) => void;
-  /** When true with `embedMode: "bookend"`, hide Back/Next (parent supplies navigation). */
-  bookendHideNav?: boolean;
+  /** Inset Back / Next / Listen on the story stage (vocab overlay). */
+  controlsPlacement?: StoryControlsPlacement;
+  /** Per-run seed for vocabulary learn “New word” reveal order. */
+  runSeed?: string;
+  /** Word metadata for sticker-match success TTS. */
+  vocabWordsById?: Record<string, Pick<VocabWord, "id" | "lemma" | "grammar" | "mealVerb">>;
 };
 
 export function StoryBookView({
@@ -150,12 +196,12 @@ export function StoryBookView({
   interactionScreenPassed = false,
   onInteractionPass,
   onInteractionWrong,
-  embedMode,
-  bookendPrimaryLabel,
-  bookendTapRewardByItemId,
-  onBookendTapReward,
-  bookendHideNav = false,
+  controlsPlacement = "below",
+  runSeed,
+  vocabWordsById,
 }: Props) {
+  const controlsOnStage = controlsPlacement === "stage-overlay" && !canvasEdit;
+  const vocabLearnDeckSeed = runSeed ?? screenId;
   const pages = useMemo(() => getNormalizedStoryPages(payload), [payload]);
   const turnStyle = getStoryPageTurnStyle(payload);
   const layoutMode = getStoryLayoutMode(payload);
@@ -169,9 +215,6 @@ export function StoryBookView({
   const [activeStoryPhaseId, setActiveStoryPhaseId] = useState<string | null>(null);
   const activeStoryPhaseIdRef = useRef<string | null>(null);
   const [hiddenItemIds, setHiddenItemIds] = useState<Record<string, boolean>>({});
-  const [activeVariableOutcomeByHost, setActiveVariableOutcomeByHost] = useState<
-    Record<string, string>
-  >({});
   const [visitedPageIds, setVisitedPageIds] = useState<Record<string, true>>({});
   const [deckDragCheckDone, setDeckDragCheckDone] = useState<Record<string, boolean>>({});
   const [deckFreeDragPos, setDeckFreeDragPos] = useState<
@@ -210,16 +253,77 @@ export function StoryBookView({
     Record<string, { perItem: Record<string, number>; aggregate: number }>
   >({});
   const tapGroupFiredRef = useRef<Set<string>>(new Set());
-  const bookendTapRewardCountsRef = useRef<Record<string, number>>({});
   /** Tap pool counters for phase `pool_interaction_quota` (key `p:${phaseId}`). */
   const phasePoolBucketsRef = useRef<
     Record<string, { perItem: Record<string, number>; aggregate: number }>
   >({});
   const phasePoolFiredRef = useRef<Set<string>>(new Set());
+  const vocabLearnOrderRef = useRef<string[]>([]);
+  const vocabLearnCursorRef = useRef(0);
+  const vocabLearnActiveImgRef = useRef<string | null>(null);
+  const vocabLearnImgPhaseRef = useRef<Record<string, VocabLearnImagePhase>>({});
+  const vocabLearnDwellTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vocabLearnFlyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vocabLearnReplayAtRef = useRef<Record<string, number>>({});
+  const vocabLearnStickerModeRef = useRef(false);
+  const vocabLearnStickerDragSessionRef = useRef<{
+    id: string;
+    displayW: number;
+    displayH: number;
+    dx: number;
+    dy: number;
+    startX: number;
+    startY: number;
+    stageLeft: number;
+    stageTop: number;
+    stageWidth: number;
+    stageHeight: number;
+    lastX: number;
+    lastY: number;
+    el: HTMLButtonElement;
+    prevTransition: string;
+    prevZIndex: string;
+    pointerId: number;
+  } | null>(null);
+  const [vocabLearnImgPhase, setVocabLearnImgPhase] = useState<
+    Record<string, VocabLearnImagePhase>
+  >({});
+  const [vocabLearnFlyMs, setVocabLearnFlyMs] = useState<Record<string, number>>({});
+  const [vocabLearnStickerMode, setVocabLearnStickerMode] = useState(false);
+  const [vocabLearnStickerPos, setVocabLearnStickerPos] = useState<
+    Record<string, { x_percent: number; y_percent: number }>
+  >({});
+  const [vocabLearnStickerMatched, setVocabLearnStickerMatched] = useState<
+    Record<string, true>
+  >({});
+  const [vocabLearnStickerScattering, setVocabLearnStickerScattering] = useState(false);
+  const vocabLearnStickerMatchedRef = useRef(vocabLearnStickerMatched);
+  const vocabLearnStickerScatterHomeRef = useRef<
+    Record<string, { x_percent: number; y_percent: number }>
+  >({});
+  const vocabLearnStickerPosRef = useRef(vocabLearnStickerPos);
+  useEffect(() => {
+    vocabLearnStickerModeRef.current = vocabLearnStickerMode;
+  }, [vocabLearnStickerMode]);
+  useEffect(() => {
+    vocabLearnStickerPosRef.current = vocabLearnStickerPos;
+  }, [vocabLearnStickerPos]);
+  useEffect(() => {
+    vocabLearnStickerMatchedRef.current = vocabLearnStickerMatched;
+  }, [vocabLearnStickerMatched]);
 
   useEffect(() => {
     audioUnlockedRef.current = audioUnlocked;
   }, [audioUnlocked]);
+
+  const mutedRef = useRef(muted);
+  const vocabWordsByIdRef = useRef(vocabWordsById);
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+  useEffect(() => {
+    vocabWordsByIdRef.current = vocabWordsById;
+  }, [vocabWordsById]);
 
   useEffect(() => {
     activeStoryPhaseIdRef.current = activeStoryPhaseId;
@@ -227,16 +331,22 @@ export function StoryBookView({
 
   const safeIndex = Math.min(pageIndex, Math.max(0, pages.length - 1));
   const page = pages[safeIndex];
-  useEffect(() => {
-    const initialByHost: Record<string, string> = {};
-    for (const it of page.items) {
-      if ((it.kind ?? "image") !== "variable") continue;
-      const initial = it.variable_config?.initial_outcome_item_id?.trim();
-      if (initial) initialByHost[it.id] = initial;
-    }
-    setActiveVariableOutcomeByHost(initialByHost);
-  }, [page.id, page.items]);
-
+  const vocabLearnWordIdsOrdered = useMemo(
+    () => (isVocabLearnNewWordPage(page) ? getOrderedLearnWordIds(page.items) : []),
+    [page],
+  );
+  const vocabLearnAllSettled = useMemo(() => {
+    if (!isVocabLearnNewWordPage(page)) return false;
+    const images = getVocabLearnImageItems(page.items);
+    return (
+      images.length > 0 &&
+      images.every((it) => vocabLearnImgPhase[it.id] === "settled")
+    );
+  }, [page, vocabLearnImgPhase]);
+  const vocabLearnAllStickerMatched = useMemo(
+    () => allStickerWordsMatched(vocabLearnWordIdsOrdered, vocabLearnStickerMatched),
+    [vocabLearnWordIdsOrdered, vocabLearnStickerMatched],
+  );
   const getPreferredItemSoundUrl = useCallback(
     (item: StoryItem | undefined): string | undefined => {
       if (!item?.tap_speeches?.length) return undefined;
@@ -261,53 +371,6 @@ export function StoryBookView({
     const sid = activeStoryPhaseId ?? getStartPhaseIdFromNormalizedPage(page);
     return page.phases.find((p) => p.id === sid) ?? page.phases[0] ?? null;
   }, [page, activeStoryPhaseId, page.phases, page.phasesExplicit]);
-
-  const pageEnterSequenceIds = useMemo(
-    () =>
-      new Set(
-        getPageEnterActionSequences(page as unknown as StoryPage, { includeLegacy: true }).map(
-          (s) => s.id,
-        ),
-      ),
-    [page],
-  );
-  const variableOutcomeMetaByItemId = useMemo(() => {
-    const out = new Map<string, { hostId: string; lockChoice: boolean }>();
-    for (const it of page.items) {
-      if ((it.kind ?? "image") !== "variable") continue;
-      const cfg = it.variable_config;
-      if (!cfg?.outcome_item_ids?.length) continue;
-      const lockChoice = cfg.lock_choice ?? true;
-      for (const outcomeId of cfg.outcome_item_ids) {
-        out.set(outcomeId, { hostId: it.id, lockChoice });
-      }
-    }
-    return out;
-  }, [page.items]);
-  const variableHiddenItemIds = useMemo(() => {
-    const hidden: Record<string, boolean> = {};
-    for (const it of page.items) {
-      if ((it.kind ?? "image") !== "variable") continue;
-      const cfg = it.variable_config;
-      if (!cfg?.outcome_item_ids?.length) continue;
-      const selected =
-        activeVariableOutcomeByHost[it.id] ?? cfg.initial_outcome_item_id?.trim() ?? undefined;
-      if (!selected) continue;
-      for (const outcomeId of cfg.outcome_item_ids) {
-        if (outcomeId !== selected) hidden[outcomeId] = true;
-      }
-    }
-    return hidden;
-  }, [page.items, activeVariableOutcomeByHost]);
-
-  /** When set, page/phase enter + phase auto timer run from compiled rows; taps, pools, and drag-match still use legacy paths. */
-  const storyUnifiedRows = useMemo(() => {
-    if (!isStoryUnifiedDispatchEnabled()) return null;
-    const built = buildUnifiedReactionsFromStoryPage(page);
-    if (built.parseErrors.length > 0) return null;
-    return built.rows;
-  }, [page]);
-
   const pageRef = useRef(page);
   const currentStoryPhaseRef = useRef(currentStoryPhase);
   useEffect(() => {
@@ -322,9 +385,92 @@ export function StoryBookView({
     tapGroupFiredRef.current = new Set();
   }, [page.id]);
 
+  const vocabLearnImageUrls = useMemo(() => {
+    if (!isVocabLearnNewWordPage(page)) return [];
+    return getVocabLearnImageItems(page.items)
+      .map((it) => it.image_url)
+      .filter((u): u is string => !!u?.trim());
+  }, [page]);
+
   useEffect(() => {
-    bookendTapRewardCountsRef.current = {};
-  }, [screenId, embedMode]);
+    if (vocabLearnImageUrls.length === 0) return;
+    void prefetchImageUrls(vocabLearnImageUrls);
+  }, [page.id, vocabLearnImageUrls]);
+
+  useEffect(() => {
+    if (vocabLearnImageUrls.length === 0) return;
+    if (activeStoryPhaseId !== VOCAB_LEARN_PLAY_PHASE_ID) return;
+    void prefetchImageUrls(vocabLearnImageUrls);
+  }, [activeStoryPhaseId, page.id, vocabLearnImageUrls]);
+
+  useEffect(() => {
+    if (!isVocabLearnNewWordPage(page)) return;
+    const imageIds = getVocabLearnImageItems(page.items).map((it) => it.id);
+    vocabLearnOrderRef.current = shuffleWithSeed(imageIds, `${vocabLearnDeckSeed}:learn-deck`);
+    vocabLearnCursorRef.current = 0;
+    vocabLearnActiveImgRef.current = null;
+    vocabLearnImgPhaseRef.current = {};
+    vocabLearnReplayAtRef.current = {};
+    vocabLearnStickerModeRef.current = false;
+    vocabLearnStickerDragSessionRef.current = null;
+    if (vocabLearnDwellTimerRef.current !== null) {
+      clearTimeout(vocabLearnDwellTimerRef.current);
+      vocabLearnDwellTimerRef.current = null;
+    }
+    if (vocabLearnFlyTimerRef.current !== null) {
+      clearTimeout(vocabLearnFlyTimerRef.current);
+      vocabLearnFlyTimerRef.current = null;
+    }
+    queueMicrotask(() => {
+      setVocabLearnImgPhase({});
+      setVocabLearnFlyMs({});
+      setVocabLearnStickerMode(false);
+      setVocabLearnStickerPos({});
+      setVocabLearnStickerMatched({});
+      setVocabLearnStickerScattering(false);
+      vocabLearnStickerScatterHomeRef.current = {};
+      setHiddenItemIds((prev) => {
+        const next = { ...prev };
+        for (const id of imageIds) next[id] = true;
+        return next;
+      });
+    });
+  }, [page.id, page.items, vocabLearnDeckSeed]);
+
+  useEffect(() => {
+    if (!isVocabLearnNewWordPage(page)) return;
+    if (activeStoryPhaseId !== VOCAB_LEARN_PLAY_PHASE_ID) return;
+    const imageIds = getVocabLearnImageItems(page.items).map((it) => it.id);
+    vocabLearnCursorRef.current = 0;
+    vocabLearnActiveImgRef.current = null;
+    vocabLearnImgPhaseRef.current = {};
+    vocabLearnReplayAtRef.current = {};
+    vocabLearnStickerModeRef.current = false;
+    vocabLearnStickerDragSessionRef.current = null;
+    vocabLearnOrderRef.current = shuffleWithSeed(imageIds, `${vocabLearnDeckSeed}:learn-deck`);
+    if (vocabLearnDwellTimerRef.current !== null) {
+      clearTimeout(vocabLearnDwellTimerRef.current);
+      vocabLearnDwellTimerRef.current = null;
+    }
+    if (vocabLearnFlyTimerRef.current !== null) {
+      clearTimeout(vocabLearnFlyTimerRef.current);
+      vocabLearnFlyTimerRef.current = null;
+    }
+    queueMicrotask(() => {
+      setVocabLearnImgPhase({});
+      setVocabLearnFlyMs({});
+      setVocabLearnStickerMode(false);
+      setVocabLearnStickerPos({});
+      setVocabLearnStickerMatched({});
+      setVocabLearnStickerScattering(false);
+      vocabLearnStickerScatterHomeRef.current = {};
+      setHiddenItemIds((prev) => {
+        const next = { ...prev };
+        for (const id of imageIds) next[id] = true;
+        return next;
+      });
+    });
+  }, [activeStoryPhaseId, page.id, page.items, vocabLearnDeckSeed]);
 
   useEffect(() => {
     phasePoolBucketsRef.current = {};
@@ -411,6 +557,17 @@ export function StoryBookView({
     passReportedRef.current = true;
     onInteractionPass?.();
   }, [lessonGated, passSatisfied, onInteractionPass]);
+
+  const terminalPhaseReady =
+    payload.auto_advance_on_pass === true &&
+    !!currentStoryPhase &&
+    getResolvedPhaseTransition(currentStoryPhase)?.type === "end_phase";
+
+  useEffect(() => {
+    if (!terminalPhaseReady || passReportedRef.current || interactionScreenPassed) return;
+    passReportedRef.current = true;
+    onInteractionPass?.();
+  }, [terminalPhaseReady, interactionScreenPassed, onInteractionPass]);
   const prefersReducedMotion = usePrefersReducedMotion();
   const activePhaseForIdle = useMemo(() => {
     if (!page.phasesExplicit) return null;
@@ -447,17 +604,22 @@ export function StoryBookView({
     });
   }, [page.id]);
 
+  type ItemEmphasisPreset = StoryActionStep["emphasis_preset"] | "pop" | "bounce";
+
   const runItemEmphasis = useCallback(
     (
       item: StoryItem,
-      emphasisPreset?: StoryActionStep["emphasis_preset"],
+      emphasisPreset?: ItemEmphasisPreset,
       durationOverrideMs?: number,
     ) => {
-      const el = document.querySelector<HTMLElement>(
-        `[data-story-item-inner="${screenId}-${item.id}"]`,
-      );
+      const el =
+        document.querySelector<HTMLElement>(`[data-story-item="${screenId}-${item.id}"]`) ??
+        document.querySelector<HTMLElement>(`[data-story-item-inner="${screenId}-${item.id}"]`);
       if (!el) return;
-      const preset = emphasisPreset ?? item.emphasis?.preset ?? "grow";
+      el.getAnimations().forEach((a) => a.cancel());
+
+      const preset: ItemEmphasisPreset =
+        emphasisPreset ?? item.emphasis?.preset ?? "grow";
       const dur = durationOverrideMs ?? item.emphasis?.duration_ms ?? 500;
       const growScale = Math.max(
         0.01,
@@ -468,7 +630,14 @@ export function StoryBookView({
       const shrinkByPercent = shrinkRaw > 100 ? shrinkRaw - 100 : shrinkRaw;
       const shrinkScale = Math.max(0.05, 1 - shrinkByPercent / 100);
       const kf: Keyframe[] =
-        preset === "shrink" ?
+        preset === "pop" || preset === "bounce" ?
+          [
+            { transform: "scale(1)" },
+            { transform: "scale(1.14)", offset: 0.38 },
+            { transform: "scale(0.97)", offset: 0.72 },
+            { transform: "scale(1)" },
+          ]
+        : preset === "shrink" ?
           [
             { transform: "scale(1)" },
             { transform: `scale(${shrinkScale})` },
@@ -489,14 +658,14 @@ export function StoryBookView({
           [{ opacity: 1 }, { opacity: 0.6 }, { opacity: 1 }]
         : [{ transform: "scale(1)" }, { transform: `scale(${growScale})` }, { transform: "scale(1)" }];
       const easing =
-        preset === "spin" ? "linear"
+        preset === "pop" || preset === "bounce" ? "cubic-bezier(0.34, 1.45, 0.64, 1)"
+        : preset === "spin" ? "linear"
         : preset === "wobble" ? "ease-in-out"
         : "cubic-bezier(0.22, 1, 0.36, 1)";
       el.animate(kf, {
         duration: dur,
         easing,
         fill: "none",
-        composite: "replace",
       });
     },
     [screenId],
@@ -833,89 +1002,6 @@ export function StoryBookView({
     [getActionStepDurationMs, runActionStep],
   );
 
-  const applyUnifiedNavRef = useRef<(nav: StoryUnifiedNavPayload) => void>(() => {});
-
-  const applyUnifiedNav = useCallback(
-    (nav: StoryUnifiedNavPayload) => {
-      switch (nav.kind) {
-        case "phase_id":
-          activeStoryPhaseIdRef.current = nav.phase_id;
-          setActiveStoryPhaseId(nav.phase_id);
-          break;
-        case "next_phase": {
-          const pg = pageRef.current;
-          const cur = activeStoryPhaseIdRef.current ?? getStartPhaseIdFromNormalizedPage(pg);
-          const ph = pg.phases.find((p) => p.id === cur);
-          const next = ph?.next_phase_id;
-          if (next) {
-            activeStoryPhaseIdRef.current = next;
-            setActiveStoryPhaseId(next);
-          }
-          break;
-        }
-        case "story_page": {
-          const idx = safeIndexRef.current;
-          const pgs = pagesNavRef.current;
-          if (nav.target === "next") {
-            if (idx < pgs.length - 1) jumpToPageRef.current(idx + 1);
-            else onNextScreenRef.current();
-          } else if (nav.target === "prev") {
-            if (idx > 0) jumpToPageRef.current(idx - 1);
-            else if (!lessonBackDisabledRef.current) onBackScreenRef.current();
-          } else if (nav.target === "page_id" && nav.page_id) {
-            const j = pgs.findIndex((pg) => pg.id === nav.page_id);
-            if (j >= 0) jumpToPageRef.current(j);
-          }
-          break;
-        }
-        case "lesson_screen":
-          onNextScreenRef.current();
-          break;
-        case "lesson_pass":
-          onInteractionPass?.();
-          break;
-        case "end_phase":
-        default:
-          break;
-      }
-    },
-    [onInteractionPass],
-  );
-
-  useEffect(() => {
-    applyUnifiedNavRef.current = applyUnifiedNav;
-  }, [applyUnifiedNav]);
-
-  const runStoryUnifiedReactionRow = useCallback(
-    (row: StoryUnifiedReactionRow, itemById: Map<string, StoryItem>, ownerItemId: string | null) => {
-      const seqId = row.id ?? row.source_sequence_id ?? "story-unified";
-      const { sequence, navAfter } = compileUnifiedReactionBody(
-        seqId,
-        row.reaction_body,
-        ownerItemId ?? row.owner_item_id ?? null,
-      );
-      const filtered: StoryActionSequence = {
-        ...sequence,
-        steps: sequence.steps.filter(
-          (step) => !(step.kind === "play_sound" && !audioUnlockedRef.current),
-        ),
-      };
-      const timers: number[] = [];
-      if (filtered.steps.length > 0) {
-        timers.push(
-          ...runActionSequence(filtered, itemById, ownerItemId ?? row.owner_item_id ?? null).timers,
-        );
-      }
-      if (navAfter) {
-        queueMicrotask(() => {
-          applyUnifiedNavRef.current(navAfter);
-        });
-      }
-      return timers;
-    },
-    [runActionSequence],
-  );
-
   const evaluateTapPoolQuotas = useCallback(
     (tappedItemId: string) => {
       const pg = pageRef.current;
@@ -1102,38 +1188,18 @@ export function StoryBookView({
 
   useEffect(() => {
     if (!page.auto_play) return;
+    const sequences = getPageEnterActionSequences(page, { includeLegacy: true });
+    if (sequences.length === 0) return;
     const itemById = new Map(page.items.map((it) => [it.id, it]));
     const timers: number[] = [];
-    const startId = getStartPhaseIdFromNormalizedPage(page);
-
-    let ranUnifiedPageEnter = false;
-    if (storyUnifiedRows) {
-      const rows = storyUnifiedRows.filter(
-        (r) =>
-          r.trigger === "phase_enter" &&
-          r.phase_id === startId &&
-          !!r.source_sequence_id &&
-          pageEnterSequenceIds.has(r.source_sequence_id),
-      );
-      if (rows.length > 0) {
-        ranUnifiedPageEnter = true;
-        for (const row of rows) {
-          timers.push(...runStoryUnifiedReactionRow(row, itemById, row.owner_item_id ?? null));
-        }
-      }
-    }
-    if (!ranUnifiedPageEnter) {
-      const sequences = getPageEnterActionSequences(page, { includeLegacy: true });
-      if (sequences.length === 0) return;
-      for (const sequence of sequences) {
-        const filtered: StoryActionSequence = {
-          ...sequence,
-          steps: sequence.steps.filter(
-            (step) => !(step.kind === "play_sound" && !audioUnlockedRef.current),
-          ),
-        };
-        timers.push(...runActionSequence(filtered, itemById, null).timers);
-      }
+    for (const sequence of sequences) {
+      const filtered: StoryActionSequence = {
+        ...sequence,
+        steps: sequence.steps.filter(
+          (step) => !(step.kind === "play_sound" && !audioUnlockedRef.current),
+        ),
+      };
+      timers.push(...runActionSequence(filtered, itemById, null).timers);
     }
     return () => {
       for (const t of timers) window.clearTimeout(t);
@@ -1144,11 +1210,7 @@ export function StoryBookView({
     page.id,
     page.action_sequences,
     page.timeline,
-    page.phases,
-    pageEnterSequenceIds,
     runActionSequence,
-    runStoryUnifiedReactionRow,
-    storyUnifiedRows,
   ]);
 
   useEffect(() => {
@@ -1188,28 +1250,6 @@ export function StoryBookView({
     if (!page.phasesExplicit) return;
     if (!currentStoryPhase) return;
     if (getPhaseInteractionKind(currentStoryPhase) === "legacy") return;
-
-    if (storyUnifiedRows) {
-      const timerRow = storyUnifiedRows.find(
-        (r) =>
-          r.trigger === "timer" &&
-          r.phase_id === currentStoryPhase.id &&
-          typeof r.timer_delay_ms === "number",
-      );
-      if (timerRow) {
-        phaseAutoTimerRef.current = setTimeout(() => {
-          const itemById = new Map(pageRef.current.items.map((it) => [it.id, it]));
-          runStoryUnifiedReactionRow(timerRow, itemById, timerRow.owner_item_id ?? null);
-        }, timerRow.timer_delay_ms ?? 0);
-        return () => {
-          if (phaseAutoTimerRef.current) {
-            clearTimeout(phaseAutoTimerRef.current);
-            phaseAutoTimerRef.current = null;
-          }
-        };
-      }
-    }
-
     const r = getResolvedPhaseTransition(currentStoryPhase);
     if (r?.type !== "auto") return;
     phaseAutoTimerRef.current = setTimeout(() => {
@@ -1222,40 +1262,17 @@ export function StoryBookView({
         phaseAutoTimerRef.current = null;
       }
     };
-  }, [
-    currentStoryPhase,
-    page.id,
-    page.phasesExplicit,
-    storyUnifiedRows,
-    runStoryUnifiedReactionRow,
-  ]);
+  }, [currentStoryPhase, page.id, page.phasesExplicit]);
 
   useEffect(() => {
     if (!page.phasesExplicit || !currentStoryPhase) return;
+    const sequences = getPhaseEnterActionSequences(currentStoryPhase, { includeLegacy: true });
+    if (sequences.length === 0) return;
     const timers: number[] = [];
     const raf = requestAnimationFrame(() => {
       const itemById = new Map(page.items.map((it) => [it.id, it]));
-      let ranUnifiedPhaseEnter = false;
-      if (storyUnifiedRows) {
-        const rows = storyUnifiedRows.filter(
-          (r) =>
-            r.trigger === "phase_enter" &&
-            r.phase_id === currentStoryPhase.id &&
-            (!r.source_sequence_id || !pageEnterSequenceIds.has(r.source_sequence_id)),
-        );
-        if (rows.length > 0) {
-          ranUnifiedPhaseEnter = true;
-          for (const row of rows) {
-            timers.push(...runStoryUnifiedReactionRow(row, itemById, row.owner_item_id ?? null));
-          }
-        }
-      }
-      if (!ranUnifiedPhaseEnter) {
-        const sequences = getPhaseEnterActionSequences(currentStoryPhase, { includeLegacy: true });
-        if (sequences.length === 0) return;
-        for (const sequence of sequences) {
-          timers.push(...runActionSequence(sequence, itemById, null).timers);
-        }
+      for (const sequence of sequences) {
+        timers.push(...runActionSequence(sequence, itemById, null).timers);
       }
     });
     return () => {
@@ -1270,14 +1287,12 @@ export function StoryBookView({
     page.id,
     page.items,
     page.phasesExplicit,
-    pageEnterSequenceIds,
     runActionSequence,
-    runStoryUnifiedReactionRow,
-    storyUnifiedRows,
   ]);
 
   useEffect(() => {
     if (!page.phasesExplicit || !currentStoryPhase?.dialogue?.start?.trim() || muted) return;
+    if (controlsOnStage) return;
     const hasRecordedPageAudio = !!page.page_audio_url?.trim();
     if (hasRecordedPageAudio) return;
     const phaseStartText = currentStoryPhase.dialogue.start.trim();
@@ -1314,6 +1329,7 @@ export function StoryBookView({
     page.body_text,
     muted,
     payload.tts_lang,
+    controlsOnStage,
   ]);
 
   useEffect(() => {
@@ -1556,6 +1572,104 @@ export function StoryBookView({
     });
   };
 
+  useEffect(() => {
+    if (!controlsOnStage || muted || canvasEdit) return;
+    const recordedPageAudio = page.page_audio_url?.trim();
+    setAudioUnlocked(true);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      if (controller.signal.aborted) return;
+      if (recordedPageAudio && pageAudioRef.current && !muted) {
+        pageAudioRef.current.src = recordedPageAudio;
+        void pageAudioRef.current.play().catch(() => {});
+        return;
+      }
+      const text = page.read_aloud_text?.trim() || page.body_text?.trim();
+      if (!text) return;
+      void speakText(text, {
+        lang: payload.tts_lang,
+        muted,
+        signal: controller.signal,
+      });
+    }, 320);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+      stopSpeaking();
+    };
+  }, [
+    screenId,
+    page.id,
+    controlsOnStage,
+    muted,
+    canvasEdit,
+    page.page_audio_url,
+    page.read_aloud_text,
+    page.body_text,
+    payload.tts_lang,
+  ]);
+
+  const speakVocabDragLabel = useCallback(
+    (item: StoryItem) => {
+      if (!isVocabDragTextItemId(item.id)) return;
+      const mutedNow = mutedRef.current;
+      if (mutedNow) return;
+      const resolved = resolveTapSpeechEntry({
+        entries: item.tap_speeches,
+        activePhaseId: VOCAB_DRAG_PLAY_PHASE_ID,
+        itemId: item.id,
+        counters: tapSpeechCountersRef.current,
+      });
+      const spoken = resolved?.entry.text?.trim();
+      if (!spoken) return;
+      void speakText(spoken, { lang: payload.tts_lang, muted: mutedNow });
+      tapSpeechCountersRef.current = bumpTapSpeechCounter(
+        tapSpeechCountersRef.current,
+        resolved,
+      );
+    },
+    [payload.tts_lang],
+  );
+
+  const speakVocabDragLabelAndWait = useCallback(
+    async (item: StoryItem): Promise<boolean> => {
+      if (!isVocabDragTextItemId(item.id)) return false;
+      const mutedNow = mutedRef.current;
+      if (mutedNow) return false;
+      const resolved = resolveTapSpeechEntry({
+        entries: item.tap_speeches,
+        activePhaseId: VOCAB_DRAG_PLAY_PHASE_ID,
+        itemId: item.id,
+        counters: tapSpeechCountersRef.current,
+      });
+      const spoken = resolved?.entry.text?.trim();
+      if (!spoken) return false;
+      tapSpeechCountersRef.current = bumpTapSpeechCounter(
+        tapSpeechCountersRef.current,
+        resolved,
+      );
+      return speakTextAndWait(spoken, { lang: payload.tts_lang, muted: mutedNow });
+    },
+    [payload.tts_lang],
+  );
+
+  const advanceVocabDragToDonePhase = useCallback(() => {
+    const ph = currentStoryPhaseRef.current;
+    if (!ph?.drag_match || getPhaseInteractionKind(ph) !== "drag_match") return;
+    const r = getResolvedPhaseTransition(ph);
+    if (r?.type !== "all_matched" || !r.next_phase_id) return;
+    activeStoryPhaseIdRef.current = r.next_phase_id;
+    setActiveStoryPhaseId(r.next_phase_id);
+  }, []);
+
+  const playVocabDragMatchSuccess = useCallback(
+    (textItemId: string) => {
+      const item = pageRef.current.items.find((x) => x.id === textItemId);
+      if (item) speakVocabDragLabel(item);
+    },
+    [speakVocabDragLabel],
+  );
+
   const runItemTapEffects = useCallback(
     (
       item: StoryItem,
@@ -1638,28 +1752,6 @@ export function StoryBookView({
         }
       }
 
-      if (embedMode === "bookend" && bookendTapRewardByItemId && onBookendTapReward) {
-        const rule = bookendTapRewardByItemId[item.id];
-        if (rule) {
-          const maxT = rule.max_triggers ?? 1;
-          const prevN = bookendTapRewardCountsRef.current[item.id] ?? 0;
-          if (prevN < maxT) {
-            const triggerOrdinal = prevN + 1;
-            bookendTapRewardCountsRef.current[item.id] = triggerOrdinal;
-            const su = rule.play_sound_url?.trim();
-            if (su && !muted && itemAudioRef.current) {
-              try {
-                itemAudioRef.current.src = su;
-                void itemAudioRef.current.play().catch(() => {});
-              } catch {
-                /* ignore */
-              }
-            }
-            onBookendTapReward({ itemId: item.id, rule, triggerOrdinal });
-          }
-        }
-      }
-
       queueMicrotask(() => {
         if (opts?.skipPhaseClickAdvance) return;
         if (!page.phasesExplicit) {
@@ -1675,6 +1767,9 @@ export function StoryBookView({
         }
         const kind = getPhaseInteractionKind(ph);
         if (kind === "drag_match") {
+          if (isVocabDragMatchPage(page) && isVocabDragTextItemId(item.id)) {
+            speakVocabDragLabel(item);
+          }
           return;
         }
         if (kind === "legacy") {
@@ -1702,9 +1797,7 @@ export function StoryBookView({
       page,
       runActionSequence,
       evaluateTapPoolQuotas,
-      embedMode,
-      bookendTapRewardByItemId,
-      onBookendTapReward,
+      speakVocabDragLabel,
     ],
   );
 
@@ -1712,16 +1805,489 @@ export function StoryBookView({
     runItemTapEffectsRef.current = runItemTapEffects;
   });
 
+  const clearVocabLearnTimers = useCallback(() => {
+    if (vocabLearnDwellTimerRef.current !== null) {
+      clearTimeout(vocabLearnDwellTimerRef.current);
+      vocabLearnDwellTimerRef.current = null;
+    }
+    if (vocabLearnFlyTimerRef.current !== null) {
+      clearTimeout(vocabLearnFlyTimerRef.current);
+      vocabLearnFlyTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearVocabLearnTimers(), [clearVocabLearnTimers]);
+
+  const patchVocabLearnPhase = useCallback((imgId: string, phase: VocabLearnImagePhase) => {
+    vocabLearnImgPhaseRef.current = { ...vocabLearnImgPhaseRef.current, [imgId]: phase };
+    setVocabLearnImgPhase((prev) => ({ ...prev, [imgId]: phase }));
+  }, []);
+
+  const settleVocabLearnImage = useCallback(
+    (imgId: string) => {
+      clearVocabLearnTimers();
+      patchVocabLearnPhase(imgId, "settled");
+      if (vocabLearnActiveImgRef.current === imgId) {
+        vocabLearnActiveImgRef.current = null;
+      }
+    },
+    [clearVocabLearnTimers, patchVocabLearnPhase],
+  );
+
+  const beginFlyToBorder = useCallback(
+    (imgId: string, durationMs: number) => {
+      clearVocabLearnTimers();
+      setVocabLearnFlyMs((prev) => ({ ...prev, [imgId]: durationMs }));
+
+      const snapToBorder = durationMs <= 0 || prefersReducedMotion;
+      const startFlying = () => {
+        if (snapToBorder) {
+          settleVocabLearnImage(imgId);
+          return;
+        }
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            patchVocabLearnPhase(imgId, "flying");
+            vocabLearnFlyTimerRef.current = setTimeout(() => {
+              vocabLearnFlyTimerRef.current = null;
+              settleVocabLearnImage(imgId);
+            }, durationMs);
+          });
+        });
+      };
+
+      if (vocabLearnImgPhaseRef.current[imgId] !== "spotlight") {
+        patchVocabLearnPhase(imgId, "spotlight");
+        requestAnimationFrame(startFlying);
+      } else {
+        startFlying();
+      }
+    },
+    [clearVocabLearnTimers, patchVocabLearnPhase, prefersReducedMotion, settleVocabLearnImage],
+  );
+
+  const allVocabLearnImagesSettled = useCallback(() => {
+    const order = vocabLearnOrderRef.current;
+    return (
+      order.length > 0 &&
+      order.every((id) => vocabLearnImgPhaseRef.current[id] === "settled")
+    );
+  }, []);
+
+  const accelerateActiveVocabLearnWord = useCallback(() => {
+    const active = vocabLearnActiveImgRef.current;
+    if (!active) return false;
+    const phase = vocabLearnImgPhaseRef.current[active];
+    if (phase === "spotlight") {
+      beginFlyToBorder(active, VOCAB_LEARN_FLY_FAST_MS);
+      return true;
+    }
+    if (phase === "flying") {
+      settleVocabLearnImage(active);
+      return true;
+    }
+    return false;
+  }, [beginFlyToBorder, settleVocabLearnImage]);
+
+  /**
+   * KEY DISPLAY — reveal one vocabulary word in the center spotlight, then fly to its border slot.
+   */
+  const revealNextVocabLearnWord = useCallback(() => {
+    if (!isVocabLearnNewWordPage(page)) return;
+    const ph = currentStoryPhaseRef.current;
+    if (ph?.id !== VOCAB_LEARN_PLAY_PHASE_ID) return;
+    const order = vocabLearnOrderRef.current;
+    const idx = vocabLearnCursorRef.current;
+    if (idx >= order.length) return;
+
+    const imgId = order[idx]!;
+    const imgItem = page.items.find((it) => it.id === imgId);
+    if (!imgItem) return;
+
+    vocabLearnActiveImgRef.current = imgId;
+    patchVocabLearnPhase(imgId, "spotlight");
+    setHiddenItemIds((prev) => {
+      const next = { ...prev };
+      delete next[imgId];
+      return next;
+    });
+
+    vocabLearnCursorRef.current = idx + 1;
+
+    void prefetchImageUrls(
+      order.slice(idx + 1).map((id) => page.items.find((it) => it.id === id)?.image_url),
+    );
+
+    const resolved = resolveTapSpeechEntry({
+      entries: imgItem.tap_speeches,
+      activePhaseId: VOCAB_LEARN_PLAY_PHASE_ID,
+      itemId: imgId,
+      counters: tapSpeechCountersRef.current,
+    });
+    const spoken = resolved?.entry.text?.trim();
+    if (spoken && !muted) {
+      void speakText(spoken, { lang: payload.tts_lang, muted });
+    }
+    tapSpeechCountersRef.current = bumpTapSpeechCounter(
+      tapSpeechCountersRef.current,
+      resolved,
+    );
+
+    const dwellMs =
+      prefersReducedMotion ? VOCAB_LEARN_DWELL_REDUCED_MS : VOCAB_LEARN_DWELL_MS;
+    const flyMs = prefersReducedMotion ? 0 : VOCAB_LEARN_FLY_MS;
+
+    vocabLearnDwellTimerRef.current = setTimeout(() => {
+      vocabLearnDwellTimerRef.current = null;
+      if (vocabLearnActiveImgRef.current === imgId) {
+        beginFlyToBorder(imgId, flyMs);
+      }
+    }, dwellMs);
+  }, [
+    beginFlyToBorder,
+    muted,
+    page,
+    patchVocabLearnPhase,
+    payload.tts_lang,
+    prefersReducedMotion,
+  ]);
+
+  const playStickerMatchSuccess = useCallback(
+    (wordId: string, draggedItem: StoryItem | undefined) => {
+      const mutedNow = mutedRef.current;
+      playSfx("correct", mutedNow);
+      const fromMap = vocabWordsByIdRef.current?.[wordId];
+      const lemma = draggedItem?.name?.trim() || fromMap?.lemma || "";
+      const word =
+        fromMap ??
+        (lemma ?
+          { id: wordId, lemma, grammar: inferLemmaGrammar(lemma) }
+        : null);
+      if (!word || mutedNow) return;
+      const variant = pickStickerMatchPhraseVariant(word, vocabLearnDeckSeed);
+      void speakText(stickerMatchLemmaStatement(word, variant), {
+        lang: payload.tts_lang,
+        muted: mutedNow,
+      });
+    },
+    [payload.tts_lang, vocabLearnDeckSeed],
+  );
+
+  const replaySettledVocabLearnWord = useCallback(
+    (item: StoryItem) => {
+      const ph = currentStoryPhaseRef.current;
+      if (!isVocabLearnNewWordPage(page) || !isVocabLearnReplayPhase(ph?.id)) return;
+      if (!isVocabLearnSettledImagePhase(vocabLearnImgPhaseRef.current[item.id])) return;
+
+      const now = Date.now();
+      const last = vocabLearnReplayAtRef.current[item.id] ?? 0;
+      if (now - last < 280) return;
+      vocabLearnReplayAtRef.current[item.id] = now;
+
+      setAudioUnlocked(true);
+      playSfx("tap", muted);
+
+      const resolved = resolveTapSpeechEntry({
+        entries: item.tap_speeches,
+        activePhaseId: VOCAB_LEARN_PLAY_PHASE_ID,
+        itemId: item.id,
+        counters: tapSpeechCountersRef.current,
+      });
+      const spoken = resolved?.entry.text?.trim();
+      if (spoken && !muted) {
+        stopSpeaking();
+        void speakText(spoken, { lang: payload.tts_lang, muted });
+      }
+      tapSpeechCountersRef.current = bumpTapSpeechCounter(
+        tapSpeechCountersRef.current,
+        resolved,
+      );
+
+      if (!shouldReduceMotion) {
+        runItemEmphasis(item, VOCAB_LEARN_TAP_POP_PRESET, VOCAB_LEARN_REPLAY_EMPHASIS_MS);
+      }
+    },
+    [muted, page, payload.tts_lang, runItemEmphasis, shouldReduceMotion],
+  );
+
+  const finishVocabLearnScreen = useCallback(() => {
+    if (interactionScreenPassed || passReportedRef.current) return;
+    vocabLearnStickerModeRef.current = false;
+    setVocabLearnStickerMode(false);
+    setVocabLearnStickerScattering(false);
+    passReportedRef.current = true;
+    onInteractionPass?.();
+  }, [interactionScreenPassed, onInteractionPass]);
+
+  const beginVocabLearnStickerMode = useCallback(() => {
+    const imageIds = getVocabLearnImageItems(page.items).map((it) => it.id);
+    const borderPos: Record<string, { x_percent: number; y_percent: number }> = {};
+    for (const id of imageIds) {
+      const border = learnSettledImageLayout(id, vocabLearnWordIdsOrdered);
+      borderPos[id] = { x_percent: border.x, y_percent: border.y };
+    }
+    const scatter = scatterLearnStickerPositions(
+      imageIds,
+      vocabLearnWordIdsOrdered,
+      `${vocabLearnDeckSeed}:sticker-scatter`,
+    );
+    vocabLearnStickerScatterHomeRef.current = scatter;
+    vocabLearnStickerMatchedRef.current = {};
+    vocabLearnStickerModeRef.current = true;
+    setVocabLearnStickerMatched({});
+    setVocabLearnStickerMode(true);
+    setVocabLearnStickerScattering(true);
+    setVocabLearnStickerPos(borderPos);
+
+    const applyScatter = () => {
+      setVocabLearnStickerPos(scatter);
+      setVocabLearnStickerScattering(false);
+    };
+
+    if (prefersReducedMotion) {
+      queueMicrotask(applyScatter);
+    } else {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(applyScatter);
+      });
+    }
+  }, [page.items, prefersReducedMotion, vocabLearnDeckSeed, vocabLearnWordIdsOrdered]);
+
+  const handleVocabLearnNewWordPress = useCallback(() => {
+    if (!isVocabLearnNewWordPage(page)) return;
+    const ph = currentStoryPhaseRef.current;
+    if (ph?.id !== VOCAB_LEARN_PLAY_PHASE_ID) return;
+
+    playSfx("tap", muted);
+
+    if (vocabLearnStickerModeRef.current) {
+      if (!allStickerWordsMatched(vocabLearnWordIdsOrdered, vocabLearnStickerMatchedRef.current)) {
+        playSfx("wrong", muted);
+        return;
+      }
+      finishVocabLearnScreen();
+      return;
+    }
+
+    if (accelerateActiveVocabLearnWord()) return;
+
+    const order = vocabLearnOrderRef.current;
+    const idx = vocabLearnCursorRef.current;
+    if (idx >= order.length) {
+      if (allVocabLearnImagesSettled()) {
+        beginVocabLearnStickerMode();
+      }
+      return;
+    }
+
+    revealNextVocabLearnWord();
+  }, [
+    accelerateActiveVocabLearnWord,
+    allVocabLearnImagesSettled,
+    beginVocabLearnStickerMode,
+    finishVocabLearnScreen,
+    muted,
+    page,
+    revealNextVocabLearnWord,
+    vocabLearnWordIdsOrdered,
+  ]);
+
+  const onVocabLearnStickerPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>, item: StoryItem) => {
+      e.preventDefault();
+      if (e.button !== 0) return;
+      if (interactionLocked || !vocabLearnStickerModeRef.current) return;
+      if (vocabLearnStickerScattering) return;
+      if (!isVocabLearnSettledImagePhase(vocabLearnImgPhaseRef.current[item.id])) return;
+      const wordId = wordIdFromLearnImageId(item.id);
+      if (wordId && vocabLearnStickerMatchedRef.current[wordId]) return;
+
+      setAudioUnlocked(true);
+      primeAudioOutput();
+      playSfx("tap", muted);
+      const stageEl = stageRef.current;
+      if (!stageEl) return;
+      const rect = stageEl.getBoundingClientRect();
+      const el = e.currentTarget;
+
+      const display = learnSettledImageLayout(item.id, vocabLearnWordIdsOrdered);
+      const cur =
+        vocabLearnStickerPosRef.current[item.id] ?? {
+          x_percent: display.x,
+          y_percent: display.y,
+        };
+
+      const clampPos = (nx: number, ny: number) => ({
+        x: Math.max(0, Math.min(100 - display.w, nx)),
+        y: Math.max(0, Math.min(100 - display.h, ny)),
+      });
+
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+
+      const prevTransition = el.style.transition;
+      const prevZIndex = el.style.zIndex;
+      el.style.transition = "none";
+
+      vocabLearnStickerDragSessionRef.current = {
+        id: item.id,
+        displayW: display.w,
+        displayH: display.h,
+        dx: e.clientX - rect.left - (cur.x_percent / 100) * rect.width,
+        dy: e.clientY - rect.top - (cur.y_percent / 100) * rect.height,
+        startX: e.clientX,
+        startY: e.clientY,
+        stageLeft: rect.left,
+        stageTop: rect.top,
+        stageWidth: rect.width,
+        stageHeight: rect.height,
+        lastX: cur.x_percent,
+        lastY: cur.y_percent,
+        el,
+        prevTransition,
+        prevZIndex,
+        pointerId: e.pointerId,
+      };
+
+      const applyDragPos = (clientX: number, clientY: number) => {
+        const sess = vocabLearnStickerDragSessionRef.current;
+        if (!sess || sess.id !== item.id) return;
+        const nx =
+          ((clientX - sess.stageLeft - sess.dx) / sess.stageWidth) * 100;
+        const ny =
+          ((clientY - sess.stageTop - sess.dy) / sess.stageHeight) * 100;
+        const clamped = clampPos(nx, ny);
+        sess.lastX = clamped.x;
+        sess.lastY = clamped.y;
+        sess.el.style.left = `${clamped.x}%`;
+        sess.el.style.top = `${clamped.y}%`;
+        if (parseInt(sess.el.style.zIndex || "0", 10) < 35) {
+          sess.el.style.zIndex = "35";
+        }
+      };
+
+      const onMove = (ev: PointerEvent) => {
+        applyDragPos(ev.clientX, ev.clientY);
+      };
+
+      const onUp = (ev: PointerEvent) => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        const sess = vocabLearnStickerDragSessionRef.current;
+        vocabLearnStickerDragSessionRef.current = null;
+        if (!sess || sess.id !== item.id) return;
+
+        try {
+          sess.el.releasePointerCapture(sess.pointerId);
+        } catch {
+          /* ignore */
+        }
+        sess.el.style.transition = sess.prevTransition;
+        sess.el.style.zIndex = sess.prevZIndex;
+
+        const dist = Math.hypot(ev.clientX - sess.startX, ev.clientY - sess.startY);
+        const dragged = pageRef.current.items.find((x) => x.id === item.id);
+        if (!dragged) return;
+        if (dist < 8) {
+          replaySettledVocabLearnWord(dragged);
+          return;
+        }
+
+        const dropWordId = wordIdFromLearnImageId(item.id);
+        if (!dropWordId) return;
+        const dropPos = { x_percent: sess.lastX, y_percent: sess.lastY };
+        vocabLearnStickerPosRef.current = {
+          ...vocabLearnStickerPosRef.current,
+          [item.id]: dropPos,
+        };
+
+        if (
+          stickerImageHitsShadow(
+            dropPos,
+            sess.displayW,
+            sess.displayH,
+            dropWordId,
+            vocabLearnWordIdsOrdered,
+          )
+        ) {
+          const border = learnSettledImageLayout(item.id, vocabLearnWordIdsOrdered);
+          vocabLearnStickerMatchedRef.current = {
+            ...vocabLearnStickerMatchedRef.current,
+            [dropWordId]: true,
+          };
+          setVocabLearnStickerMatched((prev) => ({ ...prev, [dropWordId]: true }));
+          const snapped = { x_percent: border.x, y_percent: border.y };
+          vocabLearnStickerPosRef.current[item.id] = snapped;
+          sess.el.style.left = `${snapped.x_percent}%`;
+          sess.el.style.top = `${snapped.y_percent}%`;
+          setVocabLearnStickerPos((prev) => ({
+            ...prev,
+            [item.id]: snapped,
+          }));
+          if (!shouldReduceMotion) {
+            runItemEmphasis(dragged, VOCAB_LEARN_TAP_POP_PRESET, VOCAB_LEARN_REPLAY_EMPHASIS_MS);
+          }
+          playStickerMatchSuccess(dropWordId, dragged);
+        } else {
+          playSfx("wrong", muted);
+          const home = vocabLearnStickerScatterHomeRef.current[item.id];
+          if (home) {
+            vocabLearnStickerPosRef.current[item.id] = home;
+            sess.el.style.left = `${home.x_percent}%`;
+            sess.el.style.top = `${home.y_percent}%`;
+            setVocabLearnStickerPos((prev) => ({ ...prev, [item.id]: home }));
+          } else {
+            setVocabLearnStickerPos((prev) => ({
+              ...prev,
+              [item.id]: dropPos,
+            }));
+          }
+        }
+      };
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    },
+    [
+      interactionLocked,
+      muted,
+      playStickerMatchSuccess,
+      replaySettledVocabLearnWord,
+      runItemEmphasis,
+      shouldReduceMotion,
+      vocabLearnStickerScattering,
+      vocabLearnWordIdsOrdered,
+    ],
+  );
+
   const handleItemPointerUp = useCallback(
     (item: StoryItem) => {
-      const variableOwner = variableOutcomeMetaByItemId.get(item.id);
-      if (variableOwner) {
-        setActiveVariableOutcomeByHost((prev) => {
-          const current = prev[variableOwner.hostId];
-          if (current === item.id) return prev;
-          if (variableOwner.lockChoice && current && current !== item.id) return prev;
-          return { ...prev, [variableOwner.hostId]: item.id };
-        });
+      if (
+        isVocabLearnNewWordPage(page) &&
+        item.id === VOCAB_LEARN_BTN_ID &&
+        !interactionLocked
+      ) {
+        handleVocabLearnNewWordPress();
+        return;
+      }
+      if (isVocabLearnNewWordPage(page) && isVocabLearnSlotItemId(item.id)) {
+        return;
+      }
+      if (
+        isVocabLearnNewWordPage(page) &&
+        isVocabLearnImageItemId(item.id) &&
+        !interactionLocked
+      ) {
+        if (vocabLearnStickerModeRef.current) return;
+        if (isVocabLearnSettledImagePhase(vocabLearnImgPhaseRef.current[item.id])) {
+          replaySettledVocabLearnWord(item);
+        }
+        return;
       }
       const deckMode = item.draggable_mode ?? "none";
       if (deckMode === "free" || deckMode === "check_target") {
@@ -1734,11 +2300,24 @@ export function StoryBookView({
         getPhaseInteractionKind(ph) === "drag_match" &&
         ph.drag_match?.draggable_item_ids.includes(item.id)
       ) {
+        if (isVocabDragMatchPage(page) && isVocabDragTextItemId(item.id)) {
+          setAudioUnlocked(true);
+          playSfx("tap", muted);
+          speakVocabDragLabel(item);
+        }
         return;
       }
       runItemTapEffects(item, {});
     },
-    [page.phasesExplicit, runItemTapEffects, variableOutcomeMetaByItemId],
+    [
+      handleVocabLearnNewWordPress,
+      interactionLocked,
+      muted,
+      page,
+      replaySettledVocabLearnWord,
+      runItemTapEffects,
+      speakVocabDragLabel,
+    ],
   );
 
   const onDraggablePointerDown = useCallback(
@@ -1800,7 +2379,15 @@ export function StoryBookView({
         if (!curPh?.drag_match) return;
         if (dist < 8) {
           const tapped = curPage.items.find((x) => x.id === sess.itemId);
-          if (tapped) runItemTapEffectsRef.current?.(tapped, {});
+          if (tapped) {
+            if (isVocabDragMatchPage(curPage) && isVocabDragTextItemId(tapped.id)) {
+              setAudioUnlocked(true);
+              playSfx("tap", mutedRef.current);
+              speakVocabDragLabel(tapped);
+            } else {
+              runItemTapEffectsRef.current?.(tapped, {});
+            }
+          }
           return;
         }
         if (!curPh.drag_match.draggable_item_ids.includes(sess.itemId)) {
@@ -1826,11 +2413,29 @@ export function StoryBookView({
         if (!targetId) return;
         const expected = curPh.drag_match.correct_map[sess.itemId];
         if (targetId === expected) {
+          const tapped = curPage.items.find((x) => x.id === sess.itemId);
+          const dm = curPh.drag_match;
+          const completesAll =
+            isVocabDragMatchPage(curPage) &&
+            dm &&
+            dm.draggable_item_ids.every((id) => {
+              const assigned = id === sess.itemId ? targetId! : matchAssignments[id];
+              return assigned === dm.correct_map[id];
+            });
           setMatchAssignments((prev) => ({
             ...prev,
             [sess.itemId]: targetId!,
           }));
           playSfx("correct", muted);
+          if (completesAll && tapped) {
+            void speakVocabDragLabelAndWait(tapped).finally(() => {
+              advanceVocabDragToDonePhase();
+            });
+          } else if (isVocabDragMatchPage(curPage) && tapped) {
+            speakVocabDragLabel(tapped);
+          } else if (isVocabDragMatchPage(curPage)) {
+            playVocabDragMatchSuccess(sess.itemId);
+          }
         } else {
           playSfx("wrong", muted);
           if (curPh.dialogue?.error?.trim()) {
@@ -1844,7 +2449,16 @@ export function StoryBookView({
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     },
-    [muted, payload.tts_lang, screenId],
+    [
+      advanceVocabDragToDonePhase,
+      matchAssignments,
+      muted,
+      payload.tts_lang,
+      playVocabDragMatchSuccess,
+      screenId,
+      speakVocabDragLabel,
+      speakVocabDragLabelAndWait,
+    ],
   );
 
   const onDeckPointerDown = useCallback(
@@ -1943,6 +2557,8 @@ export function StoryBookView({
     for (const did of dm.draggable_item_ids) {
       if (matchAssignments[did] !== dm.correct_map[did]) return;
     }
+    // Vocab drag waits for last-word TTS before advancing (see onDraggablePointerDown).
+    if (isVocabDragMatchPage(page)) return;
     queueMicrotask(() => {
       activeStoryPhaseIdRef.current = r.next_phase_id;
       setActiveStoryPhaseId(r.next_phase_id);
@@ -1954,12 +2570,21 @@ export function StoryBookView({
       ref={stageRef}
       className={clsx(
         "relative w-full overflow-hidden rounded-lg border-4 border-kid-ink",
-        (page.image_fit ?? "contain") === "contain" ? "bg-white" : "bg-neutral-900/5",
+        (page.image_fit ?? "contain") === "contain" ?
+          isVocabLearnNewWordPage(page) ? "bg-transparent"
+          : "bg-white"
+        : "bg-neutral-900/5",
         shouldReduceMotion && "story-reduce-motion",
+        controlsOnStage && "flex flex-col",
       )}
       style={{
-        aspectRatio: "16 / 10",
-        backgroundColor: page.background_color || undefined,
+        ...(controlsOnStage
+          ? { minHeight: "min(78dvh, 880px)", height: "min(78dvh, 880px)" }
+          : { aspectRatio: "16 / 10" }),
+        backgroundColor:
+          isVocabLearnNewWordPage(page) ?
+            page.background_color ?? VOCAB_LEARN_PAGE_BACKGROUND
+          : page.background_color || undefined,
         containerType: "inline-size",
       }}
       onTouchStart={onTouchStart}
@@ -1968,6 +2593,13 @@ export function StoryBookView({
       <audio ref={pageAudioRef} preload="metadata" className="hidden" />
       <audio ref={itemAudioRef} preload="metadata" className="hidden" />
 
+      <div
+        className={
+          controlsOnStage ?
+            "relative min-h-0 flex-1 overflow-hidden"
+          : "absolute inset-0"
+        }
+      >
       {canvasEdit && page.phasesExplicit ? (
         <div className="pointer-events-auto absolute right-1 top-1 z-30 rounded bg-white/95 px-2 py-1 text-[10px] shadow md:text-xs">
           <label className="flex items-center gap-1 text-neutral-800">
@@ -2004,16 +2636,32 @@ export function StoryBookView({
           sizes="(max-width:768px) 100vw, 42rem"
           unoptimized={page.background_image_url.includes("placehold.co")}
         />
-      ) : (
+      ) : !page.background_color?.trim() ? (
         <div className="absolute inset-0 flex items-center justify-center bg-neutral-200/80 text-neutral-500">
           No background
         </div>
-      )}
+      ) : null}
 
       {[...page.items]
         .sort((a, b) => (a.z_index ?? 0) - (b.z_index ?? 0))
         .map((item) => {
-          if (hiddenItemIds[item.id] || variableHiddenItemIds[item.id]) return null;
+          const vocabLearnPage = isVocabLearnNewWordPage(page);
+          const vocabImgPhase =
+            vocabLearnPage && isVocabLearnImageItemId(item.id) ?
+              vocabLearnImgPhase[item.id]
+            : undefined;
+          if (hiddenItemIds[item.id] && !vocabImgPhase) return null;
+          const vocabSlotWordId =
+            vocabLearnPage && isVocabLearnSlotItemId(item.id) ?
+              wordIdFromLearnSlotItemId(item.id)
+            : null;
+          if (vocabSlotWordId) {
+            const slotImgId = `learn-${vocabSlotWordId}-img`;
+            if (vocabLearnImgPhase[slotImgId] && !vocabLearnStickerMode) return null;
+            if (vocabLearnStickerMode && vocabLearnStickerMatched[vocabSlotWordId]) {
+              return null;
+            }
+          }
           const deckMode = item.draggable_mode ?? "none";
           const isDeckDraggable = deckMode === "free" || deckMode === "check_target";
           const isDeckMatched =
@@ -2039,19 +2687,111 @@ export function StoryBookView({
               ? page.items.find((t) => t.id === dm.correct_map[item.id])
               : null;
           const deckPos = deckFreeDragPos[item.id];
-          const layout = stickTarget
-            ? {
+          let layout: { left: number; top: number; w: number; h: number };
+          if (stickTarget) {
+            if (isVocabDragMatchPage(page)) {
+              const below = layoutDragLabelBelowTarget(stickTarget, item);
+              layout = { left: below.x, top: below.y, w: below.w, h: below.h };
+            } else {
+              layout = {
                 left: stickTarget.x_percent,
                 top: stickTarget.y_percent,
                 w: stickTarget.w_percent,
                 h: stickTarget.h_percent,
-              }
-            : {
-                left: deckPos?.x_percent ?? item.x_percent,
-                top: deckPos?.y_percent ?? item.y_percent,
-                w: item.w_percent,
-                h: item.h_percent,
               };
+            }
+          } else {
+            layout = {
+              left: deckPos?.x_percent ?? item.x_percent,
+              top: deckPos?.y_percent ?? item.y_percent,
+              w: item.w_percent,
+              h: item.h_percent,
+            };
+          }
+          if (vocabImgPhase) {
+            const wordId = wordIdFromLearnImageId(item.id);
+            if (vocabImgPhase === "spotlight") {
+              layout = {
+                left: VOCAB_LEARN_SPOTLIGHT.x,
+                top: VOCAB_LEARN_SPOTLIGHT.y,
+                w: VOCAB_LEARN_SPOTLIGHT.w,
+                h: VOCAB_LEARN_SPOTLIGHT.h,
+              };
+            } else if (wordId) {
+              const border = learnSettledImageLayout(item.id, vocabLearnWordIdsOrdered);
+              layout = {
+                left: border.x,
+                top: border.y,
+                w: border.w,
+                h: border.h,
+              };
+              if (vocabLearnStickerMode) {
+                if (vocabLearnStickerMatched[wordId]) {
+                  layout = {
+                    left: border.x,
+                    top: border.y,
+                    w: border.w,
+                    h: border.h,
+                  };
+                } else {
+                  const stickerPos = vocabLearnStickerPos[item.id];
+                  if (stickerPos) {
+                    layout = {
+                      ...layout,
+                      left: stickerPos.x_percent,
+                      top: stickerPos.y_percent,
+                    };
+                  }
+                }
+              }
+            }
+          }
+          const isVocabDragLabel =
+            isVocabDragMatchPage(page) && isVocabDragTextItemId(item.id);
+          const isVocabLearnBtn = item.id === VOCAB_LEARN_BTN_ID;
+          const vocabLearnBtnLabel =
+            isVocabLearnBtn && vocabLearnPage ?
+              vocabLearnStickerMode ? VOCAB_LEARN_BTN_LABEL_NEXT
+              : vocabLearnAllSettled ? VOCAB_LEARN_BTN_LABEL_STICKER_MODE
+              : VOCAB_LEARN_BTN_LABEL_NEW_WORD
+            : null;
+          const layerItem =
+            vocabLearnBtnLabel ?
+              {
+                ...item,
+                text: vocabLearnBtnLabel,
+                color_hex:
+                  vocabLearnStickerMode && !vocabLearnAllStickerMatched ?
+                    "#d4d4d4"
+                  : item.color_hex,
+              }
+            : item;
+          const vocabFlyMs =
+            vocabImgPhase ? (vocabLearnFlyMs[item.id] ?? VOCAB_LEARN_FLY_MS) : 0;
+          const vocabFlyTransition =
+            vocabImgPhase === "flying" ?
+              `left ${vocabFlyMs}ms ease-in-out, top ${vocabFlyMs}ms ease-in-out, width ${vocabFlyMs}ms ease-in-out, height ${vocabFlyMs}ms ease-in-out`
+            : undefined;
+          const vocabImgSettled = isVocabLearnSettledImagePhase(vocabImgPhase);
+          const vocabImgWordId = vocabImgSettled ? wordIdFromLearnImageId(item.id) : null;
+          const vocabImgStickerMatched =
+            !!vocabImgWordId && vocabLearnStickerMatched[vocabImgWordId];
+          const vocabImgZBoost =
+            vocabImgPhase === "spotlight" || vocabImgPhase === "flying" ? 15
+            : vocabImgStickerMatched ? 8
+            : vocabImgSettled ? 5
+            : 0;
+          const vocabStickerDraggable =
+            vocabLearnStickerMode &&
+            vocabImgSettled &&
+            !vocabImgStickerMatched &&
+            !vocabLearnStickerScattering;
+          const vocabStickerMoveTransition =
+            vocabLearnStickerMode &&
+            !vocabImgStickerMatched &&
+            vocabLearnStickerScattering ?
+              `left ${VOCAB_LEARN_STICKER_FALL_MS}ms cubic-bezier(0.36, 0.9, 0.42, 1), top ${VOCAB_LEARN_STICKER_FALL_MS}ms cubic-bezier(0.36, 0.9, 0.42, 1)`
+            : undefined;
           const enter = item.enter?.preset ?? "fade_in";
           const dur = item.enter?.duration_ms ?? 500;
           const enterCls = enterClassForPreset(enter);
@@ -2061,7 +2801,6 @@ export function StoryBookView({
             : itemKind === "shape" ? "Story shape"
             : itemKind === "line" ? "Story line"
             : itemKind === "button" ? "Story button"
-            : itemKind === "variable" ? "Variable host"
             : "Story picture";
           const resolvedIdle =
             prefersReducedMotion ?
@@ -2082,30 +2821,62 @@ export function StoryBookView({
               type="button"
               data-story-item={`${screenId}-${item.id}`}
               aria-label={
-                item.name?.trim() ? `${item.name.trim()} (story item)` : defaultAria
+                vocabImgSettled && item.name?.trim() ?
+                  `Play ${item.name.trim()} again`
+                : item.name?.trim() ?
+                  `${item.name.trim()} (story item)`
+                : defaultAria
               }
               className={clsx(
                 "story-item-anim absolute box-border touch-manipulation appearance-none border-0 bg-transparent p-0 m-0",
                 (isDraggable && !isMatched) || (isDeckDraggable && !isDeckMatched) ?
                   "touch-none cursor-grab active:cursor-grabbing"
                 : "",
-                enter !== "none" && enterCls,
+                enter !== "none" &&
+                  (vocabImgPhase === "spotlight" || !vocabImgPhase) &&
+                  enterCls,
                 page.phasesExplicit &&
                   storyHighlightIdSet.has(item.id) &&
                   "ring-2 ring-amber-400 ring-offset-1",
                 draggingItemId === item.id && "invisible",
                 (isMatched || isDeckMatched) && "ring-2 ring-green-500 ring-offset-1",
+                vocabImgStickerMatched && "ring-2 ring-emerald-500/90 ring-offset-1",
+                vocabSlotWordId && "pointer-events-none",
+                (vocabImgPhase === "spotlight" || vocabImgPhase === "flying") &&
+                  "pointer-events-none",
+                vocabStickerDraggable && "touch-none cursor-grab active:cursor-grabbing",
+                vocabImgSettled && "cursor-pointer",
+                vocabImgStickerMatched && "pointer-events-none",
+                isVocabLearnBtn && "cursor-pointer",
+                isVocabLearnBtn &&
+                  vocabLearnStickerMode &&
+                  !vocabLearnAllStickerMatched &&
+                  "opacity-80",
               )}
               style={{
                 left: `${layout.left}%`,
                 top: `${layout.top}%`,
                 width: `${layout.w}%`,
                 height: `${layout.h}%`,
-                zIndex: 10 + (item.z_index ?? 0) + (stickTarget ? 15 : 0),
+                zIndex:
+                  10 + (item.z_index ?? 0) + (stickTarget ? 15 : 0) + vocabImgZBoost,
+                transition:
+                  vocabStickerMoveTransition ??
+                  (vocabImgPhase === "flying" && !vocabLearnStickerMode ?
+                    vocabFlyTransition
+                  : undefined),
+                willChange:
+                  vocabImgPhase === "flying" ? "left, top, width, height"
+                  : vocabLearnStickerScattering ? "left, top"
+                  : vocabImgSettled ? "transform"
+                  : undefined,
+                transformOrigin: vocabImgSettled ? "center center" : undefined,
                 ["--story-dur" as string]: `${dur}ms`,
               }}
               onPointerDown={
                 interactionLocked ? undefined
+                : vocabStickerDraggable ?
+                  (e) => onVocabLearnStickerPointerDown(e, item)
                 : isDraggable && !isMatched ?
                   (e) => onDraggablePointerDown(e, item)
                 : isDeckDraggable && !isDeckMatched ?
@@ -2120,9 +2891,20 @@ export function StoryBookView({
                 data-story-item-inner={`${screenId}-${item.id}`}
                 className={clsx(
                   "relative block h-full w-full",
-                  item.show_card !== false &&
+                  isVocabDragLabel &&
+                    "rounded-lg border-2 bg-white shadow-[2px_2px_0_#152668]",
+                  !isVocabDragLabel &&
+                    item.show_card !== false &&
                     "rounded-md border-2 border-kid-ink/40 bg-white/90 shadow-md",
                 )}
+                style={
+                  isVocabDragLabel ?
+                    {
+                      backgroundColor: VOCAB_DRAG_LABEL_CARD_BG,
+                      borderColor: VOCAB_DRAG_LABEL_CARD_BORDER,
+                    }
+                  : undefined
+                }
               >
                 <span
                   className={clsx(
@@ -2132,18 +2914,87 @@ export function StoryBookView({
                   )}
                   style={idleStyle}
                 >
-                  <StoryItemLayerContent item={item} />
+                  <StoryItemLayerContent
+                    item={layerItem}
+                    silhouette={!!vocabSlotWordId}
+                    silhouetteFilter={
+                      vocabSlotWordId ?
+                        vocabLearnStickerMode ?
+                          VOCAB_LEARN_SHADOW_STICKER_FILTER
+                        : VOCAB_LEARN_SHADOW_FILTER
+                      : undefined
+                    }
+                  />
                 </span>
               </span>
             </button>
           );
         })}
-      {page.phasesExplicit && currentStoryPhase?.dialogue?.start?.trim() ? (
+      {isVocabLearnNewWordPage(page) && vocabLearnImageUrls.length > 0 ? (
         <div
-          className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 bg-black/50 px-3 py-2 text-center text-sm text-white"
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-0 h-px w-px overflow-hidden opacity-0"
+        >
+          {getVocabLearnImageItems(page.items).map((it) => {
+            const src = it.image_url?.trim();
+            if (!src || vocabLearnImgPhase[it.id]) return null;
+            return (
+              // eslint-disable-next-line @next/next/no-img-element -- decode warm-up only
+              <img key={`preload-${it.id}`} src={src} alt="" width={1} height={1} decoding="async" />
+            );
+          })}
+        </div>
+      ) : null}
+      {isVocabLearnNewWordPage(page) && vocabLearnStickerMode ? (
+        <div
+          className={clsx(
+            "pointer-events-none absolute left-0 right-0 z-10 bg-black/50 px-3 py-2 text-center text-sm text-white",
+            controlsOnStage ? "bottom-2" : "bottom-0",
+          )}
+          role="status"
+        >
+          {VOCAB_LEARN_STICKER_HINT}
+        </div>
+      ) : page.phasesExplicit && currentStoryPhase?.dialogue?.start?.trim() ? (
+        <div
+          className={clsx(
+            "pointer-events-none absolute left-0 right-0 z-10 bg-black/50 px-3 py-2 text-center text-sm text-white",
+            controlsOnStage ? "bottom-2" : "bottom-0",
+          )}
           role="status"
         >
           {currentStoryPhase.dialogue.start}
+        </div>
+      ) : null}
+      </div>
+
+      {controlsOnStage ? (
+        <div
+          className={clsx(
+            STAGE_CHROME_FOOTER_CLASS,
+            "relative z-20 flex shrink-0 items-center justify-end gap-2 border-t-2 border-amber-700/25 bg-gradient-to-b from-[#fff8eb] to-[#f7bf4d] px-3",
+          )}
+        >
+          <KidButton
+            type="button"
+            variant="secondary"
+            className={STAGE_OVERLAY_BTN}
+            disabled={firstPage && lessonBackDisabled}
+            onClick={goPageBack}
+          >
+            Back
+          </KidButton>
+          <KidButton
+            type="button"
+            className={STAGE_OVERLAY_BTN}
+            disabled={lastPage && !lessonAdvanceOk}
+            onClick={goPageNext}
+          >
+            {lastPage ? "Next" : "Next page"}
+          </KidButton>
+          <KidButton type="button" variant="accent" className={STAGE_OVERLAY_BTN} onClick={listenCurrent}>
+            Listen
+          </KidButton>
         </div>
       ) : null}
     </div>
@@ -2256,8 +3107,9 @@ export function StoryBookView({
         key={`${pageTurnKey}-${safeIndex}`}
         ref={pageFrameRef}
         className={clsx(
-          "relative mb-4 w-full max-w-4xl overflow-hidden rounded-lg",
+          "relative w-full overflow-hidden rounded-lg",
           "mx-auto",
+          controlsOnStage ? "mb-0 max-w-none" : "mb-4 max-w-4xl",
           canvasEdit && "ring-2 ring-sky-500 ring-offset-2",
           !shouldReduceMotion && "will-change-transform",
         )}
@@ -2283,7 +3135,7 @@ export function StoryBookView({
         {stage}
       </div>
 
-      {embedMode !== "bookend" && (canvasEdit || page.body_text?.trim()) ? (
+      {canvasEdit || page.body_text?.trim() ? (
         <KidPanel>
           {canvasEdit && !isMulti ? (
             <div className="space-y-3">
@@ -2387,49 +3239,47 @@ export function StoryBookView({
           )}
         </KidPanel>
       ) : null}
-      {embedMode !== "bookend" ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <KidButton
-            type="button"
-            variant="accent"
-            onClick={listenCurrent}
-          >
-            Listen
-          </KidButton>
-          {!audioUnlocked && page.auto_play && pageEnterHasScheduledSounds(page) ? (
-            <span className="text-sm text-neutral-600">
-              Tap Listen or turn the page to hear sounds.
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      {!controlsOnStage ? (
+        <>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <KidButton
+              type="button"
+              variant="accent"
+              onClick={listenCurrent}
+            >
+              Listen
+            </KidButton>
+            {!audioUnlocked && page.auto_play && pageEnterHasScheduledSounds(page) ? (
+              <span className="text-sm text-neutral-600">
+                Tap Listen or turn the page to hear sounds.
+              </span>
+            ) : null}
+          </div>
 
-      {embedMode !== "bookend" ? <GuideBlock guide={payload.guide} /> : null}
+          <GuideBlock guide={payload.guide} />
 
-      {embedMode !== "bookend" || !bookendHideNav ? (
-        <div className="mt-6 flex flex-wrap gap-3">
-          <KidButton
-            type="button"
-            variant="secondary"
-            disabled={firstPage && lessonBackDisabled}
-            onClick={goPageBack}
-          >
-            Back
-          </KidButton>
-          <KidButton
-            type="button"
-            disabled={lastPage && !lessonAdvanceOk}
-            onClick={goPageNext}
-          >
-            {lastPage ?
-              embedMode === "bookend" && bookendPrimaryLabel?.trim() ?
-                bookendPrimaryLabel.trim()
-              : "Next"
-            : "Next page"}
-          </KidButton>
-        </div>
-      ) : null}
-      {isMulti && layoutMode === "slide" && pages.length > 1 ? (
+          <div className="mt-6 flex flex-wrap gap-3">
+            <KidButton
+              type="button"
+              variant="secondary"
+              disabled={firstPage && lessonBackDisabled}
+              onClick={goPageBack}
+            >
+              Back
+            </KidButton>
+            <KidButton
+              type="button"
+              disabled={lastPage && !lessonAdvanceOk}
+              onClick={goPageNext}
+            >
+              {lastPage ? "Next" : "Next page"}
+            </KidButton>
+          </div>
+        </>
+      ) : (
+        <GuideBlock guide={payload.guide} />
+      )}
+      {isMulti && pages.length > 1 && layoutMode === "slide" ? (
         <div
           className="mt-4 flex flex-wrap items-center justify-center gap-2"
           role="tablist"
@@ -2454,3 +3304,4 @@ export function StoryBookView({
     </div>
   );
 }
+

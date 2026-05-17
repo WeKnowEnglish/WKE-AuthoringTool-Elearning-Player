@@ -72,6 +72,8 @@ function screenOutlineBase(screen: { screen_type: string; payload: unknown }): s
         return "Table complete";
       case "sorting_game":
         return "Sorting game";
+      case "word_bucket_catch":
+        return `Bucket catch: ${p.target_word}`;
       case "voice_question":
         return `Voice question: ${p.prompt.slice(0, 32)}${p.prompt.length > 32 ? "…" : ""}`;
       case "guided_dialogue":

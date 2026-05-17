@@ -23,6 +23,7 @@ import {
   segmentLessonScreensForStoryboard,
 } from "@/lib/lesson-activity-taxonomy";
 import { screenOutlineLabel, screenThumbnailUrl } from "@/lib/lesson-screen-outline";
+import type { CompletionPlayground } from "@/lib/lesson-schemas";
 import {
   getLessonPublishBlockingReasons,
   lessonPublishChecklist,
@@ -88,6 +89,8 @@ type Props = {
   learningGoals: string[];
   /** When true, generator omits an opening start screen (editor already has one). */
   hasOpeningStart: boolean;
+  /** Post-lesson reward-screen playground (optional). */
+  completionPlayground?: CompletionPlayground | null;
   /** Right sidebar: skills and tools only (objectives live in the Plan panel). */
   children?: ReactNode;
 };
@@ -384,6 +387,15 @@ const EDITOR_NOTES_KEY_PREFIX = "lesson-editor-notes";
 const EDITOR_JUMP_NEWEST_KEY_PREFIX = "lesson-editor-jump-newest";
 const EDITOR_JUMP_OPENING_KEY_PREFIX = "lesson-editor-jump-opening";
 
+function asFormAction<A extends unknown[]>(
+  fn: (...args: [...A, FormData]) => Promise<unknown>,
+  ...args: A
+) {
+  return async (formData: FormData) => {
+    await fn(...args, formData);
+  };
+}
+
 export function LessonEditorWorkspace({
   moduleId,
   lessonId,
@@ -402,6 +414,7 @@ export function LessonEditorWorkspace({
   lessonPlanSyncKey,
   learningGoals,
   hasOpeningStart,
+  completionPlayground = null,
   children,
 }: Props) {
   const router = useRouter();
@@ -437,6 +450,8 @@ export function LessonEditorWorkspace({
 
   const [screenEditorStatus, setScreenEditorStatus] = useState<ScreenEditorStatus>({
     isSaving: false,
+    isDirty: false,
+    lastSavedAt: null,
     saveHint: null,
     err: null,
   });
@@ -908,7 +923,13 @@ export function LessonEditorWorkspace({
   useEffect(() => {
     if (quizGroupId == null) return;
     queueMicrotask(() => {
-      setScreenEditorStatus({ isSaving: false, saveHint: null, err: null });
+      setScreenEditorStatus({
+        isSaving: false,
+        isDirty: false,
+        lastSavedAt: screenEditorStatus.lastSavedAt,
+        saveHint: null,
+        err: null,
+      });
     });
   }, [quizGroupId]);
 
@@ -1189,7 +1210,7 @@ export function LessonEditorWorkspace({
                   </span>
                 </button>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
-                  <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
+                  <form action={asFormAction(moveScreen, s.id, lessonId, moduleId, "up")}>
                     <button
                       type="submit"
                       disabled={pinnedBookend}
@@ -1199,7 +1220,7 @@ export function LessonEditorWorkspace({
                       Up
                     </button>
                   </form>
-                  <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
+                  <form action={asFormAction(moveScreen, s.id, lessonId, moduleId, "down")}>
                     <button
                       type="submit"
                       disabled={pinnedBookend}
@@ -1209,7 +1230,7 @@ export function LessonEditorWorkspace({
                       Down
                     </button>
                   </form>
-                  <form action={duplicateScreen.bind(null, s.id, lessonId, moduleId)}>
+                  <form action={asFormAction(duplicateScreen, s.id, lessonId, moduleId)}>
                     <input type="hidden" name="duplicate_screen" value={s.id} />
                     <button
                       type="submit"
@@ -1225,7 +1246,7 @@ export function LessonEditorWorkspace({
                       Dup
                     </button>
                   </form>
-                  <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
+                  <form action={asFormAction(deleteScreen, s.id, lessonId, moduleId)}>
                     <button
                       type="submit"
                       disabled={pinnedBookend}
@@ -1343,7 +1364,7 @@ export function LessonEditorWorkspace({
                 </span>
               </button>
               <div className="mt-0.5 flex flex-wrap items-center gap-1 pt-0.5">
-                <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "up")}>
+                <form action={asFormAction(moveScreen, s.id, lessonId, moduleId, "up")}>
                   <button
                     type="submit"
                     onClick={(e) => e.stopPropagation()}
@@ -1352,7 +1373,7 @@ export function LessonEditorWorkspace({
                     Up
                   </button>
                 </form>
-                <form action={moveScreen.bind(null, s.id, lessonId, moduleId, "down")}>
+                <form action={asFormAction(moveScreen, s.id, lessonId, moduleId, "down")}>
                   <button
                     type="submit"
                     onClick={(e) => e.stopPropagation()}
@@ -1361,7 +1382,7 @@ export function LessonEditorWorkspace({
                     Down
                   </button>
                 </form>
-                <form action={deleteScreen.bind(null, s.id, lessonId, moduleId)}>
+                <form action={asFormAction(deleteScreen, s.id, lessonId, moduleId)}>
                   <button
                     type="submit"
                     onClick={(e) => {
@@ -1925,7 +1946,7 @@ export function LessonEditorWorkspace({
             >
               Export screens JSON
             </button>
-            <form action={duplicateLesson.bind(null, lessonId, moduleId)}>
+            <form action={asFormAction(duplicateLesson, lessonId, moduleId)}>
               <button
                 type="submit"
                 className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
@@ -1966,7 +1987,7 @@ export function LessonEditorWorkspace({
           </p>
           <form
             className="mt-3 space-y-2"
-            action={importLessonScreensJson.bind(null, lessonId, moduleId)}
+            action={asFormAction(importLessonScreensJson, lessonId, moduleId)}
           >
             <label className="flex items-center gap-2 text-xs">
               <input type="checkbox" name="replace_existing" />
@@ -2021,7 +2042,7 @@ export function LessonEditorWorkspace({
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {addScreenButtonOptions.map(({ kind, label }) => (
-                  <form key={kind} action={addScreenTemplate.bind(null, lessonId, moduleId, kind)}>
+                  <form key={kind} action={asFormAction(addScreenTemplate, lessonId, moduleId, kind)}>
                     <button
                       type="submit"
                       className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold shadow-sm hover:bg-neutral-50 active:bg-neutral-200 sm:text-sm"
@@ -2031,7 +2052,7 @@ export function LessonEditorWorkspace({
                   </form>
                 ))}
                 <form
-                  action={createQuizGroup.bind(null, lessonId, moduleId)}
+                  action={asFormAction(createQuizGroup, lessonId, moduleId)}
                   className="flex flex-wrap items-end gap-2 rounded border border-sky-200 bg-sky-50/80 px-2 py-2"
                 >
                   <label className="text-xs font-medium text-neutral-700">
@@ -2159,7 +2180,7 @@ export function LessonEditorWorkspace({
                   </button>
                 </form>
               )}
-              <form action={deleteLesson.bind(null, lessonId, moduleId)}>
+              <form action={asFormAction(deleteLesson, lessonId, moduleId)}>
                 <ConfirmSubmitButton
                   type="submit"
                   confirmMessage={`Delete lesson "${lessonTitle}"? This cannot be undone.`}
@@ -2595,6 +2616,7 @@ export function LessonEditorWorkspace({
         lessonTitle={lessonTitle}
         screens={liveScreens}
         initialScreenIndex={safeIndex}
+        completionPlayground={completionPlayground}
       />
     </div>
   );

@@ -12,7 +12,8 @@ export type PuppetAnimationOption = {
 /** Options for presenter / dev preview dropdown (includes idle + none). */
 export const PUPPET_ANIMATION_OPTIONS: PuppetAnimationOption[] = PUPPET_ANIMATION_IDS.map(
   (id) => {
-    const preset = PUPPET_MOTION_PRESETS[id];
+    const preset =
+      id === "none" ? undefined : PUPPET_MOTION_PRESETS[id as Exclude<PuppetAnimationId, "none">];
     const kind =
       id === "idle" ? "idle"
       : id === "none" ? "none"

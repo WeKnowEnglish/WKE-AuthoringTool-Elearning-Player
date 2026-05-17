@@ -46,6 +46,7 @@ import {
   type StoryPage,
   type StoryPagePhase,
   type StoryPayload,
+  type StartPlaygroundTapReward,
 } from "@/lib/lesson-schemas";
 import { resolveStoryIdleForItem, storyIdleClassForPreset } from "@/lib/story-idle";
 import { isStoryPassSatisfied } from "@/lib/story-pass";
@@ -181,6 +182,18 @@ type Props = {
   runSeed?: string;
   /** Word metadata for sticker-match success TTS. */
   vocabWordsById?: Record<string, Pick<VocabWord, "id" | "lemma" | "grammar" | "mealVerb">>;
+  /** Start / completion playground: minimal chrome, optional tap rewards. */
+  embedMode?: "bookend";
+  /** Replaces the last-page primary label (e.g. start CTA). */
+  bookendPrimaryLabel?: string;
+  bookendTapRewardByItemId?: Record<string, StartPlaygroundTapReward>;
+  onBookendTapReward?: (detail: {
+    itemId: string;
+    rule: StartPlaygroundTapReward;
+    triggerOrdinal: number;
+  }) => void;
+  /** When true with `embedMode: "bookend"`, hide Back/Next (parent supplies navigation). */
+  bookendHideNav?: boolean;
 };
 
 export function StoryBookView({
@@ -199,6 +212,11 @@ export function StoryBookView({
   controlsPlacement = "below",
   runSeed,
   vocabWordsById,
+  embedMode,
+  bookendPrimaryLabel,
+  bookendTapRewardByItemId,
+  onBookendTapReward,
+  bookendHideNav = false,
 }: Props) {
   const controlsOnStage = controlsPlacement === "stage-overlay" && !canvasEdit;
   const vocabLearnDeckSeed = runSeed ?? screenId;
@@ -258,6 +276,7 @@ export function StoryBookView({
     Record<string, { perItem: Record<string, number>; aggregate: number }>
   >({});
   const phasePoolFiredRef = useRef<Set<string>>(new Set());
+  const bookendTapRewardCountsRef = useRef<Record<string, number>>({});
   const vocabLearnOrderRef = useRef<string[]>([]);
   const vocabLearnCursorRef = useRef(0);
   const vocabLearnActiveImgRef = useRef<string | null>(null);
@@ -384,6 +403,10 @@ export function StoryBookView({
     tapGroupBucketsRef.current = {};
     tapGroupFiredRef.current = new Set();
   }, [page.id]);
+
+  useEffect(() => {
+    bookendTapRewardCountsRef.current = {};
+  }, [screenId, embedMode]);
 
   const vocabLearnImageUrls = useMemo(() => {
     if (!isVocabLearnNewWordPage(page)) return [];
@@ -618,8 +641,15 @@ export function StoryBookView({
       if (!el) return;
       el.getAnimations().forEach((a) => a.cancel());
 
+      const rawPreset = emphasisPreset ?? item.emphasis?.preset ?? "grow";
       const preset: ItemEmphasisPreset =
-        emphasisPreset ?? item.emphasis?.preset ?? "grow";
+        rawPreset === "none" ||
+        rawPreset === "slide_left" ||
+        rawPreset === "slide_right" ||
+        rawPreset === "slide_up" ||
+        rawPreset === "slide_down" ?
+          "grow"
+        : rawPreset;
       const dur = durationOverrideMs ?? item.emphasis?.duration_ms ?? 500;
       const growScale = Math.max(
         0.01,
@@ -1586,10 +1616,10 @@ export function StoryBookView({
       }
       const text = page.read_aloud_text?.trim() || page.body_text?.trim();
       if (!text) return;
+      if (controller.signal.aborted) return;
       void speakText(text, {
         lang: payload.tts_lang,
         muted,
-        signal: controller.signal,
       });
     }, 320);
     return () => {
@@ -1752,6 +1782,28 @@ export function StoryBookView({
         }
       }
 
+      if (embedMode === "bookend" && bookendTapRewardByItemId && onBookendTapReward) {
+        const rule = bookendTapRewardByItemId[item.id];
+        if (rule) {
+          const maxT = rule.max_triggers ?? 1;
+          const prevN = bookendTapRewardCountsRef.current[item.id] ?? 0;
+          if (prevN < maxT) {
+            const triggerOrdinal = prevN + 1;
+            bookendTapRewardCountsRef.current[item.id] = triggerOrdinal;
+            const su = rule.play_sound_url?.trim();
+            if (su && !muted && itemAudioRef.current) {
+              try {
+                itemAudioRef.current.src = su;
+                void itemAudioRef.current.play().catch(() => {});
+              } catch {
+                /* ignore */
+              }
+            }
+            onBookendTapReward({ itemId: item.id, rule, triggerOrdinal });
+          }
+        }
+      }
+
       queueMicrotask(() => {
         if (opts?.skipPhaseClickAdvance) return;
         if (!page.phasesExplicit) {
@@ -1798,6 +1850,9 @@ export function StoryBookView({
       runActionSequence,
       evaluateTapPoolQuotas,
       speakVocabDragLabel,
+      embedMode,
+      bookendTapRewardByItemId,
+      onBookendTapReward,
     ],
   );
 
@@ -3135,7 +3190,7 @@ export function StoryBookView({
         {stage}
       </div>
 
-      {canvasEdit || page.body_text?.trim() ? (
+      {embedMode !== "bookend" && (canvasEdit || page.body_text?.trim()) ? (
         <KidPanel>
           {canvasEdit && !isMulti ? (
             <div className="space-y-3">
@@ -3241,44 +3296,52 @@ export function StoryBookView({
       ) : null}
       {!controlsOnStage ? (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <KidButton
-              type="button"
-              variant="accent"
-              onClick={listenCurrent}
-            >
-              Listen
-            </KidButton>
-            {!audioUnlocked && page.auto_play && pageEnterHasScheduledSounds(page) ? (
-              <span className="text-sm text-neutral-600">
-                Tap Listen or turn the page to hear sounds.
-              </span>
-            ) : null}
-          </div>
+          {embedMode !== "bookend" ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <KidButton
+                type="button"
+                variant="accent"
+                onClick={listenCurrent}
+              >
+                Listen
+              </KidButton>
+              {!audioUnlocked && page.auto_play && pageEnterHasScheduledSounds(page) ? (
+                <span className="text-sm text-neutral-600">
+                  Tap Listen or turn the page to hear sounds.
+                </span>
+              ) : null}
+            </div>
+          ) : null}
 
-          <GuideBlock guide={payload.guide} />
+          {embedMode !== "bookend" ? <GuideBlock guide={payload.guide} /> : null}
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <KidButton
-              type="button"
-              variant="secondary"
-              disabled={firstPage && lessonBackDisabled}
-              onClick={goPageBack}
-            >
-              Back
-            </KidButton>
-            <KidButton
-              type="button"
-              disabled={lastPage && !lessonAdvanceOk}
-              onClick={goPageNext}
-            >
-              {lastPage ? "Next" : "Next page"}
-            </KidButton>
-          </div>
+          {embedMode !== "bookend" || !bookendHideNav ? (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <KidButton
+                type="button"
+                variant="secondary"
+                disabled={firstPage && lessonBackDisabled}
+                onClick={goPageBack}
+              >
+                Back
+              </KidButton>
+              <KidButton
+                type="button"
+                disabled={lastPage && !lessonAdvanceOk}
+                onClick={goPageNext}
+              >
+                {lastPage ?
+                  embedMode === "bookend" && bookendPrimaryLabel?.trim() ?
+                    bookendPrimaryLabel.trim()
+                  : "Next"
+                : "Next page"}
+              </KidButton>
+            </div>
+          ) : null}
         </>
-      ) : (
+      ) : embedMode !== "bookend" ? (
         <GuideBlock guide={payload.guide} />
-      )}
+      ) : null}
       {isMulti && pages.length > 1 && layoutMode === "slide" ? (
         <div
           className="mt-4 flex flex-wrap items-center justify-center gap-2"

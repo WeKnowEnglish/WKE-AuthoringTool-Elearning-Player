@@ -36,7 +36,11 @@ import {
   mcQuizPayloadSchema,
   shortAnswerPayloadSchema,
   startPayloadSchema,
+  storyPayloadFromStartPlayground,
+  tapRewardsByItemId,
   trueFalsePayloadSchema,
+  type CompletionPlayground,
+  type StartPlaygroundTapReward,
 } from "@/lib/lesson-schemas";
 import { parseScreenPayload, type ScreenPayload } from "@/lib/lesson-schemas-player";
 import type { VocabWord } from "@/lib/vocabulary-templates";
@@ -165,23 +169,105 @@ const AVATAR_OPTIONS = [
   { id: "star", emoji: "⭐" },
 ] as const;
 
+function applyPlaygroundTapReward(opts: {
+  lessonId: string;
+  screenOrCompletionKey: string;
+  itemId: string;
+  rule: StartPlaygroundTapReward;
+  triggerOrdinal: number;
+  isPreview: boolean;
+}) {
+  if (opts.isPreview) return;
+  const { lessonId, screenOrCompletionKey, itemId, rule, triggerOrdinal } = opts;
+  const goldDelta = Math.max(0, rule.gold ?? 0);
+  const experienceDelta = Math.max(0, rule.experience ?? 0);
+  if (goldDelta > 0 || experienceDelta > 0) {
+    const eventId = `${lessonId}:${screenOrCompletionKey}:${itemId}:playground:${triggerOrdinal}`;
+    awardRewards({ goldDelta, experienceDelta, eventId });
+  }
+}
+
 function RewardScreen({
   lessonTitle,
   onPlayAgain,
   muted,
+  lessonId,
+  isPreview,
+  completionPlayground,
+  onEconomyRefresh,
 }: {
   lessonTitle: string;
   onPlayAgain: () => void;
   muted: boolean;
+  lessonId: string;
+  isPreview: boolean;
+  completionPlayground?: CompletionPlayground | null;
+  onEconomyRefresh: () => void;
 }) {
   const [avatar, setAvatar] = useState<string | null>(
     () => getProgressSnapshot().avatarId ?? null,
+  );
+
+  const completionStoryPayload = useMemo(() => {
+    if (!completionPlayground) return null;
+    try {
+      return storyPayloadFromStartPlayground(completionPlayground);
+    } catch {
+      return null;
+    }
+  }, [completionPlayground]);
+
+  const completionTapRewards = useMemo(
+    () => tapRewardsByItemId(completionPlayground?.tap_rewards),
+    [completionPlayground?.tap_rewards],
+  );
+
+  const onBookendTapReward = useCallback(
+    ({
+      itemId,
+      rule,
+      triggerOrdinal,
+    }: {
+      itemId: string;
+      rule: StartPlaygroundTapReward;
+      triggerOrdinal: number;
+    }) => {
+      applyPlaygroundTapReward({
+        lessonId,
+        screenOrCompletionKey: "completion",
+        itemId,
+        rule,
+        triggerOrdinal,
+        isPreview,
+      });
+      onEconomyRefresh();
+    },
+    [lessonId, isPreview, onEconomyRefresh],
   );
 
   return (
     <div className="relative overflow-hidden rounded-xl">
       <KidConfetti active />
       <KidPanel className="relative text-center">
+        {completionStoryPayload ? (
+          <div className="mb-6 text-left">
+            <StoryBookView
+              key="completion-playground"
+              screenId={`${lessonId}-completion-playground`}
+              payload={completionStoryPayload}
+              muted={muted}
+              compactPreview={isPreview}
+              canvasEdit={false}
+              lessonBackDisabled
+              embedMode="bookend"
+              bookendHideNav
+              bookendTapRewardByItemId={completionTapRewards}
+              onBookendTapReward={onBookendTapReward}
+              onNextScreen={() => {}}
+              onBackScreen={() => {}}
+            />
+          </div>
+        ) : null}
         <p className="text-3xl font-extrabold text-kid-ink">Great job!</p>
         {avatar ? (
           <p className="mt-4 text-8xl leading-none" aria-hidden>
@@ -236,6 +322,8 @@ type Props = {
   lessonId: string;
   lessonTitle: string;
   screens: LessonScreenRow[];
+  /** Optional post-lesson interactive layer (same schema as start-screen `playground`). */
+  completionPlayground?: CompletionPlayground | null;
   /** Preview: no progress writes, different end screen */
   mode?: LessonPlayerMode;
   /** When set (e.g. teacher preview), open this screen index first */
@@ -266,6 +354,7 @@ export function LessonPlayer({
   lessonId,
   lessonTitle,
   screens,
+  completionPlayground = null,
   mode = "student",
   initialScreenIndex = 0,
   visualEdit,
@@ -397,6 +486,13 @@ export function LessonPlayer({
     },
     [],
   );
+
+  const refreshEconomy = useCallback(() => {
+    if (isPreview) return;
+    const rewards = getRewards();
+    setGold(rewards.gold);
+    setExperience(rewards.experience);
+  }, [isPreview]);
 
   const resetVocabRun = useCallback(() => {
     vocabSessionRef.current = createVocabRunSession();
@@ -618,6 +714,10 @@ export function LessonPlayer({
       <RewardScreen
         lessonTitle={lessonTitle}
         muted={muted}
+        lessonId={lessonId}
+        isPreview={isPreview}
+        completionPlayground={completionPlayground}
+        onEconomyRefresh={refreshEconomy}
         onPlayAgain={() => {
           setDone(false);
           setIndex(0);

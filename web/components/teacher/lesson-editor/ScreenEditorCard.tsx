@@ -84,6 +84,7 @@ export type ScreenEditorStatus = {
   isDirty: boolean;
   lastSavedAt: number | null;
   err: string | null;
+  saveHint?: string | null;
 };
 
 export type ScreenPendingSaveSnapshot = {

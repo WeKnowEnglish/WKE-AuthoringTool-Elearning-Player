@@ -170,7 +170,7 @@ export function stickerMatchLemmaStatement(
 
 /** Sticker match success line (e.g. “I like apples.”). */
 export function iLikeLemmaStatement(word: Pick<VocabWord, "lemma" | "grammar">): string {
-  return stickerMatchLemmaStatement(word, "i_like");
+  return stickerMatchLemmaStatement({ id: word.lemma, ...word }, "i_like");
 }
 
 /** Obvious ungrammatical patterns for tests (e.g. "This is an eggs."). */

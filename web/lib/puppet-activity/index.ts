@@ -3,6 +3,7 @@ export type {
   PuppetBeat,
   PuppetDefinition,
   PuppetId,
+  PuppetChoiceBeat,
   PuppetLineBeat,
   PuppetPartKey,
   PuppetPauseBeat,
@@ -78,6 +79,18 @@ export {
 } from "./puppet-animation-catalog";
 export { DEFAULT_HOST, getDefaultHostPartSrcList } from "./puppets/default-host";
 export { DEMO_AM_WITH_I } from "./scripts/demo-am-with-i";
+export { LIKE_LIKES_FOOD } from "./scripts/like-likes-food";
+export {
+  PUPPET_BREAKFAST_FOOD_OPTIONS,
+  getPuppetFoodOption,
+  resolvePuppetFoodOptions,
+  type PuppetFoodOption,
+} from "./food-options";
+export {
+  DEFAULT_CHOICE_VAR,
+  interpolatePuppetScriptText,
+  type PuppetScriptVars,
+} from "./script-vars";
 export {
   getPuppet,
   getPuppetScript,

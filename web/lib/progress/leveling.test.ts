@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   levelFromXp,
   levelsGainedBetween,
+  MAX_PLAYER_LEVEL,
   totalXpForLevel,
   xpProgressInLevel,
   xpRequiredForLevel,
@@ -26,5 +27,9 @@ describe("leveling curve", () => {
     expect(levelsGainedBetween(0, 99)).toEqual([]);
     expect(levelsGainedBetween(0, 100)).toEqual([2]);
     expect(levelsGainedBetween(50, 250)).toEqual([2, 3]);
+  });
+
+  it("caps level at MAX_PLAYER_LEVEL", () => {
+    expect(levelFromXp(Number.MAX_SAFE_INTEGER)).toBe(MAX_PLAYER_LEVEL);
   });
 });

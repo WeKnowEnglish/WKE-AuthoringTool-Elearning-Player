@@ -1,3 +1,5 @@
+import { resolvePuppetFoodOptions } from "./food-options";
+import { DEFAULT_CHOICE_VAR } from "./script-vars";
 import { validateCaptionLayout } from "./caption-layout";
 import { PUPPET_ANIMATION_IDS } from "./types";
 import type { PuppetBeat, PuppetScript } from "./types";
@@ -36,6 +38,28 @@ export function validatePuppetScript(script: PuppetScript): string[] {
       if (beat.captionLayout) {
         errors.push(...validateCaptionLayout(beat.captionLayout, `Beat ${i} captionLayout`));
       }
+      if (beat.group != null && !beat.group.trim()) {
+        errors.push(`Beat ${i}: group must be non-empty when set.`);
+      }
+      if (beat.persist && !beat.group && beat.text.length > 48) {
+        errors.push(
+          `Beat ${i}: long persist lines without group crowd the scene — use group or persist: false.`,
+        );
+      }
+    } else if (beat.kind === "choice") {
+      if (!beat.prompt.trim()) errors.push(`Beat ${i}: choice prompt is required.`);
+      if (!beat.foodIds?.length) {
+        errors.push(`Beat ${i}: choice needs at least one foodIds entry.`);
+      } else if (resolvePuppetFoodOptions(beat.foodIds).length !== beat.foodIds.length) {
+        errors.push(`Beat ${i}: unknown food id in foodIds.`);
+      }
+      const anim = beat.puppetAnimation;
+      if (anim && !ANIM_SET.has(anim)) {
+        errors.push(`Beat ${i}: unknown puppetAnimation "${anim}".`);
+      }
+      if (beat.captionLayout) {
+        errors.push(...validateCaptionLayout(beat.captionLayout, `Beat ${i} captionLayout`));
+      }
     } else if (beat.kind === "quiz_true_false") {
       if (!beat.statement.trim()) errors.push(`Beat ${i}: statement is required.`);
     }
@@ -51,9 +75,9 @@ export function assertValidPuppetScript(script: PuppetScript): void {
   }
 }
 
-/** Expand script beats into presenter steps (line + implicit pause after each line). */
 export type PuppetPresenterStep =
   | { type: "line"; beatIndex: number; beat: Extract<PuppetBeat, { kind: "line" }> }
+  | { type: "choice"; beatIndex: number; beat: Extract<PuppetBeat, { kind: "choice" }> }
   | { type: "quiz"; beatIndex: number; beat: Extract<PuppetBeat, { kind: "quiz_true_false" }> };
 
 export function buildPresenterSteps(script: PuppetScript): PuppetPresenterStep[] {
@@ -62,10 +86,11 @@ export function buildPresenterSteps(script: PuppetScript): PuppetPresenterStep[]
     const beat = script.beats[i]!;
     if (beat.kind === "line") {
       steps.push({ type: "line", beatIndex: i, beat });
+    } else if (beat.kind === "choice") {
+      steps.push({ type: "choice", beatIndex: i, beat });
     } else if (beat.kind === "quiz_true_false") {
       steps.push({ type: "quiz", beatIndex: i, beat });
     }
-    // explicit pause beats are no-ops in MVP (line ends with tap continue)
   }
   return steps;
 }

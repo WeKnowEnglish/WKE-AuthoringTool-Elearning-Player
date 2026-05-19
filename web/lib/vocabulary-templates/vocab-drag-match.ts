@@ -94,6 +94,10 @@ export function isVocabDragTextItemId(itemId: string): boolean {
   return /^drag-.+-txt$/.test(itemId);
 }
 
+export function isVocabDragImageItemId(itemId: string): boolean {
+  return /^drag-.+-img$/.test(itemId);
+}
+
 export function wordIdFromDragTextItemId(itemId: string): string | null {
   const m = /^drag-(.+)-txt$/.exec(itemId);
   return m?.[1] ?? null;

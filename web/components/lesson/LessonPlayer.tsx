@@ -19,14 +19,22 @@ import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
 import { speakText, stopSpeaking } from "@/lib/audio/tts";
 import type { LessonScreenRow } from "@/lib/data/catalog";
 import { getQuizProgressForLessonIndex } from "@/lib/lesson-activity-taxonomy";
+import { StudentAvatar } from "@/components/avatar/StudentAvatar";
+import { AVATAR_PRESETS } from "@/lib/avatar/defaults";
+import type { AvatarLoadout } from "@/lib/avatar/types";
 import {
+  getChosenAvatarLoadout,
   getProgressSnapshot,
   markLessonComplete,
-  setAvatarId,
+  setAvatarPreset,
   setResumeScreen,
 } from "@/lib/progress/local-storage";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
-import { awardRewards, getRewards } from "@/lib/progress/rewards";
+import { awardRewards, getPlayerLevel, getRewards } from "@/lib/progress/rewards";
+import {
+  recordVocabSetCompletionDailyQuestProgress,
+  recordVocabSpellDailyQuestProgress,
+} from "@/lib/teststartpage/vocab-daily-quests";
 import { xpProgressInLevel } from "@/lib/progress/leveling";
 import { recordWordInteraction } from "@/lib/progress/word-performance";
 import {
@@ -163,12 +171,6 @@ function InteractionLazyShell({
   return <Suspense fallback={<InteractionChunkFallback />}>{inner}</Suspense>;
 }
 
-const AVATAR_OPTIONS = [
-  { id: "fox", emoji: "🦊" },
-  { id: "robot", emoji: "🤖" },
-  { id: "star", emoji: "⭐" },
-] as const;
-
 function applyPlaygroundTapReward(opts: {
   lessonId: string;
   screenOrCompletionKey: string;
@@ -204,9 +206,7 @@ function RewardScreen({
   completionPlayground?: CompletionPlayground | null;
   onEconomyRefresh: () => void;
 }) {
-  const [avatar, setAvatar] = useState<string | null>(
-    () => getProgressSnapshot().avatarId ?? null,
-  );
+  const [loadout, setLoadout] = useState<AvatarLoadout | null>(() => getChosenAvatarLoadout());
 
   const completionStoryPayload = useMemo(() => {
     if (!completionPlayground) return null;
@@ -269,34 +269,38 @@ function RewardScreen({
           </div>
         ) : null}
         <p className="text-3xl font-extrabold text-kid-ink">Great job!</p>
-        {avatar ? (
-          <p className="mt-4 text-8xl leading-none" aria-hidden>
-            {AVATAR_OPTIONS.find((a) => a.id === avatar)?.emoji ?? "⭐"}
-          </p>
-        ) : null}
+        {loadout ?
+          <div className="mt-4 flex justify-center">
+            <StudentAvatar
+              loadout={loadout}
+              playerLevel={getPlayerLevel(getRewards())}
+              size="xl"
+            />
+          </div>
+        : null}
         <p className="mt-3 text-xl text-kid-ink">You finished {lessonTitle}!</p>
-        {!avatar ? (
+        {!loadout ?
           <div className="mt-6">
-            <p className="mb-3 text-lg font-bold text-kid-ink">Pick a buddy</p>
+            <p className="mb-3 text-lg font-bold text-kid-ink">Pick your look</p>
             <div className="flex flex-wrap justify-center gap-3">
-              {AVATAR_OPTIONS.map((a) => (
+              {AVATAR_PRESETS.map((a) => (
                 <KidButton
                   key={a.id}
                   type="button"
                   variant="secondary"
                   className="!min-h-12 !min-w-12 text-4xl"
                   onClick={() => {
-                    setAvatar(a.id);
-                    setAvatarId(a.id);
+                    setAvatarPreset(a.id);
+                    setLoadout(getChosenAvatarLoadout());
                   }}
                 >
                   <span aria-hidden>{a.emoji}</span>
-                  <span className="sr-only">{a.id}</span>
+                  <span className="sr-only">{a.label}</span>
                 </KidButton>
               ))}
             </div>
           </div>
-        ) : null}
+        : null}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <KidButton
             type="button"
@@ -344,6 +348,8 @@ type Props = {
   vocabFinishLabel?: string;
   /** New run seed (remount player); used by vocabulary Play again. */
   onVocabPlayAgain?: () => void;
+  /** Hub: refresh gold/XP/quest UI after vocab rewards or quest bumps. */
+  onEconomyChange?: () => void;
 };
 
 function useMuted() {
@@ -366,6 +372,7 @@ export function LessonPlayer({
   onVocabFinish,
   vocabFinishLabel,
   onVocabPlayAgain,
+  onEconomyChange,
 }: Props) {
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -516,9 +523,18 @@ export function LessonPlayer({
       });
       setGold(snapshot.gold);
       setExperience(snapshot.experience);
+      recordVocabSetCompletionDailyQuestProgress();
+      onEconomyChange?.();
     }
     setVocabComplete({ stats, breakdown });
-  }, [isPreview, lessonId, muted, runSeed, vocabPracticeWords?.length]);
+  }, [
+    isPreview,
+    lessonId,
+    muted,
+    onEconomyChange,
+    runSeed,
+    vocabPracticeWords?.length,
+  ]);
 
   const goNext = useCallback(() => {
     if (index < screens.length - 1) {
@@ -759,6 +775,14 @@ export function LessonPlayer({
         if (isVocabLesson && isVocabGradedInteraction(parsed)) {
           recordVocabRunPass(vocabSessionRef.current, screenHadWrongRef.current);
           recordVocabPracticeGold(vocabSessionRef.current, perQuestionGold);
+        }
+        if (
+          isVocabLesson &&
+          parsed.type === "interaction" &&
+          parsed.subtype === "letter_mixup"
+        ) {
+          recordVocabSpellDailyQuestProgress();
+          onEconomyChange?.();
         }
         const trackedWords = extractTrackedWords(parsed);
         recordWordInteraction(trackedWords, true);

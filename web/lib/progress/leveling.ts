@@ -2,6 +2,9 @@
 export const XP_CURVE_BASE = 100;
 export const XP_CURVE_RATIO = 1.4;
 
+/** Player level stops increasing after this (XP can still accumulate). */
+export const MAX_PLAYER_LEVEL = 50;
+
 export function xpRequiredForLevel(level: number): number {
   if (level < 1) return 0;
   return Math.floor(XP_CURVE_BASE * XP_CURVE_RATIO ** (level - 1));
@@ -20,7 +23,7 @@ export function levelFromXp(experience: number): number {
   const xp = Math.max(0, Math.floor(experience));
   let level = 1;
   let remaining = xp;
-  while (remaining >= xpRequiredForLevel(level)) {
+  while (level < MAX_PLAYER_LEVEL && remaining >= xpRequiredForLevel(level)) {
     remaining -= xpRequiredForLevel(level);
     level += 1;
   }

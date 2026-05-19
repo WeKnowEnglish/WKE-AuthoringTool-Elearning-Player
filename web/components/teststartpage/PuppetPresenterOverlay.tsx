@@ -13,6 +13,7 @@ import { PuppetSkeletonGraphModal } from "@/components/puppet-activity/PuppetSke
 import { PuppetSkeletonToggle } from "@/components/puppet-activity/PuppetSkeletonToggle";
 import { resolveSkeletonRoot } from "@/components/puppet-activity/PuppetStage";
 import { playSfx } from "@/lib/audio/sfx";
+import { prepareSpeechSynthesis, unlockSpeechSynthesis } from "@/lib/audio/tts";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import {
   clampMotionTune,
@@ -24,6 +25,7 @@ import {
   rigPresetToEditorState,
 } from "@/lib/puppet-activity/presets";
 import { pivotMapToRigPivots, type PivotPercent } from "@/lib/puppet-activity/pivot-utils";
+import { PUPPET_BREAKFAST_FOOD_OPTIONS } from "@/lib/puppet-activity/food-options";
 import { getDefaultHostPartSrcList } from "@/lib/puppet-activity/puppets/default-host";
 import { getPuppet, getPuppetScript } from "@/lib/puppet-activity/registry";
 import type { SkeletonParentMap } from "@/lib/puppet-activity/puppet-skeleton-utils";
@@ -121,13 +123,17 @@ export function PuppetPresenterOverlay({
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    prepareSpeechSynthesis();
     return () => {
       document.body.style.overflow = "";
     };
   }, []);
 
   useEffect(() => {
-    void prefetchImageUrls(getDefaultHostPartSrcList());
+    void prefetchImageUrls([
+      ...getDefaultHostPartSrcList(),
+      ...PUPPET_BREAKFAST_FOOD_OPTIONS.map((f) => f.imageUrl),
+    ]);
   }, [puppet.id]);
 
   const handleRigToggle = useCallback(() => {
@@ -303,7 +309,19 @@ export function PuppetPresenterOverlay({
         : null}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {muted ?
+        <p className="shrink-0 border-b-2 border-amber-700/30 bg-amber-100 px-3 py-1.5 text-center text-xs font-bold text-kid-ink">
+          Sound is off — use <span className="underline">Sound on</span> on the test page to hear
+          the puppet.
+        </p>
+      : null}
+
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        onPointerDown={() => {
+          if (!muted) unlockSpeechSynthesis();
+        }}
+      >
         <PuppetPresenter
           script={script}
           muted={muted}

@@ -12,6 +12,8 @@ import { PuppetWordLine } from "./PuppetWordLine";
 type Props = {
   beat: PuppetLineBeat;
   beatIndex: number;
+  /** Resolved line text (after `{{food}}` substitution). */
+  displayText: string;
   layout: PuppetCaptionLayout;
   revealKey: number;
   /** Only the newest line plays word reveal; earlier lines stay visible. */
@@ -23,6 +25,7 @@ type Props = {
 export function PuppetSceneCaption({
   beat,
   beatIndex,
+  displayText,
   layout,
   revealKey,
   animate,
@@ -32,23 +35,36 @@ export function PuppetSceneCaption({
   const lineKey = `${beatIndex}-${revealKey}`;
   const content = (
     <PuppetWordLine
-      lineKey={lineKey}
-      text={beat.text}
+      lineKey={`${lineKey}-${animate ? "anim" : "static"}`}
+      text={displayText}
       wordStaggerMs={beat.wordStaggerMs}
       motionEnabled={motionEnabled && animate}
-      className={layout.showPanel === false ? "drop-shadow-[2px_2px_0_#152668]" : undefined}
+      captionSize={layout.size ?? "lg"}
+      className={
+        layout.showPanel === false ?
+          "rounded-lg bg-white/85 px-2 py-1 shadow-sm ring-1 ring-kid-ink/15"
+        : undefined
+      }
     />
   );
 
   return (
     <div
-      className={clsx("pointer-events-none absolute z-10 origin-center", className)}
+      className={clsx(
+        "pointer-events-none absolute z-10 origin-center transition-opacity duration-300",
+        className,
+      )}
       style={captionLayoutStyle(layout)}
       data-puppet-caption
       data-beat-index={beatIndex}
     >
       {layout.showPanel !== false ?
-        <KidPanel className="border-4 border-kid-ink bg-[#dbeafe] px-3 py-3 shadow-[4px_4px_0_#0a2f86] sm:px-4 sm:py-4">
+        <KidPanel
+          className={clsx(
+            "border-4 border-kid-ink bg-[#dbeafe] shadow-[4px_4px_0_#0a2f86]",
+            layout.size === "sm" ? "px-2 py-1.5 sm:px-2.5 sm:py-2" : "px-3 py-3 sm:px-4 sm:py-4",
+          )}
+        >
           {content}
         </KidPanel>
       : content}

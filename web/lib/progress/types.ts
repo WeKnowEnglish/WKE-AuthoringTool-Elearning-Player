@@ -1,3 +1,5 @@
+import type { AvatarLoadout } from "@/lib/avatar/types";
+
 export const PROGRESS_STORAGE_KEY = "wke-progress-v1";
 
 export type ProgressSnapshotV1 = {
@@ -7,7 +9,9 @@ export type ProgressSnapshotV1 = {
   enrolledCourseIds?: string[];
   lessonResume?: Record<string, number>;
   audioMuted?: boolean;
-  /** "fox" | "robot" | "star" — shown on reward */
+  /** Layered SVG equip state. */
+  avatarLoadout?: AvatarLoadout | null;
+  /** @deprecated Migrated to {@link avatarLoadout}; legacy buddy preset id. */
   avatarId?: string | null;
 };
 
@@ -19,6 +23,7 @@ export function emptySnapshot(deviceId: string): ProgressSnapshotV1 {
     enrolledCourseIds: [],
     lessonResume: {},
     audioMuted: false,
+    avatarLoadout: null,
     avatarId: null,
   };
 }

@@ -9,11 +9,13 @@ export function StoryItemLayerContent({
   silhouette,
   silhouetteOpacity,
   silhouetteFilter,
+  knockOutWhiteBackground,
 }: {
   item: StoryItem;
   silhouette?: boolean;
   silhouetteOpacity?: number;
   silhouetteFilter?: string;
+  knockOutWhiteBackground?: boolean;
 }) {
   const kind = item.kind ?? "image";
 
@@ -100,6 +102,7 @@ export function StoryItemLayerContent({
       silhouette={silhouette}
       silhouetteOpacity={silhouetteOpacity}
       silhouetteFilter={silhouetteFilter}
+      knockOutWhiteBackground={knockOutWhiteBackground}
     />
   );
 }

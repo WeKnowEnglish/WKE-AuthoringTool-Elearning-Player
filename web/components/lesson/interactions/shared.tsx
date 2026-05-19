@@ -7,10 +7,39 @@ import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { uploadStudentVoiceSubmission } from "@/lib/actions/student-voice";
 import { getProgressSnapshot } from "@/lib/progress/local-storage";
+import { VOCAB_STAGE_BACKGROUND } from "@/lib/vocabulary-templates/vocab-interaction-ui";
+
+export type InteractionImageDisplayOptions = {
+  /**
+   * Vocabulary overlay: blue frame + multiply blend so near-white library JPEG mats
+   * show the stage color (same idea as transparent PNGs on the learn screen).
+   */
+  vocabStage?: boolean;
+};
 
 /** Student-facing image in a fixed frame: default show whole image (contain). */
-export function interactionImageFitClass(imageFit: "cover" | "contain" | undefined) {
-  return (imageFit ?? "contain") === "contain" ? "object-contain bg-white" : "object-cover";
+export function interactionImageFitClass(
+  imageFit: "cover" | "contain" | undefined,
+  options?: InteractionImageDisplayOptions,
+) {
+  const isContain = (imageFit ?? "contain") === "contain";
+  const fit = isContain ? "object-contain" : "object-cover";
+  if (options?.vocabStage && isContain) {
+    return clsx(fit, "mix-blend-multiply");
+  }
+  return isContain ? `${fit} bg-white` : fit;
+}
+
+/** Hero image frame behind {@link interactionImageFitClass} when using multiply knock-out. */
+export function interactionHeroImageFrameClass(options?: InteractionImageDisplayOptions): string {
+  return clsx(options?.vocabStage && "isolate");
+}
+
+export function interactionHeroImageFrameStyle(
+  options?: InteractionImageDisplayOptions,
+): CSSProperties | undefined {
+  if (!options?.vocabStage) return undefined;
+  return { backgroundColor: VOCAB_STAGE_BACKGROUND };
 }
 
 /**
@@ -18,7 +47,7 @@ export function interactionImageFitClass(imageFit: "cover" | "contain" | undefin
  * Uses the smaller of: a modest dvh cap, viewport minus typical quiz/lesson chrome + fixed nav,
  * and a 16∶9 width-based cap — reduces whole-page scroll on short screens.
  */
-export const interactionHeroImageFrameStyle: CSSProperties = {
+export const interactionHeroImageHeightStyle: CSSProperties = {
   height: "min(28dvh, calc(100dvh - 21rem), calc((100vw - 2.5rem) * 9 / 16))",
 };
 

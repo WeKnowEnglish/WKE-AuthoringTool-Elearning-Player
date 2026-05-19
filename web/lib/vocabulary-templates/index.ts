@@ -5,7 +5,13 @@ export type {
   VocabWordCloze,
   VocabularySetDefinition,
 } from "./types";
-export { DEFAULT_PRACTICE_COUNT, VOCAB_SET_IDS, isVocabSetId } from "./types";
+export {
+  ANIMAL_VOCAB_SET_IDS,
+  DEFAULT_PRACTICE_COUNT,
+  VOCAB_SET_IDS,
+  isVocabSetId,
+  type AnimalVocabSetId,
+} from "./types";
 export { pickNWithSeed, randomWithSeed, shuffleWithSeed } from "./shuffle";
 export {
   buildVocabTrueFalseStatement,
@@ -15,10 +21,13 @@ export {
   type VocabTfBuildResult,
 } from "./vocab-tf-statements";
 export {
+  ANIMALS_VOCAB_SET_MENU,
   VOCAB_SET_MENU,
+  VOCAB_TOP_MENU,
   getVocabularySet,
   tryGetVocabularySet,
   vocabSetCoverImageSrc,
+  type VocabMenuEntry,
 } from "./registry";
 export {
   buildVocabularyPracticeContext,
@@ -43,6 +52,11 @@ export {
   vocabSpellAcceptedWords,
 } from "./vocab-spell";
 export { validateVocabularySetDefinition, expectedVocabularyScreenCount } from "./validate";
+export { applyMediaToVocabularySet, type VocabularySetMediaResult } from "./apply-media-to-vocabulary-set";
+export {
+  VOCAB_SET_COVER_LOOKUP_KEYS,
+  VOCAB_SET_MEDIA_TOPIC_SLUGS,
+} from "./vocab-media-topics";
 export {
   STICKER_MATCH_PHRASE_VARIANTS,
   iLikeLemmaStatement,

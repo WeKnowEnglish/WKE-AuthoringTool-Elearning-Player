@@ -5,6 +5,9 @@ import { totalLevelUpPayoutForLevels } from "./level-rewards";
 import { dispatchLevelUp } from "./level-up-events";
 import { unlockLabelsAtLevel } from "./unlock-registry";
 import { pickRandomSticker } from "./sticker-library";
+import { sanitizeSkillRanks } from "@/lib/skills/ranks";
+import type { SkillRanks } from "@/lib/skills/types";
+import { applyQuizGoldBonus } from "@/lib/skills/bonuses";
 
 export const REWARDS_STORAGE_KEY = "wke-rewards-v1";
 
@@ -31,6 +34,8 @@ export type RewardsSnapshot = {
   claimedLevelRewards?: number[];
   /** Spendable points earned from leveling up. */
   skillPoints?: number;
+  /** Purchased skill tree ranks. */
+  skillRanks?: SkillRanks;
 };
 
 export type AwardRewardsMeta = {
@@ -63,6 +68,7 @@ function emptyRewards(): RewardsSnapshot {
     level: 1,
     claimedLevelRewards: [],
     skillPoints: 0,
+    skillRanks: {},
   };
 }
 
@@ -136,6 +142,7 @@ export function getRewards(): RewardsSnapshot {
       level: typeof parsed.level === "number" ? Math.max(1, Math.floor(parsed.level)) : undefined,
       claimedLevelRewards: sanitizeClaimedLevels(parsed.claimedLevelRewards),
       skillPoints: sanitizeSkillPoints(parsed.skillPoints),
+      skillRanks: sanitizeSkillRanks(parsed.skillRanks),
     });
   } catch {
     return emptyRewards();
@@ -144,6 +151,23 @@ export function getRewards(): RewardsSnapshot {
 
 function writeRewards(next: RewardsSnapshot) {
   localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(syncLevelFields(next)));
+}
+
+/** Partial update without dropping other reward fields. */
+export function setRewardsFields(
+  patch: Partial<Pick<RewardsSnapshot, "gold" | "skillPoints" | "skillRanks">>,
+) {
+  const current = getRewards();
+  writeRewards(
+    syncLevelFields({
+      ...current,
+      ...patch,
+      skillRanks:
+        patch.skillRanks !== undefined ?
+          sanitizeSkillRanks(patch.skillRanks)
+        : current.skillRanks,
+    }),
+  );
 }
 
 function applyMilestonesAndLevelUps(
@@ -218,6 +242,7 @@ export function awardRewardsWithMeta(input: {
     quizStreak: current.quizStreak ?? 0,
     claimedLevelRewards: current.claimedLevelRewards ?? [],
     skillPoints: current.skillPoints ?? 0,
+    skillRanks: current.skillRanks,
   };
 
   const { snapshot, levelsGained, levelUpGold, levelUpSkillPoints } =
@@ -243,15 +268,17 @@ export function applyTestStartQuizCorrectAnswer(eventId: string): RewardsSnapsho
     quizStreak: current.quizStreak ?? 0,
     quizEnergy: current.quizEnergy ?? 0,
   });
+  const bonusGold = applyQuizGoldBonus(goldDelta, sanitizeSkillRanks(current.skillRanks));
 
   const base: RewardsSnapshot = {
     ...current,
-    gold: Math.max(0, current.gold + goldDelta),
+    gold: Math.max(0, current.gold + bonusGold),
     experience: Math.max(0, current.experience + experienceDelta),
     quizStreak,
     quizEnergy,
     rewardedEventIds: [...current.rewardedEventIds, eventId].slice(-500),
     skillPoints: current.skillPoints ?? 0,
+    skillRanks: current.skillRanks,
   };
 
   const { snapshot } = applyMilestonesAndLevelUps(current, base);

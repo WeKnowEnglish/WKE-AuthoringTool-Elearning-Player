@@ -23,7 +23,7 @@ import { WordBucketCatchOverlay } from "@/components/teststartpage/WordBucketCat
 import { PuppetPresenterOverlay } from "@/components/teststartpage/PuppetPresenterOverlay";
 import { QuizStickerFallback } from "@/components/teststartpage/QuizStickerFallback";
 import { playSfx } from "@/lib/audio/sfx";
-import { speakText } from "@/lib/audio/tts";
+import { speakText, unlockSpeechSynthesis } from "@/lib/audio/tts";
 import { getProgressSnapshot, setAudioMuted } from "@/lib/progress/local-storage";
 import {
   applyTestStartQuizCorrectAnswer,
@@ -62,13 +62,24 @@ import {
 import { getTestStartQuizSpeakText } from "@/lib/teststartpage/quiz-question-speak-text";
 import { bumpDailyQuestProgress } from "@/lib/teststartpage/daily-quests";
 import {
-  VOCAB_SET_MENU,
+  ANIMALS_VOCAB_SET_MENU,
+  VOCAB_TOP_MENU,
   vocabSetCoverImageSrc,
   type VocabSetId,
 } from "@/lib/vocabulary-templates";
 import type { PuppetScriptId } from "@/lib/puppet-activity/types";
 
-type Phase = "splash" | "topics" | "bucketTopics" | "vocabTopics" | "quizOptions" | "quiz" | "done";
+type Phase =
+  | "splash"
+  | "topics"
+  | "bucketTopics"
+  | "vocabTopics"
+  | "animalsTopics"
+  | "quizOptions"
+  | "quiz"
+  | "done";
+
+type VocabReturnPhase = "vocabTopics" | "animalsTopics";
 
 type PlayerMenuPage = "root" | "sticker-store";
 
@@ -122,9 +133,11 @@ export function TestStartPageClient() {
   const [vocabSetOpen, setVocabSetOpen] = useState(false);
   const [activeVocabSetId, setActiveVocabSetId] = useState<VocabSetId | null>(null);
   const [vocabSessionSeed, setVocabSessionSeed] = useState<string | null>(null);
+  const [vocabReturnPhase, setVocabReturnPhase] =
+    useState<VocabReturnPhase>("vocabTopics");
   const [puppetOpen, setPuppetOpen] = useState(false);
   const [activePuppetScriptId, setActivePuppetScriptId] =
-    useState<PuppetScriptId>("demo_am_with_i");
+    useState<PuppetScriptId>("like_likes_food");
 
   const qaReportCount = useMemo(() => loadQuizQuestionReports().length, [reportLogTick, phase]);
 
@@ -322,13 +335,14 @@ export function TestStartPageClient() {
   }, []);
 
   const openVocabularySet = useCallback(
-    (id: VocabSetId) => {
+    (id: VocabSetId, returnPhase: VocabReturnPhase = "vocabTopics") => {
       const unlockId = `vocab_set:${id}` as const;
       if (!isUnlockAvailable(unlockId, getPlayerLevel())) {
         playSfx("wrong", muted);
         return;
       }
       playSfx("tap", muted);
+      setVocabReturnPhase(returnPhase);
       setActiveVocabSetId(id);
       setVocabSessionSeed(newQuizSeed());
       setVocabSetOpen(true);
@@ -626,7 +640,8 @@ export function TestStartPageClient() {
                 onLockedClick={() => playSfx("wrong", muted)}
                 onClick={() => {
                   playSfx("tap", muted);
-                  setActivePuppetScriptId("demo_am_with_i");
+                  if (!muted) unlockSpeechSynthesis();
+                  setActivePuppetScriptId("like_likes_food");
                   setPuppetOpen(true);
                 }}
               />
@@ -736,7 +751,47 @@ export function TestStartPageClient() {
               </p>
             </div>
             <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-4 sm:max-w-lg">
-              {VOCAB_SET_MENU.map((entry) => {
+              {VOCAB_TOP_MENU.map((entry) => {
+                if (entry.kind === "hub") {
+                  const hubLocked = !isUnlockAvailable("vocab_sets_menu", rewardsUi.level);
+                  return (
+                    <button
+                      key={entry.hubId}
+                      type="button"
+                      aria-label={
+                        hubLocked ?
+                          `${entry.label} — unlocks at level ${minLevelForUnlock("vocab_sets_menu")}`
+                        : `${entry.label} vocabulary categories`
+                      }
+                      className={clsx(
+                        "rounded-2xl border-4 border-kid-ink bg-kid-panel p-3 transition-transform [touch-action:manipulation] hover:bg-kid-surface-muted active:scale-[0.98] sm:p-4",
+                        hubLocked && "cursor-not-allowed opacity-55 grayscale",
+                      )}
+                      onClick={() => {
+                        if (hubLocked) {
+                          playSfx("wrong", muted);
+                          return;
+                        }
+                        playSfx("tap", muted);
+                        setPhase("animalsTopics");
+                      }}
+                    >
+                      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border-2 border-kid-ink/50 bg-white">
+                        <NextImage
+                          src={entry.coverImageUrl}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                      <p className="mt-3 text-center text-lg font-bold text-kid-ink">{entry.label}</p>
+                      <p className="mt-1 text-center text-sm font-semibold text-kid-ink/75">
+                        Wild, pets, sea, and farm
+                      </p>
+                    </button>
+                  );
+                }
                 const setUnlockId = `vocab_set:${entry.id}` as const;
                 const setLocked = !isUnlockAvailable(setUnlockId, rewardsUi.level);
                 return (
@@ -752,7 +807,7 @@ export function TestStartPageClient() {
                     "rounded-2xl border-4 border-kid-ink bg-kid-panel p-3 transition-transform [touch-action:manipulation] hover:bg-kid-surface-muted active:scale-[0.98] sm:p-4",
                     setLocked && "cursor-not-allowed opacity-55 grayscale",
                   )}
-                  onClick={() => openVocabularySet(entry.id)}
+                  onClick={() => openVocabularySet(entry.id, "vocabTopics")}
                 >
                   <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border-2 border-kid-ink/50 bg-white">
                     <NextImage
@@ -780,6 +835,67 @@ export function TestStartPageClient() {
                 onClick={() => {
                   playSfx("tap", muted);
                   setPhase("splash");
+                }}
+              >
+                Back
+              </KidButton>
+            </div>
+          </div>
+        ) : null}
+
+        {phase === "animalsTopics" ? (
+          <div className="flex w-full max-w-3xl flex-1 flex-col gap-6">
+            <div className="space-y-2 text-center">
+              <p className="text-2xl font-extrabold text-kid-ink sm:text-3xl">Animals</p>
+              <p className="text-base font-semibold text-kid-ink/85 sm:text-lg">
+                Pick a category — wild, pets, sea, or farm.
+              </p>
+            </div>
+            <div className="mx-auto grid w-full max-w-lg grid-cols-1 gap-4 sm:grid-cols-2">
+              {ANIMALS_VOCAB_SET_MENU.map((entry) => {
+                const setUnlockId = `vocab_set:${entry.id}` as const;
+                const setLocked = !isUnlockAvailable(setUnlockId, rewardsUi.level);
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    aria-label={
+                      setLocked ?
+                        `${entry.label} — unlocks at level ${minLevelForUnlock(setUnlockId)}`
+                      : `${entry.label} vocabulary set`
+                    }
+                    className={clsx(
+                      "rounded-2xl border-4 border-kid-ink bg-kid-panel p-3 transition-transform [touch-action:manipulation] hover:bg-kid-surface-muted active:scale-[0.98] sm:p-4",
+                      setLocked && "cursor-not-allowed opacity-55 grayscale",
+                    )}
+                    onClick={() => openVocabularySet(entry.id, "animalsTopics")}
+                  >
+                    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border-2 border-kid-ink/50 bg-white">
+                      <NextImage
+                        src={vocabSetCoverImageSrc(entry.id)}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                    <p className="mt-3 text-center text-lg font-bold text-kid-ink">{entry.label}</p>
+                    {setLocked ? (
+                      <p className="mt-1 text-center text-sm font-bold text-kid-ink/80">
+                        Level {minLevelForUnlock(setUnlockId)} to unlock
+                      </p>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-auto flex justify-center pt-4">
+              <KidButton
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setPhase("vocabTopics");
                 }}
               >
                 Back
@@ -1107,13 +1223,14 @@ export function TestStartPageClient() {
           setId={activeVocabSetId}
           sessionSeed={vocabSessionSeed}
           muted={muted}
+          onEconomyChange={refreshRewardsUi}
           onRequestNewRun={() => setVocabSessionSeed(newQuizSeed())}
           onClose={() => {
             playSfx("tap", muted);
             setVocabSetOpen(false);
             setActiveVocabSetId(null);
             setVocabSessionSeed(null);
-            setPhase("vocabTopics");
+            setPhase(vocabReturnPhase);
             refreshRewardsUi();
           }}
         />

@@ -6,7 +6,7 @@ export type PuppetId = (typeof PUPPET_IDS)[number];
 export const PUPPET_ANIMATION_IDS = ["idle", "wave", "nod", "none"] as const;
 export type PuppetAnimationId = (typeof PUPPET_ANIMATION_IDS)[number];
 
-export const PUPPET_SCRIPT_IDS = ["demo_am_with_i"] as const;
+export const PUPPET_SCRIPT_IDS = ["demo_am_with_i", "like_likes_food"] as const;
 export type PuppetScriptId = (typeof PUPPET_SCRIPT_IDS)[number];
 
 export const PUPPET_PART_KEYS = [
@@ -51,6 +51,15 @@ export type PuppetLineBeat = {
   puppetAnimation?: PuppetAnimationId;
   /** Where this line appears in the scene (% of scene box). */
   captionLayout?: PuppetCaptionLayout;
+  /** Keep visible after Continue (until replaced in `group` or hidden on choice/quiz). */
+  persist?: boolean;
+  /** Persisted lines with the same group replace each other. */
+  group?: string;
+  /**
+   * One caption per slot on screen. Active line in a slot hides a persist label in that slot
+   * (e.g. left slot: "like" label OR "I like …", not both).
+   */
+  captionSlot?: string;
 };
 
 export type PuppetPauseBeat = {
@@ -64,7 +73,23 @@ export type PuppetQuizTrueFalseBeat = {
   imageUrl?: string;
 };
 
-export type PuppetBeat = PuppetLineBeat | PuppetPauseBeat | PuppetQuizTrueFalseBeat;
+/** Tap one option (e.g. food); stores label for `{{var}}` in later beats. */
+export type PuppetChoiceBeat = {
+  kind: "choice";
+  prompt: string;
+  /** Breakfast food ids from `PUPPET_BREAKFAST_FOOD_OPTIONS`. */
+  foodIds: string[];
+  /** Script variable name (default `food`). */
+  storeAs?: string;
+  puppetAnimation?: PuppetAnimationId;
+  captionLayout?: PuppetCaptionLayout;
+};
+
+export type PuppetBeat =
+  | PuppetLineBeat
+  | PuppetPauseBeat
+  | PuppetChoiceBeat
+  | PuppetQuizTrueFalseBeat;
 
 export type PuppetScript = {
   id: PuppetScriptId;
@@ -73,6 +98,8 @@ export type PuppetScript = {
   ttsLang?: string;
   /** Fallback caption placement for line beats without `captionLayout`. */
   defaultCaptionLayout?: PuppetCaptionLayout;
+  /** Safety cap for on-screen captions (default 6 in presenter). */
+  maxVisibleLines?: number;
   beats: PuppetBeat[];
 };
 

@@ -3,6 +3,10 @@
 import { clsx } from "clsx";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
+import {
+  captionSizeClassName,
+  type PuppetCaptionSize,
+} from "@/lib/puppet-activity/caption-layout";
 import { DEFAULT_WORD_STAGGER_MS, tokenizeLineForReveal } from "@/lib/puppet-activity/types";
 
 const containerVariants = {
@@ -28,6 +32,7 @@ type Props = {
   /** Increment to replay reveal animation for a new line. */
   lineKey: string;
   motionEnabled?: boolean;
+  captionSize?: PuppetCaptionSize;
   className?: string;
 };
 
@@ -36,8 +41,10 @@ export function PuppetWordLine({
   wordStaggerMs,
   lineKey,
   motionEnabled = true,
+  captionSize = "lg",
   className,
 }: Props) {
+  const sizeClass = captionSizeClassName(captionSize);
   const tokens = useMemo(() => tokenizeLineForReveal(text), [text]);
   const stagger = (wordStaggerMs ?? DEFAULT_WORD_STAGGER_MS) / 1000;
   const [visible, setVisible] = useState(!motionEnabled);
@@ -65,10 +72,7 @@ export function PuppetWordLine({
   if (!motionEnabled) {
     return (
       <p
-        className={clsx(
-          "text-center text-2xl font-extrabold leading-snug text-kid-ink sm:text-3xl",
-          className,
-        )}
+        className={clsx("text-center text-kid-ink", sizeClass, className)}
       >
         {text}
       </p>
@@ -79,7 +83,8 @@ export function PuppetWordLine({
     <motion.p
       key={lineKey}
       className={clsx(
-        "flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-center text-2xl font-extrabold leading-snug text-kid-ink sm:text-3xl",
+        "flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-center text-kid-ink",
+        sizeClass,
         className,
       )}
       variants={visible ? variants : containerVariants}

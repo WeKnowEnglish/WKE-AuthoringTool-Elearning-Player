@@ -11,6 +11,7 @@ export const DAILY_QUEST_IDS = [
   "bucket_catches",
   "letter_mixup",
   "quiz_completions",
+  "vocab_set_completions",
   "chase_wins",
 ] as const;
 
@@ -21,6 +22,7 @@ export const DAILY_QUEST_LABELS: Record<DailyQuestId, string> = {
   bucket_catches: "Catch 45 correct objects in Word bucket catch",
   letter_mixup: "Spell 15 words correctly in Letter mix-up",
   quiz_completions: "Finish 2 full topic quizzes",
+  vocab_set_completions: "Finish 2 vocabulary sets",
   chase_wins: "Win the chase game 2 times",
 };
 
@@ -29,6 +31,7 @@ const DAILY_QUEST_TARGETS: Record<DailyQuestId, number> = {
   bucket_catches: 45,
   letter_mixup: 15,
   quiz_completions: 2,
+  vocab_set_completions: 2,
   chase_wins: 2,
 };
 
@@ -144,7 +147,7 @@ export function isDailyChestClaimed(dayKey: string): boolean {
 }
 
 /**
- * Grants chest gold + XP once per day when all five quest targets are met.
+ * Grants chest gold + XP once per day when all daily quest targets are met.
  * Returns whether this call granted the loot (false if already claimed or quests incomplete).
  */
 export function openDailyTreasureChest(todayKey = getLocalDayKey()): boolean {

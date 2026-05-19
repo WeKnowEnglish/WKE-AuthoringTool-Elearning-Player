@@ -2,20 +2,23 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { LessonRow, ModuleRow } from "@/lib/data/catalog";
-import { getProgressSnapshot, setAvatarId } from "@/lib/progress/local-storage";
+import { StudentAvatar } from "@/components/avatar/StudentAvatar";
+import { AVATAR_PRESETS } from "@/lib/avatar/defaults";
+import { presetIdForLoadout } from "@/lib/avatar/progress";
+import type { AvatarLoadout } from "@/lib/avatar/types";
+import {
+  getChosenAvatarLoadout,
+  getProgressSnapshot,
+  setAvatarPreset,
+} from "@/lib/progress/local-storage";
 import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import { nextLockedUnlocks } from "@/lib/progress/unlock-registry";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
 import { PlayerLevelBar } from "@/components/progress/PlayerLevelBar";
+import { SkillTreePanel } from "@/components/progress/SkillTreePanel";
 import { StickerStorePanel } from "@/components/progress/StickerStorePanel";
-
-const BUDDIES = [
-  { id: "fox", emoji: "🦊" },
-  { id: "robot", emoji: "🤖" },
-  { id: "star", emoji: "⭐" },
-] as const;
 
 type Props = {
   modules: ModuleRow[];
@@ -30,9 +33,8 @@ export function ProfileClient({
   skillsByLesson,
   loadError,
 }: Props) {
-  const [buddy, setBuddy] = useState<string | null>(
-    () => getProgressSnapshot().avatarId ?? null,
-  );
+  const [loadout, setLoadout] = useState<AvatarLoadout | null>(() => getChosenAvatarLoadout());
+  const presetId = loadout ? presetIdForLoadout(loadout) : null;
   const [rewardsTick, setRewardsTick] = useState(0);
 
   const refreshRewards = useCallback(() => {
@@ -95,9 +97,7 @@ export function ProfileClient({
           Skill points:{" "}
           <span className="tabular-nums text-kid-ink">{rewards.skillPoints ?? 0}</span>
         </p>
-        <p className="mt-1 text-sm text-kid-ink/75">
-          Earn more when you level up. Spending skill points is coming soon.
-        </p>
+        <p className="mt-1 text-sm text-kid-ink/75">Earn more when you level up.</p>
         {upcomingUnlocks.length > 0 ? (
           <div className="mt-4 border-t-2 border-kid-ink/15 pt-3">
             <p className="text-sm font-extrabold uppercase tracking-wide text-kid-ink/90">
@@ -113,6 +113,7 @@ export function ProfileClient({
           </div>
         ) : null}
       </KidPanel>
+      <SkillTreePanel onRewardsChange={refreshRewards} />
       <StickerStorePanel
         title="Achievements"
         description="Earn gold in lessons and activities, then spend it on random sticker packs."
@@ -120,33 +121,29 @@ export function ProfileClient({
         onRewardsChange={refreshRewards}
       />
       <KidPanel>
-        <h2 className="text-xl font-bold text-kid-ink">Your buddy</h2>
+        <h2 className="text-xl font-bold text-kid-ink">Your avatar</h2>
         <p className="mt-1 text-sm text-kid-ink/80">
-          This friend appears when you finish a lesson.
+          This character appears when you finish a lesson.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          {buddy ? (
-            <span className="text-6xl leading-none" aria-hidden>
-              {BUDDIES.find((b) => b.id === buddy)?.emoji ?? "⭐"}
-            </span>
-          ) : (
-            <span className="text-kid-ink/70">Not chosen yet — pick one:</span>
-          )}
+          {loadout ?
+            <StudentAvatar loadout={loadout} playerLevel={playerLevel} size="md" />
+          : <span className="text-kid-ink/70">Not chosen yet — pick a look:</span>}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {BUDDIES.map((b) => (
+          {AVATAR_PRESETS.map((b) => (
             <KidButton
               key={b.id}
               type="button"
-              variant={buddy === b.id ? "primary" : "secondary"}
+              variant={presetId === b.id ? "primary" : "secondary"}
               className="!min-h-12 !min-w-12 text-3xl"
               onClick={() => {
-                setBuddy(b.id);
-                setAvatarId(b.id);
+                setAvatarPreset(b.id);
+                setLoadout(getChosenAvatarLoadout());
               }}
             >
               <span aria-hidden>{b.emoji}</span>
-              <span className="sr-only">{b.id}</span>
+              <span className="sr-only">{b.label}</span>
             </KidButton>
           ))}
         </div>

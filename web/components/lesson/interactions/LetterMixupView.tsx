@@ -23,8 +23,10 @@ import {
 } from "@/lib/vocabulary-templates/vocab-interaction-ui";
 import {
   GuideBlock,
-  interactionImageFitClass,
+  interactionHeroImageFrameClass,
   interactionHeroImageFrameStyle,
+  interactionHeroImageHeightStyle,
+  interactionImageFitClass,
   interactionImmersiveStageClass,
   InteractionLessonNav,
   InteractionStageFooter,
@@ -107,6 +109,7 @@ export function LetterMixupView({
 } & NavProps) {
   const immersive = controlsPlacement === "stage-footer";
   const vocabImmersive = immersive && vocabStageTint;
+  const vocabImgOpts = vocabStageTint ? { vocabStage: true as const } : undefined;
 
   const item = parsed.items[0];
   const targetWord = item?.target_word ?? "";
@@ -575,11 +578,13 @@ export function LetterMixupView({
               onClick={playPictureWord}
               className={clsx(
                 "relative mx-auto w-full max-w-md shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4",
+                interactionHeroImageFrameClass(vocabImgOpts),
                 !passed && parsed.image_use_tts && pictureListenLine && "cursor-pointer",
               )}
               style={{
                 aspectRatio: "16 / 10",
                 maxHeight: "min(32dvh, calc((100vw - 3rem) * 10 / 16))",
+                ...interactionHeroImageFrameStyle(vocabImgOpts),
               }}
               aria-label={
                 parsed.image_use_tts && pictureListenLine ?
@@ -592,7 +597,7 @@ export function LetterMixupView({
                 alt=""
                 fill
                 sizes="(max-width: 768px) 100vw, 28rem"
-                className={interactionImageFitClass(parsed.image_fit)}
+                className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
                 unoptimized={unopt(parsed.image_url)}
               />
               {!passed && parsed.image_use_tts && pictureListenLine ?
@@ -631,9 +636,13 @@ export function LetterMixupView({
             onClick={playPictureWord}
             className={clsx(
               "group relative w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
+              interactionHeroImageFrameClass(vocabImgOpts),
               !passed && "cursor-pointer",
             )}
-            style={interactionHeroImageFrameStyle}
+            style={{
+              ...interactionHeroImageHeightStyle,
+              ...interactionHeroImageFrameStyle(vocabImgOpts),
+            }}
             aria-label={
               parsed.image_use_tts ?
                 `Tap to hear: ${parsed.image_read_aloud_text?.trim() || targetWord || "word"}`
@@ -646,7 +655,7 @@ export function LetterMixupView({
               src={parsed.image_url}
               alt=""
               fill
-              className={interactionImageFitClass("contain")}
+              className={interactionImageFitClass("contain", vocabImgOpts)}
               unoptimized={unopt(parsed.image_url)}
             />
             {!passed ?

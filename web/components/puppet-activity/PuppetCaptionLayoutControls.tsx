@@ -5,18 +5,23 @@ import { useCallback } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { playSfx } from "@/lib/audio/sfx";
 import {
+  CAPTION_ROLES,
   CAPTION_SCALE_MAX,
   CAPTION_SCALE_MIN,
+  CAPTION_SIZES,
   CAPTION_WIDTH_PERCENT_MAX,
   CAPTION_WIDTH_PERCENT_MIN,
   CAPTION_X_PERCENT_MAX,
   CAPTION_X_PERCENT_MIN,
   CAPTION_Y_PERCENT_MAX,
   CAPTION_Y_PERCENT_MIN,
+  CAPTION_ROLE_PRESETS,
   clampCaptionLayout,
-  formatCaptionLayoutForSource,
+  formatLineBeatSnippet,
   resolveCaptionLayout,
   type PuppetCaptionLayout,
+  type PuppetCaptionRole,
+  type PuppetCaptionSize,
 } from "@/lib/puppet-activity/caption-layout";
 import type { PuppetLineBeat, PuppetScript } from "@/lib/puppet-activity/types";
 
@@ -99,14 +104,23 @@ export function PuppetCaptionLayoutControls({
   );
 
   const copySnippet = useCallback(async () => {
-    const text = formatCaptionLayoutForSource(layout);
+    if (!beat) return;
+    const text = formatLineBeatSnippet(beat, layout);
     try {
       await navigator.clipboard.writeText(text);
       playSfx("complete", muted);
     } catch {
       playSfx("wrong", muted);
     }
-  }, [layout, muted]);
+  }, [beat, layout, muted]);
+
+  const applyRole = useCallback(
+    (role: PuppetCaptionRole) => {
+      const preset = CAPTION_ROLE_PRESETS[role];
+      patch({ role, ...preset });
+    },
+    [patch],
+  );
 
   if (lineBeats.length === 0) return null;
 
@@ -158,6 +172,66 @@ export function PuppetCaptionLayoutControls({
         </KidButton>
       </div>
 
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1 text-xs font-bold">
+          <span className="shrink-0">Role</span>
+          <select
+            aria-label="Caption role preset"
+            value={layout.role ?? ""}
+            onChange={(e) => {
+              playSfx("tap", muted);
+              const v = e.target.value;
+              if (v === "") patch({ role: undefined });
+              else applyRole(v as PuppetCaptionRole);
+            }}
+            className="rounded-md border-2 border-kid-ink bg-white px-2 py-1 text-xs font-bold"
+          >
+            <option value="">Custom</option>
+            {CAPTION_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1 text-xs font-bold">
+          <span className="shrink-0">Text</span>
+          <select
+            aria-label="Caption text size"
+            value={layout.size ?? "lg"}
+            onChange={(e) => {
+              playSfx("tap", muted);
+              patch({ size: e.target.value as PuppetCaptionSize });
+            }}
+            className="rounded-md border-2 border-kid-ink bg-white px-2 py-1 text-xs font-bold"
+          >
+            {CAPTION_SIZES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1 text-xs font-bold">
+          <input
+            type="checkbox"
+            checked={layout.showPanel !== false}
+            onChange={(e) => {
+              playSfx("tap", muted);
+              patch({ showPanel: e.target.checked });
+            }}
+            className="size-4 accent-kid-ink"
+          />
+          Panel
+        </label>
+        {beat?.persist ?
+          <span className="rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-bold uppercase">
+            persist
+            {beat.group ? ` · ${beat.group}` : ""}
+          </span>
+        : null}
+      </div>
+
       <div className="mt-2 flex flex-wrap items-end gap-2 sm:gap-3">
         <Slider
           label="Caption X"
@@ -178,7 +252,7 @@ export function PuppetCaptionLayoutControls({
           onChange={(yPercent) => patch({ yPercent })}
         />
         <Slider
-          label="Caption size"
+          label="Box scale"
           value={layout.scale ?? 1}
           min={CAPTION_SCALE_MIN}
           max={CAPTION_SCALE_MAX}

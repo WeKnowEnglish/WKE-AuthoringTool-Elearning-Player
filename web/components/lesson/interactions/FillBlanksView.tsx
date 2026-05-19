@@ -15,8 +15,10 @@ import {
 } from "@/lib/vocabulary-templates/vocab-interaction-ui";
 import {
   GuideBlock,
-  interactionImageFitClass,
+  interactionHeroImageFrameClass,
   interactionHeroImageFrameStyle,
+  interactionHeroImageHeightStyle,
+  interactionImageFitClass,
   interactionImmersiveStageClass,
   InteractionLessonNav,
   InteractionStageFooter,
@@ -49,6 +51,7 @@ export function FillBlanksView({
   submitOnEnter?: boolean;
 } & NavProps) {
   const immersive = controlsPlacement === "stage-footer";
+  const vocabImgOpts = vocabStageTint ? { vocabStage: true as const } : undefined;
   const [answers, setAnswers] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       parsed.blanks.map((b: { id: string }): [string, string] => [b.id, ""]),
@@ -356,11 +359,13 @@ export function FillBlanksView({
               onClick={playPictureWord}
               className={clsx(
                 "relative mx-auto w-full max-w-md shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4",
+                interactionHeroImageFrameClass(vocabImgOpts),
                 !passed && parsed.image_use_tts && pictureListenLine && "cursor-pointer",
               )}
               style={{
                 aspectRatio: "16 / 10",
                 maxHeight: "min(32dvh, calc((100vw - 3rem) * 10 / 16))",
+                ...interactionHeroImageFrameStyle(vocabImgOpts),
               }}
               aria-label={
                 parsed.image_use_tts && pictureListenLine
@@ -373,7 +378,7 @@ export function FillBlanksView({
                 alt=""
                 fill
                 sizes="(max-width: 768px) 100vw, 28rem"
-                className={interactionImageFitClass(parsed.image_fit)}
+                className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
                 unoptimized={unopt(parsed.image_url)}
               />
               {!passed && parsed.image_use_tts && pictureListenLine ? (
@@ -404,14 +409,18 @@ export function FillBlanksView({
           className={clsx(
             "relative mb-3 w-full overflow-hidden rounded-lg border-4 border-kid-ink",
             imageSizeClass,
+            interactionHeroImageFrameClass(vocabImgOpts),
           )}
-          style={interactionHeroImageFrameStyle}
+          style={{
+            ...interactionHeroImageHeightStyle,
+            ...interactionHeroImageFrameStyle(vocabImgOpts),
+          }}
         >
           <Image
             src={parsed.image_url}
             alt=""
             fill
-            className={interactionImageFitClass(parsed.image_fit)}
+            className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
             unoptimized={unopt(parsed.image_url)}
           />
         </div>

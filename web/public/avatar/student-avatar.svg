@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" role="img" aria-hidden="true" data-skin="warm">
+  <title>Student avatar</title>
+  <style>
+    .skin { fill: #ffcc80; }
+    [data-skin="warm"] .skin { fill: #ffcc80; }
+    [data-skin="cool"] .skin { fill: #b0bec5; }
+    [data-skin="alien"] .skin { fill: #81c784; }
+    .ink { stroke: #152668; }
+  </style>
+
+  <ellipse id="shadow" cx="100" cy="228" rx="52" ry="10" fill="#152668" opacity="0.12"/>
+
+  <g id="body">
+    <path class="ink" d="M70 118 Q100 108 130 118 L126 178 Q100 186 74 178 Z" fill="#4fc3f7" stroke-width="4" stroke-linejoin="round"/>
+    <path class="ink" d="M56 122 L40 162" fill="none" stroke-width="8" stroke-linecap="round"/>
+    <path class="ink" d="M144 122 L160 162" fill="none" stroke-width="8" stroke-linecap="round"/>
+    <path class="ink" d="M80 178 L76 214" fill="none" stroke-width="8" stroke-linecap="round"/>
+    <path class="ink" d="M120 178 L124 214" fill="none" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g id="face">
+    <circle class="skin ink" cx="100" cy="78" r="40" stroke-width="4"/>
+    <circle cx="87" cy="76" r="4.5" fill="#152668"/>
+    <circle cx="113" cy="76" r="4.5" fill="#152668"/>
+    <path d="M88 94 Q100 104 112 94" fill="none" stroke="#152668" stroke-width="3.5" stroke-linecap="round"/>
+    <ellipse cx="82" cy="86" rx="5" ry="3" fill="#ffab91" opacity="0.55"/>
+    <ellipse cx="118" cy="86" rx="5" ry="3" fill="#ffab91" opacity="0.55"/>
+  </g>
+
+  <g id="slot-bottom">
+    <g id="item-bottom-default" data-default="true">
+      <path class="ink" d="M76 168 L124 168 L126 200 L74 200 Z" fill="#5c6bc0" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+    <g id="item-bottom-shorts" hidden>
+      <path class="ink" d="M78 170 L122 170 L118 198 L82 198 Z" fill="#26a69a" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+    <g id="item-bottom-alien" hidden>
+      <path class="ink" d="M78 170 L122 170 L118 198 L82 198 Z" fill="#7e57c2" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <g id="slot-shoes">
+    <g id="item-shoes-default" data-default="true">
+      <rect class="ink" x="70" y="208" width="22" height="12" rx="4" fill="#37474f" stroke-width="3"/>
+      <rect class="ink" x="108" y="208" width="22" height="12" rx="4" fill="#37474f" stroke-width="3"/>
+    </g>
+  </g>
+
+  <g id="slot-top">
+    <g id="item-top-default" data-default="true">
+      <path class="ink" d="M68 116 Q100 104 132 116 L128 170 Q100 176 72 170 Z" fill="#ffe135" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+    <g id="item-top-hoodie" hidden>
+      <path class="ink" d="M64 112 Q100 98 136 112 L132 174 Q100 182 68 174 Z" fill="#f5a623" stroke-width="4" stroke-linejoin="round"/>
+      <path class="ink" d="M64 112 Q52 130 48 148" fill="none" stroke-width="6" stroke-linecap="round"/>
+      <path class="ink" d="M136 112 Q148 130 152 148" fill="none" stroke-width="6" stroke-linecap="round"/>
+    </g>
+    <g id="item-top-fox" hidden>
+      <path class="ink" d="M68 116 Q100 104 132 116 L128 170 Q100 176 72 170 Z" fill="#e65100" stroke-width="4" stroke-linejoin="round"/>
+      <path class="ink" d="M72 168 Q100 174 128 168" fill="none" stroke-width="3" stroke="#bf360c"/>
+    </g>
+    <g id="item-top-robot" hidden>
+      <path class="ink" d="M66 114 Q100 100 134 114 L130 172 Q100 180 70 172 Z" fill="#90a4ae" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="82" y="128" width="10" height="10" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="108" y="128" width="10" height="10" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="92" y="148" width="16" height="4" rx="1" fill="#37474f"/>
+    </g>
+    <g id="item-top-alien" hidden>
+      <path class="ink" d="M66 114 Q100 100 134 114 L130 172 Q100 180 70 172 Z" fill="#5e35b1" stroke-width="4" stroke-linejoin="round"/>
+      <circle cx="100" cy="138" r="8" fill="#b2ff59" stroke="#152668" stroke-width="2"/>
+      <rect x="94" y="152" width="12" height="3" rx="1" fill="#cddc39"/>
+    </g>
+  </g>
+
+  <g id="slot-hair">
+    <g id="item-hair-default" data-default="true">
+      <path class="ink" d="M62 72 Q100 18 138 72 Q128 58 100 50 Q72 58 62 72 Z" fill="#6d4c41" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+    <g id="item-hair-spiky" hidden>
+      <path class="ink" d="M58 78 L68 32 L84 62 L100 24 L116 62 L132 32 L142 78 Z" fill="#546e7a" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+    <g id="item-hair-fox" hidden>
+      <path class="ink" d="M54 78 L62 28 L78 58 L100 38 L122 58 L138 28 L146 78 Z" fill="#e65100" stroke-width="4" stroke-linejoin="round"/>
+      <path class="ink" d="M62 72 Q100 48 138 72 Q128 62 100 56 Q72 62 62 72 Z" fill="#ff8f00" stroke-width="3" stroke-linejoin="round"/>
+    </g>
+    <g id="item-hair-alien" hidden>
+      <ellipse class="ink" cx="100" cy="52" rx="38" ry="22" fill="#66bb6a" stroke-width="4"/>
+      <path class="ink" d="M100 30 L100 12" fill="none" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="100" cy="10" r="6" fill="#ce93d8" stroke="#152668" stroke-width="2"/>
+    </g>
+  </g>
+
+  <g id="slot-hat"></g>
+
+  <g id="slot-accessory">
+    <g id="item-accessory-none" data-default="true"></g>
+    <g id="item-accessory-glasses" hidden>
+      <rect x="74" y="70" width="22" height="14" rx="4" fill="none" stroke="#152668" stroke-width="3"/>
+      <rect x="104" y="70" width="22" height="14" rx="4" fill="none" stroke="#152668" stroke-width="3"/>
+      <path d="M96 77 L104 77" stroke="#152668" stroke-width="3"/>
+    </g>
+    <g id="item-accessory-fox-snout" hidden>
+      <ellipse cx="100" cy="82" rx="36" ry="34" fill="#ff8f00" stroke="#152668" stroke-width="4"/>
+      <ellipse cx="100" cy="92" rx="22" ry="18" fill="#fff3e0" stroke="#152668" stroke-width="3"/>
+      <path d="M100 98 L94 106 L106 106 Z" fill="#152668"/>
+      <ellipse cx="84" cy="76" rx="7" ry="9" fill="#fffde7" stroke="#152668" stroke-width="2.5"/>
+      <ellipse cx="116" cy="76" rx="7" ry="9" fill="#fffde7" stroke="#152668" stroke-width="2.5"/>
+      <circle cx="84" cy="77" r="3" fill="#152668"/>
+      <circle cx="116" cy="77" r="3" fill="#152668"/>
+      <path d="M88 100 Q100 108 112 100" fill="none" stroke="#152668" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <g id="item-accessory-alien-face" hidden>
+      <ellipse class="skin ink" cx="100" cy="78" rx="40" ry="38" stroke-width="4"/>
+      <ellipse cx="84" cy="74" rx="12" ry="16" fill="#1a237e" stroke="#152668" stroke-width="2.5"/>
+      <ellipse cx="116" cy="74" rx="12" ry="16" fill="#1a237e" stroke="#152668" stroke-width="2.5"/>
+      <ellipse cx="86" cy="72" rx="4" ry="5" fill="#fff"/>
+      <ellipse cx="118" cy="72" rx="4" ry="5" fill="#fff"/>
+      <path d="M92 98 Q100 104 108 98" fill="none" stroke="#152668" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- Robot growth stages (full figure per stage; shown instead of standard body when preset is robot) -->
+  <g id="slot-robot-growth" hidden>
+    <g id="item-robot-growth-1" data-default="true">
+      <rect class="ink" x="88" y="100" width="24" height="18" rx="6" fill="#b0bec5" stroke-width="3"/>
+      <circle class="ink" cx="100" cy="82" r="26" fill="#cfd8dc" stroke-width="4"/>
+      <rect x="92" y="76" width="6" height="6" rx="1" fill="#4fc3f7" stroke="#152668" stroke-width="1.5"/>
+      <rect x="102" y="76" width="6" height="6" rx="1" fill="#4fc3f7" stroke="#152668" stroke-width="1.5"/>
+      <path class="ink" d="M74 108 L62 138" fill="none" stroke-width="6" stroke-linecap="round"/>
+      <path class="ink" d="M126 108 L138 138" fill="none" stroke-width="6" stroke-linecap="round"/>
+      <path class="ink" d="M82 118 L78 148" fill="none" stroke-width="6" stroke-linecap="round"/>
+      <path class="ink" d="M118 118 L122 148" fill="none" stroke-width="6" stroke-linecap="round"/>
+      <path class="ink" d="M86 112 L114 112 L112 132 L88 132 Z" fill="#90a4ae" stroke-width="3" stroke-linejoin="round"/>
+      <path class="ink" d="M84 148 L116 148 L114 168 L86 168 Z" fill="#26a69a" stroke-width="3" stroke-linejoin="round"/>
+      <rect class="ink" x="82" y="164" width="14" height="8" rx="3" fill="#37474f" stroke-width="2"/>
+      <rect class="ink" x="104" y="164" width="14" height="8" rx="3" fill="#37474f" stroke-width="2"/>
+    </g>
+    <g id="item-robot-growth-2" hidden>
+      <path class="ink" d="M58 78 L68 48 L78 68 L100 42 L122 68 L132 48 L142 78 Z" fill="#546e7a" stroke-width="3" stroke-linejoin="round"/>
+      <circle class="ink" cx="100" cy="88" r="30" fill="#cfd8dc" stroke-width="4"/>
+      <rect x="90" y="82" width="7" height="7" rx="1.5" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="103" y="82" width="7" height="7" rx="1.5" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <path class="ink" d="M68 112 Q100 102 132 112 L128 168 Q100 174 72 168 Z" fill="#90a4ae" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="86" y="128" width="8" height="8" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="106" y="128" width="8" height="8" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <path class="ink" d="M54 116 L40 158" fill="none" stroke-width="7" stroke-linecap="round"/>
+      <path class="ink" d="M146 116 L160 158" fill="none" stroke-width="7" stroke-linecap="round"/>
+      <path class="ink" d="M80 168 L76 200" fill="none" stroke-width="7" stroke-linecap="round"/>
+      <path class="ink" d="M120 168 L124 200" fill="none" stroke-width="7" stroke-linecap="round"/>
+      <path class="ink" d="M78 168 L122 168 L118 196 L82 196 Z" fill="#26a69a" stroke-width="4" stroke-linejoin="round"/>
+      <rect class="ink" x="74" y="192" width="18" height="10" rx="3" fill="#37474f" stroke-width="3"/>
+      <rect class="ink" x="108" y="192" width="18" height="10" rx="3" fill="#37474f" stroke-width="3"/>
+    </g>
+    <g id="item-robot-growth-3" hidden>
+      <path class="ink" d="M56 80 L66 38 L82 62 L100 28 L118 62 L134 38 L144 80 Z" fill="#546e7a" stroke-width="4" stroke-linejoin="round"/>
+      <rect class="ink" x="82" y="68" width="36" height="28" rx="10" fill="#cfd8dc" stroke-width="4"/>
+      <rect x="88" y="76" width="9" height="9" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="103" y="76" width="9" height="9" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="94" y="88" width="12" height="3" rx="1" fill="#37474f"/>
+      <path class="ink" d="M64 112 Q100 98 136 112 L132 174 Q100 180 68 174 Z" fill="#90a4ae" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="84" y="132" width="10" height="10" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="106" y="132" width="10" height="10" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <path class="ink" d="M52 118 L38 162" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M148 118 L162 162" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M78 174 L74 212" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M122 174 L126 212" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M76 170 L124 170 L120 200 L80 200 Z" fill="#26a69a" stroke-width="4" stroke-linejoin="round"/>
+      <rect class="ink" x="72" y="206" width="20" height="11" rx="4" fill="#37474f" stroke-width="3"/>
+      <rect class="ink" x="108" y="206" width="20" height="11" rx="4" fill="#37474f" stroke-width="3"/>
+    </g>
+    <g id="item-robot-growth-4" hidden>
+      <path class="ink" d="M54 78 L64 32 L84 58 L100 22 L116 58 L136 32 L146 78 Z" fill="#546e7a" stroke-width="4" stroke-linejoin="round"/>
+      <rect class="ink" x="78" y="62" width="44" height="32" rx="12" fill="#cfd8dc" stroke-width="4"/>
+      <rect x="86" y="72" width="10" height="10" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="104" y="72" width="10" height="10" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="92" y="86" width="16" height="4" rx="1" fill="#37474f"/>
+      <path class="ink" d="M58 108 L48 88 L62 108 Z" fill="#78909c" stroke-width="3" stroke-linejoin="round"/>
+      <path class="ink" d="M142 108 L152 88 L138 108 Z" fill="#78909c" stroke-width="3" stroke-linejoin="round"/>
+      <path class="ink" d="M62 114 Q100 100 138 114 L134 176 Q100 184 66 176 Z" fill="#90a4ae" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="82" y="136" width="11" height="11" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="107" y="136" width="11" height="11" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <path class="ink" d="M50 120 L34 166" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M150 120 L166 166" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M76 176 L72 216" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M124 176 L128 216" fill="none" stroke-width="8" stroke-linecap="round"/>
+      <path class="ink" d="M74 168 L126 168 L122 202 L78 202 Z" fill="#26a69a" stroke-width="4" stroke-linejoin="round"/>
+      <rect class="ink" x="70" y="208" width="22" height="12" rx="4" fill="#37474f" stroke-width="3"/>
+      <rect class="ink" x="108" y="208" width="22" height="12" rx="4" fill="#37474f" stroke-width="3"/>
+    </g>
+    <g id="item-robot-growth-5" hidden>
+      <path class="ink" d="M100 14 L100 4" fill="none" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="100" cy="4" r="5" fill="#ffe135" stroke="#152668" stroke-width="2"/>
+      <path class="ink" d="M52 76 L62 26 L84 54 L100 18 L116 54 L138 26 L148 76 Z" fill="#546e7a" stroke-width="4" stroke-linejoin="round"/>
+      <rect class="ink" x="76" y="58" width="48" height="36" rx="14" fill="#cfd8dc" stroke-width="4"/>
+      <rect x="84" y="68" width="11" height="11" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="105" y="68" width="11" height="11" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="90" y="84" width="20" height="5" rx="1.5" fill="#37474f"/>
+      <path class="ink" d="M56 106 L44 82 L60 106 Z" fill="#78909c" stroke-width="3" stroke-linejoin="round"/>
+      <path class="ink" d="M144 106 L156 82 L140 106 Z" fill="#78909c" stroke-width="3" stroke-linejoin="round"/>
+      <path class="ink" d="M60 112 Q100 96 140 112 L136 178 Q100 188 64 178 Z" fill="#90a4ae" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="80" y="138" width="12" height="12" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <rect x="108" y="138" width="12" height="12" rx="2" fill="#4fc3f7" stroke="#152668" stroke-width="2"/>
+      <circle cx="100" cy="158" r="5" fill="#ffe135" stroke="#152668" stroke-width="2"/>
+      <path class="ink" d="M48 118 L30 168" fill="none" stroke-width="9" stroke-linecap="round"/>
+      <path class="ink" d="M152 118 L170 168" fill="none" stroke-width="9" stroke-linecap="round"/>
+      <path class="ink" d="M74 178 L70 220" fill="none" stroke-width="9" stroke-linecap="round"/>
+      <path class="ink" d="M126 178 L130 220" fill="none" stroke-width="9" stroke-linecap="round"/>
+      <path class="ink" d="M72 168 L128 168 L124 204 L76 204 Z" fill="#26a69a" stroke-width="4" stroke-linejoin="round"/>
+      <rect class="ink" x="68" y="210" width="24" height="12" rx="4" fill="#37474f" stroke-width="3"/>
+      <rect class="ink" x="108" y="210" width="24" height="12" rx="4" fill="#37474f" stroke-width="3"/>
+    </g>
+  </g>
+</svg>

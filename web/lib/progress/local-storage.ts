@@ -1,5 +1,9 @@
 "use client";
 
+import { normalizeLoadout } from "@/lib/avatar/apply-loadout";
+import { loadoutForPreset, resolvePresetId } from "@/lib/avatar/defaults";
+import { resolveAvatarLoadout } from "@/lib/avatar/progress";
+import type { AvatarLoadout, AvatarPresetId } from "@/lib/avatar/types";
 import {
   emptySnapshot,
   PROGRESS_STORAGE_KEY,
@@ -22,6 +26,10 @@ function normalizeSnapshot(raw: unknown): ProgressSnapshotV1 | null {
     ...r,
     completedLessonIds: r.completedLessonIds,
     enrolledCourseIds: Array.isArray(r.enrolledCourseIds) ? r.enrolledCourseIds : [],
+    avatarLoadout:
+      r.avatarLoadout === undefined || r.avatarLoadout === null ?
+        null
+      : normalizeLoadout(r.avatarLoadout),
     avatarId: r.avatarId === undefined ? null : r.avatarId,
   };
 }
@@ -80,10 +88,42 @@ export function isAudioMuted(): boolean {
   return getProgressSnapshot().audioMuted === true;
 }
 
+/** Whether the student has chosen an avatar (loadout or legacy buddy id). */
+export function hasChosenAvatar(): boolean {
+  const s = getProgressSnapshot();
+  return Boolean(s.avatarLoadout) || Boolean(s.avatarId);
+}
+
+/** Resolved loadout when chosen; otherwise `null`. */
+export function getChosenAvatarLoadout(): AvatarLoadout | null {
+  const s = getProgressSnapshot();
+  if (!s.avatarLoadout && !s.avatarId) return null;
+  return resolveAvatarLoadout(s.avatarLoadout, s.avatarId);
+}
+
+export function setAvatarLoadout(loadout: AvatarLoadout) {
+  const s = getProgressSnapshot();
+  s.avatarLoadout = normalizeLoadout(loadout);
+  s.avatarId = null;
+  writeRaw(s);
+}
+
+/** @deprecated Prefer {@link setAvatarLoadout} with a preset loadout. */
 export function setAvatarId(id: string | null) {
   const s = getProgressSnapshot();
-  s.avatarId = id;
+  const preset = id ? resolvePresetId(id) : null;
+  if (preset) {
+    s.avatarLoadout = loadoutForPreset(preset);
+    s.avatarId = null;
+  } else {
+    s.avatarId = id;
+    s.avatarLoadout = id === null ? null : s.avatarLoadout;
+  }
   writeRaw(s);
+}
+
+export function setAvatarPreset(presetId: AvatarPresetId) {
+  setAvatarLoadout(loadoutForPreset(presetId));
 }
 
 export function getEnrolledCourseIds(): string[] {

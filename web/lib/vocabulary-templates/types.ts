@@ -2,7 +2,22 @@
  * Vocabulary-set ids for test-start hand-authored lessons (not quiz-compiler menu topics).
  * Planned: `memory_match` screen after letter_mixup (subtype not implemented yet).
  */
-export const VOCAB_SET_IDS = ["breakfast_food"] as const;
+export const VOCAB_SET_IDS = [
+  "breakfast_food",
+  "wild_animals",
+  "pets",
+  "sea_animals",
+  "farm_animals",
+] as const;
+
+export const ANIMAL_VOCAB_SET_IDS = [
+  "wild_animals",
+  "pets",
+  "sea_animals",
+  "farm_animals",
+] as const;
+
+export type AnimalVocabSetId = (typeof ANIMAL_VOCAB_SET_IDS)[number];
 
 export type VocabSetId = (typeof VOCAB_SET_IDS)[number];
 

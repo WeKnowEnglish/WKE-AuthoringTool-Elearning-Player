@@ -12,6 +12,8 @@ import { VOCAB_LEARN_PAGE_BACKGROUND } from "@/lib/vocabulary-templates/vocab-le
 import { vocabTfThumbImageUrl } from "@/lib/vocabulary-templates/vocab-tf-media";
 import {
   GuideBlock,
+  interactionHeroImageFrameClass,
+  interactionHeroImageFrameStyle,
   interactionImageFitClass,
   interactionImmersiveStageClass,
   InteractionLessonNav,
@@ -231,6 +233,8 @@ export function TrueFalseView({
     speakStatement(statementLine);
   }, [isResolving, muted, passed, speakStatement, statementLine]);
 
+  const vocabImgOpts = vocabStageTint ? { vocabStage: true as const } : undefined;
+
   const heroImageButton =
     parsed.image_url ?
       <button
@@ -251,19 +255,21 @@ export function TrueFalseView({
           className={clsx(
             "relative w-full overflow-hidden rounded-lg border-4 border-kid-ink",
             "aspect-video",
+            interactionHeroImageFrameClass(vocabImgOpts),
           )}
-          style={
-            immersive ?
+          style={{
+            ...(immersive ?
               { maxHeight: "min(36dvh, calc((100vw - 3rem) * 9 / 16))" }
-            : undefined
-          }
+            : {}),
+            ...interactionHeroImageFrameStyle(vocabImgOpts),
+          }}
         >
           <Image
             src={parsed.image_url}
             alt=""
             fill
             sizes="(max-width: 768px) 100vw, 42rem"
-            className={interactionImageFitClass(parsed.image_fit)}
+            className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
             unoptimized={unopt(parsed.image_url)}
           />
           {parsed.thumb_cue ? (

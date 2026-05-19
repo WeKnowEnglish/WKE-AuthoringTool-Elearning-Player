@@ -1,9 +1,9 @@
-import { StudentShell } from "@/components/kid-ui/StudentShell";
+import { StudentLayoutClient } from "@/components/kid-ui/StudentLayoutClient";
 
 export default function StudentLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <StudentShell>{children}</StudentShell>;
+  return <StudentLayoutClient>{children}</StudentLayoutClient>;
 }

@@ -1,19 +1,22 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import {
+  applyMediaToVocabularySet,
   buildVocabularyPracticeContext,
   buildVocabularySetScreens,
   getVocabularySet,
   practiceWordsInSessionOrder,
   type VocabSetId,
+  type VocabularySetDefinition,
 } from "@/lib/vocabulary-templates";
 import { DEFAULT_PRACTICE_COUNT } from "@/lib/vocabulary-templates/types";
 import { playSfx } from "@/lib/audio/sfx";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
+import { loadVocabularySetMedia } from "@/lib/teststartpage/load-vocabulary-set-media-action";
 
 const LessonPlayer = dynamic(
   () => import("@/components/lesson/LessonPlayer").then((m) => ({ default: m.LessonPlayer })),
@@ -33,15 +36,43 @@ export function VocabularySetOverlay({
   muted,
   onClose,
   onRequestNewRun,
+  onEconomyChange,
+  onActivityComplete,
 }: {
   setId: VocabSetId;
   sessionSeed: string;
   muted: boolean;
   onClose: () => void;
   onRequestNewRun: () => void;
+  onEconomyChange?: () => void;
+  /** Fired when the student finishes the activity (reward screen), before close. */
+  onActivityComplete?: () => void;
 }) {
-  const def = getVocabularySet(setId);
+  const [def, setDef] = useState<VocabularySetDefinition>(() => getVocabularySet(setId));
+  const [mediaLoading, setMediaLoading] = useState(true);
+
   const lessonId = `vocab-${setId}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    const base = getVocabularySet(setId);
+    setDef(base);
+    setMediaLoading(true);
+    void (async () => {
+      try {
+        const media = await loadVocabularySetMedia(setId);
+        if (cancelled) return;
+        setDef(applyMediaToVocabularySet(base, media.urlsByWordId, media.coverUrl));
+      } catch {
+        if (!cancelled) setDef(base);
+      } finally {
+        if (!cancelled) setMediaLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setId]);
 
   const screens = useMemo(
     () =>
@@ -83,8 +114,9 @@ export function VocabularySetOverlay({
   }, []);
 
   useEffect(() => {
+    if (mediaLoading) return;
     void prefetchImageUrls([def.coverImageUrl, ...def.words.map((w) => w.imageUrl)]);
-  }, [def.id, def.coverImageUrl, def.words]);
+  }, [mediaLoading, def.id, def.coverImageUrl, def.words]);
 
   return (
     <div
@@ -110,21 +142,31 @@ export function VocabularySetOverlay({
         </KidButton>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2 sm:px-3">
-        <LessonPlayer
-          key={sessionSeed}
-          lessonId={lessonId}
-          lessonTitle={def.title}
-          screens={screens}
-          runSeed={sessionSeed}
-          vocabWordsById={vocabWordsById}
-          vocabPracticeWords={vocabPracticeWords}
-          onVocabFinish={onClose}
-          onVocabPlayAgain={onRequestNewRun}
-          vocabFinishLabel="Close"
-          mode="student"
-          storyControlsPlacement="stage-overlay"
-          immersiveLayout
-        />
+        {mediaLoading ? (
+          <KidPanel className="m-auto text-center">
+            <p className="text-lg font-semibold text-kid-ink">Loading pictures…</p>
+          </KidPanel>
+        ) : (
+          <LessonPlayer
+            key={`${sessionSeed}:${def.id}`}
+            lessonId={lessonId}
+            lessonTitle={def.title}
+            screens={screens}
+            runSeed={sessionSeed}
+            vocabWordsById={vocabWordsById}
+            vocabPracticeWords={vocabPracticeWords}
+            onVocabFinish={() => {
+              onActivityComplete?.();
+              onClose();
+            }}
+            onVocabPlayAgain={onRequestNewRun}
+            onEconomyChange={onEconomyChange}
+            vocabFinishLabel="Close"
+            mode="student"
+            storyControlsPlacement="stage-overlay"
+            immersiveLayout
+          />
+        )}
       </div>
     </div>
   );

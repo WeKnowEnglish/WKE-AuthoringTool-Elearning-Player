@@ -13,8 +13,14 @@ import { expectedVocabularyScreenCount, validateVocabularySetDefinition } from "
 import { A1_BREAKFAST_FOOD } from "./sets/a1-breakfast-food";
 
 describe("vocabulary-templates registry", () => {
-  it("exposes breakfast food in the menu", () => {
-    expect(VOCAB_SET_MENU).toEqual([{ id: "breakfast_food", label: "Breakfast Food" }]);
+  it("exposes breakfast and animal sets in the menu", () => {
+    expect(VOCAB_SET_MENU.map((e) => e.id)).toEqual([
+      "breakfast_food",
+      "wild_animals",
+      "pets",
+      "sea_animals",
+      "farm_animals",
+    ]);
   });
 
   it("loads a valid breakfast set definition", () => {

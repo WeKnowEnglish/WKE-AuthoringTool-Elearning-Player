@@ -11,7 +11,7 @@ import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
   interactionImageFitClass,
-  interactionHeroImageFrameStyle,
+  interactionHeroImageHeightStyle,
   InteractionLessonNav,
   interactionNavReservePaddingClass,
   NavProps,
@@ -111,7 +111,7 @@ export function McQuizView({
       {parsed.image_url ? (
         <div
           className="relative mb-3 w-full shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink"
-          style={interactionHeroImageFrameStyle}
+          style={interactionHeroImageHeightStyle}
         >
           <Image
             src={parsed.image_url}

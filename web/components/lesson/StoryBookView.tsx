@@ -50,6 +50,7 @@ import {
 } from "@/lib/lesson-schemas";
 import { resolveStoryIdleForItem, storyIdleClassForPreset } from "@/lib/story-idle";
 import { isStoryPassSatisfied } from "@/lib/story-pass";
+import { canLeaveStoryScreen } from "@/lib/story-screen-navigation";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import {
   inferLemmaGrammar,
@@ -98,6 +99,7 @@ import {
   VOCAB_DRAG_LABEL_CARD_BG,
   VOCAB_DRAG_LABEL_CARD_BORDER,
   VOCAB_DRAG_PLAY_PHASE_ID,
+  isVocabDragImageItemId,
   isVocabDragMatchPage,
   isVocabDragTextItemId,
   layoutDragLabelBelowTarget,
@@ -257,6 +259,8 @@ export function StoryBookView({
   const pageSheenRef = useRef<HTMLDivElement | null>(null);
   const pageFoldShadowRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef<number | null>(null);
+  /** Blocks stage swipe→next/back while a pointer drag is active (mobile gesture clash). */
+  const blockStagePageSwipeRef = useRef(false);
   const pageAudioRef = useRef<HTMLAudioElement | null>(null);
   const itemAudioRef = useRef<HTMLAudioElement | null>(null);
   const pathAbortRef = useRef<AbortController | null>(null);
@@ -538,6 +542,7 @@ export function StoryBookView({
   const lastPage = safeIndex >= pages.length - 1;
   const firstPage = safeIndex === 0;
   const lessonGated = !!payload.pass_rule;
+  const autoAdvanceOnPass = payload.auto_advance_on_pass === true;
   const passSatisfied = useMemo(
     () =>
       isStoryPassSatisfied({
@@ -555,9 +560,31 @@ export function StoryBookView({
       }),
     [payload.pass_rule, pages, deckDragCheckDone, visitedPageIds],
   );
-  const lessonAdvanceOk =
-    !lessonGated || interactionScreenPassed || passSatisfied;
+  const lessonAdvanceOk = canLeaveStoryScreen({
+    hasPassRule: lessonGated,
+    autoAdvanceOnPass,
+    interactionScreenPassed,
+    passSatisfied,
+  });
   const interactionLocked = interactionScreenPassed || (lessonGated && passSatisfied);
+
+  const holdStagePageSwipeBlock = useCallback(() => {
+    blockStagePageSwipeRef.current = true;
+  }, []);
+
+  const releaseStagePageSwipeBlock = useCallback(() => {
+    window.setTimeout(() => {
+      blockStagePageSwipeRef.current = false;
+    }, 150);
+  }, []);
+
+  const isStagePageSwipeBlocked = useCallback(() => {
+    return (
+      blockStagePageSwipeRef.current ||
+      dragSessionRef.current != null ||
+      vocabLearnStickerDragSessionRef.current != null
+    );
+  }, []);
 
   useEffect(() => {
     passReportedRef.current = false;
@@ -1382,18 +1409,10 @@ export function StoryBookView({
       setPageTurnKey((k) => k + 1);
       setPageIndex(Math.min(safeIndex + 1, pages.length - 1));
     } else {
-      if (lessonGated && !lessonAdvanceOk) return;
+      if (!lessonAdvanceOk) return;
       onNextScreen();
     }
-  }, [
-    lastPage,
-    lessonAdvanceOk,
-    lessonGated,
-    muted,
-    onNextScreen,
-    pages.length,
-    safeIndex,
-  ]);
+  }, [lastPage, lessonAdvanceOk, muted, onNextScreen, pages.length, safeIndex]);
 
   const goPageBack = useCallback(() => {
     playSfx("tap", muted);
@@ -1403,9 +1422,10 @@ export function StoryBookView({
       setPageTurnKey((k) => k + 1);
       setPageIndex(Math.max(0, safeIndex - 1));
     } else if (!lessonBackDisabled) {
+      if (!lessonAdvanceOk) return;
       onBackScreen();
     }
-  }, [firstPage, lessonBackDisabled, muted, onBackScreen, safeIndex]);
+  }, [firstPage, lessonAdvanceOk, lessonBackDisabled, muted, onBackScreen, safeIndex]);
 
   const jumpToPage = useCallback(
     (i: number) => {
@@ -1429,21 +1449,34 @@ export function StoryBookView({
     onBackScreenRef.current = onBackScreen;
   }, [onBackScreen]);
 
-  const onTouchStart = (e: React.TouchEvent) => {
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isStagePageSwipeBlocked()) {
+      touchStartX.current = null;
+      return;
+    }
     touchStartX.current = e.changedTouches[0]?.clientX ?? null;
-  };
+  }, [isStagePageSwipeBlocked]);
 
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const start = touchStartX.current;
-    touchStartX.current = null;
-    if (start == null) return;
-    const end = e.changedTouches[0]?.clientX;
-    if (end == null) return;
-    const dx = end - start;
-    if (Math.abs(dx) < 56) return;
-    if (dx < 0) goPageNext();
-    else goPageBack();
-  };
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const start = touchStartX.current;
+      touchStartX.current = null;
+      if (start == null) return;
+      if (isStagePageSwipeBlocked()) return;
+      const end = e.changedTouches[0]?.clientX;
+      if (end == null) return;
+      const dx = end - start;
+      if (Math.abs(dx) < 56) return;
+      if (dx < 0) {
+        if (lastPage && !lessonAdvanceOk) return;
+        goPageNext();
+      } else {
+        if (firstPage && !lessonAdvanceOk) return;
+        goPageBack();
+      }
+    },
+    [firstPage, goPageBack, goPageNext, isStagePageSwipeBlocked, lastPage, lessonAdvanceOk],
+  );
 
   useEffect(() => {
     if (pageTurnKey === 0) return;
@@ -2150,8 +2183,10 @@ export function StoryBookView({
   const onVocabLearnStickerPointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>, item: StoryItem) => {
       e.preventDefault();
+      e.stopPropagation();
       if (e.button !== 0) return;
       if (interactionLocked || !vocabLearnStickerModeRef.current) return;
+      holdStagePageSwipeBlock();
       if (vocabLearnStickerScattering) return;
       if (!isVocabLearnSettledImagePhase(vocabLearnImgPhaseRef.current[item.id])) return;
       const wordId = wordIdFromLearnImageId(item.id);
@@ -2234,6 +2269,7 @@ export function StoryBookView({
         window.removeEventListener("pointercancel", onUp);
         const sess = vocabLearnStickerDragSessionRef.current;
         vocabLearnStickerDragSessionRef.current = null;
+        releaseStagePageSwipeBlock();
         if (!sess || sess.id !== item.id) return;
 
         try {
@@ -2315,6 +2351,8 @@ export function StoryBookView({
       replaySettledVocabLearnWord,
       runItemEmphasis,
       shouldReduceMotion,
+      holdStagePageSwipeBlock,
+      releaseStagePageSwipeBlock,
       vocabLearnStickerScattering,
       vocabLearnWordIdsOrdered,
     ],
@@ -2378,6 +2416,7 @@ export function StoryBookView({
   const onDraggablePointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>, item: StoryItem) => {
       e.preventDefault();
+      e.stopPropagation();
       if (e.button !== 0) return;
       const deckMode = item.draggable_mode ?? "none";
       if (deckMode === "free" || deckMode === "check_target") {
@@ -2391,6 +2430,7 @@ export function StoryBookView({
       ) {
         return;
       }
+      holdStagePageSwipeBlock();
       setAudioUnlocked(true);
       const startX = e.clientX;
       const startY = e.clientY;
@@ -2420,8 +2460,10 @@ export function StoryBookView({
       const onUp = (ev: PointerEvent) => {
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
         const sess = dragSessionRef.current;
         dragSessionRef.current = null;
+        releaseStagePageSwipeBlock();
         setDragGhost(null);
         setDraggingItemId(null);
         if (!sess) return;
@@ -2470,18 +2512,16 @@ export function StoryBookView({
         if (targetId === expected) {
           const tapped = curPage.items.find((x) => x.id === sess.itemId);
           const dm = curPh.drag_match;
-          const completesAll =
-            isVocabDragMatchPage(curPage) &&
-            dm &&
-            dm.draggable_item_ids.every((id) => {
-              const assigned = id === sess.itemId ? targetId! : matchAssignments[id];
-              return assigned === dm.correct_map[id];
-            });
-          setMatchAssignments((prev) => ({
-            ...prev,
-            [sess.itemId]: targetId!,
-          }));
           playSfx("correct", muted);
+          let completesAll = false;
+          setMatchAssignments((prev) => {
+            const next = { ...prev, [sess.itemId]: targetId! };
+            completesAll =
+              isVocabDragMatchPage(curPage) &&
+              !!dm &&
+              dm.draggable_item_ids.every((id) => next[id] === dm.correct_map[id]);
+            return next;
+          });
           if (completesAll && tapped) {
             void speakVocabDragLabelAndWait(tapped).finally(() => {
               advanceVocabDragToDonePhase();
@@ -2503,13 +2543,15 @@ export function StoryBookView({
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
     },
     [
       advanceVocabDragToDonePhase,
-      matchAssignments,
+      holdStagePageSwipeBlock,
       muted,
       payload.tts_lang,
       playVocabDragMatchSuccess,
+      releaseStagePageSwipeBlock,
       screenId,
       speakVocabDragLabel,
       speakVocabDragLabelAndWait,
@@ -2519,10 +2561,12 @@ export function StoryBookView({
   const onDeckPointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>, item: StoryItem) => {
       e.preventDefault();
+      e.stopPropagation();
       if (e.button !== 0) return;
       if (interactionLocked) return;
       const mode = item.draggable_mode ?? "none";
       if (mode !== "free" && mode !== "check_target") return;
+      holdStagePageSwipeBlock();
       setAudioUnlocked(true);
       const rect = stageRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -2561,6 +2605,7 @@ export function StoryBookView({
         window.removeEventListener("pointercancel", onUp);
         const sess = deckDragSessionRef.current;
         deckDragSessionRef.current = null;
+        releaseStagePageSwipeBlock();
         if (!sess || sess.id !== item.id) return;
         const dist = Math.hypot(ev.clientX - sess.startX, ev.clientY - sess.startY);
         const curPage = pageRef.current;
@@ -2598,7 +2643,14 @@ export function StoryBookView({
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
     },
-    [deckFreeDragPos, interactionLocked, muted, onInteractionWrong],
+    [
+      deckFreeDragPos,
+      holdStagePageSwipeBlock,
+      interactionLocked,
+      muted,
+      onInteractionWrong,
+      releaseStagePageSwipeBlock,
+    ],
   );
 
   useEffect(() => {
@@ -2631,6 +2683,9 @@ export function StoryBookView({
         : "bg-neutral-900/5",
         shouldReduceMotion && "story-reduce-motion",
         controlsOnStage && "flex flex-col",
+        (isVocabDragMatchPage(page) || isVocabLearnNewWordPage(page)) &&
+          !interactionScreenPassed &&
+          "touch-pan-y",
       )}
       style={{
         ...(controlsOnStage
@@ -2803,6 +2858,10 @@ export function StoryBookView({
           }
           const isVocabDragLabel =
             isVocabDragMatchPage(page) && isVocabDragTextItemId(item.id);
+          const vocabKnockOutImage =
+            !vocabSlotWordId &&
+            ((vocabLearnPage && isVocabLearnImageItemId(item.id)) ||
+              (isVocabDragMatchPage(page) && isVocabDragImageItemId(item.id)));
           const isVocabLearnBtn = item.id === VOCAB_LEARN_BTN_ID;
           const vocabLearnBtnLabel =
             isVocabLearnBtn && vocabLearnPage ?
@@ -2979,6 +3038,7 @@ export function StoryBookView({
                         : VOCAB_LEARN_SHADOW_FILTER
                       : undefined
                     }
+                    knockOutWhiteBackground={vocabKnockOutImage}
                   />
                 </span>
               </span>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
-import { teacherSignOut } from "@/lib/actions/auth";
+import { SignOutForm } from "@/components/auth/SignOutForm";
 import {
   TeacherEditorHeaderProvider,
   TeacherNavEditorTitle,
@@ -96,17 +96,10 @@ function TeacherChromeHeader({
           <span className="max-w-[min(42vw,12rem)] truncate text-neutral-600 sm:max-w-[14rem]">
             {userEmail}
           </span>
-          <Link href="/" className="shrink-0 text-blue-700 underline">
+          <Link href="/home" className="shrink-0 text-blue-700 underline">
             Student site
           </Link>
-          <form action={teacherSignOut}>
-            <button
-              type="submit"
-              className="rounded px-1 text-red-700 underline hover:bg-red-50 active:bg-red-100"
-            >
-              Sign out
-            </button>
-          </form>
+          <SignOutForm label="Sign out" />
         </div>
       </div>
     </header>

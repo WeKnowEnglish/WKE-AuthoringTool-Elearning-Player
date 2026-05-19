@@ -23,7 +23,8 @@ export async function GET(request: Request) {
   const nextRaw = url.searchParams.get("next");
   const nextPath = safeInternalPath(nextRaw);
 
-  const loginErr = new URL("/teacher/login", url.origin);
+  const loginErr = new URL("/login", url.origin);
+  loginErr.searchParams.set("portal", "teacher");
   if (err) {
     loginErr.searchParams.set(
       "error",

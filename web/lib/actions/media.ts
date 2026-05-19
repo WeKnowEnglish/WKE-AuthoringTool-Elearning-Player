@@ -866,3 +866,31 @@ export async function deleteTeacherMedia(assetId: string): Promise<void> {
 
   revalidatePath("/teacher/media");
 }
+
+export type BulkDeleteTeacherMediaResult = {
+  deleted: number;
+  errors: string[];
+};
+
+export async function bulkDeleteTeacherMedia(
+  assetIds: string[],
+): Promise<BulkDeleteTeacherMediaResult> {
+  const ids = [...new Set(assetIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) {
+    return { deleted: 0, errors: ["No assets selected."] };
+  }
+
+  const errors: string[] = [];
+  let deleted = 0;
+  for (const id of ids) {
+    try {
+      await deleteTeacherMedia(id);
+      deleted += 1;
+    } catch (e) {
+      const label = e instanceof Error ? e.message : "Delete failed";
+      errors.push(`${id}: ${label}`);
+    }
+  }
+
+  return { deleted, errors };
+}

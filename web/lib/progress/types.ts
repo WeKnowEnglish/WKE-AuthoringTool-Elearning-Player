@@ -1,4 +1,5 @@
 import type { AvatarLoadout } from "@/lib/avatar/types";
+import type { LearningBand } from "@/lib/learning-band";
 
 export const PROGRESS_STORAGE_KEY = "wke-progress-v1";
 
@@ -7,6 +8,8 @@ export type ProgressSnapshotV1 = {
   anonymousDeviceId: string;
   completedLessonIds: string[];
   enrolledCourseIds?: string[];
+  /** CEFR band chosen on the level landing page. */
+  learningBand?: LearningBand | null;
   lessonResume?: Record<string, number>;
   audioMuted?: boolean;
   /** Layered SVG equip state. */

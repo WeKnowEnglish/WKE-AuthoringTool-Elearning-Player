@@ -124,7 +124,7 @@ function toJsonArray(arr) {
   return JSON.stringify(norm);
 }
 
-function stemFromFilename(name) {
+export function stemFromFilename(name) {
   const base = path.basename(String(name || "")).replace(/\.[^.]+$/i, "");
   return base.trim().toLowerCase();
 }
@@ -479,6 +479,7 @@ const ANIMAL_STEMS = new Set([
   "woodpecker",
   "zebra",
   "fish",
+  "orca",
   "calf",
   "boar",
   "bee",
@@ -756,7 +757,7 @@ function enrichCrossCategories(primary, stem) {
   return [...s].sort();
 }
 
-function finalizeRowCategories(row) {
+export function finalizeRowCategories(row) {
   const stem = stemFromFilename(row.original_filename);
   const primary = inferPrimaryCategories(row);
   return enrichCrossCategories(primary, stem);
@@ -861,4 +862,7 @@ function main() {
   console.log("Category counts:", summary);
 }
 
-main();
+const isMain =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+if (isMain) main();

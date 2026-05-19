@@ -42,7 +42,7 @@ export function ResetPasswordForm() {
       return;
     }
     await supabase.auth.signOut();
-    router.push("/teacher/login?message=password_updated");
+    router.push("/login?portal=teacher&message=password_updated");
     router.refresh();
   }
 
@@ -65,7 +65,7 @@ export function ResetPasswordForm() {
           Links expire quickly and only work once. Make sure your app URL in Supabase matches this
           site (see README: Authentication → URL Configuration).
         </p>
-        <Link href="/teacher/login" className="font-semibold text-blue-700 underline">
+        <Link href="/login?portal=teacher" className="font-semibold text-blue-700 underline">
           Back to sign in
         </Link>
       </div>

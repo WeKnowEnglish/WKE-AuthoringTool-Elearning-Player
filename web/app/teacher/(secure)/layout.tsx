@@ -15,10 +15,10 @@ export default async function TeacherSecureLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/teacher/login");
+    redirect("/login?portal=teacher&next=/teacher/courses");
   }
   if (user.app_metadata?.role !== "teacher") {
-    redirect("/teacher/login?error=not_teacher");
+    redirect("/login?portal=teacher&error=not_teacher");
   }
 
   return <TeacherSecureShell userEmail={user.email ?? ""}>{children}</TeacherSecureShell>;

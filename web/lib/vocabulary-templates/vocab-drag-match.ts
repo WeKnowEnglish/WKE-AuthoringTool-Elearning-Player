@@ -90,6 +90,19 @@ export function isVocabDragMatchPage(page: { id?: string }): boolean {
   return page.id === VOCAB_DRAG_PAGE_ID;
 }
 
+/** True when every draggable label is assigned to its correct picture target. */
+export function areVocabDragMatchesComplete(
+  dragMatch: {
+    draggable_item_ids: string[];
+    correct_map: Record<string, string>;
+  },
+  assignments: Record<string, string>,
+): boolean {
+  return dragMatch.draggable_item_ids.every(
+    (id) => assignments[id] === dragMatch.correct_map[id],
+  );
+}
+
 export function isVocabDragTextItemId(itemId: string): boolean {
   return /^drag-.+-txt$/.test(itemId);
 }

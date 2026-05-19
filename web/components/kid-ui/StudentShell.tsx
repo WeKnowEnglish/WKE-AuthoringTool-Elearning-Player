@@ -6,6 +6,7 @@ import {
   getProgressSnapshot,
   setAudioMuted,
 } from "@/lib/progress/local-storage";
+import { SignOutForm } from "@/components/auth/SignOutForm";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { SoftChromePresetSwatches } from "@/components/ui/SoftChromePresetSwatches";
 import {
@@ -54,7 +55,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         style={{ backgroundColor: headerBackground }}
       >
         <Link
-          href="/"
+          href="/home"
           className="text-xl font-bold tracking-tight text-neutral-900"
         >
           We Know English
@@ -91,6 +92,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           >
             {muted ? "Sound off" : "Sound on"}
           </KidButton>
+          <SignOutForm label="Log out" variant="kid" className="!min-h-10" />
         </nav>
       </header>
       <main className="mx-auto w-full max-w-3xl px-4 py-8">{children}</main>

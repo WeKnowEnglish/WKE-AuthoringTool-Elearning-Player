@@ -5,7 +5,7 @@ import { StudentShell } from "@/components/kid-ui/StudentShell";
 
 export function StudentLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/home") {
     return <>{children}</>;
   }
   return <StudentShell>{children}</StudentShell>;

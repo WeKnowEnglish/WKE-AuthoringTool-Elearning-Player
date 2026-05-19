@@ -11,6 +11,7 @@ import { StickerBookRoom } from "@/components/student-hub/StickerBookRoom";
 import { RoomSwitcher, type StudentHubRoom } from "@/components/student-hub/RoomSwitcher";
 import { DailyQuestsDrawer } from "@/components/student-hub/DailyQuestsDrawer";
 import { QuestHeaderButton } from "@/components/student-hub/QuestHeaderButton";
+import { SignOutForm } from "@/components/auth/SignOutForm";
 import { StudentEconomyHud } from "@/components/student-hub/StudentEconomyHud";
 import { playSfx } from "@/lib/audio/sfx";
 import { completeStudyCareIfPending, isStudyCarePending } from "@/lib/pet";
@@ -159,13 +160,16 @@ export function StudentHubClient() {
         ) : (
           <div className="h-9 min-w-[8rem] flex-1 rounded-lg border-2 border-kid-ink/30 bg-kid-panel/50" aria-hidden />
         )}
-        <QuestHeaderButton
-          muted={muted}
-          hydrated={hydrated}
-          dailyQuestUiKey={dailyQuestUiKey}
-          expanded={questsOpen}
-          onClick={toggleQuests}
-        />
+        <div className="flex items-center gap-2">
+          <QuestHeaderButton
+            muted={muted}
+            hydrated={hydrated}
+            dailyQuestUiKey={dailyQuestUiKey}
+            expanded={questsOpen}
+            onClick={toggleQuests}
+          />
+          <SignOutForm variant="kid" />
+        </div>
       </header>
 
       <main

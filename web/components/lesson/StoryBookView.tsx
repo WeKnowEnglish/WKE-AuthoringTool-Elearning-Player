@@ -98,7 +98,9 @@ import {
 import {
   VOCAB_DRAG_LABEL_CARD_BG,
   VOCAB_DRAG_LABEL_CARD_BORDER,
+  VOCAB_DRAG_DONE_PHASE_ID,
   VOCAB_DRAG_PLAY_PHASE_ID,
+  areVocabDragMatchesComplete,
   isVocabDragImageItemId,
   isVocabDragMatchPage,
   isVocabDragTextItemId,
@@ -530,11 +532,19 @@ export function StoryBookView({
     | null
   >(null);
   useEffect(() => {
+    // Preserve stick positions on the done phase so labels do not jump back to the bank.
+    if (
+      isVocabDragMatchPage(page) &&
+      activeStoryPhaseId === VOCAB_DRAG_DONE_PHASE_ID
+    ) {
+      tapSpeechCountersRef.current = {};
+      return;
+    }
     queueMicrotask(() => {
       setMatchAssignments({});
     });
     tapSpeechCountersRef.current = {};
-  }, [activeStoryPhaseId, page.id]);
+  }, [activeStoryPhaseId, page]);
   const storyHighlightIdSet =
     !currentStoryPhase?.highlight_item_ids?.length ?
       new Set<string>()
@@ -1694,28 +1704,6 @@ export function StoryBookView({
     [payload.tts_lang],
   );
 
-  const speakVocabDragLabelAndWait = useCallback(
-    async (item: StoryItem): Promise<boolean> => {
-      if (!isVocabDragTextItemId(item.id)) return false;
-      const mutedNow = mutedRef.current;
-      if (mutedNow) return false;
-      const resolved = resolveTapSpeechEntry({
-        entries: item.tap_speeches,
-        activePhaseId: VOCAB_DRAG_PLAY_PHASE_ID,
-        itemId: item.id,
-        counters: tapSpeechCountersRef.current,
-      });
-      const spoken = resolved?.entry.text?.trim();
-      if (!spoken) return false;
-      tapSpeechCountersRef.current = bumpTapSpeechCounter(
-        tapSpeechCountersRef.current,
-        resolved,
-      );
-      return speakTextAndWait(spoken, { lang: payload.tts_lang, muted: mutedNow });
-    },
-    [payload.tts_lang],
-  );
-
   const advanceVocabDragToDonePhase = useCallback(() => {
     const ph = currentStoryPhaseRef.current;
     if (!ph?.drag_match || getPhaseInteractionKind(ph) !== "drag_match") return;
@@ -2519,13 +2507,13 @@ export function StoryBookView({
             completesAll =
               isVocabDragMatchPage(curPage) &&
               !!dm &&
-              dm.draggable_item_ids.every((id) => next[id] === dm.correct_map[id]);
+              areVocabDragMatchesComplete(dm, next);
             return next;
           });
-          if (completesAll && tapped) {
-            void speakVocabDragLabelAndWait(tapped).finally(() => {
-              advanceVocabDragToDonePhase();
-            });
+          if (completesAll) {
+            advanceVocabDragToDonePhase();
+            if (tapped) speakVocabDragLabel(tapped);
+            else playVocabDragMatchSuccess(sess.itemId);
           } else if (isVocabDragMatchPage(curPage) && tapped) {
             speakVocabDragLabel(tapped);
           } else if (isVocabDragMatchPage(curPage)) {
@@ -2554,7 +2542,6 @@ export function StoryBookView({
       releaseStagePageSwipeBlock,
       screenId,
       speakVocabDragLabel,
-      speakVocabDragLabelAndWait,
     ],
   );
 
@@ -2661,16 +2648,25 @@ export function StoryBookView({
     const r = getResolvedPhaseTransition(currentStoryPhase);
     if (r?.type !== "all_matched") return;
     const dm = currentStoryPhase.drag_match;
-    for (const did of dm.draggable_item_ids) {
-      if (matchAssignments[did] !== dm.correct_map[did]) return;
+    if (!areVocabDragMatchesComplete(dm, matchAssignments)) return;
+    if (isVocabDragMatchPage(page)) {
+      const t = window.setTimeout(() => {
+        if (activeStoryPhaseIdRef.current !== VOCAB_DRAG_PLAY_PHASE_ID) return;
+        advanceVocabDragToDonePhase();
+      }, 400);
+      return () => window.clearTimeout(t);
     }
-    // Vocab drag waits for last-word TTS before advancing (see onDraggablePointerDown).
-    if (isVocabDragMatchPage(page)) return;
     queueMicrotask(() => {
       activeStoryPhaseIdRef.current = r.next_phase_id;
       setActiveStoryPhaseId(r.next_phase_id);
     });
-  }, [currentStoryPhase, matchAssignments, activeStoryPhaseId, page.id]);
+  }, [
+    advanceVocabDragToDonePhase,
+    currentStoryPhase,
+    matchAssignments,
+    activeStoryPhaseId,
+    page,
+  ]);
 
   const stage = (
     <div

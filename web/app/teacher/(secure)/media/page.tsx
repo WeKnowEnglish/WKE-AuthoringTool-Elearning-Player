@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ConfirmSubmitButton } from "@/components/teacher/ConfirmSubmitButton";
+import { MediaAssetGrid } from "@/components/teacher/media/MediaAssetGrid";
 import { MediaBulkUploadCard } from "@/components/teacher/media/MediaBulkUploadCard";
 import { MediaMetadataCsvImport } from "@/components/teacher/media/MediaMetadataCsvImport";
 import {
   applyTeacherMediaMetadataCsv,
+  bulkDeleteTeacherMedia,
   deleteTeacherMedia,
   inspectTeacherMediaBulkDuplicates,
   searchTeacherMedia,
@@ -31,10 +32,6 @@ function csvToList(v: string): string[] {
     .split(",")
     .map((x) => x.trim())
     .filter(Boolean);
-}
-
-function toCsv(items: string[] | null | undefined): string {
-  return (items ?? []).join(", ");
 }
 
 function buildSearchUrl(values: Record<string, string>): string {
@@ -145,6 +142,53 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         ...base,
         status: "error",
         message: e instanceof Error ? e.message : "Delete failed",
+      });
+    }
+    redirect(targetUrl);
+  }
+
+  async function bulkDeleteAssetsAction(ids: string[]) {
+    "use server";
+    const base = {
+      q,
+      kind,
+      level,
+      word_type: wordType,
+      countability,
+      tags,
+      categories,
+      skills,
+      view,
+      page: pageQs,
+    };
+    let targetUrl = "";
+
+    try {
+      const result = await bulkDeleteTeacherMedia(ids);
+      if (result.deleted === 0) {
+        targetUrl = buildSearchUrl({
+          ...base,
+          status: "error",
+          message: result.errors[0] ?? "No assets were deleted.",
+        });
+      } else if (result.errors.length > 0) {
+        targetUrl = buildSearchUrl({
+          ...base,
+          status: "partial_upload",
+          message: `Deleted ${result.deleted} asset(s). ${result.errors.length} failed.`,
+        });
+      } else {
+        targetUrl = buildSearchUrl({
+          ...base,
+          status: "deleted",
+          message: `Deleted ${result.deleted} asset(s).`,
+        });
+      }
+    } catch (e) {
+      targetUrl = buildSearchUrl({
+        ...base,
+        status: "error",
+        message: e instanceof Error ? e.message : "Bulk delete failed",
       });
     }
     redirect(targetUrl);
@@ -368,173 +412,13 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
             No media matched your search.
           </p>
         ) : (
-          <ul
-            className={`grid gap-4 ${
-              view === "list" ? "grid-cols-1" : view === "icons_small" ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-            }`}
-          >
-            {assets.map((asset) => (
-              <li key={asset.id} className="rounded-lg border border-neutral-200 bg-white p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{asset.meta_item_name || asset.original_filename}</p>
-                    {asset.meta_item_name ? (
-                      <p className="text-xs text-neutral-500">File: {asset.original_filename}</p>
-                    ) : null}
-                    <p className="text-xs text-neutral-600">{asset.content_type}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <a
-                      href={asset.public_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded border border-neutral-300 px-2 py-1 text-xs font-semibold"
-                    >
-                      Open
-                    </a>
-                    <form action={deleteAssetAction}>
-                      <input type="hidden" name="id" value={asset.id} />
-                      <ConfirmSubmitButton
-                        type="submit"
-                        confirmMessage="Delete this media asset permanently?"
-                        className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-800 hover:bg-red-50 active:bg-red-100"
-                      >
-                        Delete
-                      </ConfirmSubmitButton>
-                    </form>
-                  </div>
-                </div>
-                {asset.content_type.startsWith("image/") ? (
-                  <div
-                    className={`relative mt-3 w-full overflow-hidden rounded border border-neutral-300 bg-neutral-100 ${
-                      view === "list" ? "h-40" : view === "icons_small" ? "h-28" : "h-36"
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={asset.public_url}
-                      alt=""
-                      className="h-full w-full object-contain"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                ) : (
-                  <audio className="mt-3 w-full" controls preload="none" src={asset.public_url} />
-                )}
-
-                <details className="mt-3 rounded border border-neutral-200">
-                  <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
-                    Edit information box
-                  </summary>
-                  <form action={saveMetadataAction} className="grid gap-3 border-t border-neutral-200 p-3">
-                    <input type="hidden" name="id" value={asset.id} />
-                    <label className="text-sm">
-                      Item name
-                      <input
-                        name="item_name"
-                        defaultValue={asset.meta_item_name ?? ""}
-                        placeholder="Display name for this item"
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Categories (csv)
-                      <input
-                        name="categories"
-                        defaultValue={toCsv(asset.meta_categories)}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Tags (csv)
-                      <input
-                        name="tags"
-                        defaultValue={toCsv(asset.meta_tags)}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Alternative names (csv)
-                      <input
-                        name="alternative_names"
-                        defaultValue={toCsv(asset.meta_alternative_names)}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Plural
-                      <input
-                        name="plural"
-                        defaultValue={asset.meta_plural ?? ""}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Countable vs uncountable
-                      <select
-                        name="countability"
-                        defaultValue={asset.meta_countability ?? "na"}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      >
-                        <option value="na">N/A</option>
-                        <option value="countable">Countable</option>
-                        <option value="uncountable">Uncountable</option>
-                        <option value="both">Both</option>
-                      </select>
-                    </label>
-                    <label className="text-sm">
-                      Level
-                      <input
-                        name="level"
-                        defaultValue={asset.meta_level ?? ""}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Grammar point (word type)
-                      <input
-                        name="word_type"
-                        defaultValue={asset.meta_word_type ?? ""}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Skills (csv)
-                      <input
-                        name="skills"
-                        defaultValue={toCsv(asset.meta_skills)}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Past tense
-                      <input
-                        name="past_tense"
-                        defaultValue={asset.meta_past_tense ?? ""}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Notes
-                      <textarea
-                        name="notes"
-                        rows={2}
-                        defaultValue={asset.meta_notes ?? ""}
-                        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      className="w-fit rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
-                    >
-                      Save info
-                    </button>
-                  </form>
-                </details>
-              </li>
-            ))}
-          </ul>
+          <MediaAssetGrid
+            assets={assets}
+            view={view}
+            saveMetadataAction={saveMetadataAction}
+            deleteSingleAction={deleteAssetAction}
+            bulkDeleteAction={bulkDeleteAssetsAction}
+          />
         )}
         {total > MEDIA_PAGE_SIZE ? (
           <nav

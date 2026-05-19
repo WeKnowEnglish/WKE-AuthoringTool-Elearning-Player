@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-/** True after the client has mounted — use before reading localStorage in render. */
+function subscribe() {
+  return () => {};
+}
+
+/** True only on the client after hydration — false during SSR and the first client pass. */
 export function useClientHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-  return hydrated;
+  return useSyncExternalStore(subscribe, () => true, () => false);
 }

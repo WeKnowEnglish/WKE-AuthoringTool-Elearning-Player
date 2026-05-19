@@ -4,6 +4,8 @@ import { normalizeLoadout } from "@/lib/avatar/apply-loadout";
 import { loadoutForPreset, resolvePresetId } from "@/lib/avatar/defaults";
 import { resolveAvatarLoadout } from "@/lib/avatar/progress";
 import type { AvatarLoadout, AvatarPresetId } from "@/lib/avatar/types";
+import { writeLearningBandCookie } from "@/lib/learning-band-cookie";
+import { isLearningBand, type LearningBand } from "@/lib/learning-band";
 import {
   emptySnapshot,
   PROGRESS_STORAGE_KEY,
@@ -26,6 +28,7 @@ function normalizeSnapshot(raw: unknown): ProgressSnapshotV1 | null {
     ...r,
     completedLessonIds: r.completedLessonIds,
     enrolledCourseIds: Array.isArray(r.enrolledCourseIds) ? r.enrolledCourseIds : [],
+    learningBand: isLearningBand(r.learningBand) ? r.learningBand : null,
     avatarLoadout:
       r.avatarLoadout === undefined || r.avatarLoadout === null ?
         null
@@ -139,5 +142,23 @@ export function enrollInCourse(courseId: string) {
   const ids = new Set(s.enrolledCourseIds ?? []);
   ids.add(courseId);
   s.enrolledCourseIds = [...ids];
+  writeRaw(s);
+}
+
+export function getLearningBand(): LearningBand | null {
+  const band = getProgressSnapshot().learningBand;
+  return isLearningBand(band) ? band : null;
+}
+
+export function setLearningBand(band: LearningBand) {
+  const s = getProgressSnapshot();
+  s.learningBand = band;
+  writeRaw(s);
+  writeLearningBandCookie(band);
+}
+
+export function clearLearningBand() {
+  const s = getProgressSnapshot();
+  s.learningBand = null;
   writeRaw(s);
 }

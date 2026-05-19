@@ -12,7 +12,7 @@ export default function TeacherResetPasswordPage() {
         </p>
         <ResetPasswordForm />
         <p className="mt-6 text-center text-sm">
-          <Link href="/teacher/login" className="text-blue-700 underline">
+          <Link href="/login?portal=teacher" className="text-blue-700 underline">
             Teacher sign in
           </Link>
         </p>

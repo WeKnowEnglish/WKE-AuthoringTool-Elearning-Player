@@ -6,6 +6,7 @@ import {
   VOCAB_DRAG_LABEL_STICK_GAP,
   VOCAB_DRAG_PAGE_ID,
   buildDragMatchStoryPayload,
+  areVocabDragMatchesComplete,
   layoutDragLabel,
   layoutDragLabelBelowTarget,
   layoutDragTarget,
@@ -69,5 +70,30 @@ describe("vocab drag match layout", () => {
 
     const playPhase = page.phases?.find((p) => p.id === "drag-play");
     expect(playPhase?.drag_match?.after_correct_match).toBe("stick_on_target");
+  });
+
+  it("areVocabDragMatchesComplete is false until every pair is assigned", () => {
+    const parsed = parseScreenPayload(
+      "story",
+      buildDragMatchStoryPayload(six),
+    );
+    expect(parsed?.type).toBe("story");
+    if (parsed?.type !== "story") return;
+    const page = getNormalizedStoryPages(parsed)[0]!;
+    const dm = page.phases?.find((p) => p.id === "drag-play")?.drag_match;
+    expect(dm).toBeDefined();
+    if (!dm) return;
+
+    const partial: Record<string, string> = {};
+    for (let i = 0; i < dm.draggable_item_ids.length - 1; i++) {
+      const id = dm.draggable_item_ids[i]!;
+      partial[id] = dm.correct_map[id]!;
+    }
+    expect(areVocabDragMatchesComplete(dm, partial)).toBe(false);
+
+    const full = Object.fromEntries(
+      dm.draggable_item_ids.map((id) => [id, dm.correct_map[id]!]),
+    );
+    expect(areVocabDragMatchesComplete(dm, full)).toBe(true);
   });
 });

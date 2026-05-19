@@ -18,7 +18,7 @@ export default async function LearnPage() {
         loadError={catalog.loadError}
       />
       <p className="text-sm text-neutral-600">
-        <Link href="/" className="font-semibold underline">
+        <Link href="/home" className="font-semibold underline">
           Home
         </Link>
       </p>

@@ -102,7 +102,8 @@ export const SEA_ANIMALS_MEDIA_URLS: Partial<
     | "starfish"
     | "stingray"
     | "otter"
-    | "walrus",
+    | "walrus"
+    | "seaturtle",
     string
   >
 > = {
@@ -120,6 +121,7 @@ export const SEA_ANIMALS_MEDIA_URLS: Partial<
   stingray: `${BASE}/1b484ad9-2826-43c3-b1b5-f973dad9e3ea-stingray.png`,
   otter: `${BASE}/1ac8af3a-23a3-43b7-ae20-752dd0d8aa80-otter.png`,
   walrus: `${BASE}/58c27880-5ae2-423d-b3cb-0881f366a722-walrus.png`,
+  seaturtle: `${BASE}/1c9d03d2-15e0-4ff4-937e-4754d30ef6da-sea_turtle.png`,
 };
 
 export const FARM_ANIMALS_MEDIA_URLS: Partial<

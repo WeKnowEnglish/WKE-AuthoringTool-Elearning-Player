@@ -1,6 +1,6 @@
 import type { VocabularySetDefinition } from "../types";
 import { SEA_ANIMALS_COVER_URL, SEA_ANIMALS_MEDIA_URLS } from "./animals-media";
-import { ACCEPT, animalWord } from "./vocab-set-helpers";
+import { animalWord } from "./vocab-set-helpers";
 
 const M = SEA_ANIMALS_MEDIA_URLS;
 const O = "I see a __1__ in the ocean.";
@@ -27,20 +27,11 @@ export const A1_SEA_ANIMALS: VocabularySetDefinition = {
     animalWord(M, "stingray", "stingray", O, S, { placeholderHex: "64748b", placeholderInk: "f8fafc" }),
     animalWord(M, "otter", "otter", O, L, { placeholderHex: "a8a29e", placeholderInk: "44403c" }),
     animalWord(M, "walrus", "walrus", O, S, { placeholderHex: "94a3b8", placeholderInk: "1e3a5f" }),
-    {
-      id: "seaturtle",
-      lemma: "seaturtle",
-      grammar: "count",
-      mealVerb: "none",
+    animalWord(M, "seaturtle", "seaturtle", O, W, {
       tts: "sea turtle",
-      imageUrl:
-        M.seaturtle ??
-        "https://placehold.co/400x400/2dd4bf/134e4a?text=sea%20turtle",
-      cloze: [
-        { template: O, acceptable: ACCEPT("seaturtle") },
-        { template: W, acceptable: ACCEPT("seaturtle") },
-      ],
-    },
+      placeholderHex: "2dd4bf",
+      placeholderInk: "134e4a",
+    }),
   ],
   falseClaims: {
     dolphin: ["This is a shark.", "This is a whale."],

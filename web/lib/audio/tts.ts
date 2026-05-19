@@ -105,7 +105,7 @@ export function speakTextAndWait(
       new Promise<boolean>((resolve) => {
         let settled = false;
         let stopKeepAlive: (() => void) | undefined;
-        let timeoutId: ReturnType<typeof window.setTimeout> | undefined;
+        let timeoutId: number | undefined;
         const finish = (ok: boolean) => {
           if (settled) return;
           settled = true;

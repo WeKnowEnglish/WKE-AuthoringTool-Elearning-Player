@@ -157,7 +157,7 @@ export function PuppetPresenter({
     prepareSpeechSynthesis();
 
     const ac = new AbortController();
-    let safetyTimer: ReturnType<typeof setTimeout> | undefined;
+    let safetyTimer: number | undefined;
 
     void (async () => {
       const tokens = tokenizeLineForReveal(displayText);

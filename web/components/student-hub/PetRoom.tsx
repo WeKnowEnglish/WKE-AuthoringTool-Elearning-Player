@@ -156,7 +156,9 @@ export function PetRoom({
           ))}
         </KidPanel>
       : (
-        <KidPanel className="h-40 animate-pulse bg-kid-surface-muted" aria-hidden />
+        <KidPanel className="h-40 animate-pulse bg-kid-surface-muted" aria-hidden>
+          {null}
+        </KidPanel>
       )}
 
       {hasTreasureSkill && snapshot ?

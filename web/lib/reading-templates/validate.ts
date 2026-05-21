@@ -23,7 +23,7 @@ export function validateReadingSetDefinition(def: ReadingSetDefinition): string[
     if (!item.lemma?.trim()) errors.push(`Item ${item.id}: lemma is required.`);
   }
 
-  const expectFive = (label: string, arr: { length: number }[]) => {
+  const expectFive = (label: string, arr: readonly unknown[]) => {
     if (arr.length !== 5) errors.push(`${label} must have exactly 5 entries (got ${arr.length}).`);
   };
   expectFive("generalTrueFalse", def.generalTrueFalse);

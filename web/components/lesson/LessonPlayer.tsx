@@ -3,7 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   KidButton,
   kidLinkSecondaryClassName,
@@ -479,13 +488,17 @@ export function LessonPlayer({
     setInteractionFeedback("none");
   }, []);
 
+  /** Clear pass/feedback before paint so the next interaction never mounts as already passed. */
+  useLayoutEffect(() => {
+    clearInteractionScreenState();
+  }, [screen?.id, index, clearInteractionScreenState]);
+
   useEffect(() => {
     stopSpeaking();
-    clearInteractionScreenState();
     if (!isPreview) {
       setResumeScreen(lessonId, index);
     }
-  }, [index, lessonId, isPreview, clearInteractionScreenState]);
+  }, [index, lessonId, isPreview]);
 
   useEffect(() => {
     screenHadWrongRef.current = false;
@@ -617,6 +630,12 @@ export function LessonPlayer({
       autoAdvanceCompletedForScreenRef.current = currentScreenId;
       goNext();
     }, advanceMs);
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+    };
   }, [interactionPass, parsed, goNext, lessonId, screen, screens, index]);
 
   if (screens.length === 0 || !screen) {

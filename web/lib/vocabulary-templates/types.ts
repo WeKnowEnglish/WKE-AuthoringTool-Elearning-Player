@@ -12,11 +12,36 @@ export const VOCAB_SET_IDS = [
   "weather_words",
   "school_supplies",
   "school_activities",
+  "body_head_face",
+  "body_limbs_inside",
+  "jobs_community",
+  "jobs_creative",
+  "toys_everyday",
+  "food_fruit",
+  "food_meals",
+  "food_snacks",
 ] as const;
+
+export const FOOD_VOCAB_SET_IDS = [
+  "breakfast_food",
+  "food_fruit",
+  "food_meals",
+  "food_snacks",
+] as const;
+
+export type FoodVocabSetId = (typeof FOOD_VOCAB_SET_IDS)[number];
 
 export const SCHOOL_VOCAB_SET_IDS = ["school_supplies", "school_activities"] as const;
 
 export type SchoolVocabSetId = (typeof SCHOOL_VOCAB_SET_IDS)[number];
+
+export const BODY_VOCAB_SET_IDS = ["body_head_face", "body_limbs_inside"] as const;
+
+export type BodyVocabSetId = (typeof BODY_VOCAB_SET_IDS)[number];
+
+export const JOBS_VOCAB_SET_IDS = ["jobs_community", "jobs_creative"] as const;
+
+export type JobsVocabSetId = (typeof JOBS_VOCAB_SET_IDS)[number];
 
 export const ANIMAL_VOCAB_SET_IDS = [
   "wild_animals",
@@ -37,7 +62,15 @@ export type VocabLearnPhraseTheme =
   | "animals"
   | "school_supplies"
   | "school_activities"
-  | "school_places";
+  | "school_places"
+  | "body_head_face"
+  | "body_limbs_inside"
+  | "jobs_community"
+  | "jobs_creative"
+  | "toys_everyday"
+  | "food_fruit"
+  | "food_meals"
+  | "food_snacks";
 
 export type VocabWordCloze = {
   /** Sentence with placeholders __1__, __2__, … */

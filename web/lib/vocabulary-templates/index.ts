@@ -9,10 +9,16 @@ export type {
 export {
   ANIMAL_VOCAB_SET_IDS,
   DEFAULT_PRACTICE_COUNT,
+  BODY_VOCAB_SET_IDS,
+  JOBS_VOCAB_SET_IDS,
+  FOOD_VOCAB_SET_IDS,
   SCHOOL_VOCAB_SET_IDS,
   VOCAB_SET_IDS,
   isVocabSetId,
   type AnimalVocabSetId,
+  type BodyVocabSetId,
+  type JobsVocabSetId,
+  type FoodVocabSetId,
   type SchoolVocabSetId,
 } from "./types";
 export { pickNWithSeed, randomWithSeed, shuffleWithSeed } from "./shuffle";
@@ -25,6 +31,9 @@ export {
 } from "./vocab-tf-statements";
 export {
   ANIMALS_VOCAB_SET_MENU,
+  BODY_VOCAB_SET_MENU,
+  FOOD_VOCAB_SET_MENU,
+  JOBS_VOCAB_SET_MENU,
   SCHOOL_VOCAB_SET_MENU,
   VOCAB_SET_MENU,
   VOCAB_TOP_MENU,

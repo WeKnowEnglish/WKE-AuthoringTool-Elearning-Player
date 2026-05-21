@@ -39,6 +39,6 @@ describe("A1_BREAKFAST_FOOD content", () => {
     const withLibrary = A1_BREAKFAST_FOOD.words.filter((w) =>
       (BREAKFAST_FOOD_MEDIA_URLS as Record<string, string | undefined>)[w.id]?.includes("supabase"),
     );
-    expect(withLibrary.length).toBeGreaterThanOrEqual(10);
+    expect(withLibrary.length).toBeGreaterThanOrEqual(9);
   });
 });

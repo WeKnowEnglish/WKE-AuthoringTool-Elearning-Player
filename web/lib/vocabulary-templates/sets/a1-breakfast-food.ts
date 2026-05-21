@@ -1,5 +1,5 @@
 import type { VocabularySetDefinition } from "../types";
-import { BREAKFAST_FOOD_COVER_URL, BREAKFAST_FOOD_MEDIA_URLS } from "./breakfast-food-media";
+import { BREAKFAST_FOOD_COVER_URL, BREAKFAST_FOOD_MEDIA_URLS } from "./food-media";
 
 const ACCEPT = (lemma: string) => {
   const cap = lemma.charAt(0).toUpperCase() + lemma.slice(1);
@@ -15,10 +15,7 @@ function wordImageUrl(id: string, lemma: string): string {
   );
 }
 
-/**
- * Hand-authored Breakfast Food vocabulary set (A1).
- * Memory card match: deferred until `memory_match` interaction exists.
- */
+/** Hand-authored Breakfast Food vocabulary set (A1). */
 export const A1_BREAKFAST_FOOD: VocabularySetDefinition = {
   id: "breakfast_food",
   title: "Breakfast Food",
@@ -135,71 +132,72 @@ export const A1_BREAKFAST_FOOD: VocabularySetDefinition = {
       ],
     },
     {
-      id: "rice",
-      lemma: "rice",
+      id: "ham",
+      lemma: "ham",
       grammar: "uncountable",
       mealVerb: "eat",
-      imageUrl: wordImageUrl("rice", "rice"),
+      imageUrl: wordImageUrl("ham", "ham"),
       cloze: [
-        { template: "I like __1__ in the morning.", acceptable: ACCEPT("rice") },
-        { template: "We eat __1__ with eggs.", acceptable: ACCEPT("rice") },
+        { template: "I eat __1__ for breakfast.", acceptable: ACCEPT("ham") },
+        { template: "This __1__ is salty.", acceptable: ACCEPT("ham") },
       ],
     },
     {
-      id: "noodles",
-      lemma: "noodles",
+      id: "yogurt",
+      lemma: "yogurt",
+      grammar: "uncountable",
+      mealVerb: "eat",
+      imageUrl: wordImageUrl("yogurt", "yogurt"),
+      cloze: [
+        { template: "I eat __1__ for breakfast.", acceptable: ACCEPT("yogurt") },
+        { template: "This __1__ is cold.", acceptable: ACCEPT("yogurt") },
+      ],
+    },
+    {
+      id: "butter",
+      lemma: "butter",
+      grammar: "uncountable",
+      mealVerb: "none",
+      imageUrl: wordImageUrl("butter", "butter"),
+      cloze: [
+        { template: "I put __1__ on my bread.", acceptable: ACCEPT("butter") },
+        { template: "This __1__ is soft.", acceptable: ACCEPT("butter") },
+      ],
+    },
+    {
+      id: "toast",
+      lemma: "toast",
+      grammar: "uncountable",
+      mealVerb: "eat",
+      imageUrl: wordImageUrl("toast", "toast"),
+      cloze: [
+        { template: "I eat __1__ for breakfast.", acceptable: ACCEPT("toast") },
+        { template: "I like __1__ with jam.", acceptable: ACCEPT("toast") },
+      ],
+    },
+    {
+      id: "waffles",
+      lemma: "waffles",
       grammar: "plural",
       mealVerb: "eat",
-      imageUrl: wordImageUrl("noodles", "noodles"),
+      imageUrl: wordImageUrl("waffles", "waffles"),
       cloze: [
-        { template: "I eat __1__ for breakfast.", acceptable: ACCEPT("noodles") },
-        { template: "These __1__ are hot.", acceptable: ACCEPT("noodles") },
-      ],
-    },
-    {
-      id: "apple",
-      lemma: "apple",
-      grammar: "count",
-      mealVerb: "eat",
-      imageUrl: wordImageUrl("apple", "apple"),
-      cloze: [
-        { template: "I want an __1__.", acceptable: ACCEPT("apple") },
-        { template: "She slices an __1__.", acceptable: ACCEPT("apple") },
-      ],
-    },
-    {
-      id: "banana",
-      lemma: "banana",
-      grammar: "count",
-      mealVerb: "eat",
-      imageUrl: wordImageUrl("banana", "banana"),
-      cloze: [
-        { template: "I eat a __1__.", acceptable: ACCEPT("banana") },
-        { template: "This __1__ is yellow.", acceptable: ACCEPT("banana") },
-      ],
-    },
-    {
-      id: "orange",
-      lemma: "orange",
-      grammar: "count",
-      mealVerb: "eat",
-      imageUrl: wordImageUrl("orange", "orange"),
-      cloze: [
-        { template: "I peel an __1__.", acceptable: ACCEPT("orange") },
-        { template: "The __1__ is juicy.", acceptable: ACCEPT("orange") },
+        { template: "We eat __1__ on Sunday.", acceptable: ACCEPT("waffles") },
+        { template: "I love __1__ with syrup.", acceptable: ACCEPT("waffles") },
       ],
     },
   ],
   falseClaims: {
-    apple: ["This is a banana.", "This is an orange."],
     milk: ["This is juice.", "This is bread."],
     juice: ["This is milk.", "This is water."],
     water: ["This is juice.", "This is milk."],
     coffee: ["This is tea.", "This is juice."],
     tea: ["This is coffee.", "This is milk."],
     eggs: ["These are pancakes.", "This is cereal."],
-    banana: ["This is an orange.", "This is an apple."],
+    pancakes: ["These are waffles.", "This is cereal."],
+    ham: ["This is yogurt.", "This is bread."],
+    yogurt: ["This is ham.", "This is milk."],
+    waffles: ["These are pancakes.", "This is toast."],
   },
-  /** Temporarily keep click-to-reveal at 12 words; water/coffee/tea stay in practice. */
   learnExcludeWordIds: ["water", "coffee", "tea"],
 };

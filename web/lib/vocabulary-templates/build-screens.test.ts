@@ -16,6 +16,9 @@ describe("vocabulary-templates registry", () => {
   it("exposes breakfast and animal sets in the menu", () => {
     expect(VOCAB_SET_MENU.map((e) => e.id)).toEqual([
       "breakfast_food",
+      "food_fruit",
+      "food_meals",
+      "food_snacks",
       "wild_animals",
       "pets",
       "sea_animals",
@@ -28,7 +31,7 @@ describe("vocabulary-templates registry", () => {
     expect(validateVocabularySetDefinition(def)).toEqual([]);
     expect(def.words).toHaveLength(15);
     expect(def.words.map((w) => w.id)).toContain("pancakes");
-    expect(def.words.find((w) => w.id === "orange")?.lemma).toBe("orange");
+    expect(def.words.find((w) => w.id === "ham")?.lemma).toBe("ham");
   });
 });
 

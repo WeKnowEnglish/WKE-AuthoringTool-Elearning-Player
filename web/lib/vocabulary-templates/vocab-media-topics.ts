@@ -11,6 +11,14 @@ export const VOCAB_SET_MEDIA_TOPIC_SLUGS: Record<VocabSetId, readonly string[]> 
   weather_words: ["weather", "nature"],
   school_supplies: ["school", "clothes", "actions", "food", "home"],
   school_activities: ["actions", "toys", "misc"],
+  body_head_face: ["body", "misc"],
+  body_limbs_inside: ["body"],
+  jobs_community: ["jobs", "people"],
+  jobs_creative: ["jobs", "people"],
+  toys_everyday: ["toys"],
+  food_fruit: ["food"],
+  food_meals: ["food"],
+  food_snacks: ["food", "snacks", "desserts"],
 };
 
 /** Extra lookup strings when resolving set cover art from the library. */
@@ -24,4 +32,12 @@ export const VOCAB_SET_COVER_LOOKUP_KEYS: Partial<Record<VocabSetId, readonly st
   weather_words: ["weather", "sun"],
   school_supplies: ["school", "supplies", "classroom"],
   school_activities: ["school", "activities", "actions"],
+  body_head_face: ["body", "head", "face"],
+  body_limbs_inside: ["body", "limbs"],
+  jobs_community: ["jobs", "community"],
+  jobs_creative: ["jobs", "creative"],
+  toys_everyday: ["toys", "games"],
+  food_fruit: ["fruit", "food"],
+  food_meals: ["meals", "food", "lunch"],
+  food_snacks: ["snacks", "treats", "food"],
 };

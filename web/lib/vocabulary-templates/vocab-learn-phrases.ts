@@ -59,6 +59,38 @@ export const SCHOOL_PLACES_PHRASE_VARIANTS = [
 
 export type SchoolPlacesPhraseVariant = (typeof SCHOOL_PLACES_PHRASE_VARIANTS)[number];
 
+export const BODY_PART_PHRASE_VARIANTS = [
+  "this_is_my",
+  "i_have_a",
+  "touch_your",
+] as const;
+
+export type BodyPartPhraseVariant = (typeof BODY_PART_PHRASE_VARIANTS)[number];
+
+export const JOBS_PHRASE_VARIANTS = [
+  "he_is_a",
+  "she_is_a",
+  "i_want_to_be",
+] as const;
+
+export type JobsPhraseVariant = (typeof JOBS_PHRASE_VARIANTS)[number];
+
+export const TOYS_PHRASE_VARIANTS = ["i_play_with", "i_have_a"] as const;
+
+export type ToysPhraseVariant = (typeof TOYS_PHRASE_VARIANTS)[number];
+
+export const FOOD_FRUIT_PHRASE_VARIANTS = ["i_like", "i_eat_a", "this_is_a"] as const;
+
+export type FoodFruitPhraseVariant = (typeof FOOD_FRUIT_PHRASE_VARIANTS)[number];
+
+export const FOOD_MEALS_PHRASE_VARIANTS = ["i_like", "i_have_a", "we_eat_lunch"] as const;
+
+export type FoodMealsPhraseVariant = (typeof FOOD_MEALS_PHRASE_VARIANTS)[number];
+
+export const FOOD_SNACKS_PHRASE_VARIANTS = ["i_like", "i_want_some", "i_eat_some"] as const;
+
+export type FoodSnacksPhraseVariant = (typeof FOOD_SNACKS_PHRASE_VARIANTS)[number];
+
 export type LearnPhraseVariant =
   | StickerMatchPhraseVariant
   | ClothesWearPhraseVariant
@@ -66,7 +98,13 @@ export type LearnPhraseVariant =
   | AnimalsPhraseVariant
   | SchoolSuppliesPhraseVariant
   | SchoolActivitiesPhraseVariant
-  | SchoolPlacesPhraseVariant;
+  | SchoolPlacesPhraseVariant
+  | BodyPartPhraseVariant
+  | JobsPhraseVariant
+  | ToysPhraseVariant
+  | FoodFruitPhraseVariant
+  | FoodMealsPhraseVariant
+  | FoodSnacksPhraseVariant;
 
 const STICKER_VARIANTS_WITHOUT_MEAL = STICKER_MATCH_PHRASE_VARIANTS.filter(
   (v) => v !== "we_eat_breakfast",
@@ -139,6 +177,20 @@ export function pickLearnPhraseVariant(
       return pickFromPool(SCHOOL_ACTIVITIES_PHRASE_VARIANTS, sessionSeed, word.id);
     case "school_places":
       return pickFromPool(SCHOOL_PLACES_PHRASE_VARIANTS, sessionSeed, word.id);
+    case "body_head_face":
+    case "body_limbs_inside":
+      return pickFromPool(BODY_PART_PHRASE_VARIANTS, sessionSeed, word.id);
+    case "jobs_community":
+    case "jobs_creative":
+      return pickFromPool(JOBS_PHRASE_VARIANTS, sessionSeed, word.id);
+    case "toys_everyday":
+      return pickFromPool(TOYS_PHRASE_VARIANTS, sessionSeed, word.id);
+    case "food_fruit":
+      return pickFromPool(FOOD_FRUIT_PHRASE_VARIANTS, sessionSeed, word.id);
+    case "food_meals":
+      return pickFromPool(FOOD_MEALS_PHRASE_VARIANTS, sessionSeed, word.id);
+    case "food_snacks":
+      return pickFromPool(FOOD_SNACKS_PHRASE_VARIANTS, sessionSeed, word.id);
     default:
       return pickFromPool(defaultPhrasePool(word), sessionSeed, word.id);
   }
@@ -261,6 +313,103 @@ function schoolPlacesLearnPhrase(word: VocabWordPhraseInput, variant: SchoolPlac
   }
 }
 
+function bodyPartLearnPhrase(word: VocabWordPhraseInput, variant: BodyPartPhraseVariant): string {
+  const lemma = word.lemma.trim();
+  const lower = lemma.toLowerCase();
+  const grammar = word.grammar ?? inferLemmaGrammar(lower);
+  const item =
+    grammar === "plural" || grammar === "uncountable" ? lower : wearObjectPhrase(word);
+  switch (variant) {
+    case "this_is_my":
+      return grammar === "plural" ? `These are my ${lower}.` : `This is my ${lemma}.`;
+    case "i_have_a":
+      return grammar === "plural" || grammar === "uncountable" ?
+          `I have ${item}.`
+        : `I have ${wearObjectPhrase(word)}.`;
+    case "touch_your":
+      return grammar === "plural" ? `Touch your ${lower}.` : `Touch your ${lemma}.`;
+  }
+}
+
+function jobsLearnPhrase(word: VocabWordPhraseInput, variant: JobsPhraseVariant): string {
+  const item = wearObjectPhrase(word);
+  switch (variant) {
+    case "he_is_a":
+      return `He is ${item}.`;
+    case "she_is_a":
+      return `She is ${item}.`;
+    case "i_want_to_be":
+      return `I want to be ${item}.`;
+  }
+}
+
+function toysLearnPhrase(word: VocabWordPhraseInput, variant: ToysPhraseVariant): string {
+  const lower = word.lemma.trim().toLowerCase();
+  const grammar = word.grammar ?? inferLemmaGrammar(lower);
+  const item =
+    grammar === "plural" || grammar === "uncountable" ? lower : wearObjectPhrase(word);
+  switch (variant) {
+    case "i_play_with":
+      return grammar === "plural" || grammar === "uncountable" ?
+          `I play with ${item}.`
+        : `I play with ${wearObjectPhrase(word)}.`;
+    case "i_have_a":
+      return grammar === "plural" || grammar === "uncountable" ?
+          `I have ${item}.`
+        : `I have ${wearObjectPhrase(word)}.`;
+  }
+}
+
+function foodFruitLearnPhrase(word: VocabWordPhraseInput, variant: FoodFruitPhraseVariant): string {
+  const noun = pluralizeForILike(word);
+  const withArticle = wearObjectPhrase(word);
+  const lemma = word.lemma.trim();
+  const grammar = word.grammar ?? inferLemmaGrammar(lemma.toLowerCase());
+  switch (variant) {
+    case "i_like":
+      return `I like ${noun}.`;
+    case "i_eat_a":
+      return grammar === "plural" || grammar === "uncountable" ?
+          `I eat ${noun}.`
+        : `I eat ${withArticle}.`;
+    case "this_is_a":
+      return grammar === "plural" ? `These are ${lemma}.` : `This is ${withArticle}.`;
+  }
+}
+
+function foodMealsLearnPhrase(word: VocabWordPhraseInput, variant: FoodMealsPhraseVariant): string {
+  const noun = pluralizeForILike(word);
+  const withArticle = wearObjectPhrase(word);
+  const grammar = word.grammar ?? inferLemmaGrammar(word.lemma.trim().toLowerCase());
+  switch (variant) {
+    case "i_like":
+      return `I like ${noun}.`;
+    case "i_have_a":
+      return grammar === "plural" || grammar === "uncountable" ?
+          `I have ${noun}.`
+        : `I have ${withArticle}.`;
+    case "we_eat_lunch":
+      return grammar === "plural" || grammar === "uncountable" ?
+          `We eat ${noun} for lunch.`
+        : `We eat ${withArticle} for lunch.`;
+  }
+}
+
+function foodSnacksLearnPhrase(word: VocabWordPhraseInput, variant: FoodSnacksPhraseVariant): string {
+  const noun = pluralizeForILike(word);
+  const grammar = word.grammar ?? inferLemmaGrammar(word.lemma.trim().toLowerCase());
+  switch (variant) {
+    case "i_like":
+      return `I like ${noun}.`;
+    case "i_want_some":
+      return `I want some ${noun}.`;
+    case "i_eat_some":
+      return grammar === "count" ?
+          `I eat ${wearObjectPhrase(word)}.`
+        : `I eat some ${noun}.`;
+  }
+}
+
 function animalsLearnPhrase(word: VocabWordPhraseInput, variant: AnimalsPhraseVariant): string {
   const lower = word.lemma.trim().toLowerCase();
   const noun = pluralizeForILike(word);
@@ -299,6 +448,20 @@ export function learnPhraseStatement(
       return schoolActivitiesLearnPhrase(word, variant as SchoolActivitiesPhraseVariant);
     case "school_places":
       return schoolPlacesLearnPhrase(word, variant as SchoolPlacesPhraseVariant);
+    case "body_head_face":
+    case "body_limbs_inside":
+      return bodyPartLearnPhrase(word, variant as BodyPartPhraseVariant);
+    case "jobs_community":
+    case "jobs_creative":
+      return jobsLearnPhrase(word, variant as JobsPhraseVariant);
+    case "toys_everyday":
+      return toysLearnPhrase(word, variant as ToysPhraseVariant);
+    case "food_fruit":
+      return foodFruitLearnPhrase(word, variant as FoodFruitPhraseVariant);
+    case "food_meals":
+      return foodMealsLearnPhrase(word, variant as FoodMealsPhraseVariant);
+    case "food_snacks":
+      return foodSnacksLearnPhrase(word, variant as FoodSnacksPhraseVariant);
     default:
       return defaultLearnPhrase(word, variant as StickerMatchPhraseVariant);
   }

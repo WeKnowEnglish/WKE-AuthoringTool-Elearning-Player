@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { A1_CLOTHES_EVERYDAY } from "./sets/a1-clothes-everyday";
 import { A1_FARM_ANIMALS } from "./sets/a1-farm-animals";
 import { A1_PETS } from "./sets/a1-pets";
+import { A1_BODY_HEAD_FACE } from "./sets/a1-body-head-face";
+import { A1_JOBS_COMMUNITY } from "./sets/a1-jobs-community";
 import { A1_SCHOOL_ACTIVITIES } from "./sets/a1-school-activities";
 import { A1_SCHOOL_SUPPLIES } from "./sets/a1-school-supplies";
+import { A1_TOYS_EVERYDAY } from "./sets/a1-toys-everyday";
 import { A1_WEATHER_WORDS } from "./sets/a1-weather-words";
 import type { VocabWord } from "./types";
 import {
@@ -178,5 +181,64 @@ describe("school learn phrases", () => {
     expect(learnPhraseStatement(word("classroom", "classroom"), "look_at_the", "s", "school_places")).toBe(
       "Look at the classroom!",
     );
+  });
+});
+
+describe("body learn phrases", () => {
+  it("builds body part variants", () => {
+    expect(learnPhraseStatement(word("head", "head"), "this_is_my", "s", "body_head_face")).toBe(
+      "This is my head.",
+    );
+    expect(learnPhraseStatement(word("teeth", "teeth", { grammar: "plural" }), "touch_your", "s", "body_head_face")).toBe(
+      "Touch your teeth.",
+    );
+    expect(learnPhraseStatement(word("leg", "leg"), "i_have_a", "s", "body_limbs_inside")).toBe(
+      "I have a leg.",
+    );
+  });
+
+  it("never uses default breakfast frames for body themes", () => {
+    for (let i = 0; i < 20; i++) {
+      const text = learnSpeechText(word("hand", "hand"), `b-${i}`, "body_head_face");
+      expect(text).not.toMatch(/breakfast/i);
+      expect(text).not.toMatch(/wearing/i);
+    }
+  });
+
+  it("body sets declare body themes", () => {
+    expect(A1_BODY_HEAD_FACE.learnPhraseTheme).toBe("body_head_face");
+  });
+});
+
+describe("jobs learn phrases", () => {
+  it("builds job variants with articles", () => {
+    expect(learnPhraseStatement(word("doctor", "doctor"), "he_is_a", "s", "jobs_community")).toBe(
+      "He is a doctor.",
+    );
+    expect(learnPhraseStatement(word("nurse", "nurse"), "she_is_a", "s", "jobs_community")).toBe(
+      "She is a nurse.",
+    );
+    expect(
+      learnPhraseStatement(word("artist", "artist"), "i_want_to_be", "s", "jobs_creative"),
+    ).toBe("I want to be an artist.");
+  });
+
+  it("jobs sets declare jobs themes", () => {
+    expect(A1_JOBS_COMMUNITY.learnPhraseTheme).toBe("jobs_community");
+  });
+});
+
+describe("toys learn phrases", () => {
+  it("builds toy play and have variants", () => {
+    expect(learnPhraseStatement(word("doll", "doll"), "i_play_with", "s", "toys_everyday")).toBe(
+      "I play with a doll.",
+    );
+    expect(learnPhraseStatement(word("blocks", "blocks", { grammar: "plural" }), "i_have_a", "s", "toys_everyday")).toBe(
+      "I have blocks.",
+    );
+  });
+
+  it("toys set declares toys theme", () => {
+    expect(A1_TOYS_EVERYDAY.learnPhraseTheme).toBe("toys_everyday");
   });
 });

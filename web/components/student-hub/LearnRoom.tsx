@@ -9,21 +9,31 @@ import { playSfx } from "@/lib/audio/sfx";
 import { isUnlockAvailable, minLevelForUnlock } from "@/lib/progress/unlock-registry";
 import {
   ANIMALS_VOCAB_SET_MENU,
+  BODY_VOCAB_SET_MENU,
+  FOOD_VOCAB_SET_MENU,
+  JOBS_VOCAB_SET_MENU,
   SCHOOL_VOCAB_SET_MENU,
   VOCAB_TOP_MENU,
   vocabSetCoverImageSrc,
   type VocabSetId,
 } from "@/lib/vocabulary-templates";
 
-type VocabHubId = "animals" | "school";
+type VocabHubId = "animals" | "school" | "body" | "jobs" | "food";
 type LearnVocabView = "top" | VocabHubId;
 
 const HUB_SET_MENUS: Record<VocabHubId, { id: VocabSetId; label: string }[]> = {
+  food: FOOD_VOCAB_SET_MENU,
   animals: ANIMALS_VOCAB_SET_MENU,
   school: SCHOOL_VOCAB_SET_MENU,
+  body: BODY_VOCAB_SET_MENU,
+  jobs: JOBS_VOCAB_SET_MENU,
 };
 
 const HUB_HEADINGS: Record<VocabHubId, { title: string; subtitle: string }> = {
+  food: {
+    title: "Food",
+    subtitle: "Pick breakfast, fruit, meals, or snacks.",
+  },
   animals: {
     title: "Animals",
     subtitle: "Pick a category — wild, pets, sea, or farm.",
@@ -31,6 +41,14 @@ const HUB_HEADINGS: Record<VocabHubId, { title: string; subtitle: string }> = {
   school: {
     title: "School",
     subtitle: "Pick supplies and subjects, or school activities.",
+  },
+  body: {
+    title: "Body Parts",
+    subtitle: "Pick head and face, or arms, legs, and inside.",
+  },
+  jobs: {
+    title: "Jobs",
+    subtitle: "Pick community jobs or more jobs.",
   },
 };
 

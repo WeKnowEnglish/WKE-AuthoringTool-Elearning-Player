@@ -130,15 +130,22 @@ export function LetterMixupView({
   wordSlotsRef.current = wordSlots;
   const passedRef = useRef(passed);
   passedRef.current = passed;
+  /** Blocks duplicate onPass while TTS runs or before parent re-renders with passed=true. */
+  const passCommittedRef = useRef(false);
   const [shakingSlotIndices, setShakingSlotIndices] = useState<Set<number>>(() => new Set());
   const kickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [passing, setPassing] = useState(false);
+
+  useEffect(() => {
+    if (!passed) passCommittedRef.current = false;
+  }, [passed]);
 
   useEffect(() => {
     queueMicrotask(() => {
       setWordSlots(Array.from({ length: Math.max(1, targetChars.length) }, () => null));
       setShakingSlotIndices(new Set());
       setPassing(false);
+      passCommittedRef.current = false;
     });
     if (kickTimeoutRef.current) {
       clearTimeout(kickTimeoutRef.current);
@@ -212,14 +219,18 @@ export function LetterMixupView({
   }, [muted, pictureListenLine, targetWord, ttsLang]);
 
   const completePass = useCallback(async () => {
-    if (passedRef.current || passing) return;
+    if (passedRef.current || passCommittedRef.current) return;
+    passCommittedRef.current = true;
     setPassing(true);
-    if (vocabImmersive) {
-      await speakWordOnPass();
+    try {
+      if (vocabImmersive) {
+        await speakWordOnPass();
+      }
+      onPass();
+    } finally {
+      setPassing(false);
     }
-    onPass();
-    setPassing(false);
-  }, [onPass, passing, speakWordOnPass, vocabImmersive]);
+  }, [onPass, speakWordOnPass, vocabImmersive]);
 
   function trayKeyInUse(traySlotKey: string) {
     return wordSlots.some((s) => s?.traySlotKey === traySlotKey);
@@ -228,7 +239,7 @@ export function LetterMixupView({
   const checkRef = useRef<() => void>(() => {});
 
   function runLetterCheck(slots: (WordCell | null)[]) {
-    if (passedRef.current || passing) return;
+    if (passedRef.current || passCommittedRef.current || passing) return;
     if (kickTimeoutRef.current) {
       clearTimeout(kickTimeoutRef.current);
       kickTimeoutRef.current = null;
@@ -311,7 +322,7 @@ export function LetterMixupView({
   }
 
   function choose(ch: string, idx: number) {
-    if (passed || passing) return;
+    if (passed || passing || passCommittedRef.current) return;
     playSfx("tap", muted);
     const traySlotKey = `${idx}__${ch}`;
     if (trayKeyInUse(traySlotKey)) return;
@@ -330,7 +341,7 @@ export function LetterMixupView({
   }
 
   function returnToTray(slotIndex: number) {
-    if (passed || passing) return;
+    if (passed || passing || passCommittedRef.current) return;
     const cell = wordSlots[slotIndex];
     if (!cell || cell.locked) return;
     playSfx("tap", muted);
@@ -342,7 +353,7 @@ export function LetterMixupView({
   }
 
   function clear() {
-    if (passed || passing) return;
+    if (passed || passing || passCommittedRef.current) return;
     playSfx("tap", muted);
     if (kickTimeoutRef.current) {
       clearTimeout(kickTimeoutRef.current);
@@ -353,7 +364,7 @@ export function LetterMixupView({
   }
 
   function check() {
-    if (passedRef.current || passing) return;
+    if (passedRef.current || passCommittedRef.current || passing) return;
     playSfx("tap", muted);
     runLetterCheck(wordSlotsRef.current);
   }

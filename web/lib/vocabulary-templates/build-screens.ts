@@ -19,6 +19,7 @@ import {
   VOCAB_LEARN_SPOTLIGHT,
   layoutLearnBorderSlot,
 } from "./vocab-learn-new-word";
+import { learnSpeechText } from "./vocab-learn-phrases";
 import {
   DEFAULT_PRACTICE_COUNT,
   type BuildVocabularySetOptions,
@@ -78,7 +79,11 @@ function toLessonScreenRow(
 }
 
 /** Learn screen using the vocabulary spotlight reveal pattern (see `vocab-learn-new-word.ts`). */
-function buildLearnStoryPayload(def: VocabularySetDefinition): Record<string, unknown> {
+function buildLearnStoryPayload(
+  def: VocabularySetDefinition,
+  runSeed: string,
+): Record<string, unknown> {
+  const theme = def.learnPhraseTheme ?? "default";
   const learnWords = wordsForLearnScreen(def);
   const items: Record<string, unknown>[] = [];
   const slotItemIds: string[] = [];
@@ -118,7 +123,11 @@ function buildLearnStoryPayload(def: VocabularySetDefinition): Record<string, un
       show_card: false,
       z_index: 25,
       tap_speeches: [
-        { id: `learn-${word.id}-speech`, priority: 0, text: word.tts ?? word.lemma },
+        {
+          id: `learn-${word.id}-speech`,
+          priority: 0,
+          text: learnSpeechText(word, `${runSeed}:learn-spotlight`, theme),
+        },
       ],
     });
   }
@@ -248,7 +257,9 @@ export function buildVocabularySetScreens(
   opening.image_fit = "cover";
   rows.push(toLessonScreenRow(def.id, order++, "start", opening));
 
-  rows.push(toLessonScreenRow(def.id, order++, "story", buildLearnStoryPayload(def)));
+  rows.push(
+    toLessonScreenRow(def.id, order++, "story", buildLearnStoryPayload(def, ctx.seed)),
+  );
 
   rows.push(
     ...buildWordToPictureScreensFixed(def.id, def, ctx, order),

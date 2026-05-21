@@ -21,6 +21,7 @@ describe("A1 animal vocabulary sets", () => {
       }
       expect(wordsForLearnScreen(def)).toHaveLength(12);
       expect(def.learnExcludeWordIds).toHaveLength(3);
+      expect(def.learnPhraseTheme).toBe("animals");
     },
   );
 

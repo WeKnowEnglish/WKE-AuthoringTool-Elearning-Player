@@ -52,13 +52,13 @@ import { resolveStoryIdleForItem, storyIdleClassForPreset } from "@/lib/story-id
 import { isStoryPassSatisfied } from "@/lib/story-pass";
 import { canLeaveStoryScreen } from "@/lib/story-screen-navigation";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
+import { inferLemmaGrammar } from "@/lib/vocabulary-templates/lemma-statement";
 import {
-  inferLemmaGrammar,
-  pickStickerMatchPhraseVariant,
-  stickerMatchLemmaStatement,
-} from "@/lib/vocabulary-templates/lemma-statement";
+  learnPhraseStatement,
+  pickLearnPhraseVariant,
+} from "@/lib/vocabulary-templates/vocab-learn-phrases";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
-import type { VocabWord } from "@/lib/vocabulary-templates";
+import type { VocabLearnPhraseTheme, VocabWord } from "@/lib/vocabulary-templates";
 import {
   VOCAB_LEARN_BTN_ID,
   VOCAB_LEARN_BTN_LABEL_NEW_WORD,
@@ -186,6 +186,8 @@ type Props = {
   runSeed?: string;
   /** Word metadata for sticker-match success TTS. */
   vocabWordsById?: Record<string, Pick<VocabWord, "id" | "lemma" | "grammar" | "mealVerb">>;
+  /** Learn spotlight + sticker sentences (default, clothes wear, weather). */
+  vocabLearnPhraseTheme?: VocabLearnPhraseTheme;
   /** Start / completion playground: minimal chrome, optional tap rewards. */
   embedMode?: "bookend";
   /** Replaces the last-page primary label (e.g. start CTA). */
@@ -216,6 +218,7 @@ export function StoryBookView({
   controlsPlacement = "below",
   runSeed,
   vocabWordsById,
+  vocabLearnPhraseTheme = "default",
   embedMode,
   bookendPrimaryLabel,
   bookendTapRewardByItemId,
@@ -2040,13 +2043,16 @@ export function StoryBookView({
           { id: wordId, lemma, grammar: inferLemmaGrammar(lemma) }
         : null);
       if (!word || mutedNow) return;
-      const variant = pickStickerMatchPhraseVariant(word, vocabLearnDeckSeed);
-      void speakText(stickerMatchLemmaStatement(word, variant), {
-        lang: payload.tts_lang,
-        muted: mutedNow,
-      });
+      const variant = pickLearnPhraseVariant(word, vocabLearnDeckSeed, vocabLearnPhraseTheme);
+      void speakText(
+        learnPhraseStatement(word, variant, vocabLearnDeckSeed, vocabLearnPhraseTheme),
+        {
+          lang: payload.tts_lang,
+          muted: mutedNow,
+        },
+      );
     },
-    [payload.tts_lang, vocabLearnDeckSeed],
+    [payload.tts_lang, vocabLearnDeckSeed, vocabLearnPhraseTheme],
   );
 
   const replaySettledVocabLearnWord = useCallback(

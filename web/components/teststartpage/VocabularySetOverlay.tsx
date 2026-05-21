@@ -154,6 +154,7 @@ export function VocabularySetOverlay({
             screens={screens}
             runSeed={sessionSeed}
             vocabWordsById={vocabWordsById}
+            vocabLearnPhraseTheme={def.learnPhraseTheme ?? "default"}
             vocabPracticeWords={vocabPracticeWords}
             onVocabFinish={() => {
               onActivityComplete?.();

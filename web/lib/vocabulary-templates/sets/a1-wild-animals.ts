@@ -10,6 +10,7 @@ const L = "Look at the __1__!";
 export const A1_WILD_ANIMALS: VocabularySetDefinition = {
   id: "wild_animals",
   title: "Wild Animals",
+  learnPhraseTheme: "animals",
   coverImageUrl: WILD_ANIMALS_COVER_URL,
   words: [
     animalWord(M, "lion", "lion", Z, "A __1__ can run fast.", { placeholderHex: "fde68a", placeholderInk: "78350f" }),

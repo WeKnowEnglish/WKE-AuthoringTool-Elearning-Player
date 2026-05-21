@@ -10,6 +10,7 @@ const L = "A __1__ lives on the farm.";
 export const A1_FARM_ANIMALS: VocabularySetDefinition = {
   id: "farm_animals",
   title: "Farm Animals",
+  learnPhraseTheme: "animals",
   coverImageUrl: FARM_ANIMALS_COVER_URL,
   words: [
     animalWord(M, "pig", "pig", F, H, { placeholderHex: "fda4af", placeholderInk: "9f1239" }),

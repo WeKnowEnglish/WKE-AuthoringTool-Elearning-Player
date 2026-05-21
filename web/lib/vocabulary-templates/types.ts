@@ -8,7 +8,15 @@ export const VOCAB_SET_IDS = [
   "pets",
   "sea_animals",
   "farm_animals",
+  "clothes_everyday",
+  "weather_words",
+  "school_supplies",
+  "school_activities",
 ] as const;
+
+export const SCHOOL_VOCAB_SET_IDS = ["school_supplies", "school_activities"] as const;
+
+export type SchoolVocabSetId = (typeof SCHOOL_VOCAB_SET_IDS)[number];
 
 export const ANIMAL_VOCAB_SET_IDS = [
   "wild_animals",
@@ -20,6 +28,16 @@ export const ANIMAL_VOCAB_SET_IDS = [
 export type AnimalVocabSetId = (typeof ANIMAL_VOCAB_SET_IDS)[number];
 
 export type VocabSetId = (typeof VOCAB_SET_IDS)[number];
+
+/** Learn spotlight + sticker-match spoken sentences (default = I like / breakfast). */
+export type VocabLearnPhraseTheme =
+  | "default"
+  | "clothes"
+  | "weather"
+  | "animals"
+  | "school_supplies"
+  | "school_activities"
+  | "school_places";
 
 export type VocabWordCloze = {
   /** Sentence with placeholders __1__, __2__, … */
@@ -51,6 +69,8 @@ export type VocabularySetDefinition = {
   id: VocabSetId;
   title: string;
   coverImageUrl: string;
+  /** Drives learn spotlight + sticker-match TTS (default when omitted). */
+  learnPhraseTheme?: VocabLearnPhraseTheme;
   words: VocabWord[];
   /** Optional hand-written false T/F lines; otherwise built from other words at screen build time. */
   falseClaims?: Record<string, string[]>;

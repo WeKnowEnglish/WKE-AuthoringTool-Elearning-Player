@@ -1,4 +1,5 @@
-import type { VocabWord, VocabWordCloze } from "../types";
+import { inferLemmaGrammar } from "../lemma-statement";
+import type { VocabLemmaGrammar, VocabWord, VocabWordCloze } from "../types";
 
 export function ACCEPT(lemma: string): string[] {
   const cap = lemma.charAt(0).toUpperCase() + lemma.slice(1);
@@ -57,4 +58,173 @@ export function clozePair(a: string, b: string, acceptable: string[]): [VocabWor
     { template: a, acceptable },
     { template: b, acceptable },
   ];
+}
+
+export function clothesWord(
+  mediaUrls: Record<string, string | undefined>,
+  id: string,
+  lemma: string,
+  opts?: {
+    grammar?: VocabLemmaGrammar;
+    tts?: string;
+    clozeA?: string;
+    clozeB?: string;
+    placeholderHex?: string;
+    placeholderInk?: string;
+  },
+): VocabWord {
+  const grammar = opts?.grammar ?? inferLemmaGrammar(lemma);
+  const acceptable = ACCEPT(lemma);
+  const clozeA =
+    opts?.clozeA ??
+    (grammar === "plural" ? "These are my __1__." : "I wear my __1__.");
+  const clozeB =
+    opts?.clozeB ??
+    (grammar === "plural" ? "I put on my __1__." : "I put on my __1__.");
+  return {
+    id,
+    lemma,
+    grammar,
+    mealVerb: "none",
+    imageUrl: vocabWordImageUrl(
+      mediaUrls,
+      id,
+      lemma,
+      opts?.placeholderHex ?? "e0e7ff",
+      opts?.placeholderInk ?? "3730a3",
+    ),
+    cloze: [
+      { template: clozeA, acceptable },
+      { template: clozeB, acceptable },
+    ],
+    ...(opts?.tts ? { tts: opts.tts } : {}),
+  };
+}
+
+const SUBJECT_LEMMAS = new Set(["maths", "english", "art"]);
+
+export function schoolSuppliesWord(
+  mediaUrls: Record<string, string | undefined>,
+  id: string,
+  lemma: string,
+  opts?: {
+    grammar?: VocabLemmaGrammar;
+    tts?: string;
+    clozeA?: string;
+    clozeB?: string;
+    placeholderHex?: string;
+    placeholderInk?: string;
+  },
+): VocabWord {
+  const lower = lemma.trim().toLowerCase();
+  const grammar = opts?.grammar ?? inferLemmaGrammar(lemma);
+  const acceptable = ACCEPT(lemma);
+  const isSubject = SUBJECT_LEMMAS.has(lower);
+  const clozeA =
+    opts?.clozeA ??
+    (isSubject ? "I like __1__." : "I have a __1__.");
+  const clozeB =
+    opts?.clozeB ??
+    (isSubject ? "We study __1__." : "I use my __1__.");
+  return {
+    id,
+    lemma,
+    grammar,
+    mealVerb: "none",
+    imageUrl: vocabWordImageUrl(
+      mediaUrls,
+      id,
+      lemma,
+      opts?.placeholderHex ?? "fef3c7",
+      opts?.placeholderInk ?? "92400e",
+    ),
+    cloze: [
+      { template: clozeA, acceptable },
+      { template: clozeB, acceptable },
+    ],
+    ...(opts?.tts ? { tts: opts.tts } : {}),
+  };
+}
+
+export function schoolActivityWord(
+  mediaUrls: Record<string, string | undefined>,
+  id: string,
+  lemma: string,
+  opts?: {
+    grammar?: VocabLemmaGrammar;
+    tts?: string;
+    clozeA?: string;
+    clozeB?: string;
+    placeholderHex?: string;
+    placeholderInk?: string;
+  },
+): VocabWord {
+  const grammar = opts?.grammar ?? "uncountable";
+  const acceptable = ACCEPT(lemma);
+  const clozeA = opts?.clozeA ?? "I like to __1__.";
+  const clozeB = opts?.clozeB ?? "We __1__ at school.";
+  return {
+    id,
+    lemma,
+    grammar,
+    mealVerb: "none",
+    imageUrl: vocabWordImageUrl(
+      mediaUrls,
+      id,
+      lemma,
+      opts?.placeholderHex ?? "dbeafe",
+      opts?.placeholderInk ?? "1e40af",
+    ),
+    cloze: [
+      { template: clozeA, acceptable },
+      { template: clozeB, acceptable },
+    ],
+    ...(opts?.tts ? { tts: opts.tts } : {}),
+  };
+}
+
+export function weatherWord(
+  mediaUrls: Record<string, string | undefined>,
+  id: string,
+  lemma: string,
+  opts?: {
+    grammar?: VocabLemmaGrammar;
+    tts?: string;
+    clozeA?: string;
+    clozeB?: string;
+    placeholderHex?: string;
+    placeholderInk?: string;
+  },
+): VocabWord {
+  const grammar = opts?.grammar ?? inferLemmaGrammar(lemma);
+  const acceptable = ACCEPT(lemma);
+  const isSceneAdj = grammar === "uncountable" && /^(sunny|cloudy|rainy|snowy|windy|hot|cold|warm)$/i.test(lemma);
+  const clozeA =
+    opts?.clozeA ??
+    (isSceneAdj ? "It is __1__." : grammar === "count" ? "I see a __1__." : "I see __1__.");
+  const clozeB =
+    opts?.clozeB ??
+    (isSceneAdj ?
+      "Today is __1__."
+    : grammar === "count" ?
+      "There is a __1__ in the sky."
+    : "The __1__ is here.");
+  return {
+    id,
+    lemma,
+    grammar,
+    mealVerb: "none",
+    imageUrl: vocabWordImageUrl(
+      mediaUrls,
+      id,
+      lemma,
+      opts?.placeholderHex ?? "e0f2fe",
+      opts?.placeholderInk ?? "0c4a6e",
+    ),
+    cloze: [
+      { template: clozeA, acceptable },
+      { template: clozeB, acceptable },
+    ],
+    ...(opts?.tts ? { tts: opts.tts } : {}),
+  };
 }

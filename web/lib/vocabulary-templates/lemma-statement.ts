@@ -1,5 +1,5 @@
-import { randomWithSeed } from "./shuffle";
 import type { VocabLemmaGrammar, VocabMealVerb, VocabWord } from "./types";
+import { stickerMatchLemmaStatement } from "./vocab-learn-phrases";
 
 /** Mass nouns common in A1 food sets (lemma lowercase). */
 const UNCOUNTABLE_LEMMAS = new Set([
@@ -36,6 +36,7 @@ const SINGULAR_LEMMAS_ENDING_IN_S = new Set([
   "glass",
   "bus",
   "gas",
+  "dress",
 ]);
 
 export type VocabWordPhraseInput = Pick<VocabWord, "id" | "lemma" | "grammar" | "mealVerb">;
@@ -118,55 +119,12 @@ export function mealBreakfastStatement(word: VocabWordPhraseInput): string | nul
     : `We eat ${noun} for breakfast.`;
 }
 
-export const STICKER_MATCH_PHRASE_VARIANTS = [
-  "i_like",
-  "i_dont_like",
-  "mom_doesnt_like",
-  "we_eat_breakfast",
-] as const;
-
-export type StickerMatchPhraseVariant = (typeof STICKER_MATCH_PHRASE_VARIANTS)[number];
-
-const STICKER_VARIANTS_WITHOUT_MEAL = STICKER_MATCH_PHRASE_VARIANTS.filter(
-  (v) => v !== "we_eat_breakfast",
-);
-
-/** Seeded phrase template for a sticker match (stable per session + word). */
-export function pickStickerMatchPhraseVariant(
-  word: VocabWordPhraseInput,
-  sessionSeed: string,
-): StickerMatchPhraseVariant {
-  const pool =
-    resolveMealVerb(word) === "none" ?
-      STICKER_VARIANTS_WITHOUT_MEAL
-    : STICKER_MATCH_PHRASE_VARIANTS;
-  const n = pool.length;
-  const i = Math.min(
-    n - 1,
-    Math.floor(randomWithSeed(`${sessionSeed}:sticker-phrase:${word.id}`) * n),
-  );
-  return pool[i]!;
-}
-
-/** Sticker match success line for a chosen template. */
-export function stickerMatchLemmaStatement(
-  word: VocabWordPhraseInput,
-  variant: StickerMatchPhraseVariant,
-): string {
-  const noun = lemmaForILike(word);
-  switch (variant) {
-    case "i_like":
-      return `I like ${noun}.`;
-    case "i_dont_like":
-      return `I don't like ${noun}.`;
-    case "mom_doesnt_like":
-      return `My mom doesn't like ${noun}.`;
-    case "we_eat_breakfast": {
-      const meal = mealBreakfastStatement(word);
-      return meal ?? `I like ${noun}.`;
-    }
-  }
-}
+export {
+  STICKER_MATCH_PHRASE_VARIANTS,
+  pickStickerMatchPhraseVariant,
+  stickerMatchLemmaStatement,
+  type StickerMatchPhraseVariant,
+} from "./vocab-learn-phrases";
 
 /** Sticker match success line (e.g. “I like apples.”). */
 export function iLikeLemmaStatement(word: Pick<VocabWord, "lemma" | "grammar">): string {

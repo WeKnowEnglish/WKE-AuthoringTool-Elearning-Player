@@ -1,5 +1,6 @@
 export type {
   BuildVocabularySetOptions,
+  VocabLearnPhraseTheme,
   VocabSetId,
   VocabWord,
   VocabWordCloze,
@@ -8,9 +9,11 @@ export type {
 export {
   ANIMAL_VOCAB_SET_IDS,
   DEFAULT_PRACTICE_COUNT,
+  SCHOOL_VOCAB_SET_IDS,
   VOCAB_SET_IDS,
   isVocabSetId,
   type AnimalVocabSetId,
+  type SchoolVocabSetId,
 } from "./types";
 export { pickNWithSeed, randomWithSeed, shuffleWithSeed } from "./shuffle";
 export {
@@ -22,6 +25,7 @@ export {
 } from "./vocab-tf-statements";
 export {
   ANIMALS_VOCAB_SET_MENU,
+  SCHOOL_VOCAB_SET_MENU,
   VOCAB_SET_MENU,
   VOCAB_TOP_MENU,
   getVocabularySet,
@@ -67,3 +71,14 @@ export {
   thisLemmaStatement,
   type StickerMatchPhraseVariant,
 } from "./lemma-statement";
+export {
+  CLOTHES_WEAR_PHRASE_VARIANTS,
+  WEATHER_PHRASE_VARIANTS,
+  learnPhraseStatement,
+  learnSpeechText,
+  pickLearnPhraseVariant,
+  wearObjectPhrase,
+  type ClothesWearPhraseVariant,
+  type LearnPhraseVariant,
+  type WeatherPhraseVariant,
+} from "./vocab-learn-phrases";

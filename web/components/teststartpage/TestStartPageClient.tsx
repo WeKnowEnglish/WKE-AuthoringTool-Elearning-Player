@@ -18,6 +18,7 @@ import { LetterMixupView } from "@/components/lesson/interactions/LetterMixupVie
 import { McQuizView } from "@/components/lesson/interactions/McQuizView";
 import { ChaseGameOverlay } from "@/components/teststartpage/ChaseGameOverlay";
 import { DailyQuestsPanel } from "@/components/teststartpage/DailyQuestsPanel";
+import { ReadingSetOverlay } from "@/components/teststartpage/ReadingSetOverlay";
 import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
 import { WordBucketCatchOverlay } from "@/components/teststartpage/WordBucketCatchOverlay";
 import { PuppetPresenterOverlay } from "@/components/teststartpage/PuppetPresenterOverlay";
@@ -138,6 +139,8 @@ export function TestStartPageClient() {
   const [puppetOpen, setPuppetOpen] = useState(false);
   const [activePuppetScriptId, setActivePuppetScriptId] =
     useState<PuppetScriptId>("like_likes_food");
+  const [readingSetOpen, setReadingSetOpen] = useState(false);
+  const [readingSessionSeed, setReadingSessionSeed] = useState<string | null>(null);
 
   const qaReportCount = useMemo(() => loadQuizQuestionReports().length, [reportLogTick, phase]);
 
@@ -568,7 +571,8 @@ export function TestStartPageClient() {
             <div className="space-y-2 text-center">
               <p className="text-2xl font-extrabold text-kid-ink sm:text-3xl">Quick start</p>
               <p className="text-base font-semibold text-kid-ink/85 sm:text-lg">
-                Start a topic quiz, vocabulary sets, the chase game, word bucket catch, or the grammar puppet.
+                Start a topic quiz, vocabulary sets, reading practice, the chase game, word bucket catch, or the
+                grammar puppet.
               </p>
             </div>
             <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
@@ -629,6 +633,20 @@ export function TestStartPageClient() {
                   setPhase("bucketTopics");
                 }}
               />
+              <KidButton
+                type="button"
+                className={clsx(
+                  splashBtnClass,
+                  "border-kid-ink bg-violet-200 text-kid-ink hover:bg-violet-100 sm:text-3xl",
+                )}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setReadingSessionSeed(newQuizSeed());
+                  setReadingSetOpen(true);
+                }}
+              >
+                Reading practice
+              </KidButton>
               <UnlockSplashButton
                 unlockId="grammar_puppet"
                 playerLevel={rewardsUi.level}
@@ -1215,6 +1233,20 @@ export function TestStartPageClient() {
             setWordBucketCatchOpen(false);
             setBucketGameConfig(null);
             setBucketCompletionEventId(null);
+          }}
+        />
+      ) : null}
+      {readingSetOpen && readingSessionSeed ? (
+        <ReadingSetOverlay
+          setId="reading_mixed_items"
+          sessionSeed={readingSessionSeed}
+          muted={muted}
+          onEconomyChange={refreshRewardsUi}
+          onClose={() => {
+            playSfx("tap", muted);
+            setReadingSetOpen(false);
+            setReadingSessionSeed(null);
+            refreshRewardsUi();
           }}
         />
       ) : null}

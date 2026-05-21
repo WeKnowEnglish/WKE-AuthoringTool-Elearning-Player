@@ -247,7 +247,6 @@ export function LetterMixupView({
     if (allLocked) {
       const built = slots.map((s) => s!.char).join("");
       if (answers.some((a) => normWord(a) === normWord(built))) {
-        playSfx("correct", muted);
         void completePass();
       }
       return;
@@ -280,7 +279,6 @@ export function LetterMixupView({
       setWordSlots(newSlots);
       const built = newSlots.map((s) => s!.char).join("");
       if (answers.some((a) => normWord(a) === normWord(built))) {
-        playSfx("correct", muted);
         void completePass();
       }
       return;

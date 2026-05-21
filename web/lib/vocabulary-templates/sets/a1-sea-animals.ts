@@ -11,6 +11,7 @@ const L = "Look at the __1__!";
 export const A1_SEA_ANIMALS: VocabularySetDefinition = {
   id: "sea_animals",
   title: "Sea Animals",
+  learnPhraseTheme: "animals",
   coverImageUrl: SEA_ANIMALS_COVER_URL,
   words: [
     animalWord(M, "dolphin", "dolphin", O, S, { placeholderHex: "7dd3fc", placeholderInk: "0c4a6e" }),

@@ -10,6 +10,7 @@ const L = "I love my __1__.";
 export const A1_PETS: VocabularySetDefinition = {
   id: "pets",
   title: "Pets",
+  learnPhraseTheme: "animals",
   coverImageUrl: PETS_COVER_URL,
   words: [
     animalWord(M, "cat", "cat", P, C, { placeholderHex: "fbcfe8", placeholderInk: "9d174d" }),

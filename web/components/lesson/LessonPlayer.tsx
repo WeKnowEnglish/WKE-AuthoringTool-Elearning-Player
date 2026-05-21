@@ -51,7 +51,7 @@ import {
   type StartPlaygroundTapReward,
 } from "@/lib/lesson-schemas";
 import { parseScreenPayload, type ScreenPayload } from "@/lib/lesson-schemas-player";
-import type { VocabWord } from "@/lib/vocabulary-templates";
+import type { VocabLearnPhraseTheme, VocabWord } from "@/lib/vocabulary-templates";
 import {
   buildVocabRunStats,
   computeVocabSetRewards,
@@ -342,6 +342,7 @@ type Props = {
   runSeed?: string;
   /** Learn word metadata for sticker-match TTS (vocabulary overlay). */
   vocabWordsById?: Record<string, Pick<VocabWord, "id" | "lemma" | "grammar" | "mealVerb">>;
+  vocabLearnPhraseTheme?: VocabLearnPhraseTheme;
   /** Words in this run (for completion stats / review list). */
   vocabPracticeWords?: VocabPracticeWordMeta[];
   onVocabFinish?: () => void;
@@ -368,6 +369,7 @@ export function LessonPlayer({
   immersiveLayout = false,
   runSeed,
   vocabWordsById,
+  vocabLearnPhraseTheme,
   vocabPracticeWords,
   onVocabFinish,
   vocabFinishLabel,
@@ -389,6 +391,8 @@ export function LessonPlayer({
   const [experience, setExperience] = useState(0);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoAdvanceCompletedForScreenRef = useRef<string | null>(null);
+  /** Screen id that received the current `interactionPass` (blocks stale pass on the next screen). */
+  const interactionPassedScreenIdRef = useRef<string | null>(null);
   const playbackRootRef = useRef<HTMLDivElement | null>(null);
   const vocabSessionRef = useRef(createVocabRunSession());
   const screenHadWrongRef = useRef(false);
@@ -463,21 +467,25 @@ export function LessonPlayer({
     if (urls.length > 0) void prefetchImageUrls(urls);
   }, [index, lessonId, screens]);
 
-  useEffect(() => {
-    stopSpeaking();
+  const clearInteractionScreenState = useCallback(() => {
     if (autoAdvanceTimerRef.current) {
       clearTimeout(autoAdvanceTimerRef.current);
       autoAdvanceTimerRef.current = null;
     }
-    queueMicrotask(() => {
-      setInteractionPass(false);
-      setDragFilled([]);
-      setInteractionFeedback("none");
-    });
+    autoAdvanceCompletedForScreenRef.current = null;
+    interactionPassedScreenIdRef.current = null;
+    setInteractionPass(false);
+    setDragFilled([]);
+    setInteractionFeedback("none");
+  }, []);
+
+  useEffect(() => {
+    stopSpeaking();
+    clearInteractionScreenState();
     if (!isPreview) {
       setResumeScreen(lessonId, index);
     }
-  }, [index, lessonId, isPreview]);
+  }, [index, lessonId, isPreview, clearInteractionScreenState]);
 
   useEffect(() => {
     screenHadWrongRef.current = false;
@@ -537,6 +545,7 @@ export function LessonPlayer({
   ]);
 
   const goNext = useCallback(() => {
+    clearInteractionScreenState();
     if (index < screens.length - 1) {
       const next = index + 1;
       setIndex(next);
@@ -566,15 +575,17 @@ export function LessonPlayer({
     visualEdit,
     isVocabLesson,
     completeVocabLesson,
+    clearInteractionScreenState,
   ]);
 
   const goBack = useCallback(() => {
+    clearInteractionScreenState();
     if (index > 0) {
       const next = index - 1;
       setIndex(next);
       visualEdit?.onScreenIndexChange?.(next);
     }
-  }, [index, visualEdit]);
+  }, [index, visualEdit, clearInteractionScreenState]);
 
   useEffect(() => {
     if (!interactionPass) {
@@ -589,6 +600,8 @@ export function LessonPlayer({
     if (parsed.type !== "interaction" && parsed.type !== "story") return;
     if (parsed.auto_advance_on_pass !== true) return;
     const currentScreenId = screen.id;
+    // Pass state must match this screen (avoids scheduling advance on the next screen).
+    if (interactionPassedScreenIdRef.current !== currentScreenId) return;
     if (
       autoAdvanceCompletedForScreenRef.current &&
       autoAdvanceCompletedForScreenRef.current !== currentScreenId
@@ -754,6 +767,7 @@ export function LessonPlayer({
 
   const passHandlers = {
     onPass: () => {
+      interactionPassedScreenIdRef.current = screen.id;
       setInteractionFeedback("correct");
       window.setTimeout(() => setInteractionFeedback("none"), 750);
       setInteractionPass(true);
@@ -992,6 +1006,7 @@ export function LessonPlayer({
               screenId={screen.id}
               runSeed={runSeed}
               vocabWordsById={vocabWordsById}
+              vocabLearnPhraseTheme={vocabLearnPhraseTheme}
               payload={parsed}
               muted={muted}
               compactPreview={isPreview}
@@ -1018,6 +1033,7 @@ export function LessonPlayer({
             screenId={screen.id}
             runSeed={runSeed}
             vocabWordsById={vocabWordsById}
+            vocabLearnPhraseTheme={vocabLearnPhraseTheme}
             payload={parsed}
             muted={muted}
             compactPreview={isPreview}
@@ -1307,6 +1323,7 @@ export function LessonPlayer({
         <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout}>
           <InteractionLazyShell fillStage={immersiveLayout}>
             <LazyLetterMixup
+              key={screen.id}
               parsed={parsed}
               {...nav}
               {...passHandlers}

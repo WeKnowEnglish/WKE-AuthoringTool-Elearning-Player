@@ -2,14 +2,16 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { LessonRow, ModuleRow } from "@/lib/data/catalog";
+import { PlayerCharacter } from "@/components/avatar/PlayerCharacter";
 import { StudentAvatar } from "@/components/avatar/StudentAvatar";
 import { AVATAR_PRESETS } from "@/lib/avatar/defaults";
 import { presetIdForLoadout } from "@/lib/avatar/progress";
 import type { AvatarLoadout } from "@/lib/avatar/types";
 import {
-  getChosenAvatarLoadout,
+  getPetLoadout,
+  getPlayerAppearanceId,
   getProgressSnapshot,
-  setAvatarPreset,
+  setPetPreset,
 } from "@/lib/progress/local-storage";
 import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import { nextLockedUnlocks } from "@/lib/progress/unlock-registry";
@@ -33,8 +35,9 @@ export function ProfileClient({
   skillsByLesson,
   loadError,
 }: Props) {
-  const [loadout, setLoadout] = useState<AvatarLoadout | null>(() => getChosenAvatarLoadout());
-  const presetId = loadout ? presetIdForLoadout(loadout) : null;
+  const [petLoadout, setPetLoadout] = useState<AvatarLoadout | null>(() => getPetLoadout());
+  const petPresetId = petLoadout ? presetIdForLoadout(petLoadout) : null;
+  const playerAppearanceId = getPlayerAppearanceId();
   const [rewardsTick, setRewardsTick] = useState(0);
 
   const refreshRewards = useCallback(() => {
@@ -117,29 +120,39 @@ export function ProfileClient({
       <StickerStorePanel
         title="Achievements"
         description="Earn gold in lessons and activities, then spend it on random sticker packs."
-        emptyBookMessage="No stickers yet. Buy one from Achievements."
+        emptyBookMessage="No stickers yet. Buy one from the Book tab on Home, or here."
+        rewardsSyncKey={rewardsTick}
         onRewardsChange={refreshRewards}
       />
       <KidPanel>
-        <h2 className="text-xl font-bold text-kid-ink">Your avatar</h2>
+        <h2 className="text-xl font-bold text-kid-ink">Your character</h2>
         <p className="mt-1 text-sm text-kid-ink/80">
-          This character appears when you finish a lesson.
+          This is you on the home world stage. More looks coming soon.
+        </p>
+        <div className="mt-4 flex justify-center">
+          <PlayerCharacter appearanceId={playerAppearanceId} size="md" />
+        </div>
+      </KidPanel>
+      <KidPanel>
+        <h2 className="text-xl font-bold text-kid-ink">Your pet</h2>
+        <p className="mt-1 text-sm text-kid-ink/80">
+          Your pet follows you on home and appears when you finish a lesson.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          {loadout ?
-            <StudentAvatar loadout={loadout} playerLevel={playerLevel} size="md" />
-          : <span className="text-kid-ink/70">Not chosen yet — pick a look:</span>}
+          {petLoadout ?
+            <StudentAvatar loadout={petLoadout} playerLevel={playerLevel} size="md" />
+          : <span className="text-kid-ink/70">Not chosen yet — pick a pet:</span>}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           {AVATAR_PRESETS.map((b) => (
             <KidButton
               key={b.id}
               type="button"
-              variant={presetId === b.id ? "primary" : "secondary"}
+              variant={petPresetId === b.id ? "primary" : "secondary"}
               className="!min-h-12 !min-w-12 text-3xl"
               onClick={() => {
-                setAvatarPreset(b.id);
-                setLoadout(getChosenAvatarLoadout());
+                setPetPreset(b.id);
+                setPetLoadout(getPetLoadout());
               }}
             >
               <span aria-hidden>{b.emoji}</span>

@@ -20,6 +20,7 @@ import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import { isUnlockAvailable } from "@/lib/progress/unlock-registry";
 import { newSessionSeed } from "@/lib/student-hub/session-seed";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
+import { markExplorationNode } from "@/lib/worlds/exploration";
 import type { VocabSetId } from "@/lib/vocabulary-templates";
 
 export function StudentHubClient() {
@@ -32,6 +33,7 @@ export function StudentHubClient() {
     level: 1,
   });
   const [dailyQuestUiKey, setDailyQuestUiKey] = useState(0);
+  const [explorationUiKey, setExplorationUiKey] = useState(0);
   const [petUiKey, setPetUiKey] = useState(0);
   const [studyPendingUi, setStudyPendingUi] = useState(false);
   const [questsOpen, setQuestsOpen] = useState(false);
@@ -47,6 +49,10 @@ export function StudentHubClient() {
       level: getPlayerLevel(r),
     });
     setDailyQuestUiKey((k) => k + 1);
+  }, []);
+
+  const refreshExplorationUi = useCallback(() => {
+    setExplorationUiKey((k) => k + 1);
   }, []);
 
   const refreshStudyPendingUi = useCallback(() => {
@@ -84,11 +90,13 @@ export function StudentHubClient() {
         return;
       }
       playSfx("tap", muted);
+      markExplorationNode({ kind: "vocab_set", setId: id });
+      refreshExplorationUi();
       setActiveVocabSetId(id);
       setVocabSessionSeed(newSessionSeed());
       setVocabSetOpen(true);
     },
-    [muted, rewardsUi.level],
+    [muted, rewardsUi.level, refreshExplorationUi],
   );
 
   const goLearn = useCallback(() => {
@@ -100,7 +108,8 @@ export function StudentHubClient() {
   const goHome = useCallback(() => {
     playSfx("tap", muted);
     setRoom("home");
-  }, [muted]);
+    refreshExplorationUi();
+  }, [muted, refreshExplorationUi]);
 
   const goPet = useCallback(() => {
     playSfx("tap", muted);
@@ -116,9 +125,10 @@ export function StudentHubClient() {
   const onRoomChange = useCallback(
     (next: StudentHubRoom) => {
       setRoom(next);
+      if (next === "home") refreshExplorationUi();
       refreshStudyPendingUi();
     },
-    [refreshStudyPendingUi],
+    [refreshExplorationUi, refreshStudyPendingUi],
   );
 
   const handleLearnActivityComplete = useCallback(() => {
@@ -155,7 +165,7 @@ export function StudentHubClient() {
           <StudentEconomyHud
             gold={rewardsUi.gold}
             experience={rewardsUi.experience}
-            showLevelBar={room !== "home"}
+            showLevelBar={room !== "book"}
           />
         ) : (
           <div className="h-9 min-w-[8rem] flex-1 rounded-lg border-2 border-kid-ink/30 bg-kid-panel/50" aria-hidden />
@@ -185,6 +195,7 @@ export function StudentHubClient() {
             experience={rewardsUi.experience}
             hydrated={hydrated}
             dailyQuestUiKey={dailyQuestUiKey}
+            explorationUiKey={explorationUiKey}
             onGoLearn={goLearn}
             onGoPet={goPet}
             onGoBook={goBook}
@@ -204,10 +215,12 @@ export function StudentHubClient() {
             muted={muted}
             studyCarePending={studyPendingUi}
             onOpenVocabularySet={openVocabularySet}
+            onExplorationChange={refreshExplorationUi}
           />
         : <StickerBookRoom
             muted={muted}
             dailyQuestUiKey={dailyQuestUiKey}
+            onRewardsChange={refreshRewardsUi}
             className="min-h-0 flex-1"
           />
         }
@@ -235,7 +248,13 @@ export function StudentHubClient() {
           muted={muted}
           onEconomyChange={refreshRewardsUi}
           onRequestNewRun={() => setVocabSessionSeed(newSessionSeed())}
-          onActivityComplete={handleLearnActivityComplete}
+          onActivityComplete={() => {
+            if (activeVocabSetId) {
+              markExplorationNode({ kind: "vocab_set", setId: activeVocabSetId });
+            }
+            refreshExplorationUi();
+            handleLearnActivityComplete();
+          }}
           onClose={() => {
             playSfx("tap", muted);
             setVocabSetOpen(false);
@@ -243,6 +262,7 @@ export function StudentHubClient() {
             setVocabSessionSeed(null);
             setRoom("learn");
             refreshRewardsUi();
+            refreshExplorationUi();
             refreshStudyPendingUi();
           }}
         />

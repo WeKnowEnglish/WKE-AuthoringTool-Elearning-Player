@@ -18,7 +18,7 @@ import {
 } from "@/lib/pet";
 import { PET_METER_IDS } from "@/lib/pet/types";
 import type { PetSnapshotV1 } from "@/lib/pet/types";
-import { getChosenAvatarLoadout } from "@/lib/progress/local-storage";
+import { getPetLoadout } from "@/lib/progress/local-storage";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import {
   canClaimPetGold,
@@ -51,7 +51,7 @@ export function PetRoom({
 }: Props) {
   const hydrated = useClientHydrated();
   const [snapshot, setSnapshot] = useState<PetSnapshotV1 | null>(null);
-  const loadout = hydrated ? getChosenAvatarLoadout() : null;
+  const loadout = hydrated ? getPetLoadout() : null;
   const presetId = loadout ? presetIdForLoadout(loadout) : null;
   const presetLabel =
     presetId ? (AVATAR_PRESETS.find((p) => p.id === presetId)?.label ?? "friend") : null;
@@ -106,7 +106,7 @@ export function PetRoom({
       <div className="text-center">
         <h1 className="text-2xl font-extrabold text-kid-ink">Pet Care</h1>
         <p className="mt-1 text-sm font-semibold text-kid-ink/85">
-          {presetLabel ? `Take care of ${presetLabel}` : "Your buddy"}
+          {presetLabel ? `Take care of your ${presetLabel}` : "Your pet buddy"}
         </p>
         {robotGrowth ?
           <p className="mt-1 text-xs font-bold uppercase tracking-wide text-kid-ink/75">
@@ -125,7 +125,7 @@ export function PetRoom({
 
       {!loadout ?
         <KidPanel className="text-center">
-          <p className="font-semibold text-kid-ink">Pick a look on Home first.</p>
+          <p className="font-semibold text-kid-ink">Pick a pet on your Profile first.</p>
           <button
             type="button"
             className="mt-3 text-sm font-bold text-[#0a2f86] underline decoration-2 underline-offset-2"

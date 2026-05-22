@@ -7,8 +7,14 @@ import type { AvatarLoadout, AvatarPresetId } from "@/lib/avatar/types";
 import { writeLearningBandCookie } from "@/lib/learning-band-cookie";
 import { isLearningBand, type LearningBand } from "@/lib/learning-band";
 import {
+  isPlayerAppearanceId,
+  migrateProgressSnapshotFields,
+} from "@/lib/progress/migrate-pet-player";
+import { resolvePetLoadoutFromSnapshot } from "@/lib/progress/resolve-pet-loadout";
+import {
   emptySnapshot,
   PROGRESS_STORAGE_KEY,
+  type PlayerAppearanceId,
   type ProgressSnapshotV1,
 } from "@/lib/progress/types";
 
@@ -24,17 +30,26 @@ function normalizeSnapshot(raw: unknown): ProgressSnapshotV1 | null {
   const r = raw as ProgressSnapshotV1;
   if (r.schemaVersion !== 1 || !r.anonymousDeviceId) return null;
   if (!Array.isArray(r.completedLessonIds)) return null;
-  return {
+
+  const base: ProgressSnapshotV1 = {
     ...r,
     completedLessonIds: r.completedLessonIds,
     enrolledCourseIds: Array.isArray(r.enrolledCourseIds) ? r.enrolledCourseIds : [],
     learningBand: isLearningBand(r.learningBand) ? r.learningBand : null,
+    petLoadout:
+      r.petLoadout === undefined || r.petLoadout === null ?
+        null
+      : normalizeLoadout(r.petLoadout),
+    playerAppearanceId:
+      isPlayerAppearanceId(r.playerAppearanceId) ? r.playerAppearanceId : null,
     avatarLoadout:
       r.avatarLoadout === undefined || r.avatarLoadout === null ?
         null
       : normalizeLoadout(r.avatarLoadout),
     avatarId: r.avatarId === undefined ? null : r.avatarId,
   };
+
+  return base;
 }
 
 function readRaw(): ProgressSnapshotV1 | null {
@@ -43,7 +58,11 @@ function readRaw(): ProgressSnapshotV1 | null {
     const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw) as unknown;
-    return normalizeSnapshot(data);
+    const normalized = normalizeSnapshot(data);
+    if (!normalized) return null;
+    const { snapshot, changed } = migrateProgressSnapshotFields(normalized);
+    if (changed) writeRaw(snapshot);
+    return snapshot;
   } catch {
     return null;
   }
@@ -65,7 +84,7 @@ export function getProgressSnapshot(): ProgressSnapshotV1 {
 }
 
 export function setProgressSnapshot(s: ProgressSnapshotV1) {
-  writeRaw(s);
+  writeRaw(migrateProgressSnapshotFields(s).snapshot);
 }
 
 export function markLessonComplete(lessonId: string) {
@@ -91,42 +110,75 @@ export function isAudioMuted(): boolean {
   return getProgressSnapshot().audioMuted === true;
 }
 
-/** Whether the student has chosen an avatar (loadout or legacy buddy id). */
+/** Whether the student has chosen a pet companion look. */
+export function hasChosenPet(): boolean {
+  return getPetLoadout() !== null;
+}
+
+/** @deprecated Use {@link hasChosenPet}. */
 export function hasChosenAvatar(): boolean {
-  const s = getProgressSnapshot();
-  return Boolean(s.avatarLoadout) || Boolean(s.avatarId);
+  return hasChosenPet();
 }
 
-/** Resolved loadout when chosen; otherwise `null`. */
+/** Resolved pet loadout when chosen; otherwise `null`. */
+export function getPetLoadout(): AvatarLoadout | null {
+  return resolvePetLoadoutFromSnapshot(getProgressSnapshot());
+}
+
+/** @deprecated Use {@link getPetLoadout}. */
 export function getChosenAvatarLoadout(): AvatarLoadout | null {
-  const s = getProgressSnapshot();
-  if (!s.avatarLoadout && !s.avatarId) return null;
-  return resolveAvatarLoadout(s.avatarLoadout, s.avatarId);
+  return getPetLoadout();
 }
 
-export function setAvatarLoadout(loadout: AvatarLoadout) {
+export function getPlayerAppearanceId(): PlayerAppearanceId {
+  const id = getProgressSnapshot().playerAppearanceId;
+  return isPlayerAppearanceId(id) ? id : "default";
+}
+
+export function setPlayerAppearanceId(appearanceId: PlayerAppearanceId) {
   const s = getProgressSnapshot();
-  s.avatarLoadout = normalizeLoadout(loadout);
+  s.playerAppearanceId = appearanceId;
+  writeRaw(s);
+}
+
+export function setPetLoadout(loadout: AvatarLoadout) {
+  const s = getProgressSnapshot();
+  s.petLoadout = normalizeLoadout(loadout);
+  s.avatarLoadout = null;
   s.avatarId = null;
   writeRaw(s);
 }
 
-/** @deprecated Prefer {@link setAvatarLoadout} with a preset loadout. */
+export function setPetPreset(presetId: AvatarPresetId) {
+  setPetLoadout(loadoutForPreset(presetId));
+}
+
+/** @deprecated Use {@link setPetLoadout}. */
+export function setAvatarLoadout(loadout: AvatarLoadout) {
+  setPetLoadout(loadout);
+}
+
+/** @deprecated Prefer {@link setPetPreset}. */
 export function setAvatarId(id: string | null) {
   const s = getProgressSnapshot();
   const preset = id ? resolvePresetId(id) : null;
   if (preset) {
-    s.avatarLoadout = loadoutForPreset(preset);
+    s.petLoadout = loadoutForPreset(preset);
     s.avatarId = null;
+    s.avatarLoadout = null;
   } else {
     s.avatarId = id;
-    s.avatarLoadout = id === null ? null : s.avatarLoadout;
+    if (id === null) {
+      s.petLoadout = null;
+      s.avatarLoadout = null;
+    }
   }
   writeRaw(s);
 }
 
+/** @deprecated Use {@link setPetPreset}. */
 export function setAvatarPreset(presetId: AvatarPresetId) {
-  setAvatarLoadout(loadoutForPreset(presetId));
+  setPetPreset(presetId);
 }
 
 export function getEnrolledCourseIds(): string[] {

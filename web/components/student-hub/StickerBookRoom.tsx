@@ -1,16 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { clsx } from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
+import { StickerPurchaseActions } from "@/components/progress/StickerPurchaseActions";
+import { StickerUnboxOverlay } from "@/components/progress/StickerUnboxOverlay";
+import { useStickerPurchases } from "@/components/progress/useStickerPurchases";
 import { StickerBackgroundRail } from "@/components/student-hub/StickerBackgroundRail";
 import { StickerBookScrollCard } from "@/components/student-hub/StickerBookScrollCard";
 import { StickerSceneCanvas } from "@/components/student-hub/StickerSceneCanvas";
 import { StickerTray } from "@/components/student-hub/StickerTray";
 import { playSfx } from "@/lib/audio/sfx";
 import type { StickerDef } from "@/lib/progress/sticker-library";
-import { getRewards } from "@/lib/progress/rewards";
+import { STICKER_LIBRARY } from "@/lib/progress/sticker-library";
 import {
   downloadStickerSceneBlob,
   exportStickerSceneToPng,
@@ -26,6 +28,7 @@ import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 type Props = {
   muted: boolean;
   dailyQuestUiKey: number;
+  onRewardsChange?: () => void;
   className?: string;
 };
 
@@ -46,8 +49,25 @@ const WORKSPACE_GRID =
 const TOOLBAR_BTN =
   "!min-h-8 shrink-0 !px-2.5 text-xs sm:!min-h-9 sm:!px-3 sm:text-sm";
 
-export function StickerBookRoom({ muted, dailyQuestUiKey, className }: Props) {
+export function StickerBookRoom({ muted, dailyQuestUiKey, onRewardsChange, className }: Props) {
   const hydrated = useClientHydrated();
+  const purchases = useStickerPurchases({
+    muted,
+    rewardsSyncKey: dailyQuestUiKey,
+    onRewardsChange,
+  });
+  const {
+    gold,
+    ownedStickerIds,
+    maxAffordableStickers,
+    unboxedBatchIds,
+    rollingStickerId,
+    isRollingSticker,
+    unboxOpen,
+    buyRandomSticker,
+    buyMaxStickers,
+    closeUnbox,
+  } = purchases;
   const [backgrounds, setBackgrounds] = useState<StickerBookBackground[]>([]);
   const [backgroundsLoading, setBackgroundsLoading] = useState(true);
   const [backgroundsErr, setBackgroundsErr] = useState<string | null>(null);
@@ -85,8 +105,18 @@ export function StickerBookRoom({ muted, dailyQuestUiKey, className }: Props) {
 
   useEffect(() => {
     if (!hydrated) return;
-    setOwnedStickers(uniqueOwnedStickers(getRewards().ownedStickerIds ?? []));
-  }, [hydrated, dailyQuestUiKey]);
+    setOwnedStickers(uniqueOwnedStickers(ownedStickerIds));
+  }, [hydrated, ownedStickerIds]);
+
+  const selectNewStickerFromUnbox = useCallback(() => {
+    if (!unboxedBatchIds?.length) return;
+    const lastId = unboxedBatchIds[unboxedBatchIds.length - 1]!;
+    const def = STICKER_LIBRARY.find((s) => s.id === lastId);
+    if (def) {
+      setSelectedStickerId(def.id);
+      setSelectedInstanceId(null);
+    }
+  }, [unboxedBatchIds]);
 
   const activeBackground = useMemo(
     () => backgrounds.find((b) => b.url === backgroundUrl) ?? backgrounds[0] ?? null,
@@ -159,7 +189,18 @@ export function StickerBookRoom({ muted, dailyQuestUiKey, className }: Props) {
 
   return (
     <div className={clsx("flex min-h-0 w-full flex-1 flex-col overflow-hidden", className)}>
-      <div className="flex shrink-0 flex-nowrap items-center justify-center gap-1 overflow-x-auto px-0.5">
+      <div className="flex shrink-0 flex-col gap-1 px-0.5">
+        <StickerPurchaseActions
+          gold={gold}
+          maxAffordableStickers={maxAffordableStickers}
+          disabled={isRollingSticker}
+          muted={muted}
+          compact
+          showGoldChip
+          onBuyRandom={buyRandomSticker}
+          onBuyMax={buyMaxStickers}
+        />
+        <div className="flex flex-nowrap items-center justify-center gap-1 overflow-x-auto">
         <KidButton
           type="button"
           variant="primary"
@@ -195,6 +236,7 @@ export function StickerBookRoom({ muted, dailyQuestUiKey, className }: Props) {
         >
           Clear
         </KidButton>
+        </div>
       </div>
       {exportErr ? (
         <p className="shrink-0 text-center text-xs font-semibold text-red-800">{exportErr}</p>
@@ -252,20 +294,29 @@ export function StickerBookRoom({ muted, dailyQuestUiKey, className }: Props) {
             onSelectSticker={selectTraySticker}
             emptyMessage={
               hydrated ?
-                <>
-                  No stickers yet.{" "}
-                  <Link
-                    href="/profile"
-                    className="text-[#0a2f86] underline decoration-1 underline-offset-2"
-                  >
-                    Get some
-                  </Link>
-                </>
+                <span className="block px-1 text-center text-[0.65rem] font-semibold leading-snug text-kid-ink/80 sm:text-xs">
+                  No stickers yet. Tap Buy above!
+                </span>
               : "…"
             }
           />
         </StickerBookScrollCard>
       </div>
+
+      {unboxOpen && unboxedBatchIds ?
+        <StickerUnboxOverlay
+          unboxedBatchIds={unboxedBatchIds}
+          rollingStickerId={rollingStickerId}
+          isRollingSticker={isRollingSticker}
+          gold={gold}
+          maxAffordableStickers={maxAffordableStickers}
+          onClose={closeUnbox}
+          onBuyAnother={buyRandomSticker}
+          onBuyMax={buyMaxStickers}
+          onContinue={selectNewStickerFromUnbox}
+          continueLabel="Place on scene"
+        />
+      : null}
     </div>
   );
 }

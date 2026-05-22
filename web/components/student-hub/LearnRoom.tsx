@@ -3,6 +3,8 @@
 import NextImage from "next/image";
 import { clsx } from "clsx";
 import { useState } from "react";
+import { markExplorationNode } from "@/lib/worlds/exploration";
+import type { VocabHubId } from "@/lib/worlds/types";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
@@ -18,7 +20,6 @@ import {
   type VocabSetId,
 } from "@/lib/vocabulary-templates";
 
-type VocabHubId = "animals" | "school" | "body" | "jobs" | "food";
 type LearnVocabView = "top" | VocabHubId;
 
 const HUB_SET_MENUS: Record<VocabHubId, { id: VocabSetId; label: string }[]> = {
@@ -57,6 +58,7 @@ type Props = {
   muted: boolean;
   studyCarePending?: boolean;
   onOpenVocabularySet: (id: VocabSetId) => void;
+  onExplorationChange?: () => void;
 };
 
 const setCardClass =
@@ -67,6 +69,7 @@ export function LearnRoom({
   muted,
   studyCarePending = false,
   onOpenVocabularySet,
+  onExplorationChange,
 }: Props) {
   const [view, setView] = useState<LearnVocabView>("top");
   const hubView = view === "top" ? null : view;
@@ -122,6 +125,8 @@ export function LearnRoom({
                         return;
                       }
                       playSfx("tap", muted);
+                      markExplorationNode({ kind: "vocab_hub", hubId: entry.hubId });
+                      onExplorationChange?.();
                       setView(entry.hubId);
                     }}
                   >

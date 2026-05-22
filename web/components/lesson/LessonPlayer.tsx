@@ -28,14 +28,16 @@ import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
 import { speakText, stopSpeaking } from "@/lib/audio/tts";
 import type { LessonScreenRow } from "@/lib/data/catalog";
 import { getQuizProgressForLessonIndex } from "@/lib/lesson-activity-taxonomy";
-import { StudentAvatar } from "@/components/avatar/StudentAvatar";
+import { PlayerCharacter } from "@/components/avatar/PlayerCharacter";
+import { PetCompanion } from "@/components/worlds/PetCompanion";
 import { AVATAR_PRESETS } from "@/lib/avatar/defaults";
 import type { AvatarLoadout } from "@/lib/avatar/types";
 import {
-  getChosenAvatarLoadout,
+  getPetLoadout,
+  getPlayerAppearanceId,
   getProgressSnapshot,
   markLessonComplete,
-  setAvatarPreset,
+  setPetPreset,
   setResumeScreen,
 } from "@/lib/progress/local-storage";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
@@ -215,7 +217,9 @@ function RewardScreen({
   completionPlayground?: CompletionPlayground | null;
   onEconomyRefresh: () => void;
 }) {
-  const [loadout, setLoadout] = useState<AvatarLoadout | null>(() => getChosenAvatarLoadout());
+  const [petLoadout, setPetLoadout] = useState<AvatarLoadout | null>(() => getPetLoadout());
+  const playerAppearanceId = getPlayerAppearanceId();
+  const playerLevel = getPlayerLevel(getRewards());
 
   const completionStoryPayload = useMemo(() => {
     if (!completionPlayground) return null;
@@ -278,19 +282,19 @@ function RewardScreen({
           </div>
         ) : null}
         <p className="text-3xl font-extrabold text-kid-ink">Great job!</p>
-        {loadout ?
-          <div className="mt-4 flex justify-center">
-            <StudentAvatar
-              loadout={loadout}
-              playerLevel={getPlayerLevel(getRewards())}
-              size="xl"
-            />
-          </div>
-        : null}
+        <div className="relative mx-auto mt-4 flex max-w-[11rem] justify-center">
+          <PlayerCharacter appearanceId={playerAppearanceId} size="lg" />
+          <PetCompanion
+            loadout={petLoadout}
+            playerLevel={playerLevel}
+            size="sm"
+            show={Boolean(petLoadout)}
+          />
+        </div>
         <p className="mt-3 text-xl text-kid-ink">You finished {lessonTitle}!</p>
-        {!loadout ?
+        {!petLoadout ?
           <div className="mt-6">
-            <p className="mb-3 text-lg font-bold text-kid-ink">Pick your look</p>
+            <p className="mb-3 text-lg font-bold text-kid-ink">Pick a pet to celebrate with you</p>
             <div className="flex flex-wrap justify-center gap-3">
               {AVATAR_PRESETS.map((a) => (
                 <KidButton
@@ -299,8 +303,8 @@ function RewardScreen({
                   variant="secondary"
                   className="!min-h-12 !min-w-12 text-4xl"
                   onClick={() => {
-                    setAvatarPreset(a.id);
-                    setLoadout(getChosenAvatarLoadout());
+                    setPetPreset(a.id);
+                    setPetLoadout(getPetLoadout());
                   }}
                 >
                   <span aria-hidden>{a.emoji}</span>

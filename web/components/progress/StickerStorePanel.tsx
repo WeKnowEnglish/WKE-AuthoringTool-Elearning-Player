@@ -1,85 +1,68 @@
 "use client";
 
 import { clsx } from "clsx";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
-import { KidConfetti } from "@/components/kid-ui/KidConfetti";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
-import { playSfx } from "@/lib/audio/sfx";
-import { isAudioMuted } from "@/lib/progress/local-storage";
+import { StickerPurchaseActions } from "@/components/progress/StickerPurchaseActions";
+import { StickerUnboxOverlay } from "@/components/progress/StickerUnboxOverlay";
+import { useStickerPurchases } from "@/components/progress/useStickerPurchases";
 import {
-  getRewards,
-  purchaseRandomStickerPacks,
   sellDuplicateStickersKeepOne,
   sellSticker,
-  type RewardsSnapshot,
 } from "@/lib/progress/rewards";
 import {
   STICKER_CARD_RING,
   STICKER_LIBRARY,
   STICKER_RARITY_LABEL_CLASS,
-  pickRandomSticker,
-  type StickerRarity,
 } from "@/lib/progress/sticker-library";
-
-const STICKER_COST_GOLD = 200;
-
-const STICKER_SELL_GOLD_BY_RARITY: Record<StickerRarity, number> = {
-  common: 25,
-  uncommon: 50,
-  rare: 100,
-  epic: 1000,
-};
-
-const RARITY_SORT_ORDER: Record<StickerRarity, number> = {
-  common: 0,
-  uncommon: 1,
-  rare: 2,
-  epic: 3,
-};
-
-function sellGoldForStickerId(stickerId: string): number | null {
-  const def = STICKER_LIBRARY.find((s) => s.id === stickerId);
-  return def ? STICKER_SELL_GOLD_BY_RARITY[def.rarity] : null;
-}
+import {
+  STICKER_RARITY_SORT_ORDER,
+  STICKER_SELL_GOLD_BY_RARITY,
+  sellGoldForStickerId,
+} from "@/lib/progress/sticker-store-constants";
 
 export type StickerStorePanelProps = {
-  /** When set, used for completion SFX instead of reading progress snapshot. */
   muted?: boolean;
-  /** Panel heading (e.g. profile uses "Achievements"). */
   title?: string;
-  /** Short description under the title. */
   description?: string;
-  /** Message when the sticker book is empty. */
   emptyBookMessage?: string;
-  /** Called after gold or owned stickers change (e.g. sync parent header). */
   onRewardsChange?: () => void;
+  /** Sync gold/owned from storage when parent bumps economy. */
+  rewardsSyncKey?: number;
 };
-
-function sfxMuted(propMuted: boolean | undefined): boolean {
-  if (propMuted !== undefined) return propMuted;
-  return isAudioMuted();
-}
 
 export function StickerStorePanel({
   muted: mutedProp,
   title = "Sticker store",
   description = "Earn gold in lessons and quizzes, then spend it on random sticker packs.",
-  emptyBookMessage = "No stickers yet. Buy one from the store.",
+  emptyBookMessage = "No stickers yet. Buy one from the Book tab on Home.",
   onRewardsChange,
+  rewardsSyncKey = 0,
 }: StickerStorePanelProps) {
-  const [gold, setGold] = useState(() => getRewards().gold);
-  const [ownedStickerIds, setOwnedStickerIds] = useState<string[]>(
-    () => getRewards().ownedStickerIds ?? [],
-  );
+  const purchases = useStickerPurchases({
+    muted: mutedProp,
+    rewardsSyncKey,
+    onRewardsChange,
+  });
+  const {
+    gold,
+    ownedStickerIds,
+    maxAffordableStickers,
+    unboxedBatchIds,
+    rollingStickerId,
+    isRollingSticker,
+    unboxOpen,
+    buyRandomSticker,
+    buyMaxStickers,
+    closeUnbox,
+    setGold,
+    setOwnedStickerIds,
+  } = purchases;
+
   const [bookOpen, setBookOpen] = useState(false);
   const [bulkSellDialogOpen, setBulkSellDialogOpen] = useState(false);
   const [pendingSellStickerId, setPendingSellStickerId] = useState<string | null>(null);
-  const [unboxedBatchIds, setUnboxedBatchIds] = useState<string[] | null>(null);
-  const [rollingStickerId, setRollingStickerId] = useState<string | null>(null);
-  const [isRollingSticker, setIsRollingSticker] = useState(false);
-  const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const rollFinalizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stickerBookEntries = useMemo(
     () =>
@@ -97,7 +80,7 @@ export function StickerStorePanel({
 
   const sortedStickerBookEntries = useMemo(() => {
     return [...stickerBookEntries].sort((a, b) => {
-      const rDiff = RARITY_SORT_ORDER[a.def.rarity] - RARITY_SORT_ORDER[b.def.rarity];
+      const rDiff = STICKER_RARITY_SORT_ORDER[a.def.rarity] - STICKER_RARITY_SORT_ORDER[b.def.rarity];
       if (rDiff !== 0) return rDiff;
       const aOwned = a.count > 0 ? 1 : 0;
       const bOwned = b.count > 0 ? 1 : 0;
@@ -121,16 +104,16 @@ export function StickerStorePanel({
     for (const id of ownedStickerIds) {
       counts.set(id, (counts.get(id) ?? 0) + 1);
     }
-    let gold = 0;
+    let previewGold = 0;
     let extraCopies = 0;
     for (const [id, c] of counts) {
       if (c < 2) continue;
       const unit = sellGoldForStickerId(id);
       if (unit == null || unit <= 0) continue;
       extraCopies += c - 1;
-      gold += (c - 1) * unit;
+      previewGold += (c - 1) * unit;
     }
-    return { gold, extraCopies };
+    return { gold: previewGold, extraCopies };
   }, [ownedStickerIds]);
 
   useEffect(() => {
@@ -146,70 +129,13 @@ export function StickerStorePanel({
     }
   }, [bulkSellDialogOpen, sellExtrasPreview.gold]);
 
-  const unboxedDefs = useMemo(
-    () =>
-      unboxedBatchIds
-        ?.map((id) => STICKER_LIBRARY.find((s) => s.id === id))
-        .filter((d): d is (typeof STICKER_LIBRARY)[number] => d != null) ?? [],
-    [unboxedBatchIds],
-  );
-
-  const rollingSticker =
-    rollingStickerId ? STICKER_LIBRARY.find((s) => s.id === rollingStickerId) ?? null : null;
-
-  const maxAffordableStickers = Math.floor(gold / STICKER_COST_GOLD);
-
-  function notifyRewardsChange() {
-    onRewardsChange?.();
-  }
-
-  function beginUnboxReveal(purchasedIds: string[], snapshot: RewardsSnapshot) {
-    if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
-    if (rollFinalizeTimeoutRef.current) clearTimeout(rollFinalizeTimeoutRef.current);
-    setGold(snapshot.gold);
-    setOwnedStickerIds(snapshot.ownedStickerIds);
-    setUnboxedBatchIds(purchasedIds);
-    notifyRewardsChange();
-    setIsRollingSticker(true);
-    setRollingStickerId(pickRandomSticker().id);
-    rollIntervalRef.current = setInterval(() => {
-      setRollingStickerId(pickRandomSticker().id);
-    }, 85);
-    const duration = purchasedIds.length === 1 ? 1450 : 1300;
-    rollFinalizeTimeoutRef.current = setTimeout(() => {
-      if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
-      rollIntervalRef.current = null;
-      if (purchasedIds.length === 1) {
-        setRollingStickerId(purchasedIds[0]!);
-      } else {
-        setRollingStickerId(null);
-      }
-      setIsRollingSticker(false);
-      playSfx("complete", sfxMuted(mutedProp));
-    }, duration);
-  }
-
-  function buyRandomSticker() {
-    const pack = purchaseRandomStickerPacks({ count: 1, costGoldEach: STICKER_COST_GOLD });
-    if (!pack) return;
-    beginUnboxReveal(pack.purchasedIds, pack.snapshot);
-  }
-
-  function buyMaxStickers() {
-    const n = Math.floor(gold / STICKER_COST_GOLD);
-    if (n < 1) return;
-    const pack = purchaseRandomStickerPacks({ count: n, costGoldEach: STICKER_COST_GOLD });
-    if (!pack) return;
-    beginUnboxReveal(pack.purchasedIds, pack.snapshot);
-  }
-
   function sellAllExtrasKeepOne() {
     const next = sellDuplicateStickersKeepOne(sellGoldForStickerId);
     if (!next) return;
     setGold(next.gold);
     setOwnedStickerIds(next.ownedStickerIds);
     setBulkSellDialogOpen(false);
-    notifyRewardsChange();
+    onRewardsChange?.();
   }
 
   function sellOneSticker(stickerId: string) {
@@ -219,15 +145,8 @@ export function StickerStorePanel({
     if (!next) return;
     setGold(next.gold);
     setOwnedStickerIds(next.ownedStickerIds);
-    notifyRewardsChange();
+    onRewardsChange?.();
   }
-
-  useEffect(() => {
-    return () => {
-      if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
-      if (rollFinalizeTimeoutRef.current) clearTimeout(rollFinalizeTimeoutRef.current);
-    };
-  }, []);
 
   return (
     <>
@@ -235,154 +154,37 @@ export function StickerStorePanel({
         <h2 className="text-xl font-bold text-kid-ink">{title}</h2>
         <p className="mt-1 text-sm text-kid-ink/80">{description}</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
-            Gold: {gold}
-          </span>
-          <KidButton
-            type="button"
-            onClick={buyRandomSticker}
-            disabled={gold < STICKER_COST_GOLD}
-            title={
-              gold < STICKER_COST_GOLD ?
-                `Need ${STICKER_COST_GOLD} gold to buy a sticker`
-              : `Buy random sticker for ${STICKER_COST_GOLD} gold`
-            }
-          >
-            Buy random sticker ({STICKER_COST_GOLD} gold)
-          </KidButton>
-          <KidButton
-            type="button"
-            variant="secondary"
-            onClick={buyMaxStickers}
-            disabled={maxAffordableStickers < 1}
-            title={
-              maxAffordableStickers < 1 ?
-                `Need ${STICKER_COST_GOLD} gold to buy stickers`
-              : `Buy ${maxAffordableStickers} sticker${maxAffordableStickers === 1 ? "" : "s"} for ${maxAffordableStickers * STICKER_COST_GOLD} gold`
-            }
-          >
-            Buy max ({maxAffordableStickers})
-          </KidButton>
+          <StickerPurchaseActions
+            gold={gold}
+            maxAffordableStickers={maxAffordableStickers}
+            disabled={isRollingSticker}
+            muted={mutedProp}
+            showGoldChip
+            onBuyRandom={buyRandomSticker}
+            onBuyMax={buyMaxStickers}
+          />
           <KidButton type="button" variant="secondary" onClick={() => setBookOpen(true)}>
             Open sticker book ({ownedStickerIds.length})
           </KidButton>
         </div>
       </KidPanel>
 
-      {unboxedBatchIds && unboxedBatchIds.length > 0 && unboxedDefs.length > 0 ? (
-        <div className="fixed left-0 top-0 z-[90] flex h-dvh w-screen items-center justify-center bg-black p-3 sm:p-4">
-          <KidConfetti active />
-          <div className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border-4 border-yellow-300 bg-neutral-950 text-center text-white shadow-2xl">
-            <div className="shrink-0 p-6 pb-4 sm:p-8 sm:pb-5">
-              <p className="text-base font-semibold uppercase tracking-[0.2em] text-yellow-200">
-                {isRollingSticker ?
-                  unboxedBatchIds.length === 1 ?
-                    "Picking your sticker..."
-                  : `Opening ${unboxedBatchIds.length} sticker packs...`
-                : unboxedBatchIds.length === 1 ?
-                  "New sticker unlocked"
-                : `${unboxedBatchIds.length} new stickers!`}
-              </p>
-              {unboxedBatchIds.length === 1 || isRollingSticker ? (
-                <>
-                  <p
-                    className="mt-6 text-[8rem] leading-none drop-shadow-[0_0_24px_rgba(255,255,255,0.25)] sm:mt-8 sm:text-[11rem]"
-                    aria-hidden
-                  >
-                    {(isRollingSticker ? (rollingSticker ?? unboxedDefs[0]) : unboxedDefs[0]).emoji}
-                  </p>
-                  {!isRollingSticker && unboxedBatchIds.length === 1 ? (
-                    <>
-                      <p className="mt-6 text-3xl font-extrabold text-yellow-100 sm:text-4xl">
-                        {unboxedDefs[0]!.label}
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-emerald-300">
-                        Congratulations! ({unboxedDefs[0]!.rarity})
-                      </p>
-                    </>
-                  ) : null}
-                </>
-              ) : null}
-              {!isRollingSticker && unboxedBatchIds.length > 1 ? (
-                <div className="mt-6 max-h-[min(52dvh,28rem)] overflow-y-auto px-1 sm:max-h-[min(50dvh,32rem)]">
-                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4">
-                    {unboxedDefs.map((def, index) => (
-                      <li
-                        key={`${def.id}-${index}`}
-                        className={clsx(
-                          "flex flex-col items-center rounded-xl border-2 border-white/20 px-2 py-3",
-                          STICKER_CARD_RING[def.rarity],
-                        )}
-                      >
-                        <span className="text-5xl leading-none sm:text-6xl" aria-hidden>
-                          {def.emoji}
-                        </span>
-                        <span className="mt-2 line-clamp-2 text-xs font-bold leading-tight text-neutral-900 sm:text-sm">
-                          {def.label}
-                        </span>
-                        <span
-                          className={clsx(
-                            "mt-1 text-[10px] font-extrabold uppercase tracking-wider sm:text-[11px]",
-                            STICKER_RARITY_LABEL_CLASS[def.rarity],
-                          )}
-                        >
-                          {def.rarity}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-            <div className="mt-auto flex shrink-0 flex-wrap justify-center gap-2 border-t border-white/10 bg-black/30 px-4 py-4 sm:gap-3 sm:px-6">
-              <KidButton
-                type="button"
-                variant="secondary"
-                disabled={isRollingSticker}
-                onClick={() => setUnboxedBatchIds(null)}
-              >
-                Close
-              </KidButton>
-              <KidButton
-                type="button"
-                disabled={isRollingSticker}
-                onClick={() => {
-                  setUnboxedBatchIds(null);
-                  setBookOpen(true);
-                }}
-              >
-                View sticker book
-              </KidButton>
-              <KidButton
-                type="button"
-                disabled={isRollingSticker || gold < STICKER_COST_GOLD}
-                title={
-                  gold < STICKER_COST_GOLD ?
-                    `Need ${STICKER_COST_GOLD} gold to buy another sticker`
-                  : `Buy another sticker for ${STICKER_COST_GOLD} gold`
-                }
-                onClick={buyRandomSticker}
-              >
-                Buy another
-              </KidButton>
-              <KidButton
-                type="button"
-                variant="accent"
-                disabled={isRollingSticker || maxAffordableStickers < 1}
-                title={
-                  maxAffordableStickers < 1 ?
-                    `Need ${STICKER_COST_GOLD} gold to buy stickers`
-                  : `Buy ${maxAffordableStickers} sticker${maxAffordableStickers === 1 ? "" : "s"} for ${maxAffordableStickers * STICKER_COST_GOLD} gold`
-                }
-                onClick={buyMaxStickers}
-              >
-                Buy max ({maxAffordableStickers})
-              </KidButton>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {bookOpen ? (
+      {unboxOpen && unboxedBatchIds ?
+        <StickerUnboxOverlay
+          unboxedBatchIds={unboxedBatchIds}
+          rollingStickerId={rollingStickerId}
+          isRollingSticker={isRollingSticker}
+          gold={gold}
+          maxAffordableStickers={maxAffordableStickers}
+          onClose={closeUnbox}
+          onBuyAnother={buyRandomSticker}
+          onBuyMax={buyMaxStickers}
+          onContinue={() => setBookOpen(true)}
+          continueLabel="View sticker book"
+        />
+      : null}
+
+      {bookOpen ?
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-3 sm:p-6">
           <div className="flex max-h-[94dvh] w-full max-w-6xl flex-col rounded-2xl border-4 border-kid-ink bg-[#fffdf8] p-5 shadow-2xl sm:p-7 md:p-8">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b-4 border-kid-ink/15 pb-4">
@@ -393,7 +195,7 @@ export function StickerStorePanel({
                 <p className="mt-1 text-sm font-semibold text-kid-ink/75 sm:text-base">
                   {stickerBookCollectedCount} of {STICKER_LIBRARY.length} stickers collected
                 </p>
-                {stickerBookCollectedCount > 0 && sellExtrasPreview.gold > 0 ? (
+                {stickerBookCollectedCount > 0 && sellExtrasPreview.gold > 0 ?
                   <KidButton
                     type="button"
                     variant="secondary"
@@ -406,17 +208,17 @@ export function StickerStorePanel({
                   >
                     Sell extras (keep 1 each) — +{sellExtrasPreview.gold} gold
                   </KidButton>
-                ) : null}
+                : null}
               </div>
               <KidButton type="button" variant="secondary" className="shrink-0" onClick={() => setBookOpen(false)}>
                 Close
               </KidButton>
             </div>
-            {stickerBookCollectedCount === 0 ? (
+            {stickerBookCollectedCount === 0 ?
               <p className="mt-4 rounded-xl border-2 border-dashed border-kid-ink/30 bg-kid-panel/80 px-4 py-3 text-center text-sm font-semibold text-kid-ink/85 sm:text-base">
                 {emptyBookMessage}
               </p>
-            ) : null}
+            : null}
             <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
               <div className="grid grid-cols-2 gap-4 pb-2 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
                 {sortedStickerBookEntries.map(({ def, count }) => {
@@ -436,11 +238,11 @@ export function StickerStorePanel({
                         owned ? STICKER_CARD_RING[def.rarity] : "border-kid-ink/20 bg-neutral-200/80",
                       )}
                     >
-                      {owned ? (
+                      {owned ?
                         <span className="absolute right-2 top-2 rounded-full border-2 border-kid-ink bg-kid-ink px-2 py-0.5 text-xs font-black text-white tabular-nums shadow-sm">
                           ×{count}
                         </span>
-                      ) : (
+                      : (
                         <span
                           className="absolute right-2 top-2 rounded-full border-2 border-kid-ink/25 bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-kid-ink/50"
                           aria-hidden
@@ -473,9 +275,9 @@ export function StickerStorePanel({
                       >
                         {def.rarity}
                       </p>
-                      {!owned ? (
+                      {!owned ?
                         <p className="mt-auto pt-3 text-xs font-semibold text-kid-ink/45">Not in your book yet</p>
-                      ) : (
+                      : (
                         <button
                           type="button"
                           className="mt-auto w-full max-w-[12rem] rounded-xl border-2 border-amber-500 bg-amber-100 py-2.5 text-sm font-extrabold text-amber-950 shadow-[2px_2px_0_rgba(120,53,15,0.25)] transition-transform [touch-action:manipulation] hover:bg-amber-200 active:scale-[0.98]"
@@ -492,8 +294,8 @@ export function StickerStorePanel({
             </div>
           </div>
         </div>
-      ) : null}
-      {bookOpen && bulkSellDialogOpen ? (
+      : null}
+      {bookOpen && bulkSellDialogOpen ?
         <div
           className="fixed inset-0 z-[86] flex items-center justify-center bg-black/50 p-4"
           role="dialog"
@@ -528,8 +330,8 @@ export function StickerStorePanel({
             </div>
           </KidPanel>
         </div>
-      ) : null}
-      {bookOpen && pendingSellEntry && pendingSellEntry.count > 0 ? (
+      : null}
+      {bookOpen && pendingSellEntry && pendingSellEntry.count > 0 ?
         <div
           className="fixed inset-0 z-[85] flex items-center justify-center bg-black/50 p-4"
           role="dialog"
@@ -551,9 +353,7 @@ export function StickerStorePanel({
                 <p className="font-bold text-kid-ink">{pendingSellEntry.def.label}</p>
                 <p className="text-xs font-semibold uppercase tracking-wide text-kid-ink/60">
                   {pendingSellEntry.def.rarity}
-                  {pendingSellEntry.count > 1 ?
-                    ` · You have ×${pendingSellEntry.count}`
-                  : null}
+                  {pendingSellEntry.count > 1 ? ` · You have ×${pendingSellEntry.count}` : null}
                 </p>
               </div>
             </div>
@@ -578,7 +378,7 @@ export function StickerStorePanel({
             </div>
           </KidPanel>
         </div>
-      ) : null}
+      : null}
     </>
   );
 }

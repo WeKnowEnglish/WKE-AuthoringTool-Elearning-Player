@@ -30,14 +30,11 @@ import type { LessonScreenRow } from "@/lib/data/catalog";
 import { getQuizProgressForLessonIndex } from "@/lib/lesson-activity-taxonomy";
 import { PlayerCharacter } from "@/components/avatar/PlayerCharacter";
 import { PetCompanion } from "@/components/worlds/PetCompanion";
-import { AVATAR_PRESETS } from "@/lib/avatar/defaults";
-import type { AvatarLoadout } from "@/lib/avatar/types";
 import {
-  getPetLoadout,
+  ensurePetDog,
   getPlayerAppearanceId,
   getProgressSnapshot,
   markLessonComplete,
-  setPetPreset,
   setResumeScreen,
 } from "@/lib/progress/local-storage";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
@@ -156,6 +153,9 @@ const LazyDragSentence = lazy(() =>
 const LazyWordBucketCatch = lazy(() =>
   import("./interactions/WordBucketCatchView").then((m) => ({ default: m.WordBucketCatchView })),
 );
+const LazyExploreRun = lazy(() =>
+  import("./interactions/ExploreRunView").then((m) => ({ default: m.ExploreRunView })),
+);
 
 function InteractionChunkFallback() {
   return (
@@ -217,9 +217,11 @@ function RewardScreen({
   completionPlayground?: CompletionPlayground | null;
   onEconomyRefresh: () => void;
 }) {
-  const [petLoadout, setPetLoadout] = useState<AvatarLoadout | null>(() => getPetLoadout());
   const playerAppearanceId = getPlayerAppearanceId();
-  const playerLevel = getPlayerLevel(getRewards());
+
+  useEffect(() => {
+    ensurePetDog();
+  }, []);
 
   const completionStoryPayload = useMemo(() => {
     if (!completionPlayground) return null;
@@ -284,36 +286,9 @@ function RewardScreen({
         <p className="text-3xl font-extrabold text-kid-ink">Great job!</p>
         <div className="relative mx-auto mt-4 flex max-w-[11rem] justify-center">
           <PlayerCharacter appearanceId={playerAppearanceId} size="lg" />
-          <PetCompanion
-            loadout={petLoadout}
-            playerLevel={playerLevel}
-            size="sm"
-            show={Boolean(petLoadout)}
-          />
+          <PetCompanion mood="excited" size="sm" />
         </div>
         <p className="mt-3 text-xl text-kid-ink">You finished {lessonTitle}!</p>
-        {!petLoadout ?
-          <div className="mt-6">
-            <p className="mb-3 text-lg font-bold text-kid-ink">Pick a pet to celebrate with you</p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {AVATAR_PRESETS.map((a) => (
-                <KidButton
-                  key={a.id}
-                  type="button"
-                  variant="secondary"
-                  className="!min-h-12 !min-w-12 text-4xl"
-                  onClick={() => {
-                    setPetPreset(a.id);
-                    setPetLoadout(getPetLoadout());
-                  }}
-                >
-                  <span aria-hidden>{a.emoji}</span>
-                  <span className="sr-only">{a.label}</span>
-                </KidButton>
-              ))}
-            </div>
-          </div>
-        : null}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <KidButton
             type="button"
@@ -1426,6 +1401,20 @@ export function LessonPlayer({
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
+      {parsed.type === "interaction" && parsed.subtype === "explore" && (
+        <InteractionLazyShell fillStage>
+          <LazyExploreRun
+            parsed={parsed}
+            muted={muted}
+            passed={interactionPass}
+            lessonId={lessonId}
+            screenId={screen.id}
+            isPreview={isPreview}
+            onPass={passHandlers.onPass}
+            onEconomyChange={onEconomyChange}
+          />
+        </InteractionLazyShell>
+      )}
       </div>
     </div>
   );
@@ -1467,6 +1456,12 @@ function extractTrackedWords(payload: ScreenPayload): string[] {
       );
     case "word_bucket_catch":
       return uniqueWords(extractWords(payload.target_word));
+    case "explore": {
+      const words = payload.gates.flatMap((g) =>
+        [g.target_word, ...(g.accepted_words ?? [])].flatMap((w) => extractWords(w)),
+      );
+      return uniqueWords(words);
+    }
     case "letter_mixup": {
       const words = payload.items.flatMap((item) =>
         [item.target_word, ...(item.accepted_words ?? [])].flatMap((w) => extractWords(w)),

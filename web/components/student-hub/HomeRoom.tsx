@@ -1,22 +1,28 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
+import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { WorldExplorationBar, WorldHomeStage } from "@/components/worlds";
 import { playSfx } from "@/lib/audio/sfx";
-import { getPetLoadout, getPlayerAppearanceId } from "@/lib/progress/local-storage";
-import type { AvatarLoadout } from "@/lib/avatar/types";
+import { ensurePetDog, getPlayerAppearanceId } from "@/lib/progress/local-storage";
 import type { PlayerAppearanceId } from "@/lib/progress/types";
-import { levelFromXp } from "@/lib/progress/leveling";
 import { getRewards } from "@/lib/progress/rewards";
 import type { StickerDef } from "@/lib/progress/sticker-library";
 import { STICKER_LIBRARY } from "@/lib/progress/sticker-library";
+import {
+  getNextExploreAreaId,
+  getWorldWordDiscoverySummary,
+} from "@/lib/explore/area-discovery";
+import { getExploreArea } from "@/lib/explore/areas";
+import type { ExploreAreaDiscoverySummary } from "@/lib/explore/area-discovery";
+import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import {
   getWorld1ExplorationSummary,
   type WorldExplorationSummary,
 } from "@/lib/worlds/exploration";
 import { WORLD_1_SIMPLE } from "@/lib/worlds/world-1-simple";
+import type { CollectionPageId } from "@/components/student-hub/collection/types";
 
 type Props = {
   muted: boolean;
@@ -26,7 +32,8 @@ type Props = {
   explorationUiKey: number;
   onGoLearn: () => void;
   onGoPet: () => void;
-  onGoBook: () => void;
+  onOpenCollection: (page?: CollectionPageId) => void;
+  onOpenExplore: (areaId: ExploreAreaId) => void;
 };
 
 function buildStickerShowcase(ownedIds: string[]): StickerDef[] {
@@ -44,22 +51,29 @@ export function HomeRoom({
   explorationUiKey,
   onGoLearn,
   onGoPet,
-  onGoBook,
+  onOpenCollection,
+  onOpenExplore,
 }: Props) {
-  const [petLoadout, setPetLoadout] = useState<AvatarLoadout | null>(null);
   const [playerAppearanceId, setPlayerAppearanceId] = useState<PlayerAppearanceId>("default");
   const [exploration, setExploration] = useState<WorldExplorationSummary | null>(null);
+  const [areaDiscoveryById, setAreaDiscoveryById] = useState<
+    Partial<Record<ExploreAreaId, ExploreAreaDiscoverySummary>>
+  >({});
   const [showcase, setShowcase] = useState<StickerDef[]>([]);
 
   useEffect(() => {
     if (!hydrated) return;
-    setPetLoadout(getPetLoadout());
+    ensurePetDog();
     setPlayerAppearanceId(getPlayerAppearanceId());
     setExploration(getWorld1ExplorationSummary());
+    const word = getWorldWordDiscoverySummary();
+    setAreaDiscoveryById(
+      Object.fromEntries(word.areas.map((a) => [a.areaId, a])) as Partial<
+        Record<ExploreAreaId, ExploreAreaDiscoverySummary>
+      >,
+    );
     setShowcase(buildStickerShowcase(getRewards().ownedStickerIds ?? []));
   }, [hydrated, dailyQuestUiKey, explorationUiKey]);
-
-  const playerLevel = levelFromXp(experience);
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
@@ -80,13 +94,15 @@ export function HomeRoom({
       <WorldHomeStage
         world={WORLD_1_SIMPLE}
         playerAppearanceId={playerAppearanceId}
-        petLoadout={hydrated ? petLoadout : null}
-        playerLevel={playerLevel}
         hydrated={hydrated}
-        levelsWithProgress={hydrated && exploration ? exploration.levelsWithProgress : undefined}
+        areaDiscoveryById={hydrated ? areaDiscoveryById : undefined}
         onPetCare={() => {
           playSfx("tap", muted);
           onGoPet();
+        }}
+        onSelectExploreArea={(areaId) => {
+          playSfx("tap", muted);
+          onOpenExplore(areaId);
         }}
       />
 
@@ -100,20 +116,11 @@ export function HomeRoom({
                 className="text-[#0a2f86] underline decoration-2 underline-offset-2"
                 onClick={() => {
                   playSfx("tap", muted);
-                  onGoBook();
+                  onOpenCollection("stickers");
                 }}
               >
-                Sticker book
+                Collection
               </button>
-              <span className="text-kid-ink/50" aria-hidden>
-                ·
-              </span>
-              <Link
-                href="/profile"
-                className="text-[#0a2f86] underline decoration-2 underline-offset-2"
-              >
-                See all
-              </Link>
             </div>
           </div>
           <ul className="mt-3 flex flex-wrap justify-center gap-2">
@@ -130,19 +137,85 @@ export function HomeRoom({
         </section>
       ) : null}
 
-      <KidButton type="button" variant="accent" className="w-full !min-h-[3.5rem] !text-lg" onClick={onGoLearn}>
-        Go learn
+      {hydrated ? (
+        <ExploreContinueButton
+          muted={muted}
+          areaDiscoveryById={areaDiscoveryById}
+          onOpenExplore={onOpenExplore}
+        />
+      ) : (
+        <div className="h-14 w-full animate-pulse rounded-2xl border-4 border-kid-ink/30 bg-kid-panel/50" aria-hidden />
+      )}
+
+      <KidButton
+        type="button"
+        variant="secondary"
+        className="w-full !min-h-12 !text-base"
+        onClick={onGoLearn}
+      >
+        Word practice
       </KidButton>
 
       <p className="text-center text-sm font-semibold text-kid-ink/75">
-        <Link href="/learn" className="text-[#0a2f86] underline decoration-2 underline-offset-2">
-          Lessons
-        </Link>
-        {" · "}
-        <Link href="/profile" className="text-[#0a2f86] underline decoration-2 underline-offset-2">
-          Profile
-        </Link>
+        <button
+          type="button"
+          className="text-[#0a2f86] underline decoration-2 underline-offset-2"
+          onClick={() => {
+            playSfx("tap", muted);
+            onOpenCollection("achievements");
+          }}
+        >
+          Awards & skills
+        </button>
       </p>
     </div>
+  );
+}
+
+function ExploreContinueButton({
+  muted,
+  areaDiscoveryById,
+  onOpenExplore,
+}: {
+  muted: boolean;
+  areaDiscoveryById: Partial<Record<ExploreAreaId, ExploreAreaDiscoverySummary>>;
+  onOpenExplore: (areaId: ExploreAreaId) => void;
+}) {
+  const nextId = getNextExploreAreaId();
+  const areas = Object.values(areaDiscoveryById).filter(Boolean) as ExploreAreaDiscoverySummary[];
+  const allComplete =
+    areas.length >= 3 && areas.every((a) => a.complete) && nextId === null;
+
+  if (allComplete) {
+    return (
+      <KidPanel className="text-center">
+        <p className="text-lg font-extrabold text-kid-ink">World complete!</p>
+        <p className="mt-1 text-sm font-semibold text-kid-ink/85">
+          You found every word in all three areas. Replay any area from the map above.
+        </p>
+      </KidPanel>
+    );
+  }
+
+  const targetId = nextId ?? "bedroom";
+  const target = getExploreArea(targetId);
+  const summary = areaDiscoveryById[targetId];
+  const label =
+    summary && summary.discoveredCount > 0 ?
+      `Continue — ${target.title}`
+    : `Explore — ${target.title}`;
+
+  return (
+    <KidButton
+      type="button"
+      variant="accent"
+      className="w-full !min-h-[3.5rem] !text-lg"
+      onClick={() => {
+        playSfx("tap", muted);
+        onOpenExplore(targetId);
+      }}
+    >
+      {label}
+    </KidButton>
   );
 }

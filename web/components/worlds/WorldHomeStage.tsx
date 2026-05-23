@@ -5,42 +5,30 @@ import { PlayerCharacter } from "@/components/avatar/PlayerCharacter";
 import { PetCompanion } from "@/components/worlds/PetCompanion";
 import { WorldLevelPlatform } from "@/components/worlds/WorldLevelPlatform";
 import { WorldLevelStrip } from "@/components/worlds/WorldLevelStrip";
-import { AVATAR_PRESETS } from "@/lib/avatar/defaults";
-import { growthStageForPreset, robotGrowthLabel } from "@/lib/avatar/growth";
-import { presetIdForLoadout } from "@/lib/avatar/progress";
-import type { AvatarLoadout } from "@/lib/avatar/types";
+import type { ExploreAreaDiscoverySummary } from "@/lib/explore/area-discovery";
+import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import type { PlayerAppearanceId } from "@/lib/progress/types";
 import type { WorldDef } from "@/lib/worlds/types";
 
 type Props = {
   world: WorldDef;
   playerAppearanceId: PlayerAppearanceId;
-  petLoadout: AvatarLoadout | null;
-  playerLevel: number;
   hydrated: boolean;
-  petPresetLabel?: string | null;
   onPetCare?: () => void;
-  levelsWithProgress?: number[];
+  areaDiscoveryById?: Partial<Record<ExploreAreaId, ExploreAreaDiscoverySummary>>;
+  onSelectExploreArea?: (areaId: ExploreAreaId) => void;
   className?: string;
 };
 
 export function WorldHomeStage({
   world,
   playerAppearanceId,
-  petLoadout,
-  playerLevel,
   hydrated,
-  petPresetLabel,
   onPetCare,
-  levelsWithProgress,
+  areaDiscoveryById,
+  onSelectExploreArea,
   className,
 }: Props) {
-  const presetId = petLoadout ? presetIdForLoadout(petLoadout) : null;
-  const presetLabel =
-    petPresetLabel ??
-    (presetId ? (AVATAR_PRESETS.find((p) => p.id === presetId)?.label ?? null) : null);
-  const robotGrowth = growthStageForPreset(presetId, playerLevel);
-
   return (
     <section
       className={clsx(
@@ -67,11 +55,7 @@ export function WorldHomeStage({
             />
           </div>
 
-          <PetCompanion
-            loadout={petLoadout}
-            playerLevel={playerLevel}
-            show={hydrated}
-          />
+          <PetCompanion show={hydrated} />
 
           <div className="relative z-0 -mt-2 w-full">
             <WorldLevelPlatform theme={world.theme} />
@@ -80,23 +64,9 @@ export function WorldHomeStage({
 
         <div className="mt-3 space-y-1 text-center" suppressHydrationWarning>
           <p className="text-sm font-bold text-kid-ink">Welcome back!</p>
-          {presetLabel ?
-            <p className="text-xs font-semibold text-kid-ink/85">
-              {presetLabel} is following you.
-            </p>
-          : (
-            <p className="text-xs font-semibold text-kid-ink/85">
-              <a href="/profile" className="font-bold text-[#0a2f86] underline decoration-2 underline-offset-2">
-                Pick a pet
-              </a>{" "}
-              on your Profile.
-            </p>
-          )}
-          {robotGrowth ?
-            <p className="text-[0.65rem] font-bold uppercase tracking-wide text-kid-ink/70">
-              Pet stage {robotGrowth} · {robotGrowthLabel(robotGrowth)}
-            </p>
-          : null}
+          <p className="text-xs font-semibold text-kid-ink/85">
+            Your dog is following you.
+          </p>
           {onPetCare ?
             <button
               type="button"
@@ -110,7 +80,8 @@ export function WorldHomeStage({
 
         <WorldLevelStrip
           world={world}
-          levelsWithProgress={levelsWithProgress}
+          areaDiscoveryById={areaDiscoveryById}
+          onSelectArea={onSelectExploreArea}
           className="mt-4"
         />
       </div>

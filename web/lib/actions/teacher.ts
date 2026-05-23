@@ -930,7 +930,8 @@ export type AddScreenKind =
   | "listen_color_write"
   | "hotspot_info"
   | "guided_dialogue"
-  | "word_bucket_catch";
+  | "word_bucket_catch"
+  | "explore";
 
 export async function addScreenTemplate(
   lessonId: string,

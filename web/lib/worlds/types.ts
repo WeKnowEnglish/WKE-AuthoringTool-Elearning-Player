@@ -1,3 +1,4 @@
+import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import type { VocabSetId } from "@/lib/vocabulary-templates/types";
 
 export type WorldId = "world_1";
@@ -5,6 +6,7 @@ export type WorldId = "world_1";
 export type VocabHubId = "food" | "animals" | "school" | "body" | "jobs";
 
 export type ExplorationNode =
+  | { kind: "explore_area"; areaId: ExploreAreaId }
   | { kind: "vocab_set"; setId: VocabSetId }
   | { kind: "vocab_hub"; hubId: VocabHubId };
 

@@ -102,6 +102,7 @@ const ADD_SCREEN_BUTTONS: { kind: AddScreenKind; label: string }[] = [
   { kind: "hotspot_info", label: "+ Hotspot info" },
   { kind: "guided_dialogue", label: "+ Guided dialogue" },
   { kind: "word_bucket_catch", label: "+ Word bucket catch" },
+  { kind: "explore", label: "+ Explore" },
 ];
 
 function screensSyncKey(list: LessonScreenRow[]) {

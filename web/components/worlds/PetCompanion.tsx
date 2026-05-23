@@ -1,21 +1,20 @@
 "use client";
 
 import { clsx } from "clsx";
-import { StudentAvatar, type StudentAvatarSize } from "@/components/avatar/StudentAvatar";
-import type { AvatarLoadout } from "@/lib/avatar/types";
+import { AnimatedPet } from "@/components/pet/AnimatedPet";
+import type { AnimatedPetSize } from "@/components/pet/AnimatedPetPlayer";
+import type { PetMood } from "@/lib/pet/types";
 
 type Props = {
-  loadout: AvatarLoadout | null | undefined;
-  playerLevel?: number;
-  size?: StudentAvatarSize;
+  mood?: PetMood;
+  size?: AnimatedPetSize;
   show?: boolean;
   className?: string;
 };
 
-/** Pet avatar anchored beside the player (follower pose). */
+/** Animated pet anchored beside the player (follower pose). */
 export function PetCompanion({
-  loadout,
-  playerLevel = 1,
+  mood = "normal",
   size = "sm",
   show = true,
   className,
@@ -27,15 +26,10 @@ export function PetCompanion({
         "right-1 bottom-[4.5rem] sm:right-2 sm:bottom-[5rem]",
         className,
       )}
-      aria-hidden={!show || !loadout}
+      aria-hidden={!show}
     >
       <div className="origin-bottom-right -rotate-6 scale-95 drop-shadow-[2px_3px_0_rgba(21,38,104,0.25)]">
-        <StudentAvatar
-          loadout={loadout}
-          playerLevel={playerLevel}
-          size={size}
-          show={show && Boolean(loadout)}
-        />
+        <AnimatedPet mood={mood} size={size} show={show} />
       </div>
     </div>
   );

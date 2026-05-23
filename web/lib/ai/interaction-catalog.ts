@@ -27,6 +27,7 @@ export const AI_INTERACTION_SUBTYPES = [
   "voice_question",
   "guided_dialogue",
   "word_bucket_catch",
+  "explore",
 ] as const;
 
 export type AiInteractionSubtype = (typeof AI_INTERACTION_SUBTYPES)[number];

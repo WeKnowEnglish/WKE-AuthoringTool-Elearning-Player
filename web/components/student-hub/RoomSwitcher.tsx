@@ -9,7 +9,7 @@ const TABS: { id: StudentHubRoom; icon: string; label: string }[] = [
   { id: "home", icon: "🏠", label: "Home" },
   { id: "pet", icon: "🐾", label: "Pet Care" },
   { id: "learn", icon: "📖", label: "Learn" },
-  { id: "book", icon: "📒", label: "Book" },
+  { id: "book", icon: "📒", label: "Collection" },
 ];
 
 type Props = {

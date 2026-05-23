@@ -717,3 +717,58 @@ body:has([data-teacher-root]) {
     animation: none;
   }
 }
+
+@keyframes blender-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+.pet-blender-shake {
+  animation: blender-shake 0.15s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-blender-shake {
+    animation: none;
+  }
+}
+
+@keyframes pet-knob-bounce {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.pet-knob-hit--ready {
+  border-color: rgba(251, 191, 36, 0.95);
+  background: rgba(255, 225, 53, 0.28);
+  box-shadow:
+    0 0 12px rgba(255, 225, 53, 0.9),
+    0 0 28px rgba(245, 166, 35, 0.55),
+    inset 0 0 12px rgba(255, 255, 255, 0.35);
+  animation: pet-knob-bounce 0.85s ease-in-out infinite;
+}
+
+.pet-knob-hit--ready:active {
+  box-shadow:
+    0 0 18px rgba(255, 225, 53, 1),
+    0 0 36px rgba(245, 166, 35, 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-knob-hit--ready {
+    animation: none;
+  }
+}

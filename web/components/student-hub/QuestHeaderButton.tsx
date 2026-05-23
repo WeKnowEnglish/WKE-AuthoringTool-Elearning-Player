@@ -3,7 +3,7 @@
 import { clsx } from "clsx";
 import { useMemo } from "react";
 import { playSfx } from "@/lib/audio/sfx";
-import { getDailyQuestUiRows } from "@/lib/teststartpage/daily-quests";
+import { getDailyQuestUiRows, HUB_DAILY_QUEST_IDS } from "@/lib/teststartpage/daily-quests";
 
 type Props = {
   muted: boolean;
@@ -18,7 +18,7 @@ export function QuestHeaderButton({ muted, hydrated, dailyQuestUiKey, expanded, 
 
   const summary = useMemo(() => {
     if (!hydrated) return null;
-    const model = getDailyQuestUiRows();
+    const model = getDailyQuestUiRows(undefined, { questIds: HUB_DAILY_QUEST_IDS });
     const done = model.rows.filter((r) => r.targetMet).length;
     const total = model.rows.length;
     const showBadge = done < total || model.chestOpenable;

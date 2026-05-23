@@ -277,6 +277,38 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
         shuffle_objects: true,
         allow_reassign: true,
       };
+    case "explore":
+      return {
+        type: "interaction",
+        subtype: "explore",
+        explore_template: "default_run_v1",
+        world_length: 3200,
+        scroll_speed_px_per_sec: 140,
+        gates: [
+          {
+            id: "gate_1",
+            time_limit_sec: 10,
+            prompt: "Spell the word before you hit the obstacle!",
+            target_word: "run",
+          },
+          {
+            id: "gate_2",
+            time_limit_sec: 10,
+            prompt: "Spell the word before you hit the obstacle!",
+            target_word: "jump",
+          },
+          {
+            id: "gate_3",
+            time_limit_sec: 10,
+            prompt: "Spell the word before you hit the obstacle!",
+            target_word: "fast",
+          },
+        ],
+        encounter: {
+          title: "A strange place",
+          body_text: "You found a hidden spot. What did you discover?",
+        },
+      };
     case "word_bucket_catch":
       return {
         type: "interaction",

@@ -17,6 +17,7 @@ import { FillBlanksView } from "@/components/lesson/interactions/FillBlanksView"
 import { LetterMixupView } from "@/components/lesson/interactions/LetterMixupView";
 import { McQuizView } from "@/components/lesson/interactions/McQuizView";
 import { ChaseGameOverlay } from "@/components/teststartpage/ChaseGameOverlay";
+import { ExploreRunOverlay } from "@/components/teststartpage/ExploreRunOverlay";
 import { DailyQuestsPanel } from "@/components/teststartpage/DailyQuestsPanel";
 import { ReadingSetOverlay } from "@/components/teststartpage/ReadingSetOverlay";
 import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
@@ -126,6 +127,7 @@ export function TestStartPageClient() {
   const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
   const [playerMenuPage, setPlayerMenuPage] = useState<PlayerMenuPage>("root");
   const [chaseGameOpen, setChaseGameOpen] = useState(false);
+  const [exploreRunOpen, setExploreRunOpen] = useState(false);
   const [wordBucketCatchOpen, setWordBucketCatchOpen] = useState(false);
   const [bucketGameConfig, setBucketGameConfig] = useState<WordBucketCatchConfig | null>(null);
   const [bucketCompletionEventId, setBucketCompletionEventId] = useState<string | null>(null);
@@ -616,6 +618,20 @@ export function TestStartPageClient() {
                 onClick={() => {
                   playSfx("tap", muted);
                   setChaseGameOpen(true);
+                }}
+              />
+              <UnlockSplashButton
+                unlockId="explore_run"
+                playerLevel={rewardsUi.level}
+                label="Explore run"
+                className={clsx(
+                  splashBtnClass,
+                  "border-kid-ink bg-teal-200 text-kid-ink hover:bg-teal-100 sm:text-4xl",
+                )}
+                onLockedClick={() => playSfx("wrong", muted)}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setExploreRunOpen(true);
                 }}
               />
               <UnlockSplashButton
@@ -1214,6 +1230,16 @@ export function TestStartPageClient() {
           onClose={() => {
             playSfx("tap", muted);
             setChaseGameOpen(false);
+          }}
+          onRewardsGranted={refreshRewardsUi}
+        />
+      ) : null}
+      {exploreRunOpen ? (
+        <ExploreRunOverlay
+          muted={muted}
+          onClose={() => {
+            playSfx("tap", muted);
+            setExploreRunOpen(false);
           }}
           onRewardsGranted={refreshRewardsUi}
         />

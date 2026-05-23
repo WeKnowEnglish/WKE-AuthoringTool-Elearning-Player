@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "sync:dog-poses": "node scripts/sync-dog-poses.mjs",
     "create-teacher": "node scripts/create-teacher-user.mjs",
     "media:finalize-metadata": "node scripts/finalize-media-metadata.mjs",
     "story:unified-dry-run": "vitest run lib/story-unified/story-import-smoke.test.ts lib/story-unified/build-unified-reactions.test.ts",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.4",
     "@tailwindcss/postcss": "^4",
+    "@types/jsdom": "^28.0.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -44,6 +46,7 @@
     "dotenv": "^16.4.7",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",

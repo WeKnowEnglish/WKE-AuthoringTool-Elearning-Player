@@ -12,10 +12,18 @@ export const DAILY_QUEST_IDS = [
   "letter_mixup",
   "quiz_completions",
   "vocab_set_completions",
+  "explore_completions",
   "chase_wins",
 ] as const;
 
 export type DailyQuestId = (typeof DAILY_QUEST_IDS)[number];
+
+/** Quests completable from `/home` (vocab only until games ship on hub). */
+export const HUB_DAILY_QUEST_IDS: DailyQuestId[] = [
+  "explore_completions",
+  "vocab_set_completions",
+  "letter_mixup",
+];
 
 export const DAILY_QUEST_LABELS: Record<DailyQuestId, string> = {
   chase_levels: "Clear 20 chase levels",
@@ -23,6 +31,7 @@ export const DAILY_QUEST_LABELS: Record<DailyQuestId, string> = {
   letter_mixup: "Spell 15 words correctly in Letter mix-up",
   quiz_completions: "Finish 2 full topic quizzes",
   vocab_set_completions: "Finish 2 vocabulary sets",
+  explore_completions: "Finish 1 explore run",
   chase_wins: "Win the chase game 2 times",
 };
 
@@ -32,6 +41,7 @@ const DAILY_QUEST_TARGETS: Record<DailyQuestId, number> = {
   letter_mixup: 15,
   quiz_completions: 2,
   vocab_set_completions: 2,
+  explore_completions: 1,
   chase_wins: 2,
 };
 
@@ -136,9 +146,13 @@ export function bumpDailyQuestProgress(
   return next;
 }
 
-export function allDailyQuestTargetsMet(state: DailyQuestStored, dayKey: string): boolean {
+export function allDailyQuestTargetsMet(
+  state: DailyQuestStored,
+  dayKey: string,
+  questIds: readonly DailyQuestId[] = DAILY_QUEST_IDS,
+): boolean {
   if (state.dayKey !== dayKey) return false;
-  return DAILY_QUEST_IDS.every((id) => (state.progress[id] ?? 0) >= DAILY_QUEST_TARGETS[id]);
+  return questIds.every((id) => (state.progress[id] ?? 0) >= DAILY_QUEST_TARGETS[id]);
 }
 
 /** True if the chest loot for `dayKey` was already granted (stored on rewards snapshot). */
@@ -150,9 +164,12 @@ export function isDailyChestClaimed(dayKey: string): boolean {
  * Grants chest gold + XP once per day when all daily quest targets are met.
  * Returns whether this call granted the loot (false if already claimed or quests incomplete).
  */
-export function openDailyTreasureChest(todayKey = getLocalDayKey()): boolean {
+export function openDailyTreasureChest(
+  todayKey = getLocalDayKey(),
+  questIds: readonly DailyQuestId[] = DAILY_QUEST_IDS,
+): boolean {
   const state = ensureDailyQuestDay(todayKey);
-  if (!allDailyQuestTargetsMet(state, todayKey)) return false;
+  if (!allDailyQuestTargetsMet(state, todayKey, questIds)) return false;
   const before = getRewards();
   const eventId = dailyChestEventId(todayKey);
   if (before.rewardedEventIds.includes(eventId)) return false;
@@ -175,16 +192,20 @@ export type DailyQuestRowUi = {
   smallRewardGranted: boolean;
 };
 
-export function getDailyQuestUiRows(todayKey = getLocalDayKey()): {
+export function getDailyQuestUiRows(
+  todayKey = getLocalDayKey(),
+  opts?: { questIds?: readonly DailyQuestId[] },
+): {
   dayKey: string;
   rows: DailyQuestRowUi[];
   allTargetsMet: boolean;
   chestLootClaimed: boolean;
   chestOpenable: boolean;
 } {
+  const questIds = opts?.questIds ?? DAILY_QUEST_IDS;
   const state = ensureDailyQuestDay(todayKey);
   const ids = getRewards().rewardedEventIds;
-  const rows: DailyQuestRowUi[] = DAILY_QUEST_IDS.map((id) => {
+  const rows: DailyQuestRowUi[] = questIds.map((id) => {
     const current = state.progress[id] ?? 0;
     const target = DAILY_QUEST_TARGETS[id];
     return {
@@ -196,7 +217,7 @@ export function getDailyQuestUiRows(todayKey = getLocalDayKey()): {
       smallRewardGranted: ids.includes(dailyQuestRewardEventId(todayKey, id)),
     };
   });
-  const allTargetsMet = allDailyQuestTargetsMet(state, todayKey);
+  const allTargetsMet = allDailyQuestTargetsMet(state, todayKey, questIds);
   const chestLootClaimed = isDailyChestClaimed(todayKey);
   const chestOpenable = allTargetsMet && !chestLootClaimed;
   return { dayKey: todayKey, rows, allTargetsMet, chestLootClaimed, chestOpenable };

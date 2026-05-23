@@ -32,7 +32,7 @@ export function WorldExplorationBar({
       role="group"
       aria-label={
         summary ?
-          `Exploring ${worldName}, ${touched} of ${total} activities tried, ${percent} percent`
+          `Exploring ${worldName}, ${touched} of ${total} words found, ${percent} percent`
         : `Exploring ${worldName}, loading progress`
       }
     >
@@ -48,7 +48,7 @@ export function WorldExplorationBar({
         )}
       >
         <span className={clsx("tabular-nums", prominent ? "text-kid-ink" : "text-kid-ink/85")}>
-          {touched}/{total} explored
+          {touched}/{total} words
         </span>
         <span
           className={clsx(

@@ -2649,6 +2649,56 @@ const wordBucketCatchChoiceSchema = z.object({
   correct: z.boolean(),
 });
 
+const exploreGateSchema = z.object({
+  id: z.string().min(1),
+  /** World X where the gate triggers; auto-spaced when omitted. */
+  world_x: z.number().min(0).optional(),
+  time_limit_sec: z.number().min(2).max(30).optional().default(10),
+  /** Words spelled in the sprint to clear this obstacle (default 1). */
+  min_words_to_clear: z.number().int().min(1).max(10).optional().default(1),
+  prompt: z.string().min(1),
+  target_word: z.string().min(1),
+  accepted_words: z.array(z.string().min(1)).optional(),
+  hint: z.string().optional(),
+  /** Gate scene backdrop override. */
+  scene_image_url: z.string().optional(),
+  /** @deprecated Use scene_image_url */
+  image_url: z.string().optional(),
+});
+
+/** @deprecated Legacy player-pick bonus choices; encounters are random tiers now. */
+const exploreEncounterChoiceSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  gold_bonus: z.number().int().min(0).max(100),
+});
+
+export const exploreEncounterSchema = z.object({
+  title: z.string().min(1),
+  body_text: z.string().optional(),
+  image_url: z.string().optional(),
+  /** Future: loot pool from a designed world vocabulary set. */
+  world_word_set_id: z.string().optional(),
+  choices: z.array(exploreEncounterChoiceSchema).optional(),
+});
+
+export const explorePayloadSchema = z.object({
+  type: z.literal("interaction"),
+  subtype: z.literal("explore"),
+  /** Visual preset: looped run + gate/encounter scenes. */
+  explore_template: z.enum(["default_run_v1"]).optional().default("default_run_v1"),
+  background_url: z.string().optional(),
+  world_length: z.number().min(800).max(20_000).optional().default(3200),
+  scroll_speed_px_per_sec: z.number().min(40).max(400).optional().default(140),
+  gates: z.array(exploreGateSchema).length(3),
+  encounter: exploreEncounterSchema,
+  guide: guideSchema,
+});
+
+export type ExploreGate = z.infer<typeof exploreGateSchema>;
+export type ExploreEncounter = z.infer<typeof exploreEncounterSchema>;
+export type ExplorePayload = z.infer<typeof explorePayloadSchema>;
+
 export const wordBucketCatchPayloadSchema = z
   .object({
     type: z.literal("interaction"),
@@ -2835,6 +2885,7 @@ export const interactionPayloadSchema = z.intersection(
     voiceQuestionPayloadSchema,
     guidedDialoguePayloadSchema,
     wordBucketCatchPayloadSchema,
+    explorePayloadSchema,
   ]),
   z.object({
     auto_advance_on_pass: z.boolean().optional(),

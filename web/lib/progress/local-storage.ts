@@ -15,6 +15,7 @@ import {
   emptySnapshot,
   PROGRESS_STORAGE_KEY,
   type PlayerAppearanceId,
+  type PetKind,
   type ProgressSnapshotV1,
 } from "@/lib/progress/types";
 
@@ -36,6 +37,7 @@ function normalizeSnapshot(raw: unknown): ProgressSnapshotV1 | null {
     completedLessonIds: r.completedLessonIds,
     enrolledCourseIds: Array.isArray(r.enrolledCourseIds) ? r.enrolledCourseIds : [],
     learningBand: isLearningBand(r.learningBand) ? r.learningBand : null,
+    petKind: r.petKind === "dog" ? "dog" : null,
     petLoadout:
       r.petLoadout === undefined || r.petLoadout === null ?
         null
@@ -110,9 +112,22 @@ export function isAudioMuted(): boolean {
   return getProgressSnapshot().audioMuted === true;
 }
 
-/** Whether the student has chosen a pet companion look. */
+/** Whether the student has an active pet companion. */
 export function hasChosenPet(): boolean {
-  return getPetLoadout() !== null;
+  const s = getProgressSnapshot();
+  return s.petKind === "dog" || resolvePetLoadoutFromSnapshot(s) !== null;
+}
+
+export function getPetKind(): PetKind | null {
+  const kind = getProgressSnapshot().petKind;
+  return kind === "dog" ? "dog" : null;
+}
+
+export function ensurePetDog(): void {
+  const s = getProgressSnapshot();
+  if (s.petKind === "dog") return;
+  s.petKind = "dog";
+  writeRaw(s);
 }
 
 /** @deprecated Use {@link hasChosenPet}. */

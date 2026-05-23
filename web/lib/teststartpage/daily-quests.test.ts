@@ -86,6 +86,7 @@ describe("daily-quests", () => {
     bumpDailyQuestProgress("letter_mixup", 15, FIXED_DAY);
     bumpDailyQuestProgress("quiz_completions", 2, FIXED_DAY);
     bumpDailyQuestProgress("vocab_set_completions", 2, FIXED_DAY);
+    bumpDailyQuestProgress("explore_completions", 1, FIXED_DAY);
     bumpDailyQuestProgress("chase_wins", 2, FIXED_DAY);
 
     const gBefore = getRewards().gold;

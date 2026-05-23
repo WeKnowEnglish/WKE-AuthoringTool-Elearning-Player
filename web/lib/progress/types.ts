@@ -6,6 +6,9 @@ export const PROGRESS_STORAGE_KEY = "wke-progress-v1";
 /** Placeholder player appearance until customizable player art ships. */
 export type PlayerAppearanceId = "default";
 
+/** Companion pet species (animated rig). */
+export type PetKind = "dog";
+
 export type ProgressSnapshotV1 = {
   schemaVersion: 1;
   anonymousDeviceId: string;
@@ -15,7 +18,9 @@ export type ProgressSnapshotV1 = {
   learningBand?: LearningBand | null;
   lessonResume?: Record<string, number>;
   audioMuted?: boolean;
-  /** Pet companion layered SVG (fox / robot / alien presets). */
+  /** Active pet species; dog uses rig animations instead of loadout. */
+  petKind?: PetKind | null;
+  /** @deprecated Legacy layered SVG presets; migrated to {@link petKind}. */
   petLoadout?: AvatarLoadout | null;
   /** Player character appearance on home and world stage. */
   playerAppearanceId?: PlayerAppearanceId | null;
@@ -35,6 +40,7 @@ export function emptySnapshot(deviceId: string): ProgressSnapshotV1 {
     enrolledCourseIds: [],
     lessonResume: {},
     audioMuted: false,
+    petKind: "dog",
     petLoadout: null,
     playerAppearanceId: "default",
     avatarLoadout: null,

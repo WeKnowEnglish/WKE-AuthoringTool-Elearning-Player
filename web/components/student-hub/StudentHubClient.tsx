@@ -3,11 +3,14 @@
 import { clsx } from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
+import { ExploreChapterOverlay } from "@/components/student-hub/ExploreChapterOverlay";
 import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
+import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import { HomeRoom } from "@/components/student-hub/HomeRoom";
 import { LearnRoom } from "@/components/student-hub/LearnRoom";
 import { PetRoom } from "@/components/student-hub/PetRoom";
-import { StickerBookRoom } from "@/components/student-hub/StickerBookRoom";
+import { CollectionBookRoom } from "@/components/student-hub/CollectionBookRoom";
+import { parseCollectionPageId, type CollectionPageId } from "@/components/student-hub/collection/types";
 import { RoomSwitcher, type StudentHubRoom } from "@/components/student-hub/RoomSwitcher";
 import { DailyQuestsDrawer } from "@/components/student-hub/DailyQuestsDrawer";
 import { QuestHeaderButton } from "@/components/student-hub/QuestHeaderButton";
@@ -23,9 +26,17 @@ import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { markExplorationNode } from "@/lib/worlds/exploration";
 import type { VocabSetId } from "@/lib/vocabulary-templates";
 
-export function StudentHubClient() {
+type Props = {
+  initialCollectionPage?: string | null;
+};
+
+export function StudentHubClient({ initialCollectionPage = null }: Props) {
   const hydrated = useClientHydrated();
-  const [room, setRoom] = useState<StudentHubRoom>("home");
+  const initialBook = Boolean(initialCollectionPage);
+  const [room, setRoom] = useState<StudentHubRoom>(() => (initialBook ? "book" : "home"));
+  const [collectionPage, setCollectionPage] = useState<CollectionPageId>(() =>
+    parseCollectionPageId(initialCollectionPage),
+  );
   const [muted, setMuted] = useState(false);
   const [rewardsUi, setRewardsUi] = useState({
     gold: 0,
@@ -40,6 +51,9 @@ export function StudentHubClient() {
   const [vocabSetOpen, setVocabSetOpen] = useState(false);
   const [activeVocabSetId, setActiveVocabSetId] = useState<VocabSetId | null>(null);
   const [vocabSessionSeed, setVocabSessionSeed] = useState<string | null>(null);
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const [activeExploreAreaId, setActiveExploreAreaId] = useState<ExploreAreaId | null>(null);
+  const [exploreSessionSeed, setExploreSessionSeed] = useState<string | null>(null);
 
   const refreshRewardsUi = useCallback(() => {
     const r = getRewards();
@@ -82,6 +96,20 @@ export function StudentHubClient() {
     };
   }, [room]);
 
+  const openExplore = useCallback(
+    (areaId: ExploreAreaId) => {
+      if (!isUnlockAvailable("explore_run", rewardsUi.level)) {
+        playSfx("wrong", muted);
+        return;
+      }
+      playSfx("tap", muted);
+      setActiveExploreAreaId(areaId);
+      setExploreSessionSeed(newSessionSeed());
+      setExploreOpen(true);
+    },
+    [muted, rewardsUi.level],
+  );
+
   const openVocabularySet = useCallback(
     (id: VocabSetId) => {
       const unlockId = `vocab_set:${id}` as const;
@@ -117,10 +145,18 @@ export function StudentHubClient() {
     refreshStudyPendingUi();
   }, [muted, refreshStudyPendingUi]);
 
+  const openCollection = useCallback(
+    (page: CollectionPageId = "stickers") => {
+      playSfx("tap", muted);
+      setCollectionPage(page);
+      setRoom("book");
+    },
+    [muted],
+  );
+
   const goBook = useCallback(() => {
-    playSfx("tap", muted);
-    setRoom("book");
-  }, [muted]);
+    openCollection("stickers");
+  }, [openCollection]);
 
   const onRoomChange = useCallback(
     (next: StudentHubRoom) => {
@@ -198,13 +234,13 @@ export function StudentHubClient() {
             explorationUiKey={explorationUiKey}
             onGoLearn={goLearn}
             onGoPet={goPet}
-            onGoBook={goBook}
+            onOpenCollection={openCollection}
+            onOpenExplore={openExplore}
           />
         : room === "pet" ?
           <PetRoom
             muted={muted}
             petUiKey={petUiKey}
-            playerLevel={rewardsUi.level}
             onGoLearn={goLearn}
             onGoHome={goHome}
             onEconomyChange={refreshRewardsUi}
@@ -217,9 +253,12 @@ export function StudentHubClient() {
             onOpenVocabularySet={openVocabularySet}
             onExplorationChange={refreshExplorationUi}
           />
-        : <StickerBookRoom
+        : <CollectionBookRoom
             muted={muted}
+            experience={rewardsUi.experience}
             dailyQuestUiKey={dailyQuestUiKey}
+            explorationUiKey={explorationUiKey}
+            initialPage={collectionPage}
             onRewardsChange={refreshRewardsUi}
             className="min-h-0 flex-1"
           />
@@ -240,6 +279,29 @@ export function StudentHubClient() {
         onClose={closeQuests}
         onEconomyChange={refreshRewardsUi}
       />
+
+      {exploreOpen && activeExploreAreaId && exploreSessionSeed ?
+        <ExploreChapterOverlay
+          areaId={activeExploreAreaId}
+          sessionSeed={exploreSessionSeed}
+          muted={muted}
+          onEconomyChange={() => {
+            refreshRewardsUi();
+            refreshExplorationUi();
+          }}
+          onOpenCollection={(page) => {
+            openCollection(page);
+          }}
+          onClose={() => {
+            playSfx("tap", muted);
+            setExploreOpen(false);
+            setActiveExploreAreaId(null);
+            setExploreSessionSeed(null);
+            refreshRewardsUi();
+            refreshExplorationUi();
+          }}
+        />
+      : null}
 
       {vocabSetOpen && activeVocabSetId && vocabSessionSeed ?
         <VocabularySetOverlay

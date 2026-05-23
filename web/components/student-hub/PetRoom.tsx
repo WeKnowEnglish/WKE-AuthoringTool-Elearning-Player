@@ -1,14 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { StudentAvatar } from "@/components/avatar/StudentAvatar";
+import { AnimatedPet } from "@/components/pet/AnimatedPet";
 import { PetCareButton } from "@/components/student-hub/PetCareButton";
 import { PetMeterBar } from "@/components/student-hub/PetMeterBar";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
-import { AVATAR_PRESETS } from "@/lib/avatar/defaults";
-import { growthStageForPreset, robotGrowthLabel } from "@/lib/avatar/growth";
-import { presetIdForLoadout } from "@/lib/avatar/progress";
 import {
   applyPetCare,
   getPetSnapshot,
@@ -16,9 +13,13 @@ import {
   petMoodLine,
   setStudyCarePending,
 } from "@/lib/pet";
+import { PET_MOOD_DURATION_MS } from "@/lib/pet/mood-durations";
 import { PET_METER_IDS } from "@/lib/pet/types";
 import type { PetSnapshotV1 } from "@/lib/pet/types";
-import { getPetLoadout } from "@/lib/progress/local-storage";
+import { usePetMoodAnimation } from "@/lib/pet/use-pet-mood-animation";
+import { ensurePetDog } from "@/lib/progress/local-storage";
+import { KidButton } from "@/components/kid-ui/KidButton";
+import { PetDrinkMixOverlay } from "@/components/pet-blender/PetDrinkMixOverlay";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import {
   canClaimPetGold,
@@ -30,12 +31,10 @@ import {
 } from "@/lib/skills";
 import { getSkillRanks } from "@/lib/skills/ranks";
 import { getRewards } from "@/lib/progress/rewards";
-import { KidButton } from "@/components/kid-ui/KidButton";
 
 type Props = {
   muted: boolean;
   petUiKey: number;
-  playerLevel: number;
   onGoLearn: () => void;
   onGoHome: () => void;
   onEconomyChange?: () => void;
@@ -44,18 +43,13 @@ type Props = {
 export function PetRoom({
   muted,
   petUiKey,
-  playerLevel,
   onGoLearn,
-  onGoHome,
   onEconomyChange,
 }: Props) {
   const hydrated = useClientHydrated();
+  const { mood, bumpMood } = usePetMoodAnimation("normal");
+  const [drinkMixOpen, setDrinkMixOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<PetSnapshotV1 | null>(null);
-  const loadout = hydrated ? getPetLoadout() : null;
-  const presetId = loadout ? presetIdForLoadout(loadout) : null;
-  const presetLabel =
-    presetId ? (AVATAR_PRESETS.find((p) => p.id === presetId)?.label ?? "friend") : null;
-  const robotGrowth = growthStageForPreset(presetId, playerLevel);
 
   const refreshPet = useCallback(() => {
     setSnapshot(getPetSnapshot());
@@ -63,11 +57,12 @@ export function PetRoom({
 
   useEffect(() => {
     if (!hydrated) return;
+    ensurePetDog();
     refreshPet();
   }, [hydrated, petUiKey, refreshPet]);
 
   const studyPending = hydrated && isStudyCarePending();
-  const mood = snapshot ? petMoodLine(snapshot) : null;
+  const moodLine = snapshot ? petMoodLine(snapshot) : null;
 
   const petTreasureRank =
     hydrated ? (getSkillRanks(getRewards()).pet_treasure ?? 0) : 0;
@@ -89,9 +84,25 @@ export function PetRoom({
     }
   };
 
-  const runCare = (action: "feed" | "drink" | "play" | "wash" | "sleep") => {
+  const runCare = (action: "feed" | "play" | "wash" | "sleep") => {
     playSfx("tap", muted);
     setSnapshot(applyPetCare(action));
+    if (action === "play") {
+      bumpMood("playful", PET_MOOD_DURATION_MS.playful);
+    } else {
+      bumpMood("excited", PET_MOOD_DURATION_MS.excited);
+    }
+  };
+
+  const onDrink = () => {
+    playSfx("tap", muted);
+    setDrinkMixOpen(true);
+  };
+
+  const onDrinkMixSuccess = () => {
+    setSnapshot(applyPetCare("drink"));
+    setDrinkMixOpen(false);
+    bumpMood("excited", PET_MOOD_DURATION_MS.excited);
   };
 
   const onStudy = () => {
@@ -106,13 +117,8 @@ export function PetRoom({
       <div className="text-center">
         <h1 className="text-2xl font-extrabold text-kid-ink">Pet Care</h1>
         <p className="mt-1 text-sm font-semibold text-kid-ink/85">
-          {presetLabel ? `Take care of your ${presetLabel}` : "Your pet buddy"}
+          Take care of your dog
         </p>
-        {robotGrowth ?
-          <p className="mt-1 text-xs font-bold uppercase tracking-wide text-kid-ink/75">
-            Stage {robotGrowth} · {robotGrowthLabel(robotGrowth)}
-          </p>
-        : null}
       </div>
 
       {studyPending ? (
@@ -123,31 +129,12 @@ export function PetRoom({
         </KidPanel>
       ) : null}
 
-      {!loadout ?
-        <KidPanel className="text-center">
-          <p className="font-semibold text-kid-ink">Pick a pet on your Profile first.</p>
-          <button
-            type="button"
-            className="mt-3 text-sm font-bold text-[#0a2f86] underline decoration-2 underline-offset-2"
-            onClick={() => {
-              playSfx("tap", muted);
-              onGoHome();
-            }}
-          >
-            Go to Home
-          </button>
-        </KidPanel>
-      : (
-        <div className="flex flex-col items-center gap-3">
-          <StudentAvatar
-            loadout={loadout}
-            playerLevel={playerLevel}
-            size="xl"
-            show={hydrated}
-          />
-          {mood ? <p className="text-sm font-bold text-kid-ink/90">{mood}</p> : null}
-        </div>
-      )}
+      <div className="flex flex-col items-center gap-3">
+        <AnimatedPet mood={mood} size="lg" show={hydrated && !drinkMixOpen} />
+        {moodLine && !drinkMixOpen ?
+          <p className="text-sm font-bold text-kid-ink/90">{moodLine}</p>
+        : null}
+      </div>
 
       {hydrated && snapshot ?
         <KidPanel className="space-y-3">
@@ -187,7 +174,7 @@ export function PetRoom({
       : hydrated ?
         <KidPanel className="text-center">
           <p className="text-sm font-semibold text-kid-ink/85">
-            Unlock <span className="font-extrabold">Pet treasure</span> on your Profile skill tree
+            Unlock <span className="font-extrabold">Pet treasure</span> in Collection → Awards & skills
             to claim bonus gold here.
           </p>
         </KidPanel>
@@ -195,12 +182,19 @@ export function PetRoom({
 
       <div className="grid grid-cols-3 gap-2">
         <PetCareButton actionId="feed" onClick={() => runCare("feed")} />
-        <PetCareButton actionId="drink" onClick={() => runCare("drink")} />
+        <PetCareButton actionId="drink" onClick={onDrink} />
         <PetCareButton actionId="play" onClick={() => runCare("play")} />
         <PetCareButton actionId="wash" onClick={() => runCare("wash")} />
         <PetCareButton actionId="sleep" onClick={() => runCare("sleep")} />
         <PetCareButton actionId="study" onClick={onStudy} />
       </div>
+
+      <PetDrinkMixOverlay
+        open={drinkMixOpen}
+        muted={muted}
+        onSuccess={onDrinkMixSuccess}
+        onClose={() => setDrinkMixOpen(false)}
+      />
     </div>
   );
 }

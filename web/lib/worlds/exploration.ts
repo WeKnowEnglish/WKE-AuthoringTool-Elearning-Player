@@ -1,5 +1,6 @@
 "use client";
 
+import { getWorldWordDiscoverySummary } from "@/lib/explore/area-discovery";
 import { WORLD_1_SIMPLE } from "@/lib/worlds/world-1-simple";
 import type { ExplorationNode, WorldDef, WorldId } from "@/lib/worlds/types";
 
@@ -12,11 +13,14 @@ export type ExplorationSnapshotV1 = {
 
 export type WorldExplorationSummary = {
   worldId: WorldId;
+  /** Words discovered in explore areas (world_1) or legacy nodes touched. */
   touchedCount: number;
   totalCount: number;
   percent: number;
-  /** Level indices (1–10) with at least one touched node in that level. */
+  /** Area/level indices (1-based) with at least one discovery word found. */
   levelsWithProgress: number[];
+  /** Area/level indices fully discovered (all required words collected). */
+  areasComplete: number[];
 };
 
 const WORLDS_BY_ID: Record<WorldId, WorldDef> = {
@@ -25,6 +29,8 @@ const WORLDS_BY_ID: Record<WorldId, WorldDef> = {
 
 export function explorationNodeKey(node: ExplorationNode): string {
   switch (node.kind) {
+    case "explore_area":
+      return `explore_area:${node.areaId}`;
     case "vocab_set":
       return `vocab_set:${node.setId}`;
     case "vocab_hub":
@@ -116,10 +122,22 @@ export function getExplorationPercent(worldId: WorldId, snapshot?: ExplorationSn
 
 export function getWorldExplorationSummary(
   worldId: WorldId,
-  snapshot?: ExplorationSnapshotV1,
+  _snapshot?: ExplorationSnapshotV1,
 ): WorldExplorationSummary {
+  if (worldId === "world_1") {
+    const word = getWorldWordDiscoverySummary();
+    return {
+      worldId,
+      touchedCount: word.discoveredWordCount,
+      totalCount: word.totalWordCount,
+      percent: word.percent,
+      levelsWithProgress: word.areasWithProgress,
+      areasComplete: word.areasComplete,
+    };
+  }
+
   const world = getWorldDef(worldId);
-  const s = snapshot ?? getExplorationSnapshot();
+  const s = _snapshot ?? getExplorationSnapshot();
   const keys = flattenExplorationKeys(world);
   const uniqueKeys = [...new Set(keys)];
   let touchedCount = 0;
@@ -144,6 +162,7 @@ export function getWorldExplorationSummary(
     totalCount,
     percent,
     levelsWithProgress,
+    areasComplete: [],
   };
 }
 
@@ -161,6 +180,8 @@ export function isWorldLevelTouched(
   );
 }
 
-export function getWorld1ExplorationSummary(snapshot?: ExplorationSnapshotV1): WorldExplorationSummary {
-  return getWorldExplorationSummary("world_1", snapshot);
+export function getWorld1ExplorationSummary(
+  _snapshot?: ExplorationSnapshotV1,
+): WorldExplorationSummary {
+  return getWorldExplorationSummary("world_1");
 }

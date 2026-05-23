@@ -74,6 +74,8 @@ function screenOutlineBase(screen: { screen_type: string; payload: unknown }): s
         return "Sorting game";
       case "word_bucket_catch":
         return `Bucket catch: ${p.target_word}`;
+      case "explore":
+        return `Explore: ${p.gates.map((g) => g.target_word).join(", ")}`;
       case "voice_question":
         return `Voice question: ${p.prompt.slice(0, 32)}${p.prompt.length > 32 ? "…" : ""}`;
       case "guided_dialogue":

@@ -33,6 +33,7 @@ import {
   trueFalsePayloadSchema,
   voiceQuestionPayloadSchema,
   wordBucketCatchPayloadSchema,
+  explorePayloadSchema,
   parseScreenPayload,
   getInteractionSubtype,
   startPayloadSchema,
@@ -661,6 +662,15 @@ function StructuredFields({
         return <TableCompleteFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
       case "sorting_game":
         return <SortingGameFields initial={parsed} onLivePayload={onLivePayload} busy={busy} />;
+      case "explore":
+        return (
+          <ExploreFields
+            syncKey={payloadSyncKey}
+            initial={parsed}
+            onLivePayload={onLivePayload}
+            busy={busy}
+          />
+        );
       case "word_bucket_catch":
         return (
           <WordBucketCatchFields
@@ -4733,6 +4743,118 @@ function SortingGameFields({
           Allow reassign
         </label>
       </div>
+    </div>
+  );
+}
+
+function ExploreFields({
+  syncKey,
+  initial,
+  onLivePayload,
+  busy,
+}: {
+  syncKey: string;
+  initial: Extract<ScreenPayload, { type: "interaction"; subtype: "explore" }>;
+  onLivePayload: (p: unknown) => void;
+  busy: boolean;
+}) {
+  const [gates, setGates] = useState(() => initial.gates.map((g) => ({ ...g })));
+  const [encounterTitle, setEncounterTitle] = useState(initial.encounter.title);
+  const [encounterBody, setEncounterBody] = useState(initial.encounter.body_text ?? "");
+  const [timeLimit, setTimeLimit] = useState(initial.gates[0]?.time_limit_sec ?? 10);
+
+  useEffect(() => {
+    setGates(initial.gates.map((g) => ({ ...g })));
+    setEncounterTitle(initial.encounter.title);
+    setEncounterBody(initial.encounter.body_text ?? "");
+    setTimeLimit(initial.gates[0]?.time_limit_sec ?? 10);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync on server revision
+  }, [syncKey]);
+
+  function emit() {
+    const nextGates = gates.map((g, i) => ({
+      ...g,
+      time_limit_sec: timeLimit,
+      prompt: g.prompt || `Spell gate ${i + 1}!`,
+    }));
+    emitLive(onLivePayload, explorePayloadSchema, {
+      ...initial,
+      gates: nextGates,
+      encounter: {
+        ...initial.encounter,
+        title: encounterTitle,
+        body_text: encounterBody.trim() || undefined,
+      },
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-neutral-600">
+        Explore: spell sprint at each gate (as many words as possible in the time limit), then
+        obstacle clip. Random bonus encounter at the end. Word loot from gate words.
+      </p>
+      <label className={labelClass()}>
+        Seconds per gate
+        <input
+          type="number"
+          min={2}
+          max={30}
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={timeLimit}
+          disabled={busy}
+          onChange={(e) => {
+            setTimeLimit(Number(e.target.value) || 5);
+            queueMicrotask(emit);
+          }}
+        />
+      </label>
+      {gates.map((g, i) => (
+        <label key={g.id} className={labelClass()}>
+          Gate {i + 1} target word
+          <input
+            type="text"
+            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={g.target_word}
+            disabled={busy}
+            onChange={(e) => {
+              const v = e.target.value;
+              setGates((prev) => {
+                const next = [...prev];
+                next[i] = { ...next[i]!, target_word: v };
+                return next;
+              });
+              queueMicrotask(emit);
+            }}
+          />
+        </label>
+      ))}
+      <label className={labelClass()}>
+        Encounter title
+        <input
+          type="text"
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={encounterTitle}
+          disabled={busy}
+          onChange={(e) => {
+            setEncounterTitle(e.target.value);
+            queueMicrotask(emit);
+          }}
+        />
+      </label>
+      <label className={labelClass()}>
+        Encounter description
+        <input
+          type="text"
+          className="mt-1 w-full rounded border px-2 py-1 text-sm"
+          value={encounterBody}
+          disabled={busy}
+          onChange={(e) => {
+            setEncounterBody(e.target.value);
+            queueMicrotask(emit);
+          }}
+        />
+      </label>
     </div>
   );
 }

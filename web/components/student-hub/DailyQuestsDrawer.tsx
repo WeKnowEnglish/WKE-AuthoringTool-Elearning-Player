@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { DailyQuestsPanel } from "@/components/teststartpage/DailyQuestsPanel";
+import { HUB_DAILY_QUEST_IDS } from "@/lib/teststartpage/daily-quests";
 import { playSfx } from "@/lib/audio/sfx";
 
 type Props = {
@@ -71,6 +72,7 @@ export function DailyQuestsDrawer({
             key={dailyQuestUiKey}
             muted={muted}
             embedded
+            questIds={HUB_DAILY_QUEST_IDS}
             onEconomyChange={onEconomyChange}
           />
         </div>

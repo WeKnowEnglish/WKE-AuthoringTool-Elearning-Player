@@ -97,6 +97,13 @@ export function LetterMixupView({
   vocabStageTint = false,
   ttsLang = "en-US",
   submitOnEnter,
+  embeddedMode = false,
+  suppressWrongCallback = false,
+  deadlineSec,
+  onDeadline,
+  exploreCloudLayout = false,
+  spellSprintMode = false,
+  onWordComplete,
 }: {
   parsed: Extract<ScreenPayload, { type: "interaction"; subtype: "letter_mixup" }>;
   muted: boolean;
@@ -106,8 +113,19 @@ export function LetterMixupView({
   vocabStageTint?: boolean;
   ttsLang?: string;
   submitOnEnter?: boolean;
+  /** Explore gate: compact layout, no lesson nav. */
+  embeddedMode?: boolean;
+  /** Explore gate: wrong letter kicks play SFX only. */
+  suppressWrongCallback?: boolean;
+  deadlineSec?: number;
+  onDeadline?: () => void;
+  /** Explore: letters as clouds in the sky over the run loop. */
+  exploreCloudLayout?: boolean;
+  /** Explore sprint: each correct word fires onWordComplete; timer owned by parent. */
+  spellSprintMode?: boolean;
+  onWordComplete?: () => void;
 } & NavProps) {
-  const immersive = controlsPlacement === "stage-footer";
+  const immersive = embeddedMode || controlsPlacement === "stage-footer";
   const vocabImmersive = immersive && vocabStageTint;
   const vocabImgOpts = vocabStageTint ? { vocabStage: true as const } : undefined;
 
@@ -130,8 +148,31 @@ export function LetterMixupView({
   wordSlotsRef.current = wordSlots;
   const passedRef = useRef(passed);
   passedRef.current = passed;
+  const deadlineFiredRef = useRef(false);
   /** Blocks duplicate onPass while TTS runs or before parent re-renders with passed=true. */
   const passCommittedRef = useRef(false);
+
+  useEffect(() => {
+    deadlineFiredRef.current = false;
+  }, [deadlineSec, parsed.items[0]?.id]);
+
+  useEffect(() => {
+    if (spellSprintMode) return;
+    if (!deadlineSec || deadlineSec <= 0 || !onDeadline || passed) return;
+    const deadlineMs = deadlineSec * 1000;
+    const started = Date.now();
+    const id = window.setInterval(() => {
+      if (passedRef.current || passCommittedRef.current) return;
+      if (Date.now() - started >= deadlineMs) {
+        if (!deadlineFiredRef.current) {
+          deadlineFiredRef.current = true;
+          onDeadline();
+        }
+        window.clearInterval(id);
+      }
+    }, 100);
+    return () => window.clearInterval(id);
+  }, [deadlineSec, onDeadline, passed, parsed.items[0]?.id, spellSprintMode]);
   const [shakingSlotIndices, setShakingSlotIndices] = useState<Set<number>>(() => new Set());
   const kickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [passing, setPassing] = useState(false);
@@ -156,6 +197,13 @@ export function LetterMixupView({
   const letterTileScrollOuterClass =
     "w-full min-w-0 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
   const letterTilesInnerClass = "mx-auto flex w-fit shrink-0 flex-nowrap items-center gap-1.5";
+  const exploreCloud =
+    exploreCloudLayout && embeddedMode;
+  const cloudLetterClass =
+    "flex shrink-0 items-center justify-center rounded-full border-2 border-white/95 bg-white/90 font-extrabold text-sky-900 shadow-[0_4px_12px_rgba(14,116,144,0.25)] transition-transform hover:scale-105 active:scale-95";
+  const cloudSlotClass =
+    "flex shrink-0 items-center justify-center rounded-full border-2 border-dashed border-white/80 bg-white/50 p-0.5 shadow-sm";
+
   const letterTileClass = vocabImmersive
     ? vocabLetterTileClass
     : "box-border flex h-full w-full min-h-0 min-w-0 touch-manipulation select-none items-center justify-center overflow-hidden rounded-xl border-2 border-sky-500 bg-white px-0.5 font-bold leading-none text-kid-ink shadow-sm transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:active:scale-100";
@@ -223,6 +271,11 @@ export function LetterMixupView({
     passCommittedRef.current = true;
     setPassing(true);
     try {
+      if (spellSprintMode && onWordComplete) {
+        onWordComplete();
+        passCommittedRef.current = false;
+        return;
+      }
       if (vocabImmersive) {
         await speakWordOnPass();
       }
@@ -230,7 +283,7 @@ export function LetterMixupView({
     } finally {
       setPassing(false);
     }
-  }, [onPass, speakWordOnPass, vocabImmersive]);
+  }, [onPass, onWordComplete, speakWordOnPass, spellSprintMode, vocabImmersive]);
 
   function trayKeyInUse(traySlotKey: string) {
     return wordSlots.some((s) => s?.traySlotKey === traySlotKey);
@@ -265,7 +318,7 @@ export function LetterMixupView({
 
     if (!allFilled) {
       playSfx("wrong", muted);
-      onWrong();
+      if (!suppressWrongCallback) onWrong();
       return;
     }
 
@@ -296,7 +349,7 @@ export function LetterMixupView({
     }
 
     playSfx("wrong", muted);
-    onWrong();
+    if (!suppressWrongCallback) onWrong();
 
     setWordSlots((prev) => {
       const next = [...prev];
@@ -452,7 +505,8 @@ export function LetterMixupView({
       <div
         key={`slot-${slotIndex}`}
         className={
-          vocabImmersive ?
+          exploreCloud ? cloudSlotClass
+          : vocabImmersive ?
             vocabLetterSlotClass
           : "flex shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-white/60 p-0.5"
         }
@@ -468,7 +522,7 @@ export function LetterMixupView({
             type="button"
             disabled={passed || passing || cell.locked}
             className={clsx(
-              letterTileClass,
+              exploreCloud ? cloudLetterClass : letterTileClass,
               cell.locked &&
                 "border-emerald-600 bg-emerald-50 text-emerald-950 kid-feedback-glow-correct hover:bg-emerald-50 !opacity-100",
               shakingSlotIndices.has(slotIndex) &&
@@ -497,7 +551,7 @@ export function LetterMixupView({
           key={traySlotKey}
           type="button"
           disabled={passed || passing}
-          className={trayLetterTileClass}
+          className={exploreCloud ? cloudLetterClass : trayLetterTileClass}
           style={{
             width: tilePx,
             height: tilePx,
@@ -518,7 +572,9 @@ export function LetterMixupView({
       <CenteredLetterTileRow
         measureRef={letterSlotsRowRef}
         frameClassName={
-          vocabImmersive ?
+          exploreCloud ?
+            "rounded-2xl border-2 border-white/40 bg-white/10 p-2 backdrop-blur-[2px]"
+          : vocabImmersive ?
             "rounded-xl border-2 border-[#152668]/25 bg-white/50 p-3"
           : "rounded-xl border-2 border-dashed border-kid-ink bg-kid-surface-muted/40 p-3"
         }
@@ -570,6 +626,25 @@ export function LetterMixupView({
   );
 
   if (immersive) {
+    if (exploreCloud) {
+      return (
+        <div className="flex w-full flex-col items-center gap-3 px-2 pt-[6%]">
+          <audio ref={wordAudioRef} preload="metadata" className="hidden" />
+          <p className="text-center text-lg font-extrabold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)] sm:text-xl">
+            {parsed.prompt}
+          </p>
+          <p className="sr-only">
+            Tap cloud letters to spell the word before time runs out.
+          </p>
+          <div className="flex w-full max-w-lg flex-col items-center gap-3">
+            {answerRow}
+            {trayRow}
+          </div>
+          <div className="mt-1 flex gap-2">{actionButtons}</div>
+        </div>
+      );
+    }
+
     return (
       <div
         className={clsx(
@@ -629,7 +704,9 @@ export function LetterMixupView({
             {actionButtons}
           </div>
         </div>
-        <InteractionStageFooter showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+        {embeddedMode ? null : (
+          <InteractionStageFooter showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+        )}
       </div>
     );
   }
@@ -688,8 +765,10 @@ export function LetterMixupView({
         {trayRow}
         <div className="mt-4">{actionButtons}</div>
       </KidPanel>
-      <GuideBlock guide={parsed.guide} />
-      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+      {embeddedMode ? null : <GuideBlock guide={parsed.guide} />}
+      {embeddedMode ? null : (
+        <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+      )}
     </div>
   );
 }

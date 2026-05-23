@@ -3,7 +3,11 @@ import { StudentHubClient } from "@/components/student-hub/StudentHubClient";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function StudentHomePage() {
+type Props = {
+  searchParams?: Promise<{ collection?: string }>;
+};
+
+export default async function StudentHomePage({ searchParams }: Props) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,5 +25,7 @@ export default async function StudentHomePage() {
     redirect("/login?error=unknown_role");
   }
 
-  return <StudentHubClient />;
+  const params = (await searchParams) ?? {};
+
+  return <StudentHubClient initialCollectionPage={params.collection ?? null} />;
 }

@@ -32,5 +32,10 @@ export function migrateProgressSnapshotFields(snapshot: ProgressSnapshotV1): {
     changed = true;
   }
 
+  if (next.petKind !== "dog") {
+    next.petKind = "dog";
+    changed = true;
+  }
+
   return { snapshot: next, changed };
 }

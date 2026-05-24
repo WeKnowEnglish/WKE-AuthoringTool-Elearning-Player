@@ -23,6 +23,7 @@ import {
   type InteractionFeedbackKind,
 } from "@/components/kid-ui/InteractionFeedbackShell";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { playSfx } from "@/lib/audio/sfx";
 import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
 import { speakText, stopSpeaking } from "@/lib/audio/tts";
@@ -341,10 +342,6 @@ type Props = {
   onEconomyChange?: () => void;
 };
 
-function useMuted() {
-  return getProgressSnapshot().audioMuted === true;
-}
-
 export function LessonPlayer({
   lessonId,
   lessonTitle,
@@ -389,7 +386,7 @@ export function LessonPlayer({
     breakdown: VocabRewardBreakdown;
   } | null>(null);
 
-  const muted = useMuted();
+  const { muted } = useAudioMuted();
   const isPreview = mode === "preview";
   const isVocabLesson =
     lessonId.startsWith("vocab-") && (vocabPracticeWords?.length ?? 0) > 0;

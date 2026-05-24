@@ -1,16 +1,6 @@
 import { clsx } from "clsx";
+import { PET_METER_UI } from "@/lib/pet/meter-ui";
 import type { PetMeterId } from "@/lib/pet/types";
-
-const METER_UI: Record<
-  PetMeterId,
-  { label: string; barClass: string }
-> = {
-  hunger: { label: "Hunger", barClass: "bg-orange-500" },
-  thirst: { label: "Thirst", barClass: "bg-sky-500" },
-  energy: { label: "Energy", barClass: "bg-amber-400" },
-  cleanliness: { label: "Clean", barClass: "bg-teal-500" },
-  happiness: { label: "Happy", barClass: "bg-pink-500" },
-};
 
 type Props = {
   meterId: PetMeterId;
@@ -19,7 +9,7 @@ type Props = {
 };
 
 export function PetMeterBar({ meterId, value, className }: Props) {
-  const ui = METER_UI[meterId];
+  const ui = PET_METER_UI[meterId];
   const pct = Math.min(100, Math.max(0, value));
 
   return (

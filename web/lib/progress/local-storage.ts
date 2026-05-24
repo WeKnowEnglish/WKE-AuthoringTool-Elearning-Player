@@ -102,10 +102,17 @@ export function setResumeScreen(lessonId: string, screenIndex: number) {
   writeRaw(s);
 }
 
+export const AUDIO_MUTED_CHANGED_EVENT = "wke:audio-muted-changed";
+
 export function setAudioMuted(muted: boolean) {
   const s = getProgressSnapshot();
   s.audioMuted = muted;
   writeRaw(s);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(AUDIO_MUTED_CHANGED_EVENT, { detail: { muted } }),
+    );
+  }
 }
 
 export function isAudioMuted(): boolean {

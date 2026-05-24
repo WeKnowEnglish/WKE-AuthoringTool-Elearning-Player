@@ -1,4 +1,9 @@
 export { BlenderScenePlayer } from "./BlenderScenePlayer";
 export { FruitTray } from "./FruitTray";
+export { IngredientTray } from "./IngredientTray";
+export { PetDrinkFlyAnimation } from "./PetDrinkFlyAnimation";
+export { PetDrinkIntro } from "./PetDrinkIntro";
+export { PetDrinkRequestBubble } from "./PetDrinkRequestBubble";
+export { PetDrinkResultsScreen } from "./PetDrinkResultsScreen";
 export { PetDrinkMixActivity } from "./PetDrinkMixActivity";
 export { PetDrinkMixOverlay } from "./PetDrinkMixOverlay";

@@ -19,6 +19,22 @@ export const STUDY_COMPLETE_METER_DELTAS: MeterDelta = {
   energy: -5,
 };
 
+export type DrinkMiniGameResultTier = "good" | "bad";
+
+/** Meter changes after the drink mini-game results screen. */
+export const DRINK_MINIGAME_DELTAS: Record<DrinkMiniGameResultTier, MeterDelta> = {
+  good: { thirst: 25, happiness: 5 },
+  bad: { thirst: -10, happiness: -10 },
+};
+
+export type SandwichMiniGameResultTier = "good" | "bad";
+
+/** Meter changes after the sandwich mini-game results screen. */
+export const SANDWICH_MINIGAME_DELTAS: Record<SandwichMiniGameResultTier, MeterDelta> = {
+  good: { hunger: 25, happiness: 5 },
+  bad: { hunger: -5, happiness: -10 },
+};
+
 export function clampMeter(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, Math.round(value)));

@@ -1,25 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { AnimatedPet } from "@/components/pet/AnimatedPet";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PetCareButton } from "@/components/student-hub/PetCareButton";
-import { PetMeterBar } from "@/components/student-hub/PetMeterBar";
+import { PetCareDisplayCard } from "@/components/student-hub/PetCareDisplayCard";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
+import { unlockSpeechSynthesis } from "@/lib/audio/tts";
 import {
+  applyDrinkMiniGameResult,
+  applySandwichMiniGameResult,
   applyPetCare,
   getPetSnapshot,
   isStudyCarePending,
+  petBaselineMood,
   petMoodLine,
   setStudyCarePending,
+  type DrinkMiniGameResultTier,
+  type SandwichMiniGameResultTier,
 } from "@/lib/pet";
 import { PET_MOOD_DURATION_MS } from "@/lib/pet/mood-durations";
-import { PET_METER_IDS } from "@/lib/pet/types";
 import type { PetSnapshotV1 } from "@/lib/pet/types";
 import { usePetMoodAnimation } from "@/lib/pet/use-pet-mood-animation";
 import { ensurePetDog } from "@/lib/progress/local-storage";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { PetDrinkMixOverlay } from "@/components/pet-blender/PetDrinkMixOverlay";
+import { PetSandwichOverlay } from "@/components/pet-sandwich/PetSandwichOverlay";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import {
   canClaimPetGold,
@@ -47,9 +52,14 @@ export function PetRoom({
   onEconomyChange,
 }: Props) {
   const hydrated = useClientHydrated();
-  const { mood, bumpMood } = usePetMoodAnimation("normal");
   const [drinkMixOpen, setDrinkMixOpen] = useState(false);
+  const [sandwichOpen, setSandwichOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<PetSnapshotV1 | null>(null);
+  const baselineMood = useMemo(
+    () => (snapshot ? petBaselineMood(snapshot) : "normal"),
+    [snapshot],
+  );
+  const { mood, bumpMood } = usePetMoodAnimation(baselineMood);
 
   const refreshPet = useCallback(() => {
     setSnapshot(getPetSnapshot());
@@ -84,7 +94,23 @@ export function PetRoom({
     }
   };
 
-  const runCare = (action: "feed" | "play" | "wash" | "sleep") => {
+  const onFeed = () => {
+    playSfx("tap", muted);
+    unlockSpeechSynthesis();
+    setSandwichOpen(true);
+  };
+
+  const onSandwichComplete = (tier: SandwichMiniGameResultTier) => {
+    setSnapshot(applySandwichMiniGameResult(tier));
+    if (tier === "good") {
+      bumpMood("excited", PET_MOOD_DURATION_MS.excited);
+    } else {
+      bumpMood("normal", PET_MOOD_DURATION_MS.normal);
+    }
+    onEconomyChange?.();
+  };
+
+  const runCare = (action: "play" | "wash" | "sleep") => {
     playSfx("tap", muted);
     setSnapshot(applyPetCare(action));
     if (action === "play") {
@@ -96,13 +122,18 @@ export function PetRoom({
 
   const onDrink = () => {
     playSfx("tap", muted);
+    unlockSpeechSynthesis();
     setDrinkMixOpen(true);
   };
 
-  const onDrinkMixSuccess = () => {
-    setSnapshot(applyPetCare("drink"));
-    setDrinkMixOpen(false);
-    bumpMood("excited", PET_MOOD_DURATION_MS.excited);
+  const onDrinkMixComplete = (tier: DrinkMiniGameResultTier) => {
+    setSnapshot(applyDrinkMiniGameResult(tier));
+    if (tier === "good") {
+      bumpMood("excited", PET_MOOD_DURATION_MS.excited);
+    } else {
+      bumpMood("normal", PET_MOOD_DURATION_MS.normal);
+    }
+    onEconomyChange?.();
   };
 
   const onStudy = () => {
@@ -129,21 +160,15 @@ export function PetRoom({
         </KidPanel>
       ) : null}
 
-      <div className="flex flex-col items-center gap-3">
-        <AnimatedPet mood={mood} size="lg" show={hydrated && !drinkMixOpen} />
-        {moodLine && !drinkMixOpen ?
-          <p className="text-sm font-bold text-kid-ink/90">{moodLine}</p>
-        : null}
-      </div>
-
       {hydrated && snapshot ?
-        <KidPanel className="space-y-3">
-          {PET_METER_IDS.map((id) => (
-            <PetMeterBar key={id} meterId={id} value={snapshot.meters[id]} />
-          ))}
-        </KidPanel>
+        <PetCareDisplayCard
+          snapshot={snapshot}
+          mood={mood}
+          moodLine={moodLine}
+          showPet={!drinkMixOpen && !sandwichOpen}
+        />
       : (
-        <KidPanel className="h-40 animate-pulse bg-kid-surface-muted" aria-hidden>
+        <KidPanel className="h-52 animate-pulse bg-kid-surface-muted sm:h-60" aria-hidden>
           {null}
         </KidPanel>
       )}
@@ -181,7 +206,7 @@ export function PetRoom({
       : null}
 
       <div className="grid grid-cols-3 gap-2">
-        <PetCareButton actionId="feed" onClick={() => runCare("feed")} />
+        <PetCareButton actionId="feed" onClick={onFeed} />
         <PetCareButton actionId="drink" onClick={onDrink} />
         <PetCareButton actionId="play" onClick={() => runCare("play")} />
         <PetCareButton actionId="wash" onClick={() => runCare("wash")} />
@@ -192,8 +217,15 @@ export function PetRoom({
       <PetDrinkMixOverlay
         open={drinkMixOpen}
         muted={muted}
-        onSuccess={onDrinkMixSuccess}
+        onComplete={onDrinkMixComplete}
         onClose={() => setDrinkMixOpen(false)}
+      />
+
+      <PetSandwichOverlay
+        open={sandwichOpen}
+        muted={muted}
+        onComplete={onSandwichComplete}
+        onClose={() => setSandwichOpen(false)}
       />
     </div>
   );

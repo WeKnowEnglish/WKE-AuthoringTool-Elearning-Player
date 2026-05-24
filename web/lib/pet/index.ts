@@ -1,8 +1,12 @@
 export {
   applyMeterDeltas,
   clampMeter,
+  DRINK_MINIGAME_DELTAS,
   PET_CARE_METER_DELTAS,
+  SANDWICH_MINIGAME_DELTAS,
   STUDY_COMPLETE_METER_DELTAS,
+  type DrinkMiniGameResultTier,
+  type SandwichMiniGameResultTier,
 } from "@/lib/pet/care-actions";
 export {
   DECAY_PER_HOUR,
@@ -13,8 +17,14 @@ export {
   PET_STORAGE_KEY,
 } from "@/lib/pet/defaults";
 export { applyDecay, decayAmountForElapsedMs } from "@/lib/pet/decay";
-export { petMoodLine } from "@/lib/pet/mood";
 export {
+  petBaselineMood,
+  petMoodLine,
+  PET_MOOD_LINE_THRESHOLD,
+} from "@/lib/pet/mood";
+export {
+  applyDrinkMiniGameResult,
+  applySandwichMiniGameResult,
   applyPetCare,
   completeStudyCareIfPending,
   getPetSnapshot,

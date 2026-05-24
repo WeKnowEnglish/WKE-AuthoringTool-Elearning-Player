@@ -5,13 +5,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { applyRigFrame, resetRigLayerTransforms, rigViewBox } from "@/lib/blender/rig-engine";
 import type { RigScene } from "@/lib/blender/rig-types";
 
-export type AnimatedPetSize = "mini" | "sm" | "md" | "lg";
+export type AnimatedPetSize = "mini" | "sm" | "md" | "lg" | "xl";
 
 const SIZE_CLASS: Record<AnimatedPetSize, string> = {
   mini: "h-[4.5rem] w-[4.5rem]",
   sm: "h-[7rem] w-[7rem]",
   md: "h-[10rem] w-[10rem]",
   lg: "h-[14rem] w-[14rem]",
+  xl: "h-[18rem] w-[18rem]",
 };
 
 type Props = {
@@ -19,6 +20,10 @@ type Props = {
   playing?: boolean;
   className?: string;
   size?: AnimatedPetSize;
+  /** Compensates for poses authored smaller in rig data (default 1). */
+  displayScale?: number;
+  /** Scale origin when displayScale is applied (default center). */
+  displayAnchor?: "center" | "bottom";
 };
 
 function usePrefersReducedMotion(): boolean {
@@ -38,7 +43,15 @@ export function AnimatedPetPlayer({
   playing = true,
   className,
   size = "md",
+  displayScale = 1,
+  displayAnchor = "center",
 }: Props) {
+  const scale = displayScale > 0 ? displayScale : 1;
+  const scaleOrigin = displayAnchor === "bottom" ? "100% 100%" : "center";
+  const alignClass =
+    displayAnchor === "bottom" ?
+      "items-end justify-end"
+    : "items-center justify-center";
   const hostRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<number>(0);
   const reducedMotion = usePrefersReducedMotion();
@@ -87,14 +100,24 @@ export function AnimatedPetPlayer({
   return (
     <div
       className={clsx(
-        "relative flex shrink-0 items-center justify-center",
+        "relative flex shrink-0",
+        alignClass,
         SIZE_CLASS[size],
+        scale > 1 && "overflow-visible",
         className,
       )}
     >
       <div
         ref={hostRef}
-        className="flex h-full w-full items-center justify-center [&_svg]:max-h-full [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:w-full"
+        className={clsx(
+          "flex h-full w-full origin-center [&_svg]:max-h-full [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:w-full",
+          alignClass,
+        )}
+        style={
+          scale !== 1 ?
+            { transform: `scale(${scale})`, transformOrigin: scaleOrigin }
+          : undefined
+        }
         dangerouslySetInnerHTML={{ __html: scene.rawSvgString }}
       />
     </div>

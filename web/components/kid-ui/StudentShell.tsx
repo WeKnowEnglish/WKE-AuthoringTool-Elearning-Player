@@ -1,13 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
-import {
-  getProgressSnapshot,
-  setAudioMuted,
-} from "@/lib/progress/local-storage";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
-import { KidButton } from "@/components/kid-ui/KidButton";
+import { SoundMuteButton } from "@/components/kid-ui/SoundMuteButton";
 import { SoftChromePresetSwatches } from "@/components/ui/SoftChromePresetSwatches";
 import {
   getSoftChromePreset,
@@ -15,7 +11,6 @@ import {
 } from "@/lib/soft-chrome-theme";
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
-  const [muted, setMuted] = useState(false);
   const presetId = useSyncExternalStore(
     studentSoftChromeStore.subscribe,
     studentSoftChromeStore.getSnapshot,
@@ -31,18 +26,6 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       document.documentElement.style.removeProperty("--student-chrome-page");
     };
   }, [pageBackground]);
-
-  useEffect(() => {
-    queueMicrotask(() =>
-      setMuted(getProgressSnapshot().audioMuted === true),
-    );
-  }, []);
-
-  function toggleMute() {
-    const next = !muted;
-    setMuted(next);
-    setAudioMuted(next);
-  }
 
   return (
     <div
@@ -84,14 +67,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           >
             Achievements
           </Link>
-          <KidButton
-            type="button"
-            variant="secondary"
-            className="!min-h-10 !min-w-0 px-3 py-2 text-sm"
-            onClick={toggleMute}
-          >
-            {muted ? "Sound off" : "Sound on"}
-          </KidButton>
+          <SoundMuteButton />
           <SignOutForm label="Log out" variant="kid" className="!min-h-10" />
         </nav>
       </header>

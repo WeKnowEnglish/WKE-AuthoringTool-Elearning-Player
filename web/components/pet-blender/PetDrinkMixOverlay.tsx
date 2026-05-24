@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
-import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { clsx } from "clsx";
+import { useCallback, useEffect, useState } from "react";
+import { PetDrinkIntro } from "@/components/pet-blender/PetDrinkIntro";
 import { PetDrinkMixActivity } from "@/components/pet-blender/PetDrinkMixActivity";
+import type { DrinkMiniGameResultTier } from "@/lib/pet/care-actions";
+
+type ShellPhase = "intro" | "play";
 
 type Props = {
   open: boolean;
   muted: boolean;
-  onSuccess: () => void;
+  onComplete: (tier: DrinkMiniGameResultTier) => void;
   onClose: () => void;
 };
 
-export function PetDrinkMixOverlay({ open, muted, onSuccess, onClose }: Props) {
+export function PetDrinkMixOverlay({ open, muted, onComplete, onClose }: Props) {
+  const [phase, setPhase] = useState<ShellPhase>("intro");
+  const [playKey, setPlayKey] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    setPhase("intro");
+    setPlayKey((k) => k + 1);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -21,31 +34,47 @@ export function PetDrinkMixOverlay({ open, muted, onSuccess, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  const onIntroFinished = useCallback(() => {
+    setPhase("play");
+  }, []);
+
+  const onPlayAgain = useCallback(() => {
+    setPhase("intro");
+    setPlayKey((k) => k + 1);
+  }, []);
+
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[82] flex items-end justify-center bg-black/45 p-3 sm:items-center"
+      className="fixed inset-0 z-[82] flex flex-col items-center justify-center bg-black/60 p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Make a drink for your pet"
-      onPointerDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
-      <KidPanel className="max-h-[92dvh] w-full max-w-lg overflow-y-auto border-4 border-kid-ink p-4 shadow-2xl">
-        <h2 className="text-center text-xl font-extrabold text-kid-ink">Blender Bar</h2>
-        <p className="mt-1 text-center text-sm font-semibold text-kid-ink/80">
-          Mix the drink your pet asked for!
-        </p>
-        <div className="mt-3">
-          <PetDrinkMixActivity
-            muted={muted}
-            onSuccess={onSuccess}
-            onCancel={onClose}
-          />
-        </div>
-      </KidPanel>
+      <div
+        className={clsx(
+          "flex w-full max-w-lg flex-col rounded-2xl border-4 border-kid-ink/20 bg-gradient-to-b from-sky-100 via-sky-50 to-amber-50 shadow-2xl",
+          phase === "play" && "min-h-0",
+          "px-3 py-3 sm:px-4",
+          phase === "intro" ?
+            "max-h-[92dvh] overflow-visible"
+          : "h-[min(92dvh,680px)] min-h-[28rem] overflow-hidden",
+        )}
+      >
+        {phase === "intro" ?
+          <PetDrinkIntro muted={muted} onFinished={onIntroFinished} />
+        : <div className="flex min-h-0 flex-1 flex-col">
+            <PetDrinkMixActivity
+              key={playKey}
+              muted={muted}
+              onComplete={onComplete}
+              onCancel={onClose}
+              onPlayAgain={onPlayAgain}
+            />
+          </div>
+        }
+      </div>
     </div>
   );
 }

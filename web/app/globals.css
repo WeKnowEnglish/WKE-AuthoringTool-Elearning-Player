@@ -718,6 +718,35 @@ body:has([data-teacher-root]) {
   }
 }
 
+@keyframes pet-drink-intro-enter {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.pet-drink-intro-group {
+  animation: pet-drink-intro-enter 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+.pet-sandwich-intro-group {
+  animation: pet-drink-intro-enter 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-drink-intro-group {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .pet-drink-drag-ghost {
+    transition: none !important;
+  }
+}
+
 @keyframes blender-shake {
   0%,
   100% {
@@ -737,6 +766,27 @@ body:has([data-teacher-root]) {
 
 @media (prefers-reduced-motion: reduce) {
   .pet-blender-shake {
+    animation: none;
+  }
+}
+
+@keyframes pet-sandwich-top-bread-drop {
+  0% {
+    transform: translateY(-1.25rem);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pet-sandwich-top-bread-drop {
+  animation: pet-sandwich-top-bread-drop 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-sandwich-top-bread-drop {
     animation: none;
   }
 }

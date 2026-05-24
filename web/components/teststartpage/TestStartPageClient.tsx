@@ -4,6 +4,7 @@ import NextImage from "next/image";
 import { clsx } from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
+import { SoundMuteButton } from "@/components/kid-ui/SoundMuteButton";
 import {
   InteractionFeedbackShell,
   type InteractionFeedbackKind,
@@ -26,7 +27,7 @@ import { PuppetPresenterOverlay } from "@/components/teststartpage/PuppetPresent
 import { QuizStickerFallback } from "@/components/teststartpage/QuizStickerFallback";
 import { playSfx } from "@/lib/audio/sfx";
 import { speakText, unlockSpeechSynthesis } from "@/lib/audio/tts";
-import { getProgressSnapshot, setAudioMuted } from "@/lib/progress/local-storage";
+import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import {
   applyTestStartQuizCorrectAnswer,
   applyTestStartQuizWrongAnswer,
@@ -104,7 +105,7 @@ export function TestStartPageClient() {
   const [interactionPass, setInteractionPass] = useState(false);
   const [interactionFeedback, setInteractionFeedback] =
     useState<InteractionFeedbackKind>("none");
-  const [muted, setMuted] = useState(false);
+  const { muted } = useAudioMuted();
   const [activeQuizSeed, setActiveQuizSeed] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportCategory, setReportCategory] = useState<QuizQuestionReportCategory>("mistopic");
@@ -160,10 +161,6 @@ export function TestStartPageClient() {
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => setMuted(getProgressSnapshot().audioMuted === true));
-  }, []);
-
-  useEffect(() => {
     refreshRewardsUi();
   }, [refreshRewardsUi]);
 
@@ -185,12 +182,6 @@ export function TestStartPageClient() {
   const closePlayerMenu = useCallback(() => {
     setPlayerMenuOpen(false);
   }, []);
-
-  const toggleMute = useCallback(() => {
-    const next = !muted;
-    setMuted(next);
-    setAudioMuted(next);
-  }, [muted]);
 
   const resetInteractionState = useCallback(() => {
     setInteractionPass(false);
@@ -562,9 +553,7 @@ export function TestStartPageClient() {
           </div>
           <PlayerLevelBar experience={rewardsUi.experience} compact />
         </div>
-        <KidButton type="button" variant="secondary" className="!min-h-9 shrink-0 text-sm" onClick={toggleMute}>
-          {muted ? "Sound off" : "Sound on"}
-        </KidButton>
+        <SoundMuteButton className="!min-h-9 shrink-0" />
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col items-center px-4 py-4 sm:py-6">

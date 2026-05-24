@@ -21,6 +21,8 @@ type Props = {
   rumbleActive?: boolean;
   onKnobClick?: () => void;
   knobEnabled?: boolean;
+  /** Shorter max height for the drink mini-game stage. */
+  size?: "default" | "compact" | "stage" | "fill";
   className?: string;
 };
 
@@ -87,12 +89,20 @@ function measureKnobHitRect(
   };
 }
 
+const SVG_SIZE_CLASS: Record<NonNullable<Props["size"]>, string> = {
+  default: "[&_svg]:max-h-[min(52dvh,320px)]",
+  compact: "[&_svg]:max-h-[min(36dvh,220px)]",
+  stage: "[&_svg]:max-h-[min(46dvh,300px)]",
+  fill: "[&_svg]:h-full [&_svg]:max-h-full [&_svg]:w-full [&_svg]:max-w-full [&_svg]:object-contain",
+};
+
 export function BlenderScenePlayer({
   scene,
   interactStateId,
   rumbleActive = false,
   onKnobClick,
   knobEnabled = false,
+  size = "default",
   className,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -185,10 +195,22 @@ export function BlenderScenePlayer({
   }, [rumbleActive, reducedMotion, scene]);
 
   return (
-    <div ref={containerRef} className={clsx("relative w-full", className)}>
+    <div
+      ref={containerRef}
+      className={clsx(
+        "relative flex w-full items-center justify-center",
+        size === "fill" ? "h-full min-h-0" : "",
+        className,
+      )}
+    >
       <div
         ref={hostRef}
-        className="[&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-h-[min(52dvh,320px)] [&_svg]:w-full"
+        className={clsx(
+          "flex h-full w-full items-center justify-center",
+          size === "fill" ?
+            SVG_SIZE_CLASS.fill
+          : clsx("[&_svg]:mx-auto [&_svg]:h-auto [&_svg]:w-full", SVG_SIZE_CLASS[size]),
+        )}
       />
       {onKnobClick && knobHitRect ?
         <button

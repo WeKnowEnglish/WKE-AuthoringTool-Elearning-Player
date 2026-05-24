@@ -3,9 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PetMood } from "@/lib/pet/types";
 
-export function usePetMoodAnimation(initial: PetMood = "normal") {
-  const [mood, setMood] = useState<PetMood>(initial);
+export function usePetMoodAnimation(baseline: PetMood = "normal") {
+  const [mood, setMood] = useState<PetMood>(baseline);
+  const baselineRef = useRef(baseline);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  baselineRef.current = baseline;
+
+  useEffect(() => {
+    if (!resetTimerRef.current) {
+      setMood(baseline);
+    }
+  }, [baseline]);
 
   useEffect(() => {
     return () => {
@@ -19,9 +28,10 @@ export function usePetMoodAnimation(initial: PetMood = "normal") {
       clearTimeout(resetTimerRef.current);
       resetTimerRef.current = null;
     }
-    if (next !== "normal" && durationMs !== undefined && durationMs > 0) {
+    const base = baselineRef.current;
+    if (next !== base && durationMs !== undefined && durationMs > 0) {
       resetTimerRef.current = setTimeout(() => {
-        setMood("normal");
+        setMood(baselineRef.current);
         resetTimerRef.current = null;
       }, durationMs);
     }

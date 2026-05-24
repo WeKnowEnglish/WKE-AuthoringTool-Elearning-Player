@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { applyMeterDeltas, clampMeter } from "@/lib/pet/care-actions";
+import {
+  applyMeterDeltas,
+  clampMeter,
+  DRINK_MINIGAME_DELTAS,
+} from "@/lib/pet/care-actions";
 import { decayAmountForElapsedMs, applyDecay } from "@/lib/pet/decay";
 import { emptyPetSnapshot } from "@/lib/pet/defaults";
 
@@ -17,6 +21,26 @@ describe("applyMeterDeltas", () => {
     const next = applyMeterDeltas(base, { hunger: 25 }, 2000);
     expect(next.meters.hunger).toBe(75);
     expect(next.lastUpdatedAt).toBe(2000);
+  });
+});
+
+describe("DRINK_MINIGAME_DELTAS", () => {
+  it("boosts thirst and happiness on good", () => {
+    const base = emptyPetSnapshot(1000);
+    base.meters.thirst = 40;
+    base.meters.happiness = 50;
+    const next = applyMeterDeltas(base, DRINK_MINIGAME_DELTAS.good, 2000);
+    expect(next.meters.thirst).toBe(65);
+    expect(next.meters.happiness).toBe(55);
+  });
+
+  it("reduces thirst and happiness on bad", () => {
+    const base = emptyPetSnapshot(1000);
+    base.meters.thirst = 40;
+    base.meters.happiness = 50;
+    const next = applyMeterDeltas(base, DRINK_MINIGAME_DELTAS.bad, 2000);
+    expect(next.meters.thirst).toBe(30);
+    expect(next.meters.happiness).toBe(40);
   });
 });
 

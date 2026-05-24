@@ -12,7 +12,10 @@ import {
   sceneById,
 } from "@/lib/blender/load-scene";
 import type { RigDocument, RigScene } from "@/lib/blender/rig-types";
-import { resolvePetMoodSceneId } from "@/lib/pet/animated-pet";
+import {
+  resolvePetMoodSceneId,
+  resolvePetSceneDisplayScale,
+} from "@/lib/pet/animated-pet";
 import type { PetMood } from "@/lib/pet/types";
 
 let cachedUrl: string | null = null;
@@ -29,6 +32,9 @@ function loadDocument(): Promise<RigDocument> {
 type Props = {
   mood?: PetMood;
   size?: AnimatedPetSize;
+  /** Overrides scene-based display scale when set (e.g. drink mini-game). */
+  displayScale?: number;
+  displayAnchor?: "center" | "bottom";
   show?: boolean;
   playing?: boolean;
   className?: string;
@@ -37,6 +43,8 @@ type Props = {
 export function AnimatedPet({
   mood = "normal",
   size = "md",
+  displayScale: displayScaleOverride,
+  displayAnchor = "center",
   show = true,
   playing = true,
   className,
@@ -86,6 +94,10 @@ export function AnimatedPet({
       scene={scene}
       playing={playing}
       size={size}
+      displayScale={
+        displayScaleOverride ?? resolvePetSceneDisplayScale(scene.id)
+      }
+      displayAnchor={displayAnchor}
       className={className}
     />
   );

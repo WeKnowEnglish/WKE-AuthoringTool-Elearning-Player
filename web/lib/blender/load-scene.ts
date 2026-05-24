@@ -7,7 +7,7 @@ import {
 
 export const BLENDER_SCENE_URL = "/pet/blender-scene.json";
 /** Bump when public/pet/dog-poses.json changes so browsers refetch after sync. */
-export const DOG_POSES_CACHE_VERSION = "3";
+export const DOG_POSES_CACHE_VERSION = "4";
 export const DOG_POSES_URL = `/pet/dog-poses.json?v=${DOG_POSES_CACHE_VERSION}`;
 
 export function parseBlenderDocument(data: unknown): BlenderDocument {

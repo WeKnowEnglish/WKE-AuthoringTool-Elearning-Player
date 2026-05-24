@@ -13,12 +13,13 @@ function loadDogDocument() {
 }
 
 describe("parseRigDocument (dog-poses.json)", () => {
-  it("loads three scenes", () => {
+  it("loads four scenes", () => {
     const doc = loadDogDocument();
-    expect(doc.scenes).toHaveLength(3);
+    expect(doc.scenes).toHaveLength(4);
     expect(sceneById(doc, "scene-standing")).toBeDefined();
     expect(sceneById(doc, "scene-happy")).toBeDefined();
     expect(sceneById(doc, "scene-downward")).toBeDefined();
+    expect(sceneById(doc, "scene-sad")).toBeDefined();
   });
 });
 

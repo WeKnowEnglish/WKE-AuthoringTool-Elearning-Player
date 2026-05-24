@@ -2,8 +2,12 @@
 
 import {
   applyMeterDeltas,
+  DRINK_MINIGAME_DELTAS,
   PET_CARE_METER_DELTAS,
+  SANDWICH_MINIGAME_DELTAS,
   STUDY_COMPLETE_METER_DELTAS,
+  type DrinkMiniGameResultTier,
+  type SandwichMiniGameResultTier,
 } from "@/lib/pet/care-actions";
 import { applyDecay } from "@/lib/pet/decay";
 import {
@@ -84,6 +88,26 @@ export function applyPetCare(actionId: Exclude<PetCareActionId, "study">): PetSn
   const base = getPetSnapshot();
   const deltas = PET_CARE_METER_DELTAS[actionId];
   const next = applyMeterDeltas(base, deltas, now);
+  writeRaw(next);
+  return next;
+}
+
+/** Applies drink mini-game outcome (replaces legacy applyPetCare("drink") on success). */
+export function applyDrinkMiniGameResult(tier: DrinkMiniGameResultTier): PetSnapshotV1 {
+  const now = Date.now();
+  const base = getPetSnapshot();
+  const next = applyMeterDeltas(base, DRINK_MINIGAME_DELTAS[tier], now);
+  writeRaw(next);
+  return next;
+}
+
+/** Applies sandwich mini-game outcome (replaces legacy applyPetCare("feed")). */
+export function applySandwichMiniGameResult(
+  tier: SandwichMiniGameResultTier,
+): PetSnapshotV1 {
+  const now = Date.now();
+  const base = getPetSnapshot();
+  const next = applyMeterDeltas(base, SANDWICH_MINIGAME_DELTAS[tier], now);
   writeRaw(next);
   return next;
 }

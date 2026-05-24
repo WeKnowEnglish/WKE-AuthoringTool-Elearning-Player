@@ -15,10 +15,11 @@ import { RoomSwitcher, type StudentHubRoom } from "@/components/student-hub/Room
 import { DailyQuestsDrawer } from "@/components/student-hub/DailyQuestsDrawer";
 import { QuestHeaderButton } from "@/components/student-hub/QuestHeaderButton";
 import { SignOutForm } from "@/components/auth/SignOutForm";
+import { SoundMuteButton } from "@/components/kid-ui/SoundMuteButton";
 import { StudentEconomyHud } from "@/components/student-hub/StudentEconomyHud";
+import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { playSfx } from "@/lib/audio/sfx";
 import { completeStudyCareIfPending, isStudyCarePending } from "@/lib/pet";
-import { getProgressSnapshot } from "@/lib/progress/local-storage";
 import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import { isUnlockAvailable } from "@/lib/progress/unlock-registry";
 import { newSessionSeed } from "@/lib/student-hub/session-seed";
@@ -37,7 +38,7 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
   const [collectionPage, setCollectionPage] = useState<CollectionPageId>(() =>
     parseCollectionPageId(initialCollectionPage),
   );
-  const [muted, setMuted] = useState(false);
+  const { muted } = useAudioMuted();
   const [rewardsUi, setRewardsUi] = useState({
     gold: 0,
     experience: 0,
@@ -73,10 +74,6 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
     if (typeof window === "undefined") return;
     setStudyPendingUi(isStudyCarePending());
     setPetUiKey((k) => k + 1);
-  }, []);
-
-  useEffect(() => {
-    queueMicrotask(() => setMuted(getProgressSnapshot().audioMuted === true));
   }, []);
 
   useEffect(() => {
@@ -207,6 +204,7 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
           <div className="h-9 min-w-[8rem] flex-1 rounded-lg border-2 border-kid-ink/30 bg-kid-panel/50" aria-hidden />
         )}
         <div className="flex items-center gap-2">
+          <SoundMuteButton className="!min-h-9 shrink-0" />
           <QuestHeaderButton
             muted={muted}
             hydrated={hydrated}

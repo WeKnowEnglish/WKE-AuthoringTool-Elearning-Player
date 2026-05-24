@@ -20,7 +20,7 @@ export const PET_CARE_ACTION_IDS = [
 export type PetCareActionId = (typeof PET_CARE_ACTION_IDS)[number];
 
 /** Animated dog pose mood (maps to rig scene ids). */
-export type PetMood = "normal" | "excited" | "playful";
+export type PetMood = "normal" | "excited" | "playful" | "sad";
 
 export type PetSnapshotV1 = {
   schemaVersion: 1;

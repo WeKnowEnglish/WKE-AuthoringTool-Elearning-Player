@@ -29,6 +29,42 @@ export {
   type FruitTrayItem,
 } from "./drink-recipes";
 export {
+  DRINK_ADJECTIVES,
+  createMainRequests,
+  formatRequest,
+  getAdjectiveCueEmoji,
+  isDrinkAdjective,
+  pickDistinctAdjectives,
+  type DrinkAdjective,
+  type DrinkRequestDisplay,
+} from "./drink-adjectives";
+export { buildFixPrompt, type DrinkFixPrompt } from "./drink-fix-prompts";
+export {
+  DRINK_INGREDIENTS,
+  getDrinkIngredient,
+  getIngredientTags,
+  ingredientMatches,
+  resolveJuiceColorFromPicks,
+  type DrinkIngredient,
+} from "./drink-ingredients";
+export {
+  availableIngredientIds,
+  buildFixRoundContext,
+  canPickIngredient,
+  createDrinkSession,
+  createIngredientTracker,
+  markIngredientUsed,
+  scoreFixRound,
+  scoreMainRound,
+  scoreSlot,
+  type DrinkIngredientTracker,
+  type DrinkSession,
+  type DrinkSessionPicks,
+  type FixRoundTier,
+  type MainRoundScore,
+  type MainRoundTier,
+} from "./drink-session";
+export {
   BLENDER_SCENE_URL,
   DOG_POSES_URL,
   loadBlenderScene,

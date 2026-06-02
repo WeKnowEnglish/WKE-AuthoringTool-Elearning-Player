@@ -11,6 +11,7 @@ type Props = {
   clozeSeed: string;
   muted: boolean;
   onPass: () => void;
+  onBack?: () => void;
 };
 
 export function ExploreSceneClozeStep({
@@ -19,6 +20,7 @@ export function ExploreSceneClozeStep({
   clozeSeed,
   muted,
   onPass,
+  onBack,
 }: Props) {
   const [passed, setPassed] = useState(false);
 
@@ -34,6 +36,9 @@ export function ExploreSceneClozeStep({
         muted={muted}
         passed={passed}
         controlsPlacement="stage-footer"
+        showBack={Boolean(onBack)}
+        onBack={onBack ?? (() => {})}
+        onNext={onPass}
         onPass={() => {
           setPassed(true);
           onPass();

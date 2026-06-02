@@ -225,6 +225,10 @@ export function ExploreSceneChapterOverlay({
             clozeSeed={`${sessionSeed}:${runKey}:cloze`}
             muted={muted}
             onPass={handleClozePass}
+            onBack={() => {
+              playSfx("tap", muted);
+              setPhase("roam");
+            }}
           />
         : null}
       </div>

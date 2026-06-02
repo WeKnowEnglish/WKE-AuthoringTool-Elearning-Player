@@ -119,12 +119,16 @@ export function findInteractTarget(
 ): ExploreSceneInteractTarget | null {
   const allowBrother = opts?.allowBrother ?? isChecklistComplete(scene, state);
   const center = playerSceneCenter(state.playerX, state.playerY);
-  let best: { target: ExploreSceneInteractTarget; distSq: number } | null = null;
+  let bestTarget: ExploreSceneInteractTarget | null = null;
+  let bestDistSq = Infinity;
 
   const consider = (target: ExploreSceneInteractTarget, x: number, y: number, r?: number) => {
     const d = distanceSq(center.x, center.y, x, y);
     if (d > interactRadius(r)) return;
-    if (!best || d < best.distSq) best = { target, distSq: d };
+    if (d < bestDistSq) {
+      bestDistSq = d;
+      bestTarget = target;
+    }
   };
 
   for (const p of scene.wordPickups) {
@@ -161,8 +165,7 @@ export function findInteractTarget(
     consider({ kind: "brother" }, scene.brother.x, scene.brother.y, scene.brother.interactRadius);
   }
 
-  if (!best) return null;
-  return best.target;
+  return bestTarget;
 }
 
 export function collectWordPickup(

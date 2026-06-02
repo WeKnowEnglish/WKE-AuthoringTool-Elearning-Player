@@ -5,6 +5,7 @@ import {
   rackLettersNeeded,
   validatePlacementStructure,
   wordsFormedByPlacement,
+  type BoardState,
   type WordPlacement,
 } from "@/lib/scrabble/scrabble-board";
 import {

@@ -1,7 +1,7 @@
 "use client";
 
 import { clsx } from "clsx";
-import { PlayerCharacter } from "@/components/avatar/PlayerCharacter";
+import { HOME_PLAYER_AVATAR_SVG_PATH, PlayerCharacter } from "@/components/avatar/PlayerCharacter";
 import { PetCompanion } from "@/components/worlds/PetCompanion";
 import { WorldLevelPlatform } from "@/components/worlds/WorldLevelPlatform";
 import { WorldLevelStrip } from "@/components/worlds/WorldLevelStrip";
@@ -52,10 +52,15 @@ export function WorldHomeStage({
               appearanceId={playerAppearanceId}
               size="lg"
               show={hydrated}
+              svgPath={HOME_PLAYER_AVATAR_SVG_PATH}
             />
           </div>
 
-          <PetCompanion show={hydrated} />
+          <PetCompanion
+            show={hydrated}
+            size="md"
+            className="origin-bottom-right translate-x-[150px] translate-y-[150px] scale-[1.5]"
+          />
 
           <div className="relative z-0 -mt-2 w-full">
             <WorldLevelPlatform theme={world.theme} />

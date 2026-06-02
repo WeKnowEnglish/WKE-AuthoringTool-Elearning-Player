@@ -17,11 +17,13 @@ describe("explore chapters", () => {
     expect(chapters[0]?.areaId).toBe("bedroom");
   });
 
-  it("links each chapter to an explore area", () => {
+  it("links each runner chapter to an explore area", () => {
     for (const id of EXPLORE_CHAPTER_IDS) {
       const chapter = getExploreChapter(id);
+      const area = getExploreArea(chapter.areaId);
+      if (area.playMode === "scene") continue;
       expect(getExploreChapterForArea(chapter.areaId).id).toBe(chapter.id);
-      expect(getExploreArea(chapter.areaId).chapterId).toBe(chapter.id);
+      expect(area.chapterId).toBe(chapter.id);
     }
   });
 

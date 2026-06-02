@@ -2,12 +2,23 @@ export {
   applyMeterDeltas,
   clampMeter,
   DRINK_MINIGAME_DELTAS,
+  EXERCISE_MINIGAME_DELTAS,
   PET_CARE_METER_DELTAS,
   SANDWICH_MINIGAME_DELTAS,
+  MEMORY_PLAY_DELTAS,
+  SCRABBLE_PLAY_DELTAS,
   STUDY_COMPLETE_METER_DELTAS,
   type DrinkMiniGameResultTier,
+  type ExerciseMiniGameResultTier,
+  type MemoryPlayOutcome,
   type SandwichMiniGameResultTier,
+  type ScrabblePlayOutcome,
 } from "@/lib/pet/care-actions";
+export {
+  IMPLEMENTED_PLAY_MINIGAMES,
+  pickPlayMiniGame,
+  type PlayMiniGameId,
+} from "@/lib/pet/play-minigames";
 export {
   DECAY_PER_HOUR,
   DEFAULT_METER_VALUE,
@@ -24,6 +35,9 @@ export {
 } from "@/lib/pet/mood";
 export {
   applyDrinkMiniGameResult,
+  applyExerciseMiniGameResult,
+  applyMemoryPlayResult,
+  applyScrabblePlayResult,
   applySandwichMiniGameResult,
   applyPetCare,
   completeStudyCareIfPending,

@@ -36,10 +36,14 @@ export function PetCareButton({ actionId, onClick, className }: Props) {
       <span
         className={clsx(
           "text-[10px] font-extrabold leading-tight",
-          actionId === "drink" ? "text-kid-ink" : "sr-only",
+          actionId === "drink" || actionId === "play" ? "text-kid-ink" : "sr-only",
         )}
       >
-        {actionId === "drink" ? "Make Drink" : ui.label}
+        {actionId === "drink" ?
+          "Make Drink"
+        : actionId === "play" ?
+          "Play"
+        : ui.label}
       </span>
     </button>
   );

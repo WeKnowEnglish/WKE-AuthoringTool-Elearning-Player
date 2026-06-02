@@ -35,6 +35,30 @@ export const SANDWICH_MINIGAME_DELTAS: Record<SandwichMiniGameResultTier, MeterD
   bad: { hunger: -5, happiness: -10 },
 };
 
+export type ExerciseMiniGameResultTier = "good" | "bad";
+
+/** Meter changes after the exercise ladder mini-game (replaces instant play care). */
+export const EXERCISE_MINIGAME_DELTAS: Record<ExerciseMiniGameResultTier, MeterDelta> = {
+  good: { happiness: 20, energy: 10 },
+  bad: { happiness: -10, energy: -5 },
+};
+
+export type ScrabblePlayOutcome = "completed" | "gave_up";
+
+/** Meter changes after the scrabble play mini-game. */
+export const SCRABBLE_PLAY_DELTAS: Record<ScrabblePlayOutcome, MeterDelta> = {
+  completed: { happiness: 20, energy: -10 },
+  gave_up: { happiness: 5, energy: -5 },
+};
+
+export type MemoryPlayOutcome = "completed" | "gave_up";
+
+/** Meter changes after the memory match play mini-game. */
+export const MEMORY_PLAY_DELTAS: Record<MemoryPlayOutcome, MeterDelta> = {
+  completed: { happiness: 20, energy: -10 },
+  gave_up: { happiness: 5, energy: -5 },
+};
+
 export function clampMeter(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, Math.round(value)));

@@ -3,11 +3,17 @@
 import {
   applyMeterDeltas,
   DRINK_MINIGAME_DELTAS,
+  EXERCISE_MINIGAME_DELTAS,
   PET_CARE_METER_DELTAS,
   SANDWICH_MINIGAME_DELTAS,
+  MEMORY_PLAY_DELTAS,
+  SCRABBLE_PLAY_DELTAS,
   STUDY_COMPLETE_METER_DELTAS,
   type DrinkMiniGameResultTier,
+  type ExerciseMiniGameResultTier,
+  type MemoryPlayOutcome,
   type SandwichMiniGameResultTier,
+  type ScrabblePlayOutcome,
 } from "@/lib/pet/care-actions";
 import { applyDecay } from "@/lib/pet/decay";
 import {
@@ -108,6 +114,35 @@ export function applySandwichMiniGameResult(
   const now = Date.now();
   const base = getPetSnapshot();
   const next = applyMeterDeltas(base, SANDWICH_MINIGAME_DELTAS[tier], now);
+  writeRaw(next);
+  return next;
+}
+
+/** Applies exercise mini-game outcome (replaces instant applyPetCare("play")). */
+export function applyExerciseMiniGameResult(
+  tier: ExerciseMiniGameResultTier,
+): PetSnapshotV1 {
+  const now = Date.now();
+  const base = getPetSnapshot();
+  const next = applyMeterDeltas(base, EXERCISE_MINIGAME_DELTAS[tier], now);
+  writeRaw(next);
+  return next;
+}
+
+/** Applies scrabble play mini-game outcome. */
+export function applyScrabblePlayResult(outcome: ScrabblePlayOutcome): PetSnapshotV1 {
+  const now = Date.now();
+  const base = getPetSnapshot();
+  const next = applyMeterDeltas(base, SCRABBLE_PLAY_DELTAS[outcome], now);
+  writeRaw(next);
+  return next;
+}
+
+/** Applies memory match play mini-game outcome. */
+export function applyMemoryPlayResult(outcome: MemoryPlayOutcome): PetSnapshotV1 {
+  const now = Date.now();
+  const base = getPetSnapshot();
+  const next = applyMeterDeltas(base, MEMORY_PLAY_DELTAS[outcome], now);
   writeRaw(next);
   return next;
 }

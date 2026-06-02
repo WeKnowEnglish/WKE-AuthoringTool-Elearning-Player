@@ -19,5 +19,6 @@ export const SCHOOL_AREA: ExploreAreaDefinition = {
   discoveryWordIds: DISCOVERY,
   encounterWordPool: POOL,
   unlockAfterAreaId: "bedroom",
+  playMode: "run",
   chapterId: "school",
 };

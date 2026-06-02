@@ -3,6 +3,7 @@ import {
   applyMeterDeltas,
   clampMeter,
   DRINK_MINIGAME_DELTAS,
+  MEMORY_PLAY_DELTAS,
 } from "@/lib/pet/care-actions";
 import { decayAmountForElapsedMs, applyDecay } from "@/lib/pet/decay";
 import { emptyPetSnapshot } from "@/lib/pet/defaults";
@@ -41,6 +42,26 @@ describe("DRINK_MINIGAME_DELTAS", () => {
     const next = applyMeterDeltas(base, DRINK_MINIGAME_DELTAS.bad, 2000);
     expect(next.meters.thirst).toBe(30);
     expect(next.meters.happiness).toBe(40);
+  });
+});
+
+describe("MEMORY_PLAY_DELTAS", () => {
+  it("boosts happiness and reduces energy on completed", () => {
+    const base = emptyPetSnapshot(1000);
+    base.meters.happiness = 50;
+    base.meters.energy = 40;
+    const next = applyMeterDeltas(base, MEMORY_PLAY_DELTAS.completed, 2000);
+    expect(next.meters.happiness).toBe(70);
+    expect(next.meters.energy).toBe(30);
+  });
+
+  it("applies smaller deltas on gave_up", () => {
+    const base = emptyPetSnapshot(1000);
+    base.meters.happiness = 50;
+    base.meters.energy = 40;
+    const next = applyMeterDeltas(base, MEMORY_PLAY_DELTAS.gave_up, 2000);
+    expect(next.meters.happiness).toBe(55);
+    expect(next.meters.energy).toBe(35);
   });
 });
 

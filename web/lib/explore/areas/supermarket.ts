@@ -19,5 +19,6 @@ export const SUPERMARKET_AREA: ExploreAreaDefinition = {
   discoveryWordIds: DISCOVERY,
   encounterWordPool: POOL,
   unlockAfterAreaId: "school",
+  playMode: "run",
   chapterId: "supermarket",
 };

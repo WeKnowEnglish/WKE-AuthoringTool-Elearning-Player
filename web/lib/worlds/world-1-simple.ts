@@ -21,8 +21,8 @@ export const WORLD_1_SIMPLE: WorldDef = {
     {
       id: "w1-bedroom",
       index: 1,
-      title: "My bedroom",
-      subtitle: "Find bedroom words",
+      title: "Home — Help Brother",
+      subtitle: "Explore the house for homework",
       explorationNodes: [{ kind: "explore_area", areaId: "bedroom" }],
     },
     {

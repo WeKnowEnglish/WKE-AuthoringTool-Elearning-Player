@@ -5,22 +5,26 @@ import { clsx } from "clsx";
 import type { PlayerAppearanceId } from "@/lib/progress/types";
 
 export const PLAYER_CHARACTER_SVG_PATH = "/avatar/player-character.svg";
+/** MVP student avatar on the home screen stage. */
+export const HOME_PLAYER_AVATAR_SVG_PATH = "/avatar/avatar-mvp-1.svg";
 
-const svgMarkupCache: { promise?: Promise<string> } = {};
+const svgMarkupCache = new Map<string, Promise<string>>();
 
-function fetchPlayerSvgMarkup(): Promise<string> {
-  if (!svgMarkupCache.promise) {
-    svgMarkupCache.promise = fetch(PLAYER_CHARACTER_SVG_PATH)
+function fetchPlayerSvgMarkup(path: string): Promise<string> {
+  let promise = svgMarkupCache.get(path);
+  if (!promise) {
+    promise = fetch(path)
       .then((res) => {
         if (!res.ok) throw new Error(`Player SVG failed: ${res.status}`);
         return res.text();
       })
       .catch((err) => {
-        svgMarkupCache.promise = undefined;
+        svgMarkupCache.delete(path);
         throw err;
       });
+    svgMarkupCache.set(path, promise);
   }
-  return svgMarkupCache.promise;
+  return promise;
 }
 
 const SIZE_CLASS = {
@@ -37,6 +41,8 @@ type Props = {
   size?: PlayerCharacterSize;
   className?: string;
   show?: boolean;
+  /** Defaults to {@link PLAYER_CHARACTER_SVG_PATH}. Home uses {@link HOME_PLAYER_AVATAR_SVG_PATH}. */
+  svgPath?: string;
 };
 
 export function playerCharacterAriaLabel(appearanceId: PlayerAppearanceId | null | undefined): string {
@@ -49,6 +55,7 @@ export function PlayerCharacter({
   size = "lg",
   className,
   show = true,
+  svgPath = PLAYER_CHARACTER_SVG_PATH,
 }: Props) {
   const titleId = useId();
   const hostRef = useRef<HTMLDivElement>(null);
@@ -58,7 +65,9 @@ export function PlayerCharacter({
 
   useEffect(() => {
     let cancelled = false;
-    fetchPlayerSvgMarkup()
+    setMarkup(null);
+    setLoadError(false);
+    fetchPlayerSvgMarkup(svgPath)
       .then((text) => {
         if (!cancelled) setMarkup(text);
       })
@@ -68,7 +77,7 @@ export function PlayerCharacter({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [svgPath]);
 
   useEffect(() => {
     if (!show || !markup || !hostRef.current) return;

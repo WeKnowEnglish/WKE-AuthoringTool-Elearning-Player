@@ -41,7 +41,11 @@ export function getExploreChapterForArea(
   areaId: ExploreAreaId,
 ): ExploreChapterDefinition {
   const chapter = BY_AREA.get(areaId);
-  if (!chapter) throw new Error(`No explore chapter for area: ${areaId}`);
+  if (!chapter) {
+    throw new Error(
+      `No explore chapter for area: ${areaId} (area may use playMode "scene")`,
+    );
+  }
   return chapter;
 }
 

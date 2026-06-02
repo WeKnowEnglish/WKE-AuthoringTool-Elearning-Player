@@ -13,11 +13,12 @@ const POOL = assertExploreWordIds(
 
 export const BEDROOM_AREA: ExploreAreaDefinition = {
   id: "bedroom",
-  title: "My bedroom",
-  subtitle: "Find things in your room",
+  title: "Home — Help Brother",
+  subtitle: "Collect words and things for homework",
   order: 1,
   discoveryWordIds: DISCOVERY,
   encounterWordPool: POOL,
   unlockAfterAreaId: null,
-  chapterId: "bedroom",
+  playMode: "scene",
+  sceneId: "home_help_brother",
 };

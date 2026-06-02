@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PetCareButton } from "@/components/student-hub/PetCareButton";
 import { PetCareDisplayCard } from "@/components/student-hub/PetCareDisplayCard";
+import { PetPlayPickerOverlay } from "@/components/student-hub/PetPlayPickerOverlay";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
 import { unlockSpeechSynthesis } from "@/lib/audio/tts";
 import {
   applyDrinkMiniGameResult,
+  applyExerciseMiniGameResult,
+  applyMemoryPlayResult,
+  applyScrabblePlayResult,
   applySandwichMiniGameResult,
   applyPetCare,
   getPetSnapshot,
@@ -16,7 +20,11 @@ import {
   petMoodLine,
   setStudyCarePending,
   type DrinkMiniGameResultTier,
+  type ExerciseMiniGameResultTier,
+  type MemoryPlayOutcome,
+  type PlayMiniGameId,
   type SandwichMiniGameResultTier,
+  type ScrabblePlayOutcome,
 } from "@/lib/pet";
 import { PET_MOOD_DURATION_MS } from "@/lib/pet/mood-durations";
 import type { PetSnapshotV1 } from "@/lib/pet/types";
@@ -24,6 +32,9 @@ import { usePetMoodAnimation } from "@/lib/pet/use-pet-mood-animation";
 import { ensurePetDog } from "@/lib/progress/local-storage";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { PetDrinkMixOverlay } from "@/components/pet-blender/PetDrinkMixOverlay";
+import { PetExerciseOverlay } from "@/components/pet-exercise/PetExerciseOverlay";
+import { PetMemoryOverlay } from "@/components/pet-memory";
+import { PetScrabbleOverlay } from "@/components/pet-scrabble";
 import { PetSandwichOverlay } from "@/components/pet-sandwich/PetSandwichOverlay";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import {
@@ -54,6 +65,8 @@ export function PetRoom({
   const hydrated = useClientHydrated();
   const [drinkMixOpen, setDrinkMixOpen] = useState(false);
   const [sandwichOpen, setSandwichOpen] = useState(false);
+  const [playGameId, setPlayGameId] = useState<PlayMiniGameId | null>(null);
+  const [playPickerOpen, setPlayPickerOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<PetSnapshotV1 | null>(null);
   const baselineMood = useMemo(
     () => (snapshot ? petBaselineMood(snapshot) : "normal"),
@@ -110,14 +123,60 @@ export function PetRoom({
     onEconomyChange?.();
   };
 
-  const runCare = (action: "play" | "wash" | "sleep") => {
+  const runCare = (action: "wash" | "sleep") => {
     playSfx("tap", muted);
     setSnapshot(applyPetCare(action));
-    if (action === "play") {
+    bumpMood("excited", PET_MOOD_DURATION_MS.excited);
+  };
+
+  const playOverlayOpen = playGameId != null;
+
+  const closePlayOverlay = () => {
+    setPlayGameId(null);
+    setPlayPickerOpen(false);
+  };
+
+  const onPlay = () => {
+    playSfx("tap", muted);
+    unlockSpeechSynthesis();
+    setPlayPickerOpen(true);
+  };
+
+  const openPlayGame = (id: PlayMiniGameId) => {
+    playSfx("tap", muted);
+    unlockSpeechSynthesis();
+    setPlayPickerOpen(false);
+    setPlayGameId(id);
+  };
+
+  const onExerciseComplete = (tier: ExerciseMiniGameResultTier) => {
+    setSnapshot(applyExerciseMiniGameResult(tier));
+    if (tier === "good") {
+      bumpMood("excited", PET_MOOD_DURATION_MS.excited);
+    } else {
+      bumpMood("normal", PET_MOOD_DURATION_MS.normal);
+    }
+    onEconomyChange?.();
+  };
+
+  const onScrabbleComplete = (outcome: ScrabblePlayOutcome) => {
+    setSnapshot(applyScrabblePlayResult(outcome));
+    if (outcome === "completed") {
       bumpMood("playful", PET_MOOD_DURATION_MS.playful);
     } else {
-      bumpMood("excited", PET_MOOD_DURATION_MS.excited);
+      bumpMood("normal", PET_MOOD_DURATION_MS.normal);
     }
+    onEconomyChange?.();
+  };
+
+  const onMemoryComplete = (outcome: MemoryPlayOutcome) => {
+    setSnapshot(applyMemoryPlayResult(outcome));
+    if (outcome === "completed") {
+      bumpMood("playful", PET_MOOD_DURATION_MS.playful);
+    } else {
+      bumpMood("normal", PET_MOOD_DURATION_MS.normal);
+    }
+    onEconomyChange?.();
   };
 
   const onDrink = () => {
@@ -165,7 +224,7 @@ export function PetRoom({
           snapshot={snapshot}
           mood={mood}
           moodLine={moodLine}
-          showPet={!drinkMixOpen && !sandwichOpen}
+          showPet={!drinkMixOpen && !sandwichOpen && !playOverlayOpen}
         />
       : (
         <KidPanel className="h-52 animate-pulse bg-kid-surface-muted sm:h-60" aria-hidden>
@@ -208,11 +267,17 @@ export function PetRoom({
       <div className="grid grid-cols-3 gap-2">
         <PetCareButton actionId="feed" onClick={onFeed} />
         <PetCareButton actionId="drink" onClick={onDrink} />
-        <PetCareButton actionId="play" onClick={() => runCare("play")} />
+        <PetCareButton actionId="play" onClick={onPlay} />
         <PetCareButton actionId="wash" onClick={() => runCare("wash")} />
         <PetCareButton actionId="sleep" onClick={() => runCare("sleep")} />
         <PetCareButton actionId="study" onClick={onStudy} />
       </div>
+
+      <PetPlayPickerOverlay
+        open={playPickerOpen && !playOverlayOpen}
+        onPick={openPlayGame}
+        onClose={() => setPlayPickerOpen(false)}
+      />
 
       <PetDrinkMixOverlay
         open={drinkMixOpen}
@@ -226,6 +291,27 @@ export function PetRoom({
         muted={muted}
         onComplete={onSandwichComplete}
         onClose={() => setSandwichOpen(false)}
+      />
+
+      <PetExerciseOverlay
+        open={playGameId === "climb"}
+        muted={muted}
+        onComplete={onExerciseComplete}
+        onClose={closePlayOverlay}
+      />
+
+      <PetScrabbleOverlay
+        open={playGameId === "scrabble"}
+        muted={muted}
+        onComplete={(outcome) => onScrabbleComplete(outcome)}
+        onClose={closePlayOverlay}
+      />
+
+      <PetMemoryOverlay
+        open={playGameId === "memory"}
+        muted={muted}
+        onComplete={(outcome) => onMemoryComplete(outcome)}
+        onClose={closePlayOverlay}
       />
     </div>
   );

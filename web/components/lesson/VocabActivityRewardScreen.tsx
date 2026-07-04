@@ -73,7 +73,7 @@ export function VocabActivityRewardScreen({
 
   const firstTryLine =
     stats.firstTryGraded > 0
-      ? `${stats.firstTryCorrect} right the first time!`
+      ? `${stats.firstTryCorrect} correct on the first try!`
       : null;
   const extraLine = `${stats.wordsMastered} super word${stats.wordsMastered === 1 ? "" : "s"} · ${formatVocabElapsed(stats.elapsedMs)}`;
 
@@ -83,7 +83,7 @@ export function VocabActivityRewardScreen({
   }
   bonusRows.push({ label: "Finish bonus", coins: breakdown.baseGold });
   if (breakdown.accuracyBonusGold > 0) {
-    bonusRows.push({ label: "Got it first time", coins: breakdown.accuracyBonusGold });
+    bonusRows.push({ label: "First-try bonus", coins: breakdown.accuracyBonusGold });
   }
   if (breakdown.masteryBonusGold > 0) {
     bonusRows.push({ label: "Super words", coins: breakdown.masteryBonusGold });
@@ -112,7 +112,7 @@ export function VocabActivityRewardScreen({
             <p className="text-4xl font-black leading-none text-kid-ink sm:text-5xl">
               {stats.firstTryAccuracyPercent}%
             </p>
-            <p className="mt-0.5 text-sm font-bold text-kid-ink sm:text-base">Got it first time</p>
+            <p className="mt-0.5 text-sm font-bold text-kid-ink sm:text-base">First-try accuracy</p>
             {firstTryLine ? (
               <p className="mt-0.5 text-xs font-semibold text-kid-ink/75 sm:text-sm">{firstTryLine}</p>
             ) : null}

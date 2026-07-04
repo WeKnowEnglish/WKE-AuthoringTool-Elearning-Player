@@ -1591,8 +1591,12 @@ export function LessonEditorWorkspace({
           }.`
         : "";
       const failedN = diag ? (diag.failedScreenCount ?? diag.failedScreens?.length ?? 0) : 0;
+      const languageIssueN =
+        diag ?
+          diag.languageQualityIssueCount ?? diag.languageQualityIssues?.length ?? 0
+        : 0;
       const warnHint =
-        diag && (diag.parseWarningCount > 0 || failedN > 0) ?
+        diag && (diag.parseWarningCount > 0 || failedN > 0 || languageIssueN > 0) ?
           ` ${diag.parseWarningCount} parser warning(s)${
             failedN > 0 ? `; ${failedN} invalid model row(s) shown as drafts below (not saved)` : ""
           } — see Generation diagnostics.`
@@ -1770,7 +1774,41 @@ export function LessonEditorWorkspace({
                   lastAiGenerationDiagnostics.failedScreens?.length ??
                   0}
               </li>
+              <li>
+                Language review:{" "}
+                {lastAiGenerationDiagnostics.languageQualityIssueCount ??
+                  lastAiGenerationDiagnostics.languageQualityIssues?.length ??
+                  0}{" "}
+                issue(s), {lastAiGenerationDiagnostics.languageQualityErrorCount ?? 0} error(s)
+              </li>
             </ul>
+            {(lastAiGenerationDiagnostics.languageQualityIssues?.length ?? 0) > 0 ?
+              <div className="mt-2 rounded border border-red-200 bg-white/90 p-2">
+                <p className="text-[10px] font-semibold text-red-950">
+                  Student-facing language review
+                </p>
+                <ol className="mt-1 max-h-40 list-decimal overflow-y-auto pl-4 text-[10px] leading-snug text-red-950">
+                  {(lastAiGenerationDiagnostics.languageQualityIssues ?? []).map((issue, i) => (
+                    <li key={`${i}-${issue.screenIndex}-${issue.path}-${issue.code}`} className="break-words">
+                      <span className="font-semibold">
+                        Screen {issue.screenIndex + 1} Â· {issue.screen_type} Â· {issue.role}
+                      </span>
+                      {": "}
+                      {issue.message}{" "}
+                      <span className="font-mono text-red-900/80">
+                        ({issue.path}, {issue.code})
+                      </span>
+                      {issue.text ? (
+                        <span className="block font-mono text-red-900/80">
+                          &quot;{issue.text.slice(0, 160)}
+                          {issue.text.length > 160 ? "..." : ""}&quot;
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            : null}
             {lastAiGenerationDiagnostics.parseWarnings.length > 0 ?
               <ol className="mt-2 max-h-40 list-decimal overflow-y-auto pl-5 text-[10px] leading-snug text-emerald-950">
                 {lastAiGenerationDiagnostics.parseWarnings.map((w, i) => (

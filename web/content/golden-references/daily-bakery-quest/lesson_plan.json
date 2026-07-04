@@ -1,0 +1,329 @@
+{
+  "storyFirstBlueprint": {
+    "lesson_metadata": {
+      "lesson_title": "Daily Bakery Quest",
+      "unit_theme": "Food and breakfast",
+      "estimated_duration_minutes": 17,
+      "production_mode": "story_first"
+    },
+    "cefr_level": "A1",
+    "target_age": { "min_age": 6, "max_age": 8 },
+    "learner_profile": {
+      "literacy_assumption": "Can read short words with picture support",
+      "attention_profile": "3–8 minute bursts; needs clear next step",
+      "learner_context": "ESL classroom or home practice"
+    },
+    "learning_goals": [
+      "Students can name four breakfast ingredients: bread, milk, eggs, and jam.",
+      "Students can understand a short story about helping at a bakery.",
+      "Students can use I need ___ and We use ___ in a simple bakery situation.",
+      "Students can spell familiar food words with picture support."
+    ],
+    "vocabulary_targets": [
+      {
+        "term": "bread",
+        "meaning": "a food we eat, often with jam",
+        "introduced_in_beat_id": "beat_bakery_problem",
+        "recycled_in_beat_ids": ["beat_learn_ingredients", "beat_recap"],
+        "required_for_reinforcement": true
+      },
+      {
+        "term": "milk",
+        "meaning": "a white drink",
+        "introduced_in_beat_id": "beat_bakery_problem",
+        "recycled_in_beat_ids": ["beat_learn_ingredients", "beat_recap"],
+        "required_for_reinforcement": true
+      },
+      {
+        "term": "eggs",
+        "meaning": "food from chickens, used in baking",
+        "introduced_in_beat_id": "beat_learn_ingredients",
+        "recycled_in_beat_ids": ["beat_recap"],
+        "required_for_reinforcement": true
+      },
+      {
+        "term": "jam",
+        "meaning": "sweet spread for bread",
+        "introduced_in_beat_id": "beat_learn_ingredients",
+        "recycled_in_beat_ids": ["beat_recap"],
+        "required_for_reinforcement": true
+      }
+    ],
+    "grammar_targets": [
+      {
+        "grammar_point": "I need + noun",
+        "function": "asking for ingredients",
+        "modeled_in_beat_ids": ["beat_learn_ingredients"],
+        "practiced_in_beat_ids": ["beat_recap"]
+      },
+      {
+        "grammar_point": "We use + noun",
+        "function": "describing recipe ingredients",
+        "modeled_in_beat_ids": ["beat_learn_ingredients"],
+        "practiced_in_beat_ids": ["beat_recap"]
+      }
+    ],
+    "story_pattern_type": "classroom_problem",
+    "story_arc": {
+      "setup": "Mai works at a small bakery after school.",
+      "goal_or_problem": "The recipe cards blew away and the morning bread cannot be made.",
+      "rising_action": "Mai and the student must find the right ingredient words.",
+      "discovery_moment": "Each ingredient picture helps rebuild one recipe line.",
+      "resolution": "The bakery restocks bread, milk, eggs, and jam for customers.",
+      "recap": "Mai thanks the student for using English to save breakfast."
+    },
+    "characters": [
+      {
+        "character_id": "mai",
+        "name": "Mai",
+        "role": "bakery helper",
+        "language_function": "asks for help and models simple sentences",
+        "appears_in_beat_ids": ["beat_bakery_problem", "beat_learn_ingredients", "beat_recap"]
+      }
+    ],
+    "ordered_story_beats": [
+      {
+        "beat_id": "beat_bakery_problem",
+        "beat_order": 1,
+        "beat_title": "The missing recipes",
+        "narrative_function": "opening_context",
+        "story_event": "Mai discovers the recipe cards are missing from the bakery counter.",
+        "learner_focus": "Understand the problem and hear bread and milk.",
+        "language_introduced": {
+          "vocabulary": ["bread", "milk"],
+          "phrases": ["Oh no!", "We need help!"],
+          "pronunciation_focus": ["bread", "milk"]
+        },
+        "grammar_modeled": {
+          "grammar_points": [],
+          "model_sentences": ["The recipe cards are gone."],
+          "contextual_purpose": "Set up the story problem"
+        },
+        "pages": [
+          {
+            "page_id": "p1_setup",
+            "page_goal": "Show the bakery and the missing cards",
+            "narrative_function": "setup",
+            "scene_progression": "Wide bakery interior; cards missing from counter"
+          },
+          {
+            "page_id": "p1_discovery",
+            "page_goal": "Student notices bread and milk",
+            "narrative_function": "discovery",
+            "scene_progression": "Highlight bread and milk pictures"
+          },
+          {
+            "page_id": "p1_consequence",
+            "page_goal": "Mai asks the student to help find more ingredients",
+            "narrative_function": "consequence",
+            "scene_progression": "Call to find eggs and jam"
+          }
+        ],
+        "beat_completion_rule": "visit_all_pages",
+        "progression_logic": {
+          "learner_should_now_know": ["bread", "milk"],
+          "transition_to_next_beat": "Student understands the bakery problem"
+        }
+      },
+      {
+        "beat_id": "beat_learn_ingredients",
+        "beat_order": 2,
+        "beat_title": "Learn the ingredients",
+        "narrative_function": "vocabulary_exposure",
+        "story_event": "Mai teaches eggs and jam and models I need sentences.",
+        "learner_focus": "Study four ingredient words with pictures",
+        "language_introduced": {
+          "vocabulary": ["eggs", "jam"],
+          "phrases": ["I need ___", "We use ___"]
+        },
+        "grammar_modeled": {
+          "grammar_points": ["I need + noun"],
+          "model_sentences": ["I need eggs.", "We use jam on bread."]
+        },
+        "pages": [
+          {
+            "page_id": "p2_setup",
+            "page_goal": "Introduce eggs",
+            "narrative_function": "setup",
+            "scene_progression": "Eggs picture with model sentence"
+          },
+          {
+            "page_id": "p2_discovery",
+            "page_goal": "Introduce jam",
+            "narrative_function": "discovery",
+            "scene_progression": "Jam picture with model sentence"
+          },
+          {
+            "page_id": "p2_consequence",
+            "page_goal": "Ready for practice",
+            "narrative_function": "consequence",
+            "scene_progression": "Bridge to presentation interactions"
+          }
+        ],
+        "reinforcement": {
+          "activity_type": "true_false",
+          "attached_to_beat_id": "beat_learn_ingredients",
+          "timing": "after_final_page_completion",
+          "pedagogical_purpose": "recognition",
+          "reason_for_activity_choice": "Check word recognition after story exposure",
+          "required_prior_exposure": {
+            "vocabulary_seen": ["bread", "milk", "eggs", "jam"],
+            "grammar_examples_seen": ["I need eggs.", "We use jam on bread."]
+          },
+          "generator_brief": {
+            "what_to_generate": "True/false checks for each ingredient picture",
+            "must_reference_story_context": true
+          }
+        },
+        "progression_logic": {
+          "depends_on_previous_beat_id": "beat_bakery_problem",
+          "learner_should_now_know": ["bread", "milk", "eggs", "jam"],
+          "transition_to_next_beat": "Student has seen all four words in context"
+        }
+      },
+      {
+        "beat_id": "beat_recap",
+        "beat_order": 3,
+        "beat_title": "Bakery saved",
+        "narrative_function": "recap",
+        "story_event": "Mai finishes the bread and thanks the student.",
+        "learner_focus": "Celebrate success and recycle vocabulary",
+        "language_introduced": {
+          "vocabulary": [],
+          "phrases": ["Thank you!"]
+        },
+        "grammar_modeled": {
+          "grammar_points": [],
+          "model_sentences": ["The bakery is open!"]
+        },
+        "pages": [
+          {
+            "page_id": "p3_setup",
+            "page_goal": "Show finished bakery goods",
+            "narrative_function": "setup",
+            "scene_progression": "Fresh bread on the counter"
+          },
+          {
+            "page_id": "p3_discovery",
+            "page_goal": "Recycle vocabulary aloud",
+            "narrative_function": "discovery",
+            "scene_progression": "Name ingredients again"
+          },
+          {
+            "page_id": "p3_consequence",
+            "page_goal": "Mission complete",
+            "narrative_function": "consequence",
+            "scene_progression": "Customers arrive for breakfast"
+          }
+        ],
+        "beat_completion_rule": "visit_all_pages",
+        "progression_logic": {
+          "depends_on_previous_beat_id": "beat_learn_ingredients",
+          "learner_should_now_know": ["bread", "milk", "eggs", "jam", "I need ___", "We use ___"]
+        }
+      }
+    ],
+    "wrap_up_recap": {
+      "story_return_required": true,
+      "recap_beat_id": "beat_recap",
+      "recap_type": "mission_complete",
+      "vocabulary_recycled": ["bread", "milk", "eggs", "jam"],
+      "grammar_recycled": ["I need + noun", "We use + noun"],
+      "final_success_moment": "The bakery is open and customers can buy breakfast!"
+    }
+  },
+  "screenOutline": [
+    {
+      "kind": "story",
+      "title": "The missing recipes",
+      "summary": "Mai discovers recipe cards are gone; student notices bread and milk.",
+      "learning_goal_indices": [0, 1],
+      "layout_mode": "slide",
+      "pages": [
+        { "summary": "Bakery wide shot; cards missing", "interaction_mode": "tap_to_advance" },
+        { "summary": "Tap bread and milk", "interaction_mode": "tap_to_advance" },
+        { "summary": "Mai asks for help with eggs and jam", "interaction_mode": "present_only" }
+      ]
+    },
+    {
+      "kind": "interaction",
+      "subtype": "true_false",
+      "quiz_group_title": "Ingredient check",
+      "summary": "This is bread. (picture of bread)"
+    },
+    {
+      "kind": "interaction",
+      "subtype": "true_false",
+      "quiz_group_title": "Ingredient check",
+      "summary": "This is juice. (picture of milk — false)"
+    },
+    {
+      "kind": "interaction",
+      "subtype": "fill_blanks",
+      "quiz_group_title": "Recipe words",
+      "summary": "I need __1__ for the recipe. (eggs)"
+    },
+    {
+      "kind": "interaction",
+      "subtype": "fill_blanks",
+      "quiz_group_title": "Recipe words",
+      "summary": "We use __1__ on bread. (jam)"
+    },
+    {
+      "kind": "interaction",
+      "subtype": "letter_mixup",
+      "quiz_group_title": "Spell it",
+      "summary": "Spell bread from the picture"
+    },
+    {
+      "kind": "interaction",
+      "subtype": "mc_quiz",
+      "quiz_group_title": "Quick check",
+      "summary": "Which ingredient do we drink?"
+    }
+  ],
+  "mediaSearchTerms": ["bread", "milk", "eggs", "jam", "bakery", "baking"],
+  "learningLoop": {
+    "loopId": "daily-bakery-quest",
+    "title": "Daily Bakery Quest",
+    "phases": [
+      {
+        "phase": "STORY",
+        "label": "Hook",
+        "targetDurationSec": 60,
+        "strandIds": ["meaning_focused_input"],
+        "completionMode": "either"
+      },
+      {
+        "phase": "PRESENTATION",
+        "label": "Instruction",
+        "targetDurationSec": 300,
+        "strandIds": ["language_focused_learning"],
+        "completionMode": "task"
+      },
+      {
+        "phase": "EXPLORER",
+        "label": "Application",
+        "targetDurationSec": 600,
+        "strandIds": ["meaning_focused_output", "fluency_development"],
+        "completionMode": "task",
+        "minEvidenceRequired": 2
+      },
+      {
+        "phase": "REFLECTION",
+        "label": "Reflection",
+        "targetDurationSec": 60,
+        "strandIds": ["language_focused_learning"],
+        "completionMode": "either",
+        "minEvidenceRequired": 1
+      }
+    ],
+    "petCareReward": { "coins": 20, "mysteryBoxCount": 1 }
+  },
+  "phaseContentMap": {
+    "STORY": { "screenIndices": [0, 1] },
+    "PRESENTATION": { "screenIndices": [2, 3, 4, 5, 6, 7] },
+    "EXPLORER": { "exploreSceneId": "bakery_recipe_rescue" },
+    "REFLECTION": { "screenIndices": [8, 9] }
+  }
+}

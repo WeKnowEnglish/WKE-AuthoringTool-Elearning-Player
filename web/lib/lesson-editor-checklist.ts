@@ -5,6 +5,11 @@ import {
   parseScreenPayload,
   type StoryPayload,
 } from "@/lib/lesson-schemas";
+import { parseScreenPayload as parsePlayerScreenPayload } from "@/lib/lesson-schemas-player";
+import {
+  validateStudentFacingLanguage,
+  type StudentFacingLanguageIssue,
+} from "@/lib/esl-language-quality";
 import { buildUnifiedReactionsFromStoryPage } from "@/lib/story-unified/build-unified-reactions";
 
 function storyPhasesLookBroken(p: StoryPayload): boolean {
@@ -88,6 +93,12 @@ function storyUnifiedIrHardFailures(story: StoryPayload): boolean {
 
 export type ChecklistItem = { ok: boolean; label: string };
 
+export type LessonLanguageQualityIssue = StudentFacingLanguageIssue & {
+  screenId: string;
+  orderIndex: number;
+  screenType: string;
+};
+
 type LessonScreenEval = {
   hasScreens: boolean;
   hasStart: boolean;
@@ -99,7 +110,28 @@ type LessonScreenEval = {
   quizMultiMissingTitle: boolean;
   quizTitleInconsistent: boolean;
   storyUnifiedIrFailures: boolean;
+  languageQualityIssues: LessonLanguageQualityIssue[];
+  languageQualityErrors: LessonLanguageQualityIssue[];
 };
+
+export function getLessonLanguageQualityIssues(
+  screens: LessonScreenRow[],
+): LessonLanguageQualityIssue[] {
+  const issues: LessonLanguageQualityIssue[] = [];
+  for (const screen of screens) {
+    const payload = parsePlayerScreenPayload(screen.screen_type, screen.payload);
+    if (!payload) continue;
+    for (const issue of validateStudentFacingLanguage(payload)) {
+      issues.push({
+        ...issue,
+        screenId: screen.id,
+        orderIndex: screen.order_index,
+        screenType: screen.screen_type,
+      });
+    }
+  }
+  return issues;
+}
 
 function evaluateLessonScreens(screens: LessonScreenRow[]): LessonScreenEval {
   const hasScreens = screens.length > 0;
@@ -181,6 +213,11 @@ function evaluateLessonScreens(screens: LessonScreenRow[]): LessonScreenEval {
     return false;
   })();
 
+  const languageQualityIssues = getLessonLanguageQualityIssues(screens);
+  const languageQualityErrors = languageQualityIssues.filter(
+    (issue) => issue.severity === "error",
+  );
+
   return {
     hasScreens,
     hasStart,
@@ -192,6 +229,8 @@ function evaluateLessonScreens(screens: LessonScreenRow[]): LessonScreenEval {
     quizMultiMissingTitle,
     quizTitleInconsistent,
     storyUnifiedIrFailures,
+    languageQualityIssues,
+    languageQualityErrors,
   };
 }
 
@@ -228,6 +267,12 @@ export function getLessonPublishBlockingReasons(screens: LessonScreenRow[]): str
       "Fix unified story reaction IR: one or more story pages fail the compiler or have error-level validation (see `web/lib/story-unified/README.md`).",
     );
   }
+  if (e.languageQualityErrors.length > 0) {
+    const first = e.languageQualityErrors[0];
+    reasons.push(
+      `Fix student-facing ESL language errors before publishing (${e.languageQualityErrors.length} found; first at order index ${first.orderIndex}: ${first.message}).`,
+    );
+  }
   return reasons;
 }
 
@@ -260,6 +305,10 @@ export function lessonPublishChecklist(input: {
     {
       ok: !e.storyUnifiedIrFailures,
       label: "Stories compile to unified reaction IR (no compiler/validation errors)",
+    },
+    {
+      ok: e.languageQualityErrors.length === 0,
+      label: "Student-facing ESL language has no blocking grammar errors",
     },
   ];
   if (published) {

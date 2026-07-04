@@ -1,0 +1,242 @@
+{
+  "screens": [
+    {
+      "screen_type": "start",
+      "payload": {
+        "type": "start",
+        "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/9c8dade9-a589-430c-a952-e8d99eef1c8a-Food_Spelling_Cover.png",
+        "cta_label": "Start the quest",
+        "read_aloud_title": "Daily Bakery Quest with Mai"
+      }
+    },
+    {
+      "screen_type": "story",
+      "payload": {
+        "type": "story",
+        "payload_version": 2,
+        "layout_mode": "slide",
+        "body_text": "Mai's bakery needs your help! Learn bread, milk, eggs, and jam.",
+        "read_aloud_text": "Welcome to Mai's bakery. The recipe cards are missing. Can you help?",
+        "tts_lang": "en-US",
+        "guide": {
+          "tip_text": "Tap the food pictures to help Mai.",
+          "image_url": "https://placehold.co/120x120/fef3c7/92400e?text=Tip"
+        },
+        "pages": [
+          {
+            "id": "page-bakery-problem",
+            "title": "Missing recipes",
+            "background_image_url": "https://placehold.co/1200x800/fef3c7/92400e?text=Bakery+interior",
+            "body_text": "Oh no! The recipe cards blew away!",
+            "read_aloud_text": "Oh no! The recipe cards blew away!",
+            "items": [
+              {
+                "id": "item_bread",
+                "kind": "image",
+                "name": "bread",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e17ed735-4459-4624-9e8a-78aea28c7e89-bread.png",
+                "x_percent": 12,
+                "y_percent": 52,
+                "w_percent": 18,
+                "h_percent": 22,
+                "show_on_start": true,
+                "z_index": 2,
+                "enter": { "preset": "fade_in", "duration_ms": 500 }
+              },
+              {
+                "id": "item_milk",
+                "kind": "image",
+                "name": "milk",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/2757fff1-d86a-4682-8297-3d7bbd00bdc0-milk.png",
+                "x_percent": 38,
+                "y_percent": 50,
+                "w_percent": 16,
+                "h_percent": 24,
+                "show_on_start": true,
+                "z_index": 2,
+                "enter": { "preset": "slide_right", "duration_ms": 450 }
+              },
+              {
+                "id": "item_mai",
+                "kind": "image",
+                "name": "Mai",
+                "image_url": "https://placehold.co/280x400/fde68a/b45309?text=Mai",
+                "x_percent": 68,
+                "y_percent": 38,
+                "w_percent": 22,
+                "h_percent": 45,
+                "show_on_start": true,
+                "z_index": 3,
+                "enter": { "preset": "slide_up", "duration_ms": 500 }
+              }
+            ]
+          },
+          {
+            "id": "page-call-to-help",
+            "title": "Help Mai",
+            "background_image_url": "https://placehold.co/1200x800/fef3c7/92400e?text=Bakery+counter",
+            "body_text": "Can you help me find eggs and jam?",
+            "read_aloud_text": "Can you help me find eggs and jam?",
+            "items": [
+              {
+                "id": "item_eggs",
+                "kind": "image",
+                "name": "eggs",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/cb0300fa-2a7c-43a6-aa00-c5f3196984de-egg.png",
+                "x_percent": 22,
+                "y_percent": 48,
+                "w_percent": 14,
+                "h_percent": 18,
+                "show_on_start": true,
+                "z_index": 2
+              },
+              {
+                "id": "item_jam",
+                "kind": "image",
+                "name": "jam",
+                "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/02c009b4-c3ad-49a4-890b-c9af9faaf941-jam.png",
+                "x_percent": 52,
+                "y_percent": 50,
+                "w_percent": 14,
+                "h_percent": 20,
+                "show_on_start": true,
+                "z_index": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "true_false",
+        "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e17ed735-4459-4624-9e8a-78aea28c7e89-bread.png",
+        "statement": "This is bread.",
+        "correct": true,
+        "picture_truth_statement": "Yes! This is bread.",
+        "quiz_group_id": "qg-ingredient-check",
+        "quiz_group_title": "Ingredient check",
+        "quiz_group_order": 0,
+        "vocab_word_id": "bread",
+        "gold_reward_on_pass": 5,
+        "guide": { "tip_text": "Read the sentence. Is it true?" }
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "true_false",
+        "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/2757fff1-d86a-4682-8297-3d7bbd00bdc0-milk.png",
+        "statement": "This is juice.",
+        "correct": false,
+        "picture_truth_statement": "No. This is milk.",
+        "quiz_group_id": "qg-ingredient-check",
+        "quiz_group_title": "Ingredient check",
+        "quiz_group_order": 1,
+        "vocab_word_id": "milk",
+        "gold_reward_on_pass": 5,
+        "guide": { "tip_text": "Look at the picture. Read the sentence." }
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "fill_blanks",
+        "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/cb0300fa-2a7c-43a6-aa00-c5f3196984de-egg.png",
+        "template": "I need __1__ for the recipe.",
+        "blanks": [{ "id": "1", "acceptable": ["eggs", "Eggs", "egg", "Egg"] }],
+        "word_bank": ["eggs", "jam", "bread", "milk"],
+        "quiz_group_id": "qg-recipe-words",
+        "quiz_group_title": "Recipe words",
+        "quiz_group_order": 0,
+        "vocab_word_id": "egg",
+        "guide": { "tip_text": "Choose the word from the story." }
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "fill_blanks",
+        "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/02c009b4-c3ad-49a4-890b-c9af9faaf941-jam.png",
+        "template": "We use __1__ on bread.",
+        "blanks": [{ "id": "1", "acceptable": ["jam", "Jam"] }],
+        "word_bank": ["jam", "milk", "eggs", "water"],
+        "quiz_group_id": "qg-recipe-words",
+        "quiz_group_title": "Recipe words",
+        "quiz_group_order": 1,
+        "vocab_word_id": "jam",
+        "guide": { "tip_text": "What do we put on bread?" }
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "letter_mixup",
+        "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e17ed735-4459-4624-9e8a-78aea28c7e89-bread.png",
+        "image_use_tts": true,
+        "image_read_aloud_text": "bread",
+        "prompt": "Spell the word.",
+        "items": [{ "id": "spell_bread", "target_word": "bread", "hint": "Tap the picture to hear it." }],
+        "quiz_group_id": "qg-spell-it",
+        "quiz_group_title": "Spell it",
+        "quiz_group_order": 0,
+        "vocab_word_id": "bread",
+        "guide": { "tip_text": "Mix the letters to spell bread." }
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "mc_quiz",
+        "image_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/2757fff1-d86a-4682-8297-3d7bbd00bdc0-milk.png",
+        "question": "Which ingredient do we drink?",
+        "options": [
+          { "id": "a", "label": "milk" },
+          { "id": "b", "label": "bread" },
+          { "id": "c", "label": "jam" },
+          { "id": "d", "label": "eggs" }
+        ],
+        "correct_option_id": "a",
+        "shuffle_options": true,
+        "quiz_group_id": "qg-quick-check",
+        "quiz_group_title": "Quick check",
+        "quiz_group_order": 0,
+        "vocab_word_id": "milk",
+        "guide": { "tip_text": "Think about the story." }
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "true_false",
+        "statement": "I can name bread, milk, eggs, and jam.",
+        "correct": true,
+        "guide": { "tip_text": "How do you feel? Tap true if you can name the words." }
+      }
+    },
+    {
+      "screen_type": "interaction",
+      "payload": {
+        "type": "interaction",
+        "subtype": "fill_blanks",
+        "template": "I need __1__ for the bakery recipe.",
+        "blanks": [
+          {
+            "id": "1",
+            "acceptable": ["eggs", "Eggs", "egg", "Egg", "bread", "Bread", "milk", "Milk", "jam", "Jam"]
+          }
+        ],
+        "word_bank": ["eggs", "bread", "milk", "jam"],
+        "guide": { "tip_text": "Say one ingredient you learned today." }
+      }
+    }
+  ]
+}

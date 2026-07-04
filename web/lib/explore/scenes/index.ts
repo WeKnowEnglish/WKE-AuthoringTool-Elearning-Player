@@ -14,6 +14,7 @@ export {
   type ExploreSceneZoneDef,
   type ExploreSceneZoneId,
 } from "./types";
+export { BAKERY_RECIPE_RESCUE_SCENE } from "./bakery-recipe-rescue";
 export { HOME_HELP_BROTHER_SCENE } from "./home-help-brother";
 export {
   getExploreScene,

@@ -14,15 +14,32 @@ export const DAILY_QUEST_IDS = [
   "vocab_set_completions",
   "explore_completions",
   "chase_wins",
+  "garden_harvests",
+  "garden_words",
+  "garden_weeds_cleared",
 ] as const;
 
 export type DailyQuestId = (typeof DAILY_QUEST_IDS)[number];
+
+const GARDEN_DAILY_QUEST_IDS: ReadonlySet<string> = new Set([
+  "garden_harvests",
+  "garden_words",
+  "garden_weeds_cleared",
+]);
+
+/** Quests on Test Start — excludes hub-only garden quests. */
+export const TEST_START_DAILY_QUEST_IDS = DAILY_QUEST_IDS.filter(
+  (id) => !GARDEN_DAILY_QUEST_IDS.has(id),
+);
 
 /** Quests completable from `/home` (vocab only until games ship on hub). */
 export const HUB_DAILY_QUEST_IDS: DailyQuestId[] = [
   "explore_completions",
   "vocab_set_completions",
   "letter_mixup",
+  "garden_harvests",
+  "garden_words",
+  "garden_weeds_cleared",
 ];
 
 export const DAILY_QUEST_LABELS: Record<DailyQuestId, string> = {
@@ -33,6 +50,9 @@ export const DAILY_QUEST_LABELS: Record<DailyQuestId, string> = {
   vocab_set_completions: "Finish 2 vocabulary sets",
   explore_completions: "Finish 1 explore run",
   chase_wins: "Win the chase game 2 times",
+  garden_harvests: "Harvest 5 letters in Language Garden",
+  garden_words: "Spell 3 words in Language Garden",
+  garden_weeds_cleared: "Clear 2 garden weeds",
 };
 
 const DAILY_QUEST_TARGETS: Record<DailyQuestId, number> = {
@@ -43,6 +63,9 @@ const DAILY_QUEST_TARGETS: Record<DailyQuestId, number> = {
   vocab_set_completions: 2,
   explore_completions: 1,
   chase_wins: 2,
+  garden_harvests: 5,
+  garden_words: 3,
+  garden_weeds_cleared: 2,
 };
 
 export type DailyQuestStored = {

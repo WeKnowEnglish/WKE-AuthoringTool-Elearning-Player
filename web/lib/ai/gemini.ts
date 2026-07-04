@@ -32,6 +32,7 @@ import {
   startPayloadSchema,
   storyPayloadSchema,
 } from "@/lib/lesson-schemas";
+import { ESL_STUDENT_FACING_LANGUAGE_POLICY } from "@/lib/esl-language-quality";
 
 const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
@@ -972,6 +973,8 @@ ${STORY_FIRST_BLUEPRINT_SHAPE},
 
 ${STORY_FIRST_BLUEPRINT_POLICY}
 
+${ESL_STUDENT_FACING_LANGUAGE_POLICY}
+
 Rules:
 - Build ordered_story_beats as the source of truth for lesson playback.
 - First beat must introduce story context before any reinforcement.
@@ -1265,6 +1268,8 @@ ${storyRules}
 
 INTERACTION RULES:
 ${interactionRules}
+
+${ESL_STUDENT_FACING_LANGUAGE_POLICY}
 
 - image_url / background_image_url for stories should be copied exactly from MEDIA LIBRARY when possible, else placehold.co.
 - REQUIRED on every story payload: "type": "story" and string "body_text" (summary line; if you use pages[], repeat the first page's main text or use a single space " ").

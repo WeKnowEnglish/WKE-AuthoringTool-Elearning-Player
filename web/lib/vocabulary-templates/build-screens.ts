@@ -50,7 +50,15 @@ export function buildVocabularyPracticeContext(
 ): VocabularyBuildContext {
   const seed = options?.seed?.trim() || def.id;
   const practiceCount = options?.practiceCount ?? DEFAULT_PRACTICE_COUNT;
-  const practiceWords = pickNWithSeed(def.words, practiceCount, `${seed}:practice`);
+  const preferredIds = new Set(options?.preferredWordIds?.filter(Boolean) ?? []);
+  const preferredWords = def.words.filter((word) => preferredIds.has(word.id)).slice(0, practiceCount);
+  const remainingWords = def.words.filter((word) => !preferredIds.has(word.id));
+  const fillWords = pickNWithSeed(
+    remainingWords,
+    Math.max(0, practiceCount - preferredWords.length),
+    `${seed}:practice`,
+  );
+  const practiceWords = [...preferredWords, ...fillWords];
   return { seed, practiceWords };
 }
 

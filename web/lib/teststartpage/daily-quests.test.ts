@@ -4,6 +4,8 @@ import {
   DAILY_CHEST_GOLD,
   DAILY_CHEST_XP,
   DAILY_QUEST_PER_GOLD,
+  HUB_DAILY_QUEST_IDS,
+  TEST_START_DAILY_QUEST_IDS,
   bumpDailyQuestProgress,
   dailyQuestRewardEventId,
   getDailyQuestUiRows,
@@ -91,11 +93,11 @@ describe("daily-quests", () => {
 
     const gBefore = getRewards().gold;
     const xpBefore = getRewards().experience;
-    expect(openDailyTreasureChest(FIXED_DAY)).toBe(true);
+    expect(openDailyTreasureChest(FIXED_DAY, TEST_START_DAILY_QUEST_IDS)).toBe(true);
     const g = getRewards().gold;
     expect(g - gBefore).toBe(DAILY_CHEST_GOLD);
     expect(getRewards().experience - xpBefore).toBe(DAILY_CHEST_XP);
-    expect(openDailyTreasureChest(FIXED_DAY)).toBe(false);
+    expect(openDailyTreasureChest(FIXED_DAY, TEST_START_DAILY_QUEST_IDS)).toBe(false);
   });
 
   it("resets progress on a new day key in storage", () => {
@@ -111,5 +113,24 @@ describe("daily-quests", () => {
   it("getLocalDayKey matches YYYY-MM-DD", () => {
     const k = getLocalDayKey(new Date(2030, 5, 9));
     expect(k).toBe("2030-06-09");
+  });
+
+  it("includes garden quests in hub list but not test start list", () => {
+    expect(HUB_DAILY_QUEST_IDS).toContain("garden_harvests");
+    expect(HUB_DAILY_QUEST_IDS).toContain("garden_words");
+    expect(HUB_DAILY_QUEST_IDS).toContain("garden_weeds_cleared");
+    expect(TEST_START_DAILY_QUEST_IDS).not.toContain("garden_harvests");
+    expect(TEST_START_DAILY_QUEST_IDS).not.toContain("garden_words");
+    expect(TEST_START_DAILY_QUEST_IDS).not.toContain("garden_weeds_cleared");
+  });
+
+  it("tracks garden harvest quest progress", () => {
+    for (let i = 0; i < 4; i += 1) {
+      bumpDailyQuestProgress("garden_harvests", 1, FIXED_DAY);
+    }
+    const ui = getDailyQuestUiRows(FIXED_DAY, { questIds: ["garden_harvests"] });
+    expect(ui.rows[0]?.current).toBe(4);
+    bumpDailyQuestProgress("garden_harvests", 1, FIXED_DAY);
+    expect(getRewards().gold).toBe(DAILY_QUEST_PER_GOLD);
   });
 });

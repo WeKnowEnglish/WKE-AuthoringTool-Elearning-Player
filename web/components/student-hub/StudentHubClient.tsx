@@ -1,5 +1,6 @@
 "use client";
 
+import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { clsx } from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
@@ -8,6 +9,8 @@ import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOv
 import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import { HomeRoom } from "@/components/student-hub/HomeRoom";
 import { LearnRoom } from "@/components/student-hub/LearnRoom";
+import { GardenRoom } from "@/components/garden/GardenRoom";
+import { GardenLockedPanel } from "@/components/garden/GardenLockedPanel";
 import { PetRoom } from "@/components/student-hub/PetRoom";
 import { CollectionBookRoom } from "@/components/student-hub/CollectionBookRoom";
 import { parseCollectionPageId, type CollectionPageId } from "@/components/student-hub/collection/types";
@@ -29,12 +32,21 @@ import type { VocabSetId } from "@/lib/vocabulary-templates";
 
 type Props = {
   initialCollectionPage?: string | null;
+  initialRoom?: string | null;
 };
 
-export function StudentHubClient({ initialCollectionPage = null }: Props) {
+function parseInitialRoom(room: string | null | undefined, hasCollectionPage: boolean): StudentHubRoom {
+  if (hasCollectionPage) return "book";
+  if (room === "learn" || room === "pet" || room === "garden" || room === "book") return room;
+  return "home";
+}
+
+export function StudentHubClient({ initialCollectionPage = null, initialRoom = null }: Props) {
   const hydrated = useClientHydrated();
   const initialBook = Boolean(initialCollectionPage);
-  const [room, setRoom] = useState<StudentHubRoom>(() => (initialBook ? "book" : "home"));
+  const [room, setRoom] = useState<StudentHubRoom>(() =>
+    parseInitialRoom(initialRoom, initialBook),
+  );
   const [collectionPage, setCollectionPage] = useState<CollectionPageId>(() =>
     parseCollectionPageId(initialCollectionPage),
   );
@@ -47,6 +59,7 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
   const [dailyQuestUiKey, setDailyQuestUiKey] = useState(0);
   const [explorationUiKey, setExplorationUiKey] = useState(0);
   const [petUiKey, setPetUiKey] = useState(0);
+  const [gardenUiKey, setGardenUiKey] = useState(0);
   const [studyPendingUi, setStudyPendingUi] = useState(false);
   const [questsOpen, setQuestsOpen] = useState(false);
   const [vocabSetOpen, setVocabSetOpen] = useState(false);
@@ -55,6 +68,19 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
   const [exploreOpen, setExploreOpen] = useState(false);
   const [activeExploreAreaId, setActiveExploreAreaId] = useState<ExploreAreaId | null>(null);
   const [exploreSessionSeed, setExploreSessionSeed] = useState<string | null>(null);
+  const [gardenLockMessage, setGardenLockMessage] = useState<string | null>(null);
+
+  const gardenUnlocked = isUnlockAvailable("language_garden", rewardsUi.level);
+
+  const showGardenLockMessage = useCallback(() => {
+    setGardenLockMessage("Language Garden unlocks at level 2. Keep learning!");
+  }, []);
+
+  useEffect(() => {
+    if (!gardenLockMessage) return;
+    const id = window.setTimeout(() => setGardenLockMessage(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [gardenLockMessage]);
 
   const refreshRewardsUi = useCallback(() => {
     const r = getRewards();
@@ -80,6 +106,14 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
     refreshRewardsUi();
     refreshStudyPendingUi();
   }, [refreshRewardsUi, refreshStudyPendingUi]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (room === "garden" && !isUnlockAvailable("language_garden", rewardsUi.level)) {
+      setRoom("home");
+      showGardenLockMessage();
+    }
+  }, [hydrated, room, rewardsUi.level, showGardenLockMessage]);
 
   useEffect(() => {
     if (room !== "book") return;
@@ -142,6 +176,17 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
     refreshStudyPendingUi();
   }, [muted, refreshStudyPendingUi]);
 
+  const goGarden = useCallback(() => {
+    if (!isUnlockAvailable("language_garden", rewardsUi.level)) {
+      playSfx("wrong", muted);
+      showGardenLockMessage();
+      return;
+    }
+    playSfx("tap", muted);
+    setRoom("garden");
+    setGardenUiKey((k) => k + 1);
+  }, [muted, rewardsUi.level, showGardenLockMessage]);
+
   const openCollection = useCallback(
     (page: CollectionPageId = "stickers") => {
       playSfx("tap", muted);
@@ -157,11 +202,17 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
 
   const onRoomChange = useCallback(
     (next: StudentHubRoom) => {
+      if (next === "garden" && !isUnlockAvailable("language_garden", rewardsUi.level)) {
+        playSfx("wrong", muted);
+        showGardenLockMessage();
+        return;
+      }
       setRoom(next);
       if (next === "home") refreshExplorationUi();
+      if (next === "garden") setGardenUiKey((k) => k + 1);
       refreshStudyPendingUi();
     },
-    [refreshExplorationUi, refreshStudyPendingUi],
+    [muted, rewardsUi.level, refreshExplorationUi, refreshStudyPendingUi, showGardenLockMessage],
   );
 
   const handleLearnActivityComplete = useCallback(() => {
@@ -216,6 +267,14 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
         </div>
       </header>
 
+      {gardenLockMessage ?
+        <KidPanel className="mx-3 mt-2 shrink-0 p-2 text-center" tone="discovery">
+          <p className="text-sm font-bold text-kid-ink" role="status" aria-live="polite">
+            {gardenLockMessage}
+          </p>
+        </KidPanel>
+      : null}
+
       <main
         className={clsx(
           room === "book" ?
@@ -230,8 +289,11 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
             hydrated={hydrated}
             dailyQuestUiKey={dailyQuestUiKey}
             explorationUiKey={explorationUiKey}
+            gardenUiKey={gardenUiKey}
+            playerLevel={rewardsUi.level}
             onGoLearn={goLearn}
             onGoPet={goPet}
+            onGoGarden={goGarden}
             onOpenCollection={openCollection}
             onOpenExplore={openExplore}
           />
@@ -243,6 +305,10 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
             onGoHome={goHome}
             onEconomyChange={refreshRewardsUi}
           />
+        : room === "garden" ?
+          gardenUnlocked ?
+            <GardenRoom muted={muted} gardenUiKey={gardenUiKey} />
+          : <GardenLockedPanel playerLevel={rewardsUi.level} onGoLearn={goLearn} />
         : room === "learn" ?
           <LearnRoom
             playerLevel={rewardsUi.level}
@@ -266,7 +332,9 @@ export function StudentHubClient({ initialCollectionPage = null }: Props) {
       <RoomSwitcher
         room={room}
         muted={muted}
+        playerLevel={rewardsUi.level}
         onRoomChange={onRoomChange}
+        onGardenLocked={showGardenLockMessage}
         dock={room === "book" ? "inline" : "fixed"}
       />
 

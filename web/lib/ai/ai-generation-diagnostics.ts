@@ -31,6 +31,18 @@ export type FailedScreenCandidate = {
   };
 };
 
+export type AiLanguageQualityIssue = {
+  /** Index in the returned/saved screens list after opening-start stripping. */
+  screenIndex: number;
+  screen_type: string;
+  path: string;
+  role: string;
+  text: string;
+  severity: "warning" | "error";
+  code: string;
+  message: string;
+};
+
 export function parseIssuesFromError(e: unknown): {
   issues: AiScreenParseIssue[];
   summary: string;
@@ -58,6 +70,10 @@ export type AiGenerationDiagnosticsV1 = {
   parseWarnings: string[];
   failedScreenCount: number;
   failedScreens: FailedScreenCandidate[];
+  languageQualityIssueCount: number;
+  languageQualityErrorCount: number;
+  languageQualityWarningCount: number;
+  languageQualityIssues: AiLanguageQualityIssue[];
 };
 
 export function buildAiGenerationDiagnostics(input: {
@@ -66,8 +82,10 @@ export function buildAiGenerationDiagnostics(input: {
   returnedScreenCount: number;
   parseWarnings: string[];
   failedScreens?: FailedScreenCandidate[];
+  languageQualityIssues?: AiLanguageQualityIssue[];
 }): AiGenerationDiagnosticsV1 {
   const failedScreens = input.failedScreens ?? [];
+  const languageQualityIssues = input.languageQualityIssues ?? [];
   return {
     modelScreensArrayLength: input.modelScreensArrayLength,
     validatedScreenCount: input.validatedScreenCount,
@@ -78,5 +96,13 @@ export function buildAiGenerationDiagnostics(input: {
     parseWarnings: [...input.parseWarnings],
     failedScreenCount: failedScreens.length,
     failedScreens: [...failedScreens],
+    languageQualityIssueCount: languageQualityIssues.length,
+    languageQualityErrorCount: languageQualityIssues.filter(
+      (issue) => issue.severity === "error",
+    ).length,
+    languageQualityWarningCount: languageQualityIssues.filter(
+      (issue) => issue.severity === "warning",
+    ).length,
+    languageQualityIssues: [...languageQualityIssues],
   };
 }

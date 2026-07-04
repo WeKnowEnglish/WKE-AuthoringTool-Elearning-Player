@@ -116,6 +116,8 @@ export type BuildVocabularySetOptions = {
   seed?: string;
   /** How many words to use in practice sections (learn uses set minus `learnExcludeWordIds`). */
   practiceCount?: number;
+  /** Prioritized word ids, usually due review or fragile mastery targets. */
+  preferredWordIds?: string[];
 };
 
 export const DEFAULT_PRACTICE_COUNT = 6;

@@ -17,6 +17,12 @@ import { DEFAULT_PRACTICE_COUNT } from "@/lib/vocabulary-templates/types";
 import { playSfx } from "@/lib/audio/sfx";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import { loadVocabularySetMedia } from "@/lib/teststartpage/load-vocabulary-set-media-action";
+import { readMasterySnapshot } from "@/lib/mastery/local-storage";
+import {
+  recommendVocabularyPracticeWords,
+  vocabularyRecommendationReasonLabel,
+  type VocabularyPracticeRecommendation,
+} from "@/lib/mastery/recommendations";
 
 const LessonPlayer = dynamic(
   () => import("@/components/lesson/LessonPlayer").then((m) => ({ default: m.LessonPlayer })),
@@ -50,6 +56,11 @@ export function VocabularySetOverlay({
 }) {
   const [def, setDef] = useState<VocabularySetDefinition>(() => getVocabularySet(setId));
   const [mediaLoading, setMediaLoading] = useState(true);
+  const [adaptiveWordIds, setAdaptiveWordIds] = useState<string[]>([]);
+  const [adaptiveRecommendations, setAdaptiveRecommendations] = useState<
+    VocabularyPracticeRecommendation[]
+  >([]);
+  const [showAdaptiveDebug, setShowAdaptiveDebug] = useState(false);
 
   const lessonId = `vocab-${setId}`;
 
@@ -74,13 +85,30 @@ export function VocabularySetOverlay({
     };
   }, [setId]);
 
+  useEffect(() => {
+    const base = getVocabularySet(setId);
+    const mastery = readMasterySnapshot();
+    const recommendations = recommendVocabularyPracticeWords({
+      words: base.words,
+      mastery,
+      limit: Math.ceil(DEFAULT_PRACTICE_COUNT / 2),
+    });
+    setAdaptiveRecommendations(recommendations);
+    setAdaptiveWordIds(recommendations.map((rec) => rec.wordId));
+  }, [setId, sessionSeed]);
+
+  useEffect(() => {
+    setShowAdaptiveDebug(new URLSearchParams(window.location.search).has("adaptiveDebug"));
+  }, []);
+
   const screens = useMemo(
     () =>
       buildVocabularySetScreens(def, {
         seed: sessionSeed,
         practiceCount: DEFAULT_PRACTICE_COUNT,
+        preferredWordIds: adaptiveWordIds,
       }),
-    [def, sessionSeed],
+    [adaptiveWordIds, def, sessionSeed],
   );
 
   const vocabWordsById = useMemo(
@@ -98,13 +126,14 @@ export function VocabularySetOverlay({
     const ctx = buildVocabularyPracticeContext(def, {
       seed: sessionSeed,
       practiceCount: DEFAULT_PRACTICE_COUNT,
+      preferredWordIds: adaptiveWordIds,
     });
     return practiceWordsInSessionOrder(ctx).map((w) => ({
       id: w.id,
       lemma: w.lemma,
       imageUrl: w.imageUrl,
     }));
-  }, [def, sessionSeed]);
+  }, [adaptiveWordIds, def, sessionSeed]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -147,28 +176,73 @@ export function VocabularySetOverlay({
             <p className="text-lg font-semibold text-kid-ink">Loading pictures…</p>
           </KidPanel>
         ) : (
-          <LessonPlayer
-            key={`${sessionSeed}:${def.id}`}
-            lessonId={lessonId}
-            lessonTitle={def.title}
-            screens={screens}
-            runSeed={sessionSeed}
-            vocabWordsById={vocabWordsById}
-            vocabLearnPhraseTheme={def.learnPhraseTheme ?? "default"}
-            vocabPracticeWords={vocabPracticeWords}
-            onVocabFinish={() => {
-              onActivityComplete?.();
-              onClose();
-            }}
-            onVocabPlayAgain={onRequestNewRun}
-            onEconomyChange={onEconomyChange}
-            vocabFinishLabel="Close"
-            mode="student"
-            storyControlsPlacement="stage-overlay"
-            immersiveLayout
-          />
+          <>
+            {showAdaptiveDebug ? (
+              <AdaptivePracticeDebugPanel
+                recommendations={adaptiveRecommendations}
+                vocabWordsById={vocabWordsById}
+              />
+            ) : null}
+            <LessonPlayer
+              key={`${sessionSeed}:${def.id}`}
+              lessonId={lessonId}
+              lessonTitle={def.title}
+              screens={screens}
+              runSeed={sessionSeed}
+              vocabWordsById={vocabWordsById}
+              vocabLearnPhraseTheme={def.learnPhraseTheme ?? "default"}
+              vocabPracticeWords={vocabPracticeWords}
+              onVocabFinish={() => {
+                onActivityComplete?.();
+                onClose();
+              }}
+              onVocabPlayAgain={onRequestNewRun}
+              onEconomyChange={onEconomyChange}
+              vocabFinishLabel="Close"
+              mode="student"
+              storyControlsPlacement="stage-overlay"
+              immersiveLayout
+            />
+          </>
         )}
       </div>
+    </div>
+  );
+}
+
+function AdaptivePracticeDebugPanel({
+  recommendations,
+  vocabWordsById,
+}: {
+  recommendations: VocabularyPracticeRecommendation[];
+  vocabWordsById: Record<string, { id: string; lemma: string }>;
+}) {
+  return (
+    <div className="mb-2 shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-bold">Adaptive practice selection</p>
+        <p className="text-slate-600">{recommendations.length} review slots</p>
+      </div>
+      {recommendations.length > 0 ? (
+        <ul className="mt-2 flex flex-wrap gap-2">
+          {recommendations.map((rec) => (
+            <li
+              key={rec.wordId}
+              className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1"
+            >
+              <span className="font-semibold">
+                {vocabWordsById[rec.wordId]?.lemma ?? rec.wordId}
+              </span>
+              <span className="ml-1 text-slate-600">
+                {vocabularyRecommendationReasonLabel(rec.reason)} | {rec.state} |{" "}
+                {Math.round(rec.masteryScore * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-slate-600">No mastery-based review words selected.</p>
+      )}
     </div>
   );
 }

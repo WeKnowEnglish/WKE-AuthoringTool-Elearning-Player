@@ -70,6 +70,18 @@ describe("buildVocabularyPracticeContext", () => {
     expect(a.practiceWords).toHaveLength(6);
     expect(a.practiceWords.map((w) => w.id)).toEqual(b.practiceWords.map((w) => w.id));
   });
+
+  it("reserves practice slots for preferred review words", () => {
+    const ctx = buildVocabularyPracticeContext(A1_BREAKFAST_FOOD, {
+      seed: "adaptive-seed",
+      practiceCount: 6,
+      preferredWordIds: ["eggs", "toast", "not-a-word"],
+    });
+
+    expect(ctx.practiceWords).toHaveLength(6);
+    expect(ctx.practiceWords.map((w) => w.id).slice(0, 2)).toEqual(["eggs", "toast"]);
+    expect(ctx.practiceWords.map((w) => w.id)).not.toContain("not-a-word");
+  });
 });
 
 describe("buildVocabularySetScreens", () => {

@@ -39,6 +39,7 @@ import {
   setResumeScreen,
 } from "@/lib/progress/local-storage";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
+import { grantGardenSeedForQuiz } from "@/lib/garden/quiz-rewards";
 import { awardRewards, getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import {
   recordVocabSetCompletionDailyQuestProgress,
@@ -79,6 +80,17 @@ import { VocabActivityRewardScreen } from "@/components/lesson/VocabActivityRewa
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import { interactionImageFitClass } from "@/components/lesson/interactions/shared";
+import {
+  createAttemptRecordedEvent,
+  createRewardAwardedEvent,
+  createSessionCompletedEvent,
+  createStudentPracticeSessionId,
+  createStudentPracticeSessionStartedEvent,
+  recordStudentPracticeSessionEvent,
+  type StudentResponseKind,
+} from "@/lib/student-session";
+import { recordVocabularyEvidence } from "@/lib/mastery/vocabulary";
+import type { EvidenceMode } from "@/lib/mastery/types";
 import {
   StoryBookView,
   type StoryControlsPlacement,
@@ -380,6 +392,8 @@ export function LessonPlayer({
   const interactionPassedScreenIdRef = useRef<string | null>(null);
   const playbackRootRef = useRef<HTMLDivElement | null>(null);
   const vocabSessionRef = useRef(createVocabRunSession());
+  const studentPracticeSessionIdRef = useRef<string | null>(null);
+  const studentPracticeSessionStartedRef = useRef(false);
   const screenHadWrongRef = useRef(false);
   const [vocabComplete, setVocabComplete] = useState<{
     stats: VocabRunStats;
@@ -391,6 +405,55 @@ export function LessonPlayer({
   const isVocabLesson =
     lessonId.startsWith("vocab-") && (vocabPracticeWords?.length ?? 0) > 0;
   const canvasEdit = isPreview && visualEdit != null;
+  const screen = screens[index];
+  const parsed: ScreenPayload | null = screen
+    ? parseScreenPayload(screen.screen_type, screen.payload)
+    : null;
+
+  const getStudentPracticeSessionId = useCallback(() => {
+    if (!studentPracticeSessionIdRef.current) {
+      studentPracticeSessionIdRef.current = createStudentPracticeSessionId({
+        activityId: lessonId,
+        seed: runSeed,
+      });
+    }
+    return studentPracticeSessionIdRef.current;
+  }, [lessonId, runSeed]);
+
+  const recordCurrentVocabMasteryEvidence = useCallback(
+    (input: { success: boolean; firstTry: boolean; attempts: number }) => {
+      if (!isVocabLesson || !isVocabGradedInteraction(parsed)) return;
+      const wordId = extractVocabWordId(parsed);
+      if (!wordId) return;
+      const lemma =
+        vocabWordsById?.[wordId]?.lemma ??
+        vocabPracticeWords?.find((word) => word.id === wordId)?.lemma ??
+        wordId;
+      recordVocabularyEvidence({
+        studentId: getProgressSnapshot().anonymousDeviceId,
+        sessionId: getStudentPracticeSessionId(),
+        activityId: lessonId,
+        itemId: screen.id,
+        wordId,
+        lemma,
+        success: input.success,
+        firstTry: input.firstTry,
+        attempts: input.attempts,
+        responseKind: vocabResponseKind(parsed),
+        evidenceMode: vocabEvidenceMode(parsed),
+        scaffoldingLevel: "medium",
+      });
+    },
+    [
+      getStudentPracticeSessionId,
+      isVocabLesson,
+      lessonId,
+      parsed,
+      screen?.id,
+      vocabPracticeWords,
+      vocabWordsById,
+    ],
+  );
 
   useEffect(() => {
     if (isPreview) return;
@@ -409,10 +472,27 @@ export function LessonPlayer({
     });
   }, [initialScreenIndex, screens.length]);
 
-  const screen = screens[index];
-  const parsed: ScreenPayload | null = screen
-    ? parseScreenPayload(screen.screen_type, screen.payload)
-    : null;
+  useEffect(() => {
+    studentPracticeSessionIdRef.current = null;
+    studentPracticeSessionStartedRef.current = false;
+  }, [lessonId, runSeed]);
+
+  useEffect(() => {
+    if (!isVocabLesson || isPreview || studentPracticeSessionStartedRef.current) return;
+    const event = createStudentPracticeSessionStartedEvent({
+      activityId: lessonId,
+      activityKind: "vocabulary_set",
+      source: "student_hub",
+      seed: runSeed,
+      languageTargets: vocabPracticeWords?.map((word) => word.lemma),
+      durationEstimateSec: 8 * 60,
+      scaffoldingLevel: "medium",
+    });
+    studentPracticeSessionIdRef.current = event.sessionId;
+    studentPracticeSessionStartedRef.current = true;
+    recordStudentPracticeSessionEvent(event);
+  }, [isPreview, isVocabLesson, lessonId, runSeed, vocabPracticeWords]);
+
   const quizProgress = useMemo(
     () => getQuizProgressForLessonIndex(screens, index),
     [screens, index],
@@ -508,16 +588,43 @@ export function LessonPlayer({
     const practiceCount = vocabPracticeWords?.length ?? 0;
     const stats = buildVocabRunStats(vocabSessionRef.current, practiceCount);
     const breakdown = computeVocabSetRewards(stats);
+    const completionGold = vocabCompletionGoldDelta(breakdown, stats.practiceGold);
+    const completionSeed = runSeed?.trim() || lessonId;
+    const completionRewardEventId = `${lessonId}:${completionSeed}:complete`;
     if (!isPreview) {
       markLessonComplete(lessonId);
       playSfx("complete", muted);
-      const completionGold = vocabCompletionGoldDelta(breakdown, stats.practiceGold);
-      const completionSeed = runSeed?.trim() || lessonId;
       const snapshot = awardRewards({
-        eventId: `${lessonId}:${completionSeed}:complete`,
+        eventId: completionRewardEventId,
         goldDelta: completionGold,
         experienceDelta: breakdown.experienceDelta,
       });
+      grantGardenSeedForQuiz(completionRewardEventId, { tier: "bonus" });
+      recordStudentPracticeSessionEvent(
+        createRewardAwardedEvent({
+          sessionId: getStudentPracticeSessionId(),
+          eventId: completionRewardEventId,
+          goldDelta: completionGold,
+          experienceDelta: breakdown.experienceDelta,
+        }),
+      );
+      recordStudentPracticeSessionEvent(
+        createSessionCompletedEvent({
+          sessionId: getStudentPracticeSessionId(),
+          result: "completed",
+          summary: {
+            practiceItemCount: stats.practiceWordCount,
+            firstTryGraded: stats.firstTryGraded,
+            firstTryCorrect: stats.firstTryCorrect,
+            firstTryAccuracyPercent: stats.firstTryAccuracyPercent,
+            masteredCount: stats.wordsMastered,
+            reviewItemIds: stats.reviewWordIds,
+            elapsedMs: stats.elapsedMs,
+            goldAwarded: stats.practiceGold + completionGold,
+            experienceAwarded: breakdown.experienceDelta,
+          },
+        }),
+      );
       setGold(snapshot.gold);
       setExperience(snapshot.experience);
       recordVocabSetCompletionDailyQuestProgress();
@@ -528,6 +635,7 @@ export function LessonPlayer({
     isPreview,
     lessonId,
     muted,
+    getStudentPracticeSessionId,
     onEconomyChange,
     runSeed,
     vocabPracticeWords?.length,
@@ -774,14 +882,40 @@ export function LessonPlayer({
           Number.isFinite(parsed.gold_reward_on_pass) ?
             Math.max(0, parsed.gold_reward_on_pass)
           : 1;
+        const rewardEventId = `${lessonId}:${screen.id}:pass`;
         const rewardSnapshot = awardRewards({
-          eventId: `${lessonId}:${screen.id}:pass`,
+          eventId: rewardEventId,
           goldDelta: perQuestionGold,
           experienceDelta: 2,
         });
+        grantGardenSeedForQuiz(rewardEventId);
+        if (isVocabLesson) {
+          recordStudentPracticeSessionEvent(
+            createAttemptRecordedEvent({
+              sessionId: getStudentPracticeSessionId(),
+              targetId: extractVocabWordId(parsed) ?? screen.id,
+              success: true,
+              responseKind: "other",
+            }),
+          );
+          recordStudentPracticeSessionEvent(
+            createRewardAwardedEvent({
+              sessionId: getStudentPracticeSessionId(),
+              eventId: rewardEventId,
+              goldDelta: perQuestionGold,
+              experienceDelta: 2,
+            }),
+          );
+        }
         setGold(rewardSnapshot.gold);
         setExperience(rewardSnapshot.experience);
         if (isVocabLesson && isVocabGradedInteraction(parsed)) {
+          const firstTry = !screenHadWrongRef.current;
+          recordCurrentVocabMasteryEvidence({
+            success: true,
+            firstTry,
+            attempts: firstTry ? 1 : 2,
+          });
           recordVocabRunPass(vocabSessionRef.current, screenHadWrongRef.current);
           recordVocabPracticeGold(vocabSessionRef.current, perQuestionGold);
         }
@@ -802,12 +936,27 @@ export function LessonPlayer({
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
       if (isVocabLesson && isVocabGradedInteraction(parsed)) {
+        recordCurrentVocabMasteryEvidence({
+          success: false,
+          firstTry: false,
+          attempts: screenHadWrongRef.current ? 2 : 1,
+        });
         if (!screenHadWrongRef.current) {
           recordVocabRunWrong(vocabSessionRef.current, extractVocabWordId(parsed));
         }
         screenHadWrongRef.current = true;
       }
       if (!isPreview) {
+        if (isVocabLesson) {
+          recordStudentPracticeSessionEvent(
+            createAttemptRecordedEvent({
+              sessionId: getStudentPracticeSessionId(),
+              targetId: extractVocabWordId(parsed) ?? screen.id,
+              success: false,
+              responseKind: "other",
+            }),
+          );
+        }
         const trackedWords = extractTrackedWords(parsed);
         recordWordInteraction(trackedWords, false);
       }
@@ -1467,6 +1616,32 @@ function extractTrackedWords(payload: ScreenPayload): string[] {
     }
     default:
       return [];
+  }
+}
+
+function vocabResponseKind(payload: ScreenPayload | null): StudentResponseKind {
+  if (!payload || payload.type !== "interaction") return "other";
+  switch (payload.subtype) {
+    case "fill_blanks":
+    case "letter_mixup":
+      return "type";
+    case "true_false":
+      return "tap";
+    default:
+      return "other";
+  }
+}
+
+function vocabEvidenceMode(payload: ScreenPayload | null): EvidenceMode {
+  if (!payload || payload.type !== "interaction") return "recall";
+  switch (payload.subtype) {
+    case "true_false":
+      return "recognition";
+    case "letter_mixup":
+      return "production";
+    case "fill_blanks":
+    default:
+      return "recall";
   }
 }
 

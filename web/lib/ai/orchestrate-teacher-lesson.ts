@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { buildAiGenerationDiagnostics } from "@/lib/ai/ai-generation-diagnostics";
+import type { AiLanguageQualityIssue } from "@/lib/ai/ai-generation-diagnostics";
 import { searchTeacherMedia } from "@/lib/actions/media";
 import { isCongratsEndScreen } from "@/lib/lesson-bookends";
 import type { DraftScreenRow, MediaAllowlistItem, QuizGroupSpec } from "@/lib/ai/gemini";
@@ -12,6 +13,11 @@ import {
   type AiLessonPlan,
 } from "@/lib/ai/gemini";
 import { quizGroupsForSpecs } from "@/lib/ai/ai-lesson-plan";
+import {
+  collectStudentFacingLanguage,
+  validateStudentFacingLanguage,
+} from "@/lib/esl-language-quality";
+import { parseScreenPayload } from "@/lib/lesson-schemas-player";
 
 const MAX_ALLOWLIST = 24;
 
@@ -88,6 +94,33 @@ function quizSpecsFromPlan(plan: AiLessonPlan): QuizGroupSpec[] {
   }));
 }
 
+export function buildLanguageQualityIssues(
+  screens: DraftScreenRow[],
+): AiLanguageQualityIssue[] {
+  const issues: AiLanguageQualityIssue[] = [];
+  screens.forEach((screen, screenIndex) => {
+    const payload = parseScreenPayload(screen.screen_type, screen.payload);
+    if (!payload) return;
+    const surfacesByPath = new Map(
+      collectStudentFacingLanguage(payload).map((surface) => [surface.path, surface]),
+    );
+    for (const issue of validateStudentFacingLanguage(payload)) {
+      const surface = surfacesByPath.get(issue.path);
+      issues.push({
+        screenIndex,
+        screen_type: screen.screen_type,
+        path: issue.path,
+        role: surface?.role ?? "unknown",
+        text: surface?.text ?? "",
+        severity: issue.severity,
+        code: issue.code,
+        message: issue.message,
+      });
+    }
+  });
+  return issues;
+}
+
 export type OrchestrateTeacherLessonInput = {
   title: string;
   cefrBand: string;
@@ -147,12 +180,14 @@ export async function orchestrateTeacherLessonAi(
   });
 
   const screens = stripExtraOpeningStarts(rawScreens, input.omitOpeningStart);
+  const languageQualityIssues = buildLanguageQualityIssues(screens);
   const diagnostics = buildAiGenerationDiagnostics({
     modelScreensArrayLength,
     validatedScreenCount,
     returnedScreenCount: screens.length,
     parseWarnings,
     failedScreens,
+    languageQualityIssues,
   });
 
   return { plan, screens, parseWarnings, diagnostics };
@@ -216,12 +251,14 @@ export async function orchestrateScreensFromLessonDocument(
     omitOpeningStart: input.omitOpeningStart,
   });
   const screens = stripExtraOpeningStarts(rawScreens, input.omitOpeningStart);
+  const languageQualityIssues = buildLanguageQualityIssues(screens);
   const diagnostics = buildAiGenerationDiagnostics({
     modelScreensArrayLength,
     validatedScreenCount,
     returnedScreenCount: screens.length,
     parseWarnings,
     failedScreens,
+    languageQualityIssues,
   });
   return { screens, parseWarnings, diagnostics };
 }

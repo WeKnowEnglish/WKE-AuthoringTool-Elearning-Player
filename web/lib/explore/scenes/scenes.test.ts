@@ -60,5 +60,17 @@ describe("explore scenes", () => {
     const ids = listExploreScenes().map((s) => s.id);
     expect(ids[0]).toBe("home_help_brother");
     expect(ids[1]).toBe("school_help_brother");
+    expect(ids[2]).toBe("bakery_recipe_rescue");
+  });
+
+  it("registers bakery_recipe_rescue with four ingredient pickups", () => {
+    const scene = getExploreScene("bakery_recipe_rescue");
+    expect(scene.wordPickups.map((p) => p.wordId).sort()).toEqual([
+      "bread",
+      "egg",
+      "jam",
+      "milk",
+    ]);
+    expect(isScenePlayable("bakery_recipe_rescue")).toBe(true);
   });
 });

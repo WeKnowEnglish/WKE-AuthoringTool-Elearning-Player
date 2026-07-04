@@ -1,7 +1,11 @@
 import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import type { Rect } from "@/lib/teststartpage/chase-game-physics";
 
-export const EXPLORE_SCENE_IDS = ["home_help_brother", "school_help_brother"] as const;
+export const EXPLORE_SCENE_IDS = [
+  "home_help_brother",
+  "school_help_brother",
+  "bakery_recipe_rescue",
+] as const;
 
 export type ExploreSceneId = (typeof EXPLORE_SCENE_IDS)[number];
 

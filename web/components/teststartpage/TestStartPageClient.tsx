@@ -18,6 +18,7 @@ import { FillBlanksView } from "@/components/lesson/interactions/FillBlanksView"
 import { LetterMixupView } from "@/components/lesson/interactions/LetterMixupView";
 import { McQuizView } from "@/components/lesson/interactions/McQuizView";
 import { ChaseGameOverlay } from "@/components/teststartpage/ChaseGameOverlay";
+import { BoardGameOverlay } from "@/components/teststartpage/BoardGameOverlay";
 import { ExploreRunOverlay } from "@/components/teststartpage/ExploreRunOverlay";
 import { DailyQuestsPanel } from "@/components/teststartpage/DailyQuestsPanel";
 import { ReadingSetOverlay } from "@/components/teststartpage/ReadingSetOverlay";
@@ -28,6 +29,7 @@ import { QuizStickerFallback } from "@/components/teststartpage/QuizStickerFallb
 import { playSfx } from "@/lib/audio/sfx";
 import { speakText, unlockSpeechSynthesis } from "@/lib/audio/tts";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
+import { grantGardenSeedForQuiz } from "@/lib/garden/quiz-rewards";
 import {
   applyTestStartQuizCorrectAnswer,
   applyTestStartQuizWrongAnswer,
@@ -63,7 +65,7 @@ import {
   summarizeQuizQuestionForReport,
 } from "@/lib/teststartpage/quiz-question-reports";
 import { getTestStartQuizSpeakText } from "@/lib/teststartpage/quiz-question-speak-text";
-import { bumpDailyQuestProgress } from "@/lib/teststartpage/daily-quests";
+import { bumpDailyQuestProgress, TEST_START_DAILY_QUEST_IDS } from "@/lib/teststartpage/daily-quests";
 import {
   ANIMALS_VOCAB_SET_MENU,
   VOCAB_TOP_MENU,
@@ -128,6 +130,7 @@ export function TestStartPageClient() {
   const [playerMenuOpen, setPlayerMenuOpen] = useState(false);
   const [playerMenuPage, setPlayerMenuPage] = useState<PlayerMenuPage>("root");
   const [chaseGameOpen, setChaseGameOpen] = useState(false);
+  const [boardGameOpen, setBoardGameOpen] = useState(false);
   const [exploreRunOpen, setExploreRunOpen] = useState(false);
   const [wordBucketCatchOpen, setWordBucketCatchOpen] = useState(false);
   const [bucketGameConfig, setBucketGameConfig] = useState<WordBucketCatchConfig | null>(null);
@@ -218,6 +221,7 @@ export function TestStartPageClient() {
     if (phase === "quiz" && activeQuizSeed && selectedTopicId !== null) {
       const eventId = `teststart:${activeQuizSeed}:${selectedTopicId}:q${index}`;
       applyTestStartQuizCorrectAnswer(eventId);
+      grantGardenSeedForQuiz(eventId);
       const q = questions[index];
       if (q?.type === "interaction" && q.subtype === "letter_mixup") {
         bumpDailyQuestProgress("letter_mixup", 1);
@@ -502,6 +506,7 @@ export function TestStartPageClient() {
                   <DailyQuestsPanel
                     key={dailyQuestUiKey}
                     muted={muted}
+                    questIds={TEST_START_DAILY_QUEST_IDS}
                     onEconomyChange={refreshRewardsUi}
                   />
                 </>
@@ -562,8 +567,8 @@ export function TestStartPageClient() {
             <div className="space-y-2 text-center">
               <p className="text-2xl font-extrabold text-kid-ink sm:text-3xl">Quick start</p>
               <p className="text-base font-semibold text-kid-ink/85 sm:text-lg">
-                Start a topic quiz, vocabulary sets, reading practice, the chase game, word bucket catch, or the
-                grammar puppet.
+                Start a topic quiz, vocabulary sets, reading practice, board game, the chase game, word bucket catch,
+                or the grammar puppet.
               </p>
             </div>
             <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
@@ -609,6 +614,19 @@ export function TestStartPageClient() {
                   setChaseGameOpen(true);
                 }}
               />
+              <KidButton
+                type="button"
+                className={clsx(
+                  splashBtnClass,
+                  "border-kid-ink bg-rose-200 text-kid-ink hover:bg-rose-100 sm:text-4xl",
+                )}
+                onClick={() => {
+                  playSfx("tap", muted);
+                  setBoardGameOpen(true);
+                }}
+              >
+                Board game
+              </KidButton>
               <UnlockSplashButton
                 unlockId="explore_run"
                 playerLevel={rewardsUi.level}
@@ -1221,6 +1239,14 @@ export function TestStartPageClient() {
             setChaseGameOpen(false);
           }}
           onRewardsGranted={refreshRewardsUi}
+        />
+      ) : null}
+      {boardGameOpen ? (
+        <BoardGameOverlay
+          muted={muted}
+          onClose={() => {
+            setBoardGameOpen(false);
+          }}
         />
       ) : null}
       {exploreRunOpen ? (

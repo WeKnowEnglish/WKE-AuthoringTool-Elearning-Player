@@ -1,3 +1,4 @@
+import { BAKERY_RECIPE_RESCUE_SCENE } from "./bakery-recipe-rescue";
 import { HOME_HELP_BROTHER_SCENE } from "./home-help-brother";
 import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import {
@@ -36,6 +37,7 @@ const SCHOOL_HELP_BROTHER_STUB: ExploreSceneDefinition = {
 const SCENES: ExploreSceneDefinition[] = [
   HOME_HELP_BROTHER_SCENE,
   SCHOOL_HELP_BROTHER_STUB,
+  BAKERY_RECIPE_RESCUE_SCENE,
 ];
 
 const BY_ID = new Map<ExploreSceneId, ExploreSceneDefinition>(
@@ -47,7 +49,10 @@ const BY_AREA = new Map<ExploreAreaId, ExploreSceneDefinition>([
 ]);
 
 /** Scenes that students can play in MVP. */
-const PLAYABLE_SCENE_IDS: ExploreSceneId[] = ["home_help_brother"];
+const PLAYABLE_SCENE_IDS: ExploreSceneId[] = [
+  "home_help_brother",
+  "bakery_recipe_rescue",
+];
 
 export function listExploreScenes(): ExploreSceneDefinition[] {
   return [...SCENES].sort((a, b) => a.order - b.order);

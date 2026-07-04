@@ -80,8 +80,14 @@ export function PetRoom({
 
   useEffect(() => {
     if (!hydrated) return;
+    let cancelled = false;
     ensurePetDog();
-    refreshPet();
+    queueMicrotask(() => {
+      if (!cancelled) refreshPet();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [hydrated, petUiKey, refreshPet]);
 
   const studyPending = hydrated && isStudyCarePending();
@@ -214,7 +220,7 @@ export function PetRoom({
       {studyPending ? (
         <KidPanel className="border-sky-800 bg-sky-50 py-3 text-center">
           <p className="text-sm font-bold text-sky-950">
-            Finish a learn activity to study together!
+            Finish a learning activity to study together!
           </p>
         </KidPanel>
       ) : null}

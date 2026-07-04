@@ -1,0 +1,51 @@
+{
+  "id": "bakery_recipe_rescue",
+  "areaId": "supermarket",
+  "title": "Bakery — Recipe Rescue",
+  "subtitle": "Collect ingredients and help Mai finish the recipe",
+  "order": 3,
+  "intro": {
+    "title": "Find the ingredients",
+    "body_text": "Walk around the bakery. Collect bread, milk, eggs, and jam. Then help Mai finish the sentences.",
+    "read_aloud_text": "Walk around the bakery and collect the ingredients Mai needs.",
+    "image_url": "https://placehold.co/800x400/fef3c7/92400e?text=Bakery+quest"
+  },
+  "map": {
+    "widthPx": 960,
+    "heightPx": 540,
+    "backgroundUrl": "https://placehold.co/960x540/fef3c7/92400e?text=Bakery+map",
+    "collisionRects": [],
+    "doorways": [
+      { "x": 280, "y": 292, "label": "Kitchen ↓" },
+      { "x": 468, "y": 268, "label": "Storage →" }
+    ]
+  },
+  "zones": [
+    { "id": "living_room", "label": "Shop floor", "bounds": { "x": 24, "y": 24, "w": 456, "h": 256 } },
+    { "id": "kitchen", "label": "Baking area", "bounds": { "x": 24, "y": 300, "w": 456, "h": 216 } },
+    { "id": "bedroom", "label": "Storage room", "bounds": { "x": 500, "y": 24, "w": 436, "h": 492 } }
+  ],
+  "brother": { "x": 700, "y": 200, "zone": "bedroom", "interactRadius": 56 },
+  "wordPickups": [
+    { "pickupId": "pickup_bread", "wordId": "bread", "zone": "living_room", "objectLabel": "Bread", "x": 120, "y": 180 },
+    { "pickupId": "pickup_milk", "wordId": "milk", "zone": "kitchen", "objectLabel": "Milk", "x": 200, "y": 380 },
+    { "pickupId": "pickup_egg", "wordId": "egg", "zone": "kitchen", "objectLabel": "Eggs", "x": 320, "y": 400 },
+    { "pickupId": "pickup_jam", "wordId": "jam", "zone": "bedroom", "objectLabel": "Jam", "x": 600, "y": 300 }
+  ],
+  "materialPickups": [],
+  "cloze": {
+    "body_text": "Help Mai finish the recipe card.",
+    "sentences": [
+      { "id": "cloze_1", "template": "We use __1__ and milk.", "blankId": "1", "wordIds": ["bread"] },
+      { "id": "cloze_2", "template": "I need __1__ for baking.", "blankId": "1", "wordIds": ["egg"] }
+    ]
+  },
+  "ending": {
+    "title": "Recipe complete!",
+    "body_text": "You found all the ingredients. The bakery can open!",
+    "read_aloud_text": "Great job! Mai can bake breakfast now.",
+    "image_url": "https://placehold.co/800x400/fef3c7/92400e?text=Recipe+complete"
+  },
+  "nextSceneId": null,
+  "_note": "Runtime source of truth: lib/explore/scenes/bakery-recipe-rescue.ts"
+}

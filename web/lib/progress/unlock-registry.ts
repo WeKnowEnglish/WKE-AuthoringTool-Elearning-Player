@@ -13,7 +13,8 @@ export type UnlockId =
   | "word_bucket_catch"
   | "chase_game"
   | "explore_run"
-  | "grammar_puppet";
+  | "grammar_puppet"
+  | "language_garden";
 
 export type UnlockEntry = {
   id: UnlockId;
@@ -42,6 +43,7 @@ export const UNLOCK_REGISTRY: UnlockEntry[] = [
   { id: "vocab_set:food_meals", label: "Meals set", minLevel: 1 },
   { id: "vocab_set:food_snacks", label: "Snacks & Treats set", minLevel: 1 },
   { id: "word_bucket_catch", label: "Word bucket catch", minLevel: 2 },
+  { id: "language_garden", label: "Language Garden", minLevel: 2 },
   { id: "chase_game", label: "Chase game", minLevel: 3 },
   { id: "explore_run", label: "Explore run", minLevel: 3 },
   { id: "grammar_puppet", label: "Grammar puppet", minLevel: 5 },

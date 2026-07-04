@@ -1,5 +1,11 @@
 # We Know English — Lesson Player (Next.js)
 
+## Planning source of truth
+
+Start with [docs/lesson-player-master-document.md](./docs/lesson-player-master-document.md) for the current student-experience brief, architecture direction, archive policy, and roadmap.
+
+For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./docs/CURSOR_LESSON_CREATION_HANDOFF.md).
+
 ## Setup
 
 1. Create `web/.env.local` from `.env.example` and set:

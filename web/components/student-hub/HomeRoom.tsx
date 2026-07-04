@@ -10,11 +10,8 @@ import type { PlayerAppearanceId } from "@/lib/progress/types";
 import { getRewards } from "@/lib/progress/rewards";
 import type { StickerDef } from "@/lib/progress/sticker-library";
 import { STICKER_LIBRARY } from "@/lib/progress/sticker-library";
-import {
-  getNextExploreAreaId,
-  getWorldWordDiscoverySummary,
-} from "@/lib/explore/area-discovery";
-import { getExploreArea } from "@/lib/explore/areas";
+import { getWorldWordDiscoverySummary } from "@/lib/explore/area-discovery";
+import { getExploreArea, listExploreAreas } from "@/lib/explore/areas";
 import type { ExploreAreaDiscoverySummary } from "@/lib/explore/area-discovery";
 import type { ExploreAreaId } from "@/lib/explore/areas/types";
 import {
@@ -23,6 +20,9 @@ import {
 } from "@/lib/worlds/exploration";
 import { WORLD_1_SIMPLE } from "@/lib/worlds/world-1-simple";
 import type { CollectionPageId } from "@/components/student-hub/collection/types";
+import { getGardenAttentionHint } from "@/lib/garden/garden-status";
+import { getGardenSnapshot } from "@/lib/garden/storage";
+import type { GardenAttentionHint } from "@/lib/garden/garden-status";
 
 type Props = {
   muted: boolean;
@@ -30,8 +30,11 @@ type Props = {
   hydrated: boolean;
   dailyQuestUiKey: number;
   explorationUiKey: number;
+  gardenUiKey: number;
+  playerLevel: number;
   onGoLearn: () => void;
   onGoPet: () => void;
+  onGoGarden: () => void;
   onOpenCollection: (page?: CollectionPageId) => void;
   onOpenExplore: (areaId: ExploreAreaId) => void;
 };
@@ -49,17 +52,21 @@ export function HomeRoom({
   hydrated,
   dailyQuestUiKey,
   explorationUiKey,
+  gardenUiKey,
+  playerLevel,
   onGoLearn,
   onGoPet,
+  onGoGarden,
   onOpenCollection,
   onOpenExplore,
 }: Props) {
   const [playerAppearanceId, setPlayerAppearanceId] = useState<PlayerAppearanceId>("default");
   const [exploration, setExploration] = useState<WorldExplorationSummary | null>(null);
   const [areaDiscoveryById, setAreaDiscoveryById] = useState<
-    Partial<Record<ExploreAreaId, ExploreAreaDiscoverySummary>>
-  >({});
+    Partial<Record<ExploreAreaId, ExploreAreaDiscoverySummary>> | undefined
+  >(undefined);
   const [showcase, setShowcase] = useState<StickerDef[]>([]);
+  const [gardenHint, setGardenHint] = useState<GardenAttentionHint | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -73,7 +80,8 @@ export function HomeRoom({
       >,
     );
     setShowcase(buildStickerShowcase(getRewards().ownedStickerIds ?? []));
-  }, [hydrated, dailyQuestUiKey, explorationUiKey]);
+    setGardenHint(getGardenAttentionHint(getGardenSnapshot(), { playerLevel }));
+  }, [hydrated, dailyQuestUiKey, explorationUiKey, gardenUiKey, playerLevel]);
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
@@ -95,16 +103,34 @@ export function HomeRoom({
         world={WORLD_1_SIMPLE}
         playerAppearanceId={playerAppearanceId}
         hydrated={hydrated}
-        areaDiscoveryById={hydrated ? areaDiscoveryById : undefined}
+        areaDiscoveryById={areaDiscoveryById}
         onPetCare={() => {
           playSfx("tap", muted);
           onGoPet();
         }}
         onSelectExploreArea={(areaId) => {
+          if (getExploreArea(areaId).playMode !== "scene") {
+            playSfx("wrong", muted);
+            return;
+          }
           playSfx("tap", muted);
           onOpenExplore(areaId);
         }}
       />
+
+      {gardenHint ?
+        <KidButton
+          type="button"
+          variant="accent"
+          className="w-full !min-h-[3.5rem] !text-lg"
+          onClick={() => {
+            playSfx("tap", muted);
+            onGoGarden();
+          }}
+        >
+          {gardenHint.buttonLabel}
+        </KidButton>
+      : null}
 
       {hydrated && showcase.length > 0 ? (
         <section className="rounded-2xl border-4 border-kid-ink bg-kid-panel p-4">
@@ -137,13 +163,13 @@ export function HomeRoom({
         </section>
       ) : null}
 
-      {hydrated ? (
-        <ExploreContinueButton
+      {hydrated && areaDiscoveryById ?
+        <StorySceneButton
           muted={muted}
           areaDiscoveryById={areaDiscoveryById}
           onOpenExplore={onOpenExplore}
         />
-      ) : (
+      : (
         <div className="h-14 w-full animate-pulse rounded-2xl border-4 border-kid-ink/30 bg-kid-panel/50" aria-hidden />
       )}
 
@@ -172,7 +198,7 @@ export function HomeRoom({
   );
 }
 
-function ExploreContinueButton({
+function StorySceneButton({
   muted,
   areaDiscoveryById,
   onOpenExplore,
@@ -181,29 +207,32 @@ function ExploreContinueButton({
   areaDiscoveryById: Partial<Record<ExploreAreaId, ExploreAreaDiscoverySummary>>;
   onOpenExplore: (areaId: ExploreAreaId) => void;
 }) {
-  const nextId = getNextExploreAreaId();
-  const areas = Object.values(areaDiscoveryById).filter(Boolean) as ExploreAreaDiscoverySummary[];
-  const allComplete =
-    areas.length >= 3 && areas.every((a) => a.complete) && nextId === null;
+  const sceneAreas = listExploreAreas().filter((area) => area.playMode === "scene");
+  const nextArea =
+    sceneAreas.find((area) => {
+      const summary = areaDiscoveryById[area.id];
+      return summary?.unlocked !== false && !summary?.complete;
+    }) ?? sceneAreas[0];
 
-  if (allComplete) {
+  if (!nextArea) {
     return (
       <KidPanel className="text-center">
-        <p className="text-lg font-extrabold text-kid-ink">World complete!</p>
+        <p className="text-lg font-extrabold text-kid-ink">Story coming soon</p>
         <p className="mt-1 text-sm font-semibold text-kid-ink/85">
-          You found every word in all three areas. Replay any area from the map above.
+          The next top-down adventure area is being prepared.
         </p>
       </KidPanel>
     );
   }
 
-  const targetId = nextId ?? "bedroom";
-  const target = getExploreArea(targetId);
-  const summary = areaDiscoveryById[targetId];
+  const summary = areaDiscoveryById[nextArea.id];
+  const allSceneComplete = sceneAreas.every((area) => areaDiscoveryById[area.id]?.complete);
   const label =
-    summary && summary.discoveredCount > 0 ?
-      `Continue — ${target.title}`
-    : `Explore — ${target.title}`;
+    allSceneComplete ?
+      `Replay story - ${nextArea.title}`
+    : summary && summary.discoveredCount > 0 ?
+      `Continue story - ${nextArea.title}`
+    : `Start story - ${nextArea.title}`;
 
   return (
     <KidButton
@@ -212,7 +241,7 @@ function ExploreContinueButton({
       className="w-full !min-h-[3.5rem] !text-lg"
       onClick={() => {
         playSfx("tap", muted);
-        onOpenExplore(targetId);
+        onOpenExplore(nextArea.id);
       }}
     >
       {label}

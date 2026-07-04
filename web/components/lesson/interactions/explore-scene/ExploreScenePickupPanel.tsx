@@ -37,8 +37,8 @@ export function ExploreScenePickupPanel({
 
   const subtitle =
     target.kind === "word" ?
-      "Listen and collect this word for brother's homework."
-    : "Pick this up for brother.";
+      "Listen and collect this word for your brother's homework."
+    : "Pick this up for your brother.";
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4">

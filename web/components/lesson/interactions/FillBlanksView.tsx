@@ -78,7 +78,7 @@ export function FillBlanksView({
       setWrongHint(null);
       setChecking(false);
     });
-  }, [parsed.template, blanksSignature, wordBankSignature]);
+  }, [parsed.blanks, parsed.template, blanksSignature, wordBankSignature]);
 
   const parts = useMemo((): { type: "text" | "blank"; value: string }[] => {
     const template = parsed.template;
@@ -192,7 +192,7 @@ export function FillBlanksView({
       setWrongHint(
         parsed.word_bank?.length
           ? immersive
-            ? "Not quite yet. Correct words stay green. Tap a word or type, then Check."
+            ? "Not quite yet. Correct words stay green. Tap a word or type, then tap Check."
             : "Not quite yet. Correct words stay green. Use the word box or type, then tap Check."
           : "Not quite yet. Correct words are locked in green. Try again for the empty blanks.",
       );
@@ -216,6 +216,7 @@ export function FillBlanksView({
     muted,
     onPass,
     onWrong,
+    passed,
     parsed.blanks,
     parsed.word_bank?.length,
     ttsLang,

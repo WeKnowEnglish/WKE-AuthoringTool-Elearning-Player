@@ -12,6 +12,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:grammar": "vitest run lib/grammar-builder",
+    "validate:grammar": "vitest run lib/grammar-builder && tsx scripts/validate-grammar-content.ts",
     "sync:dog-poses": "node scripts/sync-dog-poses.mjs",
     "create-teacher": "node scripts/create-teacher-user.mjs",
     "media:finalize-metadata": "node scripts/finalize-media-metadata.mjs",

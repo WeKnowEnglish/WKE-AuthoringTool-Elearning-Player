@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "modules": [
+    {
+      "slug": "there-is-there-are-questions-a1",
+      "title": "There is / There are — Questions",
+      "description": "Learn when to use Is there and Are there.",
+      "difficulty": "A1",
+      "file": "there-is-there-are-poster-a1.json",
+      "status": "published",
+      "thumbnailEmoji": "❓",
+      "legacyRoutes": ["/grammar/pilot"]
+    },
+    {
+      "slug": "there-is-there-are-affirmative-a1",
+      "title": "There is / There are — Affirmative",
+      "description": "Learn how to say what exists with There is and There are.",
+      "difficulty": "A1",
+      "file": "there-is-there-are-affirmative-a1.json",
+      "status": "published",
+      "thumbnailEmoji": "✅"
+    }
+  ]
+}

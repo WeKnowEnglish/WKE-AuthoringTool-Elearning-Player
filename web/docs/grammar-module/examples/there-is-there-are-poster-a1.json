@@ -1,0 +1,93 @@
+{
+  "moduleTitle": "THERE IS / THERE ARE — QUESTIONS",
+  "moduleSubtitle": "A1 grammar poster",
+  "displayMode": "poster",
+  "difficulty": "A1",
+  "pageLayout": "two-equal-then-full",
+  "cards": [
+    {
+      "id": 1,
+      "title": "QUESTION: 'IS THERE ... ?' (Singular / Uncountable)",
+      "kidTitle": "Is there…?",
+      "kidSubtitle": "One thing",
+      "theme": "sky-blue",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "Is there = one thing?",
+        "highlight": "one thing"
+      },
+      "leftColumn": {
+        "title": "SINGULAR",
+        "badge": "⭐",
+        "items": [
+          {
+            "text": "Is there a book on the desk?",
+            "graphic": "📘",
+            "highlight": "Is there"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "UNCOUNTABLE",
+        "badge": "💧",
+        "items": [
+          {
+            "text": "Is there any milk?",
+            "graphic": "🥛",
+            "highlight": "Is there"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "QUESTION: 'ARE THERE ... ?' (Plural)",
+      "kidTitle": "Are there…?",
+      "kidSubtitle": "Many things",
+      "theme": "tangerine",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "Are there = many things?",
+        "highlight": "many things"
+      },
+      "leftColumn": {
+        "title": "PLURAL",
+        "badge": "👧👦",
+        "items": [
+          {
+            "text": "ANY",
+            "graphic": "👧👦👧👦",
+            "caption": "people"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "EXAMPLES",
+        "items": [
+          {
+            "text": "Are there any chairs in the room?",
+            "graphic": "🪑",
+            "highlight": "Are there"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "QUESTION PATTERNS & SUMMARY",
+      "kidTitle": "Remember!",
+      "theme": "lavender",
+      "layoutType": "banner",
+      "glanceRule": {
+        "text": "Put Is or Are first!",
+        "highlight": "Is or Are"
+      },
+      "bannerText": "Put Is or Are before There!",
+      "leftSide": {
+        "title": "Remember!",
+        "content": "Put Is or Are before There.",
+        "example": "Is there a cat? 🐱"
+      }
+    }
+  ]
+}

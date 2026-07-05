@@ -1,0 +1,74 @@
+{
+  "sky-blue": {
+    "label": "Sky Blue",
+    "background": "#dbeafe",
+    "border": "#60a5fa",
+    "text": "#1e3a8a",
+    "accentBadge": "#2563eb",
+    "tailwind": {
+      "background": "bg-[#dbeafe]",
+      "border": "border-[#60a5fa]",
+      "text": "text-[#1e3a8a]"
+    }
+  },
+  "tangerine": {
+    "label": "Tangerine",
+    "background": "#ffedd5",
+    "border": "#fb923c",
+    "text": "#7c2d12",
+    "accentBadge": "#ea580c",
+    "tailwind": {
+      "background": "bg-[#ffedd5]",
+      "border": "border-[#fb923c]",
+      "text": "text-[#7c2d12]"
+    }
+  },
+  "mint-green": {
+    "label": "Mint Green",
+    "background": "#dcfce7",
+    "border": "#4ade80",
+    "text": "#14532d",
+    "accentBadge": "#16a34a",
+    "tailwind": {
+      "background": "bg-[#dcfce7]",
+      "border": "border-[#4ade80]",
+      "text": "text-[#14532d]"
+    }
+  },
+  "sun-gold": {
+    "label": "Sun Gold",
+    "background": "#fef9c3",
+    "border": "#facc15",
+    "text": "#713f12",
+    "accentBadge": "#ca8a04",
+    "tailwind": {
+      "background": "bg-[#fef9c3]",
+      "border": "border-[#facc15]",
+      "text": "text-[#713f12]"
+    }
+  },
+  "lavender": {
+    "label": "Lavender",
+    "background": "#f3e8ff",
+    "border": "#c084fc",
+    "text": "#581c87",
+    "accentBadge": "#9333ea",
+    "tailwind": {
+      "background": "bg-[#f3e8ff]",
+      "border": "border-[#c084fc]",
+      "text": "text-[#581c87]"
+    }
+  },
+  "bubblegum": {
+    "label": "Bubblegum",
+    "background": "#ffe4e6",
+    "border": "#fb7185",
+    "text": "#881337",
+    "accentBadge": "#e11d48",
+    "tailwind": {
+      "background": "bg-[#ffe4e6]",
+      "border": "border-[#fb7185]",
+      "text": "text-[#881337]"
+    }
+  }
+}

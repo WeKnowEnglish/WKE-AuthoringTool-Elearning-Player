@@ -1,0 +1,93 @@
+{
+  "moduleTitle": "THERE IS / THERE ARE — AFFIRMATIVE",
+  "moduleSubtitle": "A1 grammar poster",
+  "displayMode": "poster",
+  "difficulty": "A1",
+  "pageLayout": "two-equal-then-full",
+  "cards": [
+    {
+      "id": 1,
+      "title": "1. 'THERE IS' (+ Singular / Uncountable)",
+      "kidTitle": "There is…",
+      "kidSubtitle": "One thing",
+      "theme": "sky-blue",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "There is = one thing.",
+        "highlight": "one thing"
+      },
+      "leftColumn": {
+        "title": "SINGULAR",
+        "badge": "⭐",
+        "items": [
+          {
+            "text": "There is a book on the desk.",
+            "graphic": "📘",
+            "highlight": "There is"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "UNCOUNTABLE",
+        "badge": "💧",
+        "items": [
+          {
+            "text": "There is some milk.",
+            "graphic": "🥛",
+            "highlight": "There is"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "2. 'THERE ARE' (+ Plural Noun)",
+      "kidTitle": "There are…",
+      "kidSubtitle": "Many things",
+      "theme": "tangerine",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "There are = many things.",
+        "highlight": "many things"
+      },
+      "leftColumn": {
+        "title": "PLURAL",
+        "badge": "👧👦",
+        "items": [
+          {
+            "text": "ANY",
+            "graphic": "👧👦👧👦",
+            "caption": "people"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "EXAMPLES",
+        "items": [
+          {
+            "text": "There are two books on the desk.",
+            "graphic": "📚",
+            "highlight": "There are"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "3. NOTES & CONTRACTIONS",
+      "kidTitle": "Remember!",
+      "theme": "lavender",
+      "layoutType": "banner",
+      "glanceRule": {
+        "text": "There's = There is!",
+        "highlight": "There's"
+      },
+      "bannerText": "There's = There is!",
+      "leftSide": {
+        "title": "Remember!",
+        "content": "We say \"There's\" for \"There is.\"",
+        "example": "There's a cat. 🐱"
+      }
+    }
+  ]
+}

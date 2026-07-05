@@ -1,0 +1,86 @@
+{
+  "moduleTitle": "SHORT ANSWERS — THERE IS / THERE ARE",
+  "moduleSubtitle": "Author reference (showcase)",
+  "displayMode": "showcase",
+  "difficulty": "A1",
+  "pageLayout": "two-equal-then-full",
+  "tags": ["#ShortAnswers", "#ThereIsThereAre"],
+  "cards": [
+    {
+      "id": 1,
+      "title": "1. SHORT ANSWERS — 'IS THERE ... ?' (Singular / Uncountable)",
+      "kidTitle": "Is there…?",
+      "kidSubtitle": "One thing",
+      "theme": "sky-blue",
+      "layoutType": "two-column-positive-negative",
+      "glanceRule": {
+        "text": "Yes or No?",
+        "highlight": "Yes or No"
+      },
+      "positiveSide": {
+        "title": "YES",
+        "example": "Yes, there is."
+      },
+      "negativeSide": {
+        "title": "NO",
+        "example": "No, there isn't."
+      }
+    },
+    {
+      "id": 2,
+      "title": "2. SHORT ANSWERS — 'ARE THERE ... ?' (Plural)",
+      "kidTitle": "Are there…?",
+      "kidSubtitle": "Many things",
+      "theme": "tangerine",
+      "layoutType": "two-column-positive-negative",
+      "glanceRule": {
+        "text": "Yes or No?",
+        "highlight": "Yes or No"
+      },
+      "positiveSide": {
+        "title": "YES",
+        "example": "Yes, there are."
+      },
+      "negativeSide": {
+        "title": "NO",
+        "example": "No, there aren't."
+      }
+    },
+    {
+      "id": 3,
+      "title": "3. SHORT ANSWER SUMMARY",
+      "kidTitle": "Remember!",
+      "theme": "lavender",
+      "layoutType": "summary-grid",
+      "glanceRule": {
+        "text": "Short answers use Yes or No!",
+        "highlight": "Yes or No"
+      },
+      "summaryGrid": {
+        "columns": [
+          { "label": "Question" },
+          { "label": "Yes" },
+          { "label": "No" }
+        ],
+        "rows": [
+          {
+            "label": "Is there…?",
+            "cells": [
+              { "mark": "text", "text": "Is there a book?" },
+              { "mark": "text", "text": "Yes, there is." },
+              { "mark": "text", "text": "No, there isn't." }
+            ]
+          },
+          {
+            "label": "Are there…?",
+            "cells": [
+              { "mark": "text", "text": "Are there books?" },
+              { "mark": "text", "text": "Yes, there are." },
+              { "mark": "text", "text": "No, there aren't." }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

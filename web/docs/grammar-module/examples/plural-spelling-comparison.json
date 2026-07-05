@@ -1,0 +1,59 @@
+{
+  "moduleTitle": "PLURAL SPELLING — COMPARISON EXCERPT",
+  "moduleSubtitle": "Author reference (showcase)",
+  "displayMode": "showcase",
+  "pageLayout": "two-equal-then-full",
+  "tags": ["#PluralSpelling", "#Comparison"],
+  "cards": [
+    {
+      "id": 1,
+      "title": "5. NOUNS ENDING IN -F OR -FE",
+      "kidTitle": "-f / -fe → -ves",
+      "theme": "lavender",
+      "layoutType": "comparison",
+      "glanceRule": {
+        "text": "Most change to -ves",
+        "highlight": "-ves"
+      },
+      "leftColumn": {
+        "title": "Change to -ves",
+        "items": [
+          { "text": "leaf → leaves", "graphic": "🍃" },
+          { "text": "wolf → wolves", "graphic": "🐺" }
+        ]
+      },
+      "rightColumn": {
+        "title": "Exceptions (+s)",
+        "items": [
+          { "text": "roof → roofs", "graphic": "🏠" },
+          { "text": "chief → chiefs", "graphic": "👔" }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "6. NOUNS ENDING IN -O",
+      "kidTitle": "-o endings",
+      "theme": "bubblegum",
+      "layoutType": "comparison",
+      "glanceRule": {
+        "text": "Some add -es",
+        "highlight": "-es"
+      },
+      "leftColumn": {
+        "title": "Add -es",
+        "items": [
+          { "text": "hero → heroes", "graphic": "🦸" },
+          { "text": "potato → potatoes", "graphic": "🥔" }
+        ]
+      },
+      "rightColumn": {
+        "title": "Exceptions (+s)",
+        "items": [
+          { "text": "photo → photos", "graphic": "📷" },
+          { "text": "piano → pianos", "graphic": "🎹" }
+        ]
+      }
+    }
+  ]
+}

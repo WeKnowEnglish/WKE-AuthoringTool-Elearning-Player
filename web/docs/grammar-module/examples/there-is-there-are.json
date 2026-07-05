@@ -1,0 +1,88 @@
+{
+  "moduleTitle": "UNDERSTANDING 'THERE IS' / 'THERE ARE'",
+  "moduleSubtitle": "Affirmative sentences for elementary ESL",
+  "displayMode": "showcase",
+  "difficulty": "A1",
+  "tags": ["#EnglishGrammar", "#ThereIsThereAre", "#WeknowEnglish"],
+  "pageLayout": "two-equal-then-full",
+  "cards": [
+    {
+      "id": 1,
+      "title": "1. 'THERE IS' (+ Singular Noun)",
+      "theme": "sky-blue",
+      "layoutType": "three-column",
+      "subHeader": {
+        "label": "SINGULAR",
+        "badge": "⭐",
+        "desc": "Use 'THERE IS' when saying one thing exists.",
+        "extra": "Contraction: There's"
+      },
+      "items": [
+        {
+          "text": "There is a book on the desk.",
+          "graphic": "📘",
+          "caption": "on the desk.",
+          "highlight": "There is"
+        },
+        {
+          "text": "There is an apple in the bag.",
+          "graphic": "🍎",
+          "caption": "in the bag.",
+          "highlight": "There is"
+        },
+        {
+          "text": "There is a teacher in the classroom.",
+          "graphic": "👩‍🏫",
+          "caption": "in the classroom.",
+          "highlight": "There is"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "2. 'THERE ARE' (+ Plural Noun)",
+      "theme": "tangerine",
+      "layoutType": "three-column",
+      "subHeader": {
+        "label": "PLURAL",
+        "badge": "⭐⭐⭐⭐",
+        "desc": "Use 'THERE ARE' when saying two or more things exist."
+      },
+      "items": [
+        {
+          "text": "There are two books on the desk.",
+          "graphic": "📚",
+          "caption": "on the desk.",
+          "highlight": "There are"
+        },
+        {
+          "text": "There are some apples in the bag.",
+          "graphic": "🛍️",
+          "caption": "in the bag.",
+          "highlight": "There are"
+        },
+        {
+          "text": "There are about thirty students.",
+          "graphic": "🧑‍🤝‍🧑",
+          "caption": "in the classroom.",
+          "highlight": "There are"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "3. NOTES & CONTRACTIONS",
+      "theme": "lavender",
+      "layoutType": "full-width-split",
+      "leftSide": {
+        "title": "CONTRACTIONS",
+        "content": "We use \"THERE'S\" for \"THERE IS\".",
+        "example": "There's a cat in the garden. 🐱"
+      },
+      "rightSide": {
+        "formula": "There are = There're",
+        "warning": "Note: 'There're' is rare in formal writing!"
+      }
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "moduleTitle": "UNCOUNTABLE NOUNS",
+  "moduleSubtitle": "Author reference (showcase)",
+  "displayMode": "showcase",
+  "pageLayout": "two-equal-then-full",
+  "tags": ["#UncountableNouns"],
+  "cards": [
+    {
+      "id": 1,
+      "title": "1. GOOD vs BAD QUESTIONS",
+      "kidTitle": "Ask correctly",
+      "theme": "sky-blue",
+      "layoutType": "two-equal",
+      "glanceRule": { "text": "Don't count uncountables", "highlight": "Don't count" },
+      "goodBadPair": {
+        "good": {
+          "text": "How much water is there?",
+          "graphic": "✓",
+          "highlight": "How much"
+        },
+        "bad": {
+          "text": "How many water are there?",
+          "graphic": "✗",
+          "highlight": "How many"
+        }
+      },
+      "leftColumn": {
+        "title": "UNCOUNTABLE",
+        "badge": "💧",
+        "items": [
+          { "text": "There is some water.", "graphic": "🥛", "highlight": "some" }
+        ]
+      },
+      "rightColumn": {
+        "title": "EXAMPLES",
+        "items": [
+          { "text": "There is some rice.", "graphic": "🍚", "highlight": "some" }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "2. SOME / ANY WITH UNCOUNTABLE",
+      "kidTitle": "Some & any",
+      "theme": "tangerine",
+      "layoutType": "two-equal",
+      "glanceRule": { "text": "Some = yes, Any = questions", "highlight": "Some" },
+      "leftColumn": {
+        "title": "AFFIRMATIVE",
+        "badge": "➕",
+        "items": [
+          { "text": "There is some milk.", "graphic": "🥛", "highlight": "some" }
+        ]
+      },
+      "rightColumn": {
+        "title": "QUESTION",
+        "badge": "❓",
+        "items": [
+          { "text": "Is there any sugar?", "graphic": "🍬", "highlight": "any" }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "3. REMEMBER",
+      "kidTitle": "Remember!",
+      "theme": "lavender",
+      "layoutType": "banner",
+      "glanceRule": { "text": "Use much, not many!", "highlight": "much" },
+      "bannerText": "Use How much for uncountable nouns!",
+      "leftSide": {
+        "title": "Remember!",
+        "content": "We say \"How much water?\" not \"How many water?\""
+      }
+    }
+  ]
+}

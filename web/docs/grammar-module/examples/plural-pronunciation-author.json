@@ -1,0 +1,129 @@
+{
+  "moduleTitle": "PLURAL PRONUNCIATION — /s/, /z/, /ɪz/",
+  "moduleSubtitle": "Author reference (showcase)",
+  "displayMode": "showcase",
+  "pageLayout": "two-equal",
+  "tags": ["#PluralPronunciation"],
+  "cards": [
+    {
+      "id": 1,
+      "title": "1. /s/ SOUND",
+      "kidTitle": "/s/ sound",
+      "theme": "sky-blue",
+      "layoutType": "three-column",
+      "glanceRule": { "text": "After voiceless sounds", "highlight": "/s/" },
+      "items": [
+        {
+          "graphic": "🐱",
+          "transformationRow": {
+            "from": "cat",
+            "operator": "+",
+            "suffix": "s",
+            "to": "cats",
+            "ipa": "/s/"
+          }
+        },
+        {
+          "graphic": "🗺️",
+          "transformationRow": {
+            "from": "map",
+            "operator": "+",
+            "suffix": "s",
+            "to": "maps",
+            "ipa": "/s/"
+          }
+        },
+        {
+          "graphic": "🎵",
+          "transformationRow": {
+            "from": "note",
+            "operator": "+",
+            "suffix": "s",
+            "to": "notes",
+            "ipa": "/s/"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "2. /z/ SOUND",
+      "kidTitle": "/z/ sound",
+      "theme": "tangerine",
+      "layoutType": "three-column",
+      "glanceRule": { "text": "After voiced sounds", "highlight": "/z/" },
+      "items": [
+        {
+          "graphic": "🐕",
+          "transformationRow": {
+            "from": "dog",
+            "operator": "+",
+            "suffix": "s",
+            "to": "dogs",
+            "ipa": "/z/"
+          }
+        },
+        {
+          "graphic": "🐝",
+          "transformationRow": {
+            "from": "bee",
+            "operator": "+",
+            "suffix": "s",
+            "to": "bees",
+            "ipa": "/z/"
+          }
+        },
+        {
+          "graphic": "🚗",
+          "transformationRow": {
+            "from": "car",
+            "operator": "+",
+            "suffix": "s",
+            "to": "cars",
+            "ipa": "/z/"
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "3. /ɪz/ SOUND",
+      "kidTitle": "/ɪz/ sound",
+      "theme": "mint-green",
+      "layoutType": "three-column",
+      "glanceRule": { "text": "After s, sh, ch, x", "highlight": "/ɪz/" },
+      "items": [
+        {
+          "graphic": "🚌",
+          "transformationRow": {
+            "from": "bus",
+            "operator": "+",
+            "suffix": "es",
+            "to": "buses",
+            "ipa": "/ɪz/"
+          }
+        },
+        {
+          "graphic": "🖌️",
+          "transformationRow": {
+            "from": "brush",
+            "operator": "+",
+            "suffix": "es",
+            "to": "brushes",
+            "ipa": "/ɪz/"
+          }
+        },
+        {
+          "graphic": "📦",
+          "transformationRow": {
+            "from": "box",
+            "operator": "+",
+            "suffix": "es",
+            "to": "boxes",
+            "ipa": "/ɪz/"
+          }
+        }
+      ]
+    }
+  ]
+}

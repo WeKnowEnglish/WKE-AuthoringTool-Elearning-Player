@@ -148,37 +148,43 @@ export const POSTER_HERO_FALLBACK = {
 
 export const SECTION_COLORS: Record<
   PosterSectionColor,
-  { header: string; body: string; pill: string }
+  { header: string; body: string; pill: string; border: string }
 > = {
   blue: {
     header: "#1d4ed8",
     body: "#dbeafe",
     pill: "#bfdbfe",
+    border: "rgba(0,0,0,0.8)",
   },
   orange: {
     header: "#c2410c",
     body: "#ffedd5",
     pill: "#fed7aa",
+    border: "rgba(0,0,0,0.8)",
   },
   purple: {
     header: "#6d28d9",
     body: "#ede9fe",
     pill: "#ddd6fe",
+    border: "rgba(0,0,0,0.8)",
   },
   green: {
     header: "#15803d",
     body: "#dcfce7",
     pill: "#bbf7d0",
+    border: "rgba(0,0,0,0.8)",
   },
   yellow: {
     header: "#a16207",
     body: "#fef9c3",
     pill: "#fef08a",
+    border: "rgba(0,0,0,0.8)",
   },
   pink: {
     header: "#be185d",
     body: "#fce7f3",
     pill: "#fbcfe8",
+    border: "rgba(0,0,0,0.8)",
   },
 };
 

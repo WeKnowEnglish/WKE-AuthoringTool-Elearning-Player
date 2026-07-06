@@ -230,6 +230,17 @@ function refineGrammarModule(
     });
   }
 
+  const isA2Poster =
+    module.displayMode === "poster" && module.difficulty === "A2";
+
+  if (isA2Poster && module.cards.length > 6) {
+    ctx.addIssue({
+      code: "custom",
+      message: "A2 poster modules allow at most 6 cards",
+      path: ["cards"],
+    });
+  }
+
   const seenCardIds = new Set<number>();
   module.cards.forEach((card, index) => {
     if (seenCardIds.has(card.id)) {

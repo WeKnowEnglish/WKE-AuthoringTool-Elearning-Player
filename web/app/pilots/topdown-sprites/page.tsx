@@ -2,7 +2,7 @@ import { TopDownSpritePreview } from "@/components/pilots/topdown-sprites/TopDow
 
 export const metadata = {
   title: "Top-Down Sprites — Pilot",
-  description: "Sprite sheet atlas preview and mock Language Garden layout",
+  description: "Garden tile library and board-game terrain sprite tuning",
 };
 
 export default function TopDownSpritesPilotPage() {

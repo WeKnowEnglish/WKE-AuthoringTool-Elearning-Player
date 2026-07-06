@@ -43,7 +43,13 @@ function SeamlessMapTile({
         })
       }
     >
-      <TopDownSprite atlas={atlas} bounds={bounds} fillCell alt="" />
+      <TopDownSprite
+        atlas={atlas}
+        bounds={bounds}
+        fillCell
+        fillScale={SEAMLESS_MAP_TILE_PX / bounds.sw}
+        alt=""
+      />
     </div>
   );
 }

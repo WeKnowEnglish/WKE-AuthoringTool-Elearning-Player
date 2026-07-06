@@ -8,5 +8,10 @@ export function StudentLayoutClient({ children }: { children: React.ReactNode })
   if (pathname === "/" || pathname === "/home") {
     return <>{children}</>;
   }
-  return <StudentShell>{children}</StudentShell>;
+  const wide = pathname.startsWith("/grammar");
+  return (
+    <StudentShell wide={wide} compact={wide}>
+      {children}
+    </StudentShell>
+  );
 }

@@ -1,3 +1,5 @@
+import type { WkePathTileId, WkeTerrainTileId } from "@/lib/topdown/wke-sprite-atlas";
+
 /** Visual / gameplay theme applied to the board canvas. */
 export type MapThemeId = "classroom" | "jungle" | "space" | "ocean" | "castle";
 
@@ -16,9 +18,12 @@ export type MapSpaceEffectType =
 /** Automatic layout used when generating a map from space count. */
 export type MapLayoutTemplate = "snake" | "spiral" | "island";
 
+/** Terrain pattern under path cells when rendering WKE sprites. */
+export type PathTerrainDecoration = "endpoints-only" | "full-legacy";
+
 /**
- * Square type in the map schema. Most gameplay still uses `kind` + `effect`
- * (legacy lucky-space engine) until Phase 3 wires per-square onCorrect/onWrong.
+ * Square type in the map schema. Gameplay uses `effects` (onLand / onCorrect / onWrong).
+ * Legacy `kind` + `effect` remain for older generated maps until fully migrated.
  */
 export type MapSpaceType =
   | "start"
@@ -81,6 +86,12 @@ export type BoardMap = {
   pathOrder: number[];
   spaces: BoardMapSpace[];
   connections: BoardConnection[];
+  /** Manual WKE path tile per grid cell (`"col,row"` → asset id). Falls back to autotile when absent. */
+  pathTileOverrides?: Record<string, WkePathTileId>;
+  /** Manual WKE terrain tile per grid cell (`"col,row"` → asset id). Falls back to autotile when absent. */
+  terrainTileOverrides?: Record<string, WkeTerrainTileId>;
+  /** Terrain pattern under path cells — default minimal filler with decorated endpoints. */
+  pathTerrainDecoration?: PathTerrainDecoration;
 };
 
 export type GenerateMapOptions = {

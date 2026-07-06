@@ -314,7 +314,7 @@ export const STUDENT_FACING_STATIC_COPY: StudentFacingStaticCopyEntry[] = [
   },
   {
     id: "daily-quests.garden_weeds_cleared",
-    text: "Clear 2 garden weeds",
+    text: "Defeat 2 weed monsters",
     role: "instruction",
     owner: "daily-quests",
     source: "lib/teststartpage/daily-quests.ts",

@@ -1,9 +1,17 @@
+"use client";
+
 import type { LearningLoopPhaseEvent } from "@/lib/learning-loop";
+import { markLessonComplete } from "@/lib/progress/local-storage";
+import {
+  awardRewardsWithMeta,
+  type RewardsSnapshot,
+} from "@/lib/progress/rewards";
 
 export const STUDENT_SESSION_EVENTS_STORAGE_KEY = "wke-student-session-events-v1";
 
 export type StudentActivityKind =
   | "vocabulary_set"
+  | "grammar_poster"
   | "course_lesson"
   | "explore_run"
   | "pet_minigame"
@@ -205,11 +213,163 @@ export function readStudentPracticeSessionEvents(): StudentPracticeSessionEvent[
   }
 }
 
+export function readPracticeSessionEventsForSession(
+  sessionId: string,
+): StudentPracticeSessionEvent[] {
+  return readStudentPracticeSessionEvents().filter((event) => {
+    if (!("sessionId" in event) || typeof event.sessionId !== "string") return false;
+    return event.sessionId === sessionId;
+  });
+}
+
+export function isPracticeSessionTerminal(sessionId: string): boolean {
+  return readPracticeSessionEventsForSession(sessionId).some(
+    (event) => event.type === "session_completed",
+  );
+}
+
+export function hasPracticeSessionStarted(sessionId: string): boolean {
+  return readPracticeSessionEventsForSession(sessionId).some(
+    (event) => event.type === "session_started",
+  );
+}
+
+type PracticeEventListener = (event: StudentPracticeSessionEvent) => void;
+
+const practiceEventListeners = new Set<PracticeEventListener>();
+
+function notifyPracticeEventListeners(event: StudentPracticeSessionEvent): void {
+  for (const listener of practiceEventListeners) {
+    try {
+      listener(event);
+    } catch {
+      // Listeners must not break the practice write path.
+    }
+  }
+}
+
+/** Subscribe to practice events after they are persisted. Returns unsubscribe. */
+export function subscribePracticeEvents(listener: PracticeEventListener): () => void {
+  practiceEventListeners.add(listener);
+  return () => {
+    practiceEventListeners.delete(listener);
+  };
+}
+
 export function recordStudentPracticeSessionEvent(
   event: StudentPracticeSessionEvent,
 ): StudentPracticeSessionEvent[] {
   if (typeof window === "undefined" || !window.localStorage) return [];
   const next = [...readStudentPracticeSessionEvents(), event].slice(-MAX_STORED_EVENTS);
   window.localStorage.setItem(STUDENT_SESSION_EVENTS_STORAGE_KEY, JSON.stringify(next));
+  notifyPracticeEventListeners(event);
   return next;
+}
+
+/** Append a practice event and notify subscribers. Primary write entry for the contract. */
+export function emitPracticeEvent(
+  event: StudentPracticeSessionEvent,
+): StudentPracticeSessionEvent[] {
+  return recordStudentPracticeSessionEvent(event);
+}
+
+export function startPracticeSession(
+  input: StartStudentPracticeSessionInput,
+): Extract<StudentPracticeSessionEvent, { type: "session_started" }> {
+  const event = createStudentPracticeSessionStartedEvent(input);
+  emitPracticeEvent(event);
+  return event;
+}
+
+export function recordAttempt(
+  input: Parameters<typeof createAttemptRecordedEvent>[0],
+): Extract<StudentPracticeSessionEvent, { type: "attempt_recorded" }> {
+  const event = createAttemptRecordedEvent(input);
+  emitPracticeEvent(event);
+  return event;
+}
+
+export type AwardPracticeRewardResult = {
+  snapshot: RewardsSnapshot;
+  event: Extract<StudentPracticeSessionEvent, { type: "reward_awarded" }> | null;
+  skippedDuplicate: boolean;
+};
+
+/**
+ * Awards gold/XP through the existing rewards store, then emits `reward_awarded`
+ * only when the award was not an idempotent no-op.
+ */
+export function awardPracticeReward(input: {
+  sessionId: string;
+  eventId: string;
+  goldDelta: number;
+  experienceDelta: number;
+  recordedAt?: Date;
+}): AwardPracticeRewardResult {
+  const { snapshot, meta } = awardRewardsWithMeta({
+    eventId: input.eventId,
+    goldDelta: input.goldDelta,
+    experienceDelta: input.experienceDelta,
+  });
+  if (meta.skippedDuplicate) {
+    return { snapshot, event: null, skippedDuplicate: true };
+  }
+  const event = createRewardAwardedEvent({
+    sessionId: input.sessionId,
+    eventId: input.eventId,
+    goldDelta: input.goldDelta,
+    experienceDelta: input.experienceDelta,
+    recordedAt: input.recordedAt,
+  });
+  emitPracticeEvent(event);
+  return { snapshot, event, skippedDuplicate: false };
+}
+
+export type CompletePracticeSessionInput = {
+  sessionId: string;
+  result: "completed" | "exited" | "replayed";
+  summary: StudentPracticeSummary;
+  completedAt?: Date;
+  /** When `result` is `completed`, marks this lesson id complete in progress storage. */
+  lessonId?: string;
+};
+
+/**
+ * Emits `session_completed`. Marks the lesson complete only for `result: "completed"`.
+ * Does not award rewards — call `awardPracticeReward` first when needed.
+ */
+export function completePracticeSession(
+  input: CompletePracticeSessionInput,
+): Extract<StudentPracticeSessionEvent, { type: "session_completed" }> | null {
+  if (isPracticeSessionTerminal(input.sessionId)) return null;
+  if (input.result === "completed" && input.lessonId) {
+    markLessonComplete(input.lessonId);
+  }
+  const event = createSessionCompletedEvent({
+    sessionId: input.sessionId,
+    result: input.result,
+    summary: input.summary,
+    completedAt: input.completedAt,
+  });
+  emitPracticeEvent(event);
+  return event;
+}
+
+/**
+ * Records `session_completed` with `result: "exited"` when the session started
+ * and is not already terminal. No rewards and no lesson completion.
+ */
+export function exitPracticeSessionIfOpen(input: {
+  sessionId: string;
+  summary?: StudentPracticeSummary;
+  completedAt?: Date;
+}): Extract<StudentPracticeSessionEvent, { type: "session_completed" }> | null {
+  if (!input.sessionId) return null;
+  if (!hasPracticeSessionStarted(input.sessionId)) return null;
+  return completePracticeSession({
+    sessionId: input.sessionId,
+    result: "exited",
+    summary: input.summary ?? {},
+    completedAt: input.completedAt,
+  });
 }

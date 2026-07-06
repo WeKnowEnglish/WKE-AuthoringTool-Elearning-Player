@@ -22,8 +22,16 @@ import { canAffordWord, consumeLetters } from "@/lib/garden/spelling";
 import { getGardenSpellingLevel } from "@/lib/garden/spelling-levels";
 import { getGardenSnapshot, setGardenSnapshot } from "@/lib/garden/storage";
 import { canUseWateringCan } from "@/lib/garden/watering-can";
+import { allGrassPlotKeys } from "@/lib/garden/plot-unlock";
 import { DAILY_QUESTS_STORAGE_KEY } from "@/lib/teststartpage/daily-quests";
 import { minLevelForUnlock } from "@/lib/progress/unlock-registry";
+
+function gardenSnapshotWithAllPlots(now = Date.now()) {
+  return {
+    ...emptyGardenSnapshot(now),
+    purchasedPlotKeys: allGrassPlotKeys(),
+  };
+}
 
 function installLocalStorage() {
   const store = new Map<string, string>();
@@ -85,7 +93,7 @@ describe("garden actions", () => {
   });
 
   it("plants a seed and removes it from the pouch", () => {
-    const snap = emptyGardenSnapshot(1000);
+    const snap = gardenSnapshotWithAllPlots(1000);
     expect(snap.seedPouch).toHaveLength(STARTER_SEED_COUNT);
 
     const planted = plantSeedAt(snap, 0, 0, 1000);
@@ -95,10 +103,12 @@ describe("garden actions", () => {
     expect(planted.snapshot.seedPouch).toHaveLength(STARTER_SEED_COUNT - 1);
     expect(planted.snapshot.plots[0]?.seedId).toBeTruthy();
     expect(planted.snapshot.plots[0]?.plantedAt).toBe(1000);
+    expect(planted.snapshot.plots[0]?.cropLetter).toMatch(/^[A-Z]$/);
+    expect(planted.snapshot.plots[0]?.fruitSlug).toBeTruthy();
   });
 
   it("harvests a ready crop and adds a letter", () => {
-    const snap = emptyGardenSnapshot(1000);
+    const snap = gardenSnapshotWithAllPlots(1000);
     const planted = plantSeedAt(snap, 1, 1, 1000);
     if (!planted.ok) throw new Error("plant failed");
 
@@ -108,12 +118,15 @@ describe("garden actions", () => {
     if (!harvested.ok) return;
 
     expect(harvested.letter).toMatch(/^[A-Z]$/);
+    expect(harvested.letter).toBe(planted.snapshot.plots[5]?.cropLetter);
     expect(harvested.snapshot.plots[5]?.seedId).toBeNull();
+    expect(harvested.snapshot.plots[5]?.cropLetter).toBeNull();
+    expect(harvested.snapshot.plots[5]?.fruitSlug).toBeNull();
     expect(Object.values(harvested.snapshot.letters).reduce((a, b) => a + b, 0)).toBe(1);
   });
 
   it("rejects harvest before crop is ready", () => {
-    const snap = emptyGardenSnapshot(1000);
+    const snap = gardenSnapshotWithAllPlots(1000);
     const planted = plantSeedAt(snap, 0, 0, 1000);
     if (!planted.ok) throw new Error("plant failed");
 
@@ -138,7 +151,7 @@ describe("watering can", () => {
     const plantedAt = 10_000;
     const now = plantedAt + 20_000;
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { watering_can: 1 },
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
@@ -170,9 +183,9 @@ describe("watering can", () => {
       sourceEventId: "test",
     };
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { watering_can: 1 },
-      seedPouch: [...emptyGardenSnapshot(plantedAt).seedPouch, extraSeed],
+      seedPouch: [...gardenSnapshotWithAllPlots(plantedAt).seedPouch, extraSeed],
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
     if (!planted.ok) throw new Error("plant failed");
@@ -191,7 +204,7 @@ describe("watering can", () => {
   });
 
   it("rejects watering an empty plot", () => {
-    const snap = { ...emptyGardenSnapshot(), items: { watering_can: 1 } };
+    const snap = { ...gardenSnapshotWithAllPlots(), items: { watering_can: 1 } };
     const result = applyWateringCanAt(snap, 1, 1);
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -200,7 +213,7 @@ describe("watering can", () => {
 
   it("rejects watering the same plot twice", () => {
     const plantedAt = 1000;
-    let snap = { ...emptyGardenSnapshot(plantedAt), items: { watering_can: 1 } };
+    let snap = { ...gardenSnapshotWithAllPlots(plantedAt), items: { watering_can: 1 } };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
     if (!planted.ok) throw new Error("plant failed");
     const first = applyWateringCanAt(planted.snapshot, 0, 0, plantedAt + 5000);
@@ -215,7 +228,7 @@ describe("watering can", () => {
     const plantedAt = 1000;
     const now = plantedAt + 5000;
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { watering_can: 1, fertilizer: 1 },
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
@@ -238,9 +251,9 @@ describe("watering can", () => {
       sourceEventId: "test",
     };
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { watering_can: 1 },
-      seedPouch: [...emptyGardenSnapshot(plantedAt).seedPouch, extraSeed],
+      seedPouch: [...gardenSnapshotWithAllPlots(plantedAt).seedPouch, extraSeed],
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
     if (!planted.ok) throw new Error("plant failed");
@@ -269,7 +282,7 @@ describe("fertilizer", () => {
     const plantedAt = 10_000;
     const now = plantedAt + 20_000;
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { fertilizer: 1 },
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
@@ -298,9 +311,9 @@ describe("fertilizer", () => {
       sourceEventId: "test",
     };
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { fertilizer: 1 },
-      seedPouch: [...emptyGardenSnapshot(plantedAt).seedPouch, extraSeed],
+      seedPouch: [...gardenSnapshotWithAllPlots(plantedAt).seedPouch, extraSeed],
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
     if (!planted.ok) throw new Error("plant failed");
@@ -325,9 +338,9 @@ describe("fertilizer", () => {
       sourceEventId: "test",
     };
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { fertilizer: 1 },
-      seedPouch: [...emptyGardenSnapshot(plantedAt).seedPouch, extraSeed],
+      seedPouch: [...gardenSnapshotWithAllPlots(plantedAt).seedPouch, extraSeed],
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
     if (!planted.ok) throw new Error("plant failed");
@@ -348,7 +361,7 @@ describe("fertilizer", () => {
     const plantedAt = 1000;
     const now = plantedAt + 5000;
     let snap = {
-      ...emptyGardenSnapshot(plantedAt),
+      ...gardenSnapshotWithAllPlots(plantedAt),
       items: { watering_can: 1, fertilizer: 1 },
     };
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
@@ -381,22 +394,22 @@ describe("garden spelling", () => {
 
   it("spells a word and persists inventory changes", () => {
     const snap = {
-      ...emptyGardenSnapshot(1000),
-      letters: { C: 1, A: 1, T: 1 },
+      ...gardenSnapshotWithAllPlots(1000),
+      letters: { C: 1, O: 1, W: 1 },
       spellingLevel: 1 as const,
       spelledAtLevel: [],
     };
     setGardenSnapshot(snap);
 
-    const result = trySpellWord(snap, "CAT", 2000);
+    const result = trySpellWord(snap, "COW", 2000);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.word).toBe("CAT");
+    expect(result.word).toBe("COW");
     expect(result.itemUnlocked).toBeUndefined();
     expect(result.snapshot.letters).toEqual({});
     expect(result.snapshot.items.watering_can).toBeUndefined();
-    expect(result.snapshot.spelledAtLevel).toEqual(["CAT"]);
-    expect(result.snapshot.spelledWords).toEqual(["CAT"]);
+    expect(result.snapshot.spelledAtLevel).toEqual(["COW"]);
+    expect(result.snapshot.spelledWords).toEqual(["COW"]);
   });
 
   it("unlocks watering can when Sprout spelling level is complete", () => {
@@ -409,7 +422,7 @@ describe("garden spelling", () => {
     }
 
     const snap = {
-      ...emptyGardenSnapshot(1000),
+      ...gardenSnapshotWithAllPlots(1000),
       letters,
       spellingLevel: 1 as const,
       spelledAtLevel,
@@ -436,7 +449,7 @@ describe("garden spelling", () => {
     }
 
     const snap = {
-      ...emptyGardenSnapshot(1000),
+      ...gardenSnapshotWithAllPlots(1000),
       letters,
       spellingLevel: 2 as const,
       spelledAtLevel,
@@ -455,12 +468,12 @@ describe("garden spelling", () => {
 
   it("rejects words already spelled at this level", () => {
     const snap = {
-      ...emptyGardenSnapshot(1000),
-      letters: { C: 2, A: 2, T: 2 },
-      spelledAtLevel: ["CAT"],
-      spelledWords: ["CAT"],
+      ...gardenSnapshotWithAllPlots(1000),
+      letters: { C: 2, O: 2, W: 2 },
+      spelledAtLevel: ["COW"],
+      spelledWords: ["COW"],
     };
-    const result = trySpellWord(snap, "CAT");
+    const result = trySpellWord(snap, "COW");
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe("already_spelled");
@@ -468,7 +481,7 @@ describe("garden spelling", () => {
 
   it("rejects words not on the current level list", () => {
     const snap = {
-      ...emptyGardenSnapshot(1000),
+      ...gardenSnapshotWithAllPlots(1000),
       letters: { F: 1, I: 1, S: 1, H: 1 },
       spellingLevel: 1 as const,
     };
@@ -505,7 +518,7 @@ describe("garden daily quests", () => {
   it("bumps garden_harvests on successful harvest", () => {
     const plantedAt = 1000;
     const now = plantedAt + GROW_MS_BY_TIER.common + 1;
-    let snap = emptyGardenSnapshot(plantedAt);
+    let snap = gardenSnapshotWithAllPlots(plantedAt);
     const planted = plantSeedAt(snap, 0, 0, plantedAt);
     if (!planted.ok) throw new Error("plant failed");
     const harvested = harvestAt(planted.snapshot, 0, 0, now);
@@ -515,25 +528,25 @@ describe("garden daily quests", () => {
 
   it("bumps garden_words on successful spell", () => {
     const snap = {
-      ...emptyGardenSnapshot(1000),
-      letters: { C: 1, A: 1, T: 1 },
+      ...gardenSnapshotWithAllPlots(1000),
+      letters: { C: 1, O: 1, W: 1 },
       spellingLevel: 1 as const,
       spelledAtLevel: [],
     };
     setGardenSnapshot(snap);
-    const result = trySpellWord(snap, "CAT", 2000);
+    const result = trySpellWord(snap, "COW", 2000);
     expect(result.ok).toBe(true);
     expect(questProgress("garden_words")).toBe(1);
   });
 
   it("does not bump garden_words on failed spell", () => {
     const snap = {
-      ...emptyGardenSnapshot(1000),
+      ...gardenSnapshotWithAllPlots(1000),
       letters: { C: 1 },
       spellingLevel: 1 as const,
       spelledAtLevel: [],
     };
-    const result = trySpellWord(snap, "CAT");
+    const result = trySpellWord(snap, "COW");
     expect(result.ok).toBe(false);
     expect(questProgress("garden_words")).toBe(0);
   });
@@ -585,10 +598,12 @@ describe("garden persistence", () => {
     expect(snap.gridCols).toBe(GARDEN_GRID_COLS);
     expect(snap.plots).toHaveLength(GARDEN_GRID_ROWS * GARDEN_GRID_COLS);
     expect(snap.seedPouch.length).toBe(STARTER_SEED_COUNT);
+    expect(snap.purchasedPlotKeys).toEqual([]);
   });
 
   it("keeps growth progress after leaving and returning", () => {
     const plantedAt = 10_000;
+    setGardenSnapshot(gardenSnapshotWithAllPlots(plantedAt));
     let snap = getGardenSnapshot();
     const plantResult = plantSeedAt(snap, 2, 2, plantedAt);
     if (!plantResult.ok) throw new Error("plant failed");

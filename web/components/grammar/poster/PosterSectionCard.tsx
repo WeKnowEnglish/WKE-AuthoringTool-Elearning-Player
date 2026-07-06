@@ -1,3 +1,6 @@
+"use client";
+
+import { clsx } from "clsx";
 import type { ReactNode } from "react";
 import type { CardPalette } from "@/lib/grammar-builder/theme-tokens";
 import { PosterGlanceRule } from "./PosterGlanceRule";
@@ -35,13 +38,24 @@ export function PosterSectionCard({
 
   return (
     <section
-      className={
-        isShowcase ?
-          "flex h-full flex-col overflow-hidden rounded-2xl border-4 border-kid-ink shadow-[6px_6px_0_0_var(--kid-shadow)]"
-        : "flex flex-col overflow-hidden rounded-2xl border-4 border-kid-ink shadow-[6px_6px_0_0_var(--kid-shadow)]"
-      }
-      style={{ backgroundColor: resolvedPalette.body }}
+      className={clsx(
+        "relative flex flex-col overflow-hidden rounded-2xl border-2 border-black/80 shadow-[4px_4px_0_0_rgba(0,0,0,0.15)]",
+        isShowcase ? "h-full" : "mt-2",
+      )}
+      style={{
+        backgroundColor: resolvedPalette.body,
+        borderColor: resolvedPalette.border,
+      }}
     >
+      {!isShowcase ? (
+        <span
+          className="absolute -left-3.5 -top-3.5 z-10 flex h-9 w-9 items-center justify-center rounded-full border-2 border-black/80 text-lg font-extrabold text-white"
+          style={{ backgroundColor: resolvedPalette.header }}
+          aria-hidden
+        >
+          {number}
+        </span>
+      ) : null}
       <div
         className={
           isShowcase ?
@@ -50,16 +64,14 @@ export function PosterSectionCard({
         }
         style={{ backgroundColor: resolvedPalette.header }}
       >
-        <span
-          className={
-            isShowcase ?
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-sm font-extrabold text-white"
-            : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-lg font-extrabold text-white"
-          }
-          aria-hidden
-        >
-          {number}
-        </span>
+        {isShowcase ? (
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-sm font-extrabold text-white"
+            aria-hidden
+          >
+            {number}
+          </span>
+        ) : null}
         <div className="min-w-0">
           <h2
             className={
@@ -85,8 +97,4 @@ export function PosterSectionCard({
       </div>
     </section>
   );
-}
-
-export function getSectionPillColor(color: PosterSectionColor, palette?: CardPalette) {
-  return palette?.pill ?? SECTION_COLORS[color].pill;
 }

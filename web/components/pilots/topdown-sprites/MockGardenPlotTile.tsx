@@ -1,61 +1,41 @@
 "use client";
 
 import { clsx } from "clsx";
-import { TopDownSprite } from "@/components/topdown/TopDownSprite";
+import { WeedMonsterPlotOverlay } from "@/components/garden/WeedMonsterPlotOverlay";
+import { LetterFruitStackedPlotCell } from "@/components/topdown/LetterFruitStackedPlotCell";
+import { TopDownStackedIndividualTile } from "@/components/topdown/TopDownIndividualTile";
 import { useResolvedSpriteBounds } from "@/components/pilots/topdown-sprites/BoundsOverrideContext";
-import {
-  EMPTY_PLOT_SPRITE,
-  PLANT_STAGE_SPRITES,
-  spriteScaleToWidth,
-  WEED_MONSTER_SPRITE,
-} from "@/lib/topdown";
-import {
-  PREVIEW_PLOT_DISPLAY_PX,
-  type MockPlotState,
-} from "@/lib/topdown/preview-mock-data";
-import type { SpriteRect } from "@/lib/topdown/types";
+import { useLetterFruitSelector } from "@/components/pilots/topdown-sprites/LetterFruitSelectorContext";
+import { GARDEN_MAP_LAYOUT } from "@/lib/garden/garden-map-layout";
+import { getLetterFruitAtlas, letterFruitAssetKey } from "@/lib/topdown/letter-fruit-atlas";
+import { mockPlotStateToLetterFruitStage, mockPlotStateLetterFruitReadyGlow } from "@/lib/topdown/letter-fruit-plot-stage";
+import { getIndividualTile } from "@/lib/topdown/individual-tiles";
+import { mockPlotStateToIndividualTileId } from "@/lib/topdown/plot-to-individual-tile";
+import type { MockPlotState } from "@/lib/topdown/preview-mock-data";
+import type { FarmPlot } from "@/lib/garden/types";
+
+const PREVIEW_WEED_MONSTER_PLOT: FarmPlot = {
+  row: 0,
+  col: 0,
+  seedId: null,
+  seedTier: null,
+  plantedAt: null,
+  growMultiplier: 1,
+  weedMonster: {
+    puzzleId: "preview:weed-monster",
+    words: ["CAT", "DOG", "HEN"],
+    letterTray: ["C", "A", "T", "D", "O", "G", "H", "E", "N"],
+  },
+};
 
 type Props = {
   state: MockPlotState;
+  label?: string;
   waterMode?: boolean;
   fertilizeMode?: boolean;
 };
 
-function assetIdForState(state: MockPlotState): string {
-  switch (state) {
-    case "empty":
-    case "selected_empty":
-      return "soil_tilled";
-    case "sprout":
-      return "plant_sprout";
-    case "growing":
-    case "watered_growing":
-      return "plant_growing";
-    case "ready":
-    case "ready_fertilized":
-    case "ready_weed":
-      return "plant_ready";
-  }
-}
-
-function baseBoundsForState(state: MockPlotState): SpriteRect {
-  switch (state) {
-    case "empty":
-    case "selected_empty":
-      return EMPTY_PLOT_SPRITE;
-    case "sprout":
-      return PLANT_STAGE_SPRITES.sprout;
-    case "growing":
-    case "watered_growing":
-      return PLANT_STAGE_SPRITES.growing;
-    case "ready":
-    case "ready_fertilized":
-    case "ready_weed":
-      return PLANT_STAGE_SPRITES.ready;
-  }
-}
-
-function overlayTextForState(state: MockPlotState): string | null {
+export function mockPlotOverlayText(state: MockPlotState): string | null {
   switch (state) {
     case "sprout":
       return "42s";
@@ -67,8 +47,8 @@ function overlayTextForState(state: MockPlotState): string | null {
       return "Tap!";
     case "ready_fertilized":
       return "🧪 Tap!";
-    case "ready_weed":
-      return "Weed!";
+    case "empty_weed_monster":
+      return "Fight!";
     default:
       return null;
   }
@@ -90,69 +70,76 @@ function ariaLabelForState(state: MockPlotState): string {
       return "Ready crop — preview";
     case "ready_fertilized":
       return "Fertilized ready crop — preview";
-    case "ready_weed":
-      return "Ready crop blocked by weed — preview";
+    case "empty_weed_monster":
+      return "Empty plot blocked by a weed monster — preview";
+    case "locked_grass":
+      return "Locked grass plot — preview";
   }
 }
 
-export function MockGardenPlotTile({ state, waterMode, fertilizeMode }: Props) {
-  const fallback = baseBoundsForState(state);
-  const baseBounds = useResolvedSpriteBounds("garden", assetIdForState(state), fallback);
-  const weedBounds = useResolvedSpriteBounds("garden", "weed_monster", WEED_MONSTER_SPRITE);
-  const plotScale = spriteScaleToWidth(baseBounds, PREVIEW_PLOT_DISPLAY_PX);
-  const overlayText = overlayTextForState(state);
-  const showWeed = state === "ready_weed";
-  const isReady = state === "ready" || state === "ready_fertilized" || state === "ready_weed";
+export function MockGardenPlotTile({ state, label, waterMode, fertilizeMode }: Props) {
+  const { slug, atlasId } = useLetterFruitSelector();
+  const atlas = getLetterFruitAtlas(slug);
+  const tileId = mockPlotStateToIndividualTileId(state);
+  const fruitStage = mockPlotStateToLetterFruitStage(state);
+  const assetId = fruitStage ? letterFruitAssetKey(slug, fruitStage) : null;
+  const bounds = useResolvedSpriteBounds(
+    atlasId,
+    assetId ?? letterFruitAssetKey(slug, "seed"),
+    assetId ? atlas.assets[assetId] : atlas.assets[letterFruitAssetKey(slug, "seed")],
+  );
+  const tile = getIndividualTile(tileId);
+  const showWeedMonster = state === "empty_weed_monster";
+  const isReady = state === "ready" || state === "ready_fertilized";
   const isGrowing = state === "sprout" || state === "growing" || state === "watered_growing";
   const canWater = Boolean(waterMode) && isGrowing && state !== "watered_growing";
   const canFertilize = Boolean(fertilizeMode) && isGrowing;
 
+  if (!tile) {
+    return (
+      <div
+        className="bg-red-900/40"
+        style={{
+          width: GARDEN_MAP_LAYOUT.logicalTilePx,
+          height: GARDEN_MAP_LAYOUT.logicalTilePx,
+        }}
+        title={`Missing tile: ${tileId}`}
+      />
+    );
+  }
+
   return (
     <div
       className={clsx(
-        "relative aspect-square w-full overflow-hidden rounded-lg border-4 border-kid-ink/40",
-        state === "empty" && "bg-[#8b5a2b]/30",
-        state !== "empty" && "bg-[#6b8e23]/25",
-        isReady && !showWeed && "border-emerald-700 bg-emerald-100/60 shadow-[0_0_12px_rgba(16,185,129,0.45)]",
-        showWeed && "border-lime-700 bg-lime-100/60 shadow-[0_0_12px_rgba(132,204,22,0.45)]",
-        canWater && "border-sky-600 bg-sky-100/50 ring-2 ring-sky-400/60",
-        canFertilize && "border-amber-600 bg-amber-100/50 ring-2 ring-amber-400/60",
-        state === "watered_growing" && "border-sky-500/70",
-        state === "ready_fertilized" && "border-amber-600/80",
+        "relative overflow-visible",
+        canWater && "ring-2 ring-sky-400/80 ring-offset-1",
+        canFertilize && "ring-2 ring-amber-400/80 ring-offset-1",
         state === "selected_empty" && "ring-4 ring-[#0f4ecf] ring-offset-2",
+        isReady && "drop-shadow-[0_0_8px_rgba(16,185,129,0.55)]",
+        showWeedMonster && "drop-shadow-[0_0_8px_rgba(132,204,22,0.55)]",
       )}
+      style={{
+        width: GARDEN_MAP_LAYOUT.logicalTilePx,
+        height: GARDEN_MAP_LAYOUT.logicalTilePx,
+      }}
       aria-label={ariaLabelForState(state)}
+      title={label}
     >
-      <div className="absolute inset-0 flex items-center justify-center">
-        <TopDownSprite
-          bounds={baseBounds}
-          scale={plotScale}
-          alt=""
-          className={clsx(isReady && !showWeed && "animate-pulse")}
+      {fruitStage ?
+        <LetterFruitStackedPlotCell
+          stage={fruitStage}
+          bounds={bounds}
+          baseTileId="dirt_tilled"
+          readyGlow={mockPlotStateLetterFruitReadyGlow(state)}
         />
-      </div>
-
-      {showWeed ?
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <TopDownSprite
-            bounds={weedBounds}
-            scale={plotScale * 0.85}
-            alt="Weed monster"
-          />
-        </div>
-      : null}
-
-      {overlayText ?
-        <span
-          className={clsx(
-            "absolute bottom-0.5 left-0 right-0 text-center text-[0.65rem] font-bold sm:text-xs",
-            isReady && !showWeed && "font-extrabold uppercase text-emerald-800",
-            showWeed && "font-extrabold uppercase text-lime-800",
-            !isReady && "text-kid-ink/80",
-          )}
-        >
-          {overlayText}
-        </span>
+      : <TopDownStackedIndividualTile
+          tile={tile}
+          footprint={tile.footprint}
+          layout={GARDEN_MAP_LAYOUT}
+        />
+      }
+      {showWeedMonster ?
+        <WeedMonsterPlotOverlay plot={PREVIEW_WEED_MONSTER_PLOT} now={Date.now()} />
       : null}
     </div>
   );

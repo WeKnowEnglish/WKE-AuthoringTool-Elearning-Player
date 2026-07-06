@@ -1,6 +1,16 @@
 import { z } from "zod";
 import type { BoardMap } from "@/lib/board-game/map/types";
+import { listWkePathTileIds } from "@/lib/topdown/wke-path-tile-presets";
+import { listWkeTerrainTileIds } from "@/lib/topdown/wke-terrain-tile-presets";
 
+const wkePathTileIds = listWkePathTileIds();
+const wkePathTileIdSchema = z.enum(
+  wkePathTileIds as [typeof wkePathTileIds[number], ...typeof wkePathTileIds],
+);
+const wkeTerrainTileIds = listWkeTerrainTileIds();
+const wkeTerrainTileIdSchema = z.enum(
+  wkeTerrainTileIds as [typeof wkeTerrainTileIds[number], ...typeof wkeTerrainTileIds],
+);
 const spaceKindSchema = z.enum(["normal", "bonus", "treasure", "mystery", "jump", "trap"]);
 
 const spaceEffectSchema = z.enum([
@@ -29,6 +39,7 @@ const mapSpaceTypeSchema = z.enum([
 
 const mapThemeSchema = z.enum(["classroom", "jungle", "space", "ocean", "castle"]);
 const layoutTemplateSchema = z.enum(["snake", "spiral", "island"]);
+const pathTerrainDecorationSchema = z.enum(["endpoints-only", "full-legacy"]);
 
 const boardMapSpaceSchema = z.object({
   id: z.number().int().positive(),
@@ -71,6 +82,9 @@ export const boardMapSchema = z
     pathOrder: z.array(z.number().int().positive()).min(2),
     spaces: z.array(boardMapSpaceSchema).min(2),
     connections: z.array(boardConnectionSchema),
+    pathTileOverrides: z.record(z.string(), wkePathTileIdSchema).optional(),
+    terrainTileOverrides: z.record(z.string(), wkeTerrainTileIdSchema).optional(),
+    pathTerrainDecoration: pathTerrainDecorationSchema.optional(),
   })
   .superRefine((map, ctx) => {
     const spaceIds = new Set(map.spaces.map((space) => space.id));

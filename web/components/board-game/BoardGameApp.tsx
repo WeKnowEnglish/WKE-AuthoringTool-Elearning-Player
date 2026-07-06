@@ -122,6 +122,7 @@ export function BoardGameApp() {
           setMode("builder");
         }}
         mapLibraryKey={mapLibraryKey}
+        onMapLibraryChange={() => setMapLibraryKey((key) => key + 1)}
       />
     );
   }

@@ -1,0 +1,53 @@
+{
+  "moduleTitle": "COUNTABLE NOUNS",
+  "moduleSubtitle": "A1 grammar poster",
+  "displayMode": "poster",
+  "difficulty": "A1",
+  "pageLayout": "two-equal-then-full",
+  "cards": [
+    {
+      "id": 1,
+      "title": "COUNTABLE NOUNS — Q/A",
+      "kidTitle": "How many?",
+      "theme": "sky-blue",
+      "layoutType": "three-column",
+      "glanceRule": {
+        "text": "Count things you can count",
+        "highlight": "count"
+      },
+      "subHeader": { "label": "QUESTION", "badge": "❓" },
+      "items": [
+        { "text": "How many books?", "graphic": "📚", "caption": "countable" },
+        { "text": "How many chairs?", "graphic": "🪑", "caption": "countable" },
+        { "text": "How many apples?", "graphic": "🍎", "caption": "countable" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "PLURAL RULES GRID",
+      "kidTitle": "Plural rules",
+      "theme": "tangerine",
+      "layoutType": "four-card-grid",
+      "glanceRule": { "text": "Four common patterns", "highlight": "Four" },
+      "miniCards": [
+        { "title": "Regular -s", "rule": "book, pen", "formula": "+ s", "theme": "sky-blue" },
+        { "title": "Add -es", "rule": "box, bus", "formula": "+ es", "theme": "mint-green" },
+        { "title": "Consonant + y", "rule": "baby, city", "formula": "y → ies", "theme": "sun-gold" },
+        { "title": "Vowel + y", "rule": "boy, toy", "formula": "+ s", "theme": "bubblegum" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "REMEMBER",
+      "kidTitle": "Remember!",
+      "theme": "lavender",
+      "layoutType": "banner",
+      "glanceRule": { "text": "Use How many…?", "highlight": "How many" },
+      "bannerText": "Use How many for countable nouns!",
+      "leftSide": {
+        "title": "Remember!",
+        "content": "Countable nouns have plurals. Ask \"How many books?\""
+      }
+    }
+  ]
+}

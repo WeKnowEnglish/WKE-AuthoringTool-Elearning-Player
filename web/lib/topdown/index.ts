@@ -52,10 +52,16 @@ export {
 export type { WkePathTileId, WkeTerrainTileId } from "@/lib/topdown/wke-sprite-atlas";
 
 export {
+  atlasCropBackgroundStyleScaled,
+  atlasCropLayerStyle,
   getAtlasRect,
+  snapDetectedBoundsToCanonical,
   spriteBackgroundPosition,
+  spriteBackgroundPositionScaled,
   spriteBackgroundSize,
+  spriteBackgroundSizeScaled,
   spriteScaleToWidth,
+  spriteScaleToFit,
 } from "@/lib/topdown/sprite-utils";
 
 export {
@@ -93,3 +99,65 @@ export {
   PREVIEW_PLOT_DISPLAY_PX,
   PREVIEW_TOOL_ICON_PX,
 } from "@/lib/topdown/preview-mock-data";
+
+export {
+  getIndividualTile,
+  INDIVIDUAL_TILE_BY_ID,
+  INDIVIDUAL_TILE_COLUMN_OVERLAP_PX,
+  INDIVIDUAL_TILE_LIP_OVERLAP_PX,
+  INDIVIDUAL_TILE_LOGICAL_PX,
+  INDIVIDUAL_TILES,
+  presetExportName,
+} from "@/lib/topdown/individual-tiles";
+
+export type {
+  IndividualTileDef,
+  TileLayoutPreset,
+  TileRect,
+} from "@/lib/topdown/individual-tiles";
+
+export {
+  clampTileRect,
+  columnStridePx,
+  computeStackedSpritePlacement,
+  formatTilePresetTs,
+  rowStridePx,
+} from "@/lib/topdown/stacked-individual-layout";
+
+export { DIRT_1_PRESET } from "@/lib/topdown/tile-presets/dirt_1";
+export { DIRT_TILLED_PRESET } from "@/lib/topdown/tile-presets/dirt_tilled";
+export { GRASS_1_PRESET } from "@/lib/topdown/tile-presets/grass_1";
+
+export {
+  LETTER_FRUIT_PLOT_STAGES,
+  PILOT_GARDEN_MAPS,
+  PILOT_MAP_LAYOUT,
+  PILOT_MAP_TILES,
+} from "@/lib/topdown/preview-individual-map";
+
+export type {
+  LetterFruitPlotStageId,
+  PilotGardenMapDef,
+  PilotMapTileId,
+} from "@/lib/topdown/preview-individual-map";
+
+export {
+  computeWeedMonsterPlotPlacement,
+  WEED_MONSTER_PLOT_LAYER,
+} from "@/lib/topdown/weed-monster-plot";
+
+export {
+  mockPlotStateToIndividualTileId,
+  plotToIndividualTileId,
+  PLOT_TILE_THRESHOLDS,
+  resolvePlotVisual,
+} from "@/lib/topdown/plot-to-individual-tile";
+
+export type {
+  PlotBaseTileId,
+  PlotTileLookupInput,
+  PlotVisual,
+  PlotVisualOverlays,
+} from "@/lib/topdown/plot-to-individual-tile";
+
+

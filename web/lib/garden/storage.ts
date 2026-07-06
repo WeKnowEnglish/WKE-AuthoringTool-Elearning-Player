@@ -6,10 +6,17 @@ import {
   GARDEN_GRID_COLS,
   GARDEN_GRID_ROWS,
   GARDEN_STORAGE_KEY,
+  LEGACY_GARDEN_STORAGE_KEYS,
 } from "@/lib/garden/defaults";
 import type { FarmPlot, GardenSnapshotV1 } from "@/lib/garden/types";
+import {
+  backfillPlotCropIdentities,
+  normalizeCropLetter,
+  normalizeFruitSlug,
+} from "@/lib/garden/crop-letter";
 import { clampSpellingLevel } from "@/lib/garden/spelling-levels";
-import { reconcileWeeds } from "@/lib/garden/weeds";
+import { normalizePurchasedPlotKeys } from "@/lib/garden/plot-unlock";
+import { normalizeWeedMonsterPuzzle, reconcileWeedMonsters } from "@/lib/garden/weed-monsters";
 
 function normalizePlot(raw: unknown, row: number, col: number): FarmPlot {
   const p = raw && typeof raw === "object" ? (raw as FarmPlot) : null;
@@ -21,9 +28,9 @@ function normalizePlot(raw: unknown, row: number, col: number): FarmPlot {
     typeof p?.fertilizedAt === "number" && Number.isFinite(p.fertilizedAt) ?
       p.fertilizedAt
     : null;
-  const weedWord =
-    typeof p?.weedWord === "string" && p.weedWord.length > 0 ? p.weedWord.toUpperCase() : null;
-  const weedRollDone = p?.weedRollDone === true;
+  const weedMonster = normalizeWeedMonsterPuzzle(p?.weedMonster);
+  const cropLetter = normalizeCropLetter(p?.cropLetter);
+  const fruitSlug = normalizeFruitSlug(p?.fruitSlug);
   return {
     row,
     col,
@@ -35,8 +42,9 @@ function normalizePlot(raw: unknown, row: number, col: number): FarmPlot {
       : null,
     growMultiplier,
     fertilizedAt,
-    weedWord,
-    weedRollDone,
+    weedMonster,
+    cropLetter,
+    fruitSlug,
   };
 }
 
@@ -130,7 +138,7 @@ function normalizeSnapshot(raw: unknown): GardenSnapshotV1 | null {
       Math.max(0, Math.floor(r.totalHarvests))
     : 0;
 
-  return {
+  return backfillPlotCropIdentities({
     schemaVersion: 1,
     lastUpdatedAt: r.lastUpdatedAt,
     gridRows,
@@ -145,7 +153,8 @@ function normalizeSnapshot(raw: unknown): GardenSnapshotV1 | null {
     lastWateringCanUsedAt,
     lastFertilizerUsedAt,
     totalHarvests,
-  };
+    purchasedPlotKeys: normalizePurchasedPlotKeys(r.purchasedPlotKeys, false),
+  });
 }
 
 function readRaw(): GardenSnapshotV1 | null {
@@ -163,18 +172,25 @@ function writeRaw(snapshot: GardenSnapshotV1) {
   localStorage.setItem(GARDEN_STORAGE_KEY, JSON.stringify(snapshot));
 }
 
+function clearLegacyGardenSaves() {
+  for (const key of LEGACY_GARDEN_STORAGE_KEYS) {
+    localStorage.removeItem(key);
+  }
+}
+
 /** Loads garden state from localStorage. Growth is derived from `plantedAt` timestamps. */
 export function getGardenSnapshot(): GardenSnapshotV1 {
   if (typeof window === "undefined") {
     return emptyGardenSnapshot();
   }
+  clearLegacyGardenSaves();
   const existing = readRaw();
   if (!existing) {
     const fresh = emptyGardenSnapshot();
     writeRaw(fresh);
     return fresh;
   }
-  const reconciled = reconcileWeeds(existing);
+  const reconciled = reconcileWeedMonsters(existing);
   if (reconciled !== existing) {
     writeRaw(reconciled);
   }
@@ -182,7 +198,7 @@ export function getGardenSnapshot(): GardenSnapshotV1 {
 }
 
 export function setGardenSnapshot(snapshot: GardenSnapshotV1): GardenSnapshotV1 {
-  const reconciled = reconcileWeeds(snapshot);
+  const reconciled = reconcileWeedMonsters(snapshot);
   writeRaw(reconciled);
   return reconciled;
 }

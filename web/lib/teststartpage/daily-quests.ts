@@ -52,7 +52,7 @@ export const DAILY_QUEST_LABELS: Record<DailyQuestId, string> = {
   chase_wins: "Win the chase game 2 times",
   garden_harvests: "Harvest 5 letters in Language Garden",
   garden_words: "Spell 3 words in Language Garden",
-  garden_weeds_cleared: "Clear 2 garden weeds",
+  garden_weeds_cleared: "Defeat 2 weed monsters",
 };
 
 const DAILY_QUEST_TARGETS: Record<DailyQuestId, number> = {

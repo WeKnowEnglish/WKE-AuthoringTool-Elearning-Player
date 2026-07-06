@@ -1,4 +1,5 @@
 import { resolveGrowthStage } from "@/lib/garden/growth";
+import { isPlotUnlocked } from "@/lib/garden/plot-unlock";
 import { spellingLevelProgress } from "@/lib/garden/spelling-levels";
 import { totalLetterCount } from "@/lib/garden/spelling";
 import type { GardenSnapshotV1 } from "@/lib/garden/types";
@@ -8,7 +9,7 @@ import {
   hasFertilizerUnlocked,
   isPlotTreated,
 } from "@/lib/garden/fertilizer";
-import { plotHasWeed } from "@/lib/garden/weeds";
+import { plotHasWeedMonster } from "@/lib/garden/weed-monsters";
 import { isUnlockAvailable } from "@/lib/progress/unlock-registry";
 
 export type GardenAttentionKind =
@@ -36,22 +37,22 @@ export function getGardenAttentionHint(
 
   const now = opts.now ?? Date.now();
 
-  const hasWeededReadyCrop = snapshot.plots.some((plot) => {
-    if (!plot.seedId || plot.plantedAt == null) return false;
-    if (!plotHasWeed(plot)) return false;
-    return resolveGrowthStage(plot, now, plot.seedTier ?? "common") === "ready";
+  const hasWeedMonsterOnEmptyPlot = snapshot.plots.some((plot) => {
+    if (!isPlotUnlocked(snapshot, plot.row, plot.col)) return false;
+    if (plot.seedId) return false;
+    return plotHasWeedMonster(plot);
   });
-  if (hasWeededReadyCrop) {
+  if (hasWeedMonsterOnEmptyPlot) {
     return {
       kind: "clear_weed",
-      message: "A weed is blocking your harvest!",
-      buttonLabel: "Clear the weed! 🌿",
+      message: "A weed monster is blocking an empty plot!",
+      buttonLabel: "Fight the weed monster! 👾",
     };
   }
 
   const hasReadyCrop = snapshot.plots.some((plot) => {
+    if (!isPlotUnlocked(snapshot, plot.row, plot.col)) return false;
     if (!plot.seedId || plot.plantedAt == null) return false;
-    if (plotHasWeed(plot)) return false;
     return resolveGrowthStage(plot, now, plot.seedTier ?? "common") === "ready";
   });
   if (hasReadyCrop) {
@@ -62,7 +63,9 @@ export function getGardenAttentionHint(
     };
   }
 
-  const hasEmptyPlot = snapshot.plots.some((plot) => !plot.seedId);
+  const hasEmptyPlot = snapshot.plots.some(
+    (plot) => !plot.seedId && isPlotUnlocked(snapshot, plot.row, plot.col),
+  );
   if (snapshot.seedPouch.length > 0 && hasEmptyPlot) {
     return {
       kind: "plant_seeds",
@@ -83,6 +86,7 @@ export function getGardenAttentionHint(
 
   if (hasWateringCanUnlocked(snapshot) && canUseWateringCan(snapshot, now)) {
     const hasGrowingCrop = snapshot.plots.some((plot) => {
+      if (!isPlotUnlocked(snapshot, plot.row, plot.col)) return false;
       if (!plot.seedId || plot.plantedAt == null) return false;
       const stage = resolveGrowthStage(plot, now, plot.seedTier ?? "common");
       return stage === "sprout" || stage === "growing";
@@ -98,6 +102,7 @@ export function getGardenAttentionHint(
 
   if (hasFertilizerUnlocked(snapshot) && canUseFertilizer(snapshot, now)) {
     const hasUntreatedGrowing = snapshot.plots.some((plot) => {
+      if (!isPlotUnlocked(snapshot, plot.row, plot.col)) return false;
       if (!plot.seedId || plot.plantedAt == null) return false;
       if (isPlotTreated(plot)) return false;
       const stage = resolveGrowthStage(plot, now, plot.seedTier ?? "common");

@@ -1,0 +1,107 @@
+{
+  "moduleTitle": "PLURAL SPELLING RULES",
+  "moduleSubtitle": "A2 grammar poster",
+  "displayMode": "poster",
+  "difficulty": "A2",
+  "pageLayout": "four-card-grid-then-split",
+  "cards": [
+    {
+      "id": 1,
+      "title": "REGULAR -S",
+      "kidTitle": "Add -s",
+      "theme": "sky-blue",
+      "layoutType": "full-width",
+      "glanceRule": { "text": "Most nouns + s", "highlight": "+ s" },
+      "items": [
+        { "text": "book → books", "graphic": "📘" },
+        { "text": "pen → pens", "graphic": "✏️" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "ADD -ES",
+      "kidTitle": "Add -es",
+      "theme": "mint-green",
+      "layoutType": "full-width",
+      "glanceRule": { "text": "Ends in -s, -x, -ch", "highlight": "-es" },
+      "items": [
+        { "text": "box → boxes", "graphic": "📦" },
+        { "text": "bus → buses", "graphic": "🚌" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "CONSONANT + Y",
+      "kidTitle": "y → ies",
+      "theme": "sun-gold",
+      "layoutType": "full-width",
+      "glanceRule": { "text": "Consonant + y", "highlight": "ies" },
+      "items": [
+        { "text": "baby → babies", "graphic": "👶" },
+        { "text": "city → cities", "graphic": "🏙️" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "VOWEL + Y",
+      "kidTitle": "Vowel + y",
+      "theme": "bubblegum",
+      "layoutType": "full-width",
+      "glanceRule": { "text": "Vowel + y + s", "highlight": "+ s" },
+      "items": [
+        { "text": "boy → boys", "graphic": "👦" },
+        { "text": "toy → toys", "graphic": "🧸" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "NOUNS ENDING IN -F OR -FE",
+      "kidTitle": "-f / -fe → -ves",
+      "theme": "lavender",
+      "layoutType": "comparison",
+      "glanceRule": {
+        "text": "Most change to -ves",
+        "highlight": "-ves"
+      },
+      "leftColumn": {
+        "title": "Change to -ves",
+        "items": [
+          { "text": "leaf → leaves", "graphic": "🍃" },
+          { "text": "wolf → wolves", "graphic": "🐺" }
+        ]
+      },
+      "rightColumn": {
+        "title": "Exceptions (+s)",
+        "items": [
+          { "text": "roof → roofs", "graphic": "🏠" },
+          { "text": "chief → chiefs", "graphic": "👔" }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "title": "NOUNS ENDING IN -O",
+      "kidTitle": "-o endings",
+      "theme": "lavender",
+      "layoutType": "comparison",
+      "glanceRule": {
+        "text": "Some add -es",
+        "highlight": "-es"
+      },
+      "leftColumn": {
+        "title": "Add -es",
+        "items": [
+          { "text": "hero → heroes", "graphic": "🦸" },
+          { "text": "potato → potatoes", "graphic": "🥔" }
+        ]
+      },
+      "rightColumn": {
+        "title": "Exceptions (+s)",
+        "items": [
+          { "text": "photo → photos", "graphic": "📷" },
+          { "text": "piano → pianos", "graphic": "🎹" }
+        ]
+      }
+    }
+  ]
+}

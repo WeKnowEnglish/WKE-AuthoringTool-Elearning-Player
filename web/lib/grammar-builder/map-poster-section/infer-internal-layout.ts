@@ -15,7 +15,7 @@ export type PosterInternalLayout =
 
 export function inferTwoEqualInternalLayout(card: GrammarCard): PosterInternalLayout {
   const first = card.leftColumn?.items[0];
-  if (first && isLabelOnlyText(first.text)) {
+  if (first?.text && isLabelOnlyText(first.text)) {
     return "two_equal_narrow";
   }
   return "two_equal";

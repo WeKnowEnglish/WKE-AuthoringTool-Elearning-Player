@@ -1,12 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { REWARDS_STORAGE_KEY } from "./progress/rewards";
 import {
   STUDENT_SESSION_EVENTS_STORAGE_KEY,
+  awardPracticeReward,
+  completePracticeSession,
   createAttemptRecordedEvent,
   createRewardAwardedEvent,
   createSessionCompletedEvent,
   createStudentPracticeSessionStartedEvent,
+  exitPracticeSessionIfOpen,
+  isPracticeSessionTerminal,
   readStudentPracticeSessionEvents,
   recordStudentPracticeSessionEvent,
+  startPracticeSession,
+  subscribePracticeEvents,
 } from "./student-session";
 
 function installMemoryStorage() {
@@ -103,6 +110,93 @@ describe("student-session", () => {
       "session_completed",
     ]);
     expect(localStorage.getItem(STUDENT_SESSION_EVENTS_STORAGE_KEY)).toContain("banana");
+  });
+
+  it("notifies subscribePracticeEvents listeners after emit", () => {
+    const seen: string[] = [];
+    const unsubscribe = subscribePracticeEvents((event) => {
+      seen.push(event.type);
+    });
+    startPracticeSession({
+      activityId: "vocab-test",
+      activityKind: "vocabulary_set",
+      source: "student_hub",
+      seed: "notify",
+    });
+    unsubscribe();
+    expect(seen).toEqual(["session_started"]);
+  });
+
+  it("awardPracticeReward skips duplicate reward events", () => {
+    localStorage.setItem(
+      REWARDS_STORAGE_KEY,
+      JSON.stringify({
+        gold: 0,
+        experience: 0,
+        rewardedEventIds: ["dup-evt"],
+        ownedStickerIds: [],
+      }),
+    );
+    const { event, skippedDuplicate } = awardPracticeReward({
+      sessionId: "vocab-test:seed",
+      eventId: "dup-evt",
+      goldDelta: 5,
+      experienceDelta: 3,
+    });
+    expect(skippedDuplicate).toBe(true);
+    expect(event).toBeNull();
+    expect(readStudentPracticeSessionEvents()).toHaveLength(0);
+  });
+
+  it("exitPracticeSessionIfOpen records exited when session started", () => {
+    const started = startPracticeSession({
+      activityId: "vocab-test",
+      activityKind: "vocabulary_set",
+      source: "student_hub",
+      seed: "exit",
+    });
+    const exited = exitPracticeSessionIfOpen({ sessionId: started.sessionId });
+    expect(exited?.result).toBe("exited");
+    expect(isPracticeSessionTerminal(started.sessionId)).toBe(true);
+    expect(readStudentPracticeSessionEvents().map((e) => e.type)).toEqual([
+      "session_started",
+      "session_completed",
+    ]);
+  });
+
+  it("completePracticeSession is idempotent for a terminal session", () => {
+    const started = startPracticeSession({
+      activityId: "vocab-test",
+      activityKind: "vocabulary_set",
+      source: "student_hub",
+      seed: "once",
+    });
+    const first = completePracticeSession({
+      sessionId: started.sessionId,
+      result: "completed",
+      summary: { practiceItemCount: 1 },
+    });
+    const second = completePracticeSession({
+      sessionId: started.sessionId,
+      result: "completed",
+      summary: { practiceItemCount: 1 },
+    });
+    expect(first?.result).toBe("completed");
+    expect(second).toBeNull();
+    expect(
+      readStudentPracticeSessionEvents().filter((e) => e.type === "session_completed"),
+    ).toHaveLength(1);
+  });
+
+  it("starts grammar_poster practice sessions", () => {
+    const started = startPracticeSession({
+      activityId: "short-answers-there-is-a1",
+      activityKind: "grammar_poster",
+      source: "student_hub",
+      seed: "grammar-1",
+    });
+    expect(started.activityKind).toBe("grammar_poster");
+    expect(readStudentPracticeSessionEvents()[0]?.type).toBe("session_started");
   });
 });
 

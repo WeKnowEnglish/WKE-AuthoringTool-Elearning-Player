@@ -38,6 +38,8 @@ function enrichMapClone(map: BoardMap): BoardMap {
     spaces: map.spaces.map((space) => ({ ...space })),
     connections: map.connections.map((connection) => ({ ...connection })),
     pathOrder: [...map.pathOrder],
+    pathTileOverrides: map.pathTileOverrides ? { ...map.pathTileOverrides } : undefined,
+    terrainTileOverrides: map.terrainTileOverrides ? { ...map.terrainTileOverrides } : undefined,
   };
 }
 
@@ -73,7 +75,7 @@ export function updateSpace(map: BoardMap, spaceId: number, patch: SpacePatch): 
 
 export function updateMapMeta(
   map: BoardMap,
-  patch: Partial<Pick<BoardMap, "title" | "theme">>,
+  patch: Partial<Pick<BoardMap, "title" | "theme" | "pathTerrainDecoration">>,
 ): BoardMap {
   return {
     ...map,

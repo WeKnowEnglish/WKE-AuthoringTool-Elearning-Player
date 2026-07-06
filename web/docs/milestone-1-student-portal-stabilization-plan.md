@@ -201,9 +201,10 @@ Minimum metadata:
 
 Milestone 1 implementation target:
 
-- Add the types and a local runtime helper, even if the first version writes only local events or dispatches in-memory callbacks.
-- Wire the vocabulary set overlay as the pilot.
-- Keep existing reward/progress storage intact, but route the pilot completion through the new helper.
+- Types and facade live in [`lib/student-session.ts`](../lib/student-session.ts) (see [Student Practice Session Contract](./student-practice-session-contract.md)).
+- Vocabulary set overlay is the pilot (`VocabularySetOverlay` → `LessonPlayer`).
+- Existing reward/progress storage unchanged; pilot routes completion through the facade.
+- `StudentHubClient` subscribes via `subscribePracticeEvents` for hub refresh.
 
 Deliverables:
 

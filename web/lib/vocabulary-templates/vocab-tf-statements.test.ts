@@ -10,7 +10,7 @@ import { A1_BREAKFAST_FOOD } from "./sets/a1-breakfast-food";
 describe("isClozeDerivedSentence", () => {
   it("detects filled cloze lines from the set", () => {
     expect(isClozeDerivedSentence(A1_BREAKFAST_FOOD, "I like bread with jam.")).toBe(true);
-    expect(isClozeDerivedSentence(A1_BREAKFAST_FOOD, "I peel an orange.")).toBe(true);
+    expect(isClozeDerivedSentence(A1_BREAKFAST_FOOD, "I drink milk with my breakfast.")).toBe(true);
   });
 
   it("allows picture-description T/F lines", () => {
@@ -32,9 +32,9 @@ describe("buildVocabTrueFalseStatement", () => {
   const seed = "tf-content-test";
 
   it("is stable for the same word and seed", () => {
-    const apple = A1_BREAKFAST_FOOD.words.find((w) => w.id === "apple")!;
-    const a = buildVocabTrueFalseStatement(A1_BREAKFAST_FOOD, apple, seed);
-    const b = buildVocabTrueFalseStatement(A1_BREAKFAST_FOOD, apple, seed);
+    const bread = A1_BREAKFAST_FOOD.words.find((w) => w.id === "bread")!;
+    const a = buildVocabTrueFalseStatement(A1_BREAKFAST_FOOD, bread, seed);
+    const b = buildVocabTrueFalseStatement(A1_BREAKFAST_FOOD, bread, seed);
     expect(a).toEqual(b);
   });
 
@@ -57,9 +57,9 @@ describe("buildVocabTrueFalseStatement", () => {
   });
 
   it("uses the target food image and picture truth line", () => {
-    const apple = A1_BREAKFAST_FOOD.words.find((w) => w.id === "apple")!;
-    const built = buildVocabTrueFalseStatement(A1_BREAKFAST_FOOD, apple, seed);
-    expect(built.imageUrl).toBe(apple.imageUrl);
-    expect(built.pictureTruthStatement).toBe("This is an apple.");
+    const bread = A1_BREAKFAST_FOOD.words.find((w) => w.id === "bread")!;
+    const built = buildVocabTrueFalseStatement(A1_BREAKFAST_FOOD, bread, seed);
+    expect(built.imageUrl).toBe(bread.imageUrl);
+    expect(built.pictureTruthStatement).toBe("This is bread.");
   });
 });

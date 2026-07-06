@@ -10,7 +10,17 @@ import {
   studentSoftChromeStore,
 } from "@/lib/soft-chrome-theme";
 
-export function StudentShell({ children }: { children: React.ReactNode }) {
+export function StudentShell({
+  children,
+  wide = false,
+  compact = false,
+}: {
+  children: React.ReactNode;
+  /** Wider main column for grammar infographics and multi-column layouts. */
+  wide?: boolean;
+  /** Tighter vertical padding for dense infographic pages. */
+  compact?: boolean;
+}) {
   const presetId = useSyncExternalStore(
     studentSoftChromeStore.subscribe,
     studentSoftChromeStore.getSnapshot,
@@ -71,7 +81,17 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           <SignOutForm label="Log out" variant="kid" className="!min-h-10" />
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-3xl px-4 py-8">{children}</main>
+      <main
+        className={
+          wide && compact ?
+            "mx-auto w-full max-w-[90rem] px-4 py-4"
+          : wide ?
+            "mx-auto w-full max-w-[90rem] px-4 py-6"
+          : "mx-auto w-full max-w-3xl px-4 py-8"
+        }
+      >
+        {children}
+      </main>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { clsx } from "clsx";
 import { SeamlessMapGrid } from "@/components/pilots/topdown-sprites/SeamlessMapGrid";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { SEAMLESS_MAP_PREVIEWS } from "@/lib/topdown/preview-seamless-maps";
@@ -41,8 +42,8 @@ function MapBlock({ id, showSource = true }: MapBlockProps) {
   );
 }
 
-export function SeamlessMapsSection() {
-  const gardenMap = findMap("garden");
+export function SeamlessMapsSection({ variant = "all" }: { variant?: "all" | "wke-only" }) {
+  const gardenMap = variant === "all" ? findMap("garden") : null;
   const wkePathMap = findMap("wke-path");
   const wkeTerrainMap = findMap("wke-terrain");
 
@@ -53,13 +54,13 @@ export function SeamlessMapsSection() {
           Seamless map previews
         </h2>
         <p className="mt-1 text-sm font-semibold text-kid-ink/75">
-          Two tile sets — custom garden sheet vs WKE Tile Set V2. Tiles use{" "}
-          <code className="rounded bg-kid-ink/10 px-1">fillCell</code> mode for
-          edge-to-edge rendering.
+          {variant === "wke-only" ?
+            "WKE terrain mosaic and path autotile grids. Tiles use fillCell mode for edge-to-edge rendering."
+          : "Two tile sets — custom garden sheet vs WKE Tile Set V2. Tiles use fillCell mode for edge-to-edge rendering."}
         </p>
       </header>
 
-      <div className="grid gap-8 xl:grid-cols-2">
+      <div className={clsx("grid gap-8", variant === "all" && "xl:grid-cols-2")}>
         {gardenMap ?
           <KidPanel className="space-y-3 p-4">
             <p className="text-xs font-extrabold uppercase tracking-wide text-emerald-700">

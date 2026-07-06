@@ -7,7 +7,6 @@ import {
   letterDeficits,
   letterDemandForWords,
   pickWeightedLetter,
-  rollWeightedHarvestLetter,
   targetWordsForHarvest,
 } from "@/lib/garden/harvest-weights";
 
@@ -30,15 +29,15 @@ describe("harvest weights", () => {
       letters: {},
     };
     const weights = buildHarvestWeights(snap);
-    expect(weights.C).toBeGreaterThan(HARVEST_OFF_LEVEL_FLOOR);
-    expect(weights.T).toBeGreaterThan(weights.C);
+    expect(weights.J).toBeGreaterThan(HARVEST_OFF_LEVEL_FLOOR);
+    expect(weights.I).toBeGreaterThan(weights.J);
   });
 
   it("assigns floor weight when no unspelled word uses the letter", () => {
     const snap = {
       ...emptyGardenSnapshot(),
       spellingLevel: 1 as const,
-      spelledAtLevel: ["SIX", "FOX"],
+      spelledAtLevel: ["FOX"],
       letters: {},
     };
     const weights = buildHarvestWeights(snap);
@@ -49,12 +48,14 @@ describe("harvest weights", () => {
     const snap = {
       ...emptyGardenSnapshot(),
       spellingLevel: 1 as const,
-      spelledAtLevel: [] as string[],
-      letters: { C: 1, A: 1 },
+      spelledAtLevel: [
+        "QUIZ", "JUMP", "WEB", "FOX", "KID", "HEN", "VAT", "GAS", "RAT", "BOY", "LIP",
+      ],
+      letters: { C: 1, O: 1 },
     };
     const weights = buildHarvestWeights(snap);
-    expect(weights.T).toBeGreaterThan(weights.C ?? 0);
-    expect(weights.C).toBe(HARVEST_NEED_MULTIPLIER);
+    expect(weights.W).toBeGreaterThan(weights.C ?? 0);
+    expect(weights.W).toBe(HARVEST_NEED_MULTIPLIER);
   });
 
   it("picks deterministically from weights", () => {
@@ -67,20 +68,21 @@ describe("harvest weights", () => {
     const snap = {
       ...emptyGardenSnapshot(),
       spellingLevel: 1 as const,
-      spelledAtLevel: ["DOG"],
-      letters: { D: 1, O: 1, G: 1 },
+      spelledAtLevel: ["COW"],
+      letters: { C: 1, O: 1, W: 1 },
     };
     const targets = targetWordsForHarvest(snap);
-    expect(targets).not.toContain("DOG");
-    const letter = rollWeightedHarvestLetter(snap, () => 0.01);
-    expect(["C", "A", "T"]).toContain(letter);
+    expect(targets).not.toContain("COW");
+    const weights = buildHarvestWeights(snap);
+    const letter = pickWeightedLetter(weights, () => 0.01);
+    expect(targets.some((word) => word.includes(letter))).toBe(true);
   });
 
   it("falls back to next level words when current level is complete", () => {
     const level1 = getLevel1AllSpelledSnapshot();
     const targets = targetWordsForHarvest(level1);
     expect(targets.length).toBeGreaterThan(0);
-    expect(targets).toContain("ANT");
+    expect(targets).toContain("BAT");
   });
 });
 
@@ -89,9 +91,7 @@ function getLevel1AllSpelledSnapshot() {
     ...emptyGardenSnapshot(),
     spellingLevel: 1 as const,
     spelledAtLevel: [
-      "AM", "AT", "BE", "BY", "CAT", "COW", "DOG", "EGG", "FOX", "GUM", "HAT", "HEN",
-      "JAM", "KID", "LIP", "MAN", "NUT", "OAK", "PEN", "QUIZ", "RAT", "RUN", "SIX",
-      "SUN", "TUB", "VAN", "WEB", "YES", "YOU", "ZOO",
+      "QUIZ", "JUMP", "WEB", "FOX", "COW", "KID", "HEN", "VAT", "GAS", "RAT", "BOY", "LIP",
     ],
     letters: {},
   };

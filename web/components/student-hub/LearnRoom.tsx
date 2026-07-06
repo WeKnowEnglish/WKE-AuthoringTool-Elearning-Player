@@ -1,6 +1,7 @@
 "use client";
 
 import NextImage from "next/image";
+import Link from "next/link";
 import { clsx } from "clsx";
 import { useState } from "react";
 import { markExplorationNode } from "@/lib/worlds/exploration";
@@ -106,6 +107,23 @@ export function LearnRoom({
 
       {view === "top" ?
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <li className="sm:col-span-2">
+            <Link
+              href="/grammar"
+              className={clsx(setCardClass, "flex items-center gap-4")}
+              onClick={() => playSfx("tap", muted)}
+            >
+              <span className="text-5xl leading-none" aria-hidden>
+                📘
+              </span>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="text-lg font-bold text-kid-ink">Grammar</p>
+                <p className="mt-1 text-sm font-semibold text-kid-ink/75">
+                  Read grammar posters — There is, nouns, and more.
+                </p>
+              </div>
+            </Link>
+          </li>
           {VOCAB_TOP_MENU.map((entry) => {
             if (entry.kind === "hub") {
               const hubLocked = !isUnlockAvailable("vocab_sets_menu", playerLevel);

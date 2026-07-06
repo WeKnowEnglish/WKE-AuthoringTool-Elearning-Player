@@ -208,8 +208,8 @@ The current pilot at `/grammar/pilot` implements Steps 2–5 (poster/showcase sp
 
 | Rule | Spec | Current pilot |
 |------|------|---------------|
-| Card border | `border-2 border-black/80` + theme border | `border-4 border-kid-ink` |
-| Number badge | Absolute top-left overlap | Inline in header bar |
+| Card border | `border-2 border-black/80` + theme border | ✅ Phase 5d |
+| Number badge | Absolute top-left overlap | ✅ Phase 5d |
 | Theme names | `sky-blue`, `tangerine`, … | `blue`, `orange`, `purple` |
 | Page layout | Declarative `pageLayout` + `layoutType` | ✅ `pageLayout` drives last-card span (`two-equal-then-full`) |
 | Example row | text + graphic + caption (3-col) | sentence + emoji only |
@@ -231,6 +231,18 @@ The current pilot at `/grammar/pilot` implements Steps 2–5 (poster/showcase sp
 | `transformationRow` block | Noun + suffix rows with IPA | ✅ Phase 2d |
 | `goodBadPair` block | Correct vs struck-through bad Q/A | ✅ Phase 2d |
 | **Phase 2 layout engine** | **9/9 `layoutType` values mapped** | ✅ **Complete** |
+| Grammar hub `/grammar` | Student topic index from catalog | ✅ Phase 3a |
+| Poster promotion pipeline | `content/grammar/` + registry + sync tests | ✅ Phase 3b |
+| Live student posters (6 published) | Short answers, nouns, Some and Any A2 | ✅ Phase 3c–3e |
+| Grammar practice in Lesson Player | Hub Practice → overlay → rewards | ✅ Phase 4a–4b |
+| Read-then-quiz (Short answers) | 3 T/F after poster in Practice | ✅ Phase 5b |
+| 8 published posters | Plural spelling + pronunciation A2 | ✅ Phase 5a |
+| JSON-driven layout lab | `/grammar/pilot/layouts` from fixtures | ✅ Phase 5c |
+| Visual spec (theme border + badge) | PosterSectionCard poster variant | ✅ Phase 5d |
+| Hub completion badges | Local session events | ✅ Phase 5e |
+| `grammar` screen type | `grammarPayloadSchema` + `GrammarPosterScreen` | ✅ Phase 4a |
+| `grammar_poster` practice session | Gold/XP + study-care on complete | ✅ Phase 4b |
+| Read vs Practice entry | `/grammar/[slug]` read-only; hub Practice overlay | ✅ Phase 4 |
 | Author link on student poster | Hidden in production | ✅ Dev-only (Step 5) |
 | Layout lab route | Dev-only | ✅ `notFound()` in production |
 | Content/runtime sync | Single source | ✅ `content/grammar/` + sync test vs `docs/examples/` |
@@ -245,7 +257,8 @@ The current pilot at `/grammar/pilot` implements Steps 2–5 (poster/showcase sp
 
 | Mode | Route (planned) | JSON `displayMode` | Purpose |
 |------|-----------------|--------------------|---------|
-| Poster | `/grammar/[slug]`, legacy `/grammar/pilot` → questions slug | `poster` | Child reads one grammar topic |
+| Poster | `/grammar/[slug]`, `/grammar` hub **Read** | `poster` | Child reads one grammar topic |
+| Practice | `/grammar` hub **Practice** → overlay | `poster` (via Lesson Player) | Read poster + earn gold/XP |
 | Showcase | `/grammar/pilot/layouts` | `showcase` | Author/QA views layout enum demos |
 
 ### 8B. Card title rewrite rules

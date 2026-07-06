@@ -77,16 +77,28 @@ import {
   type VocabRunStats,
 } from "@/lib/vocabulary-templates/vocab-run-session";
 import { VocabActivityRewardScreen } from "@/components/lesson/VocabActivityRewardScreen";
+import { GrammarActivityRewardScreen } from "@/components/grammar/lesson/GrammarActivityRewardScreen";
+import { GrammarPosterScreen } from "@/components/grammar/lesson/GrammarPosterScreen";
+import type { GrammarDifficulty } from "@/lib/grammar-builder/schema";
+import {
+  buildGrammarRunStats,
+  computeGrammarPosterRewards,
+  createGrammarRunSession,
+  grammarCompletionEventId,
+  recordGrammarQuizResult,
+  type GrammarRewardBreakdown,
+  type GrammarRunStats,
+} from "@/lib/grammar-templates/grammar-run-session";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import { interactionImageFitClass } from "@/components/lesson/interactions/shared";
 import {
-  createAttemptRecordedEvent,
-  createRewardAwardedEvent,
-  createSessionCompletedEvent,
+  awardPracticeReward,
+  completePracticeSession,
   createStudentPracticeSessionId,
-  createStudentPracticeSessionStartedEvent,
-  recordStudentPracticeSessionEvent,
+  exitPracticeSessionIfOpen,
+  recordAttempt,
+  startPracticeSession,
   type StudentResponseKind,
 } from "@/lib/student-session";
 import { recordVocabularyEvidence } from "@/lib/mastery/vocabulary";
@@ -352,6 +364,15 @@ type Props = {
   onVocabPlayAgain?: () => void;
   /** Hub: refresh gold/XP/quest UI after vocab rewards or quest bumps. */
   onEconomyChange?: () => void;
+  /** Grammar poster practice run (lesson id `grammar-{slug}`). */
+  grammarDifficulty?: GrammarDifficulty;
+  onGrammarFinish?: () => void;
+  grammarFinishLabel?: string;
+  /**
+   * Vocab pilot: parent can call `exitIfOpen` when the student closes mid-run.
+   * Emits `session_completed` with `result: "exited"` (no rewards / no lesson complete).
+   */
+  onPracticeSessionBind?: (api: { exitIfOpen: () => void }) => void;
 };
 
 export function LessonPlayer({
@@ -372,6 +393,10 @@ export function LessonPlayer({
   vocabFinishLabel,
   onVocabPlayAgain,
   onEconomyChange,
+  grammarDifficulty,
+  onGrammarFinish,
+  grammarFinishLabel,
+  onPracticeSessionBind,
 }: Props) {
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -392,18 +417,26 @@ export function LessonPlayer({
   const interactionPassedScreenIdRef = useRef<string | null>(null);
   const playbackRootRef = useRef<HTMLDivElement | null>(null);
   const vocabSessionRef = useRef(createVocabRunSession());
+  const grammarSessionRef = useRef(createGrammarRunSession());
   const studentPracticeSessionIdRef = useRef<string | null>(null);
   const studentPracticeSessionStartedRef = useRef(false);
+  const studentPracticeSessionCompletedRef = useRef(false);
   const screenHadWrongRef = useRef(false);
   const [vocabComplete, setVocabComplete] = useState<{
     stats: VocabRunStats;
     breakdown: VocabRewardBreakdown;
+  } | null>(null);
+  const [grammarComplete, setGrammarComplete] = useState<{
+    stats: GrammarRunStats;
+    breakdown: GrammarRewardBreakdown;
   } | null>(null);
 
   const { muted } = useAudioMuted();
   const isPreview = mode === "preview";
   const isVocabLesson =
     lessonId.startsWith("vocab-") && (vocabPracticeWords?.length ?? 0) > 0;
+  const isGrammarLesson = lessonId.startsWith("grammar-");
+  const grammarSlug = isGrammarLesson ? lessonId.slice("grammar-".length) : null;
   const canvasEdit = isPreview && visualEdit != null;
   const screen = screens[index];
   const parsed: ScreenPayload | null = screen
@@ -419,6 +452,20 @@ export function LessonPlayer({
     }
     return studentPracticeSessionIdRef.current;
   }, [lessonId, runSeed]);
+
+  const exitPracticeSessionFromParent = useCallback(() => {
+    if (isPreview || studentPracticeSessionCompletedRef.current) return;
+    if (!isVocabLesson && !isGrammarLesson) return;
+    const sessionId = studentPracticeSessionIdRef.current;
+    if (!sessionId || !studentPracticeSessionStartedRef.current) return;
+    exitPracticeSessionIfOpen({ sessionId });
+    studentPracticeSessionCompletedRef.current = true;
+  }, [isPreview, isVocabLesson, isGrammarLesson]);
+
+  useEffect(() => {
+    if (!isVocabLesson && !isGrammarLesson || isPreview) return;
+    onPracticeSessionBind?.({ exitIfOpen: exitPracticeSessionFromParent });
+  }, [exitPracticeSessionFromParent, isPreview, isVocabLesson, isGrammarLesson, onPracticeSessionBind]);
 
   const recordCurrentVocabMasteryEvidence = useCallback(
     (input: { success: boolean; firstTry: boolean; attempts: number }) => {
@@ -475,23 +522,42 @@ export function LessonPlayer({
   useEffect(() => {
     studentPracticeSessionIdRef.current = null;
     studentPracticeSessionStartedRef.current = false;
+    studentPracticeSessionCompletedRef.current = false;
   }, [lessonId, runSeed]);
 
   useEffect(() => {
-    if (!isVocabLesson || isPreview || studentPracticeSessionStartedRef.current) return;
-    const event = createStudentPracticeSessionStartedEvent({
-      activityId: lessonId,
-      activityKind: "vocabulary_set",
-      source: "student_hub",
-      seed: runSeed,
-      languageTargets: vocabPracticeWords?.map((word) => word.lemma),
-      durationEstimateSec: 8 * 60,
-      scaffoldingLevel: "medium",
-    });
-    studentPracticeSessionIdRef.current = event.sessionId;
-    studentPracticeSessionStartedRef.current = true;
-    recordStudentPracticeSessionEvent(event);
-  }, [isPreview, isVocabLesson, lessonId, runSeed, vocabPracticeWords]);
+    if (isPreview || studentPracticeSessionStartedRef.current) return;
+
+    if (isVocabLesson) {
+      const event = startPracticeSession({
+        activityId: lessonId,
+        activityKind: "vocabulary_set",
+        source: "student_hub",
+        seed: runSeed,
+        languageTargets: vocabPracticeWords?.map((word) => word.lemma),
+        durationEstimateSec: 8 * 60,
+        scaffoldingLevel: "medium",
+      });
+      studentPracticeSessionIdRef.current = event.sessionId;
+      studentPracticeSessionStartedRef.current = true;
+      studentPracticeSessionCompletedRef.current = false;
+      return;
+    }
+
+    if (isGrammarLesson && grammarSlug) {
+      const event = startPracticeSession({
+        activityId: grammarSlug,
+        activityKind: "grammar_poster",
+        source: "student_hub",
+        seed: runSeed,
+        durationEstimateSec: 5 * 60,
+        scaffoldingLevel: "low",
+      });
+      studentPracticeSessionIdRef.current = event.sessionId;
+      studentPracticeSessionStartedRef.current = true;
+      studentPracticeSessionCompletedRef.current = false;
+    }
+  }, [grammarSlug, isGrammarLesson, isPreview, isVocabLesson, lessonId, runSeed, vocabPracticeWords]);
 
   const quizProgress = useMemo(
     () => getQuizProgressForLessonIndex(screens, index),
@@ -584,6 +650,61 @@ export function LessonPlayer({
     setVocabComplete(null);
   }, []);
 
+  const completeGrammarLesson = useCallback(() => {
+    if (!grammarSlug) return;
+    const stats = buildGrammarRunStats(
+      grammarSessionRef.current,
+      grammarSlug,
+      grammarDifficulty,
+    );
+    const breakdown = computeGrammarPosterRewards(stats);
+    const completionRewardEventId = grammarCompletionEventId(lessonId, runSeed ?? lessonId);
+
+    if (!isPreview) {
+      playSfx("complete", muted);
+      const sessionId = getStudentPracticeSessionId();
+      const { snapshot } = awardPracticeReward({
+        sessionId,
+        eventId: completionRewardEventId,
+        goldDelta: breakdown.totalGold,
+        experienceDelta: breakdown.experienceDelta,
+      });
+      completePracticeSession({
+        sessionId,
+        lessonId,
+        result: "completed",
+        summary: {
+          practiceItemCount: 1 + stats.quizGradedCount,
+          firstTryGraded: stats.quizGradedCount,
+          firstTryCorrect: stats.quizCorrectCount,
+          firstTryAccuracyPercent:
+            stats.quizGradedCount > 0 ?
+              Math.round((stats.quizCorrectCount / stats.quizGradedCount) * 100)
+            : 100,
+          masteredCount: 1,
+          reviewItemIds: [],
+          elapsedMs: stats.elapsedMs,
+          goldAwarded: breakdown.totalGold,
+          experienceAwarded: breakdown.experienceDelta,
+        },
+      });
+      studentPracticeSessionCompletedRef.current = true;
+      setGold(snapshot.gold);
+      setExperience(snapshot.experience);
+      onEconomyChange?.();
+    }
+    setGrammarComplete({ stats, breakdown });
+  }, [
+    grammarDifficulty,
+    grammarSlug,
+    getStudentPracticeSessionId,
+    isPreview,
+    lessonId,
+    muted,
+    onEconomyChange,
+    runSeed,
+  ]);
+
   const completeVocabLesson = useCallback(() => {
     const practiceCount = vocabPracticeWords?.length ?? 0;
     const stats = buildVocabRunStats(vocabSessionRef.current, practiceCount);
@@ -592,39 +713,32 @@ export function LessonPlayer({
     const completionSeed = runSeed?.trim() || lessonId;
     const completionRewardEventId = `${lessonId}:${completionSeed}:complete`;
     if (!isPreview) {
-      markLessonComplete(lessonId);
       playSfx("complete", muted);
-      const snapshot = awardRewards({
+      const sessionId = getStudentPracticeSessionId();
+      const { snapshot } = awardPracticeReward({
+        sessionId,
         eventId: completionRewardEventId,
         goldDelta: completionGold,
         experienceDelta: breakdown.experienceDelta,
       });
       grantGardenSeedForQuiz(completionRewardEventId, { tier: "bonus" });
-      recordStudentPracticeSessionEvent(
-        createRewardAwardedEvent({
-          sessionId: getStudentPracticeSessionId(),
-          eventId: completionRewardEventId,
-          goldDelta: completionGold,
-          experienceDelta: breakdown.experienceDelta,
-        }),
-      );
-      recordStudentPracticeSessionEvent(
-        createSessionCompletedEvent({
-          sessionId: getStudentPracticeSessionId(),
-          result: "completed",
-          summary: {
-            practiceItemCount: stats.practiceWordCount,
-            firstTryGraded: stats.firstTryGraded,
-            firstTryCorrect: stats.firstTryCorrect,
-            firstTryAccuracyPercent: stats.firstTryAccuracyPercent,
-            masteredCount: stats.wordsMastered,
-            reviewItemIds: stats.reviewWordIds,
-            elapsedMs: stats.elapsedMs,
-            goldAwarded: stats.practiceGold + completionGold,
-            experienceAwarded: breakdown.experienceDelta,
-          },
-        }),
-      );
+      completePracticeSession({
+        sessionId,
+        lessonId,
+        result: "completed",
+        summary: {
+          practiceItemCount: stats.practiceWordCount,
+          firstTryGraded: stats.firstTryGraded,
+          firstTryCorrect: stats.firstTryCorrect,
+          firstTryAccuracyPercent: stats.firstTryAccuracyPercent,
+          masteredCount: stats.wordsMastered,
+          reviewItemIds: stats.reviewWordIds,
+          elapsedMs: stats.elapsedMs,
+          goldAwarded: stats.practiceGold + completionGold,
+          experienceAwarded: breakdown.experienceDelta,
+        },
+      });
+      studentPracticeSessionCompletedRef.current = true;
       setGold(snapshot.gold);
       setExperience(snapshot.experience);
       recordVocabSetCompletionDailyQuestProgress();
@@ -650,6 +764,8 @@ export function LessonPlayer({
     } else {
       if (isVocabLesson) {
         completeVocabLesson();
+      } else if (isGrammarLesson) {
+        completeGrammarLesson();
       } else if (!isPreview) {
         markLessonComplete(lessonId);
         playSfx("complete", muted);
@@ -671,7 +787,9 @@ export function LessonPlayer({
     isPreview,
     visualEdit,
     isVocabLesson,
+    isGrammarLesson,
     completeVocabLesson,
+    completeGrammarLesson,
     clearInteractionScreenState,
   ]);
 
@@ -842,6 +960,20 @@ export function LessonPlayer({
         </div>
       );
     }
+    if (isGrammarLesson && grammarComplete) {
+      return (
+        <div className={clsx(immersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
+          <GrammarActivityRewardScreen
+            lessonTitle={lessonTitle}
+            stats={grammarComplete.stats}
+            breakdown={grammarComplete.breakdown}
+            muted={muted}
+            finishLabel={grammarFinishLabel}
+            onFinish={onGrammarFinish}
+          />
+        </div>
+      );
+    }
     return (
       <RewardScreen
         lessonTitle={lessonTitle}
@@ -883,30 +1015,31 @@ export function LessonPlayer({
             Math.max(0, parsed.gold_reward_on_pass)
           : 1;
         const rewardEventId = `${lessonId}:${screen.id}:pass`;
-        const rewardSnapshot = awardRewards({
-          eventId: rewardEventId,
-          goldDelta: perQuestionGold,
-          experienceDelta: 2,
-        });
-        grantGardenSeedForQuiz(rewardEventId);
+        const responseKind = isVocabLesson ? vocabResponseKind(parsed) : "other";
+        let rewardSnapshot = getRewards();
         if (isVocabLesson) {
-          recordStudentPracticeSessionEvent(
-            createAttemptRecordedEvent({
-              sessionId: getStudentPracticeSessionId(),
-              targetId: extractVocabWordId(parsed) ?? screen.id,
-              success: true,
-              responseKind: "other",
-            }),
-          );
-          recordStudentPracticeSessionEvent(
-            createRewardAwardedEvent({
-              sessionId: getStudentPracticeSessionId(),
-              eventId: rewardEventId,
-              goldDelta: perQuestionGold,
-              experienceDelta: 2,
-            }),
-          );
+          const sessionId = getStudentPracticeSessionId();
+          recordAttempt({
+            sessionId,
+            targetId: extractVocabWordId(parsed) ?? screen.id,
+            success: true,
+            responseKind,
+          });
+          const awarded = awardPracticeReward({
+            sessionId,
+            eventId: rewardEventId,
+            goldDelta: perQuestionGold,
+            experienceDelta: 2,
+          });
+          rewardSnapshot = awarded.snapshot;
+        } else {
+          rewardSnapshot = awardRewards({
+            eventId: rewardEventId,
+            goldDelta: perQuestionGold,
+            experienceDelta: 2,
+          });
         }
+        grantGardenSeedForQuiz(rewardEventId);
         setGold(rewardSnapshot.gold);
         setExperience(rewardSnapshot.experience);
         if (isVocabLesson && isVocabGradedInteraction(parsed)) {
@@ -918,6 +1051,13 @@ export function LessonPlayer({
           });
           recordVocabRunPass(vocabSessionRef.current, screenHadWrongRef.current);
           recordVocabPracticeGold(vocabSessionRef.current, perQuestionGold);
+        }
+        if (
+          isGrammarLesson &&
+          parsed?.type === "interaction" &&
+          parsed.subtype === "true_false"
+        ) {
+          recordGrammarQuizResult(grammarSessionRef.current, true);
         }
         if (
           isVocabLesson &&
@@ -948,14 +1088,12 @@ export function LessonPlayer({
       }
       if (!isPreview) {
         if (isVocabLesson) {
-          recordStudentPracticeSessionEvent(
-            createAttemptRecordedEvent({
-              sessionId: getStudentPracticeSessionId(),
-              targetId: extractVocabWordId(parsed) ?? screen.id,
-              success: false,
-              responseKind: "other",
-            }),
-          );
+          recordAttempt({
+            sessionId: getStudentPracticeSessionId(),
+            targetId: extractVocabWordId(parsed) ?? screen.id,
+            success: false,
+            responseKind: vocabResponseKind(parsed),
+          });
         }
         const trackedWords = extractTrackedWords(parsed);
         recordWordInteraction(trackedWords, false);
@@ -1140,6 +1278,17 @@ export function LessonPlayer({
             </div>
           ) : null}
         </div>
+      )}
+
+      {parsed.type === "grammar" && (
+        <GrammarPosterScreen
+          grammarSlug={parsed.grammar_slug}
+          onComplete={() => {
+            playSfx("tap", muted);
+            goNext();
+          }}
+          completeLabel={index === screens.length - 1 ? "Finish" : "Complete"}
+        />
       )}
 
       {parsed.type === "story" &&

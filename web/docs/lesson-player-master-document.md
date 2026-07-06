@@ -216,6 +216,8 @@ Deliverables:
 - Separate teacher-only schemas/helpers from student runtime bundles where practical.
 - Create preview modes for child view, teacher QA view, and generated-data inspection.
 
+**Grammar Module (infographic content type):** Design system, JSON schema, theme tokens, reference image index, and AI prompt recipes live in [`docs/grammar-module/`](./grammar-module/SOURCE_OF_TRUTH_UI_GUIDE.md). Use this as the source of truth when building or AI-generating grammar infographic lessons (alongside Story Builder and Quiz Builder). Student pilot: `/grammar/pilot`.
+
 ### Milestone 6: Parent And Admin Progress
 
 Goal: Progress reporting is meaningful without overwhelming families.
@@ -229,11 +231,11 @@ Deliverables:
 
 ## Next Implementation Priorities
 
-1. Write a short technical RFC for the activity/progress event contract.
+1. Expand `StudentPracticeSessionEvent` from the vocabulary pilot to explore, pet, and course lessons (see [Student Practice Session Contract](./student-practice-session-contract.md)).
 2. Audit production references to `teststartpage` and sort them into keep, rename, or retire.
 3. Decide the fate of the board-game prototype before it grows further.
-4. Add a source-of-truth link from future planning docs back to this file.
-5. Convert one existing vocabulary overlay into the new activity/progress event contract as the pilot.
+4. Wire hint recording when the hint system is redesigned.
+5. Plan Student Tracker sync from the session event shape (deferred).
 
 ## Milestone Detail Documents
 

@@ -10,6 +10,7 @@ import {
   REWARDS_STORAGE_KEY,
   getRewards,
   sellDuplicateStickersKeepOne,
+  spendGold,
 } from "./rewards";
 import { STICKER_LIBRARY } from "./sticker-library";
 
@@ -164,5 +165,38 @@ describe("sellDuplicateStickersKeepOne", () => {
     );
     expect(sellDuplicateStickersKeepOne(() => null)).toBeNull();
     expect(getRewards().ownedStickerIds).toEqual([a, a]);
+  });
+});
+
+describe("spendGold", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    installMemoryRewardsStorage();
+    localStorage.setItem(
+      REWARDS_STORAGE_KEY,
+      JSON.stringify({
+        gold: 100,
+        experience: 0,
+        rewardedEventIds: [],
+        ownedStickerIds: [],
+        quizEnergy: 0,
+        quizStreak: 0,
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("deducts gold when affordable", () => {
+    const next = spendGold(25);
+    expect(next?.gold).toBe(75);
+    expect(getRewards().gold).toBe(75);
+  });
+
+  it("returns null when gold is insufficient", () => {
+    expect(spendGold(200)).toBeNull();
+    expect(getRewards().gold).toBe(100);
   });
 });

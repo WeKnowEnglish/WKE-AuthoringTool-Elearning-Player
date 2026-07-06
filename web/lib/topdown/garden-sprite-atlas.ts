@@ -24,9 +24,9 @@ export const GARDEN_SPRITE_ATLAS = {
     plant_growing: { sx: 260, sy: 280, sw: 220, sh: 220 },
     plant_ready: { sx: 512, sy: 275, sw: 230, sh: 230 },
 
-    item_watering_can: { sx: 18, sy: 538, sw: 210, sh: 210 },
-    item_fertilizer: { sx: 262, sy: 532, sw: 220, sh: 230 },
-    weed_monster: { sx: 505, sy: 528, sw: 235, sh: 235 },
+    item_watering_can: { sx: 74, sy: 738, sw: 244, sh: 200 },
+    item_fertilizer: { sx: 400, sy: 731, sw: 194, sh: 216 },
+    weed_monster: { sx: 663, sy: 687, sw: 267, sh: 274 },
 
     fence_end: { sx: 1290, sy: 292, sw: 195, sh: 210 },
     fence_horizontal: { sx: 1275, sy: 548, sw: 220, sh: 130 },
@@ -141,6 +141,14 @@ export const GARDEN_ITEM_SPRITES: Record<GardenItemId, SpriteFrame> = {
 
 export const EMPTY_PLOT_SPRITE = frame("soil_tilled");
 export const WEED_MONSTER_SPRITE = frame("weed_monster");
+
+export const GARDEN_OVERLAY_PICKER_FRAMES = [
+  GARDEN_ITEM_FRAMES.watering_can,
+  GARDEN_ITEM_FRAMES.fertilizer,
+  WEED_MONSTER_FRAME,
+] as const satisfies readonly SpriteFrameDef[];
+
+export type GardenOverlayPickerFrameId = (typeof GARDEN_OVERLAY_PICKER_FRAMES)[number]["id"];
 
 export const SPRITE_FRAME_CATALOG: readonly SpriteFrameDef[] = [
   GRASS_TILE_FRAMES.plain,

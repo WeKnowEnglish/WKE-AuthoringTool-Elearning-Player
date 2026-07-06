@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PathTileEditorSection } from "@/components/board-game/builder/PathTileEditorSection";
+import { TerrainTileEditorSection } from "@/components/board-game/builder/TerrainTileEditorSection";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import {
@@ -94,6 +96,9 @@ export function SquareEditorPanel({ map, selectedSpaceId, onChange }: Props) {
           {locked ? " · Start/Finish locked" : ""}
         </p>
       </div>
+
+      <PathTileEditorSection map={map} space={selectedSpace} onChange={onChange} />
+      <TerrainTileEditorSection map={map} space={selectedSpace} onChange={onChange} />
 
       <label className="block">
         <span className="text-sm font-semibold text-kid-ink">Label</span>

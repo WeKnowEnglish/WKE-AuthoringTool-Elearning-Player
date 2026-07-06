@@ -810,6 +810,45 @@ export const storyPageSchema = z
         }
       }
     }
+    const outcomeOwner = new Map<string, string>();
+    for (const it of page.items) {
+      if ((it.kind ?? "image") !== "variable") continue;
+      const vc = it.variable_config;
+      if (!vc?.outcome_item_ids?.length) continue;
+      for (const oid of vc.outcome_item_ids) {
+        if (!ids.has(oid)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Story item ${it.id} variable_config references unknown outcome item id: ${oid}`,
+          });
+          return;
+        }
+        if (oid === it.id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Story item ${it.id} variable_config.outcome_item_ids must not include the variable host itself`,
+          });
+          return;
+        }
+        const prev = outcomeOwner.get(oid);
+        if (prev) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Story item ${it.id} variable_config: outcome item ${oid} is already owned by variable host ${prev}`,
+          });
+          return;
+        }
+        outcomeOwner.set(oid, it.id);
+      }
+      const initial = vc.initial_outcome_item_id?.trim();
+      if (initial && !vc.outcome_item_ids.includes(initial)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Story item ${it.id} initial_outcome_item_id must be listed in outcome_item_ids`,
+        });
+        return;
+      }
+    }
     const validateActionAndIdleRefs = (
       sourceLabel: string,
       sequences: StoryActionSequence[] | undefined,
@@ -2899,10 +2938,21 @@ export const interactionPayloadSchema = z.intersection(
   }),
 );
 
+export const grammarPayloadSchema = z
+  .object({
+    type: z.literal("grammar"),
+    grammar_slug: z.string().min(1),
+    mode: z.enum(["read", "read_then_quiz"]).default("read"),
+  })
+  .strict();
+
+export type GrammarPayload = z.infer<typeof grammarPayloadSchema>;
+
 export type ScreenPayload =
   | z.infer<typeof startPayloadSchema>
   | z.infer<typeof storyPayloadSchema>
-  | z.infer<typeof interactionPayloadSchema>;
+  | z.infer<typeof interactionPayloadSchema>
+  | GrammarPayload;
 
 export type StartPayload = z.infer<typeof startPayloadSchema>;
 export type McQuizPayload = z.infer<typeof mcQuizPayloadSchema>;
@@ -2939,6 +2989,10 @@ export function parseScreenPayload(
       }
     }
     const r = interactionPayloadSchema.safeParse(raw);
+    return r.success ? r.data : null;
+  }
+  if (screenType === "grammar") {
+    const r = grammarPayloadSchema.safeParse(raw);
     return r.success ? r.data : null;
   }
   return null;

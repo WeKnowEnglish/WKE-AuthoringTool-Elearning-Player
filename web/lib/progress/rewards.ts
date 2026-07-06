@@ -297,6 +297,19 @@ export function applyTestStartQuizWrongAnswer(): RewardsSnapshot {
   return next;
 }
 
+/** Deduct gold when the player can afford it. Returns null if insufficient. */
+export function spendGold(amount: number): RewardsSnapshot | null {
+  const cost = Math.max(0, Math.floor(amount));
+  const current = getRewards();
+  if (current.gold < cost) return null;
+  const next: RewardsSnapshot = {
+    ...current,
+    gold: current.gold - cost,
+  };
+  writeRewards(next);
+  return next;
+}
+
 export function purchaseSticker(input: { stickerId: string; costGold: number }): RewardsSnapshot | null {
   const cost = Math.max(0, input.costGold);
   const current = getRewards();

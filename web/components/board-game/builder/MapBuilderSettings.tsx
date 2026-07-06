@@ -5,18 +5,32 @@ import { KidPanel } from "@/components/kid-ui/KidPanel";
 import {
   BUILDER_LAYOUTS,
   BUILDER_SPACE_COUNTS,
+  BUILDER_TERRAIN_DECORATIONS,
   BUILDER_THEMES,
 } from "@/lib/board-game/map/library/builder-defaults";
-import type { BoardMap, MapLayoutTemplate, MapThemeId } from "@/lib/board-game/map/types";
+import type {
+  BoardMap,
+  MapLayoutTemplate,
+  MapThemeId,
+  PathTerrainDecoration,
+} from "@/lib/board-game/map/types";
+import { pathTerrainDecorationForMap } from "@/lib/board-game/map/path-terrain-decoration";
 
 type Props = {
   map: BoardMap;
   onTitleChange: (title: string) => void;
   onThemeChange: (theme: MapThemeId) => void;
+  onPathTerrainDecorationChange: (decoration: PathTerrainDecoration) => void;
   onRegenerate: (layoutTemplate: MapLayoutTemplate, boardLength: number) => void;
 };
 
-export function MapBuilderSettings({ map, onTitleChange, onThemeChange, onRegenerate }: Props) {
+export function MapBuilderSettings({
+  map,
+  onTitleChange,
+  onThemeChange,
+  onPathTerrainDecorationChange,
+  onRegenerate,
+}: Props) {
   const boardLength = map.pathOrder.length - 1;
   const [regenLayout, setRegenLayout] = useState(map.layoutTemplate);
   const [regenLength, setRegenLength] = useState(boardLength);
@@ -85,13 +99,37 @@ export function MapBuilderSettings({ map, onTitleChange, onThemeChange, onRegene
         </label>
       </div>
 
+      <label className="mt-4 block max-w-xl">
+        <span className="text-sm font-semibold text-kid-ink">Terrain decoration</span>
+        <select
+          className="mt-1 w-full rounded-lg border-4 border-kid-ink px-3 py-2"
+          value={pathTerrainDecorationForMap(map)}
+          onChange={(event) =>
+            onPathTerrainDecorationChange(event.target.value as PathTerrainDecoration)
+          }
+        >
+          {BUILDER_TERRAIN_DECORATIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs font-semibold text-kid-ink/50">
+          {
+            BUILDER_TERRAIN_DECORATIONS.find(
+              (option) => option.value === pathTerrainDecorationForMap(map),
+            )?.description
+          }
+        </span>
+      </label>
+
       <button
         type="button"
         className="mt-4 rounded-lg border-4 border-kid-ink bg-kid-surface-muted px-4 py-2 text-sm font-bold text-kid-ink hover:bg-kid-surface"
         onClick={() => {
           if (
             !window.confirm(
-              "Regenerate the map? This replaces the layout and clears your square edits.",
+              "Regenerate the map? This replaces the layout and clears your square edits, path tile overrides, and terrain tile overrides.",
             )
           ) {
             return;

@@ -1,4 +1,5 @@
 import type { GardenSpellingLevelId } from "@/lib/garden/spelling-levels";
+import type { LetterFruitSlug } from "@/lib/topdown/letter-fruit-variants";
 
 export type GardenSeedTier = "common" | "bonus";
 
@@ -21,10 +22,26 @@ export type FarmPlot = {
   growMultiplier: number;
   /** Set when fertilizer ripens this crop. */
   fertilizedAt?: number | null;
-  /** Word the student must spell to clear a weed on this plot. */
-  weedWord?: string | null;
-  /** True once we've rolled for a weed this crop cycle (ready transition). */
-  weedRollDone?: boolean;
+  /** Weed monster occupying an empty plot until the player wins the battle. */
+  weedMonster?: WeedMonsterPuzzle | null;
+  /** Uppercase A–Z — rolled at plant, granted at harvest. */
+  cropLetter?: string | null;
+  /** Sprite slug for letter fruit art — stable for the crop's lifetime. */
+  fruitSlug?: LetterFruitSlug | null;
+};
+
+/** Timed 3-word letter-sort battle on an empty plot. */
+export type WeedMonsterPuzzle = {
+  /** Stable id for reward dedupe. */
+  puzzleId: string;
+  /** Three distinct 3-letter words (uppercase). */
+  words: [string, string, string];
+  /** Nine letters shuffled for the tray. */
+  letterTray: string[];
+  /** After a failed attempt, ms epoch before the player can retry. */
+  cooldownUntil?: number;
+  /** Set when the player opens the battle (for server-side timeout check). */
+  battleStartedAt?: number;
 };
 
 export type LetterInventory = Record<string, number>;
@@ -53,4 +70,9 @@ export type GardenSnapshotV1 = {
   lastFertilizerUsedAt?: number;
   /** Lifetime harvest count (for weed onboarding grace). */
   totalHarvests?: number;
+  /**
+   * "row,col" keys for grass cells (row >= 1) the player has bought.
+   * Row 0 dirt plots are always free — never listed here.
+   */
+  purchasedPlotKeys?: string[];
 };

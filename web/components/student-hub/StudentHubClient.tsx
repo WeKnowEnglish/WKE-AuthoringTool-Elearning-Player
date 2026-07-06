@@ -29,6 +29,7 @@ import { newSessionSeed } from "@/lib/student-hub/session-seed";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { markExplorationNode } from "@/lib/worlds/exploration";
 import type { VocabSetId } from "@/lib/vocabulary-templates";
+import { subscribePracticeEvents } from "@/lib/student-session";
 
 type Props = {
   initialCollectionPage?: string | null;
@@ -106,6 +107,18 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
     refreshRewardsUi();
     refreshStudyPendingUi();
   }, [refreshRewardsUi, refreshStudyPendingUi]);
+
+  useEffect(() => {
+    return subscribePracticeEvents((event) => {
+      if (event.type === "reward_awarded" || event.type === "session_completed") {
+        refreshRewardsUi();
+      }
+      if (event.type === "session_completed" && event.result === "completed") {
+        refreshExplorationUi();
+        refreshStudyPendingUi();
+      }
+    });
+  }, [refreshExplorationUi, refreshRewardsUi, refreshStudyPendingUi]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -235,7 +248,7 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
     <div
       className={clsx(
         "flex flex-col bg-[#f7bf4d] text-kid-ink",
-        room === "book" ?
+        room === "book" || room === "garden" ?
           "h-svh max-h-svh overflow-hidden overscroll-none"
         : "min-h-dvh",
       )}
@@ -279,6 +292,8 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
         className={clsx(
           room === "book" ?
             "flex h-0 min-h-0 flex-1 flex-col overflow-hidden px-1 pt-0.5 sm:px-2"
+          : room === "garden" ?
+            "flex min-h-0 flex-1 flex-col overflow-hidden px-1 pt-0 pb-24 md:px-2 md:pt-1"
           : "min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-28",
         )}
       >
@@ -307,7 +322,7 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
           />
         : room === "garden" ?
           gardenUnlocked ?
-            <GardenRoom muted={muted} gardenUiKey={gardenUiKey} />
+            <GardenRoom muted={muted} gardenUiKey={gardenUiKey} onEconomyChange={refreshRewardsUi} />
           : <GardenLockedPanel playerLevel={rewardsUi.level} onGoLearn={goLearn} />
         : room === "learn" ?
           <LearnRoom

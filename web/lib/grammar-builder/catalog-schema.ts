@@ -16,6 +16,8 @@ export const grammarCatalogEntrySchema = z
       .refine((file) => file !== "catalog.json", "catalog.json is not a module file"),
     status: z.enum(["draft", "published"]),
     thumbnailEmoji: z.string().optional(),
+    sortOrder: z.number().int().min(1).optional(),
+    topicGroup: z.string().min(1).optional(),
     legacyRoutes: z.array(z.string()).optional(),
   })
   .strict();

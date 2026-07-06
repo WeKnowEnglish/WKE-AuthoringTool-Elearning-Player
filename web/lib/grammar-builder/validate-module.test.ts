@@ -337,4 +337,46 @@ describe("parseGrammarModule", () => {
     const result = safeParseGrammarModule(raw, { posterContentRules: false });
     expect(result.success).toBe(true);
   });
+
+  it("rejects A1 poster with more than 3 cards", () => {
+    const raw = {
+      moduleTitle: "Test",
+      displayMode: "poster",
+      difficulty: "A1",
+      pageLayout: "two-equal-then-full",
+      cards: [
+        { id: 1, title: "One", kidTitle: "One", theme: "sky-blue", layoutType: "banner", glanceRule: { text: "One" }, bannerText: "One", leftSide: { content: "One" } },
+        { id: 2, title: "Two", kidTitle: "Two", theme: "tangerine", layoutType: "banner", glanceRule: { text: "Two" }, bannerText: "Two", leftSide: { content: "Two" } },
+        { id: 3, title: "Three", kidTitle: "Three", theme: "lavender", layoutType: "banner", glanceRule: { text: "Three" }, bannerText: "Three", leftSide: { content: "Three" } },
+        { id: 4, title: "Four", kidTitle: "Four", theme: "mint-green", layoutType: "banner", glanceRule: { text: "Four" }, bannerText: "Four", leftSide: { content: "Four" } },
+      ],
+    };
+
+    const result = safeParseGrammarModule(raw, { posterContentRules: false });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts A2 poster with up to 6 cards", () => {
+    const cards = Array.from({ length: 6 }, (_, index) => ({
+      id: index + 1,
+      title: `Card ${index + 1}`,
+      kidTitle: `Card ${index + 1}`,
+      theme: "sky-blue" as const,
+      layoutType: "banner" as const,
+      glanceRule: { text: `Rule ${index + 1}` },
+      bannerText: `Banner ${index + 1}`,
+      leftSide: { content: `Content ${index + 1}` },
+    }));
+
+    const raw = {
+      moduleTitle: "Test",
+      displayMode: "poster",
+      difficulty: "A2",
+      pageLayout: "two-equal",
+      cards,
+    };
+
+    const result = safeParseGrammarModule(raw, { posterContentRules: false });
+    expect(result.success).toBe(true);
+  });
 });

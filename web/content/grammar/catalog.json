@@ -9,6 +9,8 @@
       "file": "there-is-there-are-poster-a1.json",
       "status": "published",
       "thumbnailEmoji": "❓",
+      "sortOrder": 1,
+      "topicGroup": "there-is-there-are",
       "legacyRoutes": ["/grammar/pilot"]
     },
     {
@@ -18,7 +20,75 @@
       "difficulty": "A1",
       "file": "there-is-there-are-affirmative-a1.json",
       "status": "published",
-      "thumbnailEmoji": "✅"
+      "thumbnailEmoji": "✅",
+      "sortOrder": 2,
+      "topicGroup": "there-is-there-are"
+    },
+    {
+      "slug": "short-answers-there-is-a1",
+      "title": "Short Answers — There is / There are",
+      "description": "Answer Yes or No with short answers.",
+      "difficulty": "A1",
+      "file": "short-answers-there-is-a1.json",
+      "status": "published",
+      "thumbnailEmoji": "👍",
+      "sortOrder": 3,
+      "topicGroup": "there-is-there-are"
+    },
+    {
+      "slug": "countable-nouns-a1",
+      "title": "Countable Nouns",
+      "description": "Learn how to count nouns and ask How many…?",
+      "difficulty": "A1",
+      "file": "countable-nouns-a1.json",
+      "status": "published",
+      "thumbnailEmoji": "🔢",
+      "sortOrder": 4,
+      "topicGroup": "nouns"
+    },
+    {
+      "slug": "uncountable-nouns-a1",
+      "title": "Uncountable Nouns",
+      "description": "Learn How much…? and good vs bad questions.",
+      "difficulty": "A1",
+      "file": "uncountable-nouns-a1.json",
+      "status": "published",
+      "thumbnailEmoji": "💧",
+      "sortOrder": 5,
+      "topicGroup": "nouns"
+    },
+    {
+      "slug": "some-and-any-a2",
+      "title": "Some and Any",
+      "description": "Learn when to use some and any in sentences.",
+      "difficulty": "A2",
+      "file": "some-and-any-a2.json",
+      "status": "published",
+      "thumbnailEmoji": "🧺",
+      "sortOrder": 6,
+      "topicGroup": "quantifiers"
+    },
+    {
+      "slug": "plural-spelling-a2",
+      "title": "Plural Spelling Rules",
+      "description": "Spelling patterns for plural nouns.",
+      "difficulty": "A2",
+      "file": "plural-spelling-a2.json",
+      "status": "published",
+      "thumbnailEmoji": "✏️",
+      "sortOrder": 7,
+      "topicGroup": "nouns"
+    },
+    {
+      "slug": "plural-pronunciation-a2",
+      "title": "Plural Pronunciation",
+      "description": "How to say /s/, /z/, and /ɪz/ at the end of plurals.",
+      "difficulty": "A2",
+      "file": "plural-pronunciation-a2.json",
+      "status": "published",
+      "thumbnailEmoji": "🔊",
+      "sortOrder": 8,
+      "topicGroup": "nouns"
     }
   ]
 }

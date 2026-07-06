@@ -1,6 +1,7 @@
-import { islandGridBounds, islandGridForPathIndex } from "@/lib/board-game/map/layouts/island";
-import { spiralGridBounds, spiralGridForPathIndex } from "@/lib/board-game/map/layouts/spiral";
-import { snakeColumnsForLength, snakeGridForPathIndex } from "@/lib/board-game/map/layouts/snake";
+import { islandGridBounds } from "@/lib/board-game/map/layouts/island";
+import { spiralGridBounds } from "@/lib/board-game/map/layouts/spiral";
+import { snakeColumnsForLength } from "@/lib/board-game/map/layouts/snake";
+import { gridForPathIndex } from "@/lib/board-game/map/grid-for-path-index";
 import {
   assignSpecialSpaces,
   spaceLabelForPathIndex,
@@ -8,22 +9,6 @@ import {
 } from "@/lib/board-game/map/special-spaces";
 import { finalizeGeneratedMap } from "@/lib/board-game/map/map-enrich";
 import type { BoardMap, BoardMapSpace, GenerateMapOptions, MapLayoutTemplate } from "@/lib/board-game/map/types";
-
-function gridForPathIndex(
-  template: MapLayoutTemplate,
-  pathIndex: number,
-  pathLength: number,
-): { col: number; row: number } {
-  switch (template) {
-    case "spiral":
-      return spiralGridForPathIndex(pathIndex, pathLength);
-    case "island":
-      return islandGridForPathIndex(pathIndex, pathLength);
-    case "snake":
-    default:
-      return snakeGridForPathIndex(pathIndex, snakeColumnsForLength(pathLength));
-  }
-}
 
 export function gridBoundsForMap(map: BoardMap): { cols: number; rows: number } {
   let maxCol = 0;

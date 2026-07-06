@@ -1,8 +1,26 @@
-/** Curated short words for young learners (2–5 letters). */
+/** Curated short words for young learners (2–6 letters). */
 export const KID_SCRABBLE_WORDS = new Set(
   [
     "AM", "AN", "AS", "AT", "BE", "BY", "DO", "GO", "HE", "IF", "IN", "IS", "IT",
     "ME", "MY", "NO", "OF", "ON", "OR", "SO", "TO", "UP", "US", "WE",
+    "ACT", "ADD", "AGE", "AGO", "AID", "AIM", "AIR", "ATE", "BAN", "BAR", "BAY",
+    "BET", "BIB", "BID", "BIN", "BIT", "BOW", "BUG", "BUN", "BUY", "CAB", "COP",
+    "COT", "CUB", "DAB", "DAM", "DEN", "DEW", "DIE", "DIM", "DIN", "DIP", "DOE",
+    "DYE", "FAN", "FEE", "FEW", "FIB", "FIT", "FIX", "FOE", "FRY", "FUR", "GAL",
+    "GEL", "GEM", "GIN", "GOD", "GUY", "GYM", "HAM", "HAY", "HEM", "HEW", "HEX",
+    "HID", "HIP", "HOP", "HUB", "HUE", "HUM", "HUN", "ICY", "INN", "IRE", "IVY",
+    "JAB", "JIG", "JOG", "JOT", "JUG", "KEG", "KEN", "KIN", "LAD", "LAG", "LAX",
+    "LEA", "LIE", "LIT", "LUG", "LYE", "MAW", "MAX", "MID", "MOB", "MOP", "MOW",
+    "NAB", "NAG", "NAV", "NAY", "NIB", "NIL", "NIP", "NIT", "NOD", "NOR", "NUN",
+    "OAF", "OAT", "ODE", "OFT", "ORE", "PEA", "PEG", "PEP", "PER", "PEW", "PIP",
+    "POD", "POP", "POW", "PRO", "PRY", "PUB", "PUG", "PUN", "PUP", "RAP", "RIB",
+    "RID", "RIG", "RIM", "RIP", "ROB", "ROD", "ROT", "RUB", "RUG", "RUM", "RUT",
+    "SAP", "SIP", "SIR", "SOB", "SOD", "SOP", "SOT", "SOW", "SOY", "SPA",
+    "SPY", "SUB", "SUM", "SUN", "SUP", "TAB", "TAD", "TAG", "TAN", "TAP", "TAR",
+    "TAX", "TIC", "TIE", "TIP", "TOE", "TON", "TOP", "TOT", "TOW", "TOY", "TUG",
+    "TUX", "URN", "VAN", "VAT", "VET", "VIA", "VIE", "WAD", "WAG", "WAR", "WAX",
+    "WEB", "WED", "WET", "WIG", "WIN", "WIT", "WOE", "WOK", "WON", "WOO", "YAK",
+    "YAM", "YAP", "YAW", "YEP", "YIN", "YIP", "ZAP", "ZED", "ZEN", "ZIG", "ZIP",
     "AND", "ANT", "ARE", "ARM", "ART", "ASK", "BAD", "BAG", "BAT", "BED", "BEE",
     "BIG", "BOX", "BOY", "BUS", "BUT", "CAN", "CAP", "CAR", "CAT", "COW", "CUP",
     "CUT", "DAD", "DAY", "DID", "DIG", "DOG", "DOT", "DRY", "DUE", "EAR", "EAT",
@@ -54,10 +72,26 @@ export const KID_SCRABBLE_WORDS = new Set(
   ].map((w) => w.toUpperCase()),
 );
 
-export function isValidWord(word: string): boolean {
+export type KidScrabbleWordOptions = {
+  minLength?: number;
+  maxLength?: number;
+};
+
+/** True when the word is in the kid Scrabble list and within optional length bounds. */
+export function isKidScrabbleWord(
+  word: string,
+  options?: KidScrabbleWordOptions,
+): boolean {
   const normalized = word.trim().toUpperCase();
-  if (normalized.length < 2) return false;
+  if (!/^[A-Z]+$/.test(normalized)) return false;
+  const minLength = options?.minLength ?? 2;
+  const maxLength = options?.maxLength ?? 24;
+  if (normalized.length < minLength || normalized.length > maxLength) return false;
   return KID_SCRABBLE_WORDS.has(normalized);
+}
+
+export function isValidWord(word: string): boolean {
+  return isKidScrabbleWord(word);
 }
 
 export function allWordsValid(words: string[]): boolean {

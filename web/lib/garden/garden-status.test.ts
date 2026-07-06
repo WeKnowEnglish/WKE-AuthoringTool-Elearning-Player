@@ -39,26 +39,23 @@ describe("getGardenAttentionHint", () => {
     expect(hint?.kind).toBe("harvest_ready");
   });
 
-  it("prioritizes clearing weeds over plain harvest", () => {
+  it("prioritizes fighting weed monsters over plain harvest", () => {
     const plantedAt = now - GROW_MS_BY_TIER.common - 1;
+    const puzzle = {
+      puzzleId: "weed:0,1:1",
+      words: ["CAT", "DOG", "HEN"] as [string, string, string],
+      letterTray: ["C", "A", "T", "D", "O", "G", "H", "E", "N"],
+    };
     const snap = {
       ...emptyGardenSnapshot(now),
       plots: emptyGardenSnapshot(now).plots.map((p, i) => {
+        if (i === 1) {
+          return { ...p, weedMonster: puzzle };
+        }
         if (i === 0) {
           return {
             ...p,
             seedId: "crop-1",
-            seedTier: "common" as const,
-            plantedAt,
-            growMultiplier: 1,
-            weedWord: "CAT",
-            weedRollDone: true,
-          };
-        }
-        if (i === 1) {
-          return {
-            ...p,
-            seedId: "crop-2",
             seedTier: "common" as const,
             plantedAt,
             growMultiplier: 1,

@@ -1,4 +1,4 @@
-import { getSectionPillColor } from "./PosterSectionCard";
+import { getSectionPillColor } from "./poster-section-colors";
 import type { PosterMiniCard } from "./poster-view-model";
 import type { GrammarPosterVariant } from "./poster-variant";
 

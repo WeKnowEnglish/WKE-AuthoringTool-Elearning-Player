@@ -3,83 +3,29 @@ import { KID_SCRABBLE_WORDS } from "@/lib/scrabble/scrabble-words";
 /** Garden-only words (e.g. Q) — still kid-appropriate ESL vocabulary. */
 export const GARDEN_SPELLING_EXTRA_WORDS = [
   "QUIZ",
-  // Level 5 — five-letter practice words
-  "APPLE",
+  // Level 5
   "BREAD",
   "CHAIR",
-  "CLASS",
-  "DANCE",
-  "EARTH",
   "FRUIT",
-  "GRASS",
-  "HAPPY",
-  "HOUSE",
-  "JUICE",
   "LIGHT",
+  "JUICE",
   "MUSIC",
-  "NIGHT",
   "OCEAN",
-  "PLANT",
-  "QUEEN",
+  "HAPPY",
   "RIVER",
-  "SCHOOL",
-  "SMILE",
-  "STORY",
-  "TABLE",
-  "TIGER",
-  "WATER",
   "WOMAN",
-  "YELLOW",
-  "ZEBRA",
-  // Level 6 — five- and six-letter practice words
-  "ANIMAL",
-  "BANANA",
-  "BRIDGE",
-  "BUTTER",
-  "CAMEL",
-  "CHERRY",
-  "COFFEE",
-  "COUSIN",
+  // Level 6
   "DANCER",
-  "EAGLE",
-  "ELEVEN",
-  "EXTRA",
+  "BRIDGE",
   "FAMILY",
   "FATHER",
-  "FIXED",
-  "FRIEND",
-  "GARDEN",
-  "GENTLE",
-  "HORSE",
   "JACKET",
-  "JUNGLE",
-  "KITTEN",
-  "LEMON",
-  "LETTER",
-  "MIRROR",
-  "MONKEY",
-  "MOTHER",
-  "NATURE",
-  "NUMBER",
-  "ORANGE",
-  "PARROT",
+  "COUSIN",
   "PENCIL",
-  "PEOPLE",
-  "PIANO",
-  "PLANET",
-  "POTATO",
-  "PURPLE",
-  "RABBIT",
-  "SISTER",
-  "SPRING",
   "SQUARE",
-  "SUMMER",
-  "SUNSET",
-  "TEMPLE",
-  "TICKET",
-  "TURTLE",
   "VIOLIN",
   "WINTER",
+  "EXTRA",
   "WIZARD",
 ] as const;
 
@@ -103,8 +49,8 @@ export type GardenSpellingLevel = {
 };
 
 /**
- * Six garden spelling levels. Each list uses every letter A–Z across its words.
- * Words progress from short (2–3 letters) to longer (5–6 letters).
+ * Six garden spelling levels — 12 words each. Each list still uses every letter A–Z
+ * across its words. Later levels reuse few words from earlier lists (QUIZ carries Q).
  */
 export const GARDEN_SPELLING_LEVELS: readonly GardenSpellingLevel[] = [
   {
@@ -114,9 +60,7 @@ export const GARDEN_SPELLING_LEVELS: readonly GardenSpellingLevel[] = [
     minWordLength: 2,
     maxWordLength: 4,
     words: [
-      "AM", "AT", "BE", "BY", "CAT", "COW", "DOG", "EGG", "FOX", "GUM", "HAT", "HEN",
-      "JAM", "KID", "LIP", "MAN", "NUT", "OAK", "PEN", "QUIZ", "RAT", "RUN", "SIX",
-      "SUN", "TUB", "VAN", "WEB", "YES", "YOU", "ZOO",
+      "QUIZ", "JUMP", "WEB", "FOX", "COW", "KID", "HEN", "VAT", "GAS", "RAT", "BOY", "LIP",
     ],
   },
   {
@@ -126,11 +70,7 @@ export const GARDEN_SPELLING_LEVELS: readonly GardenSpellingLevel[] = [
     minWordLength: 3,
     maxWordLength: 4,
     words: [
-      "ANT", "BAT", "BEE", "BUS", "CAN", "COW", "CUP", "DAY", "DIG", "EGG", "FAT",
-      "FOX", "GUM", "HAT", "HEN", "ICE", "JAM", "JET", "KEY", "KID", "KIT", "LEG",
-      "LIP", "LOG", "MAN", "MAP", "MIX", "MUD", "NUT", "OAK", "OWL", "PEN", "PIG",
-      "POT", "QUIZ", "RAT", "RUN", "SIX", "SUN", "TAB", "TEN", "TIP", "TOP", "TUB",
-      "TWO", "VAN", "WAR", "WEB", "WET", "YES", "YOU", "ZOO",
+      "BAT", "NUT", "CUP", "DUCK", "FISH", "GIRL", "HOME", "JUST", "YARD", "WAX", "VAST", "QUIZ",
     ],
   },
   {
@@ -140,14 +80,7 @@ export const GARDEN_SPELLING_LEVELS: readonly GardenSpellingLevel[] = [
     minWordLength: 3,
     maxWordLength: 4,
     words: [
-      "AND", "BOOK", "DARK", "DUCK", "FISH", "FIVE", "FROG", "GAME", "GIRL", "HAND",
-      "HEAD", "HELP", "HIDE", "HILL", "HOME", "HOPE", "JUMP", "JUST", "KEEP", "KIND",
-      "KITE", "KNOW", "LAMP", "LAKE", "LEAF", "LIKE", "LION", "LOOK", "LOVE", "MOON",
-      "MORE", "NAME", "NEST", "NICE", "NOSE", "OPEN", "PARK", "PLAY", "POND", "QUIZ",
-      "RAIN", "READ", "RING", "ROAD", "ROCK", "ROSE", "SAND", "SIX", "SNOW", "SOON",
-      "STAR", "STOP", "SWIM", "TAIL", "TALK", "TREE", "TRIP", "TRUE", "TURN", "VAST",
-      "WALK", "WARM", "WASH", "WAVE", "WILD", "WIND", "WISH", "WOOD", "WORD", "YARD",
-      "ZERO", "ZONE",
+      "BEE", "COOK", "DARK", "FIVE", "FROG", "HOPE", "JET", "LION", "SWIM", "TEXT", "YET", "QUIZ",
     ],
   },
   {
@@ -157,15 +90,7 @@ export const GARDEN_SPELLING_LEVELS: readonly GardenSpellingLevel[] = [
     minWordLength: 4,
     maxWordLength: 4,
     words: [
-      "BOOK", "COOK", "COOL", "DARK", "DUCK", "FISH", "FIVE", "FROG", "GAME", "GIRL",
-      "GOOD", "HAND", "HEAD", "HELP", "HIDE", "HILL", "HOME", "HOPE", "HORN", "HURT",
-      "IDEA", "JUMP", "JUST", "KEEP", "KIND", "KITE", "KNOW", "LAMP", "LAKE", "LEAF",
-      "LIKE", "LION", "LOOK", "LOVE", "MADE", "MOON", "MORE", "NAME", "NEST", "NICE",
-      "NOSE", "OPEN", "PARK", "PLAY", "POND", "PUSH", "QUIZ", "RAIN", "READ", "RING",
-      "ROAD", "ROCK", "ROSE", "SAND", "SHIP", "SHOW", "SING", "SNOW", "SOON",
-      "STAR", "STOP", "SWIM", "TAIL", "TALK", "TEXT", "TREE", "TRIP", "TRUE", "TURN", "VAST",
-      "WALK", "WARM", "WASH", "WAVE", "WILD", "WIND", "WISH", "WOOD", "WORD", "WORK",
-      "YARD", "ZERO", "ZONE",
+      "BOOK", "COOL", "FOUR", "GAME", "HAND", "JUST", "PUSH", "WARM", "VICE", "YARD", "TEXT", "QUIZ",
     ],
   },
   {
@@ -175,14 +100,7 @@ export const GARDEN_SPELLING_LEVELS: readonly GardenSpellingLevel[] = [
     minWordLength: 4,
     maxWordLength: 5,
     words: [
-      "BOOK", "DARK", "DUCK", "FISH", "FIVE", "FROG", "GAME", "HAND", "HELP", "HURT",
-      "JUMP", "KNOW", "LOVE", "MANY", "MOON", "OPEN", "PLAY", "PUSH", "QUIZ", "RAIN",
-      "READ", "RING", "ROAD", "ROCK", "ROSE", "SAND", "SNOW", "STAR", "SWIM",
-      "TALK", "TEXT", "TREE", "TRUE", "WALK", "WARM", "WASH", "WILD", "WISH", "WORD", "WORK",
-      "YARD", "ZERO", "APPLE", "BREAD", "CHAIR", "CLASS", "DANCE", "EARTH", "FRUIT",
-      "GRASS", "HAPPY", "HOUSE", "JUICE", "LIGHT", "MUSIC", "NIGHT", "OCEAN", "PLANT",
-      "QUEEN", "RIVER", "SMILE", "STORY", "TABLE", "TIGER", "WATER", "WOMAN",
-      "ZEBRA",
+      "BREAD", "CHAIR", "FRUIT", "LIGHT", "JUICE", "LAKE", "MUSIC", "WOMAN", "HAPPY", "QUIZ", "RIVER", "TEXT",
     ],
   },
   {
@@ -192,13 +110,7 @@ export const GARDEN_SPELLING_LEVELS: readonly GardenSpellingLevel[] = [
     minWordLength: 5,
     maxWordLength: 6,
     words: [
-      "APPLE", "BANANA", "BRIDGE", "BUTTER", "CAMEL", "CHERRY", "COFFEE", "COUSIN",
-      "DANCER", "EAGLE", "ELEVEN", "EXTRA", "FAMILY", "FATHER", "FIXED", "FRIEND",
-      "GARDEN", "GENTLE", "HORSE", "JACKET", "JUNGLE", "KITTEN", "LEMON", "LETTER",
-      "MIRROR", "MONKEY", "MOTHER", "NATURE", "NUMBER", "ORANGE", "PARROT", "PENCIL",
-      "PEOPLE", "PIANO", "PLANET", "POTATO", "PURPLE", "QUEEN", "RABBIT", "SCHOOL",
-      "SISTER", "SPRING", "SQUARE", "SUMMER", "SUNSET", "TEMPLE", "TICKET", "TIGER",
-      "TURTLE", "VIOLIN", "WINTER", "WIZARD", "YELLOW", "ZEBRA",
+      "DANCER", "BRIDGE", "FAMILY", "FATHER", "JACKET", "COUSIN", "PENCIL", "SQUARE", "VIOLIN", "WINTER", "EXTRA", "WIZARD",
     ],
   },
 ] as const;
@@ -242,6 +154,19 @@ export function isWordInSpellingLevel(
 export function isGardenSpellingWord(word: string): boolean {
   const normalized = word.trim().toUpperCase();
   return normalized.length >= 2 && GARDEN_SPELLING_VOCAB.has(normalized);
+}
+
+/** Kid Scrabble word that fits the student's current spelling level length band. */
+export function isGardenSpellingWordForLevel(
+  word: string,
+  levelId: GardenSpellingLevelId,
+  minLength = 3,
+): boolean {
+  const normalized = word.trim().toUpperCase();
+  if (!/^[A-Z]+$/.test(normalized)) return false;
+  const level = getGardenSpellingLevel(levelId);
+  if (normalized.length < minLength || normalized.length > level.maxWordLength) return false;
+  return GARDEN_SPELLING_VOCAB.has(normalized);
 }
 
 export function missingAlphabetLetters(words: readonly string[]): string[] {

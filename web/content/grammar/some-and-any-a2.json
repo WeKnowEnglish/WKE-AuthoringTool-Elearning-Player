@@ -1,0 +1,175 @@
+{
+  "moduleTitle": "SOME AND ANY",
+  "moduleSubtitle": "A2 grammar poster",
+  "displayMode": "poster",
+  "difficulty": "A2",
+  "pageLayout": "two-by-two-then-full",
+  "cards": [
+    {
+      "id": 1,
+      "title": "SOME — AFFIRMATIVE",
+      "kidTitle": "Some",
+      "kidSubtitle": "Affirmative",
+      "theme": "sky-blue",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "Some = affirmative",
+        "highlight": "Some"
+      },
+      "leftColumn": {
+        "title": "COUNTABLE",
+        "badge": "🧺",
+        "items": [
+          {
+            "text": "There are some apples.",
+            "graphic": "🍎",
+            "highlight": "some"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "UNCOUNTABLE",
+        "badge": "💧",
+        "items": [
+          {
+            "text": "There is some milk.",
+            "graphic": "🥛",
+            "highlight": "some"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "ANY — QUESTIONS",
+      "kidTitle": "Any",
+      "kidSubtitle": "Questions",
+      "theme": "tangerine",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "Any = questions",
+        "highlight": "Any"
+      },
+      "leftColumn": {
+        "title": "COUNTABLE",
+        "badge": "❓",
+        "items": [
+          {
+            "text": "Are there any chairs?",
+            "graphic": "🪑",
+            "highlight": "any"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "UNCOUNTABLE",
+        "badge": "❓",
+        "items": [
+          {
+            "text": "Is there any water?",
+            "graphic": "💧",
+            "highlight": "any"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "SOME — QUESTIONS (OFFERS)",
+      "kidTitle": "Some?",
+      "kidSubtitle": "Offers",
+      "theme": "mint-green",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "Some in offers",
+        "highlight": "Some"
+      },
+      "leftColumn": {
+        "title": "OFFER",
+        "badge": "☕",
+        "items": [
+          {
+            "text": "Would you like some tea?",
+            "graphic": "🍵",
+            "highlight": "some"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "EXAMPLES",
+        "items": [
+          {
+            "text": "Can I have some water?",
+            "graphic": "💧",
+            "highlight": "some"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "title": "ANY — NEGATIVE",
+      "kidTitle": "Any",
+      "kidSubtitle": "Negative",
+      "theme": "sun-gold",
+      "layoutType": "two-equal",
+      "glanceRule": {
+        "text": "Any = negative",
+        "highlight": "Any"
+      },
+      "leftColumn": {
+        "title": "COUNTABLE",
+        "badge": "🚫",
+        "items": [
+          {
+            "text": "There aren't any toys.",
+            "graphic": "🧸",
+            "highlight": "any"
+          }
+        ]
+      },
+      "rightColumn": {
+        "title": "UNCOUNTABLE",
+        "badge": "🚫",
+        "items": [
+          {
+            "text": "There isn't any sugar.",
+            "graphic": "🍬",
+            "highlight": "any"
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "title": "SUMMARY — SOME vs ANY",
+      "kidTitle": "Summary",
+      "theme": "lavender",
+      "layoutType": "summary-grid",
+      "glanceRule": {
+        "text": "Some or Any?",
+        "highlight": "Some or Any"
+      },
+      "summaryGrid": {
+        "columns": [
+          { "label": "SOME" },
+          { "label": "ANY" }
+        ],
+        "rows": [
+          {
+            "label": "Affirmative",
+            "cells": [{ "mark": "check" }, { "mark": "cross" }]
+          },
+          {
+            "label": "Negative",
+            "cells": [{ "mark": "cross" }, { "mark": "check" }]
+          },
+          {
+            "label": "Question",
+            "cells": [{ "mark": "cross" }, { "mark": "check" }]
+          }
+        ]
+      }
+    }
+  ]
+}

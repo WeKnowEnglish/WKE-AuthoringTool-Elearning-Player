@@ -6,6 +6,7 @@ import type {
   MapSpaceEffectType,
   MapSpaceType,
   MapThemeId,
+  PathTerrainDecoration,
 } from "@/lib/board-game/map/types";
 
 export const BUILDER_SPACE_TYPES: { value: MapSpaceType; label: string }[] = [
@@ -36,6 +37,23 @@ export const BUILDER_LAYOUTS: { value: MapLayoutTemplate; label: string }[] = [
 ];
 
 export const BUILDER_SPACE_COUNTS = [12, 20, 30, 40, 60, 80] as const;
+
+export const BUILDER_TERRAIN_DECORATIONS: {
+  value: PathTerrainDecoration;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "endpoints-only",
+    label: "Endpoints only",
+    description: "Plain filler under the path; start and finish get themed tiles.",
+  },
+  {
+    value: "full-legacy",
+    label: "Full legacy pattern",
+    description: "Alternating plain/alt terrain under every path cell (matches old CSS board).",
+  },
+];
 
 export const BUILDER_ICONS = ["⭐", "🎁", "❓", "🐸", "💣", "🌉", "🎲", "⏸️", "💨", "🏁", "✨", "🔥"] as const;
 

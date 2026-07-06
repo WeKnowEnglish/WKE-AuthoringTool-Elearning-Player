@@ -181,3 +181,13 @@ When generating or editing JSON:
 3. Ensure `pageLayout` matches the reference image grid (see [`reference-index.md`](reference-index.md)).
 4. For student posters: set `displayMode: poster`, include `glanceRule` and `kidTitle` on each card, omit `tags`.
 5. Cross-check typography and content caps in [`SOURCE_OF_TRUTH_UI_GUIDE.md`](SOURCE_OF_TRUTH_UI_GUIDE.md) Section 1D and 8.
+
+### Promoting author JSON to a live poster
+
+1. Copy or derive a student variant from `docs/grammar-module/examples/`.
+2. Set `displayMode: "poster"`, appropriate `difficulty`, remove `tags`.
+3. Ensure every card has `kidTitle` and `glanceRule.text`.
+4. Write the file to `content/grammar/<file>.json` and mirror the same bytes under `docs/grammar-module/examples/` for sync tests.
+5. Add a catalog entry in `content/grammar/catalog.json` (`status: "draft"` until QA, then `"published"`).
+6. Register the JSON import in `lib/grammar-builder/poster-module-registry.ts`.
+7. Run `npm run validate:grammar`.

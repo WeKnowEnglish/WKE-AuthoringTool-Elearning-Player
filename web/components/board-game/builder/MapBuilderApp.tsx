@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   BoardLayoutContext,
   useBoardLayoutRegistry,
 } from "@/components/board-game/BoardLayoutContext";
 import { GameBoard } from "@/components/board-game/GameBoard";
 import { MapBuilderSettings } from "@/components/board-game/builder/MapBuilderSettings";
+import { MapTileOverridesPanel } from "@/components/board-game/builder/MapTileOverridesPanel";
+import { downloadMapExport, parseMapImport, prepareImportedMap } from "@/lib/board-game/map/library/export-map";
 import { SquareEditorPanel } from "@/components/board-game/builder/SquareEditorPanel";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { MAP_PRESET_CATALOG, getMapById } from "@/lib/board-game/map/default-maps";
@@ -25,6 +27,8 @@ import {
 } from "@/lib/board-game/map/library/storage";
 import type { BoardMap, MapLayoutTemplate, MapThemeId } from "@/lib/board-game/map/types";
 import { formatMapMeta } from "@/lib/board-game/map/resolve-map";
+import { countPathTileOverrides } from "@/lib/board-game/map/path-tile-overrides";
+import { countTerrainTileOverrides } from "@/lib/board-game/map/terrain-tile-overrides";
 
 type Props = {
   initialMapId?: string | null;
@@ -41,6 +45,9 @@ function MapBuilderInner({ initialMapId, onBack, onUseMap }: Props) {
   const [customMaps, setCustomMaps] = useState(() => listCustomMaps());
 
   const dirty = useMemo(() => isMapDirty(draftMap, savedSnapshot), [draftMap, savedSnapshot]);
+  const pathOverrideCount = useMemo(() => countPathTileOverrides(draftMap), [draftMap]);
+  const terrainOverrideCount = useMemo(() => countTerrainTileOverrides(draftMap), [draftMap]);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialMapId && getMapById(initialMapId)) {
@@ -152,6 +159,29 @@ function MapBuilderInner({ initialMapId, onBack, onUseMap }: Props) {
     setSelectedSpaceId(null);
   }
 
+  function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = typeof reader.result === "string" ? reader.result : "";
+      const result = parseMapImport(raw);
+      if (!result.ok) {
+        showStatus(result.error);
+        return;
+      }
+      if (dirty && !window.confirm("Replace current draft with imported map?")) return;
+      const next = prepareImportedMap(result.map, result.title);
+      setDraftMap(next);
+      setSavedSnapshot(null);
+      setSelectedSpaceId(null);
+      showStatus("Map imported.");
+    };
+    reader.readAsText(file);
+  }
+
   function handleBack() {
     if (dirty && !window.confirm("Leave Map Builder? Unsaved changes will be lost.")) return;
     onBack();
@@ -165,6 +195,12 @@ function MapBuilderInner({ initialMapId, onBack, onUseMap }: Props) {
           <p className="text-lg font-bold text-kid-ink/80">{draftMap.title}</p>
           <p className="text-sm font-semibold text-kid-ink/60">
             {formatMapMeta(draftMap)}
+            {pathOverrideCount > 0 ?
+              ` · ${pathOverrideCount} manual path tile${pathOverrideCount === 1 ? "" : "s"}`
+            : ""}
+            {terrainOverrideCount > 0 ?
+              ` · ${terrainOverrideCount} manual terrain tile${terrainOverrideCount === 1 ? "" : "s"}`
+            : ""}
             {dirty ? " · Unsaved changes" : savedSnapshot ? " · Saved" : ""}
           </p>
           {statusMessage ? (
@@ -172,6 +208,19 @@ function MapBuilderInner({ initialMapId, onBack, onUseMap }: Props) {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <KidButton variant="secondary" onClick={() => importInputRef.current?.click()}>
+            Import
+          </KidButton>
+          <KidButton variant="secondary" onClick={() => downloadMapExport(draftMap)}>
+            Export
+          </KidButton>
           <KidButton variant="secondary" onClick={() => setPreviewMode((value) => !value)}>
             {previewMode ? "Edit mode" : "Preview"}
           </KidButton>
@@ -190,6 +239,7 @@ function MapBuilderInner({ initialMapId, onBack, onUseMap }: Props) {
           <GameBoard
             mode={previewMode ? "preview" : "builder"}
             map={draftMap}
+            useSpriteTiles
             selectedSpaceId={selectedSpaceId}
             onSpaceClick={(spaceId) => setSelectedSpaceId(spaceId)}
           />
@@ -199,7 +249,18 @@ function MapBuilderInner({ initialMapId, onBack, onUseMap }: Props) {
             onThemeChange={(theme) =>
               setDraftMap((current) => updateMapMeta(current, { theme: theme as MapThemeId }))
             }
+            onPathTerrainDecorationChange={(pathTerrainDecoration) =>
+              setDraftMap((current) => updateMapMeta(current, { pathTerrainDecoration }))
+            }
             onRegenerate={handleRegenerate}
+          />
+          <MapTileOverridesPanel
+            map={draftMap}
+            onChange={setDraftMap}
+            onSelectSpaceId={(spaceId) => {
+              setPreviewMode(false);
+              setSelectedSpaceId(spaceId);
+            }}
           />
         </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import {
@@ -61,8 +61,14 @@ export function VocabularySetOverlay({
     VocabularyPracticeRecommendation[]
   >([]);
   const [showAdaptiveDebug, setShowAdaptiveDebug] = useState(false);
+  const exitPracticeSessionRef = useRef<(() => void) | null>(null);
 
   const lessonId = `vocab-${setId}`;
+
+  const exitOpenPracticeSession = () => {
+    exitPracticeSessionRef.current?.();
+    exitPracticeSessionRef.current = null;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +170,7 @@ export function VocabularySetOverlay({
           className="!min-h-9 shrink-0 text-sm"
           onClick={() => {
             playSfx("tap", muted);
+            exitOpenPracticeSession();
             onClose();
           }}
         >
@@ -192,7 +199,11 @@ export function VocabularySetOverlay({
               vocabWordsById={vocabWordsById}
               vocabLearnPhraseTheme={def.learnPhraseTheme ?? "default"}
               vocabPracticeWords={vocabPracticeWords}
+              onPracticeSessionBind={(api) => {
+                exitPracticeSessionRef.current = api.exitIfOpen;
+              }}
               onVocabFinish={() => {
+                exitPracticeSessionRef.current = null;
                 onActivityComplete?.();
                 onClose();
               }}

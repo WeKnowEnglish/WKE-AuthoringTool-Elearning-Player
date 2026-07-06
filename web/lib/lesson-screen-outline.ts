@@ -19,6 +19,7 @@ function screenOutlineBase(screen: { screen_type: string; payload: unknown }): s
       : `${screen.screen_type} (invalid)`;
   }
   if (p.type === "start") return "Start";
+  if (p.type === "grammar") return `Grammar · ${p.grammar_slug}`;
   if (p.type === "story") {
     const pages = getNormalizedStoryPages(p);
     const first = pages[0];

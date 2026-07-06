@@ -11,6 +11,23 @@ describe("garden spelling levels", () => {
     expect(GARDEN_SPELLING_LEVELS.map((l) => l.id)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
+  it("each level has exactly 12 words", () => {
+    for (const level of GARDEN_SPELLING_LEVELS) {
+      expect(level.words).toHaveLength(12);
+    }
+  });
+
+  it("consecutive levels share at most two words", () => {
+    for (let i = 1; i < GARDEN_SPELLING_LEVELS.length; i++) {
+      const prev = new Set(GARDEN_SPELLING_LEVELS[i - 1]!.words);
+      const overlap = GARDEN_SPELLING_LEVELS[i]!.words.filter((w) => prev.has(w));
+      expect(
+        overlap.length,
+        `levels ${i} and ${i + 1} overlap: ${overlap.join(", ")}`,
+      ).toBeLessThanOrEqual(2);
+    }
+  });
+
   it("each level uses every letter A–Z across its word list", () => {
     for (const level of GARDEN_SPELLING_LEVELS) {
       const missing = missingAlphabetLetters(level.words);

@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { MapPreviewCard } from "@/components/board-game/MapPreviewCard";
 import { QuestionEditor } from "@/components/board-game/QuestionEditor";
+import { downloadMapExport, parseMapImport, prepareImportedMap } from "@/lib/board-game/map/library/export-map";
+import { saveCustomMap } from "@/lib/board-game/map/library/storage";
 import { MAX_PLAYERS, MIN_PLAYERS, PAWN_COLORS } from "@/lib/board-game/constants";
 import { MAP_PRESET_CATALOG, defaultMapIdForPathStyle } from "@/lib/board-game/map/default-maps";
 import { formatMapMeta, resolveMapForSetup } from "@/lib/board-game/map/resolve-map";
@@ -20,6 +23,7 @@ type Props = {
   onOpenBuilder: () => void;
   onEditMap?: (mapId: string) => void;
   mapLibraryKey?: number;
+  onMapLibraryChange?: () => void;
 };
 
 export function BoardGameSetup({
@@ -30,8 +34,11 @@ export function BoardGameSetup({
   onOpenBuilder,
   onEditMap,
   mapLibraryKey = 0,
+  onMapLibraryChange,
 }: Props) {
   const [customMaps, setCustomMaps] = useState<CustomMapRecord[]>([]);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const namedPlayers = setup.players.filter((player) => player.name.trim().length > 0);
   const canStart = namedPlayers.length >= MIN_PLAYERS && setup.questions.length > 0;
   const activeMapId = setup.mapId ?? defaultMapIdForPathStyle(setup.boardPathStyle);
@@ -41,6 +48,42 @@ export function BoardGameSetup({
   useEffect(() => {
     setCustomMaps(listCustomMaps());
   }, [mapLibraryKey]);
+
+  function showImportMessage(message: string) {
+    setImportMessage(message);
+    window.setTimeout(() => setImportMessage(null), 2500);
+  }
+
+  function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = typeof reader.result === "string" ? reader.result : "";
+      const result = parseMapImport(raw);
+      if (!result.ok) {
+        showImportMessage(result.error);
+        return;
+      }
+      const prepared = prepareImportedMap(result.map, result.title);
+      const saved = saveCustomMap({
+        id: prepared.id,
+        title: prepared.title,
+        map: prepared,
+      });
+      onChange({
+        ...setup,
+        mapId: saved.id,
+        map: undefined,
+        boardPathStyle: setup.boardPathStyle,
+      });
+      onMapLibraryChange?.();
+      showImportMessage(`Imported "${saved.title}".`);
+    };
+    reader.readAsText(file);
+  }
 
   function updatePlayerCount(count: number) {
     const playerCount = Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, count));
@@ -147,7 +190,20 @@ export function BoardGameSetup({
             <KidButton variant="secondary" onClick={onOpenBuilder}>
               Map Builder
             </KidButton>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <KidButton variant="secondary" onClick={() => importInputRef.current?.click()}>
+              Import map
+            </KidButton>
           </div>
+          {importMessage ?
+            <p className="mt-2 text-sm font-bold text-kid-accent">{importMessage}</p>
+          : null}
 
           <div className="mt-4 space-y-2">
             <p className="text-sm font-bold uppercase tracking-wide text-kid-ink/50">Built-in maps</p>
@@ -191,9 +247,28 @@ export function BoardGameSetup({
                     })
                   }
                   secondaryAction={
-                    onEditMap ?
-                      { label: "Edit", onClick: () => onEditMap(entry.id) }
-                    : undefined
+                    <>
+                      {onEditMap ?
+                        <KidButton
+                          variant="secondary"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onEditMap(entry.id);
+                          }}
+                        >
+                          Edit
+                        </KidButton>
+                      : null}
+                      <KidButton
+                        variant="secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          downloadMapExport(entry.map, entry.title);
+                        }}
+                      >
+                        Export
+                      </KidButton>
+                    </>
                   }
                 />
               ))
@@ -201,6 +276,8 @@ export function BoardGameSetup({
           </div>
         </KidPanel>
       </div>
+
+      <MapPreviewCard map={activeMap} />
 
       <QuestionEditor
         questions={setup.questions}
@@ -243,7 +320,7 @@ function MapPickerRow({
   description: string;
   selected: boolean;
   onSelect: () => void;
-  secondaryAction?: { label: string; onClick: () => void };
+  secondaryAction?: ReactNode;
 }) {
   return (
     <div
@@ -276,17 +353,15 @@ function MapPickerRow({
           aria-hidden
         />
       </div>
-      {secondaryAction ? (
-        <KidButton
-          variant="secondary"
-          onClick={(event) => {
-            event.stopPropagation();
-            secondaryAction.onClick();
-          }}
+      {secondaryAction ?
+        <div
+          className="flex flex-wrap gap-2"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
         >
-          {secondaryAction.label}
-        </KidButton>
-      ) : null}
+          {secondaryAction}
+        </div>
+      : null}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { getSectionPillColor } from "./PosterSectionCard";
+import { getSectionPillColor } from "./poster-section-colors";
 import { PosterExampleRow } from "./PosterExampleRow";
 import { PosterSubHeader } from "./PosterSubHeader";
 import { PosterTransformationRow } from "./PosterTransformationRow";

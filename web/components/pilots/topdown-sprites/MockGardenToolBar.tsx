@@ -35,6 +35,7 @@ export function MockGardenToolBar({
             <TopDownSprite
               bounds={GARDEN_ITEM_SPRITES.watering_can}
               scale={spriteScaleToWidth(GARDEN_ITEM_SPRITES.watering_can, PREVIEW_TOOL_ICON_PX)}
+              knockOutGutter
               alt=""
             />
             {waterMode ? "Watering…" : "Water"}
@@ -53,6 +54,7 @@ export function MockGardenToolBar({
             <TopDownSprite
               bounds={GARDEN_ITEM_SPRITES.fertilizer}
               scale={spriteScaleToWidth(GARDEN_ITEM_SPRITES.fertilizer, PREVIEW_TOOL_ICON_PX)}
+              knockOutGutter
               alt=""
             />
             {fertilizeMode ? "Fertilizing…" : "Fertilize"}

@@ -1,6 +1,5 @@
 import { getSpaceAt } from "@/lib/board-game/board-spaces";
-import { mapToRuntimeSpaces } from "@/lib/board-game/map/map-to-runtime";
-import { boardLengthForSetup, resolveMapForSetup } from "@/lib/board-game/map/resolve-map";
+import { boardLengthForSetup } from "@/lib/board-game/map/resolve-map";
 import { pickQuestion } from "@/lib/board-game/question-utils";
 import type {
   BoardSpaceMeta,
@@ -37,10 +36,7 @@ export function createInitialRuntime(
 }
 
 export function initRuntimeForSetup(setup: GameSetup, _random?: () => number): GameRuntime {
-  const map = resolveMapForSetup(setup);
-  const boardSpaces =
-    setup.enableLuckySpaces === false ? [] : mapToRuntimeSpaces(map);
-  return createInitialRuntime(setup.players, { boardSpaces });
+  return createInitialRuntime(setup.players, { boardSpaces: [] });
 }
 
 export function restartGame(setup: GameSetup, random?: () => number): GameRuntime {

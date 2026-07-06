@@ -1,12 +1,13 @@
 "use client";
 
-import { clsx } from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GardenEarnSeedsButton } from "@/components/garden/GardenEarnSeedsButton";
+import { GardenEarnSeedsOverlay } from "@/components/garden/GardenEarnSeedsOverlay";
 import { GardenFarmGrid } from "@/components/garden/GardenFarmGrid";
 import { GardenHud } from "@/components/garden/GardenHud";
+import { GardenSideTools } from "@/components/garden/GardenSideTools";
 import { GardenSpellOverlay } from "@/components/garden/GardenSpellOverlay";
-import { GardenWeedOverlay } from "@/components/garden/GardenWeedOverlay";
-import { KidButton } from "@/components/kid-ui/KidButton";
+import { GardenWeedBattleOverlay } from "@/components/garden/GardenWeedBattleOverlay";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
 import {
@@ -15,13 +16,20 @@ import {
   getGardenSnapshot,
   harvestAt,
   plantSeedAt,
+  purchaseGrassPlotAt,
+  recycleLetters,
   resolveGrowthStage,
   useGardenGrowthTicker,
-  plotHasWeed,
+  isEarnSeedsUnlocked,
+  startWeedMonsterBattle,
   type FarmPlot,
   type GardenSnapshotV1,
+  type LetterInventory,
+  type RecycleLettersResult,
 } from "@/lib/garden";
 import { totalLetterCount } from "@/lib/garden/spelling";
+import { isGrassCell, isPlotUnlocked, nextGrassPlotCost } from "@/lib/garden/plot-unlock";
+import { getRewards } from "@/lib/progress/rewards";
 import {
   canUseFertilizer,
   formatFertilizerCooldown,
@@ -34,11 +42,17 @@ import {
   hasWateringCanUnlocked,
   wateringCanCooldownRemainingMs,
 } from "@/lib/garden/watering-can";
+import {
+  formatWeedMonsterCooldown,
+  isWeedMonsterOnCooldown,
+  weedMonsterCooldownRemainingMs,
+} from "@/lib/garden/weed-battle";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 
 type Props = {
   muted: boolean;
   gardenUiKey: number;
+  onEconomyChange?: () => void;
 };
 
 type GardenToolMode = "none" | "water" | "fertilize";
@@ -50,7 +64,7 @@ function seedEarnedMessage(gained: number): string {
   return `You earned ${gained} new seeds! Tap an empty plot to plant one.`;
 }
 
-export function GardenRoom({ muted, gardenUiKey }: Props) {
+export function GardenRoom({ muted, gardenUiKey, onEconomyChange }: Props) {
   const hydrated = useClientHydrated();
   const [snapshot, setSnapshot] = useState<GardenSnapshotV1 | null>(null);
   const [now, setNow] = useState(0);
@@ -61,10 +75,10 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
     "Tap an empty plot to plant a seed. Crops keep growing when you leave!",
   );
   const [spellOpen, setSpellOpen] = useState(false);
-  const [weedOverlay, setWeedOverlay] = useState<{ row: number; col: number; weedWord: string } | null>(
-    null,
-  );
+  const [earnSeedsOpen, setEarnSeedsOpen] = useState(false);
+  const [weedBattle, setWeedBattle] = useState<{ row: number; col: number } | null>(null);
   const [toolMode, setToolMode] = useState<GardenToolMode>("none");
+  const [gold, setGold] = useState(0);
   const lastSeedCountRef = useRef<number | null>(null);
 
   const applySnapshot = useCallback(
@@ -90,13 +104,15 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
   useEffect(() => {
     if (!hydrated) return;
     applySnapshot(getGardenSnapshot(), { announceNewSeeds: true });
+    setGold(getRewards().gold);
   }, [hydrated, gardenUiKey, applySnapshot]);
 
   const refreshGarden = useCallback(() => {
     applySnapshot(getGardenSnapshot());
+    setGold(getRewards().gold);
   }, [applySnapshot]);
 
-  useGardenGrowthTicker(hydrated && !spellOpen && !weedOverlay, refreshGarden);
+  useGardenGrowthTicker(hydrated && !spellOpen && !earnSeedsOpen && !weedBattle, refreshGarden);
 
   const displayNow = now || Date.now();
   const wateringCanUnlocked = snapshot ? hasWateringCanUnlocked(snapshot) : false;
@@ -140,6 +156,12 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
     playSfx("tap", muted);
     setSelectedPlot({ row: plot.row, col: plot.col });
 
+    if (!isPlotUnlocked(snapshot, plot.row, plot.col)) {
+      setStatusLine("This plot is locked. Tap the grass tile to buy it first.");
+      playSfx("wrong", muted);
+      return;
+    }
+
     const tier = plot.seedTier ?? "common";
     const stage = resolveGrowthStage(plot, Date.now(), tier);
 
@@ -154,6 +176,7 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
             plot_ready: "This crop is already ready to harvest!",
             already_treated: "This crop was already treated.",
             plot_missing: "Could not find that plot.",
+            plot_locked: "This plot is locked. Buy the grass tile first.",
           };
           setStatusLine(messages[result.reason]);
           playSfx("wrong", muted);
@@ -181,6 +204,7 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
             plot_ready: "This crop is already ready to harvest!",
             already_treated: "This crop was already treated.",
             plot_missing: "Could not find that plot.",
+            plot_locked: "This plot is locked. Buy the grass tile first.",
           };
           setStatusLine(messages[result.reason]);
           playSfx("wrong", muted);
@@ -198,12 +222,50 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
     }
 
     if (stage === "empty") {
+      if (plot.weedMonster) {
+        setToolMode("none");
+
+        if (isWeedMonsterOnCooldown(plot, displayNow)) {
+          const remaining = weedMonsterCooldownRemainingMs(plot, displayNow);
+          setStatusLine(
+            `The weed monster is catching its breath. Try again in ${formatWeedMonsterCooldown(remaining)}.`,
+          );
+          playSfx("wrong", muted);
+          return;
+        }
+
+        const started = startWeedMonsterBattle(snapshot, plot.row, plot.col, displayNow);
+        if (!started.ok) {
+          const messages = {
+            plot_missing: "Could not find that plot.",
+            plot_locked: "This plot is locked. Buy the grass tile first.",
+            plot_occupied: "This plot is not empty.",
+            no_monster: "There is no weed monster here.",
+            on_cooldown: `The weed monster is catching its breath. Try again in ${formatWeedMonsterCooldown(weedMonsterCooldownRemainingMs(plot, displayNow))}.`,
+          };
+          setStatusLine(messages[started.reason]);
+          playSfx("wrong", muted);
+          return;
+        }
+
+        applySnapshot(started.snapshot);
+        setWeedBattle({ row: plot.row, col: plot.col });
+        setStatusLine("Sort the letters into 3 words before time runs out!");
+        return;
+      }
+
       const result = plantSeedAt(snapshot, plot.row, plot.col);
       if (!result.ok) {
         if (result.reason === "no_seed") {
           setStatusLine(
             "No seeds left! Go to Learn and answer questions to earn more.",
           );
+          playSfx("wrong", muted);
+        } else if (result.reason === "plot_locked") {
+          setStatusLine("This plot is locked. Buy the grass tile first.");
+          playSfx("wrong", muted);
+        } else if (result.reason === "weed_monster_blocking") {
+          setStatusLine("Defeat the weed monster before you can plant here.");
           playSfx("wrong", muted);
         } else {
           setStatusLine("This plot is not empty.");
@@ -217,20 +279,13 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
     }
 
     if (stage === "ready") {
-      if (plot.weedWord) {
-        setToolMode("none");
-        setWeedOverlay({ row: plot.row, col: plot.col, weedWord: plot.weedWord });
-        setStatusLine("A weed appeared! Spell the word to clear it.");
-        return;
-      }
-
       const result = harvestAt(snapshot, plot.row, plot.col);
       if (!result.ok) {
         const messages = {
           plot_empty: "This plot is empty.",
           not_ready: "This crop is not ready yet.",
           plot_missing: "Could not find that plot.",
-          weed_blocking: "Clear the weed before you harvest!",
+          plot_locked: "This plot is locked. Buy the grass tile first.",
         };
         setStatusLine(messages[result.reason]);
         playSfx("wrong", muted);
@@ -246,7 +301,40 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
     setStatusLine("Still growing… check back in a little while!");
   };
 
+  const onPurchasePlot = (row: number, col: number) => {
+    if (!snapshot) return;
+    playSfx("tap", muted);
+    setSelectedPlot({ row, col });
+
+    if (!isGrassCell(row, col) || isPlotUnlocked(snapshot, row, col)) {
+      onSelectPlot(snapshot.plots.find((p) => p.row === row && p.col === col)!);
+      return;
+    }
+
+    const result = purchaseGrassPlotAt(snapshot, row, col);
+    if (!result.ok) {
+      const messages = {
+        plot_missing: "Could not find that plot.",
+        not_grass: "Only grass plots can be purchased.",
+        already_unlocked: "This plot is already unlocked.",
+        all_purchased: "All grass plots are unlocked!",
+        insufficient_gold: `Need ${result.cost ?? nextGrassPlotCost(snapshot) ?? 0}g. Earn gold in Learn.`,
+      };
+      setStatusLine(messages[result.reason]);
+      playSfx("wrong", muted);
+      return;
+    }
+
+    playSfx("correct", muted);
+    applySnapshot(result.snapshot);
+    setGold(result.goldRemaining);
+    onEconomyChange?.();
+    setToolMode("none");
+    setStatusLine(`Plot unlocked for ${result.cost}g! Tap again to plant a seed.`);
+  };
+
   const letterCount = snapshot ? totalLetterCount(snapshot.letters) : 0;
+  const earnSeedsUnlocked = snapshot ? isEarnSeedsUnlocked(snapshot) : false;
 
   const openSpell = () => {
     playSfx("tap", muted);
@@ -254,15 +342,56 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
     setSpellOpen(true);
   };
 
+  const handleRecycle = (selection: LetterInventory): RecycleLettersResult => {
+    if (!snapshot) return { ok: false, reason: "nothing_to_recycle" };
+
+    const result = recycleLetters(snapshot, selection);
+    if (!result.ok) {
+      const messages = {
+        not_enough_letters: "Pick at least 3 letters to recycle.",
+        invalid_selection: "You do not have those letters selected.",
+        nothing_to_recycle: "Pick letters to recycle first.",
+      };
+      setStatusLine(messages[result.reason]);
+      playSfx("wrong", muted);
+      return result;
+    }
+
+    playSfx("correct", muted);
+    applySnapshot(result.snapshot, { announceNewSeeds: true });
+    setStatusLine(
+      result.seedsGranted === 1 ?
+        `Recycled ${result.lettersConsumed} letters into 1 seed!`
+      : `Recycled ${result.lettersConsumed} letters into ${result.seedsGranted} seeds!`,
+    );
+    return result;
+  };
+
   const closeSpell = () => {
     playSfx("tap", muted);
     setSpellOpen(false);
   };
 
-  const closeWeed = () => {
+  const openEarnSeeds = () => {
     playSfx("tap", muted);
-    setWeedOverlay(null);
+    setToolMode("none");
+    setEarnSeedsOpen(true);
   };
+
+  const closeEarnSeeds = () => {
+    playSfx("tap", muted);
+    setEarnSeedsOpen(false);
+  };
+
+  const closeWeedBattle = () => {
+    setWeedBattle(null);
+  };
+
+  const weedBattlePlot =
+    weedBattle && snapshot ?
+      snapshot.plots.find((p) => p.row === weedBattle.row && p.col === weedBattle.col)
+    : undefined;
+  const weedBattlePuzzle = weedBattlePlot?.weedMonster ?? null;
 
   const toggleWaterMode = () => {
     if (!wateringCanReady && toolMode !== "water") {
@@ -310,7 +439,7 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
 
   if (!hydrated || !snapshot) {
     return (
-      <div className="mx-auto w-full max-w-lg">
+      <div className="flex h-full w-full items-center justify-center">
         <KidPanel className="p-6 text-center text-sm font-bold text-kid-ink/70">
           Loading your garden…
         </KidPanel>
@@ -322,73 +451,51 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
   const fertilizeMode = toolMode === "fertilize";
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-3 sm:gap-4">
-      <header className="text-center">
-        <h1 className="text-2xl font-extrabold text-kid-ink sm:text-3xl">
-          Language Garden
-        </h1>
-        <p className="mt-1 text-sm font-semibold text-kid-ink/80">
-          Grow letters. Build words. Keep learning!
-        </p>
-      </header>
+    <div className="flex h-full min-h-0 w-full flex-1 flex-row items-stretch gap-2 md:gap-3">
+      <h1 className="sr-only">Language Garden</h1>
 
-      <GardenHud snapshot={snapshot} now={displayNow} />
+      <aside
+        className="flex h-full min-h-0 w-[8.5rem] shrink-0 flex-col gap-2 sm:w-44 md:w-48 lg:w-52"
+        aria-label="Garden inventory"
+      >
+        <GardenHud
+          className="min-h-0 flex-1"
+          snapshot={snapshot}
+          spellEnabled={letterCount >= 2}
+          onOpenSpell={openSpell}
+        />
+        <GardenEarnSeedsButton unlocked={earnSeedsUnlocked} onOpen={openEarnSeeds} />
+        <GardenSideTools
+          wateringCanUnlocked={wateringCanUnlocked}
+          fertilizerUnlocked={fertilizerUnlocked}
+          wateringCanReady={wateringCanReady}
+          fertilizerReady={fertilizerReady}
+          wateringCanCooldownMs={wateringCanCooldownMs}
+          fertilizerCooldownMs={fertilizerCooldownMs}
+          waterMode={waterMode}
+          fertilizeMode={fertilizeMode}
+          onToggleWater={toggleWaterMode}
+          onToggleFertilize={toggleFertilizeMode}
+        />
+      </aside>
 
-      <GardenFarmGrid
-        snapshot={snapshot}
-        now={displayNow}
-        selectedPlot={selectedPlot}
-        waterMode={waterMode}
-        fertilizeMode={fertilizeMode}
-        onSelectPlot={onSelectPlot}
-      />
-
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:justify-center">
-          {wateringCanUnlocked ?
-            <KidButton
-              variant={waterMode ? "primary" : "secondary"}
-              className={clsx("!min-h-12 w-full sm:max-w-xs", waterMode && "!bg-sky-500")}
-              onClick={toggleWaterMode}
-              disabled={!wateringCanReady && !waterMode}
-            >
-              {waterMode ?
-                "🪣 Watering…"
-              : wateringCanReady ?
-                "🪣 Water"
-              : `🪣 ${formatWateringCanCooldown(wateringCanCooldownMs)}`}
-            </KidButton>
-          : null}
-          {fertilizerUnlocked ?
-            <KidButton
-              variant={fertilizeMode ? "primary" : "secondary"}
-              className={clsx("!min-h-12 w-full sm:max-w-xs", fertilizeMode && "!bg-amber-500")}
-              onClick={toggleFertilizeMode}
-              disabled={!fertilizerReady && !fertilizeMode}
-            >
-              {fertilizeMode ?
-                "🧪 Fertilizing…"
-              : fertilizerReady ?
-                "🧪 Fertilize"
-              : `🧪 ${formatFertilizerCooldown(fertilizerCooldownMs)}`}
-            </KidButton>
-          : null}
-        </div>
-        <KidButton
-          className="!min-h-12 w-full max-w-xs"
-          variant="secondary"
-          onClick={openSpell}
-          disabled={letterCount < 2}
-        >
-          Spell a Word
-        </KidButton>
+      <div className="flex h-full min-h-0 min-w-0 flex-1">
+        <GardenFarmGrid
+          className="h-full min-h-0 flex-1"
+          snapshot={snapshot}
+          now={displayNow}
+          gold={gold}
+          selectedPlot={selectedPlot}
+          waterMode={waterMode}
+          fertilizeMode={fertilizeMode}
+          onSelectPlot={onSelectPlot}
+          onPurchasePlot={onPurchasePlot}
+        />
       </div>
 
-      <KidPanel tone="discovery" className="p-3 text-center">
-        <p className="text-sm font-bold text-kid-ink" role="status" aria-live="polite">
-          {statusLine}
-        </p>
-      </KidPanel>
+      <p className="sr-only" role="status" aria-live="polite">
+        {statusLine}
+      </p>
 
       <GardenSpellOverlay
         open={spellOpen}
@@ -397,22 +504,34 @@ export function GardenRoom({ muted, gardenUiKey }: Props) {
         onSnapshotChange={(snap) => applySnapshot(snap)}
         onSuccess={setStatusLine}
         onClose={closeSpell}
+        onConfirmRecycle={handleRecycle}
       />
 
-      {weedOverlay ?
-        <GardenWeedOverlay
+      <GardenEarnSeedsOverlay
+        open={earnSeedsOpen}
+        muted={muted}
+        snapshot={snapshot}
+        onSnapshotChange={(snap) => applySnapshot(snap, { announceNewSeeds: true })}
+        onSuccess={setStatusLine}
+        onClose={closeEarnSeeds}
+      />
+
+      {weedBattle && weedBattlePuzzle ?
+        <GardenWeedBattleOverlay
           open
           muted={muted}
-          weedWord={weedOverlay.weedWord}
-          row={weedOverlay.row}
-          col={weedOverlay.col}
+          row={weedBattle.row}
+          col={weedBattle.col}
+          puzzle={weedBattlePuzzle}
           snapshot={snapshot}
-          onSnapshotChange={(snap) => {
-            applySnapshot(snap);
-            setWeedOverlay(null);
-          }}
+          onSnapshotChange={(snap, opts) => applySnapshot(snap, opts)}
           onSuccess={setStatusLine}
-          onClose={closeWeed}
+          onFail={setStatusLine}
+          onVictory={() => {
+            setGold(getRewards().gold);
+            onEconomyChange?.();
+          }}
+          onClose={closeWeedBattle}
         />
       : null}
     </div>

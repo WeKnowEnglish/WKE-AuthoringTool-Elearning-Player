@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { filterWordItemIdsForSecondaryActivity } from "@/lib/secondary/secondary-practice-types";
 import {
   clearSecondaryTodayActivityCompletion,
-  getOrCreateSecondaryTodaySession,
   setSecondaryTodayActivityCompletion,
 } from "@/lib/secondary/secondary-today-session";
+import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import { getSecondaryVocabItemsByIds } from "@/lib/secondary/secondary-vocab-bank";
-import { recordSecondaryWordAttempt } from "@/lib/secondary/secondary-word-progress";
-import type { SecondaryTodaySession, SecondaryVocabItem } from "@/lib/secondary/types";
+import {
+  areSecondaryActivityWordsComplete,
+  clearSecondaryLocalActivitySession,
+  getSecondaryWordsNeedingRepair,
+  recordSecondaryWordAttempt,
+} from "@/lib/secondary/secondary-word-progress";
+import type { SecondaryVocabItem } from "@/lib/secondary/types";
 
 function normalizeAnswer(value: string): string {
   return value.trim().toLowerCase();
@@ -21,36 +27,50 @@ function scoreToPercent(correctCount: number, totalCount: number): number {
 }
 
 export function SpellingActivity() {
-  const [todaySession, setTodaySession] = useState<SecondaryTodaySession | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const { todaySession } = useSecondaryTodaySession();
+  const [queue, setQueue] = useState<string[]>([]);
   const [value, setValue] = useState("");
-  const [results, setResults] = useState<boolean[]>([]);
+  const [attemptLog, setAttemptLog] = useState<boolean[]>([]);
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
 
-  useEffect(() => {
-    setTodaySession(getOrCreateSecondaryTodaySession(new Date()));
-  }, []);
-
-  const todayPrompts: SecondaryVocabItem[] = useMemo(() => {
+  const spellingWordIds = useMemo(() => {
     if (!todaySession) return [];
-    return getSecondaryVocabItemsByIds(todaySession.allWordItemIds);
+    return filterWordItemIdsForSecondaryActivity(todaySession.allWordItemIds, "spelling");
   }, [todaySession]);
 
-  const totalCount = todayPrompts.length;
-  const currentItem = todayPrompts[currentIndex];
-  const isFinished = totalCount === 0 ? true : currentIndex >= totalCount;
+  const todayPrompts: SecondaryVocabItem[] = useMemo(() => {
+    if (!spellingWordIds.length) return [];
+    return getSecondaryVocabItemsByIds(spellingWordIds);
+  }, [spellingWordIds]);
+
+  const requiredWordIds = useMemo(
+    () => todayPrompts.map((item) => item.wordItemId),
+    [todayPrompts],
+  );
+
+  const promptById = useMemo(() => {
+    const map = new Map<string, SecondaryVocabItem>();
+    for (const item of todayPrompts) map.set(item.wordItemId, item);
+    return map;
+  }, [todayPrompts]);
+
+  const currentWordItemId = queue[0] ?? null;
+  const currentItem = currentWordItemId ? promptById.get(currentWordItemId) : undefined;
+  const totalCount = requiredWordIds.length;
   const scorePercent = useMemo(
-    () => scoreToPercent(results.filter(Boolean).length, totalCount),
-    [results, totalCount],
+    () => scoreToPercent(attemptLog.filter(Boolean).length, Math.max(attemptLog.length, totalCount)),
+    [attemptLog, totalCount],
   );
 
   useEffect(() => {
     if (!todaySession) return;
-    setCurrentIndex(0);
+    setQueue([...requiredWordIds]);
     setValue("");
-    setResults([]);
+    setAttemptLog([]);
     setFeedback(null);
-  }, [todaySession]);
+    setIsComplete(false);
+  }, [todaySession, requiredWordIds]);
 
   if (!todaySession) {
     return (
@@ -60,7 +80,7 @@ export function SpellingActivity() {
     );
   }
 
-  if (todayPrompts.length === 0) {
+  if (requiredWordIds.length === 0) {
     return (
       <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
         <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
@@ -82,47 +102,80 @@ export function SpellingActivity() {
     );
   }
 
+  function completeIfReady(now: Date, log: boolean[]) {
+    if (!areSecondaryActivityWordsComplete("spelling", requiredWordIds, now)) {
+      const stillBroken = getSecondaryWordsNeedingRepair("spelling", requiredWordIds, now);
+      setQueue(stillBroken);
+      setIsComplete(false);
+      return;
+    }
+
+    const percent = scoreToPercent(
+      log.filter(Boolean).length,
+      Math.max(log.length, requiredWordIds.length),
+    );
+    setSecondaryTodayActivityCompletion(
+      "spelling",
+      { completed: true, percent, completedAt: now.toISOString() },
+      now,
+    );
+    setQueue([]);
+    setIsComplete(true);
+  }
+
   function handleSubmitAnswer() {
-    if (isFinished || !currentItem) return;
+    if (isComplete || !currentItem || feedback !== null) return;
 
     const isCorrect = normalizeAnswer(currentItem.word) === normalizeAnswer(value);
+    const now = new Date();
+
     recordSecondaryWordAttempt({
       activityType: "spelling",
       wordItemId: currentItem.wordItemId,
       isCorrect,
-      attemptedAt: new Date().toISOString(),
+      attemptedAt: now.toISOString(),
     });
 
-    setResults((current) => [...current, isCorrect]);
+    setAttemptLog((current) => [...current, isCorrect]);
     setFeedback(isCorrect ? "correct" : "incorrect");
   }
 
   function handleNext() {
-    if (isFinished) return;
+    if (feedback === null || !currentWordItemId) return;
+    const now = new Date();
+    const stillNeedsWork = getSecondaryWordsNeedingRepair(
+      "spelling",
+      requiredWordIds,
+      now,
+    ).includes(currentWordItemId);
 
-    const nextIndex = currentIndex + 1;
-    setCurrentIndex(nextIndex);
     setValue("");
     setFeedback(null);
 
-    if (nextIndex >= totalCount) {
-      const correctCount = results.filter(Boolean).length;
-      const percent = scoreToPercent(correctCount, totalCount);
-      setSecondaryTodayActivityCompletion(
-        "spelling",
-        { completed: true, percent, completedAt: new Date().toISOString() },
-        new Date(),
-      );
+    const rest = queue.slice(1);
+    const nextQueue = stillNeedsWork ? [...rest, currentWordItemId] : rest;
+
+    if (nextQueue.length === 0) {
+      completeIfReady(now, attemptLog);
+      return;
     }
+
+    setQueue(nextQueue);
   }
 
   function handleRetry() {
-    setCurrentIndex(0);
+    const now = new Date();
+    clearSecondaryLocalActivitySession("spelling", now);
+    clearSecondaryTodayActivityCompletion("spelling", now);
+    setQueue([...requiredWordIds]);
     setValue("");
-    setResults([]);
+    setAttemptLog([]);
     setFeedback(null);
-    clearSecondaryTodayActivityCompletion("spelling", new Date());
+    setIsComplete(false);
   }
+
+  const queuePosition =
+    totalCount > 0 ? totalCount - queue.length + 1 : 0;
 
   return (
     <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
@@ -131,20 +184,21 @@ export function SpellingActivity() {
       </p>
       <h2 className="text-2xl font-extrabold text-kid-ink">Spelling Activity</h2>
       <p className="text-sm font-semibold text-kid-ink/80">
-        Type the correct vocabulary word for each prompt.
+        Type the correct vocabulary word for each prompt. Missed words come back for repair.
       </p>
 
-      {isFinished ? (
+      {isComplete ? (
         <div className="rounded-lg border border-green-300 bg-green-50 p-4">
           <h3 className="text-sm font-extrabold text-green-900">Completed</h3>
           <p className="mt-1 text-sm font-bold text-green-900">
-            Final score: {results.filter(Boolean).length}/{totalCount} ({scorePercent}%)
+            Final score: {attemptLog.filter(Boolean).length}/{attemptLog.length} ({scorePercent}%)
           </p>
         </div>
       ) : (
         <div className="space-y-3 rounded-lg border border-kid-ink/20 bg-kid-panel p-4">
           <p className="text-xs font-extrabold text-kid-ink/70">
-            Item {currentIndex + 1} of {totalCount}
+            Item {Math.min(queuePosition, totalCount)} of {totalCount}
+            {queue.length > totalCount ? " (repair)" : ""}
           </p>
           <p className="text-sm font-semibold text-kid-ink">
             Spell the word that means: {currentItem?.studentMeaningEn}

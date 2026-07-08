@@ -3,6 +3,8 @@ import {
   learningTargetKey,
 } from "@/lib/mastery/engine";
 import type { LearningEvidenceEvent, StudentMasteryRecord } from "@/lib/mastery/types";
+import { scopedLocalStorageKey } from "@/lib/auth/scoped-local-storage";
+import { resolveStudentStorageIdSync } from "@/lib/auth/student-storage-id";
 
 export const MASTERY_STORAGE_KEY = "wke-student-mastery-v1";
 export const MASTERY_EVIDENCE_STORAGE_KEY = "wke-learning-evidence-v1";
@@ -25,10 +27,18 @@ function hasLocalStorage(): boolean {
   return typeof window !== "undefined" && !!window.localStorage;
 }
 
+function masteryStorageKey(): string {
+  return scopedLocalStorageKey(MASTERY_STORAGE_KEY, resolveStudentStorageIdSync());
+}
+
+function evidenceStorageKey(): string {
+  return scopedLocalStorageKey(MASTERY_EVIDENCE_STORAGE_KEY, resolveStudentStorageIdSync());
+}
+
 export function readMasterySnapshot(): MasterySnapshot {
   if (!hasLocalStorage()) return EMPTY_SNAPSHOT;
   try {
-    const raw = window.localStorage.getItem(MASTERY_STORAGE_KEY);
+    const raw = window.localStorage.getItem(masteryStorageKey());
     if (!raw) return EMPTY_SNAPSHOT;
     const parsed = JSON.parse(raw) as Partial<MasterySnapshot>;
     if (parsed.schemaVersion !== 1 || typeof parsed.records !== "object" || !parsed.records) {
@@ -46,14 +56,14 @@ export function readMasterySnapshot(): MasterySnapshot {
 
 export function writeMasterySnapshot(snapshot: MasterySnapshot): MasterySnapshot {
   if (!hasLocalStorage()) return snapshot;
-  window.localStorage.setItem(MASTERY_STORAGE_KEY, JSON.stringify(snapshot));
+  window.localStorage.setItem(masteryStorageKey(), JSON.stringify(snapshot));
   return snapshot;
 }
 
 export function readLearningEvidenceEvents(): LearningEvidenceEvent[] {
   if (!hasLocalStorage()) return [];
   try {
-    const raw = window.localStorage.getItem(MASTERY_EVIDENCE_STORAGE_KEY);
+    const raw = window.localStorage.getItem(evidenceStorageKey());
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) ? (parsed as LearningEvidenceEvent[]) : [];
@@ -67,7 +77,7 @@ export function recordLearningEvidenceEvent(
 ): MasterySnapshot {
   if (!hasLocalStorage()) return readMasterySnapshot();
   const evidenceEvents = [...readLearningEvidenceEvents(), evidence].slice(-MAX_STORED_EVIDENCE);
-  window.localStorage.setItem(MASTERY_EVIDENCE_STORAGE_KEY, JSON.stringify(evidenceEvents));
+  window.localStorage.setItem(evidenceStorageKey(), JSON.stringify(evidenceEvents));
   const current = readMasterySnapshot();
   const next: MasterySnapshot = {
     schemaVersion: 1,

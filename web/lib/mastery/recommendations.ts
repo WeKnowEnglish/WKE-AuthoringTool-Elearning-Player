@@ -27,29 +27,47 @@ function isDue(record: StudentMasteryRecord, now: Date): boolean {
   return !Number.isNaN(dueAt.getTime()) && dueAt.getTime() <= now.getTime();
 }
 
+export function classifyWordForPractice(input: {
+  wordId: string;
+  record: StudentMasteryRecord | null;
+  now: Date;
+}): VocabularyRecommendationReason | "new" | "mastered" | null {
+  const { record, now } = input;
+  if (!record || record.exposureCount === 0) return "new";
+  if (isDue(record, now)) return "due_review";
+  if (record.masteryScore >= 0.75) return "mastered";
+  if (record.state === "stuck" || record.state === "needs_review") return "fragile";
+  if (record.confidence < 0.35 && record.exposureCount > 0) return "low_confidence";
+  if (record.state === "practicing" || record.state === "developing") return "developing";
+  return null;
+}
+
 function recommendationForRecord(
   wordId: string,
   record: StudentMasteryRecord,
   now: Date,
 ): VocabularyPracticeRecommendation | null {
+  const classification = classifyWordForPractice({ wordId, record, now });
+  if (classification === "new" || classification === "mastered" || classification === null) {
+    return null;
+  }
+
   const base = {
     masteryScore: record.masteryScore,
     state: record.state,
     nextReviewAt: record.nextReviewAt,
   };
-  if (isDue(record, now)) {
-    return { wordId, reason: "due_review", priority: 100 - record.masteryScore, ...base };
+
+  switch (classification) {
+    case "due_review":
+      return { wordId, reason: "due_review", priority: 100 - record.masteryScore, ...base };
+    case "fragile":
+      return { wordId, reason: "fragile", priority: 80 - record.masteryScore, ...base };
+    case "developing":
+      return { wordId, reason: "developing", priority: 50 - record.masteryScore, ...base };
+    case "low_confidence":
+      return { wordId, reason: "low_confidence", priority: 35 - record.confidence, ...base };
   }
-  if (record.state === "stuck" || record.state === "needs_review") {
-    return { wordId, reason: "fragile", priority: 80 - record.masteryScore, ...base };
-  }
-  if (record.state === "practicing" || record.state === "developing") {
-    return { wordId, reason: "developing", priority: 50 - record.masteryScore, ...base };
-  }
-  if (record.confidence < 0.35 && record.exposureCount > 0) {
-    return { wordId, reason: "low_confidence", priority: 35 - record.confidence, ...base };
-  }
-  return null;
 }
 
 export function recommendVocabularyPracticeWords(input: {

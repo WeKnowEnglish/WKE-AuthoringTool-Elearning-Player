@@ -38,6 +38,7 @@ import {
   markLessonComplete,
   setResumeScreen,
 } from "@/lib/progress/local-storage";
+import { resolveStudentStorageIdSync } from "@/lib/auth/student-storage-id";
 import { LevelUpModal } from "@/components/progress/LevelUpModal";
 import { grantGardenSeedForQuiz } from "@/lib/garden/quiz-rewards";
 import { awardRewards, getPlayerLevel, getRewards } from "@/lib/progress/rewards";
@@ -102,6 +103,11 @@ import {
   type StudentResponseKind,
 } from "@/lib/student-session";
 import { recordVocabularyEvidence } from "@/lib/mastery/vocabulary";
+import {
+  grammarPosterActivityId,
+  recordGrammarEvidence,
+} from "@/lib/mastery/grammar";
+import { getGrammarQuizItemForLessonScreen } from "@/lib/grammar-templates/grammar-quiz-items";
 import type { EvidenceMode } from "@/lib/mastery/types";
 import {
   StoryBookView,
@@ -477,7 +483,7 @@ export function LessonPlayer({
         vocabPracticeWords?.find((word) => word.id === wordId)?.lemma ??
         wordId;
       recordVocabularyEvidence({
-        studentId: getProgressSnapshot().anonymousDeviceId,
+        studentId: resolveStudentStorageIdSync(),
         sessionId: getStudentPracticeSessionId(),
         activityId: lessonId,
         itemId: screen.id,
@@ -499,6 +505,41 @@ export function LessonPlayer({
       screen?.id,
       vocabPracticeWords,
       vocabWordsById,
+    ],
+  );
+
+  const recordCurrentGrammarMasteryEvidence = useCallback(
+    (input: { success: boolean; firstTry: boolean; attempts: number }) => {
+      if (!isGrammarLesson || !grammarSlug || !screen) return;
+      if (parsed?.type !== "interaction" || parsed.subtype !== "true_false") return;
+
+      const quizItem = getGrammarQuizItemForLessonScreen({
+        lessonId,
+        screenId: screen.id,
+      });
+      if (!quizItem) return;
+
+      recordGrammarEvidence({
+        studentId: resolveStudentStorageIdSync(),
+        sessionId: getStudentPracticeSessionId(),
+        activityId: grammarPosterActivityId(grammarSlug),
+        itemId: quizItem.id,
+        microSkillId: quizItem.microSkillId,
+        label: quizItem.microSkillLabel,
+        success: input.success,
+        firstTry: input.firstTry,
+        attempts: input.attempts,
+        errorCode: input.success ? undefined : quizItem.errorCodeOnMiss,
+      });
+      recordGrammarQuizResult(grammarSessionRef.current, input.success);
+    },
+    [
+      getStudentPracticeSessionId,
+      grammarSlug,
+      isGrammarLesson,
+      lessonId,
+      parsed,
+      screen,
     ],
   );
 
@@ -1057,7 +1098,12 @@ export function LessonPlayer({
           parsed?.type === "interaction" &&
           parsed.subtype === "true_false"
         ) {
-          recordGrammarQuizResult(grammarSessionRef.current, true);
+          const firstTry = !screenHadWrongRef.current;
+          recordCurrentGrammarMasteryEvidence({
+            success: true,
+            firstTry,
+            attempts: firstTry ? 1 : 2,
+          });
         }
         if (
           isVocabLesson &&
@@ -1084,6 +1130,19 @@ export function LessonPlayer({
         if (!screenHadWrongRef.current) {
           recordVocabRunWrong(vocabSessionRef.current, extractVocabWordId(parsed));
         }
+        screenHadWrongRef.current = true;
+      }
+      if (
+        !isPreview &&
+        isGrammarLesson &&
+        parsed?.type === "interaction" &&
+        parsed.subtype === "true_false"
+      ) {
+        recordCurrentGrammarMasteryEvidence({
+          success: false,
+          firstTry: false,
+          attempts: screenHadWrongRef.current ? 2 : 1,
+        });
         screenHadWrongRef.current = true;
       }
       if (!isPreview) {

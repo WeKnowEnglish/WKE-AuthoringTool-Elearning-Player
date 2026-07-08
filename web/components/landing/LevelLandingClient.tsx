@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PortalLoginModal } from "@/components/auth/PortalLoginModal";
 import { KidButton } from "@/components/kid-ui/KidButton";
@@ -14,19 +15,29 @@ import {
 } from "@/lib/learning-band";
 import { getProgressSnapshot } from "@/lib/progress/local-storage";
 
+const SECONDARY_LOGIN_PATH = "/secondary/login";
+
 export function LevelLandingClient() {
+  const router = useRouter();
   const [selected, setSelected] = useState<LandingTrackBand>("a1");
   const [loginOpen, setLoginOpen] = useState(false);
 
-  function onSelect(band: LandingTrackBand) {
+  function enterTrack(band: LandingTrackBand) {
     playSfx("tap", getProgressSnapshot().audioMuted === true);
     setSelected(band);
+    if (band === "a2") {
+      router.push(SECONDARY_LOGIN_PATH);
+      return;
+    }
     setLoginOpen(true);
   }
 
+  function onSelect(band: LandingTrackBand) {
+    enterTrack(band);
+  }
+
   function onContinue() {
-    playSfx("tap", getProgressSnapshot().audioMuted === true);
-    setLoginOpen(true);
+    enterTrack(selected);
   }
 
   return (
@@ -114,7 +125,7 @@ export function LevelLandingClient() {
 
       <PortalLoginModal
         open={loginOpen}
-        learningBand={selected}
+        learningBand="a1"
         onClose={() => setLoginOpen(false)}
       />
     </>

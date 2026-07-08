@@ -1,26 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { getSecondaryWordDisplaySnapshot } from "@/lib/secondary/secondary-mastery-display";
 import {
-  getSecondaryWordProgressRecord,
+  countSecondaryActivityEligibleWords,
+  filterWordItemIdsForSecondaryActivity,
+} from "@/lib/secondary/secondary-practice-types";
+import {
   mapMasteryLevelToLabel,
 } from "@/lib/secondary/secondary-word-progress";
 import {
-  getOrCreateSecondaryTodaySession,
-  getSecondaryTodayCompletion,
-  MASTERED_LEVEL_THRESHOLD,
+  isSecondaryWordMastered,
   WARMUP_WORDS,
 } from "@/lib/secondary/secondary-today-session";
+import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import {
   getSecondaryClozeTemplates,
   getSecondaryVocabItemById,
-  getSecondaryVocabItemsByIds,
 } from "@/lib/secondary/secondary-vocab-bank";
 import type {
   SecondaryTodayActivityKey,
-  SecondaryTodayCompletion,
-  SecondaryTodaySession,
 } from "@/lib/secondary/types";
 
 const ACTIVITIES = [
@@ -57,29 +57,30 @@ const ACTIVITY_HREF: Record<SecondaryTodayActivityKey, string> = {
 };
 
 export function SecondaryHome() {
-  const [hydrated, setHydrated] = useState(false);
-  const [todaySession, setTodaySession] = useState<SecondaryTodaySession | null>(null);
-  const [completion, setCompletion] = useState<SecondaryTodayCompletion>({});
+  const { todaySession, completion, hydrated } = useSecondaryTodaySession();
 
-  useEffect(() => {
-    const now = new Date();
-    setTodaySession(getOrCreateSecondaryTodaySession(now));
-    setCompletion(getSecondaryTodayCompletion(now));
-    setHydrated(true);
-  }, []);
+  const sessionWordIds = todaySession?.allWordItemIds ?? [];
 
-  const todayWordSet = new Set(todaySession?.allWordItemIds ?? []);
-  const todayItems = useMemo(
-    () => (todaySession ? getSecondaryVocabItemsByIds(todaySession.allWordItemIds) : []),
-    [todaySession],
+  const matchCountToday = useMemo(
+    () => countSecondaryActivityEligibleWords(sessionWordIds, "match"),
+    [sessionWordIds],
   );
+  const spellingCountToday = useMemo(
+    () => countSecondaryActivityEligibleWords(sessionWordIds, "spelling"),
+    [sessionWordIds],
+  );
+  const clozeCountToday = useMemo(() => {
+    if (!todaySession) return 0;
+    const clozeEligible = new Set(
+      filterWordItemIdsForSecondaryActivity(sessionWordIds, "cloze"),
+    );
+    return (
+      getSecondaryClozeTemplates()[0]?.blankWordItemIds.filter((id) => clozeEligible.has(id))
+        .length ?? 0
+    );
+  }, [todaySession, sessionWordIds]);
 
-  const matchCountToday = todayItems.length;
-  const clozeCountToday =
-    getSecondaryClozeTemplates()[0]?.blankWordItemIds.filter((id) => todayWordSet.has(id))
-      .length ?? 0;
-  const spellingCountToday = todayItems.length;
-  const hasWordsToday = (todaySession?.allWordItemIds.length ?? 0) > 0;
+  const hasWordsToday = sessionWordIds.length > 0;
 
   const isActivityAvailableToday = (activityKey: SecondaryTodayActivityKey) => {
     if (!hasWordsToday) return false;
@@ -90,15 +91,15 @@ export function SecondaryHome() {
   };
 
   const weakWordItemIds = (() => {
-    if (!todaySession?.allWordItemIds.length) return [];
-    const records = todaySession.allWordItemIds
+    if (!sessionWordIds.length) return [];
+    const records = sessionWordIds
       .map((wordItemId) => {
-        const rec = getSecondaryWordProgressRecord(wordItemId);
+        const snap = getSecondaryWordDisplaySnapshot(wordItemId);
         return {
           wordItemId,
-          masteryLevel: rec?.masteryLevel ?? 0,
-          recentAccuracy: rec?.recentAccuracy ?? 0,
-          timesSeen: rec?.timesSeen ?? 0,
+          masteryLevel: snap.legacyLevel,
+          recentAccuracy: snap.recentAccuracy,
+          timesSeen: snap.timesSeen,
         };
       })
       .sort((a, b) => {
@@ -112,10 +113,9 @@ export function SecondaryHome() {
 
   const masteredCount = (() => {
     if (!todaySession) return 0;
-    return todaySession.allWordItemIds.filter((wordItemId) => {
-      const rec = getSecondaryWordProgressRecord(wordItemId);
-      return (rec?.masteryLevel ?? 0) >= MASTERED_LEVEL_THRESHOLD;
-    }).length;
+    return sessionWordIds.filter((wordItemId) =>
+      isSecondaryWordMastered(getSecondaryWordDisplaySnapshot(wordItemId)),
+    ).length;
   })();
 
   const nextActivityKey = (() => {
@@ -164,7 +164,7 @@ export function SecondaryHome() {
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Badge label={`Today: ${todaySession!.allWordItemIds.length} words`} />
+          <Badge label={`Today: ${sessionWordIds.length} words`} />
           <Badge
             label={`Warm-up: ${Math.min(WARMUP_WORDS, todaySession!.warmUpWordItemIds.length)}`}
           />
@@ -178,13 +178,13 @@ export function SecondaryHome() {
           <div className="mt-2 flex flex-wrap gap-2">
             {weakWordItemIds.map((wordItemId) => {
               const item = getSecondaryVocabItemById(wordItemId);
-              const level = getSecondaryWordProgressRecord(wordItemId)?.masteryLevel ?? 0;
+              const snap = getSecondaryWordDisplaySnapshot(wordItemId);
               return (
                 <span
                   key={wordItemId}
                   className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-800"
                 >
-                  {item?.word ?? wordItemId} — {mapMasteryLevelToLabel(level)}
+                  {item?.word ?? wordItemId} — {mapMasteryLevelToLabel(snap.legacyLevel)}
                 </span>
               );
             })}

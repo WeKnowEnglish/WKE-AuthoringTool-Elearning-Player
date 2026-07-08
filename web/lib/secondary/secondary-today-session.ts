@@ -1,28 +1,34 @@
 "use client";
 
+import { readMasterySnapshot } from "@/lib/mastery/local-storage";
+import { isSecondaryWordMastered } from "@/lib/secondary/secondary-mastery-display";
+import {
+  selectSecondaryTodayWords,
+  TARGET_TODAY_WORDS,
+  WARMUP_WORDS,
+} from "@/lib/secondary/secondary-session-selection";
+import { filterWordItemIdsForSecondaryActivity } from "@/lib/secondary/secondary-practice-types";
 import {
   getAllSecondaryWordItemIds,
   getSecondaryClozeTemplates,
   getSecondaryVocabItemById,
 } from "@/lib/secondary/secondary-vocab-bank";
 import {
-  getSecondaryWordProgressRecord,
+  COMPLETION_STORAGE_KEY_PREFIX,
   resolveSecondaryStudentId,
-} from "@/lib/secondary/secondary-word-progress";
+  SESSION_STORAGE_KEY_PREFIX,
+} from "@/lib/secondary/secondary-student-id";
 import type {
   SecondaryTodayActivityCompletion,
   SecondaryTodayActivityKey,
   SecondaryTodayCompletion,
   SecondaryTodaySession,
-  SecondaryWordProgressRecord,
 } from "@/lib/secondary/types";
 
-export const TARGET_WORDS = 10;
-export const WARMUP_WORDS = 3;
-export const MASTERED_LEVEL_THRESHOLD = 4;
+export { WARMUP_WORDS, TARGET_TODAY_WORDS };
 
-const SESSION_STORAGE_KEY_PREFIX = "secondary-vocab-today-session-v2:";
-const COMPLETION_STORAGE_KEY_PREFIX = "secondary-vocab-today-completion-v1:";
+/** @deprecated Use TARGET_TODAY_WORDS — v1 counted warmup inside TARGET_WORDS. */
+export const TARGET_WORDS = TARGET_TODAY_WORDS;
 
 export function getSecondaryTodayDateKey(now: Date): string {
   const year = now.getFullYear();
@@ -53,49 +59,6 @@ function writeJson<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-type WordSignals = {
-  wordItemId: string;
-  masteryLevel: number;
-  recentAccuracy: number;
-  timesSeen: number;
-  nextReviewAtMs: number;
-};
-
-function getWordSignals(wordItemId: string): WordSignals {
-  const record: SecondaryWordProgressRecord | null =
-    getSecondaryWordProgressRecord(wordItemId);
-  const now = Date.now();
-
-  if (!record) {
-    return {
-      wordItemId,
-      masteryLevel: 0,
-      recentAccuracy: 0,
-      timesSeen: 0,
-      nextReviewAtMs: now - 1,
-    };
-  }
-
-  return {
-    wordItemId,
-    masteryLevel: record.masteryLevel,
-    recentAccuracy: record.recentAccuracy,
-    timesSeen: record.timesSeen,
-    nextReviewAtMs: record.nextReviewAt
-      ? new Date(record.nextReviewAt).getTime()
-      : now - 1,
-  };
-}
-
-function sortWeakestFirst(signals: WordSignals[]): WordSignals[] {
-  return [...signals].sort((a, b) => {
-    if (a.masteryLevel !== b.masteryLevel) return a.masteryLevel - b.masteryLevel;
-    if (a.recentAccuracy !== b.recentAccuracy) return a.recentAccuracy - b.recentAccuracy;
-    if (a.timesSeen !== b.timesSeen) return a.timesSeen - b.timesSeen;
-    return a.wordItemId.localeCompare(b.wordItemId);
-  });
-}
-
 function normalizeSession(raw: SecondaryTodaySession | null | undefined): SecondaryTodaySession | null {
   if (!raw || typeof raw !== "object") return null;
   if (typeof raw.dateKey !== "string" || !raw.dateKey) return null;
@@ -112,13 +75,16 @@ function normalizeSession(raw: SecondaryTodaySession | null | undefined): Second
     (id): id is string => typeof id === "string" && id.length > 0,
   );
 
-  // Empty is valid (no bank / no due words) — still a stable session for the day.
-  return {
+  const session: SecondaryTodaySession = {
     dateKey: raw.dateKey,
     warmUpWordItemIds,
     todayWordItemIds,
     allWordItemIds,
   };
+  if (raw.selectionVersion === 2) {
+    session.selectionVersion = 2;
+  }
+  return session;
 }
 
 function emptySession(dateKey: string): SecondaryTodaySession {
@@ -130,6 +96,55 @@ function emptySession(dateKey: string): SecondaryTodaySession {
   };
 }
 
+function isStaleEmptySession(session: SecondaryTodaySession): boolean {
+  return session.allWordItemIds.length === 0 && getAllSecondaryWordItemIds().length > 0;
+}
+
+function collectClozeBlankIds(candidateWordItemIds: string[]): string[] {
+  const clozeEligible = new Set(
+    filterWordItemIdsForSecondaryActivity(candidateWordItemIds, "cloze"),
+  );
+  const blankIds: string[] = [];
+
+  for (const template of getSecondaryClozeTemplates()) {
+    for (const blankId of template.blankWordItemIds) {
+      if (!getSecondaryVocabItemById(blankId)) continue;
+      if (!clozeEligible.has(blankId)) continue;
+      blankIds.push(blankId);
+    }
+  }
+
+  return blankIds;
+}
+
+function buildSecondaryTodaySession(
+  now: Date,
+  dateKey: string,
+  studentId: string,
+): SecondaryTodaySession {
+  const candidateWordItemIds = getAllSecondaryWordItemIds();
+  if (candidateWordItemIds.length === 0) {
+    return emptySession(dateKey);
+  }
+
+  const selection = selectSecondaryTodayWords({
+    candidateWordItemIds,
+    studentId,
+    dateKey,
+    now,
+    clozeBlankIds: collectClozeBlankIds(candidateWordItemIds),
+    masteryRecords: readMasterySnapshot().records,
+  });
+
+  return {
+    dateKey,
+    warmUpWordItemIds: selection.warmUpWordItemIds,
+    todayWordItemIds: selection.todayWordItemIds,
+    allWordItemIds: selection.allWordItemIds,
+    selectionVersion: 2,
+  };
+}
+
 export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySession {
   const studentId = resolveSecondaryStudentId();
   const dateKey = getSecondaryTodayDateKey(now);
@@ -138,70 +153,10 @@ export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySessi
   const existingRaw = readJson<SecondaryTodaySession>(storageKey);
   if (existingRaw) {
     const existing = normalizeSession(existingRaw);
-    if (existing) return existing;
+    if (existing && !isStaleEmptySession(existing)) return existing;
   }
 
-  const candidateWordItemIds = getAllSecondaryWordItemIds();
-  if (candidateWordItemIds.length === 0) {
-    const empty = emptySession(dateKey);
-    writeJson(storageKey, empty);
-    return empty;
-  }
-
-  const candidateSignals = candidateWordItemIds.map((wordItemId) =>
-    getWordSignals(wordItemId),
-  );
-  const dueSignals = candidateSignals.filter((s) => s.nextReviewAtMs <= now.getTime());
-
-  const warmupSignals = sortWeakestFirst(
-    dueSignals.filter((s) => s.timesSeen > 0),
-  ).slice(0, WARMUP_WORDS);
-  const warmUpWordItemIds = warmupSignals.map((s) => s.wordItemId);
-  const warmUpSet = new Set(warmUpWordItemIds);
-
-  const remainingDue = sortWeakestFirst(
-    dueSignals.filter((s) => !warmUpSet.has(s.wordItemId)),
-  );
-  const targetTodayCount = Math.max(0, TARGET_WORDS - warmUpWordItemIds.length);
-
-  const todaySignals: WordSignals[] = remainingDue.slice(0, targetTodayCount);
-  const todaySet = new Set(todaySignals.map((s) => s.wordItemId));
-
-  if (todaySignals.length < targetTodayCount) {
-    const additionalNew = sortWeakestFirst(
-      candidateSignals.filter((s) => s.timesSeen === 0 && !todaySet.has(s.wordItemId)),
-    );
-    const needed = Math.max(0, targetTodayCount - todaySignals.length);
-    todaySignals.push(...additionalNew.slice(0, needed));
-  }
-
-  // Keep cloze usable by ensuring required blank words are included.
-  for (const template of getSecondaryClozeTemplates()) {
-    for (const blankId of template.blankWordItemIds) {
-      if (!getSecondaryVocabItemById(blankId)) continue;
-      if (
-        !todaySignals.some((s) => s.wordItemId === blankId) &&
-        !warmUpSet.has(blankId)
-      ) {
-        todaySignals.push(getWordSignals(blankId));
-      }
-    }
-  }
-
-  const todayWordItemIds = Array.from(
-    new Set(todaySignals.map((s) => s.wordItemId)),
-  );
-  const allWordItemIds = Array.from(
-    new Set([...warmUpWordItemIds, ...todayWordItemIds]),
-  );
-
-  const next: SecondaryTodaySession = {
-    dateKey,
-    warmUpWordItemIds,
-    todayWordItemIds,
-    allWordItemIds,
-  };
-
+  const next = buildSecondaryTodaySession(now, dateKey, studentId);
   writeJson(storageKey, next);
   return next;
 }
@@ -236,3 +191,5 @@ export function clearSecondaryTodayActivityCompletion(
   delete existing[activityKey];
   writeJson(storageKey, existing);
 }
+
+export { isSecondaryWordMastered };

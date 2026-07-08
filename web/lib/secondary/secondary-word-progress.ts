@@ -1,58 +1,38 @@
-import { resolveWordItemIdFromLegacyWord } from "@/lib/secondary/secondary-vocab-bank";
+import { getMasteryRecordForTarget } from "@/lib/mastery/local-storage";
+import {
+  applyLocalAttemptTransition,
+  createInitialLocalActivityWordState,
+  getWordsNeedingRepair,
+  isActivityLocallyComplete,
+} from "@/lib/secondary/local-activity-transitions";
+import {
+  buildSecondaryActivitySessionId,
+  clearLocalActivitySession,
+  getLocalActivityWordState,
+  readLocalActivityMap,
+  upsertLocalActivityWordState,
+} from "@/lib/secondary/local-activity-store";
+import type { LocalActivityWordState } from "@/lib/secondary/local-activity-types";
+import { applySecondaryAttemptToPlatformMastery } from "@/lib/secondary/secondary-mastery-bridge";
+import {
+  getSecondaryWordDisplaySnapshot,
+  getSecondaryWordProgressRecordFromDisplay,
+} from "@/lib/secondary/secondary-mastery-display";
+import { getSecondaryTodayDateKey } from "@/lib/secondary/secondary-today-session";
+import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 import type {
+  SecondaryTodayActivityKey,
   SecondaryWordAttempt,
   SecondaryWordProgressRecord,
   WordMasteryLevel,
 } from "@/lib/secondary/types";
 
-const WORD_PROGRESS_STORAGE_KEY_PREFIX = "secondary-vocab-word-progress-v1:";
-const STUDENT_ID_STORAGE_KEY = "secondary-vocab-student-id-v1";
-const MASTERY_LEVELS: WordMasteryLevel[] = [0, 1, 2, 3, 4, 5];
+export { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 
-const SUCCESS_INTERVAL_DAYS_BY_LEVEL: Record<WordMasteryLevel, number> = {
-  0: 1,
-  1: 2,
-  2: 4,
-  3: 7,
-  4: 14,
-  5: 30,
+export type SecondaryAttemptResult = {
+  progress: SecondaryWordProgressRecord;
+  local: LocalActivityWordState | null;
 };
-
-export function resolveSecondaryStudentId(): string {
-  if (typeof window === "undefined") return "server";
-
-  try {
-    const existing = localStorage.getItem(STUDENT_ID_STORAGE_KEY);
-    if (existing && existing.trim()) return existing;
-  } catch {
-    // ignore
-  }
-
-  const next =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `anon_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-
-  try {
-    localStorage.setItem(STUDENT_ID_STORAGE_KEY, next);
-  } catch {
-    // ignore
-  }
-
-  return next;
-}
-
-function getWordProgressStorageKey(studentId: string): string {
-  return `${WORD_PROGRESS_STORAGE_KEY_PREFIX}${studentId}`;
-}
-
-function clampMasteryLevel(level: number): WordMasteryLevel {
-  if (!Number.isFinite(level)) return 0;
-  const asInt = Math.max(0, Math.min(5, Math.floor(level)));
-  return MASTERY_LEVELS.includes(asInt as WordMasteryLevel)
-    ? (asInt as WordMasteryLevel)
-    : 0;
-}
 
 function makeNewWordProgress(wordItemId: string): SecondaryWordProgressRecord {
   return {
@@ -67,150 +47,125 @@ function makeNewWordProgress(wordItemId: string): SecondaryWordProgressRecord {
   };
 }
 
-function hydrateProgressRecord(
-  raw: unknown,
-  fallbackWordItemId: string,
-): SecondaryWordProgressRecord {
-  if (!raw || typeof raw !== "object") return makeNewWordProgress(fallbackWordItemId);
-
-  const input = raw as Record<string, unknown>;
-  const wordItemId =
-    typeof input.wordItemId === "string"
-      ? input.wordItemId
-      : typeof input.wordId === "string"
-        ? input.wordId
-        : fallbackWordItemId;
-
-  return {
-    wordItemId,
-    masteryLevel: clampMasteryLevel(
-      typeof input.masteryLevel === "number" ? input.masteryLevel : 0,
-    ),
-    timesSeen: typeof input.timesSeen === "number" ? input.timesSeen : 0,
-    timesCorrect: typeof input.timesCorrect === "number" ? input.timesCorrect : 0,
-    correctStreak: typeof input.correctStreak === "number" ? input.correctStreak : 0,
-    recentAccuracy: typeof input.recentAccuracy === "number" ? input.recentAccuracy : 0,
-    lastPracticedAt:
-      typeof input.lastPracticedAt === "string" ? input.lastPracticedAt : undefined,
-    nextReviewAt: typeof input.nextReviewAt === "string" ? input.nextReviewAt : undefined,
-  };
+function dateKeyFromAttempt(attempt: SecondaryWordAttempt): string {
+  return getSecondaryTodayDateKey(new Date(attempt.attemptedAt));
 }
 
-function migrateLegacyProgressMap(
-  parsed: Record<string, unknown>,
-): Record<string, SecondaryWordProgressRecord> {
-  const next: Record<string, SecondaryWordProgressRecord> = {};
-
-  for (const [key, value] of Object.entries(parsed)) {
-    const looksLikeWordItemId = key.startsWith("g7-a2-");
-    const mappedId = looksLikeWordItemId ? key : resolveWordItemIdFromLegacyWord(key);
-    const wordItemId = mappedId ?? (looksLikeWordItemId ? key : undefined);
-    if (!wordItemId) continue;
-
-    const record = hydrateProgressRecord(value, wordItemId);
-    const existing = next[wordItemId];
-    if (!existing || record.timesSeen >= existing.timesSeen) {
-      next[wordItemId] = { ...record, wordItemId };
-    }
-  }
-
-  return next;
-}
-
-function readAllProgress(storageKey: string): Record<string, SecondaryWordProgressRecord> {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return migrateLegacyProgressMap(parsed);
-  } catch {
-    return {};
-  }
-}
-
-function writeAllProgress(
-  storageKey: string,
-  next: Record<string, SecondaryWordProgressRecord>,
-): void {
-  localStorage.setItem(storageKey, JSON.stringify(next));
-}
-
-function applyAttemptToProgress(
-  previous: SecondaryWordProgressRecord,
-  attempt: SecondaryWordAttempt,
-  now: Date,
-): SecondaryWordProgressRecord {
-  const nextTimesSeen = previous.timesSeen + 1;
-  const nextTimesCorrect = previous.timesCorrect + (attempt.isCorrect ? 1 : 0);
-  const nextCorrectStreak = attempt.isCorrect ? previous.correctStreak + 1 : 0;
-
-  let nextLevel = previous.masteryLevel;
-  if (attempt.isCorrect) {
-    if (nextCorrectStreak >= 2 && nextLevel < 5) {
-      nextLevel = (nextLevel + 1) as WordMasteryLevel;
-    }
-  } else if (nextLevel > 0) {
-    nextLevel = (nextLevel - 1) as WordMasteryLevel;
-  }
-
-  const nextRecentAccuracy = nextTimesSeen ? nextTimesCorrect / nextTimesSeen : 0;
-  const nextReviewAt = attempt.isCorrect
-    ? new Date(
-        now.getTime() +
-          SUCCESS_INTERVAL_DAYS_BY_LEVEL[nextLevel] * 24 * 60 * 60 * 1000,
-      ).toISOString()
-    : new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
-
-  return {
-    ...previous,
-    wordItemId: attempt.wordItemId,
-    masteryLevel: clampMasteryLevel(nextLevel),
-    timesSeen: nextTimesSeen,
-    timesCorrect: nextTimesCorrect,
-    correctStreak: nextCorrectStreak,
-    recentAccuracy: nextRecentAccuracy,
-    lastPracticedAt: now.toISOString(),
-    nextReviewAt,
-  };
-}
-
+/** Platform-first progress projection for secondary UI (M5). */
 export function getSecondaryWordProgressRecord(
   wordItemId: string,
 ): SecondaryWordProgressRecord | null {
   if (typeof window === "undefined") return null;
+  const snap = getSecondaryWordDisplaySnapshot(wordItemId);
+  if (snap.timesSeen === 0 && snap.legacyLevel === 0) return null;
+  return getSecondaryWordProgressRecordFromDisplay(wordItemId);
+}
+
+/** @deprecated M5 — no new writes to legacy 0–5 store. */
+export function upsertSecondaryWordProgressRecord(
+  _studentId: string,
+  _record: SecondaryWordProgressRecord,
+): void {
+  // Intentionally no-op: platform mastery is the SoT.
+}
+
+export function getSecondaryActivitySessionId(
+  activityKey: SecondaryTodayActivityKey,
+  now = new Date(),
+): string {
+  return buildSecondaryActivitySessionId(getSecondaryTodayDateKey(now), activityKey);
+}
+
+export function getSecondaryLocalActivityStates(
+  activityKey: SecondaryTodayActivityKey,
+  now = new Date(),
+): Record<string, LocalActivityWordState> {
+  const studentId = resolveSecondaryStudentId();
+  return readLocalActivityMap(studentId, getSecondaryActivitySessionId(activityKey, now));
+}
+
+export function clearSecondaryLocalActivitySession(
+  activityKey: SecondaryTodayActivityKey,
+  now = new Date(),
+): void {
+  const studentId = resolveSecondaryStudentId();
+  clearLocalActivitySession(studentId, getSecondaryActivitySessionId(activityKey, now));
+}
+
+export function areSecondaryActivityWordsComplete(
+  activityKey: SecondaryTodayActivityKey,
+  wordItemIds: string[],
+  now = new Date(),
+): boolean {
+  const states = getSecondaryLocalActivityStates(activityKey, now);
+  return isActivityLocallyComplete(wordItemIds, states);
+}
+
+export function getSecondaryWordsNeedingRepair(
+  activityKey: SecondaryTodayActivityKey,
+  wordItemIds: string[],
+  now = new Date(),
+): string[] {
+  const states = getSecondaryLocalActivityStates(activityKey, now);
+  return getWordsNeedingRepair(states, wordItemIds);
+}
+
+export function recordSecondaryWordAttemptDetailed(
+  attempt: SecondaryWordAttempt,
+): SecondaryAttemptResult {
+  if (typeof window === "undefined") {
+    return { progress: makeNewWordProgress(attempt.wordItemId), local: null };
+  }
 
   const studentId = resolveSecondaryStudentId();
-  const storageKey = getWordProgressStorageKey(studentId);
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const migrated = migrateLegacyProgressMap(parsed);
-    return migrated[wordItemId] ?? null;
-  } catch {
-    return null;
+  const activitySessionId = buildSecondaryActivitySessionId(
+    dateKeyFromAttempt(attempt),
+    attempt.activityType,
+  );
+  const now = new Date(attempt.attemptedAt);
+  const display = getSecondaryWordDisplaySnapshot(attempt.wordItemId);
+
+  let localPrevious = getLocalActivityWordState(
+    studentId,
+    activitySessionId,
+    attempt.wordItemId,
+  );
+
+  if (!localPrevious) {
+    const mastery = getMasteryRecordForTarget({
+      type: "word",
+      key: attempt.wordItemId,
+    });
+    localPrevious = createInitialLocalActivityWordState({
+      studentId,
+      activitySessionId,
+      wordItemId: attempt.wordItemId,
+      masteryScore01: mastery?.masteryScore ?? display.masteryScore01,
+      legacyMasteryLevel: display.legacyLevel,
+      now,
+    });
   }
+
+  const attemptNumber = localPrevious.attempts + 1;
+  const localNext = applyLocalAttemptTransition(localPrevious, attempt.isCorrect, now);
+  upsertLocalActivityWordState(localNext);
+
+  const progress = applySecondaryAttemptToPlatformMastery({
+    studentId,
+    attempt,
+    evidenceMeta: {
+      firstTry: localPrevious.attempts === 0,
+      attempts: attemptNumber,
+    },
+  });
+
+  return { progress, local: localNext };
 }
 
 export function recordSecondaryWordAttempt(
   attempt: SecondaryWordAttempt,
 ): SecondaryWordProgressRecord {
-  if (typeof window === "undefined") return makeNewWordProgress(attempt.wordItemId);
-
-  const studentId = resolveSecondaryStudentId();
-  const storageKey = getWordProgressStorageKey(studentId);
-  const now = new Date(attempt.attemptedAt);
-  const existing = readAllProgress(storageKey);
-  const previous = existing[attempt.wordItemId];
-  const next = applyAttemptToProgress(
-    previous ?? makeNewWordProgress(attempt.wordItemId),
-    attempt,
-    now,
-  );
-
-  existing[attempt.wordItemId] = next;
-  writeAllProgress(storageKey, existing);
-  return next;
+  return recordSecondaryWordAttemptDetailed(attempt).progress;
 }
 
 export function mapMasteryLevelToLabel(level: WordMasteryLevel): string {

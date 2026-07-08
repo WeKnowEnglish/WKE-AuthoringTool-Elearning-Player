@@ -1,8 +1,8 @@
 # Secondary → Platform Mastery Bridge
 
-**Phase:** M0 (alignment only — no product code in this phase)  
-**Last updated:** 2026-07-08  
-**Status:** Landed  
+**Phase:** M0–M6 complete  
+**Last updated:** 2026-07-09  
+**Status:** Landed (M0–M6 + S1 session selection v2)
 
 ## 1. Purpose
 
@@ -53,8 +53,10 @@ Open Cursor work for M1+ against **Lesson Player `web`**, not ai-tutor.
 | Vocab emitters | `lib/mastery/vocabulary.ts` | `createVocabularyEvidenceEvent`, `recordVocabularyEvidence` |
 | Recommendations | `lib/mastery/recommendations.ts` | Adaptive selection for vocab runs |
 | Secondary bank / session | `lib/secondary/*` | Shared concepts with the ai-tutor prototype |
-| Secondary activities | `components/secondary/*` | Match/Cloze/Spelling call **0–5 only** today |
-| Secondary progress | `lib/secondary/secondary-word-progress.ts` | **Not wired** to `lib/mastery` |
+| Secondary activities | `components/secondary/*` | Match/Cloze/Spelling filter by `practiceTypes` (M4) |
+| Secondary progress | `lib/secondary/secondary-word-progress.ts` | Wired to `lib/mastery`; platform-first display (M5) |
+| Practice filter | `lib/secondary/secondary-practice-types.ts` | Normalizes bank aliases; per-activity eligibility |
+| Display projection | `lib/secondary/secondary-mastery-display.ts` | Reads `StudentMasteryRecord`; legacy store fallback |
 
 ### ai-tutor prototype (ideas to port, then drain)
 
@@ -133,8 +135,8 @@ Bridge must also set:
 
 | Key | Contents | Plan |
 | --- | --- | --- |
-| `secondary-vocab-word-progress-v1:{studentId}` | 0–5 aggregates | Dual-write from bridge until M5 |
-| `secondary-vocab-today-session-v2:...` | Daily word lists | Keep; selection rewrite later |
+| `secondary-vocab-word-progress-v1:{studentId}` | 0–5 aggregates | **Read-only fallback** (M5); no new dual-writes |
+| `secondary-vocab-today-session-v2:...` | Daily word lists | **S1 ✅** — quota selection v2; see [SECONDARY_SESSION_SELECTION.md](./SECONDARY_SESSION_SELECTION.md) |
 | `secondary-vocab-today-completion-v1:...` | Activity chips | Keep; gate via local repair in M2 |
 | `secondary-vocab-student-id-v1` | Guest UUID | Align with hub identity in M1 if possible |
 
@@ -212,18 +214,20 @@ Implement under Lesson Player conventions and kid UI tokens already used in seco
 | Blind file overwrite of LP secondary UX | Diff before port; behavior port, not dump |
 | Evidence log cap (500) vs secondary volume | Accept LP cap; revisit if secondary floods log |
 
-## 14. Definition of done — M0
+## 14. Definition of done — M0–M6
 
-- [x] This file exists at `web/docs/mastery/SECONDARY_TO_PLATFORM_MASTERY_BRIDGE.md`
-- [x] Hard rule recorded: no second mastery engine
-- [x] Score scale verified (0–1)
-- [ ] Team treats ai-tutor secondary/mastery as frozen for features
-- [ ] Next coding phase is **M1** in the Lesson Player workspace
+- [x] Bridge doc at `web/docs/mastery/SECONDARY_TO_PLATFORM_MASTERY_BRIDGE.md`
+- [x] Secondary attempts → `recordVocabularyEvidence` (M1)
+- [x] Local repair + completion gating (M2)
+- [x] Docs pack under `web/docs/mastery/` (M3)
+- [x] `practiceTypes` filtering in activities (M4)
+- [x] Platform-first display; legacy store read-only (M5)
+- [x] ai-tutor secondary/mastery frozen (M6)
 
 ## 15. Next step
 
-**M1 — Wire Secondary → existing mastery**
+**Post-M6 tracks** — see [MASTERY_ROADMAP.md](./MASTERY_ROADMAP.md).
 
-Change secondary attempt recording so Match / Cloze / Spelling call into `recordVocabularyEvidence` / the mastery engine, while dual-writing the legacy 0–5 secondary progress record for Home / today session.
-
-Do that work with the Cursor workspace rooted at Lesson Player `web`.
+- **S1 session selection v2** — ✅ [SECONDARY_SESSION_SELECTION.md](./SECONDARY_SESSION_SELECTION.md)
+- **P1 Supabase persistence** — next
+- Grammar emitter (G1) — ✅; teacher views, cloze generator — pending

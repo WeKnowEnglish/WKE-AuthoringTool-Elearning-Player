@@ -188,7 +188,7 @@ When wired in Phase 4:
 |-------|------|
 | 2 | `progression-edges.json` with edge metadata |
 | 3 | `CONTENT-MAPPING.md`, `catalog.json` `conceptId` |
-| 4 | `EVIDENCE-RULES.md`, `recordGrammarEvidence()` |
+| 4 | [EVIDENCE-RULES.md](./EVIDENCE-RULES.md), `recordGrammarEvidence()` — **G1 landed** |
 | 5 | `standards-index.json`, populated `standardsRef` |
 | 6 | Lesson AI prompts, recommendations |
 

@@ -1,6 +1,6 @@
 # Adaptive Learning Architecture Plan
 
-Last updated: 2026-07-04
+Last updated: 2026-07-08
 
 ## Why This Matters
 
@@ -38,7 +38,7 @@ These systems are parallel. They do not yet answer:
 
 The first bridge has been added for vocabulary: a student's graded vocabulary responses now become durable evidence and update local mastery records. The remaining work is to expand this pattern to lesson skills, grammar targets, story scenes, the board game, and teacher/parent reporting.
 
-Lower Secondary Match / Cloze / Spelling still update a separate 0–5 LocalStorage store and are not yet wired into `lib/mastery`. The consolidation map and phase sequence live in [`docs/mastery/SECONDARY_TO_PLATFORM_MASTERY_BRIDGE.md`](./mastery/SECONDARY_TO_PLATFORM_MASTERY_BRIDGE.md) (M0). Do not add a second mastery engine for that lane.
+Lower Secondary Match / Cloze / Spelling now emit into `lib/mastery` via `recordSecondaryWordAttempt` (M1) with local repair gating (M2). A legacy 0–5 projection still dual-writes for Home until M5. See [`docs/mastery/README.md`](./mastery/README.md) and [`docs/mastery/SECONDARY_TO_PLATFORM_MASTERY_BRIDGE.md`](./mastery/SECONDARY_TO_PLATFORM_MASTERY_BRIDGE.md). Do not add a second mastery engine for that lane.
 
 ## Core Product Principle
 

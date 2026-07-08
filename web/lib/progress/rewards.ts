@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedLocalStorageKey } from "@/lib/auth/scoped-local-storage";
+import { resolveStudentStorageIdSync } from "@/lib/auth/student-storage-id";
 import { levelFromXp, levelsGainedBetween } from "./leveling";
 import { totalLevelUpPayoutForLevels } from "./level-rewards";
 import { dispatchLevelUp } from "./level-up-events";
@@ -126,7 +128,9 @@ export function computeTestStartQuizCorrectOutcome(prev: {
 export function getRewards(): RewardsSnapshot {
   if (typeof window === "undefined") return emptyRewards();
   try {
-    const raw = localStorage.getItem(REWARDS_STORAGE_KEY);
+    const raw = localStorage.getItem(
+      scopedLocalStorageKey(REWARDS_STORAGE_KEY, resolveStudentStorageIdSync()),
+    );
     if (!raw) return emptyRewards();
     const parsed = JSON.parse(raw) as Partial<RewardsSnapshot>;
     return syncLevelFields({
@@ -150,7 +154,10 @@ export function getRewards(): RewardsSnapshot {
 }
 
 function writeRewards(next: RewardsSnapshot) {
-  localStorage.setItem(REWARDS_STORAGE_KEY, JSON.stringify(syncLevelFields(next)));
+  localStorage.setItem(
+    scopedLocalStorageKey(REWARDS_STORAGE_KEY, resolveStudentStorageIdSync()),
+    JSON.stringify(syncLevelFields(next)),
+  );
 }
 
 /** Partial update without dropping other reward fields. */

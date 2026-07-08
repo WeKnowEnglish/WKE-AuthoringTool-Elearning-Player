@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { scopedLocalStorageKey } from "@/lib/auth/scoped-local-storage";
+import { clearStudentStorageIdCache } from "@/lib/auth/student-storage-id";
+import { resetStudentStorageMigrationMemo } from "@/lib/auth/student-storage-migrate";
+import { PROGRESS_STORAGE_KEY } from "@/lib/progress/types";
 import {
   computeTestStartQuizCorrectOutcome,
   purchaseRandomStickerPacks,
@@ -11,8 +15,35 @@ import {
   getRewards,
   sellDuplicateStickersKeepOne,
   spendGold,
+  type RewardsSnapshot,
 } from "./rewards";
 import { STICKER_LIBRARY } from "./sticker-library";
+
+const TEST_DEVICE_ID = "rewards-test-device";
+
+function seedScopedRewards(snapshot: Partial<RewardsSnapshot> & Pick<RewardsSnapshot, "gold" | "experience" | "rewardedEventIds" | "ownedStickerIds">) {
+  localStorage.setItem(
+    PROGRESS_STORAGE_KEY,
+    JSON.stringify({
+      schemaVersion: 1,
+      anonymousDeviceId: TEST_DEVICE_ID,
+      completedLessonIds: [],
+    }),
+  );
+  localStorage.setItem(
+    scopedLocalStorageKey(REWARDS_STORAGE_KEY, TEST_DEVICE_ID),
+    JSON.stringify({
+      quizEnergy: 0,
+      quizStreak: 0,
+      ...snapshot,
+    }),
+  );
+}
+
+function resetRewardsTestState() {
+  clearStudentStorageIdCache();
+  resetStudentStorageMigrationMemo();
+}
 
 describe("computeTestStartQuizCorrectOutcome", () => {
   it("first correct: streak 1, one energy, base gold and xp", () => {
@@ -67,18 +98,14 @@ function installMemoryRewardsStorage() {
 describe("purchaseRandomStickerPacks", () => {
   beforeEach(() => {
     installMemoryRewardsStorage();
+    resetRewardsTestState();
     localStorage.clear();
-    localStorage.setItem(
-      REWARDS_STORAGE_KEY,
-      JSON.stringify({
-        gold: 25,
-        experience: 0,
-        rewardedEventIds: [],
-        ownedStickerIds: [],
-        quizEnergy: 0,
-        quizStreak: 0,
-      }),
-    );
+    seedScopedRewards({
+      gold: 25,
+      experience: 0,
+      rewardedEventIds: [],
+      ownedStickerIds: [],
+    });
   });
 
   it("buys n stickers in one write and deducts full gold", () => {
@@ -99,6 +126,7 @@ describe("purchaseRandomStickerPacks", () => {
   });
 
   afterEach(() => {
+    resetRewardsTestState();
     vi.unstubAllGlobals();
   });
 });
@@ -106,43 +134,35 @@ describe("purchaseRandomStickerPacks", () => {
 describe("sellDuplicateStickersKeepOne", () => {
   beforeEach(() => {
     installMemoryRewardsStorage();
+    resetRewardsTestState();
     localStorage.clear();
   });
 
   afterEach(() => {
+    resetRewardsTestState();
     vi.unstubAllGlobals();
   });
 
   it("returns null when every sticker id appears at most once", () => {
     const a = STICKER_LIBRARY[0]!.id;
     const b = STICKER_LIBRARY[1]!.id;
-    localStorage.setItem(
-      REWARDS_STORAGE_KEY,
-      JSON.stringify({
-        gold: 0,
-        experience: 0,
-        rewardedEventIds: [],
-        ownedStickerIds: [a, b],
-        quizEnergy: 0,
-        quizStreak: 0,
-      }),
-    );
+    seedScopedRewards({
+      gold: 0,
+      experience: 0,
+      rewardedEventIds: [],
+      ownedStickerIds: [a, b],
+    });
     expect(sellDuplicateStickersKeepOne(() => 10)).toBeNull();
   });
 
   it("sells extras for gold and keeps one copy per priced id", () => {
     const a = STICKER_LIBRARY[0]!.id;
-    localStorage.setItem(
-      REWARDS_STORAGE_KEY,
-      JSON.stringify({
-        gold: 5,
-        experience: 0,
-        rewardedEventIds: [],
-        ownedStickerIds: [a, a, a],
-        quizEnergy: 0,
-        quizStreak: 0,
-      }),
-    );
+    seedScopedRewards({
+      gold: 5,
+      experience: 0,
+      rewardedEventIds: [],
+      ownedStickerIds: [a, a, a],
+    });
     const snap = sellDuplicateStickersKeepOne((id) => (id === a ? 12 : null));
     expect(snap).not.toBeNull();
     expect(snap!.gold).toBe(5 + 12 * 2);
@@ -152,17 +172,12 @@ describe("sellDuplicateStickersKeepOne", () => {
 
   it("does not remove copies when price callback returns null", () => {
     const a = STICKER_LIBRARY[0]!.id;
-    localStorage.setItem(
-      REWARDS_STORAGE_KEY,
-      JSON.stringify({
-        gold: 0,
-        experience: 0,
-        rewardedEventIds: [],
-        ownedStickerIds: [a, a],
-        quizEnergy: 0,
-        quizStreak: 0,
-      }),
-    );
+    seedScopedRewards({
+      gold: 0,
+      experience: 0,
+      rewardedEventIds: [],
+      ownedStickerIds: [a, a],
+    });
     expect(sellDuplicateStickersKeepOne(() => null)).toBeNull();
     expect(getRewards().ownedStickerIds).toEqual([a, a]);
   });
@@ -172,20 +187,17 @@ describe("spendGold", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     installMemoryRewardsStorage();
-    localStorage.setItem(
-      REWARDS_STORAGE_KEY,
-      JSON.stringify({
-        gold: 100,
-        experience: 0,
-        rewardedEventIds: [],
-        ownedStickerIds: [],
-        quizEnergy: 0,
-        quizStreak: 0,
-      }),
-    );
+    resetRewardsTestState();
+    seedScopedRewards({
+      gold: 100,
+      experience: 0,
+      rewardedEventIds: [],
+      ownedStickerIds: [],
+    });
   });
 
   afterEach(() => {
+    resetRewardsTestState();
     vi.unstubAllGlobals();
   });
 

@@ -89,6 +89,8 @@ export interface SecondaryTodaySession {
   warmUpWordItemIds: string[];
   todayWordItemIds: string[];
   allWordItemIds: string[];
+  /** Present on sessions built by selection v2 (S1b+). */
+  selectionVersion?: 2;
 }
 
 export type SecondaryTodayActivityKey = "match" | "cloze" | "spelling";

@@ -10,7 +10,7 @@ export async function requireSecondaryStudentAccess(): Promise<void> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?portal=student");
+    redirect("/secondary/login");
   }
 
   if (isTeacher(user)) {

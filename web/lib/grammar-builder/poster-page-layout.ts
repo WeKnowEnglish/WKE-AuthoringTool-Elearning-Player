@@ -1,4 +1,4 @@
-import type { GrammarModule, GrammarPageLayout, GrammarPageRow } from "./schema";
+import type { GrammarPageLayout, GrammarPageRow } from "./schema";
 
 const POSTER_GRID_CLASS =
   "grid grid-cols-1 items-start gap-3 sm:grid-cols-2";
@@ -93,7 +93,11 @@ export function derivePresetPageRows(
   }
 }
 
-export function resolvePageRows(module: Pick<GrammarModule, "pageLayout" | "customRows" | "cards">): GrammarPageRow[] {
+export function resolvePageRows(module: {
+  pageLayout: GrammarPageLayout;
+  customRows?: GrammarPageRow[];
+  cards: ReadonlyArray<{ id: number }>;
+}): GrammarPageRow[] {
   const cardIds = module.cards.map((card) => card.id);
   if (module.pageLayout === "custom") {
     return module.customRows ?? [];

@@ -26,25 +26,38 @@ import type {
 const ACTIVITIES = [
   {
     key: "match" as const,
+    step: 1,
     href: "/secondary/match",
-    title: "Match The Word To The Definition",
-    description: "Pair key academic words with the best definition.",
+    title: "1. Match",
+    shortTitle: "Match",
+    description: "Pair each word with the best definition.",
   },
   {
     key: "cloze" as const,
+    step: 2,
     href: "/secondary/cloze",
-    title: "Cloze Paragraph",
-    description: "Complete a paragraph by filling each blank with the correct word.",
+    title: "2. Cloze",
+    shortTitle: "Cloze",
+    description: "Fill each blank in today's paragraph.",
   },
   {
     key: "spelling" as const,
+    step: 3,
     href: "/secondary/spelling",
-    title: "Spelling Activity",
-    description: "Type the correct spelling from meaning-based prompts.",
+    title: "3. Spelling",
+    shortTitle: "Spelling",
+    description: "Type the correct spelling from meaning prompts.",
   },
 ];
 
+const ACTIVITY_HREF: Record<SecondaryTodayActivityKey, string> = {
+  match: "/secondary/match",
+  cloze: "/secondary/cloze",
+  spelling: "/secondary/spelling",
+};
+
 export function SecondaryHome() {
+  const [hydrated, setHydrated] = useState(false);
   const [todaySession, setTodaySession] = useState<SecondaryTodaySession | null>(null);
   const [completion, setCompletion] = useState<SecondaryTodayCompletion>({});
 
@@ -52,6 +65,7 @@ export function SecondaryHome() {
     const now = new Date();
     setTodaySession(getOrCreateSecondaryTodaySession(now));
     setCompletion(getSecondaryTodayCompletion(now));
+    setHydrated(true);
   }, []);
 
   const todayWordSet = new Set(todaySession?.allWordItemIds ?? []);
@@ -65,8 +79,10 @@ export function SecondaryHome() {
     getSecondaryClozeTemplates()[0]?.blankWordItemIds.filter((id) => todayWordSet.has(id))
       .length ?? 0;
   const spellingCountToday = todayItems.length;
+  const hasWordsToday = (todaySession?.allWordItemIds.length ?? 0) > 0;
 
   const isActivityAvailableToday = (activityKey: SecondaryTodayActivityKey) => {
+    if (!hasWordsToday) return false;
     if (activityKey === "match") return matchCountToday > 0;
     if (activityKey === "cloze") return clozeCountToday > 0;
     if (activityKey === "spelling") return spellingCountToday > 0;
@@ -74,7 +90,7 @@ export function SecondaryHome() {
   };
 
   const weakWordItemIds = (() => {
-    if (!todaySession) return [];
+    if (!todaySession?.allWordItemIds.length) return [];
     const records = todaySession.allWordItemIds
       .map((wordItemId) => {
         const rec = getSecondaryWordProgressRecord(wordItemId);
@@ -111,6 +127,12 @@ export function SecondaryHome() {
     return null;
   })();
 
+  const allDoneToday =
+    hydrated &&
+    hasWordsToday &&
+    !nextActivityKey &&
+    ACTIVITIES.some((a) => isActivityAvailableToday(a.key));
+
   return (
     <section className="space-y-4">
       <header className="rounded-xl border-2 border-kid-ink bg-white p-5">
@@ -119,24 +141,40 @@ export function SecondaryHome() {
         </p>
         <h2 className="mt-1 text-2xl font-extrabold text-kid-ink">Vocabulary Practice</h2>
         <p className="mt-2 text-sm font-semibold text-kid-ink/80">
-          Today&apos;s practice is controlled and measurable. Finish Match, then Cloze, then
-          Spelling.
+          Work in order: Match → Cloze → Spelling. Today&apos;s word set stays the same until
+          tomorrow.
+        </p>
+        <p className="mt-3 text-xs font-bold uppercase tracking-wide text-kid-ink/60">
+          Path: Match → Cloze → Spelling
         </p>
       </header>
 
-      {todaySession ? (
+      {!hydrated ? (
+        <div
+          className="h-24 animate-pulse rounded-xl border-2 border-kid-ink/30 bg-white/70"
+          aria-hidden
+        />
+      ) : !hasWordsToday ? (
+        <div className="rounded-xl border-2 border-amber-700 bg-amber-50 p-4">
+          <p className="text-sm font-extrabold text-amber-950">No words ready today</p>
+          <p className="mt-1 text-xs font-semibold text-amber-900/80">
+            The practice bank is empty or unavailable. Check back after content is loaded, or ask
+            your teacher.
+          </p>
+        </div>
+      ) : (
         <div className="flex flex-wrap gap-2">
-          <Badge label={`Today: ${todaySession.allWordItemIds.length} words`} />
+          <Badge label={`Today: ${todaySession!.allWordItemIds.length} words`} />
           <Badge
-            label={`Warm-up: ${Math.min(WARMUP_WORDS, todaySession.warmUpWordItemIds.length)}`}
+            label={`Warm-up: ${Math.min(WARMUP_WORDS, todaySession!.warmUpWordItemIds.length)}`}
           />
           <Badge label={`Mastered: ${masteredCount}`} />
         </div>
-      ) : null}
+      )}
 
-      {weakWordItemIds.length > 0 && todaySession ? (
+      {hydrated && hasWordsToday && weakWordItemIds.length > 0 ? (
         <div className="rounded-xl border-2 border-kid-ink bg-white p-4">
-          <p className="text-sm font-extrabold text-kid-ink">Weak words</p>
+          <p className="text-sm font-extrabold text-kid-ink">Focus words</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {weakWordItemIds.map((wordItemId) => {
               const item = getSecondaryVocabItemById(wordItemId);
@@ -146,29 +184,42 @@ export function SecondaryHome() {
                   key={wordItemId}
                   className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-800"
                 >
-                  {item?.word ?? wordItemId} - {mapMasteryLevelToLabel(level)}
+                  {item?.word ?? wordItemId} — {mapMasteryLevelToLabel(level)}
                 </span>
               );
             })}
           </div>
         </div>
+      ) : hydrated && hasWordsToday ? (
+        <div className="rounded-xl border-2 border-emerald-700 bg-emerald-50 p-4">
+          <p className="text-sm font-extrabold text-emerald-950">No weak words flagged yet</p>
+          <p className="mt-1 text-xs font-semibold text-emerald-900/80">
+            Finish today&apos;s activities to build a focus list.
+          </p>
+        </div>
       ) : null}
 
       {nextActivityKey ? (
         <div className="rounded-xl border-2 border-kid-ink bg-kid-panel p-4">
-          <p className="text-sm font-extrabold text-kid-ink">Next: {nextActivityKey.toUpperCase()}</p>
+          <p className="text-sm font-extrabold text-kid-ink">
+            Next up: {ACTIVITIES.find((a) => a.key === nextActivityKey)?.shortTitle ?? nextActivityKey}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-kid-ink/75">
+            Recommended order keeps practice measurable day to day.
+          </p>
           <Link
-            className="mt-2 inline-flex rounded-lg border-2 border-kid-ink bg-kid-accent px-3 py-2 text-sm font-extrabold text-kid-ink"
-            href={
-              nextActivityKey === "match"
-                ? "/secondary/match"
-                : nextActivityKey === "cloze"
-                  ? "/secondary/cloze"
-                  : "/secondary/spelling"
-            }
+            className="mt-3 inline-flex rounded-lg border-2 border-kid-ink bg-kid-accent px-3 py-2 text-sm font-extrabold text-kid-ink"
+            href={ACTIVITY_HREF[nextActivityKey]}
           >
             Continue
           </Link>
+        </div>
+      ) : allDoneToday ? (
+        <div className="rounded-xl border-2 border-emerald-800 bg-emerald-50 p-4">
+          <p className="text-sm font-extrabold text-emerald-950">Today&apos;s path is complete</p>
+          <p className="mt-1 text-xs font-semibold text-emerald-900/80">
+            Nice work. You can replay any activity below, or come back tomorrow for a fresh set.
+          </p>
         </div>
       ) : null}
 
@@ -176,15 +227,22 @@ export function SecondaryHome() {
         {ACTIVITIES.map((activity) => {
           const canOpen = isActivityAvailableToday(activity.key);
           const activityCompletion = completion[activity.key];
+          const isNext = nextActivityKey === activity.key;
           const status = activityCompletion
             ? `Completed (${activityCompletion.percent}%)`
-            : canOpen
-              ? "Not completed"
-              : "Not available today";
+            : !hydrated
+              ? "Loading…"
+              : canOpen
+                ? isNext
+                  ? "Up next"
+                  : "Ready"
+                : "Not available today";
 
           return (
             <article
-              className="rounded-xl border-2 border-kid-ink bg-white p-4"
+              className={`rounded-xl border-2 border-kid-ink bg-white p-4 ${
+                isNext ? "ring-2 ring-kid-accent ring-offset-2" : ""
+              }`}
               key={activity.href}
             >
               <h3 className="text-sm font-extrabold text-kid-ink">{activity.title}</h3>
@@ -200,7 +258,7 @@ export function SecondaryHome() {
                   </Link>
                 ) : (
                   <span className="rounded-md bg-slate-300 px-2 py-1 text-xs font-bold text-slate-700">
-                    Open
+                    Locked
                   </span>
                 )}
               </div>
@@ -208,6 +266,12 @@ export function SecondaryHome() {
           );
         })}
       </div>
+
+      <p className="text-center text-xs font-semibold text-kid-ink/70">
+        <Link href="/home?room=learn" className="underline decoration-2 underline-offset-2">
+          Back to Learn room
+        </Link>
+      </p>
     </section>
   );
 }

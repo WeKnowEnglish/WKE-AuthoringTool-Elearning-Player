@@ -20,6 +20,8 @@ import {
   vocabSetCoverImageSrc,
   type VocabSetId,
 } from "@/lib/vocabulary-templates";
+import type { LearningBand } from "@/lib/learning-band";
+import { SecondaryPracticeCard } from "@/components/student-hub/SecondaryPracticeCard";
 
 type LearnVocabView = "top" | VocabHubId;
 
@@ -58,6 +60,7 @@ type Props = {
   playerLevel: number;
   muted: boolean;
   studyCarePending?: boolean;
+  learningBand?: LearningBand | null;
   onOpenVocabularySet: (id: VocabSetId) => void;
   onExplorationChange?: () => void;
 };
@@ -69,6 +72,7 @@ export function LearnRoom({
   playerLevel,
   muted,
   studyCarePending = false,
+  learningBand = null,
   onOpenVocabularySet,
   onExplorationChange,
 }: Props) {
@@ -107,6 +111,9 @@ export function LearnRoom({
 
       {view === "top" ?
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <li className="sm:col-span-2">
+            <SecondaryPracticeCard muted={muted} learningBand={learningBand} />
+          </li>
           <li className="sm:col-span-2">
             <Link
               href="/grammar"

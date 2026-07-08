@@ -30,10 +30,14 @@ import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { markExplorationNode } from "@/lib/worlds/exploration";
 import type { VocabSetId } from "@/lib/vocabulary-templates";
 import { subscribePracticeEvents } from "@/lib/student-session";
+import { getLearningBand } from "@/lib/progress/local-storage";
+import type { LearningBand } from "@/lib/learning-band";
+import { SecondaryAccessNotice } from "@/components/student-hub/SecondaryPracticeCard";
 
 type Props = {
   initialCollectionPage?: string | null;
   initialRoom?: string | null;
+  initialMessage?: string | null;
 };
 
 function parseInitialRoom(room: string | null | undefined, hasCollectionPage: boolean): StudentHubRoom {
@@ -42,7 +46,11 @@ function parseInitialRoom(room: string | null | undefined, hasCollectionPage: bo
   return "home";
 }
 
-export function StudentHubClient({ initialCollectionPage = null, initialRoom = null }: Props) {
+export function StudentHubClient({
+  initialCollectionPage = null,
+  initialRoom = null,
+  initialMessage = null,
+}: Props) {
   const hydrated = useClientHydrated();
   const initialBook = Boolean(initialCollectionPage);
   const [room, setRoom] = useState<StudentHubRoom>(() =>
@@ -51,6 +59,7 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
   const [collectionPage, setCollectionPage] = useState<CollectionPageId>(() =>
     parseCollectionPageId(initialCollectionPage),
   );
+  const [learningBand, setLearningBandState] = useState<LearningBand | null>(null);
   const { muted } = useAudioMuted();
   const [rewardsUi, setRewardsUi] = useState({
     gold: 0,
@@ -107,6 +116,11 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
     refreshRewardsUi();
     refreshStudyPendingUi();
   }, [refreshRewardsUi, refreshStudyPendingUi]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setLearningBandState(getLearningBand());
+  }, [hydrated]);
 
   useEffect(() => {
     return subscribePracticeEvents((event) => {
@@ -288,6 +302,8 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
         </KidPanel>
       : null}
 
+      <SecondaryAccessNotice message={initialMessage} />
+
       <main
         className={clsx(
           room === "book" ?
@@ -329,6 +345,7 @@ export function StudentHubClient({ initialCollectionPage = null, initialRoom = n
             playerLevel={rewardsUi.level}
             muted={muted}
             studyCarePending={studyPendingUi}
+            learningBand={learningBand}
             onOpenVocabularySet={openVocabularySet}
             onExplorationChange={refreshExplorationUi}
           />

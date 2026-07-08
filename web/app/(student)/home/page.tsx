@@ -4,7 +4,7 @@ import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = {
-  searchParams?: Promise<{ collection?: string; room?: string }>;
+  searchParams?: Promise<{ collection?: string; room?: string; message?: string }>;
 };
 
 export default async function StudentHomePage({ searchParams }: Props) {
@@ -31,6 +31,7 @@ export default async function StudentHomePage({ searchParams }: Props) {
     <StudentHubClient
       initialCollectionPage={params.collection ?? null}
       initialRoom={params.room ?? null}
+      initialMessage={params.message ?? null}
     />
   );
 }

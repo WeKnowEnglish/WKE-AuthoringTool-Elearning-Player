@@ -96,9 +96,38 @@ function sortWeakestFirst(signals: WordSignals[]): WordSignals[] {
   });
 }
 
-function normalizeSession(raw: SecondaryTodaySession): SecondaryTodaySession | null {
-  if (!raw.allWordItemIds?.length) return null;
-  return raw;
+function normalizeSession(raw: SecondaryTodaySession | null | undefined): SecondaryTodaySession | null {
+  if (!raw || typeof raw !== "object") return null;
+  if (typeof raw.dateKey !== "string" || !raw.dateKey) return null;
+  if (!Array.isArray(raw.allWordItemIds)) return null;
+  if (!Array.isArray(raw.warmUpWordItemIds) || !Array.isArray(raw.todayWordItemIds)) return null;
+
+  const allWordItemIds = raw.allWordItemIds.filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+  const warmUpWordItemIds = raw.warmUpWordItemIds.filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+  const todayWordItemIds = raw.todayWordItemIds.filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+
+  // Empty is valid (no bank / no due words) — still a stable session for the day.
+  return {
+    dateKey: raw.dateKey,
+    warmUpWordItemIds,
+    todayWordItemIds,
+    allWordItemIds,
+  };
+}
+
+function emptySession(dateKey: string): SecondaryTodaySession {
+  return {
+    dateKey,
+    warmUpWordItemIds: [],
+    todayWordItemIds: [],
+    allWordItemIds: [],
+  };
 }
 
 export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySession {
@@ -113,6 +142,12 @@ export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySessi
   }
 
   const candidateWordItemIds = getAllSecondaryWordItemIds();
+  if (candidateWordItemIds.length === 0) {
+    const empty = emptySession(dateKey);
+    writeJson(storageKey, empty);
+    return empty;
+  }
+
   const candidateSignals = candidateWordItemIds.map((wordItemId) =>
     getWordSignals(wordItemId),
   );
@@ -136,7 +171,7 @@ export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySessi
     const additionalNew = sortWeakestFirst(
       candidateSignals.filter((s) => s.timesSeen === 0 && !todaySet.has(s.wordItemId)),
     );
-    const needed = targetTodayCount - todaySignals.length;
+    const needed = Math.max(0, targetTodayCount - todaySignals.length);
     todaySignals.push(...additionalNew.slice(0, needed));
   }
 

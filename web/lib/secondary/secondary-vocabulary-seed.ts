@@ -1,0 +1,212 @@
+import type { SecondaryClozeTemplate, SecondaryVocabItem, SecondaryVocabPack } from "@/lib/secondary/types";
+
+const PACK_ID = "g7-a2-mvp-core-vocab-v1";
+
+function item(
+  partial: Omit<SecondaryVocabItem, "packId" | "cefrLevel" | "gradeBand" | "lemma"> & {
+    lemma?: string;
+  },
+): SecondaryVocabItem {
+  return {
+    ...partial,
+    packId: PACK_ID,
+    cefrLevel: "A2",
+    gradeBand: "6-7",
+    lemma: partial.lemma ?? partial.word,
+    commonChunks: partial.commonChunks ?? [],
+    relatedWords: partial.relatedWords ?? [],
+    opposites: partial.opposites ?? [],
+    distractors: partial.distractors ?? [],
+  };
+}
+
+export const g7A2MvpCoreVocabPack: SecondaryVocabPack = {
+  metadata: {
+    packId: PACK_ID,
+    title: "Grade 7 A2 MVP Core Vocabulary",
+    description: "Small importable bank for wordItemId foundations.",
+    cefrLevel: "A2",
+    gradeBand: "6-7",
+    version: "1.0.0-mvp",
+  },
+  topics: [
+    {
+      topicId: "school-life",
+      title: "School Life",
+      description: "Classroom and school vocabulary.",
+      sets: [
+        {
+          setId: "subjects-places-and-people",
+          title: "Subjects, Places, and People",
+          practiceFocus: ["word-meaning matching", "fill in the blank", "spelling"],
+          items: [
+            item({
+              wordItemId: "g7-a2-school-life-subject",
+              topicId: "school-life",
+              setId: "subjects-places-and-people",
+              word: "subject",
+              partOfSpeech: "noun",
+              studentMeaningEn: "an area of study at school, such as science or history",
+              vnMeaning: "mon hoc",
+              exampleSentence: "Science is my favorite subject.",
+              difficulty: 2,
+              practiceTypes: ["matching", "meaningChoice", "spelling", "fillBlank"],
+              tags: ["school"],
+              distractors: ["project", "classmate", "library"],
+            }),
+            item({
+              wordItemId: "g7-a2-school-life-science",
+              topicId: "school-life",
+              setId: "subjects-places-and-people",
+              word: "science",
+              partOfSpeech: "noun",
+              studentMeaningEn: "the study of nature, experiments, and how things work",
+              vnMeaning: "khoa hoc",
+              exampleSentence: "We do experiments in science class.",
+              difficulty: 1,
+              practiceTypes: ["matching", "meaningChoice", "spelling"],
+              tags: ["school", "subject"],
+            }),
+            item({
+              wordItemId: "g7-a2-school-life-library",
+              topicId: "school-life",
+              setId: "subjects-places-and-people",
+              word: "library",
+              partOfSpeech: "noun",
+              studentMeaningEn: "a place at school where you can read and borrow books",
+              vnMeaning: "thu vien",
+              exampleSentence: "I study quietly in the library.",
+              difficulty: 1,
+              practiceTypes: ["matching", "meaningChoice", "spelling", "fillBlank"],
+              tags: ["school", "place"],
+            }),
+            item({
+              wordItemId: "g7-a2-school-life-classmate",
+              topicId: "school-life",
+              setId: "subjects-places-and-people",
+              word: "classmate",
+              partOfSpeech: "noun",
+              studentMeaningEn: "a student in the same class as you",
+              vnMeaning: "ban cung lop",
+              exampleSentence: "My classmate helped me with the homework.",
+              difficulty: 1,
+              practiceTypes: ["matching", "meaningChoice", "spelling"],
+              tags: ["school", "people"],
+            }),
+            item({
+              wordItemId: "g7-a2-school-life-homework",
+              topicId: "school-life",
+              setId: "subjects-places-and-people",
+              word: "homework",
+              partOfSpeech: "noun",
+              studentMeaningEn: "school work that you do at home",
+              vnMeaning: "bai tap ve nha",
+              exampleSentence: "Please finish your homework before dinner.",
+              difficulty: 1,
+              practiceTypes: ["matching", "meaningChoice", "spelling", "fillBlank"],
+              tags: ["school"],
+            }),
+          ],
+        },
+      ],
+    },
+    {
+      topicId: "academic-classroom-language",
+      title: "Academic Classroom Language",
+      description: "High-value academic verbs for controlled practice.",
+      sets: [
+        {
+          setId: "thinking-and-explaining",
+          title: "Thinking and Explaining",
+          practiceFocus: ["word-meaning matching", "fill in the blank", "spelling"],
+          items: [
+            item({
+              wordItemId: "g7-a2-academic-analyze",
+              topicId: "academic-classroom-language",
+              setId: "thinking-and-explaining",
+              word: "analyze",
+              partOfSpeech: "verb",
+              studentMeaningEn: "to examine information carefully and in detail",
+              vnMeaning: "phan tich",
+              exampleSentence: "Our team had to analyze the survey results.",
+              difficulty: 3,
+              practiceTypes: ["matching", "meaningChoice", "spelling", "fillBlank"],
+              tags: ["academic"],
+              distractors: ["ignore", "predict", "submit"],
+            }),
+            item({
+              wordItemId: "g7-a2-academic-contrast",
+              topicId: "academic-classroom-language",
+              setId: "thinking-and-explaining",
+              word: "contrast",
+              partOfSpeech: "verb",
+              studentMeaningEn: "to identify differences between two or more things",
+              vnMeaning: "doi chieu",
+              exampleSentence: "We used examples to contrast two different opinions.",
+              difficulty: 3,
+              practiceTypes: ["matching", "meaningChoice", "spelling", "fillBlank"],
+              tags: ["academic"],
+              distractors: ["match", "combine", "ignore"],
+            }),
+            item({
+              wordItemId: "g7-a2-academic-sustain",
+              topicId: "academic-classroom-language",
+              setId: "thinking-and-explaining",
+              word: "sustain",
+              partOfSpeech: "verb",
+              studentMeaningEn: "to keep something going over a period of time",
+              vnMeaning: "duy tri",
+              exampleSentence: "We made a plan to sustain our effort across two weeks.",
+              difficulty: 3,
+              practiceTypes: ["matching", "meaningChoice", "spelling", "fillBlank"],
+              tags: ["academic"],
+              distractors: ["stop", "start", "ignore"],
+            }),
+            item({
+              wordItemId: "g7-a2-academic-explain",
+              topicId: "academic-classroom-language",
+              setId: "thinking-and-explaining",
+              word: "explain",
+              partOfSpeech: "verb",
+              studentMeaningEn: "to make an idea clear so other people understand it",
+              vnMeaning: "giai thich",
+              exampleSentence: "Can you explain your answer to the class?",
+              difficulty: 2,
+              practiceTypes: ["matching", "meaningChoice", "spelling"],
+              tags: ["academic"],
+            }),
+            item({
+              wordItemId: "g7-a2-academic-compare",
+              topicId: "academic-classroom-language",
+              setId: "thinking-and-explaining",
+              word: "compare",
+              partOfSpeech: "verb",
+              studentMeaningEn:
+                "to look at two or more things to see how they are similar or different",
+              vnMeaning: "so sanh",
+              exampleSentence: "Compare these two graphs and write one sentence.",
+              difficulty: 2,
+              practiceTypes: ["matching", "meaningChoice", "spelling"],
+              tags: ["academic"],
+            }),
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export const g7A2MvpClozeTemplates: SecondaryClozeTemplate[] = [
+  {
+    id: "cloze-academic-project-reflection",
+    title: "School Project Reflection",
+    paragraph:
+      "Our team had to ____ the survey results before writing conclusions. We used examples to ____ two different opinions and made a plan to ____ our effort across two weeks.",
+    blankWordItemIds: [
+      "g7-a2-academic-analyze",
+      "g7-a2-academic-contrast",
+      "g7-a2-academic-sustain",
+    ],
+    distractorWords: ["predict", "ignore"],
+  },
+];

@@ -9,6 +9,7 @@ import { PosterNoteBox } from "./PosterNoteBox";
 import { PosterPositiveNegativeBody } from "./PosterPositiveNegativeBody";
 import { PosterSummaryGrid } from "./PosterSummaryGrid";
 import { PosterThreeColumnBody } from "./PosterThreeColumnBody";
+import { PosterCategoryPill } from "./PosterCategoryPill";
 import { getSectionPillColor } from "./poster-section-colors";
 import type { PosterSection } from "./poster-view-model";
 import type { GrammarPosterVariant } from "./poster-variant";

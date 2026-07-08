@@ -32,6 +32,10 @@
   ],
   "exclude": [
     "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
     "scripts/probe-*.ts",
     "scripts/analyze-*.ts",
     "scripts/autodetect-*.ts"

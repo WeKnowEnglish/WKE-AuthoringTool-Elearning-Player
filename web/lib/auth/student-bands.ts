@@ -4,7 +4,8 @@ import { isLearningBand, type LearningBand } from "@/lib/learning-band";
 const SECONDARY_ELIGIBLE_BANDS: LearningBand[] = ["a2"];
 
 export function resolveLearningBand(value: unknown): LearningBand | null {
-  return isLearningBand(typeof value === "string" ? value : null) ? value : null;
+  const band = typeof value === "string" ? value : null;
+  return isLearningBand(band) ? band : null;
 }
 
 export function isSecondaryEligibleBand(value: unknown): boolean {

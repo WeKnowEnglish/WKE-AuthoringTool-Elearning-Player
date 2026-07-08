@@ -58,7 +58,7 @@ export function createGrammarEvidenceEvent(input: {
     itemId: input.itemId,
     targetRefs: [target, ...learningStrandTargetRefs(strandIds)],
     response: {
-      kind: "true_false",
+      kind: "tap",
       success: input.success,
       firstTry: input.firstTry,
       attempts: Math.max(1, input.attempts),

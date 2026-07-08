@@ -10,10 +10,14 @@ describe("resolvePostLoginPath", () => {
     expect(resolvePostLoginPath({ role: "student" })).toBe("/home");
   });
 
-  it("sends A2 students to secondary by default", () => {
+  it("sends Secondary-track students to secondary by default", () => {
     expect(resolvePostLoginPath({ role: "student", learningBand: "a2" })).toBe(
       "/secondary",
     );
+  });
+
+  it("sends Primary-track students to home by default", () => {
+    expect(resolvePostLoginPath({ role: "student", learningBand: "a1" })).toBe("/home");
   });
 
   it("honors safe teacher next paths", () => {

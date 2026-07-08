@@ -1283,6 +1283,7 @@ export function LessonPlayer({
       {parsed.type === "grammar" && (
         <GrammarPosterScreen
           grammarSlug={parsed.grammar_slug}
+          muted={muted}
           onComplete={() => {
             playSfx("tap", muted);
             goNext();

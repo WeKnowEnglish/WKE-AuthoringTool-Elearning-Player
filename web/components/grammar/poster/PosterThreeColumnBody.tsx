@@ -1,5 +1,5 @@
 import { getSectionPillColor } from "./poster-section-colors";
-import { PosterExampleColumn } from "./PosterExampleColumn";
+import { PosterExampleRow } from "./PosterExampleRow";
 import { PosterSubHeader } from "./PosterSubHeader";
 import type { PosterSection } from "./poster-view-model";
 import type { GrammarPosterVariant } from "./poster-variant";
@@ -23,12 +23,15 @@ export function PosterThreeColumnBody({ section, variant = "poster" }: Props) {
       ) : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {columns.map((column, index) => (
-          <PosterExampleColumn
-            key={`${section.number}-col-${index}`}
-            example={column}
-            variant={variant}
-            showDivider={index < columns.length - 1}
-          />
+          <div key={`${section.number}-col-${index}`}>
+            <PosterExampleRow
+              example={column}
+              variant={variant}
+              cardId={section.number}
+              region="item"
+              itemIndex={index}
+            />
+          </div>
         ))}
       </div>
     </div>

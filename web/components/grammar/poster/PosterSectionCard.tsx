@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
 import type { CardPalette } from "@/lib/grammar-builder/theme-tokens";
+import { PosterInteractiveTarget } from "./interactions/PosterInteractiveTarget";
 import { PosterGlanceRule } from "./PosterGlanceRule";
 import type { PosterGlanceRule as PosterGlanceRuleData, PosterSectionColor } from "./poster-view-model";
 import { SECTION_COLORS } from "./poster-view-model";
@@ -90,9 +91,11 @@ export function PosterSectionCard({
         </div>
       </div>
       <div className={isShowcase ? "flex-1 p-3" : "p-3 sm:p-4"}>
-        {!isShowcase && glanceRule ? (
-          <PosterGlanceRule text={glanceRule.text} highlight={glanceRule.highlight} />
-        ) : null}
+        {!isShowcase && glanceRule ?
+          <PosterInteractiveTarget cardId={number} region="glanceRule">
+            <PosterGlanceRule text={glanceRule.text} highlight={glanceRule.highlight} />
+          </PosterInteractiveTarget>
+        : null}
         {children}
       </div>
     </section>

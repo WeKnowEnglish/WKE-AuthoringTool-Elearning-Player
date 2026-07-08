@@ -266,12 +266,6 @@ export function SecondaryHome() {
           );
         })}
       </div>
-
-      <p className="text-center text-xs font-semibold text-kid-ink/70">
-        <Link href="/home?room=learn" className="underline decoration-2 underline-offset-2">
-          Back to Learn room
-        </Link>
-      </p>
     </section>
   );
 }

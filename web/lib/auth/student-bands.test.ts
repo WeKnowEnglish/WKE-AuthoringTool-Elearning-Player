@@ -20,7 +20,7 @@ describe("student-bands", () => {
     expect(resolveLearningBand(2)).toBeNull();
   });
 
-  it("marks only A2 as secondary-eligible", () => {
+  it("marks only Secondary track (a2) as secondary-eligible", () => {
     expect(isSecondaryEligibleBand("a2")).toBe(true);
     expect(isSecondaryEligibleBand("a1")).toBe(false);
     expect(isSecondaryEligibleBand("b1")).toBe(false);

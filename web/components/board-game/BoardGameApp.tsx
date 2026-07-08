@@ -1,90 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BoardGame } from "@/components/board-game/BoardGame";
 import { MapBuilderApp } from "@/components/board-game/builder/MapBuilderApp";
 import { BoardGameSetup } from "@/components/board-game/BoardGameSetup";
-import { initRuntimeForSetup, restartGame } from "@/lib/board-game/game-engine";
-import { createEmptySetup } from "@/lib/board-game/question-utils";
-import {
-  clearStoredRuntime,
-  clearStoredSetup,
-  readStoredRuntime,
-  readStoredSetup,
-  writeStoredRuntime,
-  writeStoredSetup,
-} from "@/lib/board-game/storage";
-import type { GameRuntime, GameSetup } from "@/lib/board-game/types";
+import { useLocalBoardGameSession } from "@/lib/board-game/session";
 
 type AppMode = "setup" | "builder" | "play";
 
 export function BoardGameApp() {
-  const [setup, setSetup] = useState<GameSetup>(() => createEmptySetup(3));
-  const [runtime, setRuntime] = useState<GameRuntime | null>(null);
-  const [gameStarted, setGameStarted] = useState(false);
+  const session = useLocalBoardGameSession({ defaultPlayerCount: 3 });
   const [mode, setMode] = useState<AppMode>("setup");
   const [mapLibraryKey, setMapLibraryKey] = useState(0);
-  const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    const storedSetup = readStoredSetup();
-    const storedRuntime = readStoredRuntime();
-    /* eslint-disable react-hooks/set-state-in-effect -- hydrate game state from localStorage once on mount */
-    if (storedSetup) {
-      setSetup(storedSetup);
-    }
-    if (storedRuntime && storedSetup) {
-      setRuntime(storedRuntime);
-      setGameStarted(true);
-      setMode("play");
-    }
-    setHydrated(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+  const resolvedMode: AppMode =
+    session.status === "ready" && session.gameStarted && mode !== "builder" ? "play" : mode;
 
-  useEffect(() => {
-    if (!hydrated) return;
-    writeStoredSetup(setup);
-  }, [setup, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    writeStoredRuntime(gameStarted ? runtime : null);
-  }, [runtime, gameStarted, hydrated]);
-
-  function handleSetupChange(nextSetup: GameSetup) {
-    setSetup(nextSetup);
-  }
-
-  function handleStart() {
-    const nextRuntime = initRuntimeForSetup(setup);
-    setRuntime(nextRuntime);
-    setGameStarted(true);
-    setMode("play");
-  }
-
-  function handleBackToSetup() {
-    setGameStarted(false);
-    setMode("setup");
-    clearStoredRuntime();
-  }
-
-  function handleRestart() {
-    const nextRuntime = restartGame(setup);
-    setRuntime(nextRuntime);
-  }
-
-  function handleClear() {
-    const empty = createEmptySetup(3);
-    setSetup(empty);
-    setRuntime(null);
-    setGameStarted(false);
-    setMode("setup");
-    clearStoredSetup();
-    clearStoredRuntime();
-  }
-
-  if (!hydrated) {
+  if (session.status === "hydrating") {
     return (
       <div className="flex min-h-dvh items-center justify-center text-xl font-bold text-kid-ink">
         Loading board game...
@@ -92,16 +24,16 @@ export function BoardGameApp() {
     );
   }
 
-  if (mode === "builder") {
+  if (resolvedMode === "builder") {
     return (
       <MapBuilderApp
-        initialMapId={setup.mapId ?? null}
+        initialMapId={session.setup.mapId ?? null}
         onBack={() => {
           setMode("setup");
           setMapLibraryKey((key) => key + 1);
         }}
         onUseMap={(mapId) => {
-          setSetup((current) => ({ ...current, mapId, map: undefined }));
+          session.setSetup({ ...session.setup, mapId, map: undefined });
           setMode("setup");
           setMapLibraryKey((key) => key + 1);
         }}
@@ -109,16 +41,19 @@ export function BoardGameApp() {
     );
   }
 
-  if (!gameStarted || !runtime) {
+  if (!session.gameStarted || !session.runtime) {
     return (
       <BoardGameSetup
-        setup={setup}
-        onChange={handleSetupChange}
-        onStart={handleStart}
-        onClear={handleClear}
+        setup={session.setup}
+        onChange={session.setSetup}
+        onStart={session.startGame}
+        onClear={() => {
+          session.clearSession();
+          setMode("setup");
+        }}
         onOpenBuilder={() => setMode("builder")}
         onEditMap={(mapId) => {
-          setSetup((current) => ({ ...current, mapId }));
+          session.setSetup({ ...session.setup, mapId });
           setMode("builder");
         }}
         mapLibraryKey={mapLibraryKey}
@@ -129,11 +64,14 @@ export function BoardGameApp() {
 
   return (
     <BoardGame
-      setup={setup}
-      runtime={runtime}
-      onRuntimeChange={setRuntime}
-      onBackToSetup={handleBackToSetup}
-      onRestart={handleRestart}
+      setup={session.setup}
+      runtime={session.runtime}
+      commitRuntime={session.commitRuntime}
+      onBackToSetup={() => {
+        session.backToSetup();
+        setMode("setup");
+      }}
+      onRestart={session.restartGame}
     />
   );
 }

@@ -24,7 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 export type PortalKind = "student" | "teacher";
 
 type Props = {
-  /** Level chosen on landing — required for new student accounts. */
+  /** Track chosen on landing — required for new student accounts. */
   learningBand?: LearningBand | null;
   defaultPortal?: PortalKind;
   nextPath?: string;
@@ -94,7 +94,7 @@ export function PortalLoginPanel({
 
       if (studentMode === "sign_up") {
         if (!learningBand) {
-          setMessage("Pick A1, A2, or B1 on the home screen first.");
+          setMessage("Pick Primary or Secondary on the home screen first.");
           return;
         }
         const registered = await registerStudentAccount({
@@ -141,7 +141,7 @@ export function PortalLoginPanel({
       const band: LearningBand | null =
         learningBand ?? (isLearningBand(metaBand) ? metaBand : null);
       if (!band) {
-        setMessage("Pick A1, A2, or B1 on the home screen first.");
+        setMessage("Pick Primary or Secondary on the home screen first.");
         return;
       }
 
@@ -247,7 +247,7 @@ export function PortalLoginPanel({
         <>
           {learningBand ?
             <p className="text-center text-sm font-bold text-kid-ink">
-              Level: <span className="text-lg">{learningBandLabel(learningBand)}</span>
+              Path: <span className="text-lg">{learningBandLabel(learningBand)}</span>
             </p>
           : null}
 
@@ -390,7 +390,7 @@ export function PortalLoginPanel({
 
       <p className="text-center text-xs text-kid-ink/70">
         <Link href="/" className="font-semibold underline">
-          Back to level picker
+          Back to path picker
         </Link>
       </p>
     </div>

@@ -9,8 +9,14 @@ export function StudentLayoutClient({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
   const wide = pathname.startsWith("/grammar");
+  const onSecondary = pathname === "/secondary" || pathname.startsWith("/secondary/");
   return (
-    <StudentShell wide={wide} compact={wide}>
+    <StudentShell
+      wide={wide}
+      compact={wide}
+      hidePrimaryNav={onSecondary}
+      homeHref={onSecondary ? "/secondary" : "/home"}
+    >
       {children}
     </StudentShell>
   );

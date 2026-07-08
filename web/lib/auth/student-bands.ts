@@ -1,5 +1,6 @@
 import { isLearningBand, type LearningBand } from "@/lib/learning-band";
 
+/** Secondary portal is the Secondary track (`a2` key for compatibility). */
 const SECONDARY_ELIGIBLE_BANDS: LearningBand[] = ["a2"];
 
 export function resolveLearningBand(value: unknown): LearningBand | null {

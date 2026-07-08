@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isLearningBand, learningBandLabel } from "@/lib/learning-band";
+import {
+  isLandingTrackBand,
+  isLearningBand,
+  LANDING_TRACK_BANDS,
+  learningBandLabel,
+} from "@/lib/learning-band";
 
 describe("learning-band", () => {
   it("accepts a1, a2, b1 only", () => {
@@ -11,8 +16,16 @@ describe("learning-band", () => {
     expect(isLearningBand(null)).toBe(false);
   });
 
-  it("formats labels in uppercase", () => {
-    expect(learningBandLabel("a1")).toBe("A1");
+  it("limits landing tracks to Primary and Secondary", () => {
+    expect(LANDING_TRACK_BANDS).toEqual(["a1", "a2"]);
+    expect(isLandingTrackBand("a1")).toBe(true);
+    expect(isLandingTrackBand("a2")).toBe(true);
+    expect(isLandingTrackBand("b1")).toBe(false);
+  });
+
+  it("formats track labels for students", () => {
+    expect(learningBandLabel("a1")).toBe("Primary");
+    expect(learningBandLabel("a2")).toBe("Secondary");
     expect(learningBandLabel("b1")).toBe("B1");
   });
 });

@@ -65,13 +65,21 @@ export function PosterLayoutShowcase({ cards, pageLayouts }: Props) {
         <ul className="mx-auto mt-4 flex max-w-xl flex-col gap-2">
           {pageLayouts.map((ref) => (
             <li key={ref.pageLayout}>
-              <Link
-                href={`/grammar/${ref.slug}`}
-                className="flex items-center justify-between rounded-xl border-2 border-kid-ink/30 bg-white/70 px-4 py-2 text-sm font-semibold text-kid-ink transition-colors hover:bg-white"
-              >
-                <span>{ref.label}</span>
-                <span className="font-mono text-xs text-kid-ink/50">{ref.pageLayout}</span>
-              </Link>
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-kid-ink/30 bg-white/70 px-4 py-2">
+                <Link
+                  href={`/grammar/${ref.slug}`}
+                  className="flex min-w-0 flex-1 items-center justify-between text-sm font-semibold text-kid-ink transition-colors hover:text-kid-ink/80"
+                >
+                  <span>{ref.label}</span>
+                  <span className="font-mono text-xs text-kid-ink/50">{ref.pageLayout}</span>
+                </Link>
+                <Link
+                  href={`/grammar/pilot/editor/${ref.slug}`}
+                  className="shrink-0 rounded-lg border-2 border-kid-ink/20 bg-kid-panel px-2 py-1 text-xs font-bold text-kid-ink/70 hover:bg-white"
+                >
+                  Open in editor
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

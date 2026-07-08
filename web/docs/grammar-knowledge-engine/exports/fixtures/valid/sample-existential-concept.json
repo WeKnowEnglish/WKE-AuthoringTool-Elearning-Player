@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-07",
+  "records": [
+    {
+      "id": "grammar.existential.there_is_are.affirmative",
+      "level": 3,
+      "parentId": "grammar.existential.there_is_are",
+      "label": {
+        "teacher": "There is / There are — Affirmative",
+        "student": "There is… / There are…"
+      },
+      "function": "Say what exists in a place",
+      "cefr": ["A1"],
+      "yle": ["starters"],
+      "strands": ["language_focused_learning", "meaning_focused_input"],
+      "teachOrder": 1,
+      "posterSlug": "there-is-there-are-affirmative-a1",
+      "precursorIds": ["domain_entry"],
+      "successorIds": ["grammar.existential.there_is_are.questions"],
+      "contrastIds": [],
+      "status": "published"
+    }
+  ]
+}

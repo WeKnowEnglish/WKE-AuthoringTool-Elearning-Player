@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://weknowenglish.local/gke/concept-record.schema.json",
+  "title": "GKE Concept Record (L3)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "level",
+    "parentId",
+    "label",
+    "function",
+    "cefr",
+    "strands",
+    "teachOrder",
+    "precursorIds",
+    "successorIds",
+    "contrastIds",
+    "status"
+  ],
+  "properties": {
+    "id": { "$ref": "gke-common.schema.json#/$defs/grammarL3Id" },
+    "level": { "const": 3 },
+    "parentId": { "$ref": "gke-common.schema.json#/$defs/grammarL2Id" },
+    "label": { "$ref": "gke-common.schema.json#/$defs/localizedLabel" },
+    "function": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "cefr": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "gke-common.schema.json#/$defs/cefrLevel" }
+    },
+    "yle": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "gke-common.schema.json#/$defs/yleLevel" }
+    },
+    "strands": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "gke-common.schema.json#/$defs/learningStrandId" }
+    },
+    "teachOrder": { "type": "integer", "minimum": 1, "maximum": 99 },
+    "posterSlug": { "$ref": "gke-common.schema.json#/$defs/slug" },
+    "precursorIds": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "const": "domain_entry" },
+          { "$ref": "gke-common.schema.json#/$defs/grammarL3Id" }
+        ]
+      }
+    },
+    "successorIds": {
+      "type": "array",
+      "items": { "$ref": "gke-common.schema.json#/$defs/grammarL3Id" }
+    },
+    "contrastIds": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "gke-common.schema.json#/$defs/grammarL3Id" },
+          { "$ref": "gke-common.schema.json#/$defs/grammarL4Id" }
+        ]
+      }
+    },
+    "status": { "$ref": "gke-common.schema.json#/$defs/publishStatus" },
+    "standardsRef": { "$ref": "gke-common.schema.json#/$defs/standardsRefStub" },
+    "notes": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "published" } }, "required": ["status"] },
+      "then": { "required": ["posterSlug"] }
+    }
+  ]
+}

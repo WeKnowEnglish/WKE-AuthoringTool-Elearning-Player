@@ -38,6 +38,65 @@
         "custom"
       ]
     },
+    "customRows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["columns", "cardIds"],
+        "properties": {
+          "columns": { "type": "integer", "enum": [1, 2] },
+          "cardIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": { "type": "integer", "minimum": 1 }
+          }
+        }
+      },
+      "description": "Required when pageLayout is custom. Defines row order and card placement."
+    },
+    "interactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "target", "trigger", "action", "payload"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "trigger": { "type": "string", "enum": ["tap"] },
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cardId", "region"],
+            "properties": {
+              "cardId": { "type": "integer", "minimum": 1 },
+              "region": {
+                "type": "string",
+                "enum": [
+                  "card",
+                  "glanceRule",
+                  "leftColumn",
+                  "rightColumn",
+                  "item",
+                  "banner",
+                  "leftSide",
+                  "positiveSide",
+                  "negativeSide",
+                  "miniCard",
+                  "summaryCell"
+                ]
+              },
+              "itemIndex": { "type": "integer", "minimum": 0 },
+              "rowIndex": { "type": "integer", "minimum": 0 },
+              "colIndex": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "action": { "type": "string", "enum": ["reveal", "highlight", "toggle", "play-audio"] },
+          "payload": { "type": "object" }
+        }
+      }
+    },
     "cards": {
       "type": "array",
       "minItems": 1,

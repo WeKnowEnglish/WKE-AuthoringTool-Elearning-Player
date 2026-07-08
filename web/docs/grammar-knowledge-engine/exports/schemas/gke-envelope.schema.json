@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://weknowenglish.local/gke/gke-envelope.schema.json",
+  "title": "GKE Records Envelope",
+  "description": "Shared wrapper for flat GKE export files.",
+  "$ref": "gke-common.schema.json#/$defs/recordsEnvelope"
+}

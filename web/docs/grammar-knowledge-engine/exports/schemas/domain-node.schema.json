@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://weknowenglish.local/gke/domain-node.schema.json",
+  "title": "GKE Domains Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "domains"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generatedAt": { "$ref": "gke-common.schema.json#/$defs/isoDate" },
+    "domains": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/domainNode" }
+    }
+  },
+  "$defs": {
+    "domainSystemNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "level", "label", "status"],
+      "properties": {
+        "id": { "$ref": "gke-common.schema.json#/$defs/grammarL2Id" },
+        "level": { "const": 2 },
+        "label": { "$ref": "gke-common.schema.json#/$defs/localizedLabel" },
+        "status": { "$ref": "gke-common.schema.json#/$defs/publishStatus" },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "domainNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "level", "label", "cefrSpan", "status", "systems"],
+      "properties": {
+        "id": { "$ref": "gke-common.schema.json#/$defs/grammarL1Id" },
+        "level": { "const": 1 },
+        "label": { "$ref": "gke-common.schema.json#/$defs/localizedLabel" },
+        "cefrSpan": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "gke-common.schema.json#/$defs/cefrLevel" }
+        },
+        "status": { "$ref": "gke-common.schema.json#/$defs/publishStatus" },
+        "systems": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/domainSystemNode" }
+        },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

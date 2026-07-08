@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-07",
+  "records": [
+    {
+      "id": "grammar.existential.there_is_are.affirmative",
+      "level": 3,
+      "parentId": "grammar.existential.there_is_are",
+      "label": {
+        "teacher": "There is / There are — Affirmative",
+        "student": "There is… / There are…"
+      },
+      "function": "Say what exists in a place",
+      "cefr": ["A1"],
+      "yle": ["starters"],
+      "strands": ["language_focused_learning", "meaning_focused_input"],
+      "teachOrder": 1,
+      "posterSlug": "there-is-there-are-affirmative-a1",
+      "precursorIds": ["domain_entry"],
+      "successorIds": ["grammar.existential.there_is_are.questions"],
+      "contrastIds": [],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.questions",
+      "level": 3,
+      "parentId": "grammar.existential.there_is_are",
+      "label": {
+        "teacher": "There is / There are — Questions",
+        "student": "Is there…? / Are there…?"
+      },
+      "function": "Ask if something exists",
+      "cefr": ["A1"],
+      "yle": ["movers"],
+      "strands": ["language_focused_learning", "meaning_focused_input"],
+      "teachOrder": 2,
+      "posterSlug": "there-is-there-are-questions-a1",
+      "precursorIds": ["grammar.existential.there_is_are.affirmative"],
+      "successorIds": ["grammar.existential.there_is_are.short_answers"],
+      "contrastIds": [
+        "grammar.existential.there_is_are.questions.singular_uncountable",
+        "grammar.existential.there_is_are.questions.plural"
+      ],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.short_answers",
+      "level": 3,
+      "parentId": "grammar.existential.there_is_are",
+      "label": {
+        "teacher": "Short Answers — There is / There are",
+        "student": "Yes or No!"
+      },
+      "function": "Answer yes/no with a short clause",
+      "cefr": ["A1"],
+      "yle": ["movers"],
+      "strands": ["language_focused_learning", "meaning_focused_input"],
+      "teachOrder": 3,
+      "posterSlug": "short-answers-there-is-a1",
+      "precursorIds": ["grammar.existential.there_is_are.questions"],
+      "successorIds": ["grammar.determiners.quantifiers.some_and_any"],
+      "contrastIds": [],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.countable",
+      "level": 3,
+      "parentId": "grammar.nouns.countability",
+      "label": {
+        "teacher": "Countable Nouns",
+        "student": "How many…?"
+      },
+      "function": "Count things and ask how many",
+      "cefr": ["A1"],
+      "yle": ["starters"],
+      "strands": ["language_focused_learning", "meaning_focused_input"],
+      "teachOrder": 4,
+      "posterSlug": "countable-nouns-a1",
+      "precursorIds": ["grammar.existential.there_is_are.affirmative"],
+      "successorIds": ["grammar.nouns.countability.uncountable"],
+      "contrastIds": ["grammar.nouns.countability.uncountable"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.uncountable",
+      "level": 3,
+      "parentId": "grammar.nouns.countability",
+      "label": {
+        "teacher": "Uncountable Nouns",
+        "student": "How much…?"
+      },
+      "function": "Talk about things you cannot count and ask how much",
+      "cefr": ["A1"],
+      "yle": ["starters", "movers"],
+      "strands": ["language_focused_learning", "meaning_focused_input"],
+      "teachOrder": 5,
+      "posterSlug": "uncountable-nouns-a1",
+      "precursorIds": ["grammar.nouns.countability.countable"],
+      "successorIds": ["grammar.determiners.quantifiers.some_and_any"],
+      "contrastIds": ["grammar.nouns.countability.countable"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.determiners.quantifiers.some_and_any",
+      "level": 3,
+      "parentId": "grammar.determiners.quantifiers",
+      "label": {
+        "teacher": "Some and Any",
+        "student": "Some / Any"
+      },
+      "function": "Choose some or any by sentence type",
+      "cefr": ["A2"],
+      "yle": ["movers", "flyers"],
+      "strands": ["language_focused_learning", "meaning_focused_input"],
+      "teachOrder": 6,
+      "posterSlug": "some-and-any-a2",
+      "precursorIds": [
+        "grammar.nouns.countability.countable",
+        "grammar.nouns.countability.uncountable",
+        "grammar.existential.there_is_are.affirmative",
+        "grammar.existential.there_is_are.questions"
+      ],
+      "successorIds": [],
+      "contrastIds": [
+        "grammar.determiners.quantifiers.some_and_any.some_affirmative",
+        "grammar.determiners.quantifiers.some_and_any.any_questions",
+        "grammar.determiners.quantifiers.some_and_any.any_negative"
+      ],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.spelling",
+      "level": 3,
+      "parentId": "grammar.nouns.plural",
+      "label": {
+        "teacher": "Plural Spelling Rules",
+        "student": "Add -s, -es, -ies…"
+      },
+      "function": "Spell plural nouns using common patterns",
+      "cefr": ["A2"],
+      "yle": ["movers"],
+      "strands": ["language_focused_learning"],
+      "teachOrder": 7,
+      "posterSlug": "plural-spelling-a2",
+      "precursorIds": ["grammar.nouns.countability.countable"],
+      "successorIds": ["grammar.nouns.plural.pronunciation"],
+      "contrastIds": [],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.pronunciation",
+      "level": 3,
+      "parentId": "grammar.nouns.plural",
+      "label": {
+        "teacher": "Plural Pronunciation",
+        "student": "/s/, /z/, /ɪz/"
+      },
+      "function": "Pronounce plural -s and -es endings correctly",
+      "cefr": ["A2"],
+      "yle": ["flyers"],
+      "strands": ["language_focused_learning", "fluency_development"],
+      "teachOrder": 8,
+      "posterSlug": "plural-pronunciation-a2",
+      "precursorIds": ["grammar.nouns.plural.spelling"],
+      "successorIds": [],
+      "contrastIds": [],
+      "status": "published"
+    }
+  ]
+}

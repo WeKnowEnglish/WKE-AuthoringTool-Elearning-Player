@@ -10,6 +10,7 @@ import type { Question } from "@/lib/board-game/types";
 type Props = {
   open: boolean;
   question: Question | null;
+  readOnly?: boolean;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -99,7 +100,14 @@ function QuestionBody({
   );
 }
 
-export function QuestionModal({ open, question, onCorrect, onIncorrect, onSkip }: Props) {
+export function QuestionModal({
+  open,
+  question,
+  readOnly = false,
+  onCorrect,
+  onIncorrect,
+  onSkip,
+}: Props) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
   useEffect(() => {
@@ -116,26 +124,31 @@ export function QuestionModal({ open, question, onCorrect, onIncorrect, onSkip }
         className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border-4 border-kid-ink bg-kid-panel p-6 shadow-[8px_8px_0_0_var(--kid-shadow)]"
       >
         <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-kid-ink">
-          {question.type === "multiple_choice" ? "Multiple Choice" : "Question"}
+          {readOnly ? "Question Time" : question.type === "multiple_choice" ? "Multiple Choice" : "Question"}
         </h2>
         <div className="mt-6 border-y-4 border-kid-ink/20 py-6">
           <QuestionBody
             question={question}
             selectedOption={selectedOption}
-            onSelectOption={setSelectedOption}
+            onSelectOption={readOnly ? () => {} : setSelectedOption}
           />
         </div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <KidButton className="bg-kid-success text-lg text-white hover:bg-green-600" onClick={onCorrect}>
-            ✓ Correct <span className="text-sm opacity-70">(Enter)</span>
-          </KidButton>
-          <KidButton variant="secondary" className="text-lg" onClick={onIncorrect}>
-            ✗ Incorrect <span className="text-sm opacity-70">(X)</span>
-          </KidButton>
-          <KidButton variant="accent" className="text-lg" onClick={onSkip}>
-            Skip <span className="text-sm opacity-70">(S / N)</span>
-          </KidButton>
-        </div>
+        {readOnly ?
+          <p className="mt-6 text-center text-sm font-semibold text-kid-ink/70">
+            Watch the board — your teacher is running this question.
+          </p>
+        : <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <KidButton className="bg-kid-success text-lg text-white hover:bg-green-600" onClick={onCorrect}>
+              ✓ Correct <span className="text-sm opacity-70">(Enter)</span>
+            </KidButton>
+            <KidButton variant="secondary" className="text-lg" onClick={onIncorrect}>
+              ✗ Incorrect <span className="text-sm opacity-70">(X)</span>
+            </KidButton>
+            <KidButton variant="accent" className="text-lg" onClick={onSkip}>
+              Skip <span className="text-sm opacity-70">(S / N)</span>
+            </KidButton>
+          </div>
+        }
       </motion.div>
     </div>
   );

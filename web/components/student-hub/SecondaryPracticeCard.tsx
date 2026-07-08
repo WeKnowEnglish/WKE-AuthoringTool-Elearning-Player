@@ -32,7 +32,7 @@ export function SecondaryPracticeCard({ muted, learningBand, className }: Props)
         <div className="min-w-0 flex-1 text-left">
           <p className="text-lg font-bold text-kid-ink">Secondary vocabulary</p>
           <p className="mt-1 text-sm font-semibold text-kid-ink/75">
-            Today&apos;s A2 practice — Match, Cloze, then Spelling.
+            Today&apos;s practice — Match, Cloze, then Spelling.
           </p>
         </div>
       </Link>
@@ -50,7 +50,7 @@ export function SecondaryPracticeCard({ muted, learningBand, className }: Props)
       <div className="min-w-0 flex-1 text-left">
         <p className="text-lg font-bold text-kid-ink">Secondary vocabulary</p>
         <p className="mt-1 text-sm font-semibold text-kid-ink/75">
-          Available for A2 students. Your level practice stays in Learn below.
+          Available on the Secondary path. Primary practice stays in Learn below.
         </p>
       </div>
     </div>
@@ -58,12 +58,13 @@ export function SecondaryPracticeCard({ muted, learningBand, className }: Props)
 }
 
 export function SecondaryAccessNotice({ message }: { message: string | null | undefined }) {
-  if (message !== "secondary_for_a2") return null;
+  if (message !== "secondary_for_a2" && message !== "secondary_path_only") return null;
 
   return (
     <KidPanel className="mx-3 mt-2 shrink-0 border-amber-800 bg-amber-50 p-3 text-center">
       <p className="text-sm font-bold text-amber-950" role="status" aria-live="polite">
-        Secondary vocabulary practice is for A2 students. Keep learning in your home and Learn rooms.
+        Secondary vocabulary practice is for the Secondary path. Keep learning in your home and
+        Learn rooms.
       </p>
     </KidPanel>
   );

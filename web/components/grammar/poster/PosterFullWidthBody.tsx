@@ -27,7 +27,13 @@ export function PosterFullWidthBody({ section, variant = "poster" }: Props) {
           {example.transformationRow ? (
             <PosterTransformationRow row={example.transformationRow} variant={variant} />
           ) : (
-            <PosterExampleRow example={example} variant={variant} />
+            <PosterExampleRow
+              example={example}
+              variant={variant}
+              cardId={section.number}
+              region="item"
+              itemIndex={index}
+            />
           )}
         </div>
       ))}

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REWARDS_STORAGE_KEY } from "./progress/rewards";
+import {
+  resetScopedStorageTestState,
+  seedScopedRewards,
+} from "@/lib/auth/scoped-storage-test-helpers";
+import { getRewards } from "./progress/rewards";
 import {
   STUDENT_SESSION_EVENTS_STORAGE_KEY,
   awardPracticeReward,
@@ -41,10 +45,12 @@ function installMemoryStorage() {
 describe("student-session", () => {
   beforeEach(() => {
     installMemoryStorage();
+    resetScopedStorageTestState();
     localStorage.clear();
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 
@@ -128,15 +134,9 @@ describe("student-session", () => {
   });
 
   it("awardPracticeReward skips duplicate reward events", () => {
-    localStorage.setItem(
-      REWARDS_STORAGE_KEY,
-      JSON.stringify({
-        gold: 0,
-        experience: 0,
-        rewardedEventIds: ["dup-evt"],
-        ownedStickerIds: [],
-      }),
-    );
+    seedScopedRewards({
+      rewardedEventIds: ["dup-evt"],
+    });
     const { event, skippedDuplicate } = awardPracticeReward({
       sessionId: "vocab-test:seed",
       eventId: "dup-evt",

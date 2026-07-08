@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { uploadStudentVoiceSubmission } from "@/lib/actions/student-voice";
-import { getProgressSnapshot } from "@/lib/progress/local-storage";
+import { resolveStudentStorageIdSync } from "@/lib/auth/student-storage-id";
 import { VOCAB_STAGE_BACKGROUND } from "@/lib/vocabulary-templates/vocab-interaction-ui";
 
 export type InteractionImageDisplayOptions = {
@@ -431,7 +431,7 @@ export async function uploadVoiceAnswer(args: {
   durationMs?: number;
 }): Promise<VoiceSubmitResult> {
   try {
-    const sessionId = getProgressSnapshot().anonymousDeviceId;
+    const sessionId = resolveStudentStorageIdSync();
     const ext = args.blob.type.includes("ogg") ? "ogg" : "webm";
     const file = new File([args.blob], `voice.${ext}`, { type: args.blob.type || "audio/webm" });
     const formData = new FormData();

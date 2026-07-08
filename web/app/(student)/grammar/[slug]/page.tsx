@@ -35,9 +35,7 @@ export default async function GrammarPosterRoutePage({ params }: Props) {
     notFound();
   }
 
-  const { hero, sections, pageLayout } = loadPosterModuleBySlug(slug);
+  const view = loadPosterModuleBySlug(slug);
 
-  return (
-    <GrammarPosterPage hero={hero} sections={sections} pageLayout={pageLayout} />
-  );
+  return <GrammarPosterPage slug={slug} view={view} />;
 }

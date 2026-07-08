@@ -3,30 +3,41 @@
 import { clsx } from "clsx";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PortalLoginModal } from "@/components/auth/PortalLoginModal";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { playSfx } from "@/lib/audio/sfx";
 import {
-  LEARNING_BANDS,
+  LANDING_TRACK_BANDS,
   learningBandLabel,
-  type LearningBand,
+  type LandingTrackBand,
 } from "@/lib/learning-band";
 import { getProgressSnapshot } from "@/lib/progress/local-storage";
 
+const SECONDARY_LOGIN_PATH = "/secondary/login";
+
 export function LevelLandingClient() {
-  const [selected, setSelected] = useState<LearningBand>("a1");
+  const router = useRouter();
+  const [selected, setSelected] = useState<LandingTrackBand>("a1");
   const [loginOpen, setLoginOpen] = useState(false);
 
-  function onSelect(band: LearningBand) {
+  function enterTrack(band: LandingTrackBand) {
     playSfx("tap", getProgressSnapshot().audioMuted === true);
     setSelected(band);
+    if (band === "a2") {
+      router.push(SECONDARY_LOGIN_PATH);
+      return;
+    }
     setLoginOpen(true);
   }
 
+  function onSelect(band: LandingTrackBand) {
+    enterTrack(band);
+  }
+
   function onContinue() {
-    playSfx("tap", getProgressSnapshot().audioMuted === true);
-    setLoginOpen(true);
+    enterTrack(selected);
   }
 
   return (
@@ -64,19 +75,20 @@ export function LevelLandingClient() {
             <div className="mx-auto w-full max-w-xl space-y-5 text-center">
               <div className="space-y-2 drop-shadow-sm">
                 <h1 className="text-2xl font-extrabold text-white sm:text-3xl">
-                  Pick your English level
+                  Pick your learning path
                 </h1>
                 <p className="text-base font-semibold text-white/95 sm:text-lg">
-                  Tap a level, then sign in or create your account to save progress.
+                  Primary is the kids learning hub. Secondary is vocabulary practice for older
+                  students.
                 </p>
               </div>
 
               <div
                 role="tablist"
-                aria-label="English level"
+                aria-label="Learning path"
                 className="mx-auto flex rounded-2xl border-4 border-kid-ink bg-white/95 p-1 shadow-lg backdrop-blur-sm"
               >
-                {LEARNING_BANDS.map((band) => {
+                {LANDING_TRACK_BANDS.map((band) => {
                   const active = selected === band;
                   return (
                     <button
@@ -113,7 +125,7 @@ export function LevelLandingClient() {
 
       <PortalLoginModal
         open={loginOpen}
-        learningBand={selected}
+        learningBand="a1"
         onClose={() => setLoginOpen(false)}
       />
     </>

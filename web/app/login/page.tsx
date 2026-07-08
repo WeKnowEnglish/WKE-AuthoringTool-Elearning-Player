@@ -31,9 +31,14 @@ export default async function LoginPage({ searchParams }: Props) {
 
   const role = getAppRole(user);
   if (role) {
+    const learningBand =
+      typeof user?.user_metadata?.learning_band === "string"
+        ? user.user_metadata.learning_band
+        : null;
     redirect(
       resolvePostLoginPath({
         role,
+        learningBand,
         next: firstParam(sp.next) || null,
       }),
     );

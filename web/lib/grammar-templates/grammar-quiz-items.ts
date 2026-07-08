@@ -6,6 +6,12 @@ export type GrammarQuizItem = {
   statement: string;
   correct: boolean;
   pictureTruthStatement?: string;
+  /** GKE L4 micro-skill id — required for mastery emission */
+  microSkillId: string;
+  /** When student misses a trap item, optional GKE error code */
+  errorCodeOnMiss?: string;
+  /** Optional display label for mastery target */
+  microSkillLabel?: string;
 };
 
 const GRAMMAR_QUIZ_BY_SLUG: Record<string, GrammarQuizItem[]> = {
@@ -15,18 +21,28 @@ const GRAMMAR_QUIZ_BY_SLUG: Record<string, GrammarQuizItem[]> = {
       statement: "Is there a book on the desk? — Yes, there is.",
       correct: true,
       pictureTruthStatement: "Yes, there is a book on the desk.",
+      microSkillId:
+        "grammar.existential.there_is_are.short_answers.positive_negative_singular",
+      microSkillLabel: "Short answers singular",
     },
     {
       id: "sa-tf-2",
       statement: "Are there a apple? — Yes, there are.",
       correct: false,
       pictureTruthStatement: "Are there any apples? — Yes, there are.",
+      microSkillId:
+        "grammar.existential.there_is_are.short_answers.positive_negative_plural",
+      microSkillLabel: "Short answers plural",
+      errorCodeOnMiss: "error.agreement.there_are_singular",
     },
     {
       id: "sa-tf-3",
       statement: "Is there any milk? — No, there isn't.",
       correct: true,
       pictureTruthStatement: "No, there isn't any milk.",
+      microSkillId:
+        "grammar.existential.there_is_are.short_answers.positive_negative_singular",
+      microSkillLabel: "Short answers singular",
     },
   ],
 };
@@ -37,6 +53,26 @@ export function getGrammarQuizItems(slug: string): GrammarQuizItem[] {
 
 export function hasGrammarQuiz(slug: string): boolean {
   return getGrammarQuizItems(slug).length > 0;
+}
+
+export function getGrammarQuizItemById(
+  slug: string,
+  itemId: string,
+): GrammarQuizItem | null {
+  return getGrammarQuizItems(slug).find((item) => item.id === itemId) ?? null;
+}
+
+/** Resolve a grammar poster quiz item from a LessonPlayer screen row. */
+export function getGrammarQuizItemForLessonScreen(input: {
+  lessonId: string;
+  screenId: string;
+}): GrammarQuizItem | null {
+  if (!input.lessonId.startsWith("grammar-")) return null;
+  const slug = input.lessonId.slice("grammar-".length);
+  const prefix = `${input.lessonId}-quiz-`;
+  if (!input.screenId.startsWith(prefix)) return null;
+  const itemId = input.screenId.slice(prefix.length);
+  return getGrammarQuizItemById(slug, itemId);
 }
 
 export function buildGrammarTrueFalsePayload(item: GrammarQuizItem): Record<string, unknown> {

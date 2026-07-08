@@ -10,6 +10,16 @@ describe("resolvePostLoginPath", () => {
     expect(resolvePostLoginPath({ role: "student" })).toBe("/home");
   });
 
+  it("sends Secondary-track students to secondary by default", () => {
+    expect(resolvePostLoginPath({ role: "student", learningBand: "a2" })).toBe(
+      "/secondary",
+    );
+  });
+
+  it("sends Primary-track students to home by default", () => {
+    expect(resolvePostLoginPath({ role: "student", learningBand: "a1" })).toBe("/home");
+  });
+
   it("honors safe teacher next paths", () => {
     expect(
       resolvePostLoginPath({
@@ -26,5 +36,15 @@ describe("resolvePostLoginPath", () => {
         next: "/teacher/courses",
       }),
     ).toBe("/home");
+  });
+
+  it("keeps student non-teacher next paths when provided", () => {
+    expect(
+      resolvePostLoginPath({
+        role: "student",
+        learningBand: "a2",
+        next: "/home?collection=games",
+      }),
+    ).toBe("/home?collection=games");
   });
 });

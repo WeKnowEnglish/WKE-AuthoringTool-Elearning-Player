@@ -14,6 +14,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:grammar": "vitest run lib/grammar-builder lib/grammar-templates",
+    "test:gke": "vitest run lib/gke",
     "validate:grammar": "vitest run lib/grammar-builder lib/grammar-templates && tsx scripts/validate-grammar-content.ts",
     "sync:dog-poses": "node scripts/sync-dog-poses.mjs",
     "create-teacher": "node scripts/create-teacher-user.mjs",
@@ -27,6 +28,9 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@liveblocks/client": "^3.22.0",
+    "@liveblocks/node": "^3.22.0",
+    "@liveblocks/react": "^3.22.0",
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
     "clsx": "^2.1.1",

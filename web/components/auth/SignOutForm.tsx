@@ -1,5 +1,8 @@
+"use client";
+
 import { clsx } from "clsx";
 import { portalSignOut } from "@/lib/actions/portal-sign-out";
+import { clearStudentStorageIdCache } from "@/lib/auth/student-storage-id";
 
 type Props = {
   label?: string;
@@ -14,7 +17,14 @@ export function SignOutForm({
   variant = "link",
 }: Props) {
   return (
-    <form action={portalSignOut} className={className}>
+    <form
+      className={className}
+      onSubmit={(event) => {
+        event.preventDefault();
+        clearStudentStorageIdCache();
+        void portalSignOut();
+      }}
+    >
       <button
         type="submit"
         className={clsx(

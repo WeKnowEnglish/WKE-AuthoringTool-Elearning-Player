@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  resetScopedStorageTestState,
+  seedScopedRewards,
+} from "@/lib/auth/scoped-storage-test-helpers";
 import { PET_STORAGE_KEY } from "@/lib/pet/defaults";
 import {
-  REWARDS_STORAGE_KEY,
   applyTestStartQuizCorrectAnswer,
   getRewards,
   QUIZ_BASE_GOLD_PER_CORRECT,
@@ -42,20 +45,11 @@ function installMemoryStorage() {
 }
 
 function seedRewards(overrides: Record<string, unknown> = {}) {
-  localStorage.setItem(
-    REWARDS_STORAGE_KEY,
-    JSON.stringify({
-      gold: 0,
-      experience: 0,
-      rewardedEventIds: [],
-      ownedStickerIds: [],
-      quizEnergy: 0,
-      quizStreak: 0,
-      skillPoints: 5,
-      skillRanks: {},
-      ...overrides,
-    }),
-  );
+  seedScopedRewards({
+    skillPoints: 5,
+    skillRanks: {},
+    ...overrides,
+  });
 }
 
 function seedPet(meters: Record<string, number>, lastPetGoldClaimAt?: number) {
@@ -89,11 +83,13 @@ describe("skill bonuses", () => {
 describe("skill ranks", () => {
   beforeEach(() => {
     installMemoryStorage();
+    resetScopedStorageTestState();
     localStorage.clear();
     seedRewards();
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 
@@ -121,6 +117,7 @@ describe("skill ranks", () => {
 describe("pet gold claim", () => {
   beforeEach(() => {
     installMemoryStorage();
+    resetScopedStorageTestState();
     localStorage.clear();
     seedRewards({ skillRanks: { pet_treasure: 2 }, gold: 10 });
     seedPet({
@@ -133,6 +130,7 @@ describe("pet gold claim", () => {
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 
@@ -161,11 +159,13 @@ describe("pet gold claim", () => {
 describe("quiz gold skill integration", () => {
   beforeEach(() => {
     installMemoryStorage();
+    resetScopedStorageTestState();
     localStorage.clear();
     seedRewards({ skillRanks: { quiz_gold: 5 } });
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 

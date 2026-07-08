@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://weknowenglish.local/gke/error-record.schema.json",
+  "title": "GKE Error Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "family", "label", "relatedL4Ids"],
+  "properties": {
+    "id": { "$ref": "gke-common.schema.json#/$defs/errorCode" },
+    "family": { "type": "string", "minLength": 1 },
+    "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "wrongExample": { "type": "string", "minLength": 1 },
+    "correctExample": { "type": "string", "minLength": 1 },
+    "relatedL4Ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "gke-common.schema.json#/$defs/grammarL4Id" }
+    },
+    "severity": { "$ref": "gke-common.schema.json#/$defs/errorSeverity" },
+    "notes": { "type": "string", "minLength": 1 }
+  }
+}

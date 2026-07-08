@@ -14,12 +14,18 @@ export function StudentShell({
   children,
   wide = false,
   compact = false,
+  hidePrimaryNav = false,
+  homeHref = "/home",
 }: {
   children: React.ReactNode;
   /** Wider main column for grammar infographics and multi-column layouts. */
   wide?: boolean;
   /** Tighter vertical padding for dense infographic pages. */
   compact?: boolean;
+  /** Hide Lessons / Activities / Achievements (secondary portal). */
+  hidePrimaryNav?: boolean;
+  /** Brand link target — secondary pages stay on `/secondary`. */
+  homeHref?: string;
 }) {
   const presetId = useSyncExternalStore(
     studentSoftChromeStore.subscribe,
@@ -48,7 +54,7 @@ export function StudentShell({
         style={{ backgroundColor: headerBackground }}
       >
         <Link
-          href="/home"
+          href={homeHref}
           className="text-xl font-bold tracking-tight text-neutral-900"
         >
           We Know English
@@ -59,24 +65,28 @@ export function StudentShell({
             presetId={presetId}
             onPresetChange={studentSoftChromeStore.persist}
           />
-          <Link
-            href="/learn"
-            className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
-          >
-            Lessons
-          </Link>
-          <Link
-            href="/activities"
-            className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
-          >
-            Activities
-          </Link>
-          <Link
-            href="/profile"
-            className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
-          >
-            Achievements
-          </Link>
+          {!hidePrimaryNav ? (
+            <>
+              <Link
+                href="/learn"
+                className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
+              >
+                Lessons
+              </Link>
+              <Link
+                href="/activities"
+                className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
+              >
+                Activities
+              </Link>
+              <Link
+                href="/profile"
+                className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
+              >
+                Achievements
+              </Link>
+            </>
+          ) : null}
           <SoundMuteButton />
           <SignOutForm label="Log out" variant="kid" className="!min-h-10" />
         </nav>

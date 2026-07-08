@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-07",
+  "records": [
+    {
+      "id": "error.agreement.there_are_singular",
+      "family": "agreement",
+      "label": "Uses Are there with singular noun",
+      "wrongExample": "Are there a book?",
+      "correctExample": "Is there a book?",
+      "relatedL4Ids": ["grammar.existential.there_is_are.questions.singular_uncountable"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.agreement.there_is_plural",
+      "family": "agreement",
+      "label": "Uses Is there with plural noun",
+      "wrongExample": "Is there two books?",
+      "correctExample": "Are there two books?",
+      "relatedL4Ids": ["grammar.existential.there_is_are.questions.plural"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.agreement.there_is_with_plural_noun",
+      "family": "agreement",
+      "label": "Uses There is with plural noun",
+      "wrongExample": "There is books.",
+      "correctExample": "There are books.",
+      "relatedL4Ids": ["grammar.existential.there_is_are.affirmative.plural"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.existential.missing_there",
+      "family": "existential",
+      "label": "Drops there in existential question",
+      "wrongExample": "Is a book on the desk?",
+      "correctExample": "Is there a book on the desk?",
+      "relatedL4Ids": ["grammar.existential.there_is_are.questions.inversion_rule"],
+      "severity": "high"
+    },
+    {
+      "id": "error.short_answer.wrong_auxiliary",
+      "family": "short_answer",
+      "label": "Wrong auxiliary in short answer",
+      "wrongExample": "Yes, there are. (for Is there...?)",
+      "correctExample": "Yes, there is.",
+      "relatedL4Ids": ["grammar.existential.there_is_are.short_answers.positive_negative_singular"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.short_answer.contraction_in_yes",
+      "family": "short_answer",
+      "label": "Uses contraction in yes short answer",
+      "wrongExample": "Yes, there's.",
+      "correctExample": "Yes, there is.",
+      "relatedL4Ids": ["grammar.existential.there_is_are.short_answers.positive_negative_singular"],
+      "severity": "low"
+    },
+    {
+      "id": "error.countability.how_many_uncountable",
+      "family": "countability",
+      "label": "Uses How many with uncountable noun",
+      "wrongExample": "How many water?",
+      "correctExample": "How much water?",
+      "relatedL4Ids": [
+        "grammar.nouns.countability.uncountable.how_much_questions",
+        "grammar.nouns.countability.uncountable.reject_how_many"
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "error.countability.how_much_countable",
+      "family": "countability",
+      "label": "Uses How much with countable noun",
+      "wrongExample": "How much books?",
+      "correctExample": "How many books?",
+      "relatedL4Ids": ["grammar.nouns.countability.countable.how_many_questions"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.countability.much_with_plural",
+      "family": "countability",
+      "label": "Uses much with plural noun",
+      "wrongExample": "much books",
+      "correctExample": "many books",
+      "relatedL4Ids": ["grammar.nouns.countability.countable.how_many_questions"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.plural.spelling_y_to_s",
+      "family": "plural",
+      "label": "Adds -s instead of -ies for consonant + y",
+      "wrongExample": "babys",
+      "correctExample": "babies",
+      "relatedL4Ids": ["grammar.nouns.plural.spelling.consonant_y"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.quantifier.some_in_question",
+      "family": "quantifier",
+      "label": "Uses some in a question",
+      "wrongExample": "Do you have some milk?",
+      "correctExample": "Do you have any milk?",
+      "relatedL4Ids": ["grammar.determiners.quantifiers.some_and_any.any_questions"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.quantifier.any_in_affirmative",
+      "family": "quantifier",
+      "label": "Uses any in affirmative statement",
+      "wrongExample": "I have any apples.",
+      "correctExample": "I have some apples.",
+      "relatedL4Ids": ["grammar.determiners.quantifiers.some_and_any.some_affirmative"],
+      "severity": "medium"
+    },
+    {
+      "id": "error.quantifier.some_with_negative",
+      "family": "quantifier",
+      "label": "Uses some in negative sentence",
+      "wrongExample": "I don't have some books.",
+      "correctExample": "I don't have any books.",
+      "relatedL4Ids": ["grammar.determiners.quantifiers.some_and_any.any_negative"],
+      "severity": "medium"
+    }
+  ]
+}

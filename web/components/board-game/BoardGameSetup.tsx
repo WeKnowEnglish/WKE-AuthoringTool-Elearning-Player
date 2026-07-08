@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { MapPreviewCard } from "@/components/board-game/MapPreviewCard";
@@ -36,6 +37,7 @@ export function BoardGameSetup({
   mapLibraryKey = 0,
   onMapLibraryChange,
 }: Props) {
+  const router = useRouter();
   const [customMaps, setCustomMaps] = useState<CustomMapRecord[]>([]);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -108,11 +110,23 @@ export function BoardGameSetup({
         <KidButton disabled={!canStart} onClick={onStart} className="min-w-[12rem] text-lg">
           Start Game
         </KidButton>
-        {!canStart ? (
+        <KidButton
+          variant="secondary"
+          disabled={setup.questions.length === 0}
+          onClick={() => router.push("/board-game/multiplayer/host")}
+          className="min-w-[12rem] text-lg"
+        >
+          Play with class
+        </KidButton>
+        {!canStart ?
           <p className="text-center text-sm font-semibold text-kid-ink/70">
-            Need at least {MIN_PLAYERS} named players and 1 question to start.
+            Need at least {MIN_PLAYERS} named players and 1 question to start solo.
           </p>
-        ) : null}
+        : (
+          <p className="text-center text-sm font-semibold text-kid-ink/70">
+            Play with class uses your current map and questions. Students join with a code.
+          </p>
+        )}
       </div>
 
       <header className="text-center">

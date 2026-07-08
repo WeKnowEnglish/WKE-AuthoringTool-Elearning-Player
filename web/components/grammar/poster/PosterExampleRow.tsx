@@ -1,9 +1,14 @@
 import type { PosterExample } from "./poster-view-model";
 import { isLabelOnlyText } from "@/lib/grammar-builder/poster-label";
 import type { GrammarPosterVariant } from "./poster-variant";
+import { PosterInteractiveExample } from "./PosterInteractiveExample";
+
 type Props = {
   example: PosterExample;
   variant?: GrammarPosterVariant;
+  cardId?: number;
+  region?: "leftColumn" | "rightColumn" | "item";
+  itemIndex?: number;
 };
 
 function highlightSentence(sentence: string, highlight?: string) {
@@ -20,12 +25,18 @@ function highlightSentence(sentence: string, highlight?: string) {
   );
 }
 
-export function PosterExampleRow({ example, variant = "poster" }: Props) {
+export function PosterExampleRow({
+  example,
+  variant = "poster",
+  cardId,
+  region,
+  itemIndex,
+}: Props) {
   const isShowcase = variant === "showcase";
   const isLabelOnly = isLabelOnlyText(example.sentence);
 
   if (isLabelOnly) {
-    return (
+    const labelOnly = (
       <div className="flex flex-col items-center justify-center gap-1.5 py-1.5 text-center">
         <span
           className={isShowcase ? "text-3xl leading-none" : "text-5xl leading-none"}
@@ -47,9 +58,17 @@ export function PosterExampleRow({ example, variant = "poster" }: Props) {
         ) : null}
       </div>
     );
+    return (
+      <PosterInteractiveExample
+        example={labelOnly}
+        cardId={cardId}
+        region={region}
+        itemIndex={itemIndex}
+      />
+    );
   }
 
-  return (
+  const row = (
     <div
       className={
         isShowcase ?
@@ -84,5 +103,14 @@ export function PosterExampleRow({ example, variant = "poster" }: Props) {
         </p>
       </div>
     </div>
+  );
+
+  return (
+    <PosterInteractiveExample
+      example={row}
+      cardId={cardId}
+      region={region}
+      itemIndex={itemIndex}
+    />
   );
 }

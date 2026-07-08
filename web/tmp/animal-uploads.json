@@ -1,0 +1,626 @@
+[
+  {
+    "id": "5bcf8957-7bb1-49cd-a77b-37e5482f295c",
+    "original_filename": "owl.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:42.422301+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/413fa981-6323-48d4-9fdd-143dbba15e55-owl.png"
+  },
+  {
+    "id": "07c9ebbd-4f61-4820-8535-7983cbd3c470",
+    "original_filename": "orca.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:41.255649+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/a9493905-e073-416c-8465-ee9d7aa554df-orca.png"
+  },
+  {
+    "id": "43887025-ac45-4a27-84a7-4c0b1e3b8c8b",
+    "original_filename": "orangutan.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:40.154505+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/8c1b19a6-04c3-41d5-8193-8c2f767a47bc-orangutan.png"
+  },
+  {
+    "id": "4162cb9d-18d7-43f1-a87b-8000314883e7",
+    "original_filename": "octopus.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:38.795623+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/d35e9cd4-690a-4b65-9b9b-58e0078bda44-octopus.png"
+  },
+  {
+    "id": "403bd355-a43a-458d-8fb6-2b5812d35773",
+    "original_filename": "moose.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:37.617309+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/09635016-3bba-4762-87dd-c6e94fb751be-moose.png"
+  },
+  {
+    "id": "209ce45e-bc50-4bf8-a079-7cb1941c95d1",
+    "original_filename": "monkey.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:36.470194+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/7f542b30-fb2a-41df-89ae-616d241f5472-monkey.png"
+  },
+  {
+    "id": "b8cbf133-05cc-4e8c-ad4c-adba3b1eb09e",
+    "original_filename": "meerkat.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:35.370039+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/5979e4e0-ee03-4d46-984f-c1cea5aef07c-meerkat.png"
+  },
+  {
+    "id": "6b8a68e8-4059-445e-8be0-25a540206ac9",
+    "original_filename": "lixzard.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:34.185055+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1f6f7246-38d4-44af-a2e1-1592a3b764e6-lixzard.png"
+  },
+  {
+    "id": "b693d0ff-4a77-43eb-ad9b-d9fa708389cb",
+    "original_filename": "lion.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:32.977522+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/c4781758-afbb-4703-9d5c-15143c59b63d-lion.png"
+  },
+  {
+    "id": "c1e96d38-d593-47ca-ab60-4396dbcdbd96",
+    "original_filename": "leopard.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:31.757176+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/0c5b4c0b-f29d-49a3-8ae8-32850f19b99a-leopard.png"
+  },
+  {
+    "id": "1ae8469f-2db8-416c-8448-c64a491295c0",
+    "original_filename": "lemur.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:30.470276+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/f0691dae-36e4-4855-824a-d9c6a9682ecb-lemur.png"
+  },
+  {
+    "id": "b545080f-aec2-40b5-ade4-a0cdb56c5d03",
+    "original_filename": "komodo dragon.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:29.262556+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/7e175935-915e-42f5-aafd-b1324c28ca20-komodo_dragon.png"
+  },
+  {
+    "id": "42796690-3c47-4836-8227-6f93ff6ab487",
+    "original_filename": "koala.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:28.039037+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/98436fe3-3dd1-4ac5-bea0-eb177f872228-koala.png"
+  },
+  {
+    "id": "4652b1ec-7402-4343-8c51-8b92a8878aef",
+    "original_filename": "kangaroo.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:26.907445+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e46a3ab6-3614-48a8-8380-4b27968835f5-kangaroo.png"
+  },
+  {
+    "id": "a03fc7fa-00db-4b1d-8411-910a679be273",
+    "original_filename": "jellyfish.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:25.702377+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/5d739f89-701b-43cf-8af2-389b6c50ee1b-jellyfish.png"
+  },
+  {
+    "id": "3a785597-460f-40c5-9d64-47a1848d92ca",
+    "original_filename": "jaguar.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:24.324352+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/c316cddf-a95a-48bb-b96f-812db374b302-jaguar.png"
+  },
+  {
+    "id": "dc989720-85c5-4d59-a747-05ec87596f97",
+    "original_filename": "iguana.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:22.994869+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/110cfd1c-4026-420e-8944-db50b0eebda4-iguana.png"
+  },
+  {
+    "id": "9b24378c-fc45-4ef8-894c-348ffa4314fe",
+    "original_filename": "hyena.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:21.759573+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/c38ecccb-e841-40e3-83c9-65d717d36dd8-hyena.png"
+  },
+  {
+    "id": "c9ffad7f-b123-49e4-852c-c1a233c74635",
+    "original_filename": "hippo.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:20.517949+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b405468b-546c-447c-8204-7361cc0c7d64-hippo.png"
+  },
+  {
+    "id": "c4e51d98-1d8f-4f68-966f-c63f6bc91f8a",
+    "original_filename": "hedgehog.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:19.328718+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/afabee8f-3fbf-458b-99ad-33f4b7c7e552-hedgehog.png"
+  },
+  {
+    "id": "fa5c4355-027e-4a88-baa4-65aeabeefffc",
+    "original_filename": "gorrila.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:17.753248+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/73f9f1a9-1bb3-47f7-aed9-b98b42ac9cf6-gorrila.png"
+  },
+  {
+    "id": "24086a5d-6de2-43d1-9647-c873fc464e30",
+    "original_filename": "giraffe.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:16.061528+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/670957fd-adf3-4346-8a5c-a5216d7af308-giraffe.png"
+  },
+  {
+    "id": "50658b35-c394-41cc-acc7-c174f5ee040c",
+    "original_filename": "frog.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:14.923483+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/cd501619-9173-4fcd-8a84-184b70ff0797-frog.png"
+  },
+  {
+    "id": "352dcd01-92f4-4027-b92d-eff287bc3ebc",
+    "original_filename": "fox.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:13.661758+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/617ef7b9-d583-46f9-bca5-e8aa1274c9f5-fox.png"
+  },
+  {
+    "id": "e82d0285-f11d-4479-9ebd-fdb45849c75a",
+    "original_filename": "flamingo.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:11.910979+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/a971691f-c19e-42dd-bbd6-37c227ffa4a8-flamingo.png"
+  },
+  {
+    "id": "a196ee23-dc63-43ee-97a7-920cd7ea7187",
+    "original_filename": "elephant.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:10.817244+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/047776cf-a4db-4a09-866f-0dc10af07b78-elephant.png"
+  },
+  {
+    "id": "2fe20005-0f99-4b45-b254-49247d713039",
+    "original_filename": "eagle.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:09.682812+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b59899df-8d1c-4a2a-8e01-ce616b981a6d-eagle.png"
+  },
+  {
+    "id": "c26a21be-2b37-4453-9c57-d0493ac64d89",
+    "original_filename": "dolphin.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:08.395146+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/73c1bdf3-33a6-4655-afd1-9ad09223a2c2-dolphin.png"
+  },
+  {
+    "id": "a2043a17-d721-43bc-a6bc-c11158485a35",
+    "original_filename": "deer.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:07.087391+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/180c1e22-1d28-4790-b421-66b707131059-deer.png"
+  },
+  {
+    "id": "ad7643f3-ff06-4d7c-9579-a9086b90a1f6",
+    "original_filename": "crane.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:05.7216+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/03510bbd-b7d9-4cae-a148-6c906a029466-crane.png"
+  },
+  {
+    "id": "5e712a74-219c-4bf1-a1fa-f7c203656ec1",
+    "original_filename": "crab.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:04.395669+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/726f9aa4-e089-4616-972a-d434f81a055a-crab.png"
+  },
+  {
+    "id": "a8d6c220-0b74-44a3-9569-afde61a66375",
+    "original_filename": "cobra.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:03.203056+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/cd5759ae-55c2-48db-90c8-b24784f75d51-cobra.png"
+  },
+  {
+    "id": "04ab69e6-08c7-4368-b11c-af9a617133e4",
+    "original_filename": "chimpanzee.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:01.88243+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/59038055-7d1e-4505-95a7-f49b0590ca7b-chimpanzee.png"
+  },
+  {
+    "id": "b26035cc-ce72-427e-9394-2e7adfc9ab14",
+    "original_filename": "chameleon.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:40:00.554638+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/8c4d6d85-0454-4791-8cfb-8d3b39fcefa7-chameleon.png"
+  },
+  {
+    "id": "3ede2e64-e284-4a93-9cd1-38f171e35c44",
+    "original_filename": "capybara.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:59.072982+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/50745910-b20f-4988-a866-d7266425d028-capybara.png"
+  },
+  {
+    "id": "36324a27-99bb-4a55-ac56-da9f8114e014",
+    "original_filename": "camel.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:57.838782+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e70649f1-e562-484b-99c1-09ebc118dce5-camel.png"
+  },
+  {
+    "id": "2221d5ac-8f1f-4c89-9264-7084a055ea52",
+    "original_filename": "beaver.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:56.423449+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/f0f2d5ce-7a9e-4260-aaaa-480e7b3064ab-beaver.png"
+  },
+  {
+    "id": "b3d1d299-5767-42d5-b145-fc78a794ea4a",
+    "original_filename": "panda.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:55.167214+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/92e8ba11-d71d-4840-933f-f54309ba2a5b-panda.png"
+  },
+  {
+    "id": "2abe62fa-aa9e-48a8-a403-66f6ac0fa533",
+    "original_filename": "bear.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:54.002235+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/68ed0fe7-65a0-4c6a-a8e1-db298fb942d9-bear.png"
+  },
+  {
+    "id": "335e9b0f-3f16-4026-ab3f-ddfd30c10efa",
+    "original_filename": "otter.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:52.882537+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1ac8af3a-23a3-43b7-ae20-752dd0d8aa80-otter.png"
+  },
+  {
+    "id": "aed320c5-5d89-4efa-bd8c-2bd91b8c8e2a",
+    "original_filename": "ostrich.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:51.600004+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/fb623124-77e5-42b8-9f01-98863a14e041-ostrich.png"
+  },
+  {
+    "id": "3114404b-84ea-403a-b6c7-bc46c4bbdbb8",
+    "original_filename": "lobster.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:50.389033+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/77cf374e-d280-4c66-b48a-d1b04043f60a-lobster.png"
+  },
+  {
+    "id": "943d238d-882a-40ad-8792-fd45259310bc",
+    "original_filename": "crocodile.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:49.129555+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1989d55a-dcdd-4e68-ad90-0a92c1e7d837-crocodile.png"
+  },
+  {
+    "id": "cd6ecb8d-2263-43df-b139-f5060fbe72e7",
+    "original_filename": "baboon.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:47.959313+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/c1b3c0d1-9946-43af-8c14-afb40d821665-baboon.png"
+  },
+  {
+    "id": "9e7a8d98-11dd-4da6-8ea9-f0ebc268a6be",
+    "original_filename": "cheetah.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:46.665872+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/65b487ff-a7a2-4076-9b7c-2f305a99a2e7-cheetah.png"
+  },
+  {
+    "id": "e67cbd5f-e1e9-4268-8f2d-c63ee58205c2",
+    "original_filename": "buffalo.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:45.465536+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1e3eeaff-0051-4997-b014-4b7243ed6d34-buffalo.png"
+  },
+  {
+    "id": "f86f6e5a-a3fe-473d-96d5-229a64af5861",
+    "original_filename": "bat.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:44.19183+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1623d228-bf0c-46bd-bf96-2cbdc346ce4c-bat.png"
+  },
+  {
+    "id": "916f2f9c-eabc-4c92-a212-5950066e3293",
+    "original_filename": "aligator.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:42.98218+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4e635cab-3712-498a-b12d-7233642fc3fc-aligator.png"
+  },
+  {
+    "id": "b1cc71dc-2d1a-45dc-850b-44ae88e196c2",
+    "original_filename": "axolotl.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:41.799259+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/d3e696de-8cf4-4727-91c6-71960ca9e505-axolotl.png"
+  },
+  {
+    "id": "08366956-1162-40c5-a034-be940a706992",
+    "original_filename": "whale.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:40.67035+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/2e61f70f-0cf5-4f36-90fb-9d33adb4a536-whale.png"
+  },
+  {
+    "id": "6b87625f-cc2d-4f7d-88c4-9f963132799f",
+    "original_filename": "stingray.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:39.137887+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1b484ad9-2826-43c3-b1b5-f973dad9e3ea-stingray.png"
+  },
+  {
+    "id": "fff3f4c0-01b1-435d-8ca0-1922665b96a9",
+    "original_filename": "artic fox.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:38.030315+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b3bd03f0-3dd3-4ecb-b758-8e1a37717c33-artic_fox.png"
+  },
+  {
+    "id": "7bbb3a8d-752e-43c0-8e2e-d9f6f3904745",
+    "original_filename": "spider.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:36.764986+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b1b9435d-b7ad-4ef5-ad87-3bd93f882232-spider.png"
+  },
+  {
+    "id": "9bac963a-dc57-4bd3-ac02-35a377526f1f",
+    "original_filename": "sloth.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:35.597906+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/001fba6f-8517-4d1b-815b-3bcb978b7ab7-sloth.png"
+  },
+  {
+    "id": "c1bc8488-ea6b-4a2b-96b5-d51eaf599993",
+    "original_filename": "sea turtle.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:34.402158+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1c9d03d2-15e0-4ff4-937e-4754d30ef6da-sea_turtle.png"
+  },
+  {
+    "id": "c83c4854-9eea-4af2-b57a-1af294dd6b28",
+    "original_filename": "walrus.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:33.216022+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/58c27880-5ae2-423d-b3cb-0881f366a722-walrus.png"
+  },
+  {
+    "id": "fb848ce6-f90e-438c-8ba8-6b63db41486e",
+    "original_filename": "seahorse.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:32.012688+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/a54d07b6-2eca-41e2-8aec-f68a0b4070dd-seahorse.png"
+  },
+  {
+    "id": "146790b6-fe3e-4a6f-a5db-43da4252dfca",
+    "original_filename": "scorpion.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:30.593152+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/c2dc9f3a-5a1a-40df-bd59-449ff31054b1-scorpion.png"
+  },
+  {
+    "id": "9f937abc-cbf1-42b1-a52f-2dc472b573d4",
+    "original_filename": "toucan.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:29.37632+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/2166eb5d-3295-44fa-bf6c-e7fd7bf6b91e-toucan.png"
+  },
+  {
+    "id": "2aa7e061-99ec-4ce5-a37d-87eb369db853",
+    "original_filename": "raoon.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:28.068306+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/237d0c59-6f71-48cd-97b9-3759ecc4e9de-raoon.png"
+  },
+  {
+    "id": "dc39a844-c051-4710-ad1c-4e006dfc11e4",
+    "original_filename": "tiger.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:26.873065+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b1b3f5ee-c6b3-487b-b021-b42d839e8433-tiger.png"
+  },
+  {
+    "id": "05532c18-8918-47fd-a05b-b6b088275c48",
+    "original_filename": "polar bear.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:25.461273+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/86c4b83b-8b15-498e-bd84-0c00bd911584-polar_bear.png"
+  },
+  {
+    "id": "7705fbff-b963-41d9-b79c-69f651cbe9a0",
+    "original_filename": "swan.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:23.832769+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/78d789e4-bdb6-4f25-86b9-cbb47dea1a55-swan.png"
+  },
+  {
+    "id": "0e01eab5-7238-4e87-a7c8-c76945c0c9f2",
+    "original_filename": "penguin.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:22.513902+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/307ae7bb-ef11-497d-832c-cce97eed5bfb-penguin.png"
+  },
+  {
+    "id": "02b38329-076a-49a4-ad88-6daafe8802db",
+    "original_filename": "starfish.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:21.356893+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/bf4db501-9789-4c0d-91fb-c76fc1db81a4-starfish.png"
+  },
+  {
+    "id": "792d58f7-b02c-492b-b94c-66234f9ae159",
+    "original_filename": "parrot.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:20.021392+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/0717647e-1fbd-4215-b23d-6c14b5d525ff-parrot.png"
+  },
+  {
+    "id": "ea9c7397-b688-4a09-b272-7d8a70a878a4",
+    "original_filename": "squirrel.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:18.632975+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/03e91997-315f-459e-918a-6b382a88b20c-squirrel.png"
+  },
+  {
+    "id": "0986714d-cad7-44b8-b62a-f5a3dc8f11dc",
+    "original_filename": "snake.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:17.170691+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/57e0c5b0-4d4c-4431-b232-6322ce303067-snake.png"
+  },
+  {
+    "id": "95b2c561-b44d-4768-bc0a-29cb9a64aaf7",
+    "original_filename": "skunk.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:15.987393+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ee78c4f5-8447-4466-8198-77357efacd26-skunk.png"
+  },
+  {
+    "id": "818a5bb5-db0b-4148-99d8-d919f41a05c7",
+    "original_filename": "shrimp.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:14.763366+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/a4ac588e-78bd-4533-ab2b-5afb9783212d-shrimp.png"
+  },
+  {
+    "id": "ff469c9d-7d8e-44b4-b0e7-a4910857bea7",
+    "original_filename": "shark.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:13.12941+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/0c4e2b39-305a-492c-b825-1cbacb77e2ca-shark.png"
+  },
+  {
+    "id": "3cdc4e28-1b91-4236-af88-b597b0c1ca1f",
+    "original_filename": "seal.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:11.973751+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/6e4e9221-7932-41ea-afdc-e0307a661827-seal.png"
+  },
+  {
+    "id": "91e700a4-94fa-4a9e-a52d-b9024d54a6b8",
+    "original_filename": "rhino.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:10.729002+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/e819ab58-1c75-486b-966e-0efb60a24147-rhino.png"
+  },
+  {
+    "id": "8bf26131-b973-4746-b76c-8bba0f81598c",
+    "original_filename": "reindeer.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:09.348131+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/45c52493-a468-44a7-963f-8932cb77edcd-reindeer.png"
+  },
+  {
+    "id": "69902c5b-4e8e-41aa-b875-cf6efbf310cc",
+    "original_filename": "red panda.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:07.964427+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/21a21237-0dce-4597-81f1-63a68f02906c-red_panda.png"
+  },
+  {
+    "id": "a775be37-2aef-4813-9dde-8b1793187358",
+    "original_filename": "platypus.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:06.530796+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/2ff6335c-e0d0-4f61-95ad-9c45e686338f-platypus.png"
+  },
+  {
+    "id": "39063cf8-3de4-4f43-8745-b03df221006a",
+    "original_filename": "peacock.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:05.274404+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/7ca74e02-2d8f-4078-b13f-2db8f17cad87-peacock.png"
+  },
+  {
+    "id": "eee60698-3f27-44da-a674-7e1626b92664",
+    "original_filename": "panther.png",
+    "meta_item_name": null,
+    "meta_categories": [],
+    "created_at": "2026-05-19T17:39:03.71552+00:00",
+    "public_url": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/0f75d3fa-0dda-4dfa-b8f7-53c530bc6873-panther.png"
+  }
+]

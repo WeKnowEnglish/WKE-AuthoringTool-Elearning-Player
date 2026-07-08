@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+/**
+ * Runtime commits (authoritative state writes):
+ * - applyEffectStep, finishTurnWithHandoff, processLandingSequence
+ * - handleCorrect, handleIncorrect (handleSkip commits via finishTurnWithHandoff)
+ * handleRoll does not commit directly; processLandingSequence does.
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { playBoardGameSfx } from "@/lib/board-game/board-game-sfx";
 import {
   CELEBRATION_MS,
@@ -34,6 +41,8 @@ import {
 } from "@/lib/board-game/map/effects/landing-sequence";
 import { resolveMapForSetup } from "@/lib/board-game/map/resolve-map";
 import { pickRandomPenalty } from "@/lib/board-game/penalties";
+import { assertValidRuntimeCommit } from "@/lib/board-game/presentation/assert-valid-runtime-commit";
+import type { BoardGamePresentationConfig } from "@/lib/board-game/presentation/types";
 import type { GameRuntime, GameSetup, UiPhase } from "@/lib/board-game/types";
 import type { TravelHop } from "@/lib/board-game/travel-state";
 import { shouldUseTravelLayer } from "@/lib/board-game/animation-timing";
@@ -52,8 +61,21 @@ function initialUiPhase(runtime: GameRuntime): UiPhase {
 export function useBoardGamePresentation(
   setup: GameSetup,
   runtime: GameRuntime,
-  onRuntimeChange: (runtime: GameRuntime) => void,
+  config: BoardGamePresentationConfig,
 ) {
+  const { commitRuntime, interactMode = "host" } = config;
+  const isSpectator = interactMode === "spectator";
+
+  const commit = useCallback(
+    (nextRuntime: GameRuntime) => {
+      if (process.env.NODE_ENV === "development") {
+        assertValidRuntimeCommit(nextRuntime, setup);
+      }
+      commitRuntime(nextRuntime);
+    },
+    [commitRuntime, setup],
+  );
+
   const { muted } = useAudioMuted();
   const [uiPhase, setUiPhase] = useState<UiPhase>(() => initialUiPhase(runtime));
   const [displayPositions, setDisplayPositions] = useState<number[]>(() => [...runtime.playerPositions]);
@@ -71,6 +93,14 @@ export function useBoardGamePresentation(
   const [travelHop, setTravelHop] = useState<TravelHop | null>(null);
   const busyRef = useRef(false);
   const hopKeyRef = useRef(0);
+
+  useEffect(() => {
+    if (busyRef.current) return;
+    setDisplayPositions([...runtime.playerPositions]);
+    if (isSpectator) {
+      setUiPhase(initialUiPhase(runtime));
+    }
+  }, [isSpectator, runtime]);
 
   const visualPositions =
     uiPhase === "moving" || uiPhase === "landing" || uiPhase === "penalty" || uiPhase === "shortcut" ?
@@ -177,7 +207,7 @@ export function useBoardGamePresentation(
     async (nextRuntime: GameRuntime, playerIndex: number, effect: import("@/lib/board-game/map/effects/resolve-effect").ResolvedEffect) => {
       const before = nextRuntime.playerPositions[playerIndex] ?? 0;
       const applied = applyResolvedEffect(nextRuntime, setup, effect);
-      onRuntimeChange(applied);
+      commit(applied);
       const after = applied.playerPositions[playerIndex] ?? before;
 
       if (effect.goToPathIndex !== undefined) {
@@ -190,12 +220,12 @@ export function useBoardGamePresentation(
       setDisplayPositions([...applied.playerPositions]);
       return applied;
     },
-    [animateHops, jumpToSpace, onRuntimeChange, setup],
+    [animateHops, jumpToSpace, commit, setup],
   );
 
   const finishTurnWithHandoff = useCallback(
     async (nextRuntime: GameRuntime) => {
-      onRuntimeChange(nextRuntime);
+      commit(nextRuntime);
       if (nextRuntime.pendingRollAgain) {
         setUiPhase("ready");
         return;
@@ -212,7 +242,7 @@ export function useBoardGamePresentation(
       setTurnHandoffPlayer(null);
       setUiPhase(nextRuntime.winnerIndex !== null ? "victory" : "ready");
     },
-    [muted, onRuntimeChange, setup.players],
+    [muted, commit, setup.players],
   );
 
   const processLandingSequence = useCallback(
@@ -229,35 +259,35 @@ export function useBoardGamePresentation(
           await showEffectFeedback(step.feedback);
           current = await applyEffectStep(current, playerIndex, step.effect);
           if (step.effect.rollAgain) {
-            onRuntimeChange(current);
+            commit(current);
             setUiPhase("ready");
             return { runtime: current, done: true, showQuestion: false };
           }
         } else if (step.kind === "question") {
           current = attachQuestionIfNeeded(current, setup, dice, true);
-          onRuntimeChange(current);
+          commit(current);
           return { runtime: current, done: false, showQuestion: true };
         } else if (step.kind === "rollAgain") {
-          onRuntimeChange(current);
+          commit(current);
           setUiPhase("ready");
           return { runtime: current, done: true, showQuestion: false };
         } else if (step.kind === "endTurn") {
           current = attachQuestionIfNeeded(current, setup, dice, false);
-          onRuntimeChange(current);
+          commit(current);
           current = nextTurn(current, setup.playerCount);
           await finishTurnWithHandoff(current);
           return { runtime: current, done: true, showQuestion: false };
         }
       }
 
-      onRuntimeChange(current);
+      commit(current);
       return { runtime: current, done: true, showQuestion: false };
     },
-    [applyEffectStep, finishTurnWithHandoff, onRuntimeChange, setup, showEffectFeedback],
+    [applyEffectStep, finishTurnWithHandoff, commit, setup, showEffectFeedback],
   );
 
   const handleRoll = useCallback(async () => {
-    if (busyRef.current || uiPhase !== "ready" || runtime.turnPhase !== "roll") return;
+    if (isSpectator || busyRef.current || uiPhase !== "ready" || runtime.turnPhase !== "roll") return;
     if (runtime.winnerIndex !== null) return;
     busyRef.current = true;
 
@@ -303,10 +333,10 @@ export function useBoardGamePresentation(
     }
 
     busyRef.current = false;
-  }, [animateHops, muted, processLandingSequence, runtime, setup, uiPhase]);
+  }, [animateHops, isSpectator, muted, processLandingSequence, runtime, setup, uiPhase]);
 
   const handleCorrect = useCallback(async () => {
-    if (uiPhase !== "question" || runtime.turnPhase !== "question") return;
+    if (isSpectator || uiPhase !== "question" || runtime.turnPhase !== "question") return;
     busyRef.current = true;
     setUiPhase("celebrating");
     playBoardGameSfx("correct", muted);
@@ -324,7 +354,7 @@ export function useBoardGamePresentation(
     let nextRuntime = markAnswerPhaseComplete(runtime, setup);
     nextRuntime = applyResolvedEffect(nextRuntime, setup, effect);
 
-    onRuntimeChange(nextRuntime);
+    commit(nextRuntime);
     await sleep(CELEBRATION_MS);
     setShowPointGain(false);
     setCelebrationMessage(null);
@@ -342,7 +372,7 @@ export function useBoardGamePresentation(
     }
 
     if (effect.rollAgain) {
-      onRuntimeChange(nextRuntime);
+      commit(nextRuntime);
       setUiPhase("ready");
       busyRef.current = false;
       return;
@@ -351,14 +381,14 @@ export function useBoardGamePresentation(
     nextRuntime = nextTurn(nextRuntime, setup.playerCount);
     await finishTurnWithHandoff(nextRuntime);
     busyRef.current = false;
-  }, [animateHops, finishTurnWithHandoff, muted, onRuntimeChange, runtime, setup, uiPhase]);
+  }, [animateHops, finishTurnWithHandoff, isSpectator, muted, commit, runtime, setup, uiPhase]);
 
   const handleIncorrect = useCallback(async () => {
-    if (uiPhase !== "question" || runtime.turnPhase !== "question") return;
+    if (isSpectator || uiPhase !== "question" || runtime.turnPhase !== "question") return;
     busyRef.current = true;
 
     let nextRuntime = markAnswerPhaseComplete(runtime, setup);
-    onRuntimeChange(nextRuntime);
+    commit(nextRuntime);
 
     if (setup.enablePenalties !== false) {
       const map = resolveMapForSetup(setup);
@@ -374,7 +404,7 @@ export function useBoardGamePresentation(
       const playerIndex = nextRuntime.currentPlayerIndex;
       const from = nextRuntime.playerPositions[playerIndex] ?? 0;
       nextRuntime = applyResolvedEffect(nextRuntime, setup, effect);
-      onRuntimeChange(nextRuntime);
+      commit(nextRuntime);
 
       if (effectRequiresMovement(runtime, nextRuntime)) {
         const to = nextRuntime.playerPositions[playerIndex] ?? from;
@@ -389,7 +419,7 @@ export function useBoardGamePresentation(
       }
 
       if (nextRuntime.pendingRollAgain) {
-        onRuntimeChange(nextRuntime);
+        commit(nextRuntime);
         setUiPhase("ready");
         busyRef.current = false;
         return;
@@ -399,18 +429,22 @@ export function useBoardGamePresentation(
     nextRuntime = nextTurn(nextRuntime, setup.playerCount);
     await finishTurnWithHandoff(nextRuntime);
     busyRef.current = false;
-  }, [animateHops, finishTurnWithHandoff, jumpToSpace, onRuntimeChange, runtime, setup, showEffectFeedback, uiPhase]);
+  }, [animateHops, finishTurnWithHandoff, isSpectator, jumpToSpace, commit, runtime, setup, showEffectFeedback, uiPhase]);
 
   const handleSkip = useCallback(async () => {
-    if (uiPhase !== "question" || runtime.turnPhase !== "question") return;
+    if (isSpectator || uiPhase !== "question" || runtime.turnPhase !== "question") return;
     busyRef.current = true;
     let nextRuntime = skipQuestion(runtime, setup);
     nextRuntime = nextTurn(nextRuntime, setup.playerCount);
     await finishTurnWithHandoff(nextRuntime);
     busyRef.current = false;
-  }, [finishTurnWithHandoff, runtime, setup, uiPhase]);
+  }, [finishTurnWithHandoff, isSpectator, runtime, setup, uiPhase]);
 
-  const canRoll = uiPhase === "ready" && runtime.turnPhase === "roll" && runtime.winnerIndex === null;
+  const canRoll =
+    !isSpectator &&
+    uiPhase === "ready" &&
+    runtime.turnPhase === "roll" &&
+    runtime.winnerIndex === null;
   const currentPlayer = getCurrentPlayer(setup, runtime);
 
   return {

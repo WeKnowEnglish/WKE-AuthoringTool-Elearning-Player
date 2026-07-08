@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://weknowenglish.local/gke/micro-skill-record.schema.json",
+  "title": "GKE Micro-Skill Record (L4 + L5)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "level",
+    "parentConceptId",
+    "label",
+    "l5Descriptor",
+    "evidenceModes",
+    "status"
+  ],
+  "properties": {
+    "id": { "$ref": "gke-common.schema.json#/$defs/grammarL4Id" },
+    "level": { "const": 4 },
+    "parentConceptId": { "$ref": "gke-common.schema.json#/$defs/grammarL3Id" },
+    "label": { "$ref": "gke-common.schema.json#/$defs/localizedLabel" },
+    "l5Descriptor": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "posterCardRef": { "$ref": "gke-common.schema.json#/$defs/posterCardRef" },
+    "evidenceModes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "gke-common.schema.json#/$defs/evidenceMode" }
+    },
+    "errorCodes": {
+      "type": "array",
+      "items": { "$ref": "gke-common.schema.json#/$defs/errorCode" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "status": { "$ref": "gke-common.schema.json#/$defs/publishStatus" },
+    "standardsRef": { "$ref": "gke-common.schema.json#/$defs/standardsRefStub" },
+    "notes": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "published" } }, "required": ["status"] },
+      "then": { "required": ["posterCardRef"] }
+    }
+  ]
+}

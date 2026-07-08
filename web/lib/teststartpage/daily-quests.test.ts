@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  resetScopedStorageTestState,
+  seedScopedRewards,
+} from "@/lib/auth/scoped-storage-test-helpers";
+import {
   DAILY_QUESTS_STORAGE_KEY,
   DAILY_CHEST_GOLD,
   DAILY_CHEST_XP,
@@ -12,7 +16,7 @@ import {
   getLocalDayKey,
   openDailyTreasureChest,
 } from "./daily-quests";
-import { DAILY_QUEST_XP, REWARDS_STORAGE_KEY, getRewards } from "@/lib/progress/rewards";
+import { DAILY_QUEST_XP, getRewards } from "@/lib/progress/rewards";
 
 const FIXED_DAY = "2030-06-15";
 
@@ -39,27 +43,19 @@ function installMemoryStorage() {
 }
 
 function seedRewards(gold = 0, ids: string[] = []) {
-  localStorage.setItem(
-    REWARDS_STORAGE_KEY,
-    JSON.stringify({
-      gold,
-      experience: 0,
-      rewardedEventIds: ids,
-      ownedStickerIds: [],
-      quizEnergy: 0,
-      quizStreak: 0,
-    }),
-  );
+  seedScopedRewards({ gold, rewardedEventIds: ids });
 }
 
 describe("daily-quests", () => {
   beforeEach(() => {
     installMemoryStorage();
+    resetScopedStorageTestState();
     localStorage.clear();
     seedRewards(0);
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyWordForPractice,
   recommendVocabularyPracticeWords,
   vocabularyRecommendationReasonLabel,
 } from "@/lib/mastery/recommendations";
@@ -82,5 +83,82 @@ describe("vocabulary recommendations", () => {
   it("formats stable explanation labels", () => {
     expect(vocabularyRecommendationReasonLabel("due_review")).toBe("due review");
     expect(vocabularyRecommendationReasonLabel("low_confidence")).toBe("low confidence");
+  });
+});
+
+describe("classifyWordForPractice", () => {
+  const now = new Date("2026-07-04T08:00:00.000Z");
+
+  it("returns new when record is missing or has zero exposure", () => {
+    expect(classifyWordForPractice({ wordId: "apple", record: null, now })).toBe("new");
+    expect(
+      classifyWordForPractice({
+        wordId: "apple",
+        record: record("word:apple", { exposureCount: 0 }),
+        now,
+      }),
+    ).toBe("new");
+  });
+
+  it("returns mastered when masteryScore is at threshold and not due", () => {
+    expect(
+      classifyWordForPractice({
+        wordId: "apple",
+        record: record("word:apple", {
+          masteryScore: 0.75,
+          state: "secure",
+          nextReviewAt: "2026-07-10T08:00:00.000Z",
+        }),
+        now,
+      }),
+    ).toBe("mastered");
+  });
+
+  it("returns due_review before fragile when both apply", () => {
+    expect(
+      classifyWordForPractice({
+        wordId: "apple",
+        record: record("word:apple", {
+          state: "needs_review",
+          nextReviewAt: "2026-07-03T08:00:00.000Z",
+        }),
+        now,
+      }),
+    ).toBe("due_review");
+  });
+
+  it("returns fragile for stuck or needs_review when not due", () => {
+    expect(
+      classifyWordForPractice({
+        wordId: "apple",
+        record: record("word:apple", { state: "stuck" }),
+        now,
+      }),
+    ).toBe("fragile");
+  });
+
+  it("returns low_confidence for seen words below confidence threshold", () => {
+    expect(
+      classifyWordForPractice({
+        wordId: "apple",
+        record: record("word:apple", { confidence: 0.2, state: "introduced" }),
+        now,
+      }),
+    ).toBe("low_confidence");
+  });
+
+  it("returns null for stable seen words eligible for refresh", () => {
+    expect(
+      classifyWordForPractice({
+        wordId: "apple",
+        record: record("word:apple", {
+          state: "secure",
+          masteryScore: 0.5,
+          confidence: 0.8,
+          nextReviewAt: "2026-07-10T08:00:00.000Z",
+        }),
+        now,
+      }),
+    ).toBeNull();
   });
 });

@@ -49,7 +49,10 @@ describe("letter-fruit-picks-sync", () => {
 } as const satisfies SpriteAtlasConfig;`,
       picks,
     );
-    expect(atlasSource).toContain("letter_a_seed: { sx: 70");
+    const seedPick = picks.find((pick) => pick.assetId === "letter_a_seed")!;
+    expect(atlasSource).toContain(
+      `letter_a_seed: { sx: ${seedPick.bounds.sx}`,
+    );
 
     const presetSource = patchLetterFruitOverlayPresets(
       `const TUNED_LETTER_A_PRESETS: Partial<

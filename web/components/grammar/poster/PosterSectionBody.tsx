@@ -1,4 +1,4 @@
-import { PosterCategoryPill } from "./PosterCategoryPill";
+import { PosterInteractiveTarget } from "./interactions/PosterInteractiveTarget";
 import { PosterExampleRow } from "./PosterExampleRow";
 import { PosterComparisonBody } from "./PosterComparisonBody";
 import { PosterFourCardGridBody } from "./PosterFourCardGridBody";
@@ -9,6 +9,7 @@ import { PosterNoteBox } from "./PosterNoteBox";
 import { PosterPositiveNegativeBody } from "./PosterPositiveNegativeBody";
 import { PosterSummaryGrid } from "./PosterSummaryGrid";
 import { PosterThreeColumnBody } from "./PosterThreeColumnBody";
+import { PosterCategoryPill } from "./PosterCategoryPill";
 import { getSectionPillColor } from "./poster-section-colors";
 import type { PosterSection } from "./poster-view-model";
 import type { GrammarPosterVariant } from "./poster-variant";
@@ -35,14 +36,16 @@ function BannerBody({
     variant === "poster" && section.rememberBanner.title === section.kidTitle;
 
   return (
-    <PosterNoteBox
-      title={section.rememberBanner.title}
-      body={section.rememberBanner.body}
-      highlight={section.rememberBanner.highlight}
-      variant={variant}
-      hideTitle={hideTitle}
-      dense={variant === "poster"}
-    />
+    <PosterInteractiveTarget cardId={section.number} region="banner">
+      <PosterNoteBox
+        title={section.rememberBanner.title}
+        body={section.rememberBanner.body}
+        highlight={section.rememberBanner.highlight}
+        variant={variant}
+        hideTitle={hideTitle}
+        dense={variant === "poster"}
+      />
+    </PosterInteractiveTarget>
   );
 }
 
@@ -67,12 +70,26 @@ function TwoEqualNarrowBody({
           />
         ) : null}
         {section.leftExamples?.map((example, i) => (
-          <PosterExampleRow key={`left-${i}`} example={example} variant={variant} />
+          <PosterExampleRow
+            key={`left-${i}`}
+            example={example}
+            variant={variant}
+            cardId={section.number}
+            region="leftColumn"
+            itemIndex={i}
+          />
         ))}
       </div>
       <div className="sm:border-l-2 sm:border-dashed sm:border-kid-ink/30 sm:pl-4">
         {section.rightExamples?.map((example, i) => (
-          <PosterExampleRow key={`right-${i}`} example={example} variant={variant} />
+          <PosterExampleRow
+            key={`right-${i}`}
+            example={example}
+            variant={variant}
+            cardId={section.number}
+            region="rightColumn"
+            itemIndex={i}
+          />
         ))}
       </div>
     </div>
@@ -108,7 +125,14 @@ function TwoEqualBody({
           />
         ) : null}
         {section.leftExamples?.map((example, i) => (
-          <PosterExampleRow key={`left-${i}`} example={example} variant={variant} />
+          <PosterExampleRow
+            key={`left-${i}`}
+            example={example}
+            variant={variant}
+            cardId={section.number}
+            region="leftColumn"
+            itemIndex={i}
+          />
         ))}
       </div>
       <div className="sm:border-l-2 sm:border-dashed sm:border-kid-ink/30 sm:pl-4">
@@ -121,7 +145,14 @@ function TwoEqualBody({
           />
         ) : null}
         {section.rightExamples?.map((example, i) => (
-          <PosterExampleRow key={`right-${i}`} example={example} variant={variant} />
+          <PosterExampleRow
+            key={`right-${i}`}
+            example={example}
+            variant={variant}
+            cardId={section.number}
+            region="rightColumn"
+            itemIndex={i}
+          />
         ))}
       </div>
       </div>
@@ -147,6 +178,7 @@ export function PosterSectionBody({ section, variant = "poster" }: Props) {
       }
       return (
         <PosterComparisonBody
+          cardId={section.number}
           left={section.comparisonLeft}
           right={section.comparisonRight}
           variant={variant}
@@ -155,6 +187,7 @@ export function PosterSectionBody({ section, variant = "poster" }: Props) {
     case "summary_grid":
       return section.summaryGrid ? (
         <PosterSummaryGrid
+          cardId={section.number}
           grid={section.summaryGrid}
           variant={variant}
           accentColor={section.palette?.header}
@@ -162,7 +195,11 @@ export function PosterSectionBody({ section, variant = "poster" }: Props) {
       ) : null;
     case "four_card_grid":
       return section.miniCards ? (
-        <PosterFourCardGridBody miniCards={section.miniCards} variant={variant} />
+        <PosterFourCardGridBody
+          cardId={section.number}
+          miniCards={section.miniCards}
+          variant={variant}
+        />
       ) : null;
     case "full_width":
       return <PosterFullWidthBody section={section} variant={variant} />;

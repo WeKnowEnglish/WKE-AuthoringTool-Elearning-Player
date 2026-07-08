@@ -6,14 +6,16 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { registerStudentAccount, updateStudentLearningBand } from "@/lib/actions/student-auth";
+import { migrateLocalStorageToStudentStorageId } from "@/lib/auth/student-storage-migrate";
 import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 import { getAppRole } from "@/lib/auth/roles";
+import { resolveLearningBand } from "@/lib/auth/student-bands";
+import { setStudentStorageIdCache } from "@/lib/auth/student-storage-id";
 import {
   normalizeUsername,
   usernameToStudentEmail,
 } from "@/lib/auth/student-credentials";
 import {
-  isLearningBand,
   learningBandLabel,
   type LearningBand,
 } from "@/lib/learning-band";
@@ -24,8 +26,13 @@ import { createClient } from "@/lib/supabase/client";
 export type PortalKind = "student" | "teacher";
 
 type Props = {
-  /** Level chosen on landing — required for new student accounts. */
+  /**
+   * Login door / sign-up track.
+   * Sign-up uses this band. Sign-in uses the account's saved band for redirect.
+   */
   learningBand?: LearningBand | null;
+  /** When true, hide teacher tab (Secondary student portal). */
+  studentOnly?: boolean;
   defaultPortal?: PortalKind;
   nextPath?: string;
   initialError?: string;
@@ -44,6 +51,7 @@ function formatAuthError(code: string | undefined): string {
 
 export function PortalLoginPanel({
   learningBand,
+  studentOnly = false,
   defaultPortal = "student",
   nextPath,
   initialError,
@@ -51,7 +59,7 @@ export function PortalLoginPanel({
   className,
 }: Props) {
   const router = useRouter();
-  const [portal, setPortal] = useState<PortalKind>(defaultPortal);
+  const [portal, setPortal] = useState<PortalKind>(studentOnly ? "student" : defaultPortal);
   const [studentMode, setStudentMode] = useState<"sign_in" | "sign_up">("sign_in");
 
   const [username, setUsername] = useState("");
@@ -68,11 +76,26 @@ export function PortalLoginPanel({
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  async function finishStudentSession(band: LearningBand) {
+  async function finishStudentSession(
+    band: LearningBand,
+    opts?: { persistBand?: boolean; authUserId?: string; migrateGuestProgress?: boolean },
+  ) {
+    if (opts?.authUserId) {
+      setStudentStorageIdCache(opts.authUserId);
+      if (opts.migrateGuestProgress) {
+        migrateLocalStorageToStudentStorageId(opts.authUserId);
+      }
+    }
     setLearningBand(band);
     writeLearningBandCookie(band);
-    await updateStudentLearningBand(band);
-    const path = resolvePostLoginPath({ role: "student", next: nextPath });
+    if (opts?.persistBand !== false) {
+      await updateStudentLearningBand(band);
+    }
+    const path = resolvePostLoginPath({
+      role: "student",
+      learningBand: band,
+      next: nextPath,
+    });
     router.push(path);
     router.refresh();
   }
@@ -87,16 +110,17 @@ export function PortalLoginPanel({
       const normalized = normalizeUsername(username);
       const email = usernameToStudentEmail(normalized);
       const pinValue = pin.trim();
+      const doorBand = learningBand ?? null;
 
       if (studentMode === "sign_up") {
-        if (!learningBand) {
-          setMessage("Pick A1, A2, or B1 on the home screen first.");
+        if (!doorBand) {
+          setMessage("Pick Primary or Secondary on the home screen first.");
           return;
         }
         const registered = await registerStudentAccount({
           username,
           pin: pinValue,
-          learningBand,
+          learningBand: doorBand,
         });
         if (!registered.ok) {
           setMessage(registered.error);
@@ -133,15 +157,41 @@ export function PortalLoginPanel({
         return;
       }
 
-      const metaBand = user?.user_metadata?.learning_band;
-      const band: LearningBand | null =
-        learningBand ?? (isLearningBand(metaBand) ? metaBand : null);
-      if (!band) {
-        setMessage("Pick A1, A2, or B1 on the home screen first.");
+      if (studentMode === "sign_up") {
+        if (!doorBand) {
+          setMessage("Pick Primary or Secondary on the home screen first.");
+          return;
+        }
+        await finishStudentSession(doorBand, {
+          persistBand: true,
+          authUserId: user?.id,
+          migrateGuestProgress: false,
+        });
         return;
       }
 
-      await finishStudentSession(band);
+      // Sign-in: account band drives redirect; login door cannot overwrite it.
+      const accountBand = resolveLearningBand(user?.user_metadata?.learning_band);
+      if (accountBand) {
+        await finishStudentSession(accountBand, {
+          persistBand: false,
+          authUserId: user?.id,
+          migrateGuestProgress: true,
+        });
+        return;
+      }
+
+      if (doorBand) {
+        await finishStudentSession(doorBand, {
+          persistBand: true,
+          authUserId: user?.id,
+          migrateGuestProgress: true,
+        });
+        return;
+      }
+
+      setMessage("Pick Primary or Secondary on the home screen first.");
+      await supabase.auth.signOut();
     } finally {
       setLoading(false);
     }
@@ -211,39 +261,41 @@ export function PortalLoginPanel({
 
   return (
     <div className={clsx("space-y-4", className)}>
-      <div
-        role="tablist"
-        aria-label="Sign in as"
-        className="flex rounded-xl border-2 border-kid-ink bg-white p-1"
-      >
-        {(["student", "teacher"] as const).map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            role="tab"
-            aria-selected={portal === kind}
-            className={clsx(
-              "min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-extrabold capitalize transition-colors [touch-action:manipulation]",
-              portal === kind ?
-                "bg-[#f7bf4d] text-kid-ink"
-              : "text-kid-ink/75 hover:bg-neutral-100",
-            )}
-            onClick={() => {
-              setPortal(kind);
-              setMessage("");
-              setInfo("");
-            }}
-          >
-            {kind === "student" ? "Student" : "Teacher"}
-          </button>
-        ))}
-      </div>
+      {!studentOnly ?
+        <div
+          role="tablist"
+          aria-label="Sign in as"
+          className="flex rounded-xl border-2 border-kid-ink bg-white p-1"
+        >
+          {(["student", "teacher"] as const).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              role="tab"
+              aria-selected={portal === kind}
+              className={clsx(
+                "min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-extrabold capitalize transition-colors [touch-action:manipulation]",
+                portal === kind ?
+                  "bg-[#f7bf4d] text-kid-ink"
+                : "text-kid-ink/75 hover:bg-neutral-100",
+              )}
+              onClick={() => {
+                setPortal(kind);
+                setMessage("");
+                setInfo("");
+              }}
+            >
+              {kind === "student" ? "Student" : "Teacher"}
+            </button>
+          ))}
+        </div>
+      : null}
 
       {portal === "student" ?
         <>
           {learningBand ?
             <p className="text-center text-sm font-bold text-kid-ink">
-              Level: <span className="text-lg">{learningBandLabel(learningBand)}</span>
+              Path: <span className="text-lg">{learningBandLabel(learningBand)}</span>
             </p>
           : null}
 
@@ -386,7 +438,7 @@ export function PortalLoginPanel({
 
       <p className="text-center text-xs text-kid-ink/70">
         <Link href="/" className="font-semibold underline">
-          Back to level picker
+          Back to path picker
         </Link>
       </p>
     </div>

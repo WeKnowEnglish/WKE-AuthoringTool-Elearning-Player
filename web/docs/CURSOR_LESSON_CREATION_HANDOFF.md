@@ -1,6 +1,6 @@
 # Cursor Handoff: Lesson Creation Against The New Learning Architecture
 
-Last updated: 2026-07-04
+Last updated: 2026-07-08
 
 ## Purpose
 
@@ -16,6 +16,8 @@ The app now has these foundations:
 - `components/learning-loop/LearningLoopRouter.tsx`: small linear router for `STORY -> PRESENTATION -> EXPLORER -> REFLECTION -> COMPLETE`.
 - `lib/learning-strands.ts`: Paul Nation's Four Strands, strand target refs, assessment rubric, and strand assessment helpers.
 - `lib/mastery`: learning target refs, evidence events, mastery records, update rules, local storage, vocabulary recommendations.
+- `docs/mastery/README.md`: canonical mastery reference docs (platform engine + secondary lane bridge). Read before changing mastery or secondary vocab behavior.
+- `lib/secondary`: Lower Secondary vocab bank, today session, bridge into `lib/mastery`, local activity repair (Match/Cloze/Spelling).
 - `lib/student-session.ts`: local session/event stream. It now accepts learning-loop phase events.
 - `components/lesson/LessonPlayer.tsx`: canonical runtime for structured lesson/vocabulary screens.
 - `components/lesson/StoryBookView.tsx`: story scene playback.

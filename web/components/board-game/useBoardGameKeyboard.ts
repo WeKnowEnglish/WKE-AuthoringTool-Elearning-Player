@@ -12,6 +12,7 @@ type Handlers = {
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
+  disabled?: boolean;
 };
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -27,10 +28,13 @@ export function useBoardGameKeyboard({
   onCorrect,
   onIncorrect,
   onSkip,
+  disabled = false,
 }: Handlers) {
   const { toggleMuted } = useAudioMuted();
 
   useEffect(() => {
+    if (disabled) return;
+
     function onKeyDown(event: KeyboardEvent) {
       if (isTypingTarget(event.target)) return;
 
@@ -74,5 +78,5 @@ export function useBoardGameKeyboard({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canRoll, onCorrect, onIncorrect, onRoll, onSkip, toggleMuted, uiPhase]);
+  }, [canRoll, disabled, onCorrect, onIncorrect, onRoll, onSkip, toggleMuted, uiPhase]);
 }

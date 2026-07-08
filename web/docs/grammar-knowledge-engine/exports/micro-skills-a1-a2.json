@@ -1,0 +1,522 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-07",
+  "records": [
+    {
+      "id": "grammar.existential.there_is_are.affirmative.singular_countable",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.affirmative",
+      "label": {
+        "teacher": "There is + singular countable",
+        "student": "There is…"
+      },
+      "l5Descriptor": "Can say There is a … for one countable thing.",
+      "posterCardRef": {
+        "slug": "there-is-there-are-affirmative-a1",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.affirmative.singular_uncountable",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.affirmative",
+      "label": {
+        "teacher": "There is + singular uncountable",
+        "student": "There is some…"
+      },
+      "l5Descriptor": "Can say There is some … for uncountable nouns.",
+      "posterCardRef": {
+        "slug": "there-is-there-are-affirmative-a1",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.affirmative.plural",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.affirmative",
+      "label": {
+        "teacher": "There are + plural",
+        "student": "There are…"
+      },
+      "l5Descriptor": "Can say There are … for two or more things.",
+      "posterCardRef": {
+        "slug": "there-is-there-are-affirmative-a1",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.agreement.there_is_with_plural_noun"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.affirmative.contractions",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.affirmative",
+      "label": {
+        "teacher": "There is contractions",
+        "student": "There's"
+      },
+      "l5Descriptor": "Know that There's is the spoken contraction of There is.",
+      "posterCardRef": {
+        "slug": "there-is-there-are-affirmative-a1",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.questions.singular_uncountable",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.questions",
+      "label": {
+        "teacher": "Is there + singular or uncountable",
+        "student": "Is there…?"
+      },
+      "l5Descriptor": "Can ask Is there a …? or Is there any …?",
+      "posterCardRef": {
+        "slug": "there-is-there-are-questions-a1",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.agreement.there_are_singular"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.questions.plural",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.questions",
+      "label": {
+        "teacher": "Are there + plural",
+        "student": "Are there…?"
+      },
+      "l5Descriptor": "Can ask Are there …? with plural nouns.",
+      "posterCardRef": {
+        "slug": "there-is-there-are-questions-a1",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.agreement.there_is_plural"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.questions.inversion_rule",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.questions",
+      "label": {
+        "teacher": "Question inversion rule",
+        "student": "Is/Are before there"
+      },
+      "l5Descriptor": "Can place Is or Are before there when forming questions.",
+      "posterCardRef": {
+        "slug": "there-is-there-are-questions-a1",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.existential.missing_there"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.short_answers.positive_negative_singular",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.short_answers",
+      "label": {
+        "teacher": "Short answers singular",
+        "student": "Yes, there is / No, there isn't"
+      },
+      "l5Descriptor": "Can answer Yes, there is or No, there isn't for singular questions.",
+      "posterCardRef": {
+        "slug": "short-answers-there-is-a1",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": [
+        "error.short_answer.wrong_auxiliary",
+        "error.short_answer.contraction_in_yes"
+      ],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.short_answers.positive_negative_plural",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.short_answers",
+      "label": {
+        "teacher": "Short answers plural",
+        "student": "Yes, there are / No, there aren't"
+      },
+      "l5Descriptor": "Can answer Yes, there are or No, there aren't for plural questions.",
+      "posterCardRef": {
+        "slug": "short-answers-there-is-a1",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.existential.there_is_are.short_answers.summary_matrix",
+      "level": 4,
+      "parentConceptId": "grammar.existential.there_is_are.short_answers",
+      "label": {
+        "teacher": "Short answer match matrix",
+        "student": "Match question and answer"
+      },
+      "l5Descriptor": "Can match question type with the correct short answer form.",
+      "posterCardRef": {
+        "slug": "short-answers-there-is-a1",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.countable.how_many_questions",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.countable",
+      "label": {
+        "teacher": "How many questions",
+        "student": "How many…?"
+      },
+      "l5Descriptor": "Can ask How many …? with a plural countable noun.",
+      "posterCardRef": {
+        "slug": "countable-nouns-a1",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": [
+        "error.countability.how_much_countable",
+        "error.countability.much_with_plural"
+      ],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.countable.plural_patterns_preview",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.countable",
+      "label": {
+        "teacher": "Plural patterns preview",
+        "student": "Plural rules"
+      },
+      "l5Descriptor": "Can recognize four common plural spelling patterns.",
+      "posterCardRef": {
+        "slug": "countable-nouns-a1",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.countable.how_many_rule",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.countable",
+      "label": {
+        "teacher": "How many rule",
+        "student": "Remember!"
+      },
+      "l5Descriptor": "Can use How many only with countable nouns.",
+      "posterCardRef": {
+        "slug": "countable-nouns-a1",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.uncountable.how_much_questions",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.uncountable",
+      "label": {
+        "teacher": "How much questions",
+        "student": "How much…?"
+      },
+      "l5Descriptor": "Can ask How much … is there? with uncountable nouns.",
+      "posterCardRef": {
+        "slug": "uncountable-nouns-a1",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.countability.how_many_uncountable"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.uncountable.reject_how_many",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.uncountable",
+      "label": {
+        "teacher": "Reject How many with uncountables",
+        "student": "Good vs bad"
+      },
+      "l5Descriptor": "Can reject How many water? and use How much instead.",
+      "posterCardRef": {
+        "slug": "uncountable-nouns-a1",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.countability.how_many_uncountable"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.countability.uncountable.some_any_preview",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.uncountable",
+      "label": {
+        "teacher": "Some and any preview",
+        "student": "Some & any"
+      },
+      "l5Descriptor": "Can recognize some in affirmative with uncountables (full study in determiners).",
+      "posterCardRef": {
+        "slug": "uncountable-nouns-a1",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition"],
+      "tags": ["forward_preview"],
+      "status": "preview"
+    },
+    {
+      "id": "grammar.nouns.countability.uncountable.how_much_rule",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.uncountable",
+      "label": {
+        "teacher": "How much rule",
+        "student": "Remember!"
+      },
+      "l5Descriptor": "Can use How much with uncountable nouns.",
+      "posterCardRef": {
+        "slug": "uncountable-nouns-a1",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.spelling.regular_s",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.spelling",
+      "label": {
+        "teacher": "Regular -s plurals",
+        "student": "Add -s"
+      },
+      "l5Descriptor": "Can spell regular plurals by adding -s.",
+      "posterCardRef": {
+        "slug": "plural-spelling-a2",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.spelling.es_after_sxch",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.spelling",
+      "label": {
+        "teacher": "Add -es plurals",
+        "student": "Add -es"
+      },
+      "l5Descriptor": "Can spell plurals by adding -es after s, x, ch, or sh.",
+      "posterCardRef": {
+        "slug": "plural-spelling-a2",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.spelling.consonant_y",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.spelling",
+      "label": {
+        "teacher": "Consonant + y → -ies",
+        "student": "y → ies"
+      },
+      "l5Descriptor": "Can change consonant + y to -ies when spelling plurals.",
+      "posterCardRef": {
+        "slug": "plural-spelling-a2",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.plural.spelling_y_to_s"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.spelling.vowel_y",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.spelling",
+      "label": {
+        "teacher": "Vowel + y plurals",
+        "student": "Vowel + y"
+      },
+      "l5Descriptor": "Can add -s to nouns ending in vowel + y.",
+      "posterCardRef": {
+        "slug": "plural-spelling-a2",
+        "cardIndex": 3
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.spelling.f_fe_ves",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.spelling",
+      "label": {
+        "teacher": "-f / -fe → -ves",
+        "student": "-f / -fe → -ves"
+      },
+      "l5Descriptor": "Can spell -f and -fe plurals as -ves and knows common exceptions.",
+      "posterCardRef": {
+        "slug": "plural-spelling-a2",
+        "cardIndex": 4
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.spelling.o_endings",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.spelling",
+      "label": {
+        "teacher": "-o endings",
+        "student": "-o endings"
+      },
+      "l5Descriptor": "Can spell -o plurals with -es and knows common exceptions.",
+      "posterCardRef": {
+        "slug": "plural-spelling-a2",
+        "cardIndex": 5
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.pronunciation.voiceless_s",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.pronunciation",
+      "label": {
+        "teacher": "Plural /s/ sound",
+        "student": "/s/ sound"
+      },
+      "l5Descriptor": "Can pronounce plural -s as /s/ after voiceless sounds.",
+      "posterCardRef": {
+        "slug": "plural-pronunciation-a2",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.pronunciation.voiced_z",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.pronunciation",
+      "label": {
+        "teacher": "Plural /z/ sound",
+        "student": "/z/ sound"
+      },
+      "l5Descriptor": "Can pronounce plural -s as /z/ after voiced sounds.",
+      "posterCardRef": {
+        "slug": "plural-pronunciation-a2",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.nouns.plural.pronunciation.sibilant_iz",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.plural.pronunciation",
+      "label": {
+        "teacher": "Plural /ɪz/ sound",
+        "student": "/ɪz/ sound"
+      },
+      "l5Descriptor": "Can pronounce plural -es as /ɪz/ after sibilant sounds.",
+      "posterCardRef": {
+        "slug": "plural-pronunciation-a2",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition", "production"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.determiners.quantifiers.some_and_any.some_affirmative",
+      "level": 4,
+      "parentConceptId": "grammar.determiners.quantifiers.some_and_any",
+      "label": {
+        "teacher": "Some in affirmative",
+        "student": "Some"
+      },
+      "l5Descriptor": "Can use some in affirmative statements with countable and uncountable nouns.",
+      "posterCardRef": {
+        "slug": "some-and-any-a2",
+        "cardIndex": 0
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.quantifier.any_in_affirmative"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.determiners.quantifiers.some_and_any.any_questions",
+      "level": 4,
+      "parentConceptId": "grammar.determiners.quantifiers.some_and_any",
+      "label": {
+        "teacher": "Any in questions",
+        "student": "Any?"
+      },
+      "l5Descriptor": "Can use any in questions.",
+      "posterCardRef": {
+        "slug": "some-and-any-a2",
+        "cardIndex": 1
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.quantifier.some_in_question"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.determiners.quantifiers.some_and_any.some_offers",
+      "level": 4,
+      "parentConceptId": "grammar.determiners.quantifiers.some_and_any",
+      "label": {
+        "teacher": "Some in offers and requests",
+        "student": "Some?"
+      },
+      "l5Descriptor": "Can use some in offers and requests (Would you like some …?).",
+      "posterCardRef": {
+        "slug": "some-and-any-a2",
+        "cardIndex": 2
+      },
+      "evidenceModes": ["recognition", "production"],
+      "tags": ["offers_requests"],
+      "status": "optional"
+    },
+    {
+      "id": "grammar.determiners.quantifiers.some_and_any.any_negative",
+      "level": 4,
+      "parentConceptId": "grammar.determiners.quantifiers.some_and_any",
+      "label": {
+        "teacher": "Any in negatives",
+        "student": "Any"
+      },
+      "l5Descriptor": "Can use any in negative sentences.",
+      "posterCardRef": {
+        "slug": "some-and-any-a2",
+        "cardIndex": 3
+      },
+      "evidenceModes": ["recognition", "production"],
+      "errorCodes": ["error.quantifier.some_with_negative"],
+      "status": "published"
+    },
+    {
+      "id": "grammar.determiners.quantifiers.some_and_any.summary_matrix",
+      "level": 4,
+      "parentConceptId": "grammar.determiners.quantifiers.some_and_any",
+      "label": {
+        "teacher": "Some vs any summary",
+        "student": "Summary"
+      },
+      "l5Descriptor": "Can choose some or any by sentence type (affirmative, question, negative).",
+      "posterCardRef": {
+        "slug": "some-and-any-a2",
+        "cardIndex": 4
+      },
+      "evidenceModes": ["recognition"],
+      "status": "published"
+    }
+  ]
+}

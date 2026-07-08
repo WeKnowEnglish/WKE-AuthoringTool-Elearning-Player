@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  resetScopedStorageTestState,
+  seedScopedRewards,
+} from "@/lib/auth/scoped-storage-test-helpers";
 import { plantSeedAt } from "@/lib/garden/actions";
 import { emptyGardenSnapshot, GARDEN_STORAGE_KEY } from "@/lib/garden/defaults";
 import { purchaseGrassPlotAt } from "@/lib/garden/plot-purchase";
 import { getGardenSnapshot, setGardenSnapshot } from "@/lib/garden/storage";
-import { REWARDS_STORAGE_KEY, getRewards } from "@/lib/progress/rewards";
+import { getRewards } from "@/lib/progress/rewards";
 
 function installStorage() {
   const store = new Map<string, string>();
@@ -23,32 +27,26 @@ function installStorage() {
 }
 
 function seedRewards(gold: number) {
-  localStorage.setItem(
-    REWARDS_STORAGE_KEY,
-    JSON.stringify({
-      gold,
-      experience: 0,
-      rewardedEventIds: [],
-      ownedStickerIds: [],
-      quizEnergy: 0,
-      quizStreak: 0,
-      level: 1,
-      claimedLevelRewards: [],
-      skillPoints: 0,
-      skillRanks: {},
-    }),
-  );
+  seedScopedRewards({
+    gold,
+    level: 1,
+    claimedLevelRewards: [],
+    skillPoints: 0,
+    skillRanks: {},
+  });
 }
 
 describe("purchaseGrassPlotAt", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     installStorage();
+    resetScopedStorageTestState();
     setGardenSnapshot(emptyGardenSnapshot(1000));
     seedRewards(100);
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 

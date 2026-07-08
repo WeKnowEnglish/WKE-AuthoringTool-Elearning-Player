@@ -1,3 +1,4 @@
+import { PosterInteractiveTarget } from "./interactions/PosterInteractiveTarget";
 import type { PosterSection, PosterSidePanel } from "./poster-view-model";
 import type { GrammarPosterVariant } from "./poster-variant";
 
@@ -69,19 +70,23 @@ export function PosterPositiveNegativeBody({ section, variant = "poster" }: Prop
 
   return (
     <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
-      <AnswerColumn
-        panel={positivePanel}
-        accentColor={accentColor}
-        defaultTitle="Yes"
-        variant={variant}
-      />
-      <div className="sm:border-l-2 sm:border-dashed sm:border-kid-ink/30 sm:pl-4">
+      <PosterInteractiveTarget cardId={section.number} region="positiveSide">
         <AnswerColumn
-          panel={negativePanel}
+          panel={positivePanel}
           accentColor={accentColor}
-          defaultTitle="No"
+          defaultTitle="Yes"
           variant={variant}
         />
+      </PosterInteractiveTarget>
+      <div className="sm:border-l-2 sm:border-dashed sm:border-kid-ink/30 sm:pl-4">
+        <PosterInteractiveTarget cardId={section.number} region="negativeSide">
+          <AnswerColumn
+            panel={negativePanel}
+            accentColor={accentColor}
+            defaultTitle="No"
+            variant={variant}
+          />
+        </PosterInteractiveTarget>
       </div>
     </div>
   );

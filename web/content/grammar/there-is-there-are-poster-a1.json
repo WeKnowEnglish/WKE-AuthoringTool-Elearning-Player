@@ -89,5 +89,24 @@
         "example": "Is there a cat? 🐱"
       }
     }
+  ],
+  "interactions": [
+    {
+      "id": "reveal-card1-left-0",
+      "target": { "cardId": 1, "region": "leftColumn", "itemIndex": 0 },
+      "trigger": "tap",
+      "action": "reveal",
+      "payload": {
+        "text": "มีหนังสืออยู่บนโต๊ะไหม?",
+        "label": "Thai"
+      }
+    },
+    {
+      "id": "highlight-card3-banner",
+      "target": { "cardId": 3, "region": "banner" },
+      "trigger": "tap",
+      "action": "highlight",
+      "payload": { "durationMs": 1200 }
+    }
   ]
 }

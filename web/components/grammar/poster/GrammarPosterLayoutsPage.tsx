@@ -8,13 +8,21 @@ export function GrammarPosterLayoutsPage() {
 
   return (
     <div className="pb-8">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <Link
-          href="/grammar"
-          className="rounded-lg border-2 border-kid-ink bg-kid-panel px-3 py-2 text-sm font-bold text-kid-ink shadow-[2px_2px_0_0_var(--kid-shadow)] transition-transform active:scale-95"
-        >
-          ← Back to grammar hub
-        </Link>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/grammar"
+            className="rounded-lg border-2 border-kid-ink bg-kid-panel px-3 py-2 text-sm font-bold text-kid-ink shadow-[2px_2px_0_0_var(--kid-shadow)] transition-transform active:scale-95"
+          >
+            ← Back to grammar hub
+          </Link>
+          <Link
+            href="/grammar/pilot/editor"
+            className="rounded-lg border-2 border-kid-ink/30 bg-white px-3 py-2 text-sm font-semibold text-kid-ink/70"
+          >
+            Poster editor
+          </Link>
+        </div>
         <span className="rounded-full border-2 border-kid-ink/30 bg-neutral-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-kid-ink/60">
           Layout lab (authors)
         </span>

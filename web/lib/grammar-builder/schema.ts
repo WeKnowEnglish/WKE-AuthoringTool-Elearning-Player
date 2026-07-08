@@ -190,6 +190,92 @@ export type GrammarParseOptions = {
   posterContentRules?: boolean;
 };
 
+export const grammarPageRowSchema = z
+  .object({
+    columns: z.union([z.literal(1), z.literal(2)]),
+    cardIds: z.array(z.number().int().min(1)).min(1).max(2),
+  })
+  .strict();
+
+export const grammarInteractionRegionSchema = z.enum([
+  "card",
+  "glanceRule",
+  "leftColumn",
+  "rightColumn",
+  "item",
+  "banner",
+  "leftSide",
+  "positiveSide",
+  "negativeSide",
+  "miniCard",
+  "summaryCell",
+]);
+
+export const grammarInteractionTargetSchema = z
+  .object({
+    cardId: z.number().int().min(1),
+    region: grammarInteractionRegionSchema,
+    itemIndex: z.number().int().min(0).optional(),
+    rowIndex: z.number().int().min(0).optional(),
+    colIndex: z.number().int().min(0).optional(),
+  })
+  .strict();
+
+export const grammarRevealPayloadSchema = z
+  .object({
+    text: z.string().min(1),
+    label: z.string().optional(),
+  })
+  .strict();
+
+export const grammarHighlightPayloadSchema = z
+  .object({
+    durationMs: z.number().int().min(100).max(5000).optional(),
+    sticky: z.boolean().optional(),
+  })
+  .strict();
+
+export const grammarTogglePayloadSchema = z
+  .object({
+    textA: z.string().min(1),
+    textB: z.string().min(1),
+    initial: z.enum(["a", "b"]).default("a"),
+  })
+  .strict();
+
+export const grammarPlayAudioPayloadSchema = z
+  .object({
+    text: z.string().min(1),
+    lang: z.string().optional(),
+    label: z.string().optional(),
+  })
+  .strict();
+
+const grammarInteractionBaseSchema = z.object({
+  id: z.string().min(1),
+  target: grammarInteractionTargetSchema,
+  trigger: z.literal("tap").default("tap"),
+});
+
+export const grammarInteractionSchema = z.discriminatedUnion("action", [
+  grammarInteractionBaseSchema.extend({
+    action: z.literal("reveal"),
+    payload: grammarRevealPayloadSchema,
+  }),
+  grammarInteractionBaseSchema.extend({
+    action: z.literal("highlight"),
+    payload: grammarHighlightPayloadSchema,
+  }),
+  grammarInteractionBaseSchema.extend({
+    action: z.literal("toggle"),
+    payload: grammarTogglePayloadSchema,
+  }),
+  grammarInteractionBaseSchema.extend({
+    action: z.literal("play-audio"),
+    payload: grammarPlayAudioPayloadSchema,
+  }),
+]);
+
 export const grammarModuleSchema = z
   .object({
     moduleTitle: z.string().min(1),
@@ -197,6 +283,8 @@ export const grammarModuleSchema = z
     displayMode: grammarDisplayModeSchema.default("poster"),
     difficulty: grammarDifficultySchema.optional(),
     pageLayout: grammarPageLayoutSchema,
+    customRows: z.array(grammarPageRowSchema).optional(),
+    interactions: z.array(grammarInteractionSchema).optional(),
     tags: z.array(z.string()).optional(),
     cards: z.array(grammarCardSchema).min(1),
   })
@@ -208,10 +296,21 @@ export type GrammarLayoutType = z.infer<typeof grammarLayoutTypeSchema>;
 export type GrammarDisplayMode = z.infer<typeof grammarDisplayModeSchema>;
 export type GrammarDifficulty = z.infer<typeof grammarDifficultySchema>;
 export type GrammarGlanceRule = z.infer<typeof grammarGlanceRuleSchema>;
+export type GrammarSubHeader = z.infer<typeof grammarSubHeaderSchema>;
+export type GrammarSidePanel = z.infer<typeof grammarSidePanelSchema>;
+export type GrammarComparisonSide = z.infer<typeof grammarComparisonSideSchema>;
+export type GrammarPattern = z.infer<typeof grammarPatternSchema>;
+export type GrammarQaSide = z.infer<typeof grammarQaSideSchema>;
 export type GrammarItem = z.infer<typeof grammarItemSchema>;
 export type GrammarMiniCard = z.infer<typeof grammarMiniCardSchema>;
+export type GrammarSummaryMark = z.infer<typeof grammarSummaryMarkSchema>;
+export type GrammarSummaryCell = z.infer<typeof grammarSummaryCellSchema>;
 export type GrammarGoodBadPair = z.infer<typeof grammarGoodBadPairSchema>;
 export type GrammarCard = z.infer<typeof grammarCardSchema>;
+export type GrammarPageRow = z.infer<typeof grammarPageRowSchema>;
+export type GrammarInteractionRegion = z.infer<typeof grammarInteractionRegionSchema>;
+export type GrammarInteractionTarget = z.infer<typeof grammarInteractionTargetSchema>;
+export type GrammarInteraction = z.infer<typeof grammarInteractionSchema>;
 export type GrammarModule = z.infer<typeof grammarModuleSchema>;
 
 function refineGrammarModule(
@@ -251,6 +350,84 @@ function refineGrammarModule(
       });
     }
     seenCardIds.add(card.id);
+  });
+
+  if (module.pageLayout === "custom") {
+    if (!module.customRows?.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "custom pageLayout requires customRows",
+        path: ["customRows"],
+      });
+    } else {
+      const assigned = new Set<number>();
+      const validIds = new Set(module.cards.map((card) => card.id));
+
+      module.customRows.forEach((row, rowIndex) => {
+        if (row.cardIds.length > row.columns) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Row has more cards (${row.cardIds.length}) than columns (${row.columns})`,
+            path: ["customRows", rowIndex, "cardIds"],
+          });
+        }
+
+        row.cardIds.forEach((cardId, cardIndex) => {
+          if (!validIds.has(cardId)) {
+            ctx.addIssue({
+              code: "custom",
+              message: `Unknown card id in row: ${cardId}`,
+              path: ["customRows", rowIndex, "cardIds", cardIndex],
+            });
+          }
+          if (assigned.has(cardId)) {
+            ctx.addIssue({
+              code: "custom",
+              message: `Card id ${cardId} appears in more than one row`,
+              path: ["customRows", rowIndex, "cardIds", cardIndex],
+            });
+          }
+          assigned.add(cardId);
+        });
+      });
+
+      module.cards.forEach((card) => {
+        if (!assigned.has(card.id)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Card id ${card.id} is not assigned to any custom row`,
+            path: ["customRows"],
+          });
+        }
+      });
+    }
+  } else if (module.customRows?.length) {
+    ctx.addIssue({
+      code: "custom",
+      message: "customRows is only allowed when pageLayout is custom",
+      path: ["customRows"],
+    });
+  }
+
+  const seenInteractionIds = new Set<string>();
+  (module.interactions ?? []).forEach((interaction, index) => {
+    if (seenInteractionIds.has(interaction.id)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Duplicate interaction id: ${interaction.id}`,
+        path: ["interactions", index, "id"],
+      });
+    }
+    seenInteractionIds.add(interaction.id);
+
+    const cardExists = module.cards.some((card) => card.id === interaction.target.cardId);
+    if (!cardExists) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Interaction targets unknown card id: ${interaction.target.cardId}`,
+        path: ["interactions", index, "target", "cardId"],
+      });
+    }
   });
 
   if (module.displayMode === "poster" && posterContentRules) {

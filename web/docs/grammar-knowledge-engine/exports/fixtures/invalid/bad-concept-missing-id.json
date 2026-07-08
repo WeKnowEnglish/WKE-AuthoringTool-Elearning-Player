@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-07",
+  "records": [
+    {
+      "level": 3,
+      "parentId": "grammar.existential.there_is_are",
+      "label": {
+        "teacher": "Missing id field",
+        "student": "Bad"
+      },
+      "function": "Invalid fixture",
+      "cefr": ["A1"],
+      "strands": ["language_focused_learning"],
+      "teachOrder": 1,
+      "precursorIds": ["domain_entry"],
+      "successorIds": [],
+      "contrastIds": [],
+      "status": "draft"
+    }
+  ]
+}

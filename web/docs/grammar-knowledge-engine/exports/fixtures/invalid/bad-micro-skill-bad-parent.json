@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-07",
+  "records": [
+    {
+      "id": "grammar.existential.there_is_are.affirmative.singular_countable",
+      "level": 4,
+      "parentConceptId": "grammar.nouns.countability.countable",
+      "label": {
+        "teacher": "Wrong parent",
+        "student": "Bad"
+      },
+      "l5Descriptor": "Invalid parent prefix",
+      "evidenceModes": ["recognition"],
+      "status": "draft"
+    }
+  ]
+}

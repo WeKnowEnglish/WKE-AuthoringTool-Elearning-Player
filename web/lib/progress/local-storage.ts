@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  getScopedProgressStorageKey,
+  resolveStudentStorageIdSync,
+} from "@/lib/auth/student-storage-id";
 import { normalizeLoadout } from "@/lib/avatar/apply-loadout";
 import { loadoutForPreset, resolvePresetId } from "@/lib/avatar/defaults";
 import { resolveAvatarLoadout } from "@/lib/avatar/progress";
@@ -18,13 +22,6 @@ import {
   type PetKind,
   type ProgressSnapshotV1,
 } from "@/lib/progress/types";
-
-function randomId(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
 
 function normalizeSnapshot(raw: unknown): ProgressSnapshotV1 | null {
   if (!raw || typeof raw !== "object") return null;
@@ -57,7 +54,7 @@ function normalizeSnapshot(raw: unknown): ProgressSnapshotV1 | null {
 function readRaw(): ProgressSnapshotV1 | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+    const raw = localStorage.getItem(getScopedProgressStorageKey());
     if (!raw) return null;
     const data = JSON.parse(raw) as unknown;
     const normalized = normalizeSnapshot(data);
@@ -71,7 +68,7 @@ function readRaw(): ProgressSnapshotV1 | null {
 }
 
 function writeRaw(s: ProgressSnapshotV1) {
-  localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(s));
+  localStorage.setItem(getScopedProgressStorageKey(), JSON.stringify(s));
 }
 
 export function getProgressSnapshot(): ProgressSnapshotV1 {
@@ -80,7 +77,8 @@ export function getProgressSnapshot(): ProgressSnapshotV1 {
   }
   const existing = readRaw();
   if (existing) return existing;
-  const fresh = emptySnapshot(randomId());
+  const deviceId = resolveStudentStorageIdSync();
+  const fresh = emptySnapshot(deviceId);
   writeRaw(fresh);
   return fresh;
 }

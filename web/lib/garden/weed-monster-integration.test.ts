@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  resetScopedStorageTestState,
+  seedScopedRewards,
+} from "@/lib/auth/scoped-storage-test-helpers";
+import {
   plantSeedAt,
   startWeedMonsterBattle,
   tryDefeatWeedMonster,
@@ -12,7 +16,7 @@ import {
   WEED_BATTLE_XP_REWARD,
 } from "@/lib/garden/defaults";
 import { getGardenSnapshot, setGardenSnapshot } from "@/lib/garden/storage";
-import { REWARDS_STORAGE_KEY, getRewards } from "@/lib/progress/rewards";
+import { getRewards } from "@/lib/progress/rewards";
 import {
   countActiveWeedMonsters,
   plotHasWeedMonster,
@@ -39,21 +43,12 @@ function installLocalStorage() {
 }
 
 function seedRewards() {
-  localStorage.setItem(
-    REWARDS_STORAGE_KEY,
-    JSON.stringify({
-      gold: 0,
-      experience: 0,
-      rewardedEventIds: [],
-      ownedStickerIds: [],
-      quizEnergy: 0,
-      quizStreak: 0,
-      level: 1,
-      claimedLevelRewards: [],
-      skillPoints: 0,
-      skillRanks: {},
-    }),
-  );
+  seedScopedRewards({
+    level: 1,
+    claimedLevelRewards: [],
+    skillPoints: 0,
+    skillRanks: {},
+  });
 }
 
 function monsterPlotIndex(snapshot: ReturnType<typeof emptyGardenSnapshot>) {
@@ -64,10 +59,13 @@ describe("weed monster integration", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     installLocalStorage();
+    resetScopedStorageTestState();
     seedRewards();
+    vi.spyOn(Math, "random").mockReturnValue(1);
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 

@@ -1,0 +1,1558 @@
+{
+  "food": {
+    "topic": "food",
+    "structures": [
+      {
+        "id": "s1",
+        "template": "She ___ every day",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 3,
+        "rejectedCount": 10,
+        "vocab": [
+          {
+            "word": "apple",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "banana",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "bread",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "buy",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "cake",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "chicken",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "cook",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "eat",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "egg",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "fish",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "juice",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "milk",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "rice",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "verb::present_simple_3sg::she  every day",
+        "familyVariantCount": 1,
+        "density": 3
+      },
+      {
+        "id": "s2",
+        "template": "I ___ every day",
+        "target": "verb",
+        "intent": "present_simple_base",
+        "level": "A1",
+        "compatibleCount": 3,
+        "rejectedCount": 10,
+        "vocab": [
+          {
+            "word": "apple",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "banana",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "bread",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "buy",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "cake",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "chicken",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "cook",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "eat",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "egg",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "fish",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "juice",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "milk",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "rice",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "verb::present_simple_base::i  every day",
+        "familyVariantCount": 1,
+        "density": 3
+      },
+      {
+        "id": "s3",
+        "template": "He ___ at school",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 3,
+        "rejectedCount": 10,
+        "vocab": [
+          {
+            "word": "apple",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "banana",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "bread",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "buy",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "cake",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "chicken",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "cook",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "eat",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "egg",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "fish",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "juice",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "milk",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "rice",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "verb::present_simple_3sg::he  at school",
+        "familyVariantCount": 1,
+        "density": 3
+      },
+      {
+        "id": "s4",
+        "template": "This is a ___",
+        "target": "vocab",
+        "intent": "countable_noun",
+        "level": "A1",
+        "compatibleCount": 6,
+        "rejectedCount": 7,
+        "vocab": [
+          {
+            "word": "apple",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "banana",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "bread",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "buy",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "cake",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "chicken",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "cook",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "eat",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "egg",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "fish",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "juice",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "milk",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "rice",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          }
+        ],
+        "health": "HEALTHY",
+        "familyKey": "vocab::countable_noun::this is a",
+        "familyVariantCount": 1,
+        "density": 6
+      },
+      {
+        "id": "s5",
+        "template": "This is ___",
+        "target": "vocab",
+        "intent": "uncountable_noun",
+        "level": "A1",
+        "compatibleCount": 4,
+        "rejectedCount": 9,
+        "vocab": [
+          {
+            "word": "apple",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "banana",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "bread",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "buy",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "cake",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "chicken",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "cook",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "eat",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "egg",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "fish",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "juice",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "milk",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "rice",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "vocab::uncountable_noun::this is",
+        "familyVariantCount": 1,
+        "density": 4
+      }
+    ],
+    "eligibleStructures": 5,
+    "totalDensity": 19,
+    "dominance": [
+      {
+        "template": "This is a ___",
+        "ratio": 0.3157894736842105
+      },
+      {
+        "template": "This is ___",
+        "ratio": 0.21052631578947367
+      },
+      {
+        "template": "She ___ every day",
+        "ratio": 0.15789473684210525
+      },
+      {
+        "template": "I ___ every day",
+        "ratio": 0.15789473684210525
+      },
+      {
+        "template": "He ___ at school",
+        "ratio": 0.15789473684210525
+      }
+    ]
+  },
+  "school": {
+    "topic": "school",
+    "structures": [
+      {
+        "id": "s1",
+        "template": "She ___ every day",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 4,
+        "rejectedCount": 4,
+        "vocab": [
+          {
+            "word": "book",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "desk",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "go",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "pen",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "play",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "read",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "teacher",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "write",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "verb::present_simple_3sg::she  every day",
+        "familyVariantCount": 1,
+        "density": 4
+      },
+      {
+        "id": "s2",
+        "template": "I ___ every day",
+        "target": "verb",
+        "intent": "present_simple_base",
+        "level": "A1",
+        "compatibleCount": 4,
+        "rejectedCount": 4,
+        "vocab": [
+          {
+            "word": "book",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "desk",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "go",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "pen",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "play",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "read",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "teacher",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "write",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "verb::present_simple_base::i  every day",
+        "familyVariantCount": 1,
+        "density": 4
+      },
+      {
+        "id": "s3",
+        "template": "He ___ at school",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 4,
+        "rejectedCount": 4,
+        "vocab": [
+          {
+            "word": "book",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "desk",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "go",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "pen",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "play",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "read",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "teacher",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "write",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "verb::present_simple_3sg::he  at school",
+        "familyVariantCount": 1,
+        "density": 4
+      },
+      {
+        "id": "s4",
+        "template": "This is a ___",
+        "target": "vocab",
+        "intent": "countable_noun",
+        "level": "A1",
+        "compatibleCount": 4,
+        "rejectedCount": 4,
+        "vocab": [
+          {
+            "word": "book",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "desk",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "go",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "pen",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "play",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "read",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "teacher",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "write",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "RISKY",
+        "familyKey": "vocab::countable_noun::this is a",
+        "familyVariantCount": 1,
+        "density": 4
+      },
+      {
+        "id": "s5",
+        "template": "This is ___",
+        "target": "vocab",
+        "intent": "uncountable_noun",
+        "level": "A1",
+        "compatibleCount": 0,
+        "rejectedCount": 8,
+        "vocab": [
+          {
+            "word": "book",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "desk",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "go",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "pen",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "play",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "read",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "teacher",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "write",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "BROKEN",
+        "familyKey": "vocab::uncountable_noun::this is",
+        "familyVariantCount": 1,
+        "density": 0
+      }
+    ],
+    "eligibleStructures": 4,
+    "totalDensity": 16,
+    "dominance": [
+      {
+        "template": "She ___ every day",
+        "ratio": 0.25
+      },
+      {
+        "template": "I ___ every day",
+        "ratio": 0.25
+      },
+      {
+        "template": "He ___ at school",
+        "ratio": 0.25
+      },
+      {
+        "template": "This is a ___",
+        "ratio": 0.25
+      },
+      {
+        "template": "This is ___",
+        "ratio": 0
+      }
+    ]
+  },
+  "daily_life": {
+    "topic": "daily_life",
+    "structures": [
+      {
+        "id": "s1",
+        "template": "She ___ every day",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 5,
+        "rejectedCount": 0,
+        "vocab": [
+          {
+            "word": "eat",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "go",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "play",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "read",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "run",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "HEALTHY",
+        "familyKey": "verb::present_simple_3sg::she  every day",
+        "familyVariantCount": 1,
+        "density": 5
+      },
+      {
+        "id": "s2",
+        "template": "I ___ every day",
+        "target": "verb",
+        "intent": "present_simple_base",
+        "level": "A1",
+        "compatibleCount": 5,
+        "rejectedCount": 0,
+        "vocab": [
+          {
+            "word": "eat",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "go",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "play",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "read",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "run",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "HEALTHY",
+        "familyKey": "verb::present_simple_base::i  every day",
+        "familyVariantCount": 1,
+        "density": 5
+      },
+      {
+        "id": "s3",
+        "template": "He ___ at school",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 5,
+        "rejectedCount": 0,
+        "vocab": [
+          {
+            "word": "eat",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "go",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "play",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "read",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "run",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "HEALTHY",
+        "familyKey": "verb::present_simple_3sg::he  at school",
+        "familyVariantCount": 1,
+        "density": 5
+      },
+      {
+        "id": "s4",
+        "template": "This is a ___",
+        "target": "vocab",
+        "intent": "countable_noun",
+        "level": "A1",
+        "compatibleCount": 0,
+        "rejectedCount": 5,
+        "vocab": [
+          {
+            "word": "eat",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "go",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "play",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "read",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "run",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "BROKEN",
+        "familyKey": "vocab::countable_noun::this is a",
+        "familyVariantCount": 1,
+        "density": 0
+      },
+      {
+        "id": "s5",
+        "template": "This is ___",
+        "target": "vocab",
+        "intent": "uncountable_noun",
+        "level": "A1",
+        "compatibleCount": 0,
+        "rejectedCount": 5,
+        "vocab": [
+          {
+            "word": "eat",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "go",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "play",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "read",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "run",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "BROKEN",
+        "familyKey": "vocab::uncountable_noun::this is",
+        "familyVariantCount": 1,
+        "density": 0
+      }
+    ],
+    "eligibleStructures": 3,
+    "totalDensity": 15,
+    "dominance": [
+      {
+        "template": "She ___ every day",
+        "ratio": 0.3333333333333333
+      },
+      {
+        "template": "I ___ every day",
+        "ratio": 0.3333333333333333
+      },
+      {
+        "template": "He ___ at school",
+        "ratio": 0.3333333333333333
+      },
+      {
+        "template": "This is a ___",
+        "ratio": 0
+      },
+      {
+        "template": "This is ___",
+        "ratio": 0
+      }
+    ]
+  },
+  "body_parts": {
+    "topic": "body_parts",
+    "structures": [
+      {
+        "id": "s1",
+        "template": "She ___ every day",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 0,
+        "rejectedCount": 10,
+        "vocab": [
+          {
+            "word": "arm",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "ear",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "eye",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "face",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "foot",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "hand",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "head",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "leg",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "mouth",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "nose",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "BROKEN",
+        "familyKey": "verb::present_simple_3sg::she  every day",
+        "familyVariantCount": 1,
+        "density": 0
+      },
+      {
+        "id": "s2",
+        "template": "I ___ every day",
+        "target": "verb",
+        "intent": "present_simple_base",
+        "level": "A1",
+        "compatibleCount": 0,
+        "rejectedCount": 10,
+        "vocab": [
+          {
+            "word": "arm",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "ear",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "eye",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "face",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "foot",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "hand",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "head",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "leg",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "mouth",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "nose",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "BROKEN",
+        "familyKey": "verb::present_simple_base::i  every day",
+        "familyVariantCount": 1,
+        "density": 0
+      },
+      {
+        "id": "s3",
+        "template": "He ___ at school",
+        "target": "verb",
+        "intent": "present_simple_3sg",
+        "level": "A1",
+        "compatibleCount": 0,
+        "rejectedCount": 10,
+        "vocab": [
+          {
+            "word": "arm",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "ear",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "eye",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "face",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "foot",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "hand",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "head",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "leg",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "mouth",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          },
+          {
+            "word": "nose",
+            "accepted": false,
+            "reasons": [
+              "target_mismatch"
+            ]
+          }
+        ],
+        "health": "BROKEN",
+        "familyKey": "verb::present_simple_3sg::he  at school",
+        "familyVariantCount": 1,
+        "density": 0
+      },
+      {
+        "id": "s4",
+        "template": "This is a ___",
+        "target": "vocab",
+        "intent": "countable_noun",
+        "level": "A1",
+        "compatibleCount": 10,
+        "rejectedCount": 0,
+        "vocab": [
+          {
+            "word": "arm",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "ear",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "eye",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "face",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "foot",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "hand",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "head",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "leg",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "mouth",
+            "accepted": true,
+            "reasons": []
+          },
+          {
+            "word": "nose",
+            "accepted": true,
+            "reasons": []
+          }
+        ],
+        "health": "HEALTHY",
+        "familyKey": "vocab::countable_noun::this is a",
+        "familyVariantCount": 1,
+        "density": 10
+      },
+      {
+        "id": "s5",
+        "template": "This is ___",
+        "target": "vocab",
+        "intent": "uncountable_noun",
+        "level": "A1",
+        "compatibleCount": 0,
+        "rejectedCount": 10,
+        "vocab": [
+          {
+            "word": "arm",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "ear",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "eye",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "face",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "foot",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "hand",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "head",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "leg",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "mouth",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          },
+          {
+            "word": "nose",
+            "accepted": false,
+            "reasons": [
+              "intent_mismatch"
+            ]
+          }
+        ],
+        "health": "BROKEN",
+        "familyKey": "vocab::uncountable_noun::this is",
+        "familyVariantCount": 1,
+        "density": 0
+      }
+    ],
+    "eligibleStructures": 1,
+    "totalDensity": 10,
+    "dominance": [
+      {
+        "template": "This is a ___",
+        "ratio": 1
+      },
+      {
+        "template": "She ___ every day",
+        "ratio": 0
+      },
+      {
+        "template": "I ___ every day",
+        "ratio": 0
+      },
+      {
+        "template": "He ___ at school",
+        "ratio": 0
+      },
+      {
+        "template": "This is ___",
+        "ratio": 0
+      }
+    ]
+  }
+}

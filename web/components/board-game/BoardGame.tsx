@@ -21,22 +21,25 @@ import { SoundMuteButton } from "@/components/kid-ui/SoundMuteButton";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { boardLengthForSetup, formatMapMeta, resolveMapForSetup } from "@/lib/board-game/map/resolve-map";
 import { useBoardGamePresentation } from "@/lib/board-game/use-board-game-presentation";
+import type { BoardGameInteractMode, CommitRuntime } from "@/lib/board-game/presentation/types";
 import type { GameRuntime, GameSetup } from "@/lib/board-game/types";
 
 type Props = {
   setup: GameSetup;
   runtime: GameRuntime;
-  onRuntimeChange: (runtime: GameRuntime) => void;
+  commitRuntime: CommitRuntime;
   onBackToSetup: () => void;
   onRestart: () => void;
+  interactMode?: BoardGameInteractMode;
 };
 
 function BoardGameInner({
   setup,
   runtime,
-  onRuntimeChange,
+  commitRuntime,
   onBackToSetup,
   onRestart,
+  interactMode = "host",
 }: Props) {
   const {
     uiPhase,
@@ -58,10 +61,11 @@ function BoardGameInner({
     handleCorrect,
     handleIncorrect,
     handleSkip,
-  } = useBoardGamePresentation(setup, runtime, onRuntimeChange);
+  } = useBoardGamePresentation(setup, runtime, { commitRuntime, interactMode });
 
   const map = resolveMapForSetup(setup);
   const boardLength = boardLengthForSetup(setup);
+  const isSpectator = interactMode === "spectator";
 
   useBoardGameKeyboard({
     canRoll,
@@ -70,6 +74,7 @@ function BoardGameInner({
     onCorrect: () => void handleCorrect(),
     onIncorrect: () => void handleIncorrect(),
     onSkip: () => void handleSkip(),
+    disabled: isSpectator,
   });
 
   return (
@@ -92,19 +97,25 @@ function BoardGameInner({
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 p-2 md:p-3">
         <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-2 rounded-xl border-4 border-kid-ink/80 bg-kid-panel/90 px-3 py-2 shadow-[4px_4px_0_0_var(--kid-shadow)] backdrop-blur-sm md:px-4">
           <div className="min-w-0">
-            <h1 className="truncate text-base font-extrabold text-kid-ink md:text-lg">ESL Board Game</h1>
+            <h1 className="truncate text-base font-extrabold text-kid-ink md:text-lg">
+              {isSpectator ? "Watching ESL Board Game" : "ESL Board Game"}
+            </h1>
             <p className="truncate text-xs font-semibold text-kid-ink/60 md:text-sm">
               {map.title} · {formatMapMeta(map)}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             <SoundMuteButton />
-            <KidButton variant="secondary" onClick={onBackToSetup}>
-              Setup
-            </KidButton>
-            <KidButton variant="secondary" onClick={onRestart}>
-              Restart
-            </KidButton>
+            {!isSpectator ?
+              <>
+                <KidButton variant="secondary" onClick={onBackToSetup}>
+                  Setup
+                </KidButton>
+                <KidButton variant="secondary" onClick={onRestart}>
+                  Restart
+                </KidButton>
+              </>
+            : null}
           </div>
         </div>
       </header>
@@ -124,6 +135,7 @@ function BoardGameInner({
       <QuestionModal
         open={uiPhase === "question"}
         question={runtime.currentQuestion}
+        readOnly={isSpectator}
         onCorrect={() => void handleCorrect()}
         onIncorrect={() => void handleIncorrect()}
         onSkip={() => void handleSkip()}
@@ -152,8 +164,8 @@ function BoardGameInner({
         open={uiPhase === "victory"}
         setup={setup}
         runtime={runtime}
-        onPlayAgain={onRestart}
-        onBackToSetup={onBackToSetup}
+        onPlayAgain={isSpectator ? () => {} : onRestart}
+        onBackToSetup={isSpectator ? () => {} : onBackToSetup}
       />
     </div>
   );

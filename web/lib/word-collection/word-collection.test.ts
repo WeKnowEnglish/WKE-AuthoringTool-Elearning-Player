@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REWARDS_STORAGE_KEY } from "@/lib/progress/rewards";
+import {
+  resetScopedStorageTestState,
+  seedScopedRewards,
+} from "@/lib/auth/scoped-storage-test-helpers";
 import { WORD_COLLECTION_STORAGE_KEY } from "./types";
 import {
   grantWordLoot,
@@ -31,24 +34,18 @@ function installMemoryStorage() {
 }
 
 function seedGold(gold: number) {
-  localStorage.setItem(
-    REWARDS_STORAGE_KEY,
-    JSON.stringify({
-      gold,
-      experience: 0,
-      rewardedEventIds: [],
-      ownedStickerIds: [],
-    }),
-  );
+  seedScopedRewards({ gold });
 }
 
 describe("word-collection", () => {
   beforeEach(() => {
     installMemoryStorage();
+    resetScopedStorageTestState();
     seedGold(500);
   });
 
   afterEach(() => {
+    resetScopedStorageTestState();
     vi.unstubAllGlobals();
   });
 

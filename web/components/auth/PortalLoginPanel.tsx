@@ -72,7 +72,11 @@ export function PortalLoginPanel({
     setLearningBand(band);
     writeLearningBandCookie(band);
     await updateStudentLearningBand(band);
-    const path = resolvePostLoginPath({ role: "student", next: nextPath });
+    const path = resolvePostLoginPath({
+      role: "student",
+      learningBand: band,
+      next: nextPath,
+    });
     router.push(path);
     router.refresh();
   }

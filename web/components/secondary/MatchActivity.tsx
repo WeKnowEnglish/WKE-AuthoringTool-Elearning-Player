@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { SecondaryActivitySummary } from "@/components/secondary/SecondaryActivitySummary";
 import { filterWordItemIdsForSecondaryActivity } from "@/lib/secondary/secondary-practice-types";
+import {
+  attemptsToSuccessFromWrongAttempts,
+  buildSecondaryActivityScoreSummary,
+  createPendingOutcomes,
+  getSecondaryPendingWordIds,
+  isSecondaryWordOutcomeDone,
+  SECONDARY_MAX_WRONG_ATTEMPTS,
+} from "@/lib/secondary/secondary-scaffold";
 import {
   clearSecondaryTodayActivityCompletion,
   setSecondaryTodayActivityCompletion,
@@ -10,23 +19,12 @@ import {
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import { getSecondaryVocabItemsByIds } from "@/lib/secondary/secondary-vocab-bank";
 import {
-  areSecondaryActivityWordsComplete,
   clearSecondaryLocalActivitySession,
-  getSecondaryWordsNeedingRepair,
+  finalizeSecondaryWordAsRevealed,
   recordSecondaryWordAttempt,
 } from "@/lib/secondary/secondary-word-progress";
+import type { SecondaryWordOutcome } from "@/lib/secondary/secondary-scaffold";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
-
-interface MatchResult {
-  correctCount: number;
-  totalCount: number;
-  percent: number;
-}
-
-function scoreToPercent(correctCount: number, totalCount: number): number {
-  if (!totalCount) return 0;
-  return Math.round((correctCount / totalCount) * 100);
-}
 
 function shuffleDefinitions(definitions: string[]): string[] {
   const copy = [...definitions];
@@ -42,10 +40,11 @@ function shuffleDefinitions(definitions: string[]): string[] {
 export function MatchActivity() {
   const { todaySession } = useSecondaryTodaySession();
   const [selectedDefinitions, setSelectedDefinitions] = useState<Record<string, string>>({});
-  const [result, setResult] = useState<MatchResult | null>(null);
+  const [lockedSelections, setLockedSelections] = useState<Record<string, string>>({});
+  const [outcomes, setOutcomes] = useState<Record<string, SecondaryWordOutcome>>({});
   const [shuffledDefinitions, setShuffledDefinitions] = useState<string[]>([]);
   const [phase, setPhase] = useState<"practice" | "repair" | "done">("practice");
-  const [repairWordIds, setRepairWordIds] = useState<string[]>([]);
+  const [checked, setChecked] = useState(false);
 
   const matchWordIds = useMemo(() => {
     if (!todaySession) return [];
@@ -59,88 +58,122 @@ export function MatchActivity() {
 
   const requiredWordIds = useMemo(() => matchItems.map((item) => item.wordItemId), [matchItems]);
 
+  const pendingWordIds = useMemo(
+    () => getSecondaryPendingWordIds(outcomes, requiredWordIds),
+    [outcomes, requiredWordIds],
+  );
+
   const visibleItems = useMemo(() => {
     if (phase === "repair") {
-      const repairSet = new Set(repairWordIds);
-      return matchItems.filter((item) => repairSet.has(item.wordItemId));
+      const pending = new Set(pendingWordIds);
+      return matchItems.filter((item) => pending.has(item.wordItemId));
     }
+    if (phase === "done") return matchItems;
     return matchItems;
-  }, [phase, repairWordIds, matchItems]);
+  }, [phase, pendingWordIds, matchItems]);
 
-  const totalCount = matchItems.length;
+  const scoreSummary = useMemo(
+    () => buildSecondaryActivityScoreSummary(outcomes, requiredWordIds),
+    [outcomes, requiredWordIds],
+  );
+
   const canCheck =
+    phase !== "done" &&
     visibleItems.length > 0 &&
     visibleItems.every((item) => Boolean(selectedDefinitions[item.wordItemId]));
 
   useEffect(() => {
     if (!todaySession) return;
     setSelectedDefinitions({});
-    setResult(null);
+    setLockedSelections({});
+    setOutcomes(createPendingOutcomes(matchItems.map((item) => item.wordItemId)));
     setPhase("practice");
-    setRepairWordIds([]);
+    setChecked(false);
     setShuffledDefinitions(shuffleDefinitions(matchItems.map((item) => item.studentMeaningEn)));
   }, [todaySession, matchItems]);
 
-  const correctnessByWordItemId = useMemo(() => {
-    if (!result) return {};
-    const map: Record<string, boolean> = {};
-    for (const item of visibleItems) {
-      map[item.wordItemId] = selectedDefinitions[item.wordItemId] === item.studentMeaningEn;
-    }
-    return map;
-  }, [result, selectedDefinitions, visibleItems]);
-
   function handleSelectDefinition(wordItemId: string, definition: string) {
+    if (isSecondaryWordOutcomeDone(outcomes[wordItemId])) return;
     setSelectedDefinitions((current) => ({
       ...current,
       [wordItemId]: definition,
     }));
-    setResult(null);
+    setChecked(false);
   }
 
-  function finishIfComplete(now: Date, correctCount: number, checkedCount: number) {
-    if (!areSecondaryActivityWordsComplete("match", requiredWordIds, now)) {
-      const needing = getSecondaryWordsNeedingRepair("match", requiredWordIds, now);
-      setRepairWordIds(needing);
-      setPhase("repair");
-      setSelectedDefinitions((current) => {
-        const next: Record<string, string> = { ...current };
-        for (const id of needing) delete next[id];
-        return next;
-      });
-      return false;
-    }
-
-    const percent = scoreToPercent(correctCount, Math.max(checkedCount, totalCount));
+  function completeActivity(now: Date) {
     setSecondaryTodayActivityCompletion(
       "match",
-      { completed: true, percent, completedAt: now.toISOString() },
+      {
+        completed: true,
+        percent: scoreSummary.percentUnderstood,
+        completedAt: now.toISOString(),
+      },
       now,
     );
     setPhase("done");
-    setRepairWordIds([]);
-    return true;
+    setChecked(false);
   }
 
   function handleCheckAnswers() {
     const now = new Date();
-    let correctCount = 0;
+    const nextOutcomes = { ...outcomes };
+    const nextLocked = { ...lockedSelections };
+    const nextSelected = { ...selectedDefinitions };
 
     for (const item of visibleItems) {
+      const outcome = nextOutcomes[item.wordItemId];
+      if (!outcome || outcome.kind !== "pending") continue;
+
       const isCorrect = selectedDefinitions[item.wordItemId] === item.studentMeaningEn;
-      if (isCorrect) correctCount += 1;
+      const attemptedAt = now.toISOString();
 
       recordSecondaryWordAttempt({
         activityType: "match",
         wordItemId: item.wordItemId,
         isCorrect,
-        attemptedAt: now.toISOString(),
+        attemptedAt,
       });
+
+      if (isCorrect) {
+        const attemptsToSuccess = attemptsToSuccessFromWrongAttempts(outcome.wrongAttempts);
+        nextOutcomes[item.wordItemId] = { kind: "success", attemptsToSuccess };
+        nextLocked[item.wordItemId] = item.studentMeaningEn;
+      } else {
+        const wrongAttempts = outcome.wrongAttempts + 1;
+        if (wrongAttempts >= SECONDARY_MAX_WRONG_ATTEMPTS) {
+          finalizeSecondaryWordAsRevealed("match", item.wordItemId, attemptedAt);
+          nextOutcomes[item.wordItemId] = { kind: "revealed" };
+          nextLocked[item.wordItemId] = item.studentMeaningEn;
+        } else {
+          nextOutcomes[item.wordItemId] = { kind: "pending", wrongAttempts };
+          delete nextSelected[item.wordItemId];
+        }
+      }
     }
 
-    const percent = scoreToPercent(correctCount, visibleItems.length);
-    setResult({ correctCount, totalCount: visibleItems.length, percent });
-    finishIfComplete(now, correctCount, visibleItems.length);
+    setOutcomes(nextOutcomes);
+    setLockedSelections(nextLocked);
+    setSelectedDefinitions(nextSelected);
+    setChecked(true);
+
+    const stillPending = getSecondaryPendingWordIds(nextOutcomes, requiredWordIds);
+    if (stillPending.length === 0) {
+      const summary = buildSecondaryActivityScoreSummary(nextOutcomes, requiredWordIds);
+      setSecondaryTodayActivityCompletion(
+        "match",
+        {
+          completed: true,
+          percent: summary.percentUnderstood,
+          completedAt: now.toISOString(),
+        },
+        now,
+      );
+      setPhase("done");
+      return;
+    }
+
+    setPhase("repair");
   }
 
   function handleRetry() {
@@ -148,9 +181,10 @@ export function MatchActivity() {
     clearSecondaryLocalActivitySession("match", now);
     clearSecondaryTodayActivityCompletion("match", now);
     setSelectedDefinitions({});
-    setResult(null);
+    setLockedSelections({});
+    setOutcomes(createPendingOutcomes(requiredWordIds));
+    setChecked(false);
     setPhase("practice");
-    setRepairWordIds([]);
     setShuffledDefinitions(shuffleDefinitions(matchItems.map((item) => item.studentMeaningEn)));
   }
 
@@ -161,9 +195,11 @@ export function MatchActivity() {
       </p>
       <h2 className="text-2xl font-extrabold text-kid-ink">Match The Word To The Definition</h2>
       <p className="text-sm font-semibold text-kid-ink/80">
-        {phase === "repair"
-          ? "Repair round: fix the words you missed, then check again."
-          : "Select one definition for each word, then check your answers."}
+        {phase === "done"
+          ? "Here is how you did today."
+          : phase === "repair"
+            ? "Fix the words you missed. You have up to three tries per word."
+            : "Select one definition for each word, then check your answers."}
       </p>
 
       {!todaySession ? <p className="text-sm font-semibold text-kid-ink/70">Loading today&apos;s practice...</p> : null}
@@ -174,26 +210,64 @@ export function MatchActivity() {
         </div>
       ) : null}
 
-      {todaySession && visibleItems.length > 0 ? (
+      {phase === "done" ? (
+        <SecondaryActivitySummary activityLabel="Match" summary={scoreSummary} />
+      ) : null}
+
+      {todaySession && phase === "done" ? (
         <div className="space-y-3">
-          {visibleItems.map((item) => {
-            const isCorrect = correctnessByWordItemId[item.wordItemId];
-            const isIncorrect = result ? !isCorrect : false;
-            const locked = phase === "done";
+          {matchItems.map((item) => {
+            const outcome = outcomes[item.wordItemId];
+            const isSuccess = outcome?.kind === "success";
+            const isRevealed = outcome?.kind === "revealed";
             return (
               <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={item.wordItemId}>
-                <label className="text-sm font-bold text-kid-ink" htmlFor={`match-${item.wordItemId}`}>
-                  {item.word}
-                </label>
-                <select
-                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold text-kid-ink disabled:opacity-70 ${
-                    isCorrect
-                      ? "border-green-500 bg-green-50"
-                      : isIncorrect
-                        ? "border-red-500 bg-red-50"
-                        : "border-kid-ink bg-white"
+                <span className="text-sm font-bold text-kid-ink">{item.word}</span>
+                <div
+                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold ${
+                    isSuccess
+                      ? "border-green-500 bg-green-50 text-green-900"
+                      : "border-red-500 bg-red-50 text-red-900"
                   }`}
-                  disabled={locked}
+                >
+                  {lockedSelections[item.wordItemId] ?? item.studentMeaningEn}
+                  {isSuccess && outcome.attemptsToSuccess > 1 ? (
+                    <span className="ml-2 text-xs font-bold text-green-800/80">
+                      (try {outcome.attemptsToSuccess})
+                    </span>
+                  ) : null}
+                  {isRevealed ? (
+                    <span className="ml-2 text-xs font-bold text-red-800/80">(needed help)</span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {todaySession && visibleItems.length > 0 && phase !== "done" ? (
+        <div className="space-y-3">
+          {visibleItems.map((item) => {
+            const outcome = outcomes[item.wordItemId];
+            const pending = outcome?.kind === "pending" ? outcome : null;
+            const showWrong = checked && pending && !selectedDefinitions[item.wordItemId];
+            return (
+              <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={item.wordItemId}>
+                <div>
+                  <label className="text-sm font-bold text-kid-ink" htmlFor={`match-${item.wordItemId}`}>
+                    {item.word}
+                  </label>
+                  {pending && pending.wrongAttempts > 0 ? (
+                    <p className="text-xs font-semibold text-red-800/80">
+                      Attempt {pending.wrongAttempts + 1} of {SECONDARY_MAX_WRONG_ATTEMPTS}
+                    </p>
+                  ) : null}
+                </div>
+                <select
+                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold text-kid-ink ${
+                    showWrong ? "border-red-500 bg-red-50" : "border-kid-ink bg-white"
+                  }`}
                   id={`match-${item.wordItemId}`}
                   onChange={(event) => handleSelectDefinition(item.wordItemId, event.target.value)}
                   value={selectedDefinitions[item.wordItemId] ?? ""}
@@ -239,13 +313,10 @@ export function MatchActivity() {
         </div>
       ) : null}
 
-      {result ? (
-        <div className="rounded-lg border border-green-300 bg-green-50 p-3 text-sm font-bold text-green-900">
-          {phase === "done" ? "Completed · " : phase === "repair" ? "Keep repairing · " : ""}
-          Score: {result.correctCount}/{result.totalCount} ({result.percent}%)
-          {phase === "repair" && repairWordIds.length > 0
-            ? ` · ${repairWordIds.length} still need repair`
-            : ""}
+      {phase === "repair" && pendingWordIds.length > 0 ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-bold text-amber-900">
+          Keep going · {pendingWordIds.length} word{pendingWordIds.length === 1 ? "" : "s"} still to
+          fix
         </div>
       ) : null}
     </section>

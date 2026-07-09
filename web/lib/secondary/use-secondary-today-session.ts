@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ensureMasteryHydratedForCurrentStudent } from "@/lib/mastery/supabase-sync";
 import {
   getOrCreateSecondaryTodaySession,
   getSecondaryTodayCompletion,
@@ -21,18 +22,31 @@ export function useSecondaryTodaySession() {
   }, []);
 
   useEffect(() => {
-    refresh();
-    setHydrated(true);
+    let cancelled = false;
+
+    void (async () => {
+      await ensureMasteryHydratedForCurrentStudent();
+      if (cancelled) return;
+      refresh();
+      setHydrated(true);
+    })();
 
     const supabase = createClient();
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user?.id) return;
-      refresh();
+      void (async () => {
+        await ensureMasteryHydratedForCurrentStudent();
+        if (cancelled) return;
+        refresh();
+      })();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [refresh]);
 
   return { todaySession, completion, hydrated, refresh };

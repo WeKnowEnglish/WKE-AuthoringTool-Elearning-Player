@@ -11,6 +11,7 @@ import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 import { getAppRole } from "@/lib/auth/roles";
 import { resolveLearningBand } from "@/lib/auth/student-bands";
 import { setStudentStorageIdCache } from "@/lib/auth/student-storage-id";
+import { ensureMasteryHydratedForCurrentStudent, pushLocalMasteryBacklogForCurrentStudent } from "@/lib/mastery/supabase-sync";
 import {
   normalizeUsername,
   usernameToStudentEmail,
@@ -84,6 +85,10 @@ export function PortalLoginPanel({
       setStudentStorageIdCache(opts.authUserId);
       if (opts.migrateGuestProgress) {
         migrateLocalStorageToStudentStorageId(opts.authUserId);
+      }
+      await ensureMasteryHydratedForCurrentStudent();
+      if (opts.migrateGuestProgress) {
+        await pushLocalMasteryBacklogForCurrentStudent();
       }
     }
     setLearningBand(band);

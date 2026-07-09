@@ -90,7 +90,11 @@ export interface SecondaryTodaySession {
   todayWordItemIds: string[];
   allWordItemIds: string[];
   /** Present on sessions built by selection v2 (S1b+). */
-  selectionVersion?: 2;
+  selectionVersion?: 2 | 3;
+  /** Today-list words in FIFO order they crossed mastered while on this session. */
+  masteredOnListOrder?: string[];
+  /** Words evicted from today's list via slow replace (audit / exclude from re-picks). */
+  replacedOutWordItemIds?: string[];
 }
 
 export type SecondaryTodayActivityKey = "match" | "cloze" | "spelling";

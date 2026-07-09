@@ -33,11 +33,15 @@ import { subscribePracticeEvents } from "@/lib/student-session";
 import { getLearningBand } from "@/lib/progress/local-storage";
 import type { LearningBand } from "@/lib/learning-band";
 import { SecondaryAccessNotice } from "@/components/student-hub/SecondaryPracticeCard";
+import { StudentClassSelectorOverlay } from "@/components/student-hub/StudentClassSelectorOverlay";
+import { StudentClassMenu } from "@/components/student-hub/StudentClassMenu";
+import type { StudentClassMembership } from "@/lib/data/student-classes";
 
 type Props = {
   initialCollectionPage?: string | null;
   initialRoom?: string | null;
   initialMessage?: string | null;
+  classMemberships?: StudentClassMembership[];
 };
 
 function parseInitialRoom(room: string | null | undefined, hasCollectionPage: boolean): StudentHubRoom {
@@ -50,6 +54,7 @@ export function StudentHubClient({
   initialCollectionPage = null,
   initialRoom = null,
   initialMessage = null,
+  classMemberships = [],
 }: Props) {
   const hydrated = useClientHydrated();
   const initialBook = Boolean(initialCollectionPage);
@@ -79,6 +84,10 @@ export function StudentHubClient({
   const [activeExploreAreaId, setActiveExploreAreaId] = useState<ExploreAreaId | null>(null);
   const [exploreSessionSeed, setExploreSessionSeed] = useState<string | null>(null);
   const [gardenLockMessage, setGardenLockMessage] = useState<string | null>(null);
+  const [classSelectorOpen, setClassSelectorOpen] = useState(classMemberships.length === 0);
+  const [autoPromptDismissed, setAutoPromptDismissed] = useState(false);
+  const overlayOpen =
+    classSelectorOpen || (classMemberships.length === 0 && !autoPromptDismissed);
 
   const gardenUnlocked = isUnlockAvailable("language_garden", rewardsUi.level);
 
@@ -282,6 +291,11 @@ export function StudentHubClient({
           <div className="h-9 min-w-[8rem] flex-1 rounded-lg border-2 border-kid-ink/30 bg-kid-panel/50" aria-hidden />
         )}
         <div className="flex items-center gap-2">
+          <StudentClassMenu
+            memberships={classMemberships}
+            onOpenClassSelector={() => setClassSelectorOpen(true)}
+            className="rounded-lg border-2 border-kid-ink bg-kid-panel px-2 py-1 text-xs font-bold"
+          />
           <SoundMuteButton className="!min-h-9 shrink-0" />
           <QuestHeaderButton
             muted={muted}
@@ -376,6 +390,14 @@ export function StudentHubClient({
         dailyQuestUiKey={dailyQuestUiKey}
         onClose={closeQuests}
         onEconomyChange={refreshRewardsUi}
+      />
+      <StudentClassSelectorOverlay
+        open={overlayOpen}
+        onClose={() => {
+          setClassSelectorOpen(false);
+          setAutoPromptDismissed(true);
+        }}
+        memberships={classMemberships}
       />
 
       {exploreOpen && activeExploreAreaId && exploreSessionSeed ?

@@ -1,6 +1,7 @@
 import { getMasteryRecordForTarget } from "@/lib/mastery/local-storage";
 import {
   applyLocalAttemptTransition,
+  applyLocalRevealTransition,
   createInitialLocalActivityWordState,
   getWordsNeedingRepair,
   isActivityLocallyComplete,
@@ -168,6 +169,41 @@ export function recordSecondaryWordAttempt(
   return recordSecondaryWordAttemptDetailed(attempt).progress;
 }
 
+/** Marks a word as session-resolved after max wrong attempts (no success evidence). */
+export function finalizeSecondaryWordAsRevealed(
+  activityKey: SecondaryTodayActivityKey,
+  wordItemId: string,
+  attemptedAt: string,
+): void {
+  if (typeof window === "undefined") return;
+
+  const studentId = resolveSecondaryStudentId();
+  const activitySessionId = buildSecondaryActivitySessionId(
+    getSecondaryTodayDateKey(new Date(attemptedAt)),
+    activityKey,
+  );
+  const now = new Date(attemptedAt);
+  const display = getSecondaryWordDisplaySnapshot(wordItemId);
+
+  let localPrevious = getLocalActivityWordState(studentId, activitySessionId, wordItemId);
+  if (!localPrevious) {
+    const mastery = getMasteryRecordForTarget({
+      type: "word",
+      key: wordItemId,
+    });
+    localPrevious = createInitialLocalActivityWordState({
+      studentId,
+      activitySessionId,
+      wordItemId,
+      masteryScore01: mastery?.masteryScore ?? display.masteryScore01,
+      legacyMasteryLevel: display.legacyLevel,
+      now,
+    });
+  }
+
+  upsertLocalActivityWordState(applyLocalRevealTransition(localPrevious, now));
+}
+
 export function mapMasteryLevelToLabel(level: WordMasteryLevel): string {
   if (level === 0) return "New";
   if (level === 1) return "Seen";
@@ -175,4 +211,12 @@ export function mapMasteryLevelToLabel(level: WordMasteryLevel): string {
   if (level === 3) return "Practiced";
   if (level === 4) return "Strong";
   return "Mastered";
+}
+
+export function masteryLevelChipClassName(level: WordMasteryLevel): string {
+  if (level >= 5) return "border-green-500 bg-green-100 text-green-950";
+  if (level === 4) return "border-emerald-300 bg-emerald-50 text-emerald-900";
+  if (level === 3) return "border-lime-300 bg-lime-50 text-lime-900";
+  if (level === 2) return "border-amber-300 bg-amber-50 text-amber-950";
+  return "border-red-300 bg-red-50 text-red-900";
 }

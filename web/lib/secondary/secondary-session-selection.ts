@@ -114,7 +114,7 @@ function compareWeakest(a: SecondaryWordCandidate, b: SecondaryWordCandidate): n
   return a.wordItemId.localeCompare(b.wordItemId);
 }
 
-function buildCandidate(
+export function buildCandidate(
   wordItemId: string,
   record: StudentMasteryRecord | null,
   now: Date,

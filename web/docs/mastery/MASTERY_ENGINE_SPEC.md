@@ -179,10 +179,7 @@ Word counts as resolved for activity completion when:
 
 ### Required successes per word per session
 
-| Prior strength | Required correct successes |
-| --- | --- |
-| `masteryScore ≥ 0.75` or projected legacy `≥ 4` | 1 |
-| Otherwise | 2 |
+**1** correct success resolves the word for today's activity. Platform mastery still records every attempt separately (`firstTry`, failures, repair successes).
 
 ### UX patterns
 

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { StudentHubClient } from "@/components/student-hub/StudentHubClient";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
+import { getStudentClassMemberships } from "@/lib/data/student-classes";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = {
@@ -26,12 +27,14 @@ export default async function StudentHomePage({ searchParams }: Props) {
   }
 
   const params = (await searchParams) ?? {};
+  const classMemberships = await getStudentClassMemberships();
 
   return (
     <StudentHubClient
       initialCollectionPage={params.collection ?? null}
       initialRoom={params.room ?? null}
       initialMessage={params.message ?? null}
+      classMemberships={classMemberships}
     />
   );
 }

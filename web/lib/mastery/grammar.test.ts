@@ -52,7 +52,7 @@ describe("grammar mastery evidence", () => {
 
     expect(event.source).toBe("lesson");
     expect(event.activityId).toBe("grammar:short-answers-there-is-a1");
-    expect(event.response.kind).toBe("true_false");
+    expect(event.response.kind).toBe("tap");
     expect(event.context?.evidenceMode).toBe("recognition");
     expect(event.targetRefs[0]?.type).toBe("grammar");
     expect(event.targetRefs).toContainEqual({

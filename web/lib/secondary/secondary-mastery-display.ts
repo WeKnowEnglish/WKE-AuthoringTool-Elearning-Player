@@ -89,3 +89,23 @@ export function getSecondaryWordProgressRecordFromDisplay(
 export function isSecondaryWordMastered(snapshot: SecondaryWordDisplaySnapshot): boolean {
   return snapshot.masteryScore01 >= 0.75 || snapshot.legacyLevel >= 4;
 }
+
+export const SECONDARY_FOCUS_HIGHLIGHT_COUNT = 6;
+
+/** Weakest words first; strongest / mastered settle at the bottom. */
+export function sortWordItemIdsByWeakness(wordItemIds: string[]): string[] {
+  return [...wordItemIds].sort((wordItemIdA, wordItemIdB) => {
+    const a = getSecondaryWordDisplaySnapshot(wordItemIdA);
+    const b = getSecondaryWordDisplaySnapshot(wordItemIdB);
+    if (a.legacyLevel !== b.legacyLevel) return a.legacyLevel - b.legacyLevel;
+    if (a.recentAccuracy !== b.recentAccuracy) return a.recentAccuracy - b.recentAccuracy;
+    return a.timesSeen - b.timesSeen;
+  });
+}
+
+export function getFocusHighlightWordIds(
+  sortedWeakestFirst: string[],
+  count = SECONDARY_FOCUS_HIGHLIGHT_COUNT,
+): string[] {
+  return sortedWeakestFirst.slice(0, Math.max(0, count));
+}

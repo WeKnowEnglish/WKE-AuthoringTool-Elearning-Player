@@ -27,7 +27,7 @@ function formatLoginError(code: string | undefined): string {
 
 export function LoginForm({ nextPath, initialError, initialMessage }: Props) {
   const router = useRouter();
-  const next = nextPath ?? "/teacher/courses";
+  const next = nextPath ?? "/teacher/classes";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

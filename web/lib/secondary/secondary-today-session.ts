@@ -7,6 +7,9 @@ import {
   TARGET_TODAY_WORDS,
   WARMUP_WORDS,
 } from "@/lib/secondary/secondary-session-selection";
+import {
+  reconcileSecondarySessionSlowReplace,
+} from "@/lib/secondary/secondary-session-slow-replace";
 import { filterWordItemIdsForSecondaryActivity } from "@/lib/secondary/secondary-practice-types";
 import {
   getAllSecondaryWordItemIds,
@@ -81,8 +84,18 @@ function normalizeSession(raw: SecondaryTodaySession | null | undefined): Second
     todayWordItemIds,
     allWordItemIds,
   };
-  if (raw.selectionVersion === 2) {
-    session.selectionVersion = 2;
+  if (raw.selectionVersion === 2 || raw.selectionVersion === 3) {
+    session.selectionVersion = raw.selectionVersion;
+  }
+  if (Array.isArray(raw.masteredOnListOrder)) {
+    session.masteredOnListOrder = raw.masteredOnListOrder.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+  }
+  if (Array.isArray(raw.replacedOutWordItemIds)) {
+    session.replacedOutWordItemIds = raw.replacedOutWordItemIds.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
   }
   return session;
 }
@@ -145,20 +158,49 @@ function buildSecondaryTodaySession(
   };
 }
 
+function applySlowReplaceToSession(
+  session: SecondaryTodaySession,
+  studentId: string,
+  now: Date,
+): SecondaryTodaySession {
+  const candidateWordItemIds = getAllSecondaryWordItemIds();
+  if (candidateWordItemIds.length === 0) return session;
+
+  return reconcileSecondarySessionSlowReplace({
+    session,
+    candidateWordItemIds,
+    masteryRecords: readMasterySnapshot().records,
+    studentId,
+    now,
+  }).session;
+}
+
 export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySession {
   const studentId = resolveSecondaryStudentId();
   const dateKey = getSecondaryTodayDateKey(now);
   const storageKey = getSessionStorageKey(studentId, dateKey);
 
   const existingRaw = readJson<SecondaryTodaySession>(storageKey);
+  let session: SecondaryTodaySession | null = null;
+  let loadedFromCache = false;
+
   if (existingRaw) {
     const existing = normalizeSession(existingRaw);
-    if (existing && !isStaleEmptySession(existing)) return existing;
+    if (existing && !isStaleEmptySession(existing)) {
+      session = existing;
+      loadedFromCache = true;
+    }
   }
 
-  const next = buildSecondaryTodaySession(now, dateKey, studentId);
-  writeJson(storageKey, next);
-  return next;
+  if (!session) {
+    session = buildSecondaryTodaySession(now, dateKey, studentId);
+  }
+
+  const reconciled = applySlowReplaceToSession(session, studentId, now);
+  if (!loadedFromCache || JSON.stringify(session) !== JSON.stringify(reconciled)) {
+    writeJson(storageKey, reconciled);
+  }
+  return reconciled;
 }
 
 export function getSecondaryTodayCompletion(now: Date): SecondaryTodayCompletion {

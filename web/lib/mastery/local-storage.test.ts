@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scopedLocalStorageKey } from "@/lib/auth/scoped-local-storage";
-import { clearStudentStorageIdCache } from "@/lib/auth/student-storage-id";
+import { clearStudentStorageIdCache, setStudentStorageIdCache } from "@/lib/auth/student-storage-id";
 import { resetStudentStorageMigrationMemo } from "@/lib/auth/student-storage-migrate";
 import {
   MASTERY_EVIDENCE_STORAGE_KEY,
@@ -11,6 +11,18 @@ import {
 } from "@/lib/mastery/local-storage";
 import type { LearningEvidenceEvent } from "@/lib/mastery/types";
 import { PROGRESS_STORAGE_KEY } from "@/lib/progress/types";
+
+const { mockPushEvidenceAndMasteryToServer } = vi.hoisted(() => ({
+  mockPushEvidenceAndMasteryToServer: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/mastery/supabase-sync", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/mastery/supabase-sync")>();
+  return {
+    ...actual,
+    pushEvidenceAndMasteryToServer: mockPushEvidenceAndMasteryToServer,
+  };
+});
 
 function installLocalStorage() {
   const store = new Map<string, string>();
@@ -62,6 +74,7 @@ function evidence(): LearningEvidenceEvent {
 afterEach(() => {
   clearStudentStorageIdCache();
   resetStudentStorageMigrationMemo();
+  mockPushEvidenceAndMasteryToServer.mockClear();
   vi.unstubAllGlobals();
 });
 
@@ -96,5 +109,31 @@ describe("mastery local storage", () => {
       localStorage.getItem(scopedLocalStorageKey(MASTERY_EVIDENCE_STORAGE_KEY, "student-1")),
     ).toContain("event-1");
   });
-});
 
+  it("schedules server push when the authenticated student matches evidence", async () => {
+    const localStorage = installLocalStorage();
+    localStorage.setItem(
+      PROGRESS_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        anonymousDeviceId: "student-1",
+        completedLessonIds: [],
+      }),
+    );
+    setStudentStorageIdCache("student-1");
+
+    recordLearningEvidenceEvent(evidence());
+    await Promise.resolve();
+
+    expect(mockPushEvidenceAndMasteryToServer).toHaveBeenCalledTimes(1);
+    expect(mockPushEvidenceAndMasteryToServer.mock.calls[0]?.[0]?.id).toBe("event-1");
+  });
+
+  it("does not schedule server push for guests", async () => {
+    installLocalStorage();
+    recordLearningEvidenceEvent(evidence());
+    await Promise.resolve();
+
+    expect(mockPushEvidenceAndMasteryToServer).not.toHaveBeenCalled();
+  });
+});

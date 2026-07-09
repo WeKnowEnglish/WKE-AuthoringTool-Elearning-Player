@@ -6,6 +6,11 @@ import {
   clearStudentStorageIdCache,
   setStudentStorageIdCache,
 } from "@/lib/auth/student-storage-id";
+import {
+  ensureMasteryHydratedForCurrentStudent,
+  flushMasterySyncQueueForCurrentStudent,
+  resetMasteryHydrationMemo,
+} from "@/lib/mastery/supabase-sync";
 
 /** Hydrates auth-scoped LocalStorage namespace on student routes. */
 export function StudentStorageBootstrap() {
@@ -18,12 +23,26 @@ export function StudentStorageBootstrap() {
       } = await supabase.auth.getUser();
       if (user?.id) {
         setStudentStorageIdCache(user.id);
+        await ensureMasteryHydratedForCurrentStudent();
       } else {
         clearStudentStorageIdCache();
+        resetMasteryHydrationMemo();
       }
     };
 
     void sync();
+
+    const onOnline = () => {
+      void flushMasterySyncQueueForCurrentStudent();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void flushMasterySyncQueueForCurrentStudent();
+      }
+    };
+
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     const {
       data: { subscription },
@@ -31,12 +50,18 @@ export function StudentStorageBootstrap() {
       const userId = session?.user?.id ?? null;
       if (userId) {
         setStudentStorageIdCache(userId);
+        void ensureMasteryHydratedForCurrentStudent();
       } else {
         clearStudentStorageIdCache();
+        resetMasteryHydrationMemo();
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   return null;

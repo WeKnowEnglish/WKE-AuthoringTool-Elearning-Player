@@ -14,8 +14,7 @@ export type StudentActivityKind =
   | "grammar_poster"
   | "course_lesson"
   | "explore_run"
-  | "pet_minigame"
-  | "activity_library_item";
+  | "pet_minigame";
 
 export type StudentActivitySource =
   | "student_hub"

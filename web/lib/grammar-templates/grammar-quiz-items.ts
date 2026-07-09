@@ -1,4 +1,4 @@
-import type { LessonScreenRow } from "@/lib/data/catalog";
+import type { LessonScreenRow } from "@/lib/lesson/types";
 import { trueFalsePayloadSchema } from "@/lib/lesson-schemas";
 
 export type GrammarQuizItem = {

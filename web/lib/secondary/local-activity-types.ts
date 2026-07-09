@@ -5,7 +5,8 @@ export type LocalWordStatus =
   | "incorrect"
   | "needs_repair"
   | "repaired"
-  | "passed";
+  | "passed"
+  | "revealed";
 
 export type LocalActivityWordState = {
   studentId: string;

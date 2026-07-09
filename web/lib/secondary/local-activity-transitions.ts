@@ -5,24 +5,25 @@ import {
 } from "@/lib/secondary/local-activity-types";
 import type { WordMasteryLevel } from "@/lib/secondary/types";
 
+/** One correct answer resolves a word for today's activity session. */
+const SESSION_RESOLVED_SUCCESSFUL_ATTEMPTS = 1;
+
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-export function getRequiredSuccessfulAttempts(input: {
+export function getRequiredSuccessfulAttempts(_input?: {
   masteryScore01?: number;
   legacyMasteryLevel?: WordMasteryLevel;
-}): 1 | 2 {
-  if (input.masteryScore01 !== undefined && input.masteryScore01 >= 0.75) return 1;
-  if (input.legacyMasteryLevel !== undefined && input.legacyMasteryLevel >= 4) return 1;
-  return 2;
+}): 1 {
+  return SESSION_RESOLVED_SUCCESSFUL_ATTEMPTS;
 }
 
 export function isLocalWordResolved(state: LocalActivityWordState): boolean {
-  if (state.status === "passed") return true;
+  if (state.status === "passed" || state.status === "revealed") return true;
   if (
     (state.status === "repaired" || state.status === "correct") &&
-    state.successfulAttempts >= state.requiredSuccessfulAttempts
+    state.successfulAttempts >= SESSION_RESOLVED_SUCCESSFUL_ATTEMPTS
   ) {
     return true;
   }
@@ -52,6 +53,17 @@ export function createInitialLocalActivityWordState(params: {
     }),
     successfulAttempts: 0,
     status: "not_seen",
+    updatedAt: now.toISOString(),
+  };
+}
+
+export function applyLocalRevealTransition(
+  previous: LocalActivityWordState,
+  now = new Date(),
+): LocalActivityWordState {
+  return {
+    ...previous,
+    status: "revealed",
     updatedAt: now.toISOString(),
   };
 }
@@ -87,7 +99,7 @@ export function applyLocalAttemptTransition(
   } else {
     const wasRepair =
       previous.status === "needs_repair" || previous.status === "incorrect";
-    if (successfulAttempts >= previous.requiredSuccessfulAttempts) {
+    if (successfulAttempts >= SESSION_RESOLVED_SUCCESSFUL_ATTEMPTS) {
       status = "passed";
     } else if (wasRepair) {
       status = "repaired";

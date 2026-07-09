@@ -365,12 +365,14 @@ Why vocabulary first:
 
 Goal: move from local intelligence to durable student records.
 
+**Status (2026-07-09):** Student persistence **landed** (P1 ✅). See [`docs/mastery/MASTERY_SUPABASE_SYNC.md`](./mastery/MASTERY_SUPABASE_SYNC.md).
+
 Deliverables:
 
-- Supabase tables for evidence and mastery summaries.
-- Student-safe RLS policies.
-- Teacher dashboard summary.
-- Parent-friendly progress summary.
+- Supabase tables for evidence and mastery summaries. ✅
+- Student-safe RLS policies. ✅
+- Teacher dashboard summary. → T1 (next)
+- Parent-friendly progress summary. → T1
 - Admin aggregation later.
 
 ## Data Model Sketch
@@ -396,7 +398,7 @@ Recommended next implementation slice:
 4. Update mastery locally after vocabulary practice.
 5. Use mastery to pick review words in vocabulary runs.
 
-Current implementation status: steps 1-5 are implemented locally for vocabulary. A first recommendation explanation surface exists behind `?adaptiveDebug=1`. The next development slice should expand evidence to grammar/skill targets and prepare a durable reporting model.
+Current implementation status: steps 1-5 are implemented locally for vocabulary. A first recommendation explanation surface exists behind `?adaptiveDebug=1`. **P1** adds Supabase pull/write-through for authenticated students ([`MASTERY_SUPABASE_SYNC.md`](./mastery/MASTERY_SUPABASE_SYNC.md)). Next slices: **D1** sync diagnostic tool, **T1** teacher views, expand grammar evidence (G1e).
 
 This is the first slice where the app will become meaningfully smarter.
 

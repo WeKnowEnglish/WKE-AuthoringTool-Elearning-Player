@@ -33,7 +33,7 @@ export default async function SecondaryLoginPage({ searchParams }: Props) {
 
   const role = getAppRole(user);
   if (role === "teacher") {
-    redirect(resolveLandingRedirectPath(user) ?? "/teacher/courses");
+    redirect(resolveLandingRedirectPath(user) ?? "/teacher/classes");
   }
   if (role === "student") {
     const learningBand =

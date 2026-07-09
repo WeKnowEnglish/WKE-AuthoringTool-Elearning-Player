@@ -23,6 +23,8 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
    - `supabase/migrations/005_teacher_media.sql` — **teacher Upload / Media library** (Storage bucket `lesson_media` + `media_assets` table)
    - `supabase/migrations/018_lesson_learning_goals.sql` — **lesson learning objectives** (`lessons.learning_goals` JSON array for the editor + AI generator)
    - `supabase/migrations/019_lesson_plan.sql` — **shared lesson plan** (`lessons.lesson_plan` text + optional `lesson_plan_meta` for AI)
+   - `supabase/migrations/024_student_mastery.sql` — **student mastery + evidence** (`student_mastery_records`, `student_learning_evidence`; P1a schema + RLS)
+   - `supabase/migrations/025_evidence_id_text.sql` — **evidence id as text** (matches composite event ids; P1c write-through)
 
 3. **Teacher account** — pick one:
    - **Script (recommended):** add **`SUPABASE_SERVICE_ROLE_KEY`** to `.env.local` (Supabase → Project Settings → API → **service_role** secret). Then run:

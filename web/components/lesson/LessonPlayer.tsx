@@ -27,7 +27,7 @@ import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { playSfx } from "@/lib/audio/sfx";
 import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
 import { speakText, stopSpeaking } from "@/lib/audio/tts";
-import type { LessonScreenRow } from "@/lib/data/catalog";
+import type { LessonScreenRow } from "@/lib/lesson/types";
 import { getQuizProgressForLessonIndex } from "@/lib/lesson-activity-taxonomy";
 import { PlayerCharacter } from "@/components/avatar/PlayerCharacter";
 import { PetCompanion } from "@/components/worlds/PetCompanion";
@@ -946,11 +946,8 @@ export function LessonPlayer({
               <Link href="/teacher" className={kidLinkSecondaryClassName}>
                 Back to dashboard
               </Link>
-              <Link href="/teacher/courses" className={kidLinkSecondaryClassName}>
-                Courses
-              </Link>
-              <Link href="/activities" className={kidLinkSecondaryClassName}>
-                Activity library
+              <Link href="/teacher/classes" className={kidLinkSecondaryClassName}>
+                Classes
               </Link>
             </div>
           </KidPanel>

@@ -3,7 +3,7 @@ import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 
 describe("resolvePostLoginPath", () => {
   it("sends teachers to teacher area by default", () => {
-    expect(resolvePostLoginPath({ role: "teacher" })).toBe("/teacher/courses");
+    expect(resolvePostLoginPath({ role: "teacher" })).toBe("/teacher/classes");
   });
 
   it("sends students to home by default", () => {
@@ -33,7 +33,7 @@ describe("resolvePostLoginPath", () => {
     expect(
       resolvePostLoginPath({
         role: "student",
-        next: "/teacher/courses",
+        next: "/teacher/classes",
       }),
     ).toBe("/home");
   });

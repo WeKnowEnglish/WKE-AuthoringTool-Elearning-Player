@@ -125,6 +125,7 @@ describe("secondary-session-slow-replace", () => {
     expect(result.swaps[0]).toEqual({ outWordItemId: "w1", inWordItemId: "w5" });
     expect(result.session.todayWordItemIds).toEqual(["w5", "w2", "w3", "w4"]);
     expect(result.session.replacedOutWordItemIds).toEqual(["w1"]);
+    expect(result.session.introducedWordItemIds).toEqual(["w5"]);
     expect(result.session.masteredOnListOrder).toEqual(["w2", "w3"]);
   });
 

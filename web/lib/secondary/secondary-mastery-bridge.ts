@@ -38,6 +38,13 @@ export function secondaryActivityToEvidenceShape(activity: SecondaryEvidenceActi
       evidenceMode: "recognition",
     };
   }
+  if (activity === "learn") {
+    return {
+      activityId: "secondary:learn",
+      responseKind: "match",
+      evidenceMode: "recognition",
+    };
+  }
   return {
     activityId: activity === "cloze" ? "secondary:cloze" : "secondary:spelling",
     responseKind: "type",

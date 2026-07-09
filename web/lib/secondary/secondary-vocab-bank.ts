@@ -1,4 +1,10 @@
 import {
+  getCompleteSecondaryVocabPack,
+  SECONDARY_VOCAB_PACK_ID,
+  SECONDARY_VOCAB_PACK_ITEM_COUNT,
+  SECONDARY_VOCAB_PACK_VERSION,
+} from "@/lib/secondary/secondary-vocab-pack-loader";
+import {
   g7A2MvpClozeTemplates,
   g7A2MvpCoreVocabPack,
 } from "@/lib/secondary/secondary-vocabulary-seed";
@@ -8,7 +14,19 @@ import type {
   SecondaryVocabPack,
 } from "@/lib/secondary/types";
 
+export {
+  SECONDARY_VOCAB_PACK_ID,
+  SECONDARY_VOCAB_PACK_ITEM_COUNT,
+  SECONDARY_VOCAB_PACK_VERSION,
+};
+
+/** Full Grade 7 A2 master pack (240 words). */
 export function getDefaultSecondaryVocabPack(): SecondaryVocabPack {
+  return getCompleteSecondaryVocabPack();
+}
+
+/** Small 10-word fixture for unit tests and local experiments. */
+export function getMvpSecondaryVocabPack(): SecondaryVocabPack {
   return g7A2MvpCoreVocabPack;
 }
 
@@ -41,13 +59,23 @@ export function getAllSecondaryWordItemIds(
   return getAllSecondaryVocabItems(pack).map((item) => item.wordItemId);
 }
 
+export function getSecondaryTopicTitle(
+  topicId: string,
+  pack: SecondaryVocabPack = getDefaultSecondaryVocabPack(),
+): string {
+  return pack.topics.find((topic) => topic.topicId === topicId)?.title ?? topicId;
+}
+
 export function getSecondaryClozeTemplates(): SecondaryClozeTemplate[] {
   return g7A2MvpClozeTemplates;
 }
 
-export function resolveWordItemIdFromLegacyWord(word: string): string | undefined {
+export function resolveWordItemIdFromLegacyWord(
+  word: string,
+  pack: SecondaryVocabPack = getDefaultSecondaryVocabPack(),
+): string | undefined {
   const normalized = word.trim().toLowerCase();
-  return getAllSecondaryVocabItems().find(
+  return getAllSecondaryVocabItems(pack).find(
     (item) =>
       item.word.toLowerCase() === normalized || item.lemma.toLowerCase() === normalized,
   )?.wordItemId;

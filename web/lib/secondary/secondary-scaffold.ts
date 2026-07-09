@@ -3,7 +3,8 @@ export const SECONDARY_MAX_WRONG_ATTEMPTS = 3;
 export type SecondaryWordOutcome =
   | { kind: "pending"; wrongAttempts: number }
   | { kind: "success"; attemptsToSuccess: 1 | 2 | 3 }
-  | { kind: "revealed" };
+  | { kind: "revealed" }
+  | { kind: "submitted" };
 
 export type SecondaryActivityScoreSummary = {
   firstTry: number;
@@ -21,7 +22,11 @@ export function createPendingOutcomes(wordItemIds: string[]): Record<string, Sec
 }
 
 export function isSecondaryWordOutcomeDone(outcome: SecondaryWordOutcome | undefined): boolean {
-  return outcome?.kind === "success" || outcome?.kind === "revealed";
+  return (
+    outcome?.kind === "success" ||
+    outcome?.kind === "revealed" ||
+    outcome?.kind === "submitted"
+  );
 }
 
 export function getSecondaryPendingWordIds(
@@ -55,6 +60,8 @@ export function buildSecondaryActivityScoreSummary(
       else thirdTry += 1;
     } else if (outcome?.kind === "revealed") {
       neededHelp += 1;
+    } else if (outcome?.kind === "submitted") {
+      firstTry += 1;
     }
   }
 

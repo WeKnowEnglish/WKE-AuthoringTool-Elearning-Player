@@ -1,4 +1,5 @@
 import { getSecondaryVocabItemById } from "@/lib/secondary/secondary-vocab-bank";
+import { wordItemHasSentencePromptContent } from "@/lib/secondary/secondary-sentence-prompt";
 import type { SecondaryTodayActivityKey, SecondaryVocabItem } from "@/lib/secondary/types";
 
 export type CanonicalPracticeType =
@@ -50,6 +51,7 @@ const ACTIVITY_PRACTICE_TYPES: Record<SecondaryTodayActivityKey, CanonicalPracti
   match: ["matching", "meaning_choice"],
   cloze: ["cloze_paragraph", "fill_blank"],
   spelling: ["spelling"],
+  sentence: ["sentence_builder"],
 };
 
 export function normalizeSecondaryPracticeType(raw: string): CanonicalPracticeType | null {
@@ -84,7 +86,11 @@ export function wordItemSupportsSecondaryActivity(
 ): boolean {
   const required = getRequiredPracticeTypesForActivity(activity);
   const normalized = normalizeSecondaryPracticeTypes(item.practiceTypes);
-  return required.some((type) => normalized.includes(type));
+  if (!required.some((type) => normalized.includes(type))) return false;
+  if (activity === "sentence") {
+    return wordItemHasSentencePromptContent(item);
+  }
+  return true;
 }
 
 export function filterWordItemIdsForSecondaryActivity(

@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { SecondaryActivitySummary } from "@/components/secondary/SecondaryActivitySummary";
+import {
+  buildSecondaryDailyWordSetFingerprint,
+  wordItemIdsFromSetKey,
+} from "@/lib/secondary/secondary-activity-session-key";
 import { filterWordItemIdsForSecondaryActivity } from "@/lib/secondary/secondary-practice-types";
 import {
   attemptsToSuccessFromWrongAttempts,
@@ -14,9 +18,11 @@ import {
 } from "@/lib/secondary/secondary-scaffold";
 import {
   clearSecondaryTodayActivityCompletion,
+  getSecondaryTodayCompletion,
   setSecondaryTodayActivityCompletion,
 } from "@/lib/secondary/secondary-today-session";
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
+import { useSecondaryActivityResetGuard } from "@/lib/secondary/use-secondary-activity-reset-guard";
 import { getSecondaryVocabItemsByIds } from "@/lib/secondary/secondary-vocab-bank";
 import {
   clearSecondaryLocalActivitySession,
@@ -39,6 +45,8 @@ function shuffleDefinitions(definitions: string[]): string[] {
 
 export function MatchActivity() {
   const { todaySession } = useSecondaryTodaySession();
+  const { shouldSkipInit, noteInitialized, markFinished, clearFinished } =
+    useSecondaryActivityResetGuard();
   const [selectedDefinitions, setSelectedDefinitions] = useState<Record<string, string>>({});
   const [lockedSelections, setLockedSelections] = useState<Record<string, string>>({});
   const [outcomes, setOutcomes] = useState<Record<string, SecondaryWordOutcome>>({});
@@ -46,15 +54,29 @@ export function MatchActivity() {
   const [phase, setPhase] = useState<"practice" | "repair" | "done">("practice");
   const [checked, setChecked] = useState(false);
 
+  const matchDateKey = todaySession?.dateKey ?? "";
+  const matchWordSetKey = todaySession?.allWordItemIds.join(",") ?? "";
+
   const matchWordIds = useMemo(() => {
-    if (!todaySession) return [];
-    return filterWordItemIdsForSecondaryActivity(todaySession.allWordItemIds, "match");
-  }, [todaySession]);
+    if (!matchWordSetKey) return [];
+    return filterWordItemIdsForSecondaryActivity(
+      wordItemIdsFromSetKey(matchWordSetKey),
+      "match",
+    );
+  }, [matchWordSetKey]);
+
+  const matchActivityFingerprint = buildSecondaryDailyWordSetFingerprint(
+    matchDateKey,
+    matchWordIds,
+    "match",
+  );
+
+  const requiredWordIdsKey = matchWordIds.join(",");
 
   const matchItems: SecondaryVocabItem[] = useMemo(() => {
-    if (!matchWordIds.length) return [];
-    return getSecondaryVocabItemsByIds(matchWordIds);
-  }, [matchWordIds]);
+    if (!requiredWordIdsKey) return [];
+    return getSecondaryVocabItemsByIds(wordItemIdsFromSetKey(requiredWordIdsKey));
+  }, [requiredWordIdsKey]);
 
   const requiredWordIds = useMemo(() => matchItems.map((item) => item.wordItemId), [matchItems]);
 
@@ -83,14 +105,31 @@ export function MatchActivity() {
     visibleItems.every((item) => Boolean(selectedDefinitions[item.wordItemId]));
 
   useEffect(() => {
-    if (!todaySession) return;
+    if (!matchActivityFingerprint || !requiredWordIdsKey) return;
+    if (shouldSkipInit(matchActivityFingerprint)) return;
+
+    const items = getSecondaryVocabItemsByIds(wordItemIdsFromSetKey(requiredWordIdsKey));
+    const saved = getSecondaryTodayCompletion(new Date()).match;
+    if (saved?.completed) {
+      markFinished();
+      noteInitialized(matchActivityFingerprint);
+      setSelectedDefinitions({});
+      setLockedSelections({});
+      setOutcomes(createPendingOutcomes(items.map((item) => item.wordItemId)));
+      setPhase("done");
+      setChecked(false);
+      setShuffledDefinitions(shuffleDefinitions(items.map((item) => item.studentMeaningEn)));
+      return;
+    }
+
+    noteInitialized(matchActivityFingerprint);
     setSelectedDefinitions({});
     setLockedSelections({});
-    setOutcomes(createPendingOutcomes(matchItems.map((item) => item.wordItemId)));
+    setOutcomes(createPendingOutcomes(items.map((item) => item.wordItemId)));
     setPhase("practice");
     setChecked(false);
-    setShuffledDefinitions(shuffleDefinitions(matchItems.map((item) => item.studentMeaningEn)));
-  }, [todaySession, matchItems]);
+    setShuffledDefinitions(shuffleDefinitions(items.map((item) => item.studentMeaningEn)));
+  }, [shouldSkipInit, noteInitialized, markFinished, matchActivityFingerprint, requiredWordIdsKey]);
 
   function handleSelectDefinition(wordItemId: string, definition: string) {
     if (isSecondaryWordOutcomeDone(outcomes[wordItemId])) return;
@@ -102,6 +141,7 @@ export function MatchActivity() {
   }
 
   function completeActivity(now: Date) {
+    markFinished();
     setSecondaryTodayActivityCompletion(
       "match",
       {
@@ -160,6 +200,7 @@ export function MatchActivity() {
     const stillPending = getSecondaryPendingWordIds(nextOutcomes, requiredWordIds);
     if (stillPending.length === 0) {
       const summary = buildSecondaryActivityScoreSummary(nextOutcomes, requiredWordIds);
+      markFinished();
       setSecondaryTodayActivityCompletion(
         "match",
         {
@@ -178,6 +219,7 @@ export function MatchActivity() {
 
   function handleRetry() {
     const now = new Date();
+    clearFinished();
     clearSecondaryLocalActivitySession("match", now);
     clearSecondaryTodayActivityCompletion("match", now);
     setSelectedDefinitions({});
@@ -186,6 +228,9 @@ export function MatchActivity() {
     setChecked(false);
     setPhase("practice");
     setShuffledDefinitions(shuffleDefinitions(matchItems.map((item) => item.studentMeaningEn)));
+    if (matchActivityFingerprint) {
+      noteInitialized(matchActivityFingerprint);
+    }
   }
 
   return (

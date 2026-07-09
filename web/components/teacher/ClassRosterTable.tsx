@@ -11,6 +11,7 @@ type Props = {
   classId: string;
   students: ClassRosterStudent[];
   masteryByStudentId: Record<string, TeacherClassStudentMasteryPreview>;
+  pendingSentencesByStudentId: Record<string, number>;
 };
 
 function formatBand(band: string | null): string {
@@ -23,7 +24,12 @@ function formatDate(iso: string): string {
   return Number.isFinite(date.getTime()) ? date.toLocaleString() : iso;
 }
 
-export function ClassRosterTable({ classId, students, masteryByStudentId }: Props) {
+export function ClassRosterTable({
+  classId,
+  students,
+  masteryByStudentId,
+  pendingSentencesByStudentId,
+}: Props) {
   const [isPending, startTransition] = useTransition();
 
   const removeStudent = (studentId: string, displayName: string) => {
@@ -48,6 +54,7 @@ export function ClassRosterTable({ classId, students, masteryByStudentId }: Prop
             <th className="px-4 py-3 font-semibold">Band</th>
             <th className="px-4 py-3 font-semibold">Enrolled</th>
             <th className="px-4 py-3 font-semibold">Signals</th>
+            <th className="px-4 py-3 font-semibold">Writing</th>
             <th className="px-4 py-3 font-semibold">Last active</th>
             <th className="px-4 py-3 font-semibold">Progress</th>
             <th className="px-4 py-3 font-semibold">Actions</th>
@@ -56,7 +63,7 @@ export function ClassRosterTable({ classId, students, masteryByStudentId }: Prop
         <tbody>
           {students.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-4 py-6 text-neutral-600">
+              <td colSpan={9} className="px-4 py-6 text-neutral-600">
                 No students yet. Share the join code so students can enroll.
               </td>
             </tr>
@@ -65,12 +72,16 @@ export function ClassRosterTable({ classId, students, masteryByStudentId }: Prop
               const mastery = masteryByStudentId[student.studentId];
               const dueCount = mastery?.dueReviewCount ?? 0;
               const weakCount = mastery?.weakWordCount ?? 0;
+              const pendingSentenceCount = pendingSentencesByStudentId[student.studentId] ?? 0;
               const progressHref = `/teacher/classes/${classId}/students/${student.studentId}`;
+              const writingHref = `${progressHref}?tab=writing`;
 
               return (
                 <tr
                   key={student.studentId}
-                  className={`border-b last:border-b-0 ${dueCount > 0 ? "bg-amber-50/60" : ""}`}
+                  className={`border-b last:border-b-0 ${
+                    dueCount > 0 || pendingSentenceCount > 0 ? "bg-amber-50/60" : ""
+                  }`}
                 >
                   <td className="px-4 py-3 font-medium">
                     <Link href={progressHref} className="text-blue-700 underline">
@@ -99,6 +110,18 @@ export function ClassRosterTable({ classId, students, masteryByStudentId }: Prop
                       </div>
                     ) : (
                       <span className="text-xs text-neutral-500">No data</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {pendingSentenceCount > 0 ? (
+                      <Link
+                        href={writingHref}
+                        className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 underline"
+                      >
+                        {pendingSentenceCount} pending
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-neutral-500">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-neutral-600">

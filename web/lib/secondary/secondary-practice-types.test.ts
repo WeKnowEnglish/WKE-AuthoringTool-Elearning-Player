@@ -51,4 +51,25 @@ describe("secondary-practice-types", () => {
     const fillBlank = item(["fillBlank"]);
     expect(wordItemSupportsSecondaryActivity(fillBlank, "cloze")).toBe(true);
   });
+
+  it("requires sentence_builder and prompt content for sentence activity", () => {
+    const sentenceReady = {
+      ...item(["sentence_builder"]),
+      exampleSentence: "She is brave.",
+    };
+    expect(wordItemSupportsSecondaryActivity(sentenceReady, "sentence")).toBe(true);
+
+    const missingContent = {
+      ...item(["sentence_builder"]),
+      exampleSentence: "",
+      sentenceFrame: undefined,
+    };
+    expect(wordItemSupportsSecondaryActivity(missingContent, "sentence")).toBe(false);
+
+    const wrongType = {
+      ...item(["spelling"]),
+      exampleSentence: "She is brave.",
+    };
+    expect(wordItemSupportsSecondaryActivity(wrongType, "sentence")).toBe(false);
+  });
 });

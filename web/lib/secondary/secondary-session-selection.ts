@@ -5,6 +5,10 @@ import {
 } from "@/lib/mastery/recommendations";
 import type { StudentMasteryRecord } from "@/lib/mastery/types";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
+import {
+  applyStretchWordToTodayList,
+  enforceTopicSpreadOnTodayList,
+} from "@/lib/secondary/secondary-selection-s2";
 
 export const WARMUP_WORDS = 3;
 export const TARGET_TODAY_WORDS = 10;
@@ -12,6 +16,9 @@ export const DUE_QUOTA = 4;
 export const FRAGILE_QUOTA = 3;
 export const NEW_QUOTA = 2;
 export const REFRESH_QUOTA = 1;
+
+/** Bump when selection rules change (S1=2 quotas only; S2=3 topic spread + stretch). */
+export const SECONDARY_SELECTION_VERSION = 3 as const;
 
 export type SecondaryWordBucket =
   | "due"
@@ -53,7 +60,8 @@ export type SecondarySessionSelectionReason =
   | VocabularyRecommendationReason
   | "new"
   | "refresh"
-  | "cloze_include";
+  | "cloze_include"
+  | "stretch";
 
 export type SecondarySessionSelectionResult = {
   warmUpWordItemIds: string[];
@@ -315,6 +323,20 @@ export function selectSecondaryTodayWords(input: {
       if (bucket && bucket !== "mastered") reasons[id] = reasonFromBucket(bucket);
     }
   }
+
+  enforceTopicSpreadOnTodayList({
+    todayWordItemIds,
+    replacementPoolWordItemIds: selectable.map((candidate) => candidate.wordItemId),
+    picked,
+    reasons,
+  });
+
+  applyStretchWordToTodayList({
+    todayWordItemIds,
+    stretchCandidateWordItemIds: selectable.map((candidate) => candidate.wordItemId),
+    picked,
+    reasons,
+  });
 
   const todaySet = new Set(todayWordItemIds);
   const warmUpSet = new Set(warmUpWordItemIds);

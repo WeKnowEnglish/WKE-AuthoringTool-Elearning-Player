@@ -48,12 +48,15 @@ export function StudentLayoutClient({
       </>
     );
   }
-  const wide = pathname.startsWith("/grammar") || pathname === "/secondary";
+  const wide =
+    pathname.startsWith("/grammar") ||
+    (pathname === "/secondary" || pathname.startsWith("/secondary/"));
   const onSecondary = pathname === "/secondary" || pathname.startsWith("/secondary/");
   return (
     <StudentShell
       wide={wide}
       compact={wide}
+      fullWidth={onSecondary}
       hidePrimaryNav={onSecondary}
       homeHref={onSecondary ? "/secondary" : "/home"}
       classMenu={

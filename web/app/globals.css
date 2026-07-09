@@ -96,6 +96,12 @@
     }
   }
 
+  .secondary-practice {
+    font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+
   /** Lesson editor: header icon pop when a screen persists (keyframes live outside @layer — see file bottom). */
   .teacher-editor-save-icon-pulse {
     animation: teacher-editor-save-icon-pulse 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both;

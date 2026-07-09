@@ -2,6 +2,7 @@ import { learningTargetKey } from "@/lib/mastery/engine";
 import type { StudentMasteryRecord } from "@/lib/mastery/types";
 import {
   buildCandidate,
+  SECONDARY_SELECTION_VERSION,
   type SecondaryWordBucket,
   type SecondaryWordCandidate,
 } from "@/lib/secondary/secondary-session-selection";
@@ -214,7 +215,8 @@ export function reconcileSecondarySessionSlowReplace(input: {
     ...input.session,
     masteredOnListOrder: [...(input.session.masteredOnListOrder ?? [])],
     replacedOutWordItemIds: [...(input.session.replacedOutWordItemIds ?? [])],
-    selectionVersion: 3,
+    introducedWordItemIds: [...(input.session.introducedWordItemIds ?? [])],
+    selectionVersion: SECONDARY_SELECTION_VERSION,
   };
 
   session.masteredOnListOrder = syncMasteredOnListOrder(
@@ -265,6 +267,10 @@ export function reconcileSecondarySessionSlowReplace(input: {
     session.replacedOutWordItemIds = [
       ...(session.replacedOutWordItemIds ?? []),
       outWordItemId,
+    ];
+    session.introducedWordItemIds = [
+      ...(session.introducedWordItemIds ?? []),
+      inWordItemId,
     ];
 
     if (isWordMasteredForSlowReplace(inWordItemId, input.masteryRecords)) {

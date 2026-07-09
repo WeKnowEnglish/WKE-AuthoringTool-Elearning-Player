@@ -5,6 +5,7 @@ import { ClassJoinCodePanel } from "@/components/teacher/ClassJoinCodePanel";
 import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
 import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
 import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
+import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
 
 type Props = {
   params: Promise<{ classId: string }>;
@@ -15,9 +16,10 @@ export default async function TeacherClassDetailPage({ params }: Props) {
   const teacherClass = await getTeacherClass(classId);
   if (!teacherClass) notFound();
 
-  const [roster, masteryOverview] = await Promise.all([
+  const [roster, masteryOverview, pendingSentences] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
+    getPendingSentenceCountsForClass(classId),
   ]);
 
   const masteryByStudentId = Object.fromEntries(
@@ -37,6 +39,16 @@ export default async function TeacherClassDetailPage({ params }: Props) {
           <p className="mt-1 text-sm text-neutral-600">
             {roster.length} student{roster.length === 1 ? "" : "s"}
             {archived ? " · Archived" : ""}
+            {pendingSentences.total > 0 ? (
+              <>
+                {" "}
+                ·{" "}
+                <span className="font-medium text-amber-800">
+                  {pendingSentences.total} sentence{pendingSentences.total === 1 ? "" : "s"} waiting
+                  for review
+                </span>
+              </>
+            ) : null}
           </p>
         </div>
         <ArchiveClassButton classId={classId} archived={archived} />
@@ -54,6 +66,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
           classId={classId}
           students={roster}
           masteryByStudentId={masteryByStudentId}
+          pendingSentencesByStudentId={pendingSentences.byStudentId}
         />
       </section>
     </div>

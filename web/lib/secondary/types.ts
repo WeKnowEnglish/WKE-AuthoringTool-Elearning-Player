@@ -4,6 +4,11 @@ export type SecondaryCefrLevel = "A1" | "A2" | "B1";
 
 export type SecondaryDifficulty = 1 | 2 | 3 | 4 | 5;
 
+export type SecondarySpellingSupport = {
+  syllables: string[];
+  commonMistakes: string[];
+};
+
 export interface SecondaryVocabItem {
   wordItemId: string;
   packId: string;
@@ -25,6 +30,7 @@ export interface SecondaryVocabItem {
   opposites?: string[];
   distractors?: string[];
   sentenceFrame?: string;
+  spellingSupport?: SecondarySpellingSupport;
 }
 
 export interface SecondaryVocabSet {
@@ -62,6 +68,11 @@ export interface SecondaryClozeTemplate {
   paragraph: string;
   blankWordItemIds: string[];
   distractorWords: string[];
+  fillerWordItemIds?: string[];
+  compilerVersion?: 2 | 3;
+  topicId?: string;
+  topicTitle?: string;
+  replayIndex?: number;
 }
 
 export type WordMasteryLevel = 0 | 1 | 2 | 3 | 4 | 5;
@@ -77,8 +88,12 @@ export interface SecondaryWordProgressRecord {
   nextReviewAt?: string;
 }
 
+export type SecondaryTodayActivityKey = "match" | "cloze" | "spelling" | "sentence";
+
+export type SecondaryAttemptActivityType = Exclude<SecondaryTodayActivityKey, "sentence"> | "learn";
+
 export interface SecondaryWordAttempt {
-  activityType: "match" | "cloze" | "spelling";
+  activityType: SecondaryAttemptActivityType;
   wordItemId: string;
   isCorrect: boolean;
   attemptedAt: string;
@@ -95,9 +110,16 @@ export interface SecondaryTodaySession {
   masteredOnListOrder?: string[];
   /** Words evicted from today's list via slow replace (audit / exclude from re-picks). */
   replacedOutWordItemIds?: string[];
+  /** Vocab pack used when this session was built (invalidates on pack bump). */
+  packId?: string;
+  packVersion?: string;
+  /** Snapshot of today's 10 at first build — used for "new today" labels after slow-replace. */
+  initialTodayWordItemIds?: string[];
+  /** Words swapped onto today's list via slow-replace during this session day. */
+  introducedWordItemIds?: string[];
+  /** Why each today word was selected (S2 diagnostics / UI badges). */
+  selectionReasons?: Record<string, string>;
 }
-
-export type SecondaryTodayActivityKey = "match" | "cloze" | "spelling";
 
 export interface SecondaryTodayActivityCompletion {
   completed: true;

@@ -2,6 +2,7 @@ import { getMasteryRecordForTarget } from "@/lib/mastery/local-storage";
 import {
   applyLocalAttemptTransition,
   applyLocalRevealTransition,
+  applyLocalSentenceSubmitTransition,
   createInitialLocalActivityWordState,
   getWordsNeedingRepair,
   isActivityLocallyComplete,
@@ -15,6 +16,8 @@ import {
 } from "@/lib/secondary/local-activity-store";
 import type { LocalActivityWordState } from "@/lib/secondary/local-activity-types";
 import { applySecondaryAttemptToPlatformMastery } from "@/lib/secondary/secondary-mastery-bridge";
+import type { SecondaryAttemptEvidenceMeta } from "@/lib/secondary/secondary-mastery-bridge";
+import type { SecondaryWordOutcome } from "@/lib/secondary/secondary-scaffold";
 import {
   getSecondaryWordDisplaySnapshot,
   getSecondaryWordProgressRecordFromDisplay,
@@ -118,6 +121,10 @@ export function recordSecondaryWordAttemptDetailed(
     return { progress: makeNewWordProgress(attempt.wordItemId), local: null };
   }
 
+  if (attempt.activityType === "learn") {
+    throw new Error("Use recordSecondaryLearnWordAttempt for learn activity evidence.");
+  }
+
   const studentId = resolveSecondaryStudentId();
   const activitySessionId = buildSecondaryActivitySessionId(
     dateKeyFromAttempt(attempt),
@@ -169,6 +176,31 @@ export function recordSecondaryWordAttempt(
   return recordSecondaryWordAttemptDetailed(attempt).progress;
 }
 
+/** Learn-drawer practice — platform mastery only; no daily activity local state. */
+export function recordSecondaryLearnWordAttempt(
+  input: {
+    wordItemId: string;
+    isCorrect: boolean;
+    attemptedAt: string;
+  },
+  evidenceMeta: SecondaryAttemptEvidenceMeta,
+): SecondaryWordProgressRecord {
+  if (typeof window === "undefined") {
+    return makeNewWordProgress(input.wordItemId);
+  }
+
+  return applySecondaryAttemptToPlatformMastery({
+    studentId: resolveSecondaryStudentId(),
+    attempt: {
+      activityType: "learn",
+      wordItemId: input.wordItemId,
+      isCorrect: input.isCorrect,
+      attemptedAt: input.attemptedAt,
+    },
+    evidenceMeta,
+  });
+}
+
 /** Marks a word as session-resolved after max wrong attempts (no success evidence). */
 export function finalizeSecondaryWordAsRevealed(
   activityKey: SecondaryTodayActivityKey,
@@ -202,6 +234,56 @@ export function finalizeSecondaryWordAsRevealed(
   }
 
   upsertLocalActivityWordState(applyLocalRevealTransition(localPrevious, now));
+}
+
+/** Sentence activity — local pending_review only; no platform mastery on submit. */
+export function recordSecondarySentenceSubmittedLocal(
+  wordItemId: string,
+  submittedAt: string,
+): void {
+  if (typeof window === "undefined") return;
+
+  const studentId = resolveSecondaryStudentId();
+  const activitySessionId = buildSecondaryActivitySessionId(
+    getSecondaryTodayDateKey(new Date(submittedAt)),
+    "sentence",
+  );
+  const now = new Date(submittedAt);
+  const display = getSecondaryWordDisplaySnapshot(wordItemId);
+
+  let localPrevious = getLocalActivityWordState(studentId, activitySessionId, wordItemId);
+  if (!localPrevious) {
+    const mastery = getMasteryRecordForTarget({
+      type: "word",
+      key: wordItemId,
+    });
+    localPrevious = createInitialLocalActivityWordState({
+      studentId,
+      activitySessionId,
+      wordItemId,
+      masteryScore01: mastery?.masteryScore ?? display.masteryScore01,
+      legacyMasteryLevel: display.legacyLevel,
+      now,
+    });
+  }
+
+  upsertLocalActivityWordState(applyLocalSentenceSubmitTransition(localPrevious, now));
+}
+
+export function buildSecondarySentenceOutcomesFromLocal(
+  wordItemIds: string[],
+  now = new Date(),
+): Record<string, SecondaryWordOutcome> {
+  const states = getSecondaryLocalActivityStates("sentence", now);
+  return Object.fromEntries(
+    wordItemIds.map((wordItemId) => {
+      const state = states[wordItemId];
+      if (state?.status === "pending_review") {
+        return [wordItemId, { kind: "submitted" as const }];
+      }
+      return [wordItemId, { kind: "pending" as const, wrongAttempts: 0 }];
+    }),
+  );
 }
 
 export function mapMasteryLevelToLabel(level: WordMasteryLevel): string {

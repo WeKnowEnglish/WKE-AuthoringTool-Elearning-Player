@@ -14,6 +14,7 @@ Run after migrations `024` + `025` are applied.
 | # | Check | Command | Result |
 | --- | --- | --- | --- |
 | A1 | Full mastery test suite | `npx vitest run lib/mastery/` | ☑ Pass |
+| A2 | Secondary integration tests | `npx vitest run lib/secondary/` | ☐ |
 
 ---
 
@@ -42,6 +43,8 @@ Run after migrations `024` + `025` are applied.
 | 5 | Device A auth practice | Evidence INSERT + mastery UPSERT | ☐ |
 | 6 | Device B login (cleared local) | Secondary reflects device A | ☐ |
 | 7 | Guest → sign-in migrate | Server has backlog mastery | ☐ |
+| 7b | Device A: complete **secondary Match** | `afterSecondaryActivityCompletion` flushes queue | ☐ |
+| 7c | Device B: `/secondary` after pull | Due/fragile skew + same mastered words | ☐ |
 
 ---
 

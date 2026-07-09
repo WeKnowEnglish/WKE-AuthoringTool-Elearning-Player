@@ -1,91 +1,141 @@
 "use client";
 
-import { clsx } from "clsx";
-import { getSecondaryWordDisplaySnapshot } from "@/lib/secondary/secondary-mastery-display";
-import {
-  mapMasteryLevelToLabel,
-  masteryLevelChipClassName,
-} from "@/lib/secondary/secondary-word-progress";
-import { getSecondaryVocabItemById } from "@/lib/secondary/secondary-vocab-bank";
+import { SecondaryWordChip } from "@/components/secondary/learn/SecondaryWordChip";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
+
+type WordListSectionProps = {
+  title: string;
+  wordItemIds: string[];
+  focusWordItemIds: ReadonlySet<string>;
+  newTodayWordItemIds: ReadonlySet<string>;
+  selectionReasons: Record<string, string>;
+  debugEnabled: boolean;
+  selectedWordItemId: string | null;
+  onWordSelect: (wordItemId: string, trigger: HTMLButtonElement) => void;
+};
+
+function WordListSection({
+  title,
+  wordItemIds,
+  focusWordItemIds,
+  newTodayWordItemIds,
+  selectionReasons,
+  debugEnabled,
+  selectedWordItemId,
+  onWordSelect,
+}: WordListSectionProps) {
+  if (wordItemIds.length === 0) return null;
+
+  return (
+    <div className="border-t-2 border-kid-ink/10 first:border-t-0">
+      <p className={`px-3 pb-1 pt-2 ${secondaryUi.eyebrowMuted}`}>{title}</p>
+      <ol className="space-y-1 px-1.5 pb-1.5">
+        {wordItemIds.map((wordItemId, index) => (
+          <li key={wordItemId}>
+            <SecondaryWordChip
+              wordItemId={wordItemId}
+              layout="sidebar"
+              index={index}
+              isFocusHighlight={focusWordItemIds.has(wordItemId)}
+              isSelected={selectedWordItemId === wordItemId}
+              isNewToday={newTodayWordItemIds.has(wordItemId)}
+              selectionReason={selectionReasons[wordItemId]}
+              debugEnabled={debugEnabled}
+              onSelect={onWordSelect}
+            />
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 type Props = {
   hydrated: boolean;
   hasWordsToday: boolean;
-  /** All of today's words, weakest first. */
-  wordItemIds: string[];
-  /** Subset that gets a focus ring (weakest words). */
-  focusWordItemIds: ReadonlySet<string>;
+  warmUpWordItemIds: string[];
+  focusWordItemIds: string[];
+  focusHighlightWordIds: ReadonlySet<string>;
+  newTodayWordItemIds?: ReadonlySet<string>;
+  selectionReasons?: Record<string, string>;
+  debugEnabled?: boolean;
+  selectedWordItemId?: string | null;
+  onWordSelect?: (wordItemId: string, trigger: HTMLButtonElement) => void;
+  inert?: boolean;
 };
 
 export function SecondaryFocusWordsPanel({
   hydrated,
   hasWordsToday,
-  wordItemIds,
+  warmUpWordItemIds,
   focusWordItemIds,
+  focusHighlightWordIds,
+  newTodayWordItemIds,
+  selectionReasons = {},
+  debugEnabled = false,
+  selectedWordItemId = null,
+  onWordSelect,
+  inert = false,
 }: Props) {
   if (hydrated && !hasWordsToday) return null;
 
+  const newTodaySet = newTodayWordItemIds ?? new Set<string>();
+  const warmUpTitle =
+    warmUpWordItemIds.length > 0
+      ? `Warm-up (${warmUpWordItemIds.length})`
+      : "Warm-up";
+  const focusTitle =
+    focusWordItemIds.length > 0
+      ? `Focus (${focusWordItemIds.length})`
+      : "Focus";
+
   return (
     <aside
-      className="flex w-full shrink-0 flex-col rounded-xl border-2 border-kid-ink bg-white md:w-44 lg:w-48"
+      className="hidden w-full shrink-0 flex-col overflow-hidden rounded-xl border-2 border-kid-ink bg-white lg:flex lg:w-60 xl:w-64"
       aria-label="Today's vocabulary list"
+      {...(inert ? { inert: true } : {})}
     >
-      <div className="shrink-0 border-b-2 border-kid-ink/15 bg-kid-panel px-3 py-2.5">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
-          Today&apos;s words
-        </p>
-        <p className="mt-0.5 text-[0.65rem] font-semibold leading-snug text-kid-ink/60">
-          Weakest at top · ring marks focus
+      <div className="shrink-0 rounded-t-xl border-b-2 border-kid-ink/15 bg-kid-panel px-3 py-2.5">
+        <p className={secondaryUi.eyebrow}>Today&apos;s words</p>
+        <p className={`mt-0.5 ${secondaryUi.captionMuted}`}>
+          Tap a word to open the helper · warm-up first, then focus
         </p>
       </div>
 
-      <div className="px-1.5 py-1">
+      <div>
         {!hydrated ? (
-          <ul className="space-y-1" aria-hidden>
+          <ul className="space-y-1 p-1.5" aria-hidden>
             {Array.from({ length: 10 }).map((_, index) => (
               <li
                 key={index}
-                className="h-8 animate-pulse rounded-lg border border-kid-ink/15 bg-kid-panel/60"
+                className="h-10 animate-pulse rounded-lg border border-kid-ink/15 bg-kid-panel/60"
               />
             ))}
           </ul>
-        ) : wordItemIds.length > 0 ? (
-          <ol className="space-y-1">
-            {wordItemIds.map((wordItemId, index) => {
-              const item = getSecondaryVocabItemById(wordItemId);
-              const snap = getSecondaryWordDisplaySnapshot(wordItemId);
-              const chipClass = masteryLevelChipClassName(snap.legacyLevel);
-              const isFocus = focusWordItemIds.has(wordItemId);
-              return (
-                <li
-                  key={wordItemId}
-                  className={clsx(
-                    "rounded-lg border px-2 py-1",
-                    chipClass,
-                    isFocus && "ring-2 ring-kid-ink ring-offset-1",
-                  )}
-                >
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="shrink-0 tabular-nums text-sm font-extrabold opacity-80">
-                      {index + 1}.
-                    </span>
-                    <span className="min-w-0 text-base font-extrabold leading-tight">
-                      {item?.word ?? wordItemId}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs font-semibold leading-tight opacity-90">
-                    {mapMasteryLevelToLabel(snap.legacyLevel)}
-                    {isFocus ? (
-                      <span className="ml-1.5 font-extrabold uppercase tracking-wide opacity-80">
-                        · Focus
-                      </span>
-                    ) : null}
-                  </p>
-                </li>
-              );
-            })}
-          </ol>
-        ) : null}
+        ) : (
+          <>
+            <WordListSection
+              title={warmUpTitle}
+              wordItemIds={warmUpWordItemIds}
+              focusWordItemIds={focusHighlightWordIds}
+              newTodayWordItemIds={newTodaySet}
+              selectionReasons={selectionReasons}
+              debugEnabled={debugEnabled}
+              selectedWordItemId={selectedWordItemId}
+              onWordSelect={onWordSelect ?? (() => {})}
+            />
+            <WordListSection
+              title={focusTitle}
+              wordItemIds={focusWordItemIds}
+              focusWordItemIds={focusHighlightWordIds}
+              newTodayWordItemIds={newTodaySet}
+              selectionReasons={selectionReasons}
+              debugEnabled={debugEnabled}
+              selectedWordItemId={selectedWordItemId}
+              onWordSelect={onWordSelect ?? (() => {})}
+            />
+          </>
+        )}
       </div>
     </aside>
   );

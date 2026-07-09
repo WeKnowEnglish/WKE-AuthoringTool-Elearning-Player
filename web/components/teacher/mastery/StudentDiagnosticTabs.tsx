@@ -21,14 +21,17 @@ import {
   RubricBadge,
   SignalChip,
 } from "@/components/teacher/mastery/MasteryUiPrimitives";
+import { SentenceReviewTable } from "@/components/teacher/sentence/SentenceReviewTable";
+import type { TeacherSentenceSubmission } from "@/lib/data/teacher-sentence-submissions";
 
-type TabId = "overview" | "vocabulary" | "grammar" | "skills";
+type TabId = "overview" | "vocabulary" | "grammar" | "skills" | "writing";
 
 const TAB_LABELS: Record<TabId, string> = {
   overview: "Overview",
   vocabulary: "Vocabulary",
   grammar: "Grammar",
   skills: "Skills",
+  writing: "Writing",
 };
 
 const VOCAB_FILTERS: Array<{ id: VocabularyFilter; label: string }> = [
@@ -40,12 +43,15 @@ const VOCAB_FILTERS: Array<{ id: VocabularyFilter; label: string }> = [
 ];
 
 type Props = {
+  classId: string;
   diagnostic: TeacherStudentMasteryDiagnostic;
   strands: LearningStrandAssessment[];
   vocabularyRows: VocabularyTableRow[];
   grammarRows: GrammarTableRow[];
   records: StudentMasteryRecord[];
   narrative: TeacherProgressNarrative;
+  sentenceSubmissions: TeacherSentenceSubmission[];
+  initialTab?: TabId;
 };
 
 function StrandMiniCard({ strand }: { strand: LearningStrandAssessment }) {
@@ -319,7 +325,11 @@ function SkillsTab({ strands }: Pick<Props, "strands">) {
 }
 
 export function StudentDiagnosticTabs(props: Props) {
-  const [tab, setTab] = useState<TabId>("overview");
+  const pendingWritingCount = useMemo(
+    () => props.sentenceSubmissions.filter((submission) => submission.status === "submitted").length,
+    [props.sentenceSubmissions],
+  );
+  const [tab, setTab] = useState<TabId>(props.initialTab ?? "overview");
 
   return (
     <div className="space-y-4">
@@ -336,6 +346,11 @@ export function StudentDiagnosticTabs(props: Props) {
             }`}
           >
             {TAB_LABELS[tabId]}
+            {tabId === "writing" && pendingWritingCount > 0 ? (
+              <span className="ml-1.5 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-amber-950">
+                {pendingWritingCount}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -352,6 +367,9 @@ export function StudentDiagnosticTabs(props: Props) {
       )}
       {tab === "grammar" && <GrammarTab grammarRows={props.grammarRows} />}
       {tab === "skills" && <SkillsTab strands={props.strands} />}
+      {tab === "writing" && (
+        <SentenceReviewTable classId={props.classId} submissions={props.sentenceSubmissions} />
+      )}
     </div>
   );
 }

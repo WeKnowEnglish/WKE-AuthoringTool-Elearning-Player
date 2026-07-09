@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StudentDiagnosticTabs } from "@/components/teacher/mastery/StudentDiagnosticTabs";
 import { getStudentDiagnosticBundle } from "@/lib/data/teacher-mastery";
+import { getSentenceSubmissionsForStudent } from "@/lib/data/teacher-sentence-submissions";
 import { formatRelativeDate } from "@/lib/mastery/teacher-mastery-display";
 
 type Props = {
   params: Promise<{ classId: string; studentId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 };
 
 function formatBand(band: string | null): string {
@@ -18,10 +20,14 @@ function formatEnrolledDate(iso: string): string {
   return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : iso;
 }
 
-export default async function TeacherStudentDiagnosticPage({ params }: Props) {
+export default async function TeacherStudentDiagnosticPage({ params, searchParams }: Props) {
   const { classId, studentId } = await params;
+  const { tab } = await searchParams;
   const bundle = await getStudentDiagnosticBundle(classId, studentId);
   if (!bundle) notFound();
+
+  const sentenceSubmissions = await getSentenceSubmissionsForStudent(classId, studentId);
+  const initialTab = tab === "writing" ? "writing" : undefined;
 
   const { teacherClass, student, diagnostic, needsAttention } = bundle;
 
@@ -70,12 +76,15 @@ export default async function TeacherStudentDiagnosticPage({ params }: Props) {
       </header>
 
       <StudentDiagnosticTabs
+        classId={classId}
         diagnostic={bundle.diagnostic}
         strands={bundle.strands}
         vocabularyRows={bundle.vocabularyRows}
         grammarRows={bundle.grammarRows}
         records={bundle.records}
         narrative={bundle.narrative}
+        sentenceSubmissions={sentenceSubmissions}
+        initialTab={initialTab}
       />
     </div>
   );

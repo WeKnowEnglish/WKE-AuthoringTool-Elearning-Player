@@ -20,7 +20,9 @@ export function getRequiredSuccessfulAttempts(_input?: {
 }
 
 export function isLocalWordResolved(state: LocalActivityWordState): boolean {
-  if (state.status === "passed" || state.status === "revealed") return true;
+  if (state.status === "passed" || state.status === "revealed" || state.status === "pending_review") {
+    return true;
+  }
   if (
     (state.status === "repaired" || state.status === "correct") &&
     state.successfulAttempts >= SESSION_RESOLVED_SUCCESSFUL_ATTEMPTS
@@ -64,6 +66,18 @@ export function applyLocalRevealTransition(
   return {
     ...previous,
     status: "revealed",
+    updatedAt: now.toISOString(),
+  };
+}
+
+export function applyLocalSentenceSubmitTransition(
+  previous: LocalActivityWordState,
+  now = new Date(),
+): LocalActivityWordState {
+  return {
+    ...previous,
+    attempts: previous.attempts + 1,
+    status: "pending_review",
     updatedAt: now.toISOString(),
   };
 }

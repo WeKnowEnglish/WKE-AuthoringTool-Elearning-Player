@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyLocalAttemptTransition,
   applyLocalRevealTransition,
+  applyLocalSentenceSubmitTransition,
   createInitialLocalActivityWordState,
   detectWasRepaired,
   getRequiredSuccessfulAttempts,
@@ -93,5 +94,18 @@ describe("local activity transitions", () => {
     expect(revealed.status).toBe("revealed");
     expect(isLocalWordResolved(revealed)).toBe(true);
     expect(isActivityLocallyComplete(["w1"], { w1: revealed })).toBe(true);
+  });
+
+  it("treats pending_review as session-resolved for sentence submit", () => {
+    const initial = createInitialLocalActivityWordState({
+      studentId: "s1",
+      activitySessionId: "2026-07-08:sentence",
+      wordItemId: "w1",
+      masteryScore01: 0.2,
+    });
+    const submitted = applyLocalSentenceSubmitTransition(initial);
+    expect(submitted.status).toBe("pending_review");
+    expect(isLocalWordResolved(submitted)).toBe(true);
+    expect(isActivityLocallyComplete(["w1"], { w1: submitted })).toBe(true);
   });
 });

@@ -14,6 +14,7 @@ export function StudentShell({
   children,
   wide = false,
   compact = false,
+  fullWidth = false,
   hidePrimaryNav = false,
   homeHref = "/home",
   classMenu,
@@ -23,6 +24,8 @@ export function StudentShell({
   wide?: boolean;
   /** Tighter vertical padding for dense infographic pages. */
   compact?: boolean;
+  /** Use the full viewport width (secondary portal). */
+  fullWidth?: boolean;
   /** Hide Learn / Achievements (secondary portal). */
   hidePrimaryNav?: boolean;
   /** Brand link target — secondary pages stay on `/secondary`. */
@@ -91,7 +94,10 @@ export function StudentShell({
       </header>
       <main
         className={
-          wide && compact ?
+          fullWidth ?
+            compact ? "w-full px-4 py-4 sm:px-6"
+            : "w-full px-4 py-6 sm:px-6"
+          : wide && compact ?
             "mx-auto w-full max-w-[90rem] px-4 py-4"
           : wide ?
             "mx-auto w-full max-w-[90rem] px-4 py-6"

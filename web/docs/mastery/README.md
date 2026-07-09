@@ -103,11 +103,11 @@ Related whole-app docs:
 
 | Display projection | `lib/secondary/secondary-mastery-display.ts` | Platform-first Home reads (M5) |
 
-| Secondary record | `lib/secondary/secondary-word-progress.ts` | `recordSecondaryWordAttempt`, completion helpers |
+| Secondary record | `lib/secondary/secondary-word-progress.ts` | `recordSecondaryWordAttempt`, `recordSecondaryLearnWordAttempt`, completion helpers |
 
 | Local repair | `lib/secondary/local-activity-*` | Session overlay (M2); not global SoT |
 
-| Secondary UI | `components/secondary/*` | Match, Cloze, Spelling, Home |
+| Secondary UI | `components/secondary/*` | Match, Cloze, Spelling, Home, Word Helper drawer |
 
 
 
@@ -169,7 +169,13 @@ Historical docs and code live in `C:\Users\brady\ai-tutor\docs\mastery\` and `fr
 
 | T2 Teacher diagnostic UI | Awaiting approval — [PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md](./PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md) |
 
-| **Next** | T2 implement (after approval) |
+| P6A Secondary cloze coverage | Done — [QA_P6A_CLOZE_COVERAGE.md](./QA_P6A_CLOZE_COVERAGE.md) |
+
+| P6B Cloze compiler v2 | Done — [QA_P6B_CLOZE_COMPILER.md](./QA_P6B_CLOZE_COMPILER.md) |
+
+| L5 Secondary learn lane | Done — [QA_L5_SECONDARY_LEARN.md](./QA_L5_SECONDARY_LEARN.md) |
+
+| **Next** | T2 implement (after approval) · P6C content ops |
 
 
 

@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SecondaryActivitySummary } from "@/components/secondary/SecondaryActivitySummary";
+import {
+  buildFallbackActivityOutcomesFromLocal,
+  clearSecondaryActivityAttemptSnapshot,
+  getSecondaryActivityAttemptSnapshot,
+  saveSecondaryActivityAttemptSnapshot,
+} from "@/lib/secondary/secondary-activity-attempt-snapshot";
+import { useSecondaryActivityMode } from "@/lib/secondary/use-secondary-activity-mode";
 import {
   buildSecondaryDailyWordSetFingerprint,
   wordItemIdsFromSetKey,
@@ -23,7 +30,9 @@ import {
 } from "@/lib/secondary/secondary-today-session";
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import { useSecondaryActivityResetGuard } from "@/lib/secondary/use-secondary-activity-reset-guard";
+import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 import { getSecondaryVocabItemsByIds } from "@/lib/secondary/secondary-vocab-bank";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 import {
   clearSecondaryLocalActivitySession,
   finalizeSecondaryWordAsRevealed,
@@ -45,8 +54,11 @@ function shuffleDefinitions(definitions: string[]): string[] {
 
 export function MatchActivity() {
   const { todaySession } = useSecondaryTodaySession();
+  const { isReviewMode, isRetry } = useSecondaryActivityMode();
+  const studentId = resolveSecondaryStudentId();
   const { shouldSkipInit, noteInitialized, markFinished, clearFinished } =
     useSecondaryActivityResetGuard();
+  const retryHandledRef = useRef(false);
   const [selectedDefinitions, setSelectedDefinitions] = useState<Record<string, string>>({});
   const [lockedSelections, setLockedSelections] = useState<Record<string, string>>({});
   const [outcomes, setOutcomes] = useState<Record<string, SecondaryWordOutcome>>({});
@@ -101,27 +113,49 @@ export function MatchActivity() {
 
   const canCheck =
     phase !== "done" &&
+    !isReviewMode &&
     visibleItems.length > 0 &&
     visibleItems.every((item) => Boolean(selectedDefinitions[item.wordItemId]));
 
-  useEffect(() => {
-    if (!matchActivityFingerprint || !requiredWordIdsKey) return;
-    if (shouldSkipInit(matchActivityFingerprint)) return;
+  function persistMatchSnapshot(
+    nextOutcomes: Record<string, SecondaryWordOutcome>,
+    nextLocked: Record<string, string>,
+    percent: number,
+    completedAt: string,
+  ) {
+    if (!studentId || !matchDateKey || requiredWordIds.length === 0) return;
 
-    const items = getSecondaryVocabItemsByIds(wordItemIdsFromSetKey(requiredWordIdsKey));
-    const saved = getSecondaryTodayCompletion(new Date()).match;
-    if (saved?.completed) {
-      markFinished();
+    saveSecondaryActivityAttemptSnapshot({
+      version: 1,
+      activityKey: "match",
+      studentId,
+      dateKey: matchDateKey,
+      completedAt,
+      percent,
+      wordItemIds: requiredWordIds,
+      outcomes: nextOutcomes,
+      match: { lockedSelections: nextLocked },
+    });
+  }
+
+  function restoreDoneState(
+    nextOutcomes: Record<string, SecondaryWordOutcome>,
+    nextLocked: Record<string, string>,
+    items: SecondaryVocabItem[],
+  ) {
+    markFinished();
+    if (matchActivityFingerprint) {
       noteInitialized(matchActivityFingerprint);
-      setSelectedDefinitions({});
-      setLockedSelections({});
-      setOutcomes(createPendingOutcomes(items.map((item) => item.wordItemId)));
-      setPhase("done");
-      setChecked(false);
-      setShuffledDefinitions(shuffleDefinitions(items.map((item) => item.studentMeaningEn)));
-      return;
     }
+    setSelectedDefinitions({});
+    setLockedSelections(nextLocked);
+    setOutcomes(nextOutcomes);
+    setPhase("done");
+    setChecked(false);
+    setShuffledDefinitions(shuffleDefinitions(items.map((item) => item.studentMeaningEn)));
+  }
 
+  function resetMatchPractice(items: SecondaryVocabItem[]) {
     noteInitialized(matchActivityFingerprint);
     setSelectedDefinitions({});
     setLockedSelections({});
@@ -129,7 +163,94 @@ export function MatchActivity() {
     setPhase("practice");
     setChecked(false);
     setShuffledDefinitions(shuffleDefinitions(items.map((item) => item.studentMeaningEn)));
-  }, [shouldSkipInit, noteInitialized, markFinished, matchActivityFingerprint, requiredWordIdsKey]);
+  }
+
+  useEffect(() => {
+    if (!matchActivityFingerprint || !requiredWordIdsKey) return;
+    if (shouldSkipInit(matchActivityFingerprint) && !isRetry) return;
+
+    const items = getSecondaryVocabItemsByIds(wordItemIdsFromSetKey(requiredWordIdsKey));
+
+    if (isRetry && !retryHandledRef.current) {
+      retryHandledRef.current = true;
+      clearFinished();
+      const now = new Date();
+      clearSecondaryLocalActivitySession("match", now);
+      clearSecondaryTodayActivityCompletion("match", now);
+      if (studentId && matchDateKey) {
+        clearSecondaryActivityAttemptSnapshot("match", studentId, matchDateKey);
+      }
+      resetMatchPractice(items);
+      return;
+    }
+
+    const snapshot =
+      studentId && matchDateKey
+        ? getSecondaryActivityAttemptSnapshot("match", studentId, matchDateKey)
+        : null;
+
+    if (isReviewMode) {
+      if (snapshot) {
+        restoreDoneState(snapshot.outcomes, snapshot.match?.lockedSelections ?? {}, items);
+        return;
+      }
+
+      const fallbackOutcomes =
+        studentId && matchDateKey
+          ? buildFallbackActivityOutcomesFromLocal(
+              "match",
+              studentId,
+              matchDateKey,
+              items.map((item) => item.wordItemId),
+            )
+          : null;
+      if (fallbackOutcomes) {
+        const locked = Object.fromEntries(
+          items.map((item) => [item.wordItemId, item.studentMeaningEn]),
+        );
+        restoreDoneState(fallbackOutcomes, locked, items);
+        return;
+      }
+    }
+
+    const saved = getSecondaryTodayCompletion(new Date()).match;
+    if (saved?.completed) {
+      if (snapshot) {
+        restoreDoneState(snapshot.outcomes, snapshot.match?.lockedSelections ?? {}, items);
+        return;
+      }
+
+      const fallbackOutcomes =
+        studentId && matchDateKey
+          ? buildFallbackActivityOutcomesFromLocal(
+              "match",
+              studentId,
+              matchDateKey,
+              items.map((item) => item.wordItemId),
+            )
+          : null;
+      if (fallbackOutcomes) {
+        const locked = Object.fromEntries(
+          items.map((item) => [item.wordItemId, item.studentMeaningEn]),
+        );
+        restoreDoneState(fallbackOutcomes, locked, items);
+        return;
+      }
+    }
+
+    resetMatchPractice(items);
+  }, [
+    shouldSkipInit,
+    noteInitialized,
+    markFinished,
+    clearFinished,
+    matchActivityFingerprint,
+    requiredWordIdsKey,
+    isReviewMode,
+    isRetry,
+    studentId,
+    matchDateKey,
+  ]);
 
   function handleSelectDefinition(wordItemId: string, definition: string) {
     if (isSecondaryWordOutcomeDone(outcomes[wordItemId])) return;
@@ -137,21 +258,6 @@ export function MatchActivity() {
       ...current,
       [wordItemId]: definition,
     }));
-    setChecked(false);
-  }
-
-  function completeActivity(now: Date) {
-    markFinished();
-    setSecondaryTodayActivityCompletion(
-      "match",
-      {
-        completed: true,
-        percent: scoreSummary.percentUnderstood,
-        completedAt: now.toISOString(),
-      },
-      now,
-    );
-    setPhase("done");
     setChecked(false);
   }
 
@@ -210,6 +316,12 @@ export function MatchActivity() {
         },
         now,
       );
+      persistMatchSnapshot(
+        nextOutcomes,
+        nextLocked,
+        summary.percentUnderstood,
+        now.toISOString(),
+      );
       setPhase("done");
       return;
     }
@@ -222,6 +334,9 @@ export function MatchActivity() {
     clearFinished();
     clearSecondaryLocalActivitySession("match", now);
     clearSecondaryTodayActivityCompletion("match", now);
+    if (studentId && matchDateKey) {
+      clearSecondaryActivityAttemptSnapshot("match", studentId, matchDateKey);
+    }
     setSelectedDefinitions({});
     setLockedSelections({});
     setOutcomes(createPendingOutcomes(requiredWordIds));
@@ -235,22 +350,22 @@ export function MatchActivity() {
 
   return (
     <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-      <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
-        Lower Secondary Activity
-      </p>
-      <h2 className="text-2xl font-extrabold text-kid-ink">Match The Word To The Definition</h2>
-      <p className="text-sm font-semibold text-kid-ink/80">
-        {phase === "done"
+      <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
+      <h2 className={secondaryUi.pageTitle}>Match The Word To The Definition</h2>
+      <p className={secondaryUi.bodyMuted}>
+        {isReviewMode && phase === "done"
+          ? "Reviewing your last attempt."
+          : phase === "done"
           ? "Here is how you did today."
           : phase === "repair"
             ? "Fix the words you missed. You have up to three tries per word."
             : "Select one definition for each word, then check your answers."}
       </p>
 
-      {!todaySession ? <p className="text-sm font-semibold text-kid-ink/70">Loading today&apos;s practice...</p> : null}
+      {!todaySession ? <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p> : null}
 
       {todaySession && matchItems.length === 0 ? (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+        <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 p-3 ${secondaryUi.body} text-amber-900`}>
           No match practice is available in today&apos;s set.
         </div>
       ) : null}
@@ -267,9 +382,9 @@ export function MatchActivity() {
             const isRevealed = outcome?.kind === "revealed";
             return (
               <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={item.wordItemId}>
-                <span className="text-sm font-bold text-kid-ink">{item.word}</span>
+                <span className={secondaryUi.word}>{item.word}</span>
                 <div
-                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold ${
+                  className={`rounded-lg border-2 px-3 py-2.5 ${secondaryUi.body} ${
                     isSuccess
                       ? "border-green-500 bg-green-50 text-green-900"
                       : "border-red-500 bg-red-50 text-red-900"
@@ -277,12 +392,12 @@ export function MatchActivity() {
                 >
                   {lockedSelections[item.wordItemId] ?? item.studentMeaningEn}
                   {isSuccess && outcome.attemptsToSuccess > 1 ? (
-                    <span className="ml-2 text-xs font-bold text-green-800/80">
+                    <span className={`ml-2 ${secondaryUi.caption} font-bold text-green-800/80`}>
                       (try {outcome.attemptsToSuccess})
                     </span>
                   ) : null}
                   {isRevealed ? (
-                    <span className="ml-2 text-xs font-bold text-red-800/80">(needed help)</span>
+                    <span className={`ml-2 ${secondaryUi.caption} font-bold text-red-800/80`}>(needed help)</span>
                   ) : null}
                 </div>
               </div>
@@ -291,7 +406,7 @@ export function MatchActivity() {
         </div>
       ) : null}
 
-      {todaySession && visibleItems.length > 0 && phase !== "done" ? (
+      {todaySession && visibleItems.length > 0 && phase !== "done" && !isReviewMode ? (
         <div className="space-y-3">
           {visibleItems.map((item) => {
             const outcome = outcomes[item.wordItemId];
@@ -300,18 +415,18 @@ export function MatchActivity() {
             return (
               <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={item.wordItemId}>
                 <div>
-                  <label className="text-sm font-bold text-kid-ink" htmlFor={`match-${item.wordItemId}`}>
+                  <label className={secondaryUi.word} htmlFor={`match-${item.wordItemId}`}>
                     {item.word}
                   </label>
                   {pending && pending.wrongAttempts > 0 ? (
-                    <p className="text-xs font-semibold text-red-800/80">
+                    <p className={`${secondaryUi.caption} text-red-800/80`}>
                       Attempt {pending.wrongAttempts + 1} of {SECONDARY_MAX_WRONG_ATTEMPTS}
                     </p>
                   ) : null}
                 </div>
                 <select
-                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold text-kid-ink ${
-                    showWrong ? "border-red-500 bg-red-50" : "border-kid-ink bg-white"
+                  className={`${secondaryUi.select} ${
+                    showWrong ? "border-red-500 bg-red-50" : ""
                   }`}
                   id={`match-${item.wordItemId}`}
                   onChange={(event) => handleSelectDefinition(item.wordItemId, event.target.value)}
@@ -334,7 +449,7 @@ export function MatchActivity() {
         <div className="flex flex-wrap items-center gap-2">
           {phase !== "done" ? (
             <button
-              className="rounded-lg border-2 border-kid-ink bg-kid-accent px-3 py-2 text-sm font-extrabold text-kid-ink disabled:cursor-not-allowed disabled:opacity-60"
+              className={secondaryUi.btnPrimary}
               disabled={!canCheck}
               onClick={handleCheckAnswers}
               type="button"
@@ -342,24 +457,17 @@ export function MatchActivity() {
               {phase === "repair" ? "Check repairs" : "Check answers"}
             </button>
           ) : null}
-          <button
-            className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-            onClick={handleRetry}
-            type="button"
-          >
+          <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
             Try again
           </button>
-          <Link
-            className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-            href="/secondary"
-          >
+          <Link className={secondaryUi.btnSecondary} href="/secondary">
             Back to vocabulary home
           </Link>
         </div>
       ) : null}
 
       {phase === "repair" && pendingWordIds.length > 0 ? (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-bold text-amber-900">
+        <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 p-3 ${secondaryUi.body} font-bold text-amber-900`}>
           Keep going · {pendingWordIds.length} word{pendingWordIds.length === 1 ? "" : "s"} still to
           fix
         </div>

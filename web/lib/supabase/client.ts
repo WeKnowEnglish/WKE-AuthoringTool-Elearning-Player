@@ -1,8 +1,9 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 /**
- * Browser-only (teacher sign-in). Uses the public anon / publishable key.
- * Never use the service-role key here. Student pages do not import this file.
+ * Browser Supabase client (student + teacher sign-in).
+ * Uses the public anon / publishable key.
+ * Never use the service-role key here.
  */
 export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
@@ -12,5 +13,10 @@ export function createClient() {
       "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY for browser auth.",
     );
   }
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    auth: {
+      // React Strict Mode can orphan navigator.locks holders; avoid steal cascades in dev.
+      lock: async (_name, _acquireTimeout, fn) => fn(),
+    },
+  });
 }

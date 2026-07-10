@@ -1,6 +1,7 @@
 "use client";
 
 import { SecondaryWordChip } from "@/components/secondary/learn/SecondaryWordChip";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 
 type Props = {
   hydrated: boolean;
@@ -10,6 +11,7 @@ type Props = {
   focusHighlightWordIds: ReadonlySet<string>;
   newTodayWordItemIds?: ReadonlySet<string>;
   selectionReasons?: Record<string, string>;
+  imageUrlsByWordId?: Record<string, string | null>;
   debugEnabled?: boolean;
   selectedWordItemId?: string | null;
   onWordSelect?: (wordItemId: string, trigger: HTMLButtonElement) => void;
@@ -22,6 +24,7 @@ function ChipSection({
   focusHighlightWordIds,
   newTodayWordItemIds,
   selectionReasons,
+  imageUrlsByWordId = {},
   debugEnabled,
   selectedWordItemId,
   onWordSelect,
@@ -31,6 +34,7 @@ function ChipSection({
   focusHighlightWordIds: ReadonlySet<string>;
   newTodayWordItemIds: ReadonlySet<string>;
   selectionReasons: Record<string, string>;
+  imageUrlsByWordId?: Record<string, string | null>;
   debugEnabled: boolean;
   selectedWordItemId: string | null;
   onWordSelect: (wordItemId: string, trigger: HTMLButtonElement) => void;
@@ -39,9 +43,7 @@ function ChipSection({
 
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <span className="shrink-0 text-[0.6rem] font-extrabold uppercase tracking-wide text-kid-ink/50">
-        {title}
-      </span>
+      <span className={`shrink-0 ${secondaryUi.eyebrowMuted}`}>{title}</span>
       <div className="flex gap-2">
         {wordItemIds.map((wordItemId) => (
           <SecondaryWordChip
@@ -54,6 +56,7 @@ function ChipSection({
             selectionReason={selectionReasons[wordItemId]}
             debugEnabled={debugEnabled}
             showProgressDots
+            imageUrl={imageUrlsByWordId[wordItemId] ?? null}
             onSelect={onWordSelect}
           />
         ))}
@@ -70,6 +73,7 @@ export function SecondaryFocusWordRow({
   focusHighlightWordIds,
   newTodayWordItemIds,
   selectionReasons = {},
+  imageUrlsByWordId = {},
   debugEnabled = false,
   selectedWordItemId = null,
   onWordSelect,
@@ -87,12 +91,7 @@ export function SecondaryFocusWordRow({
       {...(inert ? { inert: true } : {})}
     >
       <div className="rounded-t-xl border-b-2 border-kid-ink/15 bg-kid-panel px-3 py-2">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
-          Today&apos;s words
-        </p>
-        <p className="mt-0.5 text-[0.65rem] font-semibold text-kid-ink/60">
-          Tap a word for the helper · warm-up then focus
-        </p>
+        <p className={secondaryUi.eyebrow}>Today&apos;s words</p>
       </div>
 
       {!hydrated ? (
@@ -100,7 +99,7 @@ export function SecondaryFocusWordRow({
           {Array.from({ length: 5 }).map((_, index) => (
             <div
               key={index}
-              className="h-16 min-w-[7.75rem] shrink-0 animate-pulse rounded-lg border border-kid-ink/15 bg-kid-panel/60"
+              className="h-20 min-w-[8.5rem] shrink-0 animate-pulse rounded-lg border border-kid-ink/15 bg-kid-panel/60"
             />
           ))}
         </div>
@@ -112,6 +111,7 @@ export function SecondaryFocusWordRow({
             focusHighlightWordIds={focusHighlightWordIds}
             newTodayWordItemIds={newTodaySet}
             selectionReasons={selectionReasons}
+            imageUrlsByWordId={imageUrlsByWordId}
             debugEnabled={debugEnabled}
             selectedWordItemId={selectedWordItemId}
             onWordSelect={handleSelect}
@@ -122,6 +122,7 @@ export function SecondaryFocusWordRow({
             focusHighlightWordIds={focusHighlightWordIds}
             newTodayWordItemIds={newTodaySet}
             selectionReasons={selectionReasons}
+            imageUrlsByWordId={imageUrlsByWordId}
             debugEnabled={debugEnabled}
             selectedWordItemId={selectedWordItemId}
             onWordSelect={handleSelect}

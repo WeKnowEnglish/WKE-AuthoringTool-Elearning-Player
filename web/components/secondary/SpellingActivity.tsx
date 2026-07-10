@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SecondaryActivitySummary } from "@/components/secondary/SecondaryActivitySummary";
+import {
+  buildFallbackActivityOutcomesFromLocal,
+  clearSecondaryActivityAttemptSnapshot,
+  getSecondaryActivityAttemptSnapshot,
+  saveSecondaryActivityAttemptSnapshot,
+} from "@/lib/secondary/secondary-activity-attempt-snapshot";
+import { useSecondaryActivityMode } from "@/lib/secondary/use-secondary-activity-mode";
 import { isSecondarySpellingAnswerCorrect } from "@/lib/secondary/secondary-activity-answers";
 import {
   buildSecondaryDailyWordSetFingerprint,
@@ -24,6 +31,7 @@ import {
 } from "@/lib/secondary/secondary-today-session";
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import { useSecondaryActivityResetGuard } from "@/lib/secondary/use-secondary-activity-reset-guard";
+import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 import { getSecondaryVocabItemsByIds } from "@/lib/secondary/secondary-vocab-bank";
 import {
   clearSecondaryLocalActivitySession,
@@ -32,13 +40,17 @@ import {
 } from "@/lib/secondary/secondary-word-progress";
 import type { SecondaryWordOutcome } from "@/lib/secondary/secondary-scaffold";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 
 const SPELLING_CORRECT_PAUSE_MS = 750;
 
 export function SpellingActivity() {
   const { todaySession } = useSecondaryTodaySession();
+  const { isReviewMode, isRetry } = useSecondaryActivityMode();
+  const studentId = resolveSecondaryStudentId();
   const { shouldSkipInit, noteInitialized, markFinished, clearFinished } =
     useSecondaryActivityResetGuard();
+  const retryHandledRef = useRef(false);
   const [queue, setQueue] = useState<string[]>([]);
   const [value, setValue] = useState("");
   const [outcomes, setOutcomes] = useState<Record<string, SecondaryWordOutcome>>({});
@@ -95,23 +107,38 @@ export function SpellingActivity() {
     [outcomes, requiredWordIds],
   );
 
-  useEffect(() => {
-    if (!spellingActivityFingerprint || !requiredWordIdsKey) return;
-    if (shouldSkipInit(spellingActivityFingerprint)) return;
+  function persistSpellingSnapshot(
+    nextOutcomes: Record<string, SecondaryWordOutcome>,
+    percent: number,
+    completedAt: string,
+  ) {
+    if (!studentId || !spellingDateKey || requiredWordIds.length === 0) return;
 
-    const ids = wordItemIdsFromSetKey(requiredWordIdsKey);
-    const saved = getSecondaryTodayCompletion(new Date()).spelling;
-    if (saved?.completed) {
-      markFinished();
+    saveSecondaryActivityAttemptSnapshot({
+      version: 1,
+      activityKey: "spelling",
+      studentId,
+      dateKey: spellingDateKey,
+      completedAt,
+      percent,
+      wordItemIds: requiredWordIds,
+      outcomes: nextOutcomes,
+    });
+  }
+
+  function restoreDoneState(nextOutcomes: Record<string, SecondaryWordOutcome>) {
+    markFinished();
+    if (spellingActivityFingerprint) {
       noteInitialized(spellingActivityFingerprint);
-      setQueue([]);
-      setValue("");
-      setOutcomes(createPendingOutcomes(ids));
-      setFeedback(null);
-      setIsComplete(true);
-      return;
     }
+    setQueue([]);
+    setValue("");
+    setOutcomes(nextOutcomes);
+    setFeedback(null);
+    setIsComplete(true);
+  }
 
+  function resetSpellingPractice(ids: string[]) {
     noteInitialized(spellingActivityFingerprint);
     if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
     setQueue([...ids]);
@@ -119,7 +146,77 @@ export function SpellingActivity() {
     setOutcomes(createPendingOutcomes(ids));
     setFeedback(null);
     setIsComplete(false);
-  }, [shouldSkipInit, noteInitialized, markFinished, spellingActivityFingerprint, requiredWordIdsKey]);
+  }
+
+  useEffect(() => {
+    if (!spellingActivityFingerprint || !requiredWordIdsKey) return;
+    if (shouldSkipInit(spellingActivityFingerprint) && !isRetry) return;
+
+    const ids = wordItemIdsFromSetKey(requiredWordIdsKey);
+
+    if (isRetry && !retryHandledRef.current) {
+      retryHandledRef.current = true;
+      clearFinished();
+      const now = new Date();
+      clearSecondaryLocalActivitySession("spelling", now);
+      clearSecondaryTodayActivityCompletion("spelling", now);
+      if (studentId && spellingDateKey) {
+        clearSecondaryActivityAttemptSnapshot("spelling", studentId, spellingDateKey);
+      }
+      resetSpellingPractice(ids);
+      return;
+    }
+
+    const snapshot =
+      studentId && spellingDateKey
+        ? getSecondaryActivityAttemptSnapshot("spelling", studentId, spellingDateKey)
+        : null;
+
+    if (isReviewMode && snapshot) {
+      restoreDoneState(snapshot.outcomes);
+      return;
+    }
+
+    if (isReviewMode) {
+      const fallbackOutcomes =
+        studentId && spellingDateKey
+          ? buildFallbackActivityOutcomesFromLocal("spelling", studentId, spellingDateKey, ids)
+          : null;
+      if (fallbackOutcomes) {
+        restoreDoneState(fallbackOutcomes);
+        return;
+      }
+    }
+
+    const saved = getSecondaryTodayCompletion(new Date()).spelling;
+    if (saved?.completed) {
+      if (snapshot) {
+        restoreDoneState(snapshot.outcomes);
+        return;
+      }
+
+      const fallbackOutcomes =
+        studentId && spellingDateKey
+          ? buildFallbackActivityOutcomesFromLocal("spelling", studentId, spellingDateKey, ids)
+          : null;
+      if (fallbackOutcomes) {
+        restoreDoneState(fallbackOutcomes);
+        return;
+      }
+    }
+
+    resetSpellingPractice(ids);
+  }, [
+    shouldSkipInit,
+    noteInitialized,
+    markFinished,
+    spellingActivityFingerprint,
+    requiredWordIdsKey,
+    isReviewMode,
+    isRetry,
+    studentId,
+    spellingDateKey,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -160,6 +257,7 @@ export function SpellingActivity() {
         },
         now,
       );
+      persistSpellingSnapshot(nextOutcomes, summary.percentUnderstood, now.toISOString());
       setQueue([]);
       setIsComplete(true);
       setFeedback(null);
@@ -286,6 +384,9 @@ export function SpellingActivity() {
     clearFinished();
     clearSecondaryLocalActivitySession("spelling", now);
     clearSecondaryTodayActivityCompletion("spelling", now);
+    if (studentId && spellingDateKey) {
+      clearSecondaryActivityAttemptSnapshot("spelling", studentId, spellingDateKey);
+    }
     setQueue([...requiredWordIds]);
     setValue("");
     setOutcomes(createPendingOutcomes(requiredWordIds));
@@ -299,7 +400,7 @@ export function SpellingActivity() {
   if (!todaySession) {
     return (
       <section className="space-y-3 rounded-xl border-2 border-kid-ink bg-white p-5">
-        <p className="text-sm font-semibold text-kid-ink/80">Loading today&apos;s practice...</p>
+        <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
   }
@@ -307,18 +408,12 @@ export function SpellingActivity() {
   if (requiredWordIds.length === 0) {
     return (
       <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
-          Lower Secondary Activity
-        </p>
-        <h2 className="text-2xl font-extrabold text-kid-ink">Spelling Activity</h2>
-        <p className="text-sm font-semibold text-kid-ink/80">
+        <h2 className={secondaryUi.pageTitle}>Spelling Activity</h2>
+        <p className={secondaryUi.bodyMuted}>
           No spelling prompts are available in today&apos;s set.
         </p>
         <div className="flex items-center gap-2">
-          <Link
-            className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-            href="/secondary"
-          >
+          <Link className={secondaryUi.btnSecondary} href="/secondary">
             Back to vocabulary home
           </Link>
         </div>
@@ -345,15 +440,12 @@ export function SpellingActivity() {
 
   return (
     <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-      <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
-        Lower Secondary Activity
-      </p>
-      <h2 className="text-2xl font-extrabold text-kid-ink">Spelling Activity</h2>
-      <p className="text-sm font-semibold text-kid-ink/80">
-        {isComplete
-          ? "Here is how you did today."
-          : "Type the correct word and press Enter. You have up to three tries before we show the answer."}
-      </p>
+      <h2 className={secondaryUi.pageTitle}>Spelling Activity</h2>
+      {isComplete ? (
+        <p className={secondaryUi.bodyMuted}>
+          {isReviewMode ? "Reviewing your last attempt." : "Here is how you did today."}
+        </p>
+      ) : null}
 
       {isComplete ? (
         <>
@@ -367,7 +459,7 @@ export function SpellingActivity() {
               return (
                 <div
                   key={wordItemId}
-                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold ${
+                  className={`rounded-lg border-2 px-3 py-2.5 ${secondaryUi.body} ${
                     isSuccess
                       ? "border-green-500 bg-green-50 text-green-900"
                       : "border-red-500 bg-red-50 text-red-900"
@@ -375,12 +467,12 @@ export function SpellingActivity() {
                 >
                   <span className="font-extrabold">{item?.word}</span>
                   {isSuccess && outcome.attemptsToSuccess > 1 ? (
-                    <span className="ml-2 text-xs font-bold text-green-800/80">
+                    <span className={`ml-2 ${secondaryUi.caption} font-bold text-green-800/80`}>
                       (try {outcome.attemptsToSuccess})
                     </span>
                   ) : null}
                   {isRevealed ? (
-                    <span className="ml-2 text-xs font-bold text-red-800/80">(needed help)</span>
+                    <span className={`ml-2 ${secondaryUi.caption} font-bold text-red-800/80`}>(needed help)</span>
                   ) : null}
                 </div>
               );
@@ -389,52 +481,63 @@ export function SpellingActivity() {
         </>
       ) : currentItem ? (
         <div className="space-y-3 rounded-lg border border-kid-ink/20 bg-kid-panel p-4">
-          <p className="text-xs font-extrabold text-kid-ink/70">
+          <p className={`${secondaryUi.caption} font-extrabold text-kid-ink/70`}>
             Word {Math.min(queuePosition, requiredWordIds.length)} of {requiredWordIds.length}
             {currentPending && currentPending.wrongAttempts > 0
               ? ` · Attempt ${currentPending.wrongAttempts + 1} of ${SECONDARY_MAX_WRONG_ATTEMPTS}`
               : ""}
           </p>
-          <p className="text-sm font-semibold text-kid-ink">
-            Spell the word that means: {currentItem.studentMeaningEn}
-          </p>
+          <div>
+            <p className={secondaryUi.bodyLarge}>Read the sentence and write the word that means:</p>
+            <p
+              className={`mt-2 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-kid-ink`}
+            >
+              &ldquo;{currentItem.studentMeaningEn}&rdquo;
+            </p>
+          </div>
           {currentItem.exampleSentence ? (
-            <p className="text-xs font-bold text-kid-ink/70">Example: {currentItem.exampleSentence}</p>
+            <p
+              className={`mt-4 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-kid-ink`}
+            >
+              {currentItem.exampleSentence}
+            </p>
           ) : null}
           {syllableHint ? (
-            <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-950">
-              Syllable hint: <span className="font-mono text-sm font-extrabold">{syllableHint}</span>
+            <p className={`rounded-md border-2 border-sky-200 bg-sky-50 px-3 py-2 ${secondaryUi.caption} text-sky-950`}>
+              Syllable hint: <span className="font-mono text-lg font-extrabold">{syllableHint}</span>
             </p>
           ) : null}
           {commonMistakes && commonMistakes.length > 0 ? (
-            <p className="text-xs font-semibold text-amber-900">
+            <p className={`${secondaryUi.caption} text-amber-900`}>
               Watch out for: <span className="font-extrabold">{commonMistakes.join(", ")}</span>
             </p>
           ) : null}
           {feedback === "revealed" ? (
-            <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-sm font-bold text-red-900">
+            <div className={`rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 ${secondaryUi.body} font-bold text-red-900`}>
               Answer: {currentItem.word}
             </div>
           ) : (
-            <input
-              ref={inputRef}
-              className={`w-full rounded-lg border-2 bg-white px-3 py-2 text-sm font-semibold text-kid-ink ${
-                feedback === "incorrect"
-                  ? "border-red-500 bg-red-50"
-                  : feedback === "correct"
-                    ? "border-green-500 bg-green-50 text-green-900"
-                    : "border-kid-ink"
-              }`}
-              disabled={feedback !== null && feedback !== "incorrect"}
-              onChange={(event) => setValue(event.target.value)}
-              onKeyDown={handleInputKeyDown}
-              value={value}
-            />
+            <div className="flex justify-center">
+              <input
+                ref={inputRef}
+                className={`w-full max-w-sm text-center ${secondaryUi.inputField} ${
+                  feedback === "incorrect"
+                    ? "border-red-500 bg-red-50"
+                    : feedback === "correct"
+                      ? "border-green-500 bg-green-50 text-green-900"
+                      : "border-kid-ink"
+                }`}
+                disabled={feedback !== null && feedback !== "incorrect"}
+                onChange={(event) => setValue(event.target.value)}
+                onKeyDown={handleInputKeyDown}
+                value={value}
+              />
+            </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
             {feedback === null || feedback === "incorrect" ? (
               <button
-                className="rounded-lg border-2 border-kid-ink bg-kid-accent px-3 py-2 text-sm font-extrabold text-kid-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className={secondaryUi.btnPrimary}
                 disabled={feedback === "incorrect" ? !value.trim() : !value.trim()}
                 onClick={handleSubmitAnswer}
                 type="button"
@@ -443,22 +546,18 @@ export function SpellingActivity() {
               </button>
             ) : null}
             {feedback === "revealed" ? (
-              <button
-                className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-                onClick={handleNext}
-                type="button"
-              >
+              <button className={secondaryUi.btnSecondary} onClick={handleNext} type="button">
                 Next
               </button>
             ) : null}
           </div>
           {feedback === "correct" ? (
-            <p className="rounded-md border border-green-300 bg-green-50 p-2 text-sm font-bold text-green-900">
+            <p className={`rounded-md border-2 border-green-300 bg-green-50 p-2 ${secondaryUi.body} font-bold text-green-900`}>
               Correct.
             </p>
           ) : null}
           {feedback === "incorrect" ? (
-            <p className="rounded-md border border-red-300 bg-red-50 p-2 text-sm font-bold text-red-900">
+            <p className={`rounded-md border-2 border-red-300 bg-red-50 p-2 ${secondaryUi.body} font-bold text-red-900`}>
               Not quite — try once more.
             </p>
           ) : null}
@@ -466,17 +565,10 @@ export function SpellingActivity() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-          onClick={handleRetry}
-          type="button"
-        >
+        <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
           Try again
         </button>
-        <Link
-          className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-          href="/secondary"
-        >
+        <Link className={secondaryUi.btnSecondary} href="/secondary">
           Back to vocabulary home
         </Link>
       </div>

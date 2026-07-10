@@ -3,15 +3,26 @@
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
 import { getSecondaryWordDisplaySnapshot } from "@/lib/secondary/secondary-mastery-display";
 import { dailyMasteryGoalProgressFromSession } from "@/lib/secondary/secondary-daily-mastery-goal";
-import { compileSecondaryClozeFromWordIds } from "@/lib/secondary/secondary-cloze-compiler";
-import { countSecondaryActivityEligibleWords } from "@/lib/secondary/secondary-practice-types";
-import { getSecondarySentenceEligibleWordIds } from "@/lib/secondary/secondary-sentence-word-set";
+import {
+  buildSecondaryActivityAvailabilityCounts,
+  isSecondaryActivityAvailableToday,
+  resolveSecondaryNextActivityKey,
+  SECONDARY_ACTIVITY_HREF,
+} from "@/lib/secondary/secondary-study-activity";
 import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import { SecondaryVocabProgressCard } from "@/components/secondary/SecondaryVocabProgressCard";
+import { SecondaryActivityCardActions } from "@/components/secondary/SecondaryActivityCardActions";
+import { SecondaryHomeIcon } from "@/components/secondary/SecondaryHomeIcon";
+import {
+  getSecondaryActivityIconUrl,
+  getSecondaryHomeCompleteIconUrl,
+  getSecondaryHomeNextIconUrl,
+} from "@/lib/secondary/secondary-activity-icons";
+import { hasSecondaryActivityAttempt } from "@/lib/secondary/secondary-activity-attempt-snapshot";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import type { SecondaryTodayActivityKey } from "@/lib/secondary/types";
 
 const ACTIVITIES = [
@@ -49,63 +60,33 @@ const ACTIVITIES = [
   },
 ];
 
-const ACTIVITY_HREF: Record<SecondaryTodayActivityKey, string> = {
-  match: "/secondary/match",
-  cloze: "/secondary/cloze",
-  spelling: "/secondary/spelling",
-  sentence: "/secondary/sentence",
-};
-
 export function SecondaryHome() {
   const { todaySession, completion, hydrated, sessionRevision } = useSecondaryTodaySession();
   const { displayName, ready: nameReady } = useStudentDisplayName();
-  const [showListUpdated, setShowListUpdated] = useState(false);
-  const introducedCountRef = useRef(0);
 
   const sessionWordIds = todaySession?.allWordItemIds ?? [];
-  useEffect(() => {
-    const introducedCount = todaySession?.introducedWordItemIds?.length ?? 0;
-    if (hydrated && introducedCount > introducedCountRef.current) {
-      setShowListUpdated(true);
-    }
-    introducedCountRef.current = introducedCount;
-  }, [hydrated, sessionRevision, todaySession?.introducedWordItemIds]);
+  const studentId = resolveSecondaryStudentId();
+  const dateKey = todaySession?.dateKey ?? "";
 
-  useEffect(() => {
-    if (!showListUpdated) return;
-    const timer = window.setTimeout(() => setShowListUpdated(false), 6000);
-    return () => window.clearTimeout(timer);
-  }, [showListUpdated]);
-
-  const matchCountToday = useMemo(
-    () => countSecondaryActivityEligibleWords(sessionWordIds, "match"),
-    [sessionWordIds],
+  const studyCtx = useMemo(
+    () => ({
+      sessionWordIds,
+      dateKey,
+      studentId,
+      completion,
+    }),
+    [sessionWordIds, dateKey, studentId, completion],
   );
-  const spellingCountToday = useMemo(
-    () => countSecondaryActivityEligibleWords(sessionWordIds, "spelling"),
-    [sessionWordIds],
+
+  const availabilityCounts = useMemo(
+    () => buildSecondaryActivityAvailabilityCounts(studyCtx),
+    [studyCtx],
   );
-  const sentenceCountToday = useMemo(() => getSecondarySentenceEligibleWordIds().length, []);
-  const clozeCountToday = useMemo(() => {
-    if (!todaySession) return 0;
-    const compiled = compileSecondaryClozeFromWordIds({
-      wordItemIds: sessionWordIds,
-      studentId: resolveSecondaryStudentId(),
-      dateKey: todaySession.dateKey,
-    });
-    return compiled?.blankWordItemIds.length ?? 0;
-  }, [todaySession, sessionWordIds]);
 
-  const hasWordsToday = sessionWordIds.length > 0;
+  const hasWordsToday = availabilityCounts.hasWordsToday;
 
-  const isActivityAvailableToday = (activityKey: SecondaryTodayActivityKey) => {
-    if (activityKey === "sentence") return sentenceCountToday > 0;
-    if (!hasWordsToday) return false;
-    if (activityKey === "match") return matchCountToday > 0;
-    if (activityKey === "cloze") return clozeCountToday > 0;
-    if (activityKey === "spelling") return spellingCountToday > 0;
-    return false;
-  };
+  const isActivityAvailableToday = (activityKey: SecondaryTodayActivityKey) =>
+    isSecondaryActivityAvailableToday(activityKey, availabilityCounts);
 
   const dailyGoalProgress = useMemo(() => {
     if (!todaySession) {
@@ -114,14 +95,7 @@ export function SecondaryHome() {
     return dailyMasteryGoalProgressFromSession(todaySession, getSecondaryWordDisplaySnapshot);
   }, [todaySession, sessionRevision]);
 
-  const nextActivityKey = (() => {
-    const order: SecondaryTodayActivityKey[] = ["match", "cloze", "spelling", "sentence"];
-    for (const key of order) {
-      if (!isActivityAvailableToday(key)) continue;
-      if (!completion[key]) return key;
-    }
-    return null;
-  })();
+  const nextActivityKey = resolveSecondaryNextActivityKey(studyCtx);
 
   const allDoneToday =
     hydrated &&
@@ -155,7 +129,7 @@ export function SecondaryHome() {
                   {nextActivityKey ? (
                     <Link
                       className="underline decoration-2 underline-offset-2"
-                      href={ACTIVITY_HREF[nextActivityKey]}
+                      href={SECONDARY_ACTIVITY_HREF[nextActivityKey]}
                     >
                       {nextActivityLabel}
                     </Link>
@@ -168,23 +142,9 @@ export function SecondaryHome() {
                 <> Check back when today&apos;s words are ready.</>
               ) : null}
             </h2>
-            {hasWordsToday ? (
-              <p className={`mt-2 ${secondaryUi.bodyMuted}`}>
-                Master {dailyGoalProgress.goal} focus words today — warm-up words drop off once mastered.
-              </p>
-            ) : null}
           </>
         )}
       </header>
-
-      {showListUpdated ? (
-        <div
-          className={`rounded-xl border-2 border-sky-800 bg-sky-50 px-4 py-3 ${secondaryUi.body} text-sky-950`}
-          role="status"
-        >
-          Your word list updated — check the sidebar for new focus words.
-        </div>
-      ) : null}
 
       <div className="space-y-4">
         {!hydrated ? (
@@ -215,25 +175,30 @@ export function SecondaryHome() {
 
             {nextActivityKey ? (
               <div className="flex flex-col rounded-xl border-2 border-kid-ink bg-kid-panel p-4">
-                <div className="flex-1">
+                <div className="flex flex-1 items-start gap-3">
+                  <SecondaryHomeIcon src={getSecondaryHomeNextIconUrl()} size="md" />
                   <p className={secondaryUi.cardTitle}>
                     Next up:{" "}
                     {ACTIVITIES.find((a) => a.key === nextActivityKey)?.shortTitle ?? nextActivityKey}
                   </p>
-                  <p className={`mt-1 ${secondaryUi.captionMuted}`}>
-                    Recommended order keeps practice measurable day to day.
-                  </p>
                 </div>
-                <Link className={`mt-3 inline-flex w-fit ${secondaryUi.btnPrimary}`} href={ACTIVITY_HREF[nextActivityKey]}>
+                <Link
+                  className={`mt-3 inline-flex w-fit ${secondaryUi.btnPrimary}`}
+                  href={SECONDARY_ACTIVITY_HREF[nextActivityKey]}
+                >
                   Continue
                 </Link>
               </div>
             ) : allDoneToday ? (
               <div className="flex flex-col rounded-xl border-2 border-emerald-800 bg-emerald-50 p-4">
-                <p className={`${secondaryUi.cardTitle} text-emerald-950`}>Today&apos;s path is complete</p>
-                <p className={`mt-1 flex-1 ${secondaryUi.bodyMuted} text-emerald-900/80`}>
+                <div className="flex items-start gap-3">
+                  <SecondaryHomeIcon src={getSecondaryHomeCompleteIconUrl()} size="md" />
+                  <p className={`${secondaryUi.cardTitle} text-emerald-950`}>
+                    Today&apos;s path is complete
+                  </p>
+                </div>
+                <p className={`mt-2 flex-1 ${secondaryUi.bodyMuted} text-emerald-900/80`}>
                   Nice work. Replay any activity to keep building, or come back tomorrow for a fresh set.
-                  Keep mastering focus words to rotate new ones onto your list.
                 </p>
               </div>
             ) : null}
@@ -244,6 +209,12 @@ export function SecondaryHome() {
           {ACTIVITIES.map((activity) => {
             const canOpen = isActivityAvailableToday(activity.key);
             const activityCompletion = completion[activity.key];
+            const hasAttempt = hasSecondaryActivityAttempt(
+              activity.key,
+              studentId,
+              dateKey,
+              Boolean(activityCompletion?.completed),
+            );
             const isNext = nextActivityKey === activity.key;
             const status = activityCompletion
               ? activity.key === "sentence"
@@ -268,16 +239,22 @@ export function SecondaryHome() {
                 }`}
                 key={activity.href}
               >
-                <h3 className={secondaryUi.cardTitle}>{activity.title}</h3>
-                <p className={`mt-1 ${secondaryUi.captionMuted}`}>{activity.description}</p>
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="flex items-start gap-3">
+                  <SecondaryHomeIcon src={getSecondaryActivityIconUrl(activity.key)} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className={secondaryUi.cardTitle}>{activity.title}</h3>
+                    <p className={`mt-1 ${secondaryUi.captionMuted}`}>{activity.description}</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-2">
                   <span className={`${secondaryUi.caption} font-bold`}>{status}</span>
                   {canOpen ? (
-                    <Link href={activity.href} className={`${secondaryUi.btnSecondary} !px-3 !py-1.5 !text-sm`}>
-                      Open
-                    </Link>
+                    <SecondaryActivityCardActions
+                      activityKey={activity.key}
+                      hasAttempt={hasAttempt}
+                    />
                   ) : (
-                    <span className={`rounded-md bg-slate-300 px-3 py-1.5 ${secondaryUi.caption} font-bold text-slate-700`}>
+                    <span className={`inline-flex rounded-md bg-slate-300 px-3 py-1.5 ${secondaryUi.caption} font-bold text-slate-700`}>
                       Locked
                     </span>
                   )}

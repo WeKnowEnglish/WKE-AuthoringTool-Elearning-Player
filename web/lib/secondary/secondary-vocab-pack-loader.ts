@@ -39,6 +39,8 @@ type RawVocabItem = {
     syllables?: string[];
     commonMistakes?: string[];
   };
+  imageUrl?: string;
+  mediaHint?: string;
 };
 
 type RawVocabSet = {
@@ -141,6 +143,8 @@ export function normalizeSecondaryVocabItem(raw: RawVocabItem): SecondaryVocabIt
     distractors: raw.distractors ? [...raw.distractors] : undefined,
     sentenceFrame: raw.sentenceFrame,
     spellingSupport: normalizeSpellingSupport(raw.spellingSupport),
+    imageUrl: raw.imageUrl?.trim() || undefined,
+    mediaHint: raw.mediaHint?.trim() || undefined,
   };
 }
 

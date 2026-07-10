@@ -1,11 +1,13 @@
 import { buildSecondaryLearnClozePreview } from "@/lib/secondary/secondary-learn-content";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
 
 type Props = {
   item: SecondaryVocabItem;
+  centered?: boolean;
 };
 
-export function SecondaryWordClozePreviewCard({ item }: Props) {
+export function SecondaryWordClozePreviewCard({ item, centered: _centered = false }: Props) {
   const preview = buildSecondaryLearnClozePreview(item);
   if (!preview) return null;
 
@@ -13,8 +15,8 @@ export function SecondaryWordClozePreviewCard({ item }: Props) {
 
   return (
     <section className="rounded-xl border-2 border-kid-ink/20 bg-kid-panel/40 p-4">
-      <h3 className="text-sm font-extrabold text-kid-ink">Cloze</h3>
-      <p className="mt-2 text-sm font-semibold leading-relaxed text-kid-ink/90">
+      <h3 className={secondaryUi.cardTitle}>Cloze</h3>
+      <p className={`mt-2 ${secondaryUi.bodyLarge}`}>
         {parts.map((part, index) => (
           <span key={index}>
             {part}

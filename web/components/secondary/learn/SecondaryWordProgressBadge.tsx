@@ -4,21 +4,23 @@ import {
   getSecondaryWordLearnStatusDisplay,
   secondaryWordLearnStatusChipClass,
 } from "@/lib/secondary/secondary-learn-display";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 import type { SecondaryWordDisplaySnapshot } from "@/lib/secondary/secondary-mastery-display";
 
 type Props = {
   snapshot: SecondaryWordDisplaySnapshot;
   isFocus?: boolean;
+  centered?: boolean;
 };
 
-export function SecondaryWordProgressBadge({ snapshot, isFocus }: Props) {
+export function SecondaryWordProgressBadge({ snapshot, isFocus, centered = false }: Props) {
   const display = getSecondaryWordLearnStatusDisplay(snapshot, { isFocus });
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={clsx("flex flex-wrap items-center gap-2", centered && "justify-center")}>
       <span
         className={clsx(
-          "text-xs font-extrabold uppercase tracking-wide",
+          secondaryUi.tag,
           secondaryWordLearnStatusChipClass(display.status),
         )}
       >

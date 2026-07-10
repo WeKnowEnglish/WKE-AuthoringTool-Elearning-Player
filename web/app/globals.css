@@ -22,6 +22,21 @@
   --kid-success-ring: rgba(22, 163, 74, 0.55);
   --kid-border-strong: var(--kid-ink);
   --kid-shadow: var(--kid-ink);
+
+  /* Landing page — scoped tokens (not used in app shells) */
+  --landing-page-bg: #ffffff;
+  --landing-primary-bg: #fff7ed;
+  --landing-primary-border: #fb923c;
+  --landing-primary-title: #ea580c;
+  --landing-primary-cta-from: #f97316;
+  --landing-primary-cta-to: #fbbf24;
+  --landing-secondary-bg: #eff6ff;
+  --landing-secondary-border: #60a5fa;
+  --landing-secondary-title: #2563eb;
+  --landing-secondary-cta-from: #3b82f6;
+  --landing-secondary-cta-to: #2563eb;
+  --landing-feature-border: #e5e7eb;
+  --landing-body-muted: #64748b;
 }
 
 @theme inline {
@@ -43,6 +58,22 @@
 }
 
 @layer utilities {
+  .landing-cta-primary {
+    background: linear-gradient(
+      to right,
+      var(--landing-primary-cta-from),
+      var(--landing-primary-cta-to)
+    );
+  }
+
+  .landing-cta-secondary {
+    background: linear-gradient(
+      to right,
+      var(--landing-secondary-cta-from),
+      var(--landing-secondary-cta-to)
+    );
+  }
+
   .kid-feedback-glow-correct {
     box-shadow:
       0 0 0 3px var(--kid-success-ring),
@@ -96,10 +127,68 @@
     }
   }
 
+  .scrollbar-reveal {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-reveal:hover,
+  .scrollbar-reveal.is-scrolling {
+    scrollbar-color: rgb(21 38 104 / 0.2) transparent;
+  }
+
+  .scrollbar-reveal::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-reveal::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-reveal::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+  }
+
+  .scrollbar-reveal:hover::-webkit-scrollbar-thumb,
+  .scrollbar-reveal.is-scrolling::-webkit-scrollbar-thumb {
+    background: rgb(21 38 104 / 0.2);
+  }
+
+  /* Tray seamless mode: scrollbar overlays the gutter so tab bridge can fill to the card edge. */
+  .scrollbar-reveal--seamless {
+    margin-right: -4px;
+    padding-right: 4px;
+  }
+
+  .scrollbar-reveal--seamless::-webkit-scrollbar {
+    width: 4px;
+  }
+
   .secondary-practice {
     font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
     font-size: 1.0625rem;
     line-height: 1.55;
+  }
+
+  @keyframes secondary-syllable-speak-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  .secondary-syllable-speak-pulse {
+    animation: secondary-syllable-speak-pulse 0.85s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .secondary-syllable-speak-pulse {
+      animation: none;
+    }
   }
 
   /** Lesson editor: header icon pop when a screen persists (keyframes live outside @layer — see file bottom). */

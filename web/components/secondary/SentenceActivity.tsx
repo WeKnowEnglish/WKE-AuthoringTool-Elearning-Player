@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  clearSecondaryActivityAttemptSnapshot,
+  getSecondaryActivityAttemptSnapshot,
+  saveSecondaryActivityAttemptSnapshot,
+} from "@/lib/secondary/secondary-activity-attempt-snapshot";
+import { useSecondaryActivityMode } from "@/lib/secondary/use-secondary-activity-mode";
+import {
   submitSecondarySentenceSubmission,
   resubmitSecondarySentenceSubmission,
   getMySentenceSubmissionsForDate,
@@ -44,6 +50,7 @@ import {
 } from "@/lib/secondary/secondary-word-progress";
 import type { SecondaryWordOutcome } from "@/lib/secondary/secondary-scaffold";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 
 function studentSentenceStatusLabel(
   status: StudentSentenceSubmissionView["status"] | undefined,
@@ -77,9 +84,11 @@ const SENTENCE_QUALITY_HINT =
 
 export function SentenceActivity() {
   const { todaySession } = useSecondaryTodaySession();
+  const { isReviewMode, isRetry } = useSecondaryActivityMode();
   const studentId = resolveSecondaryStudentId();
   const { shouldSkipInit, noteInitialized, markFinished, clearFinished } =
     useSecondaryActivityResetGuard();
+  const retryHandledRef = useRef(false);
   const [selectedWordIds, setSelectedWordIds] = useState<string[]>([]);
   const [wordSetReady, setWordSetReady] = useState(false);
   const [runEpoch, setRunEpoch] = useState(0);
@@ -97,6 +106,7 @@ export function SentenceActivity() {
   const outcomesRef = useRef(outcomes);
   outcomesRef.current = outcomes;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const submittedSentencesRef = useRef<Record<string, string>>({});
 
   const sentenceDateKey = todaySession?.dateKey ?? "";
   const sentenceWordSetKey = selectedWordIds.join(",");
@@ -147,6 +157,77 @@ export function SentenceActivity() {
     [outcomes, requiredWordIds],
   );
 
+  function persistSentenceSnapshot(
+    nextOutcomes: Record<string, SecondaryWordOutcome>,
+    percent: number,
+    completedAt: string,
+    sentences: Record<string, string>,
+  ) {
+    if (!studentId || !sentenceDateKey || requiredWordIds.length === 0) return;
+
+    saveSecondaryActivityAttemptSnapshot({
+      version: 1,
+      activityKey: "sentence",
+      studentId,
+      dateKey: sentenceDateKey,
+      completedAt,
+      percent,
+      wordItemIds: requiredWordIds,
+      outcomes: nextOutcomes,
+      sentence: { sentences },
+    });
+  }
+
+  function buildSentenceMapFromViews(): Record<string, string> {
+    const sentences: Record<string, string> = { ...submittedSentencesRef.current };
+    for (const wordItemId of requiredWordIds) {
+      const text = submissionByWordId.get(wordItemId)?.sentenceText?.trim();
+      if (text) sentences[wordItemId] = text;
+    }
+    return sentences;
+  }
+
+  function handleRetry() {
+    const now = new Date();
+    const run = resolveSecondarySentenceWordRun({
+      studentId,
+      dateKey: sentenceDateKey,
+      forceNewRun: true,
+    });
+    clearFinished();
+    clearSecondaryLocalActivitySession("sentence", now);
+    clearSecondaryTodayActivityCompletion("sentence", now);
+    if (studentId && sentenceDateKey) {
+      clearSecondaryActivityAttemptSnapshot("sentence", studentId, sentenceDateKey);
+    }
+    submittedSentencesRef.current = {};
+    setSelectedWordIds(run.wordItemIds);
+    setRunEpoch((current) => current + 1);
+    setQueue([...run.wordItemIds]);
+    setValue("");
+    setOutcomes(
+      Object.fromEntries(
+        run.wordItemIds.map((wordItemId) => [
+          wordItemId,
+          { kind: "pending" as const, wrongAttempts: 0 },
+        ]),
+      ),
+    );
+    setFeedback(null);
+    setErrorMessage(null);
+    setIsComplete(false);
+    setResubmitWordId(null);
+    setResubmitValue("");
+    const nextFingerprint = buildSecondaryDailyWordSetFingerprint(
+      sentenceDateKey,
+      run.wordItemIds,
+      "sentence",
+    );
+    if (nextFingerprint) {
+      noteInitialized(nextFingerprint);
+    }
+  }
+
   async function refreshSubmissionViews() {
     if (!sentenceDateKey) return;
     const rows = await getMySentenceSubmissionsForDate(sentenceDateKey);
@@ -178,18 +259,41 @@ export function SentenceActivity() {
 
   useEffect(() => {
     if (!wordSetReady || !sentenceActivityFingerprint || !requiredWordIdsKey) return;
-    if (shouldSkipInit(sentenceActivityFingerprint)) return;
+    if (shouldSkipInit(sentenceActivityFingerprint) && !isRetry) return;
 
     const ids = wordItemIdsFromSetKey(requiredWordIdsKey);
+
+    if (isRetry && !retryHandledRef.current) {
+      retryHandledRef.current = true;
+      handleRetry();
+      return;
+    }
+
+    const snapshot =
+      studentId && sentenceDateKey
+        ? getSecondaryActivityAttemptSnapshot("sentence", studentId, sentenceDateKey)
+        : null;
     const saved = getSecondaryTodayCompletion(new Date()).sentence;
     const restoredOutcomes = buildSecondarySentenceOutcomesFromLocal(ids);
+
+    if (isReviewMode && snapshot) {
+      markFinished();
+      noteInitialized(sentenceActivityFingerprint);
+      setQueue([]);
+      setValue("");
+      setOutcomes(snapshot.outcomes);
+      setFeedback(null);
+      setErrorMessage(null);
+      setIsComplete(true);
+      return;
+    }
 
     if (saved?.completed) {
       markFinished();
       noteInitialized(sentenceActivityFingerprint);
       setQueue([]);
       setValue("");
-      setOutcomes(restoredOutcomes);
+      setOutcomes(snapshot?.outcomes ?? restoredOutcomes);
       setFeedback(null);
       setErrorMessage(null);
       setIsComplete(true);
@@ -211,6 +315,10 @@ export function SentenceActivity() {
     sentenceActivityFingerprint,
     requiredWordIdsKey,
     wordSetReady,
+    isReviewMode,
+    isRetry,
+    studentId,
+    sentenceDateKey,
   ]);
 
   useEffect(() => {
@@ -232,6 +340,12 @@ export function SentenceActivity() {
           completedAt: now.toISOString(),
         },
         now,
+      );
+      persistSentenceSnapshot(
+        nextOutcomes,
+        summary.percentUnderstood,
+        now.toISOString(),
+        buildSentenceMapFromViews(),
       );
       setQueue([]);
       setIsComplete(true);
@@ -283,6 +397,7 @@ export function SentenceActivity() {
     }
 
     recordSecondarySentenceSubmittedLocal(currentItem.wordItemId, attemptedAt);
+    submittedSentencesRef.current[currentWordItemId] = value;
 
     const nextOutcomes = {
       ...outcomes,
@@ -341,47 +456,10 @@ export function SentenceActivity() {
     window.setTimeout(() => setFeedback(null), 700);
   }
 
-  function handleRetry() {
-    const now = new Date();
-    const run = resolveSecondarySentenceWordRun({
-      studentId,
-      dateKey: sentenceDateKey,
-      forceNewRun: true,
-    });
-    clearFinished();
-    clearSecondaryLocalActivitySession("sentence", now);
-    clearSecondaryTodayActivityCompletion("sentence", now);
-    setSelectedWordIds(run.wordItemIds);
-    setRunEpoch((current) => current + 1);
-    setQueue([...run.wordItemIds]);
-    setValue("");
-    setOutcomes(
-      Object.fromEntries(
-        run.wordItemIds.map((wordItemId) => [
-          wordItemId,
-          { kind: "pending" as const, wrongAttempts: 0 },
-        ]),
-      ),
-    );
-    setFeedback(null);
-    setErrorMessage(null);
-    setIsComplete(false);
-    setResubmitWordId(null);
-    setResubmitValue("");
-    const nextFingerprint = buildSecondaryDailyWordSetFingerprint(
-      sentenceDateKey,
-      run.wordItemIds,
-      "sentence",
-    );
-    if (nextFingerprint) {
-      noteInitialized(nextFingerprint);
-    }
-  }
-
   if (!todaySession || !wordSetReady) {
     return (
       <section className="space-y-3 rounded-xl border-2 border-kid-ink bg-white p-5">
-        <p className="text-sm font-semibold text-kid-ink/80">Loading today&apos;s practice...</p>
+        <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
   }
@@ -389,17 +467,12 @@ export function SentenceActivity() {
   if (requiredWordIds.length === 0) {
     return (
       <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
-          Lower Secondary Activity
-        </p>
-        <h2 className="text-2xl font-extrabold text-kid-ink">Write a Sentence</h2>
-        <p className="text-sm font-semibold text-kid-ink/80">
+        <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
+        <h2 className={secondaryUi.pageTitle}>Write a Sentence</h2>
+        <p className={secondaryUi.bodyMuted}>
           No sentence prompts are available in the vocabulary list yet.
         </p>
-        <Link
-          className="inline-flex rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-          href="/secondary"
-        >
+        <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary">
           Back to vocabulary home
         </Link>
       </section>
@@ -413,12 +486,12 @@ export function SentenceActivity() {
 
   return (
     <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-      <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/70">
-        Lower Secondary Activity
-      </p>
-      <h2 className="text-2xl font-extrabold text-kid-ink">Write a Sentence</h2>
-      <p className="text-sm font-semibold text-kid-ink/80">
-        {isComplete
+      <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
+      <h2 className={secondaryUi.pageTitle}>Write a Sentence</h2>
+      <p className={secondaryUi.bodyMuted}>
+        {isReviewMode && isComplete
+          ? "Reviewing your last attempt."
+          : isComplete
           ? revisionsNeededCount > 0
             ? "Your teacher asked you to revise some sentences below."
             : "Your sentences were sent to your teacher for review."
@@ -443,23 +516,23 @@ export function SentenceActivity() {
               return (
                 <div
                   key={wordItemId}
-                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold ${status.className}`}
+                  className={`rounded-lg border-2 px-3 py-2.5 ${secondaryUi.body} ${status.className}`}
                 >
                   <span className="font-extrabold">{item?.word}</span>
-                  <span className="ml-2 text-xs font-bold opacity-80">({status.label})</span>
+                  <span className={`ml-2 ${secondaryUi.caption} font-bold opacity-80`}>({status.label})</span>
                   {submission?.status === "needs_revision" && submission.teacherComment ? (
-                    <p className="mt-1 text-xs font-semibold">
+                    <p className={`mt-1 ${secondaryUi.caption}`}>
                       Teacher note: {submission.teacherComment}
                     </p>
                   ) : null}
                   {submission?.sentenceText && submission.status !== "needs_revision" ? (
-                    <p className="mt-1 text-xs font-semibold opacity-80">
+                    <p className={`mt-1 ${secondaryUi.caption} opacity-80`}>
                       Your sentence: {submission.sentenceText}
                     </p>
                   ) : null}
-                  {canResubmit && !isResubmittingThis ? (
+                  {canResubmit && !isResubmittingThis && !isReviewMode ? (
                     <button
-                      className="mt-2 rounded-lg border-2 border-amber-700 bg-white px-3 py-1.5 text-xs font-extrabold text-amber-950"
+                      className={`mt-2 ${secondaryUi.btnSecondary} !px-3 !py-1.5 !text-sm border-amber-700 text-amber-950`}
                       onClick={() => {
                         setResubmitWordId(wordItemId);
                         setResubmitValue("");
@@ -473,18 +546,18 @@ export function SentenceActivity() {
                   ) : null}
                   {isResubmittingThis && prompt ? (
                     <div className="mt-2 space-y-2">
-                      <p className="text-xs font-semibold">{prompt.instruction}</p>
+                      <p className={secondaryUi.caption}>{prompt.instruction}</p>
                       <textarea
-                        className="min-h-[5rem] w-full rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-semibold text-kid-ink disabled:opacity-60"
+                        className={`min-h-[5rem] w-full ${secondaryUi.inputField} disabled:opacity-60`}
                         disabled={isResubmitting}
                         onChange={(event) => setResubmitValue(event.target.value)}
                         placeholder={`Write a revised sentence with "${prompt.targetWord}"…`}
                         value={resubmitValue}
                       />
-                      <p className="text-xs font-semibold text-kid-ink/65">{SENTENCE_QUALITY_HINT}</p>
+                      <p className={secondaryUi.captionMuted}>{SENTENCE_QUALITY_HINT}</p>
                       <div className="flex flex-wrap gap-2">
                         <button
-                          className="rounded-lg border-2 border-kid-ink bg-kid-accent px-3 py-1.5 text-xs font-extrabold text-kid-ink disabled:cursor-not-allowed disabled:opacity-60"
+                          className={`${secondaryUi.btnPrimary} !px-3 !py-1.5 !text-sm`}
                           disabled={!resubmitValue.trim() || isResubmitting}
                           onClick={() => void handleResubmitSentence(wordItemId)}
                           type="button"
@@ -492,7 +565,7 @@ export function SentenceActivity() {
                           {isResubmitting ? "Sending…" : "Send revised sentence"}
                         </button>
                         <button
-                          className="rounded-lg border-2 border-kid-ink bg-white px-3 py-1.5 text-xs font-extrabold text-kid-ink"
+                          className={`${secondaryUi.btnSecondary} !px-3 !py-1.5 !text-sm`}
                           disabled={isResubmitting}
                           onClick={() => {
                             setResubmitWordId(null);
@@ -511,46 +584,46 @@ export function SentenceActivity() {
             })}
           </div>
           {feedback === "submitted" ? (
-            <p className="rounded-md border border-sky-300 bg-sky-50 p-2 text-sm font-bold text-sky-950" role="status">
+            <p className={`rounded-md border-2 border-sky-300 bg-sky-50 p-2 ${secondaryUi.body} font-bold text-sky-950`} role="status">
               Revised sentence sent to your teacher!
             </p>
           ) : null}
           {feedback === "error" && errorMessage ? (
-            <p className="rounded-md border border-red-300 bg-red-50 p-2 text-sm font-bold text-red-900" role="alert">
+            <p className={`rounded-md border-2 border-red-300 bg-red-50 p-2 ${secondaryUi.body} font-bold text-red-900`} role="alert">
               {errorMessage}
             </p>
           ) : null}
         </>
-      ) : currentItem && currentPrompt ? (
+      ) : currentItem && currentPrompt && !isReviewMode ? (
         <div className="space-y-3 rounded-lg border border-kid-ink/20 bg-kid-panel p-4">
-          <p className="text-xs font-extrabold text-kid-ink/70">
+          <p className={`${secondaryUi.caption} font-extrabold text-kid-ink/70`}>
             Word {Math.min(queuePosition, requiredWordIds.length)} of {requiredWordIds.length}
           </p>
-          <p className="text-sm font-semibold leading-relaxed text-kid-ink">
+          <p className={`${secondaryUi.bodyLarge} text-kid-ink`}>
             {currentPrompt.instruction}
           </p>
           {currentPrompt.frameHint ? (
-            <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-950">
+            <p className={`rounded-md border-2 border-sky-200 bg-sky-50 px-3 py-2 ${secondaryUi.caption} text-sky-950`}>
               Frame hint: <span className="font-extrabold">{currentPrompt.frameHint}</span>
             </p>
           ) : null}
           {currentItem.exampleSentence ? (
-            <p className="text-xs font-bold text-kid-ink/70">
+            <p className={`${secondaryUi.caption} font-bold text-kid-ink/70`}>
               Example: {currentItem.exampleSentence}
             </p>
           ) : null}
           <textarea
             ref={textareaRef}
-            className="min-h-[6rem] w-full rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-semibold text-kid-ink disabled:opacity-60"
+            className={`min-h-[6rem] w-full ${secondaryUi.inputField} disabled:opacity-60`}
             disabled={isSubmitting || feedback === "submitted"}
             onChange={(event) => setValue(event.target.value)}
             placeholder={`Write a sentence with "${currentPrompt.targetWord}"…`}
             value={value}
           />
-          <p className="text-xs font-semibold text-kid-ink/65">{SENTENCE_QUALITY_HINT}</p>
+          <p className={secondaryUi.captionMuted}>{SENTENCE_QUALITY_HINT}</p>
           <div className="flex flex-wrap items-center gap-2">
             <button
-              className="rounded-lg border-2 border-kid-ink bg-kid-accent px-3 py-2 text-sm font-extrabold text-kid-ink disabled:cursor-not-allowed disabled:opacity-60"
+              className={secondaryUi.btnPrimary}
               disabled={!value.trim() || isSubmitting || feedback === "submitted"}
               onClick={() => void handleSubmitSentence()}
               type="button"
@@ -559,12 +632,12 @@ export function SentenceActivity() {
             </button>
           </div>
           {feedback === "submitted" ? (
-            <p className="rounded-md border border-sky-300 bg-sky-50 p-2 text-sm font-bold text-sky-950" role="status">
+            <p className={`rounded-md border-2 border-sky-300 bg-sky-50 p-2 ${secondaryUi.body} font-bold text-sky-950`} role="status">
               Sent to your teacher!
             </p>
           ) : null}
           {feedback === "error" && errorMessage ? (
-            <p className="rounded-md border border-red-300 bg-red-50 p-2 text-sm font-bold text-red-900" role="alert">
+            <p className={`rounded-md border-2 border-red-300 bg-red-50 p-2 ${secondaryUi.body} font-bold text-red-900`} role="alert">
               {errorMessage}
             </p>
           ) : null}
@@ -572,17 +645,10 @@ export function SentenceActivity() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-          onClick={handleRetry}
-          type="button"
-        >
+        <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
           New words
         </button>
-        <Link
-          className="rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-sm font-extrabold text-kid-ink"
-          href="/secondary"
-        >
+        <Link className={secondaryUi.btnSecondary} href="/secondary">
           Back to vocabulary home
         </Link>
       </div>

@@ -2,25 +2,24 @@ import {
   buildSecondaryLearnExampleLines,
   splitTextAroundWord,
 } from "@/lib/secondary/secondary-learn-content";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
 
 type Props = {
   item: SecondaryVocabItem;
+  centered?: boolean;
 };
 
-export function SecondaryWordExampleList({ item }: Props) {
+export function SecondaryWordExampleList({ item, centered: _centered = false }: Props) {
   const lines = buildSecondaryLearnExampleLines(item);
   if (lines.length === 0) return null;
 
   return (
     <section className="rounded-xl border-2 border-kid-ink/20 bg-kid-panel/40 p-4">
-      <h3 className="text-sm font-extrabold text-kid-ink">See it in a sentence</h3>
+      <h3 className={secondaryUi.cardTitle}>See it in a sentence</h3>
       <ul className="mt-2 space-y-2">
         {lines.map((line, index) => (
-          <li
-            key={`${line.kind}-${index}`}
-            className="text-sm font-semibold leading-relaxed text-kid-ink/90"
-          >
+          <li key={`${line.kind}-${index}`} className={secondaryUi.bodyLarge}>
             {line.kind === "sentence" ? (
               <span>
                 {splitTextAroundWord(line.text, line.highlightWord).map((part, partIndex) =>

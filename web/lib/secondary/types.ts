@@ -31,6 +31,10 @@ export interface SecondaryVocabItem {
   distractors?: string[];
   sentenceFrame?: string;
   spellingSupport?: SecondarySpellingSupport;
+  /** Curated illustration URL when available. */
+  imageUrl?: string;
+  /** Optional lookup key for `media_assets` resolution. */
+  mediaHint?: string;
 }
 
 export interface SecondaryVocabSet {

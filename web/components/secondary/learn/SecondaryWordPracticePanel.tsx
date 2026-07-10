@@ -13,12 +13,14 @@ import { SECONDARY_MAX_WRONG_ATTEMPTS } from "@/lib/secondary/secondary-scaffold
 import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 import { recordSecondaryLearnWordAttempt } from "@/lib/secondary/secondary-word-progress";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
+import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 
 type Props = {
   item: SecondaryVocabItem;
   sessionWordItemIds: string[];
   dateKey: string;
   onClose: () => void;
+  centered?: boolean;
 };
 
 type QuestionResult = {
@@ -51,6 +53,7 @@ export function SecondaryWordPracticePanel({
   sessionWordItemIds,
   dateKey,
   onClose,
+  centered = false,
 }: Props) {
   const [runSeed, setRunSeed] = useState("0");
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -209,29 +212,29 @@ export function SecondaryWordPracticePanel({
 
   return (
     <section className="rounded-xl border-2 border-kid-ink/25 bg-white p-4 shadow-sm">
-      <h3 className="text-sm font-extrabold text-kid-ink">Practice this word</h3>
+      <h3 className={secondaryUi.cardTitle}>Practice this word</h3>
 
       {isComplete ? (
         <div className="mt-3 space-y-3">
-          <p className="text-sm font-semibold text-kid-ink/85" role="status">
+          <p className={`${secondaryUi.body} text-kid-ink/85`} role="status">
             You finished {questions.length} question{questions.length === 1 ? "" : "s"} — {correctCount}{" "}
             correct.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <KidButton type="button" variant="secondary" className="!min-h-9 text-sm" onClick={handlePracticeAgain}>
+          <div className={clsx("flex flex-wrap gap-2", centered && "justify-center")}>
+            <KidButton type="button" variant="secondary" className="!min-h-10 text-base" onClick={handlePracticeAgain}>
               Practice again
             </KidButton>
-            <KidButton type="button" className="!min-h-9 text-sm" onClick={onClose}>
+            <KidButton type="button" className="!min-h-10 text-base" onClick={onClose}>
               Back to quiz
             </KidButton>
           </div>
         </div>
       ) : currentQuestion ? (
         <div className="mt-3 space-y-3">
-          <p className="text-xs font-extrabold uppercase tracking-wide text-kid-ink/60">
+          <p className={secondaryUi.eyebrowMuted}>
             Question {questionIndex + 1} of {questions.length}
           </p>
-          <p className="whitespace-pre-line text-sm font-semibold leading-relaxed text-kid-ink">
+          <p className={`whitespace-pre-line ${secondaryUi.bodyLarge}`}>
             {currentQuestion.prompt}
           </p>
 
@@ -249,7 +252,7 @@ export function SecondaryWordPracticePanel({
                 aria-keyshortcuts={`${index + 1}`}
                 onClick={() => handleChoice(choice.id)}
                 className={clsx(
-                  "w-full rounded-lg border-2 px-3 py-2.5 text-left text-sm font-extrabold leading-snug transition-[transform,box-shadow] [touch-action:manipulation] hover:brightness-[0.98] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100",
+                  `w-full rounded-lg border-2 px-3 py-3 text-left ${secondaryUi.body} font-extrabold leading-snug transition-[transform,box-shadow] [touch-action:manipulation] hover:brightness-[0.98] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100`,
                   selectedChoiceId === choice.id
                     ? "border-kid-ink bg-kid-accent text-kid-ink"
                     : "border-kid-ink/25 bg-kid-panel/30 text-kid-ink",
@@ -266,7 +269,7 @@ export function SecondaryWordPracticePanel({
           {feedback ? (
             <p
               className={clsx(
-                "rounded-lg px-3 py-2 text-sm font-semibold",
+                `rounded-lg px-3 py-2.5 ${secondaryUi.body}`,
                 feedback.kind === "correct" && "bg-emerald-50 text-emerald-950",
                 feedback.kind === "wrong" && "bg-amber-50 text-amber-950",
                 feedback.kind === "revealed" && "bg-sky-50 text-sky-950",

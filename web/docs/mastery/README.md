@@ -168,6 +168,7 @@ Historical docs and code live in `C:\Users\brady\ai-tutor\docs\mastery\` and `fr
 | T1 Teacher mastery reads | Done — [PROPOSAL_T1_TEACHER_MASTERY_READS.md](./PROPOSAL_T1_TEACHER_MASTERY_READS.md) · migration `027` |
 
 | T2 Teacher diagnostic UI | Awaiting approval — [PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md](./PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md) |
+| P9 Activity card Start / Try Again / Open | Done — [PROPOSAL_P9_ACTIVITY_CARD_ACTIONS.md](./PROPOSAL_P9_ACTIVITY_CARD_ACTIONS.md) |
 
 | P6A Secondary cloze coverage | Done — [QA_P6A_CLOZE_COVERAGE.md](./QA_P6A_CLOZE_COVERAGE.md) |
 

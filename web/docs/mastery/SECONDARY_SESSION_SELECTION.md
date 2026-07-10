@@ -98,7 +98,9 @@ After quotas: **S2** enforces max **4 words per topic** on today's list and swap
 | `todayWordItemIds` | **Focus list** (10) — sidebar, daily mastery goal meter, slow-replace FIFO |
 | `allWordItemIds` | Unique union of warmup + today — Match / Spelling / Cloze / Sentence word pools |
 | `initialTodayWordItemIds` | Snapshot at first build — baseline for analytics |
-| `introducedWordItemIds` | Words swapped **onto** today's list via slow-replace (UI **· New** badge) |
+| `introducedWordItemIds` | Words swapped **onto** today's list via slow-replace (UI **· New today** badge) |
+| Daily word intro seen | Separate localStorage key `secondary-daily-word-intro-seen-v1:{studentId}:{dateKey}` — [P7A](./PROPOSAL_P7A_DAILY_WORD_INTRO.md) |
+| Swap announced | `secondary-swap-announced-v1:{studentId}:{dateKey}` — [P7B](./PROPOSAL_P7B_FOCUS_WORD_SWAP_TRANSITION.md) transition UI |
 | `replacedOutWordItemIds` | Words evicted from today's list (excluded from re-picks) |
 | `masteredOnListOrder` | FIFO queue of words that crossed mastered **while on today's list** |
 | `selectionReasons` | Per-word reason: `due_review`, `fragile`, `new`, `refresh`, `stretch`, `cloze_include` |

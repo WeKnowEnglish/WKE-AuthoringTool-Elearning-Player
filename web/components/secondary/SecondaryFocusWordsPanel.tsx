@@ -1,6 +1,8 @@
 "use client";
 
+import clsx from "clsx";
 import { SecondaryWordChip } from "@/components/secondary/learn/SecondaryWordChip";
+import { useScrollRevealScrollbar } from "@/lib/hooks/use-scroll-reveal-scrollbar";
 import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 
 type WordListSectionProps = {
@@ -9,6 +11,7 @@ type WordListSectionProps = {
   focusWordItemIds: ReadonlySet<string>;
   newTodayWordItemIds: ReadonlySet<string>;
   selectionReasons: Record<string, string>;
+  imageUrlsByWordId?: Record<string, string | null>;
   debugEnabled: boolean;
   selectedWordItemId: string | null;
   onWordSelect: (wordItemId: string, trigger: HTMLButtonElement) => void;
@@ -20,6 +23,7 @@ function WordListSection({
   focusWordItemIds,
   newTodayWordItemIds,
   selectionReasons,
+  imageUrlsByWordId = {},
   debugEnabled,
   selectedWordItemId,
   onWordSelect,
@@ -29,7 +33,7 @@ function WordListSection({
   return (
     <div className="border-t-2 border-kid-ink/10 first:border-t-0">
       <p className={`px-3 pb-1 pt-2 ${secondaryUi.eyebrowMuted}`}>{title}</p>
-      <ol className="space-y-1 px-1.5 pb-1.5">
+      <ol className="space-y-0.5 px-1.5 pb-2">
         {wordItemIds.map((wordItemId, index) => (
           <li key={wordItemId}>
             <SecondaryWordChip
@@ -41,6 +45,7 @@ function WordListSection({
               isNewToday={newTodayWordItemIds.has(wordItemId)}
               selectionReason={selectionReasons[wordItemId]}
               debugEnabled={debugEnabled}
+              imageUrl={imageUrlsByWordId[wordItemId] ?? null}
               onSelect={onWordSelect}
             />
           </li>
@@ -58,10 +63,12 @@ type Props = {
   focusHighlightWordIds: ReadonlySet<string>;
   newTodayWordItemIds?: ReadonlySet<string>;
   selectionReasons?: Record<string, string>;
+  imageUrlsByWordId?: Record<string, string | null>;
   debugEnabled?: boolean;
   selectedWordItemId?: string | null;
   onWordSelect?: (wordItemId: string, trigger: HTMLButtonElement) => void;
   inert?: boolean;
+  embedded?: boolean;
 };
 
 export function SecondaryFocusWordsPanel({
@@ -72,11 +79,15 @@ export function SecondaryFocusWordsPanel({
   focusHighlightWordIds,
   newTodayWordItemIds,
   selectionReasons = {},
+  imageUrlsByWordId = {},
   debugEnabled = false,
   selectedWordItemId = null,
   onWordSelect,
   inert = false,
+  embedded = false,
 }: Props) {
+  const wordTrayScrollRef = useScrollRevealScrollbar<HTMLDivElement>();
+
   if (hydrated && !hasWordsToday) return null;
 
   const newTodaySet = newTodayWordItemIds ?? new Set<string>();
@@ -91,24 +102,36 @@ export function SecondaryFocusWordsPanel({
 
   return (
     <aside
-      className="hidden w-full shrink-0 flex-col overflow-hidden rounded-xl border-2 border-kid-ink bg-white lg:flex lg:w-60 xl:w-64"
+      className={clsx(
+        embedded
+          ? "flex h-full w-56 shrink-0 flex-col bg-kid-panel/25 xl:w-64"
+          : "hidden w-full shrink-0 flex-col overflow-hidden rounded-xl border-2 border-kid-ink bg-white lg:flex lg:max-h-[calc(100dvh-5.5rem)] lg:min-h-0 lg:w-72 xl:w-80",
+      )}
       aria-label="Today's vocabulary list"
       {...(inert ? { inert: true } : {})}
     >
-      <div className="shrink-0 rounded-t-xl border-b-2 border-kid-ink/15 bg-kid-panel px-3 py-2.5">
+      <div
+        className={clsx(
+          "flex min-h-10 shrink-0 items-center border-b-2 border-kid-ink/15 bg-kid-panel px-3 py-2.5",
+          embedded ? null : "rounded-t-xl",
+        )}
+      >
         <p className={secondaryUi.eyebrow}>Today&apos;s words</p>
-        <p className={`mt-0.5 ${secondaryUi.captionMuted}`}>
-          Tap a word to open the helper · warm-up first, then focus
-        </p>
       </div>
 
-      <div>
+      <div
+        ref={wordTrayScrollRef}
+        className={clsx(
+          "scrollbar-reveal",
+          embedded ? "min-h-0 flex-1 overflow-y-auto" : "lg:min-h-0 lg:flex-1 lg:overflow-y-auto",
+        )}
+      >
         {!hydrated ? (
           <ul className="space-y-1 p-1.5" aria-hidden>
             {Array.from({ length: 10 }).map((_, index) => (
               <li
                 key={index}
-                className="h-10 animate-pulse rounded-lg border border-kid-ink/15 bg-kid-panel/60"
+                className="h-9 animate-pulse rounded-lg border border-kid-ink/15 bg-kid-panel/60"
               />
             ))}
           </ul>
@@ -120,6 +143,7 @@ export function SecondaryFocusWordsPanel({
               focusWordItemIds={focusHighlightWordIds}
               newTodayWordItemIds={newTodaySet}
               selectionReasons={selectionReasons}
+              imageUrlsByWordId={imageUrlsByWordId}
               debugEnabled={debugEnabled}
               selectedWordItemId={selectedWordItemId}
               onWordSelect={onWordSelect ?? (() => {})}
@@ -130,6 +154,7 @@ export function SecondaryFocusWordsPanel({
               focusWordItemIds={focusHighlightWordIds}
               newTodayWordItemIds={newTodaySet}
               selectionReasons={selectionReasons}
+              imageUrlsByWordId={imageUrlsByWordId}
               debugEnabled={debugEnabled}
               selectedWordItemId={selectedWordItemId}
               onWordSelect={onWordSelect ?? (() => {})}

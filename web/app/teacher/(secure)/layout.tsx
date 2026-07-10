@@ -15,7 +15,7 @@ export default async function TeacherSecureLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?portal=teacher&next=/teacher/courses");
+    redirect("/login?portal=teacher&next=/teacher/classes");
   }
   if (user.app_metadata?.role !== "teacher") {
     redirect("/login?portal=teacher&error=not_teacher");

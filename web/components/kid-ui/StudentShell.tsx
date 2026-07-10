@@ -14,18 +14,24 @@ export function StudentShell({
   children,
   wide = false,
   compact = false,
+  fullWidth = false,
   hidePrimaryNav = false,
   homeHref = "/home",
+  classMenu,
 }: {
   children: React.ReactNode;
   /** Wider main column for grammar infographics and multi-column layouts. */
   wide?: boolean;
   /** Tighter vertical padding for dense infographic pages. */
   compact?: boolean;
-  /** Hide Lessons / Activities / Achievements (secondary portal). */
+  /** Use the full viewport width (secondary portal). */
+  fullWidth?: boolean;
+  /** Hide Learn / Achievements (secondary portal). */
   hidePrimaryNav?: boolean;
   /** Brand link target — secondary pages stay on `/secondary`. */
   homeHref?: string;
+  /** Optional class join/select control for student enrollment UI. */
+  classMenu?: React.ReactNode;
 }) {
   const presetId = useSyncExternalStore(
     studentSoftChromeStore.subscribe,
@@ -71,13 +77,7 @@ export function StudentShell({
                 href="/learn"
                 className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
               >
-                Lessons
-              </Link>
-              <Link
-                href="/activities"
-                className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
-              >
-                Activities
+                Learn
               </Link>
               <Link
                 href="/profile"
@@ -87,13 +87,17 @@ export function StudentShell({
               </Link>
             </>
           ) : null}
+          {classMenu}
           <SoundMuteButton />
           <SignOutForm label="Log out" variant="kid" className="!min-h-10" />
         </nav>
       </header>
       <main
         className={
-          wide && compact ?
+          fullWidth ?
+            compact ? "w-full px-4 py-4 sm:px-6"
+            : "w-full px-4 py-6 sm:px-6"
+          : wide && compact ?
             "mx-auto w-full max-w-[90rem] px-4 py-4"
           : wide ?
             "mx-auto w-full max-w-[90rem] px-4 py-6"

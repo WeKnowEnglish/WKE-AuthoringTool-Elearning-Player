@@ -156,7 +156,9 @@ type RecentImageCandidate = {
   phash: string;
 };
 
-async function fetchRecentImageCandidates(supabase: Awaited<ReturnType<typeof requireTeacher>>) {
+async function fetchRecentImageCandidates(
+  supabase: Awaited<ReturnType<typeof requireTeacher>>["supabase"],
+) {
   const { data: candidates, error: candErr } = await supabase
     .from("media_assets")
     .select("id,public_url,original_filename,phash")
@@ -216,11 +218,7 @@ export async function uploadTeacherMedia(
   kind: MediaKind = "image",
   duplicateHandling: DuplicateHandling = "delete_duplicate",
 ): Promise<UploadTeacherMediaResult> {
-  const supabase = await requireTeacher();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const { supabase, user } = await requireTeacher();
 
   const file = formData.get("file");
   if (!file || typeof file === "string" || !("arrayBuffer" in file)) {
@@ -417,7 +415,7 @@ export async function inspectTeacherMediaBulkDuplicates(
   );
   if (files.length === 0) return [];
 
-  const supabase = await requireTeacher();
+  const { supabase } = await requireTeacher();
   const issues: MediaDuplicateIssue[] = [];
   const imageCandidates =
     kind === "image" ? await fetchRecentImageCandidates(supabase) : [];
@@ -517,7 +515,7 @@ function parseRpcTotal(raw: unknown): number {
 export async function searchTeacherMedia(
   params: SearchTeacherMediaParams = {},
 ): Promise<SearchTeacherMediaResult> {
-  const supabase = await requireTeacher();
+  const { supabase } = await requireTeacher();
   const kind = params.kind ?? "all";
   const limit = Math.min(Math.max(params.limit ?? 200, 1), 1000);
   const offset = Math.max(params.offset ?? 0, 0);
@@ -579,7 +577,7 @@ type UpdateTeacherMediaMetadataInput = {
 export async function updateTeacherMediaMetadata(
   input: UpdateTeacherMediaMetadataInput,
 ): Promise<MediaAssetRow> {
-  const supabase = await requireTeacher();
+  const { supabase } = await requireTeacher();
   const categories = normalizeAndDedupList(input.categories ?? []);
   const tags = normalizeAndDedupList(input.tags ?? []);
   const alternativeNames = normalizeAndDedupList(input.alternativeNames ?? []);
@@ -695,13 +693,7 @@ function csvRowToMetadataUpdate(record: Record<string, string>) {
 export async function applyTeacherMediaMetadataCsv(
   formData: FormData,
 ): Promise<MediaMetadataCsvImportResult> {
-  const supabase = await requireTeacher();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { ok: false, message: "Not signed in.", updated: 0, skipped: 0, failed: 0 };
-  }
+  const { supabase, user } = await requireTeacher();
 
   const file = formData.get("csv");
   const dryRun = formData.get("dry_run") === "on";
@@ -840,11 +832,7 @@ export async function applyTeacherMediaMetadataCsv(
 }
 
 export async function deleteTeacherMedia(assetId: string): Promise<void> {
-  const supabase = await requireTeacher();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const { supabase, user } = await requireTeacher();
 
   const { data: row, error: rowErr } = await supabase
     .from("media_assets")

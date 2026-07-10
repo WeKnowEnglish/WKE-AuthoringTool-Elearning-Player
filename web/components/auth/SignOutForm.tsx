@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import { portalSignOut } from "@/lib/actions/portal-sign-out";
 import { clearStudentStorageIdCache } from "@/lib/auth/student-storage-id";
+import { signOutMasterySyncCleanup } from "@/lib/mastery/supabase-sync";
 
 type Props = {
   label?: string;
@@ -21,8 +22,11 @@ export function SignOutForm({
       className={className}
       onSubmit={(event) => {
         event.preventDefault();
-        clearStudentStorageIdCache();
-        void portalSignOut();
+        void (async () => {
+          await signOutMasterySyncCleanup();
+          clearStudentStorageIdCache();
+          await portalSignOut();
+        })();
       }}
     >
       <button

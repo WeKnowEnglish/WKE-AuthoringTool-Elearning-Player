@@ -1,4 +1,4 @@
-import type { LessonScreenRow } from "@/lib/data/catalog";
+import type { LessonScreenRow } from "@/lib/lesson/types";
 import { buildDefaultOpeningStartPayload } from "@/lib/lesson-bookends";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 import type {

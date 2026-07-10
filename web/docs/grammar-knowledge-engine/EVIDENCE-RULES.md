@@ -31,7 +31,7 @@ Use GKE id strings **directly** as `key` (see [SCHEMA.md](./SCHEMA.md) § Master
 | --- | --- |
 | `source` | `"lesson"` |
 | `activityId` | `grammar:{posterSlug}` |
-| `response.kind` | `"true_false"` |
+| `response.kind` | `"tap"` (T/F screen subtype is `true_false`; modality matches vocab — see `vocabResponseKind` in LessonPlayer) |
 | `context.evidenceMode` | `"recognition"` |
 | `context.activityMode` | `"practice"` |
 | `context.strandIds` | `["language_focused_learning"]` |

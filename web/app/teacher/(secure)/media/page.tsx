@@ -208,8 +208,8 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         <h1 className="text-2xl font-bold">Media Library</h1>
         <div className="flex flex-shrink-0 items-center gap-3">
           <MediaMetadataCsvImport importAction={importMediaMetadataCsvAction} />
-          <Link href="/teacher/courses" className="text-sm text-blue-700 underline">
-            Go to Courses
+          <Link href="/teacher/classes" className="text-sm text-blue-700 underline">
+            Go to Classes
           </Link>
         </div>
       </div>

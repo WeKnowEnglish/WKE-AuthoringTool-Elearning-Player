@@ -1,6 +1,6 @@
 export type AppRole = "teacher" | "student";
 
-export const TEACHER_DEFAULT_PATH = "/teacher/courses";
+export const TEACHER_DEFAULT_PATH = "/teacher/classes";
 export const STUDENT_DEFAULT_PATH = "/home";
 export const LOGIN_PATH = "/login";
 

@@ -49,8 +49,10 @@ Aligned with whole-app [adaptive learning plan](../adaptive-learning-architectur
 | --- | --- | --- | --- |
 | **Account-linked local storage (P0)** | — | Layers A + B: auth-scoped `wke-*` keys + guest migrate | ✅ [PROPOSAL](./PROPOSAL_ACCOUNT_LINKED_LOCAL_STORAGE.md) · `lib/auth/student-storage-*` |
 | **Secondary session selection v2 (S1)** | PR4 | Due / weak / new / refresh mix in today session | ✅ [SECONDARY_SESSION_SELECTION.md](./SECONDARY_SESSION_SELECTION.md) |
-| **Supabase mastery persistence (P1)** | PR5 | Layer C: durable evidence + records, cross-device | New sync layer; adaptive plan Phase 4 |
-| **Teacher / parent mastery views** | PR6 | Weak words, review queues, class summaries | Teacher app, reports |
+| **Supabase mastery persistence (P1)** | PR5 | Layer C: durable evidence + records, cross-device | ✅ [MASTERY_SUPABASE_SYNC.md](./MASTERY_SUPABASE_SYNC.md) |
+| **Sync diagnostic (D1)** | — | Dev debug panel for queue, push, server rows | D1a ✅ · D1b deferred |
+| **Teacher classes / roster (T0)** | — | Classes + join codes + enrollment RLS | ✅ [PROPOSAL_T0_TEACHER_CLASSES.md](./PROPOSAL_T0_TEACHER_CLASSES.md) |
+| **Teacher / parent mastery views** | PR6 | Weak words, review queues, class summaries | T1 ✅ reads · T2 UI pending |
 | **Cloze paragraph generator** | PR7 | Generated paragraphs from bank | Content pipeline; after M4 |
 | **Grammar evidence emitter** | GKE Phase 4 | `recordGrammarEvidence` for grammar targets | ✅ G1 — [PROPOSAL](./PROPOSAL_GRAMMAR_EVIDENCE_EMITTER.md) · [EVIDENCE-RULES](../grammar-knowledge-engine/EVIDENCE-RULES.md) |
 | **Board game / story / pet bridges** | — | Emit evidence without owning math | Per-feature thin wrappers |
@@ -84,7 +86,7 @@ Through M6 + post-M6 tracks, the platform should:
 - [x] Practice compatibility enforced (M4)
 - [x] Account-scoped local mastery/progress per auth user (P0 Layers A + B)
 - [x] Balanced secondary daily mix (S1a + S1b wired)
-- [ ] Backend persistence for authenticated students (P1 — Layer C Supabase)
+- [x] Backend persistence for authenticated students (P1 ✅ — [MASTERY_SUPABASE_SYNC.md](./MASTERY_SUPABASE_SYNC.md))
 - [ ] Teachers can see weak targets and review needs (post-M6)
 - [ ] Grammar and other lanes emit evidence (GKE / bridges) — **grammar poster T/F ✅ G1**; other lanes pending
 
@@ -104,6 +106,35 @@ Through M6 + post-M6 tracks, the platform should:
 
 ## Next step
 
-**P1 Supabase mastery sync** — [PROPOSAL_NEXT_STEP_POST_S1.md](./PROPOSAL_NEXT_STEP_POST_S1.md) §5 (awaiting approval).
+**T2 — Teacher diagnostic UI** — [PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md](./PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md) (awaiting approval).
 
-Optional parallel: **G1e** grammar quiz registry if content ready.
+Tabbed student progress view + enhanced class roster. Then T3 class insights.
+
+---
+
+## Post-P1: D1 sync diagnostic (proposed)
+
+**Problem:** P1 sync is invisible — engineers must use DevTools, Supabase Table Editor, and console `[mastery-sync]` grep to verify behavior.
+
+**Goal:** A gated debug surface (engineering / teacher preview) showing:
+
+| Panel region | Data source |
+| --- | --- |
+| Auth state | `getCachedAuthUserId()`, Supabase session |
+| Local snapshot | `readMasterySnapshot()` — record count, top targets |
+| Server snapshot | `pullMasterySnapshotFromServer` (on demand) |
+| Queue | `readSyncQueueForStudent` — depth, item kinds |
+| Debounce pending | Export pending count from debounce module |
+| Last sync log | Ring buffer of `[mastery-sync]` events (new, small) |
+
+**Suggested gate:** `?masterySyncDebug=1` (mirrors S1c `?secondaryDebug=1` pattern) or teacher role only.
+
+**Effort:** ~1 session · **Risk:** Low if read-only; medium if adding manual flush buttons.
+
+**Unlocks:** Faster E2E QA, classroom Wi‑Fi troubleshooting, pre-T1 confidence in server data.
+
+---
+
+## Next step (archive)
+
+~~**P1e docs + ops**~~ — ✅ [MASTERY_SUPABASE_SYNC.md](./MASTERY_SUPABASE_SYNC.md)

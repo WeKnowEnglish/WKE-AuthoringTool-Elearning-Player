@@ -1,4 +1,4 @@
-import type { LessonScreenRow } from "@/lib/data/catalog";
+import type { LessonScreenRow } from "@/lib/lesson/types";
 import { getGrammarCatalogEntry } from "@/lib/grammar-builder/load-catalog";
 import { buildCongratsEndPayload } from "@/lib/lesson-bookends";
 import { startPayloadSchema } from "@/lib/lesson-schemas";

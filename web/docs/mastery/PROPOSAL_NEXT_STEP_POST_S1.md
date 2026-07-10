@@ -1,8 +1,8 @@
 # Next Step Plan: Post-S1 Mastery Roadmap
 
-**Status:** Awaiting approval  
+**Status:** P1 ✅ complete (2026-07-09) — next: D1 diagnostic · T1 teacher views  
 **Prepared:** 2026-07-09  
-**Context:** M0–M6 ✅ · P0 ✅ · G1 ✅ · S1a + S1b ✅
+**Context:** M0–M6 ✅ · P0 ✅ · G1 ✅ · S1a + S1b ✅ · **P1 ✅**
 
 ---
 
@@ -14,10 +14,11 @@
 | P0 account-scoped local storage | ✅ | Correct per-user cache on shared devices |
 | S1 adaptive secondary daily set | ✅ | Due / fragile / new / refresh mix |
 | G1 grammar poster T/F evidence | ✅ | 1 poster (`short-answers-there-is-a1`) |
-| P1 Supabase Layer C | ❌ | No cross-device restore; no teacher mastery views |
+| P1 Supabase Layer C | ✅ | [MASTERY_SUPABASE_SYNC.md](./MASTERY_SUPABASE_SYNC.md) — pull, write-through, queue |
 | G1e more grammar quizzes | ❌ | Thin grammar lane beyond pilot poster |
 | G2 grammar recommendations | ❌ | No hub “practice next concept” |
-| T1 teacher/parent mastery views | ❌ | Blocked on durable backend |
+| T1 teacher/parent mastery views | ⏳ | Unblocked by P1; not started |
+| D1 sync diagnostic tool | ❌ | Dev panel for queue, server rows, flush |
 | S1d selection docs + manual QA | ✅ | [SECONDARY_SESSION_SELECTION.md](./SECONDARY_SESSION_SELECTION.md) |
 
 **Local intelligence is now worth persisting.** S1 proved adaptive selection works on scoped mastery; the main gap is durability and teacher-facing read paths.
@@ -188,15 +189,15 @@ return next;
 
 ### 5.8 P1 definition of done
 
-- [ ] Migration applied; RLS verified with student + anon clients
-- [ ] Login pull merges mastery into scoped localStorage
-- [ ] Evidence + mastery write-through for authenticated users
-- [ ] Guest path unchanged
-- [ ] Sync failures do not break lesson/secondary play
-- [ ] Docs: `docs/mastery/MASTERY_SUPABASE_SYNC.md`
-- [ ] Roadmap P1 checked off
+- [x] Migration applied; RLS verified with student + anon clients
+- [x] Login pull merges mastery into scoped localStorage
+- [x] Evidence + mastery write-through for authenticated users
+- [x] Guest path unchanged
+- [x] Sync failures do not break lesson/secondary play
+- [x] Docs: `docs/mastery/MASTERY_SUPABASE_SYNC.md`
+- [x] Roadmap P1 checked off
 
-**Estimate:** 3–5 focused sessions
+**Completed:** 2026-07-09 · Manual E2E rows in [QA_P1_SYNC_E2E.md](./QA_P1_SYNC_E2E.md) still open for classroom sign-off.
 
 ---
 
@@ -243,19 +244,19 @@ return next;
 
 ---
 
-## 9. Recommendation summary
+## 9. Recommendation summary (updated post-P1)
 
 | Priority | Track | Action |
 | --- | --- | --- |
-| **1** | **P1 Supabase mastery sync** | Approve §5; implement P1a → P1d |
-| **0 (optional)** | S1 close-out | Docs + manual QA (~0.5 session) |
-| **Parallel** | G1e | If curriculum has poster quiz content ready |
-| **Later** | G2 → T1 | After G1e and P1 respectively |
+| **1** | **D1 Sync diagnostic** | Dev panel: queue, debounce, local vs server, manual flush — see [MASTERY_ROADMAP.md](./MASTERY_ROADMAP.md) §Post-P1 |
+| **2** | **T1 Teacher views** | Weak words / due review per student (P1 unblocks) |
+| **Parallel** | G1e | Grammar quiz registry if curriculum content ready |
+| **Later** | G2 | Grammar recommendations hub |
 
 **Constitution check (Beowulf):**
 
-- **Student:** P1 restores progress across devices; S1 already improves daily practice quality
-- **Teacher:** P1 is prerequisite for trustworthy class weak-word views (T1)
+- **Student:** P1 ✅ restores progress across devices; S1 improves daily practice quality
+- **Teacher:** T1 next for class weak-word views; D1 helps ops/debug before T1 ships
 - **Curriculum:** G1e strengthens grammar evidence lane without forking mastery math
 
 ---

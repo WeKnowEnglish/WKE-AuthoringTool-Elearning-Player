@@ -10,6 +10,7 @@ import {
   secondaryActivityToEvidenceShape,
 } from "@/lib/secondary/secondary-mastery-bridge";
 import {
+  recordSecondaryLearnWordAttempt,
   recordSecondaryWordAttempt,
   resolveSecondaryStudentId,
 } from "@/lib/secondary/secondary-word-progress";
@@ -79,6 +80,11 @@ describe("secondary-mastery-bridge", () => {
       activityId: "secondary:spelling",
       responseKind: "type",
       evidenceMode: "recall",
+    });
+    expect(secondaryActivityToEvidenceShape("learn")).toEqual({
+      activityId: "secondary:learn",
+      responseKind: "match",
+      evidenceMode: "recognition",
     });
   });
 
@@ -162,5 +168,31 @@ describe("recordSecondaryWordAttempt (M5 platform SoT)", () => {
     expect(
       localStorage.getItem(scopedLocalStorageKey(MASTERY_STORAGE_KEY, "hub-device-abc")),
     ).toContain("word:g7-a2-brave");
+  });
+
+  it("records learn-drawer evidence without legacy dual-write", () => {
+    const progress = recordSecondaryLearnWordAttempt(
+      {
+        wordItemId: "g7-a2-school-life-subject",
+        isCorrect: true,
+        attemptedAt: "2026-07-08T12:30:00.000Z",
+      },
+      { firstTry: true, attempts: 1 },
+    );
+
+    expect(progress.timesSeen).toBeGreaterThanOrEqual(1);
+    const snapshot = readMasterySnapshot();
+    expect(snapshot.records["word:g7-a2-school-life-subject"]).toBeTruthy();
+  });
+
+  it("rejects learn activity on recordSecondaryWordAttempt", () => {
+    expect(() =>
+      recordSecondaryWordAttempt({
+        activityType: "learn",
+        wordItemId: "g7-a2-school-life-subject",
+        isCorrect: true,
+        attemptedAt: "2026-07-08T12:30:00.000Z",
+      }),
+    ).toThrow(/recordSecondaryLearnWordAttempt/);
   });
 });

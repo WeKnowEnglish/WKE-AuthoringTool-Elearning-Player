@@ -69,12 +69,16 @@ function startChromeSpeechKeepAlive(): () => void {
 
 export function stopSpeaking() {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
+  try {
+    window.speechSynthesis.cancel();
+  } catch {
+    /* ignore cancelled / interrupted speech */
+  }
 }
 
 export function speakText(
   text: string,
-  opts?: { lang?: string; muted?: boolean },
+  opts?: { lang?: string; muted?: boolean; rate?: number },
 ): boolean {
   if (typeof window === "undefined" || !window.speechSynthesis) return false;
   if (opts?.muted) return false;
@@ -84,14 +88,14 @@ export function speakText(
   stopSpeaking();
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = opts?.lang ?? "en-US";
-  u.rate = 0.92;
+  u.rate = opts?.rate ?? 0.92;
   window.speechSynthesis.speak(u);
   return true;
 }
 
 export function speakTextAndWait(
   text: string,
-  opts?: { lang?: string; muted?: boolean; signal?: AbortSignal },
+  opts?: { lang?: string; muted?: boolean; signal?: AbortSignal; rate?: number },
 ): Promise<boolean> {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     return Promise.resolve(false);
@@ -126,7 +130,7 @@ export function speakTextAndWait(
 
         const u = new SpeechSynthesisUtterance(clean);
         u.lang = opts?.lang ?? "en-US";
-        u.rate = 0.92;
+        u.rate = opts?.rate ?? 0.92;
         u.onend = () => finish(true);
         u.onerror = () => finish(false);
 

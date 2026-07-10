@@ -2,9 +2,13 @@ import {
   applyEvidenceToMasteryRecords,
   learningTargetKey,
 } from "@/lib/mastery/engine";
+import { pushEvidenceAndMasteryToServer } from "@/lib/mastery/supabase-sync";
 import type { LearningEvidenceEvent, StudentMasteryRecord } from "@/lib/mastery/types";
 import { scopedLocalStorageKey } from "@/lib/auth/scoped-local-storage";
-import { resolveStudentStorageIdSync } from "@/lib/auth/student-storage-id";
+import {
+  getCachedAuthUserId,
+  resolveStudentStorageIdSync,
+} from "@/lib/auth/student-storage-id";
 
 export const MASTERY_STORAGE_KEY = "wke-student-mastery-v1";
 export const MASTERY_EVIDENCE_STORAGE_KEY = "wke-learning-evidence-v1";
@@ -84,7 +88,16 @@ export function recordLearningEvidenceEvent(
     updatedAt: evidence.occurredAt,
     records: applyEvidenceToMasteryRecords(current.records, evidence),
   };
-  return writeMasterySnapshot(next);
+  const written = writeMasterySnapshot(next);
+
+  const studentId = getCachedAuthUserId();
+  if (studentId && studentId === evidence.studentId) {
+    void pushEvidenceAndMasteryToServer(evidence, written).catch((error) => {
+      console.warn("[mastery-sync] push failed", error);
+    });
+  }
+
+  return written;
 }
 
 export function getMasteryRecordForTarget(

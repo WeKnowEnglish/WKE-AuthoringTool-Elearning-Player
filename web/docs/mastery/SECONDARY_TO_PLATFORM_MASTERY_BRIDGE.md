@@ -114,13 +114,23 @@ function deriveLegacyMasteryLevelFromUnitScore(score01: number): 0 | 1 | 2 | 3 |
 | `match` | Align with existing student-session choice/definition kind | `recognition` | Meaning recognition |
 | `cloze` | Typed / cloze kind used elsewhere if available | `recall` | Contextual use |
 | `spelling` | spelling / typed | `recall` (or language-focus via strands helper) | Form accuracy |
+| `learn` (Word Helper drawer) | `match` | `recognition` | In-drawer MC practice only; see §6.1 |
 
 Bridge must also set:
 
 - `source`: prefer `"vocab_set"` (reuse `EvidenceSource`; avoid union churn unless necessary)
-- `activityId`: stable ids like `secondary:match`, `secondary:cloze`, `secondary:spelling`
+- `activityId`: stable ids like `secondary:match`, `secondary:cloze`, `secondary:spelling`, `secondary:learn`
 - `sessionId`: today session `dateKey` plus Lesson Player student identity when available
 - Strand targets: reuse `vocabularyStrandsForPractice` where possible
+
+### 6.1 Learn drawer (`secondary:learn`)
+
+- **Entry:** Word chip → `SecondaryWordLearnDrawer` (`components/secondary/learn/*`)
+- **Evidence API:** `recordSecondaryLearnWordAttempt()` in `lib/secondary/secondary-word-progress.ts`
+- **Activity id:** `secondary:learn` via `secondaryActivityToEvidenceShape("learn")`
+- **Not written:** `secondary-local-activity-*` session overlay (match/cloze/spelling only)
+- **Guard:** `recordSecondaryWordAttempt({ activityType: "learn" })` throws — callers must use the learn-specific API
+- **Daily completion:** Learn practice does **not** update `secondary-vocab-today-completion-v1` chips
 
 ## 7. Storage keys
 
@@ -231,3 +241,22 @@ Implement under Lesson Player conventions and kid UI tokens already used in seco
 - **S1 session selection v2** — ✅ [SECONDARY_SESSION_SELECTION.md](./SECONDARY_SESSION_SELECTION.md)
 - **P1 Supabase persistence** — next
 - Grammar emitter (G1) — ✅; teacher views, cloze generator — pending
+
+## 16. P7 — Sentence production lane
+
+**P7A (student submit):** Students write sentences in `/secondary/sentence`. Rows land in `student_sentence_submissions` with `status=submitted`. Daily completion = “sent for review”. **No mastery on submit.**
+
+**P7B (teacher approve):** Enrolled teachers review via class roster pending badges and student diagnostic **Writing** tab. Actions:
+
+| Outcome | Submission | Mastery |
+| --- | --- | --- |
+| Approve | `status=approved` | `student_learning_evidence` + `student_mastery_records` upsert via `record_teacher_sentence_assessment` RPC |
+| Needs revision | `status=needs_revision` + optional comment | No mastery change |
+
+Evidence shape: `activityId=secondary:sentence`, `source=teacher_assigned`, `context.evidenceMode=production`.
+
+**P7C (implemented):** Resubmit after `needs_revision` via `resubmit_student_sentence_submission` RPC — new row links `supersedes_id`, prior row → `superseded`. Student **Try again** on complete view.
+
+**P7D (implemented):** Client + server quality checks before submit/resubmit (word present, min length, capital, punctuation). Not grammar checking.
+
+Docs: [PROPOSAL_P7_SECONDARY_SENTENCE_PRODUCTION.md](./PROPOSAL_P7_SECONDARY_SENTENCE_PRODUCTION.md) · [PROPOSAL_P7B_TEACHER_SENTENCE_REVIEW.md](./PROPOSAL_P7B_TEACHER_SENTENCE_REVIEW.md) · [PROPOSAL_P7D_SENTENCE_CLIENT_CHECKS.md](./PROPOSAL_P7D_SENTENCE_CLIENT_CHECKS.md) · [QA_P7_SECONDARY_SENTENCE.md](./QA_P7_SECONDARY_SENTENCE.md) · [QA_P7B_TEACHER_SENTENCE_REVIEW.md](./QA_P7B_TEACHER_SENTENCE_REVIEW.md)

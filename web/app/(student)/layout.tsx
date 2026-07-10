@@ -1,9 +1,11 @@
 import { StudentLayoutClient } from "@/components/kid-ui/StudentLayoutClient";
+import { getStudentClassMemberships } from "@/lib/data/student-classes";
 
-export default function StudentLayout({
+export default async function StudentLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <StudentLayoutClient>{children}</StudentLayoutClient>;
+  const classMemberships = await getStudentClassMemberships();
+  return <StudentLayoutClient classMemberships={classMemberships}>{children}</StudentLayoutClient>;
 }

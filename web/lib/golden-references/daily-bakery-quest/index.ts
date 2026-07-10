@@ -1,13 +1,17 @@
-import type { DraftScreenRow } from "@/lib/ai/gemini";
+import type { LearningLoopConfig, LearningLoopPhase } from "@/lib/learning-loop";
+import { parseScreenPayload } from "@/lib/lesson-schemas-player";
+import type { LessonScreenRow } from "@/lib/lesson/types";
 import {
   storyFirstBlueprintSchema,
   type StoryFirstBlueprint,
-} from "@/lib/ai/ai-lesson-plan";
-import type { LearningLoopConfig, LearningLoopPhase } from "@/lib/learning-loop";
-import { parseScreenPayload } from "@/lib/lesson-schemas-player";
-import type { LessonScreenRow } from "@/lib/data/catalog";
+} from "@/lib/golden-references/story-first-blueprint-schema";
 import lessonPlanJson from "@/content/golden-references/daily-bakery-quest/lesson_plan.json";
 import screensJson from "@/content/golden-references/daily-bakery-quest/screens.json";
+
+export type DraftScreenRow = {
+  screen_type: "start" | "story" | "interaction";
+  payload: unknown;
+};
 
 export const DAILY_BAKERY_QUEST_ID = "daily-bakery-quest";
 

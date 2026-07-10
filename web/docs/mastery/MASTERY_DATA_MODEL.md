@@ -164,14 +164,23 @@ Legacy text-key maps in secondary progress are migrated on read.
 
 ---
 
-## 7. Supabase (future)
+## 7. Supabase (P1 ✅)
 
-Schema and sync belong to the [adaptive learning architecture plan](../adaptive-learning-architecture-plan.md) Phase 4+ track. Likely tables:
+**Canonical spec:** [MASTERY_SUPABASE_SYNC.md](./MASTERY_SUPABASE_SYNC.md)  
+**Migration:** `supabase/migrations/024_student_mastery.sql` · `025_evidence_id_text.sql`  
+**Row mappers:** `lib/mastery/supabase-rows.ts`  
+**Sync:** `lib/mastery/supabase-sync.ts` — pull, write-through, queue flush  
+**Queue:** `lib/mastery/sync-queue.ts` · **Debounce:** `lib/mastery/mastery-upsert-debounce.ts`  
+**QA:** [QA_P1_SYNC_E2E.md](./QA_P1_SYNC_E2E.md) (phase detail: P1A/B/C)
 
-- `learning_evidence_events` (or summarized)
-- `student_mastery_records`
+| Table | Contents | RLS |
+| --- | --- | --- |
+| `student_mastery_records` | One row per `(student_id, target_key)`; `record` jsonb = `StudentMasteryRecord` | Student owns rows (`student_id = auth.uid()`) |
+| `student_learning_evidence` | Append-only; `event` jsonb = `LearningEvidenceEvent`; PK = client event `id` (`text`) | Student owns rows; no UPDATE/DELETE |
 
-Local keys above remain the offline/dev baseline until sync ships.
+Guests stay local-only (no `anon` grants). Teacher read deferred to T1.
+
+Local keys above are the **runtime** offline cache; authenticated students sync via P1 pull + write-through.
 
 ---
 

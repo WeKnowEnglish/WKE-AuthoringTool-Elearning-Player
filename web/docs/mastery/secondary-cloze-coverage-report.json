@@ -1,0 +1,2402 @@
+{
+  "totalItems": 240,
+  "counts": {
+    "A": 240,
+    "B": 0,
+    "C": 0,
+    "D": 0
+  },
+  "tierABPercent": 100,
+  "clozeTaggedTotal": 240,
+  "clozeTaggedCounts": {
+    "A": 240,
+    "B": 0,
+    "C": 0,
+    "D": 0
+  },
+  "clozeTaggedTierABPercent": 100,
+  "tierCItems": [],
+  "tierDItems": [],
+  "topics": [
+    {
+      "topicId": "school-life",
+      "topicTitle": "School Life",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "daily-routines",
+      "topicTitle": "Daily Routines",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "personality",
+      "topicTitle": "Personality",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "feelings-opinions",
+      "topicTitle": "Feelings and Opinions",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "food-health",
+      "topicTitle": "Food and Health",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "places-directions",
+      "topicTitle": "Places and Directions",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "technology-online-life",
+      "topicTitle": "Technology and Online Life",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "environment",
+      "topicTitle": "Environment",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "stories-past-events",
+      "topicTitle": "Stories and Past Events",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "future-plans-jobs",
+      "topicTitle": "Future Plans and Jobs",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "social-life-communication",
+      "topicTitle": "Social Life and Communication",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "academic-classroom-language",
+      "topicTitle": "Academic Classroom Language",
+      "total": 20,
+      "counts": {
+        "A": 20,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    }
+  ],
+  "sets": [
+    {
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "setTitle": "Subjects, Places, and People",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "setTitle": "Homework, Tests, and Actions",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "setTitle": "Morning and Evening Routines",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "setTitle": "Chores and Free Time",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "setTitle": "Positive Personality Traits",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "setTitle": "Challenging Personality Traits",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "setTitle": "Feelings and Reactions",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "setTitle": "Opinions and Preferences",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "setTitle": "Healthy Food and Drinks",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "setTitle": "Health Problems and Advice",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "setTitle": "Places in Town",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "setTitle": "Directions and Transport",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "setTitle": "Devices, Apps, and Actions",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "setTitle": "Online Communication and Safety",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "setTitle": "Nature and Animals",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "setTitle": "Pollution and Recycling",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "setTitle": "Past Action Verbs",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "setTitle": "Story Sequence and Events",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "setTitle": "Jobs and Workplaces",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "setTitle": "Skills, Goals, and Plans",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "setTitle": "Friends and Activities",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "setTitle": "Problems, Apologies, and Advice",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "setTitle": "Task Instruction Verbs",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    },
+    {
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "setTitle": "Thinking and Explaining",
+      "total": 10,
+      "counts": {
+        "A": 10,
+        "B": 0,
+        "C": 0,
+        "D": 0
+      },
+      "tierABPercent": 100
+    }
+  ],
+  "rows": [
+    {
+      "wordItemId": "g7-a2-school-life-subject",
+      "word": "subject",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-science",
+      "word": "science",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-history",
+      "word": "history",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-geography",
+      "word": "geography",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-library",
+      "word": "library",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-laboratory",
+      "word": "laboratory",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-classmate",
+      "word": "classmate",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-principal",
+      "word": "principal",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-timetable",
+      "word": "timetable",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-uniform",
+      "word": "uniform",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-assignment",
+      "word": "assignment",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-project",
+      "word": "project",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-test",
+      "word": "test",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-exam",
+      "word": "exam",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-score",
+      "word": "score",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-mistake",
+      "word": "mistake",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-revise",
+      "word": "revise",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-submit",
+      "word": "submit",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-lesson",
+      "word": "lesson",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-school-life-deadline",
+      "word": "deadline",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-wake-up",
+      "word": "wake up",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-get-dressed",
+      "word": "get dressed",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-brush",
+      "word": "brush",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-pack",
+      "word": "pack",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-leave",
+      "word": "leave",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-arrive",
+      "word": "arrive",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-relax",
+      "word": "relax",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-shower",
+      "word": "shower",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-sleep",
+      "word": "sleep",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-prepare",
+      "word": "prepare",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-chore",
+      "word": "chore",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-tidy",
+      "word": "tidy",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-wash",
+      "word": "wash",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-feed",
+      "word": "feed",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-sweep",
+      "word": "sweep",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-take-out",
+      "word": "take out",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-hang-out",
+      "word": "hang out",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-rest",
+      "word": "rest",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-free-time",
+      "word": "free time",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-hobby",
+      "word": "hobby",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-friendly",
+      "word": "friendly",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-kind",
+      "word": "kind",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-helpful",
+      "word": "helpful",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-polite",
+      "word": "polite",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-careful",
+      "word": "careful",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-creative",
+      "word": "creative",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-confident",
+      "word": "confident",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-honest",
+      "word": "honest",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-brave",
+      "word": "brave",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-patient",
+      "word": "patient",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-shy",
+      "word": "shy",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-lazy",
+      "word": "lazy",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-rude",
+      "word": "rude",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-careless",
+      "word": "careless",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-noisy",
+      "word": "noisy",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-quiet",
+      "word": "quiet",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-selfish",
+      "word": "selfish",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-nervous",
+      "word": "nervous",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-serious",
+      "word": "serious",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-personality-stubborn",
+      "word": "stubborn",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-happy",
+      "word": "happy",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-sad",
+      "word": "sad",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-angry",
+      "word": "angry",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-worried",
+      "word": "worried",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-excited",
+      "word": "excited",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-bored",
+      "word": "bored",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-tired",
+      "word": "tired",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-surprised",
+      "word": "surprised",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-proud",
+      "word": "proud",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-calm",
+      "word": "calm",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-opinion",
+      "word": "opinion",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-prefer",
+      "word": "prefer",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-agree",
+      "word": "agree",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-disagree",
+      "word": "disagree",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-favorite",
+      "word": "favorite",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-interesting",
+      "word": "interesting",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-boring",
+      "word": "boring",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-useful",
+      "word": "useful",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-difficult",
+      "word": "difficult",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-easy",
+      "word": "easy",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-meal",
+      "word": "meal",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-vegetable",
+      "word": "vegetable",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-fruit",
+      "word": "fruit",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-rice",
+      "word": "rice",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-meat",
+      "word": "meat",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-soup",
+      "word": "soup",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-snack",
+      "word": "snack",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-sugar",
+      "word": "sugar",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-water",
+      "word": "water",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-healthy",
+      "word": "healthy",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-headache",
+      "word": "headache",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-stomachache",
+      "word": "stomachache",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-fever",
+      "word": "fever",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-cough",
+      "word": "cough",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-sick",
+      "word": "sick",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-medicine",
+      "word": "medicine",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-exercise",
+      "word": "exercise",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-take-a-break",
+      "word": "take a break",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-clinic",
+      "word": "clinic",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-food-health-habit",
+      "word": "habit",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-market",
+      "word": "market",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-supermarket",
+      "word": "supermarket",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-restaurant",
+      "word": "restaurant",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-cinema",
+      "word": "cinema",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-museum",
+      "word": "museum",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-hospital",
+      "word": "hospital",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-station",
+      "word": "station",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-park",
+      "word": "park",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-bank",
+      "word": "bank",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-pharmacy",
+      "word": "pharmacy",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-turn-left",
+      "word": "turn left",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-turn-right",
+      "word": "turn right",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-go-straight",
+      "word": "go straight",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-cross",
+      "word": "cross",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-near",
+      "word": "near",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-opposite",
+      "word": "opposite",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-between",
+      "word": "between",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-bus",
+      "word": "bus",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-motorbike",
+      "word": "motorbike",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-traffic",
+      "word": "traffic",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-device",
+      "word": "device",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-laptop",
+      "word": "laptop",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-tablet",
+      "word": "tablet",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-screen",
+      "word": "screen",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-keyboard",
+      "word": "keyboard",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-app",
+      "word": "app",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-website",
+      "word": "website",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-download",
+      "word": "download",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-upload",
+      "word": "upload",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-search",
+      "word": "search",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-message",
+      "word": "message",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-post",
+      "word": "post",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-comment",
+      "word": "comment",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-password",
+      "word": "password",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-private",
+      "word": "private",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-safe",
+      "word": "safe",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-dangerous",
+      "word": "dangerous",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-online",
+      "word": "online",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-share",
+      "word": "share",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-report",
+      "word": "report",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-forest",
+      "word": "forest",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-river",
+      "word": "river",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-ocean",
+      "word": "ocean",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-mountain",
+      "word": "mountain",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-island",
+      "word": "island",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-animal",
+      "word": "animal",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-plant",
+      "word": "plant",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-habitat",
+      "word": "habitat",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-wild",
+      "word": "wild",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-nature",
+      "word": "nature",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-pollution",
+      "word": "pollution",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-trash",
+      "word": "trash",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-plastic",
+      "word": "plastic",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-recycle",
+      "word": "recycle",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-reuse",
+      "word": "reuse",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-save",
+      "word": "save",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-clean",
+      "word": "clean",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-dirty",
+      "word": "dirty",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-protect",
+      "word": "protect",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-environment-waste",
+      "word": "waste",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-visit",
+      "word": "visited",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-watch",
+      "word": "watched",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-play",
+      "word": "played",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-help",
+      "word": "helped",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-start",
+      "word": "started",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-finish",
+      "word": "finished",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-find",
+      "word": "found",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-lose",
+      "word": "lost",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-buy",
+      "word": "bought",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-make",
+      "word": "made",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-first",
+      "word": "first",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-then",
+      "word": "then",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-next",
+      "word": "next",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-after-that",
+      "word": "after that",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-finally",
+      "word": "finally",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-suddenly",
+      "word": "suddenly",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-because",
+      "word": "because",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-so",
+      "word": "so",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-event",
+      "word": "event",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-solution",
+      "word": "solution",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-doctor",
+      "word": "doctor",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-nurse",
+      "word": "nurse",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-engineer",
+      "word": "engineer",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-artist",
+      "word": "artist",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-teacher",
+      "word": "teacher",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-chef",
+      "word": "chef",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-farmer",
+      "word": "farmer",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-pilot",
+      "word": "pilot",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-office",
+      "word": "office",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-factory",
+      "word": "factory",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-skill",
+      "word": "skill",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-goal",
+      "word": "goal",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-plan",
+      "word": "plan",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-future",
+      "word": "future",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-dream",
+      "word": "dream",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-practice",
+      "word": "practice",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-improve",
+      "word": "improve",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-learn",
+      "word": "learn",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-decide",
+      "word": "decide",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-become",
+      "word": "become",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-friend",
+      "word": "friend",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-team",
+      "word": "team",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-club",
+      "word": "club",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-party",
+      "word": "party",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-invite",
+      "word": "invite",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-join",
+      "word": "join",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-meet",
+      "word": "meet",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-make-plans",
+      "word": "make plans",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-together",
+      "word": "together",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-activity",
+      "word": "activity",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-problem",
+      "word": "problem",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-argument",
+      "word": "argument",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-sorry",
+      "word": "sorry",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-apologize",
+      "word": "apologize",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-forgive",
+      "word": "forgive",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-advice",
+      "word": "advice",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-listen",
+      "word": "listen",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-talk",
+      "word": "talk",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-respectful",
+      "word": "respectful",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-fair",
+      "word": "fair",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-choose",
+      "word": "choose",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-match",
+      "word": "match",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-complete",
+      "word": "complete",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-circle",
+      "word": "circle",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-underline",
+      "word": "underline",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-correct",
+      "word": "correct",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-describe",
+      "word": "describe",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-compare",
+      "word": "compare",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-explain",
+      "word": "explain",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-answer",
+      "word": "answer",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-reason",
+      "word": "reason",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-example",
+      "word": "example",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-idea",
+      "word": "idea",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-detail",
+      "word": "detail",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-reply",
+      "word": "reply",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-question",
+      "word": "question",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-different",
+      "word": "different",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-same",
+      "word": "same",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-important",
+      "word": "important",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-information",
+      "word": "information",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "tier": "A",
+      "clozeTagged": true
+    }
+  ]
+}

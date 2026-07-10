@@ -4,14 +4,25 @@ import { readMasterySnapshot } from "@/lib/mastery/local-storage";
 import { isSecondaryWordMastered } from "@/lib/secondary/secondary-mastery-display";
 import {
   selectSecondaryTodayWords,
+  SECONDARY_SELECTION_VERSION,
   TARGET_TODAY_WORDS,
   WARMUP_WORDS,
 } from "@/lib/secondary/secondary-session-selection";
-import { filterWordItemIdsForSecondaryActivity } from "@/lib/secondary/secondary-practice-types";
+import {
+  isStaleUnknownWordSession,
+  pruneLocalActivityStoresForSession,
+} from "@/lib/secondary/secondary-session-lifecycle";
+import { afterSecondaryActivityCompletion } from "@/lib/secondary/secondary-activity-completion";
+import {
+  reconcileSecondarySessionSlowReplace,
+} from "@/lib/secondary/secondary-session-slow-replace";
+import {
+  reconcileSecondarySessionWarmupPrune,
+} from "@/lib/secondary/secondary-session-warmup-prune";
 import {
   getAllSecondaryWordItemIds,
-  getSecondaryClozeTemplates,
-  getSecondaryVocabItemById,
+  SECONDARY_VOCAB_PACK_ID,
+  SECONDARY_VOCAB_PACK_VERSION,
 } from "@/lib/secondary/secondary-vocab-bank";
 import {
   COMPLETION_STORAGE_KEY_PREFIX,
@@ -24,6 +35,9 @@ import type {
   SecondaryTodayCompletion,
   SecondaryTodaySession,
 } from "@/lib/secondary/types";
+
+/** @deprecated Use SECONDARY_SELECTION_VERSION from secondary-session-selection.ts */
+export { SECONDARY_SELECTION_VERSION } from "@/lib/secondary/secondary-session-selection";
 
 export { WARMUP_WORDS, TARGET_TODAY_WORDS };
 
@@ -81,8 +95,45 @@ function normalizeSession(raw: SecondaryTodaySession | null | undefined): Second
     todayWordItemIds,
     allWordItemIds,
   };
-  if (raw.selectionVersion === 2) {
-    session.selectionVersion = 2;
+  if (raw.selectionVersion === 2 || raw.selectionVersion === 3) {
+    session.selectionVersion = raw.selectionVersion;
+  }
+  if (Array.isArray(raw.masteredOnListOrder)) {
+    session.masteredOnListOrder = raw.masteredOnListOrder.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+  }
+  if (Array.isArray(raw.replacedOutWordItemIds)) {
+    session.replacedOutWordItemIds = raw.replacedOutWordItemIds.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+  }
+  if (typeof raw.packId === "string" && raw.packId) {
+    session.packId = raw.packId;
+  }
+  if (typeof raw.packVersion === "string" && raw.packVersion) {
+    session.packVersion = raw.packVersion;
+  }
+  if (Array.isArray(raw.initialTodayWordItemIds)) {
+    session.initialTodayWordItemIds = raw.initialTodayWordItemIds.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+  }
+  if (Array.isArray(raw.introducedWordItemIds)) {
+    session.introducedWordItemIds = raw.introducedWordItemIds.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+  }
+  if (raw.selectionReasons && typeof raw.selectionReasons === "object") {
+    session.selectionReasons = Object.fromEntries(
+      Object.entries(raw.selectionReasons).filter(
+        (entry): entry is [string, string] =>
+          typeof entry[0] === "string" &&
+          entry[0].length > 0 &&
+          typeof entry[1] === "string" &&
+          entry[1].length > 0,
+      ),
+    );
   }
   return session;
 }
@@ -100,21 +151,19 @@ function isStaleEmptySession(session: SecondaryTodaySession): boolean {
   return session.allWordItemIds.length === 0 && getAllSecondaryWordItemIds().length > 0;
 }
 
-function collectClozeBlankIds(candidateWordItemIds: string[]): string[] {
-  const clozeEligible = new Set(
-    filterWordItemIdsForSecondaryActivity(candidateWordItemIds, "cloze"),
+function isStalePackSession(session: SecondaryTodaySession): boolean {
+  return (
+    session.packId !== SECONDARY_VOCAB_PACK_ID ||
+    session.packVersion !== SECONDARY_VOCAB_PACK_VERSION
   );
-  const blankIds: string[] = [];
+}
 
-  for (const template of getSecondaryClozeTemplates()) {
-    for (const blankId of template.blankWordItemIds) {
-      if (!getSecondaryVocabItemById(blankId)) continue;
-      if (!clozeEligible.has(blankId)) continue;
-      blankIds.push(blankId);
-    }
-  }
-
-  return blankIds;
+function isStaleCachedSession(session: SecondaryTodaySession): boolean {
+  return (
+    isStaleEmptySession(session) ||
+    isStalePackSession(session) ||
+    isStaleUnknownWordSession(session)
+  );
 }
 
 function buildSecondaryTodaySession(
@@ -132,7 +181,7 @@ function buildSecondaryTodaySession(
     studentId,
     dateKey,
     now,
-    clozeBlankIds: collectClozeBlankIds(candidateWordItemIds),
+    clozeBlankIds: [],
     masteryRecords: readMasterySnapshot().records,
   });
 
@@ -141,8 +190,45 @@ function buildSecondaryTodaySession(
     warmUpWordItemIds: selection.warmUpWordItemIds,
     todayWordItemIds: selection.todayWordItemIds,
     allWordItemIds: selection.allWordItemIds,
-    selectionVersion: 2,
+    selectionVersion: SECONDARY_SELECTION_VERSION,
+    packId: SECONDARY_VOCAB_PACK_ID,
+    packVersion: SECONDARY_VOCAB_PACK_VERSION,
+    initialTodayWordItemIds: [...selection.todayWordItemIds],
+    introducedWordItemIds: [],
+    selectionReasons: selection.reasons ? { ...selection.reasons } : {},
   };
+}
+
+function finalizeSecondaryTodaySession(
+  session: SecondaryTodaySession,
+  studentId: string,
+  now: Date,
+): SecondaryTodaySession {
+  const masteryRecords = readMasterySnapshot().records;
+  const afterWarmup = reconcileSecondarySessionWarmupPrune({
+    session,
+    masteryRecords,
+  }).session;
+  const reconciled = applySlowReplaceToSession(afterWarmup, studentId, now);
+  pruneLocalActivityStoresForSession(reconciled);
+  return reconciled;
+}
+
+function applySlowReplaceToSession(
+  session: SecondaryTodaySession,
+  studentId: string,
+  now: Date,
+): SecondaryTodaySession {
+  const candidateWordItemIds = getAllSecondaryWordItemIds();
+  if (candidateWordItemIds.length === 0) return session;
+
+  return reconcileSecondarySessionSlowReplace({
+    session,
+    candidateWordItemIds,
+    masteryRecords: readMasterySnapshot().records,
+    studentId,
+    now,
+  }).session;
 }
 
 export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySession {
@@ -151,14 +237,26 @@ export function getOrCreateSecondaryTodaySession(now: Date): SecondaryTodaySessi
   const storageKey = getSessionStorageKey(studentId, dateKey);
 
   const existingRaw = readJson<SecondaryTodaySession>(storageKey);
+  let session: SecondaryTodaySession | null = null;
+  let loadedFromCache = false;
+
   if (existingRaw) {
     const existing = normalizeSession(existingRaw);
-    if (existing && !isStaleEmptySession(existing)) return existing;
+    if (existing && !isStaleCachedSession(existing)) {
+      session = existing;
+      loadedFromCache = true;
+    }
   }
 
-  const next = buildSecondaryTodaySession(now, dateKey, studentId);
-  writeJson(storageKey, next);
-  return next;
+  if (!session) {
+    session = buildSecondaryTodaySession(now, dateKey, studentId);
+  }
+
+  const reconciled = finalizeSecondaryTodaySession(session, studentId, now);
+  if (!loadedFromCache || JSON.stringify(session) !== JSON.stringify(reconciled)) {
+    writeJson(storageKey, reconciled);
+  }
+  return reconciled;
 }
 
 export function getSecondaryTodayCompletion(now: Date): SecondaryTodayCompletion {
@@ -178,6 +276,7 @@ export function setSecondaryTodayActivityCompletion(
   const existing = readJson<SecondaryTodayCompletion>(storageKey) ?? {};
   existing[activityKey] = completion;
   writeJson(storageKey, existing);
+  afterSecondaryActivityCompletion();
 }
 
 export function clearSecondaryTodayActivityCompletion(

@@ -17,7 +17,7 @@ import {
   TARGET_TODAY_WORDS,
   WARMUP_WORDS,
 } from "@/lib/secondary/secondary-today-session";
-import { getAllSecondaryWordItemIds } from "@/lib/secondary/secondary-vocab-bank";
+import { getAllSecondaryWordItemIds, SECONDARY_VOCAB_PACK_ID, SECONDARY_VOCAB_PACK_VERSION } from "@/lib/secondary/secondary-vocab-bank";
 import { SESSION_STORAGE_KEY_PREFIX } from "@/lib/secondary/secondary-student-id";
 import { PROGRESS_STORAGE_KEY } from "@/lib/progress/types";
 
@@ -128,11 +128,13 @@ describe("secondary-today-session", () => {
     const second = getOrCreateSecondaryTodaySession(now);
 
     expect(first.dateKey).toBe(dateKey);
-    expect(first.selectionVersion).toBe(2);
+    expect(first.selectionVersion).toBe(3);
     expect(first.allWordItemIds.length).toBeGreaterThan(0);
     expect(first.allWordItemIds.length).toBeLessThanOrEqual(
       WARMUP_WORDS + TARGET_TODAY_WORDS + 8,
     );
+    expect(first.packId).toBe(SECONDARY_VOCAB_PACK_ID);
+    expect(first.packVersion).toBe(SECONDARY_VOCAB_PACK_VERSION);
     expect(second).toEqual(first);
   });
 
@@ -152,7 +154,7 @@ describe("secondary-today-session", () => {
     const session = getOrCreateSecondaryTodaySession(now);
     expect(session.allWordItemIds.length).toBeGreaterThan(0);
     expect(session.dateKey).toBe(dateKey);
-    expect(session.selectionVersion).toBe(2);
+    expect(session.selectionVersion).toBe(3);
   });
 
   it("rebuilds when stored session payload is corrupted", () => {
@@ -167,7 +169,7 @@ describe("secondary-today-session", () => {
     expect(session.dateKey).toBe(dateKey);
     expect(Array.isArray(session.allWordItemIds)).toBe(true);
     expect(session.allWordItemIds.length).toBeGreaterThan(0);
-    expect(session.selectionVersion).toBe(2);
+    expect(session.selectionVersion).toBe(3);
   });
 
   it("includes due words when scoped mastery marks them due", () => {
@@ -299,6 +301,88 @@ describe("secondary-today-session", () => {
     migrateLocalStorageToStudentStorageId(authId);
     const session = getOrCreateSecondaryTodaySession(now);
     expect(session.allWordItemIds).toContain(fragileWordId);
-    expect(session.selectionVersion).toBe(2);
+    expect(session.selectionVersion).toBe(3);
+  });
+
+  it("rebuilds cached session when vocab pack version changes", () => {
+    const studentId = "guest-pack-version";
+    seedHubDeviceId(studentId);
+
+    const initial = getOrCreateSecondaryTodaySession(now);
+    localStorage.setItem(
+      `${SESSION_STORAGE_KEY_PREFIX}${studentId}:${dateKey}`,
+      JSON.stringify({
+        ...initial,
+        packId: "g7-a2-mvp-core-vocab-v1",
+        packVersion: "1.0.0-mvp",
+      }),
+    );
+
+    const rebuilt = getOrCreateSecondaryTodaySession(now);
+    expect(rebuilt.packId).toBe(SECONDARY_VOCAB_PACK_ID);
+    expect(rebuilt.packVersion).toBe(SECONDARY_VOCAB_PACK_VERSION);
+    expect(rebuilt.allWordItemIds.length).toBeGreaterThan(0);
+  });
+
+  it("slow-replaces mastered today words when threshold is met on session load", () => {
+    const studentId = "guest-slow-replace";
+    seedHubDeviceId(studentId);
+
+    const bankIds = getAllSecondaryWordItemIds();
+    expect(bankIds.length).toBeGreaterThanOrEqual(4);
+    const todayIds = bankIds.slice(0, 4);
+
+    const masteredIds = todayIds.slice(0, 3);
+    const records: Record<string, StudentMasteryRecord> = {};
+    for (const wordId of bankIds) {
+      const key = learningTargetKey({ type: "word", key: wordId });
+      records[key] = masteredIds.includes(wordId)
+        ? masteryRecord(wordId, studentId, { masteryScore: 0.92, state: "secure" })
+        : masteryRecord(wordId, studentId, { masteryScore: 0.3, state: "developing" });
+    }
+    seedScopedMastery(studentId, records);
+
+    localStorage.setItem(
+      `${SESSION_STORAGE_KEY_PREFIX}${studentId}:${dateKey}`,
+      JSON.stringify({
+        dateKey,
+        warmUpWordItemIds: [],
+        todayWordItemIds: todayIds,
+        allWordItemIds: todayIds,
+        selectionVersion: 2,
+        packId: SECONDARY_VOCAB_PACK_ID,
+        packVersion: SECONDARY_VOCAB_PACK_VERSION,
+        masteredOnListOrder: masteredIds,
+      }),
+    );
+
+    const reloaded = getOrCreateSecondaryTodaySession(now);
+    expect(reloaded.selectionVersion).toBe(3);
+    expect(reloaded.replacedOutWordItemIds).toContain(masteredIds[0]);
+    expect(reloaded.todayWordItemIds).not.toContain(masteredIds[0]);
+    expect(reloaded.todayWordItemIds.length).toBe(todayIds.length);
+    expect(reloaded.todayWordItemIds.some((id) => !todayIds.includes(id))).toBe(true);
+    expect(reloaded.introducedWordItemIds?.length).toBeGreaterThan(0);
+  });
+
+  it("rebuilds cached session when it contains unknown word ids", () => {
+    const studentId = "guest-unknown-word";
+    seedHubDeviceId(studentId);
+
+    const initial = getOrCreateSecondaryTodaySession(now);
+    localStorage.setItem(
+      `${SESSION_STORAGE_KEY_PREFIX}${studentId}:${dateKey}`,
+      JSON.stringify({
+        ...initial,
+        todayWordItemIds: ["g7-a2-school-life-subject", "legacy-mvp-only-word"],
+        allWordItemIds: ["g7-a2-school-life-subject", "legacy-mvp-only-word"],
+        packId: SECONDARY_VOCAB_PACK_ID,
+        packVersion: SECONDARY_VOCAB_PACK_VERSION,
+      }),
+    );
+
+    const rebuilt = getOrCreateSecondaryTodaySession(now);
+    expect(rebuilt.allWordItemIds).not.toContain("legacy-mvp-only-word");
+    expect(rebuilt.allWordItemIds.length).toBeGreaterThan(0);
   });
 });

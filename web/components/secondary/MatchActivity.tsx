@@ -156,7 +156,9 @@ export function MatchActivity() {
   }
 
   function resetMatchPractice(items: SecondaryVocabItem[]) {
-    noteInitialized(matchActivityFingerprint);
+    if (matchActivityFingerprint) {
+      noteInitialized(matchActivityFingerprint);
+    }
     setSelectedDefinitions({});
     setLockedSelections({});
     setOutcomes(createPendingOutcomes(items.map((item) => item.wordItemId)));

@@ -36,6 +36,7 @@
     "**/*.test.tsx",
     "**/*.spec.ts",
     "**/*.spec.tsx",
+    "scripts/**",
     "scripts/probe-*.ts",
     "scripts/analyze-*.ts",
     "scripts/autodetect-*.ts"

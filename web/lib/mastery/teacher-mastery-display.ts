@@ -15,10 +15,8 @@ import {
   type TeacherStudentMasteryDiagnostic,
 } from "@/lib/mastery/teacher-mastery-summary";
 import type { MasteryState, StudentMasteryRecord } from "@/lib/mastery/types";
-import {
-  getSecondaryVocabItemsByIds,
-  type SecondaryVocabItem,
-} from "@/lib/secondary/secondary-vocab-bank";
+import { getSecondaryVocabItemsByIds } from "@/lib/secondary/secondary-vocab-bank";
+import type { SecondaryVocabItem } from "@/lib/secondary/types";
 
 export type TeacherWordLabel = {
   lemma: string;

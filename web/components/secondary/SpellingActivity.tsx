@@ -139,7 +139,9 @@ export function SpellingActivity() {
   }
 
   function resetSpellingPractice(ids: string[]) {
-    noteInitialized(spellingActivityFingerprint);
+    if (spellingActivityFingerprint) {
+      noteInitialized(spellingActivityFingerprint);
+    }
     if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
     setQueue([...ids]);
     setValue("");

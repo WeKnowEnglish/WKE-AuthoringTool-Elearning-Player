@@ -162,7 +162,8 @@ function trimBounds(
 
 async function processMascot(source: (typeof SOURCES)[number]) {
   const img = await Jimp.read(source.input);
-  const { data, width, height } = img.bitmap;
+  const { data: bitmapData, width, height } = img.bitmap;
+  const data = bitmapData as unknown as Uint8ClampedArray;
   const bg = estimateBackgroundColor(data, width, height);
 
   const isBg = keyOutEdgeBackground(data, width, height, bg, BG_TOLERANCE);

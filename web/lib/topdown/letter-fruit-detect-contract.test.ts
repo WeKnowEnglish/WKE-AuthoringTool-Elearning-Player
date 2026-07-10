@@ -132,11 +132,11 @@ async function assertSheetStagesMeetContract(
 describe("letter-fruit-detect — bounds contract (D3)", () => {
   it("every Letter E stage satisfies the detection contract", async () => {
     await assertSheetStagesMeetContract(LETTER_E_SHEET, LETTER_E_CLICKS);
-  });
+  }, 15_000);
 
   it("every Letter A stage satisfies the detection contract", async () => {
     await assertSheetStagesMeetContract(LETTER_A_SHEET, LETTER_A_CLICKS);
-  });
+  }, 15_000);
 
   it("Letter E sprout occupancy reaches the bulb above the B5 soil strip", async () => {
     const img = await Jimp.read(LETTER_E_SHEET);

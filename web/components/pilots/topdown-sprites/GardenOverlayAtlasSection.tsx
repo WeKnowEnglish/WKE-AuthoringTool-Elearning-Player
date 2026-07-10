@@ -28,8 +28,7 @@ const CATEGORY_BORDER: Record<SpriteCategory, string> = {
 
 function OverlayAssetCard({ assetId }: { assetId: GardenOverlayPickerFrameId }) {
   const { openEditor } = useBoundsOverride();
-  const frame = GARDEN_OVERLAY_PICKER_FRAMES.find((entry) => entry.id === assetId);
-  if (!frame) return null;
+  const frame = GARDEN_OVERLAY_PICKER_FRAMES.find((entry) => entry.id === assetId)!;
   const fallback = { sx: frame.sx, sy: frame.sy, sw: frame.sw, sh: frame.sh };
   const bounds = useResolvedSpriteBounds("garden", assetId, fallback);
 

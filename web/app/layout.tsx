@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
+import { IdleSessionLogout } from "@/components/auth/IdleSessionLogout";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -20,7 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${nunito.variable} h-full`}>
-      <body className="min-h-full font-sans antialiased">{children}</body>
+      <body className="min-h-full font-sans antialiased">
+        <IdleSessionLogout />
+        {children}
+      </body>
     </html>
   );
 }

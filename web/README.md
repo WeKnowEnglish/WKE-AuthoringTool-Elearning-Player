@@ -34,6 +34,8 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
      This creates the user with **`app_metadata.role`: `teacher`** and confirmed email.
    - **Dashboard:** Authentication → Users → Add user, then edit the user → **App metadata** → `{ "role": "teacher" }`.
 
+   Public teacher registration is intentionally disabled. The Teacher tab offers a **Request teacher access** form instead. To enable administrator notifications, apply `032_teacher_access_requests.sql` and configure `RESEND_API_KEY` plus `TEACHER_ACCESS_NOTIFICATION_EMAIL`. Requests are stored for review and never create an account automatically.
+
 4. **Supabase Auth URLs** (required for password reset and magic links):
    - Dashboard → **Authentication** → **URL Configuration**
    - **Site URL**: the canonical origin students/teachers use (e.g. `http://localhost:3000` in dev, or your production `https://…`).

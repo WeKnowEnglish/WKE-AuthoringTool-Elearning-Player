@@ -23,6 +23,7 @@ import {
 import { writeLearningBandCookie } from "@/lib/learning-band-cookie";
 import { setLearningBand } from "@/lib/progress/local-storage";
 import { createClient } from "@/lib/supabase/client";
+import { TeacherAccessRequestForm } from "@/components/auth/TeacherAccessRequestForm";
 
 export type PortalKind = "student" | "teacher";
 
@@ -76,6 +77,7 @@ export function PortalLoginPanel({
   );
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [requestingTeacherAccess, setRequestingTeacherAccess] = useState(false);
 
   async function finishStudentSession(
     band: LearningBand,
@@ -379,6 +381,8 @@ export function PortalLoginPanel({
             </KidButton>
           </form>
         </>
+      : requestingTeacherAccess ?
+        <TeacherAccessRequestForm onCancel={() => setRequestingTeacherAccess(false)} />
       : <form onSubmit={onTeacherSubmit} className="space-y-3">
           <div>
             <label className="block text-sm font-medium" htmlFor="portal-teacher-email">
@@ -436,6 +440,20 @@ export function PortalLoginPanel({
               className="w-full rounded border border-neutral-300 bg-white py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
             >
               {resetLoading ? "Sending…" : "Forgot password (email reset)"}
+            </button>
+            <p className="mt-3 text-center text-xs text-neutral-600">
+              Teacher accounts are approved by an administrator.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setRequestingTeacherAccess(true);
+                setMessage("");
+                setInfo("");
+              }}
+              className="mt-2 w-full rounded border border-neutral-300 bg-white py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-50"
+            >
+              Request teacher access
             </button>
           </div>
         </form>

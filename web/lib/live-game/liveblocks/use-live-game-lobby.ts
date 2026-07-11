@@ -3,8 +3,10 @@
 import { useOthers, useSelf, useStorage } from "@liveblocks/react/suspense";
 import type { LiveGameLobbyPlayer, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
 import {
+  useCloseLiveGameLobbyMutation,
+  useEndRoundAndReturnToLobbyMutation,
   useJoinLiveGameLobbyMutation,
-  useSetLiveGameReadyMutation,
+  useReturnToLobbyMutation,
   useStartLiveGameMutation,
 } from "@/lib/live-game/liveblocks/mutations/lobby";
 
@@ -32,8 +34,10 @@ export function useLiveGameLobby() {
   });
 
   const joinLobby = useJoinLiveGameLobbyMutation();
-  const setReady = useSetLiveGameReadyMutation();
   const startGame = useStartLiveGameMutation();
+  const returnToLobby = useReturnToLobbyMutation();
+  const closeLobby = useCloseLiveGameLobbyMutation();
+  const endRoundAndReturnToLobby = useEndRoundAndReturnToLobbyMutation();
 
   const selfEntry = players.find((entry) => entry.id === self.id) ?? null;
   const isHost = selfEntry?.player.role === "host";
@@ -46,8 +50,10 @@ export function useLiveGameLobby() {
     selfEntry,
     isHost,
     joinLobby,
-    setReady,
     startGame,
+    returnToLobby,
+    closeLobby,
+    endRoundAndReturnToLobby,
   };
 }
 

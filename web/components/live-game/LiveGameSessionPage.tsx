@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LiveGameRoomShell } from "@/components/live-game/LiveGameRoomShell";
 import { LiveGameSessionRouter } from "@/components/live-game/LiveGameSessionRouter";
-import { getLiveGameSessionContext } from "@/lib/live-game/liveblocks/identity";
+import {
+  getLiveGameSessionContext,
+  type LiveGameSessionContext,
+} from "@/lib/live-game/liveblocks/identity";
 import { isValidJoinCode } from "@/lib/live-game/liveblocks/join-code";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
-import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
 import { createMovementState } from "@/lib/live-game/engine/movement";
 import { getMapForMode } from "@/lib/live-game/modes";
 
@@ -14,9 +17,23 @@ type Props = {
   sessionId: string;
 };
 
+function LiveGameSessionContextLoading() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center text-xl font-bold text-kid-ink">
+      Loading live game...
+    </div>
+  );
+}
+
 export function LiveGameSessionPage({ sessionId }: Props) {
   const normalizedSessionId = sessionId.trim().toUpperCase();
-  const context = getLiveGameSessionContext();
+  const [context, setContext] = useState<LiveGameSessionContext | null>(null);
+  const [contextReady, setContextReady] = useState(false);
+
+  useEffect(() => {
+    setContext(getLiveGameSessionContext());
+    setContextReady(true);
+  }, []);
 
   if (!isValidJoinCode(normalizedSessionId)) {
     return (
@@ -27,6 +44,10 @@ export function LiveGameSessionPage({ sessionId }: Props) {
         </Link>
       </div>
     );
+  }
+
+  if (!contextReady) {
+    return <LiveGameSessionContextLoading />;
   }
 
   if (!context || context.sessionId !== normalizedSessionId) {

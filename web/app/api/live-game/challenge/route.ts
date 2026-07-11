@@ -10,7 +10,6 @@ import {
   createLiveGameChallenge,
   findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
-import { refreshExpiredNodeCooldowns } from "@/lib/live-game/server/award-wood";
 import {
   isResourceNodeAvailable,
   readLiveGameStorageJson,
@@ -66,8 +65,6 @@ async function handlePost(request: Request) {
   if (!ENGLISH_CRAFT_WOOD_TREE_BY_ID[nodeId]) {
     return NextResponse.json({ error: "Unknown resource node." }, { status: 400 });
   }
-
-  await refreshExpiredNodeCooldowns(roomId);
 
   const storage = await readLiveGameStorageJson(roomId);
   if (!storage?.session) {

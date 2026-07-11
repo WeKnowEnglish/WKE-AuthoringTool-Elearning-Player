@@ -1,6 +1,10 @@
 "use client";
 
 import type { LiveGameAuthRole } from "@/lib/live-game/liveblocks/auth-policy";
+import {
+  ENGLISH_CRAFT_DURATION_OPTIONS,
+  type EnglishCraftSessionDuration,
+} from "@/lib/live-game/modes/english-craft/config";
 import { LIVE_GAME_ROOM_PREFIX } from "@/lib/liveblocks/room-prefix";
 
 const SESSION_CONTEXT_KEY = "wke-live-game-session-context";
@@ -17,12 +21,17 @@ export type LiveGameSessionContext = {
   avatarId: string;
   modeId: "english_craft";
   mapId: string;
-  durationMinutes: number;
+  durationMinutes: EnglishCraftSessionDuration;
 };
 
 export function setLiveGameSessionContext(context: LiveGameSessionContext): void {
   if (typeof window === "undefined") return;
   window.sessionStorage.setItem(SESSION_CONTEXT_KEY, JSON.stringify(context));
+}
+
+export function clearLiveGameSessionContext(): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(SESSION_CONTEXT_KEY);
 }
 
 export function getLiveGameSessionContext(): LiveGameSessionContext | null {
@@ -40,7 +49,10 @@ export function getLiveGameSessionContext(): LiveGameSessionContext | null {
       typeof parsed.avatarId !== "string" ||
       parsed.modeId !== "english_craft" ||
       typeof parsed.mapId !== "string" ||
-      typeof parsed.durationMinutes !== "number"
+      (parsed.durationMinutes !== null &&
+        !ENGLISH_CRAFT_DURATION_OPTIONS.includes(
+          parsed.durationMinutes as (typeof ENGLISH_CRAFT_DURATION_OPTIONS)[number],
+        ))
     ) {
       return null;
     }

@@ -54,7 +54,6 @@ export async function awardWoodForNode(input: {
     const cooldownEndsAt = node.get("cooldownEndsAt");
     const now = Date.now();
     if (typeof cooldownEndsAt === "number" && cooldownEndsAt > now) return;
-    if (node.get("available") === false) return;
 
     const nextWood = readMutatorNumber(resourcePool.get("wood")) + 1;
     resourcePool.set("wood", nextWood);

@@ -12,7 +12,7 @@ import {
   setLiveGameSessionContext,
 } from "@/lib/live-game/liveblocks/identity";
 import { isValidJoinCode } from "@/lib/live-game/liveblocks/join-code";
-import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
+import { ENGLISH_CRAFT_MODE, normalizeEnglishCraftDurationMinutes } from "@/lib/live-game/modes/english-craft/config";
 import {
   LIVE_GAME_DEFAULT_AVATAR_ID,
   type LiveGameCharacterId,
@@ -66,7 +66,7 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
       avatarId,
       modeId: "english_craft",
       mapId: ENGLISH_CRAFT_MODE.defaultMapId,
-      durationMinutes: ENGLISH_CRAFT_MODE.defaultDurationMinutes,
+      durationMinutes: normalizeEnglishCraftDurationMinutes(ENGLISH_CRAFT_MODE.defaultDurationMinutes),
     });
     router.push(`/live-game/${code}`);
   }

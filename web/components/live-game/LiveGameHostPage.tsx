@@ -9,7 +9,7 @@ import {
   LIVE_GAME_DEFAULT_PLAYER_COLOR,
   setLiveGameSessionContext,
 } from "@/lib/live-game/liveblocks/identity";
-import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
+import { ENGLISH_CRAFT_DURATION_OPTIONS, ENGLISH_CRAFT_MODE, formatEnglishCraftDurationSelectValue, normalizeEnglishCraftDurationMinutes, parseEnglishCraftDurationSelectValue, type EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
 import {
   LIVE_GAME_DEFAULT_AVATAR_ID,
   type LiveGameCharacterId,
@@ -27,7 +27,9 @@ export function LiveGameHostPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("Teacher");
   const [avatarId, setAvatarId] = useState<LiveGameCharacterId>(LIVE_GAME_DEFAULT_AVATAR_ID);
-  const [durationMinutes, setDurationMinutes] = useState(ENGLISH_CRAFT_MODE.defaultDurationMinutes);
+  const [durationMinutes, setDurationMinutes] = useState<EnglishCraftSessionDuration>(
+    ENGLISH_CRAFT_MODE.defaultDurationMinutes as EnglishCraftSessionDuration,
+  );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -74,7 +76,7 @@ export function LiveGameHostPage() {
         avatarId,
         modeId: ENGLISH_CRAFT_MODE.id,
         mapId: payload.mapId ?? ENGLISH_CRAFT_MODE.defaultMapId,
-        durationMinutes: payload.durationMinutes ?? durationMinutes,
+        durationMinutes: normalizeEnglishCraftDurationMinutes(payload.durationMinutes ?? durationMinutes ?? ENGLISH_CRAFT_MODE.defaultDurationMinutes),
       });
 
       router.push(`/live-game/${payload.sessionId}`);
@@ -108,11 +110,13 @@ export function LiveGameHostPage() {
         <label className="block space-y-1">
           <span className="text-sm font-bold text-kid-ink">Session length (minutes)</span>
           <select
-            value={durationMinutes}
-            onChange={(event) => setDurationMinutes(Number(event.target.value))}
+            value={formatEnglishCraftDurationSelectValue(durationMinutes)}
+            onChange={(event) =>
+              setDurationMinutes(parseEnglishCraftDurationSelectValue(event.target.value))
+            }
             className="w-full rounded-lg border-4 border-kid-ink bg-white px-3 py-2 text-lg font-semibold text-kid-ink"
           >
-            {[10, 15, 20, 30].map((mins) => (
+            {ENGLISH_CRAFT_DURATION_OPTIONS.map((mins) => (
               <option key={mins} value={mins}>
                 {mins} minutes
               </option>

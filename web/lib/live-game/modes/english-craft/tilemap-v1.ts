@@ -18,7 +18,7 @@ const RIVER_ROW_END = 6;
 const RIVER_COL_START = 4;
 const RIVER_COL_END = 15;
 
-/** North choke — matches collision x≈680 (col 14+). */
+/** North choke column (legacy map note — no longer used for collision). */
 const NORTH_CHOKE_COL = 14;
 
 function hashCell(col: number, row: number): number {
@@ -94,3 +94,10 @@ export const ENGLISH_CRAFT_MAP_PIXELS = {
 };
 
 export const ENGLISH_CRAFT_NORTH_CHOKE_COL = NORTH_CHOKE_COL;
+
+export const ENGLISH_CRAFT_RIVER_CELL_BOUNDS = {
+  rowStart: RIVER_ROW_START,
+  rowEnd: RIVER_ROW_END,
+  colStart: RIVER_COL_START,
+  colEnd: RIVER_COL_END,
+} as const;

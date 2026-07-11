@@ -2,9 +2,11 @@
 
 import { useStorage } from "@liveblocks/react/suspense";
 import { LiveGameCanvas } from "@/components/live-game/LiveGameCanvas";
-import { LiveGameLobby } from "@/components/live-game/LiveGameLobby";
+import { LiveGameLobbyCanvas } from "@/components/live-game/LiveGameLobbyCanvas";
+import { LiveGameSessionEndedScreen } from "@/components/live-game/LiveGameSessionEndedScreen";
 import type { LiveGameSessionContext } from "@/lib/live-game/liveblocks/identity";
 import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
+import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
 
 type Props = {
   context: LiveGameSessionContext;
@@ -20,13 +22,18 @@ function SessionLoading() {
 
 export function LiveGameSessionRouter({ context }: Props) {
   const phase = useStorage((root) => (root as unknown as LiveGameStorageSnapshot).session.phase);
+  const { isHost } = useLiveGameLobby();
+
+  if (phase === "ended") {
+    return <LiveGameSessionEndedScreen isHost={isHost} />;
+  }
 
   if (phase === "playing" || phase === "paused" || phase === "completed") {
     return <LiveGameCanvas context={context} />;
   }
 
   if (phase === "lobby") {
-    return <LiveGameLobby context={context} />;
+    return <LiveGameLobbyCanvas context={context} />;
   }
 
   return <SessionLoading />;

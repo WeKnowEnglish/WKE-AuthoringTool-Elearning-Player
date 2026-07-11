@@ -87,6 +87,10 @@ export function resolveLiveGameCharacter(avatarId?: string | null): LiveGameChar
   return CHARACTER_BY_ID[LIVE_GAME_DEFAULT_AVATAR_ID];
 }
 
+export function toLiveGameCharacterId(avatarId: string): LiveGameCharacterId {
+  return resolveLiveGameCharacter(avatarId).id;
+}
+
 export function liveGameCharacterDisplayHeightPx(
   displayWidthPx: number,
   character: Pick<LiveGameCharacterDef, "nativeWidthPx" | "nativeHeightPx"> = CHARACTER_BY_ID[

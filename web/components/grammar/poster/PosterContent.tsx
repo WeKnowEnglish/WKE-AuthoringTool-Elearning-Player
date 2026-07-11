@@ -57,6 +57,15 @@ function renderSectionCard(
       tabIndex={0}
       onClick={() => editable?.onSelectCard?.(section.number)}
       onKeyDown={(event) => {
+        const target = event.target as HTMLElement;
+        if (
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           editable?.onSelectCard?.(section.number);

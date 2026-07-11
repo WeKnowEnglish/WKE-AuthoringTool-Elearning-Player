@@ -25,6 +25,8 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
    - `supabase/migrations/019_lesson_plan.sql` — **shared lesson plan** (`lessons.lesson_plan` text + optional `lesson_plan_meta` for AI)
    - `supabase/migrations/024_student_mastery.sql` — **student mastery + evidence** (`student_mastery_records`, `student_learning_evidence`; P1a schema + RLS)
    - `supabase/migrations/025_evidence_id_text.sql` — **evidence id as text** (matches composite event ids; P1c write-through)
+   - `supabase/migrations/032_teacher_access_requests.sql` — teacher access request form storage (optional)
+   - `supabase/migrations/034_grammar_modules.sql` — **grammar poster Save/Publish** (`grammar_modules` table + RLS)
 
 3. **Teacher account** — pick one:
    - **Script (recommended):** add **`SUPABASE_SERVICE_ROLE_KEY`** to `.env.local` (Supabase → Project Settings → API → **service_role** secret). Then run:
@@ -35,6 +37,8 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
    - **Dashboard:** Authentication → Users → Add user, then edit the user → **App metadata** → `{ "role": "teacher" }`.
 
    Public teacher registration is intentionally disabled. The Teacher tab offers a **Request teacher access** form instead. To enable administrator notifications, apply `032_teacher_access_requests.sql` and configure `RESEND_API_KEY` plus `TEACHER_ACCESS_NOTIFICATION_EMAIL`. Requests are stored for review and never create an account automatically.
+
+   **Grammar posters:** Teachers edit at `/teacher/grammar`. Run migration `034_grammar_modules.sql`, then use **Save** (draft) or **Publish** (live for students). Until published, students keep seeing the bundled JSON files in `content/grammar/`.
 
 4. **Supabase Auth URLs** (required for password reset and magic links):
    - Dashboard → **Authentication** → **URL Configuration**

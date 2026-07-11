@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { PosterModuleView } from "@/lib/grammar-builder/map-poster-module";
+import { grammarTeacherEditorSlugPath } from "@/lib/grammar-builder/editor/grammar-editor-paths";
 
 import { GrammarPosterInteractiveContent } from "./GrammarPosterInteractiveContent";
 
@@ -66,7 +67,7 @@ export function GrammarPosterPage({ slug, view }: Props) {
 
           <Link
 
-            href={`/grammar/pilot/editor/${slug}`}
+            href={grammarTeacherEditorSlugPath(slug)}
 
             className="text-sm font-semibold text-kid-ink/40 underline-offset-2 hover:text-kid-ink/60 hover:underline"
 

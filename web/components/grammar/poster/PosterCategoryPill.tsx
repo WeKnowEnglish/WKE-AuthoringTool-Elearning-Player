@@ -1,14 +1,30 @@
-import type { GrammarPosterVariant } from "./poster-variant";
+"use client";
+
+import { posterInlineEditFieldKey } from "@/lib/grammar-builder/editor/poster-inline-edit-fields";
+import { PosterEditableText } from "./editor/PosterEditableText";
+import { usePosterInlineEdit } from "./editor/PosterInlineEditContext";
 
 type Props = {
+  cardId: number;
+  side: "leftColumn" | "rightColumn";
   label: string;
   emoji?: string;
   backgroundColor: string;
-  variant?: GrammarPosterVariant;
+  variant?: "poster" | "showcase";
 };
 
-export function PosterCategoryPill({ label, emoji, backgroundColor, variant = "poster" }: Props) {
+export function PosterCategoryPill({
+  cardId,
+  side,
+  label,
+  emoji,
+  backgroundColor,
+  variant = "poster",
+}: Props) {
+  const inlineEdit = usePosterInlineEdit();
   const isShowcase = variant === "showcase";
+  const showBadgeEditor =
+    inlineEdit?.enabled && inlineEdit.selectedCardId === cardId && !isShowcase;
 
   return (
     <div
@@ -19,12 +35,33 @@ export function PosterCategoryPill({ label, emoji, backgroundColor, variant = "p
       }
       style={{ backgroundColor }}
     >
-      {emoji ? (
-        <span className={isShowcase ? "text-lg" : "text-2xl"} aria-hidden>
-          {emoji}
-        </span>
-      ) : null}
-      <span>{label}</span>
+      {emoji || showBadgeEditor ?
+        <PosterEditableText
+          cardId={cardId}
+          fieldKey={posterInlineEditFieldKey(cardId, { kind: "columnBadge", side })}
+          value={emoji ?? ""}
+          variant="emoji"
+          placeholder="📘"
+          trimOnCommit={false}
+        >
+          {emoji ?
+            <span className={isShowcase ? "text-lg" : "text-2xl"} aria-hidden>
+              {emoji}
+            </span>
+          : showBadgeEditor ?
+            <span className="text-sm text-kid-ink/40">+</span>
+          : null}
+        </PosterEditableText>
+      : null}
+      <PosterEditableText
+        cardId={cardId}
+        fieldKey={posterInlineEditFieldKey(cardId, { kind: "columnTitle", side })}
+        value={label}
+        variant="column-title"
+        placeholder="Column title"
+      >
+        <span>{label}</span>
+      </PosterEditableText>
     </div>
   );
 }

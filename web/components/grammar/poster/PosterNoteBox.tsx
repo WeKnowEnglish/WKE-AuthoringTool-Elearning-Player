@@ -1,6 +1,12 @@
+"use client";
+
+import { PosterEditableText } from "./editor/PosterEditableText";
 import type { GrammarPosterVariant } from "./poster-variant";
 
 type Props = {
+  cardId?: number;
+  bodyFieldKey?: string;
+  highlightFieldKey?: string;
   title: string;
   body: string;
   highlight: string;
@@ -10,6 +16,9 @@ type Props = {
 };
 
 export function PosterNoteBox({
+  cardId,
+  bodyFieldKey,
+  highlightFieldKey,
   title,
   body,
   highlight,
@@ -19,6 +28,33 @@ export function PosterNoteBox({
 }: Props) {
   const isShowcase = variant === "showcase";
   const isDensePoster = dense && !isShowcase;
+  const editable = cardId != null && bodyFieldKey && highlightFieldKey;
+
+  const bodyContent =
+    editable ?
+      <PosterEditableText
+        cardId={cardId}
+        fieldKey={bodyFieldKey}
+        value={body}
+        variant="body-text"
+        placeholder="Banner body text"
+      >
+        <span>{body}</span>
+      </PosterEditableText>
+    : body;
+
+  const highlightContent =
+    editable ?
+      <PosterEditableText
+        cardId={cardId}
+        fieldKey={highlightFieldKey}
+        value={highlight}
+        variant="banner-highlight"
+        placeholder="Highlight phrase"
+      >
+        <span>↙ ↘ {highlight}</span>
+      </PosterEditableText>
+    : <>↙ ↘ {highlight}</>;
 
   return (
     <div
@@ -57,7 +93,7 @@ export function PosterNoteBox({
           : "flex-1 text-base font-semibold leading-relaxed text-kid-ink md:text-lg"
         }
       >
-        {body}
+        {bodyContent}
       </p>
       <div
         className={
@@ -73,7 +109,7 @@ export function PosterNoteBox({
             : "text-sm font-extrabold uppercase tracking-wide text-kid-ink md:text-base"
           }
         >
-          ↙ ↘ {highlight}
+          {highlightContent}
         </p>
       </div>
     </div>

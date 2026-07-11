@@ -3,6 +3,9 @@
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
 import type { CardPalette } from "@/lib/grammar-builder/theme-tokens";
+import { posterInlineEditFieldKey } from "@/lib/grammar-builder/editor/poster-inline-edit-fields";
+import { PosterEditableText } from "./editor/PosterEditableText";
+import { usePosterInlineEdit } from "./editor/PosterInlineEditContext";
 import { PosterInteractiveTarget } from "./interactions/PosterInteractiveTarget";
 import { PosterGlanceRule } from "./PosterGlanceRule";
 import type { PosterGlanceRule as PosterGlanceRuleData, PosterSectionColor } from "./poster-view-model";
@@ -36,6 +39,10 @@ export function PosterSectionCard({
   const resolvedPalette = palette ?? SECTION_COLORS[color];
   const isShowcase = variant === "showcase";
   const headerTitle = isShowcase ? (title ?? kidTitle) : kidTitle;
+  const inlineEdit = usePosterInlineEdit();
+  const showInlineSubtitle =
+    !isShowcase &&
+    (kidSubtitle || (inlineEdit?.enabled && inlineEdit.selectedCardId === number));
 
   return (
     <section
@@ -73,27 +80,50 @@ export function PosterSectionCard({
             {number}
           </span>
         ) : null}
-        <div className="min-w-0">
-          <h2
-            className={
-              isShowcase ?
-                "text-[11px] font-extrabold uppercase leading-tight text-white sm:text-xs"
-              : "text-sm font-extrabold uppercase leading-snug text-white md:text-base"
-            }
-          >
-            {isShowcase ? `${number}. ${headerTitle}` : headerTitle}
-          </h2>
-          {!isShowcase && kidSubtitle ? (
-            <p className="text-xs font-bold uppercase leading-tight text-white/90 md:text-sm">
-              {kidSubtitle}
-            </p>
-          ) : null}
+        <div className="min-w-0 flex-1">
+          {isShowcase ?
+            <h2 className="text-[11px] font-extrabold uppercase leading-tight text-white sm:text-xs">
+              {number}. {headerTitle}
+            </h2>
+          : <PosterEditableText
+              cardId={number}
+              fieldKey={posterInlineEditFieldKey(number, { kind: "chrome", field: "kidTitle" })}
+              value={kidTitle}
+              variant="header-title"
+              maxLength={40}
+              placeholder="Card title"
+            >
+              <span className="text-sm font-extrabold uppercase leading-snug text-white md:text-base">
+                {headerTitle}
+              </span>
+            </PosterEditableText>
+          }
+          {showInlineSubtitle ?
+            <PosterEditableText
+              cardId={number}
+              fieldKey={posterInlineEditFieldKey(number, { kind: "chrome", field: "kidSubtitle" })}
+              value={kidSubtitle ?? ""}
+              variant="header-subtitle"
+              maxLength={30}
+              placeholder="Subtitle (optional)"
+            >
+              <span className="text-xs font-bold uppercase leading-tight text-white/90 md:text-sm">
+                {kidSubtitle || (
+                  <span className="text-white/50">Subtitle (optional)</span>
+                )}
+              </span>
+            </PosterEditableText>
+          : null}
         </div>
       </div>
       <div className={isShowcase ? "flex-1 p-3" : "p-3 sm:p-4"}>
         {!isShowcase && glanceRule ?
           <PosterInteractiveTarget cardId={number} region="glanceRule">
-            <PosterGlanceRule text={glanceRule.text} highlight={glanceRule.highlight} />
+            <PosterGlanceRule
+              cardId={number}
+              text={glanceRule.text}
+              highlight={glanceRule.highlight}
+            />
           </PosterInteractiveTarget>
         : null}
         {children}

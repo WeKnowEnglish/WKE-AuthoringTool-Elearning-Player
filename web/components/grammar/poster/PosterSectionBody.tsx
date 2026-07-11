@@ -1,3 +1,4 @@
+import { posterInlineEditFieldKey } from "@/lib/grammar-builder/editor/poster-inline-edit-fields";
 import { PosterInteractiveTarget } from "./interactions/PosterInteractiveTarget";
 import { PosterExampleRow } from "./PosterExampleRow";
 import { PosterComparisonBody } from "./PosterComparisonBody";
@@ -38,6 +39,12 @@ function BannerBody({
   return (
     <PosterInteractiveTarget cardId={section.number} region="banner">
       <PosterNoteBox
+        cardId={section.number}
+        bodyFieldKey={posterInlineEditFieldKey(section.number, { kind: "banner", field: "text" })}
+        highlightFieldKey={posterInlineEditFieldKey(section.number, {
+          kind: "banner",
+          field: "highlight",
+        })}
         title={section.rememberBanner.title}
         body={section.rememberBanner.body}
         highlight={section.rememberBanner.highlight}
@@ -63,6 +70,8 @@ function TwoEqualNarrowBody({
       <div>
         {section.leftLabel ? (
           <PosterCategoryPill
+            cardId={section.number}
+            side="leftColumn"
             label={section.leftLabel}
             emoji={section.leftEmoji}
             backgroundColor={getSectionPillColor(section.color, section.palette)}
@@ -109,6 +118,7 @@ function TwoEqualBody({
     <div>
       {section.goodBadPair ? (
         <PosterGoodBadPair
+          cardId={section.number}
           pair={section.goodBadPair}
           variant={variant}
           accentColor={section.palette?.header}
@@ -118,6 +128,8 @@ function TwoEqualBody({
       <div>
         {section.leftLabel ? (
           <PosterCategoryPill
+            cardId={section.number}
+            side="leftColumn"
             label={section.leftLabel}
             emoji={section.leftEmoji}
             backgroundColor={getSectionPillColor(section.color, section.palette)}
@@ -138,6 +150,8 @@ function TwoEqualBody({
       <div className="sm:border-l-2 sm:border-dashed sm:border-kid-ink/30 sm:pl-4">
         {section.rightLabel ? (
           <PosterCategoryPill
+            cardId={section.number}
+            side="rightColumn"
             label={section.rightLabel}
             emoji={section.rightEmoji}
             backgroundColor={getSectionPillColor(section.color, section.palette)}

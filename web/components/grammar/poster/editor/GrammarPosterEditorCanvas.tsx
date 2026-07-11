@@ -42,6 +42,8 @@ type Props = {
 
   cardIds?: number[];
 
+  inlineEditEnabled?: boolean;
+
 };
 
 
@@ -72,49 +74,33 @@ export function GrammarPosterEditorCanvas({
 
   cardIds,
 
+  inlineEditEnabled = false,
+
 }: Props) {
-
   const resolvedMode: PosterInteractionMode =
-
     previewMode ? "play" : interactionMode;
 
-
-
   return (
-
     <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border-2 border-kid-ink/20 bg-white/60 p-3 sm:p-4">
-
       {showValidationBanner ?
-
         <div
-
           className="mb-3 rounded-xl border-2 border-amber-500/50 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900"
-
           role="status"
-
         >
-
           Fix {validationIssues.length} validation{" "}
-
           {validationIssues.length === 1 ? "error" : "errors"} to update the preview.
-
         </div>
-
       : null}
-
-
 
       {pickTargetMode ?
-
         <p className="mb-3 rounded-xl border-2 border-kid-cta/40 bg-kid-cta/20 px-3 py-2 text-sm font-semibold text-kid-ink">
-
           Click a dashed region on the poster to pick an interaction target.
-
         </p>
-
+      : inlineEditEnabled && selectedCardId !== null ?
+        <p className="mb-3 rounded-xl border-2 border-sky-300/60 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-950">
+          Card {selectedCardId} selected — click underlined text to edit titles, examples, and column labels.
+        </p>
       : null}
-
-
 
       <GrammarPosterInteractiveContent
 

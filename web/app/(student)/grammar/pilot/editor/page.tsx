@@ -1,17 +1,6 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { GrammarPosterEditorIndex } from "@/components/grammar/poster/editor/GrammarPosterEditorIndex";
+import { redirect } from "next/navigation";
+import { GRAMMAR_TEACHER_EDITOR_INDEX_PATH } from "@/lib/grammar-builder/editor/grammar-editor-paths";
 
-export const metadata: Metadata = {
-  title: "Grammar Poster Editor (Author)",
-  description: "Authoring tool for grammar infographic posters.",
-  robots: { index: false, follow: false },
-};
-
-export default function GrammarPosterEditorRoutePage() {
-  if (process.env.NODE_ENV === "production") {
-    notFound();
-  }
-
-  return <GrammarPosterEditorIndex />;
+export default function GrammarPosterEditorRedirectPage() {
+  redirect(GRAMMAR_TEACHER_EDITOR_INDEX_PATH);
 }

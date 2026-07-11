@@ -2,16 +2,25 @@
 
 import Link from "next/link";
 import { KidButton } from "@/components/kid-ui/KidButton";
+import {
+  GRAMMAR_TEACHER_EDITOR_INDEX_PATH,
+} from "@/lib/grammar-builder/editor/grammar-editor-paths";
+import type { GrammarModulePersistedStatus } from "@/lib/data/grammar-modules";
 
 type Props = {
   slug: string;
   title: string;
   dirty: boolean;
   previewMode: boolean;
+  lenientValid: boolean;
   strictValid: boolean;
   issueCount: number;
+  persistedStatus: GrammarModulePersistedStatus | null;
+  saving: boolean;
   statusMessage: string | null;
   onTogglePreview: () => void;
+  onSave: () => void;
+  onPublish: () => void;
   onCopyJson: () => void;
   onDownloadJson: () => void;
   onReset: () => void;
@@ -22,22 +31,29 @@ export function GrammarPosterEditorToolbar({
   title,
   dirty,
   previewMode,
+  lenientValid,
   strictValid,
   issueCount,
+  persistedStatus,
+  saving,
   statusMessage,
   onTogglePreview,
+  onSave,
+  onPublish,
   onCopyJson,
   onDownloadJson,
   onReset,
 }: Props) {
   const exportDisabled = !strictValid;
+  const saveDisabled = saving || !lenientValid || !dirty;
+  const publishDisabled = saving || !strictValid;
 
   return (
     <header className="space-y-3 rounded-2xl border-2 border-kid-ink/20 bg-white/70 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href="/grammar/pilot/editor"
+            href={GRAMMAR_TEACHER_EDITOR_INDEX_PATH}
             className="rounded-lg border-2 border-kid-ink bg-kid-panel px-3 py-1.5 text-sm font-bold text-kid-ink shadow-[2px_2px_0_0_var(--kid-shadow)]"
           >
             ← Posters
@@ -64,7 +80,11 @@ export function GrammarPosterEditorToolbar({
             />
           : null}
           <span className="rounded-full border-2 border-kid-ink/30 bg-neutral-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-kid-ink/60">
-            Author editor
+            {persistedStatus === "published" ?
+              "Published"
+            : persistedStatus === "draft" ?
+              "Draft saved"
+            : "Bundled file"}
           </span>
         </div>
       </div>
@@ -82,6 +102,12 @@ export function GrammarPosterEditorToolbar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <KidButton variant="primary" onClick={onSave} disabled={saveDisabled}>
+          {saving ? "Saving…" : "Save"}
+        </KidButton>
+        <KidButton variant="primary" onClick={onPublish} disabled={publishDisabled}>
+          Publish
+        </KidButton>
         <KidButton variant="secondary" onClick={onTogglePreview}>
           {previewMode ? "Edit mode" : "Preview"}
         </KidButton>

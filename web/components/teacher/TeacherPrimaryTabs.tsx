@@ -7,6 +7,7 @@ export function TeacherPrimaryTabs() {
   const pathname = usePathname();
   const onClasses = pathname.startsWith("/teacher/classes");
   const onMedia = pathname.startsWith("/teacher/media");
+  const onGrammar = pathname.startsWith("/teacher/grammar");
 
   return (
     <nav className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5">
@@ -29,6 +30,16 @@ export function TeacherPrimaryTabs() {
         }`}
       >
         Media Library
+      </Link>
+      <Link
+        href="/teacher/grammar"
+        className={`rounded-full border px-2 py-1 text-xs font-semibold sm:px-2.5 sm:py-1.5 sm:text-sm ${
+          onGrammar ?
+            "border-neutral-900 bg-neutral-900 text-white"
+          : "border-neutral-300 bg-white text-neutral-700"
+        }`}
+      >
+        Grammar Posters
       </Link>
     </nav>
   );

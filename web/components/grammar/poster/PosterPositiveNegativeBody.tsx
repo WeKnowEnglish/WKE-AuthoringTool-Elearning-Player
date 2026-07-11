@@ -1,3 +1,11 @@
+"use client";
+
+import {
+  posterInlineEditFieldKey,
+  type PosterSidePanelField,
+  type PosterSidePanelKey,
+} from "@/lib/grammar-builder/editor/poster-inline-edit-fields";
+import { PosterEditableText } from "./editor/PosterEditableText";
 import { PosterInteractiveTarget } from "./interactions/PosterInteractiveTarget";
 import type { PosterSection, PosterSidePanel } from "./poster-view-model";
 import type { GrammarPosterVariant } from "./poster-variant";
@@ -7,33 +15,39 @@ type Props = {
   variant?: GrammarPosterVariant;
 };
 
-function panelLines(panel: PosterSidePanel): string[] {
-  const lines: string[] = [];
+function panelEditableLines(
+  panel: PosterSidePanel,
+): { field: PosterSidePanelField; text: string }[] {
+  const lines: { field: PosterSidePanelField; text: string }[] = [];
   if (panel.example?.trim()) {
-    lines.push(panel.example.trim());
+    lines.push({ field: "example", text: panel.example.trim() });
   }
   if (panel.body?.trim() && panel.body !== panel.example?.trim()) {
-    lines.push(panel.body.trim());
+    lines.push({ field: "content", text: panel.body.trim() });
   }
   if (panel.formula?.trim()) {
-    lines.push(panel.formula.trim());
+    lines.push({ field: "formula", text: panel.formula.trim() });
   }
   return lines;
 }
 
 function AnswerColumn({
+  cardId,
+  panelKey,
   panel,
   accentColor,
   defaultTitle,
   variant,
 }: {
+  cardId: number;
+  panelKey: PosterSidePanelKey;
   panel: PosterSidePanel;
   accentColor: string;
   defaultTitle: string;
   variant: GrammarPosterVariant;
 }) {
   const title = panel.title?.trim() || defaultTitle;
-  const lines = panelLines(panel);
+  const lines = panelEditableLines(panel);
   const textClass =
     variant === "poster" ?
       "text-base font-semibold leading-relaxed text-kid-ink md:text-lg"
@@ -45,12 +59,36 @@ function AnswerColumn({
         className="mb-2 text-xs font-extrabold uppercase tracking-wide md:text-sm"
         style={{ color: accentColor }}
       >
-        {title}
+        <PosterEditableText
+          cardId={cardId}
+          fieldKey={posterInlineEditFieldKey(cardId, {
+            kind: "sidePanel",
+            panel: panelKey,
+            field: "title",
+          })}
+          value={title}
+          variant="column-title"
+          placeholder={defaultTitle}
+        >
+          <span>{title}</span>
+        </PosterEditableText>
       </h3>
       <div className="space-y-1">
         {lines.map((line, i) => (
-          <p key={i} className={textClass}>
-            {line}
+          <p key={`${line.field}-${i}`} className={textClass}>
+            <PosterEditableText
+              cardId={cardId}
+              fieldKey={posterInlineEditFieldKey(cardId, {
+                kind: "sidePanel",
+                panel: panelKey,
+                field: line.field,
+              })}
+              value={line.text}
+              variant={line.field === "formula" ? "formula-mono" : "example-sentence"}
+              placeholder="Answer line"
+            >
+              <span>{line.text}</span>
+            </PosterEditableText>
           </p>
         ))}
       </div>
@@ -72,6 +110,8 @@ export function PosterPositiveNegativeBody({ section, variant = "poster" }: Prop
     <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
       <PosterInteractiveTarget cardId={section.number} region="positiveSide">
         <AnswerColumn
+          cardId={section.number}
+          panelKey="positiveSide"
           panel={positivePanel}
           accentColor={accentColor}
           defaultTitle="Yes"
@@ -81,6 +121,8 @@ export function PosterPositiveNegativeBody({ section, variant = "poster" }: Prop
       <div className="sm:border-l-2 sm:border-dashed sm:border-kid-ink/30 sm:pl-4">
         <PosterInteractiveTarget cardId={section.number} region="negativeSide">
           <AnswerColumn
+            cardId={section.number}
+            panelKey="negativeSide"
             panel={negativePanel}
             accentColor={accentColor}
             defaultTitle="No"

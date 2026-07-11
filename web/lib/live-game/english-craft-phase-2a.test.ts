@@ -7,10 +7,10 @@ import {
   toClientMcQuestion,
 } from "@/lib/live-game/modes/english-craft/questions-v1";
 import {
-  clearLiveGameChallengesForTests,
-  createLiveGameChallenge,
-  getLiveGameChallenge,
-} from "@/lib/live-game/server/challenge-store";
+  canReclaimLiveGameAward,
+  isLiveGameChallengeExpired,
+  LIVE_GAME_AWARD_CLAIM_LEASE_MS,
+} from "@/lib/live-game/server/challenge-lifecycle";
 import { isResourceNodeAvailable } from "@/lib/live-game/server/read-storage";
 
 describe("english-craft questions", () => {
@@ -44,17 +44,21 @@ describe("live-game interact", () => {
   });
 });
 
-describe("live-game challenge store", () => {
-  it("creates and retrieves challenge records", () => {
-    clearLiveGameChallengesForTests();
-    const record = createLiveGameChallenge({
-      roomId: "wke-live-game-ABC234",
-      playerId: "student-1",
-      nodeId: "tree-01",
-      questionId: "mc-hot-cold",
-      correctAnswer: "cold",
-    });
-    expect(getLiveGameChallenge(record.challengeId)?.nodeId).toBe("tree-01");
+describe("live-game challenge lifecycle", () => {
+  it("treats the exact expiry boundary as expired", () => {
+    expect(isLiveGameChallengeExpired(10_000, 9_999)).toBe(false);
+    expect(isLiveGameChallengeExpired(10_000, 10_000)).toBe(true);
+  });
+
+  it("only reclaims an abandoned award after the processing lease", () => {
+    const claimedAt = 10_000;
+    expect(canReclaimLiveGameAward(null, claimedAt + LIVE_GAME_AWARD_CLAIM_LEASE_MS)).toBe(false);
+    expect(
+      canReclaimLiveGameAward(claimedAt, claimedAt + LIVE_GAME_AWARD_CLAIM_LEASE_MS - 1),
+    ).toBe(false);
+    expect(
+      canReclaimLiveGameAward(claimedAt, claimedAt + LIVE_GAME_AWARD_CLAIM_LEASE_MS),
+    ).toBe(true);
   });
 });
 

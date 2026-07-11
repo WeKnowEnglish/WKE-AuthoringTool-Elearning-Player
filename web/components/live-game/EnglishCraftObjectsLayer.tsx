@@ -68,7 +68,6 @@ function MapSprite({ map, x, y, displayWidthPx, stackRow, src, alt, className }:
         fill
         className="object-contain object-bottom"
         sizes={`${displayWidthPx}px`}
-        unoptimized
         draggable={false}
       />
     </div>
@@ -81,7 +80,7 @@ function EnglishCraftObjectsLayerInner({
   map,
   resourceNodes,
   bridgeCrafted = false,
-  now = Date.now(),
+  now,
 }: Props) {
   const treeDisplayPx = 84;
   const stumpDisplayPx = 60;

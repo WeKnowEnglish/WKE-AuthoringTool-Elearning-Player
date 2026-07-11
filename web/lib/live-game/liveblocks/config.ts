@@ -53,12 +53,18 @@ export type LiveGameResourceNodeState = {
   collectedCount: number;
 };
 
+export type LiveGameAwardReceipt = {
+  wood: number;
+  nodeCooldownEndsAt: number;
+};
+
 /** Storage root shape inside mutateStorage (Live structures). */
 export type LiveGameStorageRoot = {
   session: LiveObject<LiveGameSessionState>;
   players: LiveMap<string, LiveObject<LiveGameLobbyPlayer>>;
   resourcePool: LiveObject<LiveGameResourcePool>;
   resourceNodes: LiveMap<string, LiveObject<LiveGameResourceNodeState>>;
+  awardReceipts: LiveMap<string, LiveObject<LiveGameAwardReceipt>>;
 };
 
 /** Plain snapshot returned by useStorage selectors on the client. */
@@ -67,6 +73,7 @@ export type LiveGameStorageSnapshot = {
   players: Record<string, LiveGameLobbyPlayer>;
   resourcePool?: LiveGameResourcePool;
   resourceNodes?: Record<string, LiveGameResourceNodeState>;
+  awardReceipts?: Record<string, LiveGameAwardReceipt>;
 };
 
 export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {

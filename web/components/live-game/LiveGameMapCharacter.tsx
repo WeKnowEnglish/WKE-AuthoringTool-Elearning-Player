@@ -94,7 +94,6 @@ export function LiveGameMapCharacter({
             fill
             className="object-contain object-bottom"
             sizes={`${displayW}px`}
-            unoptimized
             draggable={false}
           />
         </div>

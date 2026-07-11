@@ -1,4 +1,6 @@
 import { ENGLISH_CRAFT_TREE_COOLDOWN_MS } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import { LiveMap, LiveObject } from "@liveblocks/client";
+import type { LiveGameAwardReceipt } from "@/lib/live-game/liveblocks/config";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import {
   asLiveGameMutatorRoot,
@@ -9,11 +11,13 @@ import {
 export type AwardWoodResult = {
   wood: number;
   nodeCooldownEndsAt: number;
+  alreadyAwarded: boolean;
 };
 
 export async function awardWoodForNode(input: {
   roomId: string;
   nodeId: string;
+  challengeId: string;
 }): Promise<AwardWoodResult | null> {
   const liveblocks = getLiveblocksServerClient();
   let result: AwardWoodResult | null = null;
@@ -22,6 +26,21 @@ export async function awardWoodForNode(input: {
     const storage = asLiveGameMutatorRoot(root as unknown as { get: (key: string) => unknown });
     const session = storage.get("session");
     if (!session || session.get("phase") !== "playing") {
+      return;
+    }
+
+    let awardReceipts = storage.get("awardReceipts");
+    if (!awardReceipts) {
+      awardReceipts = new LiveMap<string, LiveObject<LiveGameAwardReceipt>>() as unknown as LiveGameMutatorNode;
+      storage.set("awardReceipts", awardReceipts);
+    }
+    const priorReceipt = awardReceipts.get(input.challengeId) as LiveGameMutatorNode | undefined;
+    if (priorReceipt) {
+      result = {
+        wood: readMutatorNumber(priorReceipt.get("wood")),
+        nodeCooldownEndsAt: readMutatorNumber(priorReceipt.get("nodeCooldownEndsAt")),
+        alreadyAwarded: true,
+      };
       return;
     }
 
@@ -48,7 +67,12 @@ export async function awardWoodForNode(input: {
     result = {
       wood: nextWood,
       nodeCooldownEndsAt: nextCooldown,
+      alreadyAwarded: false,
     };
+    awardReceipts.set(
+      input.challengeId,
+      new LiveObject<LiveGameAwardReceipt>({ wood: nextWood, nodeCooldownEndsAt: nextCooldown }),
+    );
   });
 
   return result;

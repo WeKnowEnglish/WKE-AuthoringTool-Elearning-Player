@@ -3,6 +3,7 @@ import { isMcAnswerCorrect } from "@/lib/live-game/modes/english-craft/questions
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { awardWoodForNode } from "@/lib/live-game/server/award-wood";
 import {
+  claimLiveGameChallengeAward,
   getLiveGameChallenge,
   markChallengeAwarded,
 } from "@/lib/live-game/server/challenge-store";
@@ -30,7 +31,7 @@ function parseAnswerBody(body: unknown): AnswerRequestBody | null {
   return record;
 }
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   try {
     assertLiveblocksSecret();
   } catch (error) {
@@ -58,14 +59,14 @@ export async function POST(request: Request) {
   const answer = parsed.answer.trim();
   const playerId = parsed.playerId.trim();
 
-  const challenge = getLiveGameChallenge(challengeId);
+  const challenge = await getLiveGameChallenge(challengeId);
   if (!challenge) {
     return NextResponse.json({ error: "Challenge expired or not found." }, { status: 404 });
   }
   if (challenge.roomId !== roomId || challenge.playerId !== playerId) {
     return NextResponse.json({ error: "Challenge mismatch." }, { status: 403 });
   }
-  if (challenge.awarded) {
+  if (challenge.status === "awarded") {
     const storage = await readLiveGameStorageJson(roomId);
     const wood = storage?.resourcePool?.wood ?? 0;
     return NextResponse.json({
@@ -90,17 +91,51 @@ export async function POST(request: Request) {
     });
   }
 
-  const award = await awardWoodForNode({ roomId, nodeId: challenge.nodeId });
+  const claim = await claimLiveGameChallengeAward(challengeId);
+  if (claim.kind === "missing") {
+    return NextResponse.json({ error: "Challenge expired or not found." }, { status: 404 });
+  }
+  if (claim.kind === "processing") {
+    return NextResponse.json({ error: "Answer is already being processed. Please retry." }, { status: 409 });
+  }
+  if (claim.kind === "awarded") {
+    const latest = await readLiveGameStorageJson(roomId);
+    return NextResponse.json({
+      correct: true,
+      resourceAwarded: { type: "wood", amount: 1 },
+      poolTotal: { wood: latest?.resourcePool?.wood ?? 0 },
+      alreadyAwarded: true,
+    });
+  }
+
+  const award = await awardWoodForNode({
+    roomId,
+    nodeId: challenge.nodeId,
+    challengeId,
+  });
   if (!award) {
     return NextResponse.json({ error: "Could not award wood for this tree." }, { status: 409 });
   }
 
-  markChallengeAwarded(challengeId);
+  await markChallengeAwarded(challengeId);
 
   return NextResponse.json({
     correct: true,
     resourceAwarded: { type: "wood", amount: 1 },
     poolTotal: { wood: award.wood },
     nodeCooldownEndsAt: award.nodeCooldownEndsAt,
+    alreadyAwarded: award.alreadyAwarded,
   });
+}
+
+export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (error) {
+    console.error("Live-game answer request failed", error);
+    return NextResponse.json(
+      { error: "The answer service is temporarily unavailable. Your answer can be retried." },
+      { status: 503 },
+    );
+  }
 }

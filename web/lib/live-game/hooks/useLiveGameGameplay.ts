@@ -14,3 +14,11 @@ export function useLiveGameResourcePool() {
 export function useLiveGameResourceNodes() {
   return useStorage((root) => readSnapshot(root).resourceNodes ?? {});
 }
+
+export function useLiveGameBridgeCrafted() {
+  return useStorage((root) => readSnapshot(root).craftedItems?.bridge === true);
+}
+
+export function useLiveGameRiverCrossingUnlocked() {
+  return useStorage((root) => readSnapshot(root).unlockedObjects?.river_crossing === true);
+}

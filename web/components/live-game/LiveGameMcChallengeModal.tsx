@@ -2,13 +2,15 @@
 
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
+import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type { EnglishCraftMcQuestionClient } from "@/lib/live-game/modes/english-craft/questions-v1";
 
 type Props = {
   open: boolean;
   question: EnglishCraftMcQuestionClient | null;
+  tokenStatus?: LiveGameChallengeTokenStatus;
   isSubmitting?: boolean;
   feedback?: "correct" | "incorrect" | null;
   error?: string | null;
@@ -19,6 +21,7 @@ type Props = {
 export function LiveGameMcChallengeModal({
   open,
   question,
+  tokenStatus = "ready",
   isSubmitting = false,
   feedback,
   error,
@@ -26,6 +29,15 @@ export function LiveGameMcChallengeModal({
   onClose,
 }: Props) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const canSubmit = tokenStatus === "ready" && !isSubmitting;
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedOption(null);
+      return;
+    }
+    setSelectedOption(null);
+  }, [open, question?.id]);
 
   return (
     <AnimatePresence>
@@ -85,6 +97,9 @@ export function LiveGameMcChallengeModal({
               })}
             </ul>
 
+            {tokenStatus === "pending" ?
+              <p className="mt-3 text-sm font-semibold text-kid-ink/70">Connecting...</p>
+            : null}
             {feedback === "incorrect" ?
               <p className="mt-3 text-sm font-semibold text-red-700">Not quite — try again!</p>
             : null}
@@ -98,9 +113,9 @@ export function LiveGameMcChallengeModal({
               </KidButton>
               <KidButton
                 variant="primary"
-                disabled={!selectedOption || isSubmitting}
+                disabled={!selectedOption || !canSubmit}
                 onClick={() => {
-                  if (!selectedOption) return;
+                  if (!selectedOption || !canSubmit) return;
                   onSubmit(selectedOption);
                 }}
               >

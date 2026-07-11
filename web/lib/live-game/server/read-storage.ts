@@ -1,4 +1,8 @@
 import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
+import {
+  ENGLISH_CRAFT_CRAFT_WOOD_COST,
+  isEnglishCraftResourceNodeInteractable,
+} from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { sessionIdFromRoomId } from "@/lib/live-game/liveblocks/room-id";
 
@@ -17,8 +21,25 @@ export function isResourceNodeAvailable(
   node: { available: boolean; cooldownEndsAt: number | null } | undefined,
   now = Date.now(),
 ): boolean {
-  if (!node) return false;
-  if (!node.available) return false;
-  if (node.cooldownEndsAt != null && node.cooldownEndsAt > now) return false;
-  return true;
+  return isEnglishCraftResourceNodeInteractable(node, now);
+}
+
+export function isBridgeCrafted(storage: LiveGameStorageSnapshot | null | undefined): boolean {
+  return storage?.craftedItems?.bridge === true;
+}
+
+export function isRiverCrossingUnlocked(storage: LiveGameStorageSnapshot | null | undefined): boolean {
+  return storage?.unlockedObjects?.river_crossing === true;
+}
+
+export function canStartCraftChallenge(storage: LiveGameStorageSnapshot | null | undefined): boolean {
+  if (!storage?.session || storage.session.phase !== "playing") return false;
+  if (isBridgeCrafted(storage)) return false;
+  const wood = storage.resourcePool?.wood ?? 0;
+  return wood >= ENGLISH_CRAFT_CRAFT_WOOD_COST;
+}
+
+export function canCompleteObjective(storage: LiveGameStorageSnapshot | null | undefined): boolean {
+  if (!storage?.session || storage.session.phase !== "playing") return false;
+  return isBridgeCrafted(storage) && isRiverCrossingUnlocked(storage);
 }

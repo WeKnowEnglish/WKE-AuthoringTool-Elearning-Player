@@ -8,6 +8,8 @@ import type { LiveGameAuthRole } from "@/lib/live-game/liveblocks/auth-policy";
 import { createLiveGameInitialStorage } from "@/lib/live-game/liveblocks/initial-storage";
 import type { LiveGameModeId } from "@/lib/live-game/modes/types";
 
+import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
+
 type Props = {
   roomId: string;
   sessionId: string;
@@ -15,7 +17,7 @@ type Props = {
   hostUserId: string;
   modeId: LiveGameModeId;
   mapId: string;
-  durationMinutes: number;
+  durationMinutes: EnglishCraftSessionDuration;
   initialPresence?: Partial<typeof DEFAULT_LIVE_GAME_PRESENCE>;
   children: ReactNode;
 };

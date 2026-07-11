@@ -7,6 +7,9 @@ import {
   toClientMcQuestion,
 } from "@/lib/live-game/modes/english-craft/questions-v1";
 import {
+  isEnglishCraftResourceNodeInteractable,
+} from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import {
   canReclaimLiveGameAward,
   isLiveGameChallengeExpired,
   LIVE_GAME_AWARD_CLAIM_LEASE_MS,
@@ -63,24 +66,41 @@ describe("live-game challenge lifecycle", () => {
 });
 
 describe("live-game node availability", () => {
-  it("blocks nodes during cooldown", () => {
+  const now = 1_000_000;
+
+  it("blocks nodes only while cooldown is active", () => {
+    expect(
+      isEnglishCraftResourceNodeInteractable({
+        available: true,
+        cooldownEndsAt: now + 10_000,
+      }, now),
+    ).toBe(false);
+    expect(
+      isEnglishCraftResourceNodeInteractable({
+        available: false,
+        cooldownEndsAt: now + 10_000,
+      }, now),
+    ).toBe(false);
+    expect(
+      isEnglishCraftResourceNodeInteractable({
+        available: true,
+        cooldownEndsAt: now - 1,
+      }, now),
+    ).toBe(true);
+  });
+
+  it("treats elapsed cooldown as interactable even when available is stale", () => {
     expect(
       isResourceNodeAvailable({
-        available: true,
-        cooldownEndsAt: Date.now() + 10_000,
-      }),
-    ).toBe(false);
+        available: false,
+        cooldownEndsAt: now - 1,
+      }, now),
+    ).toBe(true);
     expect(
       isResourceNodeAvailable({
         available: false,
         cooldownEndsAt: null,
-      }),
-    ).toBe(false);
-    expect(
-      isResourceNodeAvailable({
-        available: true,
-        cooldownEndsAt: Date.now() - 1,
-      }),
+      }, now),
     ).toBe(true);
   });
 });

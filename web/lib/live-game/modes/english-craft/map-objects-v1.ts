@@ -3,7 +3,12 @@ import {
   grassTileColCenterPx,
   grassTileRowTopPx,
 } from "@/lib/live-game/tiles/grass-tile-pack";
-import { ENGLISH_CRAFT_TREE_INTERACT_RADIUS_PX } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import {
+  ENGLISH_CRAFT_BENCH_INTERACT_RADIUS_PX,
+  ENGLISH_CRAFT_CRAFT_BENCH_ID,
+  ENGLISH_CRAFT_FLAG_ZONE_SIZE_PX,
+  ENGLISH_CRAFT_TREE_INTERACT_RADIUS_PX,
+} from "@/lib/live-game/modes/english-craft/gameplay-v1";
 
 /** Grass tiles stack to rowIndex + 1 (max 11 on the pilot map). */
 export const ENGLISH_CRAFT_OBJECTS_Z_BASE = 20;
@@ -97,4 +102,29 @@ export const ENGLISH_CRAFT_STRUCTURES_V1: EnglishCraftStructureDef[] = [
   },
   structureAt("flag-01", "flag", "Flag", 16, 2, 88, 0.88),
 ];
+
+const flagStructure = ENGLISH_CRAFT_STRUCTURES_V1.find((structure) => structure.kind === "flag")!;
+
+/** Touch zone for the team victory objective (overlap with player rect). */
+export const ENGLISH_CRAFT_FLAG_ZONE_V1 = {
+  id: flagStructure.id,
+  label: flagStructure.label,
+  x: flagStructure.x - ENGLISH_CRAFT_FLAG_ZONE_SIZE_PX / 2,
+  y: flagStructure.y - ENGLISH_CRAFT_FLAG_ZONE_SIZE_PX,
+  w: ENGLISH_CRAFT_FLAG_ZONE_SIZE_PX,
+  h: ENGLISH_CRAFT_FLAG_ZONE_SIZE_PX,
+};
+
+const craftBenchStructure = ENGLISH_CRAFT_STRUCTURES_V1.find(
+  (structure) => structure.id === ENGLISH_CRAFT_CRAFT_BENCH_ID,
+)!;
+
+/** Crafting bench interact point (north shore). */
+export const ENGLISH_CRAFT_CRAFT_BENCH_V1 = {
+  id: craftBenchStructure.id,
+  label: craftBenchStructure.label,
+  x: craftBenchStructure.x,
+  y: craftBenchStructure.y,
+  interactRadius: ENGLISH_CRAFT_BENCH_INTERACT_RADIUS_PX,
+};
 

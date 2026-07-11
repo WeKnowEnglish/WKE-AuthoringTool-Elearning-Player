@@ -74,10 +74,9 @@ function GrassTileCell({
 }) {
   return (
     <div
-      key={bounceToken ?? 0}
       className={clsx(
         "relative h-full w-full overflow-visible",
-        bounceToken && "live-game-grass-tile-bounce",
+        bounceToken != null && "live-game-grass-tile-bounce",
       )}
     >
       <Image
@@ -87,6 +86,7 @@ function GrassTileCell({
         height={GRASS_TILE_NATIVE_PX.h}
         className="absolute bottom-0 left-0 h-auto w-full max-w-none"
         sizes={`${GRASS_TILE_SIZE_PX}px`}
+        unoptimized
         draggable={false}
       />
     </div>

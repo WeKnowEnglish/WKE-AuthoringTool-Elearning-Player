@@ -115,3 +115,51 @@ export function isMcAnswerCorrect(questionId: string, answer: string): boolean {
   if (!question) return false;
   return question.correctAnswer.trim().toLowerCase() === answer.trim().toLowerCase();
 }
+
+export type EnglishCraftCraftQuestion = {
+  id: string;
+  prompt: string;
+  wordBank: string[];
+  correctOrder: string[];
+  slotCount: number;
+};
+
+export const ENGLISH_CRAFT_CRAFT_BRIDGE_V1: EnglishCraftCraftQuestion = {
+  id: "craft-bridge-v1",
+  prompt: "Put the words in order to craft the bridge:",
+  wordBank: ["usually", "after school", "I", "play football"],
+  correctOrder: ["I", "usually", "play football", "after school"],
+  slotCount: 4,
+};
+
+export type EnglishCraftCraftQuestionClient = {
+  id: string;
+  type: "drag_sentence";
+  prompt: string;
+  wordBank: string[];
+  slotCount: number;
+};
+
+export function toClientCraftQuestion(
+  question: EnglishCraftCraftQuestion,
+): EnglishCraftCraftQuestionClient {
+  return {
+    id: question.id,
+    type: "drag_sentence",
+    prompt: question.prompt,
+    wordBank: question.wordBank,
+    slotCount: question.slotCount,
+  };
+}
+
+export function getCraftQuestionById(questionId: string): EnglishCraftCraftQuestion | null {
+  if (questionId === ENGLISH_CRAFT_CRAFT_BRIDGE_V1.id) return ENGLISH_CRAFT_CRAFT_BRIDGE_V1;
+  return null;
+}
+
+export function isCraftAnswerCorrect(questionId: string, order: readonly string[]): boolean {
+  const question = getCraftQuestionById(questionId);
+  if (!question) return false;
+  if (order.length !== question.correctOrder.length) return false;
+  return order.every((word, index) => word === question.correctOrder[index]);
+}

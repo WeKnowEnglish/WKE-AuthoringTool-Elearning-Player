@@ -1,7 +1,7 @@
 # Secondary Vocabulary Full-Bank Expansion
 
 **Phase:** Language enrichment Phase 5  
-**Status:** In progress by complete curriculum topic  
+**Status:** Content enrichment complete; bilingual and teacher review pending
 **Target:** 240/240 enriched Grade 7 A2 words
 
 ## Current coverage
@@ -18,8 +18,9 @@
 | Environment | 20 | Enriched |
 | Stories and Past Events | 20 | Enriched |
 | Future Plans and Jobs | 20 | Enriched |
-| Remaining 2 topics | 40 | Legacy fallback |
-| **Total** | **240** | **200 enriched / 40 remaining** |
+| Social Life and Communication | 20 | Enriched |
+| Academic Classroom Language | 20 | Enriched |
+| **Total** | **240** | **240 enriched / 0 remaining** |
 
 ## Daily Routines batch
 
@@ -92,6 +93,14 @@ All 20 words now support past-tense narration, ordered event sequences, cause an
 
 All 20 words now connect careers to responsibilities, skills, workplaces, and evidence-based decisions. Planning language distinguishes dreams, goals, and plans while supporting realistic skill development and flexible future choices.
 
+## Social Life and Communication batch
+
+All 20 words now support healthy relationships, collaborative planning, active listening, respectful disagreement, specific apologies, constructive advice, safe boundaries, and fair group processes.
+
+## Academic Classroom Language batch
+
+All 20 words now support precise classroom instructions, evidence-based explanations, comparison, focused questioning, and clear use of examples and details. Usage notes reinforce high-value forms such as `reply to`, `different from`, `the same as`, and uncountable `information`.
+
 ## Migration policy
 
 1. Migrate complete 20-word topics, not scattered individual words.
@@ -102,9 +111,8 @@ All 20 words now connect careers to responsibilities, skills, workplaces, and ev
 
 ## Automated gate
 
-The loader tests now identify fully migrated topics and assert the exact number of enriched items. This prevents a partially authored topic from being reported as complete.
+The loader tests identify fully migrated topics, assert all 240 enriched items, and verify distinct examples, productive prompts with model answers, and unseen cloze contexts with valid blanks and answers. This prevents partial or structurally weak content from being reported as complete.
 
-## Remaining order
+## Remaining work
 
-1. Social Life and Communication
-2. Academic Classroom Language
+No authoring batches remain. The complete bank still requires bilingual accuracy review and classroom-level teacher review before it is declared curriculum-approved.

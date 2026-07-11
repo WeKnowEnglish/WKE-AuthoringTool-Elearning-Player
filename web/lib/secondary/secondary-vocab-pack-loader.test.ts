@@ -145,8 +145,44 @@ describe("secondary-vocab-pack-loader", () => {
       "environment",
       "stories-past-events",
       "future-plans-jobs",
+      "social-life-communication",
+      "academic-classroom-language",
     ]);
-    expect(enrichedItems).toHaveLength(200);
+    expect(enrichedItems).toHaveLength(240);
+  });
+
+  it("meets the rich-language quality gate across all 240 words", () => {
+    const items = getCompleteSecondaryVocabPack().topics
+      .flatMap((topic) => topic.sets)
+      .flatMap((set) => set.items);
+
+    expect(items).toHaveLength(240);
+    for (const item of items) {
+      expect(item.examples?.length, `${item.word}: examples`).toBeGreaterThanOrEqual(2);
+      expect(
+        new Set(item.examples?.map((example) => example.text.trim().toLowerCase())).size,
+        `${item.word}: distinct examples`,
+      ).toBeGreaterThanOrEqual(2);
+      expect(item.usagePatterns?.length, `${item.word}: usage patterns`).toBeGreaterThanOrEqual(1);
+      expect(item.productionPrompts?.length, `${item.word}: production prompts`).toBeGreaterThanOrEqual(1);
+      expect(item.clozeContexts?.length, `${item.word}: cloze contexts`).toBeGreaterThanOrEqual(1);
+
+      for (const prompt of item.productionPrompts ?? []) {
+        expect(prompt.prompt.trim(), `${item.word}: prompt text`).not.toBe("");
+        expect(prompt.modelAnswer.trim(), `${item.word}: prompt model answer`).not.toBe("");
+      }
+
+      const shownTexts = new Set([
+        item.exampleSentence.trim().toLowerCase(),
+        item.sentenceFrame?.trim().toLowerCase(),
+        ...(item.examples ?? []).map((example) => example.text.trim().toLowerCase()),
+      ]);
+      for (const context of item.clozeContexts ?? []) {
+        expect(context.text, `${item.word}: cloze blank`).toContain("____");
+        expect(context.acceptableAnswers.length, `${item.word}: cloze answers`).toBeGreaterThanOrEqual(1);
+        expect(shownTexts.has(context.text.trim().toLowerCase()), `${item.word}: unseen cloze`).toBe(false);
+      }
+    }
   });
 
   it("normalizes Phase 2 rich-language fields without changing legacy items", () => {

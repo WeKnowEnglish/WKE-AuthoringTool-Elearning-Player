@@ -34,6 +34,13 @@
 | **1** | **Session shell + multiplayer movement** ✅ |
 | **2 / v0.1** | **Wood + MC + craft bridge + flag** — [phase-2-plan.md](./phase-2-plan.md) |
 | 3 / v0.2 | Stone + grammar questions |
+
+## Deployment prerequisite
+
+Apply `supabase/migrations/033_live_game_challenges.sql` before deploying the durable
+challenge API. The API intentionally fails closed when the service-role key or table is
+missing; it no longer falls back to process memory because that loses challenges across
+cold starts and multiple server instances.
 | 4 / v0.3 | Coins + shop + power-ups |
 | 5 / v1.0 | Teacher wizard + timer + results |
 | 6 / v1.1 | Vocab bank + mastery evidence |

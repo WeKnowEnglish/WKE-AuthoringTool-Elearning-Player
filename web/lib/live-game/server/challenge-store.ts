@@ -1,5 +1,10 @@
+import "server-only";
 import { randomBytes } from "node:crypto";
+import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import { ENGLISH_CRAFT_CHALLENGE_TTL_MS } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import { LIVE_GAME_AWARD_CLAIM_LEASE_MS } from "@/lib/live-game/server/challenge-lifecycle";
+
+export type LiveGameChallengeStatus = "active" | "awarding" | "awarded" | "expired";
 
 export type LiveGameChallengeRecord = {
   challengeId: string;
@@ -7,93 +12,177 @@ export type LiveGameChallengeRecord = {
   playerId: string;
   nodeId: string;
   questionId: string;
-  correctAnswer: string;
   expiresAt: number;
-  used: boolean;
-  awarded: boolean;
+  status: LiveGameChallengeStatus;
 };
 
-const challenges = new Map<string, LiveGameChallengeRecord>();
+type ChallengeRow = {
+  id: string;
+  room_id: string;
+  player_id: string;
+  node_id: string;
+  question_id: string;
+  expires_at: string;
+  status: LiveGameChallengeStatus;
+};
 
-function purgeExpired(now = Date.now()) {
-  for (const [id, record] of challenges.entries()) {
-    if (record.expiresAt <= now) {
-      challenges.delete(id);
-    }
+function requireChallengeDatabase() {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) {
+    throw new Error("Live-game challenges require SUPABASE_SERVICE_ROLE_KEY.");
   }
+  return supabase;
 }
 
-export function createLiveGameChallenge(input: {
+function toRecord(row: ChallengeRow): LiveGameChallengeRecord {
+  return {
+    challengeId: row.id,
+    roomId: row.room_id,
+    playerId: row.player_id,
+    nodeId: row.node_id,
+    questionId: row.question_id,
+    expiresAt: new Date(row.expires_at).getTime(),
+    status: row.status,
+  };
+}
+
+async function expireOldChallenges(roomId: string, playerId: string, nodeId: string) {
+  const supabase = requireChallengeDatabase();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("live_game_challenges")
+    .update({ status: "expired", updated_at: now })
+    .eq("room_id", roomId)
+    .eq("player_id", playerId)
+    .eq("node_id", nodeId)
+    .in("status", ["active", "awarding"])
+    .lte("expires_at", now);
+  if (error) throw new Error(`Could not expire live-game challenges: ${error.message}`);
+}
+
+export async function findActiveChallengeForPlayerNode(input: {
+  roomId: string;
+  playerId: string;
+  nodeId: string;
+}): Promise<LiveGameChallengeRecord | null> {
+  await expireOldChallenges(input.roomId, input.playerId, input.nodeId);
+  const supabase = requireChallengeDatabase();
+  const { data, error } = await supabase
+    .from("live_game_challenges")
+    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .eq("room_id", input.roomId)
+    .eq("player_id", input.playerId)
+    .eq("node_id", input.nodeId)
+    .in("status", ["active", "awarding"])
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (error) throw new Error(`Could not read live-game challenge: ${error.message}`);
+  return data ? toRecord(data as ChallengeRow) : null;
+}
+
+export async function createLiveGameChallenge(input: {
   roomId: string;
   playerId: string;
   nodeId: string;
   questionId: string;
-  correctAnswer: string;
-}): LiveGameChallengeRecord {
-  purgeExpired();
-  const challengeId = `ch_${randomBytes(12).toString("hex")}`;
-  const record: LiveGameChallengeRecord = {
-    challengeId,
-    roomId: input.roomId,
-    playerId: input.playerId,
-    nodeId: input.nodeId,
-    questionId: input.questionId,
-    correctAnswer: input.correctAnswer,
-    expiresAt: Date.now() + ENGLISH_CRAFT_CHALLENGE_TTL_MS,
-    used: false,
-    awarded: false,
+}): Promise<LiveGameChallengeRecord> {
+  const existing = await findActiveChallengeForPlayerNode(input);
+  if (existing) return existing;
+
+  const supabase = requireChallengeDatabase();
+  const now = Date.now();
+  const row = {
+    id: `ch_${randomBytes(12).toString("hex")}`,
+    room_id: input.roomId,
+    player_id: input.playerId,
+    node_id: input.nodeId,
+    question_id: input.questionId,
+    status: "active" as const,
+    expires_at: new Date(now + ENGLISH_CRAFT_CHALLENGE_TTL_MS).toISOString(),
+    updated_at: new Date(now).toISOString(),
   };
-  challenges.set(challengeId, record);
-  return record;
-}
-
-export function getLiveGameChallenge(challengeId: string): LiveGameChallengeRecord | null {
-  purgeExpired();
-  const record = challenges.get(challengeId);
-  if (!record) return null;
-  if (record.expiresAt <= Date.now()) {
-    challenges.delete(challengeId);
-    return null;
+  const { data, error } = await supabase
+    .from("live_game_challenges")
+    .insert(row)
+    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .single();
+  if (error?.code === "23505") {
+    const raced = await findActiveChallengeForPlayerNode(input);
+    if (raced) return raced;
   }
+  if (error) throw new Error(`Could not create live-game challenge: ${error.message}`);
+  return toRecord(data as ChallengeRow);
+}
+
+export async function getLiveGameChallenge(
+  challengeId: string,
+): Promise<LiveGameChallengeRecord | null> {
+  const supabase = requireChallengeDatabase();
+  const { data, error } = await supabase
+    .from("live_game_challenges")
+    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .eq("id", challengeId)
+    .maybeSingle();
+  if (error) throw new Error(`Could not read live-game challenge: ${error.message}`);
+  if (!data) return null;
+  const record = toRecord(data as ChallengeRow);
+  if (record.status !== "awarded" && record.expiresAt <= Date.now()) return null;
   return record;
 }
 
-export function findActiveChallengeForPlayerNode(input: {
-  roomId: string;
-  playerId: string;
-  nodeId: string;
-}): LiveGameChallengeRecord | null {
-  purgeExpired();
-  for (const record of challenges.values()) {
-    if (
-      record.roomId === input.roomId &&
-      record.playerId === input.playerId &&
-      record.nodeId === input.nodeId &&
-      !record.used &&
-      record.expiresAt > Date.now()
-    ) {
-      return record;
-    }
+export type ClaimChallengeResult =
+  | { kind: "claimed"; challenge: LiveGameChallengeRecord }
+  | { kind: "awarded"; challenge: LiveGameChallengeRecord }
+  | { kind: "processing"; challenge: LiveGameChallengeRecord }
+  | { kind: "missing" };
+
+export async function claimLiveGameChallengeAward(
+  challengeId: string,
+): Promise<ClaimChallengeResult> {
+  const supabase = requireChallengeDatabase();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const staleIso = new Date(now.getTime() - LIVE_GAME_AWARD_CLAIM_LEASE_MS).toISOString();
+
+  const { data: active, error: activeError } = await supabase
+    .from("live_game_challenges")
+    .update({ status: "awarding", claim_started_at: nowIso, updated_at: nowIso })
+    .eq("id", challengeId)
+    .eq("status", "active")
+    .gt("expires_at", nowIso)
+    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .maybeSingle();
+  if (activeError) throw new Error(`Could not claim live-game challenge: ${activeError.message}`);
+  if (active) return { kind: "claimed", challenge: toRecord(active as ChallengeRow) };
+
+  const current = await getLiveGameChallenge(challengeId);
+  if (!current) return { kind: "missing" };
+  if (current.status === "awarded") return { kind: "awarded", challenge: current };
+  if (current.status !== "awarding") return { kind: "missing" };
+
+  const { data: reclaimed, error: reclaimError } = await supabase
+    .from("live_game_challenges")
+    .update({ claim_started_at: nowIso, updated_at: nowIso })
+    .eq("id", challengeId)
+    .eq("status", "awarding")
+    .lt("claim_started_at", staleIso)
+    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .maybeSingle();
+  if (reclaimError) {
+    throw new Error(`Could not reclaim live-game challenge: ${reclaimError.message}`);
   }
-  return null;
+  return reclaimed ?
+      { kind: "claimed", challenge: toRecord(reclaimed as ChallengeRow) }
+    : { kind: "processing", challenge: current };
 }
 
-export function markChallengeUsed(challengeId: string): LiveGameChallengeRecord | null {
-  const record = getLiveGameChallenge(challengeId);
-  if (!record) return null;
-  record.used = true;
-  return record;
-}
-
-export function markChallengeAwarded(challengeId: string): LiveGameChallengeRecord | null {
-  const record = challenges.get(challengeId) ?? null;
-  if (!record) return null;
-  record.awarded = true;
-  record.used = true;
-  return record;
-}
-
-/** Test helper */
-export function clearLiveGameChallengesForTests() {
-  challenges.clear();
+export async function markChallengeAwarded(challengeId: string): Promise<void> {
+  const supabase = requireChallengeDatabase();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("live_game_challenges")
+    .update({ status: "awarded", awarded_at: now, updated_at: now })
+    .eq("id", challengeId)
+    .in("status", ["awarding", "awarded"]);
+  if (error) throw new Error(`Could not complete live-game challenge: ${error.message}`);
 }

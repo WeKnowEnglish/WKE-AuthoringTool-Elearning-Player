@@ -35,7 +35,7 @@ function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
   return record;
 }
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   try {
     assertLiveblocksSecret();
   } catch (error) {
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This tree is on cooldown." }, { status: 409 });
   }
 
-  const existing = findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
+  const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
   if (existing) {
     const question =
       getMcQuestionById(existing.questionId) ?? pickMcQuestionForNode(nodeId);
@@ -94,12 +94,11 @@ export async function POST(request: Request) {
   }
 
   const question = pickMcQuestionForNode(nodeId);
-  const challenge = createLiveGameChallenge({
+  const challenge = await createLiveGameChallenge({
     roomId,
     playerId,
     nodeId,
     questionId: question.id,
-    correctAnswer: question.correctAnswer,
   });
 
   return NextResponse.json({
@@ -107,4 +106,16 @@ export async function POST(request: Request) {
     expiresAt: new Date(challenge.expiresAt).toISOString(),
     question: toClientMcQuestion(question),
   });
+}
+
+export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (error) {
+    console.error("Live-game challenge request failed", error);
+    return NextResponse.json(
+      { error: "The challenge service is temporarily unavailable. Please try again." },
+      { status: 503 },
+    );
+  }
 }

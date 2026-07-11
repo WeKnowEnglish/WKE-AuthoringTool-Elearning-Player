@@ -7,6 +7,7 @@ export type LiveGameMutatorNode = {
 
 export type LiveGameMutatorRoot = {
   get(key: string): LiveGameMutatorNode | undefined;
+  set(key: string, value: unknown): void;
 };
 
 export function asLiveGameMutatorRoot(root: { get: (key: string) => unknown }): LiveGameMutatorRoot {

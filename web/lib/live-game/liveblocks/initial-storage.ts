@@ -46,6 +46,7 @@ export function createLiveGameInitialStorage(input: {
     players: new LiveMap<string, LiveObject<import("@/lib/live-game/liveblocks/config").LiveGameLobbyPlayer>>(),
     resourcePool: new LiveObject({ wood: 0 }),
     resourceNodes: createInitialResourceNodes(),
+    awardReceipts: new LiveMap(),
   };
 }
 

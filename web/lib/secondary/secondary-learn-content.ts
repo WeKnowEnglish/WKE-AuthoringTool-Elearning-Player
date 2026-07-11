@@ -5,7 +5,7 @@ import {
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
 
 export type SecondaryLearnExampleLine =
-  | { kind: "sentence"; text: string; highlightWord: string }
+  | { kind: "sentence"; text: string; highlightWord: string; label?: string }
   | { kind: "phrase"; text: string };
 
 export type SecondaryLearnSectionVisibility = {
@@ -43,6 +43,23 @@ export function buildSecondaryLearnClozePreview(item: SecondaryVocabItem): strin
 }
 
 export function buildSecondaryLearnExampleLines(item: SecondaryVocabItem): SecondaryLearnExampleLine[] {
+  const richExamples = (item.examples ?? []).filter((entry) => entry.text.trim());
+  if (richExamples.length > 0) {
+    return richExamples.map((entry) => ({
+      kind: "sentence" as const,
+      text: entry.text.trim(),
+      highlightWord: item.word,
+      label:
+        entry.purpose === "transfer"
+          ? "Another context"
+          : entry.purpose === "dialogue"
+            ? "In conversation"
+            : entry.purpose === "contrast"
+              ? "Compare"
+              : "Example",
+    }));
+  }
+
   const lines: SecondaryLearnExampleLine[] = [];
 
   const example = item.exampleSentence?.trim();

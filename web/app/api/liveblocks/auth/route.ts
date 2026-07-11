@@ -1,9 +1,12 @@
 import { Liveblocks } from "@liveblocks/node";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { canAccessRoom as canAccessBoardGameRoom } from "@/lib/board-game/liveblocks/auth-policy";
+import { HOST_COOKIE_NAME as BOARD_GAME_HOST_COOKIE } from "@/lib/board-game/liveblocks/host-cookie";
 import { parseLiveblocksAuthRequest } from "@/lib/board-game/liveblocks/auth-context";
-import { canAccessRoom } from "@/lib/board-game/liveblocks/auth-policy";
-import { HOST_COOKIE_NAME } from "@/lib/board-game/liveblocks/host-cookie";
+import { canAccessLiveGameRoom } from "@/lib/live-game/liveblocks/auth-policy";
+import { LIVE_GAME_HOST_COOKIE_NAME } from "@/lib/live-game/liveblocks/host-cookie";
+import { getRoomProduct } from "@/lib/liveblocks/room-prefix";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 
 export async function POST(request: Request) {
@@ -28,15 +31,26 @@ export async function POST(request: Request) {
   }
 
   const cookieStore = await cookies();
-  const hostCookie = cookieStore.get(HOST_COOKIE_NAME)?.value ?? null;
+  const product = getRoomProduct(authRequest.room);
 
-  if (
-    !canAccessRoom({
+  let authorized = false;
+  if (product === "board-game") {
+    const hostCookie = cookieStore.get(BOARD_GAME_HOST_COOKIE)?.value ?? null;
+    authorized = canAccessBoardGameRoom({
       room: authRequest.room,
       role: authRequest.role,
       hostCookie,
-    })
-  ) {
+    });
+  } else if (product === "live-game") {
+    const hostCookie = cookieStore.get(LIVE_GAME_HOST_COOKIE_NAME)?.value ?? null;
+    authorized = canAccessLiveGameRoom({
+      room: authRequest.room,
+      role: authRequest.role,
+      hostCookie,
+    });
+  }
+
+  if (!authorized) {
     return NextResponse.json({ error: "Not authorized for this room." }, { status: 403 });
   }
 

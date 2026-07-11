@@ -138,7 +138,11 @@ function buildClozeQuestion(
   sessionItems: SecondaryVocabItem[],
   seed: string,
 ): SecondaryLearnQuestion | null {
-  const preview = buildSecondaryLearnClozePreview(item);
+  const richContexts = item.clozeContexts ?? [];
+  const richContext = richContexts.length > 0
+    ? shuffleWithSeed(richContexts, `${seed}:rich-cloze-context`)[0]
+    : undefined;
+  const preview = richContext?.text ?? buildSecondaryLearnClozePreview(item);
   if (!preview) return null;
 
   const wrongWords = shuffleWithSeed(
@@ -148,7 +152,7 @@ function buildClozeQuestion(
 
   const choices = shuffleWithSeed(
     [
-      { id: "correct", label: item.word, isCorrect: true },
+      { id: "correct", label: richContext?.acceptableAnswers[0] ?? item.word, isCorrect: true },
       ...wrongWords.map((label, index) => ({
         id: `wrong-${index}`,
         label,

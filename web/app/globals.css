@@ -108,6 +108,53 @@
     transform-origin: center center;
   }
 
+  .live-game-grass-tile-bounce {
+    animation: live-game-grass-tile-bounce 0.52s ease-in-out 0.14s both;
+    transform-origin: bottom center;
+  }
+
+  @keyframes live-game-grass-tile-bounce {
+    0% {
+      transform: translateY(0);
+    }
+    35% {
+      transform: translateY(-2.5%);
+    }
+    60% {
+      transform: translateY(-1%);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  .live-game-character-walk {
+    animation: live-game-character-walk 0.62s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+
+  @keyframes live-game-character-walk {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+    25% {
+      transform: scale(1.012) rotate(-1.5deg);
+    }
+    50% {
+      transform: scale(1.008) rotate(0deg);
+    }
+    75% {
+      transform: scale(1.012) rotate(1.5deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-game-character-walk {
+      animation: none;
+    }
+  }
+
   @keyframes kid-pop {
     0% {
       transform: scale(1);

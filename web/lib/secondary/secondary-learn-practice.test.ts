@@ -82,4 +82,17 @@ describe("secondary-learn-practice", () => {
     });
     expect(questions.some((question) => question.kind === "cloze_mc")).toBe(true);
   });
+
+  it("uses the enriched unseen context for the School Life cloze question", () => {
+    expect(subject).toBeDefined();
+    const questions = compileSecondaryLearnQuestions({
+      item: subject!,
+      sessionWordItemIds,
+      dateKey: "2026-07-09",
+    });
+    const cloze = questions.find((question) => question.kind === "cloze_mc");
+
+    expect(cloze?.prompt).toBe("Art is the ____ I enjoy most this year.");
+    expect(cloze?.prompt).not.toBe(subject?.sentenceFrame?.replace(/_{2,}/g, "____"));
+  });
 });

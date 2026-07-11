@@ -68,6 +68,41 @@ describe("secondary-learn-content", () => {
     expect(lines[2]).toMatchObject({ kind: "phrase", text: "school subject" });
   });
 
+  it("prefers labelled rich examples and does not mix in legacy chunks", () => {
+    const lines = buildSecondaryLearnExampleLines(
+      makeItem({
+        examples: [
+          {
+            id: "subject-intro-1",
+            text: "Science is my favorite subject because we do experiments.",
+            purpose: "introductory",
+          },
+          {
+            id: "subject-transfer-1",
+            text: "We have a different subject after lunch.",
+            purpose: "transfer",
+          },
+        ],
+        commonChunks: ["favorite subject", "school subject"],
+      }),
+    );
+
+    expect(lines).toEqual([
+      {
+        kind: "sentence",
+        text: "Science is my favorite subject because we do experiments.",
+        highlightWord: "subject",
+        label: "Example",
+      },
+      {
+        kind: "sentence",
+        text: "We have a different subject after lunch.",
+        highlightWord: "subject",
+        label: "Another context",
+      },
+    ]);
+  });
+
   it("formats syllable hints", () => {
     expect(formatSecondarySyllableHint(["sub", "ject"])).toBe("sub-ject");
   });

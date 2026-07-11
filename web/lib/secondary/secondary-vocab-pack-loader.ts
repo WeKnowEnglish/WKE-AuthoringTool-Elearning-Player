@@ -39,6 +39,12 @@ type RawVocabItem = {
     syllables?: string[];
     commonMistakes?: string[];
   };
+  examples?: SecondaryVocabItem["examples"];
+  usagePatterns?: SecondaryVocabItem["usagePatterns"];
+  productionPrompts?: SecondaryVocabItem["productionPrompts"];
+  clozeContexts?: SecondaryVocabItem["clozeContexts"];
+  confusions?: SecondaryVocabItem["confusions"];
+  usageNote?: string;
   imageUrl?: string;
   mediaHint?: string;
 };
@@ -120,6 +126,52 @@ function normalizeSpellingSupport(
   };
 }
 
+function trimmedOrUndefined(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
+}
+
+function normalizeRichLanguageFields(raw: RawVocabItem): Pick<
+  SecondaryVocabItem,
+  "examples" | "usagePatterns" | "productionPrompts" | "clozeContexts" | "confusions" | "usageNote"
+> {
+  return {
+    examples: raw.examples?.map((entry) => ({
+      ...entry,
+      id: entry.id.trim(),
+      text: entry.text.trim(),
+      context: trimmedOrUndefined(entry.context),
+    })),
+    usagePatterns: raw.usagePatterns?.map((entry) => ({
+      ...entry,
+      id: entry.id.trim(),
+      pattern: entry.pattern.trim(),
+      example: entry.example.trim(),
+      note: trimmedOrUndefined(entry.note),
+    })),
+    productionPrompts: raw.productionPrompts?.map((entry) => ({
+      ...entry,
+      id: entry.id.trim(),
+      prompt: entry.prompt.trim(),
+      sentenceStarter: trimmedOrUndefined(entry.sentenceStarter),
+      modelAnswer: entry.modelAnswer.trim(),
+    })),
+    clozeContexts: raw.clozeContexts?.map((entry) => ({
+      ...entry,
+      id: entry.id.trim(),
+      text: entry.text.trim(),
+      acceptableAnswers: entry.acceptableAnswers.map((answer) => answer.trim()).filter(Boolean),
+      difficulty: clampDifficulty(entry.difficulty),
+    })),
+    confusions: raw.confusions?.map((entry) => ({
+      word: entry.word.trim(),
+      distinction: entry.distinction.trim(),
+      contrastExample: entry.contrastExample.trim(),
+    })),
+    usageNote: trimmedOrUndefined(raw.usageNote),
+  };
+}
+
 export function normalizeSecondaryVocabItem(raw: RawVocabItem): SecondaryVocabItem {
   return {
     wordItemId: raw.wordItemId,
@@ -143,6 +195,7 @@ export function normalizeSecondaryVocabItem(raw: RawVocabItem): SecondaryVocabIt
     distractors: raw.distractors ? [...raw.distractors] : undefined,
     sentenceFrame: raw.sentenceFrame,
     spellingSupport: normalizeSpellingSupport(raw.spellingSupport),
+    ...normalizeRichLanguageFields(raw),
     imageUrl: raw.imageUrl?.trim() || undefined,
     mediaHint: raw.mediaHint?.trim() || undefined,
   };
@@ -252,6 +305,49 @@ export function collectSecondaryVocabPackValidationIssues(
             message: "Item missing practiceTypes",
             wordItemId: item.wordItemId,
           });
+        }
+
+
+        const richIds = [
+          ...(item.examples ?? []).map((entry) => entry.id),
+          ...(item.usagePatterns ?? []).map((entry) => entry.id),
+          ...(item.productionPrompts ?? []).map((entry) => entry.id),
+          ...(item.clozeContexts ?? []).map((entry) => entry.id),
+        ];
+        if (richIds.some((id) => !id)) {
+          issues.push({
+            code: "empty_rich_content_id",
+            message: "Rich-language entries require non-empty ids",
+            wordItemId: item.wordItemId,
+          });
+        }
+        if (new Set(richIds).size !== richIds.length) {
+          issues.push({
+            code: "duplicate_rich_content_id",
+            message: "Rich-language entry ids must be unique within an item",
+            wordItemId: item.wordItemId,
+          });
+        }
+
+        for (const example of item.examples ?? []) {
+          if (!example.text) {
+            issues.push({ code: "empty_rich_example", message: "Rich example text is required", wordItemId: item.wordItemId });
+          }
+        }
+        for (const pattern of item.usagePatterns ?? []) {
+          if (!pattern.pattern || !pattern.example) {
+            issues.push({ code: "invalid_usage_pattern", message: "Usage pattern and example are required", wordItemId: item.wordItemId });
+          }
+        }
+        for (const prompt of item.productionPrompts ?? []) {
+          if (!prompt.prompt || !prompt.modelAnswer) {
+            issues.push({ code: "invalid_production_prompt", message: "Production prompt and model answer are required", wordItemId: item.wordItemId });
+          }
+        }
+        for (const context of item.clozeContexts ?? []) {
+          if (!context.text.includes("____") || context.acceptableAnswers.length === 0) {
+            issues.push({ code: "invalid_cloze_context", message: "Cloze context requires ____ and an acceptable answer", wordItemId: item.wordItemId });
+          }
         }
       }
     }

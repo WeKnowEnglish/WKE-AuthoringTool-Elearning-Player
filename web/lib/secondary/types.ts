@@ -9,6 +9,46 @@ export type SecondarySpellingSupport = {
   commonMistakes: string[];
 };
 
+export type SecondaryExamplePurpose = "introductory" | "transfer" | "dialogue" | "contrast";
+
+export type SecondaryVocabExample = {
+  id: string;
+  text: string;
+  purpose: SecondaryExamplePurpose;
+  /** Short author-facing context label, for example `school project`. */
+  context?: string;
+  difficulty?: SecondaryDifficulty;
+};
+
+export type SecondaryUsagePattern = {
+  id: string;
+  pattern: string;
+  example: string;
+  note?: string;
+};
+
+export type SecondaryProductionPrompt = {
+  id: string;
+  prompt: string;
+  sentenceStarter?: string;
+  modelAnswer: string;
+};
+
+export type SecondaryClozeContext = {
+  id: string;
+  text: string;
+  /** Accepted surface forms; the first entry is the preferred display answer. */
+  acceptableAnswers: string[];
+  difficulty: SecondaryDifficulty;
+  clueType?: "meaning" | "collocation" | "grammar" | "discourse";
+};
+
+export type SecondaryWordConfusion = {
+  word: string;
+  distinction: string;
+  contrastExample: string;
+};
+
 export interface SecondaryVocabItem {
   wordItemId: string;
   packId: string;
@@ -31,6 +71,13 @@ export interface SecondaryVocabItem {
   distractors?: string[];
   sentenceFrame?: string;
   spellingSupport?: SecondarySpellingSupport;
+  /** Phase 2 rich-language fields. Optional until the versioned pack migration is complete. */
+  examples?: SecondaryVocabExample[];
+  usagePatterns?: SecondaryUsagePattern[];
+  productionPrompts?: SecondaryProductionPrompt[];
+  clozeContexts?: SecondaryClozeContext[];
+  confusions?: SecondaryWordConfusion[];
+  usageNote?: string;
   /** Curated illustration URL when available. */
   imageUrl?: string;
   /** Optional lookup key for `media_assets` resolution. */

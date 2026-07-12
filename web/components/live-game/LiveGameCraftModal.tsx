@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
-import type { EnglishCraftCraftQuestionClient } from "@/lib/live-game/modes/english-craft/questions-v1";
+import type { EnglishCraftCraftQuestionClient } from "@/lib/live-game/modes/english-craft/questions-client";
 
 type Props = {
   open: boolean;

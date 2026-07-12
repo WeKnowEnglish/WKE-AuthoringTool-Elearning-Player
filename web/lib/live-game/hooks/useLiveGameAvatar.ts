@@ -14,12 +14,11 @@ import {
   setLiveGameSessionContext,
   type LiveGameSessionContext,
 } from "@/lib/live-game/liveblocks/identity";
-import { useUpdateLiveGameAvatarMutation } from "@/lib/live-game/liveblocks/mutations/lobby";
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
+import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 
 export function useLiveGameAvatar(context: LiveGameSessionContext) {
   const { selfEntry, session, players, self } = useLiveGameLobby();
-  const updateAvatar = useUpdateLiveGameAvatarMutation();
   const updatePresence = useUpdateMyPresence();
 
   const avatarId = useMemo(
@@ -53,11 +52,15 @@ export function useLiveGameAvatar(context: LiveGameSessionContext) {
       const resolved = toLiveGameCharacterId(nextId);
       if (isLiveGameAvatarTaken(takenAvatarIds, resolved)) return;
 
-      updateAvatar(resolved);
+      void fetch("/api/live-game/avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId: toRoomId(context.sessionId), avatarId: resolved }),
+      });
       setLiveGameSessionContext({ ...context, avatarId: resolved });
       updatePresence({ avatarId: resolved } as never);
     },
-    [canChangeAvatar, context, takenAvatarIds, updateAvatar, updatePresence],
+    [canChangeAvatar, context, takenAvatarIds, updatePresence],
   );
 
   return {

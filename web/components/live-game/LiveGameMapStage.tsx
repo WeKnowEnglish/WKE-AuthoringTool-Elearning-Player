@@ -10,10 +10,6 @@ import type { LiveGameDirection, LiveGameResourceNodeState } from "@/lib/live-ga
 import { useViewportSize } from "@/lib/live-game/hooks/useLiveGameCamera";
 import { useLocalMovement } from "@/lib/live-game/hooks/useLocalMovement";
 import { useRemotePlayers } from "@/lib/live-game/hooks/useRemotePlayers";
-import {
-  useSteppedGrassTiles,
-  type GrassTileWalker,
-} from "@/lib/live-game/hooks/useSteppedGrassTiles";
 import type { LiveGameLobbyPlayerEntry } from "@/lib/live-game/liveblocks/use-live-game-lobby";
 import {
   ENGLISH_CRAFT_MAP_ZOOM,
@@ -88,28 +84,12 @@ export function useLiveGameMapStage({
 
   const remotes = useRemotePlayers(playerMetaByUserId);
 
-  const grassTileWalkers = useMemo((): GrassTileWalker[] => {
-    const walkers: GrassTileWalker[] = [
-      { id: "local", x: sampledPosition.x, y: sampledPosition.y },
-    ];
-    for (const remote of remotes) {
-      walkers.push({
-        id: String(remote.connectionId),
-        x: remote.x,
-        y: remote.y,
-      });
-    }
-    return walkers;
-  }, [sampledPosition.x, sampledPosition.y, remotes]);
-
-  const bouncingTiles = useSteppedGrassTiles(map.tilemap, grassTileWalkers);
   const mapVisuals = useMemo(
     () => resolveEnglishCraftMapVisuals({ visualMode, resourceNodes, bridgeCrafted }),
     [visualMode, resourceNodes, bridgeCrafted],
   );
   const mapStaticProps = useLiveGameMapStaticProps(
     map,
-    bouncingTiles,
     mapVisuals.resourceNodes,
     mapVisuals.bridgeCrafted,
     now,

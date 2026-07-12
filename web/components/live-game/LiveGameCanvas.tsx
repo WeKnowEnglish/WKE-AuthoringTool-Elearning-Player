@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSelf } from "@liveblocks/react/suspense";
 import { LiveGameCraftModal } from "@/components/live-game/LiveGameCraftModal";
 import {
   LiveGameMapStage,
@@ -62,7 +61,6 @@ function isTreeInteractable(node: LiveGameResourceNodeState | undefined, now = D
 }
 
 export function LiveGameCanvas({ context }: Props) {
-  const self = useSelf();
   const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby } =
     useLiveGameLobby();
   const [endSessionModalOpen, setEndSessionModalOpen] = useState(false);
@@ -73,7 +71,6 @@ export function LiveGameCanvas({ context }: Props) {
   const bridgeCrafted = useLiveGameBridgeCrafted();
   const riverCrossingUnlocked = useLiveGameRiverCrossingUnlocked();
   const roomId = toRoomId(context.sessionId);
-  const playerId = self.id;
 
   const spawnIndex = selfEntry ?
     Math.max(0, players.findIndex((entry) => entry.id === selfEntry.id))
@@ -81,11 +78,9 @@ export function LiveGameCanvas({ context }: Props) {
 
   const woodChallenge = useLiveGameWoodChallenge({
     roomId,
-    playerId,
   });
   const craftChallenge = useLiveGameCraftChallenge({
     roomId,
-    playerId,
   });
 
   const canCraft = wood >= ENGLISH_CRAFT_WOOD_GOAL && !bridgeCrafted;
@@ -127,9 +122,17 @@ export function LiveGameCanvas({ context }: Props) {
 
   const { getPosition, sampledPosition, now } = stage;
 
+  const publishPosition = useCallback(() => {
+    const position = getPosition();
+    return fetch("/api/live-game/position", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId, x: position.x, y: position.y }),
+    });
+  }, [getPosition, roomId]);
+
   useLiveGameFlagTouch({
     roomId,
-    playerId,
     playerX: sampledPosition.x,
     playerY: sampledPosition.y,
     enabled: isPlaying && bridgeCrafted && riverCrossingUnlocked,
@@ -162,10 +165,15 @@ export function LiveGameCanvas({ context }: Props) {
     [interactableTrees, sampledPosition.x, sampledPosition.y],
   );
 
-  const handleInteract = useCallback(() => {
+  const handleInteract = useCallback(async () => {
     if (woodChallenge.isOpen || craftChallenge.isOpen) {
       return;
     }
+
+    // Interaction endpoints authorize proximity using this server snapshot. Publish only
+    // when gameplay needs it instead of sending an HTTP mutation every two seconds.
+    const positionResponse = await publishPosition();
+    if (!positionResponse.ok) return;
 
     const position = getPosition();
 
@@ -185,6 +193,7 @@ export function LiveGameCanvas({ context }: Props) {
     craftChallenge,
     getPosition,
     interactableTrees,
+    publishPosition,
     resourceNodes,
     woodChallenge,
   ]);
@@ -198,6 +207,7 @@ export function LiveGameCanvas({ context }: Props) {
 
     if (canCraft && craftBenchTarget) {
       woodChallenge.cancelPrefetch();
+      void publishPosition();
       const timeout = window.setTimeout(() => {
         void craftChallenge.prefetchChallenge();
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
@@ -209,6 +219,7 @@ export function LiveGameCanvas({ context }: Props) {
 
     if (treeTarget) {
       craftChallenge.cancelPrefetch();
+      void publishPosition();
       const cooldownEndsAt = resourceNodes[treeTarget.id]?.cooldownEndsAt ?? null;
       const timeout = window.setTimeout(() => {
         void woodChallenge.prefetchForNode(treeTarget.id, cooldownEndsAt);
@@ -227,6 +238,7 @@ export function LiveGameCanvas({ context }: Props) {
     craftBenchTarget,
     craftChallenge,
     isPlaying,
+    publishPosition,
     resourceNodes,
     treeTarget,
     woodChallenge,
@@ -253,7 +265,7 @@ export function LiveGameCanvas({ context }: Props) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "e" && event.key !== "E") return;
       event.preventDefault();
-      handleInteract();
+      void handleInteract();
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -306,7 +318,7 @@ export function LiveGameCanvas({ context }: Props) {
             <LiveGameInteractPrompt
               label={interactLabel}
               disabled={(!hasInteractTarget && !bridgeCrafted) || !isPlaying}
-              onInteract={handleInteract}
+              onInteract={() => void handleInteract()}
             />
           : null
         }

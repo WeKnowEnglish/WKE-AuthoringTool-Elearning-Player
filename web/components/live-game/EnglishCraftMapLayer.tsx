@@ -31,7 +31,6 @@ type Props = {
   coverViewport?: boolean;
   /** Fill the parent box (used with camera zoom). */
   fillParent?: boolean;
-  bouncingTiles?: Record<string, number>;
 };
 
 export const EnglishCraftMapLayer = memo(EnglishCraftMapLayerInner);
@@ -42,7 +41,6 @@ function EnglishCraftMapLayerInner({
   children,
   coverViewport = false,
   fillParent = false,
-  bouncingTiles,
 }: Props) {
   const { widthPx, heightPx, tilemap } = map;
   const aspect = widthPx / heightPx;
@@ -76,7 +74,7 @@ function EnglishCraftMapLayerInner({
     >
       {tilemap ?
         <>
-          <GrassTilemapLayer tilemap={tilemap} bouncingTiles={bouncingTiles} />
+          <GrassTilemapLayer />
           <div
             className="pointer-events-none absolute z-[1] rounded-sm bg-gradient-to-b from-sky-300/90 via-sky-500/95 to-sky-700/95 shadow-inner"
             style={{

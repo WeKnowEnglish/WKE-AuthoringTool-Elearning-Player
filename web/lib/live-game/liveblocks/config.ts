@@ -1,6 +1,7 @@
 import type { LiveMap, LiveObject } from "@liveblocks/client";
 import { LIVE_GAME_DEFAULT_AVATAR_ID } from "@/lib/live-game/characters/boy-character";
 import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
+import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 export type LiveGamePhase = "lobby" | "playing" | "paused" | "completed" | "ended";
 
@@ -53,6 +54,8 @@ export type LiveGameSessionState = {
   endedAt: number | null;
   endReason: LiveGameEndReason | null;
   lobbyNotice: LiveGameLobbyNotice | null;
+  questionSetId: LiveGameQuestionSetId;
+  questionSetVersion: number;
 };
 
 export type LiveGameResourceType = "wood";
@@ -87,6 +90,8 @@ export type LiveGameCraftReceipt = {
   bridgeCrafted: boolean;
 };
 
+export type LiveGamePlayerPosition = { x: number; y: number; updatedAt: number };
+
 /** Storage root shape inside mutateStorage (Live structures). */
 export type LiveGameStorageRoot = {
   session: LiveObject<LiveGameSessionState>;
@@ -97,6 +102,7 @@ export type LiveGameStorageRoot = {
   craftedItems: LiveObject<LiveGameCraftedItems>;
   unlockedObjects: LiveObject<LiveGameUnlockedObjects>;
   craftReceipts: LiveMap<string, LiveObject<LiveGameCraftReceipt>>;
+  playerPositions: LiveMap<string, LiveObject<LiveGamePlayerPosition>>;
 };
 
 /** Plain snapshot returned by useStorage selectors on the client. */
@@ -109,6 +115,7 @@ export type LiveGameStorageSnapshot = {
   craftedItems?: LiveGameCraftedItems;
   unlockedObjects?: LiveGameUnlockedObjects;
   craftReceipts?: Record<string, LiveGameCraftReceipt>;
+  playerPositions?: Record<string, LiveGamePlayerPosition>;
 };
 
 export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {

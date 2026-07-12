@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { ENGLISH_CRAFT_WOOD_TREE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
-import {
-  getMcQuestionById,
-  pickMcQuestionForNode,
-  toClientMcQuestion,
-} from "@/lib/live-game/modes/english-craft/questions-v1";
+import { toClientMcQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
+import { getQuestionFromSet, pickQuestionFromSet, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   createLiveGameChallenge,
@@ -14,11 +11,12 @@ import {
   isResourceNodeAvailable,
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
+import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
+import { findNearestInteractable } from "@/lib/live-game/engine/interact";
 
 type ChallengeRequestBody = {
   roomId?: string;
   nodeId?: string;
-  playerId?: string;
 };
 
 function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
@@ -26,8 +24,7 @@ function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
   const record = body as ChallengeRequestBody;
   if (
     typeof record.roomId !== "string" ||
-    typeof record.nodeId !== "string" ||
-    typeof record.playerId !== "string"
+    typeof record.nodeId !== "string"
   ) {
     return null;
   }
@@ -50,13 +47,13 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseChallengeBody(body);
-  if (!parsed?.roomId || !parsed.nodeId || !parsed.playerId) {
-    return NextResponse.json({ error: "roomId, nodeId, and playerId are required." }, { status: 400 });
+  if (!parsed?.roomId || !parsed.nodeId) {
+    return NextResponse.json({ error: "roomId and nodeId are required." }, { status: 400 });
   }
 
   const roomId = parsed.roomId.trim();
   const nodeId = parsed.nodeId.trim();
-  const playerId = parsed.playerId.trim();
+  const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
   if (!roomId.startsWith("wke-live-game-")) {
     return NextResponse.json({ error: "Invalid room id." }, { status: 400 });
@@ -75,14 +72,24 @@ async function handlePost(request: Request) {
   }
 
   const nodeState = storage.resourceNodes?.[nodeId];
+  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
   if (!isResourceNodeAvailable(nodeState)) {
     return NextResponse.json({ error: "This tree is on cooldown." }, { status: 409 });
+  }
+  const position = storage.playerPositions?.[playerId];
+  if (
+    !position ||
+    Date.now() - position.updatedAt > 5_000 ||
+    !findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_WOOD_TREE_BY_ID[nodeId]!])
+  ) {
+    return NextResponse.json({ error: "Move closer to this tree." }, { status: 409 });
   }
 
   const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
   if (existing) {
     const question =
-      getMcQuestionById(existing.questionId) ?? pickMcQuestionForNode(nodeId);
+      getQuestionFromSet(questionSetId, existing.questionId) ??
+      pickQuestionFromSet(questionSetId, `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`);
     return NextResponse.json({
       challengeId: existing.challengeId,
       expiresAt: new Date(existing.expiresAt).toISOString(),
@@ -90,7 +97,10 @@ async function handlePost(request: Request) {
     });
   }
 
-  const question = pickMcQuestionForNode(nodeId);
+  const question = pickQuestionFromSet(
+    questionSetId,
+    `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`,
+  );
   const challenge = await createLiveGameChallenge({
     roomId,
     playerId,
@@ -109,6 +119,7 @@ export async function POST(request: Request) {
   try {
     return await handlePost(request);
   } catch (error) {
+    if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game challenge request failed", error);
     return NextResponse.json(
       { error: "The challenge service is temporarily unavailable. Please try again." },

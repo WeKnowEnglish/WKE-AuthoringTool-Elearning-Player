@@ -9,10 +9,9 @@ import {
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import { ENGLISH_CRAFT_CRAFT_BENCH_ID } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import {
-  ENGLISH_CRAFT_CRAFT_BRIDGE_V1,
-  toClientCraftQuestion,
+  ENGLISH_CRAFT_CRAFT_PREVIEW,
   type EnglishCraftCraftQuestionClient,
-} from "@/lib/live-game/modes/english-craft/questions-v1";
+} from "@/lib/live-game/modes/english-craft/questions-client";
 
 type ActiveCraftChallenge = {
   challengeId: string | null;
@@ -33,11 +32,10 @@ type CraftTokenPayload = {
 
 type Options = {
   roomId: string;
-  playerId: string;
   onAnswered?: (result: CraftAnswerResult) => void;
 };
 
-const CRAFT_PREVIEW_QUESTION = toClientCraftQuestion(ENGLISH_CRAFT_CRAFT_BRIDGE_V1);
+const CRAFT_PREVIEW_QUESTION = ENGLISH_CRAFT_CRAFT_PREVIEW;
 const CRAFT_NODE_ID = ENGLISH_CRAFT_CRAFT_BENCH_ID;
 
 function parseCraftPayload(payload: {
@@ -69,7 +67,7 @@ function toCraftPrefetchEntry(
   };
 }
 
-export function useLiveGameCraftChallenge({ roomId, playerId, onAnswered }: Options) {
+export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
   const [activeChallenge, setActiveChallenge] = useState<ActiveCraftChallenge | null>(null);
   const [tokenStatus, setTokenStatus] = useState<LiveGameChallengeTokenStatus>("pending");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,7 +102,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, onAnswered }: Opti
       const response = await fetch("/api/live-game/craft/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, playerId }),
+        body: JSON.stringify({ roomId }),
         signal,
       });
       const payload = (await response.json()) as {
@@ -118,7 +116,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, onAnswered }: Opti
       }
       return parseCraftPayload(payload);
     },
-    [playerId, roomId],
+    [roomId],
   );
 
   const applyTokenToActiveChallenge = useCallback((payload: CraftTokenPayload) => {
@@ -270,7 +268,6 @@ export function useLiveGameCraftChallenge({ roomId, playerId, onAnswered }: Opti
           body: JSON.stringify({
             roomId,
             challengeId: activeChallenge.challengeId,
-            playerId,
             order,
           }),
         });
@@ -303,7 +300,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, onAnswered }: Opti
         setIsSubmitting(false);
       }
     },
-    [activeChallenge, clearPrefetchCache, onAnswered, playerId, roomId, tokenStatus],
+    [activeChallenge, clearPrefetchCache, onAnswered, roomId, tokenStatus],
   );
 
   const closeChallenge = useCallback(() => {

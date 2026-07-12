@@ -5,16 +5,18 @@ import {
   canCompleteObjective,
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
+import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
+import { isPlayerTouchingFlagZone } from "@/lib/live-game/engine/flag-touch";
+import { ENGLISH_CRAFT_FLAG_ZONE_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 
 type CompleteRequestBody = {
   roomId?: string;
-  playerId?: string;
 };
 
 function parseCompleteBody(body: unknown): CompleteRequestBody | null {
   if (!body || typeof body !== "object") return null;
   const record = body as CompleteRequestBody;
-  if (typeof record.roomId !== "string" || typeof record.playerId !== "string") {
+  if (typeof record.roomId !== "string") {
     return null;
   }
   return record;
@@ -36,12 +38,12 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseCompleteBody(body);
-  if (!parsed?.roomId || !parsed.playerId) {
-    return NextResponse.json({ error: "roomId and playerId are required." }, { status: 400 });
+  if (!parsed?.roomId) {
+    return NextResponse.json({ error: "roomId is required." }, { status: 400 });
   }
 
   const roomId = parsed.roomId.trim();
-  const playerId = parsed.playerId.trim();
+  const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
   if (!roomId.startsWith("wke-live-game-")) {
     return NextResponse.json({ error: "Invalid room id." }, { status: 400 });
@@ -65,6 +67,11 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Objective is not available yet." }, { status: 409 });
   }
 
+  const position = storage.playerPositions?.[playerId];
+  if (!position || Date.now() - position.updatedAt > 5_000 || !isPlayerTouchingFlagZone(position.x, position.y, ENGLISH_CRAFT_FLAG_ZONE_V1)) {
+    return NextResponse.json({ error: "Reach the flag before completing the objective." }, { status: 409 });
+  }
+
   const result = await completeLiveGameObjective({ roomId, playerId });
   if (!result) {
     return NextResponse.json({ error: "Could not complete the objective." }, { status: 409 });
@@ -82,6 +89,7 @@ export async function POST(request: Request) {
   try {
     return await handlePost(request);
   } catch (error) {
+    if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game complete request failed", error);
     return NextResponse.json(
       { error: "The completion service is temporarily unavailable. Please try again." },

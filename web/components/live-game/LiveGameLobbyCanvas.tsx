@@ -18,7 +18,6 @@ import {
   clearLiveGameSessionContext,
   type LiveGameSessionContext,
 } from "@/lib/live-game/liveblocks/identity";
-import { useAutoJoinLiveGameLobby } from "@/lib/live-game/hooks/useAutoJoinLiveGameLobby";
 import { useLiveGameAvatar } from "@/lib/live-game/hooks/useLiveGameAvatar";
 import { useLiveGameSessionDuration } from "@/lib/live-game/hooks/useLiveGameSessionDuration";
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
@@ -36,7 +35,6 @@ type Props = {
 
 export function LiveGameLobbyCanvas({ context }: Props) {
   const router = useRouter();
-  useAutoJoinLiveGameLobby(context);
   const { self, players, selfEntry, session, isHost, others, startGame, closeLobby } = useLiveGameLobby();
   const { avatarId, setAvatarId, canChangeAvatar, takenAvatarIds } = useLiveGameAvatar(context);
   const { durationMinutes, setDurationMinutes } = useLiveGameSessionDuration(context);

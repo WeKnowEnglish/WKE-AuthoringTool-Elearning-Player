@@ -18,10 +18,10 @@ import {
 import { computeLiveGameCamera } from "@/lib/live-game/hooks/useLiveGameCamera";
 import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 
-/** React state + grass stepping sample rate (~12 Hz). */
+/** React state sample rate for interaction targeting (~12 Hz). */
 export const LIVE_GAME_STATE_COMMIT_MS = 80;
-/** Liveblocks presence send rate (~12 Hz). */
-export const LIVE_GAME_PRESENCE_INTERVAL_MS = 80;
+/** Liveblocks presence send rate (~8 Hz), with local animation still at display refresh rate. */
+export const LIVE_GAME_PRESENCE_INTERVAL_MS = 125;
 
 type Options = {
   map: LiveGameMapDef;

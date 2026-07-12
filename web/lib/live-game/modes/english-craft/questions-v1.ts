@@ -1,3 +1,9 @@
+import "server-only";
+import type {
+  EnglishCraftCraftQuestionClient,
+  EnglishCraftMcQuestionClient,
+} from "@/lib/live-game/modes/english-craft/questions-client";
+
 export type EnglishCraftMcQuestion = {
   id: string;
   prompt: string;
@@ -81,13 +87,6 @@ export const ENGLISH_CRAFT_MC_QUESTIONS_V1: EnglishCraftMcQuestion[] = [
   },
 ];
 
-export type EnglishCraftMcQuestionClient = {
-  id: string;
-  type: "multiple_choice";
-  prompt: string;
-  options: string[];
-};
-
 export function toClientMcQuestion(question: EnglishCraftMcQuestion): EnglishCraftMcQuestionClient {
   return {
     id: question.id,
@@ -130,14 +129,6 @@ export const ENGLISH_CRAFT_CRAFT_BRIDGE_V1: EnglishCraftCraftQuestion = {
   wordBank: ["usually", "after school", "I", "play football"],
   correctOrder: ["I", "usually", "play football", "after school"],
   slotCount: 4,
-};
-
-export type EnglishCraftCraftQuestionClient = {
-  id: string;
-  type: "drag_sentence";
-  prompt: string;
-  wordBank: string[];
-  slotCount: number;
 };
 
 export function toClientCraftQuestion(

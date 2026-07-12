@@ -9,10 +9,9 @@ import {
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type { EnglishCraftWoodTreeDef } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import {
-  pickMcQuestionForNode,
-  toClientMcQuestion,
+  ENGLISH_CRAFT_MC_PREVIEW,
   type EnglishCraftMcQuestionClient,
-} from "@/lib/live-game/modes/english-craft/questions-v1";
+} from "@/lib/live-game/modes/english-craft/questions-client";
 
 type ActiveChallenge = {
   nodeId: string;
@@ -33,7 +32,6 @@ type ChallengeTokenPayload = {
 
 type Options = {
   roomId: string;
-  playerId: string;
   onAnswered?: (result: AnswerResult) => void;
 };
 
@@ -67,7 +65,7 @@ function toPrefetchEntry(
   };
 }
 
-export function useLiveGameWoodChallenge({ roomId, playerId, onAnswered }: Options) {
+export function useLiveGameWoodChallenge({ roomId, onAnswered }: Options) {
   const [activeChallenge, setActiveChallenge] = useState<ActiveChallenge | null>(null);
   const [tokenStatus, setTokenStatus] = useState<LiveGameChallengeTokenStatus>("pending");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,7 +101,7 @@ export function useLiveGameWoodChallenge({ roomId, playerId, onAnswered }: Optio
       const response = await fetch("/api/live-game/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, nodeId, playerId }),
+        body: JSON.stringify({ roomId, nodeId }),
         signal,
       });
       const payload = (await response.json()) as {
@@ -117,7 +115,7 @@ export function useLiveGameWoodChallenge({ roomId, playerId, onAnswered }: Optio
       }
       return parseChallengePayload(payload);
     },
-    [playerId, roomId],
+    [roomId],
   );
 
   const applyTokenToActiveChallenge = useCallback(
@@ -262,7 +260,7 @@ export function useLiveGameWoodChallenge({ roomId, playerId, onAnswered }: Optio
       setError(null);
       setLastResult(null);
 
-      const previewQuestion = toClientMcQuestion(pickMcQuestionForNode(tree.id));
+      const previewQuestion = ENGLISH_CRAFT_MC_PREVIEW;
       const now = Date.now();
       const cached = prefetchCacheRef.current;
 
@@ -302,7 +300,6 @@ export function useLiveGameWoodChallenge({ roomId, playerId, onAnswered }: Optio
             roomId,
             challengeId: activeChallenge.challengeId,
             answer,
-            playerId,
           }),
         });
         const payload = (await response.json()) as {
@@ -332,7 +329,7 @@ export function useLiveGameWoodChallenge({ roomId, playerId, onAnswered }: Optio
         setIsSubmitting(false);
       }
     },
-    [activeChallenge, clearPrefetchCache, onAnswered, playerId, roomId, tokenStatus],
+    [activeChallenge, clearPrefetchCache, onAnswered, roomId, tokenStatus],
   );
 
   const closeChallenge = useCallback(() => {

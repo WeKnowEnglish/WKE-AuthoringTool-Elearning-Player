@@ -6,7 +6,6 @@ import { ENGLISH_CRAFT_FLAG_ZONE_V1 } from "@/lib/live-game/modes/english-craft/
 
 type Options = {
   roomId: string;
-  playerId: string;
   playerX: number;
   playerY: number;
   enabled: boolean;
@@ -14,7 +13,6 @@ type Options = {
 
 export function useLiveGameFlagTouch({
   roomId,
-  playerId,
   playerX,
   playerY,
   enabled,
@@ -29,10 +27,16 @@ export function useLiveGameFlagTouch({
     inFlightRef.current = true;
     void (async () => {
       try {
+        const positionResponse = await fetch("/api/live-game/position", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId, x: playerX, y: playerY }),
+        });
+        if (!positionResponse.ok) return;
         const response = await fetch("/api/live-game/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId, playerId }),
+          body: JSON.stringify({ roomId }),
         });
         if (response.ok) {
           completedRef.current = true;
@@ -41,5 +45,5 @@ export function useLiveGameFlagTouch({
         inFlightRef.current = false;
       }
     })();
-  }, [enabled, playerId, playerX, playerY, roomId]);
+  }, [enabled, playerX, playerY, roomId]);
 }

@@ -8,6 +8,7 @@
     "dev:webpack": "next dev --webpack",
     "clean": "node -e \"try { require('fs').rmSync('.next', { recursive: true, force: true }); } catch (e) { if (e.code !== 'ENOENT') throw e; }\"",
     "build": "next build",
+    "build:live-game-ground": "node scripts/build-english-craft-ground.mjs",
     "prebuild": "npm run validate:grammar",
     "analyze": "cross-env ANALYZE=true next build",
     "start": "next start",
@@ -43,6 +44,7 @@
     "next": "16.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sharp": "^0.34.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

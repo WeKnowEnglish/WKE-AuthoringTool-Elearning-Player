@@ -6,6 +6,7 @@ import type {
 } from "@/lib/live-game/liveblocks/config";
 import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
 import { ENGLISH_CRAFT_WOOD_TREES_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 function createInitialResourceNodes() {
   const nodes = new LiveMap<string, LiveObject<LiveGameResourceNodeState>>();
@@ -30,6 +31,8 @@ export function createLiveGameInitialStorage(input: {
   modeId: LiveGameModeId;
   mapId: string;
   durationMinutes: EnglishCraftSessionDuration;
+  questionSetId: LiveGameQuestionSetId;
+  questionSetVersion: number;
 }) {
   const session: LiveGameSessionState = {
     modeId: input.modeId,
@@ -46,6 +49,8 @@ export function createLiveGameInitialStorage(input: {
     endedAt: null,
     endReason: null,
     lobbyNotice: null,
+    questionSetId: input.questionSetId,
+    questionSetVersion: input.questionSetVersion,
   };
 
   return {
@@ -57,6 +62,7 @@ export function createLiveGameInitialStorage(input: {
     craftedItems: new LiveObject({ bridge: false }),
     unlockedObjects: new LiveObject({ river_crossing: false }),
     craftReceipts: new LiveMap(),
+    playerPositions: new LiveMap(),
   };
 }
 

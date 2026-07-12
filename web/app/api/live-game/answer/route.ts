@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isMcAnswerCorrect } from "@/lib/live-game/modes/english-craft/questions-v1";
+import { isQuestionSetAnswerCorrect, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { awardWoodForNode } from "@/lib/live-game/server/award-wood";
 import {
@@ -8,12 +8,12 @@ import {
   markChallengeAwarded,
 } from "@/lib/live-game/server/challenge-store";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
+import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 
 type AnswerRequestBody = {
   roomId?: string;
   challengeId?: string;
   answer?: string;
-  playerId?: string;
   responseTimeMs?: number;
 };
 
@@ -23,8 +23,7 @@ function parseAnswerBody(body: unknown): AnswerRequestBody | null {
   if (
     typeof record.roomId !== "string" ||
     typeof record.challengeId !== "string" ||
-    typeof record.answer !== "string" ||
-    typeof record.playerId !== "string"
+    typeof record.answer !== "string"
   ) {
     return null;
   }
@@ -47,9 +46,9 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseAnswerBody(body);
-  if (!parsed?.roomId || !parsed.challengeId || !parsed.answer || !parsed.playerId) {
+  if (!parsed?.roomId || !parsed.challengeId || !parsed.answer) {
     return NextResponse.json(
-      { error: "roomId, challengeId, answer, and playerId are required." },
+      { error: "roomId, challengeId, and answer are required." },
       { status: 400 },
     );
   }
@@ -57,7 +56,7 @@ async function handlePost(request: Request) {
   const roomId = parsed.roomId.trim();
   const challengeId = parsed.challengeId.trim();
   const answer = parsed.answer.trim();
-  const playerId = parsed.playerId.trim();
+  const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
   const challenge = await getLiveGameChallenge(challengeId);
   if (!challenge) {
@@ -82,7 +81,11 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
 
-  const correct = isMcAnswerCorrect(challenge.questionId, answer);
+  const correct = isQuestionSetAnswerCorrect(
+    resolveLiveGameQuestionSetId(storage.session.questionSetId),
+    challenge.questionId,
+    answer,
+  );
   if (!correct) {
     return NextResponse.json({
       correct: false,
@@ -132,6 +135,7 @@ export async function POST(request: Request) {
   try {
     return await handlePost(request);
   } catch (error) {
+    if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game answer request failed", error);
     return NextResponse.json(
       { error: "The answer service is temporarily unavailable. Your answer can be retried." },

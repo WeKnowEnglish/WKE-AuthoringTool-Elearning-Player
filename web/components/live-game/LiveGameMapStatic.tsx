@@ -8,16 +8,15 @@ import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 
 type Props = {
   map: LiveGameMapDef;
-  bouncingTiles: Record<string, number>;
   resourceNodes: Record<string, LiveGameResourceNodeState>;
   bridgeCrafted: boolean;
   now: number;
 };
 
-function LiveGameMapStaticInner({ map, bouncingTiles, resourceNodes, bridgeCrafted, now }: Props) {
+function LiveGameMapStaticInner({ map, resourceNodes, bridgeCrafted, now }: Props) {
   return (
     <div className="relative h-full w-full">
-      <EnglishCraftMapLayer map={map} fillParent bouncingTiles={bouncingTiles} />
+      <EnglishCraftMapLayer map={map} fillParent />
       <EnglishCraftObjectsLayer
         map={map}
         resourceNodes={resourceNodes}
@@ -32,13 +31,12 @@ export const LiveGameMapStatic = memo(LiveGameMapStaticInner);
 
 export function useLiveGameMapStaticProps(
   map: LiveGameMapDef,
-  bouncingTiles: Record<string, number>,
   resourceNodes: Record<string, LiveGameResourceNodeState>,
   bridgeCrafted: boolean,
   now: number,
 ) {
   return useMemo(
-    () => ({ map, bouncingTiles, resourceNodes, bridgeCrafted, now }),
-    [bridgeCrafted, map, bouncingTiles, resourceNodes, now],
+    () => ({ map, resourceNodes, bridgeCrafted, now }),
+    [bridgeCrafted, map, resourceNodes, now],
   );
 }

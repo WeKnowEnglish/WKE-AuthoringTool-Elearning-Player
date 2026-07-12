@@ -4,10 +4,9 @@ import { NextResponse } from "next/server";
 import { canAccessRoom as canAccessBoardGameRoom } from "@/lib/board-game/liveblocks/auth-policy";
 import { HOST_COOKIE_NAME as BOARD_GAME_HOST_COOKIE } from "@/lib/board-game/liveblocks/host-cookie";
 import { parseLiveblocksAuthRequest } from "@/lib/board-game/liveblocks/auth-context";
-import { canAccessLiveGameRoom } from "@/lib/live-game/liveblocks/auth-policy";
-import { LIVE_GAME_HOST_COOKIE_NAME } from "@/lib/live-game/liveblocks/host-cookie";
 import { getRoomProduct } from "@/lib/liveblocks/room-prefix";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
+import { verifyLiveGamePlayerToken, LIVE_GAME_PLAYER_COOKIE_NAME } from "@/lib/live-game/server/player-session";
 
 export async function POST(request: Request) {
   let secret: string;
@@ -42,12 +41,15 @@ export async function POST(request: Request) {
       hostCookie,
     });
   } else if (product === "live-game") {
-    const hostCookie = cookieStore.get(LIVE_GAME_HOST_COOKIE_NAME)?.value ?? null;
-    authorized = canAccessLiveGameRoom({
-      room: authRequest.room,
-      role: authRequest.role,
-      hostCookie,
-    });
+    const playerSession = verifyLiveGamePlayerToken(
+      cookieStore.get(LIVE_GAME_PLAYER_COOKIE_NAME)?.value,
+    );
+    authorized = playerSession?.roomId === authRequest.room;
+    if (authorized && playerSession) {
+      authRequest.userId = playerSession.playerId;
+      authRequest.displayName = playerSession.displayName;
+      authRequest.role = playerSession.role;
+    }
   }
 
   if (!authorized) {
@@ -62,7 +64,12 @@ export async function POST(request: Request) {
     },
   });
 
-  session.allow(authRequest.room, session.FULL_ACCESS);
+  session.allow(
+    authRequest.room,
+    product === "live-game" ?
+      ["room:read", "storage:read", "room:presence:write"]
+    : session.FULL_ACCESS,
+  );
 
   const { status, body: responseBody } = await session.authorize();
   return new NextResponse(responseBody, { status });

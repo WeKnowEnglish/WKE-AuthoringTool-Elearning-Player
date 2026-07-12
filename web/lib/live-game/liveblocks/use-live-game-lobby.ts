@@ -1,14 +1,10 @@
 "use client";
 
+import { useCallback } from "react";
 import { useOthers, useSelf, useStorage } from "@liveblocks/react/suspense";
 import type { LiveGameLobbyPlayer, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
-import {
-  useCloseLiveGameLobbyMutation,
-  useEndRoundAndReturnToLobbyMutation,
-  useJoinLiveGameLobbyMutation,
-  useReturnToLobbyMutation,
-  useStartLiveGameMutation,
-} from "@/lib/live-game/liveblocks/mutations/lobby";
+import type { LiveGameRoundEndReason } from "@/lib/live-game/liveblocks/config";
+import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 
 export type LiveGameLobbyPlayerEntry = {
   id: string;
@@ -33,11 +29,21 @@ export function useLiveGameLobby() {
     return entries;
   });
 
-  const joinLobby = useJoinLiveGameLobbyMutation();
-  const startGame = useStartLiveGameMutation();
-  const returnToLobby = useReturnToLobbyMutation();
-  const closeLobby = useCloseLiveGameLobbyMutation();
-  const endRoundAndReturnToLobby = useEndRoundAndReturnToLobbyMutation();
+  const control = useCallback(async (action: string, reason?: LiveGameRoundEndReason) => {
+    const response = await fetch("/api/live-game/control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId: toRoomId(session.joinCode), action, reason }),
+    });
+    if (!response.ok) throw new Error("Live-game control action failed.");
+  }, [session.joinCode]);
+  const startGame = useCallback(() => void control("start"), [control]);
+  const returnToLobby = useCallback(() => void control("return_to_lobby"), [control]);
+  const closeLobby = useCallback(() => void control("close"), [control]);
+  const endRoundAndReturnToLobby = useCallback(
+    (reason: LiveGameRoundEndReason) => void control("end_round", reason),
+    [control],
+  );
 
   const selfEntry = players.find((entry) => entry.id === self.id) ?? null;
   const isHost = selfEntry?.player.role === "host";
@@ -49,7 +55,6 @@ export function useLiveGameLobby() {
     players,
     selfEntry,
     isHost,
-    joinLobby,
     startGame,
     returnToLobby,
     closeLobby,

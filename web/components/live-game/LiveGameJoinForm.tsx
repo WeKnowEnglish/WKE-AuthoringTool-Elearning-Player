@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
-import { useStudentStorageIdReady } from "@/lib/auth/use-student-storage-id-ready";
 import {
   LIVE_GAME_DEFAULT_PLAYER_COLOR,
   setLiveGameSessionContext,
@@ -18,6 +17,7 @@ import {
   type LiveGameCharacterId,
 } from "@/lib/live-game/characters/live-game-characters";
 import { LiveGameCharacterPicker } from "@/components/live-game/LiveGameCharacterPicker";
+import { DEFAULT_LIVE_GAME_QUESTION_SET_ID, type LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 type Props = {
   initialCode?: string;
@@ -25,7 +25,6 @@ type Props = {
 
 export function LiveGameJoinForm({ initialCode = "" }: Props) {
   const router = useRouter();
-  const { ready: authReady, studentId } = useStudentStorageIdReady();
   const { displayName: studentName, ready: nameReady } = useStudentDisplayName();
   const [joinCode, setJoinCode] = useState(initialCode.toUpperCase());
   const [displayName, setDisplayName] = useState("");
@@ -39,13 +38,9 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
     }
   }, [displayName, nameReady, studentName]);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const code = joinCode.trim().toUpperCase();
     const name = displayName.trim();
-    if (!authReady || !studentId) {
-      setError("Please log in as a student before joining.");
-      return;
-    }
     if (!isValidJoinCode(code)) {
       setError("Enter a valid 6-character join code.");
       return;
@@ -57,45 +52,37 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
 
     setIsSubmitting(true);
     setError(null);
-    setLiveGameSessionContext({
-      sessionId: code,
-      role: "player",
-      displayName: name,
-      color: LIVE_GAME_DEFAULT_PLAYER_COLOR,
-      userId: studentId,
-      avatarId,
-      modeId: "english_craft",
-      mapId: ENGLISH_CRAFT_MODE.defaultMapId,
-      durationMinutes: normalizeEnglishCraftDurationMinutes(ENGLISH_CRAFT_MODE.defaultDurationMinutes),
-    });
-    router.push(`/live-game/${code}`);
-  }
-
-  if (!authReady) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center text-lg font-bold text-kid-ink">
-        Checking login...
-      </div>
-    );
-  }
-
-  if (!studentId) {
-    return (
-      <div className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-4 py-8">
-        <KidPanel className="space-y-4 text-center">
-          <h1 className="text-2xl font-extrabold text-kid-ink">Student login required</h1>
-          <p className="text-sm font-semibold text-kid-ink/70">
-            Log in to your student account before joining a live game.
-          </p>
-          <Link
-            href="/login"
-            className="inline-block font-bold text-kid-ink underline underline-offset-2"
-          >
-            Go to login
-          </Link>
-        </KidPanel>
-      </div>
-    );
+    try {
+      const response = await fetch("/api/live-game/sessions/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: code, displayName: name, avatarId }),
+      });
+      const payload = (await response.json()) as {
+        error?: string; userId?: string; mapId?: string; durationMinutes?: number | null;
+        questionSetId?: LiveGameQuestionSetId; questionSetVersion?: number;
+      };
+      if (!response.ok || !payload.userId) throw new Error(payload.error ?? "Could not join game.");
+      setLiveGameSessionContext({
+        sessionId: code,
+        role: "player",
+        displayName: name,
+        color: LIVE_GAME_DEFAULT_PLAYER_COLOR,
+        userId: payload.userId,
+        avatarId,
+        modeId: "english_craft",
+        mapId: payload.mapId ?? ENGLISH_CRAFT_MODE.defaultMapId,
+        durationMinutes: normalizeEnglishCraftDurationMinutes(
+          typeof payload.durationMinutes === "number" ? payload.durationMinutes : ENGLISH_CRAFT_MODE.defaultDurationMinutes,
+        ),
+        questionSetId: payload.questionSetId ?? DEFAULT_LIVE_GAME_QUESTION_SET_ID,
+        questionSetVersion: payload.questionSetVersion ?? 1,
+      });
+      router.push(`/live-game/${code}`);
+    } catch (joinError) {
+      setError(joinError instanceof Error ? joinError.message : "Could not join game.");
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -135,8 +122,8 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
           <p className="text-sm font-semibold text-red-700">{error}</p>
         : null}
 
-        <KidButton variant="primary" disabled={isSubmitting} onClick={handleSubmit}>
-          Join lobby
+        <KidButton variant="primary" disabled={isSubmitting} onClick={() => void handleSubmit()}>
+          {isSubmitting ? "Joining..." : "Join lobby"}
         </KidButton>
 
         <Link

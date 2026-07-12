@@ -8,6 +8,7 @@ import { LIVE_GAME_SYSTEM_SET_UUIDS } from "@/lib/live-game/question-banks/quest
 import type { LiveGameSessionState } from "@/lib/live-game/liveblocks/config";
 import type { LiveGameChallengeRecord } from "@/lib/live-game/server/challenge-store";
 import {
+  challengeMatchesQuestionBank,
   inferQuestionBankFromNodeId,
   readChallengeQuestionSetContext,
 } from "@/lib/live-game/server/question-set-challenge-context";
@@ -43,6 +44,7 @@ function baseChallenge(overrides: Partial<LiveGameChallengeRecord> = {}): LiveGa
     questionSetId: null,
     questionSetVersion: null,
     questionBank: null,
+    validationPayload: null,
     expiresAt: Date.now() + 60_000,
     status: "active",
     ...overrides,
@@ -55,6 +57,18 @@ describe("live-game challenge question set context", () => {
     expect(inferQuestionBankFromNodeId(ENGLISH_CRAFT_STORAGE_BY_TYPE.wood.id)).toBe("deposit");
     expect(inferQuestionBankFromNodeId(ENGLISH_CRAFT_CRAFT_BENCH_ID)).toBe("craft");
     expect(inferQuestionBankFromNodeId("unknown-node")).toBeNull();
+  });
+
+  it("prevents a challenge token from being scored by the wrong bank endpoint", () => {
+    const harvest = baseChallenge();
+    expect(challengeMatchesQuestionBank(harvest, "harvest")).toBe(true);
+    expect(challengeMatchesQuestionBank(harvest, "deposit")).toBe(false);
+    expect(
+      challengeMatchesQuestionBank(
+        baseChallenge({ questionBank: "craft", nodeId: ENGLISH_CRAFT_CRAFT_BENCH_ID }),
+        "craft",
+      ),
+    ).toBe(true);
   });
 
   it("uses session version when challenge snapshot is missing", () => {

@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { isHarvestAnswerCorrect } from "@/lib/live-game/server/question-set-resolver";
-import { readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
+import { isHarvestAnswerCorrect as validateHarvestAnswer } from "@/lib/live-game/question-banks/schemas";
+import { challengeMatchesQuestionBank, readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
 import { awardCarryForNode } from "@/lib/live-game/server/award-carry";
 import { normalizeAwardReceipt } from "@/lib/live-game/server/award-receipt";
 import {
   claimLiveGameChallengeAward,
   getLiveGameChallenge,
   markChallengeAwarded,
+  markChallengeSkipped,
 } from "@/lib/live-game/server/challenge-store";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
@@ -48,6 +50,7 @@ function harvestAnswerPayload(
     carryGranted?: { type: string; sourceNodeId: string } | null;
     nodeCooldownEndsAt?: number;
     alreadyAwarded?: boolean;
+    skipped?: boolean;
   },
 ) {
   return {
@@ -57,6 +60,7 @@ function harvestAnswerPayload(
     poolTotal: readResourcePool(storage),
     nodeCooldownEndsAt: input.nodeCooldownEndsAt,
     alreadyAwarded: input.alreadyAwarded,
+    skipped: input.skipped,
   };
 }
 
@@ -96,6 +100,9 @@ async function handlePost(request: Request) {
   if (challenge.roomId !== roomId || challenge.playerId !== playerId) {
     return NextResponse.json({ error: "Challenge mismatch." }, { status: 403 });
   }
+  if (!challengeMatchesQuestionBank(challenge, "harvest")) {
+    return NextResponse.json({ error: "Invalid harvest challenge." }, { status: 403 });
+  }
 
   const storage = await readLiveGameStorageJson(roomId);
   if (!storage?.session || storage.session.phase !== "playing") {
@@ -123,9 +130,15 @@ async function handlePost(request: Request) {
   }
 
   const ctx = readChallengeQuestionSetContext(storage.session, challenge);
+  if (skip) {
+    const skipped = await markChallengeSkipped(challengeId);
+    if (!skipped) return NextResponse.json({ error: "Challenge can no longer be skipped." }, { status: 409 });
+    return NextResponse.json(harvestAnswerPayload(storage, { correct: false, skipped: true }));
+  }
   const correct =
-    skip ||
-    (await isHarvestAnswerCorrect(ctx.ref, challenge.questionId, answer, ctx.version));
+    challenge.validationPayload?.type === "multiple_choice" ?
+      validateHarvestAnswer(challenge.validationPayload, answer)
+    : await isHarvestAnswerCorrect(ctx.ref, challenge.questionId, answer, ctx.version);
   if (!correct) {
     return NextResponse.json(
       harvestAnswerPayload(storage, {
@@ -170,9 +183,8 @@ async function handlePost(request: Request) {
 
   await markChallengeAwarded(challengeId);
 
-  const latest = await readLiveGameStorageJson(roomId);
   return NextResponse.json(
-    harvestAnswerPayload(latest, {
+    harvestAnswerPayload(storage, {
       correct: true,
       carryGranted: { type: award.resourceType, sourceNodeId: award.sourceNodeId },
       nodeCooldownEndsAt: award.nodeCooldownEndsAt,

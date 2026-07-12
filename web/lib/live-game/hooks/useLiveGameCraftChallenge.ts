@@ -353,11 +353,19 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
           poolTotal?: LiveGameResourcePool;
           craftedItems?: LiveGameCraftedItems;
           recipeId?: CraftRecipeId;
+          skipped?: boolean;
         };
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit craft answer.");
         }
 
+        if (payload.skipped === true) {
+          clearPrefetchCache();
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         const correct = payload.correct === true;
         const poolTotal = payload.poolTotal ?? {
           wood: 0,

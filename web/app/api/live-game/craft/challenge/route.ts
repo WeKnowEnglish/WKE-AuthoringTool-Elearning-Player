@@ -18,7 +18,6 @@ import {
 import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import {
   createLiveGameChallenge,
-  findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
 import {
   canStartRecipeCraft,
@@ -104,31 +103,20 @@ async function handlePost(request: Request) {
   }
 
   const craftSeed = `${playerId}:${recipeId}:0`;
-  const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
-  if (existing) {
-    const craftRow =
-      (await getQuestionById(binding.ref, "craft", existing.questionId, binding.version)) ??
-      (await pickCraftQuestion(binding.ref, binding.version, craftSeed));
-    return NextResponse.json({
-      challengeId: existing.challengeId,
-      expiresAt: new Date(existing.expiresAt).toISOString(),
-      question: toClientCraftQuestionFromRow(craftRow, existing.challengeId),
-      recipeId,
-      recipeLabel: recipe.label,
-      costSummary: formatRecipeFullCostSummary(recipe),
-    });
-  }
-
-  const craftRow = await pickCraftQuestion(binding.ref, binding.version, craftSeed);
+  const pickedCraftRow = await pickCraftQuestion(binding.ref, binding.version, craftSeed);
   const challenge = await createLiveGameChallenge({
     roomId,
     playerId,
     nodeId,
-    questionId: craftRow.id,
+    questionId: pickedCraftRow.id,
     questionSetId: binding.setId,
     questionSetVersion: binding.version,
     questionBank: "craft",
+    validationPayload: pickedCraftRow.payload,
   });
+  const craftRow =
+    challenge.questionId === pickedCraftRow.id ? pickedCraftRow
+    : (await getQuestionById(binding.ref, "craft", challenge.questionId, binding.version)) ?? pickedCraftRow;
 
   return NextResponse.json({
     challengeId: challenge.challengeId,

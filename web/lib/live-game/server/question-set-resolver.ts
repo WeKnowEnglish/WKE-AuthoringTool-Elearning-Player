@@ -55,6 +55,7 @@ type CacheEntry = {
 };
 
 const snapshotCache = new Map<string, CacheEntry>();
+const snapshotLoads = new Map<string, Promise<LiveGameQuestionSetSnapshot>>();
 
 function cacheKey(snapshot: LiveGameQuestionSetSnapshot): string {
   return `${snapshot.id}:v${snapshot.version}`;
@@ -101,16 +102,25 @@ export async function getQuestionSetSnapshot(
 ): Promise<LiveGameQuestionSetSnapshot> {
   const cached = readCache(ref, version);
   if (cached) return cached;
+  const loadKey = `${ref}:v${version ?? "latest"}`;
+  const inFlight = snapshotLoads.get(loadKey);
+  if (inFlight) return inFlight;
 
-  const fromDb = await loadSnapshotFromDb(ref);
-  if (!fromDb) {
-    throw new QuestionSetNotFoundError(ref);
+  const load = (async () => {
+    const fromDb = await loadSnapshotFromDb(ref);
+    if (!fromDb) throw new QuestionSetNotFoundError(ref);
+    if (version != null && fromDb.version !== version) {
+      throw new QuestionSetVersionMismatchError(ref, version, fromDb.version);
+    }
+    writeCache(fromDb);
+    return fromDb;
+  })();
+  snapshotLoads.set(loadKey, load);
+  try {
+    return await load;
+  } finally {
+    if (snapshotLoads.get(loadKey) === load) snapshotLoads.delete(loadKey);
   }
-  if (version != null && fromDb.version !== version) {
-    throw new QuestionSetVersionMismatchError(ref, version, fromDb.version);
-  }
-  writeCache(fromDb);
-  return fromDb;
 }
 
 function pickFromBank<T extends LiveGameQuestionRow>(
@@ -205,6 +215,7 @@ export async function listPublishedQuestionSets() {
 /** Test helper — clears in-memory resolver cache. */
 export function clearQuestionSetResolverCacheForTests() {
   snapshotCache.clear();
+  snapshotLoads.clear();
 }
 
 /** Drop cached snapshots for a set id or slug (e.g. after publish). */

@@ -1,7 +1,8 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
-import type { LiveGameQuestionBank } from "@/lib/live-game/question-banks/types";
+import { parseQuestionPayload } from "@/lib/live-game/question-banks/schemas";
+import type { LiveGameQuestionBank, LiveGameQuestionPayload } from "@/lib/live-game/question-banks/types";
 import { ENGLISH_CRAFT_CHALLENGE_TTL_MS } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { LIVE_GAME_AWARD_CLAIM_LEASE_MS } from "@/lib/live-game/server/challenge-lifecycle";
 
@@ -16,6 +17,7 @@ export type LiveGameChallengeRecord = {
   questionSetId: string | null;
   questionSetVersion: number | null;
   questionBank: LiveGameQuestionBank | null;
+  validationPayload: LiveGameQuestionPayload | null;
   expiresAt: number;
   status: LiveGameChallengeStatus;
 };
@@ -29,12 +31,13 @@ type ChallengeRow = {
   question_set_id: string | null;
   question_set_version: number | null;
   question_bank: LiveGameQuestionBank | null;
+  validation_payload: unknown | null;
   expires_at: string;
   status: LiveGameChallengeStatus;
 };
 
 const CHALLENGE_SELECT =
-  "id,room_id,player_id,node_id,question_id,question_set_id,question_set_version,question_bank,expires_at,status";
+  "id,room_id,player_id,node_id,question_id,question_set_id,question_set_version,question_bank,validation_payload,expires_at,status";
 
 function requireChallengeDatabase() {
   const supabase = createServiceRoleSupabase();
@@ -54,6 +57,7 @@ function toRecord(row: ChallengeRow): LiveGameChallengeRecord {
     questionSetId: row.question_set_id,
     questionSetVersion: row.question_set_version,
     questionBank: row.question_bank,
+    validationPayload: row.validation_payload == null ? null : parseQuestionPayload(row.validation_payload),
     expiresAt: new Date(row.expires_at).getTime(),
     status: row.status,
   };
@@ -101,34 +105,24 @@ export async function createLiveGameChallenge(input: {
   questionSetId: string;
   questionSetVersion: number;
   questionBank: LiveGameQuestionBank;
+  validationPayload: LiveGameQuestionPayload;
 }): Promise<LiveGameChallengeRecord> {
-  const existing = await findActiveChallengeForPlayerNode(input);
-  if (existing) return existing;
-
   const supabase = requireChallengeDatabase();
   const now = Date.now();
-  const row = {
-    id: `ch_${randomBytes(12).toString("hex")}`,
-    room_id: input.roomId,
-    player_id: input.playerId,
-    node_id: input.nodeId,
-    question_id: input.questionId,
-    question_set_id: input.questionSetId,
-    question_set_version: input.questionSetVersion,
-    question_bank: input.questionBank,
-    status: "active" as const,
-    expires_at: new Date(now + ENGLISH_CRAFT_CHALLENGE_TTL_MS).toISOString(),
-    updated_at: new Date(now).toISOString(),
-  };
   const { data, error } = await supabase
-    .from("live_game_challenges")
-    .insert(row)
-    .select(CHALLENGE_SELECT)
+    .rpc("issue_live_game_challenge", {
+      p_id: `ch_${randomBytes(12).toString("hex")}`,
+      p_room_id: input.roomId,
+      p_player_id: input.playerId,
+      p_node_id: input.nodeId,
+      p_question_id: input.questionId,
+      p_question_set_id: input.questionSetId,
+      p_question_set_version: input.questionSetVersion,
+      p_question_bank: input.questionBank,
+      p_validation_payload: input.validationPayload,
+      p_expires_at: new Date(now + ENGLISH_CRAFT_CHALLENGE_TTL_MS).toISOString(),
+    })
     .single();
-  if (error?.code === "23505") {
-    const raced = await findActiveChallengeForPlayerNode(input);
-    if (raced) return raced;
-  }
   if (error) throw new Error(`Could not create live-game challenge: ${error.message}`);
   return toRecord(data as ChallengeRow);
 }
@@ -145,8 +139,23 @@ export async function getLiveGameChallenge(
   if (error) throw new Error(`Could not read live-game challenge: ${error.message}`);
   if (!data) return null;
   const record = toRecord(data as ChallengeRow);
+  if (record.status === "expired") return null;
   if (record.status !== "awarded" && record.expiresAt <= Date.now()) return null;
   return record;
+}
+
+export async function markChallengeSkipped(challengeId: string): Promise<boolean> {
+  const supabase = requireChallengeDatabase();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("live_game_challenges")
+    .update({ status: "expired", updated_at: now })
+    .eq("id", challengeId)
+    .eq("status", "active")
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Could not skip live-game challenge: ${error.message}`);
+  return data != null;
 }
 
 export type ClaimChallengeResult =

@@ -12,7 +12,6 @@ import {
 import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import {
   createLiveGameChallenge,
-  findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
 import { readPlayerCarry } from "@/lib/live-game/server/player-carry";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
@@ -101,28 +100,9 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Move closer to storage." }, { status: 409 });
   }
 
-  const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId: storageId });
-  if (existing) {
-    const depositRow =
-      (await getQuestionById(binding.ref, "deposit", existing.questionId, binding.version)) ??
-      (await pickDepositQuestion(binding.ref, binding.version, depositSeed));
-    if (depositRow.payload.type !== "deposit_spell") {
-      return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
-    }
-    return NextResponse.json({
-      challengeId: existing.challengeId,
-      expiresAt: new Date(existing.expiresAt).toISOString(),
-      spell: toClientDepositSpellFromRow(depositRow, {
-        resourceType: carry.resourceType,
-        storageLabel: storageDef.label,
-        shuffleSeed: existing.challengeId,
-      }),
-    });
-  }
-
-  let depositRow;
+  let pickedDepositRow;
   try {
-    depositRow = await pickDepositQuestion(binding.ref, binding.version, depositSeed);
+    pickedDepositRow = await pickDepositQuestion(binding.ref, binding.version, depositSeed);
   } catch {
     return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
   }
@@ -131,11 +111,15 @@ async function handlePost(request: Request) {
     roomId,
     playerId,
     nodeId: storageId,
-    questionId: depositRow.id,
+    questionId: pickedDepositRow.id,
     questionSetId: binding.setId,
     questionSetVersion: binding.version,
     questionBank: "deposit",
+    validationPayload: pickedDepositRow.payload,
   });
+  const depositRow =
+    challenge.questionId === pickedDepositRow.id ? pickedDepositRow
+    : (await getQuestionById(binding.ref, "deposit", challenge.questionId, binding.version)) ?? pickedDepositRow;
 
   return NextResponse.json({
     challengeId: challenge.challengeId,

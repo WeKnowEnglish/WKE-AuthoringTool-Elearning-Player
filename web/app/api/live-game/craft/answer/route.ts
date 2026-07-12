@@ -3,12 +3,14 @@ import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { ENGLISH_CRAFT_CRAFT_BENCH_ID } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { isCraftRecipeId } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
 import { isCraftOrderCorrect } from "@/lib/live-game/server/question-set-resolver";
-import { readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
+import { isCraftOrderCorrect as validateCraftOrder } from "@/lib/live-game/question-banks/schemas";
+import { challengeMatchesQuestionBank, readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
 import { awardCraftRecipe } from "@/lib/live-game/server/award-craft-recipe";
 import {
   claimLiveGameChallengeAward,
   getLiveGameChallenge,
   markChallengeAwarded,
+  markChallengeSkipped,
 } from "@/lib/live-game/server/challenge-store";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
@@ -53,12 +55,14 @@ function craftAnswerPayload(
   storage: Awaited<ReturnType<typeof readLiveGameStorageJson>>,
   correct: boolean,
   alreadyAwarded = false,
+  skipped = false,
 ) {
   return {
     correct,
     poolTotal: readResourcePool(storage),
     craftedItems: readCraftedItems(storage),
     alreadyAwarded,
+    skipped,
   };
 }
 
@@ -106,6 +110,9 @@ async function handlePost(request: Request) {
   if (challenge.nodeId !== ENGLISH_CRAFT_CRAFT_BENCH_ID) {
     return NextResponse.json({ error: "Invalid craft challenge." }, { status: 400 });
   }
+  if (!challengeMatchesQuestionBank(challenge, "craft")) {
+    return NextResponse.json({ error: "Invalid craft challenge." }, { status: 403 });
+  }
   if (challenge.status === "awarded") {
     const storage = await readLiveGameStorageJson(roomId);
     return NextResponse.json(craftAnswerPayload(storage, true, true));
@@ -117,9 +124,15 @@ async function handlePost(request: Request) {
   }
 
   const ctx = readChallengeQuestionSetContext(storage.session, challenge);
+  if (skip) {
+    const skipped = await markChallengeSkipped(challengeId);
+    if (!skipped) return NextResponse.json({ error: "Challenge can no longer be skipped." }, { status: 409 });
+    return NextResponse.json(craftAnswerPayload(storage, false, false, true));
+  }
   const correct =
-    skip ||
-    (await isCraftOrderCorrect(ctx.ref, challenge.questionId, order, ctx.version));
+    challenge.validationPayload?.type === "drag_sentence" ?
+      validateCraftOrder(challenge.validationPayload, order)
+    : await isCraftOrderCorrect(ctx.ref, challenge.questionId, order, ctx.version);
   if (!correct) {
     return NextResponse.json(craftAnswerPayload(storage, false));
   }

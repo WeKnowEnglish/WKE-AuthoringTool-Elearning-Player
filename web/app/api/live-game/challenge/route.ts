@@ -9,7 +9,6 @@ import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-s
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   createLiveGameChallenge,
-  findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
 import { isPlayerCarrying } from "@/lib/live-game/server/player-carry";
 import {
@@ -97,23 +96,7 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Move closer to this resource." }, { status: 409 });
   }
 
-  const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
-  if (existing) {
-    const question =
-      (await getQuestionById(binding.ref, "harvest", existing.questionId, binding.version)) ??
-      (await pickHarvestQuestion(
-        binding.ref,
-        binding.version,
-        `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`,
-      ));
-    return NextResponse.json({
-      challengeId: existing.challengeId,
-      expiresAt: new Date(existing.expiresAt).toISOString(),
-      question: toClientMcQuestionFromRow(question, existing.challengeId),
-    });
-  }
-
-  const question = await pickHarvestQuestion(
+  const pickedQuestion = await pickHarvestQuestion(
     binding.ref,
     binding.version,
     `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`,
@@ -122,11 +105,15 @@ async function handlePost(request: Request) {
     roomId,
     playerId,
     nodeId,
-    questionId: question.id,
+    questionId: pickedQuestion.id,
     questionSetId: binding.setId,
     questionSetVersion: binding.version,
     questionBank: "harvest",
+    validationPayload: pickedQuestion.payload,
   });
+  const question =
+    challenge.questionId === pickedQuestion.id ? pickedQuestion
+    : (await getQuestionById(binding.ref, "harvest", challenge.questionId, binding.version)) ?? pickedQuestion;
 
   return NextResponse.json({
     challengeId: challenge.challengeId,

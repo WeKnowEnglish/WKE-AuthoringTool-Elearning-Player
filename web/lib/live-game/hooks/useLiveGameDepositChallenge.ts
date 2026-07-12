@@ -321,11 +321,19 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           correct?: boolean;
           poolTotal?: LiveGamePoolTotal;
           carryCleared?: boolean;
+          skipped?: boolean;
         };
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit spelling.");
         }
 
+        if (payload.skipped === true) {
+          clearPrefetchCache(activeChallenge.storageId);
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         const correct = payload.correct === true;
         const poolTotal = payload.poolTotal ?? {
           wood: 0,

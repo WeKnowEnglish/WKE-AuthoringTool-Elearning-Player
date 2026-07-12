@@ -29,6 +29,13 @@ export function inferQuestionBankFromNodeId(nodeId: string): LiveGameQuestionBan
   return null;
 }
 
+export function challengeMatchesQuestionBank(
+  challenge: LiveGameChallengeRecord,
+  expectedBank: LiveGameQuestionBank,
+): boolean {
+  return (challenge.questionBank ?? inferQuestionBankFromNodeId(challenge.nodeId)) === expectedBank;
+}
+
 export function readChallengeQuestionSetContext(
   session: LiveGameSessionState,
   challenge: LiveGameChallengeRecord,

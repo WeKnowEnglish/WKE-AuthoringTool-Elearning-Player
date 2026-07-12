@@ -322,11 +322,19 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
           correct?: boolean;
           carryGranted?: { type: LiveGameResourceType; sourceNodeId: string } | null;
           poolTotal?: LiveGamePoolTotal;
+          skipped?: boolean;
         };
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit answer.");
         }
 
+        if (payload.skipped === true) {
+          clearPrefetchCache(activeChallenge.nodeId);
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         const correct = payload.correct === true;
         const poolTotal = payload.poolTotal ?? {
           wood: 0,

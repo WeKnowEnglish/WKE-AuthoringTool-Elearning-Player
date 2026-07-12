@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { isDepositSpellCorrect } from "@/lib/live-game/server/question-set-resolver";
-import { readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
+import { isDepositSpellCorrect as validateDepositSpelling } from "@/lib/live-game/question-banks/schemas";
+import { challengeMatchesQuestionBank, readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
 import { awardDepositForCarry } from "@/lib/live-game/server/award-deposit";
 import { normalizeAwardReceipt } from "@/lib/live-game/server/award-receipt";
 import {
   claimLiveGameChallengeAward,
   getLiveGameChallenge,
   markChallengeAwarded,
+  markChallengeSkipped,
 } from "@/lib/live-game/server/challenge-store";
 import { readPlayerCarry } from "@/lib/live-game/server/player-carry";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
@@ -49,15 +51,18 @@ function depositAnswerPayload(
     carryCleared?: boolean;
     carryRetained?: boolean;
     alreadyAwarded?: boolean;
+    skipped?: boolean;
+    poolTotal?: ReturnType<typeof readResourcePool>;
   },
 ) {
   return {
     correct: input.correct,
     resourceDeposited: input.resourceDeposited ?? null,
-    poolTotal: readResourcePool(storage),
+    poolTotal: input.poolTotal ?? readResourcePool(storage),
     carryCleared: input.carryCleared,
     carryRetained: input.carryRetained,
     alreadyAwarded: input.alreadyAwarded,
+    skipped: input.skipped,
   };
 }
 
@@ -97,6 +102,9 @@ async function handlePost(request: Request) {
   if (challenge.roomId !== roomId || challenge.playerId !== playerId) {
     return NextResponse.json({ error: "Challenge mismatch." }, { status: 403 });
   }
+  if (!challengeMatchesQuestionBank(challenge, "deposit")) {
+    return NextResponse.json({ error: "Invalid deposit challenge." }, { status: 403 });
+  }
 
   const storage = await readLiveGameStorageJson(roomId);
   if (!storage?.session || storage.session.phase !== "playing") {
@@ -129,9 +137,17 @@ async function handlePost(request: Request) {
   }
 
   const ctx = readChallengeQuestionSetContext(storage.session, challenge);
+  if (skip) {
+    const skipped = await markChallengeSkipped(challengeId);
+    if (!skipped) return NextResponse.json({ error: "Challenge can no longer be skipped." }, { status: 409 });
+    return NextResponse.json(
+      depositAnswerPayload(storage, { correct: false, carryRetained: true, skipped: true }),
+    );
+  }
   const correct =
-    skip ||
-    (await isDepositSpellCorrect(ctx.ref, challenge.questionId, spelling, ctx.version));
+    challenge.validationPayload?.type === "deposit_spell" ?
+      validateDepositSpelling(challenge.validationPayload, spelling)
+    : await isDepositSpellCorrect(ctx.ref, challenge.questionId, spelling, ctx.version);
   if (!correct) {
     return NextResponse.json(
       depositAnswerPayload(storage, {
@@ -178,13 +194,17 @@ async function handlePost(request: Request) {
 
   await markChallengeAwarded(challengeId);
 
-  const latest = await readLiveGameStorageJson(roomId);
+  const poolTotal = {
+    ...readResourcePool(storage),
+    [award.resourceType]: award.poolCount,
+  };
   return NextResponse.json(
-    depositAnswerPayload(latest, {
+    depositAnswerPayload(storage, {
       correct: true,
       resourceDeposited: { type: award.resourceType, amount: 1 },
       carryCleared: true,
       alreadyAwarded: award.alreadyAwarded,
+      poolTotal,
     }),
   );
 }

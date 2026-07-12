@@ -1,16 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GRADE56_ADJECTIVES_MC_V1 } from "@/lib/live-game/modes/english-craft/grade56-adjectives-v1";
 import {
   isAdjectiveDepositSpellCorrect,
   normalizeDepositSpelling,
   toClientDepositSpell,
 } from "@/lib/live-game/modes/english-craft/questions-v1";
+import { buildSystemSnapshotFromSeeds } from "@/lib/live-game/question-banks/seed-data";
 import {
-  getQuestionSetSpellMetadata,
-  isQuestionSetDepositSpellCorrect,
-} from "@/lib/live-game/modes/english-craft/question-sets";
+  getQuestionById,
+  isDepositSpellCorrect,
+} from "@/lib/live-game/server/question-set-resolver";
+import { getDepositPayload } from "@/lib/live-game/server/question-set-snapshot";
+import * as repository from "@/lib/live-game/server/question-set-repository";
 
 describe("english-craft phase 3d deposit spelling", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(repository, "fetchPublishedSetBySlug").mockResolvedValue(
+      buildSystemSnapshotFromSeeds("grade56-adjectives"),
+    );
+  });
+
   it("normalizes spellings for comparison", () => {
     expect(normalizeDepositSpelling("  Enormous ")).toBe("enormous");
     expect(normalizeDepositSpelling("Very  Big")).toBe("very big");
@@ -23,15 +33,17 @@ describe("english-craft phase 3d deposit spelling", () => {
     expect(isAdjectiveDepositSpellCorrect(question, "tiny")).toBe(false);
   });
 
-  it("resolves spell metadata from the question set", () => {
-    const metadata = getQuestionSetSpellMetadata("grade56-adjectives", "adj-001");
-    expect(metadata?.targetWord).toBe("enormous");
-    expect(metadata?.spellHint).toBe("very big");
+  it("resolves spell metadata from the deposit bank", async () => {
+    const deposit = await getQuestionById("grade56-adjectives", "deposit", "deposit-adj-001", 1);
+    expect(deposit).not.toBeNull();
+    const payload = getDepositPayload(deposit!);
+    expect(payload.targetWord).toBe("enormous");
+    expect(payload.spellHint).toBe("very big");
   });
 
-  it("checks deposit spelling through the question set helper", () => {
-    expect(isQuestionSetDepositSpellCorrect("grade56-adjectives", "adj-002", "tiny")).toBe(true);
-    expect(isQuestionSetDepositSpellCorrect("grade56-adjectives", "adj-002", "small")).toBe(false);
+  it("checks deposit spelling through the resolver", async () => {
+    await expect(isDepositSpellCorrect("grade56-adjectives", "deposit-adj-002", "tiny")).resolves.toBe(true);
+    await expect(isDepositSpellCorrect("grade56-adjectives", "deposit-adj-002", "small")).resolves.toBe(false);
   });
 
   it("never exposes targetWord in client deposit payload", () => {
@@ -39,12 +51,18 @@ describe("english-craft phase 3d deposit spelling", () => {
       resourceType: "wood",
       spellHint: "very big",
       storageLabel: "Wood pile",
+      targetWord: "enormous",
+      shuffleSeed: "challenge-123",
     });
-    expect(client).toEqual({
-      resourceType: "wood",
-      spellHint: "very big",
-      storageLabel: "Wood pile",
-    });
+    expect(client.resourceType).toBe("wood");
+    expect(client.spellHint).toBe("very big");
+    expect(client.storageLabel).toBe("Wood pile");
+    expect(client.slotCount).toBe(8);
+    expect(client.answerLetters.join("")).toBe("enormous");
+    expect(client.letterBank).toHaveLength(8);
+    expect([...client.letterBank].sort().join("")).toBe(
+      [...client.answerLetters].sort().join(""),
+    );
     expect(client).not.toHaveProperty("targetWord");
   });
 

@@ -29,14 +29,18 @@ import { LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS } from "@/lib/live-game/challe
 import { useLiveGameCraftChallenge } from "@/lib/live-game/hooks/useLiveGameCraftChallenge";
 import { useLiveGameDepositChallenge } from "@/lib/live-game/hooks/useLiveGameDepositChallenge";
 import { useLiveGameAvatar } from "@/lib/live-game/hooks/useLiveGameAvatar";
-import { useLiveGameFlagTouch } from "@/lib/live-game/hooks/useLiveGameFlagTouch";
+import { useLiveGameBoatBoarding } from "@/lib/live-game/hooks/useLiveGameBoatBoarding";
 import {
+  useLiveGameBoatBoardingUnlocked,
   useLiveGameCraftedItems,
   useLiveGameResourceNodes,
   useLiveGameResourcePool,
-  useLiveGameRiverCrossingUnlocked,
   useLiveGameSelfCarry,
+  useLiveGameSelfInventory,
 } from "@/lib/live-game/hooks/useLiveGameGameplay";
+import { useLiveGameConsume } from "@/lib/live-game/hooks/useLiveGameConsume";
+import { useLiveGameDropCarry } from "@/lib/live-game/hooks/useLiveGameDropCarry";
+import { useLiveGameSelfHungerDisplay } from "@/lib/live-game/hooks/useLiveGameHunger";
 import { useLiveGameHarvestChallenge } from "@/lib/live-game/hooks/useLiveGameHarvestChallenge";
 import { useLiveGameAutoTimeout } from "@/lib/live-game/hooks/useLiveGameAutoTimeout";
 import { useLiveGameSessionTimer } from "@/lib/live-game/hooks/useLiveGameSessionTimer";
@@ -48,6 +52,7 @@ import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
 import {
   depositInteractLabel,
   ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
+  ENGLISH_CRAFT_HUNGER_STARVING_SPEED_MULTIPLIER,
   harvestInteractLabel,
   isEnglishCraftResourceNodeInteractable,
 } from "@/lib/live-game/modes/english-craft/gameplay-v1";
@@ -67,6 +72,7 @@ import {
   ENGLISH_CRAFT_STORAGE_BY_TYPE,
   toStorageInteractTarget,
 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import type { LiveGamePresence } from "@/lib/live-game/liveblocks/config";
 import { getEnglishCraftCollisionRects } from "@/lib/live-game/modes/english-craft/map-v1";
 
 type Props = {
@@ -79,7 +85,7 @@ function isNodeInteractable(node: LiveGameResourceNodeState | undefined, now = D
 }
 
 export function LiveGameCanvas({ context }: Props) {
-  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby } =
+  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, self, others } =
     useLiveGameLobby();
   const [endSessionModalOpen, setEndSessionModalOpen] = useState(false);
   const [recipePickerOpen, setRecipePickerOpen] = useState(false);
@@ -88,10 +94,11 @@ export function LiveGameCanvas({ context }: Props) {
   const pool = useLiveGameResourcePool();
   const resourceNodes = useLiveGameResourceNodes();
   const selfCarry = useLiveGameSelfCarry();
+  const selfInventory = useLiveGameSelfInventory();
   const craftedItems = useLiveGameCraftedItems();
   const benchBuilt = craftedItems.benchBuilt;
   const boatBuilt = craftedItems.boat;
-  const riverCrossingUnlocked = useLiveGameRiverCrossingUnlocked();
+  const boatBoardingUnlocked = useLiveGameBoatBoardingUnlocked();
   const roomId = toRoomId(context.sessionId);
   const buildBenchRecipe = ENGLISH_CRAFT_BUILD_BENCH_RECIPE;
   const buildBenchCostSummary = formatRecipeCostSummary(buildBenchRecipe);
@@ -121,6 +128,11 @@ export function LiveGameCanvas({ context }: Props) {
   const canCraftAtBench = !isCarrying && benchBuilt && !boatBuilt;
   const isPlaying = session.phase === "playing";
   const isCompleted = session.phase === "completed";
+  const hunger = useLiveGameSelfHungerDisplay({ playing: isPlaying });
+  const consume = useLiveGameConsume({ roomId });
+  const dropCarry = useLiveGameDropCarry({ roomId });
+  const movementSpeedMultiplier =
+    isPlaying && hunger.isStarving ? ENGLISH_CRAFT_HUNGER_STARVING_SPEED_MULTIPLIER : 1;
   const sessionTimer = useLiveGameSessionTimer({
     endsAt: session.endsAt,
     enabled: isPlaying,
@@ -143,9 +155,9 @@ export function LiveGameCanvas({ context }: Props) {
   const map = useMemo(
     () => ({
       ...baseMap,
-      collisionRects: getEnglishCraftCollisionRects(riverCrossingUnlocked),
+      collisionRects: getEnglishCraftCollisionRects(),
     }),
-    [baseMap, riverCrossingUnlocked],
+    [baseMap],
   );
 
   const stage = useLiveGameMapStage({
@@ -153,6 +165,7 @@ export function LiveGameCanvas({ context }: Props) {
     spawnIndex,
     avatarId,
     movementEnabled,
+    speedMultiplier: movementSpeedMultiplier,
     players,
     visualMode: "playing",
     resourceNodes,
@@ -162,7 +175,7 @@ export function LiveGameCanvas({ context }: Props) {
 
   const { getPosition, sampledPosition, now } = stage;
 
-  const publishPosition = useCallback(() => {
+  const publishPosition = useCallback(async () => {
     const position = getPosition();
     return fetch("/api/live-game/position", {
       method: "POST",
@@ -171,11 +184,37 @@ export function LiveGameCanvas({ context }: Props) {
     });
   }, [getPosition, roomId]);
 
-  useLiveGameFlagTouch({
+  const connectedBoardingPlayers = useMemo(() => {
+    const entries: Array<{ id: string; x: number; y: number }> = [];
+    if (self?.id) {
+      entries.push({
+        id: self.id,
+        x: sampledPosition.x,
+        y: sampledPosition.y,
+      });
+    }
+    for (const other of others) {
+      const presence = other.presence as Partial<LiveGamePresence> | null;
+      if (typeof presence?.x !== "number" || typeof presence?.y !== "number") continue;
+      entries.push({
+        id: other.id ?? String(other.connectionId),
+        x: presence.x,
+        y: presence.y,
+      });
+    }
+    return entries;
+  }, [others, sampledPosition.x, sampledPosition.y, self?.id]);
+
+  const syncBoardingPosition = useCallback(async () => {
+    await publishPosition();
+  }, [publishPosition]);
+
+  const boatBoarding = useLiveGameBoatBoarding({
     roomId,
-    playerX: sampledPosition.x,
-    playerY: sampledPosition.y,
-    enabled: false,
+    enabled: isPlaying && boatBoardingUnlocked,
+    connectedPlayers: connectedBoardingPlayers,
+    onSyncPosition: syncBoardingPosition,
+    onBeforeComplete: syncBoardingPosition,
   });
 
   const interactableNodes = useMemo(
@@ -436,12 +475,16 @@ export function LiveGameCanvas({ context }: Props) {
   const subtitle =
     isCompleted ?
       "Team victory!"
+    : hunger.isStarving ?
+      "Starving — movement slowed. Eat bread or craft more at the workbench."
+    : hunger.isLow && benchBuilt && !boatBuilt ?
+      "You're getting hungry — craft bread at the workbench"
     : isCarrying ?
       "Take it to the matching storage and spell the word — E or Interact"
     : boatBuilt ?
-      "Boat ready at the dock — boarding coming soon"
+      "Get everyone on the boat at the dock to escape!"
     : benchBuilt && craftBenchTarget ?
-      "Craft hammers or the boat at the workbench"
+      "Craft hammers, bread, or the boat at the workbench"
     : benchBuilt && hammersNeeded > 0 ?
       `Craft hammers — need ${hammersNeeded} more for the boat`
     : benchBuilt && !canAffordBoatPool ?
@@ -463,7 +506,7 @@ export function LiveGameCanvas({ context }: Props) {
     : harvestTarget ?
       harvestInteractLabel(harvestTarget.resourceType, harvestTarget.label)
     : boatBuilt ?
-      "Go to the dock"
+      "Board the boat"
     : isCarrying ?
       "Go to storage"
     : "Gather resource";
@@ -482,6 +525,13 @@ export function LiveGameCanvas({ context }: Props) {
   const handlePlayAgain = useCallback(() => {
     returnToLobby();
   }, [returnToLobby]);
+
+  const handleDropCarry = useCallback(async () => {
+    const dropped = await dropCarry.dropCarry();
+    if (!dropped) return;
+    depositChallenge.closeChallenge();
+    depositChallenge.clearPrefetchCache();
+  }, [depositChallenge, dropCarry]);
 
   const timerUrgent =
     sessionTimer?.alertPhase === "thirty_sec" || sessionTimer?.alertPhase === "final_five";
@@ -531,11 +581,42 @@ export function LiveGameCanvas({ context }: Props) {
                   hammers={craftedItems.hammers}
                   benchBuilt={craftedItems.benchBuilt}
                   boatBuilt={craftedItems.boat}
+                  hungerValue={hunger.value}
+                  hungerIsLow={hunger.isLow}
+                  hungerIsStarving={hunger.isStarving}
+                  bread={selfInventory.bread}
+                  onEatBread={() => void consume.consumeBread()}
+                  eatDisabled={!isPlaying || anyChallengeOpen}
+                  eatSubmitting={consume.isSubmitting}
+                  onDropCarry={() => void handleDropCarry()}
+                  dropDisabled={!isPlaying || dropCarry.isSubmitting}
+                  dropSubmitting={dropCarry.isSubmitting}
                 />
               </div>
             </div>
             <LiveGameConnectionBanner className="mt-2 rounded-lg border-2 border-amber-300/80 bg-amber-950/90 px-3 py-2 text-sm font-semibold text-amber-100 backdrop-blur-sm" />
           </header>
+
+          {boatBoardingUnlocked && isPlaying && boatBoarding.totalPlayers > 0 ?
+            <div className="pointer-events-none mt-3 flex justify-center px-3">
+              <div className="w-full max-w-md rounded-xl border-2 border-sky-200/70 bg-sky-950/85 px-4 py-3 text-center text-sky-50 backdrop-blur-sm">
+                <p className="text-sm font-extrabold">
+                  On the boat: {boatBoarding.onBoatCount}/{boatBoarding.totalPlayers}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-sky-100/85">
+                  {boatBoarding.allOnBoat ?
+                    "Hold together for 2 seconds to escape!"
+                  : "Waiting for the whole team..."}
+                </p>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-sky-950">
+                  <div
+                    className="h-full rounded-full bg-sky-300 transition-all duration-150"
+                    style={{ width: `${Math.round(boatBoarding.dwellProgress * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          : null}
         </div>
       </LiveGameMapStage>
 
@@ -555,6 +636,7 @@ export function LiveGameCanvas({ context }: Props) {
         feedback={harvestChallenge.lastResult}
         error={harvestChallenge.error}
         onSubmit={(answer) => void harvestChallenge.submitAnswer(answer)}
+        onSkip={() => harvestChallenge.skipChallenge()}
         onClose={harvestChallenge.closeChallenge}
       />
 
@@ -567,6 +649,8 @@ export function LiveGameCanvas({ context }: Props) {
         feedback={depositChallenge.lastResult}
         error={depositChallenge.error}
         onSubmit={(spelling) => void depositChallenge.submitAnswer(spelling)}
+        onSkip={() => depositChallenge.skipChallenge()}
+        onDropCarry={() => void handleDropCarry()}
         onClose={depositChallenge.closeChallenge}
       />
 
@@ -588,6 +672,7 @@ export function LiveGameCanvas({ context }: Props) {
         feedback={craftChallenge.lastResult}
         error={craftChallenge.error}
         onSubmit={(order) => void craftChallenge.submitAnswer(order)}
+        onSkip={() => craftChallenge.skipChallenge()}
         onClose={craftChallenge.closeChallenge}
       />
 
@@ -595,6 +680,7 @@ export function LiveGameCanvas({ context }: Props) {
         <LiveGameVictoryOverlay
           completedByName={completedByName}
           resourceStats={resourceStats}
+          boatBuilt={craftedItems.boat}
           isHost={isHost}
           onPlayAgain={handlePlayAgain}
         />

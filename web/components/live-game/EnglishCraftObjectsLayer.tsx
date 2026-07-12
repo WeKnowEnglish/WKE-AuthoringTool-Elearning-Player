@@ -92,7 +92,7 @@ function structureArt(
 ): string | null {
   switch (kind) {
     case "bridge":
-      return crafted.bridge ? ENGLISH_CRAFT_ART.bridgeBuilt : ENGLISH_CRAFT_ART.bridgeUnbuilt;
+      return ENGLISH_CRAFT_ART.bridgeUnbuilt;
     case "flag":
       return ENGLISH_CRAFT_ART.flag;
     case "workbench":

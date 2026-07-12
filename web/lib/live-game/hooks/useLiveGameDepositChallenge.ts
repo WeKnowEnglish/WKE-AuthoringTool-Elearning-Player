@@ -301,7 +301,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
   );
 
   const submitAnswer = useCallback(
-    async (spelling: string) => {
+    async (spelling: string, options?: { skip?: boolean }) => {
       if (!activeChallenge?.challengeId || tokenStatus !== "ready") return;
       setIsSubmitting(true);
       setError(null);
@@ -312,7 +312,8 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           body: JSON.stringify({
             roomId,
             challengeId: activeChallenge.challengeId,
-            spelling,
+            spelling: options?.skip ? "" : spelling,
+            skip: options?.skip === true,
           }),
         });
         const payload = (await response.json()) as {
@@ -363,6 +364,10 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
     setLastResult(null);
   }, []);
 
+  const skipChallenge = useCallback(() => {
+    void submitAnswer("", { skip: true });
+  }, [submitAnswer]);
+
   return useMemo(
     () => ({
       activeChallenge,
@@ -373,6 +378,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       lastResult,
       beginChallenge,
       submitAnswer,
+      skipChallenge,
       closeChallenge,
       prefetchForStorage,
       cancelPrefetch,
@@ -389,6 +395,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       isSubmitting,
       lastResult,
       prefetchForStorage,
+      skipChallenge,
       submitAnswer,
       tokenStatus,
     ],

@@ -1,5 +1,7 @@
 import "server-only";
+import { buildDepositLetterPayload } from "@/lib/live-game/modes/english-craft/deposit-spell-tiles";
 import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
+import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 import type {
   EnglishCraftCraftQuestionClient,
   EnglishCraftMcQuestionClient,
@@ -95,12 +97,19 @@ export const ENGLISH_CRAFT_MC_QUESTIONS_V1: EnglishCraftMcQuestion[] = [
   },
 ];
 
-export function toClientMcQuestion(question: EnglishCraftMcQuestion): EnglishCraftMcQuestionClient {
+export function toClientMcQuestion(
+  question: EnglishCraftMcQuestion,
+  shuffleSeed?: string,
+): EnglishCraftMcQuestionClient {
+  const options =
+    shuffleSeed ?
+      shuffleWithSeed(question.options, `${shuffleSeed}:mc-options`)
+    : question.options;
   return {
     id: question.id,
     type: "multiple_choice",
     prompt: question.prompt,
-    options: question.options,
+    options,
   };
 }
 
@@ -141,12 +150,17 @@ export const ENGLISH_CRAFT_CRAFT_BRIDGE_V1: EnglishCraftCraftQuestion = {
 
 export function toClientCraftQuestion(
   question: EnglishCraftCraftQuestion,
+  shuffleSeed?: string,
 ): EnglishCraftCraftQuestionClient {
+  const wordBank =
+    shuffleSeed ?
+      shuffleWithSeed(question.wordBank, `${shuffleSeed}:craft-bank`)
+    : question.wordBank;
   return {
     id: question.id,
     type: "drag_sentence",
     prompt: question.prompt,
-    wordBank: question.wordBank,
+    wordBank,
     slotCount: question.slotCount,
   };
 }
@@ -171,11 +185,20 @@ export function toClientDepositSpell(input: {
   resourceType: LiveGameResourceType;
   spellHint: string;
   storageLabel: string;
+  targetWord: string;
+  shuffleSeed: string;
 }): EnglishCraftDepositSpellClient {
+  const { letterBank, slotCount, answerLetters } = buildDepositLetterPayload(
+    input.targetWord,
+    input.shuffleSeed,
+  );
   return {
     resourceType: input.resourceType,
     spellHint: input.spellHint,
     storageLabel: input.storageLabel,
+    letterBank,
+    slotCount,
+    answerLetters,
   };
 }
 

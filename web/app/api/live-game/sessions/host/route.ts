@@ -18,8 +18,8 @@ import { toLiveGameCharacterId } from "@/lib/live-game/characters/live-game-char
 import { createMovementState } from "@/lib/live-game/engine/movement";
 import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
-import { getQuestionSetVersion, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
-import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
+import { resolveHostQuestionSetBinding, HostQuestionSetInvalidError } from "@/lib/live-game/server/question-set-session";
+import { QuestionSetNotFoundError, QuestionSetVersionMismatchError } from "@/lib/live-game/server/question-set-resolver";
 
 type HostRequestBody = {
   displayName?: string;
@@ -36,7 +36,7 @@ function parseHostRequestBody(
   modeId: LiveGameModeId;
   durationMinutes: number;
   avatarId: string;
-  questionSetId: LiveGameQuestionSetId;
+  questionSetInput: string | undefined;
 } | null {
   if (!body || typeof body !== "object") return null;
   const record = body as HostRequestBody;
@@ -52,7 +52,7 @@ function parseHostRequestBody(
     modeId,
     durationMinutes,
     avatarId: toLiveGameCharacterId(record.avatarId ?? ""),
-    questionSetId: resolveLiveGameQuestionSetId(record.questionSetId),
+    questionSetInput: record.questionSetId,
   };
 }
 
@@ -85,6 +85,21 @@ export async function POST(request: Request) {
   }
 
   const mode = getModeConfig(parsed.modeId);
+  let questionSetBinding;
+  try {
+    questionSetBinding = await resolveHostQuestionSetBinding(parsed.questionSetInput);
+  } catch (error) {
+    if (error instanceof HostQuestionSetInvalidError) {
+      return NextResponse.json({ error: "Unknown question set." }, { status: 400 });
+    }
+    if (error instanceof QuestionSetNotFoundError) {
+      return NextResponse.json({ error: "Question set not found." }, { status: 404 });
+    }
+    if (error instanceof QuestionSetVersionMismatchError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
   const sessionId = generateJoinCode();
   const hostSecret = randomBytes(24).toString("hex");
   const hostPlayerId = user.id;
@@ -98,8 +113,8 @@ export async function POST(request: Request) {
     modeId: parsed.modeId,
     mapId: mode.defaultMapId,
     durationMinutes: normalizeEnglishCraftDurationMinutes(parsed.durationMinutes),
-    questionSetId: parsed.questionSetId,
-    questionSetVersion: getQuestionSetVersion(parsed.questionSetId),
+    questionSetId: questionSetBinding.setId,
+    questionSetVersion: questionSetBinding.version,
   });
   await liveblocks.mutateStorage(roomId, ({ root }) => {
     const liveRoot = root as unknown as { set(key: string, value: unknown): void; get(key: string): unknown };
@@ -127,8 +142,8 @@ export async function POST(request: Request) {
     modeId: parsed.modeId,
     mapId: mode.defaultMapId,
     durationMinutes: parsed.durationMinutes,
-    questionSetId: parsed.questionSetId,
-    questionSetVersion: getQuestionSetVersion(parsed.questionSetId),
+    questionSetId: questionSetBinding.setId,
+    questionSetVersion: questionSetBinding.version,
   });
 
   response.cookies.set(

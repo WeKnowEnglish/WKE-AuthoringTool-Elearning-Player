@@ -9,7 +9,6 @@ import { createLiveGameInitialStorage } from "@/lib/live-game/liveblocks/initial
 import type { LiveGameModeId } from "@/lib/live-game/modes/types";
 
 import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
-import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 type Props = {
   roomId: string;
@@ -19,7 +18,7 @@ type Props = {
   modeId: LiveGameModeId;
   mapId: string;
   durationMinutes: EnglishCraftSessionDuration;
-  questionSetId: LiveGameQuestionSetId;
+  questionSetId: string;
   questionSetVersion: number;
   initialPresence?: Partial<typeof DEFAULT_LIVE_GAME_PRESENCE>;
   children: ReactNode;

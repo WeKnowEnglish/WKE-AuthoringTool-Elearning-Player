@@ -23,7 +23,6 @@ describe("english-craft lobby map visuals", () => {
   it("keeps lobby crafted items at defaults", () => {
     expect(ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.benchBuilt).toBe(false);
     expect(ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.boat).toBe(false);
-    expect(ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.bridge).toBe(false);
   });
 
   it("ignores live gameplay storage when visual mode is lobby", () => {
@@ -42,7 +41,6 @@ describe("english-craft lobby map visuals", () => {
         benchBuilt: true,
         hammers: 5,
         boat: true,
-        bridge: true,
       },
     });
     expect(resolved.resourceNodes).toBe(ENGLISH_CRAFT_LOBBY_RESOURCE_NODES);
@@ -55,7 +53,6 @@ describe("english-craft lobby map visuals", () => {
       benchBuilt: true,
       hammers: 2,
       boat: false,
-      bridge: true,
     };
     const resolved = resolveEnglishCraftMapVisuals({
       visualMode: "playing",

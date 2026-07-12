@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { isQuestionSetAnswerCorrect, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
+import { isHarvestAnswerCorrect } from "@/lib/live-game/server/question-set-resolver";
+import { readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
 import { awardCarryForNode } from "@/lib/live-game/server/award-carry";
 import { normalizeAwardReceipt } from "@/lib/live-game/server/award-receipt";
 import {
@@ -17,16 +18,24 @@ type AnswerRequestBody = {
   challengeId?: string;
   answer?: string;
   responseTimeMs?: number;
+  skip?: boolean;
 };
 
 function parseAnswerBody(body: unknown): AnswerRequestBody | null {
   if (!body || typeof body !== "object") return null;
   const record = body as AnswerRequestBody;
-  if (
-    typeof record.roomId !== "string" ||
-    typeof record.challengeId !== "string" ||
-    typeof record.answer !== "string"
-  ) {
+  if (typeof record.roomId !== "string" || typeof record.challengeId !== "string") {
+    return null;
+  }
+  if (record.skip === true) {
+    return {
+      roomId: record.roomId,
+      challengeId: record.challengeId,
+      answer: typeof record.answer === "string" ? record.answer : "",
+      skip: true,
+    };
+  }
+  if (typeof record.answer !== "string") {
     return null;
   }
   return record;
@@ -67,16 +76,17 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseAnswerBody(body);
-  if (!parsed?.roomId || !parsed.challengeId || !parsed.answer) {
+  if (!parsed?.roomId || !parsed.challengeId) {
     return NextResponse.json(
-      { error: "roomId, challengeId, and answer are required." },
+      { error: "roomId and challengeId are required." },
       { status: 400 },
     );
   }
 
   const roomId = parsed.roomId.trim();
   const challengeId = parsed.challengeId.trim();
-  const answer = parsed.answer.trim();
+  const answer = (parsed.answer ?? "").trim();
+  const skip = parsed.skip === true;
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
   const challenge = await getLiveGameChallenge(challengeId);
@@ -112,11 +122,10 @@ async function handlePost(request: Request) {
     );
   }
 
-  const correct = isQuestionSetAnswerCorrect(
-    resolveLiveGameQuestionSetId(storage.session.questionSetId),
-    challenge.questionId,
-    answer,
-  );
+  const ctx = readChallengeQuestionSetContext(storage.session, challenge);
+  const correct =
+    skip ||
+    (await isHarvestAnswerCorrect(ctx.ref, challenge.questionId, answer, ctx.version));
   if (!correct) {
     return NextResponse.json(
       harvestAnswerPayload(storage, {

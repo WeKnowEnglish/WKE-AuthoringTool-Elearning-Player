@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
-import { toClientMcQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
-import { getQuestionFromSet, pickQuestionFromSet, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
+import { toClientMcQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
+import {
+  getQuestionById,
+  pickHarvestQuestion,
+} from "@/lib/live-game/server/question-set-resolver";
+import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   createLiveGameChallenge,
@@ -80,7 +84,7 @@ async function handlePost(request: Request) {
   }
 
   const nodeState = storage.resourceNodes?.[nodeId];
-  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
+  const binding = readSessionQuestionSetBinding(storage.session);
   if (!isResourceNodeAvailable(nodeState)) {
     return NextResponse.json({ error: "This resource is on cooldown." }, { status: 409 });
   }
@@ -96,17 +100,22 @@ async function handlePost(request: Request) {
   const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
   if (existing) {
     const question =
-      getQuestionFromSet(questionSetId, existing.questionId) ??
-      pickQuestionFromSet(questionSetId, `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`);
+      (await getQuestionById(binding.ref, "harvest", existing.questionId, binding.version)) ??
+      (await pickHarvestQuestion(
+        binding.ref,
+        binding.version,
+        `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`,
+      ));
     return NextResponse.json({
       challengeId: existing.challengeId,
       expiresAt: new Date(existing.expiresAt).toISOString(),
-      question: toClientMcQuestion(question),
+      question: toClientMcQuestionFromRow(question, existing.challengeId),
     });
   }
 
-  const question = pickQuestionFromSet(
-    questionSetId,
+  const question = await pickHarvestQuestion(
+    binding.ref,
+    binding.version,
     `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`,
   );
   const challenge = await createLiveGameChallenge({
@@ -114,12 +123,15 @@ async function handlePost(request: Request) {
     playerId,
     nodeId,
     questionId: question.id,
+    questionSetId: binding.setId,
+    questionSetVersion: binding.version,
+    questionBank: "harvest",
   });
 
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
-    question: toClientMcQuestion(question),
+    question: toClientMcQuestionFromRow(question, challenge.challengeId),
   });
 }
 

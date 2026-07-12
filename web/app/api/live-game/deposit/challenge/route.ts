@@ -4,11 +4,12 @@ import {
   ENGLISH_CRAFT_STORAGE_BY_TYPE,
   toStorageInteractTarget,
 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
-import { toClientDepositSpell } from "@/lib/live-game/modes/english-craft/questions-v1";
+import { toClientDepositSpellFromRow } from "@/lib/live-game/question-banks/client-payloads";
 import {
-  getQuestionSetSpellMetadata,
-  resolveLiveGameQuestionSetId,
-} from "@/lib/live-game/modes/english-craft/question-sets";
+  getQuestionById,
+  pickDepositQuestion,
+} from "@/lib/live-game/server/question-set-resolver";
+import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import {
   createLiveGameChallenge,
   findActiveChallengeForPlayerNode,
@@ -17,6 +18,7 @@ import { readPlayerCarry } from "@/lib/live-game/server/player-carry";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { getPoolCount } from "@/lib/live-game/resource-pool";
 
 type DepositChallengeRequestBody = {
   roomId?: string;
@@ -85,11 +87,9 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Wrong storage for what you are carrying." }, { status: 409 });
   }
 
-  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
-  const spellMetadata = getQuestionSetSpellMetadata(questionSetId, carry.questionId);
-  if (!spellMetadata) {
-    return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
-  }
+  const binding = readSessionQuestionSetBinding(storage.session);
+  const poolCount = getPoolCount(storage, carry.resourceType);
+  const depositSeed = `${playerId}:${storageId}:${poolCount}`;
 
   const position = storage.playerPositions?.[playerId];
   const interactTarget = toStorageInteractTarget(storageDef);
@@ -103,31 +103,47 @@ async function handlePost(request: Request) {
 
   const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId: storageId });
   if (existing) {
+    const depositRow =
+      (await getQuestionById(binding.ref, "deposit", existing.questionId, binding.version)) ??
+      (await pickDepositQuestion(binding.ref, binding.version, depositSeed));
+    if (depositRow.payload.type !== "deposit_spell") {
+      return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
+    }
     return NextResponse.json({
       challengeId: existing.challengeId,
       expiresAt: new Date(existing.expiresAt).toISOString(),
-      spell: toClientDepositSpell({
+      spell: toClientDepositSpellFromRow(depositRow, {
         resourceType: carry.resourceType,
-        spellHint: spellMetadata.spellHint,
         storageLabel: storageDef.label,
+        shuffleSeed: existing.challengeId,
       }),
     });
+  }
+
+  let depositRow;
+  try {
+    depositRow = await pickDepositQuestion(binding.ref, binding.version, depositSeed);
+  } catch {
+    return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
   }
 
   const challenge = await createLiveGameChallenge({
     roomId,
     playerId,
     nodeId: storageId,
-    questionId: carry.questionId,
+    questionId: depositRow.id,
+    questionSetId: binding.setId,
+    questionSetVersion: binding.version,
+    questionBank: "deposit",
   });
 
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
-    spell: toClientDepositSpell({
+    spell: toClientDepositSpellFromRow(depositRow, {
       resourceType: carry.resourceType,
-      spellHint: spellMetadata.spellHint,
       storageLabel: storageDef.label,
+      shuffleSeed: challenge.challengeId,
     }),
   });
 }

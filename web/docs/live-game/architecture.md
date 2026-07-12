@@ -363,21 +363,35 @@ Validates answer and awards rewards.
 
 ### `POST /api/live-game/craft`
 
+Recipe-driven bench crafts (`build_bench`, `craft_hammer`, `craft_bread`, `craft_boat`) via `award-craft-recipe.ts`.
+
+**Server transaction:**
+1. Verify `recipeId`, phase, and affordability (pool + crafted costs)
+2. Validate sentence order for the recipe's craft question
+3. Deduct pool resources and apply grants (`benchBuilt`, `hammers`, `boat`, bread to crafter)
+4. On `craft_boat`, set `unlockedObjects.boat_boarding = true`
+5. Idempotent via `craftReceipts` keyed by `challengeId`
+
+---
+
+### `POST /api/live-game/complete`
+
 **Request:**
 ```json
 {
   "roomId": "wke-live-game-ABC123",
-  "recipeId": "basic_axe",
-  "sentenceOrder": ["I", "usually", "play", "football", "after", "school"]
+  "kind": "boat_escape",
+  "playerId": "student-uuid"
 }
 ```
 
-**Server transaction:**
-1. Verify team has enough resources in `resourcePool`
-2. Validate sentence order
-3. Deduct resources, add crafted item
-4. Set `unlockedObjects["fallen_tree_gate"] = true`
-5. Broadcast `ITEM_CRAFTED`
+**Server transaction (`complete-objective.ts`):**
+1. Verify `session.phase === "playing"` and `unlockedObjects.boat_boarding === true`
+2. Verify every registered player has a fresh position inside the boat boarding zone
+3. Set `session.phase = "completed"`, `objectiveCompleted = true`, `victoryAt`, `completedByPlayerId`
+4. Idempotent if already completed
+
+The deprecated bridge/flag win path was removed in Phase 4F. The internal river stays a permanent collision obstacle.
 
 ---
 

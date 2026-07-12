@@ -19,7 +19,7 @@ import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 const playingSession = {
   session: { phase: "playing" as const },
   resourcePool: { wood: 10, stone: 5, wheat: 0, cotton: 0 },
-  craftedItems: { benchBuilt: false, hammers: 0, boat: false, bridge: false },
+  craftedItems: { benchBuilt: false, hammers: 0, boat: false },
 };
 
 describe("english-craft phase 4b build_bench recipe", () => {
@@ -66,7 +66,7 @@ describe("english-craft phase 4b build_bench recipe", () => {
       canStartRecipeCraft(
         {
           ...playingSession,
-          craftedItems: { benchBuilt: true, hammers: 0, boat: false, bridge: false },
+          craftedItems: { benchBuilt: true, hammers: 0, boat: false },
         },
         "build_bench",
       ),
@@ -75,21 +75,9 @@ describe("english-craft phase 4b build_bench recipe", () => {
     expect(
       listAvailableCraftRecipes({
         ...playingSession,
-        craftedItems: { benchBuilt: true, hammers: 0, boat: false, bridge: false },
+        craftedItems: { benchBuilt: true, hammers: 0, boat: false },
       }).map((recipe) => recipe.id),
     ).not.toContain("build_bench");
-  });
-
-  it("does not block build_bench when only legacy bridge is crafted", () => {
-    expect(
-      canStartRecipeCraft(
-        {
-          ...playingSession,
-          craftedItems: { bridge: true },
-        },
-        "build_bench",
-      ),
-    ).toBe(true);
   });
 
   it("deducts pool resources and grants benchBuilt on award", () => {
@@ -99,7 +87,6 @@ describe("english-craft phase 4b build_bench recipe", () => {
       benchBuilt: true,
       hammers: 0,
       boat: false,
-      bridge: false,
     });
   });
 
@@ -108,7 +95,7 @@ describe("english-craft phase 4b build_bench recipe", () => {
       applyCraftRecipeAwardToSnapshot(
         {
           ...playingSession,
-          craftedItems: { benchBuilt: true, hammers: 0, boat: false, bridge: false },
+          craftedItems: { benchBuilt: true, hammers: 0, boat: false },
         },
         "build_bench",
       ),

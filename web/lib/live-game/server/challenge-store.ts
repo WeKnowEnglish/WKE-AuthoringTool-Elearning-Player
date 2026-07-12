@@ -1,6 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
+import type { LiveGameQuestionBank } from "@/lib/live-game/question-banks/types";
 import { ENGLISH_CRAFT_CHALLENGE_TTL_MS } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { LIVE_GAME_AWARD_CLAIM_LEASE_MS } from "@/lib/live-game/server/challenge-lifecycle";
 
@@ -12,6 +13,9 @@ export type LiveGameChallengeRecord = {
   playerId: string;
   nodeId: string;
   questionId: string;
+  questionSetId: string | null;
+  questionSetVersion: number | null;
+  questionBank: LiveGameQuestionBank | null;
   expiresAt: number;
   status: LiveGameChallengeStatus;
 };
@@ -22,9 +26,15 @@ type ChallengeRow = {
   player_id: string;
   node_id: string;
   question_id: string;
+  question_set_id: string | null;
+  question_set_version: number | null;
+  question_bank: LiveGameQuestionBank | null;
   expires_at: string;
   status: LiveGameChallengeStatus;
 };
+
+const CHALLENGE_SELECT =
+  "id,room_id,player_id,node_id,question_id,question_set_id,question_set_version,question_bank,expires_at,status";
 
 function requireChallengeDatabase() {
   const supabase = createServiceRoleSupabase();
@@ -41,6 +51,9 @@ function toRecord(row: ChallengeRow): LiveGameChallengeRecord {
     playerId: row.player_id,
     nodeId: row.node_id,
     questionId: row.question_id,
+    questionSetId: row.question_set_id,
+    questionSetVersion: row.question_set_version,
+    questionBank: row.question_bank,
     expiresAt: new Date(row.expires_at).getTime(),
     status: row.status,
   };
@@ -69,7 +82,7 @@ export async function findActiveChallengeForPlayerNode(input: {
   const supabase = requireChallengeDatabase();
   const { data, error } = await supabase
     .from("live_game_challenges")
-    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .select(CHALLENGE_SELECT)
     .eq("room_id", input.roomId)
     .eq("player_id", input.playerId)
     .eq("node_id", input.nodeId)
@@ -85,6 +98,9 @@ export async function createLiveGameChallenge(input: {
   playerId: string;
   nodeId: string;
   questionId: string;
+  questionSetId: string;
+  questionSetVersion: number;
+  questionBank: LiveGameQuestionBank;
 }): Promise<LiveGameChallengeRecord> {
   const existing = await findActiveChallengeForPlayerNode(input);
   if (existing) return existing;
@@ -97,6 +113,9 @@ export async function createLiveGameChallenge(input: {
     player_id: input.playerId,
     node_id: input.nodeId,
     question_id: input.questionId,
+    question_set_id: input.questionSetId,
+    question_set_version: input.questionSetVersion,
+    question_bank: input.questionBank,
     status: "active" as const,
     expires_at: new Date(now + ENGLISH_CRAFT_CHALLENGE_TTL_MS).toISOString(),
     updated_at: new Date(now).toISOString(),
@@ -104,7 +123,7 @@ export async function createLiveGameChallenge(input: {
   const { data, error } = await supabase
     .from("live_game_challenges")
     .insert(row)
-    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .select(CHALLENGE_SELECT)
     .single();
   if (error?.code === "23505") {
     const raced = await findActiveChallengeForPlayerNode(input);
@@ -120,7 +139,7 @@ export async function getLiveGameChallenge(
   const supabase = requireChallengeDatabase();
   const { data, error } = await supabase
     .from("live_game_challenges")
-    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .select(CHALLENGE_SELECT)
     .eq("id", challengeId)
     .maybeSingle();
   if (error) throw new Error(`Could not read live-game challenge: ${error.message}`);
@@ -150,7 +169,7 @@ export async function claimLiveGameChallengeAward(
     .eq("id", challengeId)
     .eq("status", "active")
     .gt("expires_at", nowIso)
-    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .select(CHALLENGE_SELECT)
     .maybeSingle();
   if (activeError) throw new Error(`Could not claim live-game challenge: ${activeError.message}`);
   if (active) return { kind: "claimed", challenge: toRecord(active as ChallengeRow) };
@@ -166,7 +185,7 @@ export async function claimLiveGameChallengeAward(
     .eq("id", challengeId)
     .eq("status", "awarding")
     .lt("claim_started_at", staleIso)
-    .select("id,room_id,player_id,node_id,question_id,expires_at,status")
+    .select(CHALLENGE_SELECT)
     .maybeSingle();
   if (reclaimError) {
     throw new Error(`Could not reclaim live-game challenge: ${reclaimError.message}`);

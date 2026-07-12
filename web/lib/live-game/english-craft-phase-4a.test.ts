@@ -16,7 +16,11 @@ import {
   ENGLISH_CRAFT_TILEMAP_V1,
   isPerimeterWaterCell,
 } from "@/lib/live-game/modes/english-craft/tilemap-v1";
-import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS, readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
+import {
+  ENGLISH_CRAFT_CARRY_HUD_ICON_PX,
+  ENGLISH_CRAFT_CARRY_OVERLAY_SIZE_PX,
+} from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS } from "@/lib/live-game/server/read-crafted-items";
 
 function cellKey(col: number, row: number) {
   return `${col},${row}`;
@@ -32,7 +36,7 @@ describe("english-craft phase 4a perimeter water", () => {
   });
 
   it("includes perimeter water in collision rects", () => {
-    const rects = getEnglishCraftCollisionRects(false);
+    const rects = getEnglishCraftCollisionRects();
     expect(ENGLISH_CRAFT_PERIMETER_WATER_COLLISION_RECT_COUNT).toBeGreaterThan(0);
     expect(rects.length).toBeGreaterThanOrEqual(
       ENGLISH_CRAFT_PERIMETER_WATER_COLLISION_RECT_COUNT + ENGLISH_CRAFT_RIVER_COLLISION_RECT_COUNT,
@@ -63,24 +67,8 @@ describe("english-craft phase 4a schema", () => {
     expect(storage.craftedItems.get("benchBuilt")).toBe(false);
     expect(storage.craftedItems.get("hammers")).toBe(0);
     expect(storage.craftedItems.get("boat")).toBe(false);
-    expect(storage.craftedItems.get("bridge")).toBe(false);
     expect(storage.playerInventory).toBeDefined();
     expect(storage.playerHunger).toBeDefined();
-  });
-
-  it("reads legacy bridge-only crafted snapshots safely", () => {
-    expect(
-      readCraftedItems({
-        session: {} as never,
-        players: {},
-        craftedItems: { bridge: true },
-      }),
-    ).toEqual({
-      benchBuilt: false,
-      hammers: 0,
-      boat: false,
-      bridge: true,
-    });
   });
 
   it("resets crafted items and clears personal maps", () => {
@@ -88,7 +76,6 @@ describe("english-craft phase 4a schema", () => {
       benchBuilt: true,
       hammers: 3,
       boat: true,
-      bridge: true,
     };
     const inventoryDeleted: string[] = [];
     const hungerDeleted: string[] = [];
@@ -137,6 +124,13 @@ describe("english-craft phase 4a schema", () => {
     expect(craftedValues).toEqual({ ...DEFAULT_LIVE_GAME_CRAFTED_ITEMS });
     expect(inventoryDeleted).toEqual(["player-1"]);
     expect(hungerDeleted).toEqual(["player-1"]);
+  });
+});
+
+describe("english-craft phase 4a carry scale", () => {
+  it("exports carry overlay and HUD icon sizing constants", () => {
+    expect(ENGLISH_CRAFT_CARRY_OVERLAY_SIZE_PX).toBe(48);
+    expect(ENGLISH_CRAFT_CARRY_HUD_ICON_PX).toBe(24);
   });
 });
 

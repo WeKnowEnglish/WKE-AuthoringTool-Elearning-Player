@@ -10,8 +10,12 @@ import {
   isCraftRecipeId,
   missingRecipeRequirements,
 } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
-import { toClientCraftQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
-import { getCraftQuestionFromSet, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
+import { toClientCraftQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
+import {
+  getQuestionById,
+  pickCraftQuestion,
+} from "@/lib/live-game/server/question-set-resolver";
+import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import {
   createLiveGameChallenge,
   findActiveChallengeForPlayerNode,
@@ -78,8 +82,7 @@ async function handlePost(request: Request) {
   if (!storage?.session) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
-  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
-  const craftQuestion = getCraftQuestionFromSet(questionSetId);
+  const binding = readSessionQuestionSetBinding(storage.session);
   if (storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
@@ -100,29 +103,37 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Move closer to the workbench." }, { status: 409 });
   }
 
+  const craftSeed = `${playerId}:${recipeId}:0`;
   const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
   if (existing) {
+    const craftRow =
+      (await getQuestionById(binding.ref, "craft", existing.questionId, binding.version)) ??
+      (await pickCraftQuestion(binding.ref, binding.version, craftSeed));
     return NextResponse.json({
       challengeId: existing.challengeId,
       expiresAt: new Date(existing.expiresAt).toISOString(),
-      question: toClientCraftQuestion(craftQuestion),
+      question: toClientCraftQuestionFromRow(craftRow, existing.challengeId),
       recipeId,
       recipeLabel: recipe.label,
       costSummary: formatRecipeFullCostSummary(recipe),
     });
   }
 
+  const craftRow = await pickCraftQuestion(binding.ref, binding.version, craftSeed);
   const challenge = await createLiveGameChallenge({
     roomId,
     playerId,
     nodeId,
-    questionId: craftQuestion.id,
+    questionId: craftRow.id,
+    questionSetId: binding.setId,
+    questionSetVersion: binding.version,
+    questionBank: "craft",
   });
 
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
-    question: toClientCraftQuestion(craftQuestion),
+    question: toClientCraftQuestionFromRow(craftRow, challenge.challengeId),
     recipeId,
     recipeLabel: recipe.label,
     costSummary: formatRecipeFullCostSummary(recipe),

@@ -55,10 +55,6 @@ function buildPerimeterWaterCollisionRects(): Rect[] {
 
 const RIVER_CELL_COLLISION_RECTS = buildRiverCellCollisionRects();
 
-const RIVER_CELL_COLLISION_KEYS = new Set(
-  RIVER_CELL_COLLISION_RECTS.map((rect) => `${rect.x},${rect.y}`),
-);
-
 export const ENGLISH_CRAFT_RIVER_COLLISION_RECTS = RIVER_CELL_COLLISION_RECTS;
 export const ENGLISH_CRAFT_RIVER_COLLISION_RECT_COUNT = RIVER_CELL_COLLISION_RECTS.length;
 
@@ -90,14 +86,9 @@ export const ENGLISH_CRAFT_MAP_V1: LiveGameMapDef = {
   })),
 };
 
-function isRiverCellCollisionRect(rect: Rect): boolean {
-  return RIVER_CELL_COLLISION_KEYS.has(`${rect.x},${rect.y}`);
-}
-
-/** Filter water tiles when the team has crafted the bridge. */
-export function getEnglishCraftCollisionRects(riverCrossingUnlocked: boolean): Rect[] {
-  if (!riverCrossingUnlocked) return COLLISION_RECTS;
-  return COLLISION_RECTS.filter((rect) => !isRiverCellCollisionRect(rect));
+/** River tiles stay blocked — the internal river is a permanent obstacle. */
+export function getEnglishCraftCollisionRects(): Rect[] {
+  return COLLISION_RECTS;
 }
 
 export { ENGLISH_CRAFT_RIVER_OVERLAY };

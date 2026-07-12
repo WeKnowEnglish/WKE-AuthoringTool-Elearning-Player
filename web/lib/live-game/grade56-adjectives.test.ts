@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { GRADE56_ADJECTIVES_MC_V1 } from "@/lib/live-game/modes/english-craft/grade56-adjectives-v1";
+import { GRADE56_ADJECTIVES_CRAFT_V1, GRADE56_ADJECTIVES_MC_V1 } from "@/lib/live-game/modes/english-craft/grade56-adjectives-v1";
 import { toClientMcQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
-import {
-  getCraftQuestionFromSet,
-  getLiveGameQuestionSet,
-  isQuestionSetAnswerCorrect,
-  isQuestionSetCraftAnswerCorrect,
-} from "@/lib/live-game/modes/english-craft/question-sets";
 
 const ANSWER_KEY =
   "cababbabaabaacaaababaaaabcababaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".split("");
@@ -26,9 +20,6 @@ describe("grade56-adjectives-v1", () => {
       const letter = ANSWER_KEY[index]!;
       const letterIndex = { a: 0, b: 1, c: 2, d: 3 }[letter]!;
       expect(question.correctAnswer).toBe(question.options[letterIndex]);
-      expect(isQuestionSetAnswerCorrect("grade56-adjectives", question.id, question.correctAnswer)).toBe(
-        true,
-      );
     }
   });
 
@@ -42,13 +33,11 @@ describe("grade56-adjectives-v1", () => {
     }
   });
 
-  it("registers a playable set with craft sentence", () => {
-    const set = getLiveGameQuestionSet("grade56-adjectives");
-    expect(set.questions).toHaveLength(60);
-    const craft = getCraftQuestionFromSet("grade56-adjectives");
-    expect(isQuestionSetCraftAnswerCorrect("grade56-adjectives", craft.id, craft.correctOrder)).toBe(
-      true,
-    );
+  it("includes a craft sentence with valid order", () => {
+    expect(GRADE56_ADJECTIVES_MC_V1).toHaveLength(60);
+    const craft = GRADE56_ADJECTIVES_CRAFT_V1;
+    expect(craft.correctOrder).toHaveLength(craft.slotCount);
+    expect(craft.wordBank).toHaveLength(craft.correctOrder.length);
   });
 
   it("keeps spell hints for every target word", () => {

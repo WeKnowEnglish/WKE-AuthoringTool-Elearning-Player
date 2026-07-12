@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
-import {
-  isQuestionSetDepositSpellCorrect,
-  resolveLiveGameQuestionSetId,
-} from "@/lib/live-game/modes/english-craft/question-sets";
+import { isDepositSpellCorrect } from "@/lib/live-game/server/question-set-resolver";
+import { readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
 import { awardDepositForCarry } from "@/lib/live-game/server/award-deposit";
 import { normalizeAwardReceipt } from "@/lib/live-game/server/award-receipt";
 import {
@@ -20,16 +18,24 @@ type DepositAnswerRequestBody = {
   roomId?: string;
   challengeId?: string;
   spelling?: string;
+  skip?: boolean;
 };
 
 function parseDepositAnswerBody(body: unknown): DepositAnswerRequestBody | null {
   if (!body || typeof body !== "object") return null;
   const record = body as DepositAnswerRequestBody;
-  if (
-    typeof record.roomId !== "string" ||
-    typeof record.challengeId !== "string" ||
-    typeof record.spelling !== "string"
-  ) {
+  if (typeof record.roomId !== "string" || typeof record.challengeId !== "string") {
+    return null;
+  }
+  if (record.skip === true) {
+    return {
+      roomId: record.roomId,
+      challengeId: record.challengeId,
+      spelling: typeof record.spelling === "string" ? record.spelling : "",
+      skip: true,
+    };
+  }
+  if (typeof record.spelling !== "string") {
     return null;
   }
   return record;
@@ -71,16 +77,17 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseDepositAnswerBody(body);
-  if (!parsed?.roomId || !parsed.challengeId || parsed.spelling == null) {
+  if (!parsed?.roomId || !parsed.challengeId) {
     return NextResponse.json(
-      { error: "roomId, challengeId, and spelling are required." },
+      { error: "roomId and challengeId are required." },
       { status: 400 },
     );
   }
 
   const roomId = parsed.roomId.trim();
   const challengeId = parsed.challengeId.trim();
-  const spelling = parsed.spelling;
+  const spelling = parsed.spelling ?? "";
+  const skip = parsed.skip === true;
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
   const challenge = await getLiveGameChallenge(challengeId);
@@ -99,9 +106,6 @@ async function handlePost(request: Request) {
   const carry = readPlayerCarry(storage, playerId);
   if (!carry) {
     return NextResponse.json({ error: "Nothing to deposit." }, { status: 409 });
-  }
-  if (carry.questionId !== challenge.questionId) {
-    return NextResponse.json({ error: "Deposit challenge mismatch." }, { status: 409 });
   }
 
   if (challenge.status === "awarded") {
@@ -124,8 +128,10 @@ async function handlePost(request: Request) {
     );
   }
 
-  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
-  const correct = isQuestionSetDepositSpellCorrect(questionSetId, challenge.questionId, spelling);
+  const ctx = readChallengeQuestionSetContext(storage.session, challenge);
+  const correct =
+    skip ||
+    (await isDepositSpellCorrect(ctx.ref, challenge.questionId, spelling, ctx.version));
   if (!correct) {
     return NextResponse.json(
       depositAnswerPayload(storage, {
@@ -165,7 +171,6 @@ async function handlePost(request: Request) {
     roomId,
     playerId,
     challengeId,
-    expectedQuestionId: challenge.questionId,
   });
   if (!award) {
     return NextResponse.json({ error: "Could not deposit this resource right now." }, { status: 409 });

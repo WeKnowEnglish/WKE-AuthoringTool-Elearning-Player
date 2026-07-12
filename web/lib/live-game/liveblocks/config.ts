@@ -1,7 +1,6 @@
 import type { LiveMap, LiveObject } from "@liveblocks/client";
 import { LIVE_GAME_DEFAULT_AVATAR_ID } from "@/lib/live-game/characters/boy-character";
 import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
-import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 export type LiveGamePhase = "lobby" | "playing" | "paused" | "completed" | "ended";
 
@@ -55,7 +54,8 @@ export type LiveGameSessionState = {
   endedAt: number | null;
   endReason: LiveGameEndReason | null;
   lobbyNotice: LiveGameLobbyNotice | null;
-  questionSetId: LiveGameQuestionSetId;
+  /** Canonical question-set uuid; legacy sessions may still hold a slug. */
+  questionSetId: string;
   questionSetVersion: number;
 };
 
@@ -97,8 +97,6 @@ export type LiveGameCraftedItems = {
   benchBuilt: boolean;
   hammers: number;
   boat: boolean;
-  /** @deprecated Removed in 4F — bridge craft win path */
-  bridge: boolean;
 };
 
 export type LiveGamePlayerInventory = {
@@ -111,8 +109,7 @@ export type LiveGamePlayerHunger = {
 };
 
 export type LiveGameUnlockedObjects = {
-  river_crossing: boolean;
-  boat_boarding?: boolean;
+  boat_boarding: boolean;
 };
 
 export type LiveGameCraftReceipt = {
@@ -124,7 +121,7 @@ export type LiveGameCraftReceipt = {
   benchBuilt?: boolean;
   hammers?: number;
   boatCrafted?: boolean;
-  bridgeCrafted?: boolean;
+  breadGranted?: number;
 };
 
 export type LiveGamePlayerPosition = { x: number; y: number; updatedAt: number };

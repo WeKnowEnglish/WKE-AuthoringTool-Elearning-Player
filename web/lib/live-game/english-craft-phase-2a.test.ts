@@ -30,6 +30,18 @@ describe("english-craft questions", () => {
     expect(isMcAnswerCorrect(question.id, question.correctAnswer)).toBe(true);
     expect(isMcAnswerCorrect(question.id, "wrong")).toBe(false);
   });
+
+  it("shuffles MC options deterministically per challenge id", () => {
+    const question = pickMcQuestionForNode("tree-02");
+    const first = toClientMcQuestion(question, "challenge-a");
+    const second = toClientMcQuestion(question, "challenge-a");
+    const third = toClientMcQuestion(question, "challenge-b");
+
+    expect(first.options).toHaveLength(question.options.length);
+    expect(second.options).toEqual(first.options);
+    expect(third.options).not.toEqual(first.options);
+    expect([...first.options].sort()).toEqual([...question.options].sort());
+  });
 });
 
 describe("live-game interact", () => {

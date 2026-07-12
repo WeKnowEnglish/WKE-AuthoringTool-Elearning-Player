@@ -8,8 +8,6 @@ import {
 } from "@/lib/live-game/modes/english-craft/questions-v1";
 import {
   canStartCraftChallenge,
-  isBridgeCrafted,
-  isRiverCrossingUnlocked,
 } from "@/lib/live-game/server/read-storage";
 
 describe("english-craft craft sentence", () => {
@@ -18,6 +16,16 @@ describe("english-craft craft sentence", () => {
     expect(client).not.toHaveProperty("correctOrder");
     expect(client.slotCount).toBe(4);
     expect(client.wordBank).toHaveLength(4);
+  });
+
+  it("shuffles craft word bank deterministically per challenge id", () => {
+    const first = toClientCraftQuestion(ENGLISH_CRAFT_CRAFT_BRIDGE_V1, "challenge-a");
+    const second = toClientCraftQuestion(ENGLISH_CRAFT_CRAFT_BRIDGE_V1, "challenge-a");
+    const third = toClientCraftQuestion(ENGLISH_CRAFT_CRAFT_BRIDGE_V1, "challenge-b");
+
+    expect(second.wordBank).toEqual(first.wordBank);
+    expect(third.wordBank).not.toEqual(first.wordBank);
+    expect([...first.wordBank].sort()).toEqual([...ENGLISH_CRAFT_CRAFT_BRIDGE_V1.wordBank].sort());
   });
 
   it("accepts the pilot correct order", () => {
@@ -58,8 +66,7 @@ describe("english-craft craft gates", () => {
   const playingSession = {
     session: { phase: "playing" as const },
     resourcePool: { wood: 10, stone: 5, wheat: 0, cotton: 0 },
-    craftedItems: { benchBuilt: false, hammers: 0, boat: false, bridge: false },
-    unlockedObjects: { river_crossing: false },
+    craftedItems: { benchBuilt: false, hammers: 0, boat: false },
   };
 
   it("allows build_bench when wood and stone goals are met", () => {
@@ -88,10 +95,8 @@ describe("english-craft craft gates", () => {
     expect(
       canStartCraftChallenge({
         ...playingSession,
-        craftedItems: { benchBuilt: true, hammers: 0, boat: false, bridge: false },
+        craftedItems: { benchBuilt: true, hammers: 0, boat: false },
       }),
     ).toBe(false);
-    expect(isBridgeCrafted({ craftedItems: { bridge: true } })).toBe(true);
-    expect(isRiverCrossingUnlocked({ unlockedObjects: { river_crossing: true } })).toBe(true);
   });
 });

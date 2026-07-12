@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { ENGLISH_CRAFT_CRAFT_BENCH_ID } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { isCraftRecipeId } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
-import { isQuestionSetCraftAnswerCorrect, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
+import { isCraftOrderCorrect } from "@/lib/live-game/server/question-set-resolver";
+import { readChallengeQuestionSetContext } from "@/lib/live-game/server/question-set-challenge-context";
 import { awardCraftRecipe } from "@/lib/live-game/server/award-craft-recipe";
 import {
   claimLiveGameChallengeAward,
@@ -19,20 +20,30 @@ type CraftAnswerRequestBody = {
   challengeId?: string;
   order?: string[];
   recipeId?: string;
+  skip?: boolean;
 };
 
 function parseCraftAnswerBody(body: unknown): CraftAnswerRequestBody | null {
   if (!body || typeof body !== "object") return null;
   const record = body as CraftAnswerRequestBody;
-  if (
-    typeof record.roomId !== "string" ||
-    typeof record.challengeId !== "string" ||
-    typeof record.recipeId !== "string" ||
-    !Array.isArray(record.order)
-  ) {
+  if (typeof record.roomId !== "string" || typeof record.challengeId !== "string") {
     return null;
   }
-  if (!record.order.every((word) => typeof word === "string")) {
+  if (record.skip === true) {
+    if (typeof record.recipeId !== "string") return null;
+    return {
+      roomId: record.roomId,
+      challengeId: record.challengeId,
+      recipeId: record.recipeId,
+      order: Array.isArray(record.order) ? record.order.filter((word) => typeof word === "string") : [],
+      skip: true,
+    };
+  }
+  if (
+    typeof record.recipeId !== "string" ||
+    !Array.isArray(record.order) ||
+    !record.order.every((word) => typeof word === "string")
+  ) {
     return null;
   }
   return record;
@@ -67,9 +78,9 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseCraftAnswerBody(body);
-  if (!parsed?.roomId || !parsed.challengeId || !parsed.order || !parsed.recipeId) {
+  if (!parsed?.roomId || !parsed.challengeId || !parsed.recipeId) {
     return NextResponse.json(
-      { error: "roomId, challengeId, recipeId, and order are required." },
+      { error: "roomId, challengeId, and recipeId are required." },
       { status: 400 },
     );
   }
@@ -81,8 +92,9 @@ async function handlePost(request: Request) {
   const roomId = parsed.roomId.trim();
   const challengeId = parsed.challengeId.trim();
   const recipeId = parsed.recipeId;
+  const skip = parsed.skip === true;
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
-  const order = parsed.order.map((word) => word.trim());
+  const order = (parsed.order ?? []).map((word) => word.trim());
 
   const challenge = await getLiveGameChallenge(challengeId);
   if (!challenge) {
@@ -104,11 +116,10 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
 
-  const correct = isQuestionSetCraftAnswerCorrect(
-    resolveLiveGameQuestionSetId(storage.session.questionSetId),
-    challenge.questionId,
-    order,
-  );
+  const ctx = readChallengeQuestionSetContext(storage.session, challenge);
+  const correct =
+    skip ||
+    (await isCraftOrderCorrect(ctx.ref, challenge.questionId, order, ctx.version));
   if (!correct) {
     return NextResponse.json(craftAnswerPayload(storage, false));
   }
@@ -128,7 +139,7 @@ async function handlePost(request: Request) {
     return NextResponse.json(craftAnswerPayload(latest, true, true));
   }
 
-  const award = await awardCraftRecipe({ roomId, challengeId, recipeId });
+  const award = await awardCraftRecipe({ roomId, challengeId, recipeId, playerId });
   if (!award) {
     return NextResponse.json({ error: "Could not complete craft right now." }, { status: 409 });
   }
@@ -139,6 +150,7 @@ async function handlePost(request: Request) {
     correct: true,
     poolTotal: award.poolTotal,
     craftedItems: award.craftedItems,
+    inventory: award.inventory,
     recipeId: award.recipeId,
     alreadyAwarded: award.alreadyAwarded,
   });

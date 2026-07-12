@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
+import {
+  areAllRegisteredPlayersOnBoat,
+  isPlayerInBoatBoardingZone,
+} from "@/lib/live-game/engine/boat-boarding";
+import { ENGLISH_CRAFT_BOAT_BOARDING_ZONE_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import { completeLiveGameObjective } from "@/lib/live-game/server/complete-objective";
 import {
   canCompleteObjective,
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
-import { isPlayerTouchingFlagZone } from "@/lib/live-game/engine/flag-touch";
-import { ENGLISH_CRAFT_FLAG_ZONE_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 
 type CompleteRequestBody = {
   roomId?: string;
+  kind?: string;
 };
 
 function parseCompleteBody(body: unknown): CompleteRequestBody | null {
@@ -42,6 +46,11 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "roomId is required." }, { status: 400 });
   }
 
+  const kind = parsed.kind === "boat_escape" || parsed.kind == null ? "boat_escape" : null;
+  if (!kind) {
+    return NextResponse.json({ error: "Unknown completion kind." }, { status: 400 });
+  }
+
   const roomId = parsed.roomId.trim();
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
@@ -60,21 +69,38 @@ async function handlePost(request: Request) {
       victoryAt: storage.session.victoryAt,
       completedByPlayerId: storage.session.completedByPlayerId,
       alreadyCompleted: true,
+      kind: "boat_escape",
     });
   }
 
   if (!canCompleteObjective(storage)) {
-    return NextResponse.json({ error: "Objective is not available yet." }, { status: 409 });
+    return NextResponse.json({ error: "The boat is not ready for boarding yet." }, { status: 409 });
   }
 
+  const now = Date.now();
   const position = storage.playerPositions?.[playerId];
-  if (!position || Date.now() - position.updatedAt > 5_000 || !isPlayerTouchingFlagZone(position.x, position.y, ENGLISH_CRAFT_FLAG_ZONE_V1)) {
-    return NextResponse.json({ error: "Reach the flag before completing the objective." }, { status: 409 });
+  if (
+    !position ||
+    now - position.updatedAt > 5_000 ||
+    !isPlayerInBoatBoardingZone(position.x, position.y, ENGLISH_CRAFT_BOAT_BOARDING_ZONE_V1)
+  ) {
+    return NextResponse.json({ error: "Move onto the boat with your team." }, { status: 409 });
   }
 
-  const result = await completeLiveGameObjective({ roomId, playerId });
+  if (
+    !areAllRegisteredPlayersOnBoat(
+      Object.keys(storage.players ?? {}),
+      storage.playerPositions,
+      ENGLISH_CRAFT_BOAT_BOARDING_ZONE_V1,
+      now,
+    )
+  ) {
+    return NextResponse.json({ error: "Everyone on the team must be on the boat." }, { status: 409 });
+  }
+
+  const result = await completeLiveGameObjective({ roomId, playerId, kind });
   if (!result) {
-    return NextResponse.json({ error: "Could not complete the objective." }, { status: 409 });
+    return NextResponse.json({ error: "Could not complete the escape." }, { status: 409 });
   }
 
   return NextResponse.json({
@@ -82,6 +108,7 @@ async function handlePost(request: Request) {
     victoryAt: result.victoryAt,
     completedByPlayerId: result.completedByPlayerId,
     alreadyCompleted: result.alreadyCompleted,
+    kind: result.kind,
   });
 }
 

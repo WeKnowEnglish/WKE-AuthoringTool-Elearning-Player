@@ -30,19 +30,19 @@ Session ends — all game state disappears
 
 **English Craft** is the first game mode built on the Live Game framework.
 
-Cooperative loop (v0.1):
+Cooperative loop (Phase 4 pilot):
 
 ```
-Cut trees → vocab MC question → +1 wood to team pool
+Harvest resources → vocab / spell challenges → deposit to team pool
         ↓
-Collect enough wood (10 for pilot)
+Build workbench (10 wood + 5 stone) → craft hammers, bread, boat
         ↓
-Crafting bench → sentence ordering → craft bridge
+Manage hunger (craft bread, eat) while gathering boat materials
         ↓
-Cross river → touch flag → victory
+All players board the boat for 2 seconds → team escape victory
 ```
 
-Learning is the **interaction mechanic**, not the framing. Students think "I'm collecting wood," not "I'm doing a vocabulary activity."
+The internal river and flag remain map decoration; the river is always blocked.
 
 ---
 

@@ -29,14 +29,6 @@ export function isResourceNodeAvailable(
   return isEnglishCraftResourceNodeInteractable(node, now);
 }
 
-export function isBridgeCrafted(storage: LiveGameStorageSnapshot | null | undefined): boolean {
-  return readCraftedItems(storage).bridge;
-}
-
-export function isRiverCrossingUnlocked(storage: LiveGameStorageSnapshot | null | undefined): boolean {
-  return storage?.unlockedObjects?.river_crossing === true;
-}
-
 export function isBoatBoardingUnlocked(storage: LiveGameStorageSnapshot | null | undefined): boolean {
   return storage?.unlockedObjects?.boat_boarding === true;
 }
@@ -52,7 +44,7 @@ export { readResourcePool, getPoolCount };
 
 export function canCompleteObjective(storage: LiveGameStorageSnapshot | null | undefined): boolean {
   if (!storage?.session || storage.session.phase !== "playing") return false;
-  return isBridgeCrafted(storage) && isRiverCrossingUnlocked(storage);
+  return isBoatBoardingUnlocked(storage);
 }
 
 export type { CraftRecipeId };

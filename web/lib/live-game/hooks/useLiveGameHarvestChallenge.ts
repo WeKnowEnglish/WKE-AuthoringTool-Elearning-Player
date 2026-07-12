@@ -302,7 +302,7 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
   );
 
   const submitAnswer = useCallback(
-    async (answer: string) => {
+    async (answer: string, options?: { skip?: boolean }) => {
       if (!activeChallenge?.challengeId || tokenStatus !== "ready") return;
       setIsSubmitting(true);
       setError(null);
@@ -313,7 +313,8 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
           body: JSON.stringify({
             roomId,
             challengeId: activeChallenge.challengeId,
-            answer,
+            answer: options?.skip ? "" : answer,
+            skip: options?.skip === true,
           }),
         });
         const payload = (await response.json()) as {
@@ -364,6 +365,10 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
     setLastResult(null);
   }, []);
 
+  const skipChallenge = useCallback(() => {
+    void submitAnswer("", { skip: true });
+  }, [submitAnswer]);
+
   return useMemo(
     () => ({
       activeChallenge,
@@ -374,6 +379,7 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
       lastResult,
       beginChallenge,
       submitAnswer,
+      skipChallenge,
       closeChallenge,
       prefetchForNode,
       cancelPrefetch,
@@ -390,6 +396,7 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
       isSubmitting,
       lastResult,
       prefetchForNode,
+      skipChallenge,
       submitAnswer,
       tokenStatus,
     ],

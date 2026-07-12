@@ -17,7 +17,7 @@ import {
   type LiveGameCharacterId,
 } from "@/lib/live-game/characters/live-game-characters";
 import { LiveGameCharacterPicker } from "@/components/live-game/LiveGameCharacterPicker";
-import { DEFAULT_LIVE_GAME_QUESTION_SET_ID, type LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
+import { DEFAULT_LIVE_GAME_QUESTION_SET_UUID } from "@/lib/live-game/question-banks/question-set-ids";
 
 type Props = {
   initialCode?: string;
@@ -60,7 +60,7 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
       });
       const payload = (await response.json()) as {
         error?: string; userId?: string; mapId?: string; durationMinutes?: number | null;
-        questionSetId?: LiveGameQuestionSetId; questionSetVersion?: number;
+        questionSetId?: string; questionSetVersion?: number;
       };
       if (!response.ok || !payload.userId) throw new Error(payload.error ?? "Could not join game.");
       setLiveGameSessionContext({
@@ -75,7 +75,7 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
         durationMinutes: normalizeEnglishCraftDurationMinutes(
           typeof payload.durationMinutes === "number" ? payload.durationMinutes : ENGLISH_CRAFT_MODE.defaultDurationMinutes,
         ),
-        questionSetId: payload.questionSetId ?? DEFAULT_LIVE_GAME_QUESTION_SET_ID,
+        questionSetId: payload.questionSetId ?? DEFAULT_LIVE_GAME_QUESTION_SET_UUID,
         questionSetVersion: payload.questionSetVersion ?? 1,
       });
       router.push(`/live-game/${code}`);

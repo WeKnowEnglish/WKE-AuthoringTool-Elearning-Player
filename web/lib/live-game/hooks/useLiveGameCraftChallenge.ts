@@ -331,7 +331,7 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
   );
 
   const submitAnswer = useCallback(
-    async (order: string[]) => {
+    async (order: string[], options?: { skip?: boolean }) => {
       if (!activeChallenge?.challengeId || tokenStatus !== "ready") return;
       setIsSubmitting(true);
       setError(null);
@@ -343,7 +343,8 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
             roomId,
             challengeId: activeChallenge.challengeId,
             recipeId: activeChallenge.recipeId,
-            order,
+            order: options?.skip ? [] : order,
+            skip: options?.skip === true,
           }),
         });
         const payload = (await response.json()) as {
@@ -368,7 +369,6 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
           benchBuilt: false,
           hammers: 0,
           boat: false,
-          bridge: false,
         };
         setLastResult(correct ? "correct" : "incorrect");
         onAnswered?.({
@@ -402,6 +402,10 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
     setLastResult(null);
   }, []);
 
+  const skipChallenge = useCallback(() => {
+    void submitAnswer([], { skip: true });
+  }, [submitAnswer]);
+
   return useMemo(
     () => ({
       activeChallenge,
@@ -412,6 +416,7 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
       lastResult,
       beginChallenge,
       submitAnswer,
+      skipChallenge,
       closeChallenge,
       prefetchChallenge,
       cancelPrefetch,
@@ -428,6 +433,7 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
       isSubmitting,
       lastResult,
       prefetchChallenge,
+      skipChallenge,
       submitAnswer,
       tokenStatus,
     ],

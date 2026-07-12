@@ -1,15 +1,17 @@
 import { LiveMap, LiveObject } from "@liveblocks/client";
-import type { LiveGameCraftReceipt } from "@/lib/live-game/liveblocks/config";
-import { ENGLISH_CRAFT_CRAFT_WOOD_COST } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import type { LiveGameCraftReceipt, LiveGameResourcePool } from "@/lib/live-game/liveblocks/config";
+import { ENGLISH_CRAFT_CRAFT_COSTS } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
+import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS } from "@/lib/live-game/server/read-crafted-items";
 import {
   asLiveGameMutatorRoot,
   readMutatorNumber,
   type LiveGameMutatorNode,
 } from "@/lib/live-game/server/mutator";
+import { canAffordCraftCosts, readResourcePool } from "@/lib/live-game/resource-pool";
 
 export type AwardCraftBridgeResult = {
-  wood: number;
+  poolTotal: LiveGameResourcePool;
   bridgeCrafted: boolean;
   riverCrossingUnlocked: boolean;
   alreadyCrafted: boolean;
@@ -17,6 +19,15 @@ export type AwardCraftBridgeResult = {
 
 function readMutatorBoolean(value: unknown): boolean {
   return value === true;
+}
+
+function readPoolFromMutator(resourcePool: LiveGameMutatorNode): LiveGameResourcePool {
+  return {
+    wood: readMutatorNumber(resourcePool.get("wood")),
+    stone: readMutatorNumber(resourcePool.get("stone")),
+    wheat: readMutatorNumber(resourcePool.get("wheat")),
+    cotton: readMutatorNumber(resourcePool.get("cotton")),
+  };
 }
 
 export async function awardCraftBridge(input: {
@@ -40,8 +51,14 @@ export async function awardCraftBridge(input: {
     }
     const priorReceipt = craftReceipts.get(input.challengeId) as LiveGameMutatorNode | undefined;
     if (priorReceipt) {
-      result = {
+      const poolTotal: LiveGameResourcePool = {
         wood: readMutatorNumber(priorReceipt.get("wood")),
+        stone: readMutatorNumber(priorReceipt.get("stone")),
+        wheat: readMutatorNumber(priorReceipt.get("wheat")),
+        cotton: readMutatorNumber(priorReceipt.get("cotton")),
+      };
+      result = {
+        poolTotal,
         bridgeCrafted: readMutatorBoolean(priorReceipt.get("bridgeCrafted")),
         riverCrossingUnlocked: readMutatorBoolean(priorReceipt.get("bridgeCrafted")),
         alreadyCrafted: true,
@@ -51,7 +68,7 @@ export async function awardCraftBridge(input: {
 
     let craftedItems = storage.get("craftedItems");
     if (!craftedItems) {
-      craftedItems = new LiveObject({ bridge: false }) as unknown as LiveGameMutatorNode;
+      craftedItems = new LiveObject({ ...DEFAULT_LIVE_GAME_CRAFTED_ITEMS }) as unknown as LiveGameMutatorNode;
       storage.set("craftedItems", craftedItems);
     }
     let unlockedObjects = storage.get("unlockedObjects");
@@ -67,23 +84,38 @@ export async function awardCraftBridge(input: {
     const resourcePool = storage.get("resourcePool");
     if (!resourcePool) return;
 
-    const currentWood = readMutatorNumber(resourcePool.get("wood"));
-    if (currentWood < ENGLISH_CRAFT_CRAFT_WOOD_COST) return;
+    const currentPool = readPoolFromMutator(resourcePool);
+    if (!canAffordCraftCosts(currentPool, ENGLISH_CRAFT_CRAFT_COSTS)) return;
 
-    const nextWood = currentWood - ENGLISH_CRAFT_CRAFT_WOOD_COST;
-    resourcePool.set("wood", nextWood);
+    const nextPool: LiveGameResourcePool = {
+      wood: currentPool.wood - ENGLISH_CRAFT_CRAFT_COSTS.wood,
+      stone: currentPool.stone - ENGLISH_CRAFT_CRAFT_COSTS.stone,
+      wheat: currentPool.wheat - ENGLISH_CRAFT_CRAFT_COSTS.wheat,
+      cotton: currentPool.cotton - ENGLISH_CRAFT_CRAFT_COSTS.cotton,
+    };
+
+    resourcePool.set("wood", nextPool.wood);
+    resourcePool.set("stone", nextPool.stone);
+    resourcePool.set("wheat", nextPool.wheat);
+    resourcePool.set("cotton", nextPool.cotton);
     craftedItems.set("bridge", true);
     unlockedObjects.set("river_crossing", true);
 
     result = {
-      wood: nextWood,
+      poolTotal: nextPool,
       bridgeCrafted: true,
       riverCrossingUnlocked: true,
       alreadyCrafted: false,
     };
     craftReceipts.set(
       input.challengeId,
-      new LiveObject<LiveGameCraftReceipt>({ wood: nextWood, bridgeCrafted: true }),
+      new LiveObject<LiveGameCraftReceipt>({
+        wood: nextPool.wood,
+        stone: nextPool.stone,
+        wheat: nextPool.wheat,
+        cotton: nextPool.cotton,
+        bridgeCrafted: true,
+      }),
     );
   });
 

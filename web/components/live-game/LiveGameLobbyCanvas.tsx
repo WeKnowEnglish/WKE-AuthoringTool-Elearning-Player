@@ -23,7 +23,7 @@ import { useLiveGameSessionDuration } from "@/lib/live-game/hooks/useLiveGameSes
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
 import { getMapForMode } from "@/lib/live-game/modes";
 import {
-  ENGLISH_CRAFT_LOBBY_BRIDGE_CRAFTED,
+  ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS,
   ENGLISH_CRAFT_LOBBY_RESOURCE_NODES,
 } from "@/lib/live-game/modes/english-craft/lobby-map-v1";
 import { getEnglishCraftCollisionRects } from "@/lib/live-game/modes/english-craft/map-v1";
@@ -69,7 +69,7 @@ export function LiveGameLobbyCanvas({ context }: Props) {
     players,
     visualMode: "lobby",
     resourceNodes: ENGLISH_CRAFT_LOBBY_RESOURCE_NODES,
-    bridgeCrafted: ENGLISH_CRAFT_LOBBY_BRIDGE_CRAFTED,
+    craftedItems: ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS,
   });
 
   return (
@@ -86,7 +86,7 @@ export function LiveGameLobbyCanvas({ context }: Props) {
         footer={
           !isHost ?
             <LiveGameStudentLobbyFooter
-              playerCount={players.length}
+              playerCount={studentCount}
               changeCharacterDisabled={!canChangeAvatar}
               onChangeCharacter={() => setPickerOpen(true)}
             />

@@ -53,12 +53,19 @@ function isRiverCell(col: number, row: number): boolean {
   );
 }
 
+/** Island perimeter — N edge, E/W columns, south beach corners only on row 10. */
+export function isPerimeterWaterCell(col: number, row: number): boolean {
+  if (col === 0 || col === COLS - 1) return true;
+  if (row === 0) return true;
+  return false;
+}
+
 function buildCells(): (GrassTileId | null)[][] {
   const cells: (GrassTileId | null)[][] = [];
   for (let row = 0; row < ROWS; row += 1) {
     const rowCells: (GrassTileId | null)[] = [];
     for (let col = 0; col < COLS; col += 1) {
-      if (isRiverCell(col, row)) {
+      if (isPerimeterWaterCell(col, row) || isRiverCell(col, row)) {
         rowCells.push(null);
         continue;
       }
@@ -101,3 +108,29 @@ export const ENGLISH_CRAFT_RIVER_CELL_BOUNDS = {
   colStart: RIVER_COL_START,
   colEnd: RIVER_COL_END,
 } as const;
+
+function buildPerimeterWaterOverlayRects(): Array<{ x: number; y: number; w: number; h: number }> {
+  const tile = GRASS_TILE_SIZE_PX;
+  return [
+    {
+      x: 0,
+      y: 0,
+      w: COLS * tile,
+      h: tile,
+    },
+    {
+      x: 0,
+      y: tile,
+      w: tile,
+      h: (ROWS - 1) * tile,
+    },
+    {
+      x: (COLS - 1) * tile,
+      y: tile,
+      w: tile,
+      h: (ROWS - 1) * tile,
+    },
+  ];
+}
+
+export const ENGLISH_CRAFT_PERIMETER_WATER_OVERLAYS = buildPerimeterWaterOverlayRects();

@@ -1,4 +1,5 @@
 import { LiveGameHostPage } from "@/components/live-game/LiveGameHostPage";
+import { isTeacher } from "@/lib/auth/roles";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,7 +9,7 @@ export default async function LiveGameHostRoute() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?portal=teacher&next=/live-game/host");
-  if (user.app_metadata?.role !== "teacher") {
+  if (!isTeacher(user)) {
     redirect("/login?portal=teacher&error=not_teacher&next=/live-game/host");
   }
   return <LiveGameHostPage />;

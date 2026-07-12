@@ -2,7 +2,7 @@
 
 **Product:** Live Game — disposable classroom sessions  
 **First mode:** English Craft  
-**Status:** Phase 1 complete · Phase 2 plan ready (2026-07-11)
+**Status:** Phase 2 complete · Phase 3A ✅ · Phase 3B ✅ · Phase 3C ✅ · Phase 3D ✅ · Phase 3E ✅ · Phase 3F ✅ (2026-07-12)
 
 ---
 
@@ -11,7 +11,17 @@
 | Doc | Purpose |
 | --- | --- |
 | [product-framing.md](./product-framing.md) | Product identity, English Craft mode, session mantra |
-| [phase-2-plan.md](./phase-2-plan.md) | **Phase 2 implementation plan** (v0.1 win loop, assets, sub-milestones) |
+| [phase-2-plan.md](./phase-2-plan.md) | Phase 2 implementation plan (v0.1 win loop) ✅ |
+| [phase-3a-plan.md](./phase-3a-plan.md) | Phase 3A — question bank, art, map scaffold ✅ |
+| [phase-3b-plan.md](./phase-3b-plan.md) | Phase 3B — carry & pool schema ✅ |
+| [phase-3c-plan.md](./phase-3c-plan.md) | Phase 3C — harvest → carry ✅ |
+| [phase-3d-plan.md](./phase-3d-plan.md) | Phase 3D — deposit + spell → pool ✅ |
+| [phase-3e-plan.md](./phase-3e-plan.md) | Phase 3E — HUD + storage fill ✅ |
+| [phase-3f-plan.md](./phase-3f-plan.md) | Phase 3F — multi-resource craft + victory ✅ |
+| [phase-4-plan.md](./phase-4-plan.md) | Phase 4 overview — bench milestones, hunger, boat escape (awaiting approval) |
+| [phase-4a-plan.md](./phase-4a-plan.md) | Phase 4A — map, schema, hammer/boat art ✅ |
+| [phase-4b-plan.md](./phase-4b-plan.md) | Phase 4B — build bench + recipe engine ✅ |
+| [phase-4c-plan.md](./phase-4c-plan.md) | Phase 4C — hammer + boat recipes ✅ |
 | [existing-system-audit.md](./existing-system-audit.md) | What exists in the repo; reuse verdicts |
 | [architecture.md](./architecture.md) | State ownership, Liveblocks contract, API routes |
 | [mvp-scope.md](./mvp-scope.md) | MVP includes/excludes, acceptance tests, pilot script |
@@ -32,8 +42,17 @@
 | --- | --- |
 | 0 / 0.5 | Audit + product framing docs |
 | **1** | **Session shell + multiplayer movement** ✅ |
-| **2 / v0.1** | **Wood + MC + craft bridge + flag** — [phase-2-plan.md](./phase-2-plan.md) |
-| 3 / v0.2 | Stone + grammar questions |
+| **2 / v0.1** | **Wood + MC + craft bridge + flag** ✅ |
+| **3A** | **Adjectives bank + full art + map scaffold** ✅ |
+| **3B** | **Carry & four-resource pool schema + spread map layout** ✅ |
+| **3C** | **Harvest → carry** (all node types) ✅ |
+| **3D** | **Deposit + spell → pool** ✅ |
+| **3E** | **Four-resource HUD + storage fill sprites** ✅ |
+| **3F** | **Multi-resource craft + victory stats** ✅ |
+| **4** | **Bench milestones + hunger + boat escape** — [phase-4-plan.md](./phase-4-plan.md) |
+| **4A** | **Island map + schema + hammer/boat art** ✅ |
+| **4B** | **Build bench + recipe engine** — [phase-4b-plan.md](./phase-4b-plan.md) ✅ |
+| **4C** | **Hammer + boat recipes** — [phase-4c-plan.md](./phase-4c-plan.md) ✅ |
 
 ## Deployment prerequisite
 

@@ -1,5 +1,10 @@
 import "server-only";
 import type { EnglishCraftCraftQuestion, EnglishCraftMcQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
+import { isAdjectiveDepositSpellCorrect } from "@/lib/live-game/modes/english-craft/questions-v1";
+import {
+  GRADE56_ADJECTIVES_CRAFT_V1,
+  GRADE56_ADJECTIVES_MC_V1,
+} from "@/lib/live-game/modes/english-craft/grade56-adjectives-v1";
 import {
   DEFAULT_LIVE_GAME_QUESTION_SET_ID,
   getLiveGameQuestionSetSummary,
@@ -15,6 +20,12 @@ type LiveGameQuestionSet = {
 };
 
 const SETS: Record<LiveGameQuestionSetId, LiveGameQuestionSet> = {
+  "grade56-adjectives": {
+    id: "grade56-adjectives",
+    version: 1,
+    questions: GRADE56_ADJECTIVES_MC_V1,
+    craftQuestion: GRADE56_ADJECTIVES_CRAFT_V1 as EnglishCraftCraftQuestion,
+  },
   "daily-routines-a1": {
     id: "daily-routines-a1", version: 1,
     questions: [
@@ -89,6 +100,28 @@ export function isQuestionSetCraftAnswerCorrect(id: LiveGameQuestionSetId, quest
   const question = getCraftQuestionFromSet(id);
   return question.id === questionId && order.length === question.correctOrder.length &&
     order.every((word, index) => word === question.correctOrder[index]);
+}
+
+export function isQuestionSetDepositSpellCorrect(
+  id: LiveGameQuestionSetId,
+  questionId: string,
+  spelling: string,
+): boolean {
+  const question = getQuestionFromSet(id, questionId);
+  if (!question) return false;
+  return isAdjectiveDepositSpellCorrect(question, spelling);
+}
+
+export function getQuestionSetSpellMetadata(
+  id: LiveGameQuestionSetId,
+  questionId: string,
+): { spellHint: string; targetWord: string } | null {
+  const question = getQuestionFromSet(id, questionId);
+  if (!question || !("targetWord" in question) || !("spellHint" in question)) return null;
+  const spellHint = String(question.spellHint ?? "").trim();
+  const targetWord = String(question.targetWord ?? "").trim();
+  if (!spellHint || !targetWord) return null;
+  return { spellHint, targetWord };
 }
 
 export function getQuestionSetVersion(id: LiveGameQuestionSetId): number {

@@ -1,0 +1,148 @@
+import { NextResponse } from "next/server";
+import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
+import {
+  ENGLISH_CRAFT_STORAGE_BY_TYPE,
+  toStorageInteractTarget,
+} from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import { toClientDepositSpell } from "@/lib/live-game/modes/english-craft/questions-v1";
+import {
+  getQuestionSetSpellMetadata,
+  resolveLiveGameQuestionSetId,
+} from "@/lib/live-game/modes/english-craft/question-sets";
+import {
+  createLiveGameChallenge,
+  findActiveChallengeForPlayerNode,
+} from "@/lib/live-game/server/challenge-store";
+import { readPlayerCarry } from "@/lib/live-game/server/player-carry";
+import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
+import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
+import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+
+type DepositChallengeRequestBody = {
+  roomId?: string;
+  storageId?: string;
+};
+
+function parseDepositChallengeBody(body: unknown): DepositChallengeRequestBody | null {
+  if (!body || typeof body !== "object") return null;
+  const record = body as DepositChallengeRequestBody;
+  if (typeof record.roomId !== "string" || typeof record.storageId !== "string") {
+    return null;
+  }
+  return record;
+}
+
+function isStorageId(storageId: string): boolean {
+  return Object.values(ENGLISH_CRAFT_STORAGE_BY_TYPE).some((storage) => storage.id === storageId);
+}
+
+async function handlePost(request: Request) {
+  try {
+    assertLiveblocksSecret();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Liveblocks is not configured.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  const parsed = parseDepositChallengeBody(body);
+  if (!parsed?.roomId || !parsed.storageId) {
+    return NextResponse.json({ error: "roomId and storageId are required." }, { status: 400 });
+  }
+
+  const roomId = parsed.roomId.trim();
+  const storageId = parsed.storageId.trim();
+  const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
+
+  if (!roomId.startsWith("wke-live-game-")) {
+    return NextResponse.json({ error: "Invalid room id." }, { status: 400 });
+  }
+  if (!isStorageId(storageId)) {
+    return NextResponse.json({ error: "Unknown storage building." }, { status: 400 });
+  }
+
+  const storage = await readLiveGameStorageJson(roomId);
+  if (!storage?.session) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
+  if (storage.session.phase !== "playing") {
+    return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
+  }
+
+  const carry = readPlayerCarry(storage, playerId);
+  if (!carry) {
+    return NextResponse.json({ error: "Nothing to deposit." }, { status: 409 });
+  }
+
+  const storageDef = Object.values(ENGLISH_CRAFT_STORAGE_BY_TYPE).find((entry) => entry.id === storageId);
+  if (!storageDef || storageDef.resourceType !== carry.resourceType) {
+    return NextResponse.json({ error: "Wrong storage for what you are carrying." }, { status: 409 });
+  }
+
+  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
+  const spellMetadata = getQuestionSetSpellMetadata(questionSetId, carry.questionId);
+  if (!spellMetadata) {
+    return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
+  }
+
+  const position = storage.playerPositions?.[playerId];
+  const interactTarget = toStorageInteractTarget(storageDef);
+  if (
+    !position ||
+    Date.now() - position.updatedAt > 5_000 ||
+    !findNearestInteractable(position.x, position.y, [interactTarget])
+  ) {
+    return NextResponse.json({ error: "Move closer to storage." }, { status: 409 });
+  }
+
+  const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId: storageId });
+  if (existing) {
+    return NextResponse.json({
+      challengeId: existing.challengeId,
+      expiresAt: new Date(existing.expiresAt).toISOString(),
+      spell: toClientDepositSpell({
+        resourceType: carry.resourceType,
+        spellHint: spellMetadata.spellHint,
+        storageLabel: storageDef.label,
+      }),
+    });
+  }
+
+  const challenge = await createLiveGameChallenge({
+    roomId,
+    playerId,
+    nodeId: storageId,
+    questionId: carry.questionId,
+  });
+
+  return NextResponse.json({
+    challengeId: challenge.challengeId,
+    expiresAt: new Date(challenge.expiresAt).toISOString(),
+    spell: toClientDepositSpell({
+      resourceType: carry.resourceType,
+      spellHint: spellMetadata.spellHint,
+      storageLabel: storageDef.label,
+    }),
+  });
+}
+
+export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
+      return NextResponse.json({ error: "Not authorized." }, { status: 401 });
+    }
+    console.error("Live-game deposit challenge request failed", error);
+    return NextResponse.json(
+      { error: "The deposit challenge service is temporarily unavailable. Please try again." },
+      { status: 503 },
+    );
+  }
+}

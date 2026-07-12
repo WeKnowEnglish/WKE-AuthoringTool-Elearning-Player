@@ -1,14 +1,22 @@
 import "server-only";
+import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
 import type {
   EnglishCraftCraftQuestionClient,
   EnglishCraftMcQuestionClient,
 } from "@/lib/live-game/modes/english-craft/questions-client";
+import type { EnglishCraftDepositSpellClient } from "@/lib/live-game/modes/english-craft/questions-deposit-client";
 
 export type EnglishCraftMcQuestion = {
   id: string;
   prompt: string;
   options: string[];
   correctAnswer: string;
+};
+
+/** Adjective bank items — targetWord and spellHint are server-only until Phase 3D. */
+export type EnglishCraftAdjectiveQuestion = EnglishCraftMcQuestion & {
+  targetWord: string;
+  spellHint: string;
 };
 
 /** Pilot MC bank — server holds answers; client receives prompts only. */
@@ -153,4 +161,27 @@ export function isCraftAnswerCorrect(questionId: string, order: readonly string[
   if (!question) return false;
   if (order.length !== question.correctOrder.length) return false;
   return order.every((word, index) => word === question.correctOrder[index]);
+}
+
+export function normalizeDepositSpelling(spelling: string): string {
+  return spelling.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+export function toClientDepositSpell(input: {
+  resourceType: LiveGameResourceType;
+  spellHint: string;
+  storageLabel: string;
+}): EnglishCraftDepositSpellClient {
+  return {
+    resourceType: input.resourceType,
+    spellHint: input.spellHint,
+    storageLabel: input.storageLabel,
+  };
+}
+
+export function isAdjectiveDepositSpellCorrect(question: EnglishCraftMcQuestion, spelling: string): boolean {
+  if (!("targetWord" in question)) return false;
+  const adjective = question as EnglishCraftAdjectiveQuestion;
+  if (!adjective.targetWord) return false;
+  return normalizeDepositSpelling(spelling) === normalizeDepositSpelling(adjective.targetWord);
 }

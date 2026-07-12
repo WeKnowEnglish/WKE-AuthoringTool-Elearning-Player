@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export type TeacherClassActionResult =
@@ -13,7 +14,7 @@ async function requireTeacherUserId(): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.id || user.app_metadata?.role !== "teacher") {
+  if (!user?.id || !isTeacher(user)) {
     throw new Error("Teacher authentication required.");
   }
   return user.id;

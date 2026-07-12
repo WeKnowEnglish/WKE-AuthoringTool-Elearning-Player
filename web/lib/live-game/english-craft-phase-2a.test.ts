@@ -42,7 +42,7 @@ describe("live-game interact", () => {
   });
 
   it("returns null when no tree is in range", () => {
-    const target = findNearestInteractable(0, 0, ENGLISH_CRAFT_WOOD_TREES_V1);
+    const target = findNearestInteractable(-500, -500, ENGLISH_CRAFT_WOOD_TREES_V1);
     expect(target).toBeNull();
   });
 });

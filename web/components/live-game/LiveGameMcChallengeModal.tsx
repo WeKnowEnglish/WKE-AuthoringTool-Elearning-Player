@@ -5,11 +5,14 @@ import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
+import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
+import { harvestMcModalTitle } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import type { EnglishCraftMcQuestionClient } from "@/lib/live-game/modes/english-craft/questions-client";
 
 type Props = {
   open: boolean;
   question: EnglishCraftMcQuestionClient | null;
+  resourceType?: LiveGameResourceType;
   tokenStatus?: LiveGameChallengeTokenStatus;
   isSubmitting?: boolean;
   feedback?: "correct" | "incorrect" | null;
@@ -21,6 +24,7 @@ type Props = {
 export function LiveGameMcChallengeModal({
   open,
   question,
+  resourceType = "wood",
   tokenStatus = "ready",
   isSubmitting = false,
   feedback,
@@ -59,7 +63,7 @@ export function LiveGameMcChallengeModal({
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <h2 id="live-game-mc-title" className="text-xl font-extrabold text-kid-ink">
-                Chop tree — vocab check
+                {harvestMcModalTitle(resourceType)}
               </h2>
               <button
                 type="button"

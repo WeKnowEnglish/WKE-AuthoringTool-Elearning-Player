@@ -3,6 +3,13 @@ import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   ENGLISH_CRAFT_CRAFT_BENCH_ID,
 } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import {
+  formatMissingRecipeResources,
+  formatRecipeFullCostSummary,
+  getCraftRecipe,
+  isCraftRecipeId,
+  missingRecipeRequirements,
+} from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
 import { toClientCraftQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
 import { getCraftQuestionFromSet, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
 import {
@@ -10,22 +17,24 @@ import {
   findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
 import {
-  canStartCraftChallenge,
-  isBridgeCrafted,
+  canStartRecipeCraft,
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { ENGLISH_CRAFT_CRAFT_BENCH_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import { readResourcePool } from "@/lib/live-game/resource-pool";
+import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 
 type CraftChallengeRequestBody = {
   roomId?: string;
+  recipeId?: string;
 };
 
 function parseCraftChallengeBody(body: unknown): CraftChallengeRequestBody | null {
   if (!body || typeof body !== "object") return null;
   const record = body as CraftChallengeRequestBody;
-  if (typeof record.roomId !== "string") {
+  if (typeof record.roomId !== "string" || typeof record.recipeId !== "string") {
     return null;
   }
   return record;
@@ -47,10 +56,16 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseCraftChallengeBody(body);
-  if (!parsed?.roomId) {
-    return NextResponse.json({ error: "roomId is required." }, { status: 400 });
+  if (!parsed?.roomId || !parsed.recipeId) {
+    return NextResponse.json({ error: "roomId and recipeId are required." }, { status: 400 });
   }
 
+  if (!isCraftRecipeId(parsed.recipeId)) {
+    return NextResponse.json({ error: "Unknown craft recipe." }, { status: 400 });
+  }
+
+  const recipeId = parsed.recipeId;
+  const recipe = getCraftRecipe(recipeId);
   const roomId = parsed.roomId.trim();
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
   const nodeId = ENGLISH_CRAFT_CRAFT_BENCH_ID;
@@ -68,11 +83,13 @@ async function handlePost(request: Request) {
   if (storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
-  if (isBridgeCrafted(storage)) {
-    return NextResponse.json({ error: "The bridge is already crafted." }, { status: 409 });
-  }
-  if (!canStartCraftChallenge(storage)) {
-    return NextResponse.json({ error: "Team needs 10 wood to craft the bridge." }, { status: 409 });
+  if (!canStartRecipeCraft(storage, recipeId)) {
+    const crafted = readCraftedItems(storage);
+    const missing = missingRecipeRequirements(readResourcePool(storage), crafted, recipe);
+    return NextResponse.json(
+      { error: formatMissingRecipeResources(missing, recipe), missing, recipeId },
+      { status: 409 },
+    );
   }
   const position = storage.playerPositions?.[playerId];
   if (
@@ -89,6 +106,9 @@ async function handlePost(request: Request) {
       challengeId: existing.challengeId,
       expiresAt: new Date(existing.expiresAt).toISOString(),
       question: toClientCraftQuestion(craftQuestion),
+      recipeId,
+      recipeLabel: recipe.label,
+      costSummary: formatRecipeFullCostSummary(recipe),
     });
   }
 
@@ -103,6 +123,9 @@ async function handlePost(request: Request) {
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
     question: toClientCraftQuestion(craftQuestion),
+    recipeId,
+    recipeLabel: recipe.label,
+    costSummary: formatRecipeFullCostSummary(recipe),
   });
 }
 

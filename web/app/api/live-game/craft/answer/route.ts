@@ -1,20 +1,24 @@
 import { NextResponse } from "next/server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { ENGLISH_CRAFT_CRAFT_BENCH_ID } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import { isCraftRecipeId } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
 import { isQuestionSetCraftAnswerCorrect, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
-import { awardCraftBridge } from "@/lib/live-game/server/award-craft-bridge";
+import { awardCraftRecipe } from "@/lib/live-game/server/award-craft-recipe";
 import {
   claimLiveGameChallengeAward,
   getLiveGameChallenge,
   markChallengeAwarded,
 } from "@/lib/live-game/server/challenge-store";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
+import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
+import { readResourcePool } from "@/lib/live-game/resource-pool";
 
 type CraftAnswerRequestBody = {
   roomId?: string;
   challengeId?: string;
   order?: string[];
+  recipeId?: string;
 };
 
 function parseCraftAnswerBody(body: unknown): CraftAnswerRequestBody | null {
@@ -23,6 +27,7 @@ function parseCraftAnswerBody(body: unknown): CraftAnswerRequestBody | null {
   if (
     typeof record.roomId !== "string" ||
     typeof record.challengeId !== "string" ||
+    typeof record.recipeId !== "string" ||
     !Array.isArray(record.order)
   ) {
     return null;
@@ -31,6 +36,19 @@ function parseCraftAnswerBody(body: unknown): CraftAnswerRequestBody | null {
     return null;
   }
   return record;
+}
+
+function craftAnswerPayload(
+  storage: Awaited<ReturnType<typeof readLiveGameStorageJson>>,
+  correct: boolean,
+  alreadyAwarded = false,
+) {
+  return {
+    correct,
+    poolTotal: readResourcePool(storage),
+    craftedItems: readCraftedItems(storage),
+    alreadyAwarded,
+  };
 }
 
 async function handlePost(request: Request) {
@@ -49,15 +67,20 @@ async function handlePost(request: Request) {
   }
 
   const parsed = parseCraftAnswerBody(body);
-  if (!parsed?.roomId || !parsed.challengeId || !parsed.order) {
+  if (!parsed?.roomId || !parsed.challengeId || !parsed.order || !parsed.recipeId) {
     return NextResponse.json(
-      { error: "roomId, challengeId, and order are required." },
+      { error: "roomId, challengeId, recipeId, and order are required." },
       { status: 400 },
     );
   }
 
+  if (!isCraftRecipeId(parsed.recipeId)) {
+    return NextResponse.json({ error: "Unknown craft recipe." }, { status: 400 });
+  }
+
   const roomId = parsed.roomId.trim();
   const challengeId = parsed.challengeId.trim();
+  const recipeId = parsed.recipeId;
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
   const order = parsed.order.map((word) => word.trim());
 
@@ -73,13 +96,7 @@ async function handlePost(request: Request) {
   }
   if (challenge.status === "awarded") {
     const storage = await readLiveGameStorageJson(roomId);
-    return NextResponse.json({
-      correct: true,
-      poolTotal: { wood: storage?.resourcePool?.wood ?? 0 },
-      bridgeCrafted: storage?.craftedItems?.bridge === true,
-      riverCrossingUnlocked: storage?.unlockedObjects?.river_crossing === true,
-      alreadyCrafted: true,
-    });
+    return NextResponse.json(craftAnswerPayload(storage, true, true));
   }
 
   const storage = await readLiveGameStorageJson(roomId);
@@ -93,11 +110,7 @@ async function handlePost(request: Request) {
     order,
   );
   if (!correct) {
-    return NextResponse.json({
-      correct: false,
-      poolTotal: { wood: storage.resourcePool?.wood ?? 0 },
-      bridgeCrafted: storage.craftedItems?.bridge === true,
-    });
+    return NextResponse.json(craftAnswerPayload(storage, false));
   }
 
   const claim = await claimLiveGameChallengeAward(challengeId);
@@ -112,28 +125,22 @@ async function handlePost(request: Request) {
   }
   if (claim.kind === "awarded") {
     const latest = await readLiveGameStorageJson(roomId);
-    return NextResponse.json({
-      correct: true,
-      poolTotal: { wood: latest?.resourcePool?.wood ?? 0 },
-      bridgeCrafted: latest?.craftedItems?.bridge === true,
-      riverCrossingUnlocked: latest?.unlockedObjects?.river_crossing === true,
-      alreadyCrafted: true,
-    });
+    return NextResponse.json(craftAnswerPayload(latest, true, true));
   }
 
-  const award = await awardCraftBridge({ roomId, challengeId });
+  const award = await awardCraftRecipe({ roomId, challengeId, recipeId });
   if (!award) {
-    return NextResponse.json({ error: "Could not craft the bridge right now." }, { status: 409 });
+    return NextResponse.json({ error: "Could not complete craft right now." }, { status: 409 });
   }
 
   await markChallengeAwarded(challengeId);
 
   return NextResponse.json({
     correct: true,
-    poolTotal: { wood: award.wood },
-    bridgeCrafted: award.bridgeCrafted,
-    riverCrossingUnlocked: award.riverCrossingUnlocked,
-    alreadyCrafted: award.alreadyCrafted,
+    poolTotal: award.poolTotal,
+    craftedItems: award.craftedItems,
+    recipeId: award.recipeId,
+    alreadyAwarded: award.alreadyAwarded,
   });
 }
 

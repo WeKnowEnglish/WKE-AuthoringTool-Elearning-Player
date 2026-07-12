@@ -13,6 +13,7 @@ export type RemotePlayerState = {
   color: string;
   name: string;
   avatarId: string;
+  carriedResourceType: LiveGamePresence["carriedResourceType"];
 };
 
 type PlayerMeta = {
@@ -31,6 +32,7 @@ function readPresence(presence: unknown): LiveGamePresence | null {
     isMoving: p.isMoving ?? false,
     animation: p.animation ?? "idle",
     avatarId: p.avatarId ?? LIVE_GAME_DEFAULT_AVATAR_ID,
+    carriedResourceType: p.carriedResourceType ?? null,
   };
 }
 
@@ -54,6 +56,7 @@ export function useRemotePlayers(playerMetaByUserId: Map<string, PlayerMeta>) {
         color: meta.color,
         name: meta.name,
         avatarId: presence.avatarId,
+        carriedResourceType: presence.carriedResourceType,
       };
     })
     .filter((entry): entry is RemotePlayerState => entry !== null);

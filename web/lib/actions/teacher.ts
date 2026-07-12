@@ -1,5 +1,6 @@
 ﻿"use server";
 
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export async function requireTeacher() {
@@ -7,7 +8,7 @@ export async function requireTeacher() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.app_metadata?.role !== "teacher") {
+  if (!user || !isTeacher(user)) {
     throw new Error("Teacher authentication required.");
   }
   return { supabase, user };

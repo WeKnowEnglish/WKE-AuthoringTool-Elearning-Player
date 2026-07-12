@@ -3,14 +3,23 @@
 import { memo } from "react";
 import Image from "next/image";
 import { clsx } from "clsx";
-import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
-import type { LiveGameResourceNodeState } from "@/lib/live-game/liveblocks/config";
-import { ENGLISH_CRAFT_ART } from "@/lib/live-game/modes/english-craft/english-craft-art";
+import type { LiveGameCraftedItems, LiveGameResourceNodeState, LiveGameResourcePool } from "@/lib/live-game/liveblocks/config";
 import {
+  ENGLISH_CRAFT_ART,
+  resolveResourceNodeArt,
+  resolveStorageArt,
+  type EnglishCraftResourceType,
+} from "@/lib/live-game/modes/english-craft/english-craft-art";
+import {
+  ENGLISH_CRAFT_DOCK_V1,
   ENGLISH_CRAFT_OBJECTS_Z_BASE,
+  ENGLISH_CRAFT_RESOURCE_NODES_V1,
   ENGLISH_CRAFT_STRUCTURES_V1,
-  ENGLISH_CRAFT_WOOD_TREES_V1,
+  type EnglishCraftStructureKind,
 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS } from "@/lib/live-game/server/read-crafted-items";
+import { EMPTY_LIVE_GAME_RESOURCE_POOL, resolveStorageFillLevel } from "@/lib/live-game/resource-pool";
+import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 
 function pctX(x: number, mapW: number): string {
   return `${(x / mapW) * 100}%`;
@@ -27,7 +36,8 @@ function objectZIndex(stackRow: number): number {
 type Props = {
   map: LiveGameMapDef;
   resourceNodes: Record<string, LiveGameResourceNodeState>;
-  bridgeCrafted?: boolean;
+  resourcePool?: LiveGameResourcePool;
+  craftedItems?: LiveGameCraftedItems;
   now?: number;
 };
 
@@ -74,29 +84,58 @@ function MapSprite({ map, x, y, displayWidthPx, stackRow, src, alt, className }:
   );
 }
 
+function structureArt(
+  kind: EnglishCraftStructureKind,
+  crafted: LiveGameCraftedItems,
+  resourceType: EnglishCraftResourceType | undefined,
+  pool: LiveGameResourcePool,
+): string | null {
+  switch (kind) {
+    case "bridge":
+      return crafted.bridge ? ENGLISH_CRAFT_ART.bridgeBuilt : ENGLISH_CRAFT_ART.bridgeUnbuilt;
+    case "flag":
+      return ENGLISH_CRAFT_ART.flag;
+    case "workbench":
+      return crafted.benchBuilt ? ENGLISH_CRAFT_ART.workbench : ENGLISH_CRAFT_ART.workbenchRubble;
+    case "dock":
+      return null;
+    case "log_storage":
+      return resolveStorageArt("wood", resolveStorageFillLevel(pool.wood));
+    case "stone_storage":
+      return resolveStorageArt("stone", resolveStorageFillLevel(pool.stone));
+    case "wheat_storage":
+      return resolveStorageArt("wheat", resolveStorageFillLevel(pool.wheat));
+    case "cotton_storage":
+      return resolveStorageArt("cotton", resolveStorageFillLevel(pool.cotton));
+    default:
+      if (resourceType) {
+        return resolveStorageArt(resourceType, resolveStorageFillLevel(pool[resourceType]));
+      }
+      return ENGLISH_CRAFT_ART.workbench;
+  }
+}
+
+const NODE_DISPLAY_PX: Record<EnglishCraftResourceType, { available: number; depleted: number }> = {
+  wood: { available: 84, depleted: 60 },
+  stone: { available: 80, depleted: 64 },
+  wheat: { available: 76, depleted: 60 },
+  cotton: { available: 76, depleted: 60 },
+};
+
 export const EnglishCraftObjectsLayer = memo(EnglishCraftObjectsLayerInner);
 
 function EnglishCraftObjectsLayerInner({
   map,
   resourceNodes,
-  bridgeCrafted = false,
+  resourcePool = EMPTY_LIVE_GAME_RESOURCE_POOL,
+  craftedItems = DEFAULT_LIVE_GAME_CRAFTED_ITEMS,
   now,
 }: Props) {
-  const treeDisplayPx = 84;
-  const stumpDisplayPx = 60;
-
   return (
     <div className="pointer-events-none absolute inset-0">
       {ENGLISH_CRAFT_STRUCTURES_V1.map((structure) => {
-        let src = ENGLISH_CRAFT_ART.workbench;
-        if (structure.kind === "bridge") {
-          src = bridgeCrafted ? ENGLISH_CRAFT_ART.bridgeBuilt : ENGLISH_CRAFT_ART.bridgeUnbuilt;
-        } else if (structure.kind === "flag") {
-          src = ENGLISH_CRAFT_ART.flag;
-        } else if (structure.kind === "log_storage") {
-          src = ENGLISH_CRAFT_ART.logStorage;
-        }
-
+        const src = structureArt(structure.kind, craftedItems, structure.resourceType, resourcePool);
+        if (!src) return null;
         return (
           <MapSprite
             key={structure.id}
@@ -111,21 +150,35 @@ function EnglishCraftObjectsLayerInner({
         );
       })}
 
-      {ENGLISH_CRAFT_WOOD_TREES_V1.map((tree) => {
-        const node = resourceNodes[tree.id];
-        const onCooldown = isNodeOnCooldown(node, now);
-        const displayWidthPx = onCooldown ? stumpDisplayPx : treeDisplayPx;
+      {craftedItems.boat ?
+        <MapSprite
+          key="boat-at-dock"
+          map={map}
+          x={ENGLISH_CRAFT_DOCK_V1.x}
+          y={ENGLISH_CRAFT_DOCK_V1.y}
+          displayWidthPx={ENGLISH_CRAFT_DOCK_V1.displayWidthPx}
+          stackRow={ENGLISH_CRAFT_DOCK_V1.row}
+          src={ENGLISH_CRAFT_ART.boat}
+          alt="Escape boat"
+        />
+      : null}
+
+      {ENGLISH_CRAFT_RESOURCE_NODES_V1.map((node) => {
+        const nodeState = resourceNodes[node.id];
+        const onCooldown = isNodeOnCooldown(nodeState, now);
+        const sizes = NODE_DISPLAY_PX[node.resourceType];
+        const displayWidthPx = onCooldown ? sizes.depleted : sizes.available;
 
         return (
           <MapSprite
-            key={tree.id}
+            key={node.id}
             map={map}
-            x={tree.x}
-            y={tree.y}
+            x={node.x}
+            y={node.y}
             displayWidthPx={displayWidthPx}
-            stackRow={tree.row}
-            src={onCooldown ? ENGLISH_CRAFT_ART.stump : ENGLISH_CRAFT_ART.tree}
-            alt={onCooldown ? "Tree stump" : tree.label}
+            stackRow={node.row}
+            src={resolveResourceNodeArt(node.resourceType, onCooldown)}
+            alt={onCooldown ? `${node.label} (resting)` : node.label}
             className={onCooldown ? "opacity-90" : undefined}
           />
         );

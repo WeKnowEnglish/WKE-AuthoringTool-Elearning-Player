@@ -1,26 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { ENGLISH_CRAFT_WOOD_TREES_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import { ENGLISH_CRAFT_RESOURCE_NODES_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import {
-  ENGLISH_CRAFT_LOBBY_BRIDGE_CRAFTED,
+  ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS,
   ENGLISH_CRAFT_LOBBY_RESOURCE_NODES,
   createEnglishCraftLobbyResourceNodes,
   resolveEnglishCraftMapVisuals,
 } from "@/lib/live-game/modes/english-craft/lobby-map-v1";
 
 describe("english-craft lobby map visuals", () => {
-  it("provides a full-tree snapshot for every wood node", () => {
+  it("provides a full-node snapshot for every resource node", () => {
     const nodes = createEnglishCraftLobbyResourceNodes();
-    expect(Object.keys(nodes)).toHaveLength(ENGLISH_CRAFT_WOOD_TREES_V1.length);
-    for (const tree of ENGLISH_CRAFT_WOOD_TREES_V1) {
-      const node = nodes[tree.id];
+    expect(Object.keys(nodes)).toHaveLength(ENGLISH_CRAFT_RESOURCE_NODES_V1.length);
+    for (const nodeDef of ENGLISH_CRAFT_RESOURCE_NODES_V1) {
+      const node = nodes[nodeDef.id];
       expect(node?.available).toBe(true);
       expect(node?.cooldownEndsAt).toBeNull();
       expect(node?.collectedCount).toBe(0);
+      expect(node?.resourceType).toBe(nodeDef.resourceType);
     }
   });
 
-  it("keeps lobby bridge unbuilt", () => {
-    expect(ENGLISH_CRAFT_LOBBY_BRIDGE_CRAFTED).toBe(false);
+  it("keeps lobby crafted items at defaults", () => {
+    expect(ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.benchBuilt).toBe(false);
+    expect(ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.boat).toBe(false);
+    expect(ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.bridge).toBe(false);
   });
 
   it("ignores live gameplay storage when visual mode is lobby", () => {
@@ -35,20 +38,31 @@ describe("english-craft lobby map visuals", () => {
           collectedCount: 5,
         },
       },
-      bridgeCrafted: true,
+      craftedItems: {
+        benchBuilt: true,
+        hammers: 5,
+        boat: true,
+        bridge: true,
+      },
     });
     expect(resolved.resourceNodes).toBe(ENGLISH_CRAFT_LOBBY_RESOURCE_NODES);
-    expect(resolved.bridgeCrafted).toBe(false);
+    expect(resolved.craftedItems).toBe(ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS);
   });
 
   it("passes through playing visuals from storage", () => {
     const resourceNodes = ENGLISH_CRAFT_LOBBY_RESOURCE_NODES;
+    const craftedItems = {
+      benchBuilt: true,
+      hammers: 2,
+      boat: false,
+      bridge: true,
+    };
     const resolved = resolveEnglishCraftMapVisuals({
       visualMode: "playing",
       resourceNodes,
-      bridgeCrafted: true,
+      craftedItems,
     });
     expect(resolved.resourceNodes).toBe(resourceNodes);
-    expect(resolved.bridgeCrafted).toBe(true);
+    expect(resolved.craftedItems).toBe(craftedItems);
   });
 });

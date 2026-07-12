@@ -28,6 +28,7 @@ export type LiveGamePresence = {
   isMoving: boolean;
   animation: LiveGameAnimation;
   avatarId: string;
+  carriedResourceType: LiveGameResourceType | null;
 };
 
 export type LiveGameLobbyPlayer = {
@@ -58,10 +59,20 @@ export type LiveGameSessionState = {
   questionSetVersion: number;
 };
 
-export type LiveGameResourceType = "wood";
+export type LiveGameResourceType = "wood" | "stone" | "wheat" | "cotton";
 
 export type LiveGameResourcePool = {
   wood: number;
+  stone: number;
+  wheat: number;
+  cotton: number;
+};
+
+export type LiveGamePlayerCarry = {
+  resourceType: LiveGameResourceType;
+  sourceNodeId: string;
+  questionId: string;
+  harvestedAt: number;
 };
 
 export type LiveGameResourceNodeState = {
@@ -73,21 +84,47 @@ export type LiveGameResourceNodeState = {
 };
 
 export type LiveGameAwardReceipt = {
-  wood: number;
+  awardKind: "carry" | "pool";
+  resourceType: LiveGameResourceType;
   nodeCooldownEndsAt: number;
+  /** Pool count after a deposit award. */
+  poolCount?: number;
+  /** @deprecated Pre-3C harvest receipts used wood instead of awardKind. */
+  wood?: number;
 };
 
 export type LiveGameCraftedItems = {
+  benchBuilt: boolean;
+  hammers: number;
+  boat: boolean;
+  /** @deprecated Removed in 4F — bridge craft win path */
   bridge: boolean;
+};
+
+export type LiveGamePlayerInventory = {
+  bread: number;
+};
+
+export type LiveGamePlayerHunger = {
+  value: number;
+  lastUpdatedAt: number;
 };
 
 export type LiveGameUnlockedObjects = {
   river_crossing: boolean;
+  boat_boarding?: boolean;
 };
 
 export type LiveGameCraftReceipt = {
+  recipeId?: string;
   wood: number;
-  bridgeCrafted: boolean;
+  stone?: number;
+  wheat?: number;
+  cotton?: number;
+  benchBuilt?: boolean;
+  hammers?: number;
+  boatCrafted?: boolean;
+  bridgeCrafted?: boolean;
 };
 
 export type LiveGamePlayerPosition = { x: number; y: number; updatedAt: number };
@@ -103,6 +140,9 @@ export type LiveGameStorageRoot = {
   unlockedObjects: LiveObject<LiveGameUnlockedObjects>;
   craftReceipts: LiveMap<string, LiveObject<LiveGameCraftReceipt>>;
   playerPositions: LiveMap<string, LiveObject<LiveGamePlayerPosition>>;
+  playerCarry: LiveMap<string, LiveObject<LiveGamePlayerCarry>>;
+  playerInventory: LiveMap<string, LiveObject<LiveGamePlayerInventory>>;
+  playerHunger: LiveMap<string, LiveObject<LiveGamePlayerHunger>>;
 };
 
 /** Plain snapshot returned by useStorage selectors on the client. */
@@ -116,6 +156,9 @@ export type LiveGameStorageSnapshot = {
   unlockedObjects?: LiveGameUnlockedObjects;
   craftReceipts?: Record<string, LiveGameCraftReceipt>;
   playerPositions?: Record<string, LiveGamePlayerPosition>;
+  playerCarry?: Record<string, LiveGamePlayerCarry>;
+  playerInventory?: Record<string, LiveGamePlayerInventory>;
+  playerHunger?: Record<string, LiveGamePlayerHunger>;
 };
 
 export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {
@@ -125,4 +168,5 @@ export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {
   isMoving: false,
   animation: "idle",
   avatarId: LIVE_GAME_DEFAULT_AVATAR_ID,
+  carriedResourceType: null,
 };

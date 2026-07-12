@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ENGLISH_CRAFT_WOOD_TREE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import { toClientMcQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
 import { getQuestionFromSet, pickQuestionFromSet, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
@@ -7,6 +7,7 @@ import {
   createLiveGameChallenge,
   findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
+import { isPlayerCarrying } from "@/lib/live-game/server/player-carry";
 import {
   isResourceNodeAvailable,
   readLiveGameStorageJson,
@@ -59,7 +60,8 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Invalid room id." }, { status: 400 });
   }
 
-  if (!ENGLISH_CRAFT_WOOD_TREE_BY_ID[nodeId]) {
+  const nodeDef = ENGLISH_CRAFT_RESOURCE_NODE_BY_ID[nodeId];
+  if (!nodeDef) {
     return NextResponse.json({ error: "Unknown resource node." }, { status: 400 });
   }
 
@@ -70,19 +72,25 @@ async function handlePost(request: Request) {
   if (storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
+  if (isPlayerCarrying(storage, playerId)) {
+    return NextResponse.json(
+      { error: "You are already carrying something. Deposit it first." },
+      { status: 409 },
+    );
+  }
 
   const nodeState = storage.resourceNodes?.[nodeId];
   const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
   if (!isResourceNodeAvailable(nodeState)) {
-    return NextResponse.json({ error: "This tree is on cooldown." }, { status: 409 });
+    return NextResponse.json({ error: "This resource is on cooldown." }, { status: 409 });
   }
   const position = storage.playerPositions?.[playerId];
   if (
     !position ||
     Date.now() - position.updatedAt > 5_000 ||
-    !findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_WOOD_TREE_BY_ID[nodeId]!])
+    !findNearestInteractable(position.x, position.y, [nodeDef])
   ) {
-    return NextResponse.json({ error: "Move closer to this tree." }, { status: 409 });
+    return NextResponse.json({ error: "Move closer to this resource." }, { status: 409 });
   }
 
   const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });

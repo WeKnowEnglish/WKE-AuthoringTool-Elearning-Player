@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { resolveLiveGameCharacter } from "@/lib/live-game/characters/live-game-characters";
 import type { LiveGameLobbyPlayerEntry } from "@/lib/live-game/liveblocks/use-live-game-lobby";
+import { LIVE_GAME_MAX_STUDENTS } from "@/lib/live-game/limits";
 import {
   ENGLISH_CRAFT_DURATION_OPTIONS,
   ENGLISH_CRAFT_MODE,
@@ -106,7 +107,7 @@ function LiveGameHostLobbyPanelInner({
 
         <section className="space-y-2">
           <p className="text-xs font-semibold text-white/75">
-            {studentCount} {studentCount === 1 ? "student" : "students"} · {connectedCount} connected
+            {studentCount}/{LIVE_GAME_MAX_STUDENTS} students · {connectedCount} connected
           </p>
           <ul className="space-y-1.5">
             {players.length === 0 || (players.length === 1 && players[0]?.player.role === "host") ?

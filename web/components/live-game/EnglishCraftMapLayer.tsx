@@ -4,6 +4,7 @@ import { memo, type ReactNode } from "react";
 import { clsx } from "clsx";
 import { GrassTilemapLayer } from "@/components/live-game/GrassTilemapLayer";
 import { ENGLISH_CRAFT_RIVER_OVERLAY } from "@/lib/live-game/modes/english-craft/map-v1";
+import { ENGLISH_CRAFT_PERIMETER_WATER_OVERLAYS } from "@/lib/live-game/modes/english-craft/tilemap-v1";
 import { LIVE_GAME_GROUND_COLOR } from "@/lib/live-game/tiles/grass-tile-pack";
 import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 
@@ -75,6 +76,19 @@ function EnglishCraftMapLayerInner({
       {tilemap ?
         <>
           <GrassTilemapLayer />
+          {ENGLISH_CRAFT_PERIMETER_WATER_OVERLAYS.map((overlay, index) => (
+            <div
+              key={`perimeter-water-${index}`}
+              className="pointer-events-none absolute z-[1] bg-gradient-to-b from-sky-300/90 via-sky-500/95 to-sky-700/95 shadow-inner"
+              style={{
+                left: pctX(overlay.x, widthPx),
+                top: pctY(overlay.y, heightPx),
+                width: pctW(overlay.w, widthPx),
+                height: pctH(overlay.h, heightPx),
+              }}
+              aria-hidden
+            />
+          ))}
           <div
             className="pointer-events-none absolute z-[1] rounded-sm bg-gradient-to-b from-sky-300/90 via-sky-500/95 to-sky-700/95 shadow-inner"
             style={{

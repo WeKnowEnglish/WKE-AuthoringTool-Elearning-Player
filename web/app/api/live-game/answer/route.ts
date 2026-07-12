@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { isQuestionSetAnswerCorrect, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
-import { awardWoodForNode } from "@/lib/live-game/server/award-wood";
+import { awardCarryForNode } from "@/lib/live-game/server/award-carry";
+import { normalizeAwardReceipt } from "@/lib/live-game/server/award-receipt";
 import {
   claimLiveGameChallengeAward,
   getLiveGameChallenge,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/live-game/server/challenge-store";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
+import { readResourcePool } from "@/lib/live-game/resource-pool";
 
 type AnswerRequestBody = {
   roomId?: string;
@@ -28,6 +30,25 @@ function parseAnswerBody(body: unknown): AnswerRequestBody | null {
     return null;
   }
   return record;
+}
+
+function harvestAnswerPayload(
+  storage: Awaited<ReturnType<typeof readLiveGameStorageJson>>,
+  input: {
+    correct: boolean;
+    carryGranted?: { type: string; sourceNodeId: string } | null;
+    nodeCooldownEndsAt?: number;
+    alreadyAwarded?: boolean;
+  },
+) {
+  return {
+    correct: input.correct,
+    carryGranted: input.carryGranted ?? null,
+    resourceAwarded: null,
+    poolTotal: readResourcePool(storage),
+    nodeCooldownEndsAt: input.nodeCooldownEndsAt,
+    alreadyAwarded: input.alreadyAwarded,
+  };
 }
 
 async function handlePost(request: Request) {
@@ -65,20 +86,30 @@ async function handlePost(request: Request) {
   if (challenge.roomId !== roomId || challenge.playerId !== playerId) {
     return NextResponse.json({ error: "Challenge mismatch." }, { status: 403 });
   }
-  if (challenge.status === "awarded") {
-    const storage = await readLiveGameStorageJson(roomId);
-    const wood = storage?.resourcePool?.wood ?? 0;
-    return NextResponse.json({
-      correct: true,
-      resourceAwarded: { type: "wood", amount: 1 },
-      poolTotal: { wood },
-      alreadyAwarded: true,
-    });
-  }
 
   const storage = await readLiveGameStorageJson(roomId);
   if (!storage?.session || storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
+  }
+
+  if (challenge.status === "awarded") {
+    const receipt = normalizeAwardReceipt(storage.awardReceipts?.[challengeId]);
+    if (receipt?.awardKind === "carry") {
+      return NextResponse.json(
+        harvestAnswerPayload(storage, {
+          correct: true,
+          carryGranted: { type: receipt.resourceType, sourceNodeId: challenge.nodeId },
+          nodeCooldownEndsAt: receipt.nodeCooldownEndsAt,
+          alreadyAwarded: true,
+        }),
+      );
+    }
+    return NextResponse.json(
+      harvestAnswerPayload(storage, {
+        correct: true,
+        alreadyAwarded: true,
+      }),
+    );
   }
 
   const correct = isQuestionSetAnswerCorrect(
@@ -87,11 +118,11 @@ async function handlePost(request: Request) {
     answer,
   );
   if (!correct) {
-    return NextResponse.json({
-      correct: false,
-      resourceAwarded: null,
-      poolTotal: { wood: storage.resourcePool?.wood ?? 0 },
-    });
+    return NextResponse.json(
+      harvestAnswerPayload(storage, {
+        correct: false,
+      }),
+    );
   }
 
   const claim = await claimLiveGameChallengeAward(challengeId);
@@ -103,32 +134,42 @@ async function handlePost(request: Request) {
   }
   if (claim.kind === "awarded") {
     const latest = await readLiveGameStorageJson(roomId);
-    return NextResponse.json({
-      correct: true,
-      resourceAwarded: { type: "wood", amount: 1 },
-      poolTotal: { wood: latest?.resourcePool?.wood ?? 0 },
-      alreadyAwarded: true,
-    });
+    const receipt = normalizeAwardReceipt(latest?.awardReceipts?.[challengeId]);
+    return NextResponse.json(
+      harvestAnswerPayload(latest, {
+        correct: true,
+        carryGranted:
+          receipt?.awardKind === "carry" ?
+            { type: receipt.resourceType, sourceNodeId: challenge.nodeId }
+          : null,
+        nodeCooldownEndsAt: receipt?.nodeCooldownEndsAt,
+        alreadyAwarded: true,
+      }),
+    );
   }
 
-  const award = await awardWoodForNode({
+  const award = await awardCarryForNode({
     roomId,
+    playerId,
     nodeId: challenge.nodeId,
     challengeId,
+    questionId: challenge.questionId,
   });
   if (!award) {
-    return NextResponse.json({ error: "Could not award wood for this tree." }, { status: 409 });
+    return NextResponse.json({ error: "Could not award carry for this resource." }, { status: 409 });
   }
 
   await markChallengeAwarded(challengeId);
 
-  return NextResponse.json({
-    correct: true,
-    resourceAwarded: { type: "wood", amount: 1 },
-    poolTotal: { wood: award.wood },
-    nodeCooldownEndsAt: award.nodeCooldownEndsAt,
-    alreadyAwarded: award.alreadyAwarded,
-  });
+  const latest = await readLiveGameStorageJson(roomId);
+  return NextResponse.json(
+    harvestAnswerPayload(latest, {
+      correct: true,
+      carryGranted: { type: award.resourceType, sourceNodeId: award.sourceNodeId },
+      nodeCooldownEndsAt: award.nodeCooldownEndsAt,
+      alreadyAwarded: award.alreadyAwarded,
+    }),
+  );
 }
 
 export async function POST(request: Request) {

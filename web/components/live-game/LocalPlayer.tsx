@@ -2,9 +2,10 @@
 
 import { LiveGameMapCharacter } from "@/components/live-game/LiveGameMapCharacter";
 import { LIVE_GAME_DEFAULT_AVATAR_ID } from "@/lib/live-game/characters/boy-character";
-import type { LiveGameDirection } from "@/lib/live-game/liveblocks/config";
+import type { LiveGameDirection, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
 import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 import type { RefObject } from "react";
+import { LiveGameCarryOverlay } from "@/components/live-game/LiveGameCarryOverlay";
 
 type Props = {
   map: LiveGameMapDef;
@@ -12,6 +13,7 @@ type Props = {
   avatarId?: string;
   facing?: LiveGameDirection;
   isMoving?: boolean;
+  carriedResourceType?: LiveGameResourceType | null;
   wrapperRef: RefObject<HTMLDivElement | null>;
 };
 
@@ -21,6 +23,7 @@ export function LocalPlayer({
   avatarId = LIVE_GAME_DEFAULT_AVATAR_ID,
   facing = "right",
   isMoving = false,
+  carriedResourceType = null,
   wrapperRef,
 }: Props) {
   return (
@@ -28,6 +31,9 @@ export function LocalPlayer({
       ref={wrapperRef}
       className="pointer-events-none absolute z-30 drop-shadow-[0_0_6px_rgba(255,255,255,0.85)]"
     >
+      {carriedResourceType ?
+        <LiveGameCarryOverlay resourceType={carriedResourceType} />
+      : null}
       <LiveGameMapCharacter
         map={map}
         x={0}

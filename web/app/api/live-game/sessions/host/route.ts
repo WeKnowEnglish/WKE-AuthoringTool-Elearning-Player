@@ -16,6 +16,7 @@ import { createLiveGameInitialStorage } from "@/lib/live-game/liveblocks/initial
 import { normalizeEnglishCraftDurationMinutes } from "@/lib/live-game/modes/english-craft/config";
 import { toLiveGameCharacterId } from "@/lib/live-game/characters/live-game-characters";
 import { createMovementState } from "@/lib/live-game/engine/movement";
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { getQuestionSetVersion, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
 import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
@@ -58,7 +59,7 @@ function parseHostRequestBody(
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.app_metadata?.role !== "teacher") {
+  if (!user || !isTeacher(user)) {
     return NextResponse.json({ error: "Teacher login required." }, { status: 401 });
   }
   try {

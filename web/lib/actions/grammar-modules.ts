@@ -8,6 +8,7 @@ import {
   safeParseGrammarModule,
   type GrammarModuleParseError,
 } from "@/lib/grammar-builder/validate-module";
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { GrammarModulePersistedStatus } from "@/lib/data/grammar-modules";
 
@@ -21,7 +22,7 @@ async function requireTeacherAuth() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user?.id || user.app_metadata?.role !== "teacher") {
+  if (!user?.id || !isTeacher(user)) {
     throw new Error("Teacher authentication required.");
   }
 

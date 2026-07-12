@@ -16,6 +16,8 @@ import {
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { createMovementState } from "@/lib/live-game/engine/movement";
 import { getMapForMode } from "@/lib/live-game/modes";
+import { getLiveGameCapacity, LIVE_GAME_MAX_STUDENTS } from "@/lib/live-game/limits";
+import { withLiveGameRoomLock } from "@/lib/live-game/server/room-lock";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
@@ -46,40 +48,72 @@ export async function POST(request: Request) {
       existingIdentity.playerId
     : `guest-${randomBytes(16).toString("hex")}`);
   const requestedAvatar = toLiveGameCharacterId(body?.avatarId ?? "");
-  const liveblocks = getLiveblocksServerClient();
-  await liveblocks.mutateStorage(roomId, ({ root }) => {
-    const liveRoot = root as unknown as { get(key: string): unknown };
-    const players = root.get("players") as unknown as {
-      get(id: string): unknown;
-      set(id: string, value: LiveObject<LiveGameLobbyPlayer>): void;
-    };
-    if (!players?.get(playerId)) {
-      players.set(playerId, new LiveObject<LiveGameLobbyPlayer>({
-        name: displayName,
-        color: "#64748b",
-        role: "player",
-        isReady: false,
-        joinedAt: Date.now(),
-        avatarId: requestedAvatar,
-      }));
-      const positions = liveRoot.get("playerPositions") as import("@liveblocks/client").LiveMap<string, LiveObject<{ x: number; y: number; updatedAt: number }>>;
-      const spawn = createMovementState(
-        getMapForMode(snapshot.session.mapId, snapshot.session.modeId),
-        Object.keys(snapshot.players ?? {}).length,
-      );
-      positions?.set(playerId, new LiveObject({ ...spawn, updatedAt: Date.now() }));
+  const admission = await withLiveGameRoomLock(roomId, async () => {
+    // Re-read under the room lock so capacity and insertion use the same admission view.
+    const current = await readLiveGameStorageJson(roomId);
+    if (!current?.session) return { ok: false as const, status: 404, code: "room_not_found", error: "Room not found." };
+    if (current.session.phase !== "lobby") {
+      return { ok: false as const, status: 409, code: "game_started", error: "This game has already started." };
     }
+
+    const capacity = getLiveGameCapacity(current.players, playerId);
+    if (!capacity.canJoinAsStudent) {
+      const invalidHostCount = capacity.hostCount !== 1;
+      return {
+        ok: false as const,
+        status: 409,
+        code: invalidHostCount ? "room_unavailable" : "room_full",
+        error:
+          invalidHostCount ? "This room is not available. Ask your teacher to create a new game."
+          : `This game is full. The current limit is ${LIVE_GAME_MAX_STUDENTS} students.`,
+      };
+    }
+
+    const liveblocks = getLiveblocksServerClient();
+    await liveblocks.mutateStorage(roomId, ({ root }) => {
+      const liveRoot = root as unknown as { get(key: string): unknown };
+      const players = root.get("players") as unknown as {
+        get(id: string): unknown;
+        set(id: string, value: LiveObject<LiveGameLobbyPlayer>): void;
+      };
+      if (!players?.get(playerId)) {
+        players.set(playerId, new LiveObject<LiveGameLobbyPlayer>({
+          name: displayName,
+          color: "#64748b",
+          role: "player",
+          isReady: false,
+          joinedAt: Date.now(),
+          avatarId: requestedAvatar,
+        }));
+        const positions = liveRoot.get("playerPositions") as import("@liveblocks/client").LiveMap<string, LiveObject<{ x: number; y: number; updatedAt: number }>>;
+        const spawn = createMovementState(
+          getMapForMode(current.session.mapId, current.session.modeId),
+          Object.keys(current.players ?? {}).length,
+        );
+        positions?.set(playerId, new LiveObject({ ...spawn, updatedAt: Date.now() }));
+      }
+    });
+
+    return { ok: true as const, snapshot: current };
   });
+
+  if (!admission.ok) {
+    return NextResponse.json(
+      { error: admission.error, code: admission.code },
+      { status: admission.status },
+    );
+  }
+  const admittedSnapshot = admission.snapshot;
 
   const response = NextResponse.json({
     sessionId,
     userId: playerId,
     role: "player",
-    mapId: snapshot.session.mapId,
-    modeId: snapshot.session.modeId,
-    durationMinutes: snapshot.session.durationMinutes,
-    questionSetId: snapshot.session.questionSetId,
-    questionSetVersion: snapshot.session.questionSetVersion,
+    mapId: admittedSnapshot.session.mapId,
+    modeId: admittedSnapshot.session.modeId,
+    durationMinutes: admittedSnapshot.session.durationMinutes,
+    questionSetId: admittedSnapshot.session.questionSetId,
+    questionSetVersion: admittedSnapshot.session.questionSetVersion,
   } satisfies Partial<LiveGameStorageSnapshot["session"]> & { userId: string; role: "player"; sessionId: string });
   response.cookies.set(
     LIVE_GAME_PLAYER_COOKIE_NAME,

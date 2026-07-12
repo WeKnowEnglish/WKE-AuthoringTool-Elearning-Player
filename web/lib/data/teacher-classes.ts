@@ -1,4 +1,5 @@
 import { unstable_noStore as noStore } from "next/cache";
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 
@@ -36,7 +37,7 @@ async function requireTeacherUserId(): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.id || user.app_metadata?.role !== "teacher") {
+  if (!user?.id || !isTeacher(user)) {
     throw new Error("Teacher authentication required.");
   }
   return user.id;

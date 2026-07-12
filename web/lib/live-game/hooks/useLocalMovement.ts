@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useUpdateMyPresence } from "@liveblocks/react/suspense";
-import type { LiveGamePresence, LiveGameDirection } from "@/lib/live-game/liveblocks/config";
+import type { LiveGamePresence, LiveGameDirection, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
 import { LIVE_GAME_DEFAULT_AVATAR_ID } from "@/lib/live-game/characters/boy-character";
 import {
   createMovementState,
@@ -33,6 +33,7 @@ type Options = {
   viewportH: number;
   cameraRef: RefObject<HTMLDivElement | null>;
   localPlayerRef: RefObject<HTMLDivElement | null>;
+  carriedResourceType?: LiveGameResourceType | null;
 };
 
 export function useLocalMovement({
@@ -45,8 +46,10 @@ export function useLocalMovement({
   viewportH,
   cameraRef,
   localPlayerRef,
+  carriedResourceType = null,
 }: Options) {
   const updatePresence = useUpdateMyPresence();
+  const carriedResourceRef = useRef<LiveGameResourceType | null>(carriedResourceType);
   const positionRef = useRef<MovementState>(createMovementState(map, spawnIndex));
   const facingRef = useRef<LiveGameDirection>("right");
   const isMovingRef = useRef(false);
@@ -92,14 +95,33 @@ export function useLocalMovement({
   );
 
   const sendPresence = useCallback(
-    (presence: LiveGamePresence, force = false) => {
+    (presence: Omit<LiveGamePresence, "carriedResourceType">, force = false) => {
       const now = performance.now();
       if (!force && now - lastPresenceRef.current < LIVE_GAME_PRESENCE_INTERVAL_MS) return;
       lastPresenceRef.current = now;
-      updatePresence(presence as never);
+      updatePresence({
+        ...presence,
+        carriedResourceType: carriedResourceRef.current,
+      } as never);
     },
     [updatePresence],
   );
+
+  useEffect(() => {
+    carriedResourceRef.current = carriedResourceType;
+    const current = positionRef.current;
+    sendPresence(
+      {
+        x: current.x,
+        y: current.y,
+        direction: facingRef.current,
+        isMoving: isMovingRef.current,
+        animation: isMovingRef.current ? "walk" : "idle",
+        avatarId,
+      },
+      true,
+    );
+  }, [avatarId, carriedResourceType, sendPresence]);
 
   useEffect(() => {
     const initial = createMovementState(map, spawnIndex);

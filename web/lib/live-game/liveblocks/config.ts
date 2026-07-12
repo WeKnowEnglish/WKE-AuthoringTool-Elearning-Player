@@ -161,6 +161,13 @@ export type LiveGameStorageSnapshot = {
   playerHunger?: Record<string, LiveGamePlayerHunger>;
 };
 
+/** Minimal client/server fields used by craft recipe gate helpers. */
+export type LiveGameCraftGateSnapshot = {
+  session?: Pick<LiveGameSessionState, "phase">;
+  resourcePool?: LiveGameResourcePool;
+  craftedItems?: LiveGameCraftedItems;
+};
+
 export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {
   x: 0,
   y: 0,

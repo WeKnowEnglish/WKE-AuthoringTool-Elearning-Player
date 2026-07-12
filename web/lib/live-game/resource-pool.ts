@@ -1,5 +1,4 @@
-import type { LiveGameResourcePool, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
-import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
+import type { LiveGameCraftGateSnapshot, LiveGameResourcePool, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
 import {
   ENGLISH_CRAFT_CRAFT_COSTS,
   ENGLISH_CRAFT_STORAGE_FILL_THRESHOLDS,
@@ -38,7 +37,7 @@ export function formatMissingCraftResources(types: readonly LiveGameResourceType
 }
 
 export function readResourcePool(
-  snapshot: LiveGameStorageSnapshot | null | undefined,
+  snapshot: LiveGameCraftGateSnapshot | null | undefined,
 ): LiveGameResourcePool {
   const pool = snapshot?.resourcePool;
   return {
@@ -50,7 +49,7 @@ export function readResourcePool(
 }
 
 export function getPoolCount(
-  snapshot: LiveGameStorageSnapshot | null | undefined,
+  snapshot: LiveGameCraftGateSnapshot | null | undefined,
   type: LiveGameResourceType,
 ): number {
   return readResourcePool(snapshot)[type];

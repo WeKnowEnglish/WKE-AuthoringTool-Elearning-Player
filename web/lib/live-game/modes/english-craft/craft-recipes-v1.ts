@@ -1,5 +1,9 @@
-import type { LiveGameCraftedItems, LiveGameResourcePool, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
-import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
+import type {
+  LiveGameCraftedItems,
+  LiveGameCraftGateSnapshot,
+  LiveGameResourcePool,
+  LiveGameResourceType,
+} from "@/lib/live-game/liveblocks/config";
 import {
   ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
   ENGLISH_CRAFT_BOAT_POOL_COSTS,
@@ -193,7 +197,7 @@ function meetsRecipeRequires(
 }
 
 export function canStartRecipeCraft(
-  storage: LiveGameStorageSnapshot | null | undefined,
+  storage: LiveGameCraftGateSnapshot | null | undefined,
   recipeId: CraftRecipeId,
 ): boolean {
   if (!storage?.session || storage.session.phase !== "playing") return false;
@@ -207,7 +211,7 @@ export function canStartRecipeCraft(
 }
 
 export function canCraftAtBench(
-  storage: LiveGameStorageSnapshot | null | undefined,
+  storage: LiveGameCraftGateSnapshot | null | undefined,
 ): boolean {
   if (!storage?.session || storage.session.phase !== "playing") return false;
   const crafted = readCraftedItems(storage);
@@ -215,7 +219,7 @@ export function canCraftAtBench(
 }
 
 export function listAvailableCraftRecipes(
-  storage: LiveGameStorageSnapshot | null | undefined,
+  storage: LiveGameCraftGateSnapshot | null | undefined,
 ): CraftRecipe[] {
   return (Object.keys(CRAFT_RECIPES) as CraftRecipeId[])
     .filter((recipeId) => canStartRecipeCraft(storage, recipeId))
@@ -223,21 +227,21 @@ export function listAvailableCraftRecipes(
 }
 
 export function listBenchCraftRecipes(
-  storage: LiveGameStorageSnapshot | null | undefined,
+  storage: LiveGameCraftGateSnapshot | null | undefined,
 ): CraftRecipe[] {
   if (!canCraftAtBench(storage)) return [];
   return BENCH_CRAFT_RECIPE_IDS.map((recipeId) => getCraftRecipe(recipeId));
 }
 
 export function getDefaultBenchRecipe(
-  storage: LiveGameStorageSnapshot | null | undefined,
+  storage: LiveGameCraftGateSnapshot | null | undefined,
 ): CraftRecipeId | null {
   if (canStartRecipeCraft(storage, "craft_hammer")) return "craft_hammer";
   if (canStartRecipeCraft(storage, "craft_boat")) return "craft_boat";
   return null;
 }
 
-export function canBuildBench(storage: LiveGameStorageSnapshot | null | undefined): boolean {
+export function canBuildBench(storage: LiveGameCraftGateSnapshot | null | undefined): boolean {
   return canStartRecipeCraft(storage, "build_bench");
 }
 

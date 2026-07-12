@@ -24,7 +24,7 @@ const SETS: Record<LiveGameQuestionSetId, LiveGameQuestionSet> = {
     id: "grade56-adjectives",
     version: 1,
     questions: GRADE56_ADJECTIVES_MC_V1,
-    craftQuestion: GRADE56_ADJECTIVES_CRAFT_V1 as EnglishCraftCraftQuestion,
+    craftQuestion: GRADE56_ADJECTIVES_CRAFT_V1,
   },
   "daily-routines-a1": {
     id: "daily-routines-a1", version: 1,

@@ -1,4 +1,4 @@
-import type { LiveGameCraftedItems, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
+import type { LiveGameCraftedItems, LiveGameCraftGateSnapshot } from "@/lib/live-game/liveblocks/config";
 
 export const DEFAULT_LIVE_GAME_CRAFTED_ITEMS: LiveGameCraftedItems = {
   benchBuilt: false,
@@ -8,7 +8,7 @@ export const DEFAULT_LIVE_GAME_CRAFTED_ITEMS: LiveGameCraftedItems = {
 };
 
 export function readCraftedItems(
-  storage: LiveGameStorageSnapshot | null | undefined,
+  storage: LiveGameCraftGateSnapshot | null | undefined,
 ): LiveGameCraftedItems {
   const raw = storage?.craftedItems;
   return {

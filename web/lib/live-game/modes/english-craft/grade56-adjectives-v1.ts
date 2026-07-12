@@ -1,5 +1,5 @@
 import "server-only";
-import type { EnglishCraftAdjectiveQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
+import type { EnglishCraftAdjectiveQuestion, EnglishCraftCraftQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
 
 /** Grade 5–6 adjectives — generated from Grade 56 adjectives 60 question bank.docx */
 export const GRADE56_ADJECTIVES_MC_V1: EnglishCraftAdjectiveQuestion[] = [
@@ -485,10 +485,10 @@ export const GRADE56_ADJECTIVES_MC_V1: EnglishCraftAdjectiveQuestion[] = [
   },
 ];
 
-export const GRADE56_ADJECTIVES_CRAFT_V1 = {
+export const GRADE56_ADJECTIVES_CRAFT_V1: EnglishCraftCraftQuestion = {
   id: "adj-craft-bridge",
   prompt: "Put the sentence in order to build the bridge:",
   wordBank: ["The", "enormous", "museum", "was", "very", "interesting"],
   correctOrder: ["The", "enormous", "museum", "was", "very", "interesting"],
   slotCount: 6,
-} as const;
+};

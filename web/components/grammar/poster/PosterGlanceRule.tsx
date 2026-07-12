@@ -1,4 +1,11 @@
+"use client";
+
+import { posterInlineEditFieldKey } from "@/lib/grammar-builder/editor/poster-inline-edit-fields";
+import { PosterEditableText } from "./editor/PosterEditableText";
+import { usePosterInlineEdit } from "./editor/PosterInlineEditContext";
+
 type Props = {
+  cardId?: number;
   text: string;
   highlight?: string;
 };
@@ -17,10 +24,55 @@ function highlightText(text: string, highlight?: string) {
   );
 }
 
-export function PosterGlanceRule({ text, highlight }: Props) {
-  return (
-    <p className="mb-2 text-balance text-xl font-extrabold leading-snug text-kid-ink md:text-2xl">
+export function PosterGlanceRule({ cardId, text, highlight }: Props) {
+  const inlineEdit = usePosterInlineEdit();
+  const showHighlightEditor =
+    cardId != null &&
+    inlineEdit?.enabled &&
+    inlineEdit.selectedCardId === cardId;
+
+  const glanceRuleBody = (
+    <span className="text-balance text-xl font-extrabold leading-snug text-kid-ink md:text-2xl">
       {highlightText(text, highlight)}
-    </p>
+    </span>
+  );
+
+  return (
+    <div className="mb-2">
+      {cardId != null ?
+        <PosterEditableText
+          cardId={cardId}
+          fieldKey={posterInlineEditFieldKey(cardId, { kind: "chrome", field: "glanceRuleText" })}
+          value={text}
+          variant="glance-rule"
+          maxLength={60}
+          placeholder="Glance rule"
+        >
+          {glanceRuleBody}
+        </PosterEditableText>
+      : glanceRuleBody}
+
+      {showHighlightEditor ?
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wide text-kid-ink/45">
+            Highlight
+          </span>
+          <PosterEditableText
+            cardId={cardId}
+            fieldKey={posterInlineEditFieldKey(cardId, {
+              kind: "chrome",
+              field: "glanceRuleHighlight",
+            })}
+            value={highlight ?? ""}
+            variant="glance-highlight"
+            placeholder="Word to bold"
+          >
+            <span className="text-xs font-bold uppercase tracking-wide text-kid-ink/55">
+              {highlight || "None"}
+            </span>
+          </PosterEditableText>
+        </div>
+      : null}
+    </div>
   );
 }

@@ -2,7 +2,13 @@
 
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
-import { ENGLISH_CRAFT_WOOD_GOAL } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import {
+  ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
+  ENGLISH_CRAFT_BOAT_POOL_COSTS,
+  ENGLISH_CRAFT_HAMMER_COSTS,
+} from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import { ENGLISH_CRAFT_BUILD_BENCH_COSTS } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
+import { LIVE_GAME_MAX_STUDENTS } from "@/lib/live-game/limits";
 
 type StudentLobbyActionsProps = {
   playerCount: number;
@@ -25,11 +31,20 @@ export function LiveGameStudentLobbyBanner() {
           <div className="mt-3 space-y-1.5 text-xs font-semibold text-white/85 sm:text-sm">
             <p className="font-bold text-white">How to play:</p>
             <ol className="list-decimal space-y-1 pl-4">
-              <li>Chop trees to collect wood for your team</li>
+              <li>Gather wood, stone, wheat, and cotton — answer questions and spell words at storage</li>
               <li>
-                Craft a bridge at the bench ({ENGLISH_CRAFT_WOOD_GOAL} wood)
+                Build the workbench ({ENGLISH_CRAFT_BUILD_BENCH_COSTS.wood} wood,{" "}
+                {ENGLISH_CRAFT_BUILD_BENCH_COSTS.stone} stone)
               </li>
-              <li>Cross the river and touch the flag together</li>
+              <li>
+                Craft hammers ({ENGLISH_CRAFT_HAMMER_COSTS.wood} wood, {ENGLISH_CRAFT_HAMMER_COSTS.stone}{" "}
+                stone each) until you have {ENGLISH_CRAFT_BOAT_HAMMER_GOAL}
+              </li>
+              <li>
+                Craft the boat ({ENGLISH_CRAFT_BOAT_HAMMER_GOAL} hammers,{" "}
+                {ENGLISH_CRAFT_BOAT_POOL_COSTS.wood} wood, {ENGLISH_CRAFT_BOAT_POOL_COSTS.cotton} cotton)
+              </li>
+              <li>Get everyone aboard the boat to escape the island</li>
             </ol>
             <p className="pt-1 text-white/70">
               Tip: Tap &quot;Change character&quot; below to pick your avatar.
@@ -49,7 +64,7 @@ export function LiveGameStudentLobbyFooter({
   return (
     <div className="pointer-events-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs font-semibold text-white/75">
-        {playerCount} {playerCount === 1 ? "player" : "players"} in room
+        {playerCount}/{LIVE_GAME_MAX_STUDENTS} students in room
       </p>
       <ChangeCharacterButton disabled={changeCharacterDisabled} onClick={onChangeCharacter} />
     </div>

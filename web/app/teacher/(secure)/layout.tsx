@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { TeacherSecureShell } from "@/components/teacher/TeacherSecureShell";
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function TeacherSecureLayout({
   if (!user) {
     redirect("/login?portal=teacher&next=/teacher/classes");
   }
-  if (user.app_metadata?.role !== "teacher") {
+  if (!isTeacher(user)) {
     redirect("/login?portal=teacher&error=not_teacher");
   }
 

@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { GrammarPosterPage } from "@/components/grammar/poster/GrammarPosterPage";
-import {
-  getGrammarCatalogEntry,
-  getPublishedGrammarSlugs,
-  loadPosterModuleBySlug,
-} from "@/lib/grammar-builder";
+import { getGrammarCatalogEntry } from "@/lib/grammar-builder";
+import { GrammarModuleLoadError } from "@/lib/grammar-builder/load-poster-module-by-slug";
+import { loadPosterModuleBySlugAsync } from "@/lib/grammar-builder/resolve-poster-module";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return getPublishedGrammarSlugs().map((slug) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -35,7 +31,12 @@ export default async function GrammarPosterRoutePage({ params }: Props) {
     notFound();
   }
 
-  const view = loadPosterModuleBySlug(slug);
+  const view = await loadPosterModuleBySlugAsync(slug).catch((error) => {
+    if (error instanceof GrammarModuleLoadError) {
+      notFound();
+    }
+    throw error;
+  });
 
   return <GrammarPosterPage slug={slug} view={view} />;
 }

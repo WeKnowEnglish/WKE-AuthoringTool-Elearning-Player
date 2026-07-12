@@ -4,11 +4,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
-import type { EnglishCraftCraftQuestionClient } from "@/lib/live-game/modes/english-craft/questions-v1";
+import type { EnglishCraftCraftQuestionClient } from "@/lib/live-game/modes/english-craft/questions-client";
 
 type Props = {
   open: boolean;
   question: EnglishCraftCraftQuestionClient | null;
+  recipeLabel?: string;
+  costSummary?: string;
   tokenStatus?: LiveGameChallengeTokenStatus;
   isSubmitting?: boolean;
   feedback?: "correct" | "incorrect" | null;
@@ -20,6 +22,8 @@ type Props = {
 export function LiveGameCraftModal({
   open,
   question,
+  recipeLabel = "Craft",
+  costSummary,
   tokenStatus = "ready",
   isSubmitting = false,
   feedback,
@@ -80,7 +84,7 @@ export function LiveGameCraftModal({
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <h2 id="live-game-craft-title" className="text-xl font-extrabold text-kid-ink">
-                Craft the bridge
+                {recipeLabel} — sentence craft
               </h2>
               <button
                 type="button"
@@ -90,6 +94,10 @@ export function LiveGameCraftModal({
                 Close
               </button>
             </div>
+
+            {costSummary ?
+              <p className="mt-1 text-sm font-bold text-kid-ink/70">Cost: {costSummary}</p>
+            : null}
 
             <p className="text-lg font-semibold leading-snug text-kid-ink">{question.prompt}</p>
 
@@ -150,7 +158,7 @@ export function LiveGameCraftModal({
                 disabled={filled.length !== slotCount || !canSubmit}
                 onClick={handleSubmit}
               >
-                {isSubmitting ? "Checking..." : "Craft bridge"}
+                {isSubmitting ? "Checking..." : recipeLabel}
               </KidButton>
             </div>
           </motion.div>

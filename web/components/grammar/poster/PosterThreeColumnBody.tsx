@@ -16,6 +16,7 @@ export function PosterThreeColumnBody({ section, variant = "poster" }: Props) {
     <div>
       {section.subHeader ? (
         <PosterSubHeader
+          cardId={section.number}
           {...section.subHeader}
           pillColor={getSectionPillColor(section.color, section.palette)}
           variant={variant}

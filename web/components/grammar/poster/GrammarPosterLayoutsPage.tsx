@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GRAMMAR_TEACHER_EDITOR_INDEX_PATH } from "@/lib/grammar-builder/editor/grammar-editor-paths";
 import { loadAllLayoutLabCards } from "@/lib/grammar-builder/load-layout-lab-card";
 import { LAYOUT_LAB_PAGE_LAYOUTS } from "@/lib/grammar-builder/layout-lab-index";
 import { PosterLayoutShowcase } from "./PosterLayoutShowcase";
@@ -17,7 +18,7 @@ export function GrammarPosterLayoutsPage() {
             ← Back to grammar hub
           </Link>
           <Link
-            href="/grammar/pilot/editor"
+            href={GRAMMAR_TEACHER_EDITOR_INDEX_PATH}
             className="rounded-lg border-2 border-kid-ink/30 bg-white px-3 py-2 text-sm font-semibold text-kid-ink/70"
           >
             Poster editor

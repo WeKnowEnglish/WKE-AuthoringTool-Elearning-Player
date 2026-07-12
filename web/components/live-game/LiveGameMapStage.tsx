@@ -6,14 +6,10 @@ import { LiveGameDebugPanel } from "@/components/live-game/LiveGameDebugPanel";
 import { LiveGameMapStatic, useLiveGameMapStaticProps } from "@/components/live-game/LiveGameMapStatic";
 import { LocalPlayer } from "@/components/live-game/LocalPlayer";
 import { RemotePlayers } from "@/components/live-game/RemotePlayer";
-import type { LiveGameDirection, LiveGameResourceNodeState } from "@/lib/live-game/liveblocks/config";
+import type { LiveGameCraftedItems, LiveGameDirection, LiveGameResourceNodeState, LiveGameResourcePool } from "@/lib/live-game/liveblocks/config";
 import { useViewportSize } from "@/lib/live-game/hooks/useLiveGameCamera";
 import { useLocalMovement } from "@/lib/live-game/hooks/useLocalMovement";
 import { useRemotePlayers } from "@/lib/live-game/hooks/useRemotePlayers";
-import {
-  useSteppedGrassTiles,
-  type GrassTileWalker,
-} from "@/lib/live-game/hooks/useSteppedGrassTiles";
 import type { LiveGameLobbyPlayerEntry } from "@/lib/live-game/liveblocks/use-live-game-lobby";
 import {
   ENGLISH_CRAFT_MAP_ZOOM,
@@ -21,6 +17,9 @@ import {
 import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 import type { LiveGameMapVisualMode } from "@/lib/live-game/modes/english-craft/lobby-map-v1";
 import { resolveEnglishCraftMapVisuals } from "@/lib/live-game/modes/english-craft/lobby-map-v1";
+import { useLiveGameSelfCarry } from "@/lib/live-game/hooks/useLiveGameGameplay";
+import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS } from "@/lib/live-game/server/read-crafted-items";
+import { EMPTY_LIVE_GAME_RESOURCE_POOL } from "@/lib/live-game/resource-pool";
 import { LIVE_GAME_GROUND_COLOR } from "@/lib/live-game/tiles/grass-tile-pack";
 
 export type LiveGameMapStageMovement = {
@@ -48,7 +47,8 @@ type UseLiveGameMapStageOptions = {
   /** Defaults to `playing`. Lobby uses static full trees and an unbuilt bridge. */
   visualMode?: LiveGameMapVisualMode;
   resourceNodes: Record<string, LiveGameResourceNodeState>;
-  bridgeCrafted: boolean;
+  craftedItems?: LiveGameCraftedItems;
+  resourcePool?: LiveGameResourcePool;
 };
 
 export function useLiveGameMapStage({
@@ -59,18 +59,23 @@ export function useLiveGameMapStage({
   players,
   visualMode = "playing",
   resourceNodes,
-  bridgeCrafted,
+  craftedItems = DEFAULT_LIVE_GAME_CRAFTED_ITEMS,
+  resourcePool = EMPTY_LIVE_GAME_RESOURCE_POOL,
 }: UseLiveGameMapStageOptions): LiveGameMapStageState {
   const [now, setNow] = useState(() => Date.now());
   const cameraRef = useRef<HTMLDivElement>(null);
   const localPlayerRef = useRef<HTMLDivElement>(null);
   const viewport = useViewportSize();
 
+  const selfCarry = useLiveGameSelfCarry();
+  const carriedResourceType = selfCarry?.resourceType ?? null;
+
   const { getPosition, sampledPosition, setTouchAxis, facing, isMoving } = useLocalMovement({
     map,
     spawnIndex: spawnIndex >= 0 ? spawnIndex : 0,
     enabled: movementEnabled,
     avatarId,
+    carriedResourceType,
     zoom: ENGLISH_CRAFT_MAP_ZOOM,
     viewportW: viewport.w,
     viewportH: viewport.h,
@@ -88,31 +93,16 @@ export function useLiveGameMapStage({
 
   const remotes = useRemotePlayers(playerMetaByUserId);
 
-  const grassTileWalkers = useMemo((): GrassTileWalker[] => {
-    const walkers: GrassTileWalker[] = [
-      { id: "local", x: sampledPosition.x, y: sampledPosition.y },
-    ];
-    for (const remote of remotes) {
-      walkers.push({
-        id: String(remote.connectionId),
-        x: remote.x,
-        y: remote.y,
-      });
-    }
-    return walkers;
-  }, [sampledPosition.x, sampledPosition.y, remotes]);
-
-  const bouncingTiles = useSteppedGrassTiles(map.tilemap, grassTileWalkers);
   const mapVisuals = useMemo(
-    () => resolveEnglishCraftMapVisuals({ visualMode, resourceNodes, bridgeCrafted }),
-    [visualMode, resourceNodes, bridgeCrafted],
+    () => resolveEnglishCraftMapVisuals({ visualMode, resourceNodes, craftedItems }),
+    [craftedItems, visualMode, resourceNodes],
   );
   const mapStaticProps = useLiveGameMapStaticProps(
     map,
-    bouncingTiles,
     mapVisuals.resourceNodes,
-    mapVisuals.bridgeCrafted,
+    mapVisuals.craftedItems,
     now,
+    resourcePool,
   );
 
   useEffect(() => {
@@ -158,6 +148,9 @@ export function LiveGameMapStage({
   children,
   footer,
 }: LiveGameMapStageProps) {
+  const selfCarry = useLiveGameSelfCarry();
+  const carriedResourceType = selfCarry?.resourceType ?? null;
+
   const {
     cameraRef,
     localPlayerRef,
@@ -191,6 +184,7 @@ export function LiveGameMapStage({
               avatarId={avatarId}
               facing={facing}
               isMoving={isMoving}
+              carriedResourceType={carriedResourceType}
             />
           </div>
         </div>

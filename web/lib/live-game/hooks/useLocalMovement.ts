@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useUpdateMyPresence } from "@liveblocks/react/suspense";
-import type { LiveGamePresence, LiveGameDirection } from "@/lib/live-game/liveblocks/config";
+import type { LiveGamePresence, LiveGameDirection, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
 import { LIVE_GAME_DEFAULT_AVATAR_ID } from "@/lib/live-game/characters/boy-character";
 import {
   createMovementState,
@@ -18,10 +18,10 @@ import {
 import { computeLiveGameCamera } from "@/lib/live-game/hooks/useLiveGameCamera";
 import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 
-/** React state + grass stepping sample rate (~12 Hz). */
+/** React state sample rate for interaction targeting (~12 Hz). */
 export const LIVE_GAME_STATE_COMMIT_MS = 80;
-/** Liveblocks presence send rate (~12 Hz). */
-export const LIVE_GAME_PRESENCE_INTERVAL_MS = 80;
+/** Liveblocks presence send rate (~8 Hz), with local animation still at display refresh rate. */
+export const LIVE_GAME_PRESENCE_INTERVAL_MS = 125;
 
 type Options = {
   map: LiveGameMapDef;
@@ -33,6 +33,7 @@ type Options = {
   viewportH: number;
   cameraRef: RefObject<HTMLDivElement | null>;
   localPlayerRef: RefObject<HTMLDivElement | null>;
+  carriedResourceType?: LiveGameResourceType | null;
 };
 
 export function useLocalMovement({
@@ -45,8 +46,10 @@ export function useLocalMovement({
   viewportH,
   cameraRef,
   localPlayerRef,
+  carriedResourceType = null,
 }: Options) {
   const updatePresence = useUpdateMyPresence();
+  const carriedResourceRef = useRef<LiveGameResourceType | null>(carriedResourceType);
   const positionRef = useRef<MovementState>(createMovementState(map, spawnIndex));
   const facingRef = useRef<LiveGameDirection>("right");
   const isMovingRef = useRef(false);
@@ -92,14 +95,33 @@ export function useLocalMovement({
   );
 
   const sendPresence = useCallback(
-    (presence: LiveGamePresence, force = false) => {
+    (presence: Omit<LiveGamePresence, "carriedResourceType">, force = false) => {
       const now = performance.now();
       if (!force && now - lastPresenceRef.current < LIVE_GAME_PRESENCE_INTERVAL_MS) return;
       lastPresenceRef.current = now;
-      updatePresence(presence as never);
+      updatePresence({
+        ...presence,
+        carriedResourceType: carriedResourceRef.current,
+      } as never);
     },
     [updatePresence],
   );
+
+  useEffect(() => {
+    carriedResourceRef.current = carriedResourceType;
+    const current = positionRef.current;
+    sendPresence(
+      {
+        x: current.x,
+        y: current.y,
+        direction: facingRef.current,
+        isMoving: isMovingRef.current,
+        animation: isMovingRef.current ? "walk" : "idle",
+        avatarId,
+      },
+      true,
+    );
+  }, [avatarId, carriedResourceType, sendPresence]);
 
   useEffect(() => {
     const initial = createMovementState(map, spawnIndex);

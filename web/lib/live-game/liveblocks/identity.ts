@@ -6,6 +6,7 @@ import {
   type EnglishCraftSessionDuration,
 } from "@/lib/live-game/modes/english-craft/config";
 import { LIVE_GAME_ROOM_PREFIX } from "@/lib/liveblocks/room-prefix";
+import { isLiveGameQuestionSetId, type LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 const SESSION_CONTEXT_KEY = "wke-live-game-session-context";
 
@@ -22,6 +23,8 @@ export type LiveGameSessionContext = {
   modeId: "english_craft";
   mapId: string;
   durationMinutes: EnglishCraftSessionDuration;
+  questionSetId: LiveGameQuestionSetId;
+  questionSetVersion: number;
 };
 
 export function setLiveGameSessionContext(context: LiveGameSessionContext): void {
@@ -49,6 +52,8 @@ export function getLiveGameSessionContext(): LiveGameSessionContext | null {
       typeof parsed.avatarId !== "string" ||
       parsed.modeId !== "english_craft" ||
       typeof parsed.mapId !== "string" ||
+      !isLiveGameQuestionSetId(parsed.questionSetId) ||
+      typeof parsed.questionSetVersion !== "number" ||
       (parsed.durationMinutes !== null &&
         !ENGLISH_CRAFT_DURATION_OPTIONS.includes(
           parsed.durationMinutes as (typeof ENGLISH_CRAFT_DURATION_OPTIONS)[number],

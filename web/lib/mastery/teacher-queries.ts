@@ -1,3 +1,4 @@
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildTeacherClassStudentMasteryPreview,
@@ -22,7 +23,7 @@ export async function requireTeacherUser(): Promise<User> {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user?.id || user.app_metadata?.role !== "teacher") {
+  if (!user?.id || !isTeacher(user)) {
     throw new TeacherMasteryAccessError("Teacher authentication required.");
   }
 

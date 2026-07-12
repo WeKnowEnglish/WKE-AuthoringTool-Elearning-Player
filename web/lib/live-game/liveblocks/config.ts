@@ -1,6 +1,7 @@
 import type { LiveMap, LiveObject } from "@liveblocks/client";
 import { LIVE_GAME_DEFAULT_AVATAR_ID } from "@/lib/live-game/characters/boy-character";
 import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
+import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 export type LiveGamePhase = "lobby" | "playing" | "paused" | "completed" | "ended";
 
@@ -27,6 +28,7 @@ export type LiveGamePresence = {
   isMoving: boolean;
   animation: LiveGameAnimation;
   avatarId: string;
+  carriedResourceType: LiveGameResourceType | null;
 };
 
 export type LiveGameLobbyPlayer = {
@@ -53,12 +55,24 @@ export type LiveGameSessionState = {
   endedAt: number | null;
   endReason: LiveGameEndReason | null;
   lobbyNotice: LiveGameLobbyNotice | null;
+  questionSetId: LiveGameQuestionSetId;
+  questionSetVersion: number;
 };
 
-export type LiveGameResourceType = "wood";
+export type LiveGameResourceType = "wood" | "stone" | "wheat" | "cotton";
 
 export type LiveGameResourcePool = {
   wood: number;
+  stone: number;
+  wheat: number;
+  cotton: number;
+};
+
+export type LiveGamePlayerCarry = {
+  resourceType: LiveGameResourceType;
+  sourceNodeId: string;
+  questionId: string;
+  harvestedAt: number;
 };
 
 export type LiveGameResourceNodeState = {
@@ -70,22 +84,50 @@ export type LiveGameResourceNodeState = {
 };
 
 export type LiveGameAwardReceipt = {
-  wood: number;
+  awardKind: "carry" | "pool";
+  resourceType: LiveGameResourceType;
   nodeCooldownEndsAt: number;
+  /** Pool count after a deposit award. */
+  poolCount?: number;
+  /** @deprecated Pre-3C harvest receipts used wood instead of awardKind. */
+  wood?: number;
 };
 
 export type LiveGameCraftedItems = {
+  benchBuilt: boolean;
+  hammers: number;
+  boat: boolean;
+  /** @deprecated Removed in 4F — bridge craft win path */
   bridge: boolean;
+};
+
+export type LiveGamePlayerInventory = {
+  bread: number;
+};
+
+export type LiveGamePlayerHunger = {
+  value: number;
+  lastUpdatedAt: number;
 };
 
 export type LiveGameUnlockedObjects = {
   river_crossing: boolean;
+  boat_boarding?: boolean;
 };
 
 export type LiveGameCraftReceipt = {
+  recipeId?: string;
   wood: number;
-  bridgeCrafted: boolean;
+  stone?: number;
+  wheat?: number;
+  cotton?: number;
+  benchBuilt?: boolean;
+  hammers?: number;
+  boatCrafted?: boolean;
+  bridgeCrafted?: boolean;
 };
+
+export type LiveGamePlayerPosition = { x: number; y: number; updatedAt: number };
 
 /** Storage root shape inside mutateStorage (Live structures). */
 export type LiveGameStorageRoot = {
@@ -97,6 +139,10 @@ export type LiveGameStorageRoot = {
   craftedItems: LiveObject<LiveGameCraftedItems>;
   unlockedObjects: LiveObject<LiveGameUnlockedObjects>;
   craftReceipts: LiveMap<string, LiveObject<LiveGameCraftReceipt>>;
+  playerPositions: LiveMap<string, LiveObject<LiveGamePlayerPosition>>;
+  playerCarry: LiveMap<string, LiveObject<LiveGamePlayerCarry>>;
+  playerInventory: LiveMap<string, LiveObject<LiveGamePlayerInventory>>;
+  playerHunger: LiveMap<string, LiveObject<LiveGamePlayerHunger>>;
 };
 
 /** Plain snapshot returned by useStorage selectors on the client. */
@@ -109,6 +155,17 @@ export type LiveGameStorageSnapshot = {
   craftedItems?: LiveGameCraftedItems;
   unlockedObjects?: LiveGameUnlockedObjects;
   craftReceipts?: Record<string, LiveGameCraftReceipt>;
+  playerPositions?: Record<string, LiveGamePlayerPosition>;
+  playerCarry?: Record<string, LiveGamePlayerCarry>;
+  playerInventory?: Record<string, LiveGamePlayerInventory>;
+  playerHunger?: Record<string, LiveGamePlayerHunger>;
+};
+
+/** Minimal client/server fields used by craft recipe gate helpers. */
+export type LiveGameCraftGateSnapshot = {
+  session?: Pick<LiveGameSessionState, "phase">;
+  resourcePool?: LiveGameResourcePool;
+  craftedItems?: LiveGameCraftedItems;
 };
 
 export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {
@@ -118,4 +175,5 @@ export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {
   isMoving: false,
   animation: "idle",
   avatarId: LIVE_GAME_DEFAULT_AVATAR_ID,
+  carriedResourceType: null,
 };

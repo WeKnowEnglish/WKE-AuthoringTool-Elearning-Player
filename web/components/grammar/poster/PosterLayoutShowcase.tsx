@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LayoutLabCardView } from "@/lib/grammar-builder/load-layout-lab-card";
 import type { LAYOUT_LAB_PAGE_LAYOUTS } from "@/lib/grammar-builder/layout-lab-index";
+import { grammarTeacherEditorSlugPath } from "@/lib/grammar-builder/editor/grammar-editor-paths";
 import { PosterSectionBody } from "./PosterSectionBody";
 import { PosterSectionCard } from "./PosterSectionCard";
 
@@ -74,7 +75,7 @@ export function PosterLayoutShowcase({ cards, pageLayouts }: Props) {
                   <span className="font-mono text-xs text-kid-ink/50">{ref.pageLayout}</span>
                 </Link>
                 <Link
-                  href={`/grammar/pilot/editor/${ref.slug}`}
+                  href={grammarTeacherEditorSlugPath(ref.slug)}
                   className="shrink-0 rounded-lg border-2 border-kid-ink/20 bg-kid-panel px-2 py-1 text-xs font-bold text-kid-ink/70 hover:bg-white"
                 >
                   Open in editor

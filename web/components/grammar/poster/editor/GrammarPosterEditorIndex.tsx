@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { grammarTeacherEditorSlugPath } from "@/lib/grammar-builder/editor/grammar-editor-paths";
 import { groupPublishedGrammarModulesByTopic } from "@/lib/grammar-builder/load-catalog";
 
 export function GrammarPosterEditorIndex() {
@@ -38,7 +39,7 @@ export function GrammarPosterEditorIndex() {
                 {group.modules.map((entry) => (
                   <li key={entry.slug}>
                     <Link
-                      href={`/grammar/pilot/editor/${entry.slug}`}
+                      href={grammarTeacherEditorSlugPath(entry.slug)}
                       className="flex items-center justify-between rounded-xl border-2 border-kid-ink/30 bg-white/70 px-4 py-3 text-sm font-semibold text-kid-ink transition-colors hover:bg-white"
                     >
                       <span>

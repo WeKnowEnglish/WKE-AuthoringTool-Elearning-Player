@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef } from "react";
+import { LiveGameCarryOverlay } from "@/components/live-game/LiveGameCarryOverlay";
 import { LiveGameMapCharacter } from "@/components/live-game/LiveGameMapCharacter";
 import { interpolateToward } from "@/lib/live-game/engine/interpolation";
 import {
@@ -69,6 +70,9 @@ const RemotePlayer = memo(function RemotePlayer({
 
   return (
     <div ref={wrapperRef} className="pointer-events-none absolute z-30 will-change-[left,top]">
+      {player.carriedResourceType ?
+        <LiveGameCarryOverlay resourceType={player.carriedResourceType} />
+      : null}
       <LiveGameMapCharacter
         map={map}
         x={0}

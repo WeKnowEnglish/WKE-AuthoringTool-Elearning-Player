@@ -1,10 +1,15 @@
 import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
+import { isEnglishCraftResourceNodeInteractable } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import {
-  ENGLISH_CRAFT_CRAFT_WOOD_COST,
-  isEnglishCraftResourceNodeInteractable,
-} from "@/lib/live-game/modes/english-craft/gameplay-v1";
+  canBuildBench,
+  canCraftAtBench,
+  canStartRecipeCraft,
+  type CraftRecipeId,
+} from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { sessionIdFromRoomId } from "@/lib/live-game/liveblocks/room-id";
+import { canAffordCraftCosts, getPoolCount, readResourcePool } from "@/lib/live-game/resource-pool";
+import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 
 export async function readLiveGameStorageJson(roomId: string): Promise<LiveGameStorageSnapshot | null> {
   if (!sessionIdFromRoomId(roomId)) return null;
@@ -25,21 +30,29 @@ export function isResourceNodeAvailable(
 }
 
 export function isBridgeCrafted(storage: LiveGameStorageSnapshot | null | undefined): boolean {
-  return storage?.craftedItems?.bridge === true;
+  return readCraftedItems(storage).bridge;
 }
 
 export function isRiverCrossingUnlocked(storage: LiveGameStorageSnapshot | null | undefined): boolean {
   return storage?.unlockedObjects?.river_crossing === true;
 }
 
-export function canStartCraftChallenge(storage: LiveGameStorageSnapshot | null | undefined): boolean {
-  if (!storage?.session || storage.session.phase !== "playing") return false;
-  if (isBridgeCrafted(storage)) return false;
-  const wood = storage.resourcePool?.wood ?? 0;
-  return wood >= ENGLISH_CRAFT_CRAFT_WOOD_COST;
+export function isBoatBoardingUnlocked(storage: LiveGameStorageSnapshot | null | undefined): boolean {
+  return storage?.unlockedObjects?.boat_boarding === true;
 }
+
+/** @deprecated Use canStartRecipeCraft(storage, "build_bench") */
+export function canStartCraftChallenge(storage: LiveGameStorageSnapshot | null | undefined): boolean {
+  return canStartRecipeCraft(storage, "build_bench");
+}
+
+export { canBuildBench, canCraftAtBench, canStartRecipeCraft };
+
+export { readResourcePool, getPoolCount };
 
 export function canCompleteObjective(storage: LiveGameStorageSnapshot | null | undefined): boolean {
   if (!storage?.session || storage.session.phase !== "playing") return false;
   return isBridgeCrafted(storage) && isRiverCrossingUnlocked(storage);
 }
+
+export type { CraftRecipeId };

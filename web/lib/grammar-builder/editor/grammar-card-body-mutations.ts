@@ -174,3 +174,83 @@ export function updateSummaryGridCell(
     return { ...card, summaryGrid: { ...card.summaryGrid, rows } };
   });
 }
+
+type GoodBadSide = "good" | "bad";
+
+export function updateCardGoodBadSide(
+  module: GrammarModule,
+  cardId: number,
+  side: GoodBadSide,
+  patch: Partial<{ text: string; graphic?: string; highlight?: string }>,
+): GrammarModule {
+  return updateCard(module, cardId, (card) => {
+    if (!card.goodBadPair) {
+      return card;
+    }
+    return {
+      ...card,
+      goodBadPair: {
+        ...card.goodBadPair,
+        [side]: { ...card.goodBadPair[side], ...patch },
+      },
+    };
+  });
+}
+
+export function updateCardSubHeader(
+  module: GrammarModule,
+  cardId: number,
+  patch: Partial<NonNullable<GrammarCard["subHeader"]>>,
+): GrammarModule {
+  return updateCard(module, cardId, (card) => ({
+    ...card,
+    subHeader: {
+      label: card.subHeader?.label ?? "",
+      badge: card.subHeader?.badge,
+      desc: card.subHeader?.desc,
+      extra: card.subHeader?.extra,
+      ...patch,
+    },
+  }));
+}
+
+export function updateCardPattern(
+  module: GrammarModule,
+  cardId: number,
+  patternIndex: number,
+  patch: Partial<{ label: string; formula: string; graphic?: string }>,
+): GrammarModule {
+  return updateCard(module, cardId, (card) => {
+    const patterns = (card.patterns ?? []).map((pattern, index) =>
+      index === patternIndex ? { ...pattern, ...patch } : pattern,
+    );
+    return { ...card, patterns };
+  });
+}
+
+export function updateCardItemTransformation(
+  module: GrammarModule,
+  cardId: number,
+  itemIndex: number,
+  patch: Partial<{
+    from: string;
+    operator: string;
+    suffix: string;
+    to: string;
+    graphic?: string;
+    ipa?: string;
+  }>,
+): GrammarModule {
+  return updateCard(module, cardId, (card) => {
+    const items = (card.items ?? []).map((item, index) => {
+      if (index !== itemIndex || !item.transformationRow) {
+        return item;
+      }
+      return {
+        ...item,
+        transformationRow: { ...item.transformationRow, ...patch },
+      };
+    });
+    return { ...card, items };
+  });
+}

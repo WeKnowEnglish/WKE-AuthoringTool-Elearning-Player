@@ -15,13 +15,12 @@ import {
   type LiveGameCharacterId,
 } from "@/lib/live-game/characters/live-game-characters";
 import { LiveGameCharacterPicker } from "@/components/live-game/LiveGameCharacterPicker";
-
-function createHostUserId(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return `host-${crypto.randomUUID()}`;
-  }
-  return `host-${Date.now()}`;
-}
+import {
+  DEFAULT_LIVE_GAME_QUESTION_SET_ID,
+  getLiveGameQuestionSetSummary,
+  LIVE_GAME_QUESTION_SET_SUMMARIES,
+  type LiveGameQuestionSetId,
+} from "@/lib/live-game/modes/english-craft/question-sets-client";
 
 export function LiveGameHostPage() {
   const router = useRouter();
@@ -30,6 +29,7 @@ export function LiveGameHostPage() {
   const [durationMinutes, setDurationMinutes] = useState<EnglishCraftSessionDuration>(
     ENGLISH_CRAFT_MODE.defaultDurationMinutes as EnglishCraftSessionDuration,
   );
+  const [questionSetId, setQuestionSetId] = useState<LiveGameQuestionSetId>(DEFAULT_LIVE_GAME_QUESTION_SET_ID);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,27 +43,30 @@ export function LiveGameHostPage() {
     setIsSubmitting(true);
     setError(null);
 
-    const userId = createHostUserId();
     try {
       const response = await fetch("/api/live-game/sessions/host", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           displayName: name,
-          userId,
           modeId: ENGLISH_CRAFT_MODE.id,
           durationMinutes,
+          avatarId,
+          questionSetId,
         }),
       });
 
       const payload = (await response.json()) as {
         error?: string;
         sessionId?: string;
+        userId?: string;
         mapId?: string;
         durationMinutes?: number;
+        questionSetId?: LiveGameQuestionSetId;
+        questionSetVersion?: number;
       };
 
-      if (!response.ok || !payload.sessionId) {
+      if (!response.ok || !payload.sessionId || !payload.userId) {
         throw new Error(payload.error ?? "Could not create a live game room.");
       }
 
@@ -72,11 +75,13 @@ export function LiveGameHostPage() {
         role: "host",
         displayName: name,
         color: LIVE_GAME_DEFAULT_PLAYER_COLOR,
-        userId,
+        userId: payload.userId,
         avatarId,
         modeId: ENGLISH_CRAFT_MODE.id,
         mapId: payload.mapId ?? ENGLISH_CRAFT_MODE.defaultMapId,
         durationMinutes: normalizeEnglishCraftDurationMinutes(payload.durationMinutes ?? durationMinutes ?? ENGLISH_CRAFT_MODE.defaultDurationMinutes),
+        questionSetId: payload.questionSetId ?? questionSetId,
+        questionSetVersion: payload.questionSetVersion ?? getLiveGameQuestionSetSummary(questionSetId).version,
       });
 
       router.push(`/live-game/${payload.sessionId}`);
@@ -125,6 +130,22 @@ export function LiveGameHostPage() {
         </label>
 
         <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} />
+
+        <label className="block space-y-1">
+          <span className="text-sm font-bold text-kid-ink">Question set</span>
+          <select
+            value={questionSetId}
+            onChange={(event) => setQuestionSetId(event.target.value as LiveGameQuestionSetId)}
+            className="w-full rounded-lg border-4 border-kid-ink bg-white px-3 py-2 text-lg font-semibold text-kid-ink"
+          >
+            {LIVE_GAME_QUESTION_SET_SUMMARIES.map((set) => (
+              <option key={set.id} value={set.id}>{set.title} — {set.level}</option>
+            ))}
+          </select>
+          <p className="text-sm font-semibold text-kid-ink/70">
+            {getLiveGameQuestionSetSummary(questionSetId).learningObjective}
+          </p>
+        </label>
 
         {error ?
           <p className="text-sm font-semibold text-red-700">{error}</p>

@@ -17,6 +17,7 @@ export function PosterFullWidthBody({ section, variant = "poster" }: Props) {
     <div className="space-y-3">
       {section.subHeader ? (
         <PosterSubHeader
+          cardId={section.number}
           {...section.subHeader}
           pillColor={getSectionPillColor(section.color, section.palette)}
           variant={variant}
@@ -25,7 +26,12 @@ export function PosterFullWidthBody({ section, variant = "poster" }: Props) {
       {examples.map((example, index) => (
         <div key={`${section.number}-stack-${index}`}>
           {example.transformationRow ? (
-            <PosterTransformationRow row={example.transformationRow} variant={variant} />
+            <PosterTransformationRow
+              cardId={section.number}
+              itemIndex={index}
+              row={example.transformationRow}
+              variant={variant}
+            />
           ) : (
             <PosterExampleRow
               example={example}

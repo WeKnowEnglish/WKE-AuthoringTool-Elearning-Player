@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
@@ -58,7 +59,7 @@ export function LoginForm({ nextPath, initialError, initialMessage }: Props) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user?.app_metadata?.role !== "teacher") {
+    if (!isTeacher(user)) {
       await supabase.auth.signOut();
       setMessage("This account is not a teacher.");
       setLoading(false);

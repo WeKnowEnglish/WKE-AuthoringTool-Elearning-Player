@@ -57,29 +57,38 @@ describe("english-craft craft bench interact", () => {
 describe("english-craft craft gates", () => {
   const playingSession = {
     session: { phase: "playing" as const },
-    resourcePool: { wood: 10 },
-    craftedItems: { bridge: false },
+    resourcePool: { wood: 10, stone: 5, wheat: 0, cotton: 0 },
+    craftedItems: { benchBuilt: false, hammers: 0, boat: false, bridge: false },
     unlockedObjects: { river_crossing: false },
   };
 
-  it("allows craft when wood goal met and bridge not built", () => {
+  it("allows build_bench when wood and stone goals are met", () => {
     expect(canStartCraftChallenge(playingSession)).toBe(true);
   });
 
-  it("blocks craft below wood goal", () => {
+  it("blocks build_bench below wood goal", () => {
     expect(
       canStartCraftChallenge({
         ...playingSession,
-        resourcePool: { wood: 9 },
+        resourcePool: { wood: 9, stone: 5, wheat: 0, cotton: 0 },
       }),
     ).toBe(false);
   });
 
-  it("blocks craft after bridge is built", () => {
+  it("blocks build_bench when stone is short", () => {
     expect(
       canStartCraftChallenge({
         ...playingSession,
-        craftedItems: { bridge: true },
+        resourcePool: { wood: 10, stone: 4, wheat: 0, cotton: 0 },
+      }),
+    ).toBe(false);
+  });
+
+  it("blocks build_bench after workbench is built", () => {
+    expect(
+      canStartCraftChallenge({
+        ...playingSession,
+        craftedItems: { benchBuilt: true, hammers: 0, boat: false, bridge: false },
       }),
     ).toBe(false);
     expect(isBridgeCrafted({ craftedItems: { bridge: true } })).toBe(true);

@@ -78,6 +78,8 @@ export function LiveGameSessionPage({ sessionId }: Props) {
         modeId={context.modeId}
         mapId={context.mapId}
         durationMinutes={context.durationMinutes}
+        questionSetId={context.questionSetId}
+        questionSetVersion={context.questionSetVersion}
         initialPresence={{
           x: spawn.x,
           y: spawn.y,

@@ -54,7 +54,7 @@ export function LiveGameLobbyCanvas({ context }: Props) {
   const map = useMemo(
     () => ({
       ...baseMap,
-      collisionRects: getEnglishCraftCollisionRects(false),
+      collisionRects: getEnglishCraftCollisionRects(),
     }),
     [baseMap],
   );

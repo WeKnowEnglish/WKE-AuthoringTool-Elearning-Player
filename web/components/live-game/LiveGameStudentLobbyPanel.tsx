@@ -38,13 +38,13 @@ export function LiveGameStudentLobbyBanner() {
               </li>
               <li>
                 Craft hammers ({ENGLISH_CRAFT_HAMMER_COSTS.wood} wood, {ENGLISH_CRAFT_HAMMER_COSTS.stone}{" "}
-                stone each) until you have {ENGLISH_CRAFT_BOAT_HAMMER_GOAL}
+                stone each) and bread (2 wheat) — stay fed while you work
               </li>
               <li>
                 Craft the boat ({ENGLISH_CRAFT_BOAT_HAMMER_GOAL} hammers,{" "}
                 {ENGLISH_CRAFT_BOAT_POOL_COSTS.wood} wood, {ENGLISH_CRAFT_BOAT_POOL_COSTS.cotton} cotton)
               </li>
-              <li>Get everyone aboard the boat to escape the island</li>
+              <li>Get everyone on the boat at the dock to escape the island</li>
             </ol>
             <p className="pt-1 text-white/70">
               Tip: Tap &quot;Change character&quot; below to pick your avatar.

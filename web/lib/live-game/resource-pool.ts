@@ -29,11 +29,11 @@ export function missingCraftResources(
 }
 
 export function formatMissingCraftResources(types: readonly LiveGameResourceType[]): string {
-  if (types.length === 0) return "Team needs more resources for the bridge.";
-  if (types.length === 1) return `Need more ${types[0]} for the bridge.`;
+  if (types.length === 0) return "Team needs more resources for crafting.";
+  if (types.length === 1) return `Need more ${types[0]} for crafting.`;
   const head = types.slice(0, -1).join(", ");
   const tail = types[types.length - 1];
-  return `Need more ${head} and ${tail} for the bridge.`;
+  return `Need more ${head} and ${tail} for crafting.`;
 }
 
 export function readResourcePool(

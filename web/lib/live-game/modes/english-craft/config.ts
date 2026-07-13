@@ -3,7 +3,7 @@ import type { LiveGameModeConfig } from "@/lib/live-game/modes/types";
 export const ENGLISH_CRAFT_MODE: LiveGameModeConfig = {
   id: "english_craft",
   title: "English Craft",
-  subtitle: "Collect wood, craft a bridge, reach the flag together",
+  subtitle: "Gather resources, craft milestones, escape the island together",
   defaultDurationMinutes: 20,
   defaultMapId: "english-craft-v1",
 };

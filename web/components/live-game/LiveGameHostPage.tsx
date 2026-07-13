@@ -1,26 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { LiveGameQuestionSetCarousel } from "@/components/live-game/LiveGameQuestionSetCarousel";
 import {
   LIVE_GAME_DEFAULT_PLAYER_COLOR,
   setLiveGameSessionContext,
 } from "@/lib/live-game/liveblocks/identity";
-import { ENGLISH_CRAFT_DURATION_OPTIONS, ENGLISH_CRAFT_MODE, formatEnglishCraftDurationSelectValue, normalizeEnglishCraftDurationMinutes, parseEnglishCraftDurationSelectValue, type EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
+import {
+  ENGLISH_CRAFT_DURATION_OPTIONS,
+  ENGLISH_CRAFT_MODE,
+  formatEnglishCraftDurationSelectValue,
+  normalizeEnglishCraftDurationMinutes,
+  parseEnglishCraftDurationSelectValue,
+  type EnglishCraftSessionDuration,
+} from "@/lib/live-game/modes/english-craft/config";
 import {
   LIVE_GAME_DEFAULT_AVATAR_ID,
   type LiveGameCharacterId,
 } from "@/lib/live-game/characters/live-game-characters";
 import { LiveGameCharacterPicker } from "@/components/live-game/LiveGameCharacterPicker";
+import type { LiveGameQuestionSetCard } from "@/lib/live-game/question-banks/types";
 import {
-  DEFAULT_LIVE_GAME_QUESTION_SET_ID,
-  getLiveGameQuestionSetSummary,
-  LIVE_GAME_QUESTION_SET_SUMMARIES,
-  type LiveGameQuestionSetId,
-} from "@/lib/live-game/modes/english-craft/question-sets-client";
+  fetchPublishedQuestionSets,
+  resolveInitialQuestionSetSelection,
+  writeLastSelectedQuestionSetId,
+} from "@/lib/live-game/question-banks/question-sets-api-client";
+import { duplicateQuestionSet } from "@/lib/live-game/question-banks/question-sets-editor-api";
 
 export function LiveGameHostPage() {
   const router = useRouter();
@@ -29,19 +38,82 @@ export function LiveGameHostPage() {
   const [durationMinutes, setDurationMinutes] = useState<EnglishCraftSessionDuration>(
     ENGLISH_CRAFT_MODE.defaultDurationMinutes as EnglishCraftSessionDuration,
   );
-  const [questionSetId, setQuestionSetId] = useState<LiveGameQuestionSetId>(DEFAULT_LIVE_GAME_QUESTION_SET_ID);
+  const [questionSets, setQuestionSets] = useState<LiveGameQuestionSetCard[]>([]);
+  const [selectedQuestionSetId, setSelectedQuestionSetId] = useState<string | null>(null);
+  const [setsLoading, setSetsLoading] = useState(true);
+  const [setsError, setSetsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
 
-  async function handleCreate() {
+  const loadQuestionSets = useCallback(async () => {
+    setSetsLoading(true);
+    setSetsError(null);
+    try {
+      const sets = await fetchPublishedQuestionSets();
+      setQuestionSets(sets);
+      setSelectedQuestionSetId((current) => {
+        if (current && sets.some((set) => set.id === current)) {
+          return current;
+        }
+        return resolveInitialQuestionSetSelection(sets);
+      });
+    } catch (loadError) {
+      const message =
+        loadError instanceof Error ? loadError.message : "Could not load question sets.";
+      setSetsError(message);
+      setQuestionSets([]);
+      setSelectedQuestionSetId(null);
+    } finally {
+      setSetsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadQuestionSets();
+  }, [loadQuestionSets]);
+
+  const selectedSet =
+    questionSets.find((set) => set.id === selectedQuestionSetId) ?? null;
+
+  function handleSelectQuestionSet(id: string) {
+    setSelectedQuestionSetId(id);
+    writeLastSelectedQuestionSetId(id);
+  }
+
+  async function handleEditQuestionSet(id: string) {
+    const card = questionSets.find((set) => set.id === id);
+    if (!card) return;
+
+    setEditingSetId(id);
+    setError(null);
+    try {
+      const draftId =
+        card.visibility === "system" ? (await duplicateQuestionSet(id)).id : id;
+      router.push(`/live-game/question-sets/${draftId}/edit`);
+    } catch (editError) {
+      const message =
+        editError instanceof Error ? editError.message : "Could not open question editor.";
+      setError(message);
+      setEditingSetId(null);
+    }
+  }
+
+  async function handleCreate(questionSetId?: string) {
+    const setId = questionSetId ?? selectedQuestionSetId;
     const name = displayName.trim();
     if (!name) {
       setError("Enter your name.");
       return;
     }
+    if (!setId) {
+      setError("Choose a question set.");
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
+    writeLastSelectedQuestionSetId(setId);
 
     try {
       const response = await fetch("/api/live-game/sessions/host", {
@@ -52,7 +124,7 @@ export function LiveGameHostPage() {
           modeId: ENGLISH_CRAFT_MODE.id,
           durationMinutes,
           avatarId,
-          questionSetId,
+          questionSetId: setId,
         }),
       });
 
@@ -62,7 +134,7 @@ export function LiveGameHostPage() {
         userId?: string;
         mapId?: string;
         durationMinutes?: number;
-        questionSetId?: LiveGameQuestionSetId;
+        questionSetId?: string;
         questionSetVersion?: number;
       };
 
@@ -79,9 +151,11 @@ export function LiveGameHostPage() {
         avatarId,
         modeId: ENGLISH_CRAFT_MODE.id,
         mapId: payload.mapId ?? ENGLISH_CRAFT_MODE.defaultMapId,
-        durationMinutes: normalizeEnglishCraftDurationMinutes(payload.durationMinutes ?? durationMinutes ?? ENGLISH_CRAFT_MODE.defaultDurationMinutes),
-        questionSetId: payload.questionSetId ?? questionSetId,
-        questionSetVersion: payload.questionSetVersion ?? getLiveGameQuestionSetSummary(questionSetId).version,
+        durationMinutes: normalizeEnglishCraftDurationMinutes(
+          payload.durationMinutes ?? durationMinutes ?? ENGLISH_CRAFT_MODE.defaultDurationMinutes,
+        ),
+        questionSetId: payload.questionSetId ?? setId,
+        questionSetVersion: payload.questionSetVersion ?? selectedSet?.version ?? 1,
       });
 
       router.push(`/live-game/${payload.sessionId}`);
@@ -131,27 +205,47 @@ export function LiveGameHostPage() {
 
         <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} />
 
-        <label className="block space-y-1">
+        <div className="space-y-2">
           <span className="text-sm font-bold text-kid-ink">Question set</span>
-          <select
-            value={questionSetId}
-            onChange={(event) => setQuestionSetId(event.target.value as LiveGameQuestionSetId)}
-            className="w-full rounded-lg border-4 border-kid-ink bg-white px-3 py-2 text-lg font-semibold text-kid-ink"
-          >
-            {LIVE_GAME_QUESTION_SET_SUMMARIES.map((set) => (
-              <option key={set.id} value={set.id}>{set.title} — {set.level}</option>
-            ))}
-          </select>
-          <p className="text-sm font-semibold text-kid-ink/70">
-            {getLiveGameQuestionSetSummary(questionSetId).learningObjective}
-          </p>
-        </label>
+          {setsLoading ?
+            <p className="text-sm font-semibold text-kid-ink/70">Loading question sets...</p>
+          : setsError ?
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-red-700">{setsError}</p>
+              <KidButton variant="secondary" onClick={() => void loadQuestionSets()}>
+                Retry
+              </KidButton>
+            </div>
+          : questionSets.length === 0 ?
+            <p className="text-sm font-semibold text-kid-ink/70">No published question sets.</p>
+          : <>
+              <LiveGameQuestionSetCarousel
+                sets={questionSets}
+                selectedId={selectedQuestionSetId}
+                onSelect={handleSelectQuestionSet}
+                onPlay={(id) => void handleCreate(id)}
+                onEdit={(id) => void handleEditQuestionSet(id)}
+                disabled={isSubmitting}
+                editingId={editingSetId}
+              />
+              {selectedSet ?
+                <p className="text-sm font-semibold text-kid-ink/70">
+                  Selected: {selectedSet.learningObjective}
+                </p>
+              : null}
+            </>
+          }
+        </div>
 
         {error ?
           <p className="text-sm font-semibold text-red-700">{error}</p>
         : null}
 
-        <KidButton variant="primary" disabled={isSubmitting} onClick={() => void handleCreate()}>
+        <KidButton
+          variant="primary"
+          disabled={isSubmitting || setsLoading || !selectedQuestionSetId}
+          onClick={() => void handleCreate()}
+        >
           {isSubmitting ? "Creating..." : "Create English Craft room"}
         </KidButton>
 

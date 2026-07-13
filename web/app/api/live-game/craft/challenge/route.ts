@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   ENGLISH_CRAFT_CRAFT_BENCH_ID,
@@ -10,18 +11,22 @@ import {
   isCraftRecipeId,
   missingRecipeRequirements,
 } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
-import { toClientCraftQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
-import { getCraftQuestionFromSet, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
+import { toClientCraftQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
+import {
+  getQuestionById,
+  pickCraftQuestion,
+} from "@/lib/live-game/server/question-set-resolver";
+import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import {
   createLiveGameChallenge,
-  findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
 import {
   canStartRecipeCraft,
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
-import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
 import { ENGLISH_CRAFT_CRAFT_BENCH_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
 import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
@@ -78,8 +83,7 @@ async function handlePost(request: Request) {
   if (!storage?.session) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
-  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
-  const craftQuestion = getCraftQuestionFromSet(questionSetId);
+  const binding = readSessionQuestionSetBinding(storage.session);
   if (storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
@@ -95,34 +99,36 @@ async function handlePost(request: Request) {
   if (
     !position ||
     Date.now() - position.updatedAt > 5_000 ||
-    !findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_CRAFT_BENCH_V1])
+    !findNearestInteractable(position.x, position.y, [
+      expandInteractRadius(
+        ENGLISH_CRAFT_CRAFT_BENCH_V1,
+        LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX,
+      ),
+    ])
   ) {
     return NextResponse.json({ error: "Move closer to the workbench." }, { status: 409 });
   }
 
-  const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
-  if (existing) {
-    return NextResponse.json({
-      challengeId: existing.challengeId,
-      expiresAt: new Date(existing.expiresAt).toISOString(),
-      question: toClientCraftQuestion(craftQuestion),
-      recipeId,
-      recipeLabel: recipe.label,
-      costSummary: formatRecipeFullCostSummary(recipe),
-    });
-  }
-
+  const craftSeed = `${playerId}:${recipeId}:0`;
+  const pickedCraftRow = await pickCraftQuestion(binding.ref, binding.version, craftSeed);
   const challenge = await createLiveGameChallenge({
     roomId,
     playerId,
     nodeId,
-    questionId: craftQuestion.id,
+    questionId: pickedCraftRow.id,
+    questionSetId: binding.setId,
+    questionSetVersion: binding.version,
+    questionBank: "craft",
+    validationPayload: pickedCraftRow.payload,
   });
+  const craftRow =
+    challenge.questionId === pickedCraftRow.id ? pickedCraftRow
+    : (await getQuestionById(binding.ref, "craft", challenge.questionId, binding.version)) ?? pickedCraftRow;
 
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
-    question: toClientCraftQuestion(craftQuestion),
+    question: toClientCraftQuestionFromRow(craftRow, challenge.challengeId),
     recipeId,
     recipeLabel: recipe.label,
     costSummary: formatRecipeFullCostSummary(recipe),
@@ -131,7 +137,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_craft_challenge", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game craft challenge request failed", error);

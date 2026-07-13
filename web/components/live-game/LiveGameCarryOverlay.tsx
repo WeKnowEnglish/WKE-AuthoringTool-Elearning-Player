@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { resolveCarryArt } from "@/lib/live-game/modes/english-craft/english-craft-art";
+import { ENGLISH_CRAFT_CARRY_OVERLAY_SIZE_PX } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import type { EnglishCraftResourceType } from "@/lib/live-game/modes/english-craft/english-craft-art";
 
 type Props = {
@@ -9,7 +10,10 @@ type Props = {
   sizePx?: number;
 };
 
-export function LiveGameCarryOverlay({ resourceType, sizePx = 32 }: Props) {
+export function LiveGameCarryOverlay({
+  resourceType,
+  sizePx = ENGLISH_CRAFT_CARRY_OVERLAY_SIZE_PX,
+}: Props) {
   return (
     <div
       className="pointer-events-none absolute left-1/2 -translate-x-1/2"

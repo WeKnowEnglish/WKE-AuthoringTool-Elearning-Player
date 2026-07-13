@@ -18,6 +18,7 @@ type Props = {
   feedback?: "correct" | "incorrect" | null;
   error?: string | null;
   onSubmit: (answer: string) => void;
+  onSkip?: () => void;
   onClose: () => void;
 };
 
@@ -30,10 +31,12 @@ export function LiveGameMcChallengeModal({
   feedback,
   error,
   onSubmit,
+  onSkip,
   onClose,
 }: Props) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const canSubmit = tokenStatus === "ready" && !isSubmitting;
+  const canSkip = canSubmit && onSkip != null;
 
   useEffect(() => {
     if (!open) {
@@ -111,7 +114,12 @@ export function LiveGameMcChallengeModal({
               <p className="mt-3 text-sm font-semibold text-red-700">{error}</p>
             : null}
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              {onSkip ?
+                <KidButton variant="secondary" disabled={!canSkip} onClick={onSkip}>
+                  Skip
+                </KidButton>
+              : null}
               <KidButton variant="secondary" disabled={isSubmitting} onClick={onClose}>
                 Cancel
               </KidButton>

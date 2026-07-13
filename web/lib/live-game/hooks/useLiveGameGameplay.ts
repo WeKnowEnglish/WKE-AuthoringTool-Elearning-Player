@@ -27,12 +27,8 @@ export function useLiveGameCraftedItems() {
   return useStorage((root) => readCraftedItems(readSnapshot(root)));
 }
 
-export function useLiveGameBridgeCrafted() {
-  return useLiveGameCraftedItems().bridge;
-}
-
-export function useLiveGameRiverCrossingUnlocked() {
-  return useStorage((root) => readSnapshot(root).unlockedObjects?.river_crossing === true);
+export function useLiveGameBoatBoardingUnlocked() {
+  return useStorage((root) => readSnapshot(root).unlockedObjects?.boat_boarding === true);
 }
 
 export function useLiveGamePlayerCarry(playerId: string | null | undefined) {

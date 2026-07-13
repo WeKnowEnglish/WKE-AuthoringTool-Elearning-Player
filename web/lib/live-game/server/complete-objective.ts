@@ -5,11 +5,14 @@ import {
   type LiveGameMutatorNode,
 } from "@/lib/live-game/server/mutator";
 
+export type LiveGameObjectiveKind = "boat_escape";
+
 export type CompleteObjectiveResult = {
   objectiveCompleted: boolean;
   victoryAt: number;
   completedByPlayerId: string;
   alreadyCompleted: boolean;
+  kind: LiveGameObjectiveKind;
 };
 
 function readMutatorBoolean(value: unknown): boolean {
@@ -19,7 +22,9 @@ function readMutatorBoolean(value: unknown): boolean {
 export async function completeLiveGameObjective(input: {
   roomId: string;
   playerId: string;
+  kind?: LiveGameObjectiveKind;
 }): Promise<CompleteObjectiveResult | null> {
+  const kind = input.kind ?? "boat_escape";
   const liveblocks = getLiveblocksServerClient();
   let result: CompleteObjectiveResult | null = null;
 
@@ -35,17 +40,21 @@ export async function completeLiveGameObjective(input: {
         victoryAt: typeof session.get("victoryAt") === "number" ? (session.get("victoryAt") as number) : Date.now(),
         completedByPlayerId: readMutatorString(session.get("completedByPlayerId")) ?? input.playerId,
         alreadyCompleted: true,
+        kind,
       };
       return;
     }
 
     if (phase !== "playing") return;
 
-    const craftedItems = storage.get("craftedItems") as LiveGameMutatorNode | undefined;
     const unlockedObjects = storage.get("unlockedObjects") as LiveGameMutatorNode | undefined;
-    if (!craftedItems || !unlockedObjects) return;
-    if (!readMutatorBoolean(craftedItems.get("bridge"))) return;
-    if (!readMutatorBoolean(unlockedObjects.get("river_crossing"))) return;
+    if (!unlockedObjects) return;
+
+    if (kind === "boat_escape") {
+      if (!readMutatorBoolean(unlockedObjects.get("boat_boarding"))) return;
+    } else {
+      return;
+    }
 
     const victoryAt = Date.now();
     session.set("phase", "completed");
@@ -58,6 +67,7 @@ export async function completeLiveGameObjective(input: {
       victoryAt,
       completedByPlayerId: input.playerId,
       alreadyCompleted: false,
+      kind,
     };
   });
 

@@ -2,7 +2,7 @@
 
 **Product:** Live Game — disposable classroom sessions  
 **First mode:** English Craft  
-**Status:** Phase 2 complete · Phase 3A ✅ · Phase 3B ✅ · Phase 3C ✅ · Phase 3D ✅ · Phase 3E ✅ · Phase 3F ✅ (2026-07-12)
+**Status:** Phase 2 complete · Phase 3A–3F ✅ · Phase 4A–4F ✅ · 4G partial ✅ (2026-07-12)
 
 ---
 
@@ -18,10 +18,19 @@
 | [phase-3d-plan.md](./phase-3d-plan.md) | Phase 3D — deposit + spell → pool ✅ |
 | [phase-3e-plan.md](./phase-3e-plan.md) | Phase 3E — HUD + storage fill ✅ |
 | [phase-3f-plan.md](./phase-3f-plan.md) | Phase 3F — multi-resource craft + victory ✅ |
-| [phase-4-plan.md](./phase-4-plan.md) | Phase 4 overview — bench milestones, hunger, boat escape (awaiting approval) |
+| [phase-4-plan.md](./phase-4-plan.md) | Phase 4 overview — bench milestones, hunger, boat escape |
 | [phase-4a-plan.md](./phase-4a-plan.md) | Phase 4A — map, schema, hammer/boat art ✅ |
 | [phase-4b-plan.md](./phase-4b-plan.md) | Phase 4B — build bench + recipe engine ✅ |
 | [phase-4c-plan.md](./phase-4c-plan.md) | Phase 4C — hammer + boat recipes ✅ |
+| [phase-4d-plan.md](./phase-4d-plan.md) | Phase 4D — hunger + bread ✅ |
+| [phase-4e-plan.md](./phase-4e-plan.md) | Phase 4E — boat boarding win ✅ |
+| [phase-4f-plan.md](./phase-4f-plan.md) | Phase 4F — cleanup & pilot polish ✅ |
+| [question-database-plan.md](./question-database-plan.md) | Question DB + host carousel + editor (approved) |
+| [question-database-q1-plan.md](./question-database-q1-plan.md) | Phase Q1 — schema + seed + resolver ✅ |
+| [question-database-q2-plan.md](./question-database-q2-plan.md) | Phase Q2 — wire runtime to DB ✅ |
+| [question-database-q3-plan.md](./question-database-q3-plan.md) | Phase Q3 — host carousel ✅ |
+| [question-database-q4-plan.md](./question-database-q4-plan.md) | Phase Q4 — editor + CRUD ✅ |
+| [question-database-q5-plan.md](./question-database-q5-plan.md) | Phase Q5 — remove TS registry ✅ |
 | [existing-system-audit.md](./existing-system-audit.md) | What exists in the repo; reuse verdicts |
 | [architecture.md](./architecture.md) | State ownership, Liveblocks contract, API routes |
 | [mvp-scope.md](./mvp-scope.md) | MVP includes/excludes, acceptance tests, pilot script |
@@ -33,8 +42,11 @@
 | --- | --- |
 | `/live-game` | Entry |
 | `/live-game/host` | Teacher creates English Craft session |
+| `/live-game/question-sets/[id]/edit` | Teacher edits a draft question set |
 | `/live-game/join` | Student joins with code |
 | `/live-game/[sessionId]` | Lobby + play |
+
+**Local dev:** Live Game requires Supabase migrations **035–038** applied. Question content is DB-only (no TS registry fallback since Q5).
 
 ## Milestone map
 
@@ -53,6 +65,10 @@
 | **4A** | **Island map + schema + hammer/boat art** ✅ |
 | **4B** | **Build bench + recipe engine** — [phase-4b-plan.md](./phase-4b-plan.md) ✅ |
 | **4C** | **Hammer + boat recipes** — [phase-4c-plan.md](./phase-4c-plan.md) ✅ |
+| **4G** | **Deposit letter tiles** ✅ · **carry scale (48px / 24px)** ✅ |
+| **4D** | **Hunger + bread** — [phase-4d-plan.md](./phase-4d-plan.md) ✅ |
+| **4E** | **Boat boarding win** — [phase-4e-plan.md](./phase-4e-plan.md) ✅ |
+| **4F** | **Cleanup & pilot polish** — [phase-4f-plan.md](./phase-4f-plan.md) ✅ |
 
 ## Deployment prerequisite
 

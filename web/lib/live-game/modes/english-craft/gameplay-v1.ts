@@ -32,7 +32,15 @@ export const ENGLISH_CRAFT_CRAFT_BENCH_ID = "craft-bench-01";
 export const ENGLISH_CRAFT_BOAT_HAMMER_GOAL = 5;
 export const ENGLISH_CRAFT_HAMMER_COSTS = { wood: 2, stone: 2 } as const;
 export const ENGLISH_CRAFT_BOAT_POOL_COSTS = { wood: 20, cotton: 10 } as const;
+export const ENGLISH_CRAFT_BREAD_COSTS = { wheat: 2 } as const;
 export const ENGLISH_CRAFT_CRAFT_QUESTION_ID = "craft-bridge-v1";
+export const ENGLISH_CRAFT_HUNGER_MAX = 100;
+export const ENGLISH_CRAFT_HUNGER_DECAY_INTERVAL_MS = 45_000;
+export const ENGLISH_CRAFT_HUNGER_DECAY_AMOUNT = 1;
+export const ENGLISH_CRAFT_HUNGER_LOW_WARNING = 30;
+export const ENGLISH_CRAFT_HUNGER_STARVING_SPEED_MULTIPLIER = 0.6;
+export const ENGLISH_CRAFT_CARRY_OVERLAY_SIZE_PX = 48;
+export const ENGLISH_CRAFT_CARRY_HUD_ICON_PX = 24;
 export const ENGLISH_CRAFT_FLAG_ID = "flag-01";
 export const ENGLISH_CRAFT_FLAG_ZONE_SIZE_PX = 80;
 

@@ -34,6 +34,7 @@ type Options = {
   cameraRef: RefObject<HTMLDivElement | null>;
   localPlayerRef: RefObject<HTMLDivElement | null>;
   carriedResourceType?: LiveGameResourceType | null;
+  speedMultiplier?: number;
 };
 
 export function useLocalMovement({
@@ -47,9 +48,11 @@ export function useLocalMovement({
   cameraRef,
   localPlayerRef,
   carriedResourceType = null,
+  speedMultiplier = 1,
 }: Options) {
   const updatePresence = useUpdateMyPresence();
   const carriedResourceRef = useRef<LiveGameResourceType | null>(carriedResourceType);
+  const speedMultiplierRef = useRef(speedMultiplier);
   const positionRef = useRef<MovementState>(createMovementState(map, spawnIndex));
   const facingRef = useRef<LiveGameDirection>("right");
   const isMovingRef = useRef(false);
@@ -122,6 +125,10 @@ export function useLocalMovement({
       true,
     );
   }, [avatarId, carriedResourceType, sendPresence]);
+
+  useEffect(() => {
+    speedMultiplierRef.current = speedMultiplier;
+  }, [speedMultiplier]);
 
   useEffect(() => {
     const initial = createMovementState(map, spawnIndex);
@@ -203,7 +210,12 @@ export function useLocalMovement({
       const axisY = keyboard.axisY !== 0 ? keyboard.axisY : touch.axisY;
 
       if (dtSec > 0 && (axisX !== 0 || axisY !== 0)) {
-        const next = tickMovement(map, positionRef.current, { axisX, axisY, dtSec });
+        const next = tickMovement(map, positionRef.current, {
+          axisX,
+          axisY,
+          dtSec,
+          speedMultiplier: speedMultiplierRef.current,
+        });
         positionRef.current = next;
 
         const direction = directionFromAxes(axisX, axisY);

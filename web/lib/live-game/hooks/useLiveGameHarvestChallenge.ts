@@ -6,6 +6,7 @@ import {
   isChallengePrefetchValid,
   type ChallengePrefetchEntry,
 } from "@/lib/live-game/challenge-prefetch";
+import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-sync";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type { LiveGamePoolTotal } from "@/lib/live-game/api-types";
 import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
@@ -84,6 +85,8 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
     nodeId: string;
     promise: Promise<ChallengePrefetchEntry<EnglishCraftMcQuestionClient>>;
   } | null>(null);
+  const submitInFlightRef = useRef(false);
+  const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
 
   const isOpen = activeChallenge != null;
 
@@ -265,9 +268,14 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
   );
 
   const beginChallenge = useCallback(
-    async (node: EnglishCraftResourceNodeDef, cooldownEndsAt?: number | null) => {
+    async (
+      node: EnglishCraftResourceNodeDef,
+      cooldownEndsAt?: number | null,
+      positionSync?: Promise<boolean>,
+    ) => {
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
+      interactionPositionSyncRef.current = positionSync ?? null;
 
       setError(null);
       setLastResult(null);
@@ -296,24 +304,38 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
         question: previewQuestion,
       });
 
+      try {
+        await requireLiveGamePositionSync(positionSync);
+      } catch (positionError) {
+        if (beginRequestRef.current !== requestId) return;
+        setTokenStatus("error");
+        setError(
+          positionError instanceof Error ? positionError.message : "Could not verify your position.",
+        );
+        return;
+      }
+      if (beginRequestRef.current !== requestId) return;
       await resolveTokenForNode(node.id, previewQuestion, requestId, cooldownEndsAt);
     },
     [resolveTokenForNode],
   );
 
   const submitAnswer = useCallback(
-    async (answer: string) => {
-      if (!activeChallenge?.challengeId || tokenStatus !== "ready") return;
+    async (answer: string, options?: { skip?: boolean }) => {
+      if (!activeChallenge?.challengeId || tokenStatus !== "ready" || submitInFlightRef.current) return;
+      submitInFlightRef.current = true;
       setIsSubmitting(true);
       setError(null);
       try {
+        await requireLiveGamePositionSync(interactionPositionSyncRef.current);
         const response = await fetch("/api/live-game/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             roomId,
             challengeId: activeChallenge.challengeId,
-            answer,
+            answer: options?.skip ? "" : answer,
+            skip: options?.skip === true,
           }),
         });
         const payload = (await response.json()) as {
@@ -321,11 +343,26 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
           correct?: boolean;
           carryGranted?: { type: LiveGameResourceType; sourceNodeId: string } | null;
           poolTotal?: LiveGamePoolTotal;
+          skipped?: boolean;
         };
+        if (response.status === 404) {
+          clearPrefetchCache(activeChallenge.nodeId);
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit answer.");
         }
 
+        if (payload.skipped === true) {
+          clearPrefetchCache(activeChallenge.nodeId);
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         const correct = payload.correct === true;
         const poolTotal = payload.poolTotal ?? {
           wood: 0,
@@ -350,6 +387,7 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
           answerError instanceof Error ? answerError.message : "Could not submit answer.";
         setError(message);
       } finally {
+        submitInFlightRef.current = false;
         setIsSubmitting(false);
       }
     },
@@ -358,11 +396,16 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
 
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
+    interactionPositionSyncRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");
     setError(null);
     setLastResult(null);
   }, []);
+
+  const skipChallenge = useCallback(() => {
+    void submitAnswer("", { skip: true });
+  }, [submitAnswer]);
 
   return useMemo(
     () => ({
@@ -374,6 +417,7 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
       lastResult,
       beginChallenge,
       submitAnswer,
+      skipChallenge,
       closeChallenge,
       prefetchForNode,
       cancelPrefetch,
@@ -390,6 +434,7 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
       isSubmitting,
       lastResult,
       prefetchForNode,
+      skipChallenge,
       submitAnswer,
       tokenStatus,
     ],

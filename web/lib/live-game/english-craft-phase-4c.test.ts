@@ -21,8 +21,8 @@ import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 const playingSession = {
   session: { phase: "playing" as const },
   resourcePool: { wood: 20, stone: 10, wheat: 0, cotton: 10 },
-  craftedItems: { benchBuilt: true, hammers: 5, boat: false, bridge: false },
-  unlockedObjects: { river_crossing: false, boat_boarding: false },
+  craftedItems: { benchBuilt: true, hammers: 5, boat: false },
+  unlockedObjects: { boat_boarding: false },
 };
 
 describe("english-craft phase 4c hammer recipe", () => {
@@ -42,7 +42,7 @@ describe("english-craft phase 4c hammer recipe", () => {
         {
           session: { phase: "playing" },
           resourcePool: { wood: 2, stone: 2, wheat: 0, cotton: 0 },
-          craftedItems: { benchBuilt: false, hammers: 0, boat: false, bridge: false },
+          craftedItems: { benchBuilt: false, hammers: 0, boat: false },
         },
         "craft_hammer",
       ),
@@ -53,7 +53,7 @@ describe("english-craft phase 4c hammer recipe", () => {
         {
           ...playingSession,
           resourcePool: { wood: 2, stone: 2, wheat: 0, cotton: 0 },
-          craftedItems: { benchBuilt: true, hammers: 0, boat: true, bridge: false },
+          craftedItems: { benchBuilt: true, hammers: 0, boat: true },
         },
         "craft_hammer",
       ),
@@ -65,7 +65,7 @@ describe("english-craft phase 4c hammer recipe", () => {
       {
         ...playingSession,
         resourcePool: { wood: 4, stone: 4, wheat: 0, cotton: 0 },
-        craftedItems: { benchBuilt: true, hammers: 2, boat: false, bridge: false },
+        craftedItems: { benchBuilt: true, hammers: 2, boat: false },
       },
       "craft_hammer",
     );
@@ -86,13 +86,13 @@ describe("english-craft phase 4c boat recipe", () => {
   it("blocks boat craft below 5 hammers", () => {
     expect(
       canAffordRecipeCraftedCost(
-        { benchBuilt: true, hammers: 4, boat: false, bridge: false },
+        { benchBuilt: true, hammers: 4, boat: false },
         ENGLISH_CRAFT_CRAFT_BOAT_RECIPE,
       ),
     ).toBe(false);
     expect(
       missingRecipeCraftedResources(
-        { benchBuilt: true, hammers: 4, boat: false, bridge: false },
+        { benchBuilt: true, hammers: 4, boat: false },
         ENGLISH_CRAFT_CRAFT_BOAT_RECIPE,
       ),
     ).toEqual(["hammers"]);
@@ -104,7 +104,7 @@ describe("english-craft phase 4c boat recipe", () => {
       canStartRecipeCraft(
         {
           ...playingSession,
-          craftedItems: { benchBuilt: true, hammers: 4, boat: false, bridge: false },
+          craftedItems: { benchBuilt: true, hammers: 4, boat: false },
         },
         "craft_boat",
       ),
@@ -127,7 +127,6 @@ describe("english-craft phase 4c boat recipe", () => {
       benchBuilt: true,
       hammers: 0,
       boat: true,
-      bridge: false,
     });
     expect(isBoatBoardingUnlocked(next)).toBe(true);
   });
@@ -147,10 +146,11 @@ describe("english-craft phase 4c boat recipe", () => {
 });
 
 describe("english-craft phase 4c bench recipe menu", () => {
-  it("lists hammer and boat recipes when bench is active", () => {
+  it("lists hammer, bread, and boat recipes when bench is active", () => {
     expect(canCraftAtBench(playingSession)).toBe(true);
     expect(listBenchCraftRecipes(playingSession).map((recipe) => recipe.id)).toEqual([
       "craft_hammer",
+      "craft_bread",
       "craft_boat",
     ]);
     expect(listBenchCraftRecipes({ ...playingSession, craftedItems: { boat: true } })).toEqual([]);
@@ -162,29 +162,16 @@ describe("english-craft phase 4c bench recipe menu", () => {
       getDefaultBenchRecipe({
         ...playingSession,
         resourcePool: { wood: 20, stone: 0, wheat: 0, cotton: 10 },
-        craftedItems: { benchBuilt: true, hammers: 5, boat: false, bridge: false },
+        craftedItems: { benchBuilt: true, hammers: 5, boat: false },
       }),
     ).toBe("craft_boat");
-  });
-
-  it("does not block hammer craft when only legacy bridge is crafted", () => {
-    expect(
-      canStartRecipeCraft(
-        {
-          session: { phase: "playing" },
-          resourcePool: { wood: 2, stone: 2, wheat: 0, cotton: 0 },
-          craftedItems: { benchBuilt: true, hammers: 0, boat: false, bridge: true },
-        },
-        "craft_hammer",
-      ),
-    ).toBe(true);
   });
 
   it("reports combined missing requirements for boat craft", () => {
     expect(
       missingRecipeRequirements(
         { wood: 20, stone: 0, wheat: 0, cotton: 9 },
-        { benchBuilt: true, hammers: 4, boat: false, bridge: false },
+        { benchBuilt: true, hammers: 4, boat: false },
         ENGLISH_CRAFT_CRAFT_BOAT_RECIPE,
       ),
     ).toEqual(["cotton", "hammers"]);

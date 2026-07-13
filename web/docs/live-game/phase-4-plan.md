@@ -1,6 +1,6 @@
 # Live Game — Phase 4 Plan (Milestone Loop: Bench → Tools → Boat Escape)
 
-**Status:** Awaiting approval  
+**Status:** Phase 4A–4C ✅ · 4G partial ✅ (letter tiles) · 4D next  
 **Prepared:** 2026-07-12  
 **Branch:** `codex/english-craft-stabilization` (or follow-on)  
 **Depends on:** Phase 3 complete ✅ (harvest → carry → deposit → pool → craft → flag)  

@@ -34,10 +34,9 @@ export function resetEnglishCraftGameplayState(storage: LiveGameMutatorRoot) {
 
   const unlockedObjects = storage.get("unlockedObjects");
   if (unlockedObjects) {
-    unlockedObjects.set("river_crossing", false);
     unlockedObjects.set("boat_boarding", false);
   } else {
-    storage.set("unlockedObjects", new LiveObject({ river_crossing: false, boat_boarding: false }));
+    storage.set("unlockedObjects", new LiveObject({ boat_boarding: false }));
   }
 }
 

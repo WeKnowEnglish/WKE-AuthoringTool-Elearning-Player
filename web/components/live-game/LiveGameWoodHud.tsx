@@ -10,6 +10,8 @@ import {
 } from "@/lib/live-game/modes/english-craft/english-craft-art";
 import {
   ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
+  ENGLISH_CRAFT_CARRY_HUD_ICON_PX,
+  ENGLISH_CRAFT_HUNGER_MAX,
   ENGLISH_CRAFT_RESOURCE_GOALS,
   ENGLISH_CRAFT_WOOD_GOAL,
 } from "@/lib/live-game/modes/english-craft/gameplay-v1";
@@ -18,6 +20,7 @@ import {
   canAffordRecipePoolCost,
   ENGLISH_CRAFT_BUILD_BENCH_RECIPE,
   ENGLISH_CRAFT_CRAFT_BOAT_RECIPE,
+  ENGLISH_CRAFT_CRAFT_BREAD_RECIPE,
   ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE,
 } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
 
@@ -38,6 +41,16 @@ type ResourceHudProps = {
   benchBuilt?: boolean;
   boatBuilt?: boolean;
   hammers?: number;
+  hungerValue?: number;
+  hungerIsLow?: boolean;
+  hungerIsStarving?: boolean;
+  bread?: number;
+  onEatBread?: () => void;
+  eatDisabled?: boolean;
+  eatSubmitting?: boolean;
+  onDropCarry?: () => void;
+  dropDisabled?: boolean;
+  dropSubmitting?: boolean;
 };
 
 function ResourceCell({
@@ -100,6 +113,16 @@ export function LiveGameTeamResourceHud({
   benchBuilt = false,
   boatBuilt = false,
   hammers = 0,
+  hungerValue = ENGLISH_CRAFT_HUNGER_MAX,
+  hungerIsLow = false,
+  hungerIsStarving = false,
+  bread = 0,
+  onEatBread,
+  eatDisabled = false,
+  eatSubmitting = false,
+  onDropCarry,
+  dropDisabled = false,
+  dropSubmitting = false,
 }: ResourceHudProps) {
   const canBuildBench =
     !benchBuilt && canAffordRecipePoolCost(pool, ENGLISH_CRAFT_BUILD_BENCH_RECIPE);
@@ -108,17 +131,51 @@ export function LiveGameTeamResourceHud({
     benchBuilt &&
     !boatBuilt &&
     canAffordRecipePoolCost(pool, ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE);
+  const canAffordBread =
+    benchBuilt &&
+    !boatBuilt &&
+    canAffordRecipePoolCost(pool, ENGLISH_CRAFT_CRAFT_BREAD_RECIPE);
   const canAffordBoat =
     benchBuilt &&
     !boatBuilt &&
     hammers >= ENGLISH_CRAFT_BOAT_HAMMER_GOAL &&
     canAffordRecipePoolCost(pool, ENGLISH_CRAFT_CRAFT_BOAT_RECIPE) &&
-    canAffordRecipeCraftedCost({ benchBuilt, hammers, boat: boatBuilt, bridge: false }, ENGLISH_CRAFT_CRAFT_BOAT_RECIPE);
+    canAffordRecipeCraftedCost({ benchBuilt, hammers, boat: boatBuilt }, ENGLISH_CRAFT_CRAFT_BOAT_RECIPE);
   const hammerCosts = ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE.poolCost;
+  const breadCosts = ENGLISH_CRAFT_CRAFT_BREAD_RECIPE.poolCost;
   const boatCosts = ENGLISH_CRAFT_CRAFT_BOAT_RECIPE.poolCost;
+  const hungerProgress = Math.round((hungerValue / ENGLISH_CRAFT_HUNGER_MAX) * 100);
 
   return (
     <div className="flex flex-col items-end gap-2">
+      <div
+        className="w-full max-w-[220px] rounded-xl border-2 border-amber-300/60 bg-amber-950/80 px-2.5 py-2 text-amber-50 backdrop-blur-sm"
+        aria-label={`Hunger: ${hungerValue} of ${ENGLISH_CRAFT_HUNGER_MAX}`}
+      >
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-200/80">
+          Hunger
+        </p>
+        <div className="h-2 overflow-hidden rounded-full bg-amber-950/80">
+          <div
+            className={clsx(
+              "h-full rounded-full transition-all duration-300",
+              hungerIsStarving ? "bg-red-500"
+              : hungerIsLow ? "bg-yellow-400"
+              : "bg-emerald-400",
+            )}
+            style={{ width: `${hungerProgress}%` }}
+          />
+        </div>
+        <p className="mt-1 text-xs font-bold tabular-nums text-amber-100">
+          {hungerValue}/{ENGLISH_CRAFT_HUNGER_MAX}
+          {hungerIsStarving ?
+            <span className="ml-1 text-red-300">Starving</span>
+          : hungerIsLow ?
+            <span className="ml-1 text-yellow-200">Hungry</span>
+          : null}
+        </p>
+      </div>
+
       <div className="rounded-xl border-2 border-amber-300/60 bg-amber-950/80 px-2.5 py-2 text-amber-50 backdrop-blur-sm">
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-200/80">
           Team resources
@@ -127,10 +184,12 @@ export function LiveGameTeamResourceHud({
           {RESOURCE_ROWS.map((row) => {
             const benchCost = benchCosts[row.type] ?? 0;
             const hammerCost = hammerCosts[row.type] ?? 0;
+            const breadCost = breadCosts[row.type] ?? 0;
             const boatCost = boatCosts[row.type] ?? 0;
             const craftReady =
               (canBuildBench && benchCost > 0 && pool[row.type] >= benchCost) ||
               (canAffordHammer && hammerCost > 0 && pool[row.type] >= hammerCost) ||
+              (canAffordBread && breadCost > 0 && pool[row.type] >= breadCost) ||
               (canAffordBoat && boatCost > 0 && pool[row.type] >= boatCost);
             return (
               <ResourceCell
@@ -169,11 +228,11 @@ export function LiveGameTeamResourceHud({
         </div>
       : null}
 
-      {carriedResourceType ?
-        <div className="flex items-center gap-1.5 rounded-full border border-amber-200/50 bg-amber-950/90 px-2.5 py-1 text-xs font-bold text-amber-100 backdrop-blur-sm">
+      {bread > 0 || onEatBread ?
+        <div className="flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-950/90 px-2.5 py-1 text-xs font-bold text-amber-100 backdrop-blur-sm">
           <span className="relative inline-block h-4 w-4 shrink-0">
             <Image
-              src={resolveCarryArt(carriedResourceType)}
+              src={ENGLISH_CRAFT_ART.wheatResource}
               alt=""
               fill
               className="object-contain"
@@ -182,7 +241,50 @@ export function LiveGameTeamResourceHud({
               draggable={false}
             />
           </span>
-          Carrying {carriedResourceType}
+          <span className="tabular-nums">Bread {bread}</span>
+          {onEatBread ?
+            <KidButton
+              type="button"
+              variant="accent"
+              className="!min-h-7 !px-2.5 !py-1 text-[11px] font-extrabold"
+              disabled={eatDisabled || bread < 1 || eatSubmitting}
+              onClick={onEatBread}
+            >
+              {eatSubmitting ? "..." : "Eat"}
+            </KidButton>
+          : null}
+        </div>
+      : null}
+
+      {carriedResourceType ?
+        <div className="flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-950/90 px-2.5 py-1 text-xs font-bold text-amber-100 backdrop-blur-sm">
+          <span
+            className="relative inline-block shrink-0"
+            style={{ width: ENGLISH_CRAFT_CARRY_HUD_ICON_PX, height: ENGLISH_CRAFT_CARRY_HUD_ICON_PX }}
+          >
+            <Image
+              src={resolveCarryArt(carriedResourceType)}
+              alt=""
+              fill
+              className="object-contain"
+              sizes={`${ENGLISH_CRAFT_CARRY_HUD_ICON_PX}px`}
+              unoptimized
+              draggable={false}
+            />
+          </span>
+          <span>Carrying {carriedResourceType}</span>
+          {onDropCarry ?
+            <KidButton
+              type="button"
+              variant="secondary"
+              className="!min-h-7 !px-2.5 !py-1 text-[11px] font-extrabold"
+              disabled={dropDisabled || dropSubmitting}
+              onClick={onDropCarry}
+              aria-label={`Drop carried ${carriedResourceType}`}
+            >
+              {dropSubmitting ? "..." : "Drop"}
+            </KidButton>
+          : null}
         </div>
       : null}
     </div>

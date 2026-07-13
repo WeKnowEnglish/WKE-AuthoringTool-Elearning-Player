@@ -2,6 +2,7 @@ import { LiveMap, LiveObject } from "@liveblocks/client";
 import type {
   LiveGameCraftReceipt,
   LiveGameCraftedItems,
+  LiveGamePlayerInventory,
   LiveGameResourcePool,
   LiveGameStorageSnapshot,
 } from "@/lib/live-game/liveblocks/config";
@@ -24,6 +25,7 @@ export type AwardCraftRecipeResult = {
   recipeId: CraftRecipeId;
   poolTotal: LiveGameResourcePool;
   craftedItems: LiveGameCraftedItems;
+  inventory?: LiveGamePlayerInventory;
   alreadyAwarded: boolean;
 };
 
@@ -45,7 +47,6 @@ function readCraftedFromMutator(craftedItems: LiveGameMutatorNode): LiveGameCraf
     benchBuilt: readMutatorBoolean(craftedItems.get("benchBuilt")),
     hammers: readMutatorNumber(craftedItems.get("hammers")),
     boat: readMutatorBoolean(craftedItems.get("boat")),
-    bridge: readMutatorBoolean(craftedItems.get("bridge")),
   };
 }
 
@@ -73,10 +74,33 @@ function meetsRecipeRequiresForAward(
   return true;
 }
 
+function applyBreadGrant(
+  storage: ReturnType<typeof asLiveGameMutatorRoot>,
+  playerId: string,
+  amount: number,
+): LiveGamePlayerInventory {
+  let playerInventory = storage.get("playerInventory");
+  if (!playerInventory) {
+    playerInventory = new LiveMap() as unknown as LiveGameMutatorNode;
+    storage.set("playerInventory", playerInventory);
+  }
+
+  let entry = playerInventory.get(playerId) as LiveGameMutatorNode | undefined;
+  if (!entry) {
+    entry = new LiveObject<LiveGamePlayerInventory>({ bread: 0 }) as unknown as LiveGameMutatorNode;
+    playerInventory.set(playerId, entry);
+  }
+
+  const nextBread = readMutatorNumber(entry.get("bread")) + amount;
+  entry.set("bread", nextBread);
+  return { bread: nextBread };
+}
+
 export async function awardCraftRecipe(input: {
   roomId: string;
   challengeId: string;
   recipeId: CraftRecipeId;
+  playerId: string;
 }): Promise<AwardCraftRecipeResult | null> {
   const recipe = getCraftRecipe(input.recipeId);
   const liveblocks = getLiveblocksServerClient();
@@ -107,7 +131,6 @@ export async function awardCraftRecipe(input: {
         benchBuilt: readMutatorBoolean(priorReceipt.get("benchBuilt")),
         hammers: readMutatorNumber(priorReceipt.get("hammers")),
         boat: readMutatorBoolean(priorReceipt.get("boatCrafted")),
-        bridge: readMutatorBoolean(priorReceipt.get("bridgeCrafted")),
       };
       let craftedItemsNode = storage.get("craftedItems");
       if (craftedItemsNode) {
@@ -117,6 +140,16 @@ export async function awardCraftRecipe(input: {
         recipeId: input.recipeId,
         poolTotal,
         craftedItems,
+        inventory:
+          readMutatorNumber(priorReceipt.get("breadGranted")) > 0 ?
+            (() => {
+              const playerInventory = storage.get("playerInventory");
+              const entry = playerInventory?.get(input.playerId) as LiveGameMutatorNode | undefined;
+              return {
+                bread: entry ? readMutatorNumber(entry.get("bread")) : readMutatorNumber(priorReceipt.get("breadGranted")),
+              };
+            })()
+          : undefined,
         alreadyAwarded: true,
       };
       return;
@@ -153,10 +186,15 @@ export async function awardCraftRecipe(input: {
 
     applyRecipeGrants(craftedItems, recipe.grants);
 
+    let inventory: LiveGamePlayerInventory | undefined;
+    if (recipe.grants.breadToCrafter != null && recipe.grants.breadToCrafter > 0) {
+      inventory = applyBreadGrant(storage, input.playerId, recipe.grants.breadToCrafter);
+    }
+
     if (recipe.grants.boat) {
       let unlockedObjects = storage.get("unlockedObjects");
       if (!unlockedObjects) {
-        unlockedObjects = new LiveObject({ river_crossing: false, boat_boarding: false }) as unknown as LiveGameMutatorNode;
+        unlockedObjects = new LiveObject({ boat_boarding: false }) as unknown as LiveGameMutatorNode;
         storage.set("unlockedObjects", unlockedObjects);
       }
       unlockedObjects.set("boat_boarding", true);
@@ -168,6 +206,7 @@ export async function awardCraftRecipe(input: {
       recipeId: input.recipeId,
       poolTotal: nextPool,
       craftedItems: finalCrafted,
+      inventory,
       alreadyAwarded: false,
     };
 
@@ -182,6 +221,7 @@ export async function awardCraftRecipe(input: {
         benchBuilt: finalCrafted.benchBuilt,
         hammers: finalCrafted.hammers,
         boatCrafted: finalCrafted.boat,
+        breadGranted: inventory?.bread,
       }),
     );
   });
@@ -193,6 +233,7 @@ export async function awardCraftRecipe(input: {
 export function applyCraftRecipeAwardToSnapshot(
   storage: LiveGameStorageSnapshot,
   recipeId: CraftRecipeId,
+  playerId?: string,
 ): LiveGameStorageSnapshot | null {
   const recipe = getCraftRecipe(recipeId);
   const crafted = readCraftedItems(storage);
@@ -217,15 +258,24 @@ export function applyCraftRecipeAwardToSnapshot(
   if (recipe.grants.boat) nextCrafted.boat = true;
 
   const nextUnlocked = {
-    river_crossing: storage.unlockedObjects?.river_crossing === true,
     boat_boarding:
       recipe.grants.boat ? true : storage.unlockedObjects?.boat_boarding === true,
   };
+
+  let nextPlayerInventory = storage.playerInventory;
+  if (recipe.grants.breadToCrafter != null && recipe.grants.breadToCrafter > 0 && playerId) {
+    const currentBread = storage.playerInventory?.[playerId]?.bread ?? 0;
+    nextPlayerInventory = {
+      ...storage.playerInventory,
+      [playerId]: { bread: currentBread + recipe.grants.breadToCrafter },
+    };
+  }
 
   return {
     ...storage,
     resourcePool: nextPool,
     craftedItems: nextCrafted,
     unlockedObjects: nextUnlocked,
+    playerInventory: nextPlayerInventory,
   };
 }

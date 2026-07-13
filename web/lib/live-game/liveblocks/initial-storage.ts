@@ -7,7 +7,6 @@ import type {
 } from "@/lib/live-game/liveblocks/config";
 import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
 import { ENGLISH_CRAFT_RESOURCE_NODES_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
-import type { LiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets-client";
 import { EMPTY_LIVE_GAME_RESOURCE_POOL } from "@/lib/live-game/resource-pool";
 import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS } from "@/lib/live-game/server/read-crafted-items";
 
@@ -34,7 +33,7 @@ export function createLiveGameInitialStorage(input: {
   modeId: LiveGameModeId;
   mapId: string;
   durationMinutes: EnglishCraftSessionDuration;
-  questionSetId: LiveGameQuestionSetId;
+  questionSetId: string;
   questionSetVersion: number;
 }) {
   const session: LiveGameSessionState = {
@@ -63,7 +62,7 @@ export function createLiveGameInitialStorage(input: {
     resourceNodes: createInitialResourceNodes(),
     awardReceipts: new LiveMap(),
     craftedItems: new LiveObject({ ...DEFAULT_LIVE_GAME_CRAFTED_ITEMS }),
-    unlockedObjects: new LiveObject({ river_crossing: false, boat_boarding: false }),
+    unlockedObjects: new LiveObject({ boat_boarding: false }),
     craftReceipts: new LiveMap(),
     playerPositions: new LiveMap(),
     playerCarry: new LiveMap<string, LiveObject<LiveGamePlayerCarry>>(),

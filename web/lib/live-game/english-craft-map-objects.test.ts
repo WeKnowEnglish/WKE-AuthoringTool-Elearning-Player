@@ -49,7 +49,7 @@ describe("english-craft map objects v1", () => {
     }
   });
 
-  it("keeps harvest nodes out of river collision rects when the bridge is locked", () => {
+  it("keeps harvest nodes out of river collision rects", () => {
     for (const node of ENGLISH_CRAFT_RESOURCE_NODES_V1) {
       const insideRiver = ENGLISH_CRAFT_RIVER_COLLISION_RECTS.some((rect) =>
         pointInRect(node.x, node.y, rect),

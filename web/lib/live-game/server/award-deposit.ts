@@ -19,7 +19,6 @@ export async function awardDepositForCarry(input: {
   roomId: string;
   playerId: string;
   challengeId: string;
-  expectedQuestionId: string;
 }): Promise<AwardDepositResult | null> {
   const liveblocks = getLiveblocksServerClient();
   let result: AwardDepositResult | null = null;
@@ -52,9 +51,6 @@ export async function awardDepositForCarry(input: {
     const playerCarry = storage.get("playerCarry");
     const carryNode = playerCarry?.get(input.playerId) as LiveGameMutatorNode | undefined;
     if (!carryNode) return;
-
-    const questionId = readMutatorString(carryNode.get("questionId"));
-    if (questionId !== input.expectedQuestionId) return;
 
     const resourceType = readMutatorString(carryNode.get("resourceType")) as LiveGameResourceType | null;
     if (!resourceType) return;

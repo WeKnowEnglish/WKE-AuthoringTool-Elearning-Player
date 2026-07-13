@@ -22,6 +22,7 @@ const RESOURCE_ROWS: Array<{
 type Props = {
   completedByName: string | null;
   resourceStats: VictoryResourceStats;
+  boatBuilt?: boolean;
   isHost: boolean;
   onPlayAgain?: () => void;
 };
@@ -63,6 +64,7 @@ function ResourceStatRow({
 export function LiveGameVictoryOverlay({
   completedByName,
   resourceStats,
+  boatBuilt = false,
   isHost,
   onPlayAgain,
 }: Props) {
@@ -76,16 +78,22 @@ export function LiveGameVictoryOverlay({
         aria-labelledby="live-game-victory-title"
       >
         <h2 id="live-game-victory-title" className="text-3xl font-extrabold text-kid-ink">
-          Team win!
+          Team escaped!
         </h2>
         <p className="mt-2 text-lg font-semibold text-kid-ink/80">
-          English Craft complete — great teamwork!
+          You built the boat, stayed fed, and got everyone aboard.
         </p>
 
         <dl className="mt-5 space-y-2 rounded-xl border-2 border-kid-ink/20 bg-kid-surface-muted px-4 py-3 text-left text-sm">
+          {boatBuilt ?
+            <div className="flex justify-between gap-3">
+              <dt className="font-bold text-kid-ink/70">Escape boat</dt>
+              <dd className="font-semibold text-kid-ink">Built and boarded</dd>
+            </div>
+          : null}
           {completedByName ?
             <div className="flex justify-between gap-3">
-              <dt className="font-bold text-kid-ink/70">Flag touched by</dt>
+              <dt className="font-bold text-kid-ink/70">Last on the boat</dt>
               <dd className="font-semibold text-kid-ink">{completedByName}</dd>
             </div>
           : null}

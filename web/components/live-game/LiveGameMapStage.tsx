@@ -43,6 +43,7 @@ type UseLiveGameMapStageOptions = {
   spawnIndex: number;
   avatarId: string;
   movementEnabled: boolean;
+  speedMultiplier?: number;
   players: LiveGameLobbyPlayerEntry[];
   /** Defaults to `playing`. Lobby uses static full trees and an unbuilt bridge. */
   visualMode?: LiveGameMapVisualMode;
@@ -56,6 +57,7 @@ export function useLiveGameMapStage({
   spawnIndex,
   avatarId,
   movementEnabled,
+  speedMultiplier = 1,
   players,
   visualMode = "playing",
   resourceNodes,
@@ -76,6 +78,7 @@ export function useLiveGameMapStage({
     enabled: movementEnabled,
     avatarId,
     carriedResourceType,
+    speedMultiplier,
     zoom: ENGLISH_CRAFT_MAP_ZOOM,
     viewportW: viewport.w,
     viewportH: viewport.h,

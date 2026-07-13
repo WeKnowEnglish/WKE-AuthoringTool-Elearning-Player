@@ -12,6 +12,7 @@ export type MovementInput = {
   axisX: number;
   axisY: number;
   dtSec: number;
+  speedMultiplier?: number;
 };
 
 export type MovementState = {
@@ -67,7 +68,12 @@ export function tickMovement(
     collectedMaterialIds: [],
     collectedPickupIds: [],
   };
-  const next = tickExploreSceneMovement(scene, runState, input);
+  const effectiveDtSec = input.dtSec * (input.speedMultiplier ?? 1);
+  const next = tickExploreSceneMovement(scene, runState, {
+    axisX: input.axisX,
+    axisY: input.axisY,
+    dtSec: effectiveDtSec,
+  });
   return { x: next.playerX, y: next.playerY };
 }
 

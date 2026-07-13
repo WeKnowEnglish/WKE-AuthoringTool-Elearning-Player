@@ -23,7 +23,7 @@ export const ENGLISH_CRAFT_MC_PREVIEW: EnglishCraftMcQuestionClient = {
 export const ENGLISH_CRAFT_CRAFT_PREVIEW: EnglishCraftCraftQuestionClient = {
   id: "loading-craft-question",
   type: "drag_sentence",
-  prompt: "Getting your bridge challenge...",
+  prompt: "Getting your craft challenge...",
   wordBank: [],
   slotCount: 0,
 };

@@ -10,6 +10,13 @@ export type InteractablePoint = {
   interactRadius?: number;
 };
 
+export function expandInteractRadius<T extends InteractablePoint>(target: T, extraPx: number): T {
+  return {
+    ...target,
+    interactRadius: (target.interactRadius ?? 64) + Math.max(0, extraPx),
+  };
+}
+
 function distanceSq(ax: number, ay: number, bx: number, by: number): number {
   const dx = ax - bx;
   const dy = ay - by;

@@ -24,19 +24,23 @@ import {
 } from "@/components/live-game/LiveGameWoodHud";
 import type { LiveGameSessionContext } from "@/lib/live-game/liveblocks/identity";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
-import { findNearestInteractable } from "@/lib/live-game/engine/interact";
-import { LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS } from "@/lib/live-game/challenge-prefetch";
+import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
 import { useLiveGameCraftChallenge } from "@/lib/live-game/hooks/useLiveGameCraftChallenge";
 import { useLiveGameDepositChallenge } from "@/lib/live-game/hooks/useLiveGameDepositChallenge";
 import { useLiveGameAvatar } from "@/lib/live-game/hooks/useLiveGameAvatar";
-import { useLiveGameFlagTouch } from "@/lib/live-game/hooks/useLiveGameFlagTouch";
+import { useLiveGameBoatBoarding } from "@/lib/live-game/hooks/useLiveGameBoatBoarding";
 import {
+  useLiveGameBoatBoardingUnlocked,
   useLiveGameCraftedItems,
   useLiveGameResourceNodes,
   useLiveGameResourcePool,
-  useLiveGameRiverCrossingUnlocked,
   useLiveGameSelfCarry,
+  useLiveGameSelfInventory,
 } from "@/lib/live-game/hooks/useLiveGameGameplay";
+import { useLiveGameConsume } from "@/lib/live-game/hooks/useLiveGameConsume";
+import { useLiveGameDropCarry } from "@/lib/live-game/hooks/useLiveGameDropCarry";
+import { useLiveGameSelfHungerDisplay } from "@/lib/live-game/hooks/useLiveGameHunger";
 import { useLiveGameHarvestChallenge } from "@/lib/live-game/hooks/useLiveGameHarvestChallenge";
 import { useLiveGameAutoTimeout } from "@/lib/live-game/hooks/useLiveGameAutoTimeout";
 import { useLiveGameSessionTimer } from "@/lib/live-game/hooks/useLiveGameSessionTimer";
@@ -48,6 +52,7 @@ import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
 import {
   depositInteractLabel,
   ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
+  ENGLISH_CRAFT_HUNGER_STARVING_SPEED_MULTIPLIER,
   harvestInteractLabel,
   isEnglishCraftResourceNodeInteractable,
 } from "@/lib/live-game/modes/english-craft/gameplay-v1";
@@ -67,11 +72,17 @@ import {
   ENGLISH_CRAFT_STORAGE_BY_TYPE,
   toStorageInteractTarget,
 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import type { LiveGamePresence } from "@/lib/live-game/liveblocks/config";
 import { getEnglishCraftCollisionRects } from "@/lib/live-game/modes/english-craft/map-v1";
 
 type Props = {
   context: LiveGameSessionContext;
 };
+
+const CRAFT_BENCH_PREFETCH_TARGET = expandInteractRadius(
+  ENGLISH_CRAFT_CRAFT_BENCH_V1,
+  LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX,
+);
 
 function isNodeInteractable(node: LiveGameResourceNodeState | undefined, now = Date.now()) {
   if (!node) return true;
@@ -79,7 +90,7 @@ function isNodeInteractable(node: LiveGameResourceNodeState | undefined, now = D
 }
 
 export function LiveGameCanvas({ context }: Props) {
-  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby } =
+  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, self, others } =
     useLiveGameLobby();
   const [endSessionModalOpen, setEndSessionModalOpen] = useState(false);
   const [recipePickerOpen, setRecipePickerOpen] = useState(false);
@@ -88,10 +99,11 @@ export function LiveGameCanvas({ context }: Props) {
   const pool = useLiveGameResourcePool();
   const resourceNodes = useLiveGameResourceNodes();
   const selfCarry = useLiveGameSelfCarry();
+  const selfInventory = useLiveGameSelfInventory();
   const craftedItems = useLiveGameCraftedItems();
   const benchBuilt = craftedItems.benchBuilt;
   const boatBuilt = craftedItems.boat;
-  const riverCrossingUnlocked = useLiveGameRiverCrossingUnlocked();
+  const boatBoardingUnlocked = useLiveGameBoatBoardingUnlocked();
   const roomId = toRoomId(context.sessionId);
   const buildBenchRecipe = ENGLISH_CRAFT_BUILD_BENCH_RECIPE;
   const buildBenchCostSummary = formatRecipeCostSummary(buildBenchRecipe);
@@ -119,8 +131,14 @@ export function LiveGameCanvas({ context }: Props) {
     !benchBuilt &&
     canAffordRecipePoolCost(pool, buildBenchRecipe);
   const canCraftAtBench = !isCarrying && benchBuilt && !boatBuilt;
+  const isRecipePickerOpen = recipePickerOpen && canCraftAtBench;
   const isPlaying = session.phase === "playing";
   const isCompleted = session.phase === "completed";
+  const hunger = useLiveGameSelfHungerDisplay({ playing: isPlaying });
+  const consume = useLiveGameConsume({ roomId });
+  const dropCarry = useLiveGameDropCarry({ roomId });
+  const movementSpeedMultiplier =
+    isPlaying && hunger.isStarving ? ENGLISH_CRAFT_HUNGER_STARVING_SPEED_MULTIPLIER : 1;
   const sessionTimer = useLiveGameSessionTimer({
     endsAt: session.endsAt,
     enabled: isPlaying,
@@ -130,7 +148,7 @@ export function LiveGameCanvas({ context }: Props) {
     harvestChallenge.isOpen ||
     depositChallenge.isOpen ||
     craftChallenge.isOpen ||
-    recipePickerOpen;
+    isRecipePickerOpen;
   const movementEnabled = isPlaying && !anyChallengeOpen && !endSessionModalOpen;
 
   useLiveGameAutoTimeout({
@@ -143,9 +161,9 @@ export function LiveGameCanvas({ context }: Props) {
   const map = useMemo(
     () => ({
       ...baseMap,
-      collisionRects: getEnglishCraftCollisionRects(riverCrossingUnlocked),
+      collisionRects: getEnglishCraftCollisionRects(),
     }),
-    [baseMap, riverCrossingUnlocked],
+    [baseMap],
   );
 
   const stage = useLiveGameMapStage({
@@ -153,6 +171,7 @@ export function LiveGameCanvas({ context }: Props) {
     spawnIndex,
     avatarId,
     movementEnabled,
+    speedMultiplier: movementSpeedMultiplier,
     players,
     visualMode: "playing",
     resourceNodes,
@@ -161,8 +180,9 @@ export function LiveGameCanvas({ context }: Props) {
   });
 
   const { getPosition, sampledPosition, now } = stage;
+  const selfId = self?.id;
 
-  const publishPosition = useCallback(() => {
+  const publishPosition = useCallback(async () => {
     const position = getPosition();
     return fetch("/api/live-game/position", {
       method: "POST",
@@ -171,11 +191,42 @@ export function LiveGameCanvas({ context }: Props) {
     });
   }, [getPosition, roomId]);
 
-  useLiveGameFlagTouch({
+  const syncInteractionPosition = useCallback(
+    () => publishPosition().then((response) => response.ok).catch(() => false),
+    [publishPosition],
+  );
+
+  const connectedBoardingPlayers = useMemo(() => {
+    const entries: Array<{ id: string; x: number; y: number }> = [];
+    if (selfId) {
+      entries.push({
+        id: selfId,
+        x: sampledPosition.x,
+        y: sampledPosition.y,
+      });
+    }
+    for (const other of others) {
+      const presence = other.presence as Partial<LiveGamePresence> | null;
+      if (typeof presence?.x !== "number" || typeof presence?.y !== "number") continue;
+      entries.push({
+        id: other.id ?? String(other.connectionId),
+        x: presence.x,
+        y: presence.y,
+      });
+    }
+    return entries;
+  }, [others, sampledPosition.x, sampledPosition.y, selfId]);
+
+  const syncBoardingPosition = useCallback(async () => {
+    await publishPosition();
+  }, [publishPosition]);
+
+  const boatBoarding = useLiveGameBoatBoarding({
     roomId,
-    playerX: sampledPosition.x,
-    playerY: sampledPosition.y,
-    enabled: false,
+    enabled: isPlaying && boatBoardingUnlocked,
+    connectedPlayers: connectedBoardingPlayers,
+    onSyncPosition: syncBoardingPosition,
+    onBeforeComplete: syncBoardingPosition,
   });
 
   const interactableNodes = useMemo(
@@ -225,6 +276,51 @@ export function LiveGameCanvas({ context }: Props) {
     );
   }, [interactableNodes, isCarrying, sampledPosition.x, sampledPosition.y]);
 
+  const depositPrefetchInteractTarget = useMemo(
+    () =>
+      carryStorageDef ?
+        expandInteractRadius(
+          toStorageInteractTarget(carryStorageDef),
+          LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX,
+        )
+      : null,
+    [carryStorageDef],
+  );
+
+  const expandedInteractableNodes = useMemo(
+    () =>
+      interactableNodes.map((node) =>
+        expandInteractRadius(node, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX),
+      ),
+    [interactableNodes],
+  );
+
+  const depositPrefetchTarget = useMemo(() => {
+    if (!depositPrefetchInteractTarget) return null;
+    return findNearestInteractable(
+      sampledPosition.x,
+      sampledPosition.y,
+      [depositPrefetchInteractTarget],
+    );
+  }, [depositPrefetchInteractTarget, sampledPosition.x, sampledPosition.y]);
+
+  const benchPrefetchTarget = useMemo(
+    () =>
+      findNearestInteractable(sampledPosition.x, sampledPosition.y, [
+        CRAFT_BENCH_PREFETCH_TARGET,
+      ]),
+    [sampledPosition.x, sampledPosition.y],
+  );
+
+  const harvestPrefetchTarget = useMemo(() => {
+    if (isCarrying) return null;
+    return findNearestInteractable(
+      sampledPosition.x,
+      sampledPosition.y,
+      expandedInteractableNodes,
+    );
+  }, [expandedInteractableNodes, isCarrying, sampledPosition.x, sampledPosition.y]);
+
   const defaultBenchRecipeId = useMemo(
     () => getDefaultBenchRecipe(gameplaySnapshot),
     [gameplaySnapshot],
@@ -233,28 +329,26 @@ export function LiveGameCanvas({ context }: Props) {
   const handleRecipeSelect = useCallback(
     (recipeId: CraftRecipeId, recipe: CraftRecipe) => {
       setRecipePickerOpen(false);
-      craftChallenge.clearPrefetchCache();
+      const positionSync = syncInteractionPosition();
       void craftChallenge.beginChallenge(
         recipeId,
         recipe.label,
         formatRecipeFullCostSummary(recipe),
+        positionSync,
       );
     },
-    [craftChallenge],
+    [craftChallenge, syncInteractionPosition],
   );
 
-  const handleInteract = useCallback(async () => {
+  const handleInteract = useCallback(() => {
     if (
       harvestChallenge.isOpen ||
       depositChallenge.isOpen ||
       craftChallenge.isOpen ||
-      recipePickerOpen
+      isRecipePickerOpen
     ) {
       return;
     }
-
-    const positionResponse = await publishPosition();
-    if (!positionResponse.ok) return;
 
     const position = getPosition();
 
@@ -263,7 +357,7 @@ export function LiveGameCanvas({ context }: Props) {
         toStorageInteractTarget(carryStorageDef),
       ]);
       if (storage) {
-        void depositChallenge.beginChallenge(carryStorageDef);
+        void depositChallenge.beginChallenge(carryStorageDef, syncInteractionPosition());
         return;
       }
     }
@@ -271,10 +365,12 @@ export function LiveGameCanvas({ context }: Props) {
     if (canBuildBench) {
       const bench = findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_CRAFT_BENCH_V1]);
       if (bench) {
+        const positionSync = syncInteractionPosition();
         void craftChallenge.beginChallenge(
           "build_bench",
           buildBenchRecipe.label,
           buildBenchCostSummary,
+          positionSync,
         );
         return;
       }
@@ -290,7 +386,11 @@ export function LiveGameCanvas({ context }: Props) {
 
     const node = findNearestInteractable(position.x, position.y, interactableNodes);
     if (!node) return;
-    void harvestChallenge.beginChallenge(node, resourceNodes[node.id]?.cooldownEndsAt ?? null);
+    void harvestChallenge.beginChallenge(
+      node,
+      resourceNodes[node.id]?.cooldownEndsAt ?? null,
+      syncInteractionPosition(),
+    );
   }, [
     buildBenchCostSummary,
     buildBenchRecipe.label,
@@ -303,9 +403,9 @@ export function LiveGameCanvas({ context }: Props) {
     harvestChallenge,
     interactableNodes,
     isCarrying,
-    publishPosition,
-    recipePickerOpen,
+    isRecipePickerOpen,
     resourceNodes,
+    syncInteractionPosition,
   ]);
 
   useEffect(() => {
@@ -322,7 +422,7 @@ export function LiveGameCanvas({ context }: Props) {
       return;
     }
 
-    if (isCarrying && depositTarget && carryStorageDef) {
+    if (isCarrying && depositPrefetchTarget && carryStorageDef) {
       harvestChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
       void publishPosition();
@@ -335,7 +435,7 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (canBuildBench && craftBenchTarget) {
+    if (canBuildBench && benchPrefetchTarget) {
       harvestChallenge.cancelPrefetch();
       depositChallenge.cancelPrefetch();
       void publishPosition();
@@ -348,7 +448,7 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (canCraftAtBench && craftBenchTarget && defaultBenchRecipeId) {
+    if (canCraftAtBench && benchPrefetchTarget && defaultBenchRecipeId) {
       harvestChallenge.cancelPrefetch();
       depositChallenge.cancelPrefetch();
       void publishPosition();
@@ -361,13 +461,13 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (harvestTarget) {
+    if (harvestPrefetchTarget) {
       depositChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
       void publishPosition();
-      const cooldownEndsAt = resourceNodes[harvestTarget.id]?.cooldownEndsAt ?? null;
+      const cooldownEndsAt = resourceNodes[harvestPrefetchTarget.id]?.cooldownEndsAt ?? null;
       const timeout = window.setTimeout(() => {
-        void harvestChallenge.prefetchForNode(harvestTarget.id, cooldownEndsAt);
+        void harvestChallenge.prefetchForNode(harvestPrefetchTarget.id, cooldownEndsAt);
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
       return () => {
         window.clearTimeout(timeout);
@@ -383,13 +483,16 @@ export function LiveGameCanvas({ context }: Props) {
     canBuildBench,
     canCraftAtBench,
     carryStorageDef,
+    benchPrefetchTarget,
     craftBenchTarget,
     craftChallenge,
     defaultBenchRecipeId,
     depositChallenge,
     depositTarget,
+    depositPrefetchTarget,
     harvestChallenge,
     harvestTarget,
+    harvestPrefetchTarget,
     isCarrying,
     isPlaying,
     publishPosition,
@@ -401,12 +504,6 @@ export function LiveGameCanvas({ context }: Props) {
       craftChallenge.clearPrefetchCache();
     }
   }, [canBuildBench, canCraftAtBench, craftChallenge]);
-
-  useEffect(() => {
-    if (!canCraftAtBench) {
-      setRecipePickerOpen(false);
-    }
-  }, [canCraftAtBench]);
 
   useEffect(() => {
     for (const node of ENGLISH_CRAFT_RESOURCE_NODES_V1) {
@@ -436,12 +533,16 @@ export function LiveGameCanvas({ context }: Props) {
   const subtitle =
     isCompleted ?
       "Team victory!"
+    : hunger.isStarving ?
+      "Starving — movement slowed. Eat bread or craft more at the workbench."
+    : hunger.isLow && benchBuilt && !boatBuilt ?
+      "You're getting hungry — craft bread at the workbench"
     : isCarrying ?
       "Take it to the matching storage and spell the word — E or Interact"
     : boatBuilt ?
-      "Boat ready at the dock — boarding coming soon"
+      "Get everyone on the boat at the dock to escape!"
     : benchBuilt && craftBenchTarget ?
-      "Craft hammers or the boat at the workbench"
+      "Craft hammers, bread, or the boat at the workbench"
     : benchBuilt && hammersNeeded > 0 ?
       `Craft hammers — need ${hammersNeeded} more for the boat`
     : benchBuilt && !canAffordBoatPool ?
@@ -463,7 +564,7 @@ export function LiveGameCanvas({ context }: Props) {
     : harvestTarget ?
       harvestInteractLabel(harvestTarget.resourceType, harvestTarget.label)
     : boatBuilt ?
-      "Go to the dock"
+      "Board the boat"
     : isCarrying ?
       "Go to storage"
     : "Gather resource";
@@ -482,6 +583,13 @@ export function LiveGameCanvas({ context }: Props) {
   const handlePlayAgain = useCallback(() => {
     returnToLobby();
   }, [returnToLobby]);
+
+  const handleDropCarry = useCallback(async () => {
+    const dropped = await dropCarry.dropCarry();
+    if (!dropped) return;
+    depositChallenge.closeChallenge();
+    depositChallenge.clearPrefetchCache();
+  }, [depositChallenge, dropCarry]);
 
   const timerUrgent =
     sessionTimer?.alertPhase === "thirty_sec" || sessionTimer?.alertPhase === "final_five";
@@ -531,11 +639,42 @@ export function LiveGameCanvas({ context }: Props) {
                   hammers={craftedItems.hammers}
                   benchBuilt={craftedItems.benchBuilt}
                   boatBuilt={craftedItems.boat}
+                  hungerValue={hunger.value}
+                  hungerIsLow={hunger.isLow}
+                  hungerIsStarving={hunger.isStarving}
+                  bread={selfInventory.bread}
+                  onEatBread={() => void consume.consumeBread()}
+                  eatDisabled={!isPlaying || anyChallengeOpen}
+                  eatSubmitting={consume.isSubmitting}
+                  onDropCarry={() => void handleDropCarry()}
+                  dropDisabled={!isPlaying || dropCarry.isSubmitting}
+                  dropSubmitting={dropCarry.isSubmitting}
                 />
               </div>
             </div>
             <LiveGameConnectionBanner className="mt-2 rounded-lg border-2 border-amber-300/80 bg-amber-950/90 px-3 py-2 text-sm font-semibold text-amber-100 backdrop-blur-sm" />
           </header>
+
+          {boatBoardingUnlocked && isPlaying && boatBoarding.totalPlayers > 0 ?
+            <div className="pointer-events-none mt-3 flex justify-center px-3">
+              <div className="w-full max-w-md rounded-xl border-2 border-sky-200/70 bg-sky-950/85 px-4 py-3 text-center text-sky-50 backdrop-blur-sm">
+                <p className="text-sm font-extrabold">
+                  On the boat: {boatBoarding.onBoatCount}/{boatBoarding.totalPlayers}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-sky-100/85">
+                  {boatBoarding.allOnBoat ?
+                    "Hold together for 2 seconds to escape!"
+                  : "Waiting for the whole team..."}
+                </p>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-sky-950">
+                  <div
+                    className="h-full rounded-full bg-sky-300 transition-all duration-150"
+                    style={{ width: `${Math.round(boatBoarding.dwellProgress * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          : null}
         </div>
       </LiveGameMapStage>
 
@@ -555,6 +694,7 @@ export function LiveGameCanvas({ context }: Props) {
         feedback={harvestChallenge.lastResult}
         error={harvestChallenge.error}
         onSubmit={(answer) => void harvestChallenge.submitAnswer(answer)}
+        onSkip={() => harvestChallenge.skipChallenge()}
         onClose={harvestChallenge.closeChallenge}
       />
 
@@ -567,11 +707,13 @@ export function LiveGameCanvas({ context }: Props) {
         feedback={depositChallenge.lastResult}
         error={depositChallenge.error}
         onSubmit={(spelling) => void depositChallenge.submitAnswer(spelling)}
+        onSkip={() => depositChallenge.skipChallenge()}
+        onDropCarry={() => void handleDropCarry()}
         onClose={depositChallenge.closeChallenge}
       />
 
       <LiveGameCraftRecipePicker
-        open={recipePickerOpen}
+        open={isRecipePickerOpen}
         pool={pool}
         craftedItems={craftedItems}
         onSelect={handleRecipeSelect}
@@ -588,6 +730,7 @@ export function LiveGameCanvas({ context }: Props) {
         feedback={craftChallenge.lastResult}
         error={craftChallenge.error}
         onSubmit={(order) => void craftChallenge.submitAnswer(order)}
+        onSkip={() => craftChallenge.skipChallenge()}
         onClose={craftChallenge.closeChallenge}
       />
 
@@ -595,6 +738,7 @@ export function LiveGameCanvas({ context }: Props) {
         <LiveGameVictoryOverlay
           completedByName={completedByName}
           resourceStats={resourceStats}
+          boatBuilt={craftedItems.boat}
           isHost={isHost}
           onPlayAgain={handlePlayAgain}
         />

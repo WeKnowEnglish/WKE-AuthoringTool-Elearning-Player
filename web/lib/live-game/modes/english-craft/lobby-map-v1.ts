@@ -24,9 +24,6 @@ export const ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS: LiveGameCraftedItems = {
   ...DEFAULT_LIVE_GAME_CRAFTED_ITEMS,
 };
 
-/** @deprecated Use ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.bridge */
-export const ENGLISH_CRAFT_LOBBY_BRIDGE_CRAFTED = ENGLISH_CRAFT_LOBBY_CRAFTED_ITEMS.bridge;
-
 export type LiveGameMapVisualMode = "playing" | "lobby";
 
 export function resolveEnglishCraftMapVisuals(input: {

@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
-import { toClientMcQuestion } from "@/lib/live-game/modes/english-craft/questions-v1";
-import { getQuestionFromSet, pickQuestionFromSet, resolveLiveGameQuestionSetId } from "@/lib/live-game/modes/english-craft/question-sets";
+import { toClientMcQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
+import {
+  getQuestionById,
+  pickHarvestQuestion,
+} from "@/lib/live-game/server/question-set-resolver";
+import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   createLiveGameChallenge,
-  findActiveChallengeForPlayerNode,
 } from "@/lib/live-game/server/challenge-store";
 import { isPlayerCarrying } from "@/lib/live-game/server/player-carry";
 import {
@@ -13,7 +17,8 @@ import {
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
-import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
 
 type ChallengeRequestBody = {
   roomId?: string;
@@ -80,7 +85,7 @@ async function handlePost(request: Request) {
   }
 
   const nodeState = storage.resourceNodes?.[nodeId];
-  const questionSetId = resolveLiveGameQuestionSetId(storage.session.questionSetId);
+  const binding = readSessionQuestionSetBinding(storage.session);
   if (!isResourceNodeAvailable(nodeState)) {
     return NextResponse.json({ error: "This resource is on cooldown." }, { status: 409 });
   }
@@ -88,44 +93,42 @@ async function handlePost(request: Request) {
   if (
     !position ||
     Date.now() - position.updatedAt > 5_000 ||
-    !findNearestInteractable(position.x, position.y, [nodeDef])
+    !findNearestInteractable(position.x, position.y, [
+      expandInteractRadius(nodeDef, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX),
+    ])
   ) {
     return NextResponse.json({ error: "Move closer to this resource." }, { status: 409 });
   }
 
-  const existing = await findActiveChallengeForPlayerNode({ roomId, playerId, nodeId });
-  if (existing) {
-    const question =
-      getQuestionFromSet(questionSetId, existing.questionId) ??
-      pickQuestionFromSet(questionSetId, `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`);
-    return NextResponse.json({
-      challengeId: existing.challengeId,
-      expiresAt: new Date(existing.expiresAt).toISOString(),
-      question: toClientMcQuestion(question),
-    });
-  }
-
-  const question = pickQuestionFromSet(
-    questionSetId,
+  const pickedQuestion = await pickHarvestQuestion(
+    binding.ref,
+    binding.version,
     `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`,
   );
   const challenge = await createLiveGameChallenge({
     roomId,
     playerId,
     nodeId,
-    questionId: question.id,
+    questionId: pickedQuestion.id,
+    questionSetId: binding.setId,
+    questionSetVersion: binding.version,
+    questionBank: "harvest",
+    validationPayload: pickedQuestion.payload,
   });
+  const question =
+    challenge.questionId === pickedQuestion.id ? pickedQuestion
+    : (await getQuestionById(binding.ref, "harvest", challenge.questionId, binding.version)) ?? pickedQuestion;
 
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
-    question: toClientMcQuestion(question),
+    question: toClientMcQuestionFromRow(question, challenge.challengeId),
   });
 }
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_challenge", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game challenge request failed", error);

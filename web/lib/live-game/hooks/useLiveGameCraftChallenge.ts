@@ -6,6 +6,7 @@ import {
   isChallengePrefetchValid,
   type ChallengePrefetchEntry,
 } from "@/lib/live-game/challenge-prefetch";
+import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-sync";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type {
   LiveGameCraftedItems,
@@ -124,6 +125,8 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
     recipeId: CraftRecipeId;
     promise: Promise<CraftPrefetchEntry>;
   } | null>(null);
+  const submitInFlightRef = useRef(false);
+  const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
 
   const isOpen = activeChallenge != null;
 
@@ -292,9 +295,15 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
   );
 
   const beginChallenge = useCallback(
-    async (recipeId: CraftRecipeId, recipeLabel = "Craft", costSummary = "") => {
+    async (
+      recipeId: CraftRecipeId,
+      recipeLabel = "Craft",
+      costSummary = "",
+      positionSync?: Promise<boolean>,
+    ) => {
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
+      interactionPositionSyncRef.current = positionSync ?? null;
 
       setError(null);
       setLastResult(null);
@@ -325,17 +334,30 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
         question: CRAFT_PREVIEW_QUESTION,
       });
 
+      try {
+        await requireLiveGamePositionSync(positionSync);
+      } catch (positionError) {
+        if (beginRequestRef.current !== requestId) return;
+        setTokenStatus("error");
+        setError(
+          positionError instanceof Error ? positionError.message : "Could not verify your position.",
+        );
+        return;
+      }
+      if (beginRequestRef.current !== requestId) return;
       await resolveToken(requestId, recipeId);
     },
     [resolveToken],
   );
 
   const submitAnswer = useCallback(
-    async (order: string[]) => {
-      if (!activeChallenge?.challengeId || tokenStatus !== "ready") return;
+    async (order: string[], options?: { skip?: boolean }) => {
+      if (!activeChallenge?.challengeId || tokenStatus !== "ready" || submitInFlightRef.current) return;
+      submitInFlightRef.current = true;
       setIsSubmitting(true);
       setError(null);
       try {
+        await requireLiveGamePositionSync(interactionPositionSyncRef.current);
         const response = await fetch("/api/live-game/craft/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -343,7 +365,8 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
             roomId,
             challengeId: activeChallenge.challengeId,
             recipeId: activeChallenge.recipeId,
-            order,
+            order: options?.skip ? [] : order,
+            skip: options?.skip === true,
           }),
         });
         const payload = (await response.json()) as {
@@ -352,11 +375,26 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
           poolTotal?: LiveGameResourcePool;
           craftedItems?: LiveGameCraftedItems;
           recipeId?: CraftRecipeId;
+          skipped?: boolean;
         };
+        if (response.status === 404) {
+          clearPrefetchCache();
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit craft answer.");
         }
 
+        if (payload.skipped === true) {
+          clearPrefetchCache();
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         const correct = payload.correct === true;
         const poolTotal = payload.poolTotal ?? {
           wood: 0,
@@ -368,7 +406,6 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
           benchBuilt: false,
           hammers: 0,
           boat: false,
-          bridge: false,
         };
         setLastResult(correct ? "correct" : "incorrect");
         onAnswered?.({
@@ -388,6 +425,7 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
           answerError instanceof Error ? answerError.message : "Could not submit craft answer.";
         setError(message);
       } finally {
+        submitInFlightRef.current = false;
         setIsSubmitting(false);
       }
     },
@@ -396,11 +434,16 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
 
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
+    interactionPositionSyncRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");
     setError(null);
     setLastResult(null);
   }, []);
+
+  const skipChallenge = useCallback(() => {
+    void submitAnswer([], { skip: true });
+  }, [submitAnswer]);
 
   return useMemo(
     () => ({
@@ -412,6 +455,7 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
       lastResult,
       beginChallenge,
       submitAnswer,
+      skipChallenge,
       closeChallenge,
       prefetchChallenge,
       cancelPrefetch,
@@ -428,6 +472,7 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
       isSubmitting,
       lastResult,
       prefetchChallenge,
+      skipChallenge,
       submitAnswer,
       tokenStatus,
     ],

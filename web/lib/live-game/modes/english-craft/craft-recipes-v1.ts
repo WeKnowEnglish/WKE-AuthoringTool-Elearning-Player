@@ -7,13 +7,14 @@ import type {
 import {
   ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
   ENGLISH_CRAFT_BOAT_POOL_COSTS,
+  ENGLISH_CRAFT_BREAD_COSTS,
   ENGLISH_CRAFT_CRAFT_QUESTION_ID,
   ENGLISH_CRAFT_HAMMER_COSTS,
 } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
 import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 
-export type CraftRecipeId = "build_bench" | "craft_hammer" | "craft_boat";
+export type CraftRecipeId = "build_bench" | "craft_hammer" | "craft_bread" | "craft_boat";
 
 export type CraftRecipePoolCost = Partial<LiveGameResourcePool>;
 
@@ -66,6 +67,15 @@ export const ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE: CraftRecipe = {
   questionId: ENGLISH_CRAFT_CRAFT_QUESTION_ID,
 };
 
+export const ENGLISH_CRAFT_CRAFT_BREAD_RECIPE: CraftRecipe = {
+  id: "craft_bread",
+  label: "Craft bread",
+  poolCost: { ...ENGLISH_CRAFT_BREAD_COSTS },
+  grants: { breadToCrafter: 1 },
+  requires: { benchBuilt: true, boatNotBuilt: true },
+  questionId: ENGLISH_CRAFT_CRAFT_QUESTION_ID,
+};
+
 export const ENGLISH_CRAFT_CRAFT_BOAT_RECIPE: CraftRecipe = {
   id: "craft_boat",
   label: "Craft boat",
@@ -76,11 +86,12 @@ export const ENGLISH_CRAFT_CRAFT_BOAT_RECIPE: CraftRecipe = {
   questionId: ENGLISH_CRAFT_CRAFT_QUESTION_ID,
 };
 
-const BENCH_CRAFT_RECIPE_IDS: CraftRecipeId[] = ["craft_hammer", "craft_boat"];
+const BENCH_CRAFT_RECIPE_IDS: CraftRecipeId[] = ["craft_hammer", "craft_bread", "craft_boat"];
 
 const CRAFT_RECIPES: Record<CraftRecipeId, CraftRecipe> = {
   build_bench: ENGLISH_CRAFT_BUILD_BENCH_RECIPE,
   craft_hammer: ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE,
+  craft_bread: ENGLISH_CRAFT_CRAFT_BREAD_RECIPE,
   craft_boat: ENGLISH_CRAFT_CRAFT_BOAT_RECIPE,
 };
 
@@ -237,6 +248,7 @@ export function getDefaultBenchRecipe(
   storage: LiveGameCraftGateSnapshot | null | undefined,
 ): CraftRecipeId | null {
   if (canStartRecipeCraft(storage, "craft_hammer")) return "craft_hammer";
+  if (canStartRecipeCraft(storage, "craft_bread")) return "craft_bread";
   if (canStartRecipeCraft(storage, "craft_boat")) return "craft_boat";
   return null;
 }

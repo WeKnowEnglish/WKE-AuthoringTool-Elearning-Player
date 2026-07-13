@@ -178,7 +178,29 @@ The teacher hosts via join code and controls session start/pause/end.
 
 ---
 
-## 6. End-to-end success script (classroom pilot)
+## 6. End-to-end success script (classroom pilot — Phase 4)
+
+Run with 1 teacher + 4–6 students on `english-craft-v1`. Target **20–25 minutes**.
+
+| Step | Action | Expected result |
+| --- | --- | --- |
+| 1 | Teacher creates game at `/live-game/host` | Join code displayed; island map in lobby |
+| 2 | Students join with code | All appear in lobby roster |
+| 3 | Teacher starts game | All spawn on south shore; hunger at 100 |
+| 4 | Students harvest wood/stone/wheat/cotton | Correct answers grant carry; deposit at storages grows pool |
+| 5 | Team deposits 10 wood + 5 stone | Build workbench prompt at bench stump |
+| 6 | Build workbench (sentence craft) | Bench sprite active; recipe menu opens |
+| 7 | Craft 2 hammers | Pool −4 wood −4 stone; HUD shows hammers 2/5 |
+| 8 | Play while hunger decays | Bar drops; movement slows at 0; craft bread + eat to restore |
+| 9 | Craft 3 more hammers + boat | Hammers consumed; boat appears at dock; boarding unlocked |
+| 10 | All connected players stand on boat 2s | Victory overlay — team escaped |
+| 11 | Teacher ends or play again | Session resets milestones on new round |
+
+**Smoke checks:** deposit letter tiles lock correctly; carry sprite 48px above avatar; 24px chip in HUD.
+
+---
+
+## 7. Legacy pilot script (Phase 2 v0.1 — superseded)
 
 Run with 1 teacher + 5 students on the pilot map.
 
@@ -304,7 +326,7 @@ Correct:   I usually play football after school.
 | 4 | Room prefix | `wke-live-game-` | **Locked** |
 | 5 | Student auth | Required for join | **Locked** |
 | 6 | Teacher in-world | No — lobby only (Phase 1) | **Locked** |
-| 7 | Pilot wood goal | 10 wood to craft bridge | **Locked** |
+| 7 | Pilot bench goal | 10 wood + 5 stone to build workbench | **Locked** |
 | 8 | Max pilot class size | ≤10 (Free plan) | **Locked** |
 | 9 | Coins in v0.1 | No — Phase 4 / v0.3 | **Locked** |
 

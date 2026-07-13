@@ -3,6 +3,7 @@
 import { memo, useEffect, useRef } from "react";
 import { LiveGameCarryOverlay } from "@/components/live-game/LiveGameCarryOverlay";
 import { LiveGameMapCharacter } from "@/components/live-game/LiveGameMapCharacter";
+import { LiveGamePlayerNameplate } from "@/components/live-game/LiveGamePlayerNameplate";
 import { interpolateToward } from "@/lib/live-game/engine/interpolation";
 import {
   applyMapCharacterBox,
@@ -70,6 +71,7 @@ const RemotePlayer = memo(function RemotePlayer({
 
   return (
     <div ref={wrapperRef} className="pointer-events-none absolute z-30 will-change-[left,top]">
+      <LiveGamePlayerNameplate name={player.name} isCarrying={player.carriedResourceType != null} />
       {player.carriedResourceType ?
         <LiveGameCarryOverlay resourceType={player.carriedResourceType} />
       : null}

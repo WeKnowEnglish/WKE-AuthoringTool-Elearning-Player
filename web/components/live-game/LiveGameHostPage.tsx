@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KidButton } from "@/components/kid-ui/KidButton";
-import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { LiveGameLandingShell } from "@/components/live-game/LiveGameLandingShell";
 import { LiveGameQuestionSetCarousel } from "@/components/live-game/LiveGameQuestionSetCarousel";
 import {
   LIVE_GAME_DEFAULT_PLAYER_COLOR,
@@ -168,25 +167,29 @@ export function LiveGameHostPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center px-4 py-8">
-      <KidPanel className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-kid-ink">Host Live Game</h1>
+    <LiveGameLandingShell
+      eyebrow="Teacher setup"
+      title="Build a lively English session."
+      description={`${ENGLISH_CRAFT_MODE.title}: ${ENGLISH_CRAFT_MODE.subtitle}. Choose the practice, invite your students, and play together.`}
+      wide
+    >
+      <div>
+          <h2 className="text-xl font-extrabold text-kid-ink">Room details</h2>
           <p className="mt-1 text-sm font-semibold text-kid-ink/70">
             Mode: {ENGLISH_CRAFT_MODE.title} — {ENGLISH_CRAFT_MODE.subtitle}
           </p>
-        </div>
+      </div>
 
-        <label className="block space-y-1">
+      <label className="block space-y-1">
           <span className="text-sm font-bold text-kid-ink">Your name</span>
           <input
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
             className="w-full rounded-lg border-4 border-kid-ink bg-white px-3 py-2 text-lg font-semibold text-kid-ink"
           />
-        </label>
+      </label>
 
-        <label className="block space-y-1">
+      <label className="block space-y-1">
           <span className="text-sm font-bold text-kid-ink">Session length (minutes)</span>
           <select
             value={formatEnglishCraftDurationSelectValue(durationMinutes)}
@@ -201,11 +204,11 @@ export function LiveGameHostPage() {
               </option>
             ))}
           </select>
-        </label>
+      </label>
 
-        <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} />
+      <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} />
 
-        <div className="space-y-2">
+      <div className="space-y-2">
           <span className="text-sm font-bold text-kid-ink">Question set</span>
           {setsLoading ?
             <p className="text-sm font-semibold text-kid-ink/70">Loading question sets...</p>
@@ -235,27 +238,19 @@ export function LiveGameHostPage() {
               : null}
             </>
           }
-        </div>
+      </div>
 
-        {error ?
-          <p className="text-sm font-semibold text-red-700">{error}</p>
-        : null}
+      {error ?
+        <p className="text-sm font-semibold text-red-700">{error}</p>
+      : null}
 
-        <KidButton
+      <KidButton
           variant="primary"
           disabled={isSubmitting || setsLoading || !selectedQuestionSetId}
           onClick={() => void handleCreate()}
         >
           {isSubmitting ? "Creating..." : "Create English Craft room"}
-        </KidButton>
-
-        <Link
-          href="/live-game"
-          className="inline-block text-sm font-bold text-kid-ink underline underline-offset-2"
-        >
-          Back
-        </Link>
-      </KidPanel>
-    </div>
+      </KidButton>
+    </LiveGameLandingShell>
   );
 }

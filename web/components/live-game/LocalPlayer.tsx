@@ -6,6 +6,7 @@ import type { LiveGameDirection, LiveGameResourceType } from "@/lib/live-game/li
 import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 import type { RefObject } from "react";
 import { LiveGameCarryOverlay } from "@/components/live-game/LiveGameCarryOverlay";
+import { LiveGamePlayerNameplate } from "@/components/live-game/LiveGamePlayerNameplate";
 
 type Props = {
   map: LiveGameMapDef;
@@ -31,6 +32,11 @@ export function LocalPlayer({
       ref={wrapperRef}
       className="pointer-events-none absolute z-30 drop-shadow-[0_0_6px_rgba(255,255,255,0.85)]"
     >
+      <LiveGamePlayerNameplate
+        name={displayName}
+        isCarrying={carriedResourceType != null}
+        isLocal
+      />
       {carriedResourceType ?
         <LiveGameCarryOverlay resourceType={carriedResourceType} />
       : null}

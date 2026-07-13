@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KidButton } from "@/components/kid-ui/KidButton";
-import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { LiveGameLandingShell } from "@/components/live-game/LiveGameLandingShell";
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
 import {
   LIVE_GAME_DEFAULT_PLAYER_COLOR,
@@ -86,16 +85,12 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center px-4 py-8">
-      <KidPanel className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-kid-ink">Join Live Game</h1>
-          <p className="mt-1 text-sm font-semibold text-kid-ink/70">
-            Enter the code from your teacher&apos;s screen.
-          </p>
-        </div>
-
-        <label className="block space-y-1">
+    <LiveGameLandingShell
+      eyebrow="Student entry"
+      title="Ready to join the team?"
+      description="Enter the code from your teacher, choose your character, and jump into the English adventure."
+    >
+      <label className="block space-y-1">
           <span className="text-sm font-bold text-kid-ink">Join code</span>
           <input
             value={joinCode}
@@ -104,9 +99,9 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
             className="w-full rounded-lg border-4 border-kid-ink bg-white px-3 py-2 font-mono text-xl font-bold tracking-[0.2em] text-kid-ink"
             placeholder="ABCDEF"
           />
-        </label>
+      </label>
 
-        <label className="block space-y-1">
+      <label className="block space-y-1">
           <span className="text-sm font-bold text-kid-ink">Your name</span>
           <input
             value={displayName}
@@ -114,25 +109,17 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
             className="w-full rounded-lg border-4 border-kid-ink bg-white px-3 py-2 text-lg font-semibold text-kid-ink"
             placeholder="Student name"
           />
-        </label>
+      </label>
 
-        <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} />
+      <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} />
 
-        {error ?
-          <p className="text-sm font-semibold text-red-700">{error}</p>
-        : null}
+      {error ?
+        <p className="text-sm font-semibold text-red-700">{error}</p>
+      : null}
 
-        <KidButton variant="primary" disabled={isSubmitting} onClick={() => void handleSubmit()}>
-          {isSubmitting ? "Joining..." : "Join lobby"}
-        </KidButton>
-
-        <Link
-          href="/live-game"
-          className="inline-block text-sm font-bold text-kid-ink underline underline-offset-2"
-        >
-          Back
-        </Link>
-      </KidPanel>
-    </div>
+      <KidButton variant="primary" disabled={isSubmitting} onClick={() => void handleSubmit()}>
+        {isSubmitting ? "Joining..." : "Join lobby"}
+      </KidButton>
+    </LiveGameLandingShell>
   );
 }

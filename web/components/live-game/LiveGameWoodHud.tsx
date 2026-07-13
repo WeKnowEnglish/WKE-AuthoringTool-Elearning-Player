@@ -308,17 +308,22 @@ type InteractProps = {
 
 export function LiveGameInteractPrompt({ label, disabled, onInteract }: InteractProps) {
   return (
-    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+    <div className="pointer-events-auto flex max-w-[min(100%,22rem)] items-center gap-2 rounded-2xl border-2 border-white/20 bg-black/60 p-2 backdrop-blur-sm">
       <KidButton
         type="button"
         variant="accent"
-        className="!min-h-11 px-5 text-sm font-extrabold"
+        className="!min-h-14 !min-w-32 touch-manipulation px-5 text-base font-extrabold shadow-lg"
         disabled={disabled}
         onClick={onInteract}
+        aria-label={`Interact: ${label}`}
       >
-        {label}
+        <span className="sm:hidden">Interact</span>
+        <span className="hidden sm:inline">{label}</span>
       </KidButton>
-      <p className="text-xs font-semibold text-white/75">Press E near a resource or storage</p>
+      <p className="min-w-0 text-xs font-semibold text-white/85">
+        <span className="sm:hidden">{disabled ? "Move closer to something" : label}</span>
+        <span className="hidden sm:inline">Press E near a resource or storage</span>
+      </p>
     </div>
   );
 }

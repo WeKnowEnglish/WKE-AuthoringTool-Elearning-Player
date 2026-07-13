@@ -214,3 +214,13 @@ export async function markChallengeAwarded(challengeId: string): Promise<void> {
     .in("status", ["awarding", "awarded"]);
   if (error) throw new Error(`Could not complete live-game challenge: ${error.message}`);
 }
+
+export async function expireLiveGameRoomChallenges(roomId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await requireChallengeDatabase()
+    .from("live_game_challenges")
+    .update({ status: "expired", updated_at: now })
+    .eq("room_id", roomId)
+    .in("status", ["active", "awarding"]);
+  if (error) throw new Error(`Could not close live-game challenges: ${error.message}`);
+}

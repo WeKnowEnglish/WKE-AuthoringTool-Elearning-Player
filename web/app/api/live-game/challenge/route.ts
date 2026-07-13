@@ -23,6 +23,7 @@ import {
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
+import { recordCurrentLiveGameEncounter } from "@/lib/live-game/server/report-evidence";
 
 type ChallengeRequestBody = {
   roomId?: string;
@@ -141,6 +142,13 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
   const question =
     challenge.questionId === pickedQuestion.id ? pickedQuestion
     : (await getQuestionById(binding.ref, "harvest", challenge.questionId, binding.version)) ?? pickedQuestion;
+
+  await recordCurrentLiveGameEncounter({
+    storage,
+    challenge,
+    question,
+    resourceType: nodeDef.resourceType,
+  });
 
   const usePreloadedQuestion = parsed.questionBundleVersion === binding.version;
   return NextResponse.json({

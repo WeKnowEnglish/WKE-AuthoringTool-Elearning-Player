@@ -7,14 +7,15 @@ export function useLiveGameAutoTimeout(input: {
   enabled: boolean;
   isExpired: boolean;
   hasTimedSession: boolean;
+  endsAt: number | null;
   onTimeout: (reason: LiveGameRoundEndReason) => void;
 }) {
-  const { enabled, isExpired, hasTimedSession, onTimeout } = input;
+  const { enabled, isExpired, hasTimedSession, endsAt, onTimeout } = input;
   const firedRef = useRef(false);
 
   useEffect(() => {
     firedRef.current = false;
-  }, [hasTimedSession, enabled]);
+  }, [endsAt, hasTimedSession, enabled]);
 
   useEffect(() => {
     if (!enabled || !hasTimedSession || !isExpired || firedRef.current) return;

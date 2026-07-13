@@ -11,11 +11,28 @@ import {
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
+import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
+import { getQuestionSetSnapshot } from "@/lib/live-game/server/question-set-resolver";
+import { finalizeLiveGameReportRound } from "@/lib/live-game/server/report-repository";
+import { expireLiveGameRoomChallenges } from "@/lib/live-game/server/challenge-store";
 
 type CompleteRequestBody = {
   roomId?: string;
   kind?: string;
 };
+
+async function finalizeObjectiveReport(roomId: string) {
+  const latest = await readLiveGameStorageJson(roomId);
+  if (!latest?.session) throw new Error("Live Game report snapshot unavailable.");
+  const binding = readSessionQuestionSetBinding(latest.session);
+  const questionSet = await getQuestionSetSnapshot(binding.ref, binding.version);
+  await finalizeLiveGameReportRound({
+    storage: latest,
+    questionSet,
+    reason: "objective_completed",
+    endedAt: latest.session.victoryAt ?? Date.now(),
+  });
+}
 
 function parseCompleteBody(body: unknown): CompleteRequestBody | null {
   if (!body || typeof body !== "object") return null;
@@ -102,6 +119,9 @@ async function handlePost(request: Request) {
   if (!result) {
     return NextResponse.json({ error: "Could not complete the escape." }, { status: 409 });
   }
+
+  await expireLiveGameRoomChallenges(roomId);
+  await finalizeObjectiveReport(roomId);
 
   return NextResponse.json({
     objectiveCompleted: result.objectiveCompleted,

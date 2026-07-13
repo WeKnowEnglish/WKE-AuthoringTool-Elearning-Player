@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeSessionRemainingMs,
   detectSessionTimerFlashCrossing,
+  extendSessionDeadline,
   formatSessionTimeRemaining,
   getFinalCountdownDigit,
   getSessionRemainingSecondsCeil,
@@ -19,6 +20,11 @@ describe("session timer helpers", () => {
   it("clamps remaining ms at zero", () => {
     expect(computeSessionRemainingMs(1000, 2500)).toBe(0);
     expect(computeSessionRemainingMs(5000, 1000)).toBe(4000);
+  });
+
+  it("adds one minute from the later of the deadline or server time", () => {
+    expect(extendSessionDeadline(120_000, 100_000)).toBe(180_000);
+    expect(extendSessionDeadline(90_000, 100_000)).toBe(160_000);
   });
 
   it("formats mm:ss with ceil seconds", () => {

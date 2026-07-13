@@ -16,9 +16,9 @@ import { LiveGameSpellChallengeModal } from "@/components/live-game/LiveGameSpel
 import { LiveGameFinalCountdownOverlay } from "@/components/live-game/LiveGameFinalCountdownOverlay";
 import { LiveGameHostEndSessionModal } from "@/components/live-game/LiveGameHostEndSessionModal";
 import { LiveGameHostPlayHud } from "@/components/live-game/LiveGameHostPlayHud";
+import { LiveGameEndReportOverlay } from "@/components/live-game/LiveGameEndReportOverlay";
 import { LiveGameSessionTimerChip } from "@/components/live-game/LiveGameSessionTimerChip";
 import { LiveGameSessionTimerFlash } from "@/components/live-game/LiveGameSessionTimerFlash";
-import { LiveGameVictoryOverlay } from "@/components/live-game/LiveGameVictoryOverlay";
 import {
   LiveGameInteractPrompt,
   LiveGameTeamResourceHud,
@@ -46,7 +46,6 @@ import { useLiveGameSelfHungerDisplay } from "@/lib/live-game/hooks/useLiveGameH
 import { useLiveGameHarvestChallenge } from "@/lib/live-game/hooks/useLiveGameHarvestChallenge";
 import { useLiveGameAutoTimeout } from "@/lib/live-game/hooks/useLiveGameAutoTimeout";
 import { useLiveGameSessionTimer } from "@/lib/live-game/hooks/useLiveGameSessionTimer";
-import { buildVictoryResourceStats } from "@/lib/live-game/hooks/useLiveGameVictoryStats";
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
 import type { LiveGameResourceNodeState, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
 import { getMapForMode } from "@/lib/live-game/modes";
@@ -92,9 +91,10 @@ function isNodeInteractable(node: LiveGameResourceNodeState | undefined, now = D
 }
 
 export function LiveGameCanvas({ context }: Props) {
-  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, self, others } =
+  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, addMinute, self, others } =
     useLiveGameLobby();
   const [endSessionModalOpen, setEndSessionModalOpen] = useState(false);
+  const [isAddingTime, setIsAddingTime] = useState(false);
   const [recipePickerOpen, setRecipePickerOpen] = useState(false);
   const { avatarId } = useLiveGameAvatar(context);
   const baseMap = getMapForMode(session.mapId, session.modeId);
@@ -174,6 +174,7 @@ export function LiveGameCanvas({ context }: Props) {
     enabled: isPlaying,
     isExpired: sessionTimer?.isExpired ?? false,
     hasTimedSession: session.endsAt != null,
+    endsAt: session.endsAt,
     onTimeout: endRoundAndReturnToLobby,
   });
 
@@ -584,20 +585,21 @@ export function LiveGameCanvas({ context }: Props) {
       "Go to storage"
     : "Gather resource";
 
-  const completedByName = useMemo(() => {
-    const completedPlayerId = session.completedByPlayerId;
-    if (!completedPlayerId) return null;
-    return players.find((entry) => entry.id === completedPlayerId)?.player.name ?? null;
-  }, [players, session.completedByPlayerId]);
-
-  const resourceStats = useMemo(
-    () => buildVictoryResourceStats(resourceNodes, pool),
-    [pool, resourceNodes],
-  );
-
   const handlePlayAgain = useCallback(() => {
     returnToLobby();
   }, [returnToLobby]);
+
+  const handleAddMinute = useCallback(async () => {
+    if (isAddingTime) return;
+    setIsAddingTime(true);
+    try {
+      await addMinute();
+    } catch (error) {
+      console.error("Could not add time to Live Game", error);
+    } finally {
+      setIsAddingTime(false);
+    }
+  }, [addMinute, isAddingTime]);
 
   const handleDropCarry = useCallback(async () => {
     const dropped = await dropCarry.dropCarry();
@@ -642,6 +644,8 @@ export function LiveGameCanvas({ context }: Props) {
                     showTimer={sessionTimer != null}
                     timerLabel={sessionTimer?.label ?? ""}
                     timerUrgent={timerUrgent}
+                    onAddMinute={() => void handleAddMinute()}
+                    addMinuteDisabled={isAddingTime || !isPlaying}
                     onEndSessionClick={() => setEndSessionModalOpen(true)}
                     endDisabled={!isPlaying}
                   />
@@ -750,10 +754,9 @@ export function LiveGameCanvas({ context }: Props) {
       />
 
       {isCompleted ?
-        <LiveGameVictoryOverlay
-          completedByName={completedByName}
-          resourceStats={resourceStats}
-          boatBuilt={craftedItems.boat}
+        <LiveGameEndReportOverlay
+          sessionId={context.sessionId}
+          objectiveCompleted={session.objectiveCompleted}
           isHost={isHost}
           onPlayAgain={handlePlayAgain}
         />

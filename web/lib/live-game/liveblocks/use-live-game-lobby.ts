@@ -35,7 +35,9 @@ export function useLiveGameLobby() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomId: toRoomId(session.joinCode), action, reason }),
     });
-    if (!response.ok) throw new Error("Live-game control action failed.");
+    const payload = (await response.json()) as { error?: string; endsAt?: number | null };
+    if (!response.ok) throw new Error(payload.error ?? "Live-game control action failed.");
+    return payload;
   }, [session.joinCode]);
   const startGame = useCallback(() => void control("start"), [control]);
   const returnToLobby = useCallback(() => void control("return_to_lobby"), [control]);
@@ -44,6 +46,7 @@ export function useLiveGameLobby() {
     (reason: LiveGameRoundEndReason) => void control("end_round", reason),
     [control],
   );
+  const addMinute = useCallback(() => control("add_time"), [control]);
 
   const selfEntry = players.find((entry) => entry.id === self.id) ?? null;
   const isHost = selfEntry?.player.role === "host";
@@ -59,6 +62,7 @@ export function useLiveGameLobby() {
     returnToLobby,
     closeLobby,
     endRoundAndReturnToLobby,
+    addMinute,
   };
 }
 

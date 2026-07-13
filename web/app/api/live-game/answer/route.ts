@@ -17,11 +17,17 @@ import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-sess
 import { readResourcePool } from "@/lib/live-game/resource-pool";
 import { findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import {
+  normalizeLiveGameSubmission,
+  recordCurrentLiveGameAttempt,
+  recordCurrentLiveGameSkip,
+} from "@/lib/live-game/server/report-evidence";
 
 type AnswerRequestBody = {
   roomId?: string;
   challengeId?: string;
   answer?: string;
+  submissionId?: string;
   responseTimeMs?: number;
   skip?: boolean;
 };
@@ -37,6 +43,8 @@ function parseAnswerBody(body: unknown): AnswerRequestBody | null {
       roomId: record.roomId,
       challengeId: record.challengeId,
       answer: typeof record.answer === "string" ? record.answer : "",
+      submissionId: record.submissionId,
+      responseTimeMs: record.responseTimeMs,
       skip: true,
     };
   }
@@ -94,6 +102,7 @@ async function handlePost(request: Request) {
   const challengeId = parsed.challengeId.trim();
   const answer = (parsed.answer ?? "").trim();
   const skip = parsed.skip === true;
+  const submission = normalizeLiveGameSubmission(parsed.submissionId, parsed.responseTimeMs);
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
   const [challenge, storage] = await Promise.all([
@@ -150,6 +159,7 @@ async function handlePost(request: Request) {
   if (skip) {
     const skipped = await markChallengeSkipped(challengeId);
     if (!skipped) return NextResponse.json({ error: "Challenge can no longer be skipped." }, { status: 409 });
+    await recordCurrentLiveGameSkip(challengeId);
     return NextResponse.json(harvestAnswerPayload(storage, { correct: false, skipped: true }));
   }
   const correct =
@@ -157,12 +167,27 @@ async function handlePost(request: Request) {
       validateHarvestAnswer(challenge.validationPayload, answer)
     : await isHarvestAnswerCorrect(ctx.ref, challenge.questionId, answer, ctx.version);
   if (!correct) {
+    await recordCurrentLiveGameAttempt({
+      challengeId,
+      submissionId: submission.id,
+      selectedAnswer: answer,
+      correct: false,
+      responseTimeMs: submission.responseTimeMs,
+    });
     return NextResponse.json(
       harvestAnswerPayload(storage, {
         correct: false,
       }),
     );
   }
+
+  await recordCurrentLiveGameAttempt({
+    challengeId,
+    submissionId: submission.id,
+    selectedAnswer: answer,
+    correct: true,
+    responseTimeMs: submission.responseTimeMs,
+  });
 
   const claim = await claimLiveGameChallengeAward(challengeId);
   if (claim.kind === "missing") {
@@ -199,6 +224,17 @@ async function handlePost(request: Request) {
   }
 
   await markChallengeAwarded(challengeId);
+
+  await recordCurrentLiveGameAttempt({
+    challengeId,
+    submissionId: submission.id,
+    selectedAnswer: answer,
+    correct: true,
+    responseTimeMs: submission.responseTimeMs,
+    contribution: {
+      harvested: { [award.resourceType]: award.alreadyAwarded ? 0 : 1 },
+    },
+  });
 
   return NextResponse.json(
     harvestAnswerPayload(storage, {

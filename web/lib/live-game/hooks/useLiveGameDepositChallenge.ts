@@ -15,6 +15,7 @@ import {
   ENGLISH_CRAFT_DEPOSIT_SPELL_PREVIEW,
   type EnglishCraftDepositSpellClient,
 } from "@/lib/live-game/modes/english-craft/questions-deposit-client";
+import { createLiveGameSubmissionId } from "@/lib/live-game/submission-id";
 
 type ActiveChallenge = {
   storageId: string;
@@ -87,6 +88,8 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
   } | null>(null);
   const submitInFlightRef = useRef(false);
   const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
+  const challengeOpenedAtRef = useRef(Date.now());
+  const pendingSubmissionRef = useRef<{ challengeId: string; answerKey: string; id: string; responseTimeMs: number } | null>(null);
 
   const isOpen = activeChallenge != null;
 
@@ -272,6 +275,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
       interactionPositionSyncRef.current = positionSync ?? null;
+      challengeOpenedAtRef.current = Date.now();
 
       setError(null);
       setLastResult(null);
@@ -323,6 +327,15 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       setError(null);
       try {
         await requireLiveGamePositionSync(interactionPositionSyncRef.current);
+        const answerKey = options?.skip ? "skip" : spelling;
+        const pending = pendingSubmissionRef.current;
+        const submission = pending?.challengeId === activeChallenge.challengeId && pending.answerKey === answerKey ? pending : {
+          challengeId: activeChallenge.challengeId,
+          answerKey,
+          id: createLiveGameSubmissionId(),
+          responseTimeMs: Date.now() - challengeOpenedAtRef.current,
+        };
+        pendingSubmissionRef.current = submission;
         const response = await fetch("/api/live-game/deposit/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -331,6 +344,8 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
             challengeId: activeChallenge.challengeId,
             spelling: options?.skip ? "" : spelling,
             skip: options?.skip === true,
+            submissionId: submission.id,
+            responseTimeMs: submission.responseTimeMs,
           }),
         });
         const payload = (await response.json()) as {
@@ -341,6 +356,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           skipped?: boolean;
         };
         if (response.status === 404) {
+          pendingSubmissionRef.current = null;
           clearPrefetchCache(activeChallenge.storageId);
           setActiveChallenge(null);
           setTokenStatus("pending");
@@ -350,6 +366,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit spelling.");
         }
+        pendingSubmissionRef.current = null;
 
         if (payload.skipped === true) {
           clearPrefetchCache(activeChallenge.storageId);
@@ -376,6 +393,8 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           clearPrefetchCache(activeChallenge.storageId);
           setActiveChallenge(null);
           setTokenStatus("pending");
+        } else {
+          challengeOpenedAtRef.current = Date.now();
         }
       } catch (answerError) {
         const message =
@@ -392,6 +411,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
     interactionPositionSyncRef.current = null;
+    pendingSubmissionRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");
     setError(null);

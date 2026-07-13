@@ -8,7 +8,7 @@ export const ENGLISH_CRAFT_MODE: LiveGameModeConfig = {
   defaultMapId: "english-craft-v1",
 };
 
-export const ENGLISH_CRAFT_DURATION_OPTIONS = [10, 15, 20, 30] as const;
+export const ENGLISH_CRAFT_DURATION_OPTIONS = [1, 2, 5, 10, 15, 20, 30] as const;
 
 export const ENGLISH_CRAFT_UNLIMITED_DURATION = null;
 

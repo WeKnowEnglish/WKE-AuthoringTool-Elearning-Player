@@ -33,6 +33,7 @@
 | [question-database-q5-plan.md](./question-database-q5-plan.md) | Phase Q5 — remove TS registry ✅ |
 | [existing-system-audit.md](./existing-system-audit.md) | What exists in the repo; reuse verdicts |
 | [architecture.md](./architecture.md) | State ownership, Liveblocks contract, API routes |
+| [reporting-v2.md](./reporting-v2.md) | Per-round student and teacher learning reports, privacy, and rollout |
 | [mvp-scope.md](./mvp-scope.md) | MVP includes/excludes, acceptance tests, pilot script |
 | [liveblocks-limits.md](./liveblocks-limits.md) | Plan tier vs class size |
 
@@ -47,6 +48,8 @@
 | `/live-game/[sessionId]` | Lobby + play |
 
 **Local dev:** Live Game requires Supabase migrations **035–038** applied. Question content is DB-only (no TS registry fallback since Q5).
+
+Reporting V2 development and deployment require Supabase migrations through `041`.
 
 ## Milestone map
 

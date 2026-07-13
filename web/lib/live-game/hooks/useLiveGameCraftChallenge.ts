@@ -23,6 +23,7 @@ import {
   type EnglishCraftCraftQuestionClient,
 } from "@/lib/live-game/modes/english-craft/questions-client";
 import type { CraftRecipeId } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
+import { createLiveGameSubmissionId } from "@/lib/live-game/submission-id";
 
 type ActiveCraftChallenge = {
   challengeId: string | null;
@@ -144,6 +145,8 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
   } | null>(null);
   const submitInFlightRef = useRef(false);
   const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
+  const challengeOpenedAtRef = useRef(Date.now());
+  const pendingSubmissionRef = useRef<{ challengeId: string; answerKey: string; id: string; responseTimeMs: number } | null>(null);
 
   const isOpen = activeChallenge != null;
 
@@ -331,6 +334,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
       interactionPositionSyncRef.current = positionSync ?? null;
+      challengeOpenedAtRef.current = Date.now();
 
       setError(null);
       setLastResult(null);
@@ -388,6 +392,15 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
       setError(null);
       try {
         await requireLiveGamePositionSync(interactionPositionSyncRef.current);
+        const answerKey = options?.skip ? "skip" : order.join("\u0000");
+        const pending = pendingSubmissionRef.current;
+        const submission = pending?.challengeId === activeChallenge.challengeId && pending.answerKey === answerKey ? pending : {
+          challengeId: activeChallenge.challengeId,
+          answerKey,
+          id: createLiveGameSubmissionId(),
+          responseTimeMs: Date.now() - challengeOpenedAtRef.current,
+        };
+        pendingSubmissionRef.current = submission;
         const response = await fetch("/api/live-game/craft/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -397,6 +410,8 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
             recipeId: activeChallenge.recipeId,
             order: options?.skip ? [] : order,
             skip: options?.skip === true,
+            submissionId: submission.id,
+            responseTimeMs: submission.responseTimeMs,
           }),
         });
         const payload = (await response.json()) as {
@@ -408,6 +423,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
           skipped?: boolean;
         };
         if (response.status === 404) {
+          pendingSubmissionRef.current = null;
           clearPrefetchCache();
           setActiveChallenge(null);
           setTokenStatus("pending");
@@ -417,6 +433,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit craft answer.");
         }
+        pendingSubmissionRef.current = null;
 
         if (payload.skipped === true) {
           clearPrefetchCache();
@@ -449,6 +466,8 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
           clearPrefetchCache();
           setActiveChallenge(null);
           setTokenStatus("pending");
+        } else {
+          challengeOpenedAtRef.current = Date.now();
         }
       } catch (answerError) {
         const message =
@@ -465,6 +484,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
     interactionPositionSyncRef.current = null;
+    pendingSubmissionRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");
     setError(null);

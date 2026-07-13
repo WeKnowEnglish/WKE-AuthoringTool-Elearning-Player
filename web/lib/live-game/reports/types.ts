@@ -9,6 +9,8 @@ export type LiveGameReportRoundRow = {
   join_code: string;
   round_number: number;
   status: "active" | "completed";
+  class_id: string | null;
+  class_title: string | null;
   question_set_title: string;
   level: string;
   topic: string;
@@ -151,6 +153,8 @@ export type LiveGameQuestionDiagnostic = {
 type LiveGameReportBase = {
   version: 2;
   sessionId: string;
+  classId: string | null;
+  classTitle: string | null;
   roundNumber: number;
   questionSetTitle: string;
   level: string;

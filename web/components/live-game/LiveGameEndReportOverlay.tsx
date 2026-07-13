@@ -96,7 +96,7 @@ export function LiveGameEndReportOverlay({ sessionId, objectiveCompleted, isHost
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-sky-700">Round {report?.roundNumber ?? ""} learning report</p>
             <h2 id="live-game-report-title" className="mt-1 text-3xl font-black text-slate-950">{objectiveCompleted ? "Team escaped!" : "Round complete"}</h2>
-            {report ? <p className="mt-2 max-w-2xl font-semibold text-slate-600">{report.questionSetTitle} · {report.level} · {report.learningObjective}</p> : null}
+            {report ? <p className="mt-2 max-w-2xl font-semibold text-slate-600">{report.classTitle ? `${report.classTitle} · ` : ""}{report.questionSetTitle} · {report.level} · {report.learningObjective}</p> : null}
           </div>
           <div className="flex gap-2">
             {isHost && onPlayAgain ? <KidButton variant="primary" onClick={onPlayAgain}>Play again</KidButton> : null}

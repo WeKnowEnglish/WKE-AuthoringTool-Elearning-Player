@@ -60,6 +60,7 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
       const payload = (await response.json()) as {
         error?: string; userId?: string; mapId?: string; durationMinutes?: number | null;
         questionSetId?: string; questionSetVersion?: number;
+        classId?: string | null; classTitle?: string | null;
       };
       if (!response.ok || !payload.userId) throw new Error(payload.error ?? "Could not join game.");
       setLiveGameSessionContext({
@@ -68,6 +69,8 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
         displayName: name,
         color: LIVE_GAME_DEFAULT_PLAYER_COLOR,
         userId: payload.userId,
+        classId: payload.classId ?? null,
+        classTitle: payload.classTitle ?? null,
         avatarId,
         modeId: "english_craft",
         mapId: payload.mapId ?? ENGLISH_CRAFT_MODE.defaultMapId,

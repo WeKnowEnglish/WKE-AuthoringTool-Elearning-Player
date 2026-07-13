@@ -55,6 +55,8 @@ export async function GET(_request: Request, context: RouteContext) {
     const base = {
       version: 2 as const,
       sessionId,
+      classId: round.class_id,
+      classTitle: round.class_title,
       roundNumber: round.round_number,
       questionSetTitle: round.question_set_title,
       level: round.level,

@@ -14,7 +14,7 @@ import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
 const ENCOUNTER_SELECT = "id,round_id,challenge_id,player_id,question_id,question_bank,question_type,question_prompt,correct_answer,learning_target_key,learning_target_label,cefr_level,game_action_type,game_object_id,resource_type,recipe_id,opened_at,resolved_at,resolution,system_hints_used,teacher_support_level,help_requested_at";
 const ATTEMPT_SELECT = "encounter_id,submission_id,submission_index,selected_answer,is_correct,response_time_ms,contribution,submitted_at";
-const ROUND_SELECT = "id,room_id,join_code,round_number,status,question_set_title,level,topic,learning_objective,end_reason,summary,started_at,ended_at";
+const ROUND_SELECT = "id,room_id,join_code,round_number,status,class_id,class_title,question_set_title,level,topic,learning_objective,end_reason,summary,started_at,ended_at";
 
 function adminClient() {
   const client = createServiceRoleSupabase();
@@ -76,6 +76,8 @@ export async function ensureActiveLiveGameReportRound(
     join_code: storage.session.joinCode,
     round_number: roundNumber,
     host_user_id: accountUserId(storage.session.hostUserId),
+    class_id: storage.session.classId ?? null,
+    class_title: storage.session.classTitle ?? null,
     mode_id: storage.session.modeId,
     map_id: storage.session.mapId,
     question_set_id: questionSet.id,
@@ -208,6 +210,8 @@ export async function finalizeLiveGameReportRound(input: {
   };
   const { error } = await admin.from("live_game_report_rounds").update({ status: "completed", end_reason: input.reason, ended_at: endedAt, summary }).eq("id", roundId).eq("status", "active");
   if (error) databaseError("Could not finalize Live Game report round", error);
+  const { error: projectError } = await admin.rpc("record_live_game_class_project_contribution", { p_round_id: roundId });
+  if (projectError) databaseError("Could not update the Live Game class project", projectError);
 }
 
 export async function loadLatestCompletedLiveGameReportRound(roomId: string): Promise<LiveGameReportRoundRow | null> {

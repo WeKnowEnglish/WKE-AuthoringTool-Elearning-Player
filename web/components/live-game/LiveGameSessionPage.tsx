@@ -75,6 +75,8 @@ export function LiveGameSessionPage({ sessionId }: Props) {
         sessionId={normalizedSessionId}
         role={context.role}
         hostUserId={context.userId}
+        classId={context.classId}
+        classTitle={context.classTitle}
         modeId={context.modeId}
         mapId={context.mapId}
         durationMinutes={context.durationMinutes}

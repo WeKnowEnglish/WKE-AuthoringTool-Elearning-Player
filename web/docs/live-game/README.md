@@ -49,7 +49,7 @@
 
 **Local dev:** Live Game requires Supabase migrations **035–038** applied. Question content is DB-only (no TS registry fallback since Q5).
 
-Reporting V2 development and deployment require Supabase migrations through `041`.
+Reporting V2 and class-owned Live Game projects require Supabase migrations through `042`.
 
 ## Milestone map
 

@@ -27,6 +27,7 @@ type HostRequestBody = {
   durationMinutes?: number;
   avatarId?: string;
   questionSetId?: string;
+  classId?: string | null;
 };
 
 function parseHostRequestBody(
@@ -37,6 +38,7 @@ function parseHostRequestBody(
   durationMinutes: number;
   avatarId: string;
   questionSetInput: string | undefined;
+  classId: string | null;
 } | null {
   if (!body || typeof body !== "object") return null;
   const record = body as HostRequestBody;
@@ -53,6 +55,7 @@ function parseHostRequestBody(
     durationMinutes,
     avatarId: toLiveGameCharacterId(record.avatarId ?? ""),
     questionSetInput: record.questionSetId,
+    classId: typeof record.classId === "string" && record.classId.trim() ? record.classId.trim() : null,
   };
 }
 
@@ -100,6 +103,24 @@ export async function POST(request: Request) {
     }
     throw error;
   }
+  let linkedClass: { id: string; title: string } | null = null;
+  if (parsed.classId) {
+    const { data: teacherClass, error: classError } = await supabase
+      .from("teacher_classes")
+      .select("id,title")
+      .eq("id", parsed.classId)
+      .eq("teacher_id", user.id)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (classError) {
+      console.error("Could not validate Live Game class ownership", classError);
+      return NextResponse.json({ error: "Could not validate the selected class." }, { status: 503 });
+    }
+    if (!teacherClass) {
+      return NextResponse.json({ error: "Select one of your active classes." }, { status: 400 });
+    }
+    linkedClass = { id: teacherClass.id as string, title: teacherClass.title as string };
+  }
   const sessionId = generateJoinCode();
   const hostSecret = randomBytes(24).toString("hex");
   const hostPlayerId = user.id;
@@ -109,6 +130,8 @@ export async function POST(request: Request) {
   await liveblocks.createRoom(roomId, { defaultAccesses: [] }, { idempotent: true });
   const initial = createLiveGameInitialStorage({
     hostUserId: hostPlayerId,
+    classId: linkedClass?.id ?? null,
+    classTitle: linkedClass?.title ?? null,
     joinCode: sessionId,
     modeId: parsed.modeId,
     mapId: mode.defaultMapId,

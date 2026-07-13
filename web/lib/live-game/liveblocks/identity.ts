@@ -19,6 +19,8 @@ export type LiveGameSessionContext = {
   displayName: string;
   color: string;
   userId: string;
+  classId?: string | null;
+  classTitle?: string | null;
   avatarId: string;
   modeId: "english_craft";
   mapId: string;
@@ -51,6 +53,8 @@ export function getLiveGameSessionContext(): LiveGameSessionContext | null {
       typeof parsed.color !== "string" ||
       typeof parsed.userId !== "string" ||
       typeof parsed.avatarId !== "string" ||
+      (parsed.classId !== undefined && parsed.classId !== null && typeof parsed.classId !== "string") ||
+      (parsed.classTitle !== undefined && parsed.classTitle !== null && typeof parsed.classTitle !== "string") ||
       parsed.modeId !== "english_craft" ||
       typeof parsed.mapId !== "string" ||
       typeof parsed.questionSetId !== "string" ||

@@ -109,6 +109,8 @@ export async function POST(request: Request) {
     sessionId,
     userId: playerId,
     role: "player",
+    classId: admittedSnapshot.session.classId,
+    classTitle: admittedSnapshot.session.classTitle,
     mapId: admittedSnapshot.session.mapId,
     modeId: admittedSnapshot.session.modeId,
     durationMinutes: admittedSnapshot.session.durationMinutes,

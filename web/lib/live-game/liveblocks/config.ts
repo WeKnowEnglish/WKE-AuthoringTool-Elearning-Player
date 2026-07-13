@@ -44,6 +44,10 @@ export type LiveGameSessionState = {
   phase: LiveGamePhase;
   joinCode: string;
   hostUserId: string;
+  /** Existing teacher_classes ownership; null for one-off games. */
+  classId: string | null;
+  /** Snapshot retained if the class is later renamed or archived. */
+  classTitle: string | null;
   durationMinutes: EnglishCraftSessionDuration;
   endsAt: number | null;
   mapId: string;

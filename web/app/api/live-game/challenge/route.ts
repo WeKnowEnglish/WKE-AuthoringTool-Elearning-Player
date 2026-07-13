@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
+import { withLiveGameServerTiming, type LiveGameServerTimer } from "@/lib/live-game/server/server-timing";
 import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import { toClientMcQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
 import {
@@ -47,7 +47,7 @@ function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
   };
 }
 
-async function handlePost(request: Request) {
+async function handlePost(request: Request, timer: LiveGameServerTimer) {
   try {
     assertLiveblocksSecret();
   } catch (error) {
@@ -69,7 +69,9 @@ async function handlePost(request: Request) {
 
   const roomId = parsed.roomId.trim();
   const nodeId = parsed.nodeId.trim();
-  const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
+  const playerId = (
+    await timer.measure("player_session", () => requireLiveGamePlayerSession(roomId))
+  ).playerId;
 
   if (!roomId.startsWith("wke-live-game-")) {
     return NextResponse.json({ error: "Invalid room id." }, { status: 400 });
@@ -80,7 +82,7 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Unknown resource node." }, { status: 400 });
   }
 
-  const storage = await readLiveGameStorageJson(roomId);
+  const storage = await timer.measure("liveblocks_read", () => readLiveGameStorageJson(roomId));
   if (!storage?.session) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
@@ -111,23 +113,30 @@ async function handlePost(request: Request) {
   }
 
   const deckCursor = readQuestionDeckCursor(storage.questionDeckCursors, playerId, "harvest");
-  const pickedQuestion = await pickHarvestQuestionFromDeck(
-    binding.ref,
-    binding.version,
-    { roomId, playerId, cursor: deckCursor },
+  const pickedQuestion = await timer.measure(
+    "question_resolve",
+    () => pickHarvestQuestionFromDeck(
+      binding.ref,
+      binding.version,
+      { roomId, playerId, cursor: deckCursor },
+    ),
   );
   const [challenge] = await Promise.all([
-    createLiveGameChallenge({
-      roomId,
-      playerId,
-      nodeId,
-      questionId: pickedQuestion.id,
-      questionSetId: binding.setId,
-      questionSetVersion: binding.version,
-      questionBank: "harvest",
-      validationPayload: pickedQuestion.payload,
-    }),
-    advanceQuestionDeckCursor({ roomId, playerId, bank: "harvest", cursor: deckCursor }),
+    timer.measure("challenge_rpc", () =>
+      createLiveGameChallenge({
+        roomId,
+        playerId,
+        nodeId,
+        questionId: pickedQuestion.id,
+        questionSetId: binding.setId,
+        questionSetVersion: binding.version,
+        questionBank: "harvest",
+        validationPayload: pickedQuestion.payload,
+      }),
+    ),
+    timer.measure("cursor_mutate", () =>
+      advanceQuestionDeckCursor({ roomId, playerId, bank: "harvest", cursor: deckCursor }),
+    ),
   ]);
   const question =
     challenge.questionId === pickedQuestion.id ? pickedQuestion
@@ -145,7 +154,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await withLiveGameServerTiming("live_game_challenge", () => handlePost(request));
+    return await withLiveGameServerTiming("live_game_challenge", (timer) => handlePost(request, timer));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game challenge request failed", error);

@@ -1,6 +1,5 @@
 import type {
   LiveGameQuestionBank,
-  LiveGameQuestionRow,
 } from "@/lib/live-game/question-banks/types";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 
@@ -26,7 +25,7 @@ function shuffledCycle<T extends { id: string }>(
   return deck;
 }
 
-export function pickQuestionFromSessionDeck<T extends LiveGameQuestionRow>(
+export function pickQuestionFromSessionDeck<T extends { id: string }>(
   rows: readonly T[],
   input: {
     roomId: string;

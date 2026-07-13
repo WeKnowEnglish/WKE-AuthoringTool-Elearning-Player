@@ -7,6 +7,10 @@ import {
   type ChallengePrefetchEntry,
 } from "@/lib/live-game/challenge-prefetch";
 import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-sync";
+import {
+  getPreloadedHarvestQuestion,
+  getPreloadedQuestionBundleVersion,
+} from "@/lib/live-game/question-bundle-cache";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type { LiveGamePoolTotal } from "@/lib/live-game/api-types";
 import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
@@ -35,6 +39,8 @@ type ChallengeTokenPayload = {
   question: EnglishCraftMcQuestionClient;
 };
 
+class PreloadedHarvestQuestionMissError extends Error {}
+
 type Options = {
   roomId: string;
   onAnswered?: (result: AnswerResult) => void;
@@ -45,14 +51,21 @@ function parseChallengePayload(payload: {
   challengeId?: string;
   expiresAt?: string;
   question?: EnglishCraftMcQuestionClient;
-}): ChallengeTokenPayload {
-  if (!payload.challengeId || !payload.expiresAt || !payload.question) {
+  questionId?: string;
+}, roomId: string): ChallengeTokenPayload {
+  if (!payload.challengeId || !payload.expiresAt) {
     throw new Error(payload.error ?? "Could not start challenge.");
   }
+  const question =
+    payload.question ??
+    (payload.questionId ?
+      getPreloadedHarvestQuestion(roomId, payload.questionId, payload.challengeId)
+    : null);
+  if (!question) throw new PreloadedHarvestQuestionMissError("The preloaded question was unavailable.");
   return {
     challengeId: payload.challengeId,
     expiresAt: payload.expiresAt,
-    question: payload.question,
+    question,
   };
 }
 
@@ -105,22 +118,32 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
 
   const requestChallengeToken = useCallback(
     async (nodeId: string, signal?: AbortSignal): Promise<ChallengeTokenPayload> => {
-      const response = await fetch("/api/live-game/challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, nodeId }),
-        signal,
-      });
-      const payload = (await response.json()) as {
-        error?: string;
-        challengeId?: string;
-        expiresAt?: string;
-        question?: EnglishCraftMcQuestionClient;
+      const requestToken = async (questionBundleVersion?: number) => {
+        const response = await fetch("/api/live-game/challenge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId, nodeId, questionBundleVersion }),
+          signal,
+        });
+        const payload = (await response.json()) as {
+          error?: string;
+          challengeId?: string;
+          expiresAt?: string;
+          questionId?: string;
+          question?: EnglishCraftMcQuestionClient;
+        };
+        if (!response.ok) throw new Error(payload.error ?? "Could not start challenge.");
+        return parseChallengePayload(payload, roomId);
       };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Could not start challenge.");
+
+      const bundleVersion = getPreloadedQuestionBundleVersion(roomId);
+      if (bundleVersion == null) return requestToken();
+      try {
+        return await requestToken(bundleVersion);
+      } catch (error) {
+        if (signal?.aborted || !(error instanceof PreloadedHarvestQuestionMissError)) throw error;
+        return requestToken();
       }
-      return parseChallengePayload(payload);
     },
     [roomId],
   );

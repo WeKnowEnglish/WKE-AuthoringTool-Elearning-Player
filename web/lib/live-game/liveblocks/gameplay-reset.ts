@@ -1,4 +1,4 @@
-import { LiveObject } from "@liveblocks/client";
+import { LiveMap, LiveObject } from "@liveblocks/client";
 import type { LiveGameSessionState } from "@/lib/live-game/liveblocks/config";
 import { createEnglishCraftResourceNodes } from "@/lib/live-game/liveblocks/initial-storage";
 import type { LiveGameMutatorRoot } from "@/lib/live-game/server/mutator";
@@ -22,6 +22,7 @@ export function resetEnglishCraftGameplayState(storage: LiveGameMutatorRoot) {
   clearAllPlayerCarry(storage);
   clearAllPlayerInventory(storage);
   clearAllPlayerHunger(storage);
+  storage.set("questionDeckCursors", new LiveMap<string, number>());
 
   const craftedItems = storage.get("craftedItems");
   if (craftedItems) {

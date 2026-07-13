@@ -7,6 +7,10 @@ import {
   type ChallengePrefetchEntry,
 } from "@/lib/live-game/challenge-prefetch";
 import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-sync";
+import {
+  getPreloadedCraftQuestion,
+  getPreloadedQuestionBundleVersion,
+} from "@/lib/live-game/question-bundle-cache";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type {
   LiveGameCraftedItems,
@@ -43,6 +47,8 @@ type CraftTokenPayload = {
   costSummary: string;
 };
 
+class PreloadedCraftQuestionMissError extends Error {}
+
 type CraftPrefetchEntry = ChallengePrefetchEntry<EnglishCraftCraftQuestionClient> & {
   recipeId: CraftRecipeId;
   recipeLabel: string;
@@ -63,19 +69,27 @@ function parseCraftPayload(
     challengeId?: string;
     expiresAt?: string;
     question?: EnglishCraftCraftQuestionClient;
+    questionId?: string;
     recipeId?: CraftRecipeId;
     recipeLabel?: string;
     costSummary?: string;
   },
   recipeId: CraftRecipeId,
+  roomId: string,
 ): CraftTokenPayload {
-  if (!payload.challengeId || !payload.expiresAt || !payload.question) {
+  if (!payload.challengeId || !payload.expiresAt) {
     throw new Error(payload.error ?? "Could not start craft challenge.");
   }
+  const question =
+    payload.question ??
+    (payload.questionId ?
+      getPreloadedCraftQuestion(roomId, payload.questionId, payload.challengeId)
+    : null);
+  if (!question) throw new PreloadedCraftQuestionMissError("The preloaded craft question was unavailable.");
   return {
     challengeId: payload.challengeId,
     expiresAt: payload.expiresAt,
-    question: payload.question,
+    question,
     recipeId: payload.recipeId ?? recipeId,
     recipeLabel: payload.recipeLabel ?? "Craft",
     costSummary: payload.costSummary ?? "",
@@ -143,25 +157,35 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
 
   const requestCraftToken = useCallback(
     async (recipeId: CraftRecipeId, signal?: AbortSignal): Promise<CraftTokenPayload> => {
-      const response = await fetch("/api/live-game/craft/challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, recipeId }),
-        signal,
-      });
-      const payload = (await response.json()) as {
-        error?: string;
-        challengeId?: string;
-        expiresAt?: string;
-        question?: EnglishCraftCraftQuestionClient;
-        recipeId?: CraftRecipeId;
-        recipeLabel?: string;
-        costSummary?: string;
+      const requestToken = async (questionBundleVersion?: number) => {
+        const response = await fetch("/api/live-game/craft/challenge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId, recipeId, questionBundleVersion }),
+          signal,
+        });
+        const payload = (await response.json()) as {
+          error?: string;
+          challengeId?: string;
+          expiresAt?: string;
+          questionId?: string;
+          question?: EnglishCraftCraftQuestionClient;
+          recipeId?: CraftRecipeId;
+          recipeLabel?: string;
+          costSummary?: string;
+        };
+        if (!response.ok) throw new Error(payload.error ?? "Could not start craft challenge.");
+        return parseCraftPayload(payload, recipeId, roomId);
       };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Could not start craft challenge.");
+
+      const bundleVersion = getPreloadedQuestionBundleVersion(roomId);
+      if (bundleVersion == null) return requestToken();
+      try {
+        return await requestToken(bundleVersion);
+      } catch (error) {
+        if (signal?.aborted || !(error instanceof PreloadedCraftQuestionMissError)) throw error;
+        return requestToken();
       }
-      return parseCraftPayload(payload, recipeId);
     },
     [roomId],
   );

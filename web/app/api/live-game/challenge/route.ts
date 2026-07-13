@@ -4,8 +4,12 @@ import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english
 import { toClientMcQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
 import {
   getQuestionById,
-  pickHarvestQuestion,
+  pickHarvestQuestionFromDeck,
 } from "@/lib/live-game/server/question-set-resolver";
+import {
+  advanceQuestionDeckCursor,
+  readQuestionDeckCursor,
+} from "@/lib/live-game/server/question-deck-cursor";
 import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
@@ -23,6 +27,7 @@ import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/ch
 type ChallengeRequestBody = {
   roomId?: string;
   nodeId?: string;
+  questionBundleVersion?: number;
 };
 
 function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
@@ -34,7 +39,12 @@ function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
   ) {
     return null;
   }
-  return record;
+  return {
+    roomId: record.roomId,
+    nodeId: record.nodeId,
+    questionBundleVersion:
+      Number.isInteger(record.questionBundleVersion) ? record.questionBundleVersion : undefined,
+  };
 }
 
 async function handlePost(request: Request) {
@@ -100,29 +110,36 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Move closer to this resource." }, { status: 409 });
   }
 
-  const pickedQuestion = await pickHarvestQuestion(
+  const deckCursor = readQuestionDeckCursor(storage.questionDeckCursors, playerId, "harvest");
+  const pickedQuestion = await pickHarvestQuestionFromDeck(
     binding.ref,
     binding.version,
-    `${playerId}:${nodeId}:${nodeState?.collectedCount ?? 0}`,
+    { roomId, playerId, cursor: deckCursor },
   );
-  const challenge = await createLiveGameChallenge({
-    roomId,
-    playerId,
-    nodeId,
-    questionId: pickedQuestion.id,
-    questionSetId: binding.setId,
-    questionSetVersion: binding.version,
-    questionBank: "harvest",
-    validationPayload: pickedQuestion.payload,
-  });
+  const [challenge] = await Promise.all([
+    createLiveGameChallenge({
+      roomId,
+      playerId,
+      nodeId,
+      questionId: pickedQuestion.id,
+      questionSetId: binding.setId,
+      questionSetVersion: binding.version,
+      questionBank: "harvest",
+      validationPayload: pickedQuestion.payload,
+    }),
+    advanceQuestionDeckCursor({ roomId, playerId, bank: "harvest", cursor: deckCursor }),
+  ]);
   const question =
     challenge.questionId === pickedQuestion.id ? pickedQuestion
     : (await getQuestionById(binding.ref, "harvest", challenge.questionId, binding.version)) ?? pickedQuestion;
 
+  const usePreloadedQuestion = parsed.questionBundleVersion === binding.version;
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
-    question: toClientMcQuestionFromRow(question, challenge.challengeId),
+    questionId: challenge.questionId,
+    question:
+      usePreloadedQuestion ? undefined : toClientMcQuestionFromRow(question, challenge.challengeId),
   });
 }
 

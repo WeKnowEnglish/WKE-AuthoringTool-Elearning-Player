@@ -1,6 +1,7 @@
 import "server-only";
 
 import { hashSeed } from "@/lib/live-game/question-banks/hash-seed";
+import { pickQuestionFromSessionDeck } from "@/lib/live-game/question-deck";
 import {
   isCraftOrderCorrect as validateCraftOrder,
   isDepositSpellCorrect as validateDepositSpell,
@@ -47,7 +48,10 @@ export class QuestionSetVersionMismatchError extends Error {
   }
 }
 
-const CACHE_TTL_MS = 60_000;
+// A published version is immutable. Keep it warm for a full classroom day;
+// publish actions explicitly invalidate matching entries.
+const CACHE_TTL_MS = 8 * 60 * 60 * 1_000;
+const MAX_CACHE_ENTRIES = 32;
 
 type CacheEntry = {
   expiresAt: number;
@@ -77,6 +81,10 @@ function readCache(ref: string, version?: number): LiveGameQuestionSetSnapshot |
 }
 
 function writeCache(snapshot: LiveGameQuestionSetSnapshot) {
+  if (snapshotCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = snapshotCache.keys().next().value as string | undefined;
+    if (oldestKey) snapshotCache.delete(oldestKey);
+  }
   snapshotCache.set(cacheKey(snapshot), {
     snapshot,
     expiresAt: Date.now() + CACHE_TTL_MS,
@@ -158,6 +166,39 @@ export async function pickCraftQuestion(
 ): Promise<LiveGameQuestionRow> {
   const snapshot = await getQuestionSetSnapshot(ref, version);
   return pickFromBank(snapshot.craft, seed);
+}
+
+type DeckPickInput = {
+  roomId: string;
+  playerId: string;
+  cursor: number;
+};
+
+export async function pickHarvestQuestionFromDeck(
+  ref: string,
+  version: number | undefined,
+  input: DeckPickInput,
+): Promise<LiveGameQuestionRow> {
+  const snapshot = await getQuestionSetSnapshot(ref, version);
+  return pickQuestionFromSessionDeck(snapshot.harvest, { ...input, bank: "harvest" });
+}
+
+export async function pickDepositQuestionFromDeck(
+  ref: string,
+  version: number | undefined,
+  input: DeckPickInput,
+): Promise<LiveGameQuestionRow> {
+  const snapshot = await getQuestionSetSnapshot(ref, version);
+  return pickQuestionFromSessionDeck(snapshot.deposit, { ...input, bank: "deposit" });
+}
+
+export async function pickCraftQuestionFromDeck(
+  ref: string,
+  version: number | undefined,
+  input: DeckPickInput,
+): Promise<LiveGameQuestionRow> {
+  const snapshot = await getQuestionSetSnapshot(ref, version);
+  return pickQuestionFromSessionDeck(snapshot.craft, { ...input, bank: "craft" });
 }
 
 export async function getQuestionById(

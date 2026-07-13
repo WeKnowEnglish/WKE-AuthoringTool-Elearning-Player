@@ -8,8 +8,12 @@ import {
 import { toClientDepositSpellFromRow } from "@/lib/live-game/question-banks/client-payloads";
 import {
   getQuestionById,
-  pickDepositQuestion,
+  pickDepositQuestionFromDeck,
 } from "@/lib/live-game/server/question-set-resolver";
+import {
+  advanceQuestionDeckCursor,
+  readQuestionDeckCursor,
+} from "@/lib/live-game/server/question-deck-cursor";
 import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import {
   createLiveGameChallenge,
@@ -19,7 +23,6 @@ import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
-import { getPoolCount } from "@/lib/live-game/resource-pool";
 
 type DepositChallengeRequestBody = {
   roomId?: string;
@@ -89,8 +92,7 @@ async function handlePost(request: Request) {
   }
 
   const binding = readSessionQuestionSetBinding(storage.session);
-  const poolCount = getPoolCount(storage, carry.resourceType);
-  const depositSeed = `${playerId}:${storageId}:${poolCount}`;
+  const deckCursor = readQuestionDeckCursor(storage.questionDeckCursors, playerId, "deposit");
 
   const position = storage.playerPositions?.[playerId];
   const interactTarget = toStorageInteractTarget(storageDef);
@@ -106,21 +108,28 @@ async function handlePost(request: Request) {
 
   let pickedDepositRow;
   try {
-    pickedDepositRow = await pickDepositQuestion(binding.ref, binding.version, depositSeed);
+    pickedDepositRow = await pickDepositQuestionFromDeck(
+      binding.ref,
+      binding.version,
+      { roomId, playerId, cursor: deckCursor },
+    );
   } catch {
     return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
   }
 
-  const challenge = await createLiveGameChallenge({
-    roomId,
-    playerId,
-    nodeId: storageId,
-    questionId: pickedDepositRow.id,
-    questionSetId: binding.setId,
-    questionSetVersion: binding.version,
-    questionBank: "deposit",
-    validationPayload: pickedDepositRow.payload,
-  });
+  const [challenge] = await Promise.all([
+    createLiveGameChallenge({
+      roomId,
+      playerId,
+      nodeId: storageId,
+      questionId: pickedDepositRow.id,
+      questionSetId: binding.setId,
+      questionSetVersion: binding.version,
+      questionBank: "deposit",
+      validationPayload: pickedDepositRow.payload,
+    }),
+    advanceQuestionDeckCursor({ roomId, playerId, bank: "deposit", cursor: deckCursor }),
+  ]);
   const depositRow =
     challenge.questionId === pickedDepositRow.id ? pickedDepositRow
     : (await getQuestionById(binding.ref, "deposit", challenge.questionId, binding.version)) ?? pickedDepositRow;

@@ -14,8 +14,12 @@ import {
 import { toClientCraftQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
 import {
   getQuestionById,
-  pickCraftQuestion,
+  pickCraftQuestionFromDeck,
 } from "@/lib/live-game/server/question-set-resolver";
+import {
+  advanceQuestionDeckCursor,
+  readQuestionDeckCursor,
+} from "@/lib/live-game/server/question-deck-cursor";
 import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
 import {
   createLiveGameChallenge,
@@ -34,6 +38,7 @@ import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 type CraftChallengeRequestBody = {
   roomId?: string;
   recipeId?: string;
+  questionBundleVersion?: number;
 };
 
 function parseCraftChallengeBody(body: unknown): CraftChallengeRequestBody | null {
@@ -42,7 +47,12 @@ function parseCraftChallengeBody(body: unknown): CraftChallengeRequestBody | nul
   if (typeof record.roomId !== "string" || typeof record.recipeId !== "string") {
     return null;
   }
-  return record;
+  return {
+    roomId: record.roomId,
+    recipeId: record.recipeId,
+    questionBundleVersion:
+      Number.isInteger(record.questionBundleVersion) ? record.questionBundleVersion : undefined,
+  };
 }
 
 async function handlePost(request: Request) {
@@ -109,26 +119,36 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Move closer to the workbench." }, { status: 409 });
   }
 
-  const craftSeed = `${playerId}:${recipeId}:0`;
-  const pickedCraftRow = await pickCraftQuestion(binding.ref, binding.version, craftSeed);
-  const challenge = await createLiveGameChallenge({
-    roomId,
-    playerId,
-    nodeId,
-    questionId: pickedCraftRow.id,
-    questionSetId: binding.setId,
-    questionSetVersion: binding.version,
-    questionBank: "craft",
-    validationPayload: pickedCraftRow.payload,
-  });
+  const deckCursor = readQuestionDeckCursor(storage.questionDeckCursors, playerId, "craft");
+  const pickedCraftRow = await pickCraftQuestionFromDeck(
+    binding.ref,
+    binding.version,
+    { roomId, playerId, cursor: deckCursor },
+  );
+  const [challenge] = await Promise.all([
+    createLiveGameChallenge({
+      roomId,
+      playerId,
+      nodeId,
+      questionId: pickedCraftRow.id,
+      questionSetId: binding.setId,
+      questionSetVersion: binding.version,
+      questionBank: "craft",
+      validationPayload: pickedCraftRow.payload,
+    }),
+    advanceQuestionDeckCursor({ roomId, playerId, bank: "craft", cursor: deckCursor }),
+  ]);
   const craftRow =
     challenge.questionId === pickedCraftRow.id ? pickedCraftRow
     : (await getQuestionById(binding.ref, "craft", challenge.questionId, binding.version)) ?? pickedCraftRow;
 
+  const usePreloadedQuestion = parsed.questionBundleVersion === binding.version;
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
-    question: toClientCraftQuestionFromRow(craftRow, challenge.challengeId),
+    questionId: challenge.questionId,
+    question:
+      usePreloadedQuestion ? undefined : toClientCraftQuestionFromRow(craftRow, challenge.challengeId),
     recipeId,
     recipeLabel: recipe.label,
     costSummary: formatRecipeFullCostSummary(recipe),

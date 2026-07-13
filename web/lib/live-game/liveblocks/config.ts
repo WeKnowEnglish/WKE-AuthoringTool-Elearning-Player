@@ -140,6 +140,7 @@ export type LiveGameStorageRoot = {
   playerCarry: LiveMap<string, LiveObject<LiveGamePlayerCarry>>;
   playerInventory: LiveMap<string, LiveObject<LiveGamePlayerInventory>>;
   playerHunger: LiveMap<string, LiveObject<LiveGamePlayerHunger>>;
+  questionDeckCursors: LiveMap<string, number>;
 };
 
 /** Plain snapshot returned by useStorage selectors on the client. */
@@ -156,6 +157,7 @@ export type LiveGameStorageSnapshot = {
   playerCarry?: Record<string, LiveGamePlayerCarry>;
   playerInventory?: Record<string, LiveGamePlayerInventory>;
   playerHunger?: Record<string, LiveGamePlayerHunger>;
+  questionDeckCursors?: Record<string, number>;
 };
 
 /** Minimal client/server fields used by craft recipe gate helpers. */

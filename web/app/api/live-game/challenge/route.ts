@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import { toClientMcQuestionFromRow } from "@/lib/live-game/question-banks/client-payloads";
 import {
@@ -16,7 +17,8 @@ import {
   readLiveGameStorageJson,
 } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
-import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
 
 type ChallengeRequestBody = {
   roomId?: string;
@@ -91,7 +93,9 @@ async function handlePost(request: Request) {
   if (
     !position ||
     Date.now() - position.updatedAt > 5_000 ||
-    !findNearestInteractable(position.x, position.y, [nodeDef])
+    !findNearestInteractable(position.x, position.y, [
+      expandInteractRadius(nodeDef, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX),
+    ])
   ) {
     return NextResponse.json({ error: "Move closer to this resource." }, { status: 409 });
   }
@@ -124,7 +128,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_challenge", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game challenge request failed", error);

@@ -24,8 +24,8 @@ import {
 } from "@/components/live-game/LiveGameWoodHud";
 import type { LiveGameSessionContext } from "@/lib/live-game/liveblocks/identity";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
-import { findNearestInteractable } from "@/lib/live-game/engine/interact";
-import { LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS } from "@/lib/live-game/challenge-prefetch";
+import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
 import { useLiveGameCraftChallenge } from "@/lib/live-game/hooks/useLiveGameCraftChallenge";
 import { useLiveGameDepositChallenge } from "@/lib/live-game/hooks/useLiveGameDepositChallenge";
 import { useLiveGameAvatar } from "@/lib/live-game/hooks/useLiveGameAvatar";
@@ -79,6 +79,11 @@ type Props = {
   context: LiveGameSessionContext;
 };
 
+const CRAFT_BENCH_PREFETCH_TARGET = expandInteractRadius(
+  ENGLISH_CRAFT_CRAFT_BENCH_V1,
+  LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX,
+);
+
 function isNodeInteractable(node: LiveGameResourceNodeState | undefined, now = Date.now()) {
   if (!node) return true;
   return isEnglishCraftResourceNodeInteractable(node, now);
@@ -126,6 +131,7 @@ export function LiveGameCanvas({ context }: Props) {
     !benchBuilt &&
     canAffordRecipePoolCost(pool, buildBenchRecipe);
   const canCraftAtBench = !isCarrying && benchBuilt && !boatBuilt;
+  const isRecipePickerOpen = recipePickerOpen && canCraftAtBench;
   const isPlaying = session.phase === "playing";
   const isCompleted = session.phase === "completed";
   const hunger = useLiveGameSelfHungerDisplay({ playing: isPlaying });
@@ -142,7 +148,7 @@ export function LiveGameCanvas({ context }: Props) {
     harvestChallenge.isOpen ||
     depositChallenge.isOpen ||
     craftChallenge.isOpen ||
-    recipePickerOpen;
+    isRecipePickerOpen;
   const movementEnabled = isPlaying && !anyChallengeOpen && !endSessionModalOpen;
 
   useLiveGameAutoTimeout({
@@ -174,6 +180,7 @@ export function LiveGameCanvas({ context }: Props) {
   });
 
   const { getPosition, sampledPosition, now } = stage;
+  const selfId = self?.id;
 
   const publishPosition = useCallback(async () => {
     const position = getPosition();
@@ -184,11 +191,16 @@ export function LiveGameCanvas({ context }: Props) {
     });
   }, [getPosition, roomId]);
 
+  const syncInteractionPosition = useCallback(
+    () => publishPosition().then((response) => response.ok).catch(() => false),
+    [publishPosition],
+  );
+
   const connectedBoardingPlayers = useMemo(() => {
     const entries: Array<{ id: string; x: number; y: number }> = [];
-    if (self?.id) {
+    if (selfId) {
       entries.push({
-        id: self.id,
+        id: selfId,
         x: sampledPosition.x,
         y: sampledPosition.y,
       });
@@ -203,7 +215,7 @@ export function LiveGameCanvas({ context }: Props) {
       });
     }
     return entries;
-  }, [others, sampledPosition.x, sampledPosition.y, self?.id]);
+  }, [others, sampledPosition.x, sampledPosition.y, selfId]);
 
   const syncBoardingPosition = useCallback(async () => {
     await publishPosition();
@@ -264,6 +276,51 @@ export function LiveGameCanvas({ context }: Props) {
     );
   }, [interactableNodes, isCarrying, sampledPosition.x, sampledPosition.y]);
 
+  const depositPrefetchInteractTarget = useMemo(
+    () =>
+      carryStorageDef ?
+        expandInteractRadius(
+          toStorageInteractTarget(carryStorageDef),
+          LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX,
+        )
+      : null,
+    [carryStorageDef],
+  );
+
+  const expandedInteractableNodes = useMemo(
+    () =>
+      interactableNodes.map((node) =>
+        expandInteractRadius(node, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX),
+      ),
+    [interactableNodes],
+  );
+
+  const depositPrefetchTarget = useMemo(() => {
+    if (!depositPrefetchInteractTarget) return null;
+    return findNearestInteractable(
+      sampledPosition.x,
+      sampledPosition.y,
+      [depositPrefetchInteractTarget],
+    );
+  }, [depositPrefetchInteractTarget, sampledPosition.x, sampledPosition.y]);
+
+  const benchPrefetchTarget = useMemo(
+    () =>
+      findNearestInteractable(sampledPosition.x, sampledPosition.y, [
+        CRAFT_BENCH_PREFETCH_TARGET,
+      ]),
+    [sampledPosition.x, sampledPosition.y],
+  );
+
+  const harvestPrefetchTarget = useMemo(() => {
+    if (isCarrying) return null;
+    return findNearestInteractable(
+      sampledPosition.x,
+      sampledPosition.y,
+      expandedInteractableNodes,
+    );
+  }, [expandedInteractableNodes, isCarrying, sampledPosition.x, sampledPosition.y]);
+
   const defaultBenchRecipeId = useMemo(
     () => getDefaultBenchRecipe(gameplaySnapshot),
     [gameplaySnapshot],
@@ -272,28 +329,26 @@ export function LiveGameCanvas({ context }: Props) {
   const handleRecipeSelect = useCallback(
     (recipeId: CraftRecipeId, recipe: CraftRecipe) => {
       setRecipePickerOpen(false);
-      craftChallenge.clearPrefetchCache();
+      const positionSync = syncInteractionPosition();
       void craftChallenge.beginChallenge(
         recipeId,
         recipe.label,
         formatRecipeFullCostSummary(recipe),
+        positionSync,
       );
     },
-    [craftChallenge],
+    [craftChallenge, syncInteractionPosition],
   );
 
-  const handleInteract = useCallback(async () => {
+  const handleInteract = useCallback(() => {
     if (
       harvestChallenge.isOpen ||
       depositChallenge.isOpen ||
       craftChallenge.isOpen ||
-      recipePickerOpen
+      isRecipePickerOpen
     ) {
       return;
     }
-
-    const positionResponse = await publishPosition();
-    if (!positionResponse.ok) return;
 
     const position = getPosition();
 
@@ -302,7 +357,7 @@ export function LiveGameCanvas({ context }: Props) {
         toStorageInteractTarget(carryStorageDef),
       ]);
       if (storage) {
-        void depositChallenge.beginChallenge(carryStorageDef);
+        void depositChallenge.beginChallenge(carryStorageDef, syncInteractionPosition());
         return;
       }
     }
@@ -310,10 +365,12 @@ export function LiveGameCanvas({ context }: Props) {
     if (canBuildBench) {
       const bench = findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_CRAFT_BENCH_V1]);
       if (bench) {
+        const positionSync = syncInteractionPosition();
         void craftChallenge.beginChallenge(
           "build_bench",
           buildBenchRecipe.label,
           buildBenchCostSummary,
+          positionSync,
         );
         return;
       }
@@ -329,7 +386,11 @@ export function LiveGameCanvas({ context }: Props) {
 
     const node = findNearestInteractable(position.x, position.y, interactableNodes);
     if (!node) return;
-    void harvestChallenge.beginChallenge(node, resourceNodes[node.id]?.cooldownEndsAt ?? null);
+    void harvestChallenge.beginChallenge(
+      node,
+      resourceNodes[node.id]?.cooldownEndsAt ?? null,
+      syncInteractionPosition(),
+    );
   }, [
     buildBenchCostSummary,
     buildBenchRecipe.label,
@@ -342,9 +403,9 @@ export function LiveGameCanvas({ context }: Props) {
     harvestChallenge,
     interactableNodes,
     isCarrying,
-    publishPosition,
-    recipePickerOpen,
+    isRecipePickerOpen,
     resourceNodes,
+    syncInteractionPosition,
   ]);
 
   useEffect(() => {
@@ -361,7 +422,7 @@ export function LiveGameCanvas({ context }: Props) {
       return;
     }
 
-    if (isCarrying && depositTarget && carryStorageDef) {
+    if (isCarrying && depositPrefetchTarget && carryStorageDef) {
       harvestChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
       void publishPosition();
@@ -374,7 +435,7 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (canBuildBench && craftBenchTarget) {
+    if (canBuildBench && benchPrefetchTarget) {
       harvestChallenge.cancelPrefetch();
       depositChallenge.cancelPrefetch();
       void publishPosition();
@@ -387,7 +448,7 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (canCraftAtBench && craftBenchTarget && defaultBenchRecipeId) {
+    if (canCraftAtBench && benchPrefetchTarget && defaultBenchRecipeId) {
       harvestChallenge.cancelPrefetch();
       depositChallenge.cancelPrefetch();
       void publishPosition();
@@ -400,13 +461,13 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (harvestTarget) {
+    if (harvestPrefetchTarget) {
       depositChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
       void publishPosition();
-      const cooldownEndsAt = resourceNodes[harvestTarget.id]?.cooldownEndsAt ?? null;
+      const cooldownEndsAt = resourceNodes[harvestPrefetchTarget.id]?.cooldownEndsAt ?? null;
       const timeout = window.setTimeout(() => {
-        void harvestChallenge.prefetchForNode(harvestTarget.id, cooldownEndsAt);
+        void harvestChallenge.prefetchForNode(harvestPrefetchTarget.id, cooldownEndsAt);
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
       return () => {
         window.clearTimeout(timeout);
@@ -422,13 +483,16 @@ export function LiveGameCanvas({ context }: Props) {
     canBuildBench,
     canCraftAtBench,
     carryStorageDef,
+    benchPrefetchTarget,
     craftBenchTarget,
     craftChallenge,
     defaultBenchRecipeId,
     depositChallenge,
     depositTarget,
+    depositPrefetchTarget,
     harvestChallenge,
     harvestTarget,
+    harvestPrefetchTarget,
     isCarrying,
     isPlaying,
     publishPosition,
@@ -440,12 +504,6 @@ export function LiveGameCanvas({ context }: Props) {
       craftChallenge.clearPrefetchCache();
     }
   }, [canBuildBench, canCraftAtBench, craftChallenge]);
-
-  useEffect(() => {
-    if (!canCraftAtBench) {
-      setRecipePickerOpen(false);
-    }
-  }, [canCraftAtBench]);
 
   useEffect(() => {
     for (const node of ENGLISH_CRAFT_RESOURCE_NODES_V1) {
@@ -655,7 +713,7 @@ export function LiveGameCanvas({ context }: Props) {
       />
 
       <LiveGameCraftRecipePicker
-        open={recipePickerOpen}
+        open={isRecipePickerOpen}
         pool={pool}
         craftedItems={craftedItems}
         onSelect={handleRecipeSelect}

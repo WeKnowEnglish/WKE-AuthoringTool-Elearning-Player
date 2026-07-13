@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { isHarvestAnswerCorrect } from "@/lib/live-game/server/question-set-resolver";
 import { isHarvestAnswerCorrect as validateHarvestAnswer } from "@/lib/live-game/question-banks/schemas";
@@ -14,6 +15,8 @@ import {
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
+import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { ENGLISH_CRAFT_RESOURCE_NODE_BY_ID } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 
 type AnswerRequestBody = {
   roomId?: string;
@@ -93,7 +96,10 @@ async function handlePost(request: Request) {
   const skip = parsed.skip === true;
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
-  const challenge = await getLiveGameChallenge(challengeId);
+  const [challenge, storage] = await Promise.all([
+    getLiveGameChallenge(challengeId),
+    readLiveGameStorageJson(roomId),
+  ]);
   if (!challenge) {
     return NextResponse.json({ error: "Challenge expired or not found." }, { status: 404 });
   }
@@ -104,9 +110,20 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Invalid harvest challenge." }, { status: 403 });
   }
 
-  const storage = await readLiveGameStorageJson(roomId);
   if (!storage?.session || storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
+  }
+
+  if (challenge.status !== "awarded") {
+    const nodeDef = ENGLISH_CRAFT_RESOURCE_NODE_BY_ID[challenge.nodeId];
+    const position = storage.playerPositions?.[playerId];
+    if (
+      !nodeDef ||
+      !position ||
+      !findNearestInteractable(position.x, position.y, [nodeDef])
+    ) {
+      return NextResponse.json({ error: "Move closer to this resource." }, { status: 409 });
+    }
   }
 
   if (challenge.status === "awarded") {
@@ -195,7 +212,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_answer", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game answer request failed", error);

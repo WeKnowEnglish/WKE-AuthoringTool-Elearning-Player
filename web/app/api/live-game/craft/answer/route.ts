@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { ENGLISH_CRAFT_CRAFT_BENCH_ID } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { isCraftRecipeId } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
@@ -16,6 +17,8 @@ import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
+import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { ENGLISH_CRAFT_CRAFT_BENCH_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 
 type CraftAnswerRequestBody = {
   roomId?: string;
@@ -100,7 +103,10 @@ async function handlePost(request: Request) {
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
   const order = (parsed.order ?? []).map((word) => word.trim());
 
-  const challenge = await getLiveGameChallenge(challengeId);
+  const [challenge, storage] = await Promise.all([
+    getLiveGameChallenge(challengeId),
+    readLiveGameStorageJson(roomId),
+  ]);
   if (!challenge) {
     return NextResponse.json({ error: "Challenge expired or not found." }, { status: 404 });
   }
@@ -114,13 +120,19 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Invalid craft challenge." }, { status: 403 });
   }
   if (challenge.status === "awarded") {
-    const storage = await readLiveGameStorageJson(roomId);
     return NextResponse.json(craftAnswerPayload(storage, true, true));
   }
 
-  const storage = await readLiveGameStorageJson(roomId);
   if (!storage?.session || storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
+  }
+
+  const position = storage.playerPositions?.[playerId];
+  if (
+    !position ||
+    !findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_CRAFT_BENCH_V1])
+  ) {
+    return NextResponse.json({ error: "Move closer to the workbench." }, { status: 409 });
   }
 
   const ctx = readChallengeQuestionSetContext(storage.session, challenge);
@@ -171,7 +183,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_craft_answer", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game craft answer request failed", error);

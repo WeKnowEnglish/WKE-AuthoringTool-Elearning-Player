@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { isDepositSpellCorrect } from "@/lib/live-game/server/question-set-resolver";
 import { isDepositSpellCorrect as validateDepositSpelling } from "@/lib/live-game/question-banks/schemas";
@@ -15,6 +16,8 @@ import { readPlayerCarry } from "@/lib/live-game/server/player-carry";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
+import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { ENGLISH_CRAFT_STORAGE_BY_TYPE, toStorageInteractTarget } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 
 type DepositAnswerRequestBody = {
   roomId?: string;
@@ -95,7 +98,10 @@ async function handlePost(request: Request) {
   const skip = parsed.skip === true;
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
-  const challenge = await getLiveGameChallenge(challengeId);
+  const [challenge, storage] = await Promise.all([
+    getLiveGameChallenge(challengeId),
+    readLiveGameStorageJson(roomId),
+  ]);
   if (!challenge) {
     return NextResponse.json({ error: "Challenge expired or not found." }, { status: 404 });
   }
@@ -106,14 +112,8 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Invalid deposit challenge." }, { status: 403 });
   }
 
-  const storage = await readLiveGameStorageJson(roomId);
   if (!storage?.session || storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
-  }
-
-  const carry = readPlayerCarry(storage, playerId);
-  if (!carry) {
-    return NextResponse.json({ error: "Nothing to deposit." }, { status: 409 });
   }
 
   if (challenge.status === "awarded") {
@@ -129,11 +129,23 @@ async function handlePost(request: Request) {
       );
     }
     return NextResponse.json(
-      depositAnswerPayload(storage, {
-        correct: true,
-        alreadyAwarded: true,
-      }),
+      depositAnswerPayload(storage, { correct: true, alreadyAwarded: true }),
     );
+  }
+
+  const carry = readPlayerCarry(storage, playerId);
+  if (!carry) {
+    return NextResponse.json({ error: "Nothing to deposit." }, { status: 409 });
+  }
+
+  const storageDef = ENGLISH_CRAFT_STORAGE_BY_TYPE[carry.resourceType];
+  const position = storage.playerPositions?.[playerId];
+  if (
+    challenge.nodeId !== storageDef.id ||
+    !position ||
+    !findNearestInteractable(position.x, position.y, [toStorageInteractTarget(storageDef)])
+  ) {
+    return NextResponse.json({ error: "Move closer to the correct storage." }, { status: 409 });
   }
 
   const ctx = readChallengeQuestionSetContext(storage.session, challenge);
@@ -211,7 +223,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_deposit_answer", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
       return NextResponse.json({ error: "Not authorized." }, { status: 401 });

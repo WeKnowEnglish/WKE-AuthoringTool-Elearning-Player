@@ -6,6 +6,7 @@ import {
   isChallengePrefetchValid,
   type ChallengePrefetchEntry,
 } from "@/lib/live-game/challenge-prefetch";
+import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-sync";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type { LiveGamePoolTotal } from "@/lib/live-game/api-types";
 import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
@@ -84,6 +85,8 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
     storageId: string;
     promise: Promise<ChallengePrefetchEntry<EnglishCraftDepositSpellClient>>;
   } | null>(null);
+  const submitInFlightRef = useRef(false);
+  const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
 
   const isOpen = activeChallenge != null;
 
@@ -265,9 +268,10 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
   );
 
   const beginChallenge = useCallback(
-    async (storage: EnglishCraftStructureDef) => {
+    async (storage: EnglishCraftStructureDef, positionSync?: Promise<boolean>) => {
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
+      interactionPositionSyncRef.current = positionSync ?? null;
 
       setError(null);
       setLastResult(null);
@@ -295,6 +299,17 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
         spell: previewSpell,
       });
 
+      try {
+        await requireLiveGamePositionSync(positionSync);
+      } catch (positionError) {
+        if (beginRequestRef.current !== requestId) return;
+        setTokenStatus("error");
+        setError(
+          positionError instanceof Error ? positionError.message : "Could not verify your position.",
+        );
+        return;
+      }
+      if (beginRequestRef.current !== requestId) return;
       await resolveTokenForStorage(storage.id, previewSpell, requestId);
     },
     [resolveTokenForStorage],
@@ -302,10 +317,12 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
 
   const submitAnswer = useCallback(
     async (spelling: string, options?: { skip?: boolean }) => {
-      if (!activeChallenge?.challengeId || tokenStatus !== "ready") return;
+      if (!activeChallenge?.challengeId || tokenStatus !== "ready" || submitInFlightRef.current) return;
+      submitInFlightRef.current = true;
       setIsSubmitting(true);
       setError(null);
       try {
+        await requireLiveGamePositionSync(interactionPositionSyncRef.current);
         const response = await fetch("/api/live-game/deposit/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -323,6 +340,13 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           carryCleared?: boolean;
           skipped?: boolean;
         };
+        if (response.status === 404) {
+          clearPrefetchCache(activeChallenge.storageId);
+          setActiveChallenge(null);
+          setTokenStatus("pending");
+          setLastResult(null);
+          return;
+        }
         if (!response.ok) {
           throw new Error(payload.error ?? "Could not submit spelling.");
         }
@@ -358,6 +382,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           answerError instanceof Error ? answerError.message : "Could not submit spelling.";
         setError(message);
       } finally {
+        submitInFlightRef.current = false;
         setIsSubmitting(false);
       }
     },
@@ -366,6 +391,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
 
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
+    interactionPositionSyncRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");
     setError(null);

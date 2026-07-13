@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { expandInteractRadius, findNearestInteractable, liveGamePlayerInteractPoint } from "@/lib/live-game/engine/interact";
 import { ENGLISH_CRAFT_WOOD_TREES_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import {
   isMcAnswerCorrect,
@@ -56,6 +56,14 @@ describe("live-game interact", () => {
   it("returns null when no tree is in range", () => {
     const target = findNearestInteractable(-500, -500, ENGLISH_CRAFT_WOOD_TREES_V1);
     expect(target).toBeNull();
+  });
+
+  it("supports an outer prefetch zone without changing the interaction radius", () => {
+    const playerPoint = liveGamePlayerInteractPoint(0, 0);
+    const target = { id: "prefetch-target", x: playerPoint.x + 100, y: playerPoint.y, interactRadius: 40 };
+    expect(findNearestInteractable(0, 0, [target])).toBeNull();
+    expect(findNearestInteractable(0, 0, [expandInteractRadius(target, 80)])?.id).toBe(target.id);
+    expect(target.interactRadius).toBe(40);
   });
 });
 

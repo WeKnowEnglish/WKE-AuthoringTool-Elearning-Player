@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   ENGLISH_CRAFT_STORAGE_BY_TYPE,
@@ -16,7 +17,8 @@ import {
 import { readPlayerCarry } from "@/lib/live-game/server/player-carry";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
-import { findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
+import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
 import { getPoolCount } from "@/lib/live-game/resource-pool";
 
 type DepositChallengeRequestBody = {
@@ -95,7 +97,9 @@ async function handlePost(request: Request) {
   if (
     !position ||
     Date.now() - position.updatedAt > 5_000 ||
-    !findNearestInteractable(position.x, position.y, [interactTarget])
+    !findNearestInteractable(position.x, position.y, [
+      expandInteractRadius(interactTarget, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX),
+    ])
   ) {
     return NextResponse.json({ error: "Move closer to storage." }, { status: 409 });
   }
@@ -134,7 +138,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_deposit_challenge", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
       return NextResponse.json({ error: "Not authorized." }, { status: 401 });

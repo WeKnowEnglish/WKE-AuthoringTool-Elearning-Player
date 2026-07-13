@@ -68,6 +68,7 @@ export function createLiveGameInitialStorage(input: {
     playerCarry: new LiveMap<string, LiveObject<LiveGamePlayerCarry>>(),
     playerInventory: new LiveMap(),
     playerHunger: new LiveMap(),
+    questionDeckCursors: new LiveMap<string, number>(),
   };
 }
 

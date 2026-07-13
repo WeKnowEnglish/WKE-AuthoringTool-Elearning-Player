@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useStorage } from "@liveblocks/react/suspense";
 import { LiveGameCanvas } from "@/components/live-game/LiveGameCanvas";
 import { LiveGameLobbyCanvas } from "@/components/live-game/LiveGameLobbyCanvas";
@@ -7,6 +8,8 @@ import { LiveGameSessionEndedScreen } from "@/components/live-game/LiveGameSessi
 import type { LiveGameSessionContext } from "@/lib/live-game/liveblocks/identity";
 import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
+import { preloadLiveGameQuestionBundle } from "@/lib/live-game/question-bundle-cache";
+import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 
 type Props = {
   context: LiveGameSessionContext;
@@ -23,6 +26,10 @@ function SessionLoading() {
 export function LiveGameSessionRouter({ context }: Props) {
   const phase = useStorage((root) => (root as unknown as LiveGameStorageSnapshot).session.phase);
   const { isHost } = useLiveGameLobby();
+
+  useEffect(() => {
+    void preloadLiveGameQuestionBundle(toRoomId(context.sessionId));
+  }, [context.sessionId]);
 
   if (phase === "ended") {
     return <LiveGameSessionEndedScreen isHost={isHost} />;

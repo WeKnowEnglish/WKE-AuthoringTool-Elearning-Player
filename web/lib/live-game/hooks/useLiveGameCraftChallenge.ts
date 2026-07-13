@@ -10,6 +10,7 @@ import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-
 import {
   getPreloadedCraftQuestion,
   getPreloadedQuestionBundleVersion,
+  getNextPreloadedCraftQuestion,
 } from "@/lib/live-game/question-bundle-cache";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type {
@@ -57,6 +58,8 @@ type CraftPrefetchEntry = ChallengePrefetchEntry<EnglishCraftCraftQuestionClient
 
 type Options = {
   roomId: string;
+  playerId: string;
+  questionCursor: number;
   onAnswered?: (result: CraftAnswerResult) => void;
 };
 
@@ -124,7 +127,7 @@ function toCraftPrefetchEntry(
   };
 }
 
-export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
+export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, onAnswered }: Options) {
   const [activeChallenge, setActiveChallenge] = useState<ActiveCraftChallenge | null>(null);
   const [tokenStatus, setTokenStatus] = useState<LiveGameChallengeTokenStatus>("pending");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -349,13 +352,16 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
         return;
       }
 
+      const previewQuestion =
+        getNextPreloadedCraftQuestion(roomId, playerId, questionCursor) ??
+        CRAFT_PREVIEW_QUESTION;
       setTokenStatus("pending");
       setActiveChallenge({
         challengeId: null,
         recipeId,
         recipeLabel,
         costSummary,
-        question: CRAFT_PREVIEW_QUESTION,
+        question: previewQuestion,
       });
 
       try {
@@ -371,7 +377,7 @@ export function useLiveGameCraftChallenge({ roomId, onAnswered }: Options) {
       if (beginRequestRef.current !== requestId) return;
       await resolveToken(requestId, recipeId);
     },
-    [resolveToken],
+    [playerId, questionCursor, resolveToken, roomId],
   );
 
   const submitAnswer = useCallback(

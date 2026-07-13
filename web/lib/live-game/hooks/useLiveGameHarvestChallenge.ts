@@ -10,6 +10,7 @@ import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-
 import {
   getPreloadedHarvestQuestion,
   getPreloadedQuestionBundleVersion,
+  getNextPreloadedHarvestQuestion,
 } from "@/lib/live-game/question-bundle-cache";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type { LiveGamePoolTotal } from "@/lib/live-game/api-types";
@@ -43,6 +44,8 @@ class PreloadedHarvestQuestionMissError extends Error {}
 
 type Options = {
   roomId: string;
+  playerId: string;
+  questionCursor: number;
   onAnswered?: (result: AnswerResult) => void;
 };
 
@@ -83,7 +86,7 @@ function toPrefetchEntry(
   };
 }
 
-export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
+export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, onAnswered }: Options) {
   const [activeChallenge, setActiveChallenge] = useState<ActiveChallenge | null>(null);
   const [tokenStatus, setTokenStatus] = useState<LiveGameChallengeTokenStatus>("pending");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -303,7 +306,9 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
       setError(null);
       setLastResult(null);
 
-      const previewQuestion = ENGLISH_CRAFT_MC_PREVIEW;
+      const previewQuestion =
+        getNextPreloadedHarvestQuestion(roomId, playerId, questionCursor) ??
+        ENGLISH_CRAFT_MC_PREVIEW;
       const now = Date.now();
       const cached = prefetchCacheRef.current;
 
@@ -340,7 +345,7 @@ export function useLiveGameHarvestChallenge({ roomId, onAnswered }: Options) {
       if (beginRequestRef.current !== requestId) return;
       await resolveTokenForNode(node.id, previewQuestion, requestId, cooldownEndsAt);
     },
-    [resolveTokenForNode],
+    [playerId, questionCursor, resolveTokenForNode, roomId],
   );
 
   const submitAnswer = useCallback(

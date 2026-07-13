@@ -2,6 +2,7 @@
 
 import type { EnglishCraftCraftQuestionClient, EnglishCraftMcQuestionClient } from "@/lib/live-game/modes/english-craft/questions-client";
 import type { LiveGameSafeQuestionBundle } from "@/lib/live-game/question-bundle";
+import { pickQuestionFromSessionDeck } from "@/lib/live-game/question-deck";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 
 const bundles = new Map<string, LiveGameSafeQuestionBundle>();
@@ -60,6 +61,27 @@ export function getPreloadedHarvestQuestion(
   };
 }
 
+export function getNextPreloadedHarvestQuestion(
+  roomId: string,
+  playerId: string,
+  cursor: number,
+): EnglishCraftMcQuestionClient | null {
+  const rows = bundles.get(roomId)?.harvest;
+  if (!rows?.length) return null;
+  const row = pickQuestionFromSessionDeck(rows, {
+    roomId,
+    playerId,
+    bank: "harvest",
+    cursor,
+  });
+  return {
+    id: row.clientId,
+    type: "multiple_choice",
+    prompt: row.prompt,
+    options: shuffleWithSeed(row.options, `${roomId}:${playerId}:harvest:${cursor}:mc-options`),
+  };
+}
+
 export function getPreloadedCraftQuestion(
   roomId: string,
   questionId: string,
@@ -74,6 +96,28 @@ export function getPreloadedCraftQuestion(
     type: "drag_sentence",
     prompt: row.prompt,
     wordBank: shuffleWithSeed(row.wordBank, `${challengeId}:craft-bank`),
+    slotCount: row.slotCount,
+  };
+}
+
+export function getNextPreloadedCraftQuestion(
+  roomId: string,
+  playerId: string,
+  cursor: number,
+): EnglishCraftCraftQuestionClient | null {
+  const rows = bundles.get(roomId)?.craft;
+  if (!rows?.length) return null;
+  const row = pickQuestionFromSessionDeck(rows, {
+    roomId,
+    playerId,
+    bank: "craft",
+    cursor,
+  });
+  return {
+    id: row.clientId,
+    type: "drag_sentence",
+    prompt: row.prompt,
+    wordBank: shuffleWithSeed(row.wordBank, `${roomId}:${playerId}:craft:${cursor}:craft-bank`),
     slotCount: row.slotCount,
   };
 }

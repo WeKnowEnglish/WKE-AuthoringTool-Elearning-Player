@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useStorage } from "@liveblocks/react/suspense";
 import { LiveGameCraftModal } from "@/components/live-game/LiveGameCraftModal";
 import { LiveGameCraftRecipePicker } from "@/components/live-game/LiveGameCraftRecipePicker";
 import {
@@ -26,6 +27,7 @@ import type { LiveGameSessionContext } from "@/lib/live-game/liveblocks/identity
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
+import { liveGameQuestionDeckCursorKey } from "@/lib/live-game/question-deck";
 import { useLiveGameCraftChallenge } from "@/lib/live-game/hooks/useLiveGameCraftChallenge";
 import { useLiveGameDepositChallenge } from "@/lib/live-game/hooks/useLiveGameDepositChallenge";
 import { useLiveGameAvatar } from "@/lib/live-game/hooks/useLiveGameAvatar";
@@ -46,7 +48,7 @@ import { useLiveGameAutoTimeout } from "@/lib/live-game/hooks/useLiveGameAutoTim
 import { useLiveGameSessionTimer } from "@/lib/live-game/hooks/useLiveGameSessionTimer";
 import { buildVictoryResourceStats } from "@/lib/live-game/hooks/useLiveGameVictoryStats";
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
-import type { LiveGameResourceNodeState } from "@/lib/live-game/liveblocks/config";
+import type { LiveGameResourceNodeState, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
 import { getMapForMode } from "@/lib/live-game/modes";
 import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
 import {
@@ -105,6 +107,15 @@ export function LiveGameCanvas({ context }: Props) {
   const boatBuilt = craftedItems.boat;
   const boatBoardingUnlocked = useLiveGameBoatBoardingUnlocked();
   const roomId = toRoomId(context.sessionId);
+  const selfId = self?.id ?? context.userId;
+  const harvestQuestionCursor = useStorage((root) => {
+    const cursors = (root as unknown as LiveGameStorageSnapshot).questionDeckCursors;
+    return Math.max(0, Math.floor(cursors?.[liveGameQuestionDeckCursorKey(selfId, "harvest")] ?? 0));
+  });
+  const craftQuestionCursor = useStorage((root) => {
+    const cursors = (root as unknown as LiveGameStorageSnapshot).questionDeckCursors;
+    return Math.max(0, Math.floor(cursors?.[liveGameQuestionDeckCursorKey(selfId, "craft")] ?? 0));
+  });
   const buildBenchRecipe = ENGLISH_CRAFT_BUILD_BENCH_RECIPE;
   const buildBenchCostSummary = formatRecipeCostSummary(buildBenchRecipe);
 
@@ -121,9 +132,17 @@ export function LiveGameCanvas({ context }: Props) {
     Math.max(0, players.findIndex((entry) => entry.id === selfEntry.id))
   : 0;
 
-  const harvestChallenge = useLiveGameHarvestChallenge({ roomId });
+  const harvestChallenge = useLiveGameHarvestChallenge({
+    roomId,
+    playerId: selfId,
+    questionCursor: harvestQuestionCursor,
+  });
   const depositChallenge = useLiveGameDepositChallenge({ roomId });
-  const craftChallenge = useLiveGameCraftChallenge({ roomId });
+  const craftChallenge = useLiveGameCraftChallenge({
+    roomId,
+    playerId: selfId,
+    questionCursor: craftQuestionCursor,
+  });
 
   const isCarrying = selfCarry != null;
   const canBuildBench =
@@ -180,8 +199,6 @@ export function LiveGameCanvas({ context }: Props) {
   });
 
   const { getPosition, sampledPosition, now } = stage;
-  const selfId = self?.id;
-
   const publishPosition = useCallback(async () => {
     const position = getPosition();
     return fetch("/api/live-game/position", {
@@ -325,6 +342,15 @@ export function LiveGameCanvas({ context }: Props) {
     () => getDefaultBenchRecipe(gameplaySnapshot),
     [gameplaySnapshot],
   );
+  const depositPrefetchStorageId =
+    isCarrying && depositPrefetchTarget && carryStorageDef ? carryStorageDef.id : null;
+  const craftPrefetchRecipeId =
+    canBuildBench && benchPrefetchTarget ? "build_bench"
+    : canCraftAtBench && benchPrefetchTarget ? defaultBenchRecipeId
+    : null;
+  const harvestPrefetchNodeId = !isCarrying ? (harvestPrefetchTarget?.id ?? null) : null;
+  const harvestPrefetchCooldownEndsAt =
+    harvestPrefetchNodeId ? (resourceNodes[harvestPrefetchNodeId]?.cooldownEndsAt ?? null) : null;
 
   const handleRecipeSelect = useCallback(
     (recipeId: CraftRecipeId, recipe: CraftRecipe) => {
@@ -422,12 +448,14 @@ export function LiveGameCanvas({ context }: Props) {
       return;
     }
 
-    if (isCarrying && depositPrefetchTarget && carryStorageDef) {
+    if (depositPrefetchStorageId) {
       harvestChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
-      void publishPosition();
+      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void depositChallenge.prefetchForStorage(carryStorageDef.id);
+        void positionSync.then((synced) => {
+          if (synced) void depositChallenge.prefetchForStorage(depositPrefetchStorageId);
+        });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
       return () => {
         window.clearTimeout(timeout);
@@ -435,12 +463,14 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (canBuildBench && benchPrefetchTarget) {
+    if (craftPrefetchRecipeId) {
       harvestChallenge.cancelPrefetch();
       depositChallenge.cancelPrefetch();
-      void publishPosition();
+      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void craftChallenge.prefetchChallenge("build_bench");
+        void positionSync.then((synced) => {
+          if (synced) void craftChallenge.prefetchChallenge(craftPrefetchRecipeId);
+        });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
       return () => {
         window.clearTimeout(timeout);
@@ -448,26 +478,19 @@ export function LiveGameCanvas({ context }: Props) {
       };
     }
 
-    if (canCraftAtBench && benchPrefetchTarget && defaultBenchRecipeId) {
-      harvestChallenge.cancelPrefetch();
-      depositChallenge.cancelPrefetch();
-      void publishPosition();
-      const timeout = window.setTimeout(() => {
-        void craftChallenge.prefetchChallenge(defaultBenchRecipeId);
-      }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
-      return () => {
-        window.clearTimeout(timeout);
-        craftChallenge.cancelPrefetch();
-      };
-    }
-
-    if (harvestPrefetchTarget) {
+    if (harvestPrefetchNodeId) {
       depositChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
-      void publishPosition();
-      const cooldownEndsAt = resourceNodes[harvestPrefetchTarget.id]?.cooldownEndsAt ?? null;
+      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void harvestChallenge.prefetchForNode(harvestPrefetchTarget.id, cooldownEndsAt);
+        void positionSync.then((synced) => {
+          if (synced) {
+            void harvestChallenge.prefetchForNode(
+              harvestPrefetchNodeId,
+              harvestPrefetchCooldownEndsAt,
+            );
+          }
+        });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
       return () => {
         window.clearTimeout(timeout);
@@ -480,23 +503,15 @@ export function LiveGameCanvas({ context }: Props) {
     craftChallenge.cancelPrefetch();
   }, [
     anyChallengeOpen,
-    canBuildBench,
-    canCraftAtBench,
-    carryStorageDef,
-    benchPrefetchTarget,
-    craftBenchTarget,
+    craftPrefetchRecipeId,
     craftChallenge,
-    defaultBenchRecipeId,
+    depositPrefetchStorageId,
     depositChallenge,
-    depositTarget,
-    depositPrefetchTarget,
     harvestChallenge,
-    harvestTarget,
-    harvestPrefetchTarget,
-    isCarrying,
+    harvestPrefetchCooldownEndsAt,
+    harvestPrefetchNodeId,
     isPlaying,
-    publishPosition,
-    resourceNodes,
+    syncInteractionPosition,
   ]);
 
   useEffect(() => {

@@ -34,11 +34,13 @@ import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/ch
 import { ENGLISH_CRAFT_CRAFT_BENCH_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
 import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
+import { recordCurrentLiveGameEncounter } from "@/lib/live-game/server/report-evidence";
 
 type CraftChallengeRequestBody = {
   roomId?: string;
   recipeId?: string;
   questionBundleVersion?: number;
+  prefetch?: boolean;
 };
 
 function parseCraftChallengeBody(body: unknown): CraftChallengeRequestBody | null {
@@ -52,6 +54,7 @@ function parseCraftChallengeBody(body: unknown): CraftChallengeRequestBody | nul
     recipeId: record.recipeId,
     questionBundleVersion:
       Number.isInteger(record.questionBundleVersion) ? record.questionBundleVersion : undefined,
+    prefetch: record.prefetch === true,
   };
 }
 
@@ -141,6 +144,15 @@ async function handlePost(request: Request) {
   const craftRow =
     challenge.questionId === pickedCraftRow.id ? pickedCraftRow
     : (await getQuestionById(binding.ref, "craft", challenge.questionId, binding.version)) ?? pickedCraftRow;
+
+  if (!parsed.prefetch) {
+    await recordCurrentLiveGameEncounter({
+      storage,
+      challenge,
+      question: craftRow,
+      recipeId,
+    });
+  }
 
   const usePreloadedQuestion = parsed.questionBundleVersion === binding.version;
   return NextResponse.json({

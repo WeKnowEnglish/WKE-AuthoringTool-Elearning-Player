@@ -29,6 +29,8 @@ function createInitialResourceNodes() {
 
 export function createLiveGameInitialStorage(input: {
   hostUserId: string;
+  classId?: string | null;
+  classTitle?: string | null;
   joinCode: string;
   modeId: LiveGameModeId;
   mapId: string;
@@ -41,6 +43,8 @@ export function createLiveGameInitialStorage(input: {
     phase: "lobby",
     joinCode: input.joinCode,
     hostUserId: input.hostUserId,
+    classId: input.classId ?? null,
+    classTitle: input.classTitle ?? null,
     durationMinutes: input.durationMinutes,
     endsAt: null,
     mapId: input.mapId,

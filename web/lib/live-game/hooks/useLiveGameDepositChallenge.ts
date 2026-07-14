@@ -15,6 +15,9 @@ import {
   ENGLISH_CRAFT_DEPOSIT_SPELL_PREVIEW,
   type EnglishCraftDepositSpellClient,
 } from "@/lib/live-game/modes/english-craft/questions-deposit-client";
+import { createLiveGameSubmissionId } from "@/lib/live-game/submission-id";
+import { openLiveGameQuestionEncounter } from "@/lib/live-game/open-question-encounter";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 type ActiveChallenge = {
   storageId: string;
@@ -87,6 +90,9 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
   } | null>(null);
   const submitInFlightRef = useRef(false);
   const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
+  const encounterOpenRef = useRef<Promise<void> | null>(null);
+  const challengeOpenedAtRef = useRef(0);
+  const pendingSubmissionRef = useRef<{ challengeId: string; answerKey: string; id: string; responseTimeMs: number } | null>(null);
 
   const isOpen = activeChallenge != null;
 
@@ -105,12 +111,12 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
 
   const requestChallengeToken = useCallback(
     async (storageId: string, signal?: AbortSignal): Promise<ChallengeTokenPayload> => {
-      const response = await fetch("/api/live-game/deposit/challenge", {
+      const response = await diagnosticFetch("/api/live-game/deposit/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, storageId }),
+        body: JSON.stringify({ roomId, storageId, prefetch: Boolean(signal) }),
         signal,
-      });
+      }, { phase: "gameplay", name: "deposit_question_request", detail: { storageId, prefetched: Boolean(signal) } });
       const payload = (await response.json()) as {
         error?: string;
         challengeId?: string;
@@ -218,6 +224,14 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           },
           previewSpell,
         );
+        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId });
+        encounterOpenRef.current = encounterOpen;
+        void encounterOpen.catch((openError) => {
+          if (beginRequestRef.current === requestId) {
+            setTokenStatus("error");
+            setError(openError instanceof Error ? openError.message : "Could not open deposit question.");
+          }
+        });
         return;
       }
 
@@ -235,6 +249,14 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
             },
             previewSpell,
           );
+          const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: entry.challengeId });
+          encounterOpenRef.current = encounterOpen;
+          void encounterOpen.catch((openError) => {
+            if (beginRequestRef.current === requestId) {
+              setTokenStatus("error");
+              setError(openError instanceof Error ? openError.message : "Could not open deposit question.");
+            }
+          });
           return;
         } catch {
           if (beginRequestRef.current !== requestId) return;
@@ -264,7 +286,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
         clearPrefetchCache(storageId);
       }
     },
-    [applyTokenToActiveChallenge, clearPrefetchCache, fetchAndCacheToken],
+    [applyTokenToActiveChallenge, clearPrefetchCache, fetchAndCacheToken, roomId],
   );
 
   const beginChallenge = useCallback(
@@ -272,6 +294,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
       interactionPositionSyncRef.current = positionSync ?? null;
+      challengeOpenedAtRef.current = Date.now();
 
       setError(null);
       setLastResult(null);
@@ -280,6 +303,10 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       const now = Date.now();
       const cached = prefetchCacheRef.current;
 
+      recordLiveGameDiagnostic("gameplay", "deposit_interaction", {
+        storageId: storage.id,
+        cacheState: isChallengePrefetchValid(cached, storage.id, now) ? "warm" : inFlightPrefetchRef.current?.storageId === storage.id ? "inflight" : "cold",
+      });
       if (isChallengePrefetchValid(cached, storage.id, now) && cached) {
         setActiveChallenge({
           storageId: storage.id,
@@ -288,6 +315,14 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           spell: cached.question,
         });
         setTokenStatus("ready");
+        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId });
+        encounterOpenRef.current = encounterOpen;
+        void encounterOpen.catch((openError) => {
+          if (beginRequestRef.current === requestId) {
+            setTokenStatus("error");
+            setError(openError instanceof Error ? openError.message : "Could not open deposit question.");
+          }
+        });
         return;
       }
 
@@ -312,7 +347,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       if (beginRequestRef.current !== requestId) return;
       await resolveTokenForStorage(storage.id, previewSpell, requestId);
     },
-    [resolveTokenForStorage],
+    [resolveTokenForStorage, roomId],
   );
 
   const submitAnswer = useCallback(
@@ -323,7 +358,25 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       setError(null);
       try {
         await requireLiveGamePositionSync(interactionPositionSyncRef.current);
-        const response = await fetch("/api/live-game/deposit/answer", {
+        await encounterOpenRef.current;
+        const answerKey = options?.skip ? "skip" : spelling;
+        const pending = pendingSubmissionRef.current;
+        const submission = pending?.challengeId === activeChallenge.challengeId && pending.answerKey === answerKey ? pending : {
+          challengeId: activeChallenge.challengeId,
+          answerKey,
+          id: createLiveGameSubmissionId(),
+          responseTimeMs: Date.now() - challengeOpenedAtRef.current,
+        };
+        pendingSubmissionRef.current = submission;
+        recordLiveGameDiagnostic("gameplay", "question_attempt", {
+          questionType: "deposit",
+          questionPrompt: activeChallenge.spell.spellHint,
+          gameObjectId: activeChallenge.storageId,
+          challengeId: activeChallenge.challengeId,
+          action: options?.skip ? "skip" : "answer",
+          selectedAnswer: options?.skip ? null : spelling,
+        });
+        const response = await diagnosticFetch("/api/live-game/deposit/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -331,8 +384,10 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
             challengeId: activeChallenge.challengeId,
             spelling: options?.skip ? "" : spelling,
             skip: options?.skip === true,
+            submissionId: submission.id,
+            responseTimeMs: submission.responseTimeMs,
           }),
-        });
+        }, { phase: "gameplay", name: "deposit_answer_request", detail: { skipped: options?.skip === true, responseTimeMs: submission.responseTimeMs } });
         const payload = (await response.json()) as {
           error?: string;
           correct?: boolean;
@@ -341,6 +396,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           skipped?: boolean;
         };
         if (response.status === 404) {
+          pendingSubmissionRef.current = null;
           clearPrefetchCache(activeChallenge.storageId);
           setActiveChallenge(null);
           setTokenStatus("pending");
@@ -348,8 +404,18 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           return;
         }
         if (!response.ok) {
+          recordLiveGameDiagnostic("gameplay", "question_attempt_rejected", {
+            questionType: "deposit",
+            questionPrompt: activeChallenge.spell.spellHint,
+            gameObjectId: activeChallenge.storageId,
+            challengeId: activeChallenge.challengeId,
+            action: options?.skip ? "skip" : "answer",
+            status: response.status,
+            message: payload.error ?? "Could not submit spelling.",
+          }, { kind: "error" });
           throw new Error(payload.error ?? "Could not submit spelling.");
         }
+        pendingSubmissionRef.current = null;
 
         if (payload.skipped === true) {
           clearPrefetchCache(activeChallenge.storageId);
@@ -359,6 +425,15 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           return;
         }
         const correct = payload.correct === true;
+        recordLiveGameDiagnostic("gameplay", "question_attempt_result", {
+          questionType: "deposit",
+          questionPrompt: activeChallenge.spell.spellHint,
+          gameObjectId: activeChallenge.storageId,
+          challengeId: activeChallenge.challengeId,
+          action: options?.skip ? "skip" : "answer",
+          correct,
+        });
+        recordLiveGameDiagnostic("gameplay", "deposit_result_visible", { correct });
         const poolTotal = payload.poolTotal ?? {
           wood: 0,
           stone: 0,
@@ -376,6 +451,8 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           clearPrefetchCache(activeChallenge.storageId);
           setActiveChallenge(null);
           setTokenStatus("pending");
+        } else {
+          challengeOpenedAtRef.current = Date.now();
         }
       } catch (answerError) {
         const message =
@@ -392,6 +469,8 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
     interactionPositionSyncRef.current = null;
+    encounterOpenRef.current = null;
+    pendingSubmissionRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");
     setError(null);

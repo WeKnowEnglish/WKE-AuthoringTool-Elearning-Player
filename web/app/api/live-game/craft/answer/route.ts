@@ -19,12 +19,19 @@ import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-sess
 import { readResourcePool } from "@/lib/live-game/resource-pool";
 import { findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { ENGLISH_CRAFT_CRAFT_BENCH_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import {
+  normalizeLiveGameSubmission,
+  recordCurrentLiveGameAttempt,
+  recordCurrentLiveGameSkip,
+} from "@/lib/live-game/server/report-evidence";
 
 type CraftAnswerRequestBody = {
   roomId?: string;
   challengeId?: string;
   order?: string[];
   recipeId?: string;
+  submissionId?: string;
+  responseTimeMs?: number;
   skip?: boolean;
 };
 
@@ -41,6 +48,8 @@ function parseCraftAnswerBody(body: unknown): CraftAnswerRequestBody | null {
       challengeId: record.challengeId,
       recipeId: record.recipeId,
       order: Array.isArray(record.order) ? record.order.filter((word) => typeof word === "string") : [],
+      submissionId: record.submissionId,
+      responseTimeMs: record.responseTimeMs,
       skip: true,
     };
   }
@@ -100,6 +109,7 @@ async function handlePost(request: Request) {
   const challengeId = parsed.challengeId.trim();
   const recipeId = parsed.recipeId;
   const skip = parsed.skip === true;
+  const submission = normalizeLiveGameSubmission(parsed.submissionId, parsed.responseTimeMs);
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
   const order = (parsed.order ?? []).map((word) => word.trim());
 
@@ -139,6 +149,7 @@ async function handlePost(request: Request) {
   if (skip) {
     const skipped = await markChallengeSkipped(challengeId);
     if (!skipped) return NextResponse.json({ error: "Challenge can no longer be skipped." }, { status: 409 });
+    await recordCurrentLiveGameSkip(challengeId);
     return NextResponse.json(craftAnswerPayload(storage, false, false, true));
   }
   const correct =
@@ -146,6 +157,13 @@ async function handlePost(request: Request) {
       validateCraftOrder(challenge.validationPayload, order)
     : await isCraftOrderCorrect(ctx.ref, challenge.questionId, order, ctx.version);
   if (!correct) {
+    await recordCurrentLiveGameAttempt({
+      challengeId,
+      submissionId: submission.id,
+      selectedAnswer: order,
+      correct: false,
+      responseTimeMs: submission.responseTimeMs,
+    });
     return NextResponse.json(craftAnswerPayload(storage, false));
   }
 
@@ -169,7 +187,19 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Could not complete craft right now." }, { status: 409 });
   }
 
-  await markChallengeAwarded(challengeId);
+  await Promise.all([
+    markChallengeAwarded(challengeId),
+    recordCurrentLiveGameAttempt({
+      challengeId,
+      submissionId: submission.id,
+      selectedAnswer: order,
+      correct: true,
+      responseTimeMs: submission.responseTimeMs,
+      contribution: {
+        crafted: { [award.recipeId]: award.alreadyAwarded ? 0 : 1 },
+      },
+    }),
+  ]);
 
   return NextResponse.json({
     correct: true,

@@ -42,7 +42,8 @@ export function LiveGameHostEndSessionModal({ open, onClose, onConfirm }: Props)
             </div>
 
             <p className="text-sm font-semibold text-kid-ink/80">
-              Everyone will return to the lobby. You can start another round when ready.
+              Everyone will see their private learning report. You can return to the lobby and
+              start another round when ready.
             </p>
 
             <div className="mt-5 flex flex-col gap-2">
@@ -50,7 +51,7 @@ export function LiveGameHostEndSessionModal({ open, onClose, onConfirm }: Props)
                 Keep playing
               </KidButton>
               <KidButton type="button" variant="primary" className="w-full" onClick={onConfirm}>
-                End for everyone
+                End and show reports
               </KidButton>
             </div>
           </motion.div>

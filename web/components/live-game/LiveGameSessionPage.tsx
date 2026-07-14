@@ -12,6 +12,7 @@ import { isValidJoinCode } from "@/lib/live-game/liveblocks/join-code";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 import { createMovementState } from "@/lib/live-game/engine/movement";
 import { getMapForMode } from "@/lib/live-game/modes";
+import { recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 type Props = {
   sessionId: string;
@@ -31,9 +32,14 @@ export function LiveGameSessionPage({ sessionId }: Props) {
   const [contextReady, setContextReady] = useState(false);
 
   useEffect(() => {
-    setContext(getLiveGameSessionContext());
+    const nextContext = getLiveGameSessionContext();
+    setContext(nextContext);
     setContextReady(true);
-  }, []);
+    recordLiveGameDiagnostic("room", "session_context_loaded", {
+      sessionId: normalizedSessionId,
+      validContext: Boolean(nextContext && nextContext.sessionId === normalizedSessionId),
+    });
+  }, [normalizedSessionId]);
 
   if (!isValidJoinCode(normalizedSessionId)) {
     return (
@@ -75,6 +81,8 @@ export function LiveGameSessionPage({ sessionId }: Props) {
         sessionId={normalizedSessionId}
         role={context.role}
         hostUserId={context.userId}
+        classId={context.classId}
+        classTitle={context.classTitle}
         modeId={context.modeId}
         mapId={context.mapId}
         durationMinutes={context.durationMinutes}

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArchiveClassButton } from "@/components/teacher/ArchiveClassButton";
 import { ClassJoinCodePanel } from "@/components/teacher/ClassJoinCodePanel";
 import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
+import { LiveGameClassProjectPanel } from "@/components/teacher/LiveGameClassProjectPanel";
+import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
 import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
 import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
@@ -16,10 +18,11 @@ export default async function TeacherClassDetailPage({ params }: Props) {
   const teacherClass = await getTeacherClass(classId);
   if (!teacherClass) notFound();
 
-  const [roster, masteryOverview, pendingSentences] = await Promise.all([
+  const [roster, masteryOverview, pendingSentences, liveGameProject] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
     getPendingSentenceCountsForClass(classId),
+    getLiveGameClassProjectOverview(classId),
   ]);
 
   const masteryByStudentId = Object.fromEntries(
@@ -58,6 +61,12 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         classId={classId}
         joinCode={teacherClass.join_code}
         archived={archived}
+      />
+
+      <LiveGameClassProjectPanel
+        classId={classId}
+        archived={archived}
+        overview={liveGameProject}
       />
 
       <section className="space-y-2">

@@ -15,6 +15,8 @@ type Props = {
   sessionId: string;
   role: LiveGameAuthRole;
   hostUserId: string;
+  classId?: string | null;
+  classTitle?: string | null;
   modeId: LiveGameModeId;
   mapId: string;
   durationMinutes: EnglishCraftSessionDuration;
@@ -37,6 +39,8 @@ export function LiveGameRoomShell({
   sessionId,
   role,
   hostUserId,
+  classId,
+  classTitle,
   modeId,
   mapId,
   durationMinutes,
@@ -54,6 +58,8 @@ export function LiveGameRoomShell({
       } as never}
       initialStorage={createLiveGameInitialStorage({
         hostUserId: role === "host" ? hostUserId : "host-pending",
+        classId,
+        classTitle,
         joinCode: sessionId,
         modeId,
         mapId,

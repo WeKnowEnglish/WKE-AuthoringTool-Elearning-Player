@@ -38,6 +38,24 @@ describe("resolvePostLoginPath", () => {
     ).toBe("/home");
   });
 
+  it("blocks students from the Live Game host route", () => {
+    expect(
+      resolvePostLoginPath({
+        role: "student",
+        next: "/live-game/host",
+      }),
+    ).toBe("/home");
+  });
+
+  it("returns teachers to the Live Game host route after sign-in", () => {
+    expect(
+      resolvePostLoginPath({
+        role: "teacher",
+        next: "/live-game/host",
+      }),
+    ).toBe("/live-game/host");
+  });
+
   it("keeps student non-teacher next paths when provided", () => {
     expect(
       resolvePostLoginPath({

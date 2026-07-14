@@ -20,6 +20,9 @@ import {
   ENGLISH_CRAFT_MC_PREVIEW,
   type EnglishCraftMcQuestionClient,
 } from "@/lib/live-game/modes/english-craft/questions-client";
+import { createLiveGameSubmissionId } from "@/lib/live-game/submission-id";
+import { openLiveGameQuestionEncounter } from "@/lib/live-game/open-question-encounter";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 type ActiveChallenge = {
   nodeId: string;
@@ -103,6 +106,9 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
   } | null>(null);
   const submitInFlightRef = useRef(false);
   const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
+  const encounterOpenRef = useRef<Promise<void> | null>(null);
+  const challengeOpenedAtRef = useRef(0);
+  const pendingSubmissionRef = useRef<{ challengeId: string; answerKey: string; id: string; responseTimeMs: number } | null>(null);
 
   const isOpen = activeChallenge != null;
 
@@ -122,12 +128,12 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
   const requestChallengeToken = useCallback(
     async (nodeId: string, signal?: AbortSignal): Promise<ChallengeTokenPayload> => {
       const requestToken = async (questionBundleVersion?: number) => {
-        const response = await fetch("/api/live-game/challenge", {
+        const response = await diagnosticFetch("/api/live-game/challenge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId, nodeId, questionBundleVersion }),
+          body: JSON.stringify({ roomId, nodeId, questionBundleVersion, prefetch: Boolean(signal) }),
           signal,
-        });
+        }, { phase: "gameplay", name: "harvest_question_request", detail: { nodeId, prefetched: Boolean(signal) } });
         const payload = (await response.json()) as {
           error?: string;
           challengeId?: string;
@@ -246,6 +252,14 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
           },
           previewQuestion,
         );
+        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId });
+        encounterOpenRef.current = encounterOpen;
+        void encounterOpen.catch((openError) => {
+          if (beginRequestRef.current === requestId) {
+            setTokenStatus("error");
+            setError(openError instanceof Error ? openError.message : "Could not open challenge.");
+          }
+        });
         return;
       }
 
@@ -263,6 +277,14 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
             },
             previewQuestion,
           );
+          const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: entry.challengeId });
+          encounterOpenRef.current = encounterOpen;
+          void encounterOpen.catch((openError) => {
+            if (beginRequestRef.current === requestId) {
+              setTokenStatus("error");
+              setError(openError instanceof Error ? openError.message : "Could not open challenge.");
+            }
+          });
           return;
         } catch {
           if (beginRequestRef.current !== requestId) return;
@@ -290,7 +312,7 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
         clearPrefetchCache(nodeId);
       }
     },
-    [applyTokenToActiveChallenge, clearPrefetchCache, fetchAndCacheToken],
+    [applyTokenToActiveChallenge, clearPrefetchCache, fetchAndCacheToken, roomId],
   );
 
   const beginChallenge = useCallback(
@@ -302,6 +324,7 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
       interactionPositionSyncRef.current = positionSync ?? null;
+      challengeOpenedAtRef.current = Date.now();
 
       setError(null);
       setLastResult(null);
@@ -312,6 +335,10 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
       const now = Date.now();
       const cached = prefetchCacheRef.current;
 
+      recordLiveGameDiagnostic("gameplay", "harvest_interaction", {
+        nodeId: node.id,
+        cacheState: isChallengePrefetchValid(cached, node.id, now, { cooldownEndsAt }) ? "warm" : inFlightPrefetchRef.current?.nodeId === node.id ? "inflight" : "cold",
+      });
       if (isChallengePrefetchValid(cached, node.id, now, { cooldownEndsAt }) && cached) {
         setActiveChallenge({
           nodeId: node.id,
@@ -321,6 +348,14 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
             cached.question.id !== previewQuestion.id ? cached.question : previewQuestion,
         });
         setTokenStatus("ready");
+        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId });
+        encounterOpenRef.current = encounterOpen;
+        void encounterOpen.catch((openError) => {
+          if (beginRequestRef.current === requestId) {
+            setTokenStatus("error");
+            setError(openError instanceof Error ? openError.message : "Could not open challenge.");
+          }
+        });
         return;
       }
 
@@ -356,7 +391,26 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
       setError(null);
       try {
         await requireLiveGamePositionSync(interactionPositionSyncRef.current);
-        const response = await fetch("/api/live-game/answer", {
+        await encounterOpenRef.current;
+        const answerKey = options?.skip ? "skip" : answer;
+        const pending = pendingSubmissionRef.current;
+        const submission = pending?.challengeId === activeChallenge.challengeId && pending.answerKey === answerKey ? pending : {
+          challengeId: activeChallenge.challengeId,
+          answerKey,
+          id: createLiveGameSubmissionId(),
+          responseTimeMs: Date.now() - challengeOpenedAtRef.current,
+        };
+        pendingSubmissionRef.current = submission;
+        recordLiveGameDiagnostic("gameplay", "question_attempt", {
+          questionType: "harvest",
+          questionId: activeChallenge.question.id,
+          questionPrompt: activeChallenge.question.prompt,
+          gameObjectId: activeChallenge.nodeId,
+          challengeId: activeChallenge.challengeId,
+          action: options?.skip ? "skip" : "answer",
+          selectedAnswer: options?.skip ? null : answer,
+        });
+        const response = await diagnosticFetch("/api/live-game/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -364,8 +418,10 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
             challengeId: activeChallenge.challengeId,
             answer: options?.skip ? "" : answer,
             skip: options?.skip === true,
+            submissionId: submission.id,
+            responseTimeMs: submission.responseTimeMs,
           }),
-        });
+        }, { phase: "gameplay", name: "harvest_answer_request", detail: { skipped: options?.skip === true, responseTimeMs: submission.responseTimeMs } });
         const payload = (await response.json()) as {
           error?: string;
           correct?: boolean;
@@ -374,6 +430,7 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
           skipped?: boolean;
         };
         if (response.status === 404) {
+          pendingSubmissionRef.current = null;
           clearPrefetchCache(activeChallenge.nodeId);
           setActiveChallenge(null);
           setTokenStatus("pending");
@@ -381,8 +438,18 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
           return;
         }
         if (!response.ok) {
+          recordLiveGameDiagnostic("gameplay", "question_attempt_rejected", {
+            questionType: "harvest",
+            questionId: activeChallenge.question.id,
+            gameObjectId: activeChallenge.nodeId,
+            challengeId: activeChallenge.challengeId,
+            action: options?.skip ? "skip" : "answer",
+            status: response.status,
+            message: payload.error ?? "Could not submit answer.",
+          }, { kind: "error" });
           throw new Error(payload.error ?? "Could not submit answer.");
         }
+        pendingSubmissionRef.current = null;
 
         if (payload.skipped === true) {
           clearPrefetchCache(activeChallenge.nodeId);
@@ -392,6 +459,15 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
           return;
         }
         const correct = payload.correct === true;
+        recordLiveGameDiagnostic("gameplay", "question_attempt_result", {
+          questionType: "harvest",
+          questionId: activeChallenge.question.id,
+          gameObjectId: activeChallenge.nodeId,
+          challengeId: activeChallenge.challengeId,
+          action: options?.skip ? "skip" : "answer",
+          correct,
+        });
+        recordLiveGameDiagnostic("gameplay", "harvest_result_visible", { correct });
         const poolTotal = payload.poolTotal ?? {
           wood: 0,
           stone: 0,
@@ -409,6 +485,8 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
           clearPrefetchCache(activeChallenge.nodeId);
           setActiveChallenge(null);
           setTokenStatus("pending");
+        } else {
+          challengeOpenedAtRef.current = Date.now();
         }
       } catch (answerError) {
         const message =
@@ -425,6 +503,8 @@ export function useLiveGameHarvestChallenge({ roomId, playerId, questionCursor, 
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
     interactionPositionSyncRef.current = null;
+    encounterOpenRef.current = null;
+    pendingSubmissionRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");
     setError(null);

@@ -15,6 +15,13 @@ function safeInternalPath(path: string | null | undefined, fallback: string): st
   return path;
 }
 
+function isTeacherOnlyPath(path: string): boolean {
+  return path.startsWith("/teacher") ||
+    path === "/live-game/host" ||
+    path.startsWith("/live-game/host?") ||
+    path.startsWith("/live-game/question-sets/");
+}
+
 /** Where to send a user immediately after a successful sign-in. */
 export function resolvePostLoginPath(opts: {
   role: AppRole;
@@ -32,10 +39,10 @@ export function resolvePostLoginPath(opts: {
 
   const safe = safeInternalPath(next, fallback);
   if (opts.role === "teacher") {
-    if (!safe.startsWith("/teacher")) return TEACHER_DEFAULT_PATH;
+    if (!isTeacherOnlyPath(safe)) return TEACHER_DEFAULT_PATH;
     return safe;
   }
-  if (safe.startsWith("/teacher")) return fallback;
+  if (isTeacherOnlyPath(safe)) return fallback;
   return safe;
 }
 

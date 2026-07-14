@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStorage } from "@liveblocks/react/suspense";
 import { LiveGameCraftModal } from "@/components/live-game/LiveGameCraftModal";
 import { LiveGameCraftRecipePicker } from "@/components/live-game/LiveGameCraftRecipePicker";
@@ -16,9 +16,9 @@ import { LiveGameSpellChallengeModal } from "@/components/live-game/LiveGameSpel
 import { LiveGameFinalCountdownOverlay } from "@/components/live-game/LiveGameFinalCountdownOverlay";
 import { LiveGameHostEndSessionModal } from "@/components/live-game/LiveGameHostEndSessionModal";
 import { LiveGameHostPlayHud } from "@/components/live-game/LiveGameHostPlayHud";
+import { LiveGameEndReportOverlay } from "@/components/live-game/LiveGameEndReportOverlay";
 import { LiveGameSessionTimerChip } from "@/components/live-game/LiveGameSessionTimerChip";
 import { LiveGameSessionTimerFlash } from "@/components/live-game/LiveGameSessionTimerFlash";
-import { LiveGameVictoryOverlay } from "@/components/live-game/LiveGameVictoryOverlay";
 import {
   LiveGameInteractPrompt,
   LiveGameTeamResourceHud,
@@ -42,11 +42,11 @@ import {
 } from "@/lib/live-game/hooks/useLiveGameGameplay";
 import { useLiveGameConsume } from "@/lib/live-game/hooks/useLiveGameConsume";
 import { useLiveGameDropCarry } from "@/lib/live-game/hooks/useLiveGameDropCarry";
+import { diagnosticFetch } from "@/lib/live-game/diagnostics/client";
 import { useLiveGameSelfHungerDisplay } from "@/lib/live-game/hooks/useLiveGameHunger";
 import { useLiveGameHarvestChallenge } from "@/lib/live-game/hooks/useLiveGameHarvestChallenge";
 import { useLiveGameAutoTimeout } from "@/lib/live-game/hooks/useLiveGameAutoTimeout";
 import { useLiveGameSessionTimer } from "@/lib/live-game/hooks/useLiveGameSessionTimer";
-import { buildVictoryResourceStats } from "@/lib/live-game/hooks/useLiveGameVictoryStats";
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
 import type { LiveGameResourceNodeState, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
 import { getMapForMode } from "@/lib/live-game/modes";
@@ -92,9 +92,10 @@ function isNodeInteractable(node: LiveGameResourceNodeState | undefined, now = D
 }
 
 export function LiveGameCanvas({ context }: Props) {
-  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, self, others } =
+  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, addMinute, self, others } =
     useLiveGameLobby();
   const [endSessionModalOpen, setEndSessionModalOpen] = useState(false);
+  const [isAddingTime, setIsAddingTime] = useState(false);
   const [recipePickerOpen, setRecipePickerOpen] = useState(false);
   const { avatarId } = useLiveGameAvatar(context);
   const baseMap = getMapForMode(session.mapId, session.modeId);
@@ -174,6 +175,7 @@ export function LiveGameCanvas({ context }: Props) {
     enabled: isPlaying,
     isExpired: sessionTimer?.isExpired ?? false,
     hasTimedSession: session.endsAt != null,
+    endsAt: session.endsAt,
     onTimeout: endRoundAndReturnToLobby,
   });
 
@@ -199,18 +201,75 @@ export function LiveGameCanvas({ context }: Props) {
   });
 
   const { getPosition, sampledPosition, now } = stage;
-  const publishPosition = useCallback(async () => {
-    const position = getPosition();
-    return fetch("/api/live-game/position", {
+  const lastInteractionPositionRef = useRef<{ x: number; y: number; syncedAt: number } | null>(null);
+  const interactionPositionSyncInFlightRef = useRef<Promise<boolean> | null>(null);
+  const interactionPositionSyncInFlightPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const publishPositionAt = useCallback(async (position: { x: number; y: number }) => {
+    return diagnosticFetch("/api/live-game/position", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomId, x: position.x, y: position.y }),
-    });
-  }, [getPosition, roomId]);
+    }, { phase: "gameplay", name: "interaction_position_sync" });
+  }, [roomId]);
+  const publishPosition = useCallback(
+    () => publishPositionAt(getPosition()),
+    [getPosition, publishPositionAt],
+  );
+
+  const startInteractionPositionSync = useCallback((position: { x: number; y: number }) => {
+    const promise = publishPositionAt(position)
+      .then((response) => {
+        if (response.ok) {
+          // Cache the exact coordinates sent to the server, not wherever the
+          // character moved while the request was in flight.
+          lastInteractionPositionRef.current = {
+            x: position.x,
+            y: position.y,
+            syncedAt: Date.now(),
+          };
+        }
+        return response.ok;
+      })
+      .catch(() => false)
+      .finally(() => {
+        if (interactionPositionSyncInFlightRef.current === promise) {
+          interactionPositionSyncInFlightRef.current = null;
+          interactionPositionSyncInFlightPositionRef.current = null;
+        }
+      });
+    interactionPositionSyncInFlightPositionRef.current = position;
+    interactionPositionSyncInFlightRef.current = promise;
+    return promise;
+  }, [publishPositionAt]);
 
   const syncInteractionPosition = useCallback(
-    () => publishPosition().then((response) => response.ok).catch(() => false),
-    [publishPosition],
+    (force = false) => {
+      const position = getPosition();
+      const last = lastInteractionPositionRef.current;
+      const recentlySynced =
+        last != null &&
+        Date.now() - last.syncedAt <= 1_500 &&
+        Math.hypot(position.x - last.x, position.y - last.y) <= 12;
+      if (!force && recentlySynced) return Promise.resolve(true);
+
+      const inFlight = interactionPositionSyncInFlightRef.current;
+      if (inFlight) {
+        const inFlightPosition = interactionPositionSyncInFlightPositionRef.current;
+        const samePosition =
+          inFlightPosition != null &&
+          Math.hypot(position.x - inFlightPosition.x, position.y - inFlightPosition.y) <= 2;
+        if (!force || samePosition) return inFlight;
+
+        // The click happened after the prefetch sync began. Finish that request,
+        // then publish the exact click position before accepting an answer/skip.
+        return inFlight.then((synced) =>
+          synced ? startInteractionPositionSync(getPosition()) : false
+        );
+      }
+
+      return startInteractionPositionSync(position);
+    },
+    [getPosition, startInteractionPositionSync],
   );
 
   const connectedBoardingPlayers = useMemo(() => {
@@ -355,7 +414,7 @@ export function LiveGameCanvas({ context }: Props) {
   const handleRecipeSelect = useCallback(
     (recipeId: CraftRecipeId, recipe: CraftRecipe) => {
       setRecipePickerOpen(false);
-      const positionSync = syncInteractionPosition();
+      const positionSync = syncInteractionPosition(true);
       void craftChallenge.beginChallenge(
         recipeId,
         recipe.label,
@@ -383,7 +442,7 @@ export function LiveGameCanvas({ context }: Props) {
         toStorageInteractTarget(carryStorageDef),
       ]);
       if (storage) {
-        void depositChallenge.beginChallenge(carryStorageDef, syncInteractionPosition());
+        void depositChallenge.beginChallenge(carryStorageDef, syncInteractionPosition(true));
         return;
       }
     }
@@ -391,7 +450,7 @@ export function LiveGameCanvas({ context }: Props) {
     if (canBuildBench) {
       const bench = findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_CRAFT_BENCH_V1]);
       if (bench) {
-        const positionSync = syncInteractionPosition();
+        const positionSync = syncInteractionPosition(true);
         void craftChallenge.beginChallenge(
           "build_bench",
           buildBenchRecipe.label,
@@ -415,7 +474,7 @@ export function LiveGameCanvas({ context }: Props) {
     void harvestChallenge.beginChallenge(
       node,
       resourceNodes[node.id]?.cooldownEndsAt ?? null,
-      syncInteractionPosition(),
+      syncInteractionPosition(true),
     );
   }, [
     buildBenchCostSummary,
@@ -442,18 +501,19 @@ export function LiveGameCanvas({ context }: Props) {
       depositChallenge.isSubmitting ||
       craftChallenge.isSubmitting
     ) {
-      harvestChallenge.cancelPrefetch();
-      depositChallenge.cancelPrefetch();
-      craftChallenge.cancelPrefetch();
+      // Keep the active challenge's matching prefetch alive so the interaction can
+      // adopt it instead of aborting it and issuing the same question request again.
+      if (!harvestChallenge.isOpen) harvestChallenge.cancelPrefetch();
+      if (!depositChallenge.isOpen) depositChallenge.cancelPrefetch();
+      if (!craftChallenge.isOpen) craftChallenge.cancelPrefetch();
       return;
     }
 
     if (depositPrefetchStorageId) {
       harvestChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
-      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void positionSync.then((synced) => {
+        void syncInteractionPosition().then((synced) => {
           if (synced) void depositChallenge.prefetchForStorage(depositPrefetchStorageId);
         });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
@@ -466,9 +526,8 @@ export function LiveGameCanvas({ context }: Props) {
     if (craftPrefetchRecipeId) {
       harvestChallenge.cancelPrefetch();
       depositChallenge.cancelPrefetch();
-      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void positionSync.then((synced) => {
+        void syncInteractionPosition().then((synced) => {
           if (synced) void craftChallenge.prefetchChallenge(craftPrefetchRecipeId);
         });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
@@ -481,9 +540,8 @@ export function LiveGameCanvas({ context }: Props) {
     if (harvestPrefetchNodeId) {
       depositChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
-      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void positionSync.then((synced) => {
+        void syncInteractionPosition().then((synced) => {
           if (synced) {
             void harvestChallenge.prefetchForNode(
               harvestPrefetchNodeId,
@@ -584,20 +642,21 @@ export function LiveGameCanvas({ context }: Props) {
       "Go to storage"
     : "Gather resource";
 
-  const completedByName = useMemo(() => {
-    const completedPlayerId = session.completedByPlayerId;
-    if (!completedPlayerId) return null;
-    return players.find((entry) => entry.id === completedPlayerId)?.player.name ?? null;
-  }, [players, session.completedByPlayerId]);
-
-  const resourceStats = useMemo(
-    () => buildVictoryResourceStats(resourceNodes, pool),
-    [pool, resourceNodes],
-  );
-
   const handlePlayAgain = useCallback(() => {
     returnToLobby();
   }, [returnToLobby]);
+
+  const handleAddMinute = useCallback(async () => {
+    if (isAddingTime) return;
+    setIsAddingTime(true);
+    try {
+      await addMinute();
+    } catch (error) {
+      console.error("Could not add time to Live Game", error);
+    } finally {
+      setIsAddingTime(false);
+    }
+  }, [addMinute, isAddingTime]);
 
   const handleDropCarry = useCallback(async () => {
     const dropped = await dropCarry.dropCarry();
@@ -642,6 +701,8 @@ export function LiveGameCanvas({ context }: Props) {
                     showTimer={sessionTimer != null}
                     timerLabel={sessionTimer?.label ?? ""}
                     timerUrgent={timerUrgent}
+                    onAddMinute={() => void handleAddMinute()}
+                    addMinuteDisabled={isAddingTime || !isPlaying}
                     onEndSessionClick={() => setEndSessionModalOpen(true)}
                     endDisabled={!isPlaying}
                   />
@@ -750,10 +811,9 @@ export function LiveGameCanvas({ context }: Props) {
       />
 
       {isCompleted ?
-        <LiveGameVictoryOverlay
-          completedByName={completedByName}
-          resourceStats={resourceStats}
-          boatBuilt={craftedItems.boat}
+        <LiveGameEndReportOverlay
+          sessionId={context.sessionId}
+          objectiveCompleted={session.objectiveCompleted}
           isHost={isHost}
           onPlayAgain={handlePlayAgain}
         />

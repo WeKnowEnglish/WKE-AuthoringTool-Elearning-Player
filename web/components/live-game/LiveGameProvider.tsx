@@ -7,6 +7,7 @@ import {
   getLiveGameRoleForRoom,
   getLiveGameSessionContext,
 } from "@/lib/live-game/liveblocks/identity";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 type Props = {
   children: ReactNode;
@@ -26,7 +27,8 @@ export function LiveGameProvider({ children }: Props) {
         const displayName = getLiveGameDisplayNameForRoom(room);
         const role = getLiveGameRoleForRoom(room);
 
-        const response = await fetch("/api/liveblocks/auth", {
+        recordLiveGameDiagnostic("room", "liveblocks_auth_requested", { room });
+        const response = await diagnosticFetch("/api/liveblocks/auth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -35,14 +37,16 @@ export function LiveGameProvider({ children }: Props) {
             displayName,
             role,
           }),
-        });
+        }, { phase: "room", name: "liveblocks_auth", detail: { room } });
 
         if (!response.ok) {
           const payload = (await response.json().catch(() => null)) as { error?: string } | null;
           throw new Error(payload?.error ?? "Could not authenticate with Liveblocks.");
         }
 
-        return await response.json();
+        const payload = await response.json();
+        recordLiveGameDiagnostic("room", "liveblocks_auth_ready", { room });
+        return payload;
       }}
     >
       {children}

@@ -9,6 +9,8 @@ type Props = {
   timerUrgent?: boolean;
   onEndSessionClick: () => void;
   endDisabled?: boolean;
+  onAddMinute?: () => void;
+  addMinuteDisabled?: boolean;
 };
 
 export function LiveGameHostPlayHud({
@@ -17,11 +19,13 @@ export function LiveGameHostPlayHud({
   timerUrgent = false,
   onEndSessionClick,
   endDisabled = false,
+  onAddMinute,
+  addMinuteDisabled = false,
 }: Props) {
   return (
     <div className="flex flex-col items-end gap-1.5">
       {showTimer ?
-        <LiveGameSessionTimerChip label={timerLabel} urgent={timerUrgent} />
+        <LiveGameSessionTimerChip label={timerLabel} urgent={timerUrgent} onClick={onAddMinute} disabled={addMinuteDisabled} />
       : null}
       <KidButton
         type="button"

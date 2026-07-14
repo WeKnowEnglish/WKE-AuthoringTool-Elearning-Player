@@ -11,6 +11,7 @@ import {
 
 describe("normalizeEnglishCraftDurationMinutes", () => {
   it("accepts each lobby duration option", () => {
+    expect(ENGLISH_CRAFT_DURATION_OPTIONS).toEqual([1, 2, 5, 10, 15, 20, 30]);
     for (const minutes of ENGLISH_CRAFT_DURATION_OPTIONS) {
       expect(normalizeEnglishCraftDurationMinutes(minutes)).toBe(minutes);
     }

@@ -18,11 +18,18 @@ import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-sess
 import { readResourcePool } from "@/lib/live-game/resource-pool";
 import { findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { ENGLISH_CRAFT_STORAGE_BY_TYPE, toStorageInteractTarget } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import {
+  normalizeLiveGameSubmission,
+  recordCurrentLiveGameAttempt,
+  recordCurrentLiveGameSkip,
+} from "@/lib/live-game/server/report-evidence";
 
 type DepositAnswerRequestBody = {
   roomId?: string;
   challengeId?: string;
   spelling?: string;
+  submissionId?: string;
+  responseTimeMs?: number;
   skip?: boolean;
 };
 
@@ -37,6 +44,8 @@ function parseDepositAnswerBody(body: unknown): DepositAnswerRequestBody | null 
       roomId: record.roomId,
       challengeId: record.challengeId,
       spelling: typeof record.spelling === "string" ? record.spelling : "",
+      submissionId: record.submissionId,
+      responseTimeMs: record.responseTimeMs,
       skip: true,
     };
   }
@@ -96,6 +105,7 @@ async function handlePost(request: Request) {
   const challengeId = parsed.challengeId.trim();
   const spelling = parsed.spelling ?? "";
   const skip = parsed.skip === true;
+  const submission = normalizeLiveGameSubmission(parsed.submissionId, parsed.responseTimeMs);
   const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
 
   const [challenge, storage] = await Promise.all([
@@ -152,6 +162,7 @@ async function handlePost(request: Request) {
   if (skip) {
     const skipped = await markChallengeSkipped(challengeId);
     if (!skipped) return NextResponse.json({ error: "Challenge can no longer be skipped." }, { status: 409 });
+    await recordCurrentLiveGameSkip(challengeId);
     return NextResponse.json(
       depositAnswerPayload(storage, { correct: false, carryRetained: true, skipped: true }),
     );
@@ -161,6 +172,13 @@ async function handlePost(request: Request) {
       validateDepositSpelling(challenge.validationPayload, spelling)
     : await isDepositSpellCorrect(ctx.ref, challenge.questionId, spelling, ctx.version);
   if (!correct) {
+    await recordCurrentLiveGameAttempt({
+      challengeId,
+      submissionId: submission.id,
+      selectedAnswer: spelling,
+      correct: false,
+      responseTimeMs: submission.responseTimeMs,
+    });
     return NextResponse.json(
       depositAnswerPayload(storage, {
         correct: false,
@@ -204,7 +222,19 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Could not deposit this resource right now." }, { status: 409 });
   }
 
-  await markChallengeAwarded(challengeId);
+  await Promise.all([
+    markChallengeAwarded(challengeId),
+    recordCurrentLiveGameAttempt({
+      challengeId,
+      submissionId: submission.id,
+      selectedAnswer: spelling,
+      correct: true,
+      responseTimeMs: submission.responseTimeMs,
+      contribution: {
+        deposited: { [award.resourceType]: award.alreadyAwarded ? 0 : 1 },
+      },
+    }),
+  ]);
 
   const poolTotal = {
     ...readResourcePool(storage),

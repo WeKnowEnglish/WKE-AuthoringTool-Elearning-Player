@@ -9,6 +9,10 @@ export function computeSessionRemainingMs(endsAt: number | null, now: number): n
   return Math.max(0, endsAt - now);
 }
 
+export function extendSessionDeadline(endsAt: number, now: number, addedMs = 60_000): number {
+  return Math.max(endsAt, now) + addedMs;
+}
+
 export function getSessionRemainingSecondsFloor(remainingMs: number): number {
   return Math.max(0, Math.floor(remainingMs / 1000));
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { beginLiveGameDiagnosticJourney } from "@/lib/live-game/diagnostics/client";
 
 export function TeacherPrimaryTabs() {
   const pathname = usePathname();
@@ -43,6 +44,7 @@ export function TeacherPrimaryTabs() {
       </Link>
       <Link
         href="/live-game/host"
+        onClick={() => beginLiveGameDiagnosticJourney("teacher_primary_tabs")}
         className="rounded-full border border-emerald-700 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 sm:px-2.5 sm:py-1.5 sm:text-sm"
       >
         Live Game

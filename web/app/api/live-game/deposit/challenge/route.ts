@@ -23,10 +23,12 @@ import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
+import { recordCurrentLiveGameEncounter } from "@/lib/live-game/server/report-evidence";
 
 type DepositChallengeRequestBody = {
   roomId?: string;
   storageId?: string;
+  prefetch?: boolean;
 };
 
 function parseDepositChallengeBody(body: unknown): DepositChallengeRequestBody | null {
@@ -35,7 +37,7 @@ function parseDepositChallengeBody(body: unknown): DepositChallengeRequestBody |
   if (typeof record.roomId !== "string" || typeof record.storageId !== "string") {
     return null;
   }
-  return record;
+  return { ...record, prefetch: record.prefetch === true };
 }
 
 function isStorageId(storageId: string): boolean {
@@ -133,6 +135,15 @@ async function handlePost(request: Request) {
   const depositRow =
     challenge.questionId === pickedDepositRow.id ? pickedDepositRow
     : (await getQuestionById(binding.ref, "deposit", challenge.questionId, binding.version)) ?? pickedDepositRow;
+
+  if (!parsed.prefetch) {
+    await recordCurrentLiveGameEncounter({
+      storage,
+      challenge,
+      question: depositRow,
+      resourceType: carry.resourceType,
+    });
+  }
 
   return NextResponse.json({
     challengeId: challenge.challengeId,

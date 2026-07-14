@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStorage } from "@liveblocks/react/suspense";
 import { LiveGameCraftModal } from "@/components/live-game/LiveGameCraftModal";
 import { LiveGameCraftRecipePicker } from "@/components/live-game/LiveGameCraftRecipePicker";
@@ -42,6 +42,7 @@ import {
 } from "@/lib/live-game/hooks/useLiveGameGameplay";
 import { useLiveGameConsume } from "@/lib/live-game/hooks/useLiveGameConsume";
 import { useLiveGameDropCarry } from "@/lib/live-game/hooks/useLiveGameDropCarry";
+import { diagnosticFetch } from "@/lib/live-game/diagnostics/client";
 import { useLiveGameSelfHungerDisplay } from "@/lib/live-game/hooks/useLiveGameHunger";
 import { useLiveGameHarvestChallenge } from "@/lib/live-game/hooks/useLiveGameHarvestChallenge";
 import { useLiveGameAutoTimeout } from "@/lib/live-game/hooks/useLiveGameAutoTimeout";
@@ -200,18 +201,75 @@ export function LiveGameCanvas({ context }: Props) {
   });
 
   const { getPosition, sampledPosition, now } = stage;
-  const publishPosition = useCallback(async () => {
-    const position = getPosition();
-    return fetch("/api/live-game/position", {
+  const lastInteractionPositionRef = useRef<{ x: number; y: number; syncedAt: number } | null>(null);
+  const interactionPositionSyncInFlightRef = useRef<Promise<boolean> | null>(null);
+  const interactionPositionSyncInFlightPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const publishPositionAt = useCallback(async (position: { x: number; y: number }) => {
+    return diagnosticFetch("/api/live-game/position", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomId, x: position.x, y: position.y }),
-    });
-  }, [getPosition, roomId]);
+    }, { phase: "gameplay", name: "interaction_position_sync" });
+  }, [roomId]);
+  const publishPosition = useCallback(
+    () => publishPositionAt(getPosition()),
+    [getPosition, publishPositionAt],
+  );
+
+  const startInteractionPositionSync = useCallback((position: { x: number; y: number }) => {
+    const promise = publishPositionAt(position)
+      .then((response) => {
+        if (response.ok) {
+          // Cache the exact coordinates sent to the server, not wherever the
+          // character moved while the request was in flight.
+          lastInteractionPositionRef.current = {
+            x: position.x,
+            y: position.y,
+            syncedAt: Date.now(),
+          };
+        }
+        return response.ok;
+      })
+      .catch(() => false)
+      .finally(() => {
+        if (interactionPositionSyncInFlightRef.current === promise) {
+          interactionPositionSyncInFlightRef.current = null;
+          interactionPositionSyncInFlightPositionRef.current = null;
+        }
+      });
+    interactionPositionSyncInFlightPositionRef.current = position;
+    interactionPositionSyncInFlightRef.current = promise;
+    return promise;
+  }, [publishPositionAt]);
 
   const syncInteractionPosition = useCallback(
-    () => publishPosition().then((response) => response.ok).catch(() => false),
-    [publishPosition],
+    (force = false) => {
+      const position = getPosition();
+      const last = lastInteractionPositionRef.current;
+      const recentlySynced =
+        last != null &&
+        Date.now() - last.syncedAt <= 1_500 &&
+        Math.hypot(position.x - last.x, position.y - last.y) <= 12;
+      if (!force && recentlySynced) return Promise.resolve(true);
+
+      const inFlight = interactionPositionSyncInFlightRef.current;
+      if (inFlight) {
+        const inFlightPosition = interactionPositionSyncInFlightPositionRef.current;
+        const samePosition =
+          inFlightPosition != null &&
+          Math.hypot(position.x - inFlightPosition.x, position.y - inFlightPosition.y) <= 2;
+        if (!force || samePosition) return inFlight;
+
+        // The click happened after the prefetch sync began. Finish that request,
+        // then publish the exact click position before accepting an answer/skip.
+        return inFlight.then((synced) =>
+          synced ? startInteractionPositionSync(getPosition()) : false
+        );
+      }
+
+      return startInteractionPositionSync(position);
+    },
+    [getPosition, startInteractionPositionSync],
   );
 
   const connectedBoardingPlayers = useMemo(() => {
@@ -356,7 +414,7 @@ export function LiveGameCanvas({ context }: Props) {
   const handleRecipeSelect = useCallback(
     (recipeId: CraftRecipeId, recipe: CraftRecipe) => {
       setRecipePickerOpen(false);
-      const positionSync = syncInteractionPosition();
+      const positionSync = syncInteractionPosition(true);
       void craftChallenge.beginChallenge(
         recipeId,
         recipe.label,
@@ -384,7 +442,7 @@ export function LiveGameCanvas({ context }: Props) {
         toStorageInteractTarget(carryStorageDef),
       ]);
       if (storage) {
-        void depositChallenge.beginChallenge(carryStorageDef, syncInteractionPosition());
+        void depositChallenge.beginChallenge(carryStorageDef, syncInteractionPosition(true));
         return;
       }
     }
@@ -392,7 +450,7 @@ export function LiveGameCanvas({ context }: Props) {
     if (canBuildBench) {
       const bench = findNearestInteractable(position.x, position.y, [ENGLISH_CRAFT_CRAFT_BENCH_V1]);
       if (bench) {
-        const positionSync = syncInteractionPosition();
+        const positionSync = syncInteractionPosition(true);
         void craftChallenge.beginChallenge(
           "build_bench",
           buildBenchRecipe.label,
@@ -416,7 +474,7 @@ export function LiveGameCanvas({ context }: Props) {
     void harvestChallenge.beginChallenge(
       node,
       resourceNodes[node.id]?.cooldownEndsAt ?? null,
-      syncInteractionPosition(),
+      syncInteractionPosition(true),
     );
   }, [
     buildBenchCostSummary,
@@ -443,18 +501,19 @@ export function LiveGameCanvas({ context }: Props) {
       depositChallenge.isSubmitting ||
       craftChallenge.isSubmitting
     ) {
-      harvestChallenge.cancelPrefetch();
-      depositChallenge.cancelPrefetch();
-      craftChallenge.cancelPrefetch();
+      // Keep the active challenge's matching prefetch alive so the interaction can
+      // adopt it instead of aborting it and issuing the same question request again.
+      if (!harvestChallenge.isOpen) harvestChallenge.cancelPrefetch();
+      if (!depositChallenge.isOpen) depositChallenge.cancelPrefetch();
+      if (!craftChallenge.isOpen) craftChallenge.cancelPrefetch();
       return;
     }
 
     if (depositPrefetchStorageId) {
       harvestChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
-      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void positionSync.then((synced) => {
+        void syncInteractionPosition().then((synced) => {
           if (synced) void depositChallenge.prefetchForStorage(depositPrefetchStorageId);
         });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
@@ -467,9 +526,8 @@ export function LiveGameCanvas({ context }: Props) {
     if (craftPrefetchRecipeId) {
       harvestChallenge.cancelPrefetch();
       depositChallenge.cancelPrefetch();
-      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void positionSync.then((synced) => {
+        void syncInteractionPosition().then((synced) => {
           if (synced) void craftChallenge.prefetchChallenge(craftPrefetchRecipeId);
         });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
@@ -482,9 +540,8 @@ export function LiveGameCanvas({ context }: Props) {
     if (harvestPrefetchNodeId) {
       depositChallenge.cancelPrefetch();
       craftChallenge.cancelPrefetch();
-      const positionSync = syncInteractionPosition();
       const timeout = window.setTimeout(() => {
-        void positionSync.then((synced) => {
+        void syncInteractionPosition().then((synced) => {
           if (synced) {
             void harvestChallenge.prefetchForNode(
               harvestPrefetchNodeId,

@@ -9,6 +9,7 @@ import {
   updateBoatBoardingDwell,
 } from "@/lib/live-game/engine/boat-boarding";
 import { ENGLISH_CRAFT_BOAT_BOARDING_ZONE_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 const BOARDING_POLL_MS = 250;
 
@@ -89,11 +90,12 @@ export function useLiveGameBoatBoarding({
         void (async () => {
           try {
             await onBeforeComplete?.();
-            const response = await fetch("/api/live-game/complete", {
+            recordLiveGameDiagnostic("exit", "objective_completion_started", { roomId });
+            const response = await diagnosticFetch("/api/live-game/complete", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ roomId, kind: "boat_escape" }),
-            });
+            }, { phase: "exit", name: "objective_completion_request", detail: { roomId } });
             if (response.ok) {
               completedRef.current = true;
             }

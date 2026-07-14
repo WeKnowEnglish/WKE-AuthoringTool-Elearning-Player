@@ -24,6 +24,8 @@ import {
 } from "@/lib/live-game/modes/english-craft/questions-client";
 import type { CraftRecipeId } from "@/lib/live-game/modes/english-craft/craft-recipes-v1";
 import { createLiveGameSubmissionId } from "@/lib/live-game/submission-id";
+import { openLiveGameQuestionEncounter } from "@/lib/live-game/open-question-encounter";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 type ActiveCraftChallenge = {
   challengeId: string | null;
@@ -145,7 +147,8 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
   } | null>(null);
   const submitInFlightRef = useRef(false);
   const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
-  const challengeOpenedAtRef = useRef(Date.now());
+  const encounterOpenRef = useRef<Promise<void> | null>(null);
+  const challengeOpenedAtRef = useRef(0);
   const pendingSubmissionRef = useRef<{ challengeId: string; answerKey: string; id: string; responseTimeMs: number } | null>(null);
 
   const isOpen = activeChallenge != null;
@@ -164,12 +167,12 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
   const requestCraftToken = useCallback(
     async (recipeId: CraftRecipeId, signal?: AbortSignal): Promise<CraftTokenPayload> => {
       const requestToken = async (questionBundleVersion?: number) => {
-        const response = await fetch("/api/live-game/craft/challenge", {
+        const response = await diagnosticFetch("/api/live-game/craft/challenge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId, recipeId, questionBundleVersion }),
+          body: JSON.stringify({ roomId, recipeId, questionBundleVersion, prefetch: Boolean(signal) }),
           signal,
-        });
+        }, { phase: "gameplay", name: "craft_question_request", detail: { recipeId, prefetched: Boolean(signal) } });
         const payload = (await response.json()) as {
           error?: string;
           challengeId?: string;
@@ -270,6 +273,10 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
     async (requestId: number, recipeId: CraftRecipeId) => {
       const now = Date.now();
       const cached = prefetchCacheRef.current;
+      recordLiveGameDiagnostic("gameplay", "craft_interaction", {
+        recipeId,
+        cacheState: isCraftPrefetchValid(cached, recipeId, now) ? "warm" : inFlightPrefetchRef.current?.recipeId === recipeId ? "inflight" : "cold",
+      });
       if (isCraftPrefetchValid(cached, recipeId, now)) {
         applyTokenToActiveChallenge({
           challengeId: cached.challengeId,
@@ -278,6 +285,14 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
           recipeId: cached.recipeId,
           recipeLabel: cached.recipeLabel,
           costSummary: cached.costSummary,
+        });
+        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId, recipeId });
+        encounterOpenRef.current = encounterOpen;
+        void encounterOpen.catch((openError) => {
+          if (beginRequestRef.current === requestId) {
+            setTokenStatus("error");
+            setError(openError instanceof Error ? openError.message : "Could not open craft question.");
+          }
         });
         return;
       }
@@ -294,6 +309,14 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
             recipeId: entry.recipeId,
             recipeLabel: entry.recipeLabel,
             costSummary: entry.costSummary,
+          });
+          const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: entry.challengeId, recipeId });
+          encounterOpenRef.current = encounterOpen;
+          void encounterOpen.catch((openError) => {
+            if (beginRequestRef.current === requestId) {
+              setTokenStatus("error");
+              setError(openError instanceof Error ? openError.message : "Could not open craft question.");
+            }
           });
           return;
         } catch {
@@ -321,7 +344,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
         clearPrefetchCache();
       }
     },
-    [applyTokenToActiveChallenge, clearPrefetchCache, fetchAndCacheToken],
+    [applyTokenToActiveChallenge, clearPrefetchCache, fetchAndCacheToken, roomId],
   );
 
   const beginChallenge = useCallback(
@@ -353,6 +376,14 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
             : CRAFT_PREVIEW_QUESTION,
         });
         setTokenStatus("ready");
+        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId, recipeId });
+        encounterOpenRef.current = encounterOpen;
+        void encounterOpen.catch((openError) => {
+          if (beginRequestRef.current === requestId) {
+            setTokenStatus("error");
+            setError(openError instanceof Error ? openError.message : "Could not open craft question.");
+          }
+        });
         return;
       }
 
@@ -392,6 +423,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
       setError(null);
       try {
         await requireLiveGamePositionSync(interactionPositionSyncRef.current);
+        await encounterOpenRef.current;
         const answerKey = options?.skip ? "skip" : order.join("\u0000");
         const pending = pendingSubmissionRef.current;
         const submission = pending?.challengeId === activeChallenge.challengeId && pending.answerKey === answerKey ? pending : {
@@ -401,7 +433,16 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
           responseTimeMs: Date.now() - challengeOpenedAtRef.current,
         };
         pendingSubmissionRef.current = submission;
-        const response = await fetch("/api/live-game/craft/answer", {
+        recordLiveGameDiagnostic("gameplay", "question_attempt", {
+          questionType: "craft",
+          questionId: activeChallenge.question.id,
+          questionPrompt: activeChallenge.question.prompt,
+          gameObjectId: activeChallenge.recipeId,
+          challengeId: activeChallenge.challengeId,
+          action: options?.skip ? "skip" : "answer",
+          selectedAnswer: options?.skip ? null : order.join(" "),
+        });
+        const response = await diagnosticFetch("/api/live-game/craft/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -413,7 +454,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
             submissionId: submission.id,
             responseTimeMs: submission.responseTimeMs,
           }),
-        });
+        }, { phase: "gameplay", name: "craft_answer_request", detail: { skipped: options?.skip === true, responseTimeMs: submission.responseTimeMs } });
         const payload = (await response.json()) as {
           error?: string;
           correct?: boolean;
@@ -431,6 +472,15 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
           return;
         }
         if (!response.ok) {
+          recordLiveGameDiagnostic("gameplay", "question_attempt_rejected", {
+            questionType: "craft",
+            questionId: activeChallenge.question.id,
+            gameObjectId: activeChallenge.recipeId,
+            challengeId: activeChallenge.challengeId,
+            action: options?.skip ? "skip" : "answer",
+            status: response.status,
+            message: payload.error ?? "Could not submit craft answer.",
+          }, { kind: "error" });
           throw new Error(payload.error ?? "Could not submit craft answer.");
         }
         pendingSubmissionRef.current = null;
@@ -443,6 +493,15 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
           return;
         }
         const correct = payload.correct === true;
+        recordLiveGameDiagnostic("gameplay", "question_attempt_result", {
+          questionType: "craft",
+          questionId: activeChallenge.question.id,
+          gameObjectId: activeChallenge.recipeId,
+          challengeId: activeChallenge.challengeId,
+          action: options?.skip ? "skip" : "answer",
+          correct,
+        });
+        recordLiveGameDiagnostic("gameplay", "craft_result_visible", { correct });
         const poolTotal = payload.poolTotal ?? {
           wood: 0,
           stone: 0,
@@ -484,6 +543,7 @@ export function useLiveGameCraftChallenge({ roomId, playerId, questionCursor, on
   const closeChallenge = useCallback(() => {
     beginRequestRef.current += 1;
     interactionPositionSyncRef.current = null;
+    encounterOpenRef.current = null;
     pendingSubmissionRef.current = null;
     setActiveChallenge(null);
     setTokenStatus("pending");

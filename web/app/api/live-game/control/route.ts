@@ -15,10 +15,11 @@ import {
 } from "@/lib/live-game/server/report-repository";
 import { extendSessionDeadline } from "@/lib/live-game/session-timer";
 import { expireLiveGameRoomChallenges } from "@/lib/live-game/server/challenge-store";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 
 type ControlAction = "start" | "return_to_lobby" | "end_round" | "close" | "set_duration" | "add_time";
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   try {
     const body = (await request.json()) as {
       roomId?: string;
@@ -115,4 +116,8 @@ export async function POST(request: Request) {
     console.error("Live-game control failed", error);
     return NextResponse.json({ error: "Control service unavailable." }, { status: 503 });
   }
+}
+
+export async function POST(request: Request) {
+  return withLiveGameServerTiming("live_game_control", () => handlePost(request));
 }

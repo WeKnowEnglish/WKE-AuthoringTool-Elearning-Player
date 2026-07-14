@@ -15,6 +15,7 @@ import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-s
 import { getQuestionSetSnapshot } from "@/lib/live-game/server/question-set-resolver";
 import { finalizeLiveGameReportRound } from "@/lib/live-game/server/report-repository";
 import { expireLiveGameRoomChallenges } from "@/lib/live-game/server/challenge-store";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 
 type CompleteRequestBody = {
   roomId?: string;
@@ -134,7 +135,7 @@ async function handlePost(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    return await handlePost(request);
+    return await withLiveGameServerTiming("live_game_complete", () => handlePost(request));
   } catch (error) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     console.error("Live-game complete request failed", error);

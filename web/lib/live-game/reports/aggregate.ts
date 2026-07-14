@@ -208,17 +208,21 @@ export function aggregateHostEvidence(
   participants: LiveGameReportParticipantRow[],
   finalResources: Record<string, number>,
 ) {
-  const independent = encounters.filter((encounter) => isSolved(encounter) && !isSupported(encounter)).length;
-  const supported = encounters.filter((encounter) => isSolved(encounter) && isSupported(encounter)).length;
   const studentParticipants = participants.filter((participant) => participant.role === "player");
+  const studentIds = new Set(studentParticipants.map((participant) => participant.player_id));
+  const studentEncounters = encounters.filter((encounter) => studentIds.has(encounter.player_id));
+  const studentEncounterIds = new Set(studentEncounters.map((encounter) => encounter.id));
+  const studentAttempts = attempts.filter((attempt) => studentEncounterIds.has(attempt.encounter_id));
+  const independent = studentEncounters.filter((encounter) => isSolved(encounter) && !isSupported(encounter)).length;
+  const supported = studentEncounters.filter((encounter) => isSolved(encounter) && isSupported(encounter)).length;
   const team: LiveGameTeamSummary = {
     participantCount: studentParticipants.length,
-    totalEncounters: encounters.length,
-    totalSubmissions: attempts.length,
+    totalEncounters: studentEncounters.length,
+    totalSubmissions: studentAttempts.length,
     independentCompletions: independent,
     supportedCompletions: supported,
-    unresolvedEncounters: encounters.length - independent - supported,
-    contributions: aggregateContributions(attempts),
+    unresolvedEncounters: studentEncounters.length - independent - supported,
+    contributions: aggregateContributions(studentAttempts),
     finalResources,
   };
   const students: LiveGameStudentDiagnostic[] = studentParticipants.map((participant) => {
@@ -239,11 +243,31 @@ export function aggregateHostEvidence(
       contributions: personal.contributions,
     };
   }).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const teacherParticipant = participants.find((participant) => participant.role === "host") ?? null;
+  const teacher = teacherParticipant ? (() => {
+    const ownEncounters = encounters.filter((encounter) => encounter.player_id === teacherParticipant.player_id);
+    const encounterIds = new Set(ownEncounters.map((encounter) => encounter.id));
+    const ownAttempts = attempts.filter((attempt) => encounterIds.has(attempt.encounter_id));
+    const personal = aggregateStudentEvidence(ownAttempts, ownEncounters);
+    return {
+      playerId: teacherParticipant.player_id,
+      displayName: teacherParticipant.display_name,
+      totalEncounters: ownEncounters.length,
+      firstTry: personal.firstTrySolved,
+      independent: personal.independentSolved,
+      supported: personal.supportedSolved,
+      unresolved: personal.unresolvedEncounters,
+      accuracyPercent: personal.accuracyPercent,
+      targetsNeedingSupport: personal.practiceTargets,
+      contributions: personal.contributions,
+    };
+  })() : null;
   return {
     team,
+    teacher,
     students,
-    targets: breakdowns(encounters, attempts, (encounter) => encounter.learning_target_key, (encounter) => encounter.learning_target_label),
-    questionTypes: breakdowns(encounters, attempts, (encounter) => encounter.question_bank, (encounter) => encounter.question_bank),
-    questionDiagnostics: questionDiagnostics(attempts, encounters),
+    targets: breakdowns(studentEncounters, studentAttempts, (encounter) => encounter.learning_target_key, (encounter) => encounter.learning_target_label),
+    questionTypes: breakdowns(studentEncounters, studentAttempts, (encounter) => encounter.question_bank, (encounter) => encounter.question_bank),
+    questionDiagnostics: questionDiagnostics(studentAttempts, studentEncounters),
   };
 }

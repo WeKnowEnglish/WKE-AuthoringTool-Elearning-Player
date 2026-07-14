@@ -4,6 +4,7 @@ import type { EnglishCraftCraftQuestionClient, EnglishCraftMcQuestionClient } fr
 import type { LiveGameSafeQuestionBundle } from "@/lib/live-game/question-bundle";
 import { pickQuestionFromSessionDeck } from "@/lib/live-game/question-deck";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 const bundles = new Map<string, LiveGameSafeQuestionBundle>();
 const bundleLoads = new Map<string, Promise<LiveGameSafeQuestionBundle | null>>();
@@ -16,21 +17,31 @@ export async function preloadLiveGameQuestionBundle(
   roomId: string,
 ): Promise<LiveGameSafeQuestionBundle | null> {
   const cached = bundles.get(roomId);
-  if (cached) return cached;
+  if (cached) {
+    recordLiveGameDiagnostic("room", "question_bundle_cache_hit", { roomId });
+    return cached;
+  }
   const inFlight = bundleLoads.get(roomId);
-  if (inFlight) return inFlight;
+  if (inFlight) {
+    recordLiveGameDiagnostic("room", "question_bundle_inflight", { roomId });
+    return inFlight;
+  }
 
   const load = (async () => {
     try {
-      const response = await fetch("/api/live-game/question-bundle", {
+      const response = await diagnosticFetch("/api/live-game/question-bundle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomId }),
-      });
+      }, { phase: "room", name: "question_bundle_request", detail: { roomId } });
       if (!response.ok) return null;
       const payload = (await response.json()) as LiveGameSafeQuestionBundle;
       if (payload.roomId !== roomId || !Number.isInteger(payload.questionSetVersion)) return null;
       bundles.set(roomId, payload);
+      recordLiveGameDiagnostic("room", "question_bundle_ready", {
+        roomId,
+        questionSetVersion: payload.questionSetVersion,
+      });
       return payload;
     } catch {
       return null;

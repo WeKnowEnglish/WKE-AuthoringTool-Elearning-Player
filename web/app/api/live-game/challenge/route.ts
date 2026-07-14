@@ -29,6 +29,7 @@ type ChallengeRequestBody = {
   roomId?: string;
   nodeId?: string;
   questionBundleVersion?: number;
+  prefetch?: boolean;
 };
 
 function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
@@ -45,6 +46,7 @@ function parseChallengeBody(body: unknown): ChallengeRequestBody | null {
     nodeId: record.nodeId,
     questionBundleVersion:
       Number.isInteger(record.questionBundleVersion) ? record.questionBundleVersion : undefined,
+    prefetch: record.prefetch === true,
   };
 }
 
@@ -143,12 +145,14 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
     challenge.questionId === pickedQuestion.id ? pickedQuestion
     : (await getQuestionById(binding.ref, "harvest", challenge.questionId, binding.version)) ?? pickedQuestion;
 
-  await recordCurrentLiveGameEncounter({
-    storage,
-    challenge,
-    question,
-    resourceType: nodeDef.resourceType,
-  });
+  if (!parsed.prefetch) {
+    await recordCurrentLiveGameEncounter({
+      storage,
+      challenge,
+      question,
+      resourceType: nodeDef.resourceType,
+    });
+  }
 
   const usePreloadedQuestion = parsed.questionBundleVersion === binding.version;
   return NextResponse.json({

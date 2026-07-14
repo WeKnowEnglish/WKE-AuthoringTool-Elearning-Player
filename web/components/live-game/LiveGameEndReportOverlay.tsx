@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidConfetti } from "@/components/kid-ui/KidConfetti";
@@ -9,6 +11,8 @@ import type {
   LiveGameLearningBreakdown,
   LiveGameQuestionOutcome,
 } from "@/lib/live-game/reports/types";
+import { recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
+import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 
 type Props = {
   sessionId: string;
@@ -88,6 +92,52 @@ function QuestionRows({ questions }: { questions: LiveGameQuestionOutcome[] }) {
 
 export function LiveGameEndReportOverlay({ sessionId, objectiveCompleted, isHost, onPlayAgain }: Props) {
   const { report, error, loading, retry } = useLiveGameReport(sessionId);
+  const [exportingDiagnostics, setExportingDiagnostics] = useState(false);
+  const [diagnosticExportError, setDiagnosticExportError] = useState<string | null>(null);
+
+  async function exportDiagnostics() {
+    setExportingDiagnostics(true);
+    setDiagnosticExportError(null);
+    try {
+      const roomId = toRoomId(sessionId);
+      const endpoint = process.env.NODE_ENV === "production" ?
+        "/api/live-game/diagnostics"
+      : "/api/dev/live-game-diagnostics";
+      const response = await fetch(`${endpoint}?roomId=${encodeURIComponent(roomId)}`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as { events?: unknown[]; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Could not export diagnostics.");
+      const blob = new Blob([JSON.stringify(payload.events ?? [], null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `live-game-diagnostics-${sessionId}-${new Date().toISOString().replaceAll(":", "-")}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (exportError) {
+      setDiagnosticExportError(exportError instanceof Error ? exportError.message : "Could not export diagnostics.");
+    } finally {
+      setExportingDiagnostics(false);
+    }
+  }
+  useEffect(() => {
+    recordLiveGameDiagnostic("report", "report_overlay_mounted", { sessionId, isHost, objectiveCompleted });
+  }, [isHost, objectiveCompleted, sessionId]);
+  useEffect(() => {
+    if (!report) return;
+    recordLiveGameDiagnostic("report", "report_rendered", {
+      sessionId,
+      role: report.role,
+      participantCount: report.team.participantCount,
+      encounterCount: report.team.totalEncounters,
+      independentCompletions: report.team.independentCompletions,
+      unresolvedEncounters: report.team.unresolvedEncounters,
+      zeroEvidenceWarning: report.team.participantCount > 0 && report.team.totalEncounters === 0,
+    });
+  }, [report, sessionId]);
   return (
     <div className="pointer-events-auto fixed inset-0 z-[60] overflow-y-auto bg-slate-950/90 p-3 sm:p-6">
       <KidConfetti active={objectiveCompleted} />
@@ -99,6 +149,11 @@ export function LiveGameEndReportOverlay({ sessionId, objectiveCompleted, isHost
             {report ? <p className="mt-2 max-w-2xl font-semibold text-slate-600">{report.classTitle ? `${report.classTitle} · ` : ""}{report.questionSetTitle} · {report.level} · {report.learningObjective}</p> : null}
           </div>
           <div className="flex gap-2">
+            {isHost && report?.role === "host" ?
+              <KidButton variant="secondary" onClick={() => void exportDiagnostics()} disabled={exportingDiagnostics}>
+                {exportingDiagnostics ? "Exporting..." : "Export diagnostics"}
+              </KidButton>
+            : null}
             {isHost && onPlayAgain ? <KidButton variant="primary" onClick={onPlayAgain}>Play again</KidButton> : null}
             <Link href="/live-game"><KidButton variant="secondary">Leave</KidButton></Link>
           </div>
@@ -106,6 +161,7 @@ export function LiveGameEndReportOverlay({ sessionId, objectiveCompleted, isHost
 
         {loading ? <div className="py-16 text-center font-extrabold text-slate-600">Preparing the learning report…</div> : null}
         {error ? <div className="py-12 text-center"><p className="font-bold text-red-700">{error}</p><KidButton className="mt-4" variant="secondary" onClick={retry}>Try again</KidButton></div> : null}
+        {diagnosticExportError ? <p role="alert" className="mt-3 text-sm font-bold text-red-700">{diagnosticExportError}</p> : null}
 
         {report?.role === "student" ? <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <section className="space-y-5">
@@ -136,6 +192,18 @@ export function LiveGameEndReportOverlay({ sessionId, objectiveCompleted, isHost
             <div><h3 className="mb-3 text-lg font-black text-slate-950">Class learning target</h3><TargetRows rows={report.targets} /></div>
             <div><h3 className="mb-3 text-lg font-black text-slate-950">Team contributions</h3><ContributionCards contributions={report.team.contributions} /></div>
           </section>
+          {report.teacher ? <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+            <h3 className="text-lg font-black text-slate-950">Teacher activity <span className="text-sm font-semibold text-slate-500">(not included in student learning totals)</span></h3>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {([
+                ["Encounters", report.teacher.totalEncounters],
+                ["First try", report.teacher.firstTry],
+                ["Independent", report.teacher.independent],
+                ["Revisit", report.teacher.unresolved],
+                ["Contribution", total(report.teacher.contributions.harvested) + total(report.teacher.contributions.deposited) + total(report.teacher.contributions.crafted)],
+              ] as const).map(([label, value]) => <div key={label} className="rounded-xl bg-white p-3"><p className="text-2xl font-black text-sky-950">{value}</p><p className="text-xs font-bold text-slate-600">{label}</p></div>)}
+            </div>
+          </section> : null}
           <section>
             <h3 className="mb-3 text-lg font-black text-slate-950">Student evidence <span className="text-sm font-semibold text-slate-500">(alphabetical, not ranked)</span></h3>
             <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="w-full min-w-[680px] text-left text-sm"><thead className="bg-slate-100 text-xs uppercase text-slate-600"><tr><th className="p-3">Student</th><th className="p-3">First try</th><th className="p-3">Independent</th><th className="p-3">Supported</th><th className="p-3">Revisit</th><th className="p-3">Contribution</th></tr></thead><tbody>{report.students.map((student) => <tr key={student.playerId} className="border-t border-slate-100"><td className="p-3 font-bold">{student.displayName}</td><td className="p-3">{student.firstTry}</td><td className="p-3">{student.independent}</td><td className="p-3">{student.supported}</td><td className="p-3">{student.unresolved}</td><td className="p-3">{total(student.contributions.harvested) + total(student.contributions.deposited) + total(student.contributions.crafted)}</td></tr>)}</tbody></table></div>

@@ -18,8 +18,9 @@ import { createMovementState } from "@/lib/live-game/engine/movement";
 import { getMapForMode } from "@/lib/live-game/modes";
 import { getLiveGameCapacity, LIVE_GAME_MAX_STUDENTS } from "@/lib/live-game/limits";
 import { withLiveGameRoomLock } from "@/lib/live-game/server/room-lock";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     sessionId?: string;
     displayName?: string;
@@ -130,4 +131,8 @@ export async function POST(request: Request) {
     liveGamePlayerCookieOptions(),
   );
   return response;
+}
+
+export async function POST(request: Request) {
+  return withLiveGameServerTiming("live_game_student_join", () => handlePost(request));
 }

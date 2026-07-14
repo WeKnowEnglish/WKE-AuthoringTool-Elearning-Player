@@ -13,7 +13,7 @@ export default async function LiveGameHostRoute({ searchParams }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?portal=teacher&next=/live-game/host");
   if (!isTeacher(user)) {
-    redirect("/login?portal=teacher&error=not_teacher&next=/live-game/host");
+    redirect("/live-game?notice=teacher_only");
   }
   return <LiveGameHostPage initialClassId={classId} />;
 }

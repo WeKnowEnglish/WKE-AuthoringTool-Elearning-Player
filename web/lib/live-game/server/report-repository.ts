@@ -115,26 +115,26 @@ export async function recordLiveGameQuestionEncounter(input: {
   resourceType?: string | null;
   recipeId?: string | null;
 }): Promise<void> {
-  const roundId = await ensureActiveLiveGameReportRound(input.storage, input.questionSet);
-  const { error } = await adminClient().from("live_game_question_encounters").upsert({
-    round_id: roundId,
-    challenge_id: input.challengeId,
-    player_id: input.playerId,
-    question_id: input.question.id,
-    question_set_id: input.questionSet.id,
-    question_set_version: input.questionSet.version,
-    question_bank: input.question.bank,
-    question_type: input.question.payload.type,
-    question_prompt: input.question.prompt,
-    correct_answer: correctAnswer(input.question),
-    learning_target_key: input.questionSet.id,
-    learning_target_label: input.questionSet.learningObjective,
-    cefr_level: input.questionSet.level,
-    game_action_type: input.question.bank,
-    game_object_id: input.gameObjectId,
-    resource_type: input.resourceType ?? null,
-    recipe_id: input.recipeId ?? null,
-  }, { onConflict: "challenge_id", ignoreDuplicates: true });
+  const roomId = `wke-live-game-${input.storage.session.joinCode}`;
+  const { error } = await adminClient().rpc("open_live_game_question_encounter", {
+    p_room_id: roomId,
+    p_challenge_id: input.challengeId,
+    p_player_id: input.playerId,
+    p_question_id: input.question.id,
+    p_question_set_id: input.questionSet.id,
+    p_question_set_version: input.questionSet.version,
+    p_question_bank: input.question.bank,
+    p_question_type: input.question.payload.type,
+    p_question_prompt: input.question.prompt,
+    p_correct_answer: correctAnswer(input.question),
+    p_learning_target_key: input.questionSet.id,
+    p_learning_target_label: input.questionSet.learningObjective,
+    p_cefr_level: input.questionSet.level,
+    p_game_action_type: input.question.bank,
+    p_game_object_id: input.gameObjectId,
+    p_resource_type: input.resourceType ?? null,
+    p_recipe_id: input.recipeId ?? null,
+  });
   if (error) databaseError("Could not record Live Game question encounter", error);
 }
 
@@ -147,28 +147,15 @@ export async function recordLiveGameQuestionAttempt(input: {
   contribution?: Record<string, unknown>;
 }): Promise<void> {
   const admin = adminClient();
-  const { data: encounter, error: encounterError } = await admin.from("live_game_question_encounters").select("id").eq("challenge_id", input.challengeId).single();
-  if (encounterError) databaseError("Could not read Live Game encounter", encounterError);
-  const encounterId = encounter.id as string;
-  const { data: existing, error: existingError } = await admin.from("live_game_question_attempts").select("submission_index").eq("encounter_id", encounterId).eq("submission_id", input.submissionId).maybeSingle();
-  if (existingError) databaseError("Could not read Live Game attempt", existingError);
-  let submissionIndex = (existing as { submission_index?: number } | null)?.submission_index;
-  if (!submissionIndex) {
-    const { data: latest, error: latestError } = await admin.from("live_game_question_attempts").select("submission_index").eq("encounter_id", encounterId).order("submission_index", { ascending: false }).limit(1).maybeSingle();
-    if (latestError) databaseError("Could not sequence Live Game attempt", latestError);
-    submissionIndex = ((latest as { submission_index?: number } | null)?.submission_index ?? 0) + 1;
-  }
-  const { error } = await admin.from("live_game_question_attempts").upsert({
-    encounter_id: encounterId,
-    submission_id: input.submissionId,
-    submission_index: submissionIndex,
-    selected_answer: input.selectedAnswer,
-    is_correct: input.correct,
-    response_time_ms: input.responseTimeMs,
-    contribution: input.contribution ?? {},
-  }, { onConflict: "encounter_id,submission_id" });
+  const { error } = await admin.rpc("record_live_game_question_attempt", {
+    p_challenge_id: input.challengeId,
+    p_submission_id: input.submissionId,
+    p_selected_answer: input.selectedAnswer,
+    p_is_correct: input.correct,
+    p_response_time_ms: input.responseTimeMs,
+    p_contribution: input.contribution ?? {},
+  });
   if (error) databaseError("Could not record Live Game attempt", error);
-  if (input.correct) await resolveLiveGameQuestionEncounter(input.challengeId, "correct");
 }
 
 export async function resolveLiveGameQuestionEncounter(challengeId: string, resolution: Exclude<LiveGameEncounterResolution, "open">) {
@@ -205,26 +192,19 @@ export async function finalizeLiveGameReportRound(input: {
   if (!activeRound?.id) return;
   const roundId = activeRound.id as string;
   await upsertParticipants(roundId, input.storage.players);
-  const { data: open, error: openError } = await admin.from("live_game_question_encounters").select("id").eq("round_id", roundId).eq("resolution", "open");
-  if (openError) databaseError("Could not read open Live Game encounters", openError);
-  for (const row of open ?? []) {
-    const { count, error: countError } = await admin.from("live_game_question_attempts").select("id", { count: "exact", head: true }).eq("encounter_id", row.id);
-    if (countError) databaseError("Could not finalize Live Game encounter", countError);
-    const resolution = (count ?? 0) > 0 ? "unresolved" : "abandoned";
-    const ended = new Date(input.endedAt ?? Date.now()).toISOString();
-    const { error } = await admin.from("live_game_question_encounters").update({ resolution, resolved_at: ended, updated_at: ended }).eq("id", row.id).eq("resolution", "open");
-    if (error) databaseError("Could not finalize Live Game encounter", error);
-  }
   const endedAt = new Date(input.endedAt ?? Date.now()).toISOString();
   const summary = {
     resourcePool: input.storage.resourcePool ?? {},
     craftedItems: input.storage.craftedItems ?? {},
     objectiveCompleted: input.storage.session.objectiveCompleted,
   };
-  const { error } = await admin.from("live_game_report_rounds").update({ status: "completed", end_reason: input.reason, ended_at: endedAt, summary }).eq("id", roundId).eq("status", "active");
+  const { error } = await admin.rpc("finalize_live_game_report_round", {
+    p_round_id: roundId,
+    p_end_reason: input.reason,
+    p_ended_at: endedAt,
+    p_summary: summary,
+  });
   if (error) databaseError("Could not finalize Live Game report round", error);
-  const { error: projectError } = await admin.rpc("record_live_game_class_project_contribution", { p_round_id: roundId });
-  if (projectError) databaseError("Could not update the Live Game class project", projectError);
 }
 
 export async function loadLatestCompletedLiveGameReportRound(roomId: string): Promise<LiveGameReportRoundRow | null> {

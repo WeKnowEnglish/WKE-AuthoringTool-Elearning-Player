@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LiveGameProvider } from "@/components/live-game/LiveGameProvider";
+import { LiveGamePerformancePanel } from "@/components/live-game/LiveGamePerformancePanel";
 
 export const metadata: Metadata = {
   title: "Live Game — We Know English",
@@ -10,6 +11,7 @@ export default function LiveGameLayout({ children }: { children: React.ReactNode
   return (
     <LiveGameProvider>
       <div className="min-h-dvh bg-[var(--background)] text-neutral-900">{children}</div>
+      <LiveGamePerformancePanel />
     </LiveGameProvider>
   );
 }

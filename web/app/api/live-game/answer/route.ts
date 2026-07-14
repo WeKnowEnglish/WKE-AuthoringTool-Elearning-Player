@@ -181,14 +181,6 @@ async function handlePost(request: Request) {
     );
   }
 
-  await recordCurrentLiveGameAttempt({
-    challengeId,
-    submissionId: submission.id,
-    selectedAnswer: answer,
-    correct: true,
-    responseTimeMs: submission.responseTimeMs,
-  });
-
   const claim = await claimLiveGameChallengeAward(challengeId);
   if (claim.kind === "missing") {
     return NextResponse.json({ error: "Challenge expired or not found." }, { status: 404 });
@@ -223,18 +215,19 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Could not award carry for this resource." }, { status: 409 });
   }
 
-  await markChallengeAwarded(challengeId);
-
-  await recordCurrentLiveGameAttempt({
-    challengeId,
-    submissionId: submission.id,
-    selectedAnswer: answer,
-    correct: true,
-    responseTimeMs: submission.responseTimeMs,
-    contribution: {
-      harvested: { [award.resourceType]: award.alreadyAwarded ? 0 : 1 },
-    },
-  });
+  await Promise.all([
+    markChallengeAwarded(challengeId),
+    recordCurrentLiveGameAttempt({
+      challengeId,
+      submissionId: submission.id,
+      selectedAnswer: answer,
+      correct: true,
+      responseTimeMs: submission.responseTimeMs,
+      contribution: {
+        harvested: { [award.resourceType]: award.alreadyAwarded ? 0 : 1 },
+      },
+    }),
+  ]);
 
   return NextResponse.json(
     harvestAnswerPayload(storage, {

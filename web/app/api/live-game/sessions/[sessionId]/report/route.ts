@@ -3,41 +3,21 @@ import { aggregateHostEvidence, aggregateStudentEvidence } from "@/lib/live-game
 import type { LiveGameHostReport, LiveGameReport, LiveGameStudentReport } from "@/lib/live-game/reports/types";
 import { requireLiveGamePlayerSession, roomIdForSession } from "@/lib/live-game/server/player-session";
 import {
-  finalizeLiveGameReportRound,
   loadLatestLiveGameReportRound,
   loadLiveGameReportEvidence,
   readFinalResources,
 } from "@/lib/live-game/server/report-repository";
-import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
-import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-set-session";
-import { getQuestionSetSnapshot } from "@/lib/live-game/server/question-set-resolver";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+async function handleGet(_request: Request, context: RouteContext) {
   try {
     const { sessionId: rawSessionId } = await context.params;
     const sessionId = rawSessionId.trim().toUpperCase();
     const roomId = roomIdForSession(sessionId);
     const playerSession = await requireLiveGamePlayerSession(roomId);
-    let round = await loadLatestLiveGameReportRound(roomId);
-    if (!round || round.status === "active") {
-      const storage = await readLiveGameStorageJson(roomId);
-      if (storage?.session.phase === "completed") {
-        const binding = readSessionQuestionSetBinding(storage.session);
-        const questionSet = await getQuestionSetSnapshot(binding.ref, binding.version);
-        await finalizeLiveGameReportRound({
-          storage,
-          questionSet,
-          reason:
-            storage.session.objectiveCompleted ? "objective_completed"
-            : storage.session.lobbyNotice?.reason === "timeout" ? "timeout"
-            : "host_ended_early",
-          endedAt: storage.session.victoryAt ?? storage.session.lobbyNotice?.at ?? Date.now(),
-        });
-        round = await loadLatestLiveGameReportRound(roomId);
-      }
-    }
+    const round = await loadLatestLiveGameReportRound(roomId);
     if (!round || round.status !== "completed") {
       return NextResponse.json(
         { error: "Your round report is still being prepared." },
@@ -72,6 +52,7 @@ export async function GET(_request: Request, context: RouteContext) {
       report = {
         ...base,
         role: "host",
+        teacher: hostEvidence.teacher,
         students: hostEvidence.students,
         targets: hostEvidence.targets,
         questionTypes: hostEvidence.questionTypes,
@@ -101,4 +82,8 @@ export async function GET(_request: Request, context: RouteContext) {
       { status: 503 },
     );
   }
+}
+
+export async function GET(request: Request, context: RouteContext) {
+  return withLiveGameServerTiming("live_game_report", () => handleGet(request, context));
 }

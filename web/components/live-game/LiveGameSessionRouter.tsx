@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useStorage } from "@liveblocks/react/suspense";
+import { useStatus, useStorage } from "@liveblocks/react/suspense";
 import { LiveGameCanvas } from "@/components/live-game/LiveGameCanvas";
 import { LiveGameLobbyCanvas } from "@/components/live-game/LiveGameLobbyCanvas";
 import { LiveGameSessionEndedScreen } from "@/components/live-game/LiveGameSessionEndedScreen";
@@ -10,6 +10,7 @@ import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config"
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
 import { preloadLiveGameQuestionBundle } from "@/lib/live-game/question-bundle-cache";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
+import { recordLiveGameDiagnostic, startLiveGameDiagnosticSpan } from "@/lib/live-game/diagnostics/client";
 
 type Props = {
   context: LiveGameSessionContext;
@@ -25,11 +26,29 @@ function SessionLoading() {
 
 export function LiveGameSessionRouter({ context }: Props) {
   const phase = useStorage((root) => (root as unknown as LiveGameStorageSnapshot).session.phase);
+  const connectionStatus = useStatus();
   const { isHost } = useLiveGameLobby();
 
   useEffect(() => {
-    void preloadLiveGameQuestionBundle(toRoomId(context.sessionId));
+    recordLiveGameDiagnostic("room", "liveblocks_storage_ready", { sessionId: context.sessionId });
+    const finish = startLiveGameDiagnosticSpan("room", "question_bundle_preload", { sessionId: context.sessionId });
+    void preloadLiveGameQuestionBundle(toRoomId(context.sessionId)).then(() => finish()).catch((error) => finish(undefined, error));
   }, [context.sessionId]);
+
+  useEffect(() => {
+    recordLiveGameDiagnostic(
+      phase === "completed" || phase === "ended" ? "exit" : phase === "lobby" ? "lobby" : "gameplay",
+      "session_phase_received",
+      { phase, sessionId: context.sessionId },
+    );
+  }, [context.sessionId, phase]);
+
+  useEffect(() => {
+    recordLiveGameDiagnostic("system", "liveblocks_connection_status", {
+      status: connectionStatus,
+      sessionId: context.sessionId,
+    });
+  }, [connectionStatus, context.sessionId]);
 
   if (phase === "ended") {
     return <LiveGameSessionEndedScreen isHost={isHost} />;

@@ -20,6 +20,7 @@ import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { resolveHostQuestionSetBinding, HostQuestionSetInvalidError } from "@/lib/live-game/server/question-set-session";
 import { QuestionSetNotFoundError, QuestionSetVersionMismatchError } from "@/lib/live-game/server/question-set-resolver";
+import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 
 type HostRequestBody = {
   displayName?: string;
@@ -59,7 +60,7 @@ function parseHostRequestBody(
   };
 }
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isTeacher(user)) {
@@ -194,4 +195,8 @@ export async function POST(request: Request) {
   );
 
   return response;
+}
+
+export async function POST(request: Request) {
+  return withLiveGameServerTiming("live_game_host_create", () => handlePost(request));
 }

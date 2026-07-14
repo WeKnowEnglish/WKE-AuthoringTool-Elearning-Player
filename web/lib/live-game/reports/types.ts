@@ -172,6 +172,7 @@ export type LiveGameStudentReport = LiveGameReportBase & {
 
 export type LiveGameHostReport = LiveGameReportBase & {
   role: "host";
+  teacher: LiveGameStudentDiagnostic | null;
   students: LiveGameStudentDiagnostic[];
   targets: LiveGameLearningBreakdown[];
   questionTypes: LiveGameLearningBreakdown[];

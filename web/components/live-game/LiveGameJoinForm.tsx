@@ -17,6 +17,7 @@ import {
 } from "@/lib/live-game/characters/live-game-characters";
 import { LiveGameCharacterPicker } from "@/components/live-game/LiveGameCharacterPicker";
 import { DEFAULT_LIVE_GAME_QUESTION_SET_UUID } from "@/lib/live-game/question-banks/question-set-ids";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 type Props = {
   initialCode?: string;
@@ -30,6 +31,10 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
   const [avatarId, setAvatarId] = useState<LiveGameCharacterId>(LIVE_GAME_DEFAULT_AVATAR_ID);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    recordLiveGameDiagnostic("entry", "student_join_form_mounted", { hasInitialCode: Boolean(initialCode) });
+  }, [initialCode]);
 
   useEffect(() => {
     if (nameReady && studentName && !displayName) {
@@ -51,12 +56,13 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
 
     setIsSubmitting(true);
     setError(null);
+    recordLiveGameDiagnostic("room", "student_join_click", { sessionId: code });
     try {
-      const response = await fetch("/api/live-game/sessions/join", {
+      const response = await diagnosticFetch("/api/live-game/sessions/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: code, displayName: name, avatarId }),
-      });
+      }, { phase: "room", name: "student_join_request", detail: { sessionId: code } });
       const payload = (await response.json()) as {
         error?: string; userId?: string; mapId?: string; durationMinutes?: number | null;
         questionSetId?: string; questionSetVersion?: number;
@@ -80,7 +86,9 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
         questionSetId: payload.questionSetId ?? DEFAULT_LIVE_GAME_QUESTION_SET_UUID,
         questionSetVersion: payload.questionSetVersion ?? 1,
       });
+      recordLiveGameDiagnostic("room", "student_session_context_saved", { sessionId: code });
       router.push(`/live-game/${code}`);
+      recordLiveGameDiagnostic("room", "student_session_navigation_requested", { sessionId: code });
     } catch (joinError) {
       setError(joinError instanceof Error ? joinError.message : "Could not join game.");
       setIsSubmitting(false);

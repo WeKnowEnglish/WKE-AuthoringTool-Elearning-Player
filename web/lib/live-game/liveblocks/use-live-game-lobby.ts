@@ -5,6 +5,7 @@ import { useOthers, useSelf, useStorage } from "@liveblocks/react/suspense";
 import type { LiveGameLobbyPlayer, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
 import type { LiveGameRoundEndReason } from "@/lib/live-game/liveblocks/config";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
+import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 
 export type LiveGameLobbyPlayerEntry = {
   id: string;
@@ -30,11 +31,13 @@ export function useLiveGameLobby() {
   });
 
   const control = useCallback(async (action: string, reason?: LiveGameRoundEndReason) => {
-    const response = await fetch("/api/live-game/control", {
+    const diagnosticPhase = action === "start" ? "lobby" : action === "end_round" || action === "close" ? "exit" : "lobby";
+    recordLiveGameDiagnostic(diagnosticPhase, `control_${action}_click`, { reason: reason ?? null });
+    const response = await diagnosticFetch("/api/live-game/control", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomId: toRoomId(session.joinCode), action, reason }),
-    });
+    }, { phase: diagnosticPhase, name: `control_${action}`, detail: { reason: reason ?? null } });
     const payload = (await response.json()) as { error?: string; endsAt?: number | null };
     if (!response.ok) throw new Error(payload.error ?? "Live-game control action failed.");
     return payload;

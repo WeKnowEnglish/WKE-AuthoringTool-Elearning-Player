@@ -86,4 +86,26 @@ describe("Reporting V2 aggregation", () => {
     expect(evidence.team.participantCount).toBe(2);
     expect(evidence.team.finalResources).toEqual({ wood: 2 });
   });
+
+  it("separates teacher play from student learning evidence", () => {
+    const teacherEncounter = encounter({
+      id: "teacher-encounter",
+      challenge_id: "teacher-challenge",
+      player_id: "host",
+    });
+    const teacherAttempt = attempt({ encounter_id: "teacher-encounter" });
+    const evidence = aggregateHostEvidence(
+      [attempt(), teacherAttempt],
+      [encounter(), teacherEncounter],
+      [
+        { player_id: "host", display_name: "Teacher", role: "host" },
+        { player_id: "student-1", display_name: "Alex", role: "player" },
+      ],
+      { wood: 2 },
+    );
+
+    expect(evidence.team.totalEncounters).toBe(1);
+    expect(evidence.team.totalSubmissions).toBe(1);
+    expect(evidence.teacher).toMatchObject({ displayName: "Teacher", totalEncounters: 1 });
+  });
 });

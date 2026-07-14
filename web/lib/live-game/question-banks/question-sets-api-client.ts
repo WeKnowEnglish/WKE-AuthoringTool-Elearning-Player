@@ -14,13 +14,29 @@ type QuestionSetsResponse = {
   error?: string;
 };
 
+let publishedQuestionSetsRequest: { startedAt: number; promise: Promise<LiveGameQuestionSetCard[]> } | null = null;
+const PUBLISHED_QUESTION_SETS_DEDUPE_MS = 5_000;
+
 export async function fetchPublishedQuestionSets(): Promise<LiveGameQuestionSetCard[]> {
-  const response = await fetch("/api/live-game/question-sets");
-  const payload = (await response.json()) as QuestionSetsResponse;
-  if (!response.ok || !payload.sets) {
-    throw new Error(payload.error ?? "Could not load question sets.");
+  const now = Date.now();
+  if (publishedQuestionSetsRequest && now - publishedQuestionSetsRequest.startedAt < PUBLISHED_QUESTION_SETS_DEDUPE_MS) {
+    return publishedQuestionSetsRequest.promise;
   }
-  return payload.sets;
+  const promise = (async () => {
+    const response = await fetch("/api/live-game/question-sets");
+    const payload = (await response.json()) as QuestionSetsResponse;
+    if (!response.ok || !payload.sets) {
+      throw new Error(payload.error ?? "Could not load question sets.");
+    }
+    return payload.sets;
+  })();
+  publishedQuestionSetsRequest = { startedAt: now, promise };
+  try {
+    return await promise;
+  } catch (error) {
+    if (publishedQuestionSetsRequest?.promise === promise) publishedQuestionSetsRequest = null;
+    throw error;
+  }
 }
 
 export function readLastSelectedQuestionSetId(): string | null {

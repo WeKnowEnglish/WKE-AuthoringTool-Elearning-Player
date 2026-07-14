@@ -40,6 +40,7 @@ type CraftChallengeRequestBody = {
   roomId?: string;
   recipeId?: string;
   questionBundleVersion?: number;
+  prefetch?: boolean;
 };
 
 function parseCraftChallengeBody(body: unknown): CraftChallengeRequestBody | null {
@@ -53,6 +54,7 @@ function parseCraftChallengeBody(body: unknown): CraftChallengeRequestBody | nul
     recipeId: record.recipeId,
     questionBundleVersion:
       Number.isInteger(record.questionBundleVersion) ? record.questionBundleVersion : undefined,
+    prefetch: record.prefetch === true,
   };
 }
 
@@ -143,12 +145,14 @@ async function handlePost(request: Request) {
     challenge.questionId === pickedCraftRow.id ? pickedCraftRow
     : (await getQuestionById(binding.ref, "craft", challenge.questionId, binding.version)) ?? pickedCraftRow;
 
-  await recordCurrentLiveGameEncounter({
-    storage,
-    challenge,
-    question: craftRow,
-    recipeId,
-  });
+  if (!parsed.prefetch) {
+    await recordCurrentLiveGameEncounter({
+      storage,
+      challenge,
+      question: craftRow,
+      recipeId,
+    });
+  }
 
   const usePreloadedQuestion = parsed.questionBundleVersion === binding.version;
   return NextResponse.json({

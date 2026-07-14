@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { LiveGameLandingShell } from "@/components/live-game/LiveGameLandingShell";
@@ -29,6 +29,11 @@ import {
   writeLastSelectedQuestionSetId,
 } from "@/lib/live-game/question-banks/question-sets-api-client";
 import { duplicateQuestionSet } from "@/lib/live-game/question-banks/question-sets-editor-api";
+import {
+  diagnosticFetch,
+  recordLiveGameDiagnostic,
+  startLiveGameDiagnosticSpan,
+} from "@/lib/live-game/diagnostics/client";
 
 type TeacherClassOption = { id: string; title: string };
 
@@ -49,8 +54,10 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
   const [classes, setClasses] = useState<TeacherClassOption[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>(initialClassId);
   const [classesError, setClassesError] = useState<string | null>(null);
+  const classesRequestedRef = useRef(false);
 
   const loadQuestionSets = useCallback(async () => {
+    const finishDiagnostic = startLiveGameDiagnosticSpan("entry", "question_sets_load");
     setSetsLoading(true);
     setSetsError(null);
     try {
@@ -68,18 +75,26 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
       setSetsError(message);
       setQuestionSets([]);
       setSelectedQuestionSetId(null);
+      finishDiagnostic(undefined, loadError);
     } finally {
       setSetsLoading(false);
+      finishDiagnostic();
     }
   }, []);
 
   useEffect(() => {
+    recordLiveGameDiagnostic("entry", "host_setup_mounted");
     void loadQuestionSets();
   }, [loadQuestionSets]);
 
   useEffect(() => {
+    if (classesRequestedRef.current) return;
+    classesRequestedRef.current = true;
     let cancelled = false;
-    void fetch("/api/live-game/classes", { cache: "no-store" })
+    void diagnosticFetch("/api/live-game/classes", { cache: "no-store" }, {
+      phase: "entry",
+      name: "teacher_classes_load",
+    })
       .then(async (response) => {
         const payload = (await response.json()) as { classes?: TeacherClassOption[]; error?: string };
         if (!response.ok) throw new Error(payload.error ?? "Could not load classes.");
@@ -139,10 +154,14 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
 
     setIsSubmitting(true);
     setError(null);
+    recordLiveGameDiagnostic("room", "create_room_click", {
+      hasClass: Boolean(selectedClassId),
+      durationMinutes: durationMinutes ?? "unlimited",
+    });
     writeLastSelectedQuestionSetId(setId);
 
     try {
-      const response = await fetch("/api/live-game/sessions/host", {
+      const response = await diagnosticFetch("/api/live-game/sessions/host", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -153,7 +172,7 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
           questionSetId: setId,
           classId: selectedClassId || null,
         }),
-      });
+      }, { phase: "room", name: "host_room_create" });
 
       const payload = (await response.json()) as {
         error?: string;
@@ -189,7 +208,9 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
         questionSetVersion: payload.questionSetVersion ?? selectedSet?.version ?? 1,
       });
 
+      recordLiveGameDiagnostic("room", "host_session_context_saved", { sessionId: payload.sessionId });
       router.push(`/live-game/${payload.sessionId}`);
+      recordLiveGameDiagnostic("room", "host_session_navigation_requested", { sessionId: payload.sessionId });
     } catch (createError) {
       const message =
         createError instanceof Error ? createError.message : "Could not create a live game room.";

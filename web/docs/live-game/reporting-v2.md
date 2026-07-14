@@ -42,6 +42,12 @@ Detailed report tables are server-only with RLS enabled and no `anon` or `authen
 
 The application fails closed if the reporting tables or service-role configuration are unavailable, so the migration must precede the application deployment.
 
+Migration `041` also detects the quarantined pre-V2 `live_game_question_attempts`
+schema. When present, it preserves that table as
+`live_game_question_attempts_legacy_20260714` before creating the current table.
+Do not use `supabase db push` until the historical migration ledger and duplicate
+numeric migration versions have been baselined.
+
 ## Timer additions
 
 English Craft supports 1, 2, 5, 10, 15, 20, and 30 minute rounds. During a timed round, the host can click the clock to add one minute. The server computes the new deadline from the later of the existing deadline or server time, preventing a stale client clock from shortening the round.

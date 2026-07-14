@@ -1,6 +1,61 @@
 -- Reporting V2 for the current multi-round English Craft environment.
 -- Detailed evidence remains server-only; report routes enforce player identity.
 
+-- A quarantined pre-V2 implementation used this table name with session_id and
+-- student_id columns. Preserve that data before creating the current encounter-
+-- based table. The guard is a no-op on clean databases and after a completed
+-- recovery.
+do $$
+begin
+  if to_regclass('public.live_game_question_attempts') is not null
+    and exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'live_game_question_attempts'
+        and column_name = 'session_id'
+    )
+    and not exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'live_game_question_attempts'
+        and column_name = 'encounter_id'
+    )
+  then
+    if to_regclass('public.live_game_question_attempts_legacy_20260714') is not null then
+      raise exception 'Legacy Live Game attempts backup already exists; inspect both tables before continuing';
+    end if;
+
+    alter table public.live_game_question_attempts
+      rename to live_game_question_attempts_legacy_20260714;
+
+    if exists (
+      select 1 from pg_constraint
+      where conrelid = 'public.live_game_question_attempts_legacy_20260714'::regclass
+        and conname = 'live_game_question_attempts_pkey'
+    ) then
+      alter table public.live_game_question_attempts_legacy_20260714
+        rename constraint live_game_question_attempts_pkey
+        to live_game_question_attempts_legacy_20260714_pkey;
+    end if;
+
+    if exists (
+      select 1 from pg_constraint
+      where conrelid = 'public.live_game_question_attempts_legacy_20260714'::regclass
+        and conname = 'live_game_attempt_submission_unique'
+    ) then
+      alter table public.live_game_question_attempts_legacy_20260714
+        rename constraint live_game_attempt_submission_unique
+        to live_game_attempt_legacy_submission_unique;
+    end if;
+
+    alter index if exists public.live_game_attempts_student_session_idx
+      rename to live_game_attempts_legacy_student_session_idx;
+    alter index if exists public.live_game_attempts_session_idx
+      rename to live_game_attempts_legacy_session_idx;
+  end if;
+end;
+$$;
+
 create table public.live_game_report_rounds (
   id uuid primary key default gen_random_uuid(),
   room_id text not null,

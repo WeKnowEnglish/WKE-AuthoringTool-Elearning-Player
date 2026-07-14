@@ -256,7 +256,7 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
           </select>
       </label>
 
-      <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} />
+      <LiveGameCharacterPicker value={avatarId} onChange={setAvatarId} compact />
 
       <div className="space-y-2">
           <span className="text-sm font-bold text-kid-ink">Question set</span>

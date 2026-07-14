@@ -23,7 +23,7 @@ export function LiveGameLandingShell({
   wide = false,
 }: Props) {
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-[linear-gradient(160deg,#e8f6fd_0%,#ffffff_50%,#fff8d9_100%)]">
+    <div className="relative min-h-dvh overflow-x-hidden bg-[linear-gradient(160deg,#e8f6fd_0%,#ffffff_50%,#fff8d9_100%)]">
       <div className="pointer-events-none absolute -left-20 top-24 h-56 w-56 rounded-full bg-kid-surface/60 blur-2xl" />
       <div className="pointer-events-none absolute -right-16 bottom-10 h-64 w-64 rounded-full bg-kid-cta/35 blur-3xl" />
 
@@ -40,9 +40,13 @@ export function LiveGameLandingShell({
       </header>
 
       <main
-        className={`relative z-10 mx-auto grid items-center gap-6 px-4 pb-10 pt-3 sm:px-6 lg:grid-cols-[0.72fr_1.28fr] lg:gap-10 lg:pt-8 ${wide ? "max-w-6xl" : "max-w-5xl"}`}
+        className={`relative z-10 mx-auto grid min-w-0 items-center gap-6 px-4 pt-3 sm:px-6 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] ${
+          wide
+            ? "max-w-6xl pb-4 lg:items-start lg:gap-6 lg:pt-3"
+            : "max-w-5xl pb-10 lg:gap-10 lg:pt-8"
+        }`}
       >
-        <section className="flex items-center justify-between gap-4 lg:block">
+        <section className="min-w-0 flex items-center justify-between gap-4 lg:block">
           <div className="max-w-xl">
             <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-kid-accent">
               {eyebrow}
@@ -65,7 +69,15 @@ export function LiveGameLandingShell({
           />
         </section>
 
-        <KidPanel className="space-y-4 bg-white/95 p-5 sm:p-6">{children}</KidPanel>
+        <KidPanel
+          className={
+            wide
+              ? "min-w-0 max-h-[calc(100dvh-6.5rem)] space-y-3 overflow-y-auto overscroll-contain bg-white/95 p-4 sm:p-5"
+              : "min-w-0 space-y-4 bg-white/95 p-5 sm:p-6"
+          }
+        >
+          {children}
+        </KidPanel>
       </main>
     </div>
   );

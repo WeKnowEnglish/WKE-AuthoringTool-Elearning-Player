@@ -190,7 +190,20 @@ export async function finalizeLiveGameReportRound(input: {
   endedAt?: number;
 }): Promise<void> {
   const admin = adminClient();
-  const roundId = await ensureActiveLiveGameReportRound(input.storage, input.questionSet);
+  const roomId = `wke-live-game-${input.storage.session.joinCode}`;
+  const { data: activeRound, error: activeRoundError } = await admin
+    .from("live_game_report_rounds")
+    .select("id")
+    .eq("room_id", roomId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (activeRoundError) databaseError("Could not read active Live Game report round", activeRoundError);
+
+  // Starting a round owns report creation. A repeated or concurrent completion
+  // request must be idempotent; creating here would produce a newer empty round
+  // that hides the real evidence in the completed report.
+  if (!activeRound?.id) return;
+  const roundId = activeRound.id as string;
   await upsertParticipants(roundId, input.storage.players);
   const { data: open, error: openError } = await admin.from("live_game_question_encounters").select("id").eq("round_id", roundId).eq("resolution", "open");
   if (openError) databaseError("Could not read open Live Game encounters", openError);

@@ -3,7 +3,12 @@
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { KidButton } from "@/components/kid-ui/KidButton";
-import type { LiveGameCraftedItems, LiveGameResourcePool } from "@/lib/live-game/liveblocks/config";
+import type {
+  LiveGameCraftedItems,
+  LiveGamePlayerCarry,
+  LiveGamePlayerInventory,
+  LiveGameResourcePool,
+} from "@/lib/live-game/liveblocks/config";
 import {
   canStartRecipeCraft,
   formatRecipeFullCostSummary,
@@ -17,6 +22,9 @@ type Props = {
   open: boolean;
   pool: LiveGameResourcePool;
   craftedItems: LiveGameCraftedItems;
+  playerId?: string | null;
+  playerInventory?: LiveGamePlayerInventory;
+  playerCarry?: LiveGamePlayerCarry | null;
   onSelect: (recipeId: CraftRecipeId, recipe: CraftRecipe) => void;
   onClose: () => void;
 };
@@ -59,6 +67,9 @@ export function LiveGameCraftRecipePicker({
   open,
   pool,
   craftedItems,
+  playerId = null,
+  playerInventory,
+  playerCarry = null,
   onSelect,
   onClose,
 }: Props) {
@@ -66,6 +77,9 @@ export function LiveGameCraftRecipePicker({
     session: { phase: "playing" as const },
     resourcePool: pool,
     craftedItems,
+    playerInventory:
+      playerId && playerInventory ? { [playerId]: playerInventory } : undefined,
+    playerCarry: playerId && playerCarry ? { [playerId]: playerCarry } : undefined,
   };
   const recipes = listBenchCraftRecipes(storageSnapshot);
 
@@ -106,8 +120,16 @@ export function LiveGameCraftRecipePicker({
 
             <div className="space-y-3">
               {recipes.map((recipe) => {
-                const enabled = canStartRecipeCraft(storageSnapshot, recipe.id);
-                const disabledReason = getRecipeDisabledReason(pool, craftedItems, recipe);
+                const enabled = canStartRecipeCraft(storageSnapshot, recipe.id, playerId);
+                const disabledReason =
+                  recipe.requires.backpackNotOwned && playerInventory?.backpack ?
+                    "You already have a backpack."
+                  : recipe.requires.freeCarrySlot &&
+                      playerId &&
+                      !canStartRecipeCraft(storageSnapshot, recipe.id, playerId) &&
+                      getRecipeDisabledReason(pool, craftedItems, recipe) == null ?
+                    "Hands are full — deposit or eat something first."
+                  : getRecipeDisabledReason(pool, craftedItems, recipe);
                 return (
                   <RecipeRow
                     key={recipe.id}

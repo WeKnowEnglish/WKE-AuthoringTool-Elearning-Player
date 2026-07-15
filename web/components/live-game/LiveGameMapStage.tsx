@@ -18,6 +18,7 @@ import type { LiveGameMapDef } from "@/lib/live-game/modes/types";
 import type { LiveGameMapVisualMode } from "@/lib/live-game/modes/english-craft/lobby-map-v1";
 import { resolveEnglishCraftMapVisuals } from "@/lib/live-game/modes/english-craft/lobby-map-v1";
 import { useLiveGameSelfCarry } from "@/lib/live-game/hooks/useLiveGameGameplay";
+import { getHeldVisual } from "@/lib/live-game/carry-bag";
 import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS } from "@/lib/live-game/server/read-crafted-items";
 import { EMPTY_LIVE_GAME_RESOURCE_POOL } from "@/lib/live-game/resource-pool";
 import { LIVE_GAME_GROUND_COLOR } from "@/lib/live-game/tiles/grass-tile-pack";
@@ -70,7 +71,7 @@ export function useLiveGameMapStage({
   const viewport = useViewportSize();
 
   const selfCarry = useLiveGameSelfCarry();
-  const carriedResourceType = selfCarry?.resourceType ?? null;
+  const carriedResourceType = getHeldVisual(selfCarry);
 
   const { getPosition, sampledPosition, setTouchAxis, facing, isMoving } = useLocalMovement({
     map,
@@ -152,7 +153,7 @@ export function LiveGameMapStage({
   footer,
 }: LiveGameMapStageProps) {
   const selfCarry = useLiveGameSelfCarry();
-  const carriedResourceType = selfCarry?.resourceType ?? null;
+  const carriedResourceType = getHeldVisual(selfCarry);
 
   const {
     cameraRef,

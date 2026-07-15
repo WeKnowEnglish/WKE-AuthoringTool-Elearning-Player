@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStorage } from "@liveblocks/react/suspense";
 import { LiveGameCraftModal } from "@/components/live-game/LiveGameCraftModal";
 import { LiveGameCraftRecipePicker } from "@/components/live-game/LiveGameCraftRecipePicker";
@@ -19,6 +19,7 @@ import { LiveGameHostPlayHud } from "@/components/live-game/LiveGameHostPlayHud"
 import { LiveGameEndReportOverlay } from "@/components/live-game/LiveGameEndReportOverlay";
 import { LiveGameSessionTimerChip } from "@/components/live-game/LiveGameSessionTimerChip";
 import { LiveGameSessionTimerFlash } from "@/components/live-game/LiveGameSessionTimerFlash";
+import { LiveGameCarrySlotBar } from "@/components/live-game/LiveGameCarrySlotBar";
 import {
   LiveGameInteractPrompt,
   LiveGameTeamResourceHud,
@@ -27,6 +28,19 @@ import type { LiveGameSessionContext } from "@/lib/live-game/liveblocks/identity
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
 import { LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS, LIVE_GAME_CHALLENGE_PREFETCH_RADIUS_BONUS_PX } from "@/lib/live-game/challenge-prefetch";
+import {
+  isUsableLiveGamePositionSyncResult,
+  positionSyncOutcomeForDiagnostic,
+  prefetchFailReasonFromPositionSync,
+} from "@/lib/live-game/challenge-position-sync";
+import {
+  bagHasMatchingResource,
+  depositResourceTypeFromBag,
+  getHeldVisual,
+  isHoldingBread,
+  playerCarryIsFull,
+} from "@/lib/live-game/carry-bag";
+import { recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
 import { liveGameQuestionDeckCursorKey } from "@/lib/live-game/question-deck";
 import { useLiveGameCraftChallenge } from "@/lib/live-game/hooks/useLiveGameCraftChallenge";
 import { useLiveGameDepositChallenge } from "@/lib/live-game/hooks/useLiveGameDepositChallenge";
@@ -42,18 +56,26 @@ import {
 } from "@/lib/live-game/hooks/useLiveGameGameplay";
 import { useLiveGameConsume } from "@/lib/live-game/hooks/useLiveGameConsume";
 import { useLiveGameDropCarry } from "@/lib/live-game/hooks/useLiveGameDropCarry";
-import { diagnosticFetch } from "@/lib/live-game/diagnostics/client";
+import { useLiveGameHoldCarry } from "@/lib/live-game/hooks/useLiveGameHoldCarry";
+import { useLiveGameInteractionPositionSync } from "@/lib/live-game/hooks/useLiveGameInteractionPositionSync";
 import { useLiveGameSelfHungerDisplay } from "@/lib/live-game/hooks/useLiveGameHunger";
 import { useLiveGameHarvestChallenge } from "@/lib/live-game/hooks/useLiveGameHarvestChallenge";
 import { useLiveGameAutoTimeout } from "@/lib/live-game/hooks/useLiveGameAutoTimeout";
 import { useLiveGameSessionTimer } from "@/lib/live-game/hooks/useLiveGameSessionTimer";
 import { useLiveGameLobby } from "@/lib/live-game/liveblocks/use-live-game-lobby";
-import type { LiveGameResourceNodeState, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
+import type {
+  LiveGameResourceNodeState,
+  LiveGameResourceType,
+  LiveGameStorageSnapshot,
+} from "@/lib/live-game/liveblocks/config";
 import { getMapForMode } from "@/lib/live-game/modes";
 import { ENGLISH_CRAFT_MODE } from "@/lib/live-game/modes/english-craft/config";
 import {
   depositInteractLabel,
   ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
+  ENGLISH_CRAFT_CARRY_CAPACITY_BACKPACK,
+  ENGLISH_CRAFT_CARRY_CAPACITY_BASE,
+  ENGLISH_CRAFT_CRAFT_BENCH_ID,
   ENGLISH_CRAFT_HUNGER_STARVING_SPEED_MULTIPLIER,
   harvestInteractLabel,
   isEnglishCraftResourceNodeInteractable,
@@ -92,10 +114,11 @@ function isNodeInteractable(node: LiveGameResourceNodeState | undefined, now = D
 }
 
 export function LiveGameCanvas({ context }: Props) {
-  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, addMinute, self, others } =
+  const { players, selfEntry, session, isHost, returnToLobby, endRoundAndReturnToLobby, addMinute, grantPoolResource, self, others } =
     useLiveGameLobby();
   const [endSessionModalOpen, setEndSessionModalOpen] = useState(false);
   const [isAddingTime, setIsAddingTime] = useState(false);
+  const [hostGrantingType, setHostGrantingType] = useState<LiveGameResourceType | null>(null);
   const [recipePickerOpen, setRecipePickerOpen] = useState(false);
   const { avatarId } = useLiveGameAvatar(context);
   const baseMap = getMapForMode(session.mapId, session.modeId);
@@ -125,8 +148,10 @@ export function LiveGameCanvas({ context }: Props) {
       session: { phase: session.phase },
       resourcePool: pool,
       craftedItems,
+      playerInventory: selfId ? { [selfId]: selfInventory } : undefined,
+      playerCarry: selfId && selfCarry ? { [selfId]: selfCarry } : undefined,
     }),
-    [craftedItems, pool, session.phase],
+    [craftedItems, pool, selfCarry, selfId, selfInventory, session.phase],
   );
 
   const spawnIndex = selfEntry ?
@@ -146,17 +171,29 @@ export function LiveGameCanvas({ context }: Props) {
   });
 
   const isCarrying = selfCarry != null;
-  const canBuildBench =
-    !isCarrying &&
-    !benchBuilt &&
-    canAffordRecipePoolCost(pool, buildBenchRecipe);
-  const canCraftAtBench = !isCarrying && benchBuilt && !boatBuilt;
+  const carryFull = playerCarryIsFull(
+    {
+      session: { phase: session.phase } as never,
+      players: {},
+      playerInventory: selfId ? { [selfId]: selfInventory } : undefined,
+      playerCarry: selfId && selfCarry ? { [selfId]: selfCarry } : undefined,
+    },
+    selfId,
+  );
+  const heldVisual = getHeldVisual(selfCarry);
+  const holdingBread = isHoldingBread(selfCarry);
+  const canBuildBench = !benchBuilt && canAffordRecipePoolCost(pool, buildBenchRecipe);
+  const canCraftAtBench = benchBuilt && !boatBuilt;
   const isRecipePickerOpen = recipePickerOpen && canCraftAtBench;
   const isPlaying = session.phase === "playing";
   const isCompleted = session.phase === "completed";
   const hunger = useLiveGameSelfHungerDisplay({ playing: isPlaying });
   const consume = useLiveGameConsume({ roomId });
   const dropCarry = useLiveGameDropCarry({ roomId });
+  const holdCarry = useLiveGameHoldCarry({ roomId });
+  const carryCapacity = selfInventory.backpack
+    ? ENGLISH_CRAFT_CARRY_CAPACITY_BACKPACK
+    : ENGLISH_CRAFT_CARRY_CAPACITY_BASE;
   const movementSpeedMultiplier =
     isPlaying && hunger.isStarving ? ENGLISH_CRAFT_HUNGER_STARVING_SPEED_MULTIPLIER : 1;
   const sessionTimer = useLiveGameSessionTimer({
@@ -201,75 +238,15 @@ export function LiveGameCanvas({ context }: Props) {
   });
 
   const { getPosition, sampledPosition, now } = stage;
-  const lastInteractionPositionRef = useRef<{ x: number; y: number; syncedAt: number } | null>(null);
-  const interactionPositionSyncInFlightRef = useRef<Promise<boolean> | null>(null);
-  const interactionPositionSyncInFlightPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const publishPositionAt = useCallback(async (position: { x: number; y: number }) => {
-    return diagnosticFetch("/api/live-game/position", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roomId, x: position.x, y: position.y }),
-    }, { phase: "gameplay", name: "interaction_position_sync" });
-  }, [roomId]);
-  const publishPosition = useCallback(
-    () => publishPositionAt(getPosition()),
-    [getPosition, publishPositionAt],
-  );
-
-  const startInteractionPositionSync = useCallback((position: { x: number; y: number }) => {
-    const promise = publishPositionAt(position)
-      .then((response) => {
-        if (response.ok) {
-          // Cache the exact coordinates sent to the server, not wherever the
-          // character moved while the request was in flight.
-          lastInteractionPositionRef.current = {
-            x: position.x,
-            y: position.y,
-            syncedAt: Date.now(),
-          };
-        }
-        return response.ok;
-      })
-      .catch(() => false)
-      .finally(() => {
-        if (interactionPositionSyncInFlightRef.current === promise) {
-          interactionPositionSyncInFlightRef.current = null;
-          interactionPositionSyncInFlightPositionRef.current = null;
-        }
-      });
-    interactionPositionSyncInFlightPositionRef.current = position;
-    interactionPositionSyncInFlightRef.current = promise;
-    return promise;
-  }, [publishPositionAt]);
-
+  const { syncInteractionPosition: runInteractionPositionSync, publishCurrentPosition } =
+    useLiveGameInteractionPositionSync({ roomId, playerId: selfId });
   const syncInteractionPosition = useCallback(
-    (force = false) => {
-      const position = getPosition();
-      const last = lastInteractionPositionRef.current;
-      const recentlySynced =
-        last != null &&
-        Date.now() - last.syncedAt <= 1_500 &&
-        Math.hypot(position.x - last.x, position.y - last.y) <= 12;
-      if (!force && recentlySynced) return Promise.resolve(true);
-
-      const inFlight = interactionPositionSyncInFlightRef.current;
-      if (inFlight) {
-        const inFlightPosition = interactionPositionSyncInFlightPositionRef.current;
-        const samePosition =
-          inFlightPosition != null &&
-          Math.hypot(position.x - inFlightPosition.x, position.y - inFlightPosition.y) <= 2;
-        if (!force || samePosition) return inFlight;
-
-        // The click happened after the prefetch sync began. Finish that request,
-        // then publish the exact click position before accepting an answer/skip.
-        return inFlight.then((synced) =>
-          synced ? startInteractionPositionSync(getPosition()) : false
-        );
-      }
-
-      return startInteractionPositionSync(position);
-    },
-    [getPosition, startInteractionPositionSync],
+    (force = false) => runInteractionPositionSync(getPosition, force),
+    [getPosition, runInteractionPositionSync],
+  );
+  const publishPosition = useCallback(
+    () => publishCurrentPosition(getPosition),
+    [getPosition, publishCurrentPosition],
   );
 
   const connectedBoardingPlayers = useMemo(() => {
@@ -313,19 +290,24 @@ export function LiveGameCanvas({ context }: Props) {
     [now, resourceNodes],
   );
 
-  const carryStorageDef = useMemo(
-    () => (selfCarry ? ENGLISH_CRAFT_STORAGE_BY_TYPE[selfCarry.resourceType] : null),
-    [selfCarry],
-  );
+  const carryStorageDef = useMemo(() => {
+    if (!selfCarry) return null;
+    const preferred = depositResourceTypeFromBag(selfCarry);
+    if (preferred) return ENGLISH_CRAFT_STORAGE_BY_TYPE[preferred];
+    const fallbackType = (["wood", "stone", "wheat", "cotton"] as const).find((type) =>
+      bagHasMatchingResource(selfCarry, type),
+    );
+    return fallbackType ? ENGLISH_CRAFT_STORAGE_BY_TYPE[fallbackType] : null;
+  }, [selfCarry]);
 
   const depositTarget = useMemo(() => {
-    if (!carryStorageDef) return null;
-    return findNearestInteractable(
-      sampledPosition.x,
-      sampledPosition.y,
-      [toStorageInteractTarget(carryStorageDef)],
-    );
-  }, [carryStorageDef, sampledPosition.x, sampledPosition.y]);
+    if (!selfCarry) return null;
+    const matchingStorages = (["wood", "stone", "wheat", "cotton"] as const)
+      .filter((type) => bagHasMatchingResource(selfCarry, type))
+      .map((type) => toStorageInteractTarget(ENGLISH_CRAFT_STORAGE_BY_TYPE[type]));
+    if (matchingStorages.length === 0) return null;
+    return findNearestInteractable(sampledPosition.x, sampledPosition.y, matchingStorages);
+  }, [selfCarry, sampledPosition.x, sampledPosition.y]);
 
   const nearBench = useMemo(
     () =>
@@ -344,13 +326,13 @@ export function LiveGameCanvas({ context }: Props) {
   }, [canBuildBench, canCraftAtBench, nearBench]);
 
   const harvestTarget = useMemo(() => {
-    if (isCarrying) return null;
+    if (carryFull) return null;
     return findNearestInteractable(
       sampledPosition.x,
       sampledPosition.y,
       interactableNodes,
     );
-  }, [interactableNodes, isCarrying, sampledPosition.x, sampledPosition.y]);
+  }, [interactableNodes, carryFull, sampledPosition.x, sampledPosition.y]);
 
   const depositPrefetchInteractTarget = useMemo(
     () =>
@@ -389,17 +371,17 @@ export function LiveGameCanvas({ context }: Props) {
   );
 
   const harvestPrefetchTarget = useMemo(() => {
-    if (isCarrying) return null;
+    if (carryFull) return null;
     return findNearestInteractable(
       sampledPosition.x,
       sampledPosition.y,
       expandedInteractableNodes,
     );
-  }, [expandedInteractableNodes, isCarrying, sampledPosition.x, sampledPosition.y]);
+  }, [expandedInteractableNodes, carryFull, sampledPosition.x, sampledPosition.y]);
 
   const defaultBenchRecipeId = useMemo(
-    () => getDefaultBenchRecipe(gameplaySnapshot),
-    [gameplaySnapshot],
+    () => getDefaultBenchRecipe(gameplaySnapshot, selfId),
+    [gameplaySnapshot, selfId],
   );
   const depositPrefetchStorageId =
     isCarrying && depositPrefetchTarget && carryStorageDef ? carryStorageDef.id : null;
@@ -407,7 +389,7 @@ export function LiveGameCanvas({ context }: Props) {
     canBuildBench && benchPrefetchTarget ? "build_bench"
     : canCraftAtBench && benchPrefetchTarget ? defaultBenchRecipeId
     : null;
-  const harvestPrefetchNodeId = !isCarrying ? (harvestPrefetchTarget?.id ?? null) : null;
+  const harvestPrefetchNodeId = !carryFull ? (harvestPrefetchTarget?.id ?? null) : null;
   const harvestPrefetchCooldownEndsAt =
     harvestPrefetchNodeId ? (resourceNodes[harvestPrefetchNodeId]?.cooldownEndsAt ?? null) : null;
 
@@ -425,6 +407,11 @@ export function LiveGameCanvas({ context }: Props) {
     [craftChallenge, syncInteractionPosition],
   );
 
+  const handleEatBread = useCallback(() => {
+    if (!holdingBread || !isPlaying || anyChallengeOpen) return;
+    void consume.consumeBread();
+  }, [anyChallengeOpen, consume, holdingBread, isPlaying]);
+
   const handleInteract = useCallback(() => {
     if (
       harvestChallenge.isOpen ||
@@ -435,15 +422,28 @@ export function LiveGameCanvas({ context }: Props) {
       return;
     }
 
+    if (holdingBread) {
+      handleEatBread();
+      return;
+    }
+
     const position = getPosition();
 
-    if (isCarrying && carryStorageDef) {
-      const storage = findNearestInteractable(position.x, position.y, [
-        toStorageInteractTarget(carryStorageDef),
-      ]);
-      if (storage) {
-        void depositChallenge.beginChallenge(carryStorageDef, syncInteractionPosition(true));
-        return;
+    if (selfCarry) {
+      const matchingStorages = (["wood", "stone", "wheat", "cotton"] as const)
+        .filter((type) => bagHasMatchingResource(selfCarry, type))
+        .map((type) => ENGLISH_CRAFT_STORAGE_BY_TYPE[type]);
+      const nearStorage = findNearestInteractable(
+        position.x,
+        position.y,
+        matchingStorages.map((storage) => toStorageInteractTarget(storage)),
+      );
+      if (nearStorage) {
+        const storageDef = matchingStorages.find((storage) => storage.id === nearStorage.id);
+        if (storageDef) {
+          void depositChallenge.beginChallenge(storageDef, syncInteractionPosition(true));
+          return;
+        }
       }
     }
 
@@ -469,6 +469,8 @@ export function LiveGameCanvas({ context }: Props) {
       }
     }
 
+    if (carryFull) return;
+
     const node = findNearestInteractable(position.x, position.y, interactableNodes);
     if (!node) return;
     void harvestChallenge.beginChallenge(
@@ -481,84 +483,130 @@ export function LiveGameCanvas({ context }: Props) {
     buildBenchRecipe.label,
     canBuildBench,
     canCraftAtBench,
-    carryStorageDef,
+    carryFull,
     craftChallenge,
     depositChallenge,
     getPosition,
+    handleEatBread,
     harvestChallenge,
+    holdingBread,
     interactableNodes,
-    isCarrying,
     isRecipePickerOpen,
     resourceNodes,
+    selfCarry,
     syncInteractionPosition,
   ]);
 
   useEffect(() => {
+    if (!isPlaying) {
+      harvestChallenge.cancelPrefetch();
+      depositChallenge.cancelPrefetch();
+      craftChallenge.cancelPrefetch();
+      return;
+    }
+
     if (
-      !isPlaying ||
       anyChallengeOpen ||
       harvestChallenge.isSubmitting ||
       depositChallenge.isSubmitting ||
       craftChallenge.isSubmitting
     ) {
-      // Keep the active challenge's matching prefetch alive so the interaction can
-      // adopt it instead of aborting it and issuing the same question request again.
-      if (!harvestChallenge.isOpen) harvestChallenge.cancelPrefetch();
-      if (!depositChallenge.isOpen) depositChallenge.cancelPrefetch();
-      if (!craftChallenge.isOpen) craftChallenge.cancelPrefetch();
+      // Soft-release non-open activities so briefly overlapping prefetches can finish
+      // during the leave-grace window instead of aborting immediately.
+      if (!harvestChallenge.isOpen) harvestChallenge.releasePrefetchFocus();
+      if (!depositChallenge.isOpen) depositChallenge.releasePrefetchFocus();
+      if (!craftChallenge.isOpen) craftChallenge.releasePrefetchFocus();
       return;
     }
 
     if (depositPrefetchStorageId) {
-      harvestChallenge.cancelPrefetch();
-      craftChallenge.cancelPrefetch();
+      harvestChallenge.releasePrefetchFocus();
+      craftChallenge.releasePrefetchFocus();
       const timeout = window.setTimeout(() => {
-        void syncInteractionPosition().then((synced) => {
-          if (synced) void depositChallenge.prefetchForStorage(depositPrefetchStorageId);
-        });
-      }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
-      return () => {
-        window.clearTimeout(timeout);
-        depositChallenge.cancelPrefetch();
-      };
-    }
-
-    if (craftPrefetchRecipeId) {
-      harvestChallenge.cancelPrefetch();
-      depositChallenge.cancelPrefetch();
-      const timeout = window.setTimeout(() => {
-        void syncInteractionPosition().then((synced) => {
-          if (synced) void craftChallenge.prefetchChallenge(craftPrefetchRecipeId);
-        });
-      }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
-      return () => {
-        window.clearTimeout(timeout);
-        craftChallenge.cancelPrefetch();
-      };
-    }
-
-    if (harvestPrefetchNodeId) {
-      depositChallenge.cancelPrefetch();
-      craftChallenge.cancelPrefetch();
-      const timeout = window.setTimeout(() => {
-        void syncInteractionPosition().then((synced) => {
-          if (synced) {
-            void harvestChallenge.prefetchForNode(
-              harvestPrefetchNodeId,
-              harvestPrefetchCooldownEndsAt,
-            );
+        void syncInteractionPosition().then((result) => {
+          if (isUsableLiveGamePositionSyncResult(result)) {
+            void depositChallenge.prefetchForStorage(depositPrefetchStorageId);
+          } else {
+            recordLiveGameDiagnostic("gameplay", "deposit_prefetch", {
+              storageId: depositPrefetchStorageId,
+              prefetchOutcome: "failed",
+              prefetchFailReason: prefetchFailReasonFromPositionSync(result),
+              positionSyncOutcome: positionSyncOutcomeForDiagnostic(result),
+              positionSyncUsable: false,
+              requestCallbackInvoked: false,
+              requestReachedFetch: false,
+              prefetched: true,
+            });
           }
         });
       }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
       return () => {
         window.clearTimeout(timeout);
-        harvestChallenge.cancelPrefetch();
+        depositChallenge.releasePrefetchFocus();
       };
     }
 
-    harvestChallenge.cancelPrefetch();
-    depositChallenge.cancelPrefetch();
-    craftChallenge.cancelPrefetch();
+    if (craftPrefetchRecipeId) {
+      harvestChallenge.releasePrefetchFocus();
+      depositChallenge.releasePrefetchFocus();
+      const timeout = window.setTimeout(() => {
+        void syncInteractionPosition().then((result) => {
+          if (isUsableLiveGamePositionSyncResult(result)) {
+            void craftChallenge.prefetchChallenge(craftPrefetchRecipeId);
+          } else {
+            recordLiveGameDiagnostic("gameplay", "craft_prefetch", {
+              recipeId: craftPrefetchRecipeId,
+              machineId: ENGLISH_CRAFT_CRAFT_BENCH_ID,
+              prefetchOutcome: "failed",
+              prefetchFailReason: prefetchFailReasonFromPositionSync(result),
+              positionSyncOutcome: positionSyncOutcomeForDiagnostic(result),
+              positionSyncUsable: false,
+              requestCallbackInvoked: false,
+              requestReachedFetch: false,
+              prefetched: true,
+            });
+          }
+        });
+      }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
+      return () => {
+        window.clearTimeout(timeout);
+        craftChallenge.releasePrefetchFocus();
+      };
+    }
+
+    if (harvestPrefetchNodeId) {
+      depositChallenge.releasePrefetchFocus();
+      craftChallenge.releasePrefetchFocus();
+      const timeout = window.setTimeout(() => {
+        void syncInteractionPosition().then((result) => {
+          if (isUsableLiveGamePositionSyncResult(result)) {
+            void harvestChallenge.prefetchForNode(
+              harvestPrefetchNodeId,
+              harvestPrefetchCooldownEndsAt,
+            );
+          } else {
+            recordLiveGameDiagnostic("gameplay", "harvest_prefetch", {
+              nodeId: harvestPrefetchNodeId,
+              prefetchOutcome: "failed",
+              prefetchFailReason: prefetchFailReasonFromPositionSync(result),
+              positionSyncOutcome: positionSyncOutcomeForDiagnostic(result),
+              positionSyncUsable: false,
+              requestCallbackInvoked: false,
+              requestReachedFetch: false,
+              prefetched: true,
+            });
+          }
+        });
+      }, LIVE_GAME_CHALLENGE_PREFETCH_DEBOUNCE_MS);
+      return () => {
+        window.clearTimeout(timeout);
+        harvestChallenge.releasePrefetchFocus();
+      };
+    }
+
+    harvestChallenge.releasePrefetchFocus();
+    depositChallenge.releasePrefetchFocus();
+    craftChallenge.releasePrefetchFocus();
   }, [
     anyChallengeOpen,
     craftPrefetchRecipeId,
@@ -607,15 +655,17 @@ export function LiveGameCanvas({ context }: Props) {
     isCompleted ?
       "Team victory!"
     : hunger.isStarving ?
-      "Starving — movement slowed. Eat bread or craft more at the workbench."
+      "Starving — movement slowed. Hold bread and press E to eat."
     : hunger.isLow && benchBuilt && !boatBuilt ?
       "You're getting hungry — craft bread at the workbench"
+    : holdingBread ?
+      "Holding bread — press E to eat"
     : isCarrying ?
-      "Take it to the matching storage and spell the word — E or Interact"
+      "Take resources to matching storage and spell — E or Interact"
     : boatBuilt ?
       "Get everyone on the boat at the dock to escape!"
     : benchBuilt && craftBenchTarget ?
-      "Craft hammers, bread, or the boat at the workbench"
+      "Craft a backpack, hammers, bread, or the boat at the workbench"
     : benchBuilt && hammersNeeded > 0 ?
       `Craft hammers — need ${hammersNeeded} more for the boat`
     : benchBuilt && !canAffordBoatPool ?
@@ -625,11 +675,16 @@ export function LiveGameCanvas({ context }: Props) {
     : "Deposit wood and stone to build the workbench";
 
   const hasInteractTarget =
-    depositTarget != null || craftBenchTarget != null || harvestTarget != null;
+    holdingBread ||
+    depositTarget != null ||
+    craftBenchTarget != null ||
+    (harvestTarget != null && !carryFull);
 
   const interactLabel =
-    depositTarget && selfCarry ?
-      depositInteractLabel(selfCarry.resourceType)
+    holdingBread ?
+      "Eat bread"
+    : depositTarget && selfCarry ?
+      depositInteractLabel(depositResourceTypeFromBag(selfCarry) ?? "wood")
     : craftBenchTarget && canBuildBench ?
       "Build workbench"
     : craftBenchTarget && canCraftAtBench ?
@@ -657,6 +712,21 @@ export function LiveGameCanvas({ context }: Props) {
       setIsAddingTime(false);
     }
   }, [addMinute, isAddingTime]);
+
+  const handleHostGrantResource = useCallback(
+    async (resourceType: LiveGameResourceType) => {
+      if (!isHost || !isPlaying || hostGrantingType) return;
+      setHostGrantingType(resourceType);
+      try {
+        await grantPoolResource(resourceType);
+      } catch (error) {
+        console.error("Could not grant Live Game pool resources", error);
+      } finally {
+        setHostGrantingType(null);
+      }
+    },
+    [grantPoolResource, hostGrantingType, isHost, isPlaying],
+  );
 
   const handleDropCarry = useCallback(async () => {
     const dropped = await dropCarry.dropCarry();
@@ -711,25 +781,39 @@ export function LiveGameCanvas({ context }: Props) {
                 : null}
                 <LiveGameTeamResourceHud
                   pool={pool}
-                  carriedResourceType={selfCarry?.resourceType}
+                  carriedResourceType={heldVisual}
                   hammers={craftedItems.hammers}
                   benchBuilt={craftedItems.benchBuilt}
                   boatBuilt={craftedItems.boat}
                   hungerValue={hunger.value}
                   hungerIsLow={hunger.isLow}
                   hungerIsStarving={hunger.isStarving}
-                  bread={selfInventory.bread}
-                  onEatBread={() => void consume.consumeBread()}
-                  eatDisabled={!isPlaying || anyChallengeOpen}
-                  eatSubmitting={consume.isSubmitting}
-                  onDropCarry={() => void handleDropCarry()}
-                  dropDisabled={!isPlaying || dropCarry.isSubmitting}
-                  dropSubmitting={dropCarry.isSubmitting}
+                  hostGrantEnabled={isHost && isPlaying}
+                  hostGrantDisabled={hostGrantingType != null}
+                  hostGrantingType={hostGrantingType}
+                  onHostGrantResource={(type) => void handleHostGrantResource(type)}
                 />
               </div>
             </div>
             <LiveGameConnectionBanner className="mt-2 rounded-lg border-2 border-amber-300/80 bg-amber-950/90 px-3 py-2 text-sm font-semibold text-amber-100 backdrop-blur-sm" />
           </header>
+
+          <div className="pointer-events-none mt-auto flex justify-center px-3 pb-[max(5.5rem,env(safe-area-inset-bottom))]">
+            <LiveGameCarrySlotBar
+              bag={selfCarry}
+              capacity={carryCapacity}
+              backpackOwned={selfInventory.backpack}
+              disabled={!isPlaying || anyChallengeOpen || holdCarry.isSubmitting}
+              onHoldSlot={(slotIndex) => void holdCarry.holdSlot(slotIndex)}
+              onDropHeld={() => void handleDropCarry()}
+              dropDisabled={!isPlaying || dropCarry.isSubmitting}
+              dropSubmitting={dropCarry.isSubmitting}
+              onEatHeld={() => handleEatBread()}
+              eatDisabled={!isPlaying || anyChallengeOpen}
+              eatSubmitting={consume.isSubmitting}
+              holdingBread={holdingBread}
+            />
+          </div>
 
           {boatBoardingUnlocked && isPlaying && boatBoarding.totalPlayers > 0 ?
             <div className="pointer-events-none mt-3 flex justify-center px-3">
@@ -792,6 +876,9 @@ export function LiveGameCanvas({ context }: Props) {
         open={isRecipePickerOpen}
         pool={pool}
         craftedItems={craftedItems}
+        playerId={selfId}
+        playerInventory={selfInventory}
+        playerCarry={selfCarry}
         onSelect={handleRecipeSelect}
         onClose={() => setRecipePickerOpen(false)}
       />

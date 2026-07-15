@@ -27,7 +27,8 @@ export type LiveGamePresence = {
   isMoving: boolean;
   animation: LiveGameAnimation;
   avatarId: string;
-  carriedResourceType: LiveGameResourceType | null;
+  /** Held haul visual: resource type, bread, or empty hands. */
+  carriedResourceType: LiveGameResourceType | "bread" | null;
 };
 
 export type LiveGameLobbyPlayer = {
@@ -72,11 +73,23 @@ export type LiveGameResourcePool = {
   cotton: number;
 };
 
+export type LiveGameCarrySlot =
+  | {
+      kind: "resource";
+      resourceType: LiveGameResourceType;
+      sourceNodeId: string;
+      questionId: string;
+      harvestedAt: number;
+    }
+  | {
+      kind: "bread";
+      craftedAt: number;
+    };
+
+/** Multi-slot haul bag. Legacy single-item objects are normalized by carry-bag helpers. */
 export type LiveGamePlayerCarry = {
-  resourceType: LiveGameResourceType;
-  sourceNodeId: string;
-  questionId: string;
-  harvestedAt: number;
+  slots: Array<LiveGameCarrySlot | null>;
+  heldSlotIndex: number;
 };
 
 export type LiveGameResourceNodeState = {
@@ -93,6 +106,8 @@ export type LiveGameAwardReceipt = {
   nodeCooldownEndsAt: number;
   /** Pool count after a deposit award. */
   poolCount?: number;
+  /** How many matching items were deposited into the pool. */
+  depositedAmount?: number;
   /** @deprecated Pre-3C harvest receipts used wood instead of awardKind. */
   wood?: number;
 };
@@ -104,7 +119,9 @@ export type LiveGameCraftedItems = {
 };
 
 export type LiveGamePlayerInventory = {
+  /** @deprecated Prefer carry-slot bread; kept for migration of older rooms. */
   bread: number;
+  backpack: boolean;
 };
 
 export type LiveGamePlayerHunger = {
@@ -126,6 +143,7 @@ export type LiveGameCraftReceipt = {
   hammers?: number;
   boatCrafted?: boolean;
   breadGranted?: number;
+  backpackGranted?: boolean;
 };
 
 export type LiveGamePlayerPosition = { x: number; y: number; updatedAt: number };
@@ -169,6 +187,8 @@ export type LiveGameCraftGateSnapshot = {
   session?: Pick<LiveGameSessionState, "phase">;
   resourcePool?: LiveGameResourcePool;
   craftedItems?: LiveGameCraftedItems;
+  playerInventory?: Record<string, LiveGamePlayerInventory>;
+  playerCarry?: Record<string, LiveGamePlayerCarry | Record<string, unknown>>;
 };
 
 export const DEFAULT_LIVE_GAME_PRESENCE: LiveGamePresence = {

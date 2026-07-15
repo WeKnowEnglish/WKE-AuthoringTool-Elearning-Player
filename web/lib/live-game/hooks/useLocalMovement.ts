@@ -33,7 +33,7 @@ type Options = {
   viewportH: number;
   cameraRef: RefObject<HTMLDivElement | null>;
   localPlayerRef: RefObject<HTMLDivElement | null>;
-  carriedResourceType?: LiveGameResourceType | null;
+  carriedResourceType?: LiveGameResourceType | "bread" | null;
   speedMultiplier?: number;
 };
 
@@ -51,7 +51,7 @@ export function useLocalMovement({
   speedMultiplier = 1,
 }: Options) {
   const updatePresence = useUpdateMyPresence();
-  const carriedResourceRef = useRef<LiveGameResourceType | null>(carriedResourceType);
+  const carriedResourceRef = useRef<LiveGameResourceType | "bread" | null>(carriedResourceType);
   const speedMultiplierRef = useRef(speedMultiplier);
   const positionRef = useRef<MovementState>(createMovementState(map, spawnIndex));
   const facingRef = useRef<LiveGameDirection>("right");

@@ -37,8 +37,9 @@ export function LiveGameStudentLobbyBanner() {
                 {ENGLISH_CRAFT_BUILD_BENCH_COSTS.stone} stone)
               </li>
               <li>
-                Craft hammers ({ENGLISH_CRAFT_HAMMER_COSTS.wood} wood, {ENGLISH_CRAFT_HAMMER_COSTS.stone}{" "}
-                stone each) and bread (2 wheat) — stay fed while you work
+                Craft a backpack (2 cotton) for 4 carry slots, hammers (
+                {ENGLISH_CRAFT_HAMMER_COSTS.wood} wood, {ENGLISH_CRAFT_HAMMER_COSTS.stone} stone each),
+                and bread (2 wheat) — hold bread and press E to eat
               </li>
               <li>
                 Craft the boat ({ENGLISH_CRAFT_BOAT_HAMMER_GOAL} hammers,{" "}

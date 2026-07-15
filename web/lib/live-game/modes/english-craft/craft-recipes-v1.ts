@@ -5,16 +5,24 @@ import type {
   LiveGameResourceType,
 } from "@/lib/live-game/liveblocks/config";
 import {
+  ENGLISH_CRAFT_BACKPACK_COSTS,
   ENGLISH_CRAFT_BOAT_HAMMER_GOAL,
   ENGLISH_CRAFT_BOAT_POOL_COSTS,
   ENGLISH_CRAFT_BREAD_COSTS,
   ENGLISH_CRAFT_CRAFT_QUESTION_ID,
   ENGLISH_CRAFT_HAMMER_COSTS,
 } from "@/lib/live-game/modes/english-craft/gameplay-v1";
+import { playerCarryIsFull } from "@/lib/live-game/carry-bag";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
 import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
+import { readPlayerInventory } from "@/lib/live-game/server/read-player-inventory";
 
-export type CraftRecipeId = "build_bench" | "craft_hammer" | "craft_bread" | "craft_boat";
+export type CraftRecipeId =
+  | "build_bench"
+  | "craft_hammer"
+  | "craft_bread"
+  | "craft_backpack"
+  | "craft_boat";
 
 export type CraftRecipePoolCost = Partial<LiveGameResourcePool>;
 
@@ -23,6 +31,7 @@ export type CraftRecipeGrants = {
   hammers?: number;
   boat?: true;
   breadToCrafter?: number;
+  backpackToCrafter?: true;
 };
 
 export type CraftRecipeRequires = {
@@ -30,6 +39,8 @@ export type CraftRecipeRequires = {
   benchNotBuilt?: true;
   boatNotBuilt?: true;
   maxHammers?: number;
+  backpackNotOwned?: true;
+  freeCarrySlot?: true;
 };
 
 export type CraftRecipe = {
@@ -45,8 +56,8 @@ export type CraftRecipe = {
 export type CraftRecipeMissing = LiveGameResourceType | "hammers";
 
 export const ENGLISH_CRAFT_BUILD_BENCH_COSTS = {
-  wood: 10,
-  stone: 5,
+  wood: 2,
+  stone: 1,
 } as const;
 
 export const ENGLISH_CRAFT_BUILD_BENCH_RECIPE: CraftRecipe = {
@@ -72,7 +83,16 @@ export const ENGLISH_CRAFT_CRAFT_BREAD_RECIPE: CraftRecipe = {
   label: "Craft bread",
   poolCost: { ...ENGLISH_CRAFT_BREAD_COSTS },
   grants: { breadToCrafter: 1 },
-  requires: { benchBuilt: true, boatNotBuilt: true },
+  requires: { benchBuilt: true, boatNotBuilt: true, freeCarrySlot: true },
+  questionId: ENGLISH_CRAFT_CRAFT_QUESTION_ID,
+};
+
+export const ENGLISH_CRAFT_CRAFT_BACKPACK_RECIPE: CraftRecipe = {
+  id: "craft_backpack",
+  label: "Craft backpack",
+  poolCost: { ...ENGLISH_CRAFT_BACKPACK_COSTS },
+  grants: { backpackToCrafter: true },
+  requires: { benchBuilt: true, boatNotBuilt: true, backpackNotOwned: true },
   questionId: ENGLISH_CRAFT_CRAFT_QUESTION_ID,
 };
 
@@ -86,12 +106,18 @@ export const ENGLISH_CRAFT_CRAFT_BOAT_RECIPE: CraftRecipe = {
   questionId: ENGLISH_CRAFT_CRAFT_QUESTION_ID,
 };
 
-const BENCH_CRAFT_RECIPE_IDS: CraftRecipeId[] = ["craft_hammer", "craft_bread", "craft_boat"];
+const BENCH_CRAFT_RECIPE_IDS: CraftRecipeId[] = [
+  "craft_backpack",
+  "craft_hammer",
+  "craft_bread",
+  "craft_boat",
+];
 
 const CRAFT_RECIPES: Record<CraftRecipeId, CraftRecipe> = {
   build_bench: ENGLISH_CRAFT_BUILD_BENCH_RECIPE,
   craft_hammer: ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE,
   craft_bread: ENGLISH_CRAFT_CRAFT_BREAD_RECIPE,
+  craft_backpack: ENGLISH_CRAFT_CRAFT_BACKPACK_RECIPE,
   craft_boat: ENGLISH_CRAFT_CRAFT_BOAT_RECIPE,
 };
 
@@ -207,14 +233,32 @@ function meetsRecipeRequires(
   return true;
 }
 
+function meetsPlayerRecipeRequires(
+  storage: LiveGameCraftGateSnapshot | null | undefined,
+  recipe: CraftRecipe,
+  playerId: string | null | undefined,
+): boolean {
+  if (recipe.requires.backpackNotOwned) {
+    if (!playerId) return false;
+    if (readPlayerInventory(storage, playerId).backpack) return false;
+  }
+  if (recipe.requires.freeCarrySlot) {
+    if (!playerId) return false;
+    if (playerCarryIsFull(storage, playerId)) return false;
+  }
+  return true;
+}
+
 export function canStartRecipeCraft(
   storage: LiveGameCraftGateSnapshot | null | undefined,
   recipeId: CraftRecipeId,
+  playerId?: string | null,
 ): boolean {
   if (!storage?.session || storage.session.phase !== "playing") return false;
   const recipe = getCraftRecipe(recipeId);
   const crafted = readCraftedItems(storage);
   if (!meetsRecipeRequires(crafted, recipe.requires)) return false;
+  if (!meetsPlayerRecipeRequires(storage, recipe, playerId)) return false;
   const pool = readResourcePool(storage);
   if (!canAffordRecipePoolCost(pool, recipe)) return false;
   if (!canAffordRecipeCraftedCost(crafted, recipe)) return false;
@@ -231,9 +275,10 @@ export function canCraftAtBench(
 
 export function listAvailableCraftRecipes(
   storage: LiveGameCraftGateSnapshot | null | undefined,
+  playerId?: string | null,
 ): CraftRecipe[] {
   return (Object.keys(CRAFT_RECIPES) as CraftRecipeId[])
-    .filter((recipeId) => canStartRecipeCraft(storage, recipeId))
+    .filter((recipeId) => canStartRecipeCraft(storage, recipeId, playerId))
     .map((recipeId) => getCraftRecipe(recipeId));
 }
 
@@ -246,10 +291,11 @@ export function listBenchCraftRecipes(
 
 export function getDefaultBenchRecipe(
   storage: LiveGameCraftGateSnapshot | null | undefined,
+  playerId?: string | null,
 ): CraftRecipeId | null {
-  if (canStartRecipeCraft(storage, "craft_hammer")) return "craft_hammer";
-  if (canStartRecipeCraft(storage, "craft_bread")) return "craft_bread";
-  if (canStartRecipeCraft(storage, "craft_boat")) return "craft_boat";
+  for (const recipeId of BENCH_CRAFT_RECIPE_IDS) {
+    if (canStartRecipeCraft(storage, recipeId, playerId)) return recipeId;
+  }
   return null;
 }
 

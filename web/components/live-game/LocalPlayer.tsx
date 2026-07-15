@@ -14,7 +14,7 @@ type Props = {
   avatarId?: string;
   facing?: LiveGameDirection;
   isMoving?: boolean;
-  carriedResourceType?: LiveGameResourceType | null;
+  carriedResourceType?: LiveGameResourceType | "bread" | null;
   wrapperRef: RefObject<HTMLDivElement | null>;
 };
 

@@ -5,6 +5,7 @@ import type {
   LiveGameDiagnosticEvent,
   LiveGameDiagnosticPhase,
 } from "@/lib/live-game/diagnostics/types";
+import { resolveServerMs } from "@/lib/live-game/diagnostics/server-timing-parse";
 
 const EVENTS_KEY = "wke:live-game:diagnostic-events:v1";
 const TRACE_KEY = "wke:live-game:diagnostic-trace:v1";
@@ -133,15 +134,6 @@ export function startLiveGameDiagnosticSpan(
   };
 }
 
-function parseServerTiming(value: string | null) {
-  if (!value) return [] as Array<{ name: string; durationMs: number }>;
-  return value.split(",").map((part) => {
-    const [rawName, ...params] = part.trim().split(";");
-    const duration = params.find((param) => param.trim().startsWith("dur="));
-    return { name: rawName.trim(), durationMs: Number(duration?.trim().slice(4) ?? 0) };
-  }).filter((metric) => metric.name && Number.isFinite(metric.durationMs));
-}
-
 export async function diagnosticFetch(
   input: RequestInfo | URL,
   init: RequestInit | undefined,
@@ -153,18 +145,40 @@ export async function diagnosticFetch(
   try {
     const response = await fetch(input, init);
     const headersAt = performance.now();
-    const metrics = parseServerTiming(response.headers.get("Server-Timing"));
+    const timeToHeadersMs = Math.round(headersAt - startedAt);
+    let serverMs: number | null = null;
+    let metrics: Array<{ name: string; durationMs: number }> = [];
+    try {
+      const resolved = resolveServerMs(
+        response.headers.get("X-Server-Ms"),
+        response.headers.get("Server-Timing"),
+      );
+      serverMs = resolved.serverMs;
+      metrics = resolved.metrics;
+    } catch {
+      // Malformed timing headers must never break gameplay requests.
+    }
     for (const metric of metrics) {
       recordLiveGameDiagnostic(options.phase, `server:${metric.name}`, options.detail, {
         kind: "span",
         durationMs: metric.durationMs,
       });
     }
+    const roundedServerMs = serverMs == null ? null : Math.round(serverMs);
     finish({
       status: response.status,
       ok: response.ok,
-      timeToHeadersMs: Math.round(headersAt - startedAt),
-      serverMs: Math.round(metrics.reduce((max, metric) => Math.max(max, metric.durationMs), 0)),
+      timeToHeadersMs,
+      serverMs: roundedServerMs,
+      networkOrQueueMs:
+        roundedServerMs == null ? null : Math.max(0, timeToHeadersMs - roundedServerMs),
+      serverTiming:
+        metrics.length > 0 ?
+          metrics.map((metric) => ({
+            name: metric.name,
+            durationMs: Math.round(metric.durationMs * 10) / 10,
+          }))
+        : null,
     });
     return response;
   } catch (error) {

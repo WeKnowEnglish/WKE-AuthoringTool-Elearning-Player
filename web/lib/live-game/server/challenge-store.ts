@@ -215,6 +215,34 @@ export async function markChallengeAwarded(challengeId: string): Promise<void> {
   if (error) throw new Error(`Could not complete live-game challenge: ${error.message}`);
 }
 
+/**
+ * Revert an in-flight award claim so a retry can reclaim immediately after a
+ * Liveblocks mutation failure. Only touches `awarding` rows.
+ */
+export async function releaseLiveGameChallengeAwardClaim(challengeId: string): Promise<boolean> {
+  const supabase = requireChallengeDatabase();
+  const { data, error } = await supabase.rpc("release_live_game_challenge_award_claim", {
+    p_challenge_id: challengeId,
+  });
+  if (error) {
+    // Fallback for environments that have not yet applied migration 046.
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabase
+      .from("live_game_challenges")
+      .update({ status: "active", claim_started_at: null, updated_at: now })
+      .eq("id", challengeId)
+      .eq("status", "awarding")
+      .select("id")
+      .maybeSingle();
+    if (updateError) {
+      throw new Error(`Could not release live-game challenge claim: ${updateError.message}`);
+    }
+    void data;
+    return updated != null;
+  }
+  return data === true;
+}
+
 export async function expireLiveGameRoomChallenges(roomId: string): Promise<void> {
   const now = new Date().toISOString();
   const { error } = await requireChallengeDatabase()

@@ -18,9 +18,12 @@ import { createMovementState } from "@/lib/live-game/engine/movement";
 import { getMapForMode } from "@/lib/live-game/modes";
 import { getLiveGameCapacity, LIVE_GAME_MAX_STUDENTS } from "@/lib/live-game/limits";
 import { withLiveGameRoomLock } from "@/lib/live-game/server/room-lock";
-import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
+import {
+  withLiveGameServerTiming,
+  type LiveGameServerTimer,
+} from "@/lib/live-game/server/server-timing";
 
-async function handlePost(request: Request) {
+async function handlePost(request: Request, timer: LiveGameServerTimer) {
   const body = (await request.json().catch(() => null)) as {
     sessionId?: string;
     displayName?: string;
@@ -33,14 +36,12 @@ async function handlePost(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await timer.measure("auth", () => supabase.auth.getUser());
 
   const roomId = toRoomId(sessionId);
-  const snapshot = await readLiveGameStorageJson(roomId);
-  if (!snapshot?.session) return NextResponse.json({ error: "Room not found." }, { status: 404 });
-  if (snapshot.session.phase !== "lobby") {
-    return NextResponse.json({ error: "This game has already started." }, { status: 409 });
-  }
+  timer.setContext({ roomId, sessionId, role: "player", routeType: "join" });
 
   const existingIdentity = await getLiveGamePlayerSession();
   const playerId =
@@ -49,14 +50,43 @@ async function handlePost(request: Request) {
       existingIdentity.playerId
     : `guest-${randomBytes(16).toString("hex")}`);
   const requestedAvatar = toLiveGameCharacterId(body?.avatarId ?? "");
+  const reconnect =
+    existingIdentity?.roomId === roomId &&
+    existingIdentity.role === "player" &&
+    existingIdentity.playerId === playerId;
+
+  let liveblocksCallCount = 0;
+  let liveblocksReadCount = 0;
+  let liveblocksMutateCount = 0;
+  let storageSnapshotReused = false;
+  let playerCountBefore = 0;
+  let playerCountAfter = 0;
+  let joinOutcome = "pending";
+  let idempotencyOutcome = "none";
+  let mutationRequestBytes: number | null = null;
+
   const admission = await withLiveGameRoomLock(roomId, async () => {
-    // Re-read under the room lock so capacity and insertion use the same admission view.
-    const current = await readLiveGameStorageJson(roomId);
-    if (!current?.session) return { ok: false as const, status: 404, code: "room_not_found", error: "Room not found." };
+    // Single full Storage read under the lock — concurrent instances still rely on
+    // mutateStorage idempotent insertion (`if (!players.get(playerId))`).
+    const current = await timer.measure("liveblocks_read", async () => {
+      liveblocksCallCount += 1;
+      liveblocksReadCount += 1;
+      return readLiveGameStorageJson(roomId);
+    });
+    storageSnapshotReused = true;
+    if (!current?.session) {
+      return { ok: false as const, status: 404, code: "room_not_found", error: "Room not found." };
+    }
     if (current.session.phase !== "lobby") {
-      return { ok: false as const, status: 409, code: "game_started", error: "This game has already started." };
+      return {
+        ok: false as const,
+        status: 409,
+        code: "game_started",
+        error: "This game has already started.",
+      };
     }
 
+    playerCountBefore = Object.keys(current.players ?? {}).length;
     const capacity = getLiveGameCapacity(current.players, playerId);
     if (!capacity.canJoinAsStudent) {
       const invalidHostCount = capacity.hostCount !== 1;
@@ -70,35 +100,88 @@ async function handlePost(request: Request) {
       };
     }
 
+    const alreadyPresent = Boolean(current.players?.[playerId]);
     const liveblocks = getLiveblocksServerClient();
-    await liveblocks.mutateStorage(roomId, ({ root }) => {
-      const liveRoot = root as unknown as { get(key: string): unknown };
-      const players = root.get("players") as unknown as {
-        get(id: string): unknown;
-        set(id: string, value: LiveObject<LiveGameLobbyPlayer>): void;
-      };
-      if (!players?.get(playerId)) {
-        players.set(playerId, new LiveObject<LiveGameLobbyPlayer>({
-          name: displayName,
-          color: "#64748b",
-          role: "player",
-          isReady: false,
-          joinedAt: Date.now(),
+    await timer.measure("liveblocks_mutate", async () => {
+      liveblocksCallCount += 1;
+      liveblocksMutateCount += 1;
+      mutationRequestBytes = Buffer.byteLength(
+        JSON.stringify({
+          playerId,
+          displayName,
           avatarId: requestedAvatar,
-        }));
-        const positions = liveRoot.get("playerPositions") as import("@liveblocks/client").LiveMap<string, LiveObject<{ x: number; y: number; updatedAt: number }>>;
-        const spawn = createMovementState(
-          getMapForMode(current.session.mapId, current.session.modeId),
-          Object.keys(current.players ?? {}).length,
-        );
-        positions?.set(playerId, new LiveObject({ ...spawn, updatedAt: Date.now() }));
-      }
+          insert: !alreadyPresent,
+        }),
+        "utf8",
+      );
+      await liveblocks.mutateStorage(roomId, ({ root }) => {
+        const liveRoot = root as unknown as { get(key: string): unknown };
+        const players = root.get("players") as unknown as {
+          get(id: string): unknown;
+          set(id: string, value: LiveObject<LiveGameLobbyPlayer>): void;
+        };
+        if (!players?.get(playerId)) {
+          players.set(
+            playerId,
+            new LiveObject<LiveGameLobbyPlayer>({
+              name: displayName,
+              color: "#64748b",
+              role: "player",
+              isReady: false,
+              joinedAt: Date.now(),
+              avatarId: requestedAvatar,
+            }),
+          );
+          const positions = liveRoot.get("playerPositions") as import("@liveblocks/client").LiveMap<
+            string,
+            LiveObject<{ x: number; y: number; updatedAt: number }>
+          >;
+          const spawn = createMovementState(
+            getMapForMode(current.session.mapId, current.session.modeId),
+            Object.keys(current.players ?? {}).length,
+          );
+          positions?.set(playerId, new LiveObject({ ...spawn, updatedAt: Date.now() }));
+        }
+      });
     });
+
+    if (alreadyPresent) {
+      joinOutcome = "existing_player";
+      idempotencyOutcome = reconnect ? "reconnect" : "duplicate_request";
+      playerCountAfter = playerCountBefore;
+    } else {
+      joinOutcome = "inserted";
+      idempotencyOutcome = "inserted";
+      playerCountAfter = playerCountBefore + 1;
+    }
 
     return { ok: true as const, snapshot: current };
   });
 
   if (!admission.ok) {
+    timer.setContext({
+      liveblocksCallCount,
+      liveblocksReadCount,
+      liveblocksMutateCount,
+      idempotencyOutcome: admission.code,
+    });
+    console.info(
+      JSON.stringify({
+        type: "live_game_student_join_detail",
+        roomId,
+        sessionId,
+        liveblocksCallCount,
+        liveblocksReadCount,
+        liveblocksMutateCount,
+        storageSnapshotReused,
+        playerCountBefore,
+        playerCountAfter,
+        joinOutcome: admission.code,
+        idempotencyOutcome: admission.code,
+        reconnect,
+        mutationRequestBytes,
+      }),
+    );
     return NextResponse.json(
       { error: admission.error, code: admission.code },
       { status: admission.status },
@@ -106,10 +189,10 @@ async function handlePost(request: Request) {
   }
   const admittedSnapshot = admission.snapshot;
 
-  const response = NextResponse.json({
+  const payload = {
     sessionId,
     userId: playerId,
-    role: "player",
+    role: "player" as const,
     classId: admittedSnapshot.session.classId,
     classTitle: admittedSnapshot.session.classTitle,
     mapId: admittedSnapshot.session.mapId,
@@ -117,7 +200,39 @@ async function handlePost(request: Request) {
     durationMinutes: admittedSnapshot.session.durationMinutes,
     questionSetId: admittedSnapshot.session.questionSetId,
     questionSetVersion: admittedSnapshot.session.questionSetVersion,
-  } satisfies Partial<LiveGameStorageSnapshot["session"]> & { userId: string; role: "player"; sessionId: string });
+  } satisfies Partial<LiveGameStorageSnapshot["session"]> & {
+    userId: string;
+    role: "player";
+    sessionId: string;
+  };
+  const responseBytes = Buffer.byteLength(JSON.stringify(payload), "utf8");
+  timer.setContext({
+    liveblocksCallCount,
+    liveblocksReadCount,
+    liveblocksMutateCount,
+    idempotencyOutcome,
+    responseBytes,
+  });
+  console.info(
+    JSON.stringify({
+      type: "live_game_student_join_detail",
+      roomId,
+      sessionId,
+      liveblocksCallCount,
+      liveblocksReadCount,
+      liveblocksMutateCount,
+      storageSnapshotReused,
+      playerCountBefore,
+      playerCountAfter,
+      joinOutcome,
+      idempotencyOutcome,
+      reconnect,
+      mutationRequestBytes,
+      responseBytes,
+    }),
+  );
+
+  const response = NextResponse.json(payload);
   response.cookies.set(
     LIVE_GAME_PLAYER_COOKIE_NAME,
     createLiveGamePlayerToken({
@@ -134,5 +249,5 @@ async function handlePost(request: Request) {
 }
 
 export async function POST(request: Request) {
-  return withLiveGameServerTiming("live_game_student_join", () => handlePost(request));
+  return withLiveGameServerTiming("live_game_student_join", (timer) => handlePost(request, timer));
 }

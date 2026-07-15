@@ -7,10 +7,20 @@ export type LiveGameDiagnosticPhase =
   | "report"
   | "system";
 
-export type LiveGameDiagnosticDetail = Record<
-  string,
-  string | number | boolean | null | undefined
->;
+export type LiveGameDiagnosticServerTimingEntry = {
+  name: string;
+  durationMs: number;
+};
+
+export type LiveGameDiagnosticDetailValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | LiveGameDiagnosticServerTimingEntry[];
+
+export type LiveGameDiagnosticDetail = Record<string, LiveGameDiagnosticDetailValue>;
 
 export type LiveGameDiagnosticEvent = {
   id: string;

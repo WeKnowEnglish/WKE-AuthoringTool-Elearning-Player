@@ -80,6 +80,10 @@ function readCache(ref: string, version?: number): LiveGameQuestionSetSnapshot |
   return null;
 }
 
+export function peekQuestionSetSnapshotCacheHit(ref: string, version?: number): boolean {
+  return readCache(ref, version) != null;
+}
+
 function writeCache(snapshot: LiveGameQuestionSetSnapshot) {
   if (snapshotCache.size >= MAX_CACHE_ENTRIES) {
     const oldestKey = snapshotCache.keys().next().value as string | undefined;
@@ -274,4 +278,8 @@ export function invalidateQuestionSetCache(ref: string): void {
       snapshotCache.delete(key);
     }
   }
+  // Best-effort: drop all safe-bank caches on publish invalidation (immutable versions).
+  void import("@/lib/live-game/server/question-bundle").then((mod) => {
+    mod.clearSafeLiveGameQuestionBundleCacheForTests();
+  });
 }

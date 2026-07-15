@@ -2,10 +2,17 @@
 
 import { useCallback } from "react";
 import { useOthers, useSelf, useStorage } from "@liveblocks/react/suspense";
-import type { LiveGameLobbyPlayer, LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
-import type { LiveGameRoundEndReason } from "@/lib/live-game/liveblocks/config";
+import type {
+  LiveGameLobbyPlayer,
+  LiveGameResourceType,
+  LiveGameRoundEndReason,
+  LiveGameStorageSnapshot,
+} from "@/lib/live-game/liveblocks/config";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 import { diagnosticFetch, recordLiveGameDiagnostic } from "@/lib/live-game/diagnostics/client";
+
+/** Keep in sync with LIVE_GAME_HOST_GRANT_POOL_AMOUNT on the server. */
+const HOST_GRANT_POOL_AMOUNT = 5;
 
 export type LiveGameLobbyPlayerEntry = {
   id: string;
@@ -51,6 +58,40 @@ export function useLiveGameLobby() {
   );
   const addMinute = useCallback(() => control("add_time"), [control]);
 
+  const grantPoolResource = useCallback(
+    async (resourceType: LiveGameResourceType) => {
+      recordLiveGameDiagnostic("gameplay", "host_grant_pool_click", {
+        resourceType,
+        amount: HOST_GRANT_POOL_AMOUNT,
+      });
+      const response = await diagnosticFetch(
+        "/api/live-game/control",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roomId: toRoomId(session.joinCode),
+            action: "grant_pool",
+            resourceType,
+          }),
+        },
+        {
+          phase: "gameplay",
+          name: "host_grant_pool",
+          detail: { resourceType, amount: HOST_GRANT_POOL_AMOUNT },
+        },
+      );
+      const payload = (await response.json()) as {
+        error?: string;
+        poolCount?: number;
+        amount?: number;
+      };
+      if (!response.ok) throw new Error(payload.error ?? "Could not add resources.");
+      return payload;
+    },
+    [session.joinCode],
+  );
+
   const selfEntry = players.find((entry) => entry.id === self.id) ?? null;
   const isHost = selfEntry?.player.role === "host";
 
@@ -66,6 +107,7 @@ export function useLiveGameLobby() {
     closeLobby,
     endRoundAndReturnToLobby,
     addMinute,
+    grantPoolResource,
   };
 }
 

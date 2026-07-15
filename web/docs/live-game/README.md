@@ -10,6 +10,7 @@
 
 | Doc | Purpose |
 | --- | --- |
+| [CURSOR_HANDOFF_2026-07-14.md](./CURSOR_HANDOFF_2026-07-14.md) | Current implementation snapshot, release gate, and next teacher-development phase |
 | [product-framing.md](./product-framing.md) | Product identity, English Craft mode, session mantra |
 | [phase-2-plan.md](./phase-2-plan.md) | Phase 2 implementation plan (v0.1 win loop) ✅ |
 | [phase-3a-plan.md](./phase-3a-plan.md) | Phase 3A — question bank, art, map scaffold ✅ |
@@ -49,7 +50,7 @@
 
 **Local dev:** Live Game requires Supabase migrations **035–038** applied. Question content is DB-only (no TS registry fallback since Q5).
 
-Reporting V2 and class-owned Live Game projects require Supabase migrations through `042`.
+Base Reporting V2 and class-owned Live Game projects require Supabase migrations through `042`. The optimized reporting path requires `043`, and private production diagnostic capture/export requires `044`.
 
 ## Milestone map
 

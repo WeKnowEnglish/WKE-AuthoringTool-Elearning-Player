@@ -7,7 +7,10 @@ import { getQuestionById } from "@/lib/live-game/server/question-set-resolver";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { recordCurrentLiveGameEncounter } from "@/lib/live-game/server/report-evidence";
-import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
+import {
+  withLiveGameServerTiming,
+  type LiveGameServerTimer,
+} from "@/lib/live-game/server/server-timing";
 
 type OpenEncounterBody = {
   roomId?: string;
@@ -15,7 +18,7 @@ type OpenEncounterBody = {
   recipeId?: string;
 };
 
-async function handlePost(request: Request) {
+async function handlePost(request: Request, timer: LiveGameServerTimer) {
   const body = (await request.json().catch(() => null)) as OpenEncounterBody | null;
   if (!body?.roomId || !body.challengeId) {
     return NextResponse.json({ error: "roomId and challengeId are required." }, { status: 400 });
@@ -23,10 +26,11 @@ async function handlePost(request: Request) {
 
   const roomId = body.roomId.trim();
   const challengeId = body.challengeId.trim();
-  const player = await requireLiveGamePlayerSession(roomId);
+  timer.setContext({ roomId });
+  const player = await timer.measure("auth", () => requireLiveGamePlayerSession(roomId));
   const [challenge, storage] = await Promise.all([
-    getLiveGameChallenge(challengeId),
-    readLiveGameStorageJson(roomId),
+    timer.measure("supabase_query", () => getLiveGameChallenge(challengeId)),
+    timer.measure("liveblocks_read", () => readLiveGameStorageJson(roomId)),
   ]);
   if (!challenge || challenge.roomId !== roomId || challenge.playerId !== player.playerId) {
     return NextResponse.json({ error: "Challenge not found." }, { status: 404 });
@@ -36,7 +40,9 @@ async function handlePost(request: Request) {
   }
 
   const context = readChallengeQuestionSetContext(storage.session, challenge);
-  const question = await getQuestionById(context.ref, context.bank, challenge.questionId, context.version);
+  const question = await timer.measure("question_select", () =>
+    getQuestionById(context.ref, context.bank, challenge.questionId, context.version),
+  );
   if (!question) return NextResponse.json({ error: "Question not found." }, { status: 404 });
 
   const resourceType =
@@ -47,23 +53,28 @@ async function handlePost(request: Request) {
     ? body.recipeId
     : undefined;
 
-  await recordCurrentLiveGameEncounter({
-    storage,
-    challenge,
-    question,
-    resourceType,
-    recipeId,
-  });
+  await timer.measure("reporting", () =>
+    recordCurrentLiveGameEncounter({
+      storage,
+      challenge,
+      question,
+      resourceType,
+      recipeId,
+    }),
+  );
   return NextResponse.json({ ok: true });
 }
+
 export async function POST(request: Request) {
-  try {
-    return await withLiveGameServerTiming("live_game_encounter_open", () => handlePost(request));
-  } catch (error) {
-    if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
-      return NextResponse.json({ error: "Not authorized." }, { status: 401 });
+  return withLiveGameServerTiming("live_game_encounter_open", async (timer) => {
+    try {
+      return await handlePost(request, timer);
+    } catch (error) {
+      if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
+        return NextResponse.json({ error: "Not authorized." }, { status: 401 });
+      }
+      console.error("Live-game encounter open failed", error);
+      return NextResponse.json({ error: "Could not open the learning question." }, { status: 503 });
     }
-    console.error("Live-game encounter open failed", error);
-    return NextResponse.json({ error: "Could not open the learning question." }, { status: 503 });
-  }
+  });
 }

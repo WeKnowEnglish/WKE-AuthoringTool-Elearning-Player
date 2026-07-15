@@ -34,14 +34,25 @@ describe("Live Game reporting optimization contract", () => {
     expect(migration).not.toContain("for row in");
   });
 
-  it("records a correct answer once after its award", () => {
+  it("records incorrect attempts and finalizes correct awards", () => {
     for (const route of [
       "../../../app/api/live-game/answer/route.ts",
       "../../../app/api/live-game/deposit/answer/route.ts",
       "../../../app/api/live-game/craft/answer/route.ts",
     ]) {
       const routeSource = source(route);
-      expect(routeSource.match(/recordCurrentLiveGameAttempt\(\{/g)).toHaveLength(2);
+      expect(routeSource).toContain("recordCurrentLiveGameAttempt({");
+      expect(routeSource).toContain("finalizeCurrentLiveGameCorrectAnswer({");
+      expect(routeSource).toContain("releaseLiveGameChallengeAwardClaim");
+      expect(routeSource.match(/recordCurrentLiveGameAttempt\(\{/g)).toHaveLength(1);
     }
+  });
+
+  it("uses the combined finalize correct-answer RPC", () => {
+    const repository = source("./report-repository.ts");
+    const migration = source("../../../supabase/migrations/046_live_game_answer_finalize_rpc.sql");
+    expect(repository).toContain('rpc("finalize_live_game_correct_answer"');
+    expect(migration).toContain("finalize_live_game_correct_answer");
+    expect(migration).toContain("release_live_game_challenge_award_claim");
   });
 });

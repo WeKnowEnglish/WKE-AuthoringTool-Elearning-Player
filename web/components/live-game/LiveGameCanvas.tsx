@@ -138,7 +138,7 @@ export function LiveGameCanvas({ context }: Props) {
     playerId: selfId,
     questionCursor: harvestQuestionCursor,
   });
-  const depositChallenge = useLiveGameDepositChallenge({ roomId });
+  const depositChallenge = useLiveGameDepositChallenge({ roomId, playerId: selfId });
   const craftChallenge = useLiveGameCraftChallenge({
     roomId,
     playerId: selfId,

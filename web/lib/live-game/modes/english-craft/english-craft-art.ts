@@ -69,7 +69,7 @@ export function resolveResourceNodeArt(
   }
 }
 
-export function resolveCarryArt(resourceType: EnglishCraftResourceType): string {
+export function resolveCarryArt(resourceType: EnglishCraftResourceType | "bread"): string {
   switch (resourceType) {
     case "wood":
       return ENGLISH_CRAFT_ART.logs;
@@ -79,6 +79,8 @@ export function resolveCarryArt(resourceType: EnglishCraftResourceType): string 
       return ENGLISH_CRAFT_ART.wheatResource;
     case "cotton":
       return ENGLISH_CRAFT_ART.cottonResource;
+    case "bread":
+      return ENGLISH_CRAFT_ART.wheatResource;
   }
 }
 

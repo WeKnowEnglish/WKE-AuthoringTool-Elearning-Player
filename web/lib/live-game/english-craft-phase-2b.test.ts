@@ -77,7 +77,7 @@ describe("english-craft craft gates", () => {
     expect(
       canStartCraftChallenge({
         ...playingSession,
-        resourcePool: { wood: 9, stone: 5, wheat: 0, cotton: 0 },
+        resourcePool: { wood: 1, stone: 5, wheat: 0, cotton: 0 },
       }),
     ).toBe(false);
   });
@@ -86,7 +86,7 @@ describe("english-craft craft gates", () => {
     expect(
       canStartCraftChallenge({
         ...playingSession,
-        resourcePool: { wood: 10, stone: 4, wheat: 0, cotton: 0 },
+        resourcePool: { wood: 10, stone: 0, wheat: 0, cotton: 0 },
       }),
     ).toBe(false);
   });

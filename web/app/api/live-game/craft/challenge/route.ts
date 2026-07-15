@@ -100,7 +100,7 @@ async function handlePost(request: Request) {
   if (storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
-  if (!canStartRecipeCraft(storage, recipeId)) {
+  if (!canStartRecipeCraft(storage, recipeId, playerId)) {
     const crafted = readCraftedItems(storage);
     const missing = missingRecipeRequirements(readResourcePool(storage), crafted, recipe);
     return NextResponse.json(

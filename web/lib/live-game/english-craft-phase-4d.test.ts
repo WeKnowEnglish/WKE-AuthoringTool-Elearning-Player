@@ -79,8 +79,8 @@ describe("english-craft phase 4d bread craft", () => {
     expect(ENGLISH_CRAFT_CRAFT_BREAD_RECIPE.grants).toEqual({ breadToCrafter: 1 });
   });
 
-  it("requires an active bench and no boat", () => {
-    expect(canStartRecipeCraft(playingSession, "craft_bread")).toBe(true);
+  it("requires an active bench, free carry slot, and no boat", () => {
+    expect(canStartRecipeCraft(playingSession, "craft_bread", "player-1")).toBe(true);
     expect(
       canStartRecipeCraft(
         {
@@ -88,6 +88,7 @@ describe("english-craft phase 4d bread craft", () => {
           resourcePool: { wood: 0, stone: 0, wheat: 1, cotton: 0 },
         },
         "craft_bread",
+        "player-1",
       ),
     ).toBe(false);
     expect(
@@ -97,29 +98,35 @@ describe("english-craft phase 4d bread craft", () => {
           craftedItems: { benchBuilt: true, hammers: 0, boat: true },
         },
         "craft_bread",
+        "player-1",
       ),
     ).toBe(false);
   });
 
-  it("adds bread to the crafter inventory instead of the team pool", () => {
+  it("adds bread to the crafter carry bag instead of an inventory count", () => {
     const next = applyCraftRecipeAwardToSnapshot(playingSession, "craft_bread", "player-1");
     expect(next?.resourcePool.wheat).toBe(2);
-    expect(next?.playerInventory?.["player-1"]?.bread).toBe(1);
+    expect(next?.playerCarry?.["player-1"]?.slots.some((slot) => slot?.kind === "bread")).toBe(true);
   });
 
-  it("lists bread in the bench recipe menu", () => {
+  it("lists backpack and bread in the bench recipe menu", () => {
     const recipes = listBenchCraftRecipes(playingSession);
-    expect(recipes.map((recipe) => recipe.id)).toEqual(["craft_hammer", "craft_bread", "craft_boat"]);
+    expect(recipes.map((recipe) => recipe.id)).toEqual([
+      "craft_backpack",
+      "craft_hammer",
+      "craft_bread",
+      "craft_boat",
+    ]);
     expect(getDefaultBenchRecipe(playingSession)).toBe("craft_hammer");
   });
 });
 
 describe("english-craft phase 4d consume bread", () => {
-  it("restores hunger and decrements bread", () => {
+  it("restores hunger and decrements inventory bread", () => {
     const result = applyConsumeBreadToSnapshot(
       {
         session: { phase: "playing" },
-        playerInventory: { "player-1": { bread: 2 } },
+        playerInventory: { "player-1": { bread: 2, backpack: false } },
         playerHunger: { "player-1": { value: 10, lastUpdatedAt: 1_000 } },
       },
       "player-1",
@@ -130,11 +137,31 @@ describe("english-craft phase 4d consume bread", () => {
     expect(result?.playerHunger["player-1"]?.lastUpdatedAt).toBe(50_000);
   });
 
+  it("consumes held carry bread first", () => {
+    const result = applyConsumeBreadToSnapshot(
+      {
+        session: { phase: "playing" },
+        playerInventory: { "player-1": { bread: 0, backpack: false } },
+        playerCarry: {
+          "player-1": {
+            slots: [{ kind: "bread", craftedAt: 1 }, null, null, null],
+            heldSlotIndex: 0,
+          },
+        },
+        playerHunger: { "player-1": { value: 10, lastUpdatedAt: 1_000 } },
+      },
+      "player-1",
+      50_000,
+    );
+    expect(result?.playerCarry?.["player-1"]).toBeUndefined();
+    expect(result?.playerHunger["player-1"]?.value).toBe(ENGLISH_CRAFT_HUNGER_MAX);
+  });
+
   it("rejects consume when bread is empty", () => {
     const result = applyConsumeBreadToSnapshot(
       {
         session: { phase: "playing" },
-        playerInventory: { "player-1": { bread: 0 } },
+        playerInventory: { "player-1": { bread: 0, backpack: false } },
       },
       "player-1",
     );

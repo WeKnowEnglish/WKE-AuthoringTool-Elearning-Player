@@ -26,14 +26,14 @@ const playingSession = {
 };
 
 describe("english-craft phase 4c hammer recipe", () => {
-  it("locks hammer costs to 2 wood and 2 stone", () => {
-    expect(ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE.poolCost).toEqual({ wood: 2, stone: 2 });
+  it("locks hammer costs to 1 wood and 1 stone", () => {
+    expect(ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE.poolCost).toEqual({ wood: 1, stone: 1 });
   });
 
-  it("affords hammer craft at 2 wood and 2 stone", () => {
-    const pool = { wood: 2, stone: 2, wheat: 0, cotton: 0 };
+  it("affords hammer craft at 1 wood and 1 stone", () => {
+    const pool = { wood: 1, stone: 1, wheat: 0, cotton: 0 };
     expect(canAffordRecipePoolCost(pool, ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE)).toBe(true);
-    expect(canAffordRecipePoolCost({ ...pool, wood: 1 }, ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE)).toBe(false);
+    expect(canAffordRecipePoolCost({ ...pool, wood: 0 }, ENGLISH_CRAFT_CRAFT_HAMMER_RECIPE)).toBe(false);
   });
 
   it("requires an active bench and no boat for hammer craft", () => {
@@ -41,7 +41,7 @@ describe("english-craft phase 4c hammer recipe", () => {
       canStartRecipeCraft(
         {
           session: { phase: "playing" },
-          resourcePool: { wood: 2, stone: 2, wheat: 0, cotton: 0 },
+          resourcePool: { wood: 1, stone: 1, wheat: 0, cotton: 0 },
           craftedItems: { benchBuilt: false, hammers: 0, boat: false },
         },
         "craft_hammer",
@@ -52,7 +52,7 @@ describe("english-craft phase 4c hammer recipe", () => {
       canStartRecipeCraft(
         {
           ...playingSession,
-          resourcePool: { wood: 2, stone: 2, wheat: 0, cotton: 0 },
+          resourcePool: { wood: 1, stone: 1, wheat: 0, cotton: 0 },
           craftedItems: { benchBuilt: true, hammers: 0, boat: true },
         },
         "craft_hammer",
@@ -69,7 +69,7 @@ describe("english-craft phase 4c hammer recipe", () => {
       },
       "craft_hammer",
     );
-    expect(next?.resourcePool).toEqual({ wood: 2, stone: 2, wheat: 0, cotton: 0 });
+    expect(next?.resourcePool).toEqual({ wood: 3, stone: 3, wheat: 0, cotton: 0 });
     expect(readCraftedItems(next).hammers).toBe(3);
   });
 });
@@ -146,9 +146,10 @@ describe("english-craft phase 4c boat recipe", () => {
 });
 
 describe("english-craft phase 4c bench recipe menu", () => {
-  it("lists hammer, bread, and boat recipes when bench is active", () => {
+  it("lists backpack, hammer, bread, and boat recipes when bench is active", () => {
     expect(canCraftAtBench(playingSession)).toBe(true);
     expect(listBenchCraftRecipes(playingSession).map((recipe) => recipe.id)).toEqual([
+      "craft_backpack",
       "craft_hammer",
       "craft_bread",
       "craft_boat",
@@ -156,7 +157,7 @@ describe("english-craft phase 4c bench recipe menu", () => {
     expect(listBenchCraftRecipes({ ...playingSession, craftedItems: { boat: true } })).toEqual([]);
   });
 
-  it("prefers hammer for default prefetch when both are affordable", () => {
+  it("prefers hammer for default prefetch when backpack cannot start without player", () => {
     expect(getDefaultBenchRecipe(playingSession)).toBe("craft_hammer");
     expect(
       getDefaultBenchRecipe({

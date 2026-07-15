@@ -15,7 +15,7 @@ import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   createLiveGameChallenge,
 } from "@/lib/live-game/server/challenge-store";
-import { isPlayerCarrying } from "@/lib/live-game/server/player-carry";
+import { playerCarryIsFull } from "@/lib/live-game/carry-bag";
 import {
   isResourceNodeAvailable,
   readLiveGameStorageJson,
@@ -72,8 +72,9 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
 
   const roomId = parsed.roomId.trim();
   const nodeId = parsed.nodeId.trim();
+  timer.setContext({ roomId });
   const playerId = (
-    await timer.measure("player_session", () => requireLiveGamePlayerSession(roomId))
+    await timer.measure("auth", () => requireLiveGamePlayerSession(roomId))
   ).playerId;
 
   if (!roomId.startsWith("wke-live-game-")) {
@@ -92,9 +93,9 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
   if (storage.session.phase !== "playing") {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
-  if (isPlayerCarrying(storage, playerId)) {
+  if (playerCarryIsFull(storage, playerId)) {
     return NextResponse.json(
-      { error: "You are already carrying something. Deposit it first." },
+      { error: "Your hands are full. Deposit something first." },
       { status: 409 },
     );
   }
@@ -117,7 +118,7 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
 
   const deckCursor = readQuestionDeckCursor(storage.questionDeckCursors, playerId, "harvest");
   const pickedQuestion = await timer.measure(
-    "question_resolve",
+    "question_select",
     () => pickHarvestQuestionFromDeck(
       binding.ref,
       binding.version,
@@ -125,7 +126,7 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
     ),
   );
   const [challenge] = await Promise.all([
-    timer.measure("challenge_rpc", () =>
+    timer.measure("supabase_rpc", () =>
       createLiveGameChallenge({
         roomId,
         playerId,
@@ -137,7 +138,7 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
         validationPayload: pickedQuestion.payload,
       }),
     ),
-    timer.measure("cursor_mutate", () =>
+    timer.measure("liveblocks_mutate", () =>
       advanceQuestionDeckCursor({ roomId, playerId, bank: "harvest", cursor: deckCursor }),
     ),
   ]);
@@ -146,12 +147,14 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
     : (await getQuestionById(binding.ref, "harvest", challenge.questionId, binding.version)) ?? pickedQuestion;
 
   if (!parsed.prefetch) {
-    await recordCurrentLiveGameEncounter({
-      storage,
-      challenge,
-      question,
-      resourceType: nodeDef.resourceType,
-    });
+    await timer.measure("reporting", () =>
+      recordCurrentLiveGameEncounter({
+        storage,
+        challenge,
+        question,
+        resourceType: nodeDef.resourceType,
+      }),
+    );
   }
 
   const usePreloadedQuestion = parsed.questionBundleVersion === binding.version;
@@ -165,14 +168,18 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
 }
 
 export async function POST(request: Request) {
-  try {
-    return await withLiveGameServerTiming("live_game_challenge", (timer) => handlePost(request, timer));
-  } catch (error) {
-    if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") return NextResponse.json({ error: "Not authorized." }, { status: 401 });
-    console.error("Live-game challenge request failed", error);
-    return NextResponse.json(
-      { error: "The challenge service is temporarily unavailable. Please try again." },
-      { status: 503 },
-    );
-  }
+  return withLiveGameServerTiming("live_game_challenge", async (timer) => {
+    try {
+      return await handlePost(request, timer);
+    } catch (error) {
+      if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
+        return NextResponse.json({ error: "Not authorized." }, { status: 401 });
+      }
+      console.error("Live-game challenge request failed", error);
+      return NextResponse.json(
+        { error: "The challenge service is temporarily unavailable. Please try again." },
+        { status: 503 },
+      );
+    }
+  });
 }

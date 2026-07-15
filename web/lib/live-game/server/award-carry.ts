@@ -1,8 +1,13 @@
 import { ENGLISH_CRAFT_TREE_COOLDOWN_MS } from "@/lib/live-game/modes/english-craft/gameplay-v1";
 import { LiveMap, LiveObject } from "@liveblocks/client";
-import type { LiveGameAwardReceipt, LiveGamePlayerCarry, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
+import type { LiveGameAwardReceipt, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
+import { appendCarrySlot } from "@/lib/live-game/carry-bag";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { normalizeAwardReceipt } from "@/lib/live-game/server/award-receipt";
+import {
+  readPlayerCarryBagFromMutator,
+  writePlayerCarryBagToMutator,
+} from "@/lib/live-game/server/player-carry";
 import {
   asLiveGameMutatorRoot,
   readMutatorNumber,
@@ -53,11 +58,11 @@ export async function awardCarryForNode(input: {
       return;
     }
 
-    const playerCarry = storage.get("playerCarry");
-    const existingCarry = playerCarry?.get(input.playerId) as LiveGameMutatorNode | undefined;
-    if (existingCarry) {
-      return;
-    }
+    const inventoryEntry = storage.get("playerInventory")?.get(input.playerId) as
+      | LiveGameMutatorNode
+      | undefined;
+    const capacity = inventoryEntry?.get("backpack") === true ? 4 : 1;
+    const existingBag = readPlayerCarryBagFromMutator(storage, input.playerId, capacity);
 
     const resourceNodes = storage.get("resourceNodes");
     if (!resourceNodes) return;
@@ -72,21 +77,22 @@ export async function awardCarryForNode(input: {
     const resourceType = readMutatorString(node.get("resourceType")) as LiveGameResourceType | null;
     if (!resourceType) return;
 
-    let carryMap = playerCarry;
-    if (!carryMap) {
-      carryMap = new LiveMap<string, LiveObject<LiveGamePlayerCarry>>() as unknown as LiveGameMutatorNode;
-      storage.set("playerCarry", carryMap);
-    }
+    const nextBag = appendCarrySlot(
+      existingBag,
+      {
+        kind: "resource",
+        resourceType,
+        sourceNodeId: input.nodeId,
+        questionId: input.questionId,
+        harvestedAt: now,
+      },
+      capacity,
+    );
+    if (!nextBag) return;
+
+    writePlayerCarryBagToMutator(storage, input.playerId, nextBag);
 
     const nextCooldown = now + ENGLISH_CRAFT_TREE_COOLDOWN_MS;
-    const carry: LiveGamePlayerCarry = {
-      resourceType,
-      sourceNodeId: input.nodeId,
-      questionId: input.questionId,
-      harvestedAt: now,
-    };
-    carryMap.set(input.playerId, new LiveObject(carry));
-
     node.set("available", false);
     node.set("cooldownEndsAt", nextCooldown);
     node.set("collectedCount", readMutatorNumber(node.get("collectedCount")) + 1);

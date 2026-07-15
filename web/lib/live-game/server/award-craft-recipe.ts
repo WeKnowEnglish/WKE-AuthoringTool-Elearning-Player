@@ -7,6 +7,12 @@ import type {
   LiveGameStorageSnapshot,
 } from "@/lib/live-game/liveblocks/config";
 import {
+  appendCarrySlot,
+  hasFreeCarrySlot,
+  normalizePlayerCarry,
+  playerCarryIsFull,
+} from "@/lib/live-game/carry-bag";
+import {
   canAffordRecipeCraftedCost,
   canAffordRecipePoolCost,
   getCraftRecipe,
@@ -15,11 +21,16 @@ import {
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS, readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 import {
+  readPlayerCarryBagFromMutator,
+  writePlayerCarryBagToMutator,
+} from "@/lib/live-game/server/player-carry";
+import {
   asLiveGameMutatorRoot,
   readMutatorNumber,
   type LiveGameMutatorNode,
 } from "@/lib/live-game/server/mutator";
 import { readResourcePool } from "@/lib/live-game/resource-pool";
+import { EMPTY_LIVE_GAME_PLAYER_INVENTORY } from "@/lib/live-game/server/read-player-inventory";
 
 export type AwardCraftRecipeResult = {
   recipeId: CraftRecipeId;
@@ -74,11 +85,10 @@ function meetsRecipeRequiresForAward(
   return true;
 }
 
-function applyBreadGrant(
+function ensureInventoryEntry(
   storage: ReturnType<typeof asLiveGameMutatorRoot>,
   playerId: string,
-  amount: number,
-): LiveGamePlayerInventory {
+): LiveGameMutatorNode {
   let playerInventory = storage.get("playerInventory");
   if (!playerInventory) {
     playerInventory = new LiveMap() as unknown as LiveGameMutatorNode;
@@ -87,13 +97,49 @@ function applyBreadGrant(
 
   let entry = playerInventory.get(playerId) as LiveGameMutatorNode | undefined;
   if (!entry) {
-    entry = new LiveObject<LiveGamePlayerInventory>({ bread: 0 }) as unknown as LiveGameMutatorNode;
+    entry = new LiveObject<LiveGamePlayerInventory>({
+      ...EMPTY_LIVE_GAME_PLAYER_INVENTORY,
+    }) as unknown as LiveGameMutatorNode;
     playerInventory.set(playerId, entry);
   }
+  return entry;
+}
 
-  const nextBread = readMutatorNumber(entry.get("bread")) + amount;
-  entry.set("bread", nextBread);
-  return { bread: nextBread };
+function readInventoryFromMutator(entry: LiveGameMutatorNode): LiveGamePlayerInventory {
+  return {
+    bread: readMutatorNumber(entry.get("bread")),
+    backpack: entry.get("backpack") === true,
+  };
+}
+
+function applyBreadCarryGrant(
+  storage: ReturnType<typeof asLiveGameMutatorRoot>,
+  playerId: string,
+  amount: number,
+): LiveGamePlayerInventory | null {
+  const inventoryEntry = ensureInventoryEntry(storage, playerId);
+  const inventory = readInventoryFromMutator(inventoryEntry);
+  const capacity = inventory.backpack ? 4 : 1;
+  let bag = readPlayerCarryBagFromMutator(storage, playerId, capacity);
+  const now = Date.now();
+
+  for (let i = 0; i < amount; i += 1) {
+    const next = appendCarrySlot(bag, { kind: "bread", craftedAt: now }, capacity);
+    if (!next) return null;
+    bag = next;
+  }
+
+  writePlayerCarryBagToMutator(storage, playerId, bag);
+  return inventory;
+}
+
+function applyBackpackGrant(
+  storage: ReturnType<typeof asLiveGameMutatorRoot>,
+  playerId: string,
+): LiveGamePlayerInventory {
+  const entry = ensureInventoryEntry(storage, playerId);
+  entry.set("backpack", true);
+  return readInventoryFromMutator(entry);
 }
 
 export async function awardCraftRecipe(input: {
@@ -136,20 +182,14 @@ export async function awardCraftRecipe(input: {
       if (craftedItemsNode) {
         Object.assign(craftedItems, readCraftedFromMutator(craftedItemsNode));
       }
+      const inventoryEntry = storage.get("playerInventory")?.get(input.playerId) as
+        | LiveGameMutatorNode
+        | undefined;
       result = {
         recipeId: input.recipeId,
         poolTotal,
         craftedItems,
-        inventory:
-          readMutatorNumber(priorReceipt.get("breadGranted")) > 0 ?
-            (() => {
-              const playerInventory = storage.get("playerInventory");
-              const entry = playerInventory?.get(input.playerId) as LiveGameMutatorNode | undefined;
-              return {
-                bread: entry ? readMutatorNumber(entry.get("bread")) : readMutatorNumber(priorReceipt.get("breadGranted")),
-              };
-            })()
-          : undefined,
+        inventory: inventoryEntry ? readInventoryFromMutator(inventoryEntry) : undefined,
         alreadyAwarded: true,
       };
       return;
@@ -163,6 +203,19 @@ export async function awardCraftRecipe(input: {
 
     const currentCrafted = readCraftedFromMutator(craftedItems);
     if (!meetsRecipeRequiresForAward(currentCrafted, recipe.requires)) return;
+
+    const inventoryPreview = (() => {
+      const entry = storage.get("playerInventory")?.get(input.playerId) as LiveGameMutatorNode | undefined;
+      return entry ?
+          readInventoryFromMutator(entry)
+        : { ...EMPTY_LIVE_GAME_PLAYER_INVENTORY };
+    })();
+    if (recipe.requires.backpackNotOwned && inventoryPreview.backpack) return;
+    if (recipe.requires.freeCarrySlot) {
+      const capacity = inventoryPreview.backpack ? 4 : 1;
+      const bag = readPlayerCarryBagFromMutator(storage, input.playerId, capacity);
+      if (!hasFreeCarrySlot(bag, capacity)) return;
+    }
 
     const resourcePool = storage.get("resourcePool");
     if (!resourcePool) return;
@@ -188,7 +241,11 @@ export async function awardCraftRecipe(input: {
 
     let inventory: LiveGamePlayerInventory | undefined;
     if (recipe.grants.breadToCrafter != null && recipe.grants.breadToCrafter > 0) {
-      inventory = applyBreadGrant(storage, input.playerId, recipe.grants.breadToCrafter);
+      inventory = applyBreadCarryGrant(storage, input.playerId, recipe.grants.breadToCrafter) ?? undefined;
+      if (!inventory) return;
+    }
+    if (recipe.grants.backpackToCrafter) {
+      inventory = applyBackpackGrant(storage, input.playerId);
     }
 
     if (recipe.grants.boat) {
@@ -221,7 +278,8 @@ export async function awardCraftRecipe(input: {
         benchBuilt: finalCrafted.benchBuilt,
         hammers: finalCrafted.hammers,
         boatCrafted: finalCrafted.boat,
-        breadGranted: inventory?.bread,
+        breadGranted: recipe.grants.breadToCrafter,
+        backpackGranted: recipe.grants.backpackToCrafter === true,
       }),
     );
   });
@@ -243,6 +301,14 @@ export function applyCraftRecipeAwardToSnapshot(
   if (!canAffordRecipePoolCost(pool, recipe)) return null;
   if (!canAffordRecipeCraftedCost(crafted, recipe)) return null;
 
+  if (playerId) {
+    const inventory = storage.playerInventory?.[playerId] ?? EMPTY_LIVE_GAME_PLAYER_INVENTORY;
+    if (recipe.requires.backpackNotOwned && inventory.backpack) return null;
+    if (recipe.requires.freeCarrySlot && playerCarryIsFull(storage, playerId)) return null;
+  } else if (recipe.requires.backpackNotOwned || recipe.requires.freeCarrySlot) {
+    return null;
+  }
+
   const nextPool: LiveGameResourcePool = { ...pool };
   for (const type of ["wood", "stone", "wheat", "cotton"] as const) {
     const cost = recipe.poolCost[type] ?? 0;
@@ -263,12 +329,27 @@ export function applyCraftRecipeAwardToSnapshot(
   };
 
   let nextPlayerInventory = storage.playerInventory;
-  if (recipe.grants.breadToCrafter != null && recipe.grants.breadToCrafter > 0 && playerId) {
-    const currentBread = storage.playerInventory?.[playerId]?.bread ?? 0;
-    nextPlayerInventory = {
-      ...storage.playerInventory,
-      [playerId]: { bread: currentBread + recipe.grants.breadToCrafter },
-    };
+  let nextPlayerCarry = storage.playerCarry;
+  if (playerId) {
+    const current = storage.playerInventory?.[playerId] ?? { ...EMPTY_LIVE_GAME_PLAYER_INVENTORY };
+    if (recipe.grants.backpackToCrafter) {
+      nextPlayerInventory = {
+        ...storage.playerInventory,
+        [playerId]: { ...current, backpack: true },
+      };
+    }
+    if (recipe.grants.breadToCrafter != null && recipe.grants.breadToCrafter > 0) {
+      const capacity = (nextPlayerInventory?.[playerId]?.backpack ?? current.backpack) ? 4 : 1;
+      let bag = normalizePlayerCarry(storage.playerCarry?.[playerId], capacity);
+      for (let i = 0; i < recipe.grants.breadToCrafter; i += 1) {
+        bag = appendCarrySlot(bag, { kind: "bread", craftedAt: Date.now() }, capacity);
+        if (!bag) return null;
+      }
+      nextPlayerCarry = {
+        ...storage.playerCarry,
+        [playerId]: bag!,
+      };
+    }
   }
 
   return {
@@ -277,5 +358,6 @@ export function applyCraftRecipeAwardToSnapshot(
     craftedItems: nextCrafted,
     unlockedObjects: nextUnlocked,
     playerInventory: nextPlayerInventory,
+    playerCarry: nextPlayerCarry,
   };
 }

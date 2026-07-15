@@ -6,7 +6,7 @@ import { ENGLISH_CRAFT_CARRY_OVERLAY_SIZE_PX } from "@/lib/live-game/modes/engli
 import type { EnglishCraftResourceType } from "@/lib/live-game/modes/english-craft/english-craft-art";
 
 type Props = {
-  resourceType: EnglishCraftResourceType;
+  resourceType: EnglishCraftResourceType | "bread";
   sizePx?: number;
 };
 

@@ -18,28 +18,28 @@ import { readCraftedItems } from "@/lib/live-game/server/read-crafted-items";
 
 const playingSession = {
   session: { phase: "playing" as const },
-  resourcePool: { wood: 10, stone: 5, wheat: 0, cotton: 0 },
+  resourcePool: { wood: 2, stone: 1, wheat: 0, cotton: 0 },
   craftedItems: { benchBuilt: false, hammers: 0, boat: false },
 };
 
 describe("english-craft phase 4b build_bench recipe", () => {
-  it("locks build_bench costs to 10 wood and 5 stone", () => {
-    expect(ENGLISH_CRAFT_BUILD_BENCH_COSTS).toEqual({ wood: 10, stone: 5 });
-    expect(getCraftRecipe("build_bench").poolCost).toEqual({ wood: 10, stone: 5 });
-    expect(formatRecipeCostSummary(ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe("10 wood · 5 stone");
+  it("locks build_bench costs to 2 wood and 1 stone", () => {
+    expect(ENGLISH_CRAFT_BUILD_BENCH_COSTS).toEqual({ wood: 2, stone: 1 });
+    expect(getCraftRecipe("build_bench").poolCost).toEqual({ wood: 2, stone: 1 });
+    expect(formatRecipeCostSummary(ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe("2 wood · 1 stone");
   });
 
-  it("affords build_bench at 10 wood and 5 stone", () => {
-    const pool = { wood: 10, stone: 5, wheat: 0, cotton: 0 };
+  it("affords build_bench at 2 wood and 1 stone", () => {
+    const pool = { wood: 2, stone: 1, wheat: 0, cotton: 0 };
     expect(canAffordRecipePoolCost(pool, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(true);
-    expect(canAffordRecipePoolCost({ ...pool, wood: 9 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(false);
-    expect(canAffordRecipePoolCost({ ...pool, stone: 4 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(false);
+    expect(canAffordRecipePoolCost({ ...pool, wood: 1 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(false);
+    expect(canAffordRecipePoolCost({ ...pool, stone: 0 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(false);
   });
 
   it("lists missing pool resources for build_bench", () => {
     expect(
       missingRecipePoolResources(
-        { wood: 9, stone: 4, wheat: 0, cotton: 0 },
+        { wood: 1, stone: 0, wheat: 0, cotton: 0 },
         ENGLISH_CRAFT_BUILD_BENCH_RECIPE,
       ),
     ).toEqual(["wood", "stone"]);
@@ -56,7 +56,7 @@ describe("english-craft phase 4b build_bench recipe", () => {
       canStartRecipeCraft(
         {
           ...playingSession,
-          resourcePool: { wood: 9, stone: 5, wheat: 0, cotton: 0 },
+          resourcePool: { wood: 1, stone: 1, wheat: 0, cotton: 0 },
         },
         "build_bench",
       ),
@@ -105,7 +105,7 @@ describe("english-craft phase 4b build_bench recipe", () => {
       applyCraftRecipeAwardToSnapshot(
         {
           ...playingSession,
-          resourcePool: { wood: 9, stone: 5, wheat: 0, cotton: 0 },
+          resourcePool: { wood: 1, stone: 1, wheat: 0, cotton: 0 },
         },
         "build_bench",
       ),

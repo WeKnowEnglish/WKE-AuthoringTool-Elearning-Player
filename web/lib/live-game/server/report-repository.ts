@@ -158,6 +158,52 @@ export async function recordLiveGameQuestionAttempt(input: {
   if (error) databaseError("Could not record Live Game attempt", error);
 }
 
+/** Mark challenge awarded and record the correct attempt in one database round-trip. */
+export async function finalizeLiveGameCorrectAnswer(input: {
+  challengeId: string;
+  submissionId: string;
+  selectedAnswer: unknown;
+  responseTimeMs: number | null;
+  contribution?: Record<string, unknown>;
+}): Promise<void> {
+  const admin = adminClient();
+  const { error } = await admin.rpc("finalize_live_game_correct_answer", {
+    p_challenge_id: input.challengeId,
+    p_submission_id: input.submissionId,
+    p_selected_answer: input.selectedAnswer,
+    p_response_time_ms: input.responseTimeMs,
+    p_contribution: input.contribution ?? {},
+  });
+  if (error) {
+    const missingFn =
+      error.code === "PGRST202" ||
+      /finalize_live_game_correct_answer/i.test(error.message) ||
+      /Could not find the function/i.test(error.message);
+    if (!missingFn) databaseError("Could not finalize Live Game correct answer", error);
+    // Fallback when migration 046 is not yet applied.
+    await markChallengeAwardedFallback(input.challengeId);
+    await recordLiveGameQuestionAttempt({
+      challengeId: input.challengeId,
+      submissionId: input.submissionId,
+      selectedAnswer: input.selectedAnswer,
+      correct: true,
+      responseTimeMs: input.responseTimeMs,
+      contribution: input.contribution,
+    });
+    return;
+  }
+}
+
+async function markChallengeAwardedFallback(challengeId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await adminClient()
+    .from("live_game_challenges")
+    .update({ status: "awarded", awarded_at: now, updated_at: now })
+    .eq("id", challengeId)
+    .in("status", ["awarding", "awarded"]);
+  if (error) databaseError("Could not complete live-game challenge", error);
+}
+
 export async function resolveLiveGameQuestionEncounter(challengeId: string, resolution: Exclude<LiveGameEncounterResolution, "open">) {
   const now = new Date().toISOString();
   const { error } = await adminClient().from("live_game_question_encounters").update({ resolution, resolved_at: now, updated_at: now }).eq("challenge_id", challengeId).eq("resolution", "open");

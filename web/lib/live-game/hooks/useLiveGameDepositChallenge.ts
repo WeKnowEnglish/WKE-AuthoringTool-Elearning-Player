@@ -1,12 +1,18 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  canStartChallengePrefetch,
-  isChallengePrefetchValid,
+  buildChallengePrefetchKey,
+  hashChallengePrefetchKey,
   type ChallengePrefetchEntry,
 } from "@/lib/live-game/challenge-prefetch";
-import { requireLiveGamePositionSync } from "@/lib/live-game/challenge-position-sync";
+import { LiveGameChallengePrefetchController } from "@/lib/live-game/challenge-prefetch-controller";
+import {
+  positionSyncInteractionFields,
+  requireLiveGamePositionSync,
+} from "@/lib/live-game/challenge-position-sync";
+import type { PositionSyncResult } from "@/lib/live-game/interaction-position-sync-controller";
+import { getPreloadedQuestionBundleVersion } from "@/lib/live-game/question-bundle-cache";
 import type { LiveGameChallengeTokenStatus } from "@/lib/live-game/challenge-token-status";
 import type { LiveGamePoolTotal } from "@/lib/live-game/api-types";
 import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
@@ -40,6 +46,7 @@ type ChallengeTokenPayload = {
 
 type Options = {
   roomId: string;
+  playerId: string;
   onAnswered?: (result: AnswerResult) => void;
 };
 
@@ -73,50 +80,96 @@ function toPrefetchEntry(
   };
 }
 
-export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
+export function useLiveGameDepositChallenge({ roomId, playerId, onAnswered }: Options) {
   const [activeChallenge, setActiveChallenge] = useState<ActiveChallenge | null>(null);
   const [tokenStatus, setTokenStatus] = useState<LiveGameChallengeTokenStatus>("pending");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<"correct" | "incorrect" | null>(null);
   const beginRequestRef = useRef(0);
-  const prefetchCacheRef = useRef<ChallengePrefetchEntry<EnglishCraftDepositSpellClient> | null>(null);
-  const prefetchAbortRef = useRef<AbortController | null>(null);
-  const prefetchRequestRef = useRef(0);
-  const lastPrefetchAtRef = useRef(0);
-  const inFlightPrefetchRef = useRef<{
-    storageId: string;
-    promise: Promise<ChallengePrefetchEntry<EnglishCraftDepositSpellClient>>;
-  } | null>(null);
+  const controllerRef = useRef(
+    new LiveGameChallengePrefetchController<EnglishCraftDepositSpellClient>(),
+  );
   const submitInFlightRef = useRef(false);
-  const interactionPositionSyncRef = useRef<Promise<boolean> | null>(null);
+  const interactionPositionSyncRef = useRef<Promise<boolean | PositionSyncResult> | null>(null);
   const encounterOpenRef = useRef<Promise<void> | null>(null);
   const challengeOpenedAtRef = useRef(0);
   const pendingSubmissionRef = useRef<{ challengeId: string; answerKey: string; id: string; responseTimeMs: number } | null>(null);
 
   const isOpen = activeChallenge != null;
 
-  const clearPrefetchCache = useCallback((storageId?: string) => {
-    if (!storageId || prefetchCacheRef.current?.nodeId === storageId) {
-      prefetchCacheRef.current = null;
-    }
+  const ensureController = useCallback(() => {
+    const current = controllerRef.current;
+    if (!current.isDisposed()) return current;
+    const replacement = new LiveGameChallengePrefetchController<EnglishCraftDepositSpellClient>();
+    controllerRef.current = replacement;
+    return replacement;
   }, []);
+
+  const buildKey = useCallback(
+    (storageId: string) =>
+      buildChallengePrefetchKey({
+        roomId,
+        activity: "deposit",
+        targetId: storageId,
+        playerId,
+        questionBundleVersion: getPreloadedQuestionBundleVersion(roomId),
+      }),
+    [playerId, roomId],
+  );
+
+  useEffect(() => {
+    const controllerAtMount = ensureController();
+    return () => {
+      controllerAtMount.dispose();
+    };
+  }, [ensureController]);
+
+  useEffect(() => {
+    ensureController().cancelAll("room_change");
+  }, [ensureController, roomId, playerId]);
+
+  const clearPrefetchCache = useCallback(
+    (storageId?: string) => {
+      const controller = ensureController();
+      if (storageId) {
+        controller.invalidateTarget(storageId);
+      } else {
+        controller.cancelAll("session_change");
+      }
+    },
+    [ensureController],
+  );
 
   const cancelPrefetch = useCallback(() => {
-    prefetchRequestRef.current += 1;
-    prefetchAbortRef.current?.abort();
-    prefetchAbortRef.current = null;
-    inFlightPrefetchRef.current = null;
-  }, []);
+    ensureController().cancelAll("session_change");
+  }, [ensureController]);
+
+  const releasePrefetchFocus = useCallback(() => {
+    ensureController().releaseFocus();
+  }, [ensureController]);
 
   const requestChallengeToken = useCallback(
-    async (storageId: string, signal?: AbortSignal): Promise<ChallengeTokenPayload> => {
+    async (
+      storageId: string,
+      signal?: AbortSignal,
+      prefetchMeta?: { keyHash: string; prefetchOutcome: string },
+    ): Promise<ChallengeTokenPayload> => {
       const response = await diagnosticFetch("/api/live-game/deposit/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomId, storageId, prefetch: Boolean(signal) }),
         signal,
-      }, { phase: "gameplay", name: "deposit_question_request", detail: { storageId, prefetched: Boolean(signal) } });
+      }, {
+        phase: "gameplay",
+        name: "deposit_question_request",
+        detail: {
+          storageId,
+          prefetched: Boolean(signal),
+          prefetchKeyHash: prefetchMeta?.keyHash,
+          prefetchOutcome: prefetchMeta?.prefetchOutcome,
+        },
+      });
       const payload = (await response.json()) as {
         error?: string;
         challengeId?: string;
@@ -150,60 +203,94 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
     [],
   );
 
-  const fetchAndCacheToken = useCallback(
+  const fetchTokenEntry = useCallback(
     async (
       storageId: string,
-      signal?: AbortSignal,
+      signal: AbortSignal,
+      prefetchMeta: { keyHash: string; prefetchOutcome: string },
     ): Promise<ChallengePrefetchEntry<EnglishCraftDepositSpellClient>> => {
-      const payload = await requestChallengeToken(storageId, signal);
-      const fetchedAt = Date.now();
-      const entry = toPrefetchEntry(storageId, payload, fetchedAt);
-      prefetchCacheRef.current = entry;
-      return entry;
+      const payload = await requestChallengeToken(storageId, signal, prefetchMeta);
+      return toPrefetchEntry(storageId, payload, Date.now());
     },
     [requestChallengeToken],
   );
 
   const prefetchForStorage = useCallback(
     async (storageId: string) => {
-      const now = Date.now();
-      if (
-        isChallengePrefetchValid(prefetchCacheRef.current, storageId, now) ||
-        inFlightPrefetchRef.current?.storageId === storageId
-      ) {
-        return;
+      const key = buildKey(storageId);
+      const keyHash = hashChallengePrefetchKey(key);
+      let requestReachedFetch = false;
+      let prefetchEntryCreated = false;
+      let prefetchStored = false;
+      const result = await ensureController().ensure({
+        key,
+        targetId: storageId,
+        fetcher: async (signal) => {
+          requestReachedFetch = true;
+          const entry = await fetchTokenEntry(storageId, signal, {
+            keyHash,
+            prefetchOutcome: "started",
+          });
+          prefetchEntryCreated = true;
+          return entry;
+        },
+      });
+      if (result.outcome === "retained" && result.entry) {
+        prefetchStored = true;
       }
-      if (!canStartChallengePrefetch(lastPrefetchAtRef.current, now)) {
-        return;
-      }
-
-      const requestId = prefetchRequestRef.current + 1;
-      prefetchRequestRef.current = requestId;
-      prefetchAbortRef.current?.abort();
-
-      const controller = new AbortController();
-      prefetchAbortRef.current = controller;
-      lastPrefetchAtRef.current = now;
-
-      const promise = fetchAndCacheToken(storageId, controller.signal);
-      inFlightPrefetchRef.current = { storageId, promise };
-
-      try {
-        await promise;
-      } catch (prefetchError) {
-        if (controller.signal.aborted || prefetchRequestRef.current !== requestId) return;
-        clearPrefetchCache(storageId);
-        if (prefetchError instanceof Error && prefetchError.name === "AbortError") return;
-      } finally {
-        if (inFlightPrefetchRef.current?.promise === promise) {
-          inFlightPrefetchRef.current = null;
+      if (result.promise) {
+        try {
+          await result.promise;
+          prefetchStored = true;
+        } catch (prefetchError) {
+          if (prefetchError instanceof Error && prefetchError.name === "AbortError") {
+            recordLiveGameDiagnostic("gameplay", "deposit_prefetch", {
+              storageId,
+              prefetchKeyHash: result.keyHash,
+              prefetchOutcome: "failed",
+              prefetchFailReason: "request_aborted",
+              cancelReason: result.cancelReason ?? "failed",
+              requestCallbackInvoked: result.requestCallbackInvoked ?? false,
+              requestReachedFetch,
+              prefetchEntryCreated,
+              prefetchStored: false,
+              prefetched: true,
+            });
+            return;
+          }
+          recordLiveGameDiagnostic("gameplay", "deposit_prefetch", {
+            storageId,
+            prefetchKeyHash: result.keyHash,
+            prefetchOutcome: "failed",
+            prefetchFailReason: result.prefetchFailReason ?? "request_http_error",
+            cancelReason: result.cancelReason ?? null,
+            requestCallbackInvoked: result.requestCallbackInvoked ?? false,
+            requestReachedFetch,
+            prefetchEntryCreated,
+            prefetchStored: false,
+            prefetched: true,
+          });
+          return;
         }
-        if (prefetchAbortRef.current === controller) {
-          prefetchAbortRef.current = null;
-        }
       }
+
+      recordLiveGameDiagnostic("gameplay", "deposit_prefetch", {
+        storageId,
+        prefetchKeyHash: result.keyHash,
+        prefetchOutcome: result.outcome,
+        prefetchFailReason: result.prefetchFailReason ?? null,
+        cancelReason: result.cancelReason ?? null,
+        requestCallbackInvoked: result.requestCallbackInvoked ?? false,
+        requestReachedFetch,
+        prefetchEntryCreated,
+        prefetchStored,
+        prefetched: true,
+        inFlightAgeMs: result.inFlightAgeMs ?? null,
+        challengeRemainingValidityMs: result.challengeRemainingValidityMs ?? null,
+        prefetchRemainingValidityMs: result.challengeRemainingValidityMs ?? null,
+      });
     },
-    [clearPrefetchCache, fetchAndCacheToken],
+    [buildKey, ensureController, fetchTokenEntry],
   );
 
   const resolveTokenForStorage = useCallback(
@@ -213,18 +300,23 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       requestId: number,
     ) => {
       const now = Date.now();
-      const cached = prefetchCacheRef.current;
-      if (isChallengePrefetchValid(cached, storageId, now) && cached) {
+      const key = buildKey(storageId);
+      const lookup = ensureController().lookupInteraction(key, storageId, now);
+
+      if (lookup.entry) {
         applyTokenToActiveChallenge(
           storageId,
           {
-            challengeId: cached.challengeId,
-            expiresAt: new Date(cached.expiresAt).toISOString(),
-            spell: cached.question,
+            challengeId: lookup.entry.challengeId,
+            expiresAt: new Date(lookup.entry.expiresAt).toISOString(),
+            spell: lookup.entry.question,
           },
           previewSpell,
         );
-        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId });
+        const encounterOpen = openLiveGameQuestionEncounter({
+          roomId,
+          challengeId: lookup.entry.challengeId,
+        });
         encounterOpenRef.current = encounterOpen;
         void encounterOpen.catch((openError) => {
           if (beginRequestRef.current === requestId) {
@@ -235,10 +327,9 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
         return;
       }
 
-      const inFlight = inFlightPrefetchRef.current;
-      if (inFlight?.storageId === storageId) {
+      if (lookup.promise) {
         try {
-          const entry = await inFlight.promise;
+          const entry = await lookup.promise;
           if (beginRequestRef.current !== requestId) return;
           applyTokenToActiveChallenge(
             storageId,
@@ -264,17 +355,13 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       }
 
       try {
-        const entry = await fetchAndCacheToken(storageId);
+        const keyHash = hashChallengePrefetchKey(key);
+        const payload = await requestChallengeToken(storageId, undefined, {
+          keyHash,
+          prefetchOutcome: "started",
+        });
         if (beginRequestRef.current !== requestId) return;
-        applyTokenToActiveChallenge(
-          storageId,
-          {
-            challengeId: entry.challengeId,
-            expiresAt: new Date(entry.expiresAt).toISOString(),
-            spell: entry.question,
-          },
-          previewSpell,
-        );
+        applyTokenToActiveChallenge(storageId, payload, previewSpell);
       } catch (challengeError) {
         if (beginRequestRef.current !== requestId) return;
         const message =
@@ -286,11 +373,11 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
         clearPrefetchCache(storageId);
       }
     },
-    [applyTokenToActiveChallenge, clearPrefetchCache, fetchAndCacheToken, roomId],
+    [applyTokenToActiveChallenge, buildKey, clearPrefetchCache, ensureController, requestChallengeToken, roomId],
   );
 
   const beginChallenge = useCallback(
-    async (storage: EnglishCraftStructureDef, positionSync?: Promise<boolean>) => {
+    async (storage: EnglishCraftStructureDef, positionSync?: Promise<boolean | PositionSyncResult>) => {
       const requestId = beginRequestRef.current + 1;
       beginRequestRef.current = requestId;
       interactionPositionSyncRef.current = positionSync ?? null;
@@ -301,21 +388,35 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
 
       const previewSpell = ENGLISH_CRAFT_DEPOSIT_SPELL_PREVIEW;
       const now = Date.now();
-      const cached = prefetchCacheRef.current;
+      const key = buildKey(storage.id);
+      const controller = ensureController();
+      controller.setFocus(key);
+      const lookup = controller.lookupInteraction(key, storage.id, now);
 
       recordLiveGameDiagnostic("gameplay", "deposit_interaction", {
         storageId: storage.id,
-        cacheState: isChallengePrefetchValid(cached, storage.id, now) ? "warm" : inFlightPrefetchRef.current?.storageId === storage.id ? "inflight" : "cold",
+        cacheState: lookup.cacheState,
+        prefetchKeyHash: lookup.keyHash,
+        prefetchOutcome: lookup.outcome,
+        retentionAgeMs: lookup.retentionAgeMs,
+        inFlightAgeMs: lookup.inFlightAgeMs,
+        challengeRemainingValidityMs: lookup.challengeRemainingValidityMs,
+        sameTargetReturn: lookup.cacheState !== "cold",
+        waitedForPositionSync: false,
+        positionWaitMs: 0,
       });
-      if (isChallengePrefetchValid(cached, storage.id, now) && cached) {
+      if (lookup.entry) {
         setActiveChallenge({
           storageId: storage.id,
           resourceType: storage.resourceType ?? previewSpell.resourceType,
-          challengeId: cached.challengeId,
-          spell: cached.question,
+          challengeId: lookup.entry.challengeId,
+          spell: lookup.entry.question,
         });
         setTokenStatus("ready");
-        const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: cached.challengeId });
+        const encounterOpen = openLiveGameQuestionEncounter({
+          roomId,
+          challengeId: lookup.entry.challengeId,
+        });
         encounterOpenRef.current = encounterOpen;
         void encounterOpen.catch((openError) => {
           if (beginRequestRef.current === requestId) {
@@ -323,6 +424,56 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
             setError(openError instanceof Error ? openError.message : "Could not open deposit question.");
           }
         });
+        return;
+      }
+
+      if (lookup.promise) {
+        setTokenStatus("pending");
+        setActiveChallenge({
+          storageId: storage.id,
+          resourceType: storage.resourceType ?? previewSpell.resourceType,
+          challengeId: null,
+          spell: previewSpell,
+        });
+        try {
+          const entry = await lookup.promise;
+          if (beginRequestRef.current !== requestId) return;
+          applyTokenToActiveChallenge(
+            storage.id,
+            {
+              challengeId: entry.challengeId,
+              expiresAt: new Date(entry.expiresAt).toISOString(),
+              spell: entry.question,
+            },
+            previewSpell,
+          );
+          const encounterOpen = openLiveGameQuestionEncounter({ roomId, challengeId: entry.challengeId });
+          encounterOpenRef.current = encounterOpen;
+          void encounterOpen.catch((openError) => {
+            if (beginRequestRef.current === requestId) {
+              setTokenStatus("error");
+              setError(openError instanceof Error ? openError.message : "Could not open deposit question.");
+            }
+          });
+        } catch {
+          if (beginRequestRef.current !== requestId) return;
+          try {
+            const positionDetail = await requireLiveGamePositionSync(positionSync);
+            recordLiveGameDiagnostic("gameplay", "deposit_interaction", {
+              storageId: storage.id,
+              cacheState: lookup.cacheState,
+              ...positionSyncInteractionFields(positionDetail),
+            });
+            if (beginRequestRef.current !== requestId) return;
+            await resolveTokenForStorage(storage.id, previewSpell, requestId);
+          } catch (positionError) {
+            if (beginRequestRef.current !== requestId) return;
+            setTokenStatus("error");
+            setError(
+              positionError instanceof Error ? positionError.message : "Could not verify your position.",
+            );
+          }
+        }
         return;
       }
 
@@ -335,7 +486,12 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       });
 
       try {
-        await requireLiveGamePositionSync(positionSync);
+        const positionDetail = await requireLiveGamePositionSync(positionSync);
+        recordLiveGameDiagnostic("gameplay", "deposit_interaction", {
+          storageId: storage.id,
+          cacheState: lookup.cacheState,
+          ...positionSyncInteractionFields(positionDetail),
+        });
       } catch (positionError) {
         if (beginRequestRef.current !== requestId) return;
         setTokenStatus("error");
@@ -347,15 +503,21 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       if (beginRequestRef.current !== requestId) return;
       await resolveTokenForStorage(storage.id, previewSpell, requestId);
     },
-    [resolveTokenForStorage, roomId],
+    [applyTokenToActiveChallenge, buildKey, ensureController, resolveTokenForStorage, roomId],
   );
 
   const submitAnswer = useCallback(
     async (spelling: string, options?: { skip?: boolean }) => {
       if (!activeChallenge?.challengeId || tokenStatus !== "ready" || submitInFlightRef.current) return;
+      const clickAt = performance.now();
       submitInFlightRef.current = true;
       setIsSubmitting(true);
+      setLastResult(null);
       setError(null);
+      recordLiveGameDiagnostic("gameplay", "answer_submit_clicked", {
+        questionType: "deposit",
+        gameObjectId: activeChallenge.storageId,
+      });
       try {
         await requireLiveGamePositionSync(interactionPositionSyncRef.current);
         await encounterOpenRef.current;
@@ -376,6 +538,10 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           action: options?.skip ? "skip" : "answer",
           selectedAnswer: options?.skip ? null : spelling,
         });
+        recordLiveGameDiagnostic("gameplay", "answer_request_started", {
+          questionType: "deposit",
+          clickToRequestMs: Math.round(performance.now() - clickAt),
+        });
         const response = await diagnosticFetch("/api/live-game/deposit/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -388,16 +554,26 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
             responseTimeMs: submission.responseTimeMs,
           }),
         }, { phase: "gameplay", name: "deposit_answer_request", detail: { skipped: options?.skip === true, responseTimeMs: submission.responseTimeMs } });
+        recordLiveGameDiagnostic("gameplay", "answer_headers_received", {
+          questionType: "deposit",
+          status: response.status,
+          clickToHeadersMs: Math.round(performance.now() - clickAt),
+        });
         const payload = (await response.json()) as {
           error?: string;
           correct?: boolean;
           poolTotal?: LiveGamePoolTotal;
           carryCleared?: boolean;
           skipped?: boolean;
+          alreadyAwarded?: boolean;
         };
+        recordLiveGameDiagnostic("gameplay", "answer_body_parsed", {
+          questionType: "deposit",
+          clickToBodyMs: Math.round(performance.now() - clickAt),
+        });
         if (response.status === 404) {
           pendingSubmissionRef.current = null;
-          clearPrefetchCache(activeChallenge.storageId);
+          ensureController().consume(buildKey(activeChallenge.storageId));
           setActiveChallenge(null);
           setTokenStatus("pending");
           setLastResult(null);
@@ -418,13 +594,20 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
         pendingSubmissionRef.current = null;
 
         if (payload.skipped === true) {
-          clearPrefetchCache(activeChallenge.storageId);
+          ensureController().consume(buildKey(activeChallenge.storageId));
           setActiveChallenge(null);
           setTokenStatus("pending");
           setLastResult(null);
           return;
         }
         const correct = payload.correct === true;
+        const authoritativeAt = performance.now();
+        recordLiveGameDiagnostic("gameplay", "authoritative_result_received", {
+          questionType: "deposit",
+          correct,
+          alreadyAwarded: payload.alreadyAwarded === true,
+          clickToAuthoritativeMs: Math.round(authoritativeAt - clickAt),
+        });
         recordLiveGameDiagnostic("gameplay", "question_attempt_result", {
           questionType: "deposit",
           questionPrompt: activeChallenge.spell.spellHint,
@@ -433,22 +616,42 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
           action: options?.skip ? "skip" : "answer",
           correct,
         });
-        recordLiveGameDiagnostic("gameplay", "deposit_result_visible", { correct });
+        setLastResult(correct ? "correct" : "incorrect");
+        recordLiveGameDiagnostic("gameplay", "result_state_committed", {
+          questionType: "deposit",
+          correct,
+          authoritativeToCommittedMs: Math.round(performance.now() - authoritativeAt),
+        });
+        recordLiveGameDiagnostic("gameplay", "deposit_result_visible", {
+          correct,
+          clickToVisibleMs: Math.round(performance.now() - clickAt),
+          authoritativeToVisibleMs: Math.round(performance.now() - authoritativeAt),
+        });
+        recordLiveGameDiagnostic("gameplay", "result_visible", {
+          questionType: "deposit",
+          correct,
+          clickToVisibleMs: Math.round(performance.now() - clickAt),
+          authoritativeToVisibleMs: Math.round(performance.now() - authoritativeAt),
+        });
         const poolTotal = payload.poolTotal ?? {
           wood: 0,
           stone: 0,
           wheat: 0,
           cotton: 0,
         };
-        setLastResult(correct ? "correct" : "incorrect");
         onAnswered?.({
           correct,
           poolTotal,
           carryCleared: payload.carryCleared === true,
         });
+        recordLiveGameDiagnostic("gameplay", "liveblocks_reconciled", {
+          questionType: "deposit",
+          note: "storage_updates_via_subscription",
+          visibleToReconcileMs: 0,
+        });
 
         if (correct) {
-          clearPrefetchCache(activeChallenge.storageId);
+          ensureController().consume(buildKey(activeChallenge.storageId));
           setActiveChallenge(null);
           setTokenStatus("pending");
         } else {
@@ -463,7 +666,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
         setIsSubmitting(false);
       }
     },
-    [activeChallenge, clearPrefetchCache, onAnswered, roomId, tokenStatus],
+    [activeChallenge, buildKey, ensureController, onAnswered, roomId, tokenStatus],
   );
 
   const closeChallenge = useCallback(() => {
@@ -495,6 +698,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       closeChallenge,
       prefetchForStorage,
       cancelPrefetch,
+      releasePrefetchFocus,
       clearPrefetchCache,
     }),
     [
@@ -508,6 +712,7 @@ export function useLiveGameDepositChallenge({ roomId, onAnswered }: Options) {
       isSubmitting,
       lastResult,
       prefetchForStorage,
+      releasePrefetchFocus,
       skipChallenge,
       submitAnswer,
       tokenStatus,

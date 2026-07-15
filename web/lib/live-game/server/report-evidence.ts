@@ -10,6 +10,7 @@ import {
   recordLiveGameQuestionAttempt,
   recordLiveGameQuestionEncounter,
   resolveLiveGameQuestionEncounter,
+  finalizeLiveGameCorrectAnswer,
 } from "@/lib/live-game/server/report-repository";
 
 export async function recordCurrentLiveGameEncounter(input: {
@@ -44,6 +45,16 @@ export async function recordCurrentLiveGameAttempt(input: {
   contribution?: Record<string, unknown>;
 }) {
   await recordLiveGameQuestionAttempt(input);
+}
+
+export async function finalizeCurrentLiveGameCorrectAnswer(input: {
+  challengeId: string;
+  submissionId: string;
+  selectedAnswer: unknown;
+  responseTimeMs: number | null;
+  contribution?: Record<string, unknown>;
+}) {
+  await finalizeLiveGameCorrectAnswer(input);
 }
 
 export async function recordCurrentLiveGameSkip(challengeId: string) {

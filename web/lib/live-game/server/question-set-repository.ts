@@ -6,7 +6,6 @@ import type {
   LiveGameQuestionBank,
   LiveGameQuestionRow,
   LiveGameQuestionSetSnapshot,
-  LiveGameQuestionSetSummaryFromDb,
 } from "@/lib/live-game/question-banks/types";
 
 type QuestionSetDbRow = {
@@ -101,7 +100,7 @@ async function readPublishedSet(
     return null;
   }
 
-  let setQuery = client
+  const setQuery = client
     .from("live_game_question_sets")
     .select(SET_COLUMNS)
     .eq("status", "published")
@@ -140,53 +139,9 @@ export async function fetchPublishedSetById(
   return readPublishedSet({ column: "id", value: id });
 }
 
-export async function fetchPublishedSetSummaries(): Promise<LiveGameQuestionSetSummaryFromDb[]> {
-  const client = createServiceRoleSupabase();
-  if (!client) {
-    return [];
-  }
-
-  const { data: sets, error } = await client
-    .from("live_game_question_sets")
-    .select(SET_COLUMNS)
-    .eq("status", "published")
-    .order("sort_order", { ascending: true })
-    .order("title", { ascending: true });
-
-  if (error || !sets) {
-    return [];
-  }
-
-  const summaries: LiveGameQuestionSetSummaryFromDb[] = [];
-  for (const rawSet of sets as QuestionSetDbRow[]) {
-    const { data: questions, error: questionError } = await client
-      .from("live_game_questions")
-      .select("bank")
-      .eq("set_id", rawSet.id)
-      .eq("enabled", true);
-
-    if (questionError || !questions) continue;
-
-    const counts = { harvest: 0, deposit: 0, craft: 0 };
-    for (const row of questions as Array<{ bank: LiveGameQuestionBank }>) {
-      counts[row.bank] += 1;
-    }
-
-    summaries.push({
-      id: rawSet.id,
-      slug: rawSet.slug,
-      title: rawSet.title,
-      level: rawSet.level,
-      topic: rawSet.topic,
-      learningObjective: rawSet.learning_objective,
-      description: rawSet.description,
-      version: rawSet.version,
-      visibility: rawSet.visibility,
-      harvestCount: counts.harvest,
-      depositCount: counts.deposit,
-      craftCount: counts.craft,
-    });
-  }
-
-  return summaries;
-}
+export {
+  fetchPublishedSetSummaries,
+  fetchPublishedSetSummariesWithMeta,
+  type FetchPublishedSetSummariesMeta,
+  type PublishedSetSummaryQueryStrategy,
+} from "@/lib/live-game/server/published-set-summaries";

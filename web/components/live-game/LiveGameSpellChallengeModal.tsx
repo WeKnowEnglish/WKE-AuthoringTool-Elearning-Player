@@ -294,6 +294,11 @@ export function LiveGameSpellChallengeModal({
             {tokenStatus === "pending" ?
               <p className="mt-3 text-sm font-semibold text-kid-ink/70">Connecting...</p>
             : null}
+            {isSubmitting && feedback == null ?
+              <p className="mt-3 text-sm font-semibold text-kid-ink/70" aria-live="polite">
+                Checking...
+              </p>
+            : null}
             {feedback === "incorrect" ?
               <p className="mt-3 text-sm font-semibold text-red-700">Not quite — try again!</p>
             : null}

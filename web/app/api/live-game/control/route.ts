@@ -15,9 +15,20 @@ import {
 } from "@/lib/live-game/server/report-repository";
 import { extendSessionDeadline } from "@/lib/live-game/session-timer";
 import { expireLiveGameRoomChallenges } from "@/lib/live-game/server/challenge-store";
+import {
+  grantPoolResources,
+  isLiveGameResourceType,
+} from "@/lib/live-game/server/grant-pool-resources";
 import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
 
-type ControlAction = "start" | "return_to_lobby" | "end_round" | "close" | "set_duration" | "add_time";
+type ControlAction =
+  | "start"
+  | "return_to_lobby"
+  | "end_round"
+  | "close"
+  | "set_duration"
+  | "add_time"
+  | "grant_pool";
 
 async function handlePost(request: Request) {
   try {
@@ -26,11 +37,35 @@ async function handlePost(request: Request) {
       action?: ControlAction;
       reason?: LiveGameRoundEndReason;
       durationMinutes?: number | null;
+      resourceType?: string;
     };
     if (!body.roomId || !body.action) {
       return NextResponse.json({ error: "roomId and action are required." }, { status: 400 });
     }
     const player = await requireLiveGamePlayerSession(body.roomId);
+
+    if (body.action === "grant_pool") {
+      if (player.role !== "host") {
+        return NextResponse.json({ error: "Host only." }, { status: 403 });
+      }
+      if (!isLiveGameResourceType(body.resourceType)) {
+        return NextResponse.json({ error: "Invalid resource type." }, { status: 400 });
+      }
+      const granted = await grantPoolResources({
+        roomId: body.roomId,
+        resourceType: body.resourceType,
+      });
+      if (!granted) {
+        return NextResponse.json({ error: "Action not allowed." }, { status: 409 });
+      }
+      return NextResponse.json({
+        ok: true,
+        resourceType: granted.resourceType,
+        amount: granted.amount,
+        poolCount: granted.poolCount,
+      });
+    }
+
     const liveblocks = getLiveblocksServerClient();
     let applied = false;
     let canonicalEndsAt: number | null = null;

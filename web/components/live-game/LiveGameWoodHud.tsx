@@ -35,22 +35,22 @@ const RESOURCE_ROWS: Array<{
   { type: "cotton", label: "Cotton", icon: ENGLISH_CRAFT_ART.cottonResource },
 ];
 
+const HOST_GRANT_HINT = "+5";
+
 type ResourceHudProps = {
   pool: LiveGameResourcePool;
-  carriedResourceType?: LiveGameResourceType | null;
+  carriedResourceType?: LiveGameResourceType | "bread" | null;
   benchBuilt?: boolean;
   boatBuilt?: boolean;
   hammers?: number;
   hungerValue?: number;
   hungerIsLow?: boolean;
   hungerIsStarving?: boolean;
-  bread?: number;
-  onEatBread?: () => void;
-  eatDisabled?: boolean;
-  eatSubmitting?: boolean;
-  onDropCarry?: () => void;
-  dropDisabled?: boolean;
-  dropSubmitting?: boolean;
+  /** Host-only: click a resource cell to add +5 to the shared pool. */
+  hostGrantEnabled?: boolean;
+  hostGrantDisabled?: boolean;
+  hostGrantingType?: LiveGameResourceType | null;
+  onHostGrantResource?: (type: LiveGameResourceType) => void;
 };
 
 function ResourceCell({
@@ -60,6 +60,10 @@ function ResourceCell({
   count,
   goal,
   craftReady,
+  hostGrantEnabled = false,
+  hostGrantDisabled = false,
+  hostGranting = false,
+  onHostGrant,
 }: {
   type: LiveGameResourceType;
   label: string;
@@ -67,17 +71,16 @@ function ResourceCell({
   count: number;
   goal: number;
   craftReady: boolean;
+  hostGrantEnabled?: boolean;
+  hostGrantDisabled?: boolean;
+  hostGranting?: boolean;
+  onHostGrant?: (type: LiveGameResourceType) => void;
 }) {
   const progress = goal > 0 ? Math.min(100, Math.round((count / goal) * 100)) : 0;
+  const interactive = hostGrantEnabled && typeof onHostGrant === "function";
 
-  return (
-    <div
-      className={clsx(
-        "rounded-lg border px-2 py-1.5",
-        craftReady ? "border-emerald-400/70 bg-emerald-950/40" : "border-amber-300/40 bg-amber-950/50",
-      )}
-      aria-label={`Team ${label}: ${count} of ${goal}`}
-    >
+  const body = (
+    <>
       <p className="flex items-center gap-1 text-sm font-extrabold leading-tight text-amber-50">
         <span className="relative inline-block h-5 w-5 shrink-0">
           <Image
@@ -103,6 +106,39 @@ function ResourceCell({
           style={{ width: `${progress}%` }}
         />
       </div>
+      {interactive ?
+        <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-sky-200/90">
+          {hostGranting ? "Adding..." : `Tap ${HOST_GRANT_HINT}`}
+        </p>
+      : null}
+    </>
+  );
+
+  const className = clsx(
+    "rounded-lg border px-2 py-1.5 text-left",
+    craftReady ? "border-emerald-400/70 bg-emerald-950/40" : "border-amber-300/40 bg-amber-950/50",
+    interactive &&
+      "cursor-pointer outline-none ring-offset-1 ring-offset-amber-950 transition hover:border-sky-300/80 hover:bg-sky-950/40 focus-visible:ring-2 focus-visible:ring-sky-300",
+    interactive && hostGrantDisabled && "cursor-wait opacity-70",
+  );
+
+  if (interactive) {
+    return (
+      <button
+        type="button"
+        className={className}
+        disabled={hostGrantDisabled}
+        onClick={() => onHostGrant?.(type)}
+        aria-label={`Add 5 team ${label}. Now ${count} of ${goal}`}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <div className={className} aria-label={`Team ${label}: ${count} of ${goal}`}>
+      {body}
     </div>
   );
 }
@@ -116,13 +152,10 @@ export function LiveGameTeamResourceHud({
   hungerValue = ENGLISH_CRAFT_HUNGER_MAX,
   hungerIsLow = false,
   hungerIsStarving = false,
-  bread = 0,
-  onEatBread,
-  eatDisabled = false,
-  eatSubmitting = false,
-  onDropCarry,
-  dropDisabled = false,
-  dropSubmitting = false,
+  hostGrantEnabled = false,
+  hostGrantDisabled = false,
+  hostGrantingType = null,
+  onHostGrantResource,
 }: ResourceHudProps) {
   const canBuildBench =
     !benchBuilt && canAffordRecipePoolCost(pool, ENGLISH_CRAFT_BUILD_BENCH_RECIPE);
@@ -179,6 +212,7 @@ export function LiveGameTeamResourceHud({
       <div className="rounded-xl border-2 border-amber-300/60 bg-amber-950/80 px-2.5 py-2 text-amber-50 backdrop-blur-sm">
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-200/80">
           Team resources
+          {hostGrantEnabled ? <span className="ml-1 text-sky-200/90">(host +5)</span> : null}
         </p>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
           {RESOURCE_ROWS.map((row) => {
@@ -200,6 +234,10 @@ export function LiveGameTeamResourceHud({
                 count={pool[row.type]}
                 goal={ENGLISH_CRAFT_RESOURCE_GOALS[row.type]}
                 craftReady={craftReady}
+                hostGrantEnabled={hostGrantEnabled}
+                hostGrantDisabled={hostGrantDisabled || hostGrantingType != null}
+                hostGranting={hostGrantingType === row.type}
+                onHostGrant={onHostGrantResource}
               />
             );
           })}
@@ -228,34 +266,6 @@ export function LiveGameTeamResourceHud({
         </div>
       : null}
 
-      {bread > 0 || onEatBread ?
-        <div className="flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-950/90 px-2.5 py-1 text-xs font-bold text-amber-100 backdrop-blur-sm">
-          <span className="relative inline-block h-4 w-4 shrink-0">
-            <Image
-              src={ENGLISH_CRAFT_ART.wheatResource}
-              alt=""
-              fill
-              className="object-contain"
-              sizes="16px"
-              unoptimized
-              draggable={false}
-            />
-          </span>
-          <span className="tabular-nums">Bread {bread}</span>
-          {onEatBread ?
-            <KidButton
-              type="button"
-              variant="accent"
-              className="!min-h-7 !px-2.5 !py-1 text-[11px] font-extrabold"
-              disabled={eatDisabled || bread < 1 || eatSubmitting}
-              onClick={onEatBread}
-            >
-              {eatSubmitting ? "..." : "Eat"}
-            </KidButton>
-          : null}
-        </div>
-      : null}
-
       {carriedResourceType ?
         <div className="flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-950/90 px-2.5 py-1 text-xs font-bold text-amber-100 backdrop-blur-sm">
           <span
@@ -272,19 +282,7 @@ export function LiveGameTeamResourceHud({
               draggable={false}
             />
           </span>
-          <span>Carrying {carriedResourceType}</span>
-          {onDropCarry ?
-            <KidButton
-              type="button"
-              variant="secondary"
-              className="!min-h-7 !px-2.5 !py-1 text-[11px] font-extrabold"
-              disabled={dropDisabled || dropSubmitting}
-              onClick={onDropCarry}
-              aria-label={`Drop carried ${carriedResourceType}`}
-            >
-              {dropSubmitting ? "..." : "Drop"}
-            </KidButton>
-          : null}
+          <span>Holding {carriedResourceType}</span>
         </div>
       : null}
     </div>
@@ -292,7 +290,7 @@ export function LiveGameTeamResourceHud({
 }
 
 /** @deprecated Use LiveGameTeamResourceHud */
-export function LiveGameTeamHud({ wood, goal = ENGLISH_CRAFT_WOOD_GOAL }: { wood: number; goal?: number }) {
+export function LiveGameTeamHud({ wood, goal: _goal = ENGLISH_CRAFT_WOOD_GOAL }: { wood: number; goal?: number }) {
   return (
     <LiveGameTeamResourceHud
       pool={{ wood, stone: 0, wheat: 0, cotton: 0 }}

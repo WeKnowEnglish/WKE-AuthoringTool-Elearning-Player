@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
-import { getHeldVisual } from "@/lib/live-game/carry-bag";
-import {
-  clearPlayerHeldCarry,
-  readPlayerCarry,
-} from "@/lib/live-game/server/player-carry";
+import { setPlayerHeldSlot } from "@/lib/live-game/server/player-carry";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 
-type DropCarryRequestBody = {
+type HoldCarryRequestBody = {
   roomId?: string;
+  slotIndex?: number;
 };
 
-function parseDropCarryBody(body: unknown): DropCarryRequestBody | null {
+function parseHoldCarryBody(body: unknown): HoldCarryRequestBody | null {
   if (!body || typeof body !== "object") return null;
-  const record = body as DropCarryRequestBody;
+  const record = body as HoldCarryRequestBody;
   if (typeof record.roomId !== "string") return null;
+  if (typeof record.slotIndex !== "number" || !Number.isInteger(record.slotIndex)) return null;
   return record;
 }
 
@@ -34,9 +32,9 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const parsed = parseDropCarryBody(body);
-  if (!parsed?.roomId) {
-    return NextResponse.json({ error: "roomId is required." }, { status: 400 });
+  const parsed = parseHoldCarryBody(body);
+  if (!parsed?.roomId || parsed.slotIndex == null) {
+    return NextResponse.json({ error: "roomId and slotIndex are required." }, { status: 400 });
   }
 
   const roomId = parsed.roomId.trim();
@@ -54,18 +52,16 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
 
-  const carry = readPlayerCarry(storage, playerId);
-  if (!carry) {
-    return NextResponse.json({ error: "Nothing to drop." }, { status: 409 });
+  const bag = await setPlayerHeldSlot({
+    roomId,
+    playerId,
+    heldSlotIndex: parsed.slotIndex,
+  });
+  if (!bag) {
+    return NextResponse.json({ error: "Cannot hold that slot." }, { status: 409 });
   }
 
-  const droppedVisual = getHeldVisual(carry);
-  const cleared = await clearPlayerHeldCarry(roomId, playerId);
-  if (!cleared) {
-    return NextResponse.json({ error: "Nothing to drop." }, { status: 409 });
-  }
-
-  return NextResponse.json({ dropped: true, resourceType: droppedVisual });
+  return NextResponse.json({ heldSlotIndex: bag.heldSlotIndex, slots: bag.slots });
 }
 
 export async function POST(request: Request) {
@@ -75,9 +71,9 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
       return NextResponse.json({ error: "Not authorized." }, { status: 401 });
     }
-    console.error("Live-game drop-carry request failed", error);
+    console.error("Live-game hold-carry request failed", error);
     return NextResponse.json(
-      { error: "The drop-carry service is temporarily unavailable. Please try again." },
+      { error: "The hold-carry service is temporarily unavailable. Please try again." },
       { status: 503 },
     );
   }

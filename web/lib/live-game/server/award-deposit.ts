@@ -1,17 +1,25 @@
 import { LiveMap, LiveObject } from "@liveblocks/client";
 import type { LiveGameAwardReceipt, LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
+import {
+  bagHasMatchingResource,
+  removeMatchingResourceSlots,
+} from "@/lib/live-game/carry-bag";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { normalizeAwardReceipt } from "@/lib/live-game/server/award-receipt";
 import {
+  readPlayerCarryBagFromMutator,
+  writePlayerCarryBagToMutator,
+} from "@/lib/live-game/server/player-carry";
+import {
   asLiveGameMutatorRoot,
   readMutatorNumber,
-  readMutatorString,
   type LiveGameMutatorNode,
 } from "@/lib/live-game/server/mutator";
 
 export type AwardDepositResult = {
   resourceType: LiveGameResourceType;
   poolCount: number;
+  depositedAmount: number;
   alreadyAwarded: boolean;
 };
 
@@ -19,6 +27,7 @@ export async function awardDepositForCarry(input: {
   roomId: string;
   playerId: string;
   challengeId: string;
+  resourceType: LiveGameResourceType;
 }): Promise<AwardDepositResult | null> {
   const liveblocks = getLiveblocksServerClient();
   let result: AwardDepositResult | null = null;
@@ -43,29 +52,33 @@ export async function awardDepositForCarry(input: {
       result = {
         resourceType: priorReceipt.resourceType,
         poolCount: priorReceipt.poolCount,
+        depositedAmount: priorReceipt.depositedAmount ?? 1,
         alreadyAwarded: true,
       };
       return;
     }
 
-    const playerCarry = storage.get("playerCarry");
-    const carryNode = playerCarry?.get(input.playerId) as LiveGameMutatorNode | undefined;
-    if (!carryNode) return;
+    const inventoryEntry = storage.get("playerInventory")?.get(input.playerId) as
+      | LiveGameMutatorNode
+      | undefined;
+    const capacity = inventoryEntry?.get("backpack") === true ? 4 : 1;
+    const bag = readPlayerCarryBagFromMutator(storage, input.playerId, capacity);
+    if (!bag || !bagHasMatchingResource(bag, input.resourceType)) return;
 
-    const resourceType = readMutatorString(carryNode.get("resourceType")) as LiveGameResourceType | null;
-    if (!resourceType) return;
+    const { bag: nextBag, removedCount } = removeMatchingResourceSlots(bag, input.resourceType);
+    if (removedCount < 1) return;
 
     const resourcePool = storage.get("resourcePool");
     if (!resourcePool) return;
 
-    const nextCount = readMutatorNumber(resourcePool.get(resourceType)) + 1;
-    resourcePool.set(resourceType, nextCount);
-
-    (playerCarry as { delete?: (key: string) => void }).delete?.(input.playerId);
+    const nextCount = readMutatorNumber(resourcePool.get(input.resourceType)) + removedCount;
+    resourcePool.set(input.resourceType, nextCount);
+    writePlayerCarryBagToMutator(storage, input.playerId, nextBag);
 
     result = {
-      resourceType,
+      resourceType: input.resourceType,
       poolCount: nextCount,
+      depositedAmount: removedCount,
       alreadyAwarded: false,
     };
 
@@ -73,9 +86,10 @@ export async function awardDepositForCarry(input: {
       input.challengeId,
       new LiveObject<LiveGameAwardReceipt>({
         awardKind: "pool",
-        resourceType,
+        resourceType: input.resourceType,
         nodeCooldownEndsAt: 0,
         poolCount: nextCount,
+        depositedAmount: removedCount,
       }),
     );
   });

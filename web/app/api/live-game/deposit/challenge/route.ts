@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
+import {
+  withLiveGameServerTiming,
+  type LiveGameServerTimer,
+} from "@/lib/live-game/server/server-timing";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
   ENGLISH_CRAFT_STORAGE_BY_TYPE,
@@ -18,7 +21,8 @@ import { readSessionQuestionSetBinding } from "@/lib/live-game/server/question-s
 import {
   createLiveGameChallenge,
 } from "@/lib/live-game/server/challenge-store";
-import { readPlayerCarry } from "@/lib/live-game/server/player-carry";
+import { bagHasMatchingResource, readPlayerCarryBag } from "@/lib/live-game/carry-bag";
+import type { LiveGameResourceType } from "@/lib/live-game/liveblocks/config";
 import { readLiveGameStorageJson } from "@/lib/live-game/server/read-storage";
 import { requireLiveGamePlayerSession } from "@/lib/live-game/server/player-session";
 import { expandInteractRadius, findNearestInteractable } from "@/lib/live-game/engine/interact";
@@ -44,7 +48,7 @@ function isStorageId(storageId: string): boolean {
   return Object.values(ENGLISH_CRAFT_STORAGE_BY_TYPE).some((storage) => storage.id === storageId);
 }
 
-async function handlePost(request: Request) {
+async function handlePost(request: Request, timer: LiveGameServerTimer) {
   try {
     assertLiveblocksSecret();
   } catch (error) {
@@ -66,7 +70,8 @@ async function handlePost(request: Request) {
 
   const roomId = parsed.roomId.trim();
   const storageId = parsed.storageId.trim();
-  const playerId = (await requireLiveGamePlayerSession(roomId)).playerId;
+  timer.setContext({ roomId });
+  const playerId = (await timer.measure("auth", () => requireLiveGamePlayerSession(roomId))).playerId;
 
   if (!roomId.startsWith("wke-live-game-")) {
     return NextResponse.json({ error: "Invalid room id." }, { status: 400 });
@@ -75,7 +80,7 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Unknown storage building." }, { status: 400 });
   }
 
-  const storage = await readLiveGameStorageJson(roomId);
+  const storage = await timer.measure("liveblocks_read", () => readLiveGameStorageJson(roomId));
   if (!storage?.session) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
@@ -83,13 +88,13 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
 
-  const carry = readPlayerCarry(storage, playerId);
-  if (!carry) {
+  const bag = readPlayerCarryBag(storage, playerId);
+  if (!bag) {
     return NextResponse.json({ error: "Nothing to deposit." }, { status: 409 });
   }
 
   const storageDef = Object.values(ENGLISH_CRAFT_STORAGE_BY_TYPE).find((entry) => entry.id === storageId);
-  if (!storageDef || storageDef.resourceType !== carry.resourceType) {
+  if (!storageDef || !bagHasMatchingResource(bag, storageDef.resourceType as LiveGameResourceType)) {
     return NextResponse.json({ error: "Wrong storage for what you are carrying." }, { status: 409 });
   }
 
@@ -110,46 +115,54 @@ async function handlePost(request: Request) {
 
   let pickedDepositRow;
   try {
-    pickedDepositRow = await pickDepositQuestionFromDeck(
-      binding.ref,
-      binding.version,
-      { roomId, playerId, cursor: deckCursor },
+    pickedDepositRow = await timer.measure("question_select", () =>
+      pickDepositQuestionFromDeck(
+        binding.ref,
+        binding.version,
+        { roomId, playerId, cursor: deckCursor },
+      ),
     );
   } catch {
     return NextResponse.json({ error: "This question set does not support deposit spelling." }, { status: 409 });
   }
 
   const [challenge] = await Promise.all([
-    createLiveGameChallenge({
-      roomId,
-      playerId,
-      nodeId: storageId,
-      questionId: pickedDepositRow.id,
-      questionSetId: binding.setId,
-      questionSetVersion: binding.version,
-      questionBank: "deposit",
-      validationPayload: pickedDepositRow.payload,
-    }),
-    advanceQuestionDeckCursor({ roomId, playerId, bank: "deposit", cursor: deckCursor }),
+    timer.measure("supabase_rpc", () =>
+      createLiveGameChallenge({
+        roomId,
+        playerId,
+        nodeId: storageId,
+        questionId: pickedDepositRow.id,
+        questionSetId: binding.setId,
+        questionSetVersion: binding.version,
+        questionBank: "deposit",
+        validationPayload: pickedDepositRow.payload,
+      }),
+    ),
+    timer.measure("liveblocks_mutate", () =>
+      advanceQuestionDeckCursor({ roomId, playerId, bank: "deposit", cursor: deckCursor }),
+    ),
   ]);
   const depositRow =
     challenge.questionId === pickedDepositRow.id ? pickedDepositRow
     : (await getQuestionById(binding.ref, "deposit", challenge.questionId, binding.version)) ?? pickedDepositRow;
 
   if (!parsed.prefetch) {
-    await recordCurrentLiveGameEncounter({
-      storage,
-      challenge,
-      question: depositRow,
-      resourceType: carry.resourceType,
-    });
+    await timer.measure("reporting", () =>
+      recordCurrentLiveGameEncounter({
+        storage,
+        challenge,
+        question: depositRow,
+        resourceType: storageDef.resourceType,
+      }),
+    );
   }
 
   return NextResponse.json({
     challengeId: challenge.challengeId,
     expiresAt: new Date(challenge.expiresAt).toISOString(),
     spell: toClientDepositSpellFromRow(depositRow, {
-      resourceType: carry.resourceType,
+      resourceType: storageDef.resourceType as LiveGameResourceType,
       storageLabel: storageDef.label,
       shuffleSeed: challenge.challengeId,
     }),
@@ -157,16 +170,18 @@ async function handlePost(request: Request) {
 }
 
 export async function POST(request: Request) {
-  try {
-    return await withLiveGameServerTiming("live_game_deposit_challenge", () => handlePost(request));
-  } catch (error) {
-    if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
-      return NextResponse.json({ error: "Not authorized." }, { status: 401 });
+  return withLiveGameServerTiming("live_game_deposit_challenge", async (timer) => {
+    try {
+      return await handlePost(request, timer);
+    } catch (error) {
+      if (error instanceof Error && error.message === "LIVE_GAME_UNAUTHORIZED") {
+        return NextResponse.json({ error: "Not authorized." }, { status: 401 });
+      }
+      console.error("Live-game deposit challenge request failed", error);
+      return NextResponse.json(
+        { error: "The deposit challenge service is temporarily unavailable. Please try again." },
+        { status: 503 },
+      );
     }
-    console.error("Live-game deposit challenge request failed", error);
-    return NextResponse.json(
-      { error: "The deposit challenge service is temporarily unavailable. Please try again." },
-      { status: 503 },
-    );
-  }
+  });
 }

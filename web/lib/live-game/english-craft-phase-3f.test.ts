@@ -16,19 +16,19 @@ import { canStartCraftChallenge } from "@/lib/live-game/server/read-storage";
 describe("english-craft phase 3f craft costs", () => {
   it("uses build_bench costs for the first craft milestone", () => {
     expect(ENGLISH_CRAFT_BUILD_BENCH_COSTS).toEqual({
-      wood: ENGLISH_CRAFT_RESOURCE_GOALS.wood,
-      stone: ENGLISH_CRAFT_RESOURCE_GOALS.stone,
+      wood: 2,
+      stone: 1,
     });
   });
 
   it("requires wood and stone before build_bench is affordable", () => {
-    const ready = { wood: 10, stone: 5, wheat: 0, cotton: 0 };
+    const ready = { wood: 2, stone: 1, wheat: 0, cotton: 0 };
     expect(canAffordRecipePoolCost(ready, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(true);
 
-    expect(canAffordRecipePoolCost({ ...ready, stone: 4 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(
+    expect(canAffordRecipePoolCost({ ...ready, stone: 0 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(
       false,
     );
-    expect(canAffordRecipePoolCost({ ...ready, wood: 9 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(
+    expect(canAffordRecipePoolCost({ ...ready, wood: 1 }, ENGLISH_CRAFT_BUILD_BENCH_RECIPE)).toBe(
       false,
     );
   });
@@ -36,7 +36,7 @@ describe("english-craft phase 3f craft costs", () => {
   it("lists missing build_bench resources and formats a readable error", () => {
     expect(
       missingRecipePoolResources(
-        { wood: 10, stone: 4, wheat: 5, cotton: 2 },
+        { wood: 2, stone: 0, wheat: 5, cotton: 2 },
         ENGLISH_CRAFT_BUILD_BENCH_RECIPE,
       ),
     ).toEqual(["stone"]);
@@ -48,11 +48,11 @@ describe("english-craft phase 3f craft costs", () => {
     ).toBe("Need more wood to build workbench.");
   });
 
-  it("blocks build_bench when stone is below goal", () => {
+  it("blocks build_bench when stone is below cost", () => {
     expect(
       canStartCraftChallenge({
         session: { phase: "playing" },
-        resourcePool: { wood: 10, stone: 4, wheat: 5, cotton: 4 },
+        resourcePool: { wood: 10, stone: 0, wheat: 5, cotton: 4 },
         craftedItems: { benchBuilt: false },
       }),
     ).toBe(false);

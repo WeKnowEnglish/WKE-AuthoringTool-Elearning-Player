@@ -17,12 +17,15 @@ export function normalizeAwardReceipt(
   const poolCount = readMutatorNumber(read("poolCount"));
   const legacyWood = readMutatorNumber(read("wood"));
 
+  const depositedAmount = readMutatorNumber(read("depositedAmount"));
+
   if (awardKind === "carry" || awardKind === "pool") {
     return {
       awardKind: awardKind as "carry" | "pool",
       resourceType: (readMutatorString(resourceType) ?? "wood") as LiveGameResourceType,
       nodeCooldownEndsAt,
       poolCount: poolCount > 0 ? poolCount : undefined,
+      depositedAmount: depositedAmount > 0 ? depositedAmount : undefined,
     };
   }
 

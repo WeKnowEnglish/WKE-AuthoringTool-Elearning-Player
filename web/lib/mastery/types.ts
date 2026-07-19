@@ -21,7 +21,8 @@ export type EvidenceSource =
   | "board_game"
   | "story_scene"
   | "pet_game"
-  | "teacher_assigned";
+  | "teacher_assigned"
+  | "whiteboard";
 
 export type EvidenceMode = "recognition" | "recall" | "production" | "transfer";
 

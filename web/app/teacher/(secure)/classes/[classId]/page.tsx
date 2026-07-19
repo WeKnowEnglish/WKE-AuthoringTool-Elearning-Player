@@ -4,10 +4,16 @@ import { ArchiveClassButton } from "@/components/teacher/ArchiveClassButton";
 import { ClassJoinCodePanel } from "@/components/teacher/ClassJoinCodePanel";
 import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
 import { LiveGameClassProjectPanel } from "@/components/teacher/LiveGameClassProjectPanel";
+import { SentenceStripClassPanel } from "@/components/teacher/SentenceStripClassPanel";
+import { VirtualClassroomClassPanel } from "@/components/teacher/VirtualClassroomClassPanel";
+import { WhiteboardClassHistory } from "@/components/teacher/WhiteboardClassHistory";
+import { WhiteboardClassPanel } from "@/components/teacher/WhiteboardClassPanel";
 import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
 import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
 import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
+import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
+import { listClassWhiteboardHistory } from "@/lib/whiteboard/server/history";
 
 type Props = {
   params: Promise<{ classId: string }>;
@@ -18,11 +24,20 @@ export default async function TeacherClassDetailPage({ params }: Props) {
   const teacherClass = await getTeacherClass(classId);
   if (!teacherClass) notFound();
 
-  const [roster, masteryOverview, pendingSentences, liveGameProject] = await Promise.all([
+  const [
+    roster,
+    masteryOverview,
+    pendingSentences,
+    liveGameProject,
+    whiteboardHistory,
+    activeVc,
+  ] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
     getPendingSentenceCountsForClass(classId),
     getLiveGameClassProjectOverview(classId),
+    listClassWhiteboardHistory(classId),
+    getActiveVirtualClassroomForClass(classId),
   ]);
 
   const masteryByStudentId = Object.fromEntries(
@@ -63,11 +78,27 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         archived={archived}
       />
 
+      <VirtualClassroomClassPanel
+        classId={classId}
+        archived={archived}
+        activeSession={
+          activeVc
+            ? { sessionId: activeVc.id, joinCode: activeVc.joinCode }
+            : null
+        }
+      />
+
       <LiveGameClassProjectPanel
         classId={classId}
         archived={archived}
         overview={liveGameProject}
       />
+
+      <WhiteboardClassPanel classId={classId} archived={archived} />
+
+      <SentenceStripClassPanel classId={classId} archived={archived} />
+
+      <WhiteboardClassHistory classId={classId} rounds={whiteboardHistory} />
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Roster</h2>

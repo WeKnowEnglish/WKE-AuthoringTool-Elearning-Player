@@ -15,7 +15,11 @@ import { getProgressSnapshot } from "@/lib/progress/local-storage";
 
 const SECONDARY_LOGIN_PATH = "/secondary/login";
 
-export function LevelLandingClient() {
+export function LevelLandingClient({
+  children,
+}: {
+  children?: React.ReactNode;
+}) {
   const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
 
@@ -45,6 +49,7 @@ export function LevelLandingClient() {
             ))}
           </div>
           <LandingFeatureBar />
+          {children}
         </main>
       </div>
 

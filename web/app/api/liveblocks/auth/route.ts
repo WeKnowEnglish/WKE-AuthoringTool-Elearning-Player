@@ -8,6 +8,21 @@ import { getRoomProduct } from "@/lib/liveblocks/room-prefix";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { verifyLiveGamePlayerToken, LIVE_GAME_PLAYER_COOKIE_NAME } from "@/lib/live-game/server/player-session";
 import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
+import { canAccessVirtualClassroomRoom } from "@/lib/virtual-classroom/auth-policy";
+import {
+  decodeVcMemberToken,
+  VC_HOST_COOKIE,
+  VC_MEMBER_COOKIE,
+} from "@/lib/virtual-classroom/session-cookie";
+import { getVirtualClassroomSessionByJoinCode } from "@/lib/virtual-classroom/server/session";
+import { joinCodeFromVirtualClassroomRoom } from "@/lib/virtual-classroom/room-id";
+import { canAccessDocumentRoom } from "@/lib/document-activity/auth-policy";
+import { canAccessWhiteboardRoom } from "@/lib/whiteboard/liveblocks/auth-policy";
+import {
+  decodeWhiteboardPlayerToken,
+  WHITEBOARD_HOST_COOKIE,
+  WHITEBOARD_PLAYER_COOKIE,
+} from "@/lib/whiteboard/liveblocks/host-cookie";
 
 export async function POST(request: Request) {
   return withLiveGameServerTiming("liveblocks_auth", async (timer) => {
@@ -54,6 +69,64 @@ export async function POST(request: Request) {
         authRequest.displayName = playerSession.displayName;
         authRequest.role = playerSession.role;
         timer.setContext({ role: playerSession.role });
+      }
+    } else if (product === "virtual-classroom") {
+      const hostCookie = cookieStore.get(VC_HOST_COOKIE)?.value ?? null;
+      const memberCookie = cookieStore.get(VC_MEMBER_COOKIE)?.value ?? null;
+      const joinCode = joinCodeFromVirtualClassroomRoom(authRequest.room);
+      if (joinCode) {
+        const session = await timer.measure("vc_session_lookup", () =>
+          getVirtualClassroomSessionByJoinCode(joinCode),
+        );
+        if (session?.status === "ended") {
+          authorized = false;
+        } else {
+          authorized = canAccessVirtualClassroomRoom({
+            room: authRequest.room,
+            role: authRequest.role,
+            hostCookie,
+            memberCookie,
+          });
+        }
+      }
+      const member = decodeVcMemberToken(memberCookie);
+      if (authorized && member?.roomId === authRequest.room) {
+        authRequest.userId = member.userId;
+        authRequest.displayName = member.displayName;
+        authRequest.role = member.role === "host" ? "host" : "player";
+        timer.setContext({ role: authRequest.role });
+      }
+    } else if (product === "whiteboard") {
+      const hostCookie = cookieStore.get(WHITEBOARD_HOST_COOKIE)?.value ?? null;
+      const playerCookie = cookieStore.get(WHITEBOARD_PLAYER_COOKIE)?.value ?? null;
+      authorized = canAccessWhiteboardRoom({
+        room: authRequest.room,
+        role: authRequest.role,
+        hostCookie,
+        playerCookie,
+      });
+      const player = decodeWhiteboardPlayerToken(playerCookie);
+      if (authorized && player?.roomId === authRequest.room) {
+        authRequest.userId = player.userId;
+        authRequest.displayName = player.displayName;
+        authRequest.role = player.role;
+        timer.setContext({ role: player.role });
+      }
+    } else if (product === "document") {
+      const hostCookie = cookieStore.get(VC_HOST_COOKIE)?.value ?? null;
+      const memberCookie = cookieStore.get(VC_MEMBER_COOKIE)?.value ?? null;
+      authorized = canAccessDocumentRoom({
+        room: authRequest.room,
+        role: authRequest.role,
+        hostCookie,
+        memberCookie,
+      });
+      const member = decodeVcMemberToken(memberCookie);
+      if (authorized && member) {
+        authRequest.userId = member.userId;
+        authRequest.displayName = member.displayName;
+        authRequest.role = member.role === "host" ? "host" : "player";
+        timer.setContext({ role: authRequest.role });
       }
     }
 

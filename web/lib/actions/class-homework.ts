@@ -8,12 +8,19 @@ import {
   normalizeHomeworkPayload,
   normalizeHomeworkTitle,
 } from "@/lib/class-homework/normalize";
+import { getAssignableActivityAdapter } from "@/lib/assignable-activities/registry";
+import {
+  freezePackFlashcardsPayload,
+  parseStoredPackFlashcardCards,
+} from "@/lib/class-homework/freeze-pack-flashcards";
 import { freezePackQuizPayload, parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
 import type { ClassHomework, ClassHomeworkStatus } from "@/lib/class-homework/types";
 import { getClassHomework } from "@/lib/data/class-homework";
 import { createClient } from "@/lib/supabase/server";
-import type { PackQuizCompiledQuestion } from "@/lib/vocabulary/pack-quiz";
-
+import {
+  normalizePackFlashcardOptions,
+  type PackFlashcardOptions,
+} from "@/lib/vocabulary/pack-flashcards";
 export type ClassHomeworkActionResult =
   | { ok: true; homework: ClassHomework }
   | { ok: false; error: string };
@@ -114,47 +121,65 @@ export async function saveClassHomework(input: {
       return { ok: false, error: "Choose a valid homework type and complete the fields." };
     }
 
-    const previousPayload = normalizeHomeworkPayload(existing.payload);
-
     if (payload.type === "pack_quiz") {
-      const previous =
-        previousPayload?.type === "pack_quiz" ? previousPayload : null;
-      let sourceQuestions: PackQuizCompiledQuestion[] = [];
-      const canReuse =
-        previous &&
-        previous.quizId === payload.quizId &&
-        Array.isArray(previous.questions) &&
-        previous.questions.length > 0;
+      const { data: quiz, error: quizError } = await supabase
+        .from("teacher_pack_quizzes")
+        .select("title, questions, archived_at")
+        .eq("id", payload.quizId)
+        .eq("teacher_id", teacherId)
+        .maybeSingle();
+      if (quizError) return { ok: false, error: quizError.message };
+      if (!quiz || quiz.archived_at) {
+        return { ok: false, error: "Pack quiz not found." };
+      }
+      const sourceQuestions = parseStoredPackQuizQuestions(quiz.questions);
+      if (sourceQuestions.length < 1) {
+        return { ok: false, error: "Pack quiz needs at least one question." };
+      }
+      payload = freezePackQuizPayload({
+        quizId: payload.quizId,
+        quizTitle: payload.quizTitle || String(quiz.title ?? "Pack quiz"),
+        questions: sourceQuestions,
+      });
+    }
 
-      if (!canReuse) {
-        const { data: quiz, error: quizError } = await supabase
-          .from("teacher_pack_quizzes")
-          .select("title, questions, archived_at")
-          .eq("id", payload.quizId)
-          .eq("teacher_id", teacherId)
-          .maybeSingle();
-        if (quizError) return { ok: false, error: quizError.message };
-        if (!quiz || quiz.archived_at) {
-          return { ok: false, error: "Pack quiz not found." };
-        }
-        sourceQuestions = parseStoredPackQuizQuestions(quiz.questions);
-        if (sourceQuestions.length < 1) {
-          return { ok: false, error: "Pack quiz needs at least one question." };
-        }
-        payload = freezePackQuizPayload({
-          quizId: payload.quizId,
-          quizTitle: payload.quizTitle || String(quiz.title ?? "Pack quiz"),
-          questions: sourceQuestions,
-          previous: null,
-        });
-      } else {
-        payload = freezePackQuizPayload({
-          quizId: payload.quizId,
-          quizTitle: payload.quizTitle,
-          questions: previous!.questions!,
-          previous,
+    if (payload.type === "pack_flashcards") {
+      const { data: set, error: setError } = await supabase
+        .from("teacher_pack_flashcard_sets")
+        .select("title, cards, options, archived_at")
+        .eq("id", payload.setId)
+        .eq("teacher_id", teacherId)
+        .maybeSingle();
+      if (setError) return { ok: false, error: setError.message };
+      if (!set || set.archived_at) {
+        return { ok: false, error: "Flashcard set not found." };
+      }
+      const sourceCards = parseStoredPackFlashcardCards(set.cards);
+      if (sourceCards.length < 1) {
+        return { ok: false, error: "Flashcard set needs at least one card." };
+      }
+      let options: PackFlashcardOptions | null = null;
+      if (set.options && typeof set.options === "object" && !Array.isArray(set.options)) {
+        const raw = set.options as Record<string, unknown>;
+        options = normalizePackFlashcardOptions({
+          includeFaces: Array.isArray(raw.includeFaces)
+            ? (raw.includeFaces as PackFlashcardOptions["includeFaces"])
+            : [],
+          frontFaces: Array.isArray(raw.frontFaces)
+            ? (raw.frontFaces as PackFlashcardOptions["frontFaces"])
+            : [],
+          backFaces: Array.isArray(raw.backFaces)
+            ? (raw.backFaces as PackFlashcardOptions["backFaces"])
+            : [],
+          shuffle: Boolean(raw.shuffle),
         });
       }
+      payload = freezePackFlashcardsPayload({
+        setId: payload.setId,
+        setTitle: payload.setTitle || String(set.title ?? "Flashcards"),
+        cards: sourceCards,
+        options,
+      });
     }
 
     const status: ClassHomeworkStatus =
@@ -169,6 +194,9 @@ export async function saveClassHomework(input: {
     if (status === "assigned" || status === "closed") {
       if (payload.type === "pack_quiz" && payload.questionCount < 1) {
         return { ok: false, error: "Pack quiz needs at least one question." };
+      }
+      if (payload.type === "pack_flashcards" && payload.cardCount < 1) {
+        return { ok: false, error: "Flashcard set needs at least one card." };
       }
       if (payload.type === "word_pack_practice" && payload.wordCount < 1) {
         return { ok: false, error: "Word pack needs at least one word." };
@@ -187,6 +215,14 @@ export async function saveClassHomework(input: {
         .from("teacher_pack_quizzes")
         .update({ status: "published", updated_at: new Date().toISOString() })
         .eq("id", payload.quizId)
+        .eq("teacher_id", teacherId);
+    }
+
+    if (payload.type === "pack_flashcards" && status === "assigned") {
+      await supabase
+        .from("teacher_pack_flashcard_sets")
+        .update({ status: "published", updated_at: new Date().toISOString() })
+        .eq("id", payload.setId)
         .eq("teacher_id", teacherId);
     }
 
@@ -319,9 +355,17 @@ export async function assignPackQuizAsHomework(input: {
       return { ok: false, error: "Quiz not found." };
     }
 
-    const questions = parseStoredPackQuizQuestions(quiz.questions);
-    if (questions.length < 1) {
-      return { ok: false, error: "Quiz has no questions." };
+    let payload;
+    try {
+      payload = await getAssignableActivityAdapter("pack_mc_quiz").toHomeworkPayload(quizId);
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Could not prepare quiz for homework.",
+      };
+    }
+    if (payload.type !== "pack_quiz" || payload.questionCount < 1) {
+      return { ok: false, error: "Could not freeze quiz questions." };
     }
 
     const packId = typeof quiz.pack_id === "string" ? quiz.pack_id : null;
@@ -354,15 +398,6 @@ export async function assignPackQuizAsHomework(input: {
         }
         revalidatePath(`/teacher/word-packs/${packId}`);
       }
-    }
-
-    const payload = freezePackQuizPayload({
-      quizId,
-      quizTitle: String(quiz.title ?? "Pack quiz"),
-      questions,
-    });
-    if (payload.questionCount < 1) {
-      return { ok: false, error: "Could not freeze quiz questions." };
     }
 
     const now = new Date().toISOString();
@@ -416,6 +451,164 @@ export async function assignPackQuizAsHomework(input: {
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Could not assign quiz as homework.",
+    };
+  }
+}
+
+export async function assignPackFlashcardSetAsHomework(input: {
+  setId: string;
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status?: "draft" | "assigned";
+  linkPackToClass?: boolean;
+}): Promise<ClassHomeworkActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const setId = input.setId.trim();
+    const classId = input.classId.trim();
+    if (!setId) return { ok: false, error: "Missing flashcard set." };
+    if (!classId) return { ok: false, error: "Choose a class." };
+
+    const status: ClassHomeworkStatus =
+      input.status === "assigned" ? "assigned" : "draft";
+
+    const supabase = await createClient();
+
+    const { data: ownedClass, error: classError } = await supabase
+      .from("teacher_classes")
+      .select("id, archived_at")
+      .eq("id", classId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (classError) {
+      if (/teacher_classes|schema cache|does not exist/i.test(classError.message)) {
+        return { ok: false, error: "Classes aren’t available yet." };
+      }
+      return { ok: false, error: classError.message };
+    }
+    if (!ownedClass || ownedClass.archived_at) {
+      return { ok: false, error: "Class not found." };
+    }
+
+    const { data: set, error: setError } = await supabase
+      .from("teacher_pack_flashcard_sets")
+      .select("id, title, pack_id, cards, archived_at")
+      .eq("id", setId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (setError) {
+      if (/teacher_pack_flashcard_sets|schema cache|does not exist/i.test(setError.message)) {
+        return {
+          ok: false,
+          error: "Flashcards aren’t available yet — apply migration 068_teacher_pack_flashcard_sets.",
+        };
+      }
+      return { ok: false, error: setError.message };
+    }
+    if (!set || set.archived_at) {
+      return { ok: false, error: "Flashcard set not found." };
+    }
+
+    let payload;
+    try {
+      payload = await getAssignableActivityAdapter("pack_flashcards").toHomeworkPayload(setId);
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Could not prepare flashcards for homework.",
+      };
+    }
+    if (payload.type !== "pack_flashcards" || payload.cardCount < 1) {
+      return { ok: false, error: "Could not freeze flashcard set." };
+    }
+
+    const packId = typeof set.pack_id === "string" ? set.pack_id : null;
+    if (input.linkPackToClass && packId) {
+      const { data: pack, error: packError } = await supabase
+        .from("teacher_word_packs")
+        .select("id, class_id, archived_at")
+        .eq("id", packId)
+        .eq("teacher_id", teacherId)
+        .maybeSingle();
+
+      if (packError) return { ok: false, error: packError.message };
+      if (!pack || pack.archived_at) {
+        return { ok: false, error: "Word pack not found." };
+      }
+
+      if (pack.class_id !== classId) {
+        const { error: linkError } = await supabase
+          .from("teacher_word_packs")
+          .update({
+            class_id: classId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", packId)
+          .eq("teacher_id", teacherId);
+
+        if (linkError) return { ok: false, error: linkError.message };
+        if (typeof pack.class_id === "string" && pack.class_id) {
+          revalidatePath(`/teacher/classes/${pack.class_id}`);
+        }
+        revalidatePath(`/teacher/word-packs/${packId}`);
+      }
+    }
+
+    const now = new Date().toISOString();
+    const title = normalizeHomeworkTitle(input.title, payload.setTitle);
+    const instructions = normalizeHomeworkInstructions(input.instructions);
+    const dueAt = normalizeDueAt(input.dueAt);
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("class_homework")
+      .insert({
+        class_id: classId,
+        teacher_id: teacherId,
+        title,
+        instructions,
+        due_at: dueAt,
+        status,
+        payload,
+        assigned_at: status === "assigned" ? now : null,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !inserted?.id) {
+      if (/class_homework|schema cache|does not exist/i.test(insertError?.message ?? "")) {
+        return {
+          ok: false,
+          error: "Homework isn’t available yet — apply migration 064_class_homework.",
+        };
+      }
+      return { ok: false, error: insertError?.message ?? "Could not create homework." };
+    }
+
+    if (status === "assigned") {
+      await supabase
+        .from("teacher_pack_flashcard_sets")
+        .update({ status: "published", updated_at: now })
+        .eq("id", setId)
+        .eq("teacher_id", teacherId);
+    }
+
+    const homework = await getClassHomework(inserted.id);
+    if (!homework) {
+      return { ok: false, error: "Homework created but could not be loaded." };
+    }
+
+    revalidateClass(classId);
+    revalidatePath("/teacher/word-packs");
+    return { ok: true, homework };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not assign flashcards as homework.",
     };
   }
 }

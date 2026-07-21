@@ -12,9 +12,12 @@ import {
   packQuizEmptyDropdownCopy,
   resolvePackTitleForQuiz,
 } from "@/lib/class-homework/display";
+import { sourceLabelForAssignableKind } from "@/lib/assignable-activities/map";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, ClassHomeworkPayload, HomeworkCompletionSummary } from "@/lib/class-homework/types";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
+
+const ACTIVITY_LABEL = sourceLabelForAssignableKind("pack_mc_quiz");
 
 type QuizOption = {
   id: string;
@@ -148,8 +151,8 @@ export function ClassHomeworkPanel({
           <h3 className="text-base font-semibold text-neutral-900">Homework</h3>
           <p className="mt-1 max-w-xl text-sm text-neutral-600">
             {isLight
-              ? "Assign a pack quiz or word-pack practice. Track who finished with a simple Done count."
-              : "Stage offline work — pack quizzes, word-pack practice, or a short note. Assigned items appear on the student Primary Learn tab."}
+              ? `Assign a ${ACTIVITY_LABEL.toLowerCase()} or word-pack practice. Track who finished with a simple Done count.`
+              : `Assign an activity (${ACTIVITY_LABEL.toLowerCase()} for now), word-pack practice, or a short note. Assigned items appear on the student Primary Learn tab.`}
           </p>
         </div>
         {!archived ? (
@@ -168,7 +171,7 @@ export function ClassHomeworkPanel({
 
       {items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-3 py-4 text-sm text-neutral-600">
-          No homework yet. Create a draft, then Assign when students should see it.
+          No homework yet. Assign an activity when students should see it on Primary Learn.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -262,11 +265,11 @@ function HomeworkEditor({
   const typeOptions = (
     isLight
       ? ([
-          ["pack_quiz", "Pack quiz"],
+          ["pack_quiz", ACTIVITY_LABEL],
           ["word_pack_practice", "Word pack practice"],
         ] as const)
       : ([
-          ["pack_quiz", "Pack quiz"],
+          ["pack_quiz", ACTIVITY_LABEL],
           ["word_pack_practice", "Word pack practice"],
           ["external_note", "Note / reminder"],
         ] as const)
@@ -404,7 +407,7 @@ function HomeworkEditor({
       </label>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">Type</legend>
+        <legend className="text-sm font-semibold">Assign</legend>
         <div className="flex flex-wrap gap-2">
           {typeOptions.map(([value, label]) => (
             <button
@@ -422,22 +425,28 @@ function HomeworkEditor({
             </button>
           ))}
         </div>
+        {payloadType === "pack_quiz" ? (
+          <p className="text-xs font-normal text-neutral-500">
+            Activity from the catalog (MCQ quizzes teachers save from word packs).
+          </p>
+        ) : null}
       </fieldset>
 
       {payloadType === "pack_quiz" ? (
         <div className="space-y-1">
           <label className="block text-sm font-semibold">
-            Quiz
+            {ACTIVITY_LABEL}
             <select
               value={quizId}
               disabled={archived || pending}
               onChange={(event) => setQuizId(event.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
             >
-              <option value="">Select a class pack quiz…</option>
+              <option value="">Select a {ACTIVITY_LABEL.toLowerCase()}…</option>
               {packQuizzes.map((quiz) => (
-                <option key={quiz.id} value={quiz.id}>
+                <option key={quiz.id} value={quiz.id} disabled={quiz.questionCount < 1}>
                   {quiz.title} ({quiz.questionCount} q)
+                  {quiz.questionCount < 1 ? " — not ready" : ""}
                 </option>
               ))}
             </select>

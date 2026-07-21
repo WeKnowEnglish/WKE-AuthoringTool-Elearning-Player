@@ -127,6 +127,64 @@ describe("compilePackMultipleChoiceQuiz", () => {
       new Set(["a", "b", "c", "d", "e"]),
     );
   });
+
+  it("uses only the selected subset from a larger pack lexeme pool", () => {
+    const subsetDraft = createPackQuizDraft({
+      packId: "p",
+      packTitle: "t",
+      format: "multiple_choice",
+      wordIds: ["b", "c", "d", "e"],
+    });
+    const lexemes = [
+      lex({ id: "a", lemma: "ant", definitionEn: "a tiny insect" }),
+      lex({ id: "b", lemma: "bear", definitionEn: "a big animal" }),
+      lex({ id: "c", lemma: "cat", definitionEn: "a pet" }),
+      lex({ id: "d", lemma: "dog", definitionEn: "a friend" }),
+      lex({ id: "e", lemma: "elk", definitionEn: "a deer" }),
+      lex({ id: "f", lemma: "fox", definitionEn: "a clever animal" }),
+    ];
+    const result = compilePackMultipleChoiceQuiz({
+      draft: subsetDraft,
+      lexemes,
+      seed: "subset",
+      questionCount: 4,
+    });
+    expect(result.questions).toHaveLength(4);
+    const used = new Set(result.questions.map((q) => q.wordId));
+    expect(used).toEqual(new Set(["b", "c", "d", "e"]));
+    expect(used.has("a")).toBe(false);
+    expect(used.has("f")).toBe(false);
+    // Distractors must also come from the selected pool only.
+    for (const q of result.questions) {
+      for (const opt of q.payload.options) {
+        expect(["ant", "fox"]).not.toContain(opt.label.toLowerCase());
+      }
+    }
+  });
+
+  it("defaults to one question per usable selected word (no 12-cap)", () => {
+    const ids = Array.from({ length: 15 }, (_, i) => `w${i}`);
+    const bigDraft = createPackQuizDraft({
+      packId: "p",
+      packTitle: "t",
+      format: "multiple_choice",
+      wordIds: ids,
+    });
+    const lexemes = ids.map((id, i) =>
+      lex({
+        id,
+        lemma: `word${i}`,
+        definitionEn: `meaning ${i}`,
+      }),
+    );
+    const result = compilePackMultipleChoiceQuiz({
+      draft: bigDraft,
+      lexemes,
+      seed: "all-words",
+    });
+    expect(result.questions).toHaveLength(15);
+    expect(new Set(result.questions.map((q) => q.wordId))).toEqual(new Set(ids));
+  });
 });
 
 describe("hydratePackLexemeDefinitions", () => {

@@ -146,13 +146,13 @@ export function AssignPackQuizHomeworkOverlay({
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-200 px-4 py-3">
           <div className="min-w-0">
             <h2 id={titleId} className="text-base font-bold text-neutral-900">
-              Assign as homework
+              Assign activity as homework
             </h2>
             <p className="mt-0.5 truncate text-sm text-neutral-600" title={quizTitle}>
               {quizTitle}
             </p>
             <p className="mt-1 text-xs text-neutral-500">
-              {questionCount} question{questionCount === 1 ? "" : "s"}
+              Pack quiz · {questionCount} question{questionCount === 1 ? "" : "s"}
               {format !== "multiple_choice"
                 ? " · Only multiple choice plays for students today"
                 : ""}

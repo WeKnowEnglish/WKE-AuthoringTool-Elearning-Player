@@ -24,7 +24,6 @@ export type PackQuizCompileResult = {
 
 const OPTION_IDS = ["a", "b", "c", "d"] as const;
 const DISTRACTOR_COUNT = 3;
-const DEFAULT_MAX_QUESTIONS = 12;
 
 function normalizeKey(value: string): string {
   return value.trim().toLowerCase();
@@ -165,12 +164,14 @@ function buildQuestion(
 
 /**
  * Compile a teacher-preview MC quiz from a frozen pack draft + hydrated lexemes.
- * Distractors come from other words in the same pack snapshot.
+ * Distractors come from other words in the same selection snapshot.
+ * By default builds one question per usable selected word (optional `questionCount` caps).
  */
 export function compilePackMultipleChoiceQuiz(input: {
   draft: PackQuizDraft;
   lexemes: readonly PackLexemeResolution[];
   seed?: string;
+  /** Optional cap; defaults to one question per usable selected word. */
   questionCount?: number;
 }): PackQuizCompileResult {
   const warnings: string[] = [];
@@ -210,7 +211,7 @@ export function compilePackMultipleChoiceQuiz(input: {
   const seedBase = input.seed ?? input.draft.createdAt;
   const maxQuestions = Math.max(
     1,
-    Math.min(input.questionCount ?? DEFAULT_MAX_QUESTIONS, ordered.length),
+    Math.min(input.questionCount ?? ordered.length, ordered.length),
   );
   const targets = shuffleWithSeed(ordered, `${seedBase}:targets`).slice(0, maxQuestions);
 

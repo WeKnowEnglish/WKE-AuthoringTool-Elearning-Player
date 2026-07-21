@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { MakePackFlashcardsOverlay } from "@/components/teacher/word-packs/MakePackFlashcardsOverlay";
+import { MakePackQuizOverlay } from "@/components/teacher/word-packs/MakePackQuizOverlay";
 import {
   archiveTeacherWordPackFromForm,
   duplicateTeacherWordPackFromForm,
 } from "@/lib/actions/teacher-word-packs";
-import { MakePackQuizOverlay } from "@/components/teacher/word-packs/MakePackQuizOverlay";
 
 type Props = {
   packId: string;
@@ -16,6 +17,7 @@ type Props = {
 
 export function WordPackListRowActions({ packId, title, wordIds }: Props) {
   const [quizOpen, setQuizOpen] = useState(false);
+  const [flashcardsOpen, setFlashcardsOpen] = useState(false);
 
   return (
     <>
@@ -26,6 +28,13 @@ export function WordPackListRowActions({ packId, title, wordIds }: Props) {
           className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
         >
           Make a quiz
+        </button>
+        <button
+          type="button"
+          onClick={() => setFlashcardsOpen(true)}
+          className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
+        >
+          Make flashcards
         </button>
         <form action={duplicateTeacherWordPackFromForm}>
           <input type="hidden" name="pack_id" value={packId} />
@@ -59,6 +68,13 @@ export function WordPackListRowActions({ packId, title, wordIds }: Props) {
       <MakePackQuizOverlay
         open={quizOpen}
         onClose={() => setQuizOpen(false)}
+        packId={packId}
+        packTitle={title}
+        wordIds={wordIds}
+      />
+      <MakePackFlashcardsOverlay
+        open={flashcardsOpen}
+        onClose={() => setFlashcardsOpen(false)}
         packId={packId}
         packTitle={title}
         wordIds={wordIds}

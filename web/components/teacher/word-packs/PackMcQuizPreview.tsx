@@ -16,6 +16,8 @@ type Props = {
   /** When true, hide Save (already-persisted quiz preview). */
   hideSave?: boolean;
   backLabel?: string;
+  /** After a successful save, open the spreadsheet editor (E2+). */
+  onEditSavedQuiz?: (quiz: { id: string; title: string }) => void;
 };
 
 export function PackMcQuizPreview({
@@ -23,6 +25,7 @@ export function PackMcQuizPreview({
   onBackToFormats,
   hideSave = false,
   backLabel = "Back to formats",
+  onEditSavedQuiz,
 }: Props) {
   const [index, setIndex] = useState(0);
   const [passed, setPassed] = useState(false);
@@ -30,6 +33,7 @@ export function PackMcQuizPreview({
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuizId, setSavedQuizId] = useState<string | null>(null);
+  const [savedQuizTitle, setSavedQuizTitle] = useState<string | null>(null);
 
   const draft: PackQuizDraft = compiled.draft;
   const total = compiled.questions.length;
@@ -59,6 +63,7 @@ export function PackMcQuizPreview({
         return;
       }
       setSavedQuizId(result.quiz.id);
+      setSavedQuizTitle(result.quiz.title);
       setSaveMessage(`Saved as draft: ${result.quiz.title}`);
     } finally {
       setSaving(false);
@@ -75,6 +80,20 @@ export function PackMcQuizPreview({
       >
         {savedQuizId ? "Saved" : saving ? "Saving…" : "Save quiz"}
       </button>
+      {savedQuizId && onEditSavedQuiz ? (
+        <button
+          type="button"
+          onClick={() =>
+            onEditSavedQuiz({
+              id: savedQuizId,
+              title: savedQuizTitle ?? draft.packTitle,
+            })
+          }
+          className="rounded border border-neutral-900 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
+        >
+          Edit quiz
+        </button>
+      ) : null}
       {saveMessage ? (
         <p className={`text-xs ${savedQuizId ? "text-emerald-800" : "text-amber-900"}`}>
           {saveMessage}

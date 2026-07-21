@@ -1,6 +1,7 @@
 export {
   PACK_QUIZ_FORMATS,
   createPackQuizDraft,
+  freezeSelectedPackWordIds,
   getPackQuizFormatMeta,
   isPackQuizFormatAvailable,
   packQuizComingSoonMessage,
@@ -18,3 +19,13 @@ export {
 } from "./compile-pack-mc-quiz";
 
 export { hydratePackLexemeDefinitions } from "./hydrate-lexemes";
+
+export {
+  packQuizMcModeLabel,
+  packQuizQuestionsToSheetRows,
+  sheetRowsToPackQuizQuestions,
+  preservePromptImagesByWordId,
+  PACK_QUIZ_MC_MODES,
+  type PackQuizSheetRow,
+  type SheetRowsToQuestionsResult,
+} from "./sheet-rows";

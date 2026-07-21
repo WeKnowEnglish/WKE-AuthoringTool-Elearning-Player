@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createTeacherWordPackFromForm } from "@/lib/actions/teacher-word-packs";
+import { PackFlashcardSetListRowActions } from "@/components/teacher/word-packs/PackFlashcardSetListRowActions";
 import { PackQuizListRowActions } from "@/components/teacher/word-packs/PackQuizListRowActions";
 import { WordPackListRowActions } from "@/components/teacher/word-packs/WordPackListRowActions";
 import { listTeacherClasses } from "@/lib/data/teacher-classes";
 import { listPackQuizHomeworkUsage, type PackQuizHomeworkUsage } from "@/lib/data/class-homework";
+import { listTeacherPackFlashcardSets } from "@/lib/data/teacher-pack-flashcards";
 import { listTeacherPackQuizzes } from "@/lib/data/teacher-pack-quizzes";
 import { listTeacherWordPacks } from "@/lib/data/teacher-word-packs";
 import { getPackQuizFormatMeta } from "@/lib/vocabulary/pack-quiz";
 
 export const metadata: Metadata = {
   title: "Word packs — Teacher",
-  description: "Build Primary vocabulary packs and quizzes from the master candidate bank.",
+  description: "Build Primary vocabulary packs, quizzes, and flashcards from the master candidate bank.",
   robots: { index: false, follow: false },
 };
 
@@ -19,7 +21,7 @@ type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type PageTab = "packs" | "quizzes";
+type PageTab = "packs" | "quizzes" | "flashcards";
 
 function firstParam(v: string | string[] | undefined): string {
   if (Array.isArray(v)) return v[0] ?? "";
@@ -38,7 +40,9 @@ function formatUpdated(iso: string): string {
 }
 
 function resolveTab(raw: string): PageTab {
-  return raw === "quizzes" ? "quizzes" : "packs";
+  if (raw === "quizzes") return "quizzes";
+  if (raw === "flashcards") return "flashcards";
+  return "packs";
 }
 
 export default async function TeacherWordPacksPage({ searchParams }: Props) {
@@ -46,12 +50,14 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
   const error = firstParam(params.error);
   const archived = firstParam(params.archived);
   const archivedQuiz = firstParam(params.archived_quiz);
+  const archivedSet = firstParam(params.archived_set);
   const tab = resolveTab(firstParam(params.tab));
 
-  const [packs, classes, quizzes, quizHomeworkUsage] = await Promise.all([
+  const [packs, classes, quizzes, flashcardSets, quizHomeworkUsage] = await Promise.all([
     listTeacherWordPacks(),
     listTeacherClasses(),
     listTeacherPackQuizzes().catch(() => []),
+    listTeacherPackFlashcardSets().catch(() => []),
     listPackQuizHomeworkUsage().catch(
       (): Record<string, PackQuizHomeworkUsage> => ({}),
     ),
@@ -67,8 +73,8 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
       <div>
         <h1 className="text-2xl font-bold">Word packs</h1>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-          Build packs from the Primary candidate bank, then turn them into quizzes. Pack edits do not change
-          quizzes you already saved.
+          Build packs from the Primary candidate bank, then turn them into quizzes or flashcards. Pack
+          edits do not change sets you already saved.
         </p>
       </div>
 
@@ -96,6 +102,19 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
             ({quizzes.length})
           </span>
         </Link>
+        <Link
+          href="/teacher/word-packs?tab=flashcards"
+          className={`rounded-t border px-3 py-2 text-sm font-semibold ${
+            tab === "flashcards"
+              ? "border-neutral-300 border-b-white bg-white text-neutral-900"
+              : "border-transparent text-neutral-600 hover:text-neutral-900"
+          }`}
+        >
+          Flashcards{" "}
+          <span className={tab === "flashcards" ? "text-neutral-500" : "text-neutral-400"}>
+            ({flashcardSets.length})
+          </span>
+        </Link>
       </div>
 
       {archived === "1" ? (
@@ -107,6 +126,12 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
       {archivedQuiz === "1" ? (
         <p className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           Quiz archived.
+        </p>
+      ) : null}
+
+      {archivedSet === "1" ? (
+        <p className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Flashcard set archived.
         </p>
       ) : null}
 
@@ -133,6 +158,13 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
         <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           Couldn’t archive that quiz. Apply migration{" "}
           <code className="rounded bg-red-100 px-1">061_teacher_pack_quizzes</code> if you haven’t yet.
+        </p>
+      ) : null}
+
+      {error === "flashcard_archive_failed" ? (
+        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          Couldn’t archive that flashcard set. Apply migration{" "}
+          <code className="rounded bg-red-100 px-1">068_teacher_pack_flashcard_sets</code> if you haven’t yet.
         </p>
       ) : null}
 
@@ -215,7 +247,7 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
             </ul>
           )}
         </>
-      ) : (
+      ) : tab === "quizzes" ? (
         <>
           <p className="text-sm text-neutral-600">
             Saved from <span className="font-medium text-neutral-800">Make a quiz</span> on a pack.
@@ -288,6 +320,64 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
                       packClassId={quiz.pack_id ? packClassIdById.get(quiz.pack_id) ?? null : null}
                       classes={classOptions}
                     />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-neutral-600">
+            Saved from <span className="font-medium text-neutral-800">Make flashcards</span> on a pack.
+            Assigning flashcards as homework comes in the next slice.
+          </p>
+
+          {flashcardSets.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-4 py-10 text-center">
+              <p className="font-medium text-neutral-800">No saved flashcard sets yet</p>
+              <p className="mt-1 text-sm text-neutral-600">
+                Open a pack on the Word packs tab, choose{" "}
+                <span className="font-medium">Make flashcards</span>, then Save in the preview.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {flashcardSets.map((set) => {
+                const packTitle = set.pack_id ? packTitleById.get(set.pack_id) : null;
+                return (
+                  <li
+                    key={set.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-3 shadow-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-neutral-900">{set.title}</p>
+                      <p className="text-sm text-neutral-600">
+                        {set.cardCount} card{set.cardCount === 1 ? "" : "s"} · {set.wordCount} word
+                        {set.wordCount === 1 ? "" : "s"} ·{" "}
+                        <span className="capitalize">{set.status}</span>
+                        {packTitle ? (
+                          <>
+                            {" "}
+                            · from{" "}
+                            {set.pack_id ? (
+                              <Link
+                                href={`/teacher/word-packs/${set.pack_id}`}
+                                className="font-medium text-neutral-800 underline-offset-2 hover:underline"
+                              >
+                                {packTitle}
+                              </Link>
+                            ) : (
+                              packTitle
+                            )}
+                          </>
+                        ) : set.pack_id ? (
+                          " · pack unavailable"
+                        ) : null}
+                        <span className="text-neutral-400"> · Updated {formatUpdated(set.updated_at)}</span>
+                      </p>
+                    </div>
+                    <PackFlashcardSetListRowActions setId={set.id} title={set.title} />
                   </li>
                 );
               })}

@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { TeacherClassHubClient } from "@/components/teacher/class-hub/TeacherClassHubClient";
+import { listAssignableActivitiesForClass } from "@/lib/assignable-activities/registry";
 import { getTeacherTier } from "@/lib/auth/roles";
 import type { LiveGameQuestionSetOption } from "@/lib/class-lessons/types";
 import {
   listClassHomeworkCompletionsForClass,
   listClassHomeworkForClass,
-  listTeacherPackQuizzesForClass,
 } from "@/lib/data/class-homework";
 import { listClassLessonsWithStepsForClass } from "@/lib/data/class-lessons";
 import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
@@ -45,7 +45,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     lessons,
     liveGameSetsRaw,
     homework,
-    packQuizzes,
+    activityCards,
     homeworkCompletions,
   ] = await Promise.all([
     getClassRoster(classId),
@@ -58,9 +58,18 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     listClassLessonsWithStepsForClass(classId),
     listPublishedQuestionSetsForHost(),
     listClassHomeworkForClass(classId),
-    listTeacherPackQuizzesForClass(classId),
+    listAssignableActivitiesForClass(classId),
     listClassHomeworkCompletionsForClass(classId).catch(() => []),
   ]);
+
+  const packQuizzes = activityCards
+    .filter((card) => card.kind === "pack_mc_quiz")
+    .map((card) => ({
+      id: card.artifactId,
+      title: card.title,
+      questionCount: card.questionCount ?? 0,
+      packId: card.packId ?? null,
+    }));
 
   const masteryByStudentId = Object.fromEntries(
     masteryOverview.students.map((preview) => [preview.studentId, preview]),

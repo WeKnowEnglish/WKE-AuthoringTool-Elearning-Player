@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { archiveTeacherPackQuizFromForm } from "@/lib/actions/pack-quiz";
 import { AssignPackQuizHomeworkOverlay } from "@/components/teacher/word-packs/AssignPackQuizHomeworkOverlay";
+import { PackQuizEditorOverlay } from "@/components/teacher/word-packs/PackQuizEditorOverlay";
 import { SavedPackQuizPreviewOverlay } from "@/components/teacher/word-packs/SavedPackQuizPreviewOverlay";
 import type { PackQuizFormat } from "@/lib/vocabulary/pack-quiz";
 
@@ -31,11 +32,19 @@ export function PackQuizListRowActions({
   classes,
 }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
 
   return (
     <>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setEditOpen(true)}
+          className="rounded bg-neutral-900 px-2.5 py-1 text-xs font-semibold text-white hover:bg-neutral-800"
+        >
+          Edit
+        </button>
         <button
           type="button"
           onClick={() => setPreviewOpen(true)}
@@ -66,6 +75,12 @@ export function PackQuizListRowActions({
           </button>
         </form>
       </div>
+      <PackQuizEditorOverlay
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        quizId={quizId}
+        quizTitle={title}
+      />
       <SavedPackQuizPreviewOverlay
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}

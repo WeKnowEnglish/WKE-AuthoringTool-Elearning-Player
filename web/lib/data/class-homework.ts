@@ -389,6 +389,63 @@ export async function listTeacherPackQuizzesForClass(
   }));
 }
 
+export async function listTeacherPackFlashcardSetsForClass(
+  classId: string,
+): Promise<
+  Array<{
+    id: string;
+    title: string;
+    cardCount: number;
+    packId: string | null;
+  }>
+> {
+  noStore();
+  await requireTeacherUserId();
+  const supabase = await createClient();
+
+  const { data: packs, error: packsError } = await supabase
+    .from("teacher_word_packs")
+    .select("id")
+    .eq("class_id", classId)
+    .is("archived_at", null);
+
+  if (packsError) {
+    if (/teacher_word_packs|schema cache|does not exist/i.test(packsError.message)) {
+      return [];
+    }
+    throw packsError;
+  }
+
+  const packIds = ((packs ?? []) as Array<{ id: string }>).map((row) => row.id);
+  if (!packIds.length) return [];
+
+  const { data: sets, error } = await supabase
+    .from("teacher_pack_flashcard_sets")
+    .select("id, pack_id, title, cards, archived_at")
+    .in("pack_id", packIds)
+    .is("archived_at", null)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    if (/teacher_pack_flashcard_sets|schema cache|does not exist/i.test(error.message)) {
+      return [];
+    }
+    throw error;
+  }
+
+  return ((sets ?? []) as Array<{
+    id: string;
+    pack_id: string | null;
+    title: string;
+    cards: unknown;
+  }>).map((row) => ({
+    id: row.id,
+    title: row.title,
+    cardCount: Array.isArray(row.cards) ? row.cards.length : 0,
+    packId: row.pack_id,
+  }));
+}
+
 /** Completions for all homework in a class (teacher). Soft-fails if migration missing. */
 export const listClassHomeworkCompletionsForClass = cache(
   async function listClassHomeworkCompletionsForClass(

@@ -8,6 +8,12 @@ import {
   CLASS_HOMEWORK_STATUSES,
 } from "@/lib/class-homework/types";
 import { parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
+import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
+import {
+  isPackFlashcardFace,
+  sortPackFlashcardFaces,
+  type PackFlashcardFace,
+} from "@/lib/vocabulary/pack-flashcards";
 
 const TITLE_MAX = 120;
 const INSTRUCTIONS_MAX = 2000;
@@ -20,6 +26,15 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function asFaceList(value: unknown): PackFlashcardFace[] {
+  if (!Array.isArray(value)) return [];
+  const out: PackFlashcardFace[] = [];
+  for (const item of value) {
+    if (isPackFlashcardFace(item) && !out.includes(item)) out.push(item);
+  }
+  return sortPackFlashcardFaces(out);
 }
 
 export function normalizeHomeworkTitle(raw: unknown, fallback = "Homework"): string {
@@ -60,6 +75,9 @@ export function defaultHomeworkPayload(
   if (type === "pack_quiz") {
     return { type: "pack_quiz", quizId: "", quizTitle: "", questionCount: 0 };
   }
+  if (type === "pack_flashcards") {
+    return { type: "pack_flashcards", setId: "", setTitle: "", cardCount: 0 };
+  }
   if (type === "word_pack_practice") {
     return { type: "word_pack_practice", packId: "", packTitle: "", wordCount: 0 };
   }
@@ -93,6 +111,42 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
     };
   }
 
+  if (input.type === "pack_flashcards") {
+    const setId = asString(input.setId).trim();
+    if (!setId) return null;
+    const cards = parseStoredPackFlashcardCards(input.cards);
+    const cardCountFromField =
+      typeof input.cardCount === "number" && Number.isFinite(input.cardCount)
+        ? Math.max(0, Math.round(input.cardCount))
+        : 0;
+    const cardCount = cards.length > 0 ? cards.length : cardCountFromField;
+    const frozenAt =
+      typeof input.frozenAt === "string" && input.frozenAt.trim()
+        ? input.frozenAt.trim()
+        : undefined;
+    const optionsRaw =
+      input.options && typeof input.options === "object" && !Array.isArray(input.options)
+        ? (input.options as Record<string, unknown>)
+        : null;
+    const options = optionsRaw
+      ? {
+          includeFaces: asFaceList(optionsRaw.includeFaces),
+          frontFaces: asFaceList(optionsRaw.frontFaces),
+          backFaces: asFaceList(optionsRaw.backFaces),
+          shuffle: Boolean(optionsRaw.shuffle),
+        }
+      : undefined;
+    return {
+      type: "pack_flashcards",
+      setId,
+      setTitle: asString(input.setTitle).trim() || "Flashcards",
+      cardCount,
+      ...(cards.length > 0 ? { cards } : {}),
+      ...(options && options.includeFaces.length > 0 ? { options } : {}),
+      ...(frozenAt ? { frozenAt } : {}),
+    };
+  }
+
   if (input.type === "word_pack_practice") {
     const packId = asString(input.packId).trim();
     if (!packId) return null;
@@ -117,6 +171,11 @@ export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
   if (payload.type === "pack_quiz") {
     return `${payload.quizTitle} · ${payload.questionCount} question${
       payload.questionCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "pack_flashcards") {
+    return `${payload.setTitle} · ${payload.cardCount} card${
+      payload.cardCount === 1 ? "" : "s"
     }`;
   }
   if (payload.type === "word_pack_practice") {

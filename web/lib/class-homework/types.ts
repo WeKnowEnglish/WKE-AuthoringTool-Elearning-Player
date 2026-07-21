@@ -1,10 +1,16 @@
 import type { PackQuizCompiledQuestion } from "@/lib/vocabulary/pack-quiz";
+import type {
+  PackFlashcardCompiledCard,
+  PackFlashcardFace,
+  PackFlashcardOptions,
+} from "@/lib/vocabulary/pack-flashcards";
 
 export const CLASS_HOMEWORK_STATUSES = ["draft", "assigned", "closed"] as const;
 export type ClassHomeworkStatus = (typeof CLASS_HOMEWORK_STATUSES)[number];
 
 export const CLASS_HOMEWORK_PAYLOAD_TYPES = [
   "pack_quiz",
+  "pack_flashcards",
   "word_pack_practice",
   "external_note",
 ] as const;
@@ -18,6 +24,20 @@ export type ClassHomeworkPayload =
       questionCount: number;
       /** Frozen compiled questions — preferred for student play. */
       questions?: PackQuizCompiledQuestion[];
+      frozenAt?: string;
+    }
+  | {
+      type: "pack_flashcards";
+      setId: string;
+      setTitle: string;
+      cardCount: number;
+      /** Frozen face snapshots — preferred for student play. */
+      cards?: PackFlashcardCompiledCard[];
+      /** Front/back config at freeze time. */
+      options?: Pick<
+        PackFlashcardOptions,
+        "frontFaces" | "backFaces" | "includeFaces" | "shuffle"
+      >;
       frozenAt?: string;
     }
   | {
@@ -68,6 +88,10 @@ export type HomeworkCompletionSummary = {
 
 export const CLASS_HOMEWORK_PAYLOAD_LABELS: Record<ClassHomeworkPayloadType, string> = {
   pack_quiz: "Pack quiz",
+  pack_flashcards: "Flashcards",
   word_pack_practice: "Word pack practice",
   external_note: "Note / reminder",
 };
+
+/** Re-export face type for consumers that only import homework types. */
+export type { PackFlashcardFace };

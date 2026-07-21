@@ -13,7 +13,7 @@ export type PackQuizDraft = {
   packId: string;
   packTitle: string;
   format: PackQuizFormat;
-  /** Frozen snapshot of pack word ids at draft creation. */
+  /** Frozen snapshot of selected pack word ids at generate (subset of the pack). */
   wordIds: string[];
   options: {
     questionCount?: number;
@@ -25,7 +25,7 @@ export type PackQuizFormatMeta = {
   id: PackQuizFormat;
   label: string;
   description: string;
-  /** Minimum words required in the frozen pack snapshot. */
+  /** Minimum selected words required to generate this format. */
   minWords: number;
   /** Slice that will implement generation (0 = shell only). */
   implementedInSlice: number;
@@ -69,6 +69,19 @@ export function getPackQuizFormatMeta(format: PackQuizFormat): PackQuizFormatMet
   return found;
 }
 
+/**
+ * Keep pack order; drop ids that are not selected or not in the pack.
+ * Used when freezing the draft at Generate.
+ */
+export function freezeSelectedPackWordIds(
+  packWordIds: readonly string[],
+  selectedIds: ReadonlySet<string> | readonly string[],
+): string[] {
+  const selected =
+    selectedIds instanceof Set ? selectedIds : new Set(selectedIds);
+  return packWordIds.filter((id) => selected.has(id));
+}
+
 export function createPackQuizDraft(input: {
   packId: string;
   packTitle: string;
@@ -100,14 +113,14 @@ export function packQuizFormatReadiness(
   if (wordCount < meta.minWords) {
     return {
       ok: false,
-      reason: `Needs at least ${meta.minWords} word${meta.minWords === 1 ? "" : "s"} in the pack (you have ${wordCount}).`,
+      reason: `Needs at least ${meta.minWords} word${meta.minWords === 1 ? "" : "s"} selected (you have ${wordCount}).`,
     };
   }
   return { ok: true };
 }
 
-/** Formats not yet generating — Continue shows this after freezing the draft. */
+/** Formats not yet generating — Generate freezes selection and shows this. */
 export function packQuizComingSoonMessage(format: PackQuizFormat): string {
   const meta = getPackQuizFormatMeta(format);
-  return `${meta.label} is next on the roadmap (Slice ${meta.implementedInSlice}). Teacher preview generation isn’t wired yet — this step only freezes your pack word list.`;
+  return `${meta.label} is next on the roadmap (Slice ${meta.implementedInSlice}). Teacher preview generation isn’t wired yet — this step only freezes your selected words.`;
 }

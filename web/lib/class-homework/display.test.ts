@@ -49,7 +49,7 @@ describe("class-homework/display", () => {
         },
         "Animals",
       ),
-    ).toBe("from Animals · frozen");
+    ).toBe("from Animals · latest");
 
     expect(
       formatHomeworkListSubtitle(
@@ -66,6 +66,6 @@ describe("class-homework/display", () => {
 
   it("returns tiered empty dropdown copy", () => {
     expect(packQuizEmptyDropdownCopy("no_packs").body).toMatch(/Link a word pack/i);
-    expect(packQuizEmptyDropdownCopy("no_quizzes").body).toMatch(/No saved quizzes/i);
+    expect(packQuizEmptyDropdownCopy("no_quizzes").body).toMatch(/No saved pack quizzes/i);
   });
 });

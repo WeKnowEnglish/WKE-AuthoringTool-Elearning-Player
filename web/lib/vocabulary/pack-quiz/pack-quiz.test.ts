@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createPackQuizDraft,
+  freezeSelectedPackWordIds,
   getPackQuizFormatMeta,
   packQuizFormatReadiness,
 } from "@/lib/vocabulary/pack-quiz";
@@ -19,8 +20,20 @@ describe("pack quiz draft contract", () => {
     expect(draft.format).toBe("multiple_choice");
   });
 
+  it("freezes selected ids in pack order and drops unknowns", () => {
+    const pack = ["a", "b", "c", "d", "e"];
+    expect(freezeSelectedPackWordIds(pack, new Set(["e", "a", "c"]))).toEqual([
+      "a",
+      "c",
+      "e",
+    ]);
+    expect(freezeSelectedPackWordIds(pack, ["z", "b"])).toEqual(["b"]);
+    expect(freezeSelectedPackWordIds(pack, [])).toEqual([]);
+  });
+
   it("enforces MC minimum of 4 words", () => {
     expect(packQuizFormatReadiness("multiple_choice", 3).ok).toBe(false);
+    expect(packQuizFormatReadiness("multiple_choice", 3).reason).toMatch(/selected/);
     expect(packQuizFormatReadiness("multiple_choice", 4).ok).toBe(true);
     expect(packQuizFormatReadiness("letter_scramble", 1).ok).toBe(true);
   });

@@ -37,35 +37,19 @@ export function parseStoredPackQuizQuestions(raw: unknown): PackQuizCompiledQues
 export type PackQuizHomeworkPayload = Extract<ClassHomeworkPayload, { type: "pack_quiz" }>;
 
 /**
- * Build a pack_quiz homework payload, reusing an existing snapshot when the quiz id is unchanged.
+ * Build a pack_quiz homework payload from the current quiz questions.
+ * Always writes the provided questions (homework tracks the latest quiz version).
  */
 export function freezePackQuizPayload(input: {
   quizId: string;
   quizTitle: string;
   questions: readonly PackQuizCompiledQuestion[];
+  /** @deprecated Ignored — homework always takes the latest questions. */
   previous?: PackQuizHomeworkPayload | null;
   frozenAt?: string;
 }): PackQuizHomeworkPayload {
   const quizId = input.quizId.trim();
   const quizTitle = input.quizTitle.trim() || "Pack quiz";
-  const previous = input.previous ?? null;
-
-  if (
-    previous &&
-    previous.quizId === quizId &&
-    Array.isArray(previous.questions) &&
-    previous.questions.length > 0
-  ) {
-    return {
-      type: "pack_quiz",
-      quizId,
-      quizTitle: quizTitle || previous.quizTitle,
-      questionCount: previous.questions.length,
-      questions: previous.questions,
-      frozenAt: previous.frozenAt,
-    };
-  }
-
   const questions = parseStoredPackQuizQuestions(input.questions).slice(0, MAX_FROZEN_QUESTIONS);
   return {
     type: "pack_quiz",

@@ -42,7 +42,7 @@ describe("freezePackQuizPayload", () => {
     expect(payload.frozenAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
-  it("keeps previous snapshot when quizId is unchanged", () => {
+  it("always takes the latest questions when quizId is unchanged", () => {
     const oldQs = [q("old", "cat")];
     const previous = freezePackQuizPayload({
       quizId: "quiz-1",
@@ -57,9 +57,9 @@ describe("freezePackQuizPayload", () => {
       previous,
       frozenAt: "2026-02-01T00:00:00.000Z",
     });
-    expect(next.questions).toHaveLength(1);
-    expect(next.questions?.[0]?.id).toBe("old");
-    expect(next.frozenAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(next.questions).toHaveLength(2);
+    expect(next.questions?.[0]?.id).toBe("new");
+    expect(next.frozenAt).toBe("2026-02-01T00:00:00.000Z");
     expect(next.quizTitle).toBe("New title");
   });
 

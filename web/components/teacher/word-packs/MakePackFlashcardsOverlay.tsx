@@ -2,21 +2,22 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { loadPackQuizLexemes } from "@/lib/actions/pack-quiz";
+import { PackFlashcardPreview } from "@/components/teacher/word-packs/PackFlashcardPreview";
+import { faceLabel } from "@/components/teacher/word-packs/FlashcardFaceStack";
 import {
-  PACK_QUIZ_FORMATS,
-  compilePackMultipleChoiceQuiz,
-  createPackQuizDraft,
+  PACK_FLASHCARD_FACES,
+  compilePackFlashcards,
+  createPackFlashcardDraft,
+  flashcardLexemeReadinessLabel,
   freezeSelectedPackWordIds,
-  isPackQuizFormatAvailable,
-  packQuizComingSoonMessage,
-  packQuizFormatReadiness,
-  type PackQuizCompileResult,
-  type PackQuizDraft,
-  type PackQuizFormat,
-} from "@/lib/vocabulary/pack-quiz";
+  packFlashcardWordReadiness,
+  validatePackFlashcardOptions,
+  type PackFlashcardCompileResult,
+  type PackFlashcardDraft,
+  type PackFlashcardFace,
+  type PackFlashcardOptions,
+} from "@/lib/vocabulary/pack-flashcards";
 import type { PackLexemeResolution } from "@/lib/vocabulary/teacher-lexicon/resolve-pack";
-import { PackMcQuizPreview } from "@/components/teacher/word-packs/PackMcQuizPreview";
-import { PackQuizEditorOverlay } from "@/components/teacher/word-packs/PackQuizEditorOverlay";
 
 type Props = {
   open: boolean;
@@ -26,37 +27,71 @@ type Props = {
   wordIds: readonly string[];
 };
 
-type Step = "pick" | "select" | "preview";
+type Step = "configure" | "select" | "preview";
 
-function meaningHint(row: PackLexemeResolution): string {
-  const en = row.definitionEn?.trim();
-  if (en) return en;
-  const vi = row.definitionVi?.trim();
-  if (vi) return vi;
-  if (row.source === "missing") return "Missing from lexicon";
-  if (row.archived) return "Archived";
-  return "No meaning yet";
+const DEFAULT_OPTIONS: PackFlashcardOptions = {
+  includeFaces: ["word", "definition"],
+  frontFaces: ["word"],
+  backFaces: ["definition"],
+  shuffle: false,
+};
+
+function toggleFace(
+  list: PackFlashcardFace[],
+  face: PackFlashcardFace,
+): PackFlashcardFace[] {
+  return list.includes(face) ? list.filter((f) => f !== face) : [...list, face];
 }
 
-export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds }: Props) {
+function deriveOptions(
+  includeFaces: PackFlashcardFace[],
+  frontFaces: PackFlashcardFace[],
+  shuffle: boolean,
+): PackFlashcardOptions {
+  const include = PACK_FLASHCARD_FACES.filter((f) => includeFaces.includes(f));
+  const front = PACK_FLASHCARD_FACES.filter(
+    (f) => include.includes(f) && frontFaces.includes(f),
+  );
+  const back = include.filter((f) => !front.includes(f));
+  return { includeFaces: include, frontFaces: front, backFaces: back, shuffle };
+}
+
+export function MakePackFlashcardsOverlay({
+  open,
+  onClose,
+  packId,
+  packTitle,
+  wordIds,
+}: Props) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [format, setFormat] = useState<PackQuizFormat>("multiple_choice");
-  const [draft, setDraft] = useState<PackQuizDraft | null>(null);
+  const [includeFaces, setIncludeFaces] = useState<PackFlashcardFace[]>([
+    "word",
+    "definition",
+  ]);
+  const [frontFaces, setFrontFaces] = useState<PackFlashcardFace[]>(["word"]);
+  const [shuffle, setShuffle] = useState(false);
+  const [draft, setDraft] = useState<PackFlashcardDraft | null>(null);
   const [gateMessage, setGateMessage] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>("pick");
-  const [compiled, setCompiled] = useState<PackQuizCompileResult | null>(null);
+  const [step, setStep] = useState<Step>("configure");
+  const [compiled, setCompiled] = useState<PackFlashcardCompileResult | null>(null);
   const [building, setBuilding] = useState(false);
   const [loadingWords, setLoadingWords] = useState(false);
   const [lexemes, setLexemes] = useState<PackLexemeResolution[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [editorQuiz, setEditorQuiz] = useState<{ id: string; title: string } | null>(null);
 
   const packWordCount = wordIds.length;
   const selectedCount = selectedIds.size;
-  const packReadiness = packQuizFormatReadiness(format, packWordCount);
-  const selectReadiness = packQuizFormatReadiness(format, selectedCount);
-  const formatMeta = PACK_QUIZ_FORMATS.find((f) => f.id === format);
+  const options = useMemo(
+    () => deriveOptions(includeFaces, frontFaces, shuffle),
+    [includeFaces, frontFaces, shuffle],
+  );
+  const optionsValidation = useMemo(
+    () => validatePackFlashcardOptions(options),
+    [options],
+  );
+  const packReadiness = packFlashcardWordReadiness(packWordCount);
+  const selectReadiness = packFlashcardWordReadiness(selectedCount);
 
   const rows = useMemo(() => {
     const byId = new Map(lexemes.map((row) => [row.id, row]));
@@ -78,10 +113,12 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
 
   useEffect(() => {
     if (!open) return;
-    setFormat("multiple_choice");
+    setIncludeFaces([...DEFAULT_OPTIONS.includeFaces]);
+    setFrontFaces([...DEFAULT_OPTIONS.frontFaces]);
+    setShuffle(false);
     setDraft(null);
     setGateMessage(null);
-    setStep("pick");
+    setStep("configure");
     setCompiled(null);
     setBuilding(false);
     setLoadingWords(false);
@@ -89,8 +126,7 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
     setSelectedIds(new Set(wordIds));
     const t = window.setTimeout(() => closeRef.current?.focus(), 0);
     return () => window.clearTimeout(t);
-    // Reset when the overlay opens for a pack — not on every wordIds array identity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- wordIds read on open/packId
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset on open/packId
   }, [open, packId]);
 
   useEffect(() => {
@@ -110,8 +146,8 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
     };
   }, [open, onClose]);
 
-  function resetToFormats() {
-    setStep("pick");
+  function resetToConfigure() {
+    setStep("configure");
     setCompiled(null);
     setGateMessage(null);
     setDraft(null);
@@ -136,36 +172,23 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
     setCompiled(null);
   }
 
-  function selectAll() {
-    setSelectedIds(new Set(wordIds));
-    setGateMessage(null);
-    setDraft(null);
-    setCompiled(null);
-  }
-
-  function selectNone() {
-    setSelectedIds(new Set());
-    setGateMessage(null);
-    setDraft(null);
-    setCompiled(null);
-  }
-
   async function onContinueToSelect() {
     setGateMessage(null);
     setDraft(null);
     setCompiled(null);
 
     if (!packReadiness.ok) {
-      setGateMessage(packReadiness.reason ?? "Pack isn’t ready for this format.");
+      setGateMessage(packReadiness.reason ?? "Pack isn’t ready.");
+      return;
+    }
+    if (!optionsValidation.ok) {
+      setGateMessage(optionsValidation.errors[0] ?? "Fix face settings first.");
       return;
     }
 
     setLoadingWords(true);
     try {
-      const loaded = await loadPackQuizLexemes({
-        packId,
-        wordIds,
-      });
+      const loaded = await loadPackQuizLexemes({ packId, wordIds });
       if (!loaded.ok) {
         setGateMessage(loaded.error);
         return;
@@ -183,29 +206,25 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
 
     const frozenIds = freezeSelectedPackWordIds(wordIds, selectedIds);
     if (!selectReadiness.ok) {
-      setGateMessage(selectReadiness.reason ?? "Select more words for this format.");
+      setGateMessage(selectReadiness.reason ?? "Select at least one word.");
       setDraft(null);
       setCompiled(null);
       return;
     }
-
-    const next = createPackQuizDraft({
-      packId,
-      packTitle,
-      format,
-      wordIds: frozenIds,
-    });
-    setDraft(next);
-
-    if (!isPackQuizFormatAvailable(format)) {
-      setCompiled(null);
-      setGateMessage(packQuizComingSoonMessage(format));
+    if (!optionsValidation.ok) {
+      setGateMessage(optionsValidation.errors[0] ?? "Invalid face settings.");
       return;
     }
 
+    const next = createPackFlashcardDraft({
+      packId,
+      packTitle,
+      wordIds: frozenIds,
+      options: optionsValidation.options,
+    });
+    setDraft(next);
     setBuilding(true);
     try {
-      // Prefer already-loaded lexemes; reload if selection somehow outpaces cache.
       let pool = lexemes;
       if (pool.length === 0) {
         const loaded = await loadPackQuizLexemes({
@@ -221,15 +240,15 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
         setLexemes(pool);
       }
 
-      const result = compilePackMultipleChoiceQuiz({
+      const result = compilePackFlashcards({
         draft: next,
         lexemes: pool,
         seed: next.createdAt,
       });
 
-      if (result.questions.length === 0) {
+      if (result.cards.length === 0) {
         setGateMessage(
-          result.warnings.join(" ") || "Could not build a quiz from the selected words.",
+          result.warnings.join(" ") || "Could not build flashcards from the selected words.",
         );
         setCompiled(null);
         return;
@@ -243,12 +262,12 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
     }
   }
 
-  if (!open && !editorQuiz) return null;
+  if (!open) return null;
 
   const wide = step === "preview" || step === "select";
   const stepHint =
-    step === "pick"
-      ? `${packWordCount} word${packWordCount === 1 ? "" : "s"} in pack · choose format`
+    step === "configure"
+      ? `${packWordCount} word${packWordCount === 1 ? "" : "s"} in pack · choose faces`
       : step === "select"
         ? `${selectedCount} of ${packWordCount} selected · freezes when you generate`
         : `Draft frozen: ${draft?.wordIds.length ?? 0} word${
@@ -256,8 +275,6 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
           } · teacher preview`;
 
   return (
-    <>
-      {open ? (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-6"
       role="dialog"
@@ -274,7 +291,7 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-200 px-4 py-3">
           <div className="min-w-0">
             <h2 id={titleId} className="text-base font-bold text-neutral-900">
-              Make a quiz
+              Make flashcards
             </h2>
             <p className="mt-0.5 truncate text-sm text-neutral-600" title={packTitle}>
               {packTitle}
@@ -293,14 +310,10 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
 
         <div className="min-h-0 flex-1 space-y-4 overflow-auto px-4 py-4">
           {step === "preview" && compiled ? (
-            <PackMcQuizPreview
+            <PackFlashcardPreview
               compiled={compiled}
-              onBackToFormats={backToSelect}
+              onBack={backToSelect}
               backLabel="Back to word selection"
-              onEditSavedQuiz={(quiz) => {
-                setEditorQuiz(quiz);
-                onClose();
-              }}
             />
           ) : step === "select" ? (
             <>
@@ -308,14 +321,19 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
                 <div>
                   <h3 className="text-sm font-semibold text-neutral-900">Select words</h3>
                   <p className="mt-0.5 text-xs text-neutral-600">
-                    Only checked entries will be used for this quiz
-                    {formatMeta ? ` · min ${formatMeta.minWords} for ${formatMeta.label}` : ""}.
+                    Only checked entries become cards · needs{" "}
+                    {options.includeFaces.map(faceLabel).join(", ")}.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={selectAll}
+                    onClick={() => {
+                      setSelectedIds(new Set(wordIds));
+                      setGateMessage(null);
+                      setDraft(null);
+                      setCompiled(null);
+                    }}
                     disabled={building}
                     className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
                   >
@@ -323,7 +341,12 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
                   </button>
                   <button
                     type="button"
-                    onClick={selectNone}
+                    onClick={() => {
+                      setSelectedIds(new Set());
+                      setGateMessage(null);
+                      setDraft(null);
+                      setCompiled(null);
+                    }}
                     disabled={building}
                     className="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
                   >
@@ -338,15 +361,16 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
                 }`}
               >
                 {selectedCount} selected
-                {!selectReadiness.ok && formatMeta
-                  ? ` · need ${formatMeta.minWords} for ${formatMeta.label}`
-                  : ""}
+                {!selectReadiness.ok ? " · select at least 1 word" : ""}
               </p>
 
               <ul className="divide-y divide-neutral-100 rounded-lg border border-neutral-200">
                 {rows.map((row) => {
                   const checked = selectedIds.has(row.id);
-                  const hint = meaningHint(row);
+                  const readiness = flashcardLexemeReadinessLabel(
+                    row,
+                    options.includeFaces,
+                  );
                   return (
                     <li key={row.id}>
                       <label
@@ -366,18 +390,20 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
                             <span className="text-sm font-semibold text-neutral-900">
                               {row.lemma}
                             </span>
-                            {row.readyForClass ? (
-                              <span className="text-[11px] font-medium text-emerald-800">
-                                Ready
-                              </span>
-                            ) : (
-                              <span className="text-[11px] font-medium text-amber-800">
-                                Not ready
-                              </span>
-                            )}
+                            <span
+                              className={`text-[11px] font-medium ${
+                                readiness === "Ready"
+                                  ? "text-emerald-800"
+                                  : "text-amber-800"
+                              }`}
+                            >
+                              {readiness}
+                            </span>
                           </span>
                           <span className="mt-0.5 line-clamp-2 block text-xs text-neutral-600">
-                            {hint}
+                            {row.definitionEn?.trim() ||
+                              row.definitionVi?.trim() ||
+                              "No definition yet"}
                           </span>
                         </span>
                       </label>
@@ -389,64 +415,106 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
               {gateMessage ? (
                 <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
                   <p>{gateMessage}</p>
-                  {draft ? (
-                    <p className="mt-2 text-xs text-amber-900/80">
-                      Draft frozen: {draft.wordIds.length} id
-                      {draft.wordIds.length === 1 ? "" : "s"} · {draft.format} ·{" "}
-                      {new Date(draft.createdAt).toLocaleString()}
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
             </>
           ) : (
             <>
               <fieldset className="space-y-2" disabled={loadingWords || building}>
-                <legend className="text-sm font-semibold text-neutral-900">Choose a format</legend>
-                {PACK_QUIZ_FORMATS.map((option) => {
-                  const selected = format === option.id;
-                  const optionReady = packQuizFormatReadiness(option.id, packWordCount);
-                  const available = isPackQuizFormatAvailable(option.id);
-                  return (
-                    <label
-                      key={option.id}
-                      className={`flex cursor-pointer gap-3 rounded-lg border px-3 py-2.5 ${
-                        selected
-                          ? "border-neutral-900 bg-neutral-50"
-                          : "border-neutral-200 hover:border-neutral-400"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="pack-quiz-format"
-                        className="mt-1"
-                        checked={selected}
-                        onChange={() => {
-                          setFormat(option.id);
-                          setDraft(null);
-                          setGateMessage(null);
-                          setCompiled(null);
-                        }}
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-neutral-900">
-                          {option.label}
+                <legend className="text-sm font-semibold text-neutral-900">
+                  Include faces
+                </legend>
+                <p className="text-xs text-neutral-600">
+                  Students only see word, definition, example, and picture. Pick at least two.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {PACK_FLASHCARD_FACES.map((face) => {
+                    const checked = includeFaces.includes(face);
+                    return (
+                      <label
+                        key={face}
+                        className={`flex cursor-pointer gap-2 rounded-lg border px-3 py-2 ${
+                          checked
+                            ? "border-neutral-900 bg-neutral-50"
+                            : "border-neutral-200 hover:border-neutral-400"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setIncludeFaces((prev) => {
+                              const next = toggleFace(prev, face);
+                              setFrontFaces((front) =>
+                                front.filter((f) => next.includes(f)),
+                              );
+                              return next;
+                            });
+                            setGateMessage(null);
+                          }}
+                        />
+                        <span className="text-sm font-semibold text-neutral-900">
+                          {faceLabel(face)}
                         </span>
-                        <span className="mt-0.5 block text-xs text-neutral-600">
-                          {option.description}
-                        </span>
-                        <span className="mt-1 block text-[11px] font-medium text-neutral-500">
-                          Min {option.minWords} word{option.minWords === 1 ? "" : "s"}
-                          {!optionReady.ok ? " · not enough words in pack yet" : ""}
-                          {available
-                            ? " · ready now"
-                            : ` · Slice ${option.implementedInSlice} next`}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
+                      </label>
+                    );
+                  })}
+                </div>
               </fieldset>
+
+              <fieldset className="space-y-2" disabled={loadingWords || building}>
+                <legend className="text-sm font-semibold text-neutral-900">
+                  Front of card
+                </legend>
+                <p className="text-xs text-neutral-600">
+                  Checked faces show first; the rest go on the back.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {options.includeFaces.map((face) => {
+                    const checked = frontFaces.includes(face);
+                    return (
+                      <label
+                        key={face}
+                        className={`flex cursor-pointer gap-2 rounded-lg border px-3 py-2 ${
+                          checked
+                            ? "border-neutral-900 bg-neutral-50"
+                            : "border-neutral-200 hover:border-neutral-400"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setFrontFaces((prev) => toggleFace(prev, face));
+                            setGateMessage(null);
+                          }}
+                        />
+                        <span className="text-sm font-semibold text-neutral-900">
+                          {faceLabel(face)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {options.backFaces.length > 0 ? (
+                  <p className="text-xs text-neutral-600">
+                    Back: {options.backFaces.map(faceLabel).join(", ")}
+                  </p>
+                ) : (
+                  <p className="text-xs font-medium text-amber-800">
+                    Leave at least one face for the back.
+                  </p>
+                )}
+              </fieldset>
+
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-800">
+                <input
+                  type="checkbox"
+                  checked={shuffle}
+                  onChange={(e) => setShuffle(e.target.checked)}
+                />
+                Shuffle card order
+              </label>
 
               {gateMessage ? (
                 <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
@@ -457,7 +525,7 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
           )}
         </div>
 
-        {step === "pick" ? (
+        {step === "configure" ? (
           <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-neutral-100 px-4 py-3">
             <button
               type="button"
@@ -469,7 +537,7 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
             <button
               type="button"
               onClick={() => void onContinueToSelect()}
-              disabled={loadingWords}
+              disabled={loadingWords || !optionsValidation.ok}
               className="rounded bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-60"
             >
               {loadingWords ? "Loading words…" : "Continue"}
@@ -481,11 +549,11 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
           <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-neutral-100 px-4 py-3">
             <button
               type="button"
-              onClick={resetToFormats}
+              onClick={resetToConfigure}
               disabled={building}
               className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
             >
-              Back to formats
+              Back to faces
             </button>
             <button
               type="button"
@@ -499,14 +567,5 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
         ) : null}
       </div>
     </div>
-      ) : null}
-
-      <PackQuizEditorOverlay
-        open={Boolean(editorQuiz)}
-        onClose={() => setEditorQuiz(null)}
-        quizId={editorQuiz?.id ?? ""}
-        quizTitle={editorQuiz?.title ?? ""}
-      />
-    </>
   );
 }

@@ -16,3 +16,8 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+
+# Local primary vocabulary package dumps (not for git)
+web/primary-vocabulary-package-v0.1.0/
+web/primary-vocabulary-package-v0.1.0.zip
+web/primary-vocabulary-package-*/

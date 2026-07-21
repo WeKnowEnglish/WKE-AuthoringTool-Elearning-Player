@@ -1,11 +1,28 @@
 import Link from "next/link";
 import { listTeacherClasses } from "@/lib/data/teacher-classes";
 
-export default async function TeacherClassesPage() {
+type Props = {
+  searchParams?: Promise<{ notice?: string }>;
+};
+
+export default async function TeacherClassesPage({ searchParams }: Props) {
+  const sp = (await searchParams) ?? {};
   const classes = await listTeacherClasses();
+  const liveRequiresPlus = sp.notice === "live_requires_plus";
 
   return (
     <div className="space-y-6">
+      {liveRequiresPlus ? (
+        <p
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          role="status"
+        >
+          Live hosting (Virtual Classroom, Live Game, and in-class live tools) is available on
+          Teacher Plus. Your account can still create classes, word packs, grammar posters, and
+          homework.
+        </p>
+      ) : null}
+
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">Classes</h1>

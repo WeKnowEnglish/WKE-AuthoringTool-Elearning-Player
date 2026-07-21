@@ -19,28 +19,35 @@ function seedSyncImageUrls(wordItemIds: string[]): Record<string, string | null>
   return out;
 }
 
+function toStableIdsKey(wordItemIds: string[]): string {
+  return [...new Set(wordItemIds.filter((id) => id.trim().length > 0))].sort().join(",");
+}
+
+function idsFromKey(stableKey: string): string[] {
+  return stableKey.length === 0 ? [] : stableKey.split(",");
+}
+
 export function useSecondaryWordImages(wordItemIds: string[]): Record<string, string | null> {
-  const stableIds = useMemo(
-    () => [...new Set(wordItemIds.filter((id) => id.trim().length > 0))].sort(),
-    [wordItemIds],
-  );
-  const stableKey = stableIds.join(",");
+  // Primitive content key — ignores parent array identity churn (e.g. `?? []` each render).
+  const stableKey = toStableIdsKey(wordItemIds);
+  const stableIds = useMemo(() => idsFromKey(stableKey), [stableKey]);
   const [urlsById, setUrlsById] = useState<Record<string, string | null>>(() =>
     seedSyncImageUrls(stableIds),
   );
   const fetchedKeysRef = useRef(new Set<string>());
 
   useEffect(() => {
-    setUrlsById(seedSyncImageUrls(stableIds));
-  }, [stableKey, stableIds]);
+    setUrlsById(seedSyncImageUrls(idsFromKey(stableKey)));
+  }, [stableKey]);
 
   useEffect(() => {
-    if (stableIds.length === 0) return;
+    const ids = idsFromKey(stableKey);
+    if (ids.length === 0) return;
     if (fetchedKeysRef.current.has(stableKey)) return;
     fetchedKeysRef.current.add(stableKey);
 
     let cancelled = false;
-    void loadSecondaryWordImageUrls(stableIds).then((resolved) => {
+    void loadSecondaryWordImageUrls(ids).then((resolved) => {
       if (cancelled) return;
       setUrlsById((prev) => ({ ...prev, ...resolved }));
     });
@@ -48,7 +55,7 @@ export function useSecondaryWordImages(wordItemIds: string[]): Record<string, st
     return () => {
       cancelled = true;
     };
-  }, [stableKey, stableIds]);
+  }, [stableKey]);
 
   return urlsById;
 }

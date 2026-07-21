@@ -5,6 +5,7 @@ import {
 import {
   DOCUMENT_INTERACTION_CONFIG,
   WHITEBOARD_INTERACTION_CONFIG,
+  WORD_CARDS_INTERACTION_CONFIG,
   type ActivityInteractionConfig,
 } from "@/lib/activity-runtime/activity-interaction-config";
 
@@ -40,6 +41,16 @@ const REGISTRY: RegisteredVcActivity[] = [
     teacherLaunchHint: "Start document from Virtual Classroom (Chunk 1+)",
     studentJoinHint: "Enter document when the teacher launches it",
   },
+  {
+    kind: "word_cards",
+    label: VC_ACTIVITY_KIND_META.word_cards.label,
+    description: VC_ACTIVITY_KIND_META.word_cards.description,
+    enabled: true,
+    interaction: WORD_CARDS_INTERACTION_CONFIG,
+    teacherLaunchHint:
+      "Paste a word list and launch Word cards from the Virtual Classroom activity panel",
+    studentJoinHint: "Enter word cards when the teacher launches them",
+  },
 ];
 
 export function listVcActivities(): RegisteredVcActivity[] {
@@ -59,5 +70,5 @@ export function getVcActivity(
 export function isRegisteredVcActivity(
   kind: string,
 ): kind is VirtualClassroomActivityKind {
-  return kind === "whiteboard" || kind === "document";
+  return kind === "whiteboard" || kind === "document" || kind === "word_cards";
 }

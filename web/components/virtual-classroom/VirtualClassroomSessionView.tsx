@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPanel";
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
+import { TodaysLessonPlaylist } from "@/components/virtual-classroom/TodaysLessonPlaylist";
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
 import { VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
 import { VirtualClassroomToolbar } from "@/components/virtual-classroom/VirtualClassroomToolbar";
@@ -30,8 +31,13 @@ import {
   WhiteboardLaunchPanel,
   type WhiteboardLaunchPayload,
 } from "@/components/pilots/whiteboard/WhiteboardLaunchPanel";
+import {
+  WordCardsLaunchPanel,
+  type WordCardsLaunchPayload,
+} from "@/components/word-cards/WordCardsLaunchPanel";
 import { setDocumentSessionContext } from "@/lib/document-activity/client-context";
 import { setWhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
+import { setWordCardsSessionContext } from "@/lib/word-cards/client-context";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import {
   countByStatus,
@@ -68,9 +74,9 @@ export function VirtualClassroomSessionView({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
-  const [launchOverlay, setLaunchOverlay] = useState<"whiteboard" | "document" | null>(
-    null,
-  );
+  const [launchOverlay, setLaunchOverlay] = useState<
+    "whiteboard" | "document" | "word_cards" | null
+  >(null);
   const broadcast = useBroadcastEvent();
 
   const status = useStorage((root) => readRuntimeField<string>(root, "status") ?? "active");
@@ -80,7 +86,7 @@ export function VirtualClassroomSessionView({
   );
   const activeActivity = useStorage((root) =>
     readRuntimeField<{
-      kind: "whiteboard" | "document" | null;
+      kind: "whiteboard" | "document" | "word_cards" | null;
       joinCode: string | null;
       label: string | null;
       roundId?: string | null;
@@ -398,6 +404,108 @@ export function VirtualClassroomSessionView({
     }
   }, [activeActivity?.joinCode, activeActivity?.roundId, displayName, router, sessionId, userId]);
 
+  const launchWordCards = useCallback(
+    async (launch?: WordCardsLaunchPayload) => {
+      setBusy("word_cards");
+      setError(null);
+      try {
+        const res = await fetch(`/api/virtual-classroom/${sessionId}/word-cards`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            launch ?? {
+              title: "Create a word card",
+              instructions: "Create a card for your assigned vocabulary word.",
+              wordList: ["apple", "banana", "chair", "desk"],
+              participationMode: "individual",
+              timerMinutes: 4,
+            },
+          ),
+        });
+        const payload = (await res.json()) as {
+          error?: string;
+          joinCode?: string;
+          roundId?: string;
+          roomId?: string;
+          vcSessionId?: string;
+          userId?: string;
+          displayName?: string;
+          participationMode?: string;
+          groupsAssigned?: number;
+        };
+        if (!res.ok || !payload.joinCode || !payload.roomId || !payload.userId || !payload.roundId) {
+          throw new Error(payload.error ?? "Could not start word cards.");
+        }
+        setWordCardsSessionContext({
+          joinCode: payload.joinCode,
+          roundId: payload.roundId,
+          roomId: payload.roomId,
+          vcSessionId: payload.vcSessionId ?? sessionId,
+          role: "host",
+          displayName: payload.displayName ?? displayName,
+          color: "#0f172a",
+          userId: payload.userId,
+        });
+        if (
+          payload.participationMode === "group" &&
+          (payload.groupsAssigned ?? 0) === 0
+        ) {
+          setError(
+            "Group word cards started — use Group maker → Send to word cards after you generate groups.",
+          );
+        }
+        router.push(`/teacher/word-cards/${payload.joinCode}`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [displayName, router, sessionId],
+  );
+
+  const enterWordCardsAsStudent = useCallback(async () => {
+    const code = activeActivity?.joinCode;
+    if (!code) return;
+    setBusy("enter-wc");
+    setError(null);
+    try {
+      const res = await fetch(`/api/word-cards/${code}/enter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName, userId }),
+      });
+      const payload = (await res.json()) as {
+        error?: string;
+        joinCode?: string;
+        roundId?: string;
+        roomId?: string;
+        vcSessionId?: string;
+        userId?: string;
+        displayName?: string;
+        role?: "host" | "player";
+      };
+      if (!res.ok || !payload.joinCode || !payload.roomId || !payload.userId || !payload.roundId) {
+        throw new Error(payload.error ?? "Could not enter word cards.");
+      }
+      setWordCardsSessionContext({
+        joinCode: payload.joinCode,
+        roundId: payload.roundId,
+        roomId: payload.roomId,
+        vcSessionId: payload.vcSessionId ?? sessionId,
+        role: payload.role ?? "player",
+        displayName: payload.displayName ?? displayName,
+        color: "#0f766e",
+        userId: payload.userId,
+      });
+      router.push(`/word-cards/${payload.joinCode}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed.");
+    } finally {
+      setBusy(null);
+    }
+  }, [activeActivity?.joinCode, displayName, router, sessionId, userId]);
+
   const runToolCommand = useCallback(
     async (command: Record<string, unknown>) => {
       setBusy("tools");
@@ -508,6 +616,7 @@ export function VirtualClassroomSessionView({
             busy={Boolean(busy)}
             hasWhiteboardActivity={activeActivity?.kind === "whiteboard"}
             hasDocumentActivity={activeActivity?.kind === "document"}
+            hasWordCardsActivity={activeActivity?.kind === "word_cards"}
             onCommand={runToolCommand}
           />
         )}
@@ -529,9 +638,19 @@ export function VirtualClassroomSessionView({
               <>
                 <h2 className="text-lg font-semibold text-slate-900">Activities</h2>
                 <p className="text-sm text-slate-600">
-                  Pick an activity to configure and launch. Ending an activity does not end the
-                  Virtual Classroom.
+                  Launch a staged lesson step, or pick an activity to configure. Ending an
+                  activity does not end the Virtual Classroom.
                 </p>
+                {classId ? (
+                  <TodaysLessonPlaylist
+                    sessionId={sessionId}
+                    classId={classId}
+                    busy={Boolean(busy)}
+                    onLaunchWhiteboard={(payload) => void launchWhiteboard(payload)}
+                    onLaunchDocument={(payload) => void launchDocument(payload)}
+                    onLaunchWordCards={(payload) => void launchWordCards(payload)}
+                  />
+                ) : null}
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
@@ -573,6 +692,26 @@ export function VirtualClassroomSessionView({
                       </span>
                     )}
                   </button>
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => setLaunchOverlay("word_cards")}
+                    className={`relative flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border-2 text-center transition disabled:opacity-50 ${
+                      activeActivity?.kind === "word_cards"
+                        ? "border-violet-600 bg-violet-50 text-violet-950"
+                        : "border-violet-200 bg-violet-50/70 text-violet-900 hover:border-violet-400"
+                    }`}
+                  >
+                    <span className="text-lg font-black leading-none">WC</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide">
+                      Cards
+                    </span>
+                    {activeActivity?.kind === "word_cards" && (
+                      <span className="absolute -right-1 -top-1 rounded-full bg-violet-700 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
+                        Live
+                      </span>
+                    )}
+                  </button>
                 </div>
 
                 {launchOverlay && (
@@ -587,7 +726,9 @@ export function VirtualClassroomSessionView({
                       aria-label={
                         launchOverlay === "whiteboard"
                           ? "Whiteboard activity setup"
-                          : "Document activity setup"
+                          : launchOverlay === "document"
+                            ? "Document activity setup"
+                            : "Word cards activity setup"
                       }
                       className="max-h-[min(85dvh,720px)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl"
                       onClick={(event) => event.stopPropagation()}
@@ -598,7 +739,11 @@ export function VirtualClassroomSessionView({
                             Activity setup
                           </p>
                           <h3 className="text-lg font-bold text-slate-900">
-                            {launchOverlay === "whiteboard" ? "Whiteboard" : "Document"}
+                            {launchOverlay === "whiteboard"
+                              ? "Whiteboard"
+                              : launchOverlay === "document"
+                                ? "Document"
+                                : "Word cards"}
                           </h3>
                         </div>
                         <button
@@ -642,6 +787,22 @@ export function VirtualClassroomSessionView({
                           </button>
                         )}
 
+                      {launchOverlay === "word_cards" &&
+                        activeActivity?.kind === "word_cards" &&
+                        activeActivity.joinCode && (
+                          <button
+                            type="button"
+                            disabled={Boolean(busy)}
+                            onClick={() => {
+                              setLaunchOverlay(null);
+                              void launchWordCards();
+                            }}
+                            className="mb-3 w-full rounded-lg border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-bold text-violet-900 disabled:opacity-50"
+                          >
+                            {busy === "word_cards" ? "Opening…" : "Re-enter word cards"}
+                          </button>
+                        )}
+
                       {launchOverlay === "whiteboard" ? (
                         <WhiteboardLaunchPanel
                           busy={busy === "whiteboard"}
@@ -650,12 +811,20 @@ export function VirtualClassroomSessionView({
                             void launchWhiteboard(payload);
                           }}
                         />
-                      ) : (
+                      ) : launchOverlay === "document" ? (
                         <DocumentLaunchPanel
                           busy={busy === "document"}
                           onLaunch={(payload) => {
                             setLaunchOverlay(null);
                             void launchDocument(payload);
+                          }}
+                        />
+                      ) : (
+                        <WordCardsLaunchPanel
+                          busy={busy === "word_cards"}
+                          onLaunch={(payload) => {
+                            setLaunchOverlay(null);
+                            void launchWordCards(payload);
                           }}
                         />
                       )}
@@ -691,6 +860,16 @@ export function VirtualClassroomSessionView({
                       {busy === "enter-doc" ? "Entering…" : "Enter document"}
                     </button>
                   )}
+                {activeActivity?.kind === "word_cards" && activeActivity.joinCode && (
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => void enterWordCardsAsStudent()}
+                    className="rounded-lg bg-violet-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    {busy === "enter-wc" ? "Entering…" : "Enter word cards"}
+                  </button>
+                )}
               </>
             )}
           </section>

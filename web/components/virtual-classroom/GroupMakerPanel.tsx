@@ -13,6 +13,7 @@ type Props = {
   busy: boolean;
   hasWhiteboardActivity: boolean;
   hasDocumentActivity: boolean;
+  hasWordCardsActivity: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
 };
 
@@ -41,6 +42,7 @@ export function GroupMakerPanel({
   busy,
   hasWhiteboardActivity,
   hasDocumentActivity,
+  hasWordCardsActivity,
   onCommand,
 }: Props) {
   const groupSet = useStorage((root) => readGroupSet(root));
@@ -153,11 +155,19 @@ export function GroupMakerPanel({
         >
           Send to document
         </button>
+        <button
+          type="button"
+          disabled={busy || !hasWordCardsActivity || !groupSet?.groups?.length}
+          className="rounded-lg bg-violet-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
+          onClick={() => void onCommand({ type: "SEND_GROUPS_TO_WORD_CARDS" })}
+        >
+          Send to word cards
+        </button>
       </div>
 
-      {!hasWhiteboardActivity && !hasDocumentActivity && (
+      {!hasWhiteboardActivity && !hasDocumentActivity && !hasWordCardsActivity && (
         <p className="text-xs text-amber-800">
-          Start a whiteboard or document activity to send groups into it.
+          Start a whiteboard, document, or word cards activity to send groups into it.
         </p>
       )}
 

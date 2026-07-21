@@ -1,6 +1,6 @@
 /** VirtualClassroom activity kinds and round identity. */
 
-export type VirtualClassroomActivityKind = "whiteboard" | "document";
+export type VirtualClassroomActivityKind = "whiteboard" | "document" | "word_cards";
 
 export type ActivityParticipationMode =
   | "individual"
@@ -19,6 +19,8 @@ export type ActivityRuntimePhase =
   | "collected"
   | "review"
   | "revision"
+  | "moderating"
+  | "play"
   | "completed";
 
 /**
@@ -67,7 +69,24 @@ export const VC_ACTIVITY_KIND_META: Record<
     label: "Document",
     description: "Collaborative writing with Show/Compare review",
   },
+  word_cards: {
+    kind: "word_cards",
+    label: "Word cards",
+    description: "Create vocabulary cards, moderate a class deck, then play",
+  },
 };
+
+export const WORD_CARDS_ROOM_PREFIX = "wke-word-cards-";
+
+export function toWordCardsRoomId(joinCode: string): string {
+  return `${WORD_CARDS_ROOM_PREFIX}${joinCode.toUpperCase()}`;
+}
+
+export function parseWordCardsRoomId(roomId: string): { joinCode: string } | null {
+  if (!roomId.startsWith(WORD_CARDS_ROOM_PREFIX)) return null;
+  const joinCode = roomId.slice(WORD_CARDS_ROOM_PREFIX.length);
+  return joinCode ? { joinCode: joinCode.toUpperCase() } : null;
+}
 
 export const DOCUMENT_ROOM_PREFIX = "wke-doc-";
 

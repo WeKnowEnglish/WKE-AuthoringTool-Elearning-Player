@@ -40,6 +40,7 @@ export function VocabularySetOverlay({
   setId,
   sessionSeed,
   muted,
+  initialScreenIndex = 0,
   onClose,
   onRequestNewRun,
   onEconomyChange,
@@ -48,6 +49,8 @@ export function VocabularySetOverlay({
   setId: VocabSetId;
   sessionSeed: string;
   muted: boolean;
+  /** Resume mid-set when available (from progress lessonResume). */
+  initialScreenIndex?: number;
   onClose: () => void;
   onRequestNewRun: () => void;
   onEconomyChange?: () => void;
@@ -191,11 +194,12 @@ export function VocabularySetOverlay({
               />
             ) : null}
             <LessonPlayer
-              key={`${sessionSeed}:${def.id}`}
+              key={`${sessionSeed}:${def.id}:${initialScreenIndex}`}
               lessonId={lessonId}
               lessonTitle={def.title}
               screens={screens}
               runSeed={sessionSeed}
+              initialScreenIndex={initialScreenIndex}
               vocabWordsById={vocabWordsById}
               vocabLearnPhraseTheme={def.learnPhraseTheme ?? "default"}
               vocabPracticeWords={vocabPracticeWords}

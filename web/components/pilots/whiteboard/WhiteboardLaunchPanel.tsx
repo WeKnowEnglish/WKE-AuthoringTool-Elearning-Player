@@ -14,19 +14,27 @@ export type { WhiteboardLaunchPayload };
 
 type Props = {
   busy: boolean;
+  initial?: Partial<WhiteboardLaunchPayload>;
+  submitLabel?: string;
+  busyLabel?: string;
   onLaunch: (payload: WhiteboardLaunchPayload) => void;
 };
 
-const INITIAL = normalizeWhiteboardLaunchPayload({});
-
-export function WhiteboardLaunchPanel({ busy, onLaunch }: Props) {
-  const [mode, setMode] = useState(INITIAL.mode);
+export function WhiteboardLaunchPanel({
+  busy,
+  initial,
+  submitLabel,
+  busyLabel = "Starting…",
+  onLaunch,
+}: Props) {
+  const seed = normalizeWhiteboardLaunchPayload(initial ?? {});
+  const [mode, setMode] = useState(seed.mode);
   const [worksheetPresetId, setWorksheetPresetId] = useState<string | null>(
-    INITIAL.worksheetPresetId,
+    seed.worksheetPresetId,
   );
-  const [timerMinutes, setTimerMinutes] = useState(INITIAL.timerMinutes);
-  const [title, setTitle] = useState(INITIAL.title);
-  const [instructions, setInstructions] = useState(INITIAL.instructions);
+  const [timerMinutes, setTimerMinutes] = useState(seed.timerMinutes);
+  const [title, setTitle] = useState(seed.title);
+  const [instructions, setInstructions] = useState(seed.instructions);
 
   return (
     <div className="space-y-2 rounded-lg border border-teal-100 bg-teal-50/60 p-3">
@@ -133,7 +141,7 @@ export function WhiteboardLaunchPanel({ busy, onLaunch }: Props) {
         }
         className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
       >
-        {busy ? "Starting…" : whiteboardLaunchStartLabel(mode)}
+        {busy ? busyLabel : submitLabel ?? whiteboardLaunchStartLabel(mode)}
       </button>
     </div>
   );

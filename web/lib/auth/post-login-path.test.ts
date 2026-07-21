@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
+import { resolveLandingRedirectPath, resolvePostLoginPath } from "@/lib/auth/post-login-path";
 
 describe("resolvePostLoginPath", () => {
   it("sends teachers to teacher area by default", () => {
     expect(resolvePostLoginPath({ role: "teacher" })).toBe("/teacher/classes");
   });
 
-  it("sends students to home by default", () => {
-    expect(resolvePostLoginPath({ role: "student" })).toBe("/home");
+  it("sends teachers with password induction to set-password", () => {
+    expect(
+      resolvePostLoginPath({
+        role: "teacher",
+        mustChangePassword: true,
+        next: "/teacher/media",
+      }),
+    ).toBe("/teacher/set-password");
+  });
+
+  it("sends students to primary dashboard by default", () => {
+    expect(resolvePostLoginPath({ role: "student" })).toBe("/primary");
   });
 
   it("sends Secondary-track students to secondary by default", () => {
@@ -16,8 +26,10 @@ describe("resolvePostLoginPath", () => {
     );
   });
 
-  it("sends Primary-track students to home by default", () => {
-    expect(resolvePostLoginPath({ role: "student", learningBand: "a1" })).toBe("/home");
+  it("sends Primary-track students to primary dashboard by default", () => {
+    expect(resolvePostLoginPath({ role: "student", learningBand: "a1" })).toBe(
+      "/primary",
+    );
   });
 
   it("honors safe teacher next paths", () => {
@@ -35,7 +47,7 @@ describe("resolvePostLoginPath", () => {
         role: "student",
         next: "/teacher/classes",
       }),
-    ).toBe("/home");
+    ).toBe("/primary");
   });
 
   it("blocks students from the Live Game host route", () => {
@@ -44,7 +56,7 @@ describe("resolvePostLoginPath", () => {
         role: "student",
         next: "/live-game/host",
       }),
-    ).toBe("/home");
+    ).toBe("/primary");
   });
 
   it("returns teachers to the Live Game host route after sign-in", () => {
@@ -64,5 +76,35 @@ describe("resolvePostLoginPath", () => {
         next: "/home?collection=games",
       }),
     ).toBe("/home?collection=games");
+  });
+
+  it("allows deep links into the primary dashboard", () => {
+    expect(
+      resolvePostLoginPath({
+        role: "student",
+        learningBand: "a1",
+        next: "/primary?nav=vocabulary",
+      }),
+    ).toBe("/primary?nav=vocabulary");
+  });
+});
+
+describe("resolveLandingRedirectPath", () => {
+  it("sends induction teachers to set-password", () => {
+    expect(
+      resolveLandingRedirectPath({
+        email: "t@school.com",
+        app_metadata: { role: "teacher", must_change_password: true },
+      }),
+    ).toBe("/teacher/set-password");
+  });
+
+  it("sends normal teachers to classes", () => {
+    expect(
+      resolveLandingRedirectPath({
+        email: "t@school.com",
+        app_metadata: { role: "teacher" },
+      }),
+    ).toBe("/teacher/classes");
   });
 });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isTeacher } from "@/lib/auth/roles";
 import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
+import { getReadyClassLessonForClass } from "@/lib/data/class-lessons";
 import { createClient } from "@/lib/supabase/server";
 import {
   requireVirtualClassroomTeacher,
@@ -16,6 +17,7 @@ type Body = {
   title?: string;
   /** Omit or null for a one-off session (guest students allowed). */
   classId?: string | null;
+  classLessonId?: string | null;
 };
 
 /**
@@ -63,11 +65,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Teacher login required." }, { status: 401 });
     }
 
+    let classLessonId: string | null = null;
+    const requestedLessonId =
+      typeof body.classLessonId === "string" ? body.classLessonId.trim() : "";
+    if (requestedLessonId) {
+      if (!classId) {
+        return NextResponse.json(
+          { error: "Lessons can only be bound to a class session." },
+          { status: 400 },
+        );
+      }
+      const lesson = await timer.measure("validateLesson", () =>
+        getReadyClassLessonForClass({ lessonId: requestedLessonId, classId }),
+      );
+      if (!lesson) {
+        return NextResponse.json(
+          { error: "Select a Ready lesson with at least one step." },
+          { status: 400 },
+        );
+      }
+      classLessonId = lesson.id;
+    }
+
     try {
       const hosted = await timer.measure("bootstrap", () =>
         bootstrapVirtualClassroomHost({
           teacher,
           classId,
+          classLessonId,
           title: body.title,
         }),
       );
@@ -78,6 +103,7 @@ export async function POST(request: Request) {
         joinCode: hosted.joinCode,
         roomId: hosted.roomId,
         classId: hosted.classId,
+        classLessonId: hosted.classLessonId,
         title: hosted.title,
         userId: hosted.userId,
         displayName: hosted.displayName,

@@ -8,6 +8,8 @@ export type VirtualClassroomSessionRecord = {
   id: string;
   /** Null for one-off stress / guest sessions. */
   classId: string | null;
+  /** Staged Create Lesson playlist bound for this live session (nullable). */
+  classLessonId: string | null;
   joinCode: string;
   liveblocksRoomId: string;
   title: string;

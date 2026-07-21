@@ -33,6 +33,10 @@ export function toRuntimePhase(phase: LegacyActivityPhase | string): ActivityRun
     case "REVISION":
     case "revision":
       return "revision";
+    case "moderating":
+      return "moderating";
+    case "play":
+      return "play";
     case "ENDED":
     case "completed":
       return "completed";
@@ -55,6 +59,10 @@ export function fromRuntimePhaseToWhiteboard(
       return "REVIEW";
     case "revision":
       return "REVISION";
+    case "moderating":
+      return "COLLECTED";
+    case "play":
+      return "OPEN";
     case "completed":
       return "ENDED";
     default:
@@ -71,10 +79,23 @@ export function studentFacingState(input: {
   const status = (input.workStatus ?? "").toLowerCase();
 
   if (runtime === "completed" || input.phase === "ENDED") return "Completed";
+  // Definition race: Active while choosing; Submitted once locked/revealed (or local lock).
+  if (runtime === "play") {
+    if (
+      status === "submitted" ||
+      status === "auto_submitted" ||
+      status === "locked" ||
+      status === "auto-submitted"
+    ) {
+      return "Submitted";
+    }
+    return "Active";
+  }
   if (
     input.hasReviewPush ||
     runtime === "review" ||
     runtime === "collected" ||
+    runtime === "moderating" ||
     input.phase === "REVIEW" ||
     input.phase === "COLLECTED"
   ) {

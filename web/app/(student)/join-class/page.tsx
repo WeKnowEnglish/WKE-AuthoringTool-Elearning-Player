@@ -27,7 +27,7 @@ export default async function JoinClassPage() {
   return (
     <div className="min-h-dvh bg-[#f7bf4d] px-4 py-8 text-kid-ink">
       <div className="mx-auto max-w-lg space-y-6">
-        <Link href="/home" className="text-sm font-semibold underline">
+        <Link href="/primary" className="text-sm font-semibold underline">
           ← Back to home
         </Link>
         <div>

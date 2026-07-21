@@ -16,7 +16,8 @@ export function StudentShell({
   compact = false,
   fullWidth = false,
   hidePrimaryNav = false,
-  homeHref = "/home",
+  homeHref = "/primary",
+  learnHref = "/primary?nav=learn",
   classMenu,
 }: {
   children: React.ReactNode;
@@ -30,6 +31,8 @@ export function StudentShell({
   hidePrimaryNav?: boolean;
   /** Brand link target — secondary pages stay on `/secondary`. */
   homeHref?: string;
+  /** Learn nav target on the primary dashboard. */
+  learnHref?: string;
   /** Optional class join/select control for student enrollment UI. */
   classMenu?: React.ReactNode;
 }) {
@@ -74,13 +77,13 @@ export function StudentShell({
           {!hidePrimaryNav ? (
             <>
               <Link
-                href="/learn"
+                href={learnHref}
                 className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
               >
                 Learn
               </Link>
               <Link
-                href="/profile"
+                href="/primary?nav=progress"
                 className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
               >
                 Achievements

@@ -41,6 +41,7 @@ export async function GET(_request: Request, context: RouteContext) {
     joinCode: session.joinCode,
     roomId: session.liveblocksRoomId,
     classId: session.classId,
+    classLessonId: session.classLessonId,
     title: session.title,
     status: session.status,
     endedAt: session.endedAt,

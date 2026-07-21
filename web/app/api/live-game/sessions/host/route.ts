@@ -17,7 +17,7 @@ import {
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { normalizeEnglishCraftDurationMinutes } from "@/lib/live-game/modes/english-craft/config";
 import { toLiveGameCharacterId } from "@/lib/live-game/characters/live-game-characters";
-import { isTeacher } from "@/lib/auth/roles";
+import { isTeacher, canHostLive } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import {
   resolveHostQuestionSetBinding,
@@ -199,6 +199,9 @@ async function handlePost(request: Request, timer: LiveGameServerTimer) {
   } = await timer.measure("auth", () => supabase.auth.getUser());
   if (!user || !isTeacher(user)) {
     return NextResponse.json({ error: "Teacher login required." }, { status: 401 });
+  }
+  if (!canHostLive(user)) {
+    return NextResponse.json({ error: "Live hosting requires Teacher Plus." }, { status: 403 });
   }
   try {
     assertLiveblocksSecret();

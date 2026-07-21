@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
+import { getReadyClassLessonForClass } from "@/lib/data/class-lessons";
 import { requireWhiteboardTeacher } from "@/lib/whiteboard/product/access";
 import { bootstrapVirtualClassroomHost } from "@/lib/virtual-classroom/server/host-bootstrap";
 import {
@@ -9,7 +10,7 @@ import {
 
 type RouteContext = { params: Promise<{ classId: string }> };
 
-type Body = { title?: string };
+type Body = { title?: string; classLessonId?: string | null };
 
 /** Class-linked host (same as POST /api/virtual-classroom/host with classId). */
 export async function POST(request: Request, context: RouteContext) {
@@ -37,11 +38,28 @@ export async function POST(request: Request, context: RouteContext) {
       body = {};
     }
 
+    let classLessonId: string | null = null;
+    const requestedLessonId =
+      typeof body.classLessonId === "string" ? body.classLessonId.trim() : "";
+    if (requestedLessonId) {
+      const lesson = await timer.measure("validateLesson", () =>
+        getReadyClassLessonForClass({ lessonId: requestedLessonId, classId }),
+      );
+      if (!lesson) {
+        return NextResponse.json(
+          { error: "Select a Ready lesson with at least one step." },
+          { status: 400 },
+        );
+      }
+      classLessonId = lesson.id;
+    }
+
     try {
       const hosted = await timer.measure("bootstrap", () =>
         bootstrapVirtualClassroomHost({
           teacher,
           classId,
+          classLessonId,
           title: body.title,
         }),
       );
@@ -52,6 +70,7 @@ export async function POST(request: Request, context: RouteContext) {
         joinCode: hosted.joinCode,
         roomId: hosted.roomId,
         classId: hosted.classId,
+        classLessonId: hosted.classLessonId,
         title: hosted.title,
         userId: hosted.userId,
         displayName: hosted.displayName,

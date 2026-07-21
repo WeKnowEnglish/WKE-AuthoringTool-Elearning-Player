@@ -24,8 +24,11 @@ export function StudentLayoutClient({
   const bareChrome =
     pathname === "/" ||
     pathname === "/home" ||
+    pathname === "/primary" ||
+    pathname.startsWith("/primary/homework/") ||
     pathname === "/join-class" ||
-    pathname === "/secondary/login";
+    pathname === "/secondary/login" ||
+    pathname === "/testprimary";
 
   const autoPromptOpen =
     !bareChrome && classMemberships.length === 0 && !autoPromptDismissed;
@@ -48,9 +51,9 @@ export function StudentLayoutClient({
       </>
     );
   }
+  const onGrammar = pathname.startsWith("/grammar");
   const wide =
-    pathname.startsWith("/grammar") ||
-    (pathname === "/secondary" || pathname.startsWith("/secondary/"));
+    onGrammar || pathname === "/secondary" || pathname.startsWith("/secondary/");
   const onSecondary = pathname === "/secondary" || pathname.startsWith("/secondary/");
   return (
     <StudentShell
@@ -58,7 +61,8 @@ export function StudentLayoutClient({
       compact={wide}
       fullWidth={onSecondary}
       hidePrimaryNav={onSecondary}
-      homeHref={onSecondary ? "/secondary" : "/home"}
+      homeHref={onSecondary ? "/secondary" : "/primary"}
+      learnHref="/primary?nav=learn"
       classMenu={
         <StudentClassMenu
           memberships={classMemberships}

@@ -28,6 +28,9 @@ export type DocumentLaunchPayload = {
 
 type Props = {
   busy: boolean;
+  initial?: Partial<DocumentLaunchPayload>;
+  submitLabel?: string;
+  busyLabel?: string;
   onLaunch: (payload: DocumentLaunchPayload) => void;
 };
 
@@ -52,17 +55,35 @@ function defaultsFor(template: DocumentTemplateType) {
   };
 }
 
-const INITIAL = defaultsFor("paragraph");
-
-export function DocumentLaunchPanel({ busy, onLaunch }: Props) {
-  const [documentMode, setDocumentMode] = useState<LaunchMode>("individual");
-  const [templateType, setTemplateType] = useState<DocumentTemplateType>("paragraph");
-  const [title, setTitle] = useState(INITIAL.title);
-  const [instructions, setInstructions] = useState(INITIAL.instructions);
-  const [successCriteria, setSuccessCriteria] = useState(INITIAL.successCriteria);
-  const [stimulus, setStimulus] = useState(INITIAL.stimulus);
-  const [wordBankText, setWordBankText] = useState(INITIAL.wordBankText);
-  const [sentenceStartersText, setSentenceStartersText] = useState(INITIAL.sentenceStartersText);
+export function DocumentLaunchPanel({
+  busy,
+  initial,
+  submitLabel,
+  busyLabel = "Starting…",
+  onLaunch,
+}: Props) {
+  const seedTemplate = initial?.templateType ?? "paragraph";
+  const seedDefaults = defaultsFor(seedTemplate);
+  const [documentMode, setDocumentMode] = useState<LaunchMode>(
+    initial?.participationMode ?? "individual",
+  );
+  const [templateType, setTemplateType] = useState<DocumentTemplateType>(seedTemplate);
+  const [title, setTitle] = useState(initial?.title?.trim() || seedDefaults.title);
+  const [instructions, setInstructions] = useState(
+    initial?.instructions?.trim() || seedDefaults.instructions,
+  );
+  const [successCriteria, setSuccessCriteria] = useState(
+    initial?.successCriteria?.trim() || seedDefaults.successCriteria,
+  );
+  const [stimulus, setStimulus] = useState(initial?.stimulus ?? seedDefaults.stimulus);
+  const [wordBankText, setWordBankText] = useState(
+    initial?.wordBank?.length ? initial.wordBank.join(", ") : seedDefaults.wordBankText,
+  );
+  const [sentenceStartersText, setSentenceStartersText] = useState(
+    initial?.sentenceStarters?.length
+      ? initial.sentenceStarters.join("\n")
+      : seedDefaults.sentenceStartersText,
+  );
 
   const selectTemplate = (next: DocumentTemplateType) => {
     setTemplateType(next);
@@ -220,7 +241,7 @@ export function DocumentLaunchPanel({ busy, onLaunch }: Props) {
         }
         className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
       >
-        {busy ? "Starting…" : startLabel}
+        {busy ? busyLabel : submitLabel ?? startLabel}
       </button>
     </div>
   );

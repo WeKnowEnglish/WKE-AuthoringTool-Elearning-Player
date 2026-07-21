@@ -49,7 +49,7 @@ export default async function SecondaryLoginPage({ searchParams }: Props) {
         }),
       );
     }
-    redirect(resolveLandingRedirectPath(user) ?? "/home");
+    redirect(resolveLandingRedirectPath(user) ?? "/primary");
   }
 
   return (

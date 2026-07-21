@@ -54,3 +54,20 @@ export const WHITEBOARD_INTERACTION_CONFIG: ActivityInteractionConfig = {
   timerEnabled: true,
   rewardsEnabled: true,
 };
+
+export const WORD_CARDS_INTERACTION_CONFIG: ActivityInteractionConfig = {
+  participationMode: "individual",
+  studentStates: {
+    waiting: true,
+    active: true,
+    submitted: true,
+    review: true,
+    revision: true,
+  },
+  reviewModes: ["show", "compare"],
+  pushToStudent: true,
+  allowRevision: true,
+  anonymousReview: true,
+  timerEnabled: true,
+  rewardsEnabled: true,
+};

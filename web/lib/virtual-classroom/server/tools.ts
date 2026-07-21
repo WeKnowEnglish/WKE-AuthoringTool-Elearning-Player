@@ -3,6 +3,9 @@ import "server-only";
 import { applyDocumentTeacherCommand } from "@/lib/document-activity/server/commands";
 import { getDocumentRoundById } from "@/lib/document-activity/server/persistence";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
+import { toWordCardsRoomId } from "@/lib/word-cards/domain";
+import { applyWordCardsTeacherCommand } from "@/lib/word-cards/server/commands";
+import { getWordCardRoundByJoinCode } from "@/lib/word-cards/server/persistence";
 import {
   clearLastRoll,
   configureRandomiser,
@@ -139,6 +142,7 @@ export type VcToolCommand =
   | { type: "TOGGLE_GROUP_LOCK"; groupId: string }
   | { type: "SEND_GROUPS_TO_WHITEBOARD" }
   | { type: "SEND_GROUPS_TO_DOCUMENT" }
+  | { type: "SEND_GROUPS_TO_WORD_CARDS" }
   | { type: "SET_TIMER_MODE"; mode: GlobalTimerMode }
   | { type: "START_TIMER"; durationMs?: number }
   | { type: "PAUSE_TIMER" }
@@ -186,6 +190,8 @@ export async function applyVcToolCommand(input: {
     let groupsForWhiteboard: ReturnType<typeof toWhiteboardAssignPayload> = [];
     let documentRoundId: string | null = null;
     let groupsForDocument: ReturnType<typeof toWhiteboardAssignPayload> = [];
+    let wordCardsJoinCode: string | null = null;
+    let groupsForWordCards: ReturnType<typeof toWhiteboardAssignPayload> = [];
 
     await liveblocks.mutateStorage(input.roomId, ({ root }) => {
       const runtime = runtimeOf(root);
@@ -323,6 +329,21 @@ export async function applyVcToolCommand(input: {
           }
           documentRoundId = roundId;
           groupsForDocument = toWhiteboardAssignPayload(groupSet.groups);
+          break;
+        }
+        case "SEND_GROUPS_TO_WORD_CARDS": {
+          const activity = runtime.get("activeActivity") as {
+            kind: string | null;
+            joinCode: string | null;
+          } | null;
+          if (activity?.kind !== "word_cards" || !activity.joinCode) {
+            throw new Error("Start a group word cards activity first.");
+          }
+          if (!groupSet.groups.length) {
+            throw new Error("Generate groups before sending.");
+          }
+          wordCardsJoinCode = activity.joinCode;
+          groupsForWordCards = toWhiteboardAssignPayload(groupSet.groups);
           break;
         }
         case "SET_TIMER_MODE": {
@@ -491,6 +512,31 @@ export async function applyVcToolCommand(input: {
           },
         });
         return { ok: true, detail: "Groups sent to document." };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not assign groups.";
+        return { ok: false, error: message };
+      }
+    }
+
+    if (input.command.type === "SEND_GROUPS_TO_WORD_CARDS" && wordCardsJoinCode) {
+      const round = await getWordCardRoundByJoinCode(wordCardsJoinCode);
+      if (!round) return { ok: false, error: "Word cards round not found." };
+      try {
+        await applyWordCardsTeacherCommand({
+          roomId: round.liveblocksRoomId ?? toWordCardsRoomId(wordCardsJoinCode),
+          roundId: round.id,
+          sessionId: round.sessionId,
+          hostUserId: round.createdBy,
+          command: {
+            type: "ASSIGN_GROUPS",
+            groups: groupsForWordCards.map((g) => ({
+              id: g.id,
+              name: g.name,
+              memberIds: g.memberIds,
+            })),
+          },
+        });
+        return { ok: true, detail: "Groups sent to word cards." };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not assign groups.";
         return { ok: false, error: message };

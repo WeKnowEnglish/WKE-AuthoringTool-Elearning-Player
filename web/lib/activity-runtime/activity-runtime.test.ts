@@ -27,12 +27,15 @@ import { encodeVcMemberToken } from "@/lib/virtual-classroom/session-cookie";
 import { getRoomProduct } from "@/lib/liveblocks/room-prefix";
 
 describe("activity-runtime registry", () => {
-  it("registers whiteboard and document", () => {
+  it("registers whiteboard, document, and word_cards", () => {
     const kinds = listEnabledVcActivities().map((a) => a.kind);
     expect(kinds).toContain("whiteboard");
     expect(kinds).toContain("document");
+    expect(kinds).toContain("word_cards");
     expect(isRegisteredVcActivity("document")).toBe(true);
+    expect(isRegisteredVcActivity("word_cards")).toBe(true);
     expect(getVcActivity("document")?.interaction.participationMode).toBe("individual");
+    expect(getVcActivity("word_cards")?.interaction.pushToStudent).toBe(true);
     expect(isDocumentActivityRegistered()).toBe(true);
   });
 });

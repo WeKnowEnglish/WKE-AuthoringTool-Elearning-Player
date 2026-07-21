@@ -12,6 +12,7 @@ Whiteboard is an **activity environment**, not the product.
 | [ACTIVITY_SPEC_TEMPLATE.md](./ACTIVITY_SPEC_TEMPLATE.md) | Spec template + checklist gate before build |
 | [DOCUMENT_ACTIVITY_SPEC.md](./DOCUMENT_ACTIVITY_SPEC.md) | Document activity (Yjs/Tiptap) — Chunks 0–5 done |
 | [WHITEBOARD_ACTIVITY_SPEC.md](./WHITEBOARD_ACTIVITY_SPEC.md) | Whiteboard activity — Phase 1c + Document alignment WB-0–6 done |
+| [WORD_CARDS_ACTIVITY_SPEC.md](./WORD_CARDS_ACTIVITY_SPEC.md) | Collaborative Word Cards — WC-0–7 done (unit regression green) |
 
 ## Design rule
 
@@ -36,16 +37,19 @@ Host global tools live in a **left rail** (collapsed by default). Click Pick / G
 
 | Action | Path |
 | --- | --- |
-| Teacher start (class) | Class page → **Start Virtual Classroom** → `/teacher/virtual-classroom/[sessionId]` |
+| Teacher start (class) | Class page → **Teach** → optionally bind a Ready lesson → **Start Virtual Classroom** → `/teacher/virtual-classroom/[sessionId]` |
 | Teacher start (one-off) | `/teacher/virtual-classroom/host` (signed-in teacher only; no class) |
 | Student join | `/virtual-classroom/join` — class sessions need enrollment; one-off needs display name only |
 | End for all | Host toolbar → **End session for all** (`POST /api/virtual-classroom/[sessionId]`) |
+| Launch staged step | Host **Today’s lesson** playlist → Launch (prefilled) |
 | Launch whiteboard | Inside live session → whiteboard panel (mode / worksheet / timer) |
 
-Apply migrations `050_virtual_classroom_session.sql` and `051_virtual_classroom_one_off.sql` (`class_id` nullable for one-off sessions).
+Apply migrations `050_virtual_classroom_session.sql`, `051_virtual_classroom_one_off.sql` (`class_id` nullable for one-off sessions), `062_class_lessons.sql`, and `063_class_sessions_lesson.sql` (`class_lesson_id` on sessions).
 
 ## Whiteboard Show / Compare (Phase 1c)
 
 Teacher **Show** / **Compare** pushes selected boards to every student screen with a required short review task (notice, agree, vote clearest, find a difference, etc.). Students submit via `POST /api/whiteboard/[sessionId]/review`. Shared student state labels: Waiting · Active · Submitted · Class review · Revision · Completed.
 
 Document alignment (Complete clears VC, launch reuse, orphan groups, Reveal, Ready/Revise, VC launch panel) is complete in [WHITEBOARD_ACTIVITY_SPEC.md](./WHITEBOARD_ACTIVITY_SPEC.md) chunks **WB-0–6**.
+
+Word Cards vertical slice complete — Create → Moderate → Show/Compare → Play + groups — [WORD_CARDS_ACTIVITY_SPEC.md](./WORD_CARDS_ACTIVITY_SPEC.md) (**WC-0–7** done, unit regression green; classroom smoke remains manual).

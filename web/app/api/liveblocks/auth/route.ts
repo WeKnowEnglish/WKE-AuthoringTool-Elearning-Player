@@ -23,6 +23,11 @@ import {
   WHITEBOARD_HOST_COOKIE,
   WHITEBOARD_PLAYER_COOKIE,
 } from "@/lib/whiteboard/liveblocks/host-cookie";
+import {
+  canAccessWordCardsRoom,
+  decodeWordCardsPlayerToken,
+  WORD_CARDS_PLAYER_COOKIE,
+} from "@/lib/word-cards/liveblocks/host-cookie";
 
 export async function POST(request: Request) {
   return withLiveGameServerTiming("liveblocks_auth", async (timer) => {
@@ -127,6 +132,19 @@ export async function POST(request: Request) {
         authRequest.displayName = member.displayName;
         authRequest.role = member.role === "host" ? "host" : "player";
         timer.setContext({ role: authRequest.role });
+      }
+    } else if (product === "word-cards") {
+      const playerCookie = cookieStore.get(WORD_CARDS_PLAYER_COOKIE)?.value ?? null;
+      authorized = canAccessWordCardsRoom({
+        room: authRequest.room,
+        playerCookie,
+      });
+      const player = decodeWordCardsPlayerToken(playerCookie);
+      if (authorized && player?.roomId === authRequest.room) {
+        authRequest.userId = player.userId;
+        authRequest.displayName = player.displayName;
+        authRequest.role = player.role;
+        timer.setContext({ role: player.role });
       }
     }
 

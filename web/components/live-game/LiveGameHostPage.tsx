@@ -42,7 +42,13 @@ import {
   recordLiveGameDiagnostic,
 } from "@/lib/live-game/diagnostics/client";
 
-export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: string }) {
+export function LiveGameHostPage({
+  initialClassId = "",
+  initialQuestionSetId = "",
+}: {
+  initialClassId?: string;
+  initialQuestionSetId?: string;
+}) {
   const router = useRouter();
   const setupMountedAtRef = useRef(0);
   const creationIdRef = useRef<string | null>(null);
@@ -52,7 +58,9 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
     ENGLISH_CRAFT_MODE.defaultDurationMinutes as EnglishCraftSessionDuration,
   );
   const [questionSets, setQuestionSets] = useState<LiveGameQuestionSetCard[]>([]);
-  const [selectedQuestionSetId, setSelectedQuestionSetId] = useState<string | null>(null);
+  const [selectedQuestionSetId, setSelectedQuestionSetId] = useState<string | null>(
+    initialQuestionSetId.trim() || null,
+  );
   const [setsLoading, setSetsLoading] = useState(true);
   const [setsError, setSetsError] = useState<string | null>(null);
   const [setsRetryCount, setSetsRetryCount] = useState(0);
@@ -86,6 +94,10 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
         });
         setQuestionSets(sets);
         setSelectedQuestionSetId((current) => {
+          const preferred = initialQuestionSetId.trim();
+          if (preferred && sets.some((set) => set.id === preferred)) {
+            return preferred;
+          }
           if (current && sets.some((set) => set.id === current)) {
             return current;
           }
@@ -108,7 +120,7 @@ export function LiveGameHostPage({ initialClassId = "" }: { initialClassId?: str
         setSetsLoading(false);
       }
     },
-    [elapsedSinceMountMs, setsRetryCount],
+    [elapsedSinceMountMs, initialQuestionSetId, setsRetryCount],
   );
 
   const loadClasses = useCallback(

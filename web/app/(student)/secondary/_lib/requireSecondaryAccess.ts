@@ -27,6 +27,6 @@ export async function requireSecondaryStudentAccess(): Promise<void> {
       : null;
 
   if (!isSecondaryEligibleBand(learningBand)) {
-    redirect("/home?message=secondary_for_a2");
+    redirect("/primary?message=secondary_for_a2");
   }
 }

@@ -1,17 +1,21 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ArchiveClassButton } from "@/components/teacher/ArchiveClassButton";
-import { ClassJoinCodePanel } from "@/components/teacher/ClassJoinCodePanel";
-import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
-import { LiveGameClassProjectPanel } from "@/components/teacher/LiveGameClassProjectPanel";
-import { SentenceStripClassPanel } from "@/components/teacher/SentenceStripClassPanel";
-import { VirtualClassroomClassPanel } from "@/components/teacher/VirtualClassroomClassPanel";
-import { WhiteboardClassHistory } from "@/components/teacher/WhiteboardClassHistory";
-import { WhiteboardClassPanel } from "@/components/teacher/WhiteboardClassPanel";
+import { TeacherClassHubClient } from "@/components/teacher/class-hub/TeacherClassHubClient";
+import { getTeacherTier } from "@/lib/auth/roles";
+import type { LiveGameQuestionSetOption } from "@/lib/class-lessons/types";
+import {
+  listClassHomeworkCompletionsForClass,
+  listClassHomeworkForClass,
+  listTeacherPackQuizzesForClass,
+} from "@/lib/data/class-homework";
+import { listClassLessonsWithStepsForClass } from "@/lib/data/class-lessons";
 import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
 import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
+import { listTeacherWordPacksForClass } from "@/lib/data/teacher-word-packs";
 import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
+import { listPublishedQuestionSetsForHost } from "@/lib/live-game/server/question-set-list";
+import { createClient } from "@/lib/supabase/server";
 import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
 import { listClassWhiteboardHistory } from "@/lib/whiteboard/server/history";
 
@@ -24,6 +28,12 @@ export default async function TeacherClassDetailPage({ params }: Props) {
   const teacherClass = await getTeacherClass(classId);
   if (!teacherClass) notFound();
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const teacherTier = getTeacherTier(user) ?? "plus";
+
   const [
     roster,
     masteryOverview,
@@ -31,6 +41,12 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     liveGameProject,
     whiteboardHistory,
     activeVc,
+    wordPacks,
+    lessons,
+    liveGameSetsRaw,
+    homework,
+    packQuizzes,
+    homeworkCompletions,
   ] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
@@ -38,77 +54,68 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     getLiveGameClassProjectOverview(classId),
     listClassWhiteboardHistory(classId),
     getActiveVirtualClassroomForClass(classId),
+    listTeacherWordPacksForClass(classId),
+    listClassLessonsWithStepsForClass(classId),
+    listPublishedQuestionSetsForHost(),
+    listClassHomeworkForClass(classId),
+    listTeacherPackQuizzesForClass(classId),
+    listClassHomeworkCompletionsForClass(classId).catch(() => []),
   ]);
 
   const masteryByStudentId = Object.fromEntries(
     masteryOverview.students.map((preview) => [preview.studentId, preview]),
   );
 
+  const liveGameSets: LiveGameQuestionSetOption[] = liveGameSetsRaw.map((set) => ({
+    id: set.id,
+    slug: set.slug,
+    title: set.title,
+    level: set.level,
+    topic: set.topic,
+    questionCount: set.questionCount,
+  }));
+
   const archived = Boolean(teacherClass.archived_at);
 
   return (
-    <div className="space-y-6">
-      <Link href="/teacher/classes" className="text-sm text-blue-700 underline">
-        ← Classes
-      </Link>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{teacherClass.title}</h1>
-          <p className="mt-1 text-sm text-neutral-600">
-            {roster.length} student{roster.length === 1 ? "" : "s"}
-            {archived ? " · Archived" : ""}
-            {pendingSentences.total > 0 ? (
-              <>
-                {" "}
-                ·{" "}
-                <span className="font-medium text-amber-800">
-                  {pendingSentences.total} sentence{pendingSentences.total === 1 ? "" : "s"} waiting
-                  for review
-                </span>
-              </>
-            ) : null}
-          </p>
+    <Suspense
+      fallback={
+        <div className="space-y-4">
+          <div className="h-8 w-40 animate-pulse rounded bg-neutral-200" />
+          <div className="h-10 w-full max-w-md animate-pulse rounded bg-neutral-100" />
+          <div className="h-40 w-full animate-pulse rounded-xl bg-neutral-100" />
         </div>
-        <ArchiveClassButton classId={classId} archived={archived} />
-      </div>
-
-      <ClassJoinCodePanel
+      }
+    >
+      <TeacherClassHubClient
         classId={classId}
+        title={teacherClass.title}
         joinCode={teacherClass.join_code}
         archived={archived}
-      />
-
-      <VirtualClassroomClassPanel
-        classId={classId}
-        archived={archived}
+        teacherTier={teacherTier}
+        studentCount={roster.length}
+        pendingSentenceTotal={pendingSentences.total}
         activeSession={
           activeVc
-            ? { sessionId: activeVc.id, joinCode: activeVc.joinCode }
+            ? {
+                sessionId: activeVc.id,
+                joinCode: activeVc.joinCode,
+                classLessonId: activeVc.classLessonId,
+              }
             : null
         }
+        roster={roster}
+        masteryByStudentId={masteryByStudentId}
+        pendingSentencesByStudentId={pendingSentences.byStudentId}
+        wordPacks={wordPacks}
+        liveGameProject={liveGameProject}
+        whiteboardHistory={whiteboardHistory}
+        lessons={lessons}
+        liveGameSets={liveGameSets}
+        homework={homework}
+        homeworkCompletions={homeworkCompletions}
+        packQuizzes={packQuizzes}
       />
-
-      <LiveGameClassProjectPanel
-        classId={classId}
-        archived={archived}
-        overview={liveGameProject}
-      />
-
-      <WhiteboardClassPanel classId={classId} archived={archived} />
-
-      <SentenceStripClassPanel classId={classId} archived={archived} />
-
-      <WhiteboardClassHistory classId={classId} rounds={whiteboardHistory} />
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Roster</h2>
-        <ClassRosterTable
-          classId={classId}
-          students={roster}
-          masteryByStudentId={masteryByStudentId}
-          pendingSentencesByStudentId={pendingSentences.byStudentId}
-        />
-      </section>
-    </div>
+    </Suspense>
   );
 }

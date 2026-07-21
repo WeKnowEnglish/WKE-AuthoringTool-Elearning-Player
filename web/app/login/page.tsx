@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 import { PortalLoginPanel, type PortalKind } from "@/components/auth/PortalLoginPanel";
-import {
-  resolveLandingRedirectPath,
-  resolvePostLoginPath,
-} from "@/lib/auth/post-login-path";
-import { getAppRole } from "@/lib/auth/roles";
+import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
+import { getAppRole, mustChangePassword } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +38,7 @@ export default async function LoginPage({ searchParams }: Props) {
         role,
         learningBand,
         next: firstParam(sp.next) || null,
+        mustChangePassword: role === "teacher" ? mustChangePassword(user) : false,
       }),
     );
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isTeacher } from "@/lib/auth/roles";
+import { canHostLive, isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { listPublishedQuestionSetsForHostWithMeta } from "@/lib/live-game/server/question-set-list";
 import { withLiveGameServerTiming } from "@/lib/live-game/server/server-timing";
@@ -16,6 +16,9 @@ export async function GET() {
     });
     if (!user || !isTeacher(user)) {
       return NextResponse.json({ error: "Teacher login required." }, { status: 401 });
+    }
+    if (!canHostLive(user)) {
+      return NextResponse.json({ error: "Live hosting requires Teacher Plus." }, { status: 403 });
     }
     timer.setContext({ role: "host" });
 

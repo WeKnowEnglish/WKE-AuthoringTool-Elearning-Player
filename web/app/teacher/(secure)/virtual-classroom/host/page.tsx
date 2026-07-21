@@ -1,5 +1,5 @@
 import { VirtualClassroomHostClient } from "@/components/virtual-classroom/VirtualClassroomHostClient";
-import { isTeacher } from "@/lib/auth/roles";
+import { canHostLive, isTeacher } from "@/lib/auth/roles";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,6 +19,9 @@ export default async function VirtualClassroomHostPage() {
   }
   if (!isTeacher(user)) {
     redirect("/teacher/classes?notice=teacher_only");
+  }
+  if (!canHostLive(user)) {
+    redirect("/teacher/classes?notice=live_requires_plus");
   }
   return <VirtualClassroomHostClient />;
 }

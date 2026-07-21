@@ -49,10 +49,10 @@ export function GrammarHubClient({ modules, onEconomyChange }: Props) {
       <div className="mx-auto w-full max-w-3xl pb-4">
         <div className="mb-4">
           <Link
-            href="/home?room=learn"
+            href="/primary"
             className="rounded-lg border-2 border-kid-ink bg-kid-panel px-3 py-2 text-sm font-bold text-kid-ink shadow-[2px_2px_0_0_var(--kid-shadow)] transition-transform active:scale-95"
           >
-            ← Back to Learn
+            ← Back to Home
           </Link>
         </div>
 

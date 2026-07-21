@@ -65,6 +65,7 @@ export async function POST(_request: Request, context: RouteContext) {
     joinCode: session.joinCode,
     roomId: session.liveblocksRoomId,
     classId: session.classId,
+    classLessonId: session.classLessonId,
     title: session.title,
     userId: teacher.userId,
     displayName: teacher.displayName,

@@ -1,40 +1,22 @@
 import { redirect } from "next/navigation";
-import { StudentHubClient } from "@/components/student-hub/StudentHubClient";
-import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
-import { getStudentClassMemberships } from "@/lib/data/student-classes";
-import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 type Props = {
   searchParams?: Promise<{ collection?: string; room?: string; message?: string }>;
 };
 
+/**
+ * F5 — legacy world hub retired. Bookmarks map onto Primary.
+ * @see docs/primary/PRIMARY_VOCAB_ACTIVITY_CONTRACT.md
+ */
 export default async function StudentHomePage({ searchParams }: Props) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/");
-  }
-
-  if (isTeacher(user)) {
-    redirect(TEACHER_DEFAULT_PATH);
-  }
-
-  if (!isStudent(user)) {
-    redirect("/login?error=unknown_role");
-  }
-
   const params = (await searchParams) ?? {};
-  const classMemberships = await getStudentClassMemberships();
-
-  return (
-    <StudentHubClient
-      initialCollectionPage={params.collection ?? null}
-      initialRoom={params.room ?? null}
-      initialMessage={params.message ?? null}
-      classMemberships={classMemberships}
-    />
-  );
+  if (params.collection === "games") {
+    redirect("/primary?nav=games");
+  }
+  if (params.message) {
+    redirect(`/primary?message=${encodeURIComponent(params.message)}`);
+  }
+  redirect("/primary");
 }

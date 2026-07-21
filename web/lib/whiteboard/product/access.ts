@@ -1,6 +1,6 @@
 import "server-only";
 
-import { isTeacher } from "@/lib/auth/roles";
+import { canHostLive, isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
@@ -17,6 +17,9 @@ export async function requireWhiteboardTeacher(
   } = await supabase.auth.getUser();
   if (!user?.id || !isTeacher(user)) {
     throw new Error("Teacher authentication required.");
+  }
+  if (!canHostLive(user)) {
+    throw new Error("Live hosting requires Teacher Plus.");
   }
 
   const { data: row, error } = await supabase

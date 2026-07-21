@@ -10,6 +10,7 @@ function mapRow(row: Record<string, unknown>): VirtualClassroomSessionRecord {
   return {
     id: row.id as string,
     classId: (row.class_id as string | null) ?? null,
+    classLessonId: (row.class_lesson_id as string | null) ?? null,
     joinCode: (row.join_code as string) ?? "",
     liveblocksRoomId: (row.liveblocks_room_id as string) ?? "",
     title: row.title as string,
@@ -51,6 +52,7 @@ export async function endActiveOneOffSessionsForTeacher(teacherId: string): Prom
 export async function createVirtualClassroomSession(input: {
   id: string;
   classId: string | null;
+  classLessonId?: string | null;
   joinCode: string;
   liveblocksRoomId: string;
   title: string;
@@ -68,6 +70,7 @@ export async function createVirtualClassroomSession(input: {
   await supabase.from("class_sessions").upsert({
     id: input.id,
     class_id: input.classId,
+    class_lesson_id: input.classLessonId ?? null,
     join_code: input.joinCode,
     liveblocks_room_id: input.liveblocksRoomId,
     title: input.title,
@@ -75,6 +78,23 @@ export async function createVirtualClassroomSession(input: {
     created_by: input.createdBy,
     ended_at: null,
   });
+}
+
+export async function setVirtualClassroomSessionLesson(input: {
+  sessionId: string;
+  classLessonId: string | null;
+}): Promise<VirtualClassroomSessionRecord | null> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("class_sessions")
+    .update({ class_lesson_id: input.classLessonId })
+    .eq("id", input.sessionId)
+    .eq("status", "active")
+    .select("*")
+    .maybeSingle();
+  if (!data) return null;
+  return mapRow(data as Record<string, unknown>);
 }
 
 export async function getVirtualClassroomSessionByJoinCode(

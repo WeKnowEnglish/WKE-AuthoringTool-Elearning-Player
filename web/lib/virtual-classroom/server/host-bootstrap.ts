@@ -22,6 +22,7 @@ export type HostVirtualClassroomResult = {
   joinCode: string;
   roomId: string;
   classId: string | null;
+  classLessonId: string | null;
   title: string;
   userId: string;
   displayName: string;
@@ -34,6 +35,7 @@ export type HostVirtualClassroomResult = {
 export async function bootstrapVirtualClassroomHost(input: {
   teacher: { userId: string; displayName: string };
   classId: string | null;
+  classLessonId?: string | null;
   title?: string;
 }): Promise<HostVirtualClassroomResult> {
   const secret = assertLiveblocksSecret();
@@ -44,10 +46,12 @@ export async function bootstrapVirtualClassroomHost(input: {
   const title =
     input.title?.trim() ||
     (input.classId ? "Virtual Classroom" : "One-off Virtual Classroom");
+  const classLessonId = input.classId ? (input.classLessonId ?? null) : null;
 
   await createVirtualClassroomSession({
     id: sessionId,
     classId: input.classId,
+    classLessonId,
     joinCode,
     liveblocksRoomId: roomId,
     title,
@@ -93,6 +97,7 @@ export async function bootstrapVirtualClassroomHost(input: {
     joinCode,
     roomId,
     classId: input.classId,
+    classLessonId,
     title,
     userId: input.teacher.userId,
     displayName: input.teacher.displayName,

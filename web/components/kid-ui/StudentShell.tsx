@@ -16,7 +16,7 @@ export function StudentShell({
   compact = false,
   fullWidth = false,
   hidePrimaryNav = false,
-  homeHref = "/home",
+  homeHref = "/primary",
   classMenu,
 }: {
   children: React.ReactNode;
@@ -26,7 +26,7 @@ export function StudentShell({
   compact?: boolean;
   /** Use the full viewport width (secondary portal). */
   fullWidth?: boolean;
-  /** Hide Learn / Achievements (secondary portal). */
+  /** Hide Achievements (secondary portal). */
   hidePrimaryNav?: boolean;
   /** Brand link target — secondary pages stay on `/secondary`. */
   homeHref?: string;
@@ -72,20 +72,12 @@ export function StudentShell({
             onPresetChange={studentSoftChromeStore.persist}
           />
           {!hidePrimaryNav ? (
-            <>
-              <Link
-                href="/learn"
-                className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
-              >
-                Learn
-              </Link>
-              <Link
-                href="/profile"
-                className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
-              >
-                Achievements
-              </Link>
-            </>
+            <Link
+              href="/primary?nav=progress"
+              className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
+            >
+              Achievements
+            </Link>
           ) : null}
           {classMenu}
           <SoundMuteButton />

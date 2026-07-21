@@ -8,7 +8,7 @@ import { KidButton } from "@/components/kid-ui/KidButton";
 import { registerStudentAccount, updateStudentLearningBand } from "@/lib/actions/student-auth";
 import { migrateLocalStorageToStudentStorageId } from "@/lib/auth/student-storage-migrate";
 import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
-import { getAppRole } from "@/lib/auth/roles";
+import { getAppRole, mustChangePassword } from "@/lib/auth/roles";
 import { resolveLearningBand } from "@/lib/auth/student-bands";
 import { setStudentStorageIdCache } from "@/lib/auth/student-storage-id";
 import { ensureMasteryHydratedForCurrentStudent, pushLocalMasteryBacklogForCurrentStudent } from "@/lib/mastery/supabase-sync";
@@ -230,7 +230,11 @@ export function PortalLoginPanel({
         return;
       }
 
-      const path = resolvePostLoginPath({ role: "teacher", next: nextPath });
+      const path = resolvePostLoginPath({
+        role: "teacher",
+        next: nextPath,
+        mustChangePassword: mustChangePassword(user),
+      });
       router.push(path);
       router.refresh();
     } finally {

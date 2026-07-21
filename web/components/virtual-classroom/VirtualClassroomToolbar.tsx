@@ -30,6 +30,7 @@ type Props = {
   busy: boolean;
   hasWhiteboardActivity: boolean;
   hasDocumentActivity: boolean;
+  hasWordCardsActivity: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
 };
 
@@ -69,6 +70,7 @@ export function VirtualClassroomToolbar({
   busy,
   hasWhiteboardActivity,
   hasDocumentActivity,
+  hasWordCardsActivity,
   onCommand,
 }: Props) {
   const [openTool, setOpenTool] = useState<VcToolId | null>(null);
@@ -134,6 +136,7 @@ export function VirtualClassroomToolbar({
             busy={busy}
             hasWhiteboardActivity={hasWhiteboardActivity}
             hasDocumentActivity={hasDocumentActivity}
+            hasWordCardsActivity={hasWordCardsActivity}
             onCommand={onCommand}
           />
         );

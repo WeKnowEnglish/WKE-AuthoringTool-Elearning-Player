@@ -1,5 +1,5 @@
 import { LiveGameQuestionSetEditorPage } from "@/components/live-game/editor/LiveGameQuestionSetEditorPage";
-import { isTeacher } from "@/lib/auth/roles";
+import { canHostLive, isTeacher } from "@/lib/auth/roles";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,6 +20,9 @@ export default async function LiveGameQuestionSetEditRoute({ params }: Props) {
   }
   if (!isTeacher(user)) {
     redirect(`/login?portal=teacher&error=not_teacher&next=/live-game/question-sets/${id}/edit`);
+  }
+  if (!canHostLive(user)) {
+    redirect("/teacher/classes?notice=live_requires_plus");
   }
   return <LiveGameQuestionSetEditorPage setId={id} />;
 }

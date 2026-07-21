@@ -6,6 +6,8 @@ export type VirtualClassroomClientContext = {
   roomId: string;
   /** Empty string for one-off sessions. */
   classId: string;
+  /** Staged lesson bound at host time (optional). */
+  classLessonId?: string | null;
   role: "host" | "member";
   userId: string;
   displayName: string;
@@ -35,7 +37,11 @@ export function getVirtualClassroomContext(): VirtualClassroomClientContext | nu
     ) {
       return null;
     }
-    return parsed;
+    return {
+      ...parsed,
+      classLessonId:
+        typeof parsed.classLessonId === "string" ? parsed.classLessonId : parsed.classLessonId ?? null,
+    };
   } catch {
     return null;
   }

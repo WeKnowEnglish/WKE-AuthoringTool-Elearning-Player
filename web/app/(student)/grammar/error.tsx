@@ -38,7 +38,7 @@ export default function GrammarError({ error, reset }: Props) {
           Try again
         </button>
         <Link
-          href="/home"
+          href="/primary"
           className="rounded-lg border-2 border-kid-ink bg-kid-panel px-4 py-2 text-sm font-bold text-kid-ink shadow-[2px_2px_0_0_var(--kid-shadow)] transition-transform active:scale-95"
         >
           ← Back home

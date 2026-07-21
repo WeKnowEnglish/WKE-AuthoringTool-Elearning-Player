@@ -32,9 +32,10 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
    - **Script (recommended):** add **`SUPABASE_SERVICE_ROLE_KEY`** to `.env.local` (Supabase → Project Settings → API → **service_role** secret). Then run:
      ```bash
      npm run create-teacher -- your@email.com YourPassword
+     npm run create-teacher -- your@email.com 00000000 --tier light
      ```
-     This creates the user with **`app_metadata.role`: `teacher`** and confirmed email.
-   - **Dashboard:** Authentication → Users → Add user, then edit the user → **App metadata** → `{ "role": "teacher" }`.
+     This creates (or updates) the user with **`app_metadata.role`: `teacher`**, **`teacher_tier`**: `light`|`plus` (default `plus`), and **`must_change_password`**: `true` by default (use `--no-must-change-password` to skip induction). Email is confirmed. On first sign-in, teachers with the induction flag are sent to `/teacher/set-password` (new password + confirm, with show/hide) before the portal.
+   - **Dashboard:** Authentication → Users → Add user, then edit the user → **App metadata** → `{ "role": "teacher", "teacher_tier": "light", "must_change_password": true }`.
 
    Public teacher registration is intentionally disabled. The Teacher tab offers a **Request teacher access** form instead. To enable administrator notifications, apply `032_teacher_access_requests.sql` and configure `RESEND_API_KEY` plus `TEACHER_ACCESS_NOTIFICATION_EMAIL`. Requests are stored for review and never create an account automatically.
 

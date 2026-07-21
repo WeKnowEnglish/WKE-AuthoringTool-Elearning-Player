@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
+import type { ClassLesson } from "@/lib/class-lessons/types";
 import { setVirtualClassroomContext } from "@/lib/virtual-classroom/client-context";
 
 type Props = {
@@ -11,24 +12,45 @@ type Props = {
   activeSession?: {
     sessionId: string;
     joinCode: string;
+    classLessonId?: string | null;
   } | null;
+  readyLessons?: ClassLesson[];
 };
 
-export function VirtualClassroomClassPanel({ classId, archived, activeSession }: Props) {
+export function VirtualClassroomClassPanel({
+  classId,
+  archived,
+  activeSession,
+  readyLessons = [],
+}: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const defaultLessonId = readyLessons[0]?.id ?? "";
+  const [selectedLessonId, setSelectedLessonId] = useState(defaultLessonId);
+
+  const boundLessonTitle = useMemo(() => {
+    if (!activeSession?.classLessonId) return null;
+    return (
+      readyLessons.find((lesson) => lesson.id === activeSession.classLessonId)?.title ??
+      "Staged lesson"
+    );
+  }, [activeSession?.classLessonId, readyLessons]);
 
   const start = async () => {
     setBusy(true);
     setError(null);
     try {
+      const classLessonId = selectedLessonId.trim() || null;
       const response = await diagnosticFetch(
         `/api/virtual-classroom/class/${classId}/host`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "Virtual Classroom" }),
+          body: JSON.stringify({
+            title: "Virtual Classroom",
+            classLessonId,
+          }),
         },
         {
           phase: "classroom",
@@ -42,6 +64,7 @@ export function VirtualClassroomClassPanel({ classId, archived, activeSession }:
         joinCode?: string;
         roomId?: string;
         classId?: string;
+        classLessonId?: string | null;
         userId?: string;
         displayName?: string;
         role?: "host" | "member";
@@ -60,6 +83,7 @@ export function VirtualClassroomClassPanel({ classId, archived, activeSession }:
         joinCode: payload.joinCode,
         roomId: payload.roomId,
         classId: payload.classId ?? classId,
+        classLessonId: payload.classLessonId ?? classLessonId,
         role: "host",
         userId: payload.userId,
         displayName: payload.displayName ?? "Teacher",
@@ -87,6 +111,7 @@ export function VirtualClassroomClassPanel({ classId, archived, activeSession }:
         joinCode?: string;
         roomId?: string;
         classId?: string;
+        classLessonId?: string | null;
         userId?: string;
         displayName?: string;
       };
@@ -104,6 +129,7 @@ export function VirtualClassroomClassPanel({ classId, archived, activeSession }:
         joinCode: payload.joinCode,
         roomId: payload.roomId,
         classId: payload.classId ?? classId,
+        classLessonId: payload.classLessonId ?? activeSession.classLessonId ?? null,
         role: "host",
         userId: payload.userId,
         displayName: payload.displayName ?? "Teacher",
@@ -129,46 +155,79 @@ export function VirtualClassroomClassPanel({ classId, archived, activeSession }:
 
       {archived ? (
         <p className="text-sm text-amber-800">Unarchive the class to start a session.</p>
-      ) : activeSession ? (
-        <div className="space-y-2">
-          <p className="text-sm text-slate-700">
-            Live session code{" "}
-            <span className="rounded bg-slate-900 px-2 py-0.5 font-mono text-white">
-              {activeSession.joinCode}
-            </span>
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void reopen()}
-              className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-            >
-              {busy ? "Opening…" : "Open live session"}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void start()}
-              className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-bold text-slate-800 disabled:opacity-50"
-            >
-              {busy ? "Starting…" : "Start new session"}
-            </button>
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-        </div>
       ) : (
-        <div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void start()}
-            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-          >
-            {busy ? "Starting…" : "Start Virtual Classroom"}
-          </button>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-        </div>
+        <>
+          <label className="block text-sm font-semibold text-slate-800">
+            Today’s lesson (optional)
+            <select
+              value={selectedLessonId}
+              disabled={busy}
+              onChange={(event) => setSelectedLessonId(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900"
+            >
+              <option value="">No staged lesson</option>
+              {readyLessons.map((lesson) => (
+                <option key={lesson.id} value={lesson.id}>
+                  {lesson.title} ({lesson.steps.length} step
+                  {lesson.steps.length === 1 ? "" : "s"})
+                </option>
+              ))}
+            </select>
+          </label>
+          {readyLessons.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Mark a lesson Ready on the Create Lesson tab to bind a playlist when you go live.
+            </p>
+          ) : null}
+
+          {activeSession ? (
+            <div className="space-y-2">
+              <p className="text-sm text-slate-700">
+                Live session code{" "}
+                <span className="rounded bg-slate-900 px-2 py-0.5 font-mono text-white">
+                  {activeSession.joinCode}
+                </span>
+                {boundLessonTitle ? (
+                  <>
+                    {" "}
+                    · Lesson <span className="font-semibold">{boundLessonTitle}</span>
+                  </>
+                ) : null}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void reopen()}
+                  className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                >
+                  {busy ? "Opening…" : "Open live session"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void start()}
+                  className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-bold text-slate-800 disabled:opacity-50"
+                >
+                  {busy ? "Starting…" : "Start new session"}
+                </button>
+              </div>
+              {error && <p className="text-sm text-red-600">{error}</p>}
+            </div>
+          ) : (
+            <div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void start()}
+                className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {busy ? "Starting…" : "Start Virtual Classroom"}
+              </button>
+              {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

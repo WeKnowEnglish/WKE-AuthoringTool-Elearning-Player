@@ -20,6 +20,8 @@ import { useSecondaryFocusWordSwapQueue } from "@/lib/secondary/use-secondary-fo
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import { useSecondaryWordImages } from "@/lib/secondary/use-secondary-word-images";
 
+const EMPTY_WORD_IDS: string[] = [];
+
 type WordListProps = {
   hydrated: boolean;
   hasWordsToday: boolean;
@@ -50,9 +52,9 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
   const { ready: storageReady, studentId } = useStudentStorageIdReady();
   const dateKey = todaySession?.dateKey ?? "";
 
-  const focusWordIds = todaySession?.todayWordItemIds ?? [];
-  const warmUpWordIds = todaySession?.warmUpWordItemIds ?? [];
-  const sessionWordIds = todaySession?.allWordItemIds ?? [];
+  const focusWordIds = todaySession?.todayWordItemIds ?? EMPTY_WORD_IDS;
+  const warmUpWordIds = todaySession?.warmUpWordItemIds ?? EMPTY_WORD_IDS;
+  const sessionWordIds = todaySession?.allWordItemIds ?? EMPTY_WORD_IDS;
   const hasWordsToday = sessionWordIds.length > 0;
   const imageUrlsByWordId = useSecondaryWordImages(sessionWordIds);
   const selectedWordImageUrl =

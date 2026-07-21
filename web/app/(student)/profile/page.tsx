@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Achievements and skills moved to `/home` Collection book. */
+/** Profile / achievements entry for the primary dashboard. */
 export default function ProfileRedirectPage() {
-  redirect("/home?collection=achievements");
+  redirect("/primary?nav=progress");
 }

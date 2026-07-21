@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { rateLimitAllow } from "@/lib/rate-limit/memory";
+import { sendTeacherAccessAdminNotification } from "@/lib/email/teacher-welcome";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import {
   validateTeacherAccessRequest,
@@ -11,48 +12,6 @@ import {
 export type TeacherAccessRequestResult =
   | { ok: true }
   | { ok: false; error: string };
-
-async function sendAdministratorNotification(input: {
-  requestId?: string;
-  fullName: string;
-  email: string;
-  school: string;
-  reason: string;
-}): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const to = process.env.TEACHER_ACCESS_NOTIFICATION_EMAIL?.trim();
-  const from = process.env.TEACHER_ACCESS_FROM_EMAIL?.trim() || "Teacher Access <onboarding@resend.dev>";
-  if (!apiKey || !to) return false;
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      reply_to: input.email,
-      subject: `Teacher access request: ${input.fullName}`,
-      text: [
-        "A teacher requested access to the We Know English teacher portal.",
-        "",
-        `Name: ${input.fullName}`,
-        `Email: ${input.email}`,
-        `School/organization: ${input.school}`,
-        `Request ID: ${input.requestId ?? "not stored"}`,
-        "",
-        "How they plan to use the portal:",
-        input.reason,
-        "",
-        "Review the request before creating a teacher account.",
-      ].join("\n"),
-    }),
-  });
-
-  return response.ok;
-}
 
 export async function requestTeacherAccess(
   input: TeacherAccessRequestInput,
@@ -92,7 +51,11 @@ export async function requestTeacherAccess(
 
   let notified = false;
   try {
-    notified = await sendAdministratorNotification({ requestId, ...validated.value });
+    const sent = await sendTeacherAccessAdminNotification({
+      requestId,
+      ...validated.value,
+    });
+    notified = sent.ok;
   } catch {
     notified = false;
   }

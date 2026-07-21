@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
 import { TeacherPrimaryTabs } from "@/components/teacher/TeacherPrimaryTabs";
 import { SoftChromePresetSwatches } from "@/components/ui/SoftChromePresetSwatches";
+import type { TeacherTier } from "@/lib/auth/roles";
 import {
   getSoftChromePreset,
   teacherSoftChromeStore,
@@ -13,16 +15,26 @@ import {
 
 type Props = {
   userEmail: string;
+  teacherTier?: TeacherTier;
+  isAdmin?: boolean;
   children: React.ReactNode;
 };
 
+function isWordPackEditorPath(pathname: string): boolean {
+  return /^\/teacher\/word-packs\/[^/]+$/.test(pathname);
+}
+
 function TeacherChromeHeader({
   userEmail,
+  teacherTier,
+  isAdmin,
   headerBackground,
   presetId,
   onPresetChange,
 }: {
   userEmail: string;
+  teacherTier: TeacherTier;
+  isAdmin: boolean;
   headerBackground: string;
   presetId: SoftChromePresetId;
   onPresetChange: (id: SoftChromePresetId) => void;
@@ -39,7 +51,7 @@ function TeacherChromeHeader({
           </Link>
         </div>
         <div className="flex justify-center justify-self-center sm:col-start-2 sm:row-start-1">
-          <TeacherPrimaryTabs />
+          <TeacherPrimaryTabs teacherTier={teacherTier} isAdmin={isAdmin} />
         </div>
         <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs sm:justify-self-end sm:text-sm">
           <SoftChromePresetSwatches
@@ -50,7 +62,7 @@ function TeacherChromeHeader({
           <span className="max-w-[min(42vw,12rem)] truncate text-neutral-600 sm:max-w-[14rem]">
             {userEmail}
           </span>
-          <Link href="/home" className="shrink-0 text-blue-700 underline">
+          <Link href="/primary" className="shrink-0 text-blue-700 underline">
             Student site
           </Link>
           <SignOutForm label="Sign out" />
@@ -60,7 +72,14 @@ function TeacherChromeHeader({
   );
 }
 
-export function TeacherSecureShell({ userEmail, children }: Props) {
+export function TeacherSecureShell({
+  userEmail,
+  teacherTier = "plus",
+  isAdmin = false,
+  children,
+}: Props) {
+  const pathname = usePathname();
+  const lockToViewport = isWordPackEditorPath(pathname);
   const presetId = useSyncExternalStore(
     teacherSoftChromeStore.subscribe,
     teacherSoftChromeStore.getSnapshot,
@@ -76,17 +95,23 @@ export function TeacherSecureShell({ userEmail, children }: Props) {
 
   return (
     <div
-      className="min-h-screen"
+      className={lockToViewport ? "flex h-dvh flex-col overflow-hidden" : "min-h-screen"}
       style={{ backgroundColor: pageBackground, ...teacherChromeVars }}
     >
       <TeacherChromeHeader
         userEmail={userEmail}
+        teacherTier={teacherTier}
+        isAdmin={isAdmin}
         headerBackground={preset.header}
         presetId={presetId}
         onPresetChange={teacherSoftChromeStore.persist}
       />
       <div
-        className="w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
+        className={
+          lockToViewport
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3 sm:px-6 lg:px-8"
+            : "w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
+        }
         style={{ backgroundColor: pageBackground, ...teacherChromeVars }}
       >
         {children}

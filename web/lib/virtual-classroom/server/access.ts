@@ -1,11 +1,11 @@
 import "server-only";
 
-import { isTeacher } from "@/lib/auth/roles";
+import { canHostLive, isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { VirtualClassroomSessionRecord } from "@/lib/virtual-classroom/domain";
 import { requireWhiteboardTeacher } from "@/lib/whiteboard/product/access";
 
-/** Signed-in teacher (no class required). */
+/** Signed-in teacher with live-hosting capability (no class required). */
 export async function requireVirtualClassroomTeacher(): Promise<{
   userId: string;
   displayName: string;
@@ -16,6 +16,9 @@ export async function requireVirtualClassroomTeacher(): Promise<{
   } = await supabase.auth.getUser();
   if (!user?.id || !isTeacher(user)) {
     throw new Error("Teacher login required.");
+  }
+  if (!canHostLive(user)) {
+    throw new Error("Live hosting requires Teacher Plus.");
   }
   return {
     userId: user.id,

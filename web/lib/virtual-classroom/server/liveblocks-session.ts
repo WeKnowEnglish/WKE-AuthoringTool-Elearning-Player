@@ -56,7 +56,7 @@ export async function markVcSessionEndedInStorage(roomId: string): Promise<void>
 
 export async function setVcActiveActivity(input: {
   roomId: string;
-  kind: "whiteboard" | "document" | null;
+  kind: "whiteboard" | "document" | "word_cards" | null;
   joinCode: string | null;
   label: string | null;
   roundId?: string | null;

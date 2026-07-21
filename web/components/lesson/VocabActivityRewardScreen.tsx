@@ -2,14 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { clsx } from "clsx";
 import { useState } from "react";
-import {
-  KidButton,
-  kidLinkSecondaryClassName,
-} from "@/components/kid-ui/KidButton";
 import { KidConfetti } from "@/components/kid-ui/KidConfetti";
-import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
 import type {
   VocabPracticeWordMeta,
@@ -29,17 +23,17 @@ function RewardPill({
 }) {
   return (
     <div
-      className={clsx(
-        "flex w-full flex-1 flex-col items-center justify-center rounded-xl border-2 border-kid-ink px-2 py-1.5 shadow-[2px_2px_0_#0a2f86]",
-        tone === "coin" ? "bg-amber-100" : "bg-sky-100",
-      )}
+      className={`flex w-full flex-1 flex-col items-center justify-center rounded-2xl border border-[var(--pl-border)] px-2 py-2 ${
+        tone === "coin" ? "bg-amber-50" : "bg-[var(--pl-purple-soft)]"
+      }`}
     >
-      <span className="text-3xl font-black leading-none text-kid-ink sm:text-4xl">{value}</span>
+      <span className="text-3xl font-black leading-none text-[var(--pl-ink)] sm:text-4xl">
+        {value}
+      </span>
       <span
-        className={clsx(
-          "mt-0.5 text-sm font-black sm:text-base",
-          tone === "coin" ? "text-amber-950" : "text-sky-950",
-        )}
+        className={`mt-0.5 text-sm font-extrabold sm:text-base ${
+          tone === "coin" ? "text-amber-900" : "text-[var(--pl-purple)]"
+        }`}
       >
         {label}
       </span>
@@ -47,6 +41,9 @@ function RewardPill({
   );
 }
 
+/**
+ * Product A finish screen — Primary chrome when nested under VocabularySetOverlay.
+ */
 export function VocabActivityRewardScreen({
   lessonTitle,
   stats,
@@ -92,31 +89,35 @@ export function VocabActivityRewardScreen({
     bonusRows.push({ label: "Speed bonus", coins: breakdown.timeBonusGold });
   }
 
+  const primaryBtn =
+    "inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)] active:scale-[0.98]";
+  const secondaryBtn =
+    "inline-flex min-h-12 items-center justify-center rounded-2xl border border-[var(--pl-border)] bg-white px-5 text-sm font-extrabold text-[var(--pl-ink)] transition hover:border-[var(--pl-purple)]";
+
   return (
-    <div className="relative box-border flex min-h-0 flex-1 flex-col py-[100px] px-[200px] max-[480px]:px-4 max-[480px]:py-4">
+    <div className="relative box-border flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-4 sm:px-6 sm:py-6">
       <KidConfetti active />
-      <KidPanel
-        tone="discovery"
-        className="relative flex min-h-0 flex-1 flex-col justify-start gap-2 border-kid-ink p-3 sm:p-4"
-      >
+      <div className="relative m-auto flex w-full max-w-lg flex-col gap-3 rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] p-4 shadow-sm sm:p-5">
         <div className="shrink-0 text-center">
-          <p className="text-3xl font-black leading-tight text-kid-ink sm:text-4xl">Awesome!</p>
-          <p className="mt-0.5 text-base font-bold text-kid-ink sm:text-lg">
-            <span className="font-black">{lessonTitle}</span>
-            <span className="text-kid-ink/80"> — done!</span>
+          <p className="text-3xl font-extrabold leading-tight text-[var(--pl-ink)] sm:text-4xl">
+            Awesome!
+          </p>
+          <p className="mt-1 text-base font-bold text-[var(--pl-muted)] sm:text-lg">
+            <span className="font-extrabold text-[var(--pl-ink)]">{lessonTitle}</span>
+            <span> — done!</span>
           </p>
         </div>
 
         <div className="grid shrink-0 grid-cols-2 items-stretch gap-2">
-          <div className="flex flex-col justify-center rounded-xl border-2 border-[#152668] bg-white px-2 py-2 text-center shadow-[2px_2px_0_#152668]">
-            <p className="text-4xl font-black leading-none text-kid-ink sm:text-5xl">
+          <div className="flex flex-col justify-center rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-2 py-3 text-center">
+            <p className="text-4xl font-extrabold leading-none text-[var(--pl-ink)] sm:text-5xl">
               {stats.firstTryAccuracyPercent}%
             </p>
-            <p className="mt-0.5 text-sm font-bold text-kid-ink sm:text-base">First-try accuracy</p>
+            <p className="mt-1 text-sm font-extrabold text-[var(--pl-muted)]">First-try accuracy</p>
             {firstTryLine ? (
-              <p className="mt-0.5 text-xs font-semibold text-kid-ink/75 sm:text-sm">{firstTryLine}</p>
+              <p className="mt-0.5 text-xs font-semibold text-[var(--pl-muted)]">{firstTryLine}</p>
             ) : null}
-            <p className="mt-0.5 text-xs font-semibold text-kid-ink/70 sm:text-sm">{extraLine}</p>
+            <p className="mt-0.5 text-xs font-semibold text-[var(--pl-muted)]">{extraLine}</p>
           </div>
 
           <div className="flex min-h-0 flex-col gap-2">
@@ -128,7 +129,7 @@ export function VocabActivityRewardScreen({
         <div className="shrink-0">
           <button
             type="button"
-            className="mx-auto block text-sm font-bold text-kid-ink/70 underline decoration-2 underline-offset-2 hover:text-kid-ink sm:text-base"
+            className="mx-auto block text-sm font-bold text-[var(--pl-muted)] underline decoration-2 underline-offset-2 hover:text-[var(--pl-purple)]"
             onClick={() => {
               playSfx("tap", muted);
               setShowBreakdown((v) => !v);
@@ -137,11 +138,11 @@ export function VocabActivityRewardScreen({
             {showBreakdown ? "Hide details" : "How you earned coins"}
           </button>
           {showBreakdown ? (
-            <ul className="mt-1.5 space-y-1 rounded-xl border-2 border-kid-ink/20 bg-white/80 px-3 py-2 text-sm font-semibold text-kid-ink sm:text-base">
+            <ul className="mt-2 space-y-1 rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-3 py-2 text-sm font-semibold text-[var(--pl-ink)]">
               {bonusRows.map((row) => (
                 <li key={row.label} className="flex justify-between gap-3">
                   <span>{row.label}</span>
-                  <span className="font-black">+{row.coins}</span>
+                  <span className="font-extrabold">+{row.coins}</span>
                 </li>
               ))}
             </ul>
@@ -151,16 +152,16 @@ export function VocabActivityRewardScreen({
         <div className="shrink-0">
           {reviewWords.length > 0 ? (
             <div>
-              <p className="mb-1.5 text-center text-lg font-black text-kid-ink sm:text-xl">
+              <p className="mb-2 text-center text-base font-extrabold text-[var(--pl-ink)] sm:text-lg">
                 Practice these next time
               </p>
               <ul className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {reviewWords.map((w) => (
                   <li
                     key={w.id}
-                    className="flex w-20 shrink-0 snap-center flex-col items-center gap-1 rounded-xl border-2 border-[#152668] bg-[#dbeafe] p-1.5 shadow-[2px_2px_0_#152668]"
+                    className="flex w-20 shrink-0 snap-center flex-col items-center gap-1 rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-purple-soft)] p-1.5"
                   >
-                    <div className="relative h-16 w-16 overflow-hidden rounded-lg border-2 border-[#152668]/30 bg-white sm:h-[4.5rem] sm:w-[4.5rem]">
+                    <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-[var(--pl-border)] bg-white sm:h-[4.5rem] sm:w-[4.5rem]">
                       <Image
                         src={w.imageUrl}
                         alt=""
@@ -174,7 +175,7 @@ export function VocabActivityRewardScreen({
                         }
                       />
                     </div>
-                    <span className="text-center text-sm font-black text-kid-ink sm:text-base">
+                    <span className="text-center text-sm font-extrabold text-[var(--pl-ink)]">
                       {w.lemma}
                     </span>
                   </li>
@@ -182,42 +183,41 @@ export function VocabActivityRewardScreen({
               </ul>
             </div>
           ) : (
-            <p className="text-center text-lg font-black text-emerald-800 sm:text-xl">
+            <p className="text-center text-base font-extrabold text-[var(--pl-teal)] sm:text-lg">
               Every word — first try!
             </p>
           )}
         </div>
 
-        <div className="mt-auto flex shrink-0 flex-wrap justify-center gap-2 pt-1">
-          <KidButton
-            type="button"
-            className="!min-h-11 !px-5 !text-lg"
-            onClick={() => {
-              playSfx("tap", muted);
-              onPlayAgain();
-            }}
-          >
-            Play again
-          </KidButton>
+        <div className="mt-1 flex shrink-0 flex-col items-stretch justify-center gap-2 sm:flex-row sm:flex-wrap">
           {onFinish ? (
-            <KidButton
+            <button
               type="button"
-              variant="secondary"
-              className="!min-h-11 !px-5 !text-lg"
+              className={primaryBtn}
               onClick={() => {
                 playSfx("tap", muted);
                 onFinish();
               }}
             >
               {finishLabel}
-            </KidButton>
+            </button>
           ) : (
-            <Link href="/learn" className={clsx(kidLinkSecondaryClassName, "!min-h-11 !text-lg")}>
+            <Link href="/primary?nav=vocabulary" className={primaryBtn}>
               {finishLabel}
             </Link>
           )}
+          <button
+            type="button"
+            className={secondaryBtn}
+            onClick={() => {
+              playSfx("tap", muted);
+              onPlayAgain();
+            }}
+          >
+            Play again
+          </button>
         </div>
-      </KidPanel>
+      </div>
     </div>
   );
 }

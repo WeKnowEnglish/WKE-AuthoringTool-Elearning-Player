@@ -4,7 +4,10 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { loadPackQuizLexemes } from "@/lib/actions/pack-quiz";
 import {
   PACK_QUIZ_FORMATS,
+  compilePackLetterScrambleQuiz,
   compilePackMultipleChoiceQuiz,
+  compilePackSentenceScrambleQuiz,
+  compilePackTrueFalseQuiz,
   createPackQuizDraft,
   freezeSelectedPackWordIds,
   isPackQuizFormatAvailable,
@@ -221,11 +224,30 @@ export function MakePackQuizOverlay({ open, onClose, packId, packTitle, wordIds 
         setLexemes(pool);
       }
 
-      const result = compilePackMultipleChoiceQuiz({
-        draft: next,
-        lexemes: pool,
-        seed: next.createdAt,
-      });
+      const result =
+        format === "true_false"
+          ? compilePackTrueFalseQuiz({
+              draft: next,
+              lexemes: pool,
+              seed: next.createdAt,
+            })
+          : format === "letter_scramble"
+            ? compilePackLetterScrambleQuiz({
+                draft: next,
+                lexemes: pool,
+                seed: next.createdAt,
+              })
+            : format === "sentence_scramble"
+              ? compilePackSentenceScrambleQuiz({
+                  draft: next,
+                  lexemes: pool,
+                  seed: next.createdAt,
+                })
+              : compilePackMultipleChoiceQuiz({
+                  draft: next,
+                  lexemes: pool,
+                  seed: next.createdAt,
+                });
 
       if (result.questions.length === 0) {
         setGateMessage(

@@ -68,14 +68,14 @@ describe("resolvePostLoginPath", () => {
     ).toBe("/live-game/host");
   });
 
-  it("keeps student non-teacher next paths when provided", () => {
+  it("maps legacy /home student next paths onto Primary", () => {
     expect(
       resolvePostLoginPath({
         role: "student",
         learningBand: "a2",
         next: "/home?collection=games",
       }),
-    ).toBe("/home?collection=games");
+    ).toBe("/primary?nav=games");
   });
 
   it("allows deep links into the primary dashboard", () => {

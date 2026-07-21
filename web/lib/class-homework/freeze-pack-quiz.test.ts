@@ -10,6 +10,7 @@ function q(id: string, label: string): PackQuizCompiledQuestion {
   return {
     id,
     wordId: id,
+    format: "multiple_choice",
     mode: "find_lemma",
     payload: mcQuizPayloadSchema.parse({
       type: "interaction",
@@ -92,5 +93,50 @@ describe("parseStoredPackQuizQuestions", () => {
     ]);
     expect(parsed).toHaveLength(1);
     expect(parsed[0]?.id).toBe("a");
+  });
+
+  it("infers MC format from legacy rows without format field", () => {
+    const legacy = {
+      id: "legacy",
+      wordId: "w1",
+      mode: "find_lemma",
+      payload: mcQuizPayloadSchema.parse({
+        type: "interaction",
+        subtype: "mc_quiz",
+        question: "Find cat",
+        options: [
+          { id: "a", label: "cat" },
+          { id: "b", label: "dog" },
+          { id: "c", label: "bird" },
+          { id: "d", label: "fish" },
+        ],
+        correct_option_id: "a",
+        shuffle_options: false,
+      }),
+    };
+    const parsed = parseStoredPackQuizQuestions([legacy]);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]?.format).toBe("multiple_choice");
+  });
+
+  it("accepts true_false payloads for F1+", () => {
+    const parsed = parseStoredPackQuizQuestions([
+      {
+        id: "tf1",
+        wordId: "w1",
+        format: "true_false",
+        payload: {
+          type: "interaction",
+          subtype: "true_false",
+          statement: "This is a cat.",
+          correct: true,
+        },
+      },
+    ]);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]?.format).toBe("true_false");
+    if (parsed[0]?.format === "true_false") {
+      expect(parsed[0].payload.correct).toBe(true);
+    }
   });
 });

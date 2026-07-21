@@ -25,6 +25,7 @@ export {
   canBuildFlashcard,
   flashcardFacePresence,
   flashcardLexemeReadinessLabel,
+  incompleteFacesOnCard,
   isUsableFlashcardLexeme,
   missingFlashcardFaces,
   resolveFlashcardFaceValue,

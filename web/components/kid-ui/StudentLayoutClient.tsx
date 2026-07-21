@@ -23,7 +23,6 @@ export function StudentLayoutClient({
   const [autoPromptDismissed, setAutoPromptDismissed] = useState(false);
   const bareChrome =
     pathname === "/" ||
-    pathname === "/home" ||
     pathname === "/primary" ||
     pathname.startsWith("/primary/homework/") ||
     pathname === "/join-class" ||
@@ -62,7 +61,6 @@ export function StudentLayoutClient({
       fullWidth={onSecondary}
       hidePrimaryNav={onSecondary}
       homeHref={onSecondary ? "/secondary" : "/primary"}
-      learnHref="/primary?nav=learn"
       classMenu={
         <StudentClassMenu
           memberships={classMemberships}

@@ -379,6 +379,8 @@ type Props = {
    * Emits `session_completed` with `result: "exited"` (no rewards / no lesson complete).
    */
   onPracticeSessionBind?: (api: { exitIfOpen: () => void }) => void;
+  /** Fired when the active screen index changes (vocab overlay progress). */
+  onScreenIndexChange?: (index: number) => void;
 };
 
 export function LessonPlayer({
@@ -403,6 +405,7 @@ export function LessonPlayer({
   onGrammarFinish,
   grammarFinishLabel,
   onPracticeSessionBind,
+  onScreenIndexChange,
 }: Props) {
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -472,6 +475,10 @@ export function LessonPlayer({
     if (!isVocabLesson && !isGrammarLesson || isPreview) return;
     onPracticeSessionBind?.({ exitIfOpen: exitPracticeSessionFromParent });
   }, [exitPracticeSessionFromParent, isPreview, isVocabLesson, isGrammarLesson, onPracticeSessionBind]);
+
+  useEffect(() => {
+    onScreenIndexChange?.(index);
+  }, [index, onScreenIndexChange]);
 
   const recordCurrentVocabMasteryEvidence = useCallback(
     (input: { success: boolean; firstTry: boolean; attempts: number }) => {
@@ -1173,39 +1180,38 @@ export function LessonPlayer({
           Student preview — progress is not saved.
         </p>
       ) : null}
-      <div
-        className={clsx(
-          "flex flex-wrap items-center justify-between gap-3 border-b-4 border-kid-ink pb-3",
-          immersiveLayout && "shrink-0",
-        )}
-      >
-        <h1 className="text-xl font-bold text-kid-ink">{lessonTitle}</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
-            Gold: {gold}
-          </p>
-          <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
-            Lv {xpProgressInLevel(experience).level} · {experience} XP
-          </p>
+      {!immersiveLayout ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-kid-ink pb-3">
+          <h1 className="text-xl font-bold text-kid-ink">{lessonTitle}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
+              Gold: {gold}
+            </p>
+            <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
+              Lv {xpProgressInLevel(experience).level} · {experience} XP
+            </p>
+          </div>
         </div>
-      </div>
-      {quizProgress ? (
-        <p
-          className={clsx(
-            "rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm",
-            immersiveLayout && "shrink-0",
-          )}
+      ) : null}
+      {!immersiveLayout && quizProgress ? (
+        <div
+          className="rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 shadow-sm"
           role="status"
           aria-live="polite"
           aria-label={`${quizProgress.title ?? "Quiz"}, question ${quizProgress.questionIndex} of ${quizProgress.questionCount}`}
         >
-          <span className="block text-xs font-medium uppercase tracking-wide text-amber-800/90">
-            {quizProgress.title ?? "Quiz"}
-          </span>
-          <span className="mt-0.5 block">
+          <div className="flex items-center justify-between gap-2 text-xs font-extrabold text-amber-800/90">
+            <span className="uppercase tracking-wide">
+              {quizProgress.title ?? "Quiz"}
+            </span>
+            <span className="tabular-nums">
+              {quizProgress.questionIndex}/{quizProgress.questionCount}
+            </span>
+          </div>
+          <p className="mt-0.5 text-center text-sm font-semibold text-amber-950">
             Question {quizProgress.questionIndex} of {quizProgress.questionCount}
-          </span>
-        </p>
+          </p>
+        </div>
       ) : null}
 
       <div

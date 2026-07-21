@@ -2,6 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { cache } from "react";
 import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
+import { parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
 import type { PackQuizCompiledQuestion, PackQuizFormat } from "@/lib/vocabulary/pack-quiz";
 
 export type TeacherPackQuizStatus = "draft" | "published";
@@ -77,8 +78,7 @@ function asOptions(value: unknown): Record<string, unknown> {
 }
 
 function asQuestions(value: unknown): PackQuizCompiledQuestion[] {
-  if (!Array.isArray(value)) return [];
-  return value as PackQuizCompiledQuestion[];
+  return parseStoredPackQuizQuestions(value);
 }
 
 function asWarnings(value: unknown): string[] {

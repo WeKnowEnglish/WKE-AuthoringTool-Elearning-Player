@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
+import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS } from "@/lib/class-homework/types";
+import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Product C — teacher pack homework (quiz / flashcards / notes).
+ * F2: focused play chrome + progress + finish → Home.
+ * @see docs/primary/PRIMARY_VOCAB_ACTIVITY_CONTRACT.md
+ */
 
 export const metadata: Metadata = {
   title: "Homework | We Know English",
@@ -40,87 +49,91 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
+  const flashcardCards =
+    payload.type === "pack_flashcards"
+      ? parseStoredPackFlashcardCards(payload.cards ?? [])
+      : [];
+  const typeLabel = CLASS_HOMEWORK_PAYLOAD_LABELS[payload.type];
+  const eyebrow = `${homework.classTitle} · ${typeLabel}`;
 
   return (
-    <main className="mx-auto min-h-dvh max-w-3xl px-4 py-6 sm:px-6">
-      <Link
-        href="/primary?nav=learn"
-        className="text-sm font-semibold text-blue-700 underline underline-offset-2"
-      >
-        ← Back to Learn
-      </Link>
-
-      <header className="mt-4 space-y-2">
-        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-neutral-500">
-          {homework.classTitle} · {CLASS_HOMEWORK_PAYLOAD_LABELS[payload.type]}
-        </p>
-        <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">
-          {homework.title}
-        </h1>
-        <p className="text-sm font-semibold text-neutral-600">Due {formatDue(homework.dueAt)}</p>
-        {homework.instructions ? (
-          <p className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-800">
-            {homework.instructions}
+    <HomeworkPlayChrome
+      title={homework.title}
+      eyebrow={eyebrow}
+      dueLabel={formatDue(homework.dueAt)}
+      instructions={homework.instructions || null}
+      closed={homework.status === "closed"}
+    >
+      {payload.type === "external_note" ? (
+        <div className="rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-5 shadow-sm">
+          <h2 className="text-sm font-extrabold uppercase tracking-wide text-[var(--pl-muted)]">
+            Teacher note
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap text-base font-semibold text-[var(--pl-ink)]">
+            {payload.body}
           </p>
-        ) : null}
-        {homework.status === "closed" ? (
-          <p className="text-sm font-semibold text-amber-800">
-            This assignment is closed. You can still review it.
+          <Link
+            href="/primary"
+            className="mt-5 inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)]"
+          >
+            Back to Home
+          </Link>
+        </div>
+      ) : null}
+
+      {payload.type === "word_pack_practice" ? (
+        <div className="rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-5 shadow-sm">
+          <h2 className="text-lg font-extrabold text-[var(--pl-ink)]">{payload.packTitle}</h2>
+          <p className="mt-1 text-sm font-semibold text-[var(--pl-muted)]">
+            Practice {payload.wordCount} word{payload.wordCount === 1 ? "" : "s"} from this pack in
+            Vocabulary.
           </p>
-        ) : null}
-      </header>
-
-      <section className="mt-6 space-y-4">
-        {payload.type === "external_note" ? (
-          <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-5 shadow-sm">
-            <h2 className="text-sm font-extrabold uppercase tracking-wide text-neutral-500">
-              Teacher note
-            </h2>
-            <p className="mt-2 whitespace-pre-wrap text-base font-semibold text-neutral-900">
-              {payload.body}
-            </p>
-          </div>
-        ) : null}
-
-        {payload.type === "word_pack_practice" ? (
-          <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-5 shadow-sm">
-            <h2 className="text-lg font-extrabold text-neutral-900">{payload.packTitle}</h2>
-            <p className="mt-1 text-sm font-semibold text-neutral-600">
-              Practice {payload.wordCount} word{payload.wordCount === 1 ? "" : "s"} from this pack
-              in Vocabulary.
-            </p>
+          <div className="mt-5 flex flex-wrap gap-2">
             <Link
               href="/primary?nav=vocabulary"
-              className="mt-4 inline-flex rounded-xl bg-neutral-900 px-4 py-2 text-sm font-bold text-white"
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)]"
             >
               Open Vocabulary
             </Link>
+            <Link
+              href="/primary"
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[var(--pl-border)] bg-white px-5 text-sm font-extrabold text-[var(--pl-ink)] transition hover:border-[var(--pl-purple)]"
+            >
+              Back to Home
+            </Link>
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
-        {payload.type === "pack_quiz" ? (
-          <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-5 shadow-sm">
-            <h2 className="text-lg font-extrabold text-neutral-900">{payload.quizTitle}</h2>
-            <p className="mt-1 text-sm font-semibold text-neutral-600">
-              {payload.questionCount} question{payload.questionCount === 1 ? "" : "s"}
-            </p>
-            <div className="mt-4">
-              {quizQuestions && quizQuestions.length > 0 ? (
-                <HomeworkPackQuizPlayer
-                  homeworkId={homework.id}
-                  title={payload.quizTitle}
-                  questions={quizQuestions}
-                  alreadyCompleted={Boolean(homework.completedAt)}
-                />
-              ) : (
-                <p className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-5 text-sm text-neutral-600">
-                  Quiz content is not available yet. Ask your teacher to check the pack quiz.
-                </p>
-              )}
-            </div>
-          </div>
-        ) : null}
-      </section>
-    </main>
+      {payload.type === "pack_quiz" ? (
+        quizQuestions && quizQuestions.length > 0 ? (
+          <HomeworkPackQuizPlayer
+            homeworkId={homework.id}
+            title={payload.quizTitle}
+            questions={quizQuestions}
+            alreadyCompleted={Boolean(homework.completedAt)}
+          />
+        ) : (
+          <p className="rounded-2xl border border-dashed border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-5 text-sm font-semibold text-[var(--pl-muted)]">
+            Quiz content is not available yet. Ask your teacher to check the pack quiz.
+          </p>
+        )
+      ) : null}
+
+      {payload.type === "pack_flashcards" ? (
+        flashcardCards.length > 0 ? (
+          <HomeworkFlashcardsPlayer
+            homeworkId={homework.id}
+            title={payload.setTitle}
+            cards={flashcardCards}
+            alreadyCompleted={Boolean(homework.completedAt)}
+          />
+        ) : (
+          <p className="rounded-2xl border border-dashed border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-5 text-sm font-semibold text-[var(--pl-muted)]">
+            Flashcard content is not available yet. Ask your teacher to check the set.
+          </p>
+        )
+      ) : null}
+    </HomeworkPlayChrome>
   );
 }

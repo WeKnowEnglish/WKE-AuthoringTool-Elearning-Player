@@ -67,7 +67,7 @@ export function StudentsHomeworkTab({
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
           {isLight
-            ? "Share the join code, review mastery at a glance, attach word packs, and assign pack quizzes or practice."
+            ? "Share the join code, review mastery at a glance, attach word packs, and assign quizzes, flashcards, or practice."
             : "Share the join code, review the roster, manage word packs, and assign offline work."}
         </p>
       </section>

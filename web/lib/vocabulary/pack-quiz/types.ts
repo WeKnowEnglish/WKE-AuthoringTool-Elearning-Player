@@ -45,21 +45,24 @@ export const PACK_QUIZ_FORMATS: readonly PackQuizFormatMeta[] = [
     label: "True / False",
     description: "Quick recognition checks — match or reject a claim about each word.",
     minWords: 1,
-    implementedInSlice: 2,
+    /** 0 = available now (teacher preview). */
+    implementedInSlice: 0,
   },
   {
     id: "letter_scramble",
     label: "Letter scramble",
     description: "Unscramble the letters to spell the word.",
     minWords: 1,
-    implementedInSlice: 3,
+    /** 0 = available now (teacher preview). */
+    implementedInSlice: 0,
   },
   {
     id: "sentence_scramble",
     label: "Sentence scramble",
-    description: "Put the words of a sentence back in order (needs sentence support later).",
+    description: "Put the words of a sentence back in order (edit starter sentences in the sheet).",
     minWords: 1,
-    implementedInSlice: 4,
+    /** 0 = available now (teacher preview). */
+    implementedInSlice: 0,
   },
 ] as const;
 

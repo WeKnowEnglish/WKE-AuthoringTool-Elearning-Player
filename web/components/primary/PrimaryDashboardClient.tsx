@@ -6,13 +6,13 @@ import { StudentHomeLanding } from "@/components/primary/StudentHomeLanding";
 import { StudentClassMenu } from "@/components/student-hub/StudentClassMenu";
 import { StudentClassSelectorOverlay } from "@/components/student-hub/StudentClassSelectorOverlay";
 import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
+import { SelfStudyTopicQuizOverlay } from "@/components/primary/SelfStudyTopicQuizOverlay";
 import { playSfx } from "@/lib/audio/sfx";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import { completeStudyCareIfPending } from "@/lib/pet";
-import type { LearningBand } from "@/lib/learning-band";
 import { buildPrimaryHomeLearningModel } from "@/lib/primary/build-primary-home-learning";
 import { buildPrimaryEconomyModel } from "@/lib/primary/build-primary-home-model";
 import { buildPrimaryProgressModel } from "@/lib/primary/build-primary-progress-model";
@@ -23,11 +23,11 @@ import {
   PRIMARY_SSR_REVIEW,
 } from "@/lib/primary/ssr-primary-placeholders";
 import { resumeScreenIndexForSet } from "@/lib/primary/vocab-continue";
-import { getLearningBand } from "@/lib/progress/local-storage";
 import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import { isUnlockAvailable } from "@/lib/progress/unlock-registry";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { newSessionSeed } from "@/lib/student-hub/session-seed";
+import type { TestStartTopicId } from "@/lib/teststartpage/bank";
 import { isVocabSetId, type VocabSetId } from "@/lib/vocabulary-templates";
 import { markExplorationNode } from "@/lib/worlds/exploration";
 
@@ -57,7 +57,6 @@ export function PrimaryDashboardClient({
     ...PRIMARY_SSR_PROGRESS,
   }));
   const [reviewModel, setReviewModel] = useState(() => ({ ...PRIMARY_SSR_REVIEW }));
-  const [learningBand, setLearningBand] = useState<LearningBand | null>(null);
   const [classSelectorOpen, setClassSelectorOpen] = useState(
     classMemberships.length === 0,
   );
@@ -68,6 +67,9 @@ export function PrimaryDashboardClient({
   const [vocabSessionSeed, setVocabSessionSeed] = useState<string | null>(null);
   const [vocabResumeIndex, setVocabResumeIndex] = useState(0);
   const [initialSetConsumed, setInitialSetConsumed] = useState(false);
+  const [selfStudyTopicId, setSelfStudyTopicId] = useState<TestStartTopicId | null>(
+    null,
+  );
 
   const refreshHomeModel = useCallback(() => {
     const rewards = getRewards();
@@ -77,7 +79,6 @@ export function PrimaryDashboardClient({
     });
     setProgressModel(buildPrimaryProgressModel(rewards));
     setReviewModel(buildPrimaryReviewModel());
-    setLearningBand(getLearningBand());
   }, [displayName]);
 
   useEffect(() => {
@@ -149,8 +150,8 @@ export function PrimaryDashboardClient({
         model={homeModel}
         progressModel={progressModel}
         reviewModel={reviewModel}
-        learningBand={learningBand}
         assignedHomework={assignedHomework}
+        enrolledInClass={classMemberships.length > 0}
         initialNav={initialSetId ? "vocabulary" : initialNav}
         onEconomyChange={refreshHomeModel}
         onOpenVocabularySet={(id) => {
@@ -160,6 +161,14 @@ export function PrimaryDashboardClient({
               : resumeScreenIndexForSet(id);
           openVocabularySet(id, { resumeScreenIndex: resume });
         }}
+        onOpenSelfStudyTopic={(topicId) => {
+          if (!isUnlockAvailable("topic_quiz", getPlayerLevel())) {
+            playSfx("wrong", muted);
+            return;
+          }
+          playSfx("tap", muted);
+          setSelfStudyTopicId(topicId);
+        }}
         headerExtra={
           <StudentClassMenu
             memberships={classMemberships}
@@ -168,6 +177,14 @@ export function PrimaryDashboardClient({
           />
         }
       />
+
+      {selfStudyTopicId ? (
+        <SelfStudyTopicQuizOverlay
+          topicId={selfStudyTopicId}
+          muted={muted}
+          onClose={() => setSelfStudyTopicId(null)}
+        />
+      ) : null}
 
       {vocabSetOpen && activeVocabSetId && vocabSessionSeed ? (
         <VocabularySetOverlay

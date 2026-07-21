@@ -3,6 +3,7 @@ import {
   createPackQuizDraft,
   freezeSelectedPackWordIds,
   getPackQuizFormatMeta,
+  isPackQuizFormatAvailable,
   packQuizFormatReadiness,
 } from "@/lib/vocabulary/pack-quiz";
 
@@ -40,7 +41,10 @@ describe("pack quiz draft contract", () => {
 
   it("exposes format metadata for the picker", () => {
     expect(getPackQuizFormatMeta("true_false").label).toBe("True / False");
-    expect(getPackQuizFormatMeta("sentence_scramble").implementedInSlice).toBe(4);
+    expect(getPackQuizFormatMeta("sentence_scramble").implementedInSlice).toBe(0);
     expect(getPackQuizFormatMeta("multiple_choice").implementedInSlice).toBe(0);
+    expect(isPackQuizFormatAvailable("true_false")).toBe(true);
+    expect(isPackQuizFormatAvailable("letter_scramble")).toBe(true);
+    expect(isPackQuizFormatAvailable("sentence_scramble")).toBe(true);
   });
 });

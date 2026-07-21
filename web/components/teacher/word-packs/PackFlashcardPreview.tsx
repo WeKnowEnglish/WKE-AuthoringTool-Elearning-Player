@@ -14,6 +14,7 @@ import type {
   PackFlashcardDraft,
   PackFlashcardFaceSnapshot,
 } from "@/lib/vocabulary/pack-flashcards";
+import { incompleteFacesOnCard } from "@/lib/vocabulary/pack-flashcards";
 
 type Props = {
   compiled: PackFlashcardCompileResult;
@@ -31,22 +32,21 @@ function applyFaceEdits(
   },
 ): PackFlashcardFaceSnapshot {
   const next: PackFlashcardFaceSnapshot = { ...faces };
+  // Keep blank strings for included faces so incomplete cards stay editable.
   if (faces.definition !== undefined || edits.definition.trim()) {
-    const value = edits.definition.trim();
-    if (value) next.definition = value;
-    else delete next.definition;
+    next.definition = edits.definition.trim();
   }
   if (faces.example !== undefined || edits.example.trim()) {
-    const value = edits.example.trim();
-    if (value) next.example = value;
-    else delete next.example;
+    next.example = edits.example.trim();
   }
   if (faces.pictureUrl !== undefined || edits.pictureUrl.trim()) {
-    const value = edits.pictureUrl.trim();
-    if (value) next.pictureUrl = value;
-    else delete next.pictureUrl;
+    next.pictureUrl = edits.pictureUrl.trim();
   }
   return next;
+}
+
+function cardIncludeFaces(card: PackFlashcardCompiledCard) {
+  return [...new Set([...card.frontFaces, ...card.backFaces])];
 }
 
 export function PackFlashcardPreview({
@@ -62,20 +62,29 @@ export function PackFlashcardPreview({
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedSetId, setSavedSetId] = useState<string | null>(null);
-  const [showEdits, setShowEdits] = useState(false);
 
   const draft: PackFlashcardDraft = compiled.draft;
   const total = cards.length;
   const current = cards[index];
+  const currentIncomplete = current
+    ? incompleteFacesOnCard(current.faces, cardIncludeFaces(current))
+    : [];
+  const [showEdits, setShowEdits] = useState(() => currentIncomplete.length > 0);
 
-  const [definitionEdit, setDefinitionEdit] = useState("");
-  const [exampleEdit, setExampleEdit] = useState("");
-  const [pictureEdit, setPictureEdit] = useState("");
+  const [definitionEdit, setDefinitionEdit] = useState(
+    () => current?.faces.definition ?? "",
+  );
+  const [exampleEdit, setExampleEdit] = useState(() => current?.faces.example ?? "");
+  const [pictureEdit, setPictureEdit] = useState(() => current?.faces.pictureUrl ?? "");
 
   function syncEditsFromCard(card: PackFlashcardCompiledCard | undefined) {
     setDefinitionEdit(card?.faces.definition ?? "");
     setExampleEdit(card?.faces.example ?? "");
     setPictureEdit(card?.faces.pictureUrl ?? "");
+    if (card) {
+      const incomplete = incompleteFacesOnCard(card.faces, cardIncludeFaces(card));
+      setShowEdits(incomplete.length > 0);
+    }
   }
 
   function goTo(nextIndex: number) {
@@ -197,8 +206,8 @@ export function PackFlashcardPreview({
       <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-4">
         <p className="text-sm font-semibold text-emerald-950">Preview complete</p>
         <p className="text-sm text-emerald-900">
-          You walked through {total} flashcard{total === 1 ? "" : "s"} from this pack. Assigning
-          for students comes in the next slice.
+          You walked through {total} flashcard{total === 1 ? "" : "s"} from this pack. Assign from
+          the Flashcards tab or class Homework so students can study on Primary.
         </p>
         {compiled.warnings.length > 0 ? (
           <ul className="list-disc space-y-1 pl-5 text-xs text-emerald-900/80">
@@ -241,6 +250,7 @@ export function PackFlashcardPreview({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-medium text-neutral-500">
           Teacher preview · Card {index + 1} of {total} · {flipped ? "Back" : "Front"}
+          {currentIncomplete.length > 0 ? " · needs edit" : ""}
         </p>
         <button
           type="button"
@@ -250,6 +260,13 @@ export function PackFlashcardPreview({
           {backLabel}
         </button>
       </div>
+
+      {currentIncomplete.length > 0 ? (
+        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+          Fill in {currentIncomplete.map(faceLabel).join(", ")} below, then Apply — blank faces are
+          kept so you can finish them later.
+        </div>
+      ) : null}
 
       {compiled.warnings.length > 0 && index === 0 ? (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
@@ -265,7 +282,7 @@ export function PackFlashcardPreview({
         <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
           {sideFaces.map(faceLabel).join(" · ") || "Empty"} · tap to flip
         </p>
-        <FlashcardFaceStack faces={sideFaces} values={current.faces} size="lg" />
+        <FlashcardFaceStack faces={sideFaces} values={current.faces} size="lg" emptyHints />
       </button>
 
       <div className="flex flex-wrap items-center justify-between gap-2">

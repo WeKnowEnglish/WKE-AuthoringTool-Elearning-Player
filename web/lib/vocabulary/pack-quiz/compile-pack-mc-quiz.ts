@@ -1,19 +1,15 @@
 import { mcQuizPayloadSchema, type McQuizPayload } from "@/lib/lesson-schemas";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 import type { PackLexemeResolution } from "@/lib/vocabulary/teacher-lexicon/resolve-pack";
+import type {
+  PackQuizCompiledQuestion,
+  PackQuizMcCompiledQuestion,
+  PackQuizMcMode,
+} from "./compiled-question";
 import type { PackQuizDraft } from "./types";
 
-export type PackQuizMcMode =
-  | "word_for_meaning_en"
-  | "meaning_for_word_en"
-  | "find_lemma";
-
-export type PackQuizCompiledQuestion = {
-  id: string;
-  wordId: string;
-  mode: PackQuizMcMode;
-  payload: McQuizPayload;
-};
+export type { PackQuizMcMode } from "./compiled-question";
+export type { PackQuizCompiledQuestion } from "./compiled-question";
 
 export type PackQuizCompileResult = {
   draft: PackQuizDraft;
@@ -113,7 +109,7 @@ function buildQuestion(
   target: PackLexemeResolution,
   pool: PackLexemeResolution[],
   seed: string,
-): PackQuizCompiledQuestion | null {
+): PackQuizMcCompiledQuestion | null {
   const mode = pickMode(target, pool, seed);
   if (!mode) return null;
 
@@ -126,6 +122,7 @@ function buildQuestion(
     return {
       id: `${target.id}:word-for-meaning`,
       wordId: target.id,
+      format: "multiple_choice",
       mode,
       payload: buildMcPayload(
         `Which word matches this meaning?\n${def}`,
@@ -145,6 +142,7 @@ function buildQuestion(
     return {
       id: `${target.id}:meaning-for-word`,
       wordId: target.id,
+      format: "multiple_choice",
       mode,
       payload: buildMcPayload(`What does ${target.lemma.trim()} mean?`, def, wrong, seed),
     };
@@ -157,6 +155,7 @@ function buildQuestion(
   return {
     id: `${target.id}:find-lemma`,
     wordId: target.id,
+    format: "multiple_choice",
     mode: "find_lemma",
     payload: buildMcPayload(`Find the word: ${target.lemma.trim()}`, target.lemma.trim(), wrong, seed),
   };
@@ -215,7 +214,7 @@ export function compilePackMultipleChoiceQuiz(input: {
   );
   const targets = shuffleWithSeed(ordered, `${seedBase}:targets`).slice(0, maxQuestions);
 
-  const questions: PackQuizCompiledQuestion[] = [];
+  const questions: PackQuizMcCompiledQuestion[] = [];
   for (const target of targets) {
     const q = buildQuestion(target, ordered, `${seedBase}:${target.id}`);
     if (q) questions.push(q);

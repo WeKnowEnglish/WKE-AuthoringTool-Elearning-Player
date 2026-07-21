@@ -321,8 +321,12 @@ export function MakePackFlashcardsOverlay({
                 <div>
                   <h3 className="text-sm font-semibold text-neutral-900">Select words</h3>
                   <p className="mt-0.5 text-xs text-neutral-600">
-                    Only checked entries become cards · needs{" "}
-                    {options.includeFaces.map(faceLabel).join(", ")}.
+                    Checked words become cards. Incomplete faces stay blank so you can fill them in
+                    preview
+                    {options.includeFaces.length
+                      ? ` · needs ${options.includeFaces.map(faceLabel).join(", ")}`
+                      : ""}
+                    .
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

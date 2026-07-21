@@ -618,11 +618,12 @@ export type RecordHomeworkCompletionResult =
   | { ok: false; error: string };
 
 /**
- * Student marks a pack_quiz homework as finished (upsert one row per student).
- * questionsTotal is taken from the homework payload on the server, not the client.
+ * Student marks catalog activity homework as finished (upsert one row per student).
+ * questions_total stores question count (quiz) or card count (flashcards).
  */
-export async function recordPackQuizHomeworkCompletion(input: {
+async function recordCatalogHomeworkCompletion(input: {
   homeworkId: string;
+  allowedTypes: ReadonlyArray<"pack_quiz" | "pack_flashcards">;
 }): Promise<RecordHomeworkCompletionResult> {
   try {
     const supabase = await createClient();
@@ -654,14 +655,26 @@ export async function recordPackQuizHomeworkCompletion(input: {
     }
 
     const payload = normalizeHomeworkPayload(homework.payload);
-    if (!payload || payload.type !== "pack_quiz") {
-      return { ok: false, error: "Only pack quizzes can be marked complete here." };
+    if (
+      !payload ||
+      (payload.type !== "pack_quiz" && payload.type !== "pack_flashcards") ||
+      !input.allowedTypes.includes(payload.type)
+    ) {
+      return { ok: false, error: "This homework type can’t be marked complete here." };
     }
 
-    const questionsTotal =
-      Array.isArray(payload.questions) && payload.questions.length > 0
-        ? payload.questions.length
-        : Math.max(0, payload.questionCount);
+    let questionsTotal = 0;
+    if (payload.type === "pack_quiz") {
+      questionsTotal =
+        Array.isArray(payload.questions) && payload.questions.length > 0
+          ? payload.questions.length
+          : Math.max(0, payload.questionCount);
+    } else if (payload.type === "pack_flashcards") {
+      questionsTotal =
+        Array.isArray(payload.cards) && payload.cards.length > 0
+          ? payload.cards.length
+          : Math.max(0, payload.cardCount);
+    }
 
     const { data: memberships, error: membershipError } = await supabase.rpc(
       "student_class_memberships",
@@ -714,5 +727,28 @@ export async function recordPackQuizHomeworkCompletion(input: {
       error: err instanceof Error ? err.message : "Could not save completion.",
     };
   }
+}
+
+/**
+ * Student marks a pack_quiz homework as finished (upsert one row per student).
+ * questionsTotal is taken from the homework payload on the server, not the client.
+ */
+export async function recordPackQuizHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["pack_quiz"],
+  });
+}
+
+/** Student marks pack_flashcards homework finished after studying the deck. */
+export async function recordPackFlashcardsHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["pack_flashcards"],
+  });
 }
 

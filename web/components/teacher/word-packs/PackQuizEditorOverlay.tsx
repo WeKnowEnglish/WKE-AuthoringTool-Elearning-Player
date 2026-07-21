@@ -8,11 +8,25 @@ import {
 } from "@/lib/actions/pack-quiz";
 import {
   getPackQuizFormatMeta,
+  packQuizFormatReadiness,
+  packQuizQuestionsToLetterSheetRows,
+  packQuizQuestionsToSentenceSheetRows,
   packQuizQuestionsToSheetRows,
+  packQuizQuestionsToTfSheetRows,
+  sheetLetterRowsToPackQuizQuestions,
   sheetRowsToPackQuizQuestions,
+  sheetSentenceRowsToPackQuizQuestions,
+  sheetTfRowsToPackQuizQuestions,
+  type PackQuizFormat,
+  type PackQuizLetterSheetRow,
+  type PackQuizSentenceSheetRow,
   type PackQuizSheetRow,
+  type PackQuizTfSheetRow,
 } from "@/lib/vocabulary/pack-quiz";
+import { PackQuizLetterSheetTable } from "@/components/teacher/word-packs/PackQuizLetterSheetTable";
+import { PackQuizSentenceSheetTable } from "@/components/teacher/word-packs/PackQuizSentenceSheetTable";
 import { PackQuizSheetTable } from "@/components/teacher/word-packs/PackQuizSheetTable";
+import { PackQuizTfSheetTable } from "@/components/teacher/word-packs/PackQuizTfSheetTable";
 
 type Props = {
   open: boolean;
@@ -27,11 +41,15 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [title, setTitle] = useState(quizTitle);
+  const [format, setFormat] = useState<PackQuizFormat | null>(null);
   const [formatLabel, setFormatLabel] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<PackQuizSheetRow[]>([]);
+  const [mcRows, setMcRows] = useState<PackQuizSheetRow[]>([]);
+  const [tfRows, setTfRows] = useState<PackQuizTfSheetRow[]>([]);
+  const [letterRows, setLetterRows] = useState<PackQuizLetterSheetRow[]>([]);
+  const [sentenceRows, setSentenceRows] = useState<PackQuizSentenceSheetRow[]>([]);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [homeworkSynced, setHomeworkSynced] = useState<number | null>(null);
@@ -40,14 +58,62 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestRef = useRef({ title: quizTitle, rows: [] as PackQuizSheetRow[] });
-  latestRef.current = { title, rows };
+  const latestRef = useRef({
+    title: quizTitle,
+    format: null as PackQuizFormat | null,
+    mcRows: [] as PackQuizSheetRow[],
+    tfRows: [] as PackQuizTfSheetRow[],
+    letterRows: [] as PackQuizLetterSheetRow[],
+    sentenceRows: [] as PackQuizSentenceSheetRow[],
+  });
+  latestRef.current = { title, format, mcRows, tfRows, letterRows, sentenceRows };
+
+  const questionCount =
+    format === "true_false"
+      ? tfRows.length
+      : format === "letter_scramble"
+        ? letterRows.length
+        : format === "sentence_scramble"
+          ? sentenceRows.length
+          : mcRows.length;
+  const canRegenerate =
+    format != null && packQuizFormatReadiness(format, wordCount).ok;
+
+  function applyQuizRows(quizFormat: PackQuizFormat, questions: Parameters<
+    typeof packQuizQuestionsToSheetRows
+  >[0]) {
+    if (quizFormat === "true_false") {
+      setTfRows(packQuizQuestionsToTfSheetRows(questions));
+      setMcRows([]);
+      setLetterRows([]);
+      setSentenceRows([]);
+    } else if (quizFormat === "letter_scramble") {
+      setLetterRows(packQuizQuestionsToLetterSheetRows(questions));
+      setMcRows([]);
+      setTfRows([]);
+      setSentenceRows([]);
+    } else if (quizFormat === "sentence_scramble") {
+      setSentenceRows(packQuizQuestionsToSentenceSheetRows(questions));
+      setMcRows([]);
+      setTfRows([]);
+      setLetterRows([]);
+    } else {
+      setMcRows(packQuizQuestionsToSheetRows(questions));
+      setTfRows([]);
+      setLetterRows([]);
+      setSentenceRows([]);
+    }
+  }
 
   useEffect(() => {
     if (!open || !quizId) return;
     setLoading(true);
     setError(null);
-    setRows([]);
+    setMcRows([]);
+    setTfRows([]);
+    setLetterRows([]);
+    setSentenceRows([]);
+    setFormat(null);
     setTitle(quizTitle);
     setSaveState("idle");
     setSaveError(null);
@@ -63,9 +129,10 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
       }
       const quiz = result.quiz;
       setTitle(quiz.title);
+      setFormat(quiz.format);
       setFormatLabel(getPackQuizFormatMeta(quiz.format).label);
       setWordCount(quiz.word_ids.length);
-      setRows(packQuizQuestionsToSheetRows(quiz.questions));
+      applyQuizRows(quiz.format, quiz.questions);
       setSaveState("saved");
     });
 
@@ -97,7 +164,14 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
   async function persist() {
     if (!dirtyRef.current || savingRef.current) return;
     const payload = latestRef.current;
-    const built = sheetRowsToPackQuizQuestions(payload.rows);
+    const built =
+      payload.format === "true_false"
+        ? sheetTfRowsToPackQuizQuestions(payload.tfRows)
+        : payload.format === "letter_scramble"
+          ? sheetLetterRowsToPackQuizQuestions(payload.letterRows)
+          : payload.format === "sentence_scramble"
+            ? sheetSentenceRowsToPackQuizQuestions(payload.sentenceRows)
+            : sheetRowsToPackQuizQuestions(payload.mcRows);
     if (!built.ok) {
       setSaveState("error");
       setSaveError(built.error);
@@ -147,18 +221,76 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
     }, 650);
   }
 
-  function onChangeRow(
+  function onChangeMcRow(
     id: string,
     patch: Partial<
       Pick<PackQuizSheetRow, "mode" | "prompt" | "promptImageUrl" | "correct" | "wrongs">
     >,
   ) {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setMcRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
     markDirty();
   }
 
-  function onDeleteRow(id: string) {
-    setRows((prev) => {
+  function onChangeTfRow(
+    id: string,
+    patch: Partial<
+      Pick<PackQuizTfSheetRow, "statement" | "correct" | "promptImageUrl" | "truthStatement">
+    >,
+  ) {
+    setTfRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    markDirty();
+  }
+
+  function onChangeLetterRow(
+    id: string,
+    patch: Partial<
+      Pick<PackQuizLetterSheetRow, "prompt" | "targetWord" | "promptImageUrl" | "extraAccepted">
+    >,
+  ) {
+    setLetterRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
+    markDirty();
+  }
+
+  function onChangeSentenceRow(
+    id: string,
+    patch: Partial<
+      Pick<PackQuizSentenceSheetRow, "sentence" | "bodyText" | "promptImageUrl">
+    >,
+  ) {
+    setSentenceRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
+    markDirty();
+  }
+
+  function onDeleteMcRow(id: string) {
+    setMcRows((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((row) => row.id !== id);
+    });
+    markDirty();
+  }
+
+  function onDeleteTfRow(id: string) {
+    setTfRows((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((row) => row.id !== id);
+    });
+    markDirty();
+  }
+
+  function onDeleteLetterRow(id: string) {
+    setLetterRows((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((row) => row.id !== id);
+    });
+    markDirty();
+  }
+
+  function onDeleteSentenceRow(id: string) {
+    setSentenceRows((prev) => {
       if (prev.length <= 1) return prev;
       return prev.filter((row) => row.id !== id);
     });
@@ -186,8 +318,9 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
         return;
       }
       setTitle(result.quiz.title);
+      setFormat(result.quiz.format);
       setWordCount(result.quiz.word_ids.length);
-      setRows(packQuizQuestionsToSheetRows(result.quiz.questions));
+      applyQuizRows(result.quiz.format, result.quiz.questions);
       setHomeworkSynced(result.homeworkSynced);
       setSaveState("saved");
     } finally {
@@ -198,12 +331,12 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
   const subtitle = useMemo(() => {
     const parts: string[] = [];
     if (formatLabel) parts.push(formatLabel);
-    parts.push(`${rows.length} question${rows.length === 1 ? "" : "s"}`);
+    parts.push(`${questionCount} question${questionCount === 1 ? "" : "s"}`);
     if (wordCount > 0) {
       parts.push(`${wordCount} word${wordCount === 1 ? "" : "s"} frozen`);
     }
     return parts.join(" · ");
-  }, [formatLabel, rows.length, wordCount]);
+  }, [formatLabel, questionCount, wordCount]);
 
   function saveStatusLabel(): string {
     if (saveState === "saving" || regenerating) return regenerating ? "Regenerating…" : "Saving…";
@@ -294,12 +427,35 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
                   {saveStatusLabel()}
                 </p>
               </div>
-              <PackQuizSheetTable
-                rows={rows}
-                readOnly={false}
-                onChangeRow={onChangeRow}
-                onDeleteRow={onDeleteRow}
-              />
+              {format === "true_false" ? (
+                <PackQuizTfSheetTable
+                  rows={tfRows}
+                  readOnly={false}
+                  onChangeRow={onChangeTfRow}
+                  onDeleteRow={onDeleteTfRow}
+                />
+              ) : format === "letter_scramble" ? (
+                <PackQuizLetterSheetTable
+                  rows={letterRows}
+                  readOnly={false}
+                  onChangeRow={onChangeLetterRow}
+                  onDeleteRow={onDeleteLetterRow}
+                />
+              ) : format === "sentence_scramble" ? (
+                <PackQuizSentenceSheetTable
+                  rows={sentenceRows}
+                  readOnly={false}
+                  onChangeRow={onChangeSentenceRow}
+                  onDeleteRow={onDeleteSentenceRow}
+                />
+              ) : (
+                <PackQuizSheetTable
+                  rows={mcRows}
+                  readOnly={false}
+                  onChangeRow={onChangeMcRow}
+                  onDeleteRow={onDeleteMcRow}
+                />
+              )}
             </>
           )}
         </div>
@@ -308,7 +464,7 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
           <button
             type="button"
             onClick={() => void onRegenerate()}
-            disabled={loading || regenerating || Boolean(error) || wordCount < 4}
+            disabled={loading || regenerating || Boolean(error) || !canRegenerate}
             className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
           >
             {regenerating ? "Regenerating…" : "Regenerate from words"}

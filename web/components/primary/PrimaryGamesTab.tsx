@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Lock, PawPrint, Sprout } from "lucide-react";
 import { GardenLockedPanel } from "@/components/garden/GardenLockedPanel";
@@ -158,14 +157,8 @@ export function PrimaryGamesTab({ playerLevel, onEconomyChange, onGoLearn }: Pro
       </ul>
 
       <p className="text-xs font-semibold text-[var(--pl-muted)]">
-        World explore is not ready here yet. You can still open the legacy world hub.
+        World explore is coming to Primary Games soon.
       </p>
-      <Link
-        href="/home"
-        className="inline-flex w-fit items-center rounded-2xl border border-[var(--pl-border)] bg-white px-4 py-2.5 text-sm font-extrabold text-[var(--pl-purple)] hover:bg-[var(--pl-purple-soft)]"
-      >
-        Open world hub
-      </Link>
     </div>
   );
 }

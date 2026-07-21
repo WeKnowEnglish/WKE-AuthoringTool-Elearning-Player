@@ -1,5 +1,15 @@
+import {
+  dragSentencePayloadSchema,
+  letterMixupPayloadSchema,
+  mcQuizPayloadSchema,
+  trueFalsePayloadSchema,
+} from "@/lib/lesson-schemas";
 import type { ClassHomeworkPayload } from "@/lib/class-homework/types";
-import type { PackQuizCompiledQuestion, PackQuizMcMode } from "@/lib/vocabulary/pack-quiz";
+import type {
+  PackQuizCompiledQuestion,
+  PackQuizMcMode,
+} from "@/lib/vocabulary/pack-quiz";
+import { packQuizFormatFromPayloadSubtype } from "@/lib/vocabulary/pack-quiz/compiled-question";
 
 const MAX_FROZEN_QUESTIONS = 200;
 
@@ -9,28 +19,71 @@ const MODES: readonly PackQuizMcMode[] = [
   "find_lemma",
 ];
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+/**
+ * Parse stored pack-quiz questions (MC + future formats).
+ * Legacy MC rows without `format` are inferred from `payload.subtype` + `mode`.
+ */
 export function parseStoredPackQuizQuestions(raw: unknown): PackQuizCompiledQuestion[] {
   if (!Array.isArray(raw)) return [];
   const out: PackQuizCompiledQuestion[] = [];
+
   for (const item of raw) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
-    const row = item as Record<string, unknown>;
+    const row = asRecord(item);
+    if (!row) continue;
     const id = typeof row.id === "string" ? row.id.trim() : "";
     const wordId = typeof row.wordId === "string" ? row.wordId.trim() : "";
-    const mode = row.mode;
     if (!id || !wordId) continue;
-    if (typeof mode !== "string" || !(MODES as readonly string[]).includes(mode)) continue;
-    if (!row.payload || typeof row.payload !== "object" || Array.isArray(row.payload)) continue;
-    const payload = row.payload as PackQuizCompiledQuestion["payload"];
-    if (payload.type !== "interaction" || payload.subtype !== "mc_quiz") continue;
-    out.push({
-      id,
-      wordId,
-      mode: mode as PackQuizMcMode,
-      payload,
-    });
+
+    const payloadRaw = asRecord(row.payload);
+    if (!payloadRaw) continue;
+    const subtype = typeof payloadRaw.subtype === "string" ? payloadRaw.subtype : "";
+    const formatFromField =
+      typeof row.format === "string" ? (row.format as string) : null;
+    const format =
+      formatFromField === "multiple_choice" ||
+      formatFromField === "true_false" ||
+      formatFromField === "letter_scramble" ||
+      formatFromField === "sentence_scramble"
+        ? formatFromField
+        : packQuizFormatFromPayloadSubtype(subtype);
+    if (!format) continue;
+
+    if (format === "multiple_choice") {
+      const mode = row.mode;
+      if (typeof mode !== "string" || !(MODES as readonly string[]).includes(mode)) {
+        continue;
+      }
+      const parsed = mcQuizPayloadSchema.safeParse(payloadRaw);
+      if (!parsed.success) continue;
+      out.push({
+        id,
+        wordId,
+        format: "multiple_choice",
+        mode: mode as PackQuizMcMode,
+        payload: parsed.data,
+      });
+    } else if (format === "true_false") {
+      const parsed = trueFalsePayloadSchema.safeParse(payloadRaw);
+      if (!parsed.success) continue;
+      out.push({ id, wordId, format: "true_false", payload: parsed.data });
+    } else if (format === "letter_scramble") {
+      const parsed = letterMixupPayloadSchema.safeParse(payloadRaw);
+      if (!parsed.success) continue;
+      out.push({ id, wordId, format: "letter_scramble", payload: parsed.data });
+    } else if (format === "sentence_scramble") {
+      const parsed = dragSentencePayloadSchema.safeParse(payloadRaw);
+      if (!parsed.success) continue;
+      out.push({ id, wordId, format: "sentence_scramble", payload: parsed.data });
+    }
+
     if (out.length >= MAX_FROZEN_QUESTIONS) break;
   }
+
   return out;
 }
 

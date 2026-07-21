@@ -75,7 +75,7 @@ export type StudentHomeworkCard = {
   status: "assigned" | "closed";
   payload: ClassHomeworkPayload;
   assignedAt: string | null;
-  /** ISO timestamp when this student finished (pack quiz), if any. */
+  /** ISO timestamp when this student finished (quiz / flashcards), if any. */
   completedAt: string | null;
 };
 

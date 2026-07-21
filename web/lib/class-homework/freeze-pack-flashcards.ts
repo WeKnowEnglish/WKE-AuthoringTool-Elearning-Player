@@ -23,16 +23,11 @@ function asFaceSnapshot(value: unknown): PackFlashcardFaceSnapshot {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const raw = value as Record<string, unknown>;
   const faces: PackFlashcardFaceSnapshot = {};
-  if (typeof raw.word === "string" && raw.word.trim()) faces.word = raw.word.trim();
-  if (typeof raw.definition === "string" && raw.definition.trim()) {
-    faces.definition = raw.definition.trim();
-  }
-  if (typeof raw.example === "string" && raw.example.trim()) {
-    faces.example = raw.example.trim();
-  }
-  if (typeof raw.pictureUrl === "string" && raw.pictureUrl.trim()) {
-    faces.pictureUrl = raw.pictureUrl.trim();
-  }
+  // Preserve blank optional faces so incomplete cards stay editable after freeze.
+  if (typeof raw.word === "string") faces.word = raw.word.trim();
+  if (typeof raw.definition === "string") faces.definition = raw.definition.trim();
+  if (typeof raw.example === "string") faces.example = raw.example.trim();
+  if (typeof raw.pictureUrl === "string") faces.pictureUrl = raw.pictureUrl.trim();
   return faces;
 }
 
@@ -46,9 +41,7 @@ export function parseStoredPackFlashcardCards(raw: unknown): PackFlashcardCompil
     const wordId = typeof row.wordId === "string" ? row.wordId.trim() : "";
     if (!id || !wordId) continue;
     const faces = asFaceSnapshot(row.faces);
-    if (!faces.word && !faces.definition && !faces.example && !faces.pictureUrl) {
-      continue;
-    }
+    if (!faces.word) continue;
     out.push({
       id,
       wordId,

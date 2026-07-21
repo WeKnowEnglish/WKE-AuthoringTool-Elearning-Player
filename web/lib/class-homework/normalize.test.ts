@@ -58,6 +58,23 @@ describe("class-homework/normalize", () => {
     expect(payload.frozenAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
+  it("normalizes pack flashcards and rejects empty set id", () => {
+    expect(normalizeHomeworkPayload({ type: "pack_flashcards", setId: "" })).toBeNull();
+    const payload = normalizeHomeworkPayload({
+      type: "pack_flashcards",
+      setId: "s1",
+      setTitle: "Pets cards",
+      cardCount: 3,
+    });
+    expect(payload).toEqual({
+      type: "pack_flashcards",
+      setId: "s1",
+      setTitle: "Pets cards",
+      cardCount: 3,
+    });
+    expect(homeworkPayloadSummary(payload!)).toContain("Pets cards");
+  });
+
   it("normalizes word pack practice and external notes", () => {
     const pack = normalizeHomeworkPayload({
       type: "word_pack_practice",

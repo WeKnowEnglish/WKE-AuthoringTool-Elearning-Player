@@ -1,21 +1,14 @@
 "use client";
 
-import NextImage from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   BookOpen,
-  Brain,
-  Check,
-  ChevronRight,
   Coins,
   Gamepad2,
-  Headphones,
   Home,
   Library,
   Menu,
-  Pencil,
-  Play,
   Trophy,
   Volume2,
   VolumeX,
@@ -24,20 +17,24 @@ import {
 
 import { SignOutForm } from "@/components/auth/SignOutForm";
 import { PrimaryGamesTab } from "@/components/primary/PrimaryGamesTab";
-import { PrimaryLearnTab } from "@/components/primary/PrimaryLearnTab";
 import { PrimaryProgressTab } from "@/components/primary/PrimaryProgressTab";
 import { PrimaryReviewTab } from "@/components/primary/PrimaryReviewTab";
 import { PrimaryVocabularyTab } from "@/components/primary/PrimaryVocabularyTab";
+import { SelfStudySection } from "@/components/primary/SelfStudySection";
+import { TodaysLearningAssignments } from "@/components/primary/TodaysLearningAssignments";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
-import type { LearningBand } from "@/lib/learning-band";
+import {
+  PRIMARY_CHROME_CLASS,
+  PRIMARY_CHROME_STYLE,
+} from "@/lib/primary/primary-chrome";
 import type { PrimaryProgressModel } from "@/lib/primary/build-primary-progress-model";
 import type { PrimaryReviewModel } from "@/lib/primary/build-primary-review-model";
+import type { TestStartTopicId } from "@/lib/teststartpage/bank";
 import type { VocabSetId } from "@/lib/vocabulary-templates";
 
 export type PrimaryNavId =
   | "home"
-  | "learn"
   | "vocabulary"
   | "grammar"
   | "games"
@@ -89,24 +86,25 @@ type Props = {
   progressModel?: PrimaryProgressModel;
   /** Live Review list (Phase 5). */
   reviewModel?: PrimaryReviewModel;
-  /** Learning band for secondary entry on Learn (Phase 6). */
-  learningBand?: LearningBand | null;
   onNavigate?: (destination: PrimaryNavId | string) => void;
   /** Open a vocabulary set in the lesson overlay (Phase 1). */
   onOpenVocabularySet?: (id: VocabSetId) => void;
+  /** Open a Self Study topic quiz (Product B). */
+  onOpenSelfStudyTopic?: (id: TestStartTopicId) => void;
   /** Refresh economy / progress after games (Phase 5). */
   onEconomyChange?: () => void;
   /** Optional controls in the top bar (e.g. class menu). */
   headerExtra?: ReactNode;
   /** Deep-link tab, e.g. `?nav=vocabulary`. */
   initialNav?: string | null;
-  /** Teacher-assigned offline work for Learn tab. */
+  /** Teacher-assigned offline work for Today's Learning. */
   assignedHomework?: StudentHomeworkCard[];
+  /** Whether the student is enrolled in at least one class. */
+  enrolledInClass?: boolean;
 };
 
 const NAV_IDS: PrimaryNavId[] = [
   "home",
-  "learn",
   "vocabulary",
   "grammar",
   "games",
@@ -115,6 +113,8 @@ const NAV_IDS: PrimaryNavId[] = [
 ];
 
 function parseInitialNav(nav: string | null | undefined): PrimaryNavId {
+  // Old Learn tab deep-links land on Home (assignments live there now).
+  if (nav === "learn") return "home";
   if (nav && (NAV_IDS as string[]).includes(nav)) return nav as PrimaryNavId;
   return "home";
 }
@@ -172,11 +172,8 @@ const DEFAULT_MODEL: PrimaryHomeModel = {
 
 const NAV: Array<{ id: PrimaryNavId; label: string; icon: typeof Home }> = [
   { id: "home", label: "Home", icon: Home },
-  { id: "learn", label: "Learn", icon: BookOpen },
   { id: "vocabulary", label: "Vocabulary", icon: Library },
-  { id: "grammar", label: "Grammar", icon: Pencil },
   { id: "games", label: "Games", icon: Gamepad2 },
-  { id: "review", label: "Review", icon: Brain },
   { id: "progress", label: "My Progress", icon: Trophy },
 ];
 
@@ -192,31 +189,18 @@ function mergeModel(partial?: Partial<PrimaryHomeModel>): PrimaryHomeModel {
   };
 }
 
-function RecommendIcon({ kind }: { kind: "match" | "cloze" | "listen" }) {
-  if (kind === "cloze") return <Pencil className="h-5 w-5" />;
-  if (kind === "listen") return <Headphones className="h-5 w-5" />;
-  return <BookOpen className="h-5 w-5" />;
-}
-
-function PathIcon({ status, index }: { status: PathStepStatus; index: number }) {
-  if (status === "complete") return <Check className="h-5 w-5" />;
-  if (index === 0) return <BookOpen className="h-5 w-5" />;
-  if (index === 1) return <Pencil className="h-5 w-5" />;
-  if (index === 2) return <Headphones className="h-5 w-5" />;
-  return <Trophy className="h-5 w-5" />;
-}
-
 export function StudentHomeLanding({
   model: modelPartial,
   progressModel,
   reviewModel,
-  learningBand = null,
   onNavigate,
   onOpenVocabularySet,
+  onOpenSelfStudyTopic,
   onEconomyChange,
   headerExtra,
   initialNav,
   assignedHomework = [],
+  enrolledInClass = false,
 }: Props) {
   const router = useRouter();
   const { muted, toggleMuted } = useAudioMuted();
@@ -226,12 +210,6 @@ export function StudentHomeLanding({
   );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-
-  const progressPct = Math.round(
-    (model.today.activitiesDone / Math.max(1, model.today.activitiesTotal)) * 100,
-  );
-  const continueLabel =
-    model.today.activitiesDone === 0 ? "Start Learning" : "Continue Learning";
 
   function go(destination: PrimaryNavId | string, message?: string) {
     if (destination === "grammar") {
@@ -317,22 +295,8 @@ export function StudentHomeLanding({
 
   return (
     <div
-      className="flex h-[100dvh] w-full flex-col overflow-hidden font-[family-name:var(--font-nunito)] text-[var(--pl-ink)]"
-      style={
-        {
-          "--pl-bg": "#f3f0f8",
-          "--pl-card": "#ffffff",
-          "--pl-ink": "#1e293b",
-          "--pl-muted": "#64748b",
-          "--pl-border": "#e8e2f0",
-          "--pl-purple": "#7c3aed",
-          "--pl-purple-soft": "#ede9fe",
-          "--pl-teal": "#0d9488",
-          "--pl-teal-hover": "#0f766e",
-          "--pl-gold": "#f59e0b",
-          "--pl-success": "#22c55e",
-        } as CSSProperties
-      }
+      className={`flex h-[100dvh] w-full flex-col overflow-hidden ${PRIMARY_CHROME_CLASS}`}
+      style={PRIMARY_CHROME_STYLE}
     >
       <header className="z-30 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--pl-border)] bg-white px-4 py-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
@@ -358,7 +322,7 @@ export function StudentHomeLanding({
                 WeKnow <span className="text-[var(--pl-purple)]">English</span>
               </span>
               <span className="hidden text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--pl-muted)] sm:block">
-                Learning dashboard
+                Primary
               </span>
             </span>
           </button>
@@ -397,13 +361,6 @@ export function StudentHomeLanding({
           >
             {model.avatarInitials}
           </button>
-
-          <SignOutForm
-            variant="primary"
-            label="Log out"
-            className="hidden lg:block"
-            buttonClassName="!w-auto px-3.5 py-2"
-          />
         </div>
       </header>
 
@@ -445,7 +402,7 @@ export function StudentHomeLanding({
             <PrimaryGamesTab
               playerLevel={model.level}
               onEconomyChange={onEconomyChange}
-              onGoLearn={() => go("learn")}
+              onGoLearn={() => go("home")}
             />
           ) : activeNav === "review" && reviewModel ? (
             <PrimaryReviewTab
@@ -459,19 +416,6 @@ export function StudentHomeLanding({
               }}
               onOpenVocabulary={() => go("vocabulary")}
             />
-          ) : activeNav === "learn" ? (
-            <PrimaryLearnTab
-              model={model}
-              reviewWordCount={reviewModel?.items.length ?? 0}
-              learningBand={learningBand}
-              continueLabel={continueLabel}
-              assignedHomework={assignedHomework}
-              onContinue={openContinueLearning}
-              onOpenReview={() => go("review")}
-              onOpenVocabulary={() => go("vocabulary")}
-              onOpenProgress={() => go("progress")}
-              onOpenGrammar={() => go("grammar")}
-            />
           ) : activeNav !== "home" ? (
             <div className="mx-auto flex max-w-5xl flex-col gap-3 pb-24 lg:pb-8">
               <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
@@ -483,234 +427,20 @@ export function StudentHomeLanding({
             </div>
           ) : (
           <div className="mx-auto flex max-w-5xl flex-col gap-5 pb-24 lg:pb-8">
-            {/* Today’s Learning */}
-            <section
-              aria-labelledby="todays-learning-heading"
-              className="overflow-hidden rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] p-4 shadow-sm sm:p-6"
-            >
-              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--pl-purple)]">
-                Today&apos;s Learning
-              </p>
+            <TodaysLearningAssignments
+              enrolled={enrolledInClass}
+              items={assignedHomework}
+            />
 
-              <div className="mt-4 grid gap-5 md:grid-cols-[120px_1fr] lg:grid-cols-[140px_1fr_220px] lg:items-center">
-                <div
-                  className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-[var(--pl-purple-soft)] text-[var(--pl-purple)] md:mx-0 md:h-[120px] md:w-full lg:h-[140px]"
-                  aria-hidden
-                >
-                  <BookOpen className="h-12 w-12 md:h-14 md:w-14" strokeWidth={1.5} />
-                </div>
-
-                <div className="min-w-0 text-center md:text-left">
-                  <h1
-                    id="todays-learning-heading"
-                    className="text-2xl font-extrabold tracking-tight text-[var(--pl-ink)] sm:text-3xl"
-                  >
-                    {model.today.topicTitle}
-                  </h1>
-                  <p className="mt-2 text-sm font-semibold text-[var(--pl-muted)] sm:text-base">
-                    Goal: {model.today.goal}
-                  </p>
-                  <span className="mt-3 inline-flex rounded-full bg-[var(--pl-purple-soft)] px-3 py-1 text-xs font-extrabold text-[var(--pl-purple)]">
-                    {model.today.skill}
-                  </span>
-                </div>
-
-                <div className="flex w-full flex-col gap-3 md:col-span-2 lg:col-span-1">
-                  <div className="rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] p-3">
-                    <div className="flex items-center justify-between gap-2 text-xs font-extrabold text-[var(--pl-muted)]">
-                      <span>Progress</span>
-                      <span>
-                        {model.today.activitiesDone}/{model.today.activitiesTotal}{" "}
-                        activities done
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white">
-                      <div
-                        className="h-full rounded-full bg-[var(--pl-success)] transition-[width]"
-                        style={{ width: `${progressPct}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={openContinueLearning}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)] active:scale-[0.98]"
-                  >
-                    {continueLabel}
-                    <Play className="h-4 w-4 fill-current" />
-                  </button>
-                  <p className="text-center text-xs font-semibold text-[var(--pl-muted)] lg:text-left">
-                    Next: {model.today.nextActivityLabel}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* Today’s Path */}
-            <section
-              aria-labelledby="todays-path-heading"
-              className="rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] p-4 shadow-sm sm:p-6"
-            >
-              <h2
-                id="todays-path-heading"
-                className="text-lg font-extrabold tracking-tight sm:text-xl"
-              >
-                Today&apos;s Path
-              </h2>
-
-              <ol className="mt-5 flex gap-3 overflow-x-auto pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
-                {model.path.map((step, index) => {
-                  const current = step.status === "current";
-                  const complete = step.status === "complete";
-                  const locked = step.status === "locked";
-                  return (
-                    <li key={step.id} className="relative min-w-[160px] flex-1 lg:min-w-0">
-                      {index < model.path.length - 1 && (
-                        <span
-                          className="pointer-events-none absolute left-[calc(50%+28px)] top-7 hidden h-0.5 w-[calc(100%-24px)] bg-[var(--pl-border)] lg:block"
-                          aria-hidden
-                        />
-                      )}
-                      <button
-                        type="button"
-                        disabled={locked}
-                        onClick={() => {
-                          if (step.id === "rewards") {
-                            go("progress");
-                            return;
-                          }
-                          if (step.id === "review") {
-                            go("review");
-                            return;
-                          }
-                          openContinueLearning();
-                        }}
-                        className={`relative flex w-full flex-col items-start rounded-2xl border-2 p-3 text-left transition ${
-                          current
-                            ? "border-[var(--pl-purple)] bg-[var(--pl-purple-soft)]"
-                            : complete
-                              ? "border-[var(--pl-success)]/40 bg-emerald-50"
-                              : locked
-                                ? "cursor-not-allowed border-[var(--pl-border)] bg-[var(--pl-bg)] opacity-60"
-                                : "border-[var(--pl-border)] bg-white hover:border-[var(--pl-purple)]/50"
-                        }`}
-                      >
-                        <span
-                          className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-                            current
-                              ? "bg-[var(--pl-purple)] text-white"
-                              : complete
-                                ? "bg-[var(--pl-success)] text-white"
-                                : "bg-[var(--pl-bg)] text-[var(--pl-muted)]"
-                          }`}
-                        >
-                          <PathIcon status={step.status} index={index} />
-                        </span>
-                        <span className="mt-3 text-sm font-extrabold">{step.title}</span>
-                        <span className="mt-1 text-xs font-semibold text-[var(--pl-muted)]">
-                          {step.description}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </section>
-
-            {/* Bottom grid */}
-            <div className="grid gap-5 lg:grid-cols-2">
-              <section
-                aria-labelledby="recommended-heading"
-                className="rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] p-4 shadow-sm sm:p-6"
-              >
-                <h2
-                  id="recommended-heading"
-                  className="text-lg font-extrabold tracking-tight"
-                >
-                  Recommended for You
-                </h2>
-                <ul className="mt-4 space-y-3">
-                  {model.recommended.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center gap-3 rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] p-3"
-                    >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--pl-teal)] shadow-sm">
-                        <RecommendIcon kind={item.icon} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-extrabold">{item.title}</p>
-                        <p className="text-xs font-bold text-[var(--pl-gold)]">
-                          {item.rewardLabel}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={openContinueLearning}
-                        className="shrink-0 rounded-xl bg-[var(--pl-teal)] px-3.5 py-2 text-xs font-extrabold text-white hover:bg-[var(--pl-teal-hover)]"
-                      >
-                        Start
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section
-                aria-labelledby="words-heading"
-                className="rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] p-4 shadow-sm sm:p-6"
-              >
-                <h2 id="words-heading" className="text-lg font-extrabold tracking-tight">
-                  Words You&apos;re Learning
-                </h2>
-                <ul className="mt-4 space-y-2">
-                  {model.words.length === 0 ? (
-                    <li className="rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-3 py-3 text-sm font-semibold text-[var(--pl-muted)]">
-                      Open Vocabulary to pick a topic and start learning words.
-                    </li>
-                  ) : (
-                    model.words.map((item) => {
-                      const isImage =
-                        item.icon.startsWith("/") || item.icon.startsWith("http");
-                      return (
-                        <li
-                          key={item.id}
-                          className="flex items-center gap-3 rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-3 py-2.5"
-                        >
-                          {isImage ? (
-                            <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-white">
-                              <NextImage
-                                src={item.icon}
-                                alt=""
-                                fill
-                                className="object-cover"
-                                unoptimized
-                              />
-                            </span>
-                          ) : (
-                            <span className="text-xl" aria-hidden>
-                              {item.icon}
-                            </span>
-                          )}
-                          <span className="text-sm font-extrabold capitalize">
-                            {item.word}
-                          </span>
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
-                <button
-                  type="button"
-                  onClick={() => go("vocabulary")}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-2xl border border-[var(--pl-border)] bg-white py-2.5 text-sm font-extrabold text-[var(--pl-purple)] hover:bg-[var(--pl-purple-soft)]"
-                >
-                  See All Words
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </section>
-            </div>
+            <SelfStudySection
+              onOpenTopic={(topicId) => {
+                if (onOpenSelfStudyTopic) {
+                  onOpenSelfStudyTopic(topicId);
+                  return;
+                }
+                setToast("Topic quiz is not available here.");
+              }}
+            />
           </div>
           )}
         </main>
@@ -722,7 +452,7 @@ export function StudentHomeLanding({
         aria-label="Primary mobile"
       >
         {NAV.filter((item) =>
-          ["home", "learn", "vocabulary", "games"].includes(item.id),
+          ["home", "vocabulary", "games"].includes(item.id),
         ).map((item) => {
           const Icon = item.icon;
           const active = activeNav === item.id;

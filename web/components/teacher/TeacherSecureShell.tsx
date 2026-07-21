@@ -62,7 +62,7 @@ function TeacherChromeHeader({
           <span className="max-w-[min(42vw,12rem)] truncate text-neutral-600 sm:max-w-[14rem]">
             {userEmail}
           </span>
-          <Link href="/home" className="shrink-0 text-blue-700 underline">
+          <Link href="/primary" className="shrink-0 text-blue-700 underline">
             Student site
           </Link>
           <SignOutForm label="Sign out" />

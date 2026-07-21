@@ -3,6 +3,8 @@
 import NextImage from "next/image";
 import { useState } from "react";
 import { ArrowLeft, ChevronRight, Lock } from "lucide-react";
+import { resumeScreenIndexForSet } from "@/lib/primary/vocab-continue";
+import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import {
   ANIMALS_VOCAB_SET_MENU,
   BODY_VOCAB_SET_MENU,
@@ -55,6 +57,7 @@ type Props = {
 };
 
 export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
+  const hydrated = useClientHydrated();
   const [view, setView] = useState<VocabView>("top");
   const hubView = view === "top" ? null : view;
   const heading = hubView
@@ -124,6 +127,11 @@ export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
                   imageSrc={vocabSetCoverImageSrc(entry.id)}
                   locked={setLocked}
                   unlockLevel={minLevelForUnlock(setUnlockId)}
+                  continueLabel={
+                    hydrated && !setLocked && resumeScreenIndexForSet(entry.id) > 0
+                      ? "Continue"
+                      : null
+                  }
                   onClick={() => openSet(entry.id, entry.label)}
                 />
               </li>
@@ -142,6 +150,11 @@ export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
                   imageSrc={vocabSetCoverImageSrc(entry.id)}
                   locked={setLocked}
                   unlockLevel={minLevelForUnlock(setUnlockId)}
+                  continueLabel={
+                    hydrated && !setLocked && resumeScreenIndexForSet(entry.id) > 0
+                      ? "Continue"
+                      : null
+                  }
                   onClick={() => openSet(entry.id, entry.label)}
                 />
               </li>
@@ -159,6 +172,7 @@ function TopicCard({
   imageSrc,
   locked,
   unlockLevel,
+  continueLabel,
   onClick,
 }: {
   label: string;
@@ -166,6 +180,7 @@ function TopicCard({
   imageSrc: string;
   locked: boolean;
   unlockLevel: number;
+  continueLabel?: string | null;
   onClick: () => void;
 }) {
   return (
@@ -198,6 +213,11 @@ function TopicCard({
             </span>
           </span>
         )}
+        {!locked && continueLabel ? (
+          <span className="absolute left-2 top-2 rounded-full bg-[var(--pl-teal)] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+            {continueLabel}
+          </span>
+        ) : null}
       </div>
       <div className="flex items-start justify-between gap-2 p-4">
         <div className="min-w-0">

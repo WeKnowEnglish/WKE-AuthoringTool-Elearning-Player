@@ -30,7 +30,7 @@ export function AssignPackFlashcardHomeworkOverlay({
   open,
   onClose,
   setId,
-  setTitle,
+  setTitle: flashcardSetTitle,
   cardCount,
   packId,
   packClassId,
@@ -44,7 +44,7 @@ export function AssignPackFlashcardHomeworkOverlay({
   }, [classes, packClassId]);
 
   const [classId, setClassId] = useState(defaultClassId);
-  const [title, setTitle] = useState(setTitle);
+  const [title, setTitle] = useState(flashcardSetTitle);
   const [instructions, setInstructions] = useState("");
   const [dueLocal, setDueLocal] = useState("");
   const [linkPack, setLinkPack] = useState(() => defaultLinkPack(packClassId, defaultClassId));
@@ -59,7 +59,7 @@ export function AssignPackFlashcardHomeworkOverlay({
   useEffect(() => {
     if (!open) return;
     setClassId(defaultClassId);
-    setTitle(setTitle);
+    setTitle(flashcardSetTitle);
     setInstructions("");
     setDueLocal("");
     setLinkPack(defaultLinkPack(packClassId, defaultClassId));
@@ -68,7 +68,7 @@ export function AssignPackFlashcardHomeworkOverlay({
     setBusy(false);
     const t = window.setTimeout(() => closeRef.current?.focus(), 0);
     return () => window.clearTimeout(t);
-  }, [open, setId, setTitle, defaultClassId, packClassId]);
+  }, [open, setId, flashcardSetTitle, defaultClassId, packClassId]);
 
   useEffect(() => {
     if (!open) return;
@@ -145,8 +145,8 @@ export function AssignPackFlashcardHomeworkOverlay({
             <h2 id={titleId} className="text-base font-bold text-neutral-900">
               Assign activity as homework
             </h2>
-            <p className="mt-0.5 truncate text-sm text-neutral-600" title={setTitle}>
-              {setTitle}
+            <p className="mt-0.5 truncate text-sm text-neutral-600" title={flashcardSetTitle}>
+              {flashcardSetTitle}
             </p>
             <p className="mt-1 text-xs text-neutral-500">
               Flashcards · {cardCount} card{cardCount === 1 ? "" : "s"}

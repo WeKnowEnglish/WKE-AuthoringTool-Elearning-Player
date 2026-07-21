@@ -1,8 +1,8 @@
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 import {
   buildFlashcardFaceSnapshot,
+  incompleteFacesOnCard,
   isUsableFlashcardLexeme,
-  missingFlashcardFaces,
 } from "./readiness";
 import type {
   PackFlashcardCompiledCard,
@@ -15,8 +15,8 @@ import { validatePackFlashcardOptions } from "./types";
 
 /**
  * Compile a flashcard deck from a frozen pack draft + lexemes.
- * Skips words missing any included face (unless overrides fill the gap).
- * Warnings list skipped lemmas and option issues.
+ * Usable words always become cards; missing faces are left blank for teacher edit.
+ * Only unavailable / missing lexicon rows are skipped.
  */
 export function compilePackFlashcards(input: {
   draft: PackFlashcardDraft;
@@ -52,20 +52,17 @@ export function compilePackFlashcards(input: {
       continue;
     }
 
-    const missing = missingFlashcardFaces(row, options.includeFaces, overrides);
-    if (missing.length > 0) {
-      skippedWordIds.push(id);
-      warnings.push(
-        `Skipped “${row.lemma.trim()}” — missing ${missing.join(", ")}.`,
-      );
-      continue;
-    }
-
     const faces = buildFlashcardFaceSnapshot(row, options.includeFaces, overrides);
     if (!faces) {
       skippedWordIds.push(id);
-      warnings.push(`Skipped “${row.lemma.trim()}” — could not build faces.`);
       continue;
+    }
+
+    const incomplete = incompleteFacesOnCard(faces, options.includeFaces);
+    if (incomplete.length > 0) {
+      warnings.push(
+        `“${row.lemma.trim()}” needs ${incomplete.join(", ")} — edit in preview before assigning.`,
+      );
     }
 
     cards.push({

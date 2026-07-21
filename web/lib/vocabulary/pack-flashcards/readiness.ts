@@ -76,24 +76,44 @@ export function canBuildFlashcard(
   return missingFlashcardFaces(lexeme, includeFaces, overrides).length === 0;
 }
 
-/** Build frozen face snapshot for included faces only. */
+/**
+ * Build face snapshot for included faces.
+ * Usable words always get a card; missing faces are empty strings for teacher edit.
+ */
 export function buildFlashcardFaceSnapshot(
   lexeme: PackFlashcardLexemeSource,
   includeFaces: readonly PackFlashcardFace[],
   overrides?: PackFlashcardFaceOverrides | null,
 ): PackFlashcardFaceSnapshot | null {
-  if (!canBuildFlashcard(lexeme, includeFaces, overrides)) return null;
+  if (!isUsableFlashcardLexeme(lexeme)) return null;
 
   const faces: PackFlashcardFaceSnapshot = {};
   for (const face of includeFaces) {
     const value = resolveFlashcardFaceValue(face, lexeme, overrides);
-    if (!value) return null;
-    if (face === "word") faces.word = value;
-    else if (face === "definition") faces.definition = value;
-    else if (face === "example") faces.example = value;
-    else faces.pictureUrl = value;
+    if (face === "word") {
+      faces.word = value ?? lexeme.lemma.trim();
+    } else if (face === "definition") {
+      faces.definition = value ?? "";
+    } else if (face === "example") {
+      faces.example = value ?? "";
+    } else {
+      faces.pictureUrl = value ?? "";
+    }
   }
   return faces;
+}
+
+/** True when an included face on the snapshot is blank. */
+export function incompleteFacesOnCard(
+  faces: PackFlashcardFaceSnapshot,
+  includeFaces: readonly PackFlashcardFace[],
+): PackFlashcardFace[] {
+  return includeFaces.filter((face) => {
+    if (face === "word") return !(faces.word?.trim());
+    if (face === "definition") return !(faces.definition?.trim());
+    if (face === "example") return !(faces.example?.trim());
+    return !(faces.pictureUrl?.trim());
+  });
 }
 
 /** Short picker hint: which included faces are ready. */
@@ -105,5 +125,5 @@ export function flashcardLexemeReadinessLabel(
   if (!isUsableFlashcardLexeme(lexeme)) return "Unavailable";
   const missing = missingFlashcardFaces(lexeme, includeFaces, overrides);
   if (missing.length === 0) return "Ready";
-  return `Missing ${missing.join(", ")}`;
+  return `Needs ${missing.join(", ")}`;
 }

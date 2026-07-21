@@ -110,18 +110,19 @@ function asCards(value: unknown): PackFlashcardCompiledCard[] {
         ? (row.faces as Record<string, unknown>)
         : {};
     const faces: PackFlashcardCompiledCard["faces"] = {};
-    if (typeof facesRaw.word === "string" && facesRaw.word.trim()) {
+    if (typeof facesRaw.word === "string") {
       faces.word = facesRaw.word.trim();
     }
-    if (typeof facesRaw.definition === "string" && facesRaw.definition.trim()) {
+    if (typeof facesRaw.definition === "string") {
       faces.definition = facesRaw.definition.trim();
     }
-    if (typeof facesRaw.example === "string" && facesRaw.example.trim()) {
+    if (typeof facesRaw.example === "string") {
       faces.example = facesRaw.example.trim();
     }
-    if (typeof facesRaw.pictureUrl === "string" && facesRaw.pictureUrl.trim()) {
+    if (typeof facesRaw.pictureUrl === "string") {
       faces.pictureUrl = facesRaw.pictureUrl.trim();
     }
+    if (!faces.word) continue;
     out.push({
       id,
       wordId,

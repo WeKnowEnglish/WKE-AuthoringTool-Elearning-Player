@@ -17,8 +17,12 @@ import { getTeacherWordPack } from "@/lib/data/teacher-word-packs";
 import { createClient } from "@/lib/supabase/server";
 import { hydratePackLexemeDefinitions } from "@/lib/vocabulary/pack-quiz/hydrate-lexemes";
 import {
+  compilePackLetterScrambleQuiz,
   compilePackMultipleChoiceQuiz,
+  compilePackSentenceScrambleQuiz,
+  compilePackTrueFalseQuiz,
   createPackQuizDraft,
+  getPackQuizFormatMeta,
   preservePromptImagesByWordId,
   type PackQuizCompiledQuestion,
   type PackQuizDraft,
@@ -436,14 +440,23 @@ export async function regeneratePackQuiz(quizId: string): Promise<UpdatePackQuiz
     if (!existing || existing.archived_at) {
       return { ok: false, error: "Quiz not found." };
     }
-    if (existing.format !== "multiple_choice") {
-      return { ok: false, error: "Regenerate is only available for multiple choice." };
+    if (
+      existing.format !== "multiple_choice" &&
+      existing.format !== "true_false" &&
+      existing.format !== "letter_scramble" &&
+      existing.format !== "sentence_scramble"
+    ) {
+      return { ok: false, error: "Regenerate is not available for this quiz format yet." };
     }
     if (!existing.pack_id) {
       return { ok: false, error: "Quiz has no linked pack to regenerate from." };
     }
-    if (existing.word_ids.length < 4) {
-      return { ok: false, error: "Need at least 4 frozen words to regenerate." };
+    const minWords = getPackQuizFormatMeta(existing.format).minWords;
+    if (existing.word_ids.length < minWords) {
+      return {
+        ok: false,
+        error: `Need at least ${minWords} frozen word${minWords === 1 ? "" : "s"} to regenerate.`,
+      };
     }
 
     const loaded = await loadPackQuizLexemes({
@@ -456,16 +469,35 @@ export async function regeneratePackQuiz(quizId: string): Promise<UpdatePackQuiz
     const draft = createPackQuizDraft({
       packId: existing.pack_id,
       packTitle: existing.title,
-      format: "multiple_choice",
+      format: existing.format,
       wordIds: existing.word_ids,
     });
     draft.createdAt = seed;
 
-    const compiled = compilePackMultipleChoiceQuiz({
-      draft,
-      lexemes: loaded.lexemes,
-      seed,
-    });
+    const compiled =
+      existing.format === "true_false"
+        ? compilePackTrueFalseQuiz({
+            draft,
+            lexemes: loaded.lexemes,
+            seed,
+          })
+        : existing.format === "letter_scramble"
+          ? compilePackLetterScrambleQuiz({
+              draft,
+              lexemes: loaded.lexemes,
+              seed,
+            })
+          : existing.format === "sentence_scramble"
+            ? compilePackSentenceScrambleQuiz({
+                draft,
+                lexemes: loaded.lexemes,
+                seed,
+              })
+            : compilePackMultipleChoiceQuiz({
+                draft,
+                lexemes: loaded.lexemes,
+                seed,
+              });
     if (compiled.questions.length === 0) {
       return {
         ok: false,

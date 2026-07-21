@@ -108,7 +108,7 @@ describe("flashcard readiness", () => {
     });
     expect(missingFlashcardFaces(row, ["word", "picture"])).toEqual(["picture"]);
     expect(flashcardLexemeReadinessLabel(row, ["word", "definition"])).toBe("Ready");
-    expect(flashcardLexemeReadinessLabel(row, ["word", "picture"])).toMatch(/Missing picture/);
+    expect(flashcardLexemeReadinessLabel(row, ["word", "picture"])).toMatch(/Needs picture/);
   });
 });
 
@@ -141,7 +141,7 @@ describe("compilePackFlashcards", () => {
     expect(result.cards.map((c) => c.wordId)).toEqual(["a", "b"]);
   });
 
-  it("skips words missing included faces and warns", () => {
+  it("keeps incomplete cards and warns for teacher edit", () => {
     const draft = createPackFlashcardDraft({
       packId: "p",
       packTitle: "t",
@@ -166,9 +166,14 @@ describe("compilePackFlashcards", () => {
       seed: "x",
     });
 
-    expect(result.cards).toHaveLength(1);
-    expect(result.cards[0]?.wordId).toBe("a");
-    expect(result.skippedWordIds).toEqual(["b", "gone"]);
+    expect(result.cards).toHaveLength(2);
+    expect(result.cards.map((c) => c.wordId)).toEqual(["a", "b"]);
+    expect(result.cards[1]?.faces).toEqual({
+      word: "dog",
+      definition: "barks",
+      example: "",
+    });
+    expect(result.skippedWordIds).toEqual(["gone"]);
     expect(result.warnings.some((w) => /dog/i.test(w) && /example/i.test(w))).toBe(
       true,
     );

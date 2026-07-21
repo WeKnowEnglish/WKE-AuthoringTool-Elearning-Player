@@ -191,7 +191,8 @@ export function ClassHomeworkPanel({
           {items.map((item) => {
             const doneCount = completionsByHomework.get(item.id)?.length ?? 0;
             const showDone =
-              item.payload.type === "pack_quiz" &&
+              (item.payload.type === "pack_quiz" ||
+                item.payload.type === "pack_flashcards") &&
               (item.status === "assigned" || item.status === "closed");
             return (
               <li key={item.id}>
@@ -594,7 +595,8 @@ function HomeworkEditor({
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      {homework.payload.type === "pack_quiz" &&
+      {(homework.payload.type === "pack_quiz" ||
+        homework.payload.type === "pack_flashcards") &&
       (homework.status === "assigned" || homework.status === "closed") ? (
         isLight ? (
           <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-3">

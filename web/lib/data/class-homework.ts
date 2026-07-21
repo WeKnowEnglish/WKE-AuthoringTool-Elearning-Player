@@ -16,6 +16,7 @@ import type {
 } from "@/lib/class-homework/types";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
+import { parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
 import type { PackQuizCompiledQuestion } from "@/lib/vocabulary/pack-quiz";
 
 type HomeworkRow = {
@@ -316,7 +317,7 @@ async function loadQuizQuestionsForAssignedHomework(
   payload: Extract<ClassHomeworkPayload, { type: "pack_quiz" }>,
 ): Promise<PackQuizCompiledQuestion[] | null> {
   if (Array.isArray(payload.questions) && payload.questions.length > 0) {
-    return payload.questions;
+    return parseStoredPackQuizQuestions(payload.questions);
   }
 
   // Legacy homework rows (pre-H2): live-load from source quiz.
@@ -328,8 +329,7 @@ async function loadQuizQuestionsForAssignedHomework(
     .eq("id", payload.quizId)
     .maybeSingle();
   if (error || !data || data.archived_at) return null;
-  const questions = data.questions;
-  return Array.isArray(questions) ? (questions as PackQuizCompiledQuestion[]) : null;
+  return parseStoredPackQuizQuestions(data.questions);
 }
 
 export async function listTeacherPackQuizzesForClass(

@@ -11,7 +11,7 @@ export type TeacherTier = "light" | "plus";
 export const TEACHER_DEFAULT_PATH = "/teacher/classes";
 /** First-login password induction (outside the secure teacher shell). */
 export const TEACHER_SET_PASSWORD_PATH = "/teacher/set-password";
-/** Primary student dashboard. Legacy world hub remains at `/home`. */
+/** Primary student dashboard (canonical). Legacy `/home` redirects here (F5). */
 export const STUDENT_DEFAULT_PATH = "/primary";
 export const LOGIN_PATH = "/login";
 

@@ -330,7 +330,7 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
         <>
           <p className="text-sm text-neutral-600">
             Saved from <span className="font-medium text-neutral-800">Make flashcards</span> on a pack.
-            Assigning flashcards as homework comes in the next slice.
+            Assign a set to a class as homework — students see it on Primary → Assigned.
           </p>
 
           {flashcardSets.length === 0 ? (
@@ -339,6 +339,9 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
               <p className="mt-1 text-sm text-neutral-600">
                 Open a pack on the Word packs tab, choose{" "}
                 <span className="font-medium">Make flashcards</span>, then Save in the preview.
+              </p>
+              <p className="mt-3 text-xs text-neutral-500">
+                After you save, use Assign to send the set as class homework.
               </p>
             </div>
           ) : (
@@ -377,7 +380,14 @@ export default async function TeacherWordPacksPage({ searchParams }: Props) {
                         <span className="text-neutral-400"> · Updated {formatUpdated(set.updated_at)}</span>
                       </p>
                     </div>
-                    <PackFlashcardSetListRowActions setId={set.id} title={set.title} />
+                    <PackFlashcardSetListRowActions
+                      setId={set.id}
+                      title={set.title}
+                      cardCount={set.cardCount}
+                      packId={set.pack_id}
+                      packClassId={set.pack_id ? packClassIdById.get(set.pack_id) ?? null : null}
+                      classes={classOptions}
+                    />
                   </li>
                 );
               })}

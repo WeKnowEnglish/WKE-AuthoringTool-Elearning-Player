@@ -467,6 +467,7 @@ export function preservePromptImagesByWordId(
   return next.map((q) => {
     const url = imageByWord.get(q.wordId);
     if (!url) return q;
+    // Preserve discriminant: spreading payload through the union needs a cast.
     return {
       ...q,
       payload: {
@@ -474,6 +475,6 @@ export function preservePromptImagesByWordId(
         image_url: url,
         image_fit: q.payload.image_fit ?? "contain",
       },
-    };
+    } as PackQuizCompiledQuestion;
   });
 }

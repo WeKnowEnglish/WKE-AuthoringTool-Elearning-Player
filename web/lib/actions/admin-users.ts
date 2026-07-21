@@ -10,7 +10,7 @@ import {
   DEFAULT_TEACHER_TEMP_PASSWORD,
   provisionTeacherAccount,
 } from "@/lib/admin/provision-teacher";
-import type { AccessRequestStatus, AdminTeacherSummary } from "@/lib/data/admin-users";
+import type { AdminTeacherSummary } from "@/lib/data/admin-users";
 import {
   searchAdminStudents as searchAdminStudentsData,
   type AdminStudentSummary,
@@ -523,9 +523,6 @@ export async function setStudentLearningBandAdmin(input: {
   revalidateAdmin();
   return { ok: true };
 }
-
-/** Used by pages that need a status filter type export without circular imports. */
-export type { AccessRequestStatus };
 
 /** Escape hatch for pages that need email lookup (e.g. conflict messaging). */
 export async function adminFindUserByEmail(email: string) {

@@ -16,6 +16,13 @@ type QuizOption = {
   packId: string | null;
 };
 
+type FlashcardSetOption = {
+  id: string;
+  title: string;
+  cardCount: number;
+  packId: string | null;
+};
+
 type Props = {
   classId: string;
   joinCode: string;
@@ -28,6 +35,7 @@ type Props = {
   wordPacks: TeacherWordPackSummary[];
   homework: ClassHomework[];
   packQuizzes: QuizOption[];
+  packFlashcardSets: FlashcardSetOption[];
   homeworkCompletions: HomeworkCompletionSummary[];
 };
 
@@ -43,6 +51,7 @@ export function StudentsHomeworkTab({
   wordPacks,
   homework,
   packQuizzes,
+  packFlashcardSets,
   homeworkCompletions,
 }: Props) {
   const isLight = teacherTier === "light";
@@ -92,6 +101,7 @@ export function StudentsHomeworkTab({
         homework={homework}
         wordPacks={wordPacks}
         packQuizzes={packQuizzes}
+        packFlashcardSets={packFlashcardSets}
         rosterSize={roster.length}
         rosterNames={roster.map((student) => ({
           studentId: student.studentId,

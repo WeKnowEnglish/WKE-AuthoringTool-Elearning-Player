@@ -71,6 +71,15 @@ export default async function TeacherClassDetailPage({ params }: Props) {
       packId: card.packId ?? null,
     }));
 
+  const packFlashcardSets = activityCards
+    .filter((card) => card.kind === "pack_flashcards")
+    .map((card) => ({
+      id: card.artifactId,
+      title: card.title,
+      cardCount: card.questionCount ?? 0,
+      packId: card.packId ?? null,
+    }));
+
   const masteryByStudentId = Object.fromEntries(
     masteryOverview.students.map((preview) => [preview.studentId, preview]),
   );
@@ -124,6 +133,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         homework={homework}
         homeworkCompletions={homeworkCompletions}
         packQuizzes={packQuizzes}
+        packFlashcardSets={packFlashcardSets}
       />
     </Suspense>
   );

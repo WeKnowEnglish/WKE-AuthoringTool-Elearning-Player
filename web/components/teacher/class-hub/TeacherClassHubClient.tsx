@@ -56,6 +56,12 @@ export type TeacherClassHubClientProps = {
     questionCount: number;
     packId: string | null;
   }>;
+  packFlashcardSets: Array<{
+    id: string;
+    title: string;
+    cardCount: number;
+    packId: string | null;
+  }>;
 };
 
 export function TeacherClassHubClient({
@@ -78,6 +84,7 @@ export function TeacherClassHubClient({
   homework,
   homeworkCompletions,
   packQuizzes,
+  packFlashcardSets,
 }: TeacherClassHubClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -189,6 +196,7 @@ export function TeacherClassHubClient({
           homework={homework}
           homeworkCompletions={homeworkCompletions}
           packQuizzes={packQuizzes}
+          packFlashcardSets={packFlashcardSets}
         />
       ) : null}
     </div>

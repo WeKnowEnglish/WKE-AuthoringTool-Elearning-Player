@@ -9,7 +9,9 @@ import {
 } from "@/lib/actions/class-homework";
 import {
   formatHomeworkListSubtitle,
+  packFlashcardsEmptyDropdownCopy,
   packQuizEmptyDropdownCopy,
+  resolvePackTitleForFlashcardSet,
   resolvePackTitleForQuiz,
 } from "@/lib/class-homework/display";
 import { sourceLabelForAssignableKind } from "@/lib/assignable-activities/map";
@@ -18,11 +20,19 @@ import type { ClassHomework, ClassHomeworkPayload, HomeworkCompletionSummary } f
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
 
 const ACTIVITY_LABEL = sourceLabelForAssignableKind("pack_mc_quiz");
+const FLASHCARDS_LABEL = sourceLabelForAssignableKind("pack_flashcards");
 
 type QuizOption = {
   id: string;
   title: string;
   questionCount: number;
+  packId: string | null;
+};
+
+type FlashcardSetOption = {
+  id: string;
+  title: string;
+  cardCount: number;
   packId: string | null;
 };
 
@@ -38,6 +48,7 @@ type Props = {
   homework: ClassHomework[];
   wordPacks: TeacherWordPackSummary[];
   packQuizzes: QuizOption[];
+  packFlashcardSets: FlashcardSetOption[];
   rosterSize: number;
   rosterNames: RosterName[];
   completions: HomeworkCompletionSummary[];
@@ -66,6 +77,7 @@ export function ClassHomeworkPanel({
   homework: initialHomework,
   wordPacks,
   packQuizzes,
+  packFlashcardSets,
   rosterSize,
   rosterNames,
   completions,
@@ -126,6 +138,7 @@ export function ClassHomeworkPanel({
         teacherTier={teacherTier}
         wordPacks={wordPacks}
         packQuizzes={packQuizzes}
+        packFlashcardSets={packFlashcardSets}
         finishers={completionsByHomework.get(editing.id) ?? []}
         nameByStudentId={nameByStudentId}
         busy={isPending}
@@ -151,8 +164,8 @@ export function ClassHomeworkPanel({
           <h3 className="text-base font-semibold text-neutral-900">Homework</h3>
           <p className="mt-1 max-w-xl text-sm text-neutral-600">
             {isLight
-              ? `Assign a ${ACTIVITY_LABEL.toLowerCase()} or word-pack practice. Track who finished with a simple Done count.`
-              : `Assign an activity (${ACTIVITY_LABEL.toLowerCase()} for now), word-pack practice, or a short note. Assigned items appear on the student Primary Learn tab.`}
+              ? `Assign a ${ACTIVITY_LABEL.toLowerCase()}, ${FLASHCARDS_LABEL.toLowerCase()}, or word-pack practice.`
+              : `Assign a catalog activity (${ACTIVITY_LABEL.toLowerCase()} or ${FLASHCARDS_LABEL.toLowerCase()}), word-pack practice, or a short note. Assigned items appear on Primary Learn.`}
           </p>
         </div>
         {!archived ? (
@@ -206,7 +219,13 @@ export function ClassHomeworkPanel({
                                 packQuizzes,
                                 packTitleById,
                               )
-                            : null,
+                            : item.payload.type === "pack_flashcards"
+                              ? resolvePackTitleForFlashcardSet(
+                                  item.payload.setId,
+                                  packFlashcardSets,
+                                  packTitleById,
+                                )
+                              : null,
                         dueLabel: formatDue(item.dueAt),
                       })}
                     </p>
@@ -242,6 +261,7 @@ function HomeworkEditor({
   teacherTier,
   wordPacks,
   packQuizzes,
+  packFlashcardSets,
   finishers,
   nameByStudentId,
   busy,
@@ -254,6 +274,7 @@ function HomeworkEditor({
   teacherTier: TeacherTier;
   wordPacks: TeacherWordPackSummary[];
   packQuizzes: QuizOption[];
+  packFlashcardSets: FlashcardSetOption[];
   finishers: HomeworkCompletionSummary[];
   nameByStudentId: Map<string, string>;
   busy: boolean;
@@ -266,10 +287,12 @@ function HomeworkEditor({
     isLight
       ? ([
           ["pack_quiz", ACTIVITY_LABEL],
+          ["pack_flashcards", FLASHCARDS_LABEL],
           ["word_pack_practice", "Word pack practice"],
         ] as const)
       : ([
           ["pack_quiz", ACTIVITY_LABEL],
+          ["pack_flashcards", FLASHCARDS_LABEL],
           ["word_pack_practice", "Word pack practice"],
           ["external_note", "Note / reminder"],
         ] as const)
@@ -283,6 +306,9 @@ function HomeworkEditor({
   const [payloadType, setPayloadType] = useState(initialType);
   const [quizId, setQuizId] = useState(
     homework.payload.type === "pack_quiz" ? homework.payload.quizId : "",
+  );
+  const [flashcardSetId, setFlashcardSetId] = useState(
+    homework.payload.type === "pack_flashcards" ? homework.payload.setId : "",
   );
   const [packId, setPackId] = useState(
     homework.payload.type === "word_pack_practice" ? homework.payload.packId : "",
@@ -303,6 +329,16 @@ function HomeworkEditor({
         quizId: quiz.id,
         quizTitle: quiz.title,
         questionCount: quiz.questionCount,
+      };
+    }
+    if (payloadType === "pack_flashcards") {
+      const set = packFlashcardSets.find((item) => item.id === flashcardSetId);
+      if (!set) return null;
+      return {
+        type: "pack_flashcards",
+        setId: set.id,
+        setTitle: set.title,
+        cardCount: set.cardCount,
       };
     }
     if (payloadType === "word_pack_practice") {
@@ -427,7 +463,12 @@ function HomeworkEditor({
         </div>
         {payloadType === "pack_quiz" ? (
           <p className="text-xs font-normal text-neutral-500">
-            Activity from the catalog (MCQ quizzes teachers save from word packs).
+            Catalog activity — MCQ quizzes saved from word packs.
+          </p>
+        ) : null}
+        {payloadType === "pack_flashcards" ? (
+          <p className="text-xs font-normal text-neutral-500">
+            Catalog activity — flashcard sets saved from word packs.
           </p>
         ) : null}
       </fieldset>
@@ -456,6 +497,36 @@ function HomeworkEditor({
           ) : (
             <p className="text-xs font-normal text-neutral-500">
               Students get a frozen copy of the questions. Editing the quiz later won’t change this
+              homework.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {payloadType === "pack_flashcards" ? (
+        <div className="space-y-1">
+          <label className="block text-sm font-semibold">
+            {FLASHCARDS_LABEL}
+            <select
+              value={flashcardSetId}
+              disabled={archived || pending}
+              onChange={(event) => setFlashcardSetId(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
+            >
+              <option value="">Select a {FLASHCARDS_LABEL.toLowerCase()} set…</option>
+              {packFlashcardSets.map((set) => (
+                <option key={set.id} value={set.id} disabled={set.cardCount < 1}>
+                  {set.title} ({set.cardCount} card{set.cardCount === 1 ? "" : "s"})
+                  {set.cardCount < 1 ? " — not ready" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          {packFlashcardSets.length === 0 ? (
+            <PackFlashcardsEmptyHint wordPackCount={wordPacks.length} />
+          ) : (
+            <p className="text-xs font-normal text-neutral-500">
+              Students get a frozen copy of the cards. Editing the set later won’t change this
               homework.
             </p>
           )}
@@ -606,6 +677,22 @@ function PackQuizEmptyHint({ wordPackCount }: { wordPackCount: number }) {
       {" · "}
       <Link href={copy.quizzesHref} className="font-semibold underline underline-offset-2">
         Quizzes
+      </Link>
+    </p>
+  );
+}
+
+function PackFlashcardsEmptyHint({ wordPackCount }: { wordPackCount: number }) {
+  const copy = packFlashcardsEmptyDropdownCopy(wordPackCount === 0 ? "no_packs" : "no_sets");
+  return (
+    <p className="text-xs font-normal text-neutral-500">
+      {copy.body}{" "}
+      <Link href={copy.packsHref} className="font-semibold underline underline-offset-2">
+        Word packs
+      </Link>
+      {" · "}
+      <Link href={copy.flashcardsHref} className="font-semibold underline underline-offset-2">
+        Flashcards
       </Link>
     </p>
   );

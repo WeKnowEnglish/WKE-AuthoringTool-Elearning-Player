@@ -24,7 +24,7 @@ export type IncomingTeacherWhiteboardCommand =
     }
   | {
       type: "COMPARE";
-      boardIds: [string, string];
+      boardIds: string[];
       anonymous: boolean;
       taskKind?: ReviewTaskKind;
       prompt?: string;

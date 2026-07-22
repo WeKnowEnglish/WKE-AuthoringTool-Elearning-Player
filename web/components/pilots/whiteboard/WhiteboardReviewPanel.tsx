@@ -129,7 +129,9 @@ export function WhiteboardReviewPanel({
 
         <div
           className={`grid gap-3 ${
-            reviewTask.boardIds.length > 1 ? "md:grid-cols-2" : "md:grid-cols-1"
+            reviewTask.boardIds.length > 1
+              ? "grid-cols-1 sm:grid-cols-2"
+              : "grid-cols-1"
           }`}
         >
           {reviewTask.boardIds.map((id, index) => (
@@ -139,7 +141,11 @@ export function WhiteboardReviewPanel({
                   ? `Board ${String.fromCharCode(65 + index)}`
                   : id.replace(/^board:(student|group):/, "")}
               </p>
-              <div className="h-[36vh] min-h-[200px] rounded-xl border border-slate-200 bg-white p-1">
+              <div
+                className={`min-h-[160px] rounded-xl border border-slate-200 bg-white p-1 ${
+                  reviewTask.boardIds.length > 2 ? "h-[26vh]" : "h-[36vh]"
+                }`}
+              >
                 <WhiteboardCanvas
                   boardId={id}
                   mode="inspect"

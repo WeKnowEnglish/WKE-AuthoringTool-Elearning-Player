@@ -70,7 +70,7 @@ export const ACTIVITY_COMMAND_SEMANTICS = {
   collect: "Stops editing, snapshots work, enables Show/Compare. Does not end the round.",
   complete: "Finalizes the activity round and returns students to Virtual Classroom. Does not end the session.",
   show: "Pushes one response to all students with a required review task.",
-  compare: "Pushes two responses to all students with a required review task.",
+  compare: "Pushes 2–4 responses to all students with a required review task.",
   return: "Unlocks selected work with one short teacher note.",
   revise: "Starts revision stage with feedback/criteria visible.",
 } as const;

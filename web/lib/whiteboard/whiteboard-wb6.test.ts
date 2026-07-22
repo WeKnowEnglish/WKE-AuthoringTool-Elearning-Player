@@ -136,6 +136,33 @@ describe("whiteboard WB-6 regression (individual + group)", () => {
     expect(store.review).toBeNull();
   });
 
+  it("individual: compare dual-writes up to four board ids", () => {
+    const review = createCompareReviewTask({
+      boardIds: [
+        "board:student:a",
+        "board:student:b",
+        "board:student:c",
+        "board:student:d",
+      ],
+      anonymous: true,
+    });
+    expect(review.boardIds).toHaveLength(4);
+    const store: Record<string, unknown> = {};
+    const runtime = {
+      get: (k: string) => store[k],
+      set: (k: string, v: unknown) => {
+        store[k] = v;
+      },
+    };
+    syncReviewToRuntime(runtime, review);
+    expect(store.compareBoardIds).toEqual([
+      "board:student:a",
+      "board:student:b",
+      "board:student:c",
+      "board:student:d",
+    ]);
+  });
+
   it("individual: return → revise → resubmit/collect phase path", () => {
     expect(canTransition("COLLECTED", "REVISION")).toBe(true);
     expect(canTransition("REVIEW", "REVISION")).toBe(true);

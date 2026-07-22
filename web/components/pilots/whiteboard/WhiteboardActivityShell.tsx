@@ -117,10 +117,10 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
   const compareBoardIds = useStorage((root) => {
     const runtime = (root as unknown as { runtime?: { get?: (k: string) => unknown } }).runtime;
     if (runtime && typeof runtime.get === "function") {
-      return runtime.get("compareBoardIds") as [string, string] | null;
+      return runtime.get("compareBoardIds") as string[] | null;
     }
     return (
-      (root as unknown as { runtime?: { compareBoardIds?: [string, string] | null } }).runtime
+      (root as unknown as { runtime?: { compareBoardIds?: string[] | null } }).runtime
         ?.compareBoardIds ?? null
     );
   });
@@ -611,7 +611,7 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
                         if (orphaned) return;
                         setComparePick((prev) => {
                           if (prev.includes(boardId)) return prev.filter((id) => id !== boardId);
-                          if (prev.length >= 2) return [prev[1]!, boardId];
+                          if (prev.length >= 4) return prev;
                           return [...prev, boardId];
                         });
                       }}
@@ -675,16 +675,16 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
             <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
               <HostBtn
                 label={
-                  comparePick.length === 2
-                    ? "Compare"
-                    : `Pick 2 to compare (${comparePick.length}/2)`
+                  comparePick.length >= 2
+                    ? `Compare (${comparePick.length})`
+                    : `Pick 2–4 to compare (${comparePick.length}/4)`
                 }
                 busy={busy}
                 onClick={() => {
-                  if (comparePick.length !== 2) return;
+                  if (comparePick.length < 2 || comparePick.length > 4) return;
                   void run("Compare", {
                     type: "COMPARE",
-                    boardIds: [comparePick[0], comparePick[1]],
+                    boardIds: comparePick,
                     anonymous: true,
                   });
                 }}

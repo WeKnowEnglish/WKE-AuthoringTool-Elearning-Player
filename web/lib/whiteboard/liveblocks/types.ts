@@ -52,7 +52,7 @@ export type WhiteboardRuntimeFields = {
   hostUserId: string;
   displayBoardId: string | null;
   displayAnonymous: boolean;
-  compareBoardIds: [string, string] | null;
+  compareBoardIds: string[] | null;
   compareAnonymous: boolean;
   /** Shared review blob (WB-2+). Prefer this over legacy fields. */
   review: SharedReviewState | null;

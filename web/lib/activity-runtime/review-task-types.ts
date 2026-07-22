@@ -41,6 +41,10 @@ export type SharedReviewState = {
   createdAt: number;
 };
 
+/** Compare pushes at least 2 and at most 4 targets (2×2 layout). */
+export const COMPARE_TARGET_MIN = 2;
+export const COMPARE_TARGET_MAX = 4;
+
 export const REVIEW_TASK_PRESETS: Record<
   ReviewTaskType,
   { label: string; defaultPrompt: string; modes: ReviewMode[] }
@@ -101,6 +105,37 @@ function newReviewId(): string {
   return `rev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Dedupe and cap compare targets (order preserved). */
+export function normalizeCompareTargetIds(ids: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of ids) {
+    const id = typeof raw === "string" ? raw.trim() : "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= COMPARE_TARGET_MAX) break;
+  }
+  return out;
+}
+
+/** Anonymous labels A, B, C… for compare targets. */
+export function compareAnonymousLetterOptions(count: number): string[] {
+  const n = Math.max(0, Math.min(count, 26));
+  return Array.from({ length: n }, (_, i) => String.fromCharCode(65 + i));
+}
+
+/** Map anonymous letter choice (A–Z) onto targetIds by index. */
+export function mapAnonymousLetterChoice(
+  choice: string | null | undefined,
+  targetIds: readonly string[],
+): string | null {
+  if (!choice || choice.length !== 1) return null;
+  const idx = choice.toUpperCase().charCodeAt(0) - 65;
+  if (idx < 0 || idx >= targetIds.length) return null;
+  return targetIds[idx] ?? null;
+}
+
 export function createShowReview(input: {
   targetId: string;
   anonymous: boolean;
@@ -127,23 +162,29 @@ export function createShowReview(input: {
 }
 
 export function createCompareReview(input: {
-  targetIds: [string, string];
+  targetIds: readonly string[];
   anonymous: boolean;
   taskType?: ReviewTaskType;
   prompt?: string;
   nowMs?: number;
 }): SharedReviewState {
+  const targetIds = normalizeCompareTargetIds(input.targetIds);
+  if (targetIds.length < COMPARE_TARGET_MIN) {
+    throw new Error(`Compare needs at least ${COMPARE_TARGET_MIN} responses.`);
+  }
   const type = input.taskType ?? "vote";
   const preset = REVIEW_TASK_PRESETS[type];
   return {
     reviewId: newReviewId(),
     mode: "compare",
-    targetIds: [...input.targetIds],
+    targetIds,
     anonymous: input.anonymous,
     task: {
       type,
       prompt: input.prompt?.trim() || preset.defaultPrompt,
-      options: input.anonymous ? ["A", "B"] : undefined,
+      options: input.anonymous
+        ? compareAnonymousLetterOptions(targetIds.length)
+        : undefined,
       requireResponse: true,
     },
     status: "open",
@@ -159,12 +200,19 @@ export function setReviewTaskType(
 ): SharedReviewState {
   const preset = REVIEW_TASK_PRESETS[taskType];
   if (!preset.modes.includes(state.mode)) return state;
+  const normalized = normalizeTaskType(taskType);
+  const needsLetterOptions =
+    state.anonymous &&
+    state.mode === "compare" &&
+    (normalized === "vote" || normalized === "choose_stronger");
   return {
     ...state,
     task: {
       type: taskType,
       prompt: prompt?.trim() || preset.defaultPrompt,
-      options: state.task.options,
+      options: needsLetterOptions
+        ? compareAnonymousLetterOptions(state.targetIds.length)
+        : state.task.options,
       requireResponse: true,
     },
     responsesByStudentId: {},
@@ -207,9 +255,8 @@ export function submitSharedReviewResponse(
   }
   if (taskType === "vote" || taskType === "choose_stronger") {
     if (!choice || !state.targetIds.includes(choice)) {
-      // Allow A/B anonymous choices mapped by index
-      if (choice === "A" && state.targetIds[0]) choice = state.targetIds[0];
-      else if (choice === "B" && state.targetIds[1]) choice = state.targetIds[1];
+      const mapped = mapAnonymousLetterChoice(choice, state.targetIds);
+      if (mapped) choice = mapped;
       else throw new Error("Choose one of the responses.");
     }
   }

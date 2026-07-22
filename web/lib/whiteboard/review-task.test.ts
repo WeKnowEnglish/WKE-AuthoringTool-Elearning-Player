@@ -31,6 +31,20 @@ describe("review task", () => {
     expect(task.boardIds).toHaveLength(2);
   });
 
+  it("creates compare task with three or four boards", () => {
+    const three = createCompareReviewTask({
+      boardIds: ["b1", "b2", "b3"],
+      anonymous: true,
+    });
+    expect(three.boardIds).toEqual(["b1", "b2", "b3"]);
+    const voted = submitReviewResponse(three, {
+      studentId: "u1",
+      choice: "C",
+      nowMs: 1,
+    });
+    expect(voted.responsesByStudentId.u1?.choice).toBe("b3");
+  });
+
   it("submits note responses and vote choices", () => {
     let task = createShowReviewTask({ boardId: "b1", anonymous: false });
     task = submitReviewResponse(task, {

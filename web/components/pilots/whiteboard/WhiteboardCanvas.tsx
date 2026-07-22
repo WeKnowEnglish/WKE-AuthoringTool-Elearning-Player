@@ -178,7 +178,7 @@ export function WhiteboardCanvas({
   const background = useStorage((root) => readRuntimeField<BoardBackground>(root, "background"));
   const hasReviewPush = useStorage((root) => {
     const display = readRuntimeField<string | null>(root, "displayBoardId");
-    const compare = readRuntimeField<[string, string] | null>(root, "compareBoardIds");
+    const compare = readRuntimeField<string[] | null>(root, "compareBoardIds");
     const reviewTask = readRuntimeField<unknown>(root, "reviewTask");
     const review = readRuntimeField<{ targetIds?: string[] } | null>(root, "review");
     return (

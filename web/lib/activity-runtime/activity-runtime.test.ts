@@ -94,6 +94,21 @@ describe("activity-runtime review + routing", () => {
     expect(next.responsesByStudentId.u1?.choice).toBe("document:student:b");
   });
 
+  it("supports compare of up to 4 targets with anonymous letter votes", () => {
+    const compare = createCompareReview({
+      targetIds: ["a", "b", "c", "d", "e"],
+      anonymous: true,
+    });
+    expect(compare.targetIds).toEqual(["a", "b", "c", "d"]);
+    expect(compare.task.options).toEqual(["A", "B", "C", "D"]);
+    const voted = submitSharedReviewResponse(compare, {
+      studentId: "u1",
+      choice: "C",
+      nowMs: 1,
+    });
+    expect(voted.responsesByStudentId.u1?.choice).toBe("c");
+  });
+
   it("routes activeActivity without ending session", () => {
     expect(isActivityLive(emptyActiveActivity())).toBe(false);
     expect(

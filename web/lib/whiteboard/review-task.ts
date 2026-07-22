@@ -201,12 +201,8 @@ export function syncReviewToRuntime(
     runtime.set("compareBoardIds", null);
     runtime.set("compareAnonymous", false);
   } else {
-    const a = state.boardIds[0];
-    const b = state.boardIds[1];
-    runtime.set(
-      "compareBoardIds",
-      a && b ? ([a, b] as [string, string]) : null,
-    );
+    const ids = state.boardIds.slice(0, 4);
+    runtime.set("compareBoardIds", ids.length >= 2 ? ids : null);
     runtime.set("compareAnonymous", state.anonymous);
     runtime.set("displayBoardId", null);
     runtime.set("displayAnonymous", false);
@@ -238,7 +234,7 @@ export function createShowReviewTask(input: {
 }
 
 export function createCompareReviewTask(input: {
-  boardIds: [string, string];
+  boardIds: readonly string[];
   anonymous: boolean;
   taskKind?: ReviewTaskKind;
   prompt?: string;

@@ -59,6 +59,10 @@ import {
   type ReviewTaskKind,
 } from "@/lib/whiteboard/review-task";
 import {
+  COMPARE_TARGET_MIN,
+  normalizeCompareTargetIds,
+} from "@/lib/activity-runtime/review-task-types";
+import {
   normalizeTeacherWhiteboardCommand,
   type IncomingTeacherWhiteboardCommand,
 } from "@/lib/whiteboard/server/normalize-command";
@@ -98,7 +102,7 @@ export type TeacherWhiteboardCommand =
   | { type: "AWARD_STUDENT"; studentId: string; rewardType: string }
   | {
       type: "COMPARE_BOARDS";
-      boardIds: [string, string];
+      boardIds: string[];
       anonymous: boolean;
       taskKind?: ReviewTaskKind;
       prompt?: string;
@@ -583,12 +587,17 @@ export async function applyTeacherCommand(input: {
           break;
         }
         case "COMPARE_BOARDS": {
-          assertBoardPushTarget(storageRoot, command.boardIds[0]);
-          assertBoardPushTarget(storageRoot, command.boardIds[1]);
+          const boardIds = normalizeCompareTargetIds(command.boardIds);
+          if (boardIds.length < COMPARE_TARGET_MIN) {
+            throw new Error(`Compare needs at least ${COMPARE_TARGET_MIN} boards.`);
+          }
+          for (const boardId of boardIds) {
+            assertBoardPushTarget(storageRoot, boardId);
+          }
           syncReviewToRuntime(
             runtime,
             createCompareReviewTask({
-              boardIds: command.boardIds,
+              boardIds,
               anonymous: command.anonymous,
               taskKind: command.taskKind,
               prompt: command.prompt,

@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "listen_and_choose",
+  "quiz_group_id": "bakery-listen-choose",
+  "quiz_group_title": "Bakery listen and choose",
+  "activity_name": "Bakery listen and choose",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "listen_and_choose",
+      "body_text": "Listen, then choose the picture.",
+      "dialog_text": "I'd like a loaf of bread, please.",
+      "image_fit": "contain",
+      "auto_play": true,
+      "shuffle_choices": true,
+      "choices": [
+        {
+          "id": "a",
+          "image_url": "https://placehold.co/400x400/fef3c7/92400e?text=Bread",
+          "label": "Bread"
+        },
+        {
+          "id": "b",
+          "image_url": "https://placehold.co/400x400/dbeafe/1e3a8a?text=Milk",
+          "label": "Milk"
+        },
+        {
+          "id": "c",
+          "image_url": "https://placehold.co/400x400/dcfce7/14532d?text=Apple",
+          "label": "Apple"
+        }
+      ],
+      "correct_choice_id": "a",
+      "quiz_group_id": "bakery-listen-choose",
+      "quiz_group_title": "Bakery listen and choose",
+      "quiz_group_order": 0
+    },
+    {
+      "type": "interaction",
+      "subtype": "listen_and_choose",
+      "body_text": "Listen, then choose the picture.",
+      "dialog_text": "Can I have a piece of cake?",
+      "image_fit": "contain",
+      "auto_play": true,
+      "shuffle_choices": true,
+      "choices": [
+        {
+          "id": "a",
+          "image_url": "https://placehold.co/400x400/fee2e2/991b1b?text=Soup",
+          "label": "Soup"
+        },
+        {
+          "id": "b",
+          "image_url": "https://placehold.co/400x400/fce7f3/9d174d?text=Cake",
+          "label": "Cake"
+        },
+        {
+          "id": "c",
+          "image_url": "https://placehold.co/400x400/e0e7ff/3730a3?text=Rice",
+          "label": "Rice"
+        }
+      ],
+      "correct_choice_id": "b",
+      "quiz_group_id": "bakery-listen-choose",
+      "quiz_group_title": "Bakery listen and choose",
+      "quiz_group_order": 1
+    }
+  ]
+}

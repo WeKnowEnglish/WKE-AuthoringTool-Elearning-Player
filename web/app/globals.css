@@ -1011,3 +1011,135 @@ body:has([data-teacher-root]) {
     animation: none;
   }
 }
+
+/* EDU Studio explore-hotspots student player (ported layout) */
+.hotspot-player-layout {
+  display: grid;
+  align-items: start;
+  gap: clamp(1rem, 2cqi, 1.5rem);
+}
+
+.hotspot-player-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.hotspot-speech-bubble::before,
+.hotspot-speech-bubble::after {
+  content: "";
+  position: absolute;
+  left: 2.25rem;
+  bottom: -0.72rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  background: white;
+  transform: rotate(45deg);
+  border-right: 2px solid #e2e8f0;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.hotspot-speech-bubble::after {
+  left: 2.15rem;
+  bottom: -0.14rem;
+  width: 1.6rem;
+  height: 0.8rem;
+  border: 0;
+  transform: none;
+}
+
+@container (min-width: 900px) {
+  .hotspot-player-layout {
+    grid-template-columns: minmax(0, 68fr) minmax(290px, 32fr);
+  }
+}
+
+.lif-layout {
+  display: grid;
+  align-items: start;
+  gap: 0.85rem;
+}
+
+.lif-rail {
+  min-width: 0;
+}
+
+@keyframes lif-hint-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(13, 148, 136, 0.55),
+      0 0 0 0 rgba(251, 191, 36, 0.35);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(13, 148, 136, 0.18),
+      0 0 18px 2px rgba(251, 191, 36, 0.45);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes lif-hint-glow-amber {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(245, 158, 11, 0.55),
+      0 0 0 0 rgba(251, 191, 36, 0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(245, 158, 11, 0.2),
+      0 0 16px 2px rgba(245, 158, 11, 0.4);
+    transform: scale(1.03);
+  }
+}
+
+.lif-hint-pulse {
+  animation: lif-hint-glow 1.6s ease-in-out infinite;
+  z-index: 2;
+}
+
+.lif-hint-pulse-amber {
+  animation: lif-hint-glow-amber 1.6s ease-in-out infinite;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lif-hint-pulse,
+  .lif-hint-pulse-amber {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.45);
+  }
+
+  .lif-hint-pulse-amber {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.5);
+  }
+}
+
+.lif-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.45rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  background: inherit;
+  border-bottom: inherit;
+  border-right: inherit;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+@container (min-width: 900px) {
+  .lif-layout {
+    grid-template-columns: minmax(0, 58fr) minmax(260px, 42fr);
+  }
+}
+
+@container (max-width: 899px) {
+  .lif-rail {
+    order: 2;
+  }
+}

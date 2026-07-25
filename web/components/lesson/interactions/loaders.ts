@@ -24,14 +24,17 @@ export function prefetchInteractionChunk(subtype: InteractionSubtype): void {
     case "essay":
       void import("./EssayView");
       break;
-    case "hotspot_info":
-      void import("./HotspotInfoView");
+    case "explore_hotspots":
+      void import("./ExploreHotspotsView");
       break;
-    case "hotspot_gate":
-      void import("./HotspotGateView");
+    case "language_in_focus":
+      void import("./LanguageInFocusView");
       break;
     case "drag_match":
       void import("./DragMatchView");
+      break;
+    case "line_match":
+      void import("./LineMatchView");
       break;
     case "click_targets":
       void import("./ClickTargetsView");
@@ -39,8 +42,11 @@ export function prefetchInteractionChunk(subtype: InteractionSubtype): void {
     case "sound_sort":
       void import("./SoundSortView");
       break;
-    case "listen_hotspot_sequence":
-      void import("./ListenHotspotSequenceView");
+    case "listen_and_choose":
+      void import("./ListenAndChooseView");
+      break;
+    case "flashcards":
+      void import("./FlashcardsView");
       break;
     case "listen_color_write":
       void import("./ListenColorWriteView");

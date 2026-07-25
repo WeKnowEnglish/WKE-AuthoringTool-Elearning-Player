@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "flashcards",
+  "quiz_group_id": "bakery-flashcards",
+  "quiz_group_title": "Bakery flashcards",
+  "activity_name": "Bakery flashcards",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "flashcards",
+      "activity_name": "Bakery flashcards",
+      "body_text": "Tap the card to flip. Study each word.",
+      "shuffle_cards": true,
+      "quiz_group_id": "bakery-flashcards",
+      "quiz_group_title": "Bakery flashcards",
+      "cards": [
+        {
+          "id": "c-bakery",
+          "faces": {
+            "word": "bakery",
+            "definition": "a place that sells bread and cakes",
+            "example": "We buy bread at the bakery."
+          },
+          "front_faces": ["word"],
+          "back_faces": ["definition", "example"]
+        },
+        {
+          "id": "c-bread",
+          "faces": {
+            "word": "bread",
+            "definition": "food made from flour, used for sandwiches",
+            "example": "I like bread with butter."
+          },
+          "front_faces": ["word"],
+          "back_faces": ["definition", "example"]
+        },
+        {
+          "id": "c-cake",
+          "faces": {
+            "word": "cake",
+            "definition": "a sweet food for birthdays",
+            "example": "She blows out the candles on the cake."
+          },
+          "front_faces": ["word"],
+          "back_faces": ["definition", "example"]
+        },
+        {
+          "id": "c-cookie",
+          "faces": {
+            "word": "cookie",
+            "definition": "a small sweet biscuit",
+            "example": "He eats a cookie after lunch."
+          },
+          "front_faces": ["word"],
+          "back_faces": ["definition", "example"]
+        }
+      ]
+    }
+  ]
+}

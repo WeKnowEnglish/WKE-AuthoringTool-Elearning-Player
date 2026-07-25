@@ -1,0 +1,355 @@
+{
+  "type": "interaction",
+  "subtype": "language_in_focus",
+  "activity_name": "What can they do?",
+  "pattern_id": "can-cant",
+  "morphology": {
+    "marks": [
+      "n't",
+      "-n't",
+      "+n't"
+    ],
+    "word_suffixes": [
+      "n't"
+    ],
+    "highlight_words": [
+      "can't"
+    ]
+  },
+  "scene": {
+    "image_url": "/pilots/language-in-focus/playground-can-cant-banner.png",
+    "image_alt": "Kids in a bright classroom ready for playground actions",
+    "image_fit": "cover",
+    "aspect_ratio": "16:9"
+  },
+  "tabs": [
+    {
+      "id": "mia",
+      "label": "Mia"
+    },
+    {
+      "id": "leo",
+      "label": "Leo"
+    }
+  ],
+  "chunks": [
+    {
+      "id": "c-subject",
+      "role": "subject",
+      "label": "Who",
+      "color": "#0d9488",
+      "icon": "person"
+    },
+    {
+      "id": "c-modal",
+      "role": "modal",
+      "label": "Can",
+      "color": "#ca8a04",
+      "icon": "heart"
+    },
+    {
+      "id": "c-verb",
+      "role": "verb",
+      "label": "Action",
+      "color": "#2563eb",
+      "icon": "activity"
+    }
+  ],
+  "sentence_template": "{subject} {modal} {verb}.",
+  "bubble_template": "{tab}: {sentence}",
+  "slot_banks": [
+    {
+      "role": "subject",
+      "options": [
+        {
+          "id": "i",
+          "label": "I"
+        },
+        {
+          "id": "she",
+          "label": "She"
+        },
+        {
+          "id": "he",
+          "label": "He"
+        }
+      ]
+    },
+    {
+      "role": "modal",
+      "options": [
+        {
+          "id": "can",
+          "label": "can"
+        },
+        {
+          "id": "cant",
+          "label": "can't"
+        }
+      ]
+    },
+    {
+      "role": "verb",
+      "options": [
+        {
+          "id": "swim",
+          "label": "swim",
+          "color": "#0d9488"
+        },
+        {
+          "id": "jump",
+          "label": "jump",
+          "color": "#2563eb"
+        },
+        {
+          "id": "draw",
+          "label": "draw",
+          "color": "#db2777"
+        },
+        {
+          "id": "sing",
+          "label": "sing",
+          "color": "#9333ea"
+        },
+        {
+          "id": "ride",
+          "label": "ride a bike",
+          "color": "#16a34a"
+        },
+        {
+          "id": "fly",
+          "label": "fly",
+          "color": "#64748b"
+        }
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-mia",
+      "tab_id": "mia",
+      "values": {
+        "subject": "i",
+        "modal": "can",
+        "verb": "swim"
+      },
+      "build_values": {
+        "subject": "she",
+        "modal": "can",
+        "verb": "swim"
+      },
+      "build_choices": {
+        "subject": [
+          "she",
+          "he"
+        ],
+        "modal": [
+          "can",
+          "cant"
+        ],
+        "verb": [
+          "swim",
+          "fly"
+        ]
+      }
+    },
+    {
+      "id": "ex-leo",
+      "tab_id": "leo",
+      "values": {
+        "subject": "i",
+        "modal": "cant",
+        "verb": "fly"
+      },
+      "build_values": {
+        "subject": "he",
+        "modal": "cant",
+        "verb": "fly"
+      },
+      "build_choices": {
+        "subject": [
+          "she",
+          "he"
+        ],
+        "modal": [
+          "can",
+          "cant"
+        ],
+        "verb": [
+          "jump",
+          "fly"
+        ]
+      }
+    }
+  ],
+  "bubbles": [
+    {
+      "id": "b-mia",
+      "example_id": "ex-mia",
+      "x_percent": 28,
+      "y_percent": 10
+    },
+    {
+      "id": "b-leo",
+      "example_id": "ex-leo",
+      "x_percent": 72,
+      "y_percent": 10
+    }
+  ],
+  "layers": [
+    {
+      "type": "listen_and_build",
+      "id": "listen-build-friends",
+      "example_ids": [
+        "ex-mia",
+        "ex-leo"
+      ],
+      "require_listen_before_build": true,
+      "distractor_option_ids": []
+    },
+    {
+      "type": "workbench",
+      "id": "modify-examples",
+      "elements": [
+        {
+          "type": "example_tabs"
+        },
+        {
+          "type": "chunk_dissection",
+          "show_full_sentence": false
+        },
+        {
+          "type": "slot_chooser",
+          "role": "verb",
+          "option_ids": [
+            "swim",
+            "jump",
+            "draw",
+            "sing",
+            "ride"
+          ]
+        },
+        {
+          "type": "action_row",
+          "actions": [
+            "hear_sentence",
+            "cycle_slot"
+          ],
+          "cycle_role": "verb"
+        }
+      ]
+    }
+  ],
+  "reference_from_layer": 0,
+  "reference": {
+    "general": {
+      "title": "Ability sentences",
+      "body": "We use **can** and **can't** to say what someone is able to do.",
+      "items": [
+        {
+          "id": "g-who",
+          "text": "Who",
+          "note": "I / She / He",
+          "icon": "me"
+        },
+        {
+          "id": "g-can",
+          "text": "Can",
+          "note": "can / can't",
+          "icon": "heart"
+        },
+        {
+          "id": "g-do",
+          "text": "Action",
+          "note": "swim, jump…",
+          "icon": "ball"
+        }
+      ]
+    },
+    "intro": "Tap a word in the sentence to see the grammar tip.",
+    "focus_panels": [
+      {
+        "role": "subject",
+        "title": "People words",
+        "body": "These words tell us **who** we are talking about.",
+        "items": [
+          {
+            "id": "p-i",
+            "text": "I",
+            "note": "me",
+            "icon": "me"
+          },
+          {
+            "id": "p-she",
+            "text": "She",
+            "note": "a girl / a woman",
+            "icon": "girl"
+          },
+          {
+            "id": "p-he",
+            "text": "He",
+            "note": "a boy / a man",
+            "icon": "boy"
+          }
+        ]
+      },
+      {
+        "role": "modal",
+        "title": "can → can't",
+        "body": "**can** = able to. **can't** = not able to. The **n't** means *not*.",
+        "items": [
+          {
+            "id": "m-can",
+            "text": "can",
+            "note": "able to",
+            "icon": "heart"
+          },
+          {
+            "id": "m-cant",
+            "text": "can't",
+            "note": "add n't",
+            "base": "can",
+            "form": "can't",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "role": "verb",
+        "title": "Action words",
+        "body": "After **can** / **can't**, use the **base** action word (no -s, no -ing).",
+        "items": [
+          {
+            "id": "v-swim",
+            "text": "swim",
+            "icon": "ball"
+          },
+          {
+            "id": "v-jump",
+            "text": "jump",
+            "icon": "dance"
+          },
+          {
+            "id": "v-draw",
+            "text": "draw",
+            "icon": "pencil"
+          },
+          {
+            "id": "v-sing",
+            "text": "sing",
+            "icon": "music"
+          }
+        ]
+      }
+    ]
+  },
+  "completion": {
+    "type": "complete_all_layers",
+    "explore": {
+      "all_tabs": true,
+      "all_grammar_roles": true,
+      "min_sentence_changes": 3,
+      "min_changes_per_tab": 1
+    }
+  }
+}

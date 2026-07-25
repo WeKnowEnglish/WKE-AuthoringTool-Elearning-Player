@@ -1,16 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { clsx } from "clsx";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
-import { speakText, speakTextAndWait } from "@/lib/audio/tts";
-import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
+  gamesBodyTextClass,
+  gamesCheckActionRowClass,
+  gamesChipButtonClass,
+  gamesHeroImageFrameClass,
+  gamesHintTextClass,
+  gamesWrongHintClass,
+  interactionHeroImageHeightStyle,
   interactionImageFitClass,
   InteractionLessonNav,
   interactionNavReservePaddingClass,
@@ -38,12 +42,14 @@ export function DragSentenceView({
   onPass: () => void;
   onWrong: () => void;
 } & NavProps) {
+  const [wrongHint, setWrongHint] = useState<string | null>(null);
   const slots = parsed.sentence_slots.length;
   const bank = parsed.word_bank.filter((w: string) => !filled.includes(w));
 
   function addWord(w: string) {
     if (passed) return;
     playSfx("tap", muted);
+    setWrongHint(null);
     if (filled.length >= slots) return;
     setFilled([...filled, w]);
   }
@@ -51,24 +57,31 @@ export function DragSentenceView({
   function clearSlot(i: number) {
     if (passed) return;
     playSfx("tap", muted);
+    setWrongHint(null);
     setFilled(filled.filter((_, idx) => idx !== i));
   }
 
   function check() {
     playSfx("tap", muted);
     if (filled.length !== parsed.correct_order.length) {
+      setWrongHint("Not quite yet. Fill every gap, then tap Check again.");
       onWrong();
       return;
     }
     const ok = filled.every((w: string, i: number) => w === parsed.correct_order[i]);
-    if (ok) onPass();
-    else onWrong();
+    if (ok) {
+      setWrongHint(null);
+      onPass();
+    } else {
+      setWrongHint("Not quite yet. Tap a word in the sentence to remove it, then try again.");
+      onWrong();
+    }
   }
 
   return (
     <div className={interactionNavReservePaddingClass}>
       {parsed.image_url ? (
-        <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
+        <div className={gamesHeroImageFrameClass} style={interactionHeroImageHeightStyle}>
           <Image
             src={parsed.image_url}
             alt=""
@@ -79,31 +92,29 @@ export function DragSentenceView({
         </div>
       ) : null}
       <KidPanel>
-        {parsed.body_text ? (
-          <p className="mb-4 text-lg">{parsed.body_text}</p>
-        ) : null}
-        <p className="mb-2 font-semibold">Fill the sentence:</p>
-        <div className="flex min-h-14 flex-wrap gap-2 rounded-lg border-4 border-kid-ink p-3">
+        {parsed.body_text ? <p className={gamesBodyTextClass}>{parsed.body_text}</p> : null}
+        <p className={gamesHintTextClass}>Tap words to build the sentence</p>
+        <div className="flex min-h-16 flex-wrap gap-2 rounded-lg border-4 border-kid-ink bg-kid-surface-muted/30 p-3">
           {Array.from({ length: slots }).map((_, i) => (
             <button
               key={i}
               type="button"
               disabled={passed}
               onClick={() => clearSlot(i)}
-              className="min-w-[5rem] rounded-md border-2 border-neutral-800 bg-neutral-100 px-2 py-2 text-center font-semibold hover:bg-neutral-200 active:bg-neutral-300"
+              className="min-h-11 min-w-[5rem] rounded-lg border-2 border-kid-ink bg-white px-3 py-2 text-center text-base font-bold text-kid-ink hover:bg-kid-surface-muted active:bg-kid-panel disabled:opacity-60"
             >
               {filled[i] ?? "—"}
             </button>
           ))}
         </div>
-        <p className="mt-4 mb-2 font-semibold">Words</p>
+        <p className="mt-4 mb-2 text-base font-semibold text-kid-ink/80">Word box</p>
         <div className="flex flex-wrap gap-2">
           {bank.map((w: string) => (
             <KidButton
               key={w}
               type="button"
               variant="secondary"
-              className="!min-h-10 !min-w-0 text-base"
+              className={gamesChipButtonClass}
               disabled={passed}
               onClick={() => addWord(w)}
             >
@@ -111,21 +122,21 @@ export function DragSentenceView({
             </KidButton>
           ))}
         </div>
-        <div className="mt-4">
+        {wrongHint ? <p className={gamesWrongHintClass}>{wrongHint}</p> : null}
+        <div className={gamesCheckActionRowClass}>
           <KidButton
             type="button"
             variant="secondary"
             disabled={passed || filled.length === 0}
-            onClick={() => setFilled([])}
+            onClick={() => {
+              playSfx("tap", muted);
+              setFilled([]);
+              setWrongHint(null);
+            }}
           >
             Clear
           </KidButton>
-          <KidButton
-            type="button"
-            className="ml-3"
-            disabled={passed}
-            onClick={check}
-          >
+          <KidButton type="button" disabled={passed} onClick={check}>
             Check
           </KidButton>
         </div>

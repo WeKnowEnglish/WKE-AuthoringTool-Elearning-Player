@@ -80,57 +80,232 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
         hints_enabled: true,
         hint_decoy_words: ["went", "gone", "goes"],
       };
-    case "hotspot_info":
+    case "explore_hotspots":
       return {
         type: "interaction",
-        subtype: "hotspot_info",
+        subtype: "explore_hotspots",
+        activity_name: "What do you like doing?",
         image_url: "https://placehold.co/800x450/dcfce7/14532d?text=Explore",
-        body_text: "Tap the picture to learn more.",
+        body_text: "Tap each person. Listen to what they like doing.",
         hotspots: [
           {
             id: "h1",
-            x_percent: 10,
-            y_percent: 10,
-            w_percent: 30,
-            h_percent: 40,
-            title: "Tip",
-            body: "This is extra information.",
+            name: "Mia",
+            accessible_label: "Mia",
+            required: true,
+            points: [
+              { x: 0.1, y: 0.2 },
+              { x: 0.3, y: 0.2 },
+              { x: 0.3, y: 0.7 },
+              { x: 0.1, y: 0.7 },
+            ],
           },
         ],
-        require_all_viewed: false,
+        dialogues: [
+          {
+            id: "d1",
+            hotspot_id: "h1",
+            title: "Mia likes drawing",
+            turns: [
+              { speaker: "AJ", text: "What do you like doing?" },
+              { speaker: "Mia", text: "I like drawing pictures." },
+            ],
+          },
+        ],
+        auto_play_on_select: true,
       };
-    case "hotspot_gate":
+    case "language_in_focus":
       return {
         type: "interaction",
-        subtype: "hotspot_gate",
-        image_url: "https://placehold.co/800x450/fee2e2/991b1b?text=Tap",
-        body_text: "Tap the correct area.",
-        mode: "single",
-        targets: [
+        subtype: "language_in_focus",
+        activity_name: "How do we talk about hobbies?",
+        scene: {
+          image_url: "/pilots/language-in-focus/hobbies-like-ing-banner-v2.png",
+          image_alt: "Mia drawing and Leo reading a space book at a sunny table",
+          image_fit: "cover",
+          aspect_ratio: "3:1",
+        },
+        tabs: [
+          { id: "mia", label: "Mia" },
+          { id: "leo", label: "Leo" },
+        ],
+        chunks: [
+          { id: "c-person", role: "person", label: "Person", color: "#0d9488" },
+          { id: "c-feeling", role: "feeling", label: "Feeling", color: "#ca8a04" },
+          { id: "c-activity", role: "activity", label: "Activity", color: "#2563eb" },
+        ],
+        sentence_template: "{person} {feeling} {activity}.",
+        slot_banks: [
           {
-            id: "t1",
-            x_percent: 15,
-            y_percent: 20,
-            w_percent: 30,
-            h_percent: 35,
-            label: "Correct",
+            role: "person",
+            options: [
+              { id: "i", label: "I" },
+              { id: "she", label: "She" },
+              { id: "he", label: "He" },
+            ],
           },
           {
-            id: "t2",
-            x_percent: 55,
-            y_percent: 20,
-            w_percent: 30,
-            h_percent: 35,
-            label: "Wrong",
+            role: "feeling",
+            options: [
+              { id: "like", label: "like" },
+              { id: "likes", label: "likes" },
+            ],
+          },
+          {
+            role: "activity",
+            options: [
+              { id: "drawing", label: "drawing", base_form: "draw" },
+              { id: "draw", label: "draw", base_form: "draw" },
+              { id: "reading-comics", label: "reading", base_form: "read" },
+              { id: "read", label: "read", base_form: "read" },
+            ],
           },
         ],
-        correct_target_id: "t1",
+        examples: [
+          {
+            id: "ex-mia",
+            tab_id: "mia",
+            values: { person: "i", feeling: "like", activity: "drawing" },
+            build_values: { person: "she", feeling: "likes", activity: "drawing" },
+            build_choices: {
+              person: ["she", "he"],
+              feeling: ["like", "likes"],
+              activity: ["drawing", "draw"],
+            },
+          },
+          {
+            id: "ex-leo",
+            tab_id: "leo",
+            values: { person: "i", feeling: "like", activity: "reading-comics" },
+            build_values: {
+              person: "he",
+              feeling: "likes",
+              activity: "reading-comics",
+            },
+            build_choices: {
+              person: ["she", "he"],
+              feeling: ["like", "likes"],
+              activity: ["reading-comics", "read"],
+            },
+          },
+        ],
+        bubbles: [
+          { id: "b-mia", example_id: "ex-mia", x_percent: 28, y_percent: 10 },
+          { id: "b-leo", example_id: "ex-leo", x_percent: 68, y_percent: 10 },
+        ],
+        layers: [
+          {
+            type: "listen_and_build",
+            id: "listen-build-friends",
+            example_ids: ["ex-mia", "ex-leo"],
+            require_listen_before_build: true,
+            distractor_option_ids: [],
+          },
+          {
+            type: "workbench",
+            id: "modify-examples",
+            elements: [
+              { type: "example_tabs" },
+              { type: "chunk_dissection", show_full_sentence: false },
+              {
+                type: "slot_chooser",
+                role: "activity",
+                option_ids: ["drawing", "reading-comics"],
+              },
+              {
+                type: "action_row",
+                actions: ["hear_sentence", "cycle_slot"],
+                cycle_role: "activity",
+              },
+            ],
+          },
+        ],
+        reference_from_layer: 0,
+        reference: {
+          general: {
+            title: "Simple sentences",
+            body: "A simple sentence has **who**, a **verb**, and **what** they do.",
+            items: [
+              { id: "g-who", text: "Who", note: "I / She / He", icon: "me" },
+              { id: "g-verb", text: "Verb", note: "like / likes", icon: "heart" },
+              { id: "g-what", text: "What", note: "drawing, reading…", icon: "pencil" },
+            ],
+          },
+          intro: "Tap a word in the sentence to see the grammar tip.",
+          focus_panels: [
+            {
+              role: "person",
+              title: "People words",
+              body: "These words tell us **who** we are talking about.",
+              items: [
+                { id: "p-i", text: "I", note: "me", icon: "me" },
+                { id: "p-she", text: "She", note: "a girl / a woman", icon: "girl" },
+                { id: "p-he", text: "He", note: "a boy / a man", icon: "boy" },
+              ],
+            },
+            {
+              role: "feeling",
+              title: "like → likes",
+              body: "With **he** and **she**, we add **-s** to the verb.",
+              items: [
+                { id: "f-i", text: "I like", note: "no -s", icon: "me" },
+                { id: "f-she", text: "She likes", note: "add -s", icon: "girl" },
+                { id: "f-he", text: "He likes", note: "add -s", icon: "boy" },
+              ],
+            },
+            {
+              role: "activity",
+              title: "Doing words: -ing",
+              body: "After **like**, the activity ends in **-ing**.",
+              items: [
+                {
+                  id: "a-draw",
+                  text: "drawing",
+                  base: "draw",
+                  form: "drawing",
+                  icon: "pencil",
+                },
+                {
+                  id: "a-read",
+                  text: "reading",
+                  base: "read",
+                  form: "reading",
+                  icon: "book",
+                },
+              ],
+            },
+          ],
+        },
+        completion: {
+          type: "complete_all_layers",
+          explore: {
+            all_tabs: true,
+            all_grammar_roles: true,
+            min_sentence_changes: 3,
+            min_changes_per_tab: 1,
+          },
+        },
       };
     case "drag_match":
       return {
         type: "interaction",
         subtype: "drag_match",
         body_text: "Match each word to the right group.",
+        zones: [
+          { id: "z1", label: "Animals" },
+          { id: "z2", label: "Food" },
+        ],
+        tokens: [
+          { id: "tok1", label: "cat" },
+          { id: "tok2", label: "apple" },
+        ],
+        correct_map: { tok1: "z1", tok2: "z2" },
+      };
+    case "line_match":
+      return {
+        type: "interaction",
+        subtype: "line_match",
+        body_text: "Draw a line to match each word.",
         zones: [
           { id: "z1", label: "Animals" },
           { id: "z2", label: "Food" },
@@ -154,21 +329,63 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
         ],
         correct_choice_id: "a",
       };
-    case "listen_hotspot_sequence":
+    case "listen_and_choose":
       return {
         type: "interaction",
-        subtype: "listen_hotspot_sequence",
-        image_url: "https://placehold.co/800x450/e2e8f0/334155?text=Listen+and+tap",
-        body_text: "Listen and tap the hotspots in order.",
-        prompt_audio_url:
-          "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",
-        targets: [
-          { id: "s1", x_percent: 12, y_percent: 18, w_percent: 20, h_percent: 24, label: "First" },
-          { id: "s2", x_percent: 40, y_percent: 26, w_percent: 20, h_percent: 24, label: "Second" },
-          { id: "s3", x_percent: 68, y_percent: 22, w_percent: 20, h_percent: 24, label: "Third" },
+        subtype: "listen_and_choose",
+        body_text: "Listen, then choose the picture.",
+        dialog_text: "I'd like a loaf of bread, please.",
+        image_fit: "contain",
+        auto_play: true,
+        shuffle_choices: false,
+        choices: [
+          {
+            id: "a",
+            image_url: "https://placehold.co/400x400/fef3c7/92400e?text=Bread",
+            label: "Bread",
+          },
+          {
+            id: "b",
+            image_url: "https://placehold.co/400x400/dbeafe/1e3a8a?text=Milk",
+            label: "Milk",
+          },
+          {
+            id: "c",
+            image_url: "https://placehold.co/400x400/dcfce7/14532d?text=Apple",
+            label: "Apple",
+          },
         ],
-        order: ["s1", "s2", "s3"],
-        allow_replay: true,
+        correct_choice_id: "a",
+      };
+    case "flashcards":
+      return {
+        type: "interaction",
+        subtype: "flashcards",
+        activity_name: "Word study",
+        body_text: "Tap the card to flip. Study each word.",
+        shuffle_cards: false,
+        cards: [
+          {
+            id: "c1",
+            faces: {
+              word: "bakery",
+              definition: "a place that sells bread and cakes",
+              example: "We buy bread at the bakery.",
+            },
+            front_faces: ["word"],
+            back_faces: ["definition", "example"],
+          },
+          {
+            id: "c2",
+            faces: {
+              word: "bread",
+              definition: "food made from flour, used for sandwiches",
+              example: "I like bread with butter.",
+            },
+            front_faces: ["word"],
+            back_faces: ["definition", "example"],
+          },
+        ],
       };
     case "listen_color_write":
       return {

@@ -19,7 +19,13 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@wke/explore-hotspots-play": [
+        "../../WKE Animator/svg-edu-studio/packages/explore-hotspots-play/src/index.ts"
+      ],
+      "@wke/explore-hotspots-play/*": [
+        "../../WKE Animator/svg-edu-studio/packages/explore-hotspots-play/src/*"
+      ]
     }
   },
   "include": [

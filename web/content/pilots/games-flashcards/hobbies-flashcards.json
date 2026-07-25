@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "flashcards",
+  "quiz_group_id": "hobbies-flashcards",
+  "quiz_group_title": "Our favorite hobbies",
+  "activity_name": "Our favorite hobbies",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "flashcards",
+      "activity_name": "Our favorite hobbies",
+      "cards": [
+        {
+          "id": "c1",
+          "faces": {
+            "word": "painting",
+            "example": "I like painting in my art class.",
+            "picture_url": "/pilots/games-flashcards/hobbies/01-painting.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c2",
+          "faces": {
+            "word": "drawing",
+            "example": "I like drawing animals and nature.",
+            "picture_url": "/pilots/games-flashcards/hobbies/02-drawing.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c3",
+          "faces": {
+            "word": "singing",
+            "example": "I like singing pop songs.",
+            "picture_url": "/pilots/games-flashcards/hobbies/03-singing.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c4",
+          "faces": {
+            "word": "dancing",
+            "example": "I like dancing with my friends.",
+            "picture_url": "/pilots/games-flashcards/hobbies/04-dancing.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c5",
+          "faces": {
+            "word": "listening to music",
+            "example": "I like listening to pop music.",
+            "picture_url": "/pilots/games-flashcards/hobbies/05-listening-to-music.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c6",
+          "faces": {
+            "word": "playing the guitar",
+            "example": "I like playing my guitar in the school band.",
+            "picture_url": "/pilots/games-flashcards/hobbies/06-playing-the-guitar.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c7",
+          "faces": {
+            "word": "riding a bike",
+            "example": "I like riding my bike around the park.",
+            "picture_url": "/pilots/games-flashcards/hobbies/07-riding-a-bike.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c8",
+          "faces": {
+            "word": "building models",
+            "example": "I like building models of robots.",
+            "picture_url": "/pilots/games-flashcards/hobbies/08-building-models.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        },
+        {
+          "id": "c9",
+          "faces": {
+            "word": "reading comics",
+            "example": "I like reading comics about space and adventure.",
+            "picture_url": "/pilots/games-flashcards/hobbies/09-reading-comics.webp"
+          },
+          "front_faces": ["picture"],
+          "back_faces": ["word", "example"]
+        }
+      ],
+      "shuffle_cards": true,
+      "quiz_group_id": "hobbies-flashcards",
+      "quiz_group_title": "Our favorite hobbies",
+      "body_text": "Tap the picture. Flip to see the word."
+    }
+  ]
+}

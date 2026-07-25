@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "letter_mixup",
+  "quiz_group_id": "bakery-letter-mixup",
+  "quiz_group_title": "Bakery letter scramble",
+  "activity_name": "Bakery letter scramble",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "letter_mixup",
+      "prompt": "Unscramble the letters to spell the word.",
+      "items": [{ "id": "lm1", "target_word": "bread", "hint": "You buy this for sandwiches." }],
+      "shuffle_letters": true,
+      "case_sensitive": false,
+      "quiz_group_id": "bakery-letter-mixup",
+      "quiz_group_title": "Bakery letter scramble",
+      "quiz_group_order": 0
+    },
+    {
+      "type": "interaction",
+      "subtype": "letter_mixup",
+      "prompt": "Unscramble the letters to spell the word.",
+      "items": [{ "id": "lm2", "target_word": "cake", "hint": "A sweet food for birthdays." }],
+      "shuffle_letters": true,
+      "case_sensitive": false,
+      "quiz_group_id": "bakery-letter-mixup",
+      "quiz_group_title": "Bakery letter scramble",
+      "quiz_group_order": 1
+    },
+    {
+      "type": "interaction",
+      "subtype": "letter_mixup",
+      "prompt": "Unscramble the letters to spell the word.",
+      "items": [{ "id": "lm3", "target_word": "bakery", "hint": "A place that sells bread and cakes." }],
+      "shuffle_letters": true,
+      "case_sensitive": false,
+      "quiz_group_id": "bakery-letter-mixup",
+      "quiz_group_title": "Bakery letter scramble",
+      "quiz_group_order": 2
+    },
+    {
+      "type": "interaction",
+      "subtype": "letter_mixup",
+      "prompt": "Unscramble the letters to spell the word.",
+      "items": [{ "id": "lm4", "target_word": "cookie", "hint": "A small sweet biscuit." }],
+      "shuffle_letters": true,
+      "case_sensitive": false,
+      "quiz_group_id": "bakery-letter-mixup",
+      "quiz_group_title": "Bakery letter scramble",
+      "quiz_group_order": 3
+    }
+  ]
+}

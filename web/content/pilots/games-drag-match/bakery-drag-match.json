@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "drag_match",
+  "quiz_group_id": "bakery-drag-match",
+  "quiz_group_title": "Bakery drag match",
+  "activity_name": "Bakery drag match",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "drag_match",
+      "body_text": "Match each word to the right meaning.",
+      "tokens": [
+        { "id": "tok_bread", "label": "bread" },
+        { "id": "tok_jam", "label": "jam" },
+        { "id": "tok_milk", "label": "milk" }
+      ],
+      "zones": [
+        { "id": "z_sweet", "label": "sweet on toast" },
+        { "id": "z_drink", "label": "white drink" },
+        { "id": "z_loaf", "label": "loaf from the bakery" }
+      ],
+      "correct_map": {
+        "tok_bread": "z_loaf",
+        "tok_jam": "z_sweet",
+        "tok_milk": "z_drink"
+      },
+      "quiz_group_id": "bakery-drag-match",
+      "quiz_group_title": "Bakery drag match",
+      "quiz_group_order": 0
+    },
+    {
+      "type": "interaction",
+      "subtype": "drag_match",
+      "body_text": "Match each tool to what it does.",
+      "tokens": [
+        { "id": "tok_oven", "label": "oven" },
+        { "id": "tok_knife", "label": "knife" },
+        { "id": "tok_tray", "label": "tray" }
+      ],
+      "zones": [
+        { "id": "z_cut", "label": "cuts the bread" },
+        { "id": "z_hold", "label": "holds cookies" },
+        { "id": "z_bake", "label": "bakes cakes" }
+      ],
+      "correct_map": {
+        "tok_oven": "z_bake",
+        "tok_knife": "z_cut",
+        "tok_tray": "z_hold"
+      },
+      "quiz_group_id": "bakery-drag-match",
+      "quiz_group_title": "Bakery drag match",
+      "quiz_group_order": 1
+    }
+  ]
+}

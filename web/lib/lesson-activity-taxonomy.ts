@@ -9,22 +9,27 @@ export const QUIZ_SUBTYPES = [
   "essay",
   "voice_question",
   "click_targets",
-  "hotspot_gate",
-  "listen_hotspot_sequence",
   "listen_color_write",
   "letter_mixup",
   "word_shape_hunt",
   "table_complete",
   "sorting_game",
   "drag_match",
+  "line_match",
   "sound_sort",
+  "listen_and_choose",
+  "flashcards",
   "drag_sentence",
   "word_bucket_catch",
 ] as const;
 
 export type QuizSubtype = (typeof QUIZ_SUBTYPES)[number];
 
-export const INTERACTION_SUBTYPES = ["hotspot_info", "guided_dialogue"] as const;
+export const INTERACTION_SUBTYPES = [
+  "explore_hotspots",
+  "language_in_focus",
+  "guided_dialogue",
+] as const;
 
 export type InteractionSubtypeStandalone = (typeof INTERACTION_SUBTYPES)[number];
 
@@ -135,15 +140,16 @@ export const QUIZ_SUBTYPE_LABELS: Record<QuizSubtype, string> = {
   essay: "Essay",
   voice_question: "Voice question",
   click_targets: "Click target(s)",
-  hotspot_gate: "Hotspots (gate)",
-  listen_hotspot_sequence: "Listen + hotspot sequence",
   listen_color_write: "Listen, color, write",
   letter_mixup: "Letter mix-up",
   word_shape_hunt: "Word shape hunt",
   table_complete: "Complete the table",
   sorting_game: "Sorting game",
   drag_match: "Drag match",
+  line_match: "Line match",
   sound_sort: "Sound sort",
+  listen_and_choose: "Listen and choose",
+  flashcards: "Flashcards",
   drag_sentence: "Sentence scramble",
   word_bucket_catch: "Word bucket catch",
 };

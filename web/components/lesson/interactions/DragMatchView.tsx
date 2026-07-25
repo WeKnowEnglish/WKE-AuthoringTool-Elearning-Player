@@ -2,15 +2,21 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
-import { speakText, speakTextAndWait } from "@/lib/audio/tts";
-import { countKeywordMatchesInText } from "@/lib/essay-keyword-feedback";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
+  gamesBodyTextClass,
+  gamesCheckActionRowClass,
+  gamesChipButtonClass,
+  gamesHeroImageFrameClass,
+  gamesHintTextClass,
+  gamesMatchZoneClass,
+  gamesWrongHintClass,
+  interactionHeroImageHeightStyle,
   interactionImageFitClass,
   InteractionLessonNav,
   interactionNavReservePaddingClass,
@@ -37,6 +43,7 @@ export function DragMatchView({
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   /** tokenId -> zoneId */
   const [assignment, setAssignment] = useState<Record<string, string>>({});
+  const [wrongHint, setWrongHint] = useState<string | null>(null);
 
   const zones = parsed.zones;
   const tokens = parsed.tokens;
@@ -44,12 +51,14 @@ export function DragMatchView({
   function selectToken(id: string) {
     if (passed) return;
     playSfx("tap", muted);
+    setWrongHint(null);
     setSelectedToken((s) => (s === id ? null : id));
   }
 
   function assignToZone(zoneId: string) {
     if (passed || !selectedToken) return;
     playSfx("tap", muted);
+    setWrongHint(null);
     setAssignment((prev) => {
       const next = { ...prev };
       for (const tid of Object.keys(next)) {
@@ -66,25 +75,25 @@ export function DragMatchView({
     for (const tok of tokens) {
       const zid = assignment[tok.id];
       if (!zid || parsed.correct_map[tok.id] !== zid) {
+        setWrongHint("Not quite yet. Match every word, then tap Check again.");
         onWrong();
         return;
       }
     }
+    setWrongHint(null);
     onPass();
   }
 
   const labelForZone = (zoneId: string) => {
-    const tid = tokens.find((t: (typeof tokens)[number]) => assignment[t.id] === zoneId)?.id;
-    const label = tid
-      ? tokens.find((x: (typeof tokens)[number]) => x.id === tid)?.label ?? tid
-      : null;
+    const tid = tokens.find((t) => assignment[t.id] === zoneId)?.id;
+    const label = tid ? (tokens.find((x) => x.id === tid)?.label ?? tid) : null;
     return label;
   };
 
   return (
     <div className={interactionNavReservePaddingClass}>
       {parsed.image_url ? (
-        <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg border-4 border-kid-ink">
+        <div className={gamesHeroImageFrameClass} style={interactionHeroImageHeightStyle}>
           <Image
             src={parsed.image_url}
             alt=""
@@ -95,26 +104,27 @@ export function DragMatchView({
         </div>
       ) : null}
       <KidPanel>
-        {parsed.body_text ? (
-          <p className="mb-4 text-lg">{parsed.body_text}</p>
-        ) : null}
-        <p className="mb-2 font-semibold">Tap a word, then tap a box</p>
+        {parsed.body_text ? <p className={gamesBodyTextClass}>{parsed.body_text}</p> : null}
+        <p className={gamesHintTextClass}>Tap a word, then tap a box</p>
         <div className="mb-4 flex flex-wrap gap-2">
-          {tokens.map((t: (typeof tokens)[number]) => (
-            <KidButton
-              key={t.id}
-              type="button"
-              variant={selectedToken === t.id ? "primary" : "secondary"}
-              disabled={passed}
-              className="!min-h-10"
-              onClick={() => selectToken(t.id)}
-            >
-              {t.label}
-            </KidButton>
-          ))}
+          {tokens.map((t) => {
+            const placed = Boolean(assignment[t.id]);
+            return (
+              <KidButton
+                key={t.id}
+                type="button"
+                variant={selectedToken === t.id ? "primary" : "secondary"}
+                disabled={passed}
+                className={clsx(gamesChipButtonClass, placed && selectedToken !== t.id && "opacity-70")}
+                onClick={() => selectToken(t.id)}
+              >
+                {t.label}
+              </KidButton>
+            );
+          })}
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {zones.map((z: (typeof zones)[number]) => {
+        <div className="grid gap-3 sm:grid-cols-2">
+          {zones.map((z) => {
             const placed = labelForZone(z.id);
             const label = placed ?? z.label ?? "Drop here";
             return (
@@ -123,14 +133,27 @@ export function DragMatchView({
                 type="button"
                 disabled={passed}
                 onClick={() => assignToZone(z.id)}
-                className="min-h-16 rounded-lg border-4 border-dashed border-neutral-700 bg-neutral-100 px-3 py-2 text-left text-lg font-semibold hover:bg-neutral-200 active:bg-neutral-300 disabled:opacity-60"
+                className={clsx(
+                  gamesMatchZoneClass,
+                  placed && "border-solid border-emerald-700 bg-emerald-50 text-emerald-950",
+                )}
               >
-                {label}
+                {placed ? (
+                  <span>
+                    <span className="block text-xs font-bold uppercase tracking-wide text-emerald-800/80">
+                      {z.label ?? "Box"}
+                    </span>
+                    {placed}
+                  </span>
+                ) : (
+                  label
+                )}
               </button>
             );
           })}
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        {wrongHint ? <p className={gamesWrongHintClass}>{wrongHint}</p> : null}
+        <div className={gamesCheckActionRowClass}>
           <KidButton
             type="button"
             variant="secondary"
@@ -139,6 +162,7 @@ export function DragMatchView({
               playSfx("tap", muted);
               setAssignment({});
               setSelectedToken(null);
+              setWrongHint(null);
             }}
           >
             Clear

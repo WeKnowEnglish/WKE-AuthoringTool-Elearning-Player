@@ -49,20 +49,28 @@ function screenOutlineBase(screen: { screen_type: string; payload: unknown }): s
         return "Fill in the blanks";
       case "fix_text":
         return "Fix the text";
-      case "hotspot_info":
-        return "Hotspots (info)";
-      case "hotspot_gate":
-        return `Hotspots (${p.mode})`;
+      case "explore_hotspots":
+        return "Explore hotspots";
+      case "language_in_focus":
+        return p.activity_name?.trim()
+          ? `Language in focus: ${p.activity_name}`
+          : "Language in focus";
       case "drag_match":
         return "Drag match";
+      case "line_match":
+        return "Line match";
       case "drag_sentence":
         return "Drag sentence";
       case "click_targets":
         return "Click target";
       case "sound_sort":
         return "Sound sort";
-      case "listen_hotspot_sequence":
-        return "Listen hotspot sequence";
+      case "listen_and_choose":
+        return "Listen and choose";
+      case "flashcards":
+        return p.activity_name?.trim()
+          ? `Flashcards: ${p.activity_name}`
+          : `Flashcards (${p.cards.length})`;
       case "listen_color_write":
         return "Listen color/write";
       case "letter_mixup":
@@ -149,7 +157,12 @@ export function screenThumbnailUrl(screen: {
   }
   if (p.type === "interaction") {
     if ("image_url" in p && p.image_url) return p.image_url;
-    if (p.subtype === "sound_sort") return p.choices[0]?.image_url ?? null;
+    if (p.subtype === "sound_sort" || p.subtype === "listen_and_choose") {
+      return p.choices[0]?.image_url ?? null;
+    }
+    if (p.subtype === "flashcards") {
+      return p.cards.find((card) => card.faces.picture_url)?.faces.picture_url ?? null;
+    }
   }
   return null;
 }

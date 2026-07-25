@@ -6,12 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
-import { speakText, speakTextAndWait } from "@/lib/audio/tts";
+import { speakText, speakTextAndWait, stopSpeaking } from "@/lib/audio/tts";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
-  interactionImageFitClass,
-  interactionHeroImageHeightStyle,
   InteractionLessonNav,
   interactionNavReservePaddingClass,
   NavProps,
@@ -23,6 +21,21 @@ const lastMcQuizOrderBySignature = new Map<string, string>();
 
 function orderSignature(options: { id: string }[]): string {
   return options.map((o) => o.id).join("|");
+}
+
+/** Bigger/bolder for short answers; scales down so longer phrases still fit the cell. */
+function optionLabelClass(label: string): string {
+  const len = label.trim().length;
+  if (len <= 8) {
+    return "text-2xl font-extrabold leading-tight sm:text-3xl md:text-4xl";
+  }
+  if (len <= 16) {
+    return "text-xl font-extrabold leading-snug sm:text-2xl md:text-3xl";
+  }
+  if (len <= 28) {
+    return "text-lg font-bold leading-snug sm:text-xl md:text-2xl";
+  }
+  return "text-base font-bold leading-snug sm:text-lg";
 }
 
 export function McQuizView({
@@ -52,11 +65,57 @@ export function McQuizView({
   const [isResolving, setIsResolving] = useState(false);
   const wrongFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shuffleSeed, setShuffleSeed] = useState("initial");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingPrompt, setPlayingPrompt] = useState(false);
+  const [hasPlayedPrompt, setHasPlayedPrompt] = useState(false);
+
+  const audioUrl = parsed.prompt_audio_url?.trim() || null;
+  const imageUrl = parsed.image_url?.trim() || null;
 
   const triggerBuzz = useCallback(() => {
     if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
     navigator.vibrate([80, 50, 100]);
   }, []);
+
+  /** Play recorded prompt audio (if any). Returns when playback ends or fails. */
+  const playRecordedPrompt = useCallback(async () => {
+    if (!audioUrl || !audioRef.current || muted) return;
+    stopSpeaking();
+    const el = audioRef.current;
+    el.currentTime = 0;
+    try {
+      await el.play();
+      await new Promise<void>((resolve) => {
+        if (el.ended || el.paused) {
+          resolve();
+          return;
+        }
+        const done = () => {
+          el.removeEventListener("ended", done);
+          resolve();
+        };
+        el.addEventListener("ended", done);
+      });
+    } catch {
+      /* ignore autoplay / CORS */
+    }
+  }, [audioUrl, muted]);
+
+  const playPrompt = useCallback(async () => {
+    if (!audioUrl) return;
+    if (muted) {
+      setHasPlayedPrompt(true);
+      return;
+    }
+    playSfx("tap", muted);
+    setPlayingPrompt(true);
+    try {
+      await playRecordedPrompt();
+    } finally {
+      setPlayingPrompt(false);
+      setHasPlayedPrompt(true);
+    }
+  }, [audioUrl, muted, playRecordedPrompt]);
 
   useEffect(() => {
     return () => {
@@ -70,12 +129,19 @@ export function McQuizView({
     queueMicrotask(() => {
       setWrongOptionId(null);
       setIsResolving(false);
+      setPlayingPrompt(false);
+      setHasPlayedPrompt(false);
     });
+    stopSpeaking();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     if (wrongFlashTimerRef.current) {
       clearTimeout(wrongFlashTimerRef.current);
       wrongFlashTimerRef.current = null;
     }
-  }, [parsed.question, optionsSignature, parsed.correct_option_id]);
+  }, [parsed.question, optionsSignature, parsed.correct_option_id, parsed.prompt_audio_url]);
 
   useEffect(() => {
     const buf = new Uint32Array(2);
@@ -106,65 +172,116 @@ export function McQuizView({
     lastMcQuizOrderBySignature.set(quizSig, nextOrder);
     return next;
   }, [parsed.shuffle_options, parsed.options, optionsSignature, shuffleSeed]);
+
+  async function pickOption(opt: { id: string; label: string }) {
+    if (passed || isResolving) return;
+    playSfx("tap", muted);
+    if (opt.id === parsed.correct_option_id) {
+      setIsResolving(true);
+      // Prefer teacher-recorded prompt audio over TTS for the correct-answer confirm.
+      if (audioUrl) {
+        if (snappyCorrect) {
+          void playRecordedPrompt();
+          onPass();
+        } else {
+          await playRecordedPrompt();
+          onPass();
+        }
+      } else if (snappyCorrect) {
+        speakText(opt.label, { muted });
+        onPass();
+      } else {
+        await speakTextAndWait(opt.label, { muted });
+        onPass();
+      }
+      setIsResolving(false);
+      return;
+    }
+    setWrongOptionId(opt.id);
+    triggerBuzz();
+    onWrong();
+    if (wrongFlashTimerRef.current) {
+      clearTimeout(wrongFlashTimerRef.current);
+    }
+    wrongFlashTimerRef.current = setTimeout(() => {
+      setWrongOptionId((current) => (current === opt.id ? null : current));
+    }, 460);
+  }
+
+  const optionButtons = (
+    <div
+      className={clsx(
+        "grid grid-cols-2 gap-3",
+        imageUrl && "md:h-full md:min-h-[min(52dvh,28rem)]",
+      )}
+    >
+      {displayOptions.map((opt: { id: string; label: string }) => (
+        <KidButton
+          key={opt.id}
+          type="button"
+          variant="secondary"
+          disabled={passed || isResolving}
+          className={clsx(
+            "!flex !min-h-[4.5rem] !min-w-0 h-full w-full items-center justify-center !bg-[#f9f0e8] px-2 py-3 text-center hover:!bg-[#f3e6d8] active:!bg-[#eddcc8] sm:px-3 sm:py-4",
+            wrongOptionId === opt.id &&
+              "!border-red-600 !bg-red-100 text-red-900 kid-animate-shake hover:!bg-red-100",
+          )}
+          onClick={() => void pickOption(opt)}
+        >
+          <span className={clsx("max-w-full break-words hyphens-auto", optionLabelClass(opt.label))}>
+            {opt.label}
+          </span>
+        </KidButton>
+      ))}
+    </div>
+  );
+
   return (
     <div className={interactionNavReservePaddingClass}>
-      {parsed.image_url ? (
-        <div
-          className="relative mb-3 w-full shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink"
-          style={interactionHeroImageHeightStyle}
-        >
-          <Image
-            src={parsed.image_url}
-            alt=""
-            fill
-            className={interactionImageFitClass(parsed.image_fit)}
-            unoptimized={unopt(parsed.image_url)}
-          />
-        </div>
+      {audioUrl ? (
+        <audio ref={audioRef} src={audioUrl} preload="auto" className="hidden" />
       ) : null}
       <KidPanel>
-        <p className="text-xl font-semibold">{parsed.question}</p>
-        <div className="mt-4 grid gap-3">
-          {displayOptions.map((opt: { id: string; label: string }) => (
+        {parsed.body_text?.trim() ? (
+          <p className="mb-2 text-base font-semibold text-kid-ink/70">{parsed.body_text.trim()}</p>
+        ) : null}
+        <p className="mb-3 text-2xl font-extrabold leading-snug text-kid-ink sm:text-3xl">
+          {parsed.question}
+        </p>
+        {audioUrl ? (
+          <div className="mb-4 flex justify-center sm:justify-start">
             <KidButton
-              key={opt.id}
               type="button"
-              variant="secondary"
-              disabled={passed || isResolving}
-              className={clsx(
-                "w-full text-left",
-                wrongOptionId === opt.id && "border-red-600 bg-red-100 text-red-900 kid-animate-shake",
-              )}
-              onClick={async () => {
-                if (passed || isResolving) return;
-                playSfx("tap", muted);
-                if (opt.id === parsed.correct_option_id) {
-                  setIsResolving(true);
-                  if (snappyCorrect) {
-                    speakText(opt.label, { muted });
-                    onPass();
-                  } else {
-                    await speakTextAndWait(opt.label, { muted });
-                    onPass();
-                  }
-                  setIsResolving(false);
-                  return;
-                }
-                setWrongOptionId(opt.id);
-                triggerBuzz();
-                onWrong();
-                if (wrongFlashTimerRef.current) {
-                  clearTimeout(wrongFlashTimerRef.current);
-                }
-                wrongFlashTimerRef.current = setTimeout(() => {
-                  setWrongOptionId((current) => (current === opt.id ? null : current));
-                }, 460);
-              }}
+              variant="accent"
+              disabled={playingPrompt}
+              onClick={() => void playPrompt()}
             >
-              {opt.label}
+              {playingPrompt ? "Playing…" : hasPlayedPrompt ? "Replay" : "Listen"}
             </KidButton>
-          ))}
-        </div>
+          </div>
+        ) : null}
+
+        {imageUrl ? (
+          <div className="mt-2 grid gap-4 md:grid-cols-2 md:items-stretch md:gap-5">
+            <div className="relative aspect-square w-full overflow-hidden rounded-lg border-4 border-kid-ink bg-[#eef3f9] shadow-[inset_3px_-3px_2px_rgba(0,0,0,0.18)] sm:aspect-[4/3] md:aspect-auto md:min-h-[min(52dvh,28rem)]">
+              <Image
+                src={imageUrl}
+                alt=""
+                fill
+                className={
+                  (parsed.image_fit ?? "contain") === "cover"
+                    ? "object-cover"
+                    : "object-contain"
+                }
+                unoptimized={unopt(imageUrl)}
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+            </div>
+            {optionButtons}
+          </div>
+        ) : (
+          <div className="mt-2">{optionButtons}</div>
+        )}
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
       <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />

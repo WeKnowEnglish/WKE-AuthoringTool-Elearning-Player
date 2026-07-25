@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "listen_and_choose",
+  "quiz_group_id": "listen-choose-hobbies",
+  "quiz_group_title": "Listen and Choose Hobbies",
+  "activity_name": "Listen and Choose Hobbies",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "listen_and_choose",
+      "image_fit": "contain",
+      "choices": [
+        {
+          "id": "a",
+          "image_url": "/pilots/games-listen-choose/hobbies/q1-dancing.webp",
+          "label": "Dancing"
+        },
+        {
+          "id": "b",
+          "image_url": "/pilots/games-listen-choose/hobbies/q1-drawing.webp",
+          "label": "Drawing"
+        },
+        {
+          "id": "c",
+          "image_url": "/pilots/games-listen-choose/hobbies/q1-reading.webp",
+          "label": "Reading"
+        }
+      ],
+      "correct_choice_id": "b",
+      "auto_play": false,
+      "shuffle_choices": true,
+      "quiz_group_id": "listen-choose-hobbies",
+      "quiz_group_title": "Listen and Choose Hobbies",
+      "quiz_group_order": 0,
+      "body_text": "What is Mia's favorite hobby?",
+      "dialog_text": "I have many different hobbies. I enjoy reading adventure comics in my free time, but I don't do it that much. I am really bad at dancing! I love drawing flowers and animals. One day, I hope to be an artist!"
+    },
+    {
+      "type": "interaction",
+      "subtype": "listen_and_choose",
+      "image_fit": "contain",
+      "choices": [
+        {
+          "id": "a",
+          "image_url": "/pilots/games-listen-choose/hobbies/q2-ethan-building-robot.webp",
+          "label": "Ethan building robot"
+        },
+        {
+          "id": "b",
+          "image_url": "/pilots/games-listen-choose/hobbies/q2-ethan-playing-football.webp",
+          "label": "Ethan playing football"
+        },
+        {
+          "id": "c",
+          "image_url": "/pilots/games-listen-choose/hobbies/q2-ethan-riding-bike.webp",
+          "label": "Ethan riding bike"
+        }
+      ],
+      "correct_choice_id": "a",
+      "auto_play": false,
+      "shuffle_choices": true,
+      "quiz_group_id": "listen-choose-hobbies",
+      "quiz_group_title": "Listen and Choose Hobbies",
+      "quiz_group_order": 1,
+      "body_text": "What is Ethan's favorite hobby?",
+      "dialog_text": "I really like to ride my bike with my friend Leo. We go riding on Saturday mornings. After lunch, we do my favorite hobby. I taught Leo how to build a robot. I don't like football that much, but my teacher is hilarious!"
+    },
+    {
+      "type": "interaction",
+      "subtype": "listen_and_choose",
+      "image_fit": "contain",
+      "choices": [
+        {
+          "id": "a",
+          "image_url": "/pilots/games-listen-choose/hobbies/q3-leo-playing-guitar.webp",
+          "label": "Leo playing guitar"
+        },
+        {
+          "id": "b",
+          "image_url": "/pilots/games-listen-choose/hobbies/q3-leo-reading-comic.webp",
+          "label": "Leo reading comic"
+        },
+        {
+          "id": "c",
+          "image_url": "/pilots/games-listen-choose/hobbies/q3-leo-taking-photos.webp",
+          "label": "Leo taking photos"
+        }
+      ],
+      "correct_choice_id": "a",
+      "auto_play": false,
+      "shuffle_choices": true,
+      "quiz_group_id": "listen-choose-hobbies",
+      "quiz_group_title": "Listen and Choose Hobbies",
+      "quiz_group_order": 2,
+      "body_text": "What is Leo's favorite hobby?",
+      "dialog_text": "My friend Ethan gave me a really good comic book. It was the first comic I have ever read! I usually play my guitar everyday after school and on the weekends. It's the best!"
+    },
+    {
+      "type": "interaction",
+      "subtype": "listen_and_choose",
+      "image_fit": "contain",
+      "choices": [
+        {
+          "id": "a",
+          "image_url": "/pilots/games-listen-choose/hobbies/q4-zara-dancing.webp",
+          "label": "Zara dancing"
+        },
+        {
+          "id": "b",
+          "image_url": "/pilots/games-listen-choose/hobbies/q4-zara-singing.webp",
+          "label": "Zara singing"
+        },
+        {
+          "id": "c",
+          "image_url": "/pilots/games-listen-choose/hobbies/q4-zara-painting.webp",
+          "label": "Zara painting"
+        }
+      ],
+      "correct_choice_id": "b",
+      "auto_play": false,
+      "shuffle_choices": true,
+      "quiz_group_id": "listen-choose-hobbies",
+      "quiz_group_title": "Listen and Choose Hobbies",
+      "quiz_group_order": 3,
+      "body_text": "Why was Zara excited?",
+      "dialog_text": "I was so excited last week! I got to join a dance competition. Dancing is my favorite hobby, but I didn't win. I was excited because it was the first time I sang in front of so many people. They all cheered and clapped for me. Maybe I am better at singing."
+    },
+    {
+      "type": "interaction",
+      "subtype": "listen_and_choose",
+      "image_fit": "contain",
+      "choices": [
+        {
+          "id": "a",
+          "image_url": "/pilots/games-listen-choose/hobbies/q5-mia-reading-zara-dancing.webp",
+          "label": "Mia reading Zara dancing"
+        },
+        {
+          "id": "b",
+          "image_url": "/pilots/games-listen-choose/hobbies/q5-mia-zara-riding-bikes.webp",
+          "label": "Mia Zara riding bikes"
+        },
+        {
+          "id": "c",
+          "image_url": "/pilots/games-listen-choose/hobbies/q5-mia-zara-recording-art-project.webp",
+          "label": "Mia Zara recording art project"
+        }
+      ],
+      "correct_choice_id": "c",
+      "auto_play": false,
+      "shuffle_choices": true,
+      "quiz_group_id": "listen-choose-hobbies",
+      "quiz_group_title": "Listen and Choose Hobbies",
+      "quiz_group_order": 4,
+      "body_text": "What did the friends do last weekend?",
+      "dialog_text": "Last weekend, Mia rode her bike to my house. Then we took our things to the park across the street and made a video for Mia's art presentation. Afterwards, we went home and ate some sandwiches my mom made. Then I gave Mia a present!"
+    }
+  ]
+}

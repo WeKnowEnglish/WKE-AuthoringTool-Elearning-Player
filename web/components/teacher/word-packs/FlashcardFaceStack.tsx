@@ -26,7 +26,7 @@ export function FlashcardFaceStack({
 }: {
   faces: readonly PackFlashcardFace[];
   values: PackFlashcardFaceSnapshot;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
   /** Teacher preview: prompt to fill blank faces. */
   emptyHints?: boolean;
 }) {
@@ -34,16 +34,45 @@ export function FlashcardFaceStack({
     return <p className="text-sm text-neutral-500">Nothing on this side.</p>;
   }
 
-  const titleClass = size === "lg" ? "text-2xl font-bold" : "text-xl font-bold";
-  const bodyClass = size === "lg" ? "text-base" : "text-sm";
+  const titleClass =
+    size === "xl"
+      ? "text-4xl font-extrabold sm:text-5xl"
+      : size === "lg"
+        ? "text-2xl font-bold"
+        : "text-xl font-bold";
+  const bodyClass =
+    size === "xl"
+      ? "text-xl font-semibold sm:text-2xl"
+      : size === "lg"
+        ? "text-base"
+        : "text-sm";
+  const pictureClass =
+    size === "xl"
+      ? "max-h-[min(62vh,34rem)] w-full max-w-2xl rounded-2xl object-contain"
+      : size === "lg"
+        ? "max-h-40 w-auto rounded-md border border-neutral-200 object-contain"
+        : "max-h-40 w-auto rounded-md border border-neutral-200 object-contain";
+  const pictureWrapClass =
+    size === "xl" ? "flex w-full max-w-2xl justify-center" : "flex w-full max-w-xs justify-center";
   const emptyClass = emptyHints ? "text-amber-800" : "text-neutral-500";
+  const inkClass = size === "xl" ? "text-kid-ink" : "text-neutral-900";
+  const bodyInkClass =
+    size === "xl" ? "text-kid-ink/90" : "text-neutral-800";
+  const exampleInkClass =
+    size === "xl" ? "text-kid-ink/80" : "text-neutral-700";
 
   return (
-    <div className="flex w-full flex-col items-center gap-3 text-center">
+    <div
+      className={
+        size === "xl"
+          ? "flex w-full flex-col items-center gap-5 text-center"
+          : "flex w-full flex-col items-center gap-3 text-center"
+      }
+    >
       {faces.map((face) => {
         if (face === "word") {
           return (
-            <p key={face} className={`${titleClass} text-neutral-900`}>
+            <p key={face} className={`${titleClass} ${inkClass}`}>
               {values.word?.trim() || "—"}
             </p>
           );
@@ -53,7 +82,7 @@ export function FlashcardFaceStack({
           return (
             <p
               key={face}
-              className={`${bodyClass} ${text ? "text-neutral-800" : emptyClass}`}
+              className={`${bodyClass} ${text ? bodyInkClass : emptyClass}`}
             >
               {text || (emptyHints ? "Add definition…" : "—")}
             </p>
@@ -64,20 +93,20 @@ export function FlashcardFaceStack({
           return (
             <p
               key={face}
-              className={`${bodyClass} italic ${text ? "text-neutral-700" : emptyClass}`}
+              className={`${bodyClass} italic ${text ? exampleInkClass : emptyClass}`}
             >
               {text ? `“${text}”` : emptyHints ? "Add example…" : "—"}
             </p>
           );
         }
         return (
-          <div key={face} className="flex w-full max-w-xs justify-center">
+          <div key={face} className={pictureWrapClass}>
             {values.pictureUrl?.trim() ? (
               // eslint-disable-next-line @next/next/no-img-element -- teacher paste URL preview
               <img
                 src={values.pictureUrl}
                 alt=""
-                className="max-h-40 w-auto rounded-md border border-neutral-200 object-contain"
+                className={pictureClass}
               />
             ) : (
               <p className={`${bodyClass} ${emptyClass}`}>

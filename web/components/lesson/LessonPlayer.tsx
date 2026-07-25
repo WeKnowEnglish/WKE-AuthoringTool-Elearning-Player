@@ -135,14 +135,21 @@ const LazyFillBlanks = lazy(() =>
 const LazyEssay = lazy(() =>
   import("./interactions/EssayView").then((m) => ({ default: m.EssayView })),
 );
-const LazyHotspotInfo = lazy(() =>
-  import("./interactions/HotspotInfoView").then((m) => ({ default: m.HotspotInfoView })),
+const LazyExploreHotspots = lazy(() =>
+  import("./interactions/ExploreHotspotsView").then((m) => ({
+    default: m.ExploreHotspotsView,
+  })),
 );
-const LazyHotspotGate = lazy(() =>
-  import("./interactions/HotspotGateView").then((m) => ({ default: m.HotspotGateView })),
+const LazyLanguageInFocus = lazy(() =>
+  import("./interactions/LanguageInFocusView").then((m) => ({
+    default: m.LanguageInFocusView,
+  })),
 );
 const LazyDragMatch = lazy(() =>
   import("./interactions/DragMatchView").then((m) => ({ default: m.DragMatchView })),
+);
+const LazyLineMatch = lazy(() =>
+  import("./interactions/LineMatchView").then((m) => ({ default: m.LineMatchView })),
 );
 const LazyClickTargets = lazy(() =>
   import("./interactions/ClickTargetsView").then((m) => ({ default: m.ClickTargetsView })),
@@ -150,9 +157,14 @@ const LazyClickTargets = lazy(() =>
 const LazySoundSort = lazy(() =>
   import("./interactions/SoundSortView").then((m) => ({ default: m.SoundSortView })),
 );
-const LazyListenHotspotSequence = lazy(() =>
-  import("./interactions/ListenHotspotSequenceView").then((m) => ({
-    default: m.ListenHotspotSequenceView,
+const LazyListenAndChoose = lazy(() =>
+  import("./interactions/ListenAndChooseView").then((m) => ({
+    default: m.ListenAndChooseView,
+  })),
+);
+const LazyFlashcards = lazy(() =>
+  import("./interactions/FlashcardsView").then((m) => ({
+    default: m.FlashcardsView,
   })),
 );
 const LazyListenColorWrite = lazy(() =>
@@ -1626,17 +1638,17 @@ export function LessonPlayer({
           </InteractionFeedbackShell>
         </>
       )}
-      {parsed.type === "interaction" && parsed.subtype === "hotspot_info" && (
-        <InteractionFeedbackShell kind="none">
+      {parsed.type === "interaction" && parsed.subtype === "explore_hotspots" && (
+        <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
-            <LazyHotspotInfo parsed={parsed} {...nav} />
+            <LazyExploreHotspots parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
-      {parsed.type === "interaction" && parsed.subtype === "hotspot_gate" && (
+      {parsed.type === "interaction" && parsed.subtype === "language_in_focus" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
-            <LazyHotspotGate parsed={parsed} {...nav} {...passHandlers} />
+            <LazyLanguageInFocus parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
@@ -1644,6 +1656,13 @@ export function LessonPlayer({
         <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
             <LazyDragMatch parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "line_match" && (
+        <InteractionFeedbackShell kind={interactionFeedback}>
+          <InteractionLazyShell>
+            <LazyLineMatch parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
@@ -1661,10 +1680,17 @@ export function LessonPlayer({
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
-      {parsed.type === "interaction" && parsed.subtype === "listen_hotspot_sequence" && (
+      {parsed.type === "interaction" && parsed.subtype === "listen_and_choose" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
-            <LazyListenHotspotSequence parsed={parsed} {...nav} {...passHandlers} />
+            <LazyListenAndChoose key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "flashcards" && (
+        <InteractionFeedbackShell kind={interactionFeedback}>
+          <InteractionLazyShell>
+            <LazyFlashcards key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
@@ -1806,11 +1832,25 @@ function extractTrackedWords(payload: ScreenPayload): string[] {
       );
     case "drag_sentence":
       return uniqueWords(payload.word_bank.flatMap((word) => extractWords(word)));
-    case "listen_hotspot_sequence":
+    case "explore_hotspots":
       return uniqueWords(
         extractWords(payload.body_text ?? "").concat(
-          payload.targets.flatMap((target) => extractWords(target.label ?? "")),
+          payload.dialogues.flatMap((d) =>
+            extractWords(d.title).concat(d.turns.flatMap((t) => extractWords(t.text))),
+          ),
         ),
+      );
+    case "language_in_focus":
+      return uniqueWords(
+        extractWords(payload.body_text ?? "")
+          .concat(extractWords(payload.sentence_template))
+          .concat(
+            payload.slot_banks.flatMap((bank) =>
+              bank.options.flatMap((o) =>
+                extractWords(o.label).concat(extractWords(o.base_form ?? "")),
+              ),
+            ),
+          ),
       );
     case "word_bucket_catch":
       return uniqueWords(extractWords(payload.target_word));

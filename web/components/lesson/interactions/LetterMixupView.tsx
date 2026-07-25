@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
@@ -22,6 +23,11 @@ import {
   vocabLetterTileClass,
 } from "@/lib/vocabulary-templates/vocab-interaction-ui";
 import {
+  buildInitialLetterMixupSlots,
+  buildLetterMixupLayout,
+  normalizeLetterMixupTarget,
+} from "@/lib/games-letter-mixup/letter-mixup-layout";
+import {
   GuideBlock,
   interactionHeroImageFrameClass,
   interactionHeroImageFrameStyle,
@@ -33,7 +39,6 @@ import {
   interactionNavReservePaddingClass,
   NavProps,
   unopt,
-  deterministicShuffle,
 } from "./shared";
 
 /** Vocab spell: prefer large tiles; scroll horizontally rather than shrink below `min`. */
@@ -131,16 +136,24 @@ export function LetterMixupView({
 
   const item = parsed.items[0];
   const targetWord = item?.target_word ?? "";
-  const targetChars = useMemo(() => targetWord.split(""), [targetWord]);
-  const letters = useMemo(() => {
-    const split = targetChars;
+  const layout = useMemo(() => {
     const shuffleSeed =
       typeof parsed.letter_shuffle_seed === "string" && parsed.letter_shuffle_seed.trim()
         ? parsed.letter_shuffle_seed.trim()
         : targetWord;
-    return parsed.shuffle_letters ? deterministicShuffle([...split], shuffleSeed) : split;
-  }, [parsed.shuffle_letters, parsed.letter_shuffle_seed, targetChars, targetWord]);
-  const lettersKey = useMemo(() => letters.map((ch, i) => `${i}:${ch}`).join("|"), [letters]);
+    return buildLetterMixupLayout(targetWord, {
+      shuffleLetters: parsed.shuffle_letters,
+      shuffleSeed,
+    });
+  }, [parsed.shuffle_letters, parsed.letter_shuffle_seed, targetWord]);
+  const { targetChars, trayGroups, trayLetters: letters } = layout;
+  const lettersKey = useMemo(
+    () =>
+      `${targetChars.map((ch, i) => `${i}:${ch}`).join("|")}||${letters
+        .map((ch, i) => `${i}:${ch}`)
+        .join("|")}`,
+    [targetChars, letters],
+  );
 
   type WordCell = { traySlotKey: string; char: string; locked: boolean };
   const [wordSlots, setWordSlots] = useState<(WordCell | null)[]>([]);
@@ -183,7 +196,8 @@ export function LetterMixupView({
 
   useEffect(() => {
     queueMicrotask(() => {
-      setWordSlots(Array.from({ length: Math.max(1, targetChars.length) }, () => null));
+      const initial = buildInitialLetterMixupSlots(targetChars);
+      setWordSlots(initial.length > 0 ? initial : [null]);
       setShakingSlotIndices(new Set());
       setPassing(false);
       passCommittedRef.current = false;
@@ -192,7 +206,7 @@ export function LetterMixupView({
       clearTimeout(kickTimeoutRef.current);
       kickTimeoutRef.current = null;
     }
-  }, [lettersKey, targetChars.length]);
+  }, [lettersKey, targetChars]);
 
   const letterTileScrollOuterClass =
     "w-full min-w-0 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
@@ -220,7 +234,8 @@ export function LetterMixupView({
   const tilePreferredPx = vocabImmersive ? 56 : 44;
 
   useLayoutEffect(() => {
-    const n = letters.length;
+    // Size tiles from the answer row (includes fixed space gaps between words).
+    const n = Math.max(targetChars.length, letters.length);
     if (n === 0) {
       queueMicrotask(() => setLetterTileSizePx(null));
       return;
@@ -255,7 +270,15 @@ export function LetterMixupView({
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [lettersKey, letters.length, TRAY_GAP_PX, tileMaxPx, tileMinPx, vocabImmersive]);
+  }, [
+    lettersKey,
+    letters.length,
+    targetChars.length,
+    TRAY_GAP_PX,
+    tileMaxPx,
+    tileMinPx,
+    vocabImmersive,
+  ]);
 
   const pictureListenLine =
     parsed.image_read_aloud_text?.trim() || targetWord.trim();
@@ -300,10 +323,14 @@ export function LetterMixupView({
     const n = targetChars.length;
     if (n === 0 || slots.length !== n) return;
 
-    const normWord = (s: string) => (parsed.case_sensitive ? s : s.toLowerCase());
-    const answers = [item?.target_word ?? "", ...(item?.accepted_words ?? [])].filter(
-      (w): w is string => typeof w === "string" && w.length > 0,
-    );
+    const normWord = (s: string) => {
+      const normalized = normalizeLetterMixupTarget(s);
+      return parsed.case_sensitive ? normalized : normalized.toLowerCase();
+    };
+    const answers = [
+      targetChars.join(""),
+      ...(item?.accepted_words ?? []).map((word) => normalizeLetterMixupTarget(word)),
+    ].filter((w): w is string => typeof w === "string" && w.length > 0);
 
     const allFilled = slots.every((s) => s !== null);
     const allLocked = allFilled && slots.every((s) => s!.locked);
@@ -413,6 +440,7 @@ export function LetterMixupView({
       kickTimeoutRef.current = null;
     }
     setShakingSlotIndices(new Set());
+    // Keep locked letters and fixed space slots; clear only unlocked letter tiles.
     setWordSlots((prev) => prev.map((c) => (c?.locked ? c : null)));
   }
 
@@ -436,7 +464,12 @@ export function LetterMixupView({
       if (e.key !== "Enter") return;
       if (passedRef.current || passing) return;
       const slots = wordSlotsRef.current;
-      if (slots.length === 0 || slots.every((s) => s === null)) return;
+      if (
+        slots.length === 0 ||
+        !slots.some((s) => s !== null && !s.traySlotKey.startsWith("space__"))
+      ) {
+        return;
+      }
       e.preventDefault();
       checkRef.current();
     };
@@ -458,9 +491,21 @@ export function LetterMixupView({
   }, [parsed.image_audio_url]);
 
   useEffect(() => {
-    if (!immersive || muted || passed || !parsed.image_use_tts || !pictureListenLine) return;
+    if (!immersive || muted || passed) return;
+    const url = parsed.image_audio_url?.trim();
     const timer = window.setTimeout(() => {
-      speakText(pictureListenLine, { lang: ttsLang, muted });
+      // Recorded audio wins over TTS (same as Listen / Flashcards).
+      if (url) {
+        const el = wordAudioRef.current;
+        if (el) {
+          el.currentTime = 0;
+          void el.play().catch(() => null);
+        }
+        return;
+      }
+      if (parsed.image_use_tts && pictureListenLine) {
+        speakText(pictureListenLine, { lang: ttsLang, muted });
+      }
     }, 320);
     return () => window.clearTimeout(timer);
   }, [
@@ -468,6 +513,7 @@ export function LetterMixupView({
     item?.id,
     muted,
     passed,
+    parsed.image_audio_url,
     parsed.image_use_tts,
     pictureListenLine,
     ttsLang,
@@ -477,11 +523,8 @@ export function LetterMixupView({
     if (passed || passing) return;
     primeAudioOutput();
     playSfx("tap", muted);
-    if (parsed.image_use_tts) {
-      if (pictureListenLine) speakText(pictureListenLine, { lang: ttsLang, muted });
-      return;
-    }
     const url = parsed.image_audio_url?.trim();
+    // Prefer recorded / uploaded clip whenever present.
     if (url && !muted) {
       const el = wordAudioRef.current;
       if (el) {
@@ -489,6 +532,10 @@ export function LetterMixupView({
         void el.play().catch(() => null);
         return;
       }
+    }
+    if (parsed.image_use_tts && pictureListenLine) {
+      speakText(pictureListenLine, { lang: ttsLang, muted });
+      return;
     }
     const say = targetWord.trim();
     if (say) speakText(say, { lang: ttsLang, muted });
@@ -499,8 +546,34 @@ export function LetterMixupView({
   const tileFontMin = vocabImmersive ? 22 : 14;
   const tileFontScale = vocabImmersive ? 0.52 : 0.42;
 
+  const spaceGapPx = Math.max(12, Math.round(tilePx * 0.55));
+
   const slotTiles = wordSlots.map((cell, slotIndex) => {
     const fs = Math.min(tileFontMax, Math.max(tileFontMin, Math.round(tilePx * tileFontScale)));
+    const isSpaceSlot = targetChars[slotIndex] === " ";
+    if (isSpaceSlot) {
+      return (
+        <div
+          key={`slot-${slotIndex}`}
+          className="flex shrink-0 items-center justify-center"
+          style={{
+            width: spaceGapPx,
+            height: tilePx,
+            minWidth: spaceGapPx,
+            minHeight: tilePx,
+          }}
+          aria-label="Space"
+        >
+          <span
+            className={clsx(
+              "block h-1 w-3/4 max-w-[1.25rem] rounded-full",
+              exploreCloud ? "bg-white/70" : "bg-kid-ink/35",
+            )}
+            aria-hidden
+          />
+        </div>
+      );
+    }
     return (
       <div
         key={`slot-${slotIndex}`}
@@ -508,7 +581,7 @@ export function LetterMixupView({
           exploreCloud ? cloudSlotClass
           : vocabImmersive ?
             vocabLetterSlotClass
-          : "flex shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-white/60 p-0.5"
+          : "flex shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-kid-ink/30 bg-white/60 p-0.5"
         }
         style={{
           width: tilePx,
@@ -536,17 +609,43 @@ export function LetterMixupView({
           >
             {cell.char}
           </button>
-        : <span className="text-xs font-medium text-neutral-400 sm:text-sm" aria-hidden>·</span>}
+        : <span className="text-xs font-medium text-kid-ink/40 sm:text-sm" aria-hidden>·</span>}
       </div>
     );
   });
 
-  const trayTiles = letters
-    .map((ch, i) => ({ ch, i, traySlotKey: `${i}__${ch}` }))
-    .filter(({ traySlotKey }) => !trayKeyInUse(traySlotKey))
-    .map(({ ch, i, traySlotKey }) => {
+  let trayLetterOffset = 0;
+  const trayTiles: ReactNode[] = [];
+  trayGroups.forEach((group, groupIndex) => {
+    if (groupIndex > 0) {
+      trayTiles.push(
+        <div
+          key={`tray-space-${groupIndex}`}
+          className="flex shrink-0 items-center justify-center"
+          style={{
+            width: spaceGapPx,
+            height: tilePx,
+            minWidth: spaceGapPx,
+            minHeight: tilePx,
+          }}
+          aria-hidden
+        >
+          <span
+            className={clsx(
+              "block h-1 w-3/4 max-w-[1.25rem] rounded-full",
+              exploreCloud ? "bg-white/50" : "bg-kid-ink/25",
+            )}
+          />
+        </div>,
+      );
+    }
+    for (const ch of group) {
+      const i = trayLetterOffset;
+      trayLetterOffset += 1;
+      const traySlotKey = `${i}__${ch}`;
+      if (trayKeyInUse(traySlotKey)) continue;
       const fs = Math.min(tileFontMax, Math.max(tileFontMin, Math.round(tilePx * tileFontScale)));
-      return (
+      trayTiles.push(
         <button
           key={traySlotKey}
           type="button"
@@ -563,9 +662,10 @@ export function LetterMixupView({
           aria-label={`Add letter ${ch}`}
         >
           {ch}
-        </button>
+        </button>,
       );
-    });
+    }
+  });
 
   const answerRow =
     immersive ?
@@ -618,7 +718,7 @@ export function LetterMixupView({
     <p
       className={clsx(
         "font-semibold text-kid-ink",
-        immersive ? "text-center text-2xl sm:text-3xl" : "text-xl",
+        immersive ? "text-center text-2xl sm:text-3xl" : "mb-4 text-xl",
       )}
     >
       {parsed.prompt}
@@ -663,7 +763,10 @@ export function LetterMixupView({
               className={clsx(
                 "relative mx-auto w-full max-w-md shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4",
                 interactionHeroImageFrameClass(vocabImgOpts),
-                !passed && parsed.image_use_tts && pictureListenLine && "cursor-pointer",
+                !passed &&
+                  (Boolean(parsed.image_audio_url?.trim()) ||
+                    (parsed.image_use_tts && pictureListenLine)) &&
+                  "cursor-pointer",
               )}
               style={{
                 aspectRatio: "16 / 10",
@@ -671,7 +774,9 @@ export function LetterMixupView({
                 ...interactionHeroImageFrameStyle(vocabImgOpts),
               }}
               aria-label={
-                parsed.image_use_tts && pictureListenLine ?
+                parsed.image_audio_url?.trim() ?
+                  "Tap to hear the word"
+                : parsed.image_use_tts && pictureListenLine ?
                   `Tap to hear: ${pictureListenLine}`
                 : "Picture"
               }
@@ -684,7 +789,9 @@ export function LetterMixupView({
                 className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
                 unoptimized={unopt(parsed.image_url)}
               />
-              {!passed && parsed.image_use_tts && pictureListenLine ?
+              {!passed &&
+              (Boolean(parsed.image_audio_url?.trim()) ||
+                (parsed.image_use_tts && pictureListenLine)) ?
                 <span className="pointer-events-none absolute bottom-2 left-2 rounded-full border-2 border-kid-ink bg-white/95 px-2.5 py-1 text-xs font-bold text-kid-ink shadow-sm">
                   Tap · hear word
                 </span>
@@ -715,7 +822,7 @@ export function LetterMixupView({
     <div className={interactionNavReservePaddingClass}>
       <audio ref={wordAudioRef} preload="metadata" className="hidden" />
       {parsed.image_url ?
-        <div className="mb-4">
+        <div className="mb-3">
           <button
             type="button"
             disabled={passed || passing}
@@ -730,10 +837,10 @@ export function LetterMixupView({
               ...interactionHeroImageFrameStyle(vocabImgOpts),
             }}
             aria-label={
-              parsed.image_use_tts ?
-                `Tap to hear: ${parsed.image_read_aloud_text?.trim() || targetWord || "word"}`
-              : parsed.image_audio_url?.trim() ?
+              parsed.image_audio_url?.trim() ?
                 "Tap to hear the word"
+              : parsed.image_use_tts ?
+                `Tap to hear: ${parsed.image_read_aloud_text?.trim() || targetWord || "word"}`
               : `Tap to hear the word: ${targetWord || "target word"}`
             }
           >
@@ -759,7 +866,7 @@ export function LetterMixupView({
           wrong letters return to the tray.
         </p>
         {answerRow}
-        <p className="mt-2 text-center text-sm text-neutral-600">
+        <p className="mt-2 text-center text-sm font-semibold text-kid-ink/70">
           Letter tray — tap to add (first empty slot)
         </p>
         {trayRow}

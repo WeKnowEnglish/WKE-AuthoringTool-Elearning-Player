@@ -1,7 +1,14 @@
-import bundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
+
+/**
+ * Relative to the Lesson Player `web/` app root.
+ * Turbopack rejects absolute Windows paths in resolveAlias ("windows imports are not implemented yet").
+ */
+const exploreHotspotsPlayEntry =
+  "../../WKE Animator/svg-edu-studio/packages/explore-hotspots-play/src/index.ts";
 
 function supabaseStoragePattern():
   | {
@@ -27,6 +34,19 @@ function supabaseStoragePattern():
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  transpilePackages: ["@wke/explore-hotspots-play"],
+  turbopack: {
+    resolveAlias: {
+      "@wke/explore-hotspots-play": exploreHotspotsPlayEntry,
+    },
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@wke/explore-hotspots-play": exploreHotspotsPlayEntry,
+    };
+    return config;
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "100mb",

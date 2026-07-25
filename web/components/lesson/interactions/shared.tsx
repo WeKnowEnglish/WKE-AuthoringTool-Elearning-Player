@@ -90,7 +90,7 @@ export function GuideBlock({
 }
 
 export function unopt(url: string) {
-  return url.includes("placehold.co");
+  return url.includes("placehold.co") || url.startsWith("data:");
 }
 
 /** Brief scale pop on interaction hero images (correct answer feedback). */
@@ -187,6 +187,44 @@ export const STAGE_CHROME_FOOTER_CLASS = "h-14 shrink-0";
 
 /** Bottom padding so activity content stays above {@link InteractionLessonNav}. */
 export const interactionNavReservePaddingClass = "pb-24";
+
+/* ── Games quiz chrome (shared look for pilots / Activity Builder exports) ── */
+
+/** Optional hero image frame — pair with {@link interactionHeroImageHeightStyle}. */
+export const gamesHeroImageFrameClass =
+  "relative mb-3 w-full shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink";
+
+/** Primary prompt / body_text line. */
+export const gamesBodyTextClass = "mb-4 text-xl font-semibold text-kid-ink";
+
+/** Secondary how-to hint under the body. */
+export const gamesHintTextClass = "mb-3 text-base font-semibold text-kid-ink/80";
+
+/** Clear + Check (and similar) action row. */
+export const gamesCheckActionRowClass = "mt-4 flex flex-wrap gap-2";
+
+/** Compact KidButton chips (word bank, match tokens). */
+export const gamesChipButtonClass = "!min-h-11 !min-w-0 px-3 py-2 text-base font-bold";
+
+/** Drop / match target zone (dashed). */
+export const gamesMatchZoneClass =
+  "min-h-16 w-full rounded-lg border-4 border-dashed border-kid-ink bg-kid-surface-muted/50 px-3 py-2 text-left text-lg font-semibold text-kid-ink transition hover:bg-kid-surface-muted active:bg-kid-panel disabled:opacity-60";
+
+/** Solid match tile (left column / selected). */
+export const gamesMatchTileClass =
+  "min-h-14 w-full rounded-lg border-4 border-kid-ink bg-kid-panel px-3 py-2 text-left text-lg font-semibold text-kid-ink transition hover:bg-kid-surface-muted active:bg-kid-surface disabled:opacity-60";
+
+/** Selected match tile. */
+export const gamesMatchTileSelectedClass =
+  "min-h-14 w-full rounded-lg border-4 border-kid-ink bg-kid-cta px-3 py-2 text-left text-lg font-semibold text-kid-ink transition disabled:opacity-60";
+
+/** Linked / placed match tile. */
+export const gamesMatchTileLinkedClass =
+  "min-h-14 w-full rounded-lg border-4 border-emerald-700 bg-emerald-50 px-3 py-2 text-left text-lg font-semibold text-emerald-950 transition disabled:opacity-60";
+
+/** Inline wrong-attempt hint (Check activities). */
+export const gamesWrongHintClass =
+  "mt-3 rounded-lg border-2 border-red-300 bg-red-50 px-3 py-2 text-base font-semibold text-red-900";
 
 /** Orange footer row for immersive lesson interactions (vocabulary overlay). */
 export function InteractionStageFooter({

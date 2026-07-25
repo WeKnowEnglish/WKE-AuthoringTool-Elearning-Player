@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "fill_blanks",
+  "quiz_group_id": "bakery-fill-blanks",
+  "quiz_group_title": "Bakery fill in the blanks",
+  "activity_name": "Bakery fill in the blanks",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "fill_blanks",
+      "body_text": "Choose the missing word.",
+      "template": "I need __1__ for the recipe.",
+      "blanks": [{ "id": "1", "acceptable": ["eggs", "Eggs", "egg", "Egg"] }],
+      "word_bank": ["eggs", "jam", "bread", "milk"],
+      "quiz_group_id": "bakery-fill-blanks",
+      "quiz_group_title": "Bakery fill in the blanks",
+      "quiz_group_order": 0
+    },
+    {
+      "type": "interaction",
+      "subtype": "fill_blanks",
+      "body_text": "Choose the missing word.",
+      "template": "We use __1__ on bread.",
+      "blanks": [{ "id": "1", "acceptable": ["jam", "Jam"] }],
+      "word_bank": ["jam", "milk", "eggs", "water"],
+      "quiz_group_id": "bakery-fill-blanks",
+      "quiz_group_title": "Bakery fill in the blanks",
+      "quiz_group_order": 1
+    },
+    {
+      "type": "interaction",
+      "subtype": "fill_blanks",
+      "body_text": "Choose the missing word.",
+      "template": "We buy bread at the __1__.",
+      "blanks": [{ "id": "1", "acceptable": ["bakery", "Bakery"] }],
+      "word_bank": ["bakery", "school", "park", "library"],
+      "quiz_group_id": "bakery-fill-blanks",
+      "quiz_group_title": "Bakery fill in the blanks",
+      "quiz_group_order": 2
+    }
+  ]
+}

@@ -2194,6 +2194,8 @@ export const mcQuizPayloadSchema = z.object({
   image_url: z.string().optional(),
   image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
   body_text: z.string().optional(),
+  /** Recorded/uploaded prompt; when set, Listen plays this instead of question TTS. */
+  prompt_audio_url: z.string().optional(),
   question: z.string(),
   options: z.array(
     z.object({
@@ -2348,100 +2350,546 @@ export const fixTextPayloadSchema = z.object({
   guide: guideSchema,
 });
 
-const hotspotInfoItemSchema = z.object({
-  id: z.string(),
-  x_percent: z.number(),
-  y_percent: z.number(),
-  w_percent: z.number(),
-  h_percent: z.number(),
-  title: z.string().optional(),
-  body: z.string().optional(),
-  label: z.string().optional(),
+const exploreHotspotPointSchema = z.object({
+  x: z.number(),
+  y: z.number(),
 });
 
-export type HotspotGatePayloadIn = {
-  targets: { id: string }[];
-  mode: "single" | "sequence" | "all";
-  correct_target_id?: string;
-  order?: string[];
-};
-
-export function validateHotspotGatePayload(
-  data: HotspotGatePayloadIn,
-): { ok: true } | { ok: false; message: string } {
-  const ids = new Set(data.targets.map((t) => t.id));
-  if (data.mode === "single") {
-    if (!data.correct_target_id || !ids.has(data.correct_target_id)) {
-      return { ok: false, message: "single mode requires correct_target_id in targets" };
-    }
-  }
-  if (data.mode === "sequence") {
-    const ord = data.order ?? [];
-    if (ord.length === 0) {
-      return { ok: false, message: "sequence mode requires order array" };
-    }
-    for (const id of ord) {
-      if (!ids.has(id)) return { ok: false, message: `order references unknown id ${id}` };
-    }
-  }
-  if (data.mode === "all") {
-    if (data.targets.length === 0) {
-      return { ok: false, message: "all mode needs at least one target" };
-    }
-  }
-  return { ok: true };
-}
-
-export const hotspotInfoPayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("hotspot_info"),
-  image_url: z.string(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  hotspots: z.array(hotspotInfoItemSchema).min(1),
-  require_all_viewed: z.boolean().optional().default(false),
-  guide: guideSchema,
+const exploreHotspotItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().optional(),
+  accessible_label: z.string().optional(),
+  required: z.boolean().optional().default(true),
+  tab_order: z.number().int().optional(),
+  /** Normalized polygon points in 0–1 image space (EDU Studio export). */
+  points: z.array(exploreHotspotPointSchema).min(3),
+  /** Precise segmentation contours for spotlight mask / outline (Studio visualShape). */
+  visual_shape: z
+    .object({
+      type: z.literal("segmentation-contour"),
+      source_asset_id: z.string().min(1),
+      source_width: z.number().positive(),
+      source_height: z.number().positive(),
+      paths: z.array(z.array(exploreHotspotPointSchema).min(3)).min(1),
+      score: z.number().optional(),
+    })
+    .optional(),
+  highlight: z
+    .object({
+      style: z.string().optional(),
+      color: z.string().optional(),
+      outline_width: z.number().optional(),
+      glow_radius: z.number().optional(),
+      background_dim: z.number().optional(),
+    })
+    .optional(),
 });
 
-export const hotspotGatePayloadSchema = z
+const exploreHotspotDialogueSchema = z.object({
+  id: z.string().min(1),
+  hotspot_id: z.string().min(1),
+  title: z.string().min(1),
+  turns: z
+    .array(
+      z.object({
+        speaker: z.string().min(1),
+        text: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+/** Studio-aligned explore hotspots (replaces legacy rect hotspot subtypes). */
+export const exploreHotspotsPayloadSchema = z
   .object({
     type: z.literal("interaction"),
-    subtype: z.literal("hotspot_gate"),
-    image_url: z.string(),
+    subtype: z.literal("explore_hotspots"),
+    activity_name: z.string().optional(),
+    image_url: z.string().min(1),
+    image_alt: z.string().optional(),
     image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    image_width: z.number().positive().optional(),
+    image_height: z.number().positive().optional(),
+    aspect_ratio: z.string().optional().default("16:9"),
     body_text: z.string().optional(),
-    targets: z.array(rectTargetSchema).min(1),
-    mode: z.enum(["single", "sequence", "all"]),
-    correct_target_id: z.string().optional(),
-    order: z.array(z.string()).optional(),
+    completion_message: z.string().optional(),
+    media_width_fraction: z.number().min(0.2).max(0.95).optional().default(0.72),
+    hotspots: z.array(exploreHotspotItemSchema).min(1),
+    dialogue_panel: z
+      .object({
+        empty_state_text: z.string().optional(),
+        show_transcript: z.boolean().optional().default(true),
+        show_replay: z.boolean().optional().default(true),
+        show_progress: z.boolean().optional().default(true),
+      })
+      .optional(),
+    dialogues: z.array(exploreHotspotDialogueSchema).min(1),
+    completion: z
+      .object({
+        type: z.literal("visit_all_required_hotspots"),
+      })
+      .optional()
+      .default({ type: "visit_all_required_hotspots" }),
+    visited_when: z
+      .enum(["dialogue_started", "dialogue_finished"])
+      .optional()
+      .default("dialogue_started"),
+    auto_play_on_select: z.boolean().optional().default(true),
     guide: guideSchema,
   })
   .superRefine((data, ctx) => {
-    const v = validateHotspotGatePayload(data);
-    if (!v.ok) ctx.addIssue({ code: z.ZodIssueCode.custom, message: v.message });
+    const hotspotIds = new Set(data.hotspots.map((h) => h.id));
+    for (const dialogue of data.dialogues) {
+      if (!hotspotIds.has(dialogue.hotspot_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Dialogue ${dialogue.id} references unknown hotspot ${dialogue.hotspot_id}`,
+        });
+      }
+    }
   });
 
-export const listenHotspotSequencePayloadSchema = z
+export type ExploreHotspotsPayload = z.infer<typeof exploreHotspotsPayloadSchema>;
+
+/** Closed roles for language-in-focus chunk dissection (reusable across patterns). */
+export const languageInFocusChunkRoleSchema = z.enum([
+  "person",
+  "feeling",
+  "activity",
+  "subject",
+  "modal",
+  "verb",
+  "object",
+  "other",
+]);
+
+export const languageInFocusReferenceIconSchema = z.enum([
+  "me",
+  "girl",
+  "boy",
+  "heart",
+  "pencil",
+  "book",
+  "dance",
+  "ball",
+  "music",
+]);
+
+const languageInFocusReferenceItemSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1),
+  note: z.string().optional(),
+  base: z.string().optional(),
+  form: z.string().optional(),
+  /** Optional meaning icon shown beside the item. */
+  icon: languageInFocusReferenceIconSchema.optional(),
+});
+
+const languageInFocusSlotOptionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  base_form: z.string().optional(),
+  icon: z.string().optional(),
+  color: z.string().optional(),
+});
+
+const languageInFocusWorkbenchElementSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("example_tabs"),
+  }),
+  z.object({
+    type: z.literal("chunk_dissection"),
+    show_full_sentence: z.boolean().optional().default(true),
+  }),
+  z.object({
+    type: z.literal("slot_chooser"),
+    role: languageInFocusChunkRoleSchema,
+    prompt: z.string().optional(),
+    /**
+     * When set, only these options are offered (controlled correct practice).
+     * Omit to offer the full slot bank (includes build distractors).
+     */
+    option_ids: z.array(z.string().min(1)).min(1).optional(),
+  }),
+  z.object({
+    type: z.literal("action_row"),
+    actions: z
+      .array(z.enum(["hear_sentence", "cycle_slot"]))
+      .min(1),
+    /** Required when actions include cycle_slot. */
+    cycle_role: languageInFocusChunkRoleSchema.optional(),
+    /**
+     * Optional subset for cycle_slot. When omitted, inherits option_ids from
+     * a slot_chooser with the same role in the same workbench.
+     */
+    cycle_option_ids: z.array(z.string().min(1)).min(1).optional(),
+  }),
+]);
+
+const languageInFocusLayerSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("sentence_build"),
+    id: z.string().min(1),
+    prompt: z.string().optional(),
+    /** Target example for the correct answers (defaults to first example). */
+    example_id: z.string().optional(),
+    /** Extra option ids from slot_banks to mix into the word bank. */
+    distractor_option_ids: z.array(z.string()).optional().default([]),
+  }),
+  z.object({
+    type: z.literal("listen_and_build"),
+    id: z.string().min(1),
+    listen_prompt: z.string().optional(),
+    build_prompt: z.string().optional(),
+    /** Walk these examples in order (defaults to all examples). */
+    example_ids: z.array(z.string().min(1)).min(1).optional(),
+    require_listen_before_build: z.boolean().optional().default(true),
+    distractor_option_ids: z.array(z.string()).optional().default([]),
+  }),
+  z.object({
+    type: z.literal("workbench"),
+    id: z.string().min(1),
+    elements: z.array(languageInFocusWorkbenchElementSchema).min(1),
+  }),
+]);
+
+/**
+ * Interactive language-in-focus: scene + layered workbench + grammar rail.
+ * Prefer `layers` for guided flow; `workbench` remains as a single-layer fallback.
+ */
+export const languageInFocusPayloadSchema = z
   .object({
     type: z.literal("interaction"),
-    subtype: z.literal("listen_hotspot_sequence"),
-    image_url: z.string(),
-    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    subtype: z.literal("language_in_focus"),
+    activity_name: z.string().optional(),
     body_text: z.string().optional(),
-    prompt_audio_url: z.string(),
-    targets: z.array(rectTargetSchema).min(1),
-    order: z.array(z.string()).min(1),
-    allow_replay: z.boolean().optional().default(true),
+    completion_message: z.string().optional(),
+    /** Optional Studio pattern id (like-ing, can-cant, …). */
+    pattern_id: z.string().min(1).optional(),
+    morphology: z
+      .object({
+        marks: z.array(z.string()).optional().default([]),
+        word_suffixes: z.array(z.string()).optional().default([]),
+        highlight_words: z.array(z.string()).optional().default([]),
+      })
+      .optional(),
+    scene: z.object({
+      image_url: z.string().min(1),
+      image_alt: z.string().optional(),
+      image_fit: z.enum(["cover", "contain"]).optional().default("cover"),
+      aspect_ratio: z.string().optional().default("3:1"),
+    }),
+    tabs: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+        }),
+      )
+      .min(1),
+    chunks: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          role: languageInFocusChunkRoleSchema,
+          label: z.string().min(1),
+          color: z.string().optional(),
+          icon: z.string().optional(),
+        }),
+      )
+      .min(1),
+    /** Placeholders: `{role}` and/or `{chunk_id}` — e.g. `{person} {feeling} {activity}.` */
+    sentence_template: z.string().min(1),
+    slot_banks: z
+      .array(
+        z.object({
+          role: languageInFocusChunkRoleSchema,
+          options: z.array(languageInFocusSlotOptionSchema).min(1),
+        }),
+      )
+      .min(1),
+    examples: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          tab_id: z.string().min(1),
+          /** First-person (or spoken) slot values — e.g. I like drawing. */
+          values: z.record(z.string(), z.string()),
+          /**
+           * Third-person (or build-target) slot values — e.g. She likes drawing.
+           * When omitted, listen `values` are used as-is (set build_values for shifts).
+           */
+          build_values: z.record(z.string(), z.string()).optional(),
+          /**
+           * Exactly two option ids per chunk role for the build word bank.
+           * Keys are roles (preferred) or chunk ids.
+           */
+          build_choices: z
+            .record(z.string(), z.array(z.string().min(1)).length(2))
+            .optional(),
+          /** Optional bubble_id → full bubble text override. */
+          bubble_overrides: z.record(z.string(), z.string()).optional(),
+        }),
+      )
+      .min(1),
+    bubbles: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          example_id: z.string().min(1),
+          x_percent: z.number().min(0).max(100),
+          y_percent: z.number().min(0).max(100),
+        }),
+      )
+      .optional()
+      .default([]),
+    /** Placeholders: `{tab}` / `{speaker}` / `{sentence}` */
+    bubble_template: z.string().optional().default("{tab}: {sentence}"),
+    /** Guided stages. When omitted, `workbench` is treated as a single layer. */
+    layers: z.array(languageInFocusLayerSchema).min(1).optional(),
+    workbench: z.array(languageInFocusWorkbenchElementSchema).min(1).optional(),
+    /** Show grammar rail starting at this layer index (0-based). Default: after first layer. */
+    reference_from_layer: z.number().int().min(0).optional().default(1),
+    reference: z
+      .object({
+        /**
+         * Fixed tip during listen/build (layer-one word ordering).
+         * Focus panels are used later on the remix workbench.
+         */
+        general: z
+          .object({
+            title: z.string().min(1),
+            body: z.string().optional(),
+            items: z
+              .array(languageInFocusReferenceItemSchema)
+              .optional()
+              .default([]),
+          })
+          .optional(),
+        /** Shown on remix when no sentence chunk is focused yet. */
+        intro: z.string().optional(),
+        /**
+         * Per-chunk grammar cards. Clicking that role in the remix sentence
+         * staging area reveals the matching panel.
+         */
+        focus_panels: z
+          .array(
+            z.object({
+              role: languageInFocusChunkRoleSchema,
+              title: z.string().min(1),
+              body: z.string().optional(),
+              items: z
+                .array(languageInFocusReferenceItemSchema)
+                .optional()
+                .default([]),
+            }),
+          )
+          .optional()
+          .default([]),
+        tips: z
+          .array(
+            z.object({
+              id: z.string().min(1),
+              text: z.string().min(1),
+            }),
+          )
+          .optional()
+          .default([]),
+        key_rule: z
+          .object({
+            text: z.string().min(1),
+          })
+          .optional(),
+        compare: z
+          .object({
+            title: z.string().optional(),
+            rows: z
+              .array(
+                z.object({
+                  id: z.string().min(1),
+                  base: z.string().min(1),
+                  form: z.string().min(1),
+                  icon: z.string().optional(),
+                }),
+              )
+              .min(1),
+          })
+          .optional(),
+        footer_tip: z.string().optional(),
+      })
+      .optional(),
+    completion: z
+      .object({
+        type: z.enum(["visit_all_tabs", "complete_all_layers"]),
+        /**
+         * Remix exploration goals (AND). Used when the active layer is a
+         * workbench / when finishing complete_all_layers on the last layer.
+         */
+        explore: z
+          .object({
+            /** Visit every student tab. Default true when explore is set. */
+            all_tabs: z.boolean().optional().default(true),
+            /** Open every grammar focus panel (person/feeling/activity…). */
+            all_grammar_roles: z.boolean().optional().default(true),
+            /** Total remix sentence edits (chooser or cycle). */
+            min_sentence_changes: z.number().int().min(0).optional().default(3),
+            /** Each visited student must get at least this many edits. */
+            min_changes_per_tab: z.number().int().min(0).optional().default(1),
+          })
+          .optional(),
+      })
+      .optional()
+      .default({ type: "complete_all_layers" }),
     guide: guideSchema,
   })
   .superRefine((data, ctx) => {
-    const v = validateHotspotGatePayload({
-      targets: data.targets,
-      mode: "sequence",
-      order: data.order,
-    });
-    if (!v.ok) ctx.addIssue({ code: z.ZodIssueCode.custom, message: v.message });
+    if ((!data.layers || data.layers.length === 0) && (!data.workbench || data.workbench.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "language_in_focus requires layers or workbench",
+      });
+    }
+
+    const tabIds = new Set(data.tabs.map((t) => t.id));
+    const exampleIds = new Set(data.examples.map((e) => e.id));
+    const roles = new Set(data.chunks.map((c) => c.role));
+    const bankRoles = new Set(data.slot_banks.map((b) => b.role));
+    const optionIds = new Set(
+      data.slot_banks.flatMap((b) => b.options.map((o) => o.id)),
+    );
+
+    for (const example of data.examples) {
+      if (!tabIds.has(example.tab_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Example ${example.id} references unknown tab ${example.tab_id}`,
+        });
+      }
+      if (example.build_choices) {
+        for (const [key, choiceIds] of Object.entries(example.build_choices)) {
+          for (const choiceId of choiceIds) {
+            if (!optionIds.has(choiceId)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Example ${example.id} build_choices.${key} references unknown option ${choiceId}`,
+              });
+            }
+          }
+          const buildVal = example.build_values?.[key];
+          if (buildVal && !choiceIds.includes(buildVal)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Example ${example.id} build_values.${key}=${buildVal} must be one of build_choices.${key}`,
+            });
+          }
+        }
+      }
+    }
+
+    for (const bubble of data.bubbles) {
+      if (!exampleIds.has(bubble.example_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Bubble ${bubble.id} references unknown example ${bubble.example_id}`,
+        });
+      }
+    }
+
+    for (const chunk of data.chunks) {
+      if (!bankRoles.has(chunk.role)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Chunk ${chunk.id} role ${chunk.role} has no slot_bank`,
+        });
+      }
+    }
+
+    const workbenchElements = [
+      ...(data.workbench ?? []),
+      ...(data.layers ?? []).flatMap((layer) =>
+        layer.type === "workbench" ? layer.elements : [],
+      ),
+    ];
+
+    for (const el of workbenchElements) {
+      if (el.type === "slot_chooser" && !roles.has(el.role) && !bankRoles.has(el.role)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `slot_chooser references unknown role ${el.role}`,
+        });
+      }
+      if (el.type === "slot_chooser" && el.option_ids) {
+        for (const optionId of el.option_ids) {
+          if (!optionIds.has(optionId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `slot_chooser option_ids includes unknown option ${optionId}`,
+            });
+          }
+        }
+      }
+      if (el.type === "action_row" && el.actions.includes("cycle_slot")) {
+        if (!el.cycle_role) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "action_row with cycle_slot requires cycle_role",
+          });
+        } else if (!bankRoles.has(el.cycle_role)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `cycle_role ${el.cycle_role} has no slot_bank`,
+          });
+        }
+        for (const optionId of el.cycle_option_ids ?? []) {
+          if (!optionIds.has(optionId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `cycle_option_ids includes unknown option ${optionId}`,
+            });
+          }
+        }
+      }
+    }
+
+    for (const layer of data.layers ?? []) {
+      if (layer.type === "sentence_build") {
+        if (layer.example_id && !exampleIds.has(layer.example_id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `sentence_build layer ${layer.id} references unknown example ${layer.example_id}`,
+          });
+        }
+        for (const distractorId of layer.distractor_option_ids) {
+          if (!optionIds.has(distractorId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `sentence_build distractor ${distractorId} is not in slot_banks`,
+            });
+          }
+        }
+      }
+      if (layer.type === "listen_and_build") {
+        for (const exampleId of layer.example_ids ?? []) {
+          if (!exampleIds.has(exampleId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `listen_and_build layer ${layer.id} references unknown example ${exampleId}`,
+            });
+          }
+        }
+        for (const distractorId of layer.distractor_option_ids) {
+          if (!optionIds.has(distractorId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `listen_and_build distractor ${distractorId} is not in slot_banks`,
+            });
+          }
+        }
+      }
+    }
   });
+
+export type LanguageInFocusPayload = z.infer<typeof languageInFocusPayloadSchema>;
 
 const listenColorWritePaletteItemSchema = z.object({
   id: z.string(),
@@ -2817,6 +3265,23 @@ export const dragMatchPayloadSchema = z.object({
   guide: guideSchema,
 });
 
+/**
+ * Draw-a-line matching — same pair model as drag_match (tokens ↔ zones),
+ * different student interaction (connect with lines instead of tap-assign).
+ */
+export const lineMatchPayloadSchema = z.object({
+  type: z.literal("interaction"),
+  subtype: z.literal("line_match"),
+  image_url: z.string().optional(),
+  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+  body_text: z.string().optional(),
+  zones: z.array(dragZoneSchema).min(1),
+  tokens: z.array(dragTokenSchema).min(1),
+  /** token id -> zone id */
+  correct_map: z.record(z.string(), z.string()),
+  guide: guideSchema,
+});
+
 export const soundSortPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("sound_sort"),
@@ -2836,6 +3301,126 @@ export const soundSortPayloadSchema = z.object({
   correct_choice_id: z.string(),
   guide: guideSchema,
 });
+
+const flashcardFaceSchema = z.enum(["word", "definition", "example", "picture"]);
+
+/** Study deck: flip cards through word / definition / example / picture faces. */
+export const flashcardsPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("flashcards"),
+    activity_name: z.string().optional(),
+    body_text: z.string().optional(),
+    cards: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          faces: z.object({
+            word: z.string().optional(),
+            definition: z.string().optional(),
+            example: z.string().optional(),
+            picture_url: z.string().optional(),
+          }),
+          front_faces: z.array(flashcardFaceSchema).min(1),
+          back_faces: z.array(flashcardFaceSchema).min(1),
+          /** Optional recorded word clip; preferred over TTS when present. */
+          prompt_audio_url: z.string().optional(),
+          /** Optional recorded example clip; preferred over TTS when present. */
+          example_audio_url: z.string().optional(),
+          /** Optional recorded definition clip; preferred over TTS when present. */
+          definition_audio_url: z.string().optional(),
+        }),
+      )
+      .min(1),
+    shuffle_cards: z.boolean().optional().default(false),
+    /** Auto-play word audio / TTS when the card changes. */
+    auto_play: z.boolean().optional().default(true),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    const ids = new Set<string>();
+    for (const card of data.cards) {
+      if (ids.has(card.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate flashcard id: ${card.id}`,
+        });
+        return;
+      }
+      ids.add(card.id);
+      const overlap = card.front_faces.filter((face) => card.back_faces.includes(face));
+      if (overlap.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Card ${card.id}: faces cannot be on both sides (${overlap.join(", ")})`,
+        });
+        return;
+      }
+      const hasContent =
+        Boolean(card.faces.word?.trim()) ||
+        Boolean(card.faces.definition?.trim()) ||
+        Boolean(card.faces.example?.trim()) ||
+        Boolean(card.faces.picture_url?.trim());
+      if (!hasContent) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Card ${card.id} needs at least one face value`,
+        });
+        return;
+      }
+    }
+  });
+
+/** Listen to a short dialog, then choose one of three pictures. */
+export const listenAndChoosePayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("listen_and_choose"),
+    body_text: z.string().optional(),
+    /** Short dialog / utterance spoken via TTS when no audio file is set. */
+    dialog_text: z.string().optional(),
+    /** Optional recorded dialog clip; preferred over TTS when present. */
+    prompt_audio_url: z.string().optional(),
+    /** How choice thumbnails are scaled */
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    choices: z
+      .array(
+        z.object({
+          id: z.string(),
+          image_url: z.string(),
+          label: z.string().optional(),
+        }),
+      )
+      .length(3),
+    correct_choice_id: z.string(),
+    /** Attempt to play the dialog once when the screen opens. */
+    auto_play: z.boolean().optional().default(true),
+    shuffle_choices: z.boolean().optional().default(false),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    const hasDialog = Boolean(data.dialog_text?.trim());
+    const hasAudio = Boolean(data.prompt_audio_url?.trim());
+    if (!hasDialog && !hasAudio) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "listen_and_choose requires dialog_text and/or prompt_audio_url",
+      });
+    }
+    const ids = new Set(data.choices.map((c) => c.id));
+    if (ids.size !== data.choices.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "listen_and_choose choice ids must be unique",
+      });
+    }
+    if (!ids.has(data.correct_choice_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "correct_choice_id must match a choice id",
+      });
+    }
+  });
 
 export const essayPayloadSchema = z.object({
   type: z.literal("interaction"),
@@ -2910,16 +3495,18 @@ export const interactionPayloadSchema = z.intersection(
     shortAnswerPayloadSchema,
     fillBlanksPayloadSchema,
     fixTextPayloadSchema,
-    hotspotInfoPayloadSchema,
-    hotspotGatePayloadSchema,
-    listenHotspotSequencePayloadSchema,
+    exploreHotspotsPayloadSchema,
+    languageInFocusPayloadSchema,
     listenColorWritePayloadSchema,
     letterMixupPayloadSchema,
     wordShapeHuntPayloadSchema,
     tableCompletePayloadSchema,
     sortingGamePayloadSchema,
     dragMatchPayloadSchema,
+    lineMatchPayloadSchema,
     soundSortPayloadSchema,
+    listenAndChoosePayloadSchema,
+    flashcardsPayloadSchema,
     essayPayloadSchema,
     voiceQuestionPayloadSchema,
     guidedDialoguePayloadSchema,

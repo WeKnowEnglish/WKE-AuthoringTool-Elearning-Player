@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "multiple_choice",
+  "quiz_group_id": "bakery-quick-check",
+  "quiz_group_title": "Bakery quick check",
+  "activity_name": "Bakery quick check",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "mc_quiz",
+      "question": "Which place sells bread and cakes?",
+      "options": [
+        { "id": "a", "label": "bakery" },
+        { "id": "b", "label": "library" },
+        { "id": "c", "label": "park" },
+        { "id": "d", "label": "school" }
+      ],
+      "correct_option_id": "a",
+      "shuffle_options": true,
+      "quiz_group_id": "bakery-quick-check",
+      "quiz_group_title": "Bakery quick check",
+      "quiz_group_order": 0
+    },
+    {
+      "type": "interaction",
+      "subtype": "mc_quiz",
+      "question": "What do you buy to make a sandwich?",
+      "options": [
+        { "id": "a", "label": "cookie" },
+        { "id": "b", "label": "bread" },
+        { "id": "c", "label": "juice" },
+        { "id": "d", "label": "soap" }
+      ],
+      "correct_option_id": "b",
+      "shuffle_options": true,
+      "quiz_group_id": "bakery-quick-check",
+      "quiz_group_title": "Bakery quick check",
+      "quiz_group_order": 1
+    },
+    {
+      "type": "interaction",
+      "subtype": "mc_quiz",
+      "question": "Which word matches this meaning?\nA sweet food for birthdays.",
+      "options": [
+        { "id": "a", "label": "cake" },
+        { "id": "b", "label": "soup" },
+        { "id": "c", "label": "rice" },
+        { "id": "d", "label": "salt" }
+      ],
+      "correct_option_id": "a",
+      "shuffle_options": true,
+      "quiz_group_id": "bakery-quick-check",
+      "quiz_group_title": "Bakery quick check",
+      "quiz_group_order": 2
+    }
+  ]
+}

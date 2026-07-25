@@ -1,0 +1,236 @@
+{
+  "type": "interaction",
+  "subtype": "language_in_focus",
+  "pattern_id": "like-ing",
+  "morphology": {
+    "marks": ["-s", "-ing", "+s", "+ing"],
+    "word_suffixes": ["ing"],
+    "highlight_words": ["likes"]
+  },
+  "activity_name": "How do we talk about hobbies?",
+  "scene": {
+    "image_url": "/pilots/language-in-focus/hobbies-like-ing-banner-v2.png",
+    "image_alt": "Mia drawing and Leo reading a space book at a sunny table",
+    "image_fit": "cover",
+    "aspect_ratio": "3:1"
+  },
+  "tabs": [
+    { "id": "mia", "label": "Mia" },
+    { "id": "leo", "label": "Leo" }
+  ],
+  "chunks": [
+    {
+      "id": "c-person",
+      "role": "person",
+      "label": "Person",
+      "color": "#0d9488",
+      "icon": "person"
+    },
+    {
+      "id": "c-feeling",
+      "role": "feeling",
+      "label": "Feeling",
+      "color": "#ca8a04",
+      "icon": "heart"
+    },
+    {
+      "id": "c-activity",
+      "role": "activity",
+      "label": "Activity",
+      "color": "#2563eb",
+      "icon": "activity"
+    }
+  ],
+  "sentence_template": "{person} {feeling} {activity}.",
+  "bubble_template": "{tab}: {sentence}",
+  "slot_banks": [
+    {
+      "role": "person",
+      "options": [
+        { "id": "i", "label": "I" },
+        { "id": "she", "label": "She" },
+        { "id": "he", "label": "He" }
+      ]
+    },
+    {
+      "role": "feeling",
+      "options": [
+        { "id": "like", "label": "like" },
+        { "id": "likes", "label": "likes" }
+      ]
+    },
+    {
+      "role": "activity",
+      "options": [
+        { "id": "drawing", "label": "drawing", "base_form": "draw", "color": "#0d9488" },
+        { "id": "draw", "label": "draw", "base_form": "draw", "color": "#0d9488" },
+        {
+          "id": "reading-comics",
+          "label": "reading",
+          "base_form": "read",
+          "color": "#2563eb"
+        },
+        { "id": "read", "label": "read", "base_form": "read", "color": "#2563eb" },
+        {
+          "id": "dancing",
+          "label": "dancing",
+          "base_form": "dance",
+          "color": "#db2777"
+        },
+        { "id": "dance", "label": "dance", "base_form": "dance", "color": "#db2777" },
+        {
+          "id": "playing-soccer",
+          "label": "playing soccer",
+          "base_form": "play",
+          "color": "#16a34a"
+        },
+        {
+          "id": "listening-to-music",
+          "label": "listening to music",
+          "base_form": "listen",
+          "color": "#9333ea"
+        }
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-mia",
+      "tab_id": "mia",
+      "values": { "person": "i", "feeling": "like", "activity": "drawing" },
+      "build_values": { "person": "she", "feeling": "likes", "activity": "drawing" },
+      "build_choices": {
+        "person": ["she", "he"],
+        "feeling": ["like", "likes"],
+        "activity": ["drawing", "draw"]
+      }
+    },
+    {
+      "id": "ex-leo",
+      "tab_id": "leo",
+      "values": { "person": "i", "feeling": "like", "activity": "reading-comics" },
+      "build_values": { "person": "he", "feeling": "likes", "activity": "reading-comics" },
+      "build_choices": {
+        "person": ["she", "he"],
+        "feeling": ["like", "likes"],
+        "activity": ["reading-comics", "read"]
+      }
+    }
+  ],
+  "bubbles": [
+    { "id": "b-mia", "example_id": "ex-mia", "x_percent": 28, "y_percent": 8 },
+    { "id": "b-leo", "example_id": "ex-leo", "x_percent": 70, "y_percent": 8 }
+  ],
+  "layers": [
+    {
+      "type": "listen_and_build",
+      "id": "listen-build-friends",
+      "example_ids": ["ex-mia", "ex-leo"],
+      "require_listen_before_build": true,
+      "distractor_option_ids": []
+    },
+    {
+      "type": "workbench",
+      "id": "modify-examples",
+      "elements": [
+        { "type": "example_tabs" },
+        { "type": "chunk_dissection", "show_full_sentence": false },
+        {
+          "type": "slot_chooser",
+          "role": "activity",
+          "option_ids": [
+            "drawing",
+            "reading-comics",
+            "dancing",
+            "playing-soccer",
+            "listening-to-music"
+          ]
+        },
+        {
+          "type": "action_row",
+          "actions": ["hear_sentence", "cycle_slot"],
+          "cycle_role": "activity"
+        }
+      ]
+    }
+  ],
+  "reference_from_layer": 0,
+  "reference": {
+    "general": {
+      "title": "Simple sentences",
+      "body": "A simple sentence has **who**, a **verb**, and **what** they do.",
+      "items": [
+        { "id": "g-who", "text": "Who", "note": "I / She / He", "icon": "me" },
+        { "id": "g-verb", "text": "Verb", "note": "like / likes", "icon": "heart" },
+        { "id": "g-what", "text": "What", "note": "drawing, reading…", "icon": "pencil" }
+      ]
+    },
+    "intro": "Tap a word in the sentence to see the grammar tip.",
+    "focus_panels": [
+      {
+        "role": "person",
+        "title": "People words",
+        "body": "These words tell us **who** we are talking about.",
+        "items": [
+          { "id": "p-i", "text": "I", "note": "me", "icon": "me" },
+          { "id": "p-she", "text": "She", "note": "a girl / a woman", "icon": "girl" },
+          { "id": "p-he", "text": "He", "note": "a boy / a man", "icon": "boy" }
+        ]
+      },
+      {
+        "role": "feeling",
+        "title": "like → likes",
+        "body": "With **he** and **she**, we add **-s** to the verb.",
+        "items": [
+          { "id": "f-i", "text": "I like", "note": "no -s", "icon": "me" },
+          { "id": "f-she", "text": "She likes", "note": "add -s", "icon": "girl" },
+          { "id": "f-he", "text": "He likes", "note": "add -s", "icon": "boy" }
+        ]
+      },
+      {
+        "role": "activity",
+        "title": "Doing words: -ing",
+        "body": "After **like**, the activity ends in **-ing**.",
+        "items": [
+          {
+            "id": "a-draw",
+            "text": "drawing",
+            "base": "draw",
+            "form": "drawing",
+            "icon": "pencil"
+          },
+          {
+            "id": "a-read",
+            "text": "reading",
+            "base": "read",
+            "form": "reading",
+            "icon": "book"
+          },
+          {
+            "id": "a-dance",
+            "text": "dancing",
+            "base": "dance",
+            "form": "dancing",
+            "icon": "dance"
+          },
+          {
+            "id": "a-play",
+            "text": "playing",
+            "base": "play",
+            "form": "playing",
+            "icon": "ball"
+          }
+        ]
+      }
+    ]
+  },
+  "completion": {
+    "type": "complete_all_layers",
+    "explore": {
+      "all_tabs": true,
+      "all_grammar_roles": true,
+      "min_sentence_changes": 3,
+      "min_changes_per_tab": 1
+    }
+  }
+}

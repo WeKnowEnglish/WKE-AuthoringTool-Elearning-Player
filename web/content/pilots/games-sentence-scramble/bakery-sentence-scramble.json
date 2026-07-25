@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "sentence_scramble",
+  "quiz_group_id": "bakery-sentence-scramble",
+  "quiz_group_title": "Bakery sentence scramble",
+  "activity_name": "Bakery sentence scramble",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "drag_sentence",
+      "body_text": "Put the words in order.",
+      "sentence_slots": ["", "", "", "", "", ""],
+      "word_bank": ["at", "the", "We", "bakery.", "buy", "bread"],
+      "correct_order": ["We", "buy", "bread", "at", "the", "bakery."],
+      "quiz_group_id": "bakery-sentence-scramble",
+      "quiz_group_title": "Bakery sentence scramble",
+      "quiz_group_order": 0
+    },
+    {
+      "type": "interaction",
+      "subtype": "drag_sentence",
+      "body_text": "Put the words in order.",
+      "sentence_slots": ["", "", "", "", ""],
+      "word_bank": ["with", "I", "butter.", "like", "bread"],
+      "correct_order": ["I", "like", "bread", "with", "butter."],
+      "quiz_group_id": "bakery-sentence-scramble",
+      "quiz_group_title": "Bakery sentence scramble",
+      "quiz_group_order": 1
+    },
+    {
+      "type": "interaction",
+      "subtype": "drag_sentence",
+      "body_text": "Put the words in order.",
+      "sentence_slots": ["", "", "", "", ""],
+      "word_bank": ["sweet.", "is", "cake", "The", "very"],
+      "correct_order": ["The", "cake", "is", "very", "sweet."],
+      "quiz_group_id": "bakery-sentence-scramble",
+      "quiz_group_title": "Bakery sentence scramble",
+      "quiz_group_order": 2
+    }
+  ]
+}

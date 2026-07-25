@@ -15,6 +15,9 @@ import {
 } from "@/lib/vocabulary-templates/vocab-interaction-ui";
 import {
   GuideBlock,
+  gamesBodyTextClass,
+  gamesChipButtonClass,
+  gamesWrongHintClass,
   interactionHeroImageFrameClass,
   interactionHeroImageFrameStyle,
   interactionHeroImageHeightStyle,
@@ -233,7 +236,7 @@ export function FillBlanksView({
         ? "border-emerald-700 bg-emerald-50 text-emerald-900"
         : immersive
           ? "border-[#152668] bg-white text-[#0f172a] shadow-[1px_1px_0_#152668]"
-          : "border-neutral-800 bg-white",
+          : "border-kid-ink bg-white text-kid-ink",
     );
 
   const sentenceBlock = (
@@ -322,12 +325,7 @@ export function FillBlanksView({
 
   const wrongHintBlock =
     wrongHint ?
-      <p
-        className={clsx(
-          "rounded-lg border-2 border-red-300 bg-red-50 px-3 py-2 text-base font-semibold text-red-900",
-          immersive ? "mt-3 text-center" : "mt-3",
-        )}
-      >
+      <p className={clsx(gamesWrongHintClass, immersive && "text-center")}>
         {wrongHint}
       </p>
     : null;
@@ -427,7 +425,7 @@ export function FillBlanksView({
         </div>
       ) : null}
       <KidPanel>
-        {parsed.body_text ? <p className="mb-4 text-lg">{parsed.body_text}</p> : null}
+        {parsed.body_text ? <p className={gamesBodyTextClass}>{parsed.body_text}</p> : null}
         {sentenceBlock}
         {wordBankBlock}
         {wrongHintBlock}

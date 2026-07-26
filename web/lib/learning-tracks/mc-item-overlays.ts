@@ -67,7 +67,7 @@ export function pruneMcItemOverlays(
   const allowed = new Set(itemIds);
   const next = overlays
     .filter((overlay) => allowed.has(overlay.itemId))
-    .map(compactMcItemOverlay)
+    .map((overlay) => compactMcItemOverlay(overlay))
     .filter((overlay): overlay is LearningTrackMcItemOverlay => overlay !== null);
   return next.length > 0 ? next : undefined;
 }

@@ -44,7 +44,7 @@ export function LearningTrackPilot() {
 
   const remote = useStudioPackQuerySource();
   const [pack, setPack] = useState<LearningTrackLessonPlayerPack>(BUILTIN_PACK);
-  const [sourceName, setSourceName] = useState(BUILTIN_PACK.title);
+  const [sourceName, setSourceName] = useState<string>(BUILTIN_PACK.title);
   const [generation, setGeneration] = useState(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);

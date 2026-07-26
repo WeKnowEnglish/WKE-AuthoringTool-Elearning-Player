@@ -7,7 +7,6 @@ import type {
 } from "@/lib/activity-intro/types";
 
 function buildItem(item: ActivityIntroItemSpec) {
-  const kind = item.kind ?? "image";
   const idle =
     item.idle ?
       [
@@ -42,7 +41,7 @@ function buildItem(item: ActivityIntroItemSpec) {
     ...(idle ? { idle_animations: idle } : {}),
   };
 
-  if (kind === "text") {
+  if (item.kind === "text") {
     return {
       ...base,
       kind: "text" as const,
@@ -52,7 +51,7 @@ function buildItem(item: ActivityIntroItemSpec) {
     };
   }
 
-  if (kind === "shape") {
+  if (item.kind === "shape") {
     return {
       ...base,
       kind: "shape" as const,

@@ -32,7 +32,7 @@ const BUILTIN_PACK = parseGamesLetterMixupLessonPlayerPack(bakeryLetterMixup);
 export function GamesLetterMixupPilot() {
   const remote = useStudioPackQuerySource();
   const [pack, setPack] = useState<GamesLetterMixupLessonPlayerPack>(BUILTIN_PACK);
-  const [sourceName, setSourceName] = useState(BUILTIN_PACK.activity_name);
+  const [sourceName, setSourceName] = useState<string>(BUILTIN_PACK.activity_name);
   const [generation, setGeneration] = useState(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);

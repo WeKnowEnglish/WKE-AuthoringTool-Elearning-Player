@@ -57,7 +57,7 @@ export function LanguageInFocusPilot() {
   const [payload, setPayload] = useState<LanguageInFocusPayload>(
     BUILTIN_FIXTURES.hobbies.payload,
   );
-  const [sourceName, setSourceName] = useState(BUILTIN_FIXTURES.hobbies.label);
+  const [sourceName, setSourceName] = useState<string>(BUILTIN_FIXTURES.hobbies.label);
   const [generation, setGeneration] = useState(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);

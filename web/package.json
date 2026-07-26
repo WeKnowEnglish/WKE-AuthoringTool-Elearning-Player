@@ -7,6 +7,7 @@
     "dev:turbo": "next dev --turbopack",
     "dev:webpack": "next dev --webpack",
     "clean": "node -e \"try { require('fs').rmSync('.next', { recursive: true, force: true }); } catch (e) { if (e.code !== 'ENOENT') throw e; }\"",
+    "postinstall": "npm install --prefix ../packages/explore-hotspots-play --ignore-scripts --no-audit --no-fund --include=dev",
     "build": "next build",
     "build:live-game-ground": "node scripts/build-english-craft-ground.mjs",
     "prebuild": "npm run validate:grammar",

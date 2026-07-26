@@ -1,0 +1,232 @@
+/* Teacher app chrome — colors from CSS vars on [data-teacher-root]. */
+
+[data-teacher-root][data-teacher-themed="true"] {
+  background: var(--teacher-bg);
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-theme-controls {
+  background: color-mix(in srgb, var(--teacher-panel) 88%, transparent);
+  border-color: var(--teacher-border);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-theme-label {
+  color: var(--teacher-subtle);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-theme-chip {
+  border: 1px solid var(--teacher-border-strong);
+  background: var(--teacher-input);
+  color: var(--teacher-muted);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-theme-chip[data-active="true"] {
+  border-color: var(--teacher-selected-border);
+  background: var(--teacher-selected-bg);
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-chrome-header {
+  background: var(--teacher-elevated);
+  border-color: color-mix(in srgb, var(--teacher-border) 80%, transparent);
+  color: var(--teacher-fg);
+}
+
+/* LTC only: auto-hiding teacher chrome (pops out near top, recesses after idle). */
+[data-teacher-root][data-teacher-chrome-autohide="true"] .teacher-chrome-header-drawer {
+  position: relative;
+  z-index: 50;
+  flex-shrink: 0;
+  height: 10px;
+}
+
+[data-teacher-root][data-teacher-chrome-autohide="true"] .teacher-chrome-header-hotzone {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 52;
+  height: 28px;
+  pointer-events: auto;
+}
+
+[data-teacher-root][data-teacher-chrome-autohide="true"]
+  .teacher-chrome-header-drawer[data-open="true"]
+  .teacher-chrome-header-hotzone {
+  pointer-events: none;
+}
+
+[data-teacher-root][data-teacher-chrome-autohide="true"] .teacher-chrome-header-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 51;
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--teacher-fg) 12%, transparent);
+}
+
+[data-teacher-root][data-teacher-chrome-autohide="true"]
+  .teacher-chrome-header-drawer[data-open="false"]
+  .teacher-chrome-header-panel {
+  transform: translateY(calc(-100% + 6px));
+  opacity: 0.9;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+[data-teacher-root][data-teacher-chrome-autohide="true"]
+  .teacher-chrome-header-panel
+  .teacher-chrome-header {
+  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--teacher-elevated) 92%, transparent);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-chrome-link {
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-chrome-muted {
+  color: var(--teacher-muted);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-chrome-accent {
+  color: var(--teacher-accent);
+}
+
+/* Remap common hardcoded teacher surfaces (skip student/Lesson Player embeds). */
+[data-teacher-root][data-teacher-themed="true"]
+  :where(
+    .bg-white,
+    .bg-neutral-50,
+    .bg-stone-50,
+    .bg-\[\#fbf8f4\],
+    .bg-\[\#faf8f5\]
+  ):not([data-student-surface] *):not([data-student-surface]) {
+  background-color: var(--teacher-elevated) !important;
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"]
+  :where(.bg-neutral-100, .bg-stone-100, .bg-neutral-50\/80, .bg-white\/80, .bg-white\/70):not(
+    [data-student-surface] *
+  ):not([data-student-surface]) {
+  background-color: var(--teacher-panel) !important;
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"]
+  :where(
+    .text-neutral-900,
+    .text-stone-900,
+    .text-neutral-800,
+    .text-stone-800,
+    .text-neutral-950
+  ):not([data-student-surface] *):not([data-student-surface]) {
+  color: var(--teacher-fg) !important;
+}
+
+[data-teacher-root][data-teacher-themed="true"]
+  :where(
+    .text-neutral-700,
+    .text-stone-700,
+    .text-neutral-600,
+    .text-stone-600,
+    .text-neutral-500,
+    .text-stone-500
+  ):not([data-student-surface] *):not([data-student-surface]) {
+  color: var(--teacher-muted) !important;
+}
+
+[data-teacher-root][data-teacher-themed="true"]
+  :where(
+    .text-neutral-400,
+    .text-stone-400,
+    .text-neutral-300
+  ):not([data-student-surface] *):not([data-student-surface]) {
+  color: var(--teacher-subtle) !important;
+}
+
+[data-teacher-root][data-teacher-themed="true"]
+  :where(
+    .border-neutral-200,
+    .border-stone-200,
+    .border-neutral-100,
+    .border-stone-100,
+    .border-neutral-300,
+    .border-stone-300,
+    .border-black\/\[0\.08\],
+    .border-black\/10,
+    .border-black\/5
+  ):not([data-student-surface] *):not([data-student-surface]) {
+  border-color: var(--teacher-border) !important;
+}
+
+[data-teacher-root][data-teacher-themed="true"]
+  :where(input, textarea, select):not([data-student-surface] *):not([data-student-surface]) {
+  background-color: var(--teacher-input);
+  color: var(--teacher-fg);
+  border-color: var(--teacher-border-strong);
+}
+
+[data-teacher-root][data-teacher-themed="true"]
+  :where(a.text-blue-700, a.text-sky-800, .text-blue-700, .text-sky-800):not(
+    [data-student-surface] *
+  ):not([data-student-surface]) {
+  color: var(--teacher-accent) !important;
+}
+
+/* Primary tabs */
+[data-teacher-root][data-teacher-themed="true"] .teacher-tab {
+  border-color: var(--teacher-border-strong);
+  background: var(--teacher-elevated);
+  color: var(--teacher-muted);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-tab[data-active="true"] {
+  border-color: var(--teacher-selected-border);
+  background: var(--teacher-primary-btn);
+  color: var(--teacher-primary-btn-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-tab:not([data-active="true"]):hover {
+  border-color: var(--teacher-accent-border);
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-nav-menu-panel {
+  background: var(--teacher-elevated);
+  border-color: var(--teacher-border-strong);
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-nav-menu-item {
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-nav-menu-item:hover,
+[data-teacher-root][data-teacher-themed="true"] .teacher-nav-menu-item[data-active="true"] {
+  background: var(--teacher-selected-bg);
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-nav-menu-divider {
+  background: var(--teacher-border);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-nav-menu .teacher-theme-controls {
+  border-color: var(--teacher-border);
+}
+
+/* Keep Lesson Player / published previews on student light surfaces. */
+[data-teacher-root] [data-student-surface] {
+  color: #171717;
+}
+
+[data-teacher-root] [data-student-surface].bg-white,
+[data-teacher-root] [data-student-surface] .bg-white {
+  background-color: #ffffff !important;
+}

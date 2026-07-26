@@ -714,7 +714,7 @@ body:has([data-student-shell]) {
 /* Keep teacher workspace backgrounds fully neutral even when route content
    is shorter than viewport and body background would otherwise show through. */
 body:has([data-teacher-root]) {
-  background: #ffffff;
+  background: var(--teacher-bg, #020617);
 }
 
 /* Teacher editor: global keyframes so Tailwind layer order cannot drop the animation name. */

@@ -39,6 +39,39 @@ type LanguageInFocusParsed = Extract<
   { type: "interaction"; subtype: "language_in_focus" }
 >;
 
+async function playHtmlAudio(
+  url: string,
+  isCancelled: () => boolean,
+): Promise<void> {
+  const el = new Audio(url);
+  try {
+    await el.play();
+    await new Promise<void>((resolve) => {
+      if (isCancelled() || el.ended || el.paused) {
+        el.pause();
+        resolve();
+        return;
+      }
+      const done = () => {
+        window.clearInterval(poll);
+        el.removeEventListener("ended", done);
+        el.removeEventListener("error", done);
+        resolve();
+      };
+      const poll = window.setInterval(() => {
+        if (isCancelled()) {
+          el.pause();
+          done();
+        }
+      }, 80);
+      el.addEventListener("ended", done);
+      el.addEventListener("error", done);
+    });
+  } catch {
+    /* ignore autoplay / CORS */
+  }
+}
+
 type Layer = NonNullable<LanguageInFocusParsed["layers"]>[number];
 
 const ROLE_FALLBACK_COLORS: Record<string, string> = {
@@ -1240,6 +1273,7 @@ export function LanguageInFocusView({
     if (!roundExample || !roundTab) return;
     playSfx("tap", muted);
     const gen = ++playGenRef.current;
+    const isCancelled = () => gen !== playGenRef.current;
     stopSpeaking();
     setSpeaking(false);
     unlockSpeechSynthesis();
@@ -1253,7 +1287,14 @@ export function LanguageInFocusView({
     }
     setSpeaking(true);
     try {
-      await speakTextAndWait(listenSentence, { muted: false, rate: 0.9 });
+      const clip = roundExample.audio_url?.trim() || "";
+      if (clip) {
+        stopSpeaking();
+        await playHtmlAudio(clip, isCancelled);
+      } else if (listenSentence) {
+        unlockSpeechSynthesis();
+        await speakTextAndWait(listenSentence, { muted: false, rate: 0.9 });
+      }
     } finally {
       if (gen === playGenRef.current) {
         setSpeaking(false);

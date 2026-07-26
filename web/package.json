@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@huggingface/transformers": "^3.8.1",
     "@liveblocks/client": "^3.22.0",
     "@liveblocks/node": "^3.22.0",
     "@liveblocks/react": "^3.22.0",
@@ -44,7 +45,8 @@
     "@tiptap/pm": "^3.28.0",
     "@tiptap/react": "^3.28.0",
     "@tiptap/starter-kit": "^3.28.0",
-    "@wke/explore-hotspots-play": "file:../../WKE Animator/svg-edu-studio/packages/explore-hotspots-play",
+    "@wke/explore-hotspots-author": "file:../packages/explore-hotspots-author",
+    "@wke/explore-hotspots-play": "file:../packages/explore-hotspots-play",
     "clsx": "^2.1.1",
     "jimp": "^1.6.1",
     "jszip": "^3.10.1",

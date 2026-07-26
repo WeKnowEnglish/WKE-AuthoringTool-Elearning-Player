@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
+import { HomeworkStudioActivityPlayer } from "@/components/primary/HomeworkStudioActivityPlayer";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
@@ -11,7 +12,7 @@ import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Product C — teacher pack homework (quiz / flashcards / notes).
+ * Product C — teacher homework (pack quiz / flashcards / notes / Activity Bank).
  * F2: focused play chrome + progress + finish → Home.
  * @see docs/primary/PRIMARY_VOCAB_ACTIVITY_CONTRACT.md
  */
@@ -133,6 +134,17 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
             Flashcard content is not available yet. Ask your teacher to check the set.
           </p>
         )
+      ) : null}
+
+      {payload.type === "studio_activity" ? (
+        <HomeworkStudioActivityPlayer
+          homeworkId={homework.id}
+          activityId={payload.activityId}
+          format={payload.format}
+          title={payload.title}
+          pack={payload.pack}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
       ) : null}
     </HomeworkPlayChrome>
   );

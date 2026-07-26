@@ -89,6 +89,8 @@ function screenOutlineBase(screen: { screen_type: string; payload: unknown }): s
         return `Voice question: ${p.prompt.slice(0, 32)}${p.prompt.length > 32 ? "…" : ""}`;
       case "guided_dialogue":
         return `Guided dialogue: ${p.character_name}`;
+      case "post_quiz_report":
+        return `Report: ${p.source_beat_label} → ${p.next_activity_label}`;
       default:
         return `Interaction: ${(p as { subtype: string }).subtype}`;
     }

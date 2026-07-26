@@ -10,7 +10,6 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type RefObject,
 } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
@@ -25,6 +24,8 @@ import {
 import {
   buildInitialLetterMixupSlots,
   buildLetterMixupLayout,
+  letterMixupAnswerRowRanges,
+  maxLetterMixupWordLength,
   normalizeLetterMixupTarget,
 } from "@/lib/games-letter-mixup/letter-mixup-layout";
 import {
@@ -41,15 +42,17 @@ import {
   unopt,
 } from "./shared";
 
-/** Vocab spell: prefer large tiles; scroll horizontally rather than shrink below `min`. */
-function computeVocabSpellTileSizePx(
+/**
+ * Size tiles to fit one word row in the letter column.
+ * Prefer large tiles; shrink for long words rather than forcing horizontal scroll.
+ */
+function computeLetterTileSizePx(
   rowWidth: number,
   letterCount: number,
   gapPx: number,
+  options: { preferred: number; min: number; max: number },
 ): number {
-  const preferred = 56;
-  const min = 48;
-  const max = 72;
+  const { preferred, min, max } = options;
   if (letterCount <= 0) return preferred;
   const gaps = Math.max(0, letterCount - 1) * gapPx;
   const fitAll = Math.floor((rowWidth - gaps) / letterCount);
@@ -57,34 +60,25 @@ function computeVocabSpellTileSizePx(
   return Math.min(max, Math.max(min, fitAll));
 }
 
-/** Centers the tile group; scroll lives on a max-w-full child so short words stay centered. */
-function CenteredLetterTileRow({
-  measureRef,
-  frameClassName,
+/** Centers a single word’s tiles; parent sizes tiles so the row fits without scrolling. */
+function LetterWordRow({
   className,
   ariaLabel,
   children,
 }: {
-  measureRef?: RefObject<HTMLDivElement | null>;
-  frameClassName?: string;
   className?: string;
   ariaLabel?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
-      ref={measureRef}
-      className={clsx("flex w-full min-w-0 justify-center", className)}
+      className={clsx(
+        "flex w-full min-w-0 flex-nowrap items-center justify-center gap-1.5",
+        className,
+      )}
       aria-label={ariaLabel}
     >
-      <div
-        className={clsx(
-          "w-fit max-w-full overflow-x-auto pb-0.5 [scrollbar-width:thin]",
-          frameClassName,
-        )}
-      >
-        <div className="flex shrink-0 flex-nowrap items-center gap-1.5">{children}</div>
-      </div>
+      {children}
     </div>
   );
 }
@@ -147,6 +141,14 @@ export function LetterMixupView({
     });
   }, [parsed.shuffle_letters, parsed.letter_shuffle_seed, targetWord]);
   const { targetChars, trayGroups, trayLetters: letters } = layout;
+  const answerRowRanges = useMemo(
+    () => letterMixupAnswerRowRanges(targetChars),
+    [targetChars],
+  );
+  const sizingLetterCount = useMemo(
+    () => maxLetterMixupWordLength(trayGroups),
+    [trayGroups],
+  );
   const lettersKey = useMemo(
     () =>
       `${targetChars.map((ch, i) => `${i}:${ch}`).join("|")}||${letters
@@ -208,9 +210,6 @@ export function LetterMixupView({
     }
   }, [lettersKey, targetChars]);
 
-  const letterTileScrollOuterClass =
-    "w-full min-w-0 overflow-x-auto pb-0.5 [scrollbar-width:thin]";
-  const letterTilesInnerClass = "mx-auto flex w-fit shrink-0 flex-nowrap items-center gap-1.5";
   const exploreCloud =
     exploreCloudLayout && embeddedMode;
   const cloudLetterClass =
@@ -227,32 +226,31 @@ export function LetterMixupView({
     ? clsx(vocabLetterTileClass, "shrink-0")
     : "box-border flex shrink-0 touch-manipulation select-none items-center justify-center rounded-xl border-2 border-sky-500 bg-white font-bold leading-none text-kid-ink shadow-sm transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sky-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:active:scale-100";
 
-  const letterSlotsRowRef = useRef<HTMLDivElement>(null);
+  /** Measure width of the letter column (answer area), not a single scrolled row. */
+  const letterColumnMeasureRef = useRef<HTMLDivElement>(null);
   const [letterTileSizePx, setLetterTileSizePx] = useState<number | null>(null);
-  const tileMinPx = vocabImmersive ? 48 : 26;
+  // Allow smaller tiles so long words fit the 2/3 letter column without scrolling.
+  const tileMinPx = vocabImmersive ? 28 : 22;
   const tileMaxPx = vocabImmersive ? 72 : 48;
   const tilePreferredPx = vocabImmersive ? 56 : 44;
 
   useLayoutEffect(() => {
-    // Size tiles from the answer row (includes fixed space gaps between words).
-    const n = Math.max(targetChars.length, letters.length);
-    if (n === 0) {
+    const n = sizingLetterCount;
+    if (n <= 0) {
       queueMicrotask(() => setLetterTileSizePx(null));
       return;
     }
-    const el = letterSlotsRowRef.current;
+    const el = letterColumnMeasureRef.current;
     if (!el) return;
 
     const compute = (): boolean => {
       const w = el.clientWidth;
       if (w <= 0) return false;
-      const clamped = vocabImmersive
-        ? computeVocabSpellTileSizePx(w, n, TRAY_GAP_PX)
-        : (() => {
-            const totalGaps = Math.max(0, n - 1) * TRAY_GAP_PX;
-            const raw = Math.floor((w - totalGaps) / n);
-            return Math.min(tileMaxPx, Math.max(tileMinPx, raw));
-          })();
+      const clamped = computeLetterTileSizePx(w, n, TRAY_GAP_PX, {
+        preferred: tilePreferredPx,
+        min: tileMinPx,
+        max: tileMaxPx,
+      });
       queueMicrotask(() => {
         setLetterTileSizePx(clamped);
       });
@@ -272,12 +270,11 @@ export function LetterMixupView({
     return () => ro.disconnect();
   }, [
     lettersKey,
-    letters.length,
-    targetChars.length,
+    sizingLetterCount,
     TRAY_GAP_PX,
     tileMaxPx,
     tileMinPx,
-    vocabImmersive,
+    tilePreferredPx,
   ]);
 
   const pictureListenLine =
@@ -543,37 +540,12 @@ export function LetterMixupView({
 
   const tilePx = letterTileSizePx ?? (vocabImmersive ? tilePreferredPx : 44);
   const tileFontMax = vocabImmersive ? 36 : 24;
-  const tileFontMin = vocabImmersive ? 22 : 14;
+  const tileFontMin = vocabImmersive ? 16 : 12;
   const tileFontScale = vocabImmersive ? 0.52 : 0.42;
 
-  const spaceGapPx = Math.max(12, Math.round(tilePx * 0.55));
-
-  const slotTiles = wordSlots.map((cell, slotIndex) => {
+  const renderSlotTile = (slotIndex: number) => {
+    const cell = wordSlots[slotIndex];
     const fs = Math.min(tileFontMax, Math.max(tileFontMin, Math.round(tilePx * tileFontScale)));
-    const isSpaceSlot = targetChars[slotIndex] === " ";
-    if (isSpaceSlot) {
-      return (
-        <div
-          key={`slot-${slotIndex}`}
-          className="flex shrink-0 items-center justify-center"
-          style={{
-            width: spaceGapPx,
-            height: tilePx,
-            minWidth: spaceGapPx,
-            minHeight: tilePx,
-          }}
-          aria-label="Space"
-        >
-          <span
-            className={clsx(
-              "block h-1 w-3/4 max-w-[1.25rem] rounded-full",
-              exploreCloud ? "bg-white/70" : "bg-kid-ink/35",
-            )}
-            aria-hidden
-          />
-        </div>
-      );
-    }
     return (
       <div
         key={`slot-${slotIndex}`}
@@ -612,40 +584,29 @@ export function LetterMixupView({
         : <span className="text-xs font-medium text-kid-ink/40 sm:text-sm" aria-hidden>·</span>}
       </div>
     );
-  });
+  };
+
+  const answerWordRows = answerRowRanges.map((range, rowIndex) => (
+    <LetterWordRow
+      key={`answer-row-${rowIndex}`}
+      ariaLabel={answerRowRanges.length > 1 ? `Word ${rowIndex + 1}` : "Your word"}
+    >
+      {Array.from({ length: range.end - range.start }, (_, offset) =>
+        renderSlotTile(range.start + offset),
+      )}
+    </LetterWordRow>
+  ));
 
   let trayLetterOffset = 0;
-  const trayTiles: ReactNode[] = [];
-  trayGroups.forEach((group, groupIndex) => {
-    if (groupIndex > 0) {
-      trayTiles.push(
-        <div
-          key={`tray-space-${groupIndex}`}
-          className="flex shrink-0 items-center justify-center"
-          style={{
-            width: spaceGapPx,
-            height: tilePx,
-            minWidth: spaceGapPx,
-            minHeight: tilePx,
-          }}
-          aria-hidden
-        >
-          <span
-            className={clsx(
-              "block h-1 w-3/4 max-w-[1.25rem] rounded-full",
-              exploreCloud ? "bg-white/50" : "bg-kid-ink/25",
-            )}
-          />
-        </div>,
-      );
-    }
+  const trayWordRows = trayGroups.map((group, groupIndex) => {
+    const groupButtons: ReactNode[] = [];
     for (const ch of group) {
       const i = trayLetterOffset;
       trayLetterOffset += 1;
       const traySlotKey = `${i}__${ch}`;
       if (trayKeyInUse(traySlotKey)) continue;
       const fs = Math.min(tileFontMax, Math.max(tileFontMin, Math.round(tilePx * tileFontScale)));
-      trayTiles.push(
+      groupButtons.push(
         <button
           key={traySlotKey}
           type="button"
@@ -665,38 +626,48 @@ export function LetterMixupView({
         </button>,
       );
     }
+    return (
+      <LetterWordRow
+        key={`tray-row-${groupIndex}`}
+        ariaLabel={
+          trayGroups.length > 1 ? `Letter tray word ${groupIndex + 1}` : "Letter tray"
+        }
+      >
+        {groupButtons}
+      </LetterWordRow>
+    );
   });
 
-  const answerRow =
-    immersive ?
-      <CenteredLetterTileRow
-        measureRef={letterSlotsRowRef}
-        frameClassName={
-          exploreCloud ?
-            "rounded-2xl border-2 border-white/40 bg-white/10 p-2 backdrop-blur-[2px]"
-          : vocabImmersive ?
-            "rounded-xl border-2 border-[#152668]/25 bg-white/50 p-3"
-          : "rounded-xl border-2 border-dashed border-kid-ink bg-kid-surface-muted/40 p-3"
-        }
-        ariaLabel="Your word"
-      >
-        {slotTiles}
-      </CenteredLetterTileRow>
-    : <div
-        className="mt-3 min-w-0 rounded-xl border-2 border-dashed border-kid-ink bg-kid-surface-muted/40 p-3"
-        aria-label="Your word"
-      >
-        <div ref={letterSlotsRowRef} className={letterTileScrollOuterClass}>
-          <div className={letterTilesInnerClass}>{slotTiles}</div>
-        </div>
-      </div>;
+  const answerFrameClass = exploreCloud
+    ? "rounded-2xl border-2 border-white/40 bg-white/10 p-2 backdrop-blur-[2px]"
+    : vocabImmersive
+      ? "rounded-xl border-2 border-[#152668]/25 bg-white/50 p-3"
+      : "rounded-xl border-2 border-dashed border-kid-ink bg-kid-surface-muted/40 p-3";
 
-  const trayRow =
-    immersive ?
-      <CenteredLetterTileRow className="mt-3">{trayTiles}</CenteredLetterTileRow>
-    : <div className={clsx(letterTileScrollOuterClass, "mt-2 min-h-[3.25rem]")}>
-        <div className={letterTilesInnerClass}>{trayTiles}</div>
-      </div>;
+  const answerRow = (
+    <div
+      className={clsx(answerFrameClass, !immersive && "mt-3")}
+      aria-label="Your word"
+    >
+      <div
+        ref={letterColumnMeasureRef}
+        className="flex w-full min-w-0 flex-col items-center gap-2"
+      >
+        {answerWordRows}
+      </div>
+    </div>
+  );
+
+  const trayRow = (
+    <div
+      className={clsx(
+        "flex w-full min-w-0 flex-col items-center gap-2",
+        immersive ? "mt-3" : "mt-2 min-h-[3.25rem]",
+      )}
+    >
+      {trayWordRows}
+    </div>
+  );
 
   const actionButtons = (
     <div className={clsx("flex w-full gap-2", immersive ? "justify-center" : "")}>
@@ -754,57 +725,64 @@ export function LetterMixupView({
         style={vocabStageTint ? { backgroundColor: VOCAB_STAGE_BACKGROUND } : undefined}
       >
         <audio ref={wordAudioRef} preload="metadata" className="hidden" />
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 md:flex-row md:items-stretch md:gap-4">
           {parsed.image_url ?
-            <button
-              type="button"
-              disabled={passed || passing}
-              onClick={playPictureWord}
-              className={clsx(
-                "relative mx-auto w-full max-w-md shrink-0 overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4",
-                interactionHeroImageFrameClass(vocabImgOpts),
-                !passed &&
-                  (Boolean(parsed.image_audio_url?.trim()) ||
-                    (parsed.image_use_tts && pictureListenLine)) &&
-                  "cursor-pointer",
-              )}
-              style={{
-                aspectRatio: "16 / 10",
-                maxHeight: "min(32dvh, calc((100vw - 3rem) * 10 / 16))",
-                ...interactionHeroImageFrameStyle(vocabImgOpts),
-              }}
-              aria-label={
-                parsed.image_audio_url?.trim() ?
-                  "Tap to hear the word"
-                : parsed.image_use_tts && pictureListenLine ?
-                  `Tap to hear: ${pictureListenLine}`
-                : "Picture"
-              }
-            >
-              <Image
-                src={parsed.image_url}
-                alt=""
-                fill
-                sizes="(max-width: 768px) 100vw, 28rem"
-                className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
-                unoptimized={unopt(parsed.image_url)}
-              />
-              {!passed &&
-              (Boolean(parsed.image_audio_url?.trim()) ||
-                (parsed.image_use_tts && pictureListenLine)) ?
-                <span className="pointer-events-none absolute bottom-2 left-2 rounded-full border-2 border-kid-ink bg-white/95 px-2.5 py-1 text-xs font-bold text-kid-ink shadow-sm">
-                  Tap · hear word
-                </span>
-              : null}
-            </button>
+            <div className="flex w-full shrink-0 items-center justify-center md:w-[33%] md:max-w-[33%]">
+              <button
+                type="button"
+                disabled={passed || passing}
+                onClick={playPictureWord}
+                className={clsx(
+                  "relative h-full w-full max-h-[40dvh] overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4 md:max-h-none",
+                  interactionHeroImageFrameClass(vocabImgOpts),
+                  !passed &&
+                    (Boolean(parsed.image_audio_url?.trim()) ||
+                      (parsed.image_use_tts && pictureListenLine)) &&
+                    "cursor-pointer",
+                )}
+                style={{
+                  aspectRatio: "4 / 5",
+                  minHeight: "min(28dvh, 12rem)",
+                  ...interactionHeroImageFrameStyle(vocabImgOpts),
+                }}
+                aria-label={
+                  parsed.image_audio_url?.trim() ?
+                    "Tap to hear the word"
+                  : parsed.image_use_tts && pictureListenLine ?
+                    `Tap to hear: ${pictureListenLine}`
+                  : "Picture"
+                }
+              >
+                <Image
+                  src={parsed.image_url}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
+                  unoptimized={unopt(parsed.image_url)}
+                />
+                {!passed &&
+                (Boolean(parsed.image_audio_url?.trim()) ||
+                  (parsed.image_use_tts && pictureListenLine)) ?
+                  <span className="pointer-events-none absolute bottom-2 left-2 rounded-full border-2 border-kid-ink bg-white/95 px-2.5 py-1 text-xs font-bold text-kid-ink shadow-sm">
+                    Tap · hear word
+                  </span>
+                : null}
+              </button>
+            </div>
           : null}
-          <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-1">
+          <div
+            className={clsx(
+              "flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 px-1",
+              parsed.image_url ? "md:w-[67%]" : "w-full",
+            )}
+          >
             <div className="w-full text-center">{promptBlock}</div>
             <p className="sr-only">
-              Fill each slot left to right. Tap Check or fill every slot to verify letters. Green letters
-              stay; wrong letters return to the tray.
+              Fill each slot left to right. Phrases break into one row per word. Tap Check or fill
+              every slot to verify letters. Green letters stay; wrong letters return to the tray.
             </p>
-            <div className="flex w-full flex-col items-center gap-3">
+            <div className="flex w-full max-w-none flex-col items-center gap-3">
               {answerRow}
               {trayRow}
             </div>

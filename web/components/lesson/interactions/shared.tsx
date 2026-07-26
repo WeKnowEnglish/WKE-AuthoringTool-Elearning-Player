@@ -2,12 +2,20 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { KidButton } from "@/components/kid-ui/KidButton";
-import { KidPanel } from "@/components/kid-ui/KidPanel";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { uploadStudentVoiceSubmission } from "@/lib/actions/student-voice";
 import { resolveStudentStorageIdSync } from "@/lib/auth/student-storage-id";
 import { VOCAB_STAGE_BACKGROUND } from "@/lib/vocabulary-templates/vocab-interaction-ui";
+import { KidPanel } from "@/components/kid-ui/KidPanel";
 
 export type InteractionImageDisplayOptions = {
   /**
@@ -58,7 +66,7 @@ export const interactionImmersiveHeroMinStyle: CSSProperties = {
 
 /** Fills the lesson player stage column (vocabulary overlay interactions). */
 export const interactionImmersiveStageClass =
-  "flex h-full min-h-0 flex-1 flex-col overflow-hidden";
+  "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden pb-11";
 
 export function GuideBlock({
   guide,
@@ -90,7 +98,12 @@ export function GuideBlock({
 }
 
 export function unopt(url: string) {
-  return url.includes("placehold.co") || url.startsWith("data:");
+  return (
+    url.includes("placehold.co") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:") ||
+    /^https?:\/\//i.test(url)
+  );
 }
 
 /** Brief scale pop on interaction hero images (correct answer feedback). */
@@ -179,14 +192,40 @@ export type NavProps = {
   controlsPlacement?: InteractionControlsPlacement;
 };
 
+type LessonChromeContextValue = {
+  controlsPlacement?: InteractionControlsPlacement;
+};
+
+const LessonChromeContext = createContext<LessonChromeContextValue>({});
+
+/** Lets immersive embeds (e.g. LTC preview) keep Next inside the player, not the page. */
+export function LessonChromeProvider({
+  controlsPlacement,
+  children,
+}: {
+  controlsPlacement?: InteractionControlsPlacement;
+  children: ReactNode;
+}) {
+  return (
+    <LessonChromeContext.Provider value={{ controlsPlacement }}>
+      {children}
+    </LessonChromeContext.Provider>
+  );
+}
+
+export function useLessonChrome(): LessonChromeContextValue {
+  return useContext(LessonChromeContext);
+}
+
 /** Matches story immersive footer buttons (click-to-reveal learn screen). */
 export const STAGE_OVERLAY_BTN =
   "!min-h-9 !min-w-0 shrink-0 px-3 py-1.5 text-sm shadow-[3px_3px_0_#0a2f86]";
 
+/** @deprecated Kept for callers; nav is now an overlay, not a reserved bar. */
 export const STAGE_CHROME_FOOTER_CLASS = "h-14 shrink-0";
 
 /** Bottom padding so activity content stays above {@link InteractionLessonNav}. */
-export const interactionNavReservePaddingClass = "pb-24";
+export const interactionNavReservePaddingClass = "pb-14";
 
 /* ── Games quiz chrome (shared look for pilots / Activity Builder exports) ── */
 
@@ -226,46 +265,31 @@ export const gamesMatchTileLinkedClass =
 export const gamesWrongHintClass =
   "mt-3 rounded-lg border-2 border-red-300 bg-red-50 px-3 py-2 text-base font-semibold text-red-900";
 
-/** Orange footer row for immersive lesson interactions (vocabulary overlay). */
-export function InteractionStageFooter({
-  showBack,
-  onBack,
-  passed,
-  onNext,
-  nextDisabled,
-  nextLabel = "Next",
-  backLabel = "Back",
-}: Omit<NavProps, "muted" | "controlsPlacement"> & {
-  nextDisabled?: boolean;
-  nextLabel?: string;
-  backLabel?: string;
-}) {
-  const nextBtnDisabled = nextDisabled !== undefined ? nextDisabled : !passed;
+const lessonNavArrowBtnClass =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-kid-ink/80 bg-white/95 text-kid-ink shadow-sm transition-[transform,background-color,opacity] duration-100 hover:bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 motion-reduce:active:scale-100";
+
+function LessonNavChevron({ direction }: { direction: "back" | "next" }) {
   return (
-    <div
-      className={clsx(
-        STAGE_CHROME_FOOTER_CLASS,
-        "relative z-20 flex shrink-0 items-center justify-end gap-2 border-t-2 border-amber-700/25 bg-gradient-to-b from-[#fff8eb] to-[#f7bf4d] px-3",
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
+      {direction === "back" ? (
+        <path
+          fill="currentColor"
+          d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"
+        />
+      ) : (
+        <path
+          fill="currentColor"
+          d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
+        />
       )}
-    >
-      {showBack ? (
-        <KidButton type="button" variant="secondary" className={STAGE_OVERLAY_BTN} onClick={onBack}>
-          {backLabel}
-        </KidButton>
-      ) : null}
-      <KidButton
-        type="button"
-        className={STAGE_OVERLAY_BTN}
-        disabled={nextBtnDisabled}
-        onClick={() => onNext()}
-      >
-        {nextLabel}
-      </KidButton>
-    </div>
+    </svg>
   );
 }
 
-/** Back / Next pinned to the bottom-left of the viewport (lesson / quiz player). */
+/**
+ * Compact Back / Next arrows — centered on the player (all quiz activities).
+ * Fixed to the viewport, or absolute inside the stage when chrome is stage-footer.
+ */
 export function InteractionLessonNav({
   showBack,
   onBack,
@@ -274,33 +298,67 @@ export function InteractionLessonNav({
   nextDisabled,
   nextLabel = "Next",
   backLabel = "Back",
-}: Omit<NavProps, "muted" | "controlsPlacement"> & {
+  controlsPlacement: controlsPlacementProp,
+}: Omit<NavProps, "muted"> & {
   /** When set, overrides the default Next disable rule (`!passed`). */
   nextDisabled?: boolean;
   nextLabel?: string;
   backLabel?: string;
 }) {
+  const chrome = useLessonChrome();
+  const placement = controlsPlacementProp ?? chrome.controlsPlacement ?? "fixed";
+  const contained = placement === "stage-footer";
   const nextBtnDisabled = nextDisabled !== undefined ? nextDisabled : !passed;
   return (
     <div
       className={clsx(
-        "pointer-events-none fixed z-[100] flex justify-start",
-        "left-[max(0.75rem,env(safe-area-inset-left))]",
-        "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
+        "pointer-events-none z-[100] flex justify-center",
+        contained
+          ? "absolute inset-x-0 bottom-2"
+          : [
+              "fixed",
+              "inset-x-0",
+              "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
+            ],
       )}
     >
-      <div className="pointer-events-auto flex flex-wrap gap-3 drop-shadow-md">
+      <div className="pointer-events-auto flex items-center gap-2 drop-shadow-md">
         {showBack ? (
-          <KidButton type="button" variant="secondary" onClick={onBack}>
-            {backLabel}
-          </KidButton>
+          <button
+            type="button"
+            className={lessonNavArrowBtnClass}
+            onClick={onBack}
+            aria-label={backLabel}
+          >
+            <LessonNavChevron direction="back" />
+          </button>
         ) : null}
-        <KidButton type="button" disabled={nextBtnDisabled} onClick={() => onNext()}>
-          {nextLabel}
-        </KidButton>
+        <button
+          type="button"
+          className={lessonNavArrowBtnClass}
+          disabled={nextBtnDisabled}
+          onClick={() => onNext()}
+          aria-label={nextLabel}
+        >
+          <LessonNavChevron direction="next" />
+        </button>
       </div>
     </div>
   );
+}
+
+/**
+ * Same compact arrows as {@link InteractionLessonNav} (stage-footer placement).
+ * Kept so immersive activities share one control — no yellow bar.
+ */
+export function InteractionStageFooter(
+  props: Omit<NavProps, "muted" | "controlsPlacement"> & {
+    nextDisabled?: boolean;
+    nextLabel?: string;
+    backLabel?: string;
+  },
+) {
+  return <InteractionLessonNav {...props} controlsPlacement="stage-footer" />;
 }
 
 export function fixTextWordNeedsCorrection(

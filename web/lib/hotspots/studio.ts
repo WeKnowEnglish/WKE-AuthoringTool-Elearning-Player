@@ -1,0 +1,142 @@
+import { parseWkeActivity } from "@/lib/wke-activity";
+import { wkeActivityToExploreHotspotsPayload } from "@/lib/wke-activity/to-lesson-screen";
+import {
+  countLocalHotspotMedia,
+  publishLocalHotspotMedia,
+} from "@/lib/hotspots/publish-media";
+import type { ExploreHotspotsDocument } from "@/lib/hotspots/types";
+
+export type StudioExploreHotspotsRef = {
+  id: string;
+  name: string;
+  updatedAt: string;
+};
+
+function slugify(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "explore-hotspots"
+  );
+}
+
+export function validateExploreHotspotsDocument(
+  raw: unknown,
+): ExploreHotspotsDocument {
+  return parseWkeActivity(raw) as ExploreHotspotsDocument;
+}
+
+export async function listStudioExploreHotspots(): Promise<StudioExploreHotspotsRef[]> {
+  const response = await fetch("/api/studio/activities?format=explore_hotspots&limit=100", {
+    method: "GET",
+    credentials: "same-origin",
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    activities?: Array<{ id: string; title: string; updated_at: string }>;
+    error?: string;
+  } | null;
+  if (!response.ok || !payload?.ok || !Array.isArray(payload.activities)) {
+    throw new Error(
+      payload?.error ||
+        `Could not list hotspot activities (${response.status}). Are you signed in as a teacher?`,
+    );
+  }
+  return payload.activities.map((row) => ({
+    id: row.id,
+    name: row.title,
+    updatedAt: row.updated_at,
+  }));
+}
+
+export async function getStudioExploreHotspots(
+  activityId: string,
+): Promise<{ id: string; document: ExploreHotspotsDocument }> {
+  const response = await fetch(`/api/studio/activities/${encodeURIComponent(activityId)}`, {
+    method: "GET",
+    credentials: "same-origin",
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    id?: string;
+    format?: string;
+    authoring?: unknown;
+    error?: string;
+  } | null;
+  if (!response.ok || !payload?.ok || !payload.id) {
+    throw new Error(payload?.error || `Could not load hotspot activity (${response.status}).`);
+  }
+  if (payload.format && payload.format !== "explore_hotspots") {
+    throw new Error("That Activity Bank item is not an explore-hotspots activity.");
+  }
+  return {
+    id: payload.id,
+    document: validateExploreHotspotsDocument(payload.authoring),
+  };
+}
+
+export async function saveExploreHotspotsToStudio(input: {
+  activityId: string | null;
+  document: ExploreHotspotsDocument;
+}): Promise<StudioExploreHotspotsRef> {
+  let document = validateExploreHotspotsDocument(input.document);
+
+  if (countLocalHotspotMedia(document) > 0) {
+    document = validateExploreHotspotsDocument(await publishLocalHotspotMedia(document));
+    if (countLocalHotspotMedia(document) > 0) {
+      throw new Error(
+        "Could not upload all images. Check you’re signed in, then try Save again.",
+      );
+    }
+  }
+
+  const pack = wkeActivityToExploreHotspotsPayload(document);
+  const response = await fetch("/api/studio/activities", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: input.activityId,
+      format: "explore_hotspots",
+      pack,
+      authoring: document,
+      title: document.name,
+      filename: `${slugify(document.name)}.wkeactivity.json`,
+      source: { via: "explore_hotspots_workspace" },
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    id?: string;
+    title?: string;
+    created_at?: string;
+    error?: string;
+  } | null;
+
+  if (!response.ok || !payload?.ok || !payload.id) {
+    throw new Error(
+      payload?.error ||
+        `Could not save hotspot activity (${response.status}). Apply migration 075 if explore_hotspots is rejected.`,
+    );
+  }
+
+  return {
+    id: payload.id,
+    name: payload.title || document.name,
+    updatedAt: payload.created_at || new Date().toISOString(),
+  };
+}
+
+export function downloadExploreHotspotsJson(document: ExploreHotspotsDocument) {
+  const valid = validateExploreHotspotsDocument(document);
+  const url = URL.createObjectURL(
+    new Blob([`${JSON.stringify(valid, null, 2)}\n`], { type: "application/json" }),
+  );
+  const anchor = window.document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${slugify(valid.name)}.wkeactivity.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}

@@ -6,6 +6,16 @@ export type LearningTrackBeatPlan = {
   label: string;
   estimatedMinutes: number;
   screenCount: number;
+  screenStart?: number;
+  screenEnd?: number;
+  afterBridge?: {
+    kind: "post_quiz_report";
+    status: "planned" | "emitted";
+    nextBeatId?: string;
+    nextBeatLabel?: string;
+    screenIndex?: number;
+    intent: string;
+  };
 };
 
 export type LearningTrackLessonPlayerPack = {
@@ -83,6 +93,47 @@ export function parseLearningTrackLessonPlayerPack(
 
   const beat_plan: LearningTrackBeatPlan[] = raw.beat_plan.map((beat, index) => {
     if (!isRecord(beat)) throw new Error(`beat_plan[${index}] must be an object.`);
+    const screenStart =
+      typeof beat.screenStart === "number"
+        ? beat.screenStart
+        : typeof beat.screen_start === "number"
+          ? beat.screen_start
+          : 0;
+    const screenEnd =
+      typeof beat.screenEnd === "number"
+        ? beat.screenEnd
+        : typeof beat.screen_end === "number"
+          ? beat.screen_end
+          : screenStart + (typeof beat.screenCount === "number" ? beat.screenCount : 0);
+
+    const afterRaw = beat.afterBridge ?? beat.after_bridge;
+    let afterBridge: LearningTrackBeatPlan["afterBridge"];
+    if (isRecord(afterRaw) && afterRaw.kind === "post_quiz_report") {
+      afterBridge = {
+        kind: "post_quiz_report",
+        status: afterRaw.status === "emitted" ? "emitted" : "planned",
+        ...(typeof afterRaw.nextBeatId === "string"
+          ? { nextBeatId: afterRaw.nextBeatId }
+          : typeof afterRaw.next_beat_id === "string"
+            ? { nextBeatId: afterRaw.next_beat_id }
+            : {}),
+        ...(typeof afterRaw.nextBeatLabel === "string"
+          ? { nextBeatLabel: afterRaw.nextBeatLabel }
+          : typeof afterRaw.next_beat_label === "string"
+            ? { nextBeatLabel: afterRaw.next_beat_label }
+            : {}),
+        ...(typeof afterRaw.screenIndex === "number"
+          ? { screenIndex: afterRaw.screenIndex }
+          : typeof afterRaw.screen_index === "number"
+            ? { screenIndex: afterRaw.screen_index }
+            : {}),
+        intent:
+          typeof afterRaw.intent === "string"
+            ? afterRaw.intent
+            : "Show a brief quiz report with encouragement, then cue the next activity.",
+      };
+    }
+
     return {
       id: assertString(beat.id, `beat_plan[${index}].id`),
       kind: assertString(beat.kind, `beat_plan[${index}].kind`),
@@ -90,6 +141,9 @@ export function parseLearningTrackLessonPlayerPack(
       estimatedMinutes:
         typeof beat.estimatedMinutes === "number" ? beat.estimatedMinutes : 0,
       screenCount: typeof beat.screenCount === "number" ? beat.screenCount : 0,
+      screenStart,
+      screenEnd,
+      ...(afterBridge ? { afterBridge } : {}),
     };
   });
 

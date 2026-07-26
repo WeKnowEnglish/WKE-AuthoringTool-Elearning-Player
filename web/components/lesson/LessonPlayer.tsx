@@ -78,6 +78,8 @@ import {
   type VocabRunStats,
 } from "@/lib/vocabulary-templates/vocab-run-session";
 import { VocabActivityRewardScreen } from "@/components/lesson/VocabActivityRewardScreen";
+import { PostQuizReportView } from "@/components/lesson/interactions/PostQuizReportView";
+import type { TrackScreenOutcome } from "@/lib/learning-tracks/report-results";
 import { GrammarActivityRewardScreen } from "@/components/grammar/lesson/GrammarActivityRewardScreen";
 import { GrammarPosterScreen } from "@/components/grammar/lesson/GrammarPosterScreen";
 import type { GrammarDifficulty } from "@/lib/grammar-builder/schema";
@@ -92,7 +94,10 @@ import {
 } from "@/lib/grammar-templates/grammar-run-session";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
-import { interactionImageFitClass } from "@/components/lesson/interactions/shared";
+import {
+  interactionImageFitClass,
+  LessonChromeProvider,
+} from "@/components/lesson/interactions/shared";
 import {
   awardPracticeReward,
   completePracticeSession,
@@ -367,8 +372,21 @@ type Props = {
   visualEdit?: LessonPlayerVisualEdit;
   /** Story screens: inset nav on the stage (vocabulary overlay). */
   storyControlsPlacement?: StoryControlsPlacement;
-  /** Full-height flex shell, no page scroll (vocabulary overlay). */
+  /** Full-height flex shell, no page scroll (vocabulary overlay / published play). */
   immersiveLayout?: boolean;
+  /**
+   * With immersiveLayout: size to content height instead of filling the parent.
+   * Use inside FitScale / authoring embeds so activities can scale to fit.
+   */
+  embedNaturalHeight?: boolean;
+  /**
+   * When mode is preview: authoring tooling vs published student practice.
+   * Affects end-screen copy and finish links (not progress writes).
+   */
+  previewAudience?: "authoring" | "published";
+  /** Published preview finish link (e.g. back to classroom wall). */
+  previewFinishHref?: string;
+  previewFinishLabel?: string;
   /** Per-run shuffle seed (vocabulary learn reveal order). */
   runSeed?: string;
   /** Learn word metadata for sticker-match TTS (vocabulary overlay). */
@@ -393,6 +411,11 @@ type Props = {
   onPracticeSessionBind?: (api: { exitIfOpen: () => void }) => void;
   /** Fired when the active screen index changes (vocab overlay progress). */
   onScreenIndexChange?: (index: number) => void;
+  /**
+   * Preview mode only: fired once when the run reaches the end screen
+   * (e.g. homework freeze play that records completion outside LessonPlayer).
+   */
+  onPreviewComplete?: () => void;
 };
 
 export function LessonPlayer({
@@ -405,6 +428,10 @@ export function LessonPlayer({
   visualEdit,
   storyControlsPlacement = "below",
   immersiveLayout = false,
+  embedNaturalHeight = false,
+  previewAudience = "authoring",
+  previewFinishHref,
+  previewFinishLabel,
   runSeed,
   vocabWordsById,
   vocabLearnPhraseTheme,
@@ -418,6 +445,7 @@ export function LessonPlayer({
   grammarFinishLabel,
   onPracticeSessionBind,
   onScreenIndexChange,
+  onPreviewComplete,
 }: Props) {
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -430,6 +458,9 @@ export function LessonPlayer({
   const [dragFilled, setDragFilled] = useState<string[]>([]);
   const [interactionFeedback, setInteractionFeedback] =
     useState<InteractionFeedbackKind>("none");
+  const [trackScreenOutcomes, setTrackScreenOutcomes] = useState<
+    Record<string, TrackScreenOutcome>
+  >({});
   const [gold, setGold] = useState(0);
   const [experience, setExperience] = useState(0);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -838,6 +869,9 @@ export function LessonPlayer({
         setExperience(snapshot.experience);
       }
       setDone(true);
+      if (isPreview) {
+        onPreviewComplete?.();
+      }
     }
   }, [
     index,
@@ -851,6 +885,7 @@ export function LessonPlayer({
     completeVocabLesson,
     completeGrammarLesson,
     clearInteractionScreenState,
+    onPreviewComplete,
   ]);
 
   const goBack = useCallback(() => {
@@ -943,6 +978,40 @@ export function LessonPlayer({
 
   if (done) {
     if (isPreview) {
+      const restartPreview = () => {
+        playSfx("tap", muted);
+        setDone(false);
+        setIndex(0);
+        visualEdit?.onScreenIndexChange?.(0);
+      };
+
+      if (previewAudience === "published") {
+        return (
+          <div
+            className={clsx(
+              immersiveLayout && "flex min-h-0 flex-1 flex-col items-center justify-center",
+            )}
+          >
+            <KidPanel className="space-y-4 text-center">
+              <p className="text-2xl font-bold text-kid-ink">Nice work!</p>
+              <p className="mt-2 text-lg text-kid-ink">
+                You finished <span className="font-semibold">{lessonTitle}</span>.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <KidButton type="button" onClick={restartPreview}>
+                  Play again
+                </KidButton>
+                {previewFinishHref ? (
+                  <Link href={previewFinishHref} className={kidLinkSecondaryClassName}>
+                    {previewFinishLabel ?? "Back to classroom"}
+                  </Link>
+                ) : null}
+              </div>
+            </KidPanel>
+          </div>
+        );
+      }
+
       if (lessonId.startsWith("activity-")) {
         return (
           <KidPanel className="space-y-4 text-center">
@@ -951,15 +1020,7 @@ export function LessonPlayer({
               You completed <span className="font-semibold">{lessonTitle}</span>.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <KidButton
-                type="button"
-                onClick={() => {
-                  playSfx("tap", muted);
-                  setDone(false);
-                  setIndex(0);
-                  visualEdit?.onScreenIndexChange?.(0);
-                }}
-              >
+              <KidButton type="button" onClick={restartPreview}>
                 Play again
               </KidButton>
               <Link href="/teacher" className={kidLinkSecondaryClassName}>
@@ -975,17 +1036,11 @@ export function LessonPlayer({
       return (
         <KidPanel className="space-y-4 text-center">
           <p className="text-2xl font-bold text-kid-ink">End of preview</p>
-          <p className="mt-2 text-lg text-kid-ink">This is how students finish {lessonTitle}.</p>
+          <p className="mt-2 text-lg text-kid-ink">
+            This is how students finish {lessonTitle}.
+          </p>
           <div>
-            <KidButton
-              type="button"
-              onClick={() => {
-                playSfx("tap", muted);
-                setDone(false);
-                setIndex(0);
-                visualEdit?.onScreenIndexChange?.(0);
-              }}
-            >
+            <KidButton type="button" onClick={restartPreview}>
               Restart preview
             </KidButton>
           </div>
@@ -1060,6 +1115,13 @@ export function LessonPlayer({
   const passHandlers = {
     onPass: () => {
       interactionPassedScreenIdRef.current = screen.id;
+      setTrackScreenOutcomes((current) => ({
+        ...current,
+        [screen.id]: {
+          passed: true,
+          wrongAttempts: current[screen.id]?.wrongAttempts ?? 0,
+        },
+      }));
       setInteractionFeedback("correct");
       window.setTimeout(() => setInteractionFeedback("none"), 750);
       setInteractionPass(true);
@@ -1134,6 +1196,13 @@ export function LessonPlayer({
       }
     },
     onWrong: () => {
+      setTrackScreenOutcomes((current) => ({
+        ...current,
+        [screen.id]: {
+          passed: current[screen.id]?.passed ?? false,
+          wrongAttempts: (current[screen.id]?.wrongAttempts ?? 0) + 1,
+        },
+      }));
       setInteractionFeedback("wrong");
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
@@ -1177,17 +1246,22 @@ export function LessonPlayer({
   };
 
   return (
+    <LessonChromeProvider
+      controlsPlacement={immersiveLayout ? "stage-footer" : undefined}
+    >
     <div
       ref={playbackRootRef}
       className={clsx(
         "mx-auto w-full max-w-5xl",
-        immersiveLayout ?
-          "flex h-full min-h-0 flex-col gap-2 overflow-hidden"
-        : "space-y-6",
+        immersiveLayout
+          ? embedNaturalHeight
+            ? "relative flex flex-col gap-2"
+            : "relative flex h-full min-h-0 flex-col gap-2 overflow-hidden"
+          : "space-y-6",
       )}
     >
       {!isPreview ? <LevelUpModal muted={muted} /> : null}
-      {isPreview ? (
+      {isPreview && !immersiveLayout && previewAudience === "authoring" ? (
         <p className="shrink-0 rounded border-2 border-sky-700 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-950">
           Student preview — progress is not saved.
         </p>
@@ -1228,7 +1302,9 @@ export function LessonPlayer({
 
       <div
         className={clsx(
-          immersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden",
+          immersiveLayout &&
+            !embedNaturalHeight &&
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
         )}
       >
       {parsed.type === "start" && (
@@ -1420,6 +1496,19 @@ export function LessonPlayer({
           />
         ))}
 
+      {parsed.type === "interaction" && parsed.subtype === "post_quiz_report" && (
+        <PostQuizReportView
+          parsed={parsed}
+          outcomes={trackScreenOutcomes}
+          sourceScreenIds={screens
+            .slice(parsed.source_screen_start, parsed.source_screen_end)
+            .map((sourceScreen) => sourceScreen.id)}
+          onNext={goNext}
+          onBack={goBack}
+          showBack={index > 0}
+        />
+      )}
+
       {parsed.type === "interaction" && parsed.subtype === "mc_quiz" && (
         <>
           {canvasEdit ? (
@@ -1477,8 +1566,8 @@ export function LessonPlayer({
               />
             </label>
           ) : null}
-          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout}>
-            <InteractionLazyShell fillStage={immersiveLayout}>
+          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout && !embedNaturalHeight}>
+            <InteractionLazyShell fillStage={immersiveLayout && !embedNaturalHeight}>
               <LazyTrueFalse
                 parsed={parsed}
                 {...nav}
@@ -1585,8 +1674,8 @@ export function LessonPlayer({
               />
             </label>
           ) : null}
-          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout}>
-            <InteractionLazyShell fillStage={immersiveLayout}>
+          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout && !embedNaturalHeight}>
+            <InteractionLazyShell fillStage={immersiveLayout && !embedNaturalHeight}>
               <LazyFillBlanks
                 key={screen.id}
                 parsed={parsed}
@@ -1702,8 +1791,8 @@ export function LessonPlayer({
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "letter_mixup" && (
-        <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout}>
-          <InteractionLazyShell fillStage={immersiveLayout}>
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout && !embedNaturalHeight}>
+          <InteractionLazyShell fillStage={immersiveLayout && !embedNaturalHeight}>
             <LazyLetterMixup
               key={screen.id}
               parsed={parsed}
@@ -1801,6 +1890,7 @@ export function LessonPlayer({
       )}
       </div>
     </div>
+    </LessonChromeProvider>
   );
 }
 

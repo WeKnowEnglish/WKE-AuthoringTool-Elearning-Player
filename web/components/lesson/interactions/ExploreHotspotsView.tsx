@@ -88,6 +88,39 @@ function toPlayHotspots(parsed: ExploreHotspotsParsed): PlayHotspot[] {
   }));
 }
 
+async function playHtmlAudio(
+  url: string,
+  isCancelled: () => boolean,
+): Promise<void> {
+  const el = new Audio(url);
+  try {
+    await el.play();
+    await new Promise<void>((resolve) => {
+      if (isCancelled() || el.ended || el.paused) {
+        el.pause();
+        resolve();
+        return;
+      }
+      const done = () => {
+        window.clearInterval(poll);
+        el.removeEventListener("ended", done);
+        el.removeEventListener("error", done);
+        resolve();
+      };
+      const poll = window.setInterval(() => {
+        if (isCancelled()) {
+          el.pause();
+          done();
+        }
+      }, 80);
+      el.addEventListener("ended", done);
+      el.addEventListener("error", done);
+    });
+  } catch {
+    /* ignore autoplay / CORS */
+  }
+}
+
 export function ExploreHotspotsView({
   parsed,
   muted,
@@ -123,8 +156,13 @@ export function ExploreHotspotsView({
 
   const dialogueText = useMemo(
     () =>
-      activeDialogue?.turns.map((turn) => `${turn.speaker}. ${turn.text}`).join(" ") ??
-      "",
+      activeDialogue?.turns
+        .map((turn) => {
+          if (turn.speak_text?.trim()) return turn.speak_text.trim();
+          const speaker = turn.speaker?.trim() ?? "";
+          return speaker ? `${speaker}. ${turn.text}` : turn.text;
+        })
+        .join(" ") ?? "",
     [activeDialogue],
   );
 
@@ -153,6 +191,7 @@ export function ExploreHotspotsView({
     const dialogue = parsed.dialogues.find((d) => d.hotspot_id === hotspotId);
     if (!dialogue) return;
     const gen = ++playGenRef.current;
+    const isCancelled = () => gen !== playGenRef.current;
     stopSpeaking();
     setSpeaking(false);
     unlockSpeechSynthesis();
@@ -162,8 +201,21 @@ export function ExploreHotspotsView({
     if (muted) return;
     setSpeaking(true);
     try {
-      const line = dialogue.turns.map((t) => `${t.speaker}. ${t.text}`).join(" ");
-      await speakTextAndWait(line, { muted: false, rate: 0.88 });
+      for (const turn of dialogue.turns) {
+        if (isCancelled()) return;
+        const clip = turn.audio_url?.trim() || "";
+        const speaker = turn.speaker?.trim() ?? "";
+        const line =
+          turn.speak_text?.trim() ||
+          (speaker ? `${speaker}. ${turn.text}` : turn.text);
+        if (clip) {
+          stopSpeaking();
+          await playHtmlAudio(clip, isCancelled);
+        } else if (line.trim()) {
+          unlockSpeechSynthesis();
+          await speakTextAndWait(line, { muted: false, rate: 0.88 });
+        }
+      }
     } finally {
       if (gen === playGenRef.current) {
         setSpeaking(false);
@@ -268,17 +320,21 @@ export function ExploreHotspotsView({
                                 : "px-1"
                             }
                           >
+                            {turn.speaker?.trim() ? (
+                              <p
+                                className={`text-xs font-extrabold uppercase tracking-wide ${
+                                  index === activeDialogue.turns.length - 1
+                                    ? "text-[#2479cc]"
+                                    : "text-amber-600"
+                                }`}
+                              >
+                                {turn.speaker}
+                              </p>
+                            ) : null}
                             <p
-                              className={`text-xs font-extrabold uppercase tracking-wide ${
-                                index === activeDialogue.turns.length - 1
-                                  ? "text-[#2479cc]"
-                                  : "text-amber-600"
-                              }`}
-                            >
-                              {turn.speaker}
-                            </p>
-                            <p
-                              className={`mt-1 leading-snug text-[#13264a] ${
+                              className={`leading-snug text-[#13264a] ${
+                                turn.speaker?.trim() ? "mt-1" : ""
+                              } ${
                                 index === activeDialogue.turns.length - 1
                                   ? "text-[clamp(1.2rem,2.3cqi,1.65rem)] font-bold"
                                   : "text-base font-medium"

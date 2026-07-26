@@ -36,6 +36,10 @@ type Props = {
   initialFilters?: DictionaryBrowserFilters;
   packWordIds?: readonly string[];
   onAddToPack?: (wordId: string) => void;
+  /** Button label when adding (default Add). */
+  addLabel?: string;
+  /** Shown when word is already selected (default In pack). */
+  alreadyAddedLabel?: string;
   /** Teacher lexicon loaded from server; updated locally after create/edit. */
   teacherEntries: TeacherLexiconEntry[];
   onTeacherEntriesChange: (entries: TeacherLexiconEntry[]) => void;
@@ -56,6 +60,8 @@ export function PrimaryDictionaryBrowser({
   initialFilters,
   packWordIds = [],
   onAddToPack,
+  addLabel = "Add",
+  alreadyAddedLabel = "In pack",
   teacherEntries,
   onTeacherEntriesChange,
   platformEntries: platformEntriesProp,
@@ -379,6 +385,8 @@ export function PrimaryDictionaryBrowser({
                     topicOptions={facets.primaryTopic}
                     inPack={inPack.has(entry.id)}
                     onAddToPack={onAddToPack}
+                    addLabel={addLabel}
+                    alreadyAddedLabel={alreadyAddedLabel}
                     onUpdated={(updated) => upsertLocal(updated)}
                     onArchived={(id) => removeLocal(id)}
                     disabled={pending}
@@ -424,6 +432,8 @@ function DictionaryRow({
   topicOptions,
   inPack,
   onAddToPack,
+  addLabel = "Add",
+  alreadyAddedLabel = "In pack",
   onUpdated,
   onArchived,
   disabled,
@@ -433,6 +443,8 @@ function DictionaryRow({
   topicOptions: string[];
   inPack: boolean;
   onAddToPack?: (wordId: string) => void;
+  addLabel?: string;
+  alreadyAddedLabel?: string;
   onUpdated: (entry: TeacherLexiconEntry) => void;
   onArchived: (id: string) => void;
   disabled: boolean;
@@ -697,14 +709,14 @@ function DictionaryRow({
       <td className="whitespace-nowrap px-3 py-2">
         {onAddToPack ? (
           inPack ? (
-            <span className="mr-2 text-xs text-neutral-400">In pack</span>
+            <span className="mr-2 text-xs text-neutral-400">{alreadyAddedLabel}</span>
           ) : (
             <button
               type="button"
               onClick={() => onAddToPack(entry.id)}
               className="mr-2 text-xs font-semibold text-neutral-800 underline hover:text-neutral-950"
             >
-              Add
+              {addLabel}
             </button>
           )
         ) : null}

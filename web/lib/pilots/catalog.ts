@@ -229,15 +229,17 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     href: "/pilots/explore-hotspots",
     title: "Explore hotspots",
-    description: "Tap targets on a scene for listening and vocabulary discovery.",
+    description:
+      "Tap targets on a scene for listening and vocabulary discovery. Author in Lesson Player Activity Builder.",
     group: "activities",
     status: "active",
-    studioHref: "/activity-builder/hotspots",
+    studioHref: "/teacher/activity-builder/hotspots",
   },
   {
     href: "/pilots/activity-intro",
     title: "Activity intro",
-    description: "Story-style activity intro pilot — decide keep vs fold elsewhere.",
+    description:
+      "StoryBook-based activity intro. Track bridges now use post_quiz_report; keep or fold this intro elsewhere.",
     group: "experiments",
     status: "review",
   },
@@ -245,10 +247,20 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/learning-track",
     title: "Learning track",
     description:
-      "Compiled self-study sessions (hobbies Day 1). Studio Learning tracks → Play inbox.",
+      "Compiled self-study sessions (hobbies Day 1) with timeline authoring and live preview.",
     group: "activities",
     status: "active",
-    studioHref: "/activity-builder/learning-tracks",
+    studioHref: "/teacher/activity-builder/learning-tracks",
+  },
+  {
+    href: "/pilots/learning-track",
+    title: "Post-quiz report bridge",
+    description:
+      "Replaces StoryBook for track transitions: results, encouragement, and next-activity cue from the Learning Track Compiler.",
+    group: "activities",
+    status: "active",
+    studioHref: "/teacher/activity-builder/learning-tracks",
+    subtype: "post_quiz_report",
   },
   {
     href: "/pilots/self-study",
@@ -470,9 +482,17 @@ export const PILOT_CATALOG: PilotEntry[] = [
     subtype: "voice_question",
   },
   {
+    title: "StoryBook",
+    description:
+      "Legacy story screen type (StoryBookView). Firmly replaced for learning-track transitions by post_quiz_report; schema + view remain for vocab/learn and other leftover story payloads.",
+    group: "salvageable",
+    status: "review",
+    subtype: "story",
+  },
+  {
     title: "Story-page drag match",
     description:
-      "Pointer drag-and-drop on story pages (StoryBookView phase kind drag_match) — not Quiz subtype drag_match.",
+      "StoryBook phase kind drag_match — salvageable with StoryBook. Not Quiz subtype drag_match.",
     group: "salvageable",
     status: "review",
     subtype: "story.drag_match",
@@ -539,10 +559,19 @@ export const PILOT_CATALOG: PilotEntry[] = [
   },
   {
     href: "/teacher/word-packs",
-    title: "Word cards / word packs",
+    title: "Word cards / word packs (salvageable)",
     description:
-      "Teacher packs at /teacher/word-packs. Students join sessions at /word-cards/[joinCode].",
-    group: "classroom",
+      "Removed from teacher primary nav — routes kept. Teacher packs at /teacher/word-packs; students join at /word-cards/[joinCode]. Prefer Activity Builder vocabulary lists.",
+    group: "salvageable",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/teacher/dictionary/review",
+    title: "Teacher dictionary / lexicon review",
+    description:
+      "Lexicon review remains under Media in the teacher header. This pilots card preserves the dictionary surface for triage.",
+    group: "salvageable",
     status: "review",
   },
   {

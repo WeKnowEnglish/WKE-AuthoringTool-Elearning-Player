@@ -2,10 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import bakeryLetterMixup from "@/content/pilots/games-letter-mixup/bakery-letter-mixup.json";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { useStudioPackQuerySource } from "@/components/pilots/useStudioPackQuerySource";
 import {
   parseGamesLetterMixupLessonPlayerPack,
   type GamesLetterMixupLessonPlayerPack,
@@ -30,17 +30,14 @@ const LessonPlayer = dynamic(
 const BUILTIN_PACK = parseGamesLetterMixupLessonPlayerPack(bakeryLetterMixup);
 
 export function GamesLetterMixupPilot() {
-  const searchParams = useSearchParams();
-  const inboxId = searchParams.get("inbox")?.trim() || null;
-
+  const remote = useStudioPackQuerySource();
   const [pack, setPack] = useState<GamesLetterMixupLessonPlayerPack>(BUILTIN_PACK);
   const [sourceName, setSourceName] = useState(BUILTIN_PACK.activity_name);
   const [generation, setGeneration] = useState(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [inboxLoading, setInboxLoading] = useState(Boolean(inboxId));
   const fileRef = useRef<HTMLInputElement>(null);
-  const loadedInboxRef = useRef<string | null>(null);
+  const appliedRemoteKeyRef = useRef<string | null>(null);
 
   const screens = useMemo((): LessonScreenRow[] => {
     return pack.screens.map((payload, index) => ({
@@ -53,41 +50,32 @@ export function GamesLetterMixupPilot() {
   }, [pack]);
 
   useEffect(() => {
-    if (!inboxId) {
-      setInboxLoading(false);
+    if (remote.notice && !remote.rawPack) {
+      setImportNotice(remote.notice);
       return;
     }
-    if (loadedInboxRef.current === inboxId) return;
-    loadedInboxRef.current = inboxId;
-    setInboxLoading(true);
-    setImportNotice(null);
-    void (async () => {
-      try {
-        const response = await fetch(`/api/dev/studio-pack-inbox/${encodeURIComponent(inboxId)}`);
-        const payload = (await response.json()) as {
-          error?: string;
-          pack?: unknown;
-          filename?: string | null;
-        };
-        if (!response.ok) {
-          throw new Error(payload.error || "Could not load Studio inbox pack.");
-        }
-        const next = parseGamesLetterMixupLessonPlayerPack(payload.pack);
-        setPack(next);
-        setSourceName(payload.filename?.trim() || next.activity_name);
-        setGeneration((n) => n + 1);
-        setImportNotice(
-          `Loaded from Studio inbox (${next.screens.length} word${
-            next.screens.length === 1 ? "" : "s"
-          }).`,
-        );
-      } catch (error) {
-        setImportNotice(error instanceof Error ? error.message : "Inbox load failed.");
-      } finally {
-        setInboxLoading(false);
-      }
-    })();
-  }, [inboxId]);
+    if (!remote.rawPack || !remote.sourceKind) return;
+    const key = `${remote.sourceKind}:${remote.sourceName}`;
+    if (appliedRemoteKeyRef.current === key) return;
+    try {
+      const next = parseGamesLetterMixupLessonPlayerPack(remote.rawPack);
+      appliedRemoteKeyRef.current = key;
+      setPack(next);
+      setSourceName(remote.sourceName || next.activity_name);
+      setGeneration((n) => n + 1);
+      setImportNotice(
+        remote.sourceKind === "activity"
+          ? `Loaded from My Activity Bank (${next.screens.length} word${
+              next.screens.length === 1 ? "" : "s"
+            }).`
+          : `Loaded from Studio inbox (${next.screens.length} word${
+              next.screens.length === 1 ? "" : "s"
+            }).`,
+      );
+    } catch (error) {
+      setImportNotice(error instanceof Error ? error.message : "Could not parse pack.");
+    }
+  }, [remote.notice, remote.rawPack, remote.sourceKind, remote.sourceName]);
 
   function loadBuiltin() {
     setPack(BUILTIN_PACK);
@@ -112,6 +100,8 @@ export function GamesLetterMixupPilot() {
     }
   }
 
+  const remoteLoading = remote.loading;
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
       <KidPanel>
@@ -124,7 +114,7 @@ export function GamesLetterMixupPilot() {
               Studio Quiz letter scramble packs play as Lesson Player letter_mixup screens.
             </p>
             <p className="mt-2 text-xs font-semibold text-kid-ink/60">
-              Playing: {inboxLoading ? "Loading Studio pack…" : sourceName}
+              Playing: {remoteLoading ? "Loading Studio pack…" : sourceName}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -149,7 +139,8 @@ export function GamesLetterMixupPilot() {
             <p className="mt-1 text-xs font-semibold text-kid-ink/70">
               Drop a{" "}
               <code className="font-mono">.games-letter-mixup.lessonplayer.json</code> from EDU
-              Studio, or use <strong>Play in Lesson Player</strong> from Studio (inbox handoff).
+              Studio, open an Activity Bank link (<code className="font-mono">?activity=</code>),
+              or use Play from Studio.
             </p>
             {importNotice && (
               <p className="mt-2 text-xs font-bold text-kid-ink/80">{importNotice}</p>
@@ -158,7 +149,7 @@ export function GamesLetterMixupPilot() {
           <KidButton
             type="button"
             variant="secondary"
-            disabled={importing || inboxLoading}
+            disabled={importing || remoteLoading}
             onClick={() => fileRef.current?.click()}
           >
             {importing ? "Importing…" : "Choose file"}
@@ -192,7 +183,7 @@ export function GamesLetterMixupPilot() {
       </KidPanel>
 
       <div className="min-h-[min(75dvh,640px)]">
-        {inboxLoading ? (
+        {remoteLoading ? (
           <div className="rounded-2xl border-2 border-kid-ink/20 bg-white px-6 py-10 text-center">
             <p className="text-lg font-extrabold text-kid-ink">Loading Studio pack…</p>
           </div>

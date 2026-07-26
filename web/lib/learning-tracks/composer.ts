@@ -1,0 +1,106 @@
+export {
+  compileLearningTrack,
+  compileLearningTrackAsync,
+  getLearningTrackComposition,
+  getLearningTrackRecipe,
+  listLearningTrackCompositions,
+  listLearningTrackRecipes,
+  HOBBIES_DAY_1_COMPOSITION,
+} from "@/lib/learning-tracks/compile-learning-track";
+export {
+  compositionFromRecipe,
+  createBeatInstance,
+  defaultAfterBridgeForKind,
+  defaultFlashcardsSettings,
+  defaultLetterMixupSettings,
+  defaultListenAndChooseSettings,
+  defaultExploreHotspotsSettings,
+  defaultLanguageInFocusSettings,
+  defaultMultipleChoiceSettings,
+  defaultSourceForKind,
+  fixtureIdForKind,
+  isLearningTrackComposition,
+  resolveAfterBridgePlan,
+  vocabFormatForKind,
+  clampMcOptionCount,
+  DEFAULT_FLASHCARDS_BACK_FACES,
+  DEFAULT_FLASHCARDS_FRONT_FACES,
+  DEFAULT_LETTER_MIXUP_PROMPT,
+  DEFAULT_MC_MASTER_QUESTION,
+  DEFAULT_MC_OPTION_COUNT,
+} from "@/lib/learning-tracks/composition";
+export { createHobbiesVocabularyListDocument } from "@/lib/learning-tracks/create-hobbies-vocabulary-list";
+export {
+  beatSupportsFixture,
+  beatSupportsLibrary,
+  libraryFormatForBeatKind,
+  vocabCompileFormatForBeatKind,
+} from "@/lib/learning-tracks/resolve-beat-screens";
+export { HOBBIES_DAY_1_RECIPE } from "@/lib/learning-tracks/recipes/hobbies-day-1";
+export type {
+  CompileLearningTrackResult,
+  LearningTrackAfterBridge,
+  LearningTrackBeatInstance,
+  LearningTrackBeatKind,
+  LearningTrackBeatPlan,
+  LearningTrackBeatPresentation,
+  LearningTrackBeatSource,
+  LearningTrackComposition,
+  LearningTrackFixtureId,
+  LearningTrackFlashcardsSettings,
+  LearningTrackLetterMixupSettings,
+  LearningTrackLibraryFormat,
+  LearningTrackLessonPlayerPack,
+  LearningTrackListenAndChooseSettings,
+  LearningTrackListenItemOverlay,
+  LearningTrackExploreHotspotsSettings,
+  LearningTrackHotspotTurnOverlay,
+  LearningTrackHotspotPanelOverlay,
+  LearningTrackHotspotContentCard,
+  LearningTrackHotspotDialogueTurnCard,
+  LearningTrackLanguageInFocusSettings,
+  LearningTrackLifExampleOverlay,
+  LearningTrackMcItemOverlay,
+  LearningTrackMultipleChoiceSettings,
+  LearningTrackPlannedBridge,
+  LearningTrackRecipe,
+  LearningTrackScreenPayload,
+  LearningTrackVocabCompileFormat,
+} from "@/lib/learning-tracks/composition-types";
+export {
+  applyMcItemOverlays,
+  listMcQuizItemsFromScreens,
+  pruneMcItemOverlays,
+  upsertMcItemOverlay,
+} from "@/lib/learning-tracks/mc-item-overlays";
+export {
+  applyListenItemOverlays,
+  listListenItemsFromScreens,
+  pruneListenItemOverlays,
+  upsertListenItemOverlay,
+} from "@/lib/learning-tracks/listen-item-overlays";
+export {
+  applyHotspotTurnOverlays,
+  listHotspotPanelsFromScreens,
+  listHotspotTurnsFromScreens,
+  pruneHotspotTurnOverlays,
+  upsertHotspotTurnOverlay,
+  addHotspotDialogueTurnCard,
+  removeHotspotDialogueTurnCard,
+  patchHotspotDialogueTurnCard,
+  patchHotspotPanelTitle,
+  setHotspotPanelCards,
+  createDialogueTurnCard,
+} from "@/lib/learning-tracks/hotspot-turn-overlays";
+export {
+  applyLifExampleOverlays,
+  listLifExamplesFromScreens,
+  pruneLifExampleOverlays,
+  upsertLifExampleOverlay,
+} from "@/lib/learning-tracks/lif-example-overlays";
+export {
+  HOBBIES_DEFAULT_VOCAB_LIST_ID,
+  LEARNING_TRACK_BEAT_KIND_OPTIONS,
+  LEARNING_TRACK_BEAT_LABELS,
+  QUIZ_REPORT_BEAT_KINDS,
+} from "@/lib/learning-tracks/composition-types";

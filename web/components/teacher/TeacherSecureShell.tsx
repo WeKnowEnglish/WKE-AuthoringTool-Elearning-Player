@@ -2,16 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
 import { TeacherPrimaryTabs } from "@/components/teacher/TeacherPrimaryTabs";
-import { SoftChromePresetSwatches } from "@/components/ui/SoftChromePresetSwatches";
+import {
+  TeacherNavDropdown,
+  TeacherNavMenuDivider,
+  TeacherNavMenuLink,
+} from "@/components/teacher/TeacherNavDropdown";
+import { TeacherThemeControls } from "@/components/teacher/TeacherThemeControls";
 import type { TeacherTier } from "@/lib/auth/roles";
 import {
-  getSoftChromePreset,
-  teacherSoftChromeStore,
-  type SoftChromePresetId,
-} from "@/lib/soft-chrome-theme";
+  resolveTeacherThemeCssVars,
+  teacherThemeStore,
+} from "@/lib/teacher-theme";
+import "./teacher-theme.css";
 
 type Props = {
   userEmail: string;
@@ -20,55 +32,207 @@ type Props = {
   children: React.ReactNode;
 };
 
+/** Hide the teacher chrome after the pointer leaves it this long (LTC only). */
+const HEADER_RECESS_MS = 5000;
+
 function isWordPackEditorPath(pathname: string): boolean {
   return /^\/teacher\/word-packs\/[^/]+$/.test(pathname);
+}
+
+function isActivityBuilderWorkspacePath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/teacher/activity-builder/") &&
+    pathname !== "/teacher/activity-builder"
+  );
+}
+
+function isLearningTrackCompilerPath(pathname: string): boolean {
+  return (
+    pathname === "/teacher/activity-builder/learning-tracks" ||
+    pathname.startsWith("/teacher/activity-builder/learning-tracks/")
+  );
+}
+
+function SettingsGearIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+    </svg>
+  );
+}
+
+function TeacherSettingsMenu({ userEmail }: { userEmail: string }) {
+  const theme = useSyncExternalStore(
+    teacherThemeStore.subscribe,
+    teacherThemeStore.getSnapshot,
+    teacherThemeStore.getServerSnapshot,
+  );
+
+  return (
+    <TeacherNavDropdown
+      label={<SettingsGearIcon />}
+      ariaLabel="Settings"
+      align="right"
+      triggerClassName="teacher-tab inline-flex h-8 w-8 items-center justify-center rounded-full border"
+    >
+      <div className="px-2 pb-1 pt-1.5">
+        <p className="teacher-chrome-muted max-w-[14rem] truncate text-[11px]">
+          {userEmail}
+        </p>
+      </div>
+      <TeacherNavMenuDivider />
+      <div className="px-2 py-2">
+        <p className="teacher-theme-label mb-1.5 text-[10px] font-semibold uppercase tracking-wide">
+          Theme
+        </p>
+        <TeacherThemeControls
+          compact
+          value={theme}
+          onChange={teacherThemeStore.persist}
+        />
+      </div>
+      <TeacherNavMenuDivider />
+      <TeacherNavMenuLink href="/primary">View student site</TeacherNavMenuLink>
+      <div className="px-1 py-1">
+        <SignOutForm
+          label="Sign out"
+          buttonClassName="teacher-nav-menu-item block w-full rounded-md px-2.5 py-1.5 text-left text-sm font-medium !no-underline"
+        />
+      </div>
+    </TeacherNavDropdown>
+  );
 }
 
 function TeacherChromeHeader({
   userEmail,
   teacherTier,
   isAdmin,
-  headerBackground,
-  presetId,
-  onPresetChange,
 }: {
   userEmail: string;
   teacherTier: TeacherTier;
   isAdmin: boolean;
-  headerBackground: string;
-  presetId: SoftChromePresetId;
-  onPresetChange: (id: SoftChromePresetId) => void;
 }) {
   return (
-    <header
-      className="shrink-0 border-b border-black/[0.08] px-2 py-1 sm:px-3"
-      style={{ backgroundColor: headerBackground }}
-    >
+    <header className="teacher-chrome-header shrink-0 border-b px-2 py-1 sm:px-3">
       <div className="grid w-full grid-cols-1 items-center gap-y-2 gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-x-1 sm:gap-y-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:justify-self-start">
-          <Link href="/teacher/classes" className="shrink-0 text-sm font-bold sm:text-base">
+          <Link
+            href="/teacher/classes"
+            className="teacher-chrome-link shrink-0 text-sm font-bold sm:text-base"
+          >
             Teacher
           </Link>
         </div>
         <div className="flex justify-center justify-self-center sm:col-start-2 sm:row-start-1">
-          <TeacherPrimaryTabs teacherTier={teacherTier} isAdmin={isAdmin} />
+          <Suspense
+            fallback={
+              <nav className="flex gap-1" aria-hidden>
+                <span className="teacher-tab rounded-full border px-2 py-1 text-xs opacity-50">
+                  …
+                </span>
+              </nav>
+            }
+          >
+            <TeacherPrimaryTabs teacherTier={teacherTier} isAdmin={isAdmin} />
+          </Suspense>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs sm:justify-self-end sm:text-sm">
-          <SoftChromePresetSwatches
-            headerBackground={headerBackground}
-            presetId={presetId}
-            onPresetChange={onPresetChange}
-          />
-          <span className="max-w-[min(42vw,12rem)] truncate text-neutral-600 sm:max-w-[14rem]">
-            {userEmail}
-          </span>
-          <Link href="/primary" className="shrink-0 text-blue-700 underline">
-            Student site
-          </Link>
-          <SignOutForm label="Sign out" />
+          <TeacherSettingsMenu userEmail={userEmail} />
         </div>
       </div>
     </header>
+  );
+}
+
+function TeacherChromeHeaderDrawer({
+  userEmail,
+  teacherTier,
+  isAdmin,
+}: {
+  userEmail: string;
+  teacherTier: TeacherTier;
+  isAdmin: boolean;
+}) {
+  const [headerOpen, setHeaderOpen] = useState(true);
+  const headerHoverRef = useRef(false);
+  const headerNearRef = useRef(false);
+  const headerRecessTimerRef = useRef<number | null>(null);
+
+  const clearHeaderRecessTimer = () => {
+    if (headerRecessTimerRef.current != null) {
+      window.clearTimeout(headerRecessTimerRef.current);
+      headerRecessTimerRef.current = null;
+    }
+  };
+
+  const openHeaderDrawer = () => {
+    clearHeaderRecessTimer();
+    setHeaderOpen(true);
+  };
+
+  const scheduleHeaderRecess = () => {
+    if (headerHoverRef.current || headerNearRef.current) return;
+    if (headerRecessTimerRef.current != null) return;
+    headerRecessTimerRef.current = window.setTimeout(() => {
+      headerRecessTimerRef.current = null;
+      if (!headerHoverRef.current && !headerNearRef.current) {
+        setHeaderOpen(false);
+      }
+    }, HEADER_RECESS_MS);
+  };
+
+  useEffect(() => {
+    scheduleHeaderRecess();
+    return () => clearHeaderRecessTimer();
+    // Mount-only idle recess for LTC chrome.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      className="teacher-chrome-header-drawer"
+      data-open={headerOpen ? "true" : "false"}
+    >
+      <div
+        className="teacher-chrome-header-hotzone"
+        aria-hidden
+        onPointerEnter={() => {
+          headerNearRef.current = true;
+          openHeaderDrawer();
+        }}
+        onPointerLeave={() => {
+          headerNearRef.current = false;
+          scheduleHeaderRecess();
+        }}
+      />
+      <div
+        className="teacher-chrome-header-panel"
+        onPointerEnter={() => {
+          headerHoverRef.current = true;
+          openHeaderDrawer();
+        }}
+        onPointerLeave={() => {
+          headerHoverRef.current = false;
+          scheduleHeaderRecess();
+        }}
+      >
+        <TeacherChromeHeader
+          userEmail={userEmail}
+          teacherTier={teacherTier}
+          isAdmin={isAdmin}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -79,40 +243,52 @@ export function TeacherSecureShell({
   children,
 }: Props) {
   const pathname = usePathname();
-  const lockToViewport = isWordPackEditorPath(pathname);
-  const presetId = useSyncExternalStore(
-    teacherSoftChromeStore.subscribe,
-    teacherSoftChromeStore.getSnapshot,
-    teacherSoftChromeStore.getServerSnapshot,
+  const lockToViewport =
+    isWordPackEditorPath(pathname) || isActivityBuilderWorkspacePath(pathname);
+  const autoHideChrome = isLearningTrackCompilerPath(pathname);
+  const theme = useSyncExternalStore(
+    teacherThemeStore.subscribe,
+    teacherThemeStore.getSnapshot,
+    teacherThemeStore.getServerSnapshot,
   );
-  const preset = getSoftChromePreset(presetId);
-  const pageBackground = preset.page;
-  const teacherChromeVars = {
-    "--teacher-chrome-page": preset.page,
-    "--teacher-chrome-header": preset.header,
-    "--teacher-chrome-card": preset.card,
-  } as React.CSSProperties;
+  const themeVars = useMemo(
+    () => resolveTeacherThemeCssVars(theme) as React.CSSProperties,
+    [theme],
+  );
 
   return (
     <div
+      data-teacher-root
+      data-teacher-themed="true"
+      data-teacher-chrome-autohide={autoHideChrome ? "true" : undefined}
       className={lockToViewport ? "flex h-dvh flex-col overflow-hidden" : "min-h-screen"}
-      style={{ backgroundColor: pageBackground, ...teacherChromeVars }}
+      style={themeVars}
     >
-      <TeacherChromeHeader
-        userEmail={userEmail}
-        teacherTier={teacherTier}
-        isAdmin={isAdmin}
-        headerBackground={preset.header}
-        presetId={presetId}
-        onPresetChange={teacherSoftChromeStore.persist}
-      />
+      {autoHideChrome ? (
+        <TeacherChromeHeaderDrawer
+          userEmail={userEmail}
+          teacherTier={teacherTier}
+          isAdmin={isAdmin}
+        />
+      ) : (
+        <TeacherChromeHeader
+          userEmail={userEmail}
+          teacherTier={teacherTier}
+          isAdmin={isAdmin}
+        />
+      )}
       <div
         className={
           lockToViewport
-            ? "flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3 sm:px-6 lg:px-8"
+            ? isActivityBuilderWorkspacePath(pathname)
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+              : "flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3 sm:px-6 lg:px-8"
             : "w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
         }
-        style={{ backgroundColor: pageBackground, ...teacherChromeVars }}
+        style={{
+          backgroundColor: "var(--teacher-bg)",
+          color: "var(--teacher-fg)",
+        }}
       >
         {children}
       </div>

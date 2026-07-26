@@ -16,6 +16,16 @@ export type WkeAsset = {
   alt?: string;
 };
 
+export type WkeHotspotVisualShape = {
+  type: "segmentation-contour";
+  sourceAssetId: string;
+  sourceWidth: number;
+  sourceHeight: number;
+  /** Normalized closed contours. Multiple paths preserve separated parts / holes. */
+  paths: WkePoint[][];
+  score?: number;
+};
+
 export type WkeHotspotElement = {
   id: string;
   kind: "hotspot";
@@ -32,6 +42,7 @@ export type WkeHotspotElement = {
     glowRadius?: number;
     backgroundDim?: number;
   };
+  visualShape?: WkeHotspotVisualShape;
 };
 
 export type WkeMediaElement = {
@@ -61,6 +72,10 @@ export type WkeLayoutElement =
 export type WkeDialogueTurn = {
   speaker: string;
   text: string;
+  /** Optional TTS override when no audioUrl. */
+  speakText?: string;
+  /** Recorded clip URL; preferred over TTS when set. */
+  audioUrl?: string;
 };
 
 export type WkeDialogue = {

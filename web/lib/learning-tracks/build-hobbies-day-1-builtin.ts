@@ -21,6 +21,28 @@ export function buildHobbiesDay1BuiltinTrackPack(): LearningTrackLessonPlayerPac
   const listen = parseGamesListenAndChooseLessonPlayerPack(hobbiesListenChoose).screens;
 
   const screens = [hotspot, ...flashcards, lif, ...listen];
+  let cursor = 0;
+  const beat = (
+    id: string,
+    kind: string,
+    label: string,
+    estimatedMinutes: number,
+    screenCount: number,
+    afterBridge?: LearningTrackLessonPlayerPack["beat_plan"][number]["afterBridge"],
+  ) => {
+    const screenStart = cursor;
+    cursor += screenCount;
+    return {
+      id,
+      kind,
+      label,
+      estimatedMinutes,
+      screenCount,
+      screenStart,
+      screenEnd: cursor,
+      ...(afterBridge ? { afterBridge } : {}),
+    };
+  };
 
   return {
     version: 1,
@@ -35,34 +57,10 @@ export function buildHobbiesDay1BuiltinTrackPack(): LearningTrackLessonPlayerPac
     estimated_minutes: 10,
     cefr: "A1",
     beat_plan: [
-      {
-        id: "hotspots",
-        kind: "explore_hotspots",
-        label: "Explore hotspots",
-        estimatedMinutes: 2.5,
-        screenCount: 1,
-      },
-      {
-        id: "flashcards",
-        kind: "flashcards",
-        label: "Flashcards",
-        estimatedMinutes: 2,
-        screenCount: flashcards.length,
-      },
-      {
-        id: "lif",
-        kind: "language_in_focus",
-        label: "Language in Focus",
-        estimatedMinutes: 2.5,
-        screenCount: 1,
-      },
-      {
-        id: "listen",
-        kind: "listen_and_choose",
-        label: "Listen and choose",
-        estimatedMinutes: 2.5,
-        screenCount: listen.length,
-      },
+      beat("hotspots", "explore_hotspots", "Explore hotspots", 2.5, 1),
+      beat("flashcards", "flashcards", "Flashcards", 2, flashcards.length),
+      beat("lif", "language_in_focus", "Language in Focus", 2.5, 1),
+      beat("listen", "listen_and_choose", "Listen and choose", 2.5, listen.length),
     ],
     screens,
   };

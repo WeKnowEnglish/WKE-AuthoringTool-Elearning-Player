@@ -14,7 +14,12 @@ import {
   parseStoredPackFlashcardCards,
 } from "@/lib/class-homework/freeze-pack-flashcards";
 import { freezePackQuizPayload, parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
-import type { ClassHomework, ClassHomeworkStatus } from "@/lib/class-homework/types";
+import { freezeStudioActivityHomeworkPayload } from "@/lib/class-homework/freeze-studio-activity";
+import {
+  isHomeworkStudioFormat,
+  type ClassHomework,
+  type ClassHomeworkStatus,
+} from "@/lib/class-homework/types";
 import { getClassHomework } from "@/lib/data/class-homework";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -623,7 +628,7 @@ export type RecordHomeworkCompletionResult =
  */
 async function recordCatalogHomeworkCompletion(input: {
   homeworkId: string;
-  allowedTypes: ReadonlyArray<"pack_quiz" | "pack_flashcards">;
+  allowedTypes: ReadonlyArray<"pack_quiz" | "pack_flashcards" | "studio_activity">;
 }): Promise<RecordHomeworkCompletionResult> {
   try {
     const supabase = await createClient();
@@ -657,7 +662,9 @@ async function recordCatalogHomeworkCompletion(input: {
     const payload = normalizeHomeworkPayload(homework.payload);
     if (
       !payload ||
-      (payload.type !== "pack_quiz" && payload.type !== "pack_flashcards") ||
+      (payload.type !== "pack_quiz" &&
+        payload.type !== "pack_flashcards" &&
+        payload.type !== "studio_activity") ||
       !input.allowedTypes.includes(payload.type)
     ) {
       return { ok: false, error: "This homework type can’t be marked complete here." };
@@ -674,6 +681,8 @@ async function recordCatalogHomeworkCompletion(input: {
         Array.isArray(payload.cards) && payload.cards.length > 0
           ? payload.cards.length
           : Math.max(0, payload.cardCount);
+    } else if (payload.type === "studio_activity") {
+      questionsTotal = Math.max(0, payload.screenCount);
     }
 
     const { data: memberships, error: membershipError } = await supabase.rpc(
@@ -750,5 +759,144 @@ export async function recordPackFlashcardsHomeworkCompletion(input: {
     homeworkId: input.homeworkId,
     allowedTypes: ["pack_flashcards"],
   });
+}
+
+/** Student marks Activity Bank quiz homework finished after LessonPlayer end. */
+export async function recordStudioActivityHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["studio_activity"],
+  });
+}
+
+/**
+ * Create class homework from an Activity Bank quiz (MC / letter / flashcards).
+ * Freezes the pack so later bank edits do not change the assignment.
+ */
+export async function assignStudioActivityAsHomework(input: {
+  activityId: string;
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const activityId = input.activityId.trim();
+    const classId = input.classId.trim();
+    if (!activityId) return { ok: false, error: "Missing Activity Bank item." };
+    if (!classId) return { ok: false, error: "Choose a class." };
+
+    const status: ClassHomeworkStatus =
+      input.status === "assigned" ? "assigned" : "draft";
+
+    const supabase = await createClient();
+
+    const { data: ownedClass, error: classError } = await supabase
+      .from("teacher_classes")
+      .select("id, archived_at")
+      .eq("id", classId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (classError) {
+      if (/teacher_classes|schema cache|does not exist/i.test(classError.message)) {
+        return { ok: false, error: "Classes aren’t available yet." };
+      }
+      return { ok: false, error: classError.message };
+    }
+    if (!ownedClass || ownedClass.archived_at) {
+      return { ok: false, error: "Class not found." };
+    }
+
+    const { data: activity, error: activityError } = await supabase
+      .from("studio_activities")
+      .select("id, title, format, pack")
+      .eq("id", activityId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (activityError) {
+      if (/studio_activities|schema cache|does not exist/i.test(activityError.message)) {
+        return {
+          ok: false,
+          error: "Activity Bank isn’t available yet — apply migration 070_studio_activities.",
+        };
+      }
+      return { ok: false, error: activityError.message };
+    }
+    if (!activity) return { ok: false, error: "Activity not found." };
+    if (!isHomeworkStudioFormat(activity.format)) {
+      return {
+        ok: false,
+        error:
+          "Only multiple choice, letter scramble, and flashcards can be assigned as homework for now.",
+      };
+    }
+
+    let payload;
+    try {
+      payload = freezeStudioActivityHomeworkPayload({
+        activityId,
+        format: activity.format,
+        pack: activity.pack,
+        titleHint: typeof activity.title === "string" ? activity.title : null,
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Could not freeze activity for homework.",
+      };
+    }
+
+    const now = new Date().toISOString();
+    const title = normalizeHomeworkTitle(input.title, payload.title);
+    const instructions = normalizeHomeworkInstructions(input.instructions);
+    const dueAt = normalizeDueAt(input.dueAt);
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("class_homework")
+      .insert({
+        class_id: classId,
+        teacher_id: teacherId,
+        title,
+        instructions,
+        due_at: dueAt,
+        status,
+        payload,
+        assigned_at: status === "assigned" ? now : null,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !inserted?.id) {
+      if (/class_homework|schema cache|does not exist/i.test(insertError?.message ?? "")) {
+        return {
+          ok: false,
+          error: "Homework isn’t available yet — apply migration 064_class_homework.",
+        };
+      }
+      return { ok: false, error: insertError?.message ?? "Could not create homework." };
+    }
+
+    const homework = await getClassHomework(inserted.id);
+    if (!homework) {
+      return { ok: false, error: "Homework created but could not be loaded." };
+    }
+
+    revalidateClass(classId);
+    revalidatePath("/teacher/classes");
+    return { ok: true, homework };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : "Could not assign Activity Bank item as homework.",
+    };
+  }
 }
 

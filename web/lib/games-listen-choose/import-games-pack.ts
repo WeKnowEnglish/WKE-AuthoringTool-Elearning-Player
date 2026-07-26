@@ -48,8 +48,8 @@ async function remapUrlToObjectUrl(
   if (!filename) return src;
   const entry = assetEntries.get(filename) || assetEntries.get(`assets/${filename}`) || null;
   if (!entry) {
-    // Public path already on disk (built-in pilot assets) — leave as-is.
-    if (src.startsWith("/")) return src;
+    // Already-remote or already-on-disk URLs — leave as-is (cloud studio_media, pilots).
+    if (src.startsWith("/") || /^https?:\/\//i.test(src)) return src;
     throw new Error(`Zip is missing asset file for ${label} (expected assets/${filename}).`);
   }
   const blob = await entry.async("blob");

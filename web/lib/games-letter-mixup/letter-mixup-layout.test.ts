@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildInitialLetterMixupSlots,
   buildLetterMixupLayout,
+  letterMixupAnswerRowRanges,
+  maxLetterMixupWordLength,
   normalizeLetterMixupTarget,
 } from "./letter-mixup-layout";
 
@@ -48,5 +50,18 @@ describe("letter-mixup-layout", () => {
     });
     expect(slots[0]).toBeNull();
     expect(slots[4]).toBeNull();
+  });
+
+  it("reports max word length and answer row ranges for phrases", () => {
+    const layout = buildLetterMixupLayout("ice cream cone", {
+      shuffleLetters: false,
+      shuffleSeed: "seed",
+    });
+    expect(maxLetterMixupWordLength(layout.trayGroups)).toBe(5);
+    expect(letterMixupAnswerRowRanges(layout.targetChars)).toEqual([
+      { start: 0, end: 3 },
+      { start: 4, end: 9 },
+      { start: 10, end: 14 },
+    ]);
   });
 });

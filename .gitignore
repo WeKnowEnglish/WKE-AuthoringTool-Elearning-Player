@@ -1,5 +1,16 @@
 .cursor/
 
+# Dependencies
+node_modules/
+
+# Package local installs (canonical apps install via file: deps)
+packages/**/node_modules/
+packages/**/package-lock.json
+
+# Local planning / Office scratch (not for git)
+*.xlsx
+~$*
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

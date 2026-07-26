@@ -6,6 +6,9 @@ export type InteractionSubtype = Extract<ScreenPayload, { type: "interaction" }>
 /** Warm the next screen’s JS chunk (fire-and-forget). */
 export function prefetchInteractionChunk(subtype: InteractionSubtype): void {
   switch (subtype) {
+    case "post_quiz_report":
+      // Bundled with LessonPlayer because it is a lightweight transition screen.
+      break;
     case "mc_quiz":
       void import("./McQuizView");
       break;

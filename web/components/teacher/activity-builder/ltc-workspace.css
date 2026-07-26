@@ -1,0 +1,155 @@
+/* Temporary LTC chrome — colors come from CSS vars on [data-ltc-root]. */
+
+[data-ltc-root] {
+  background: var(--ltc-bg);
+  color: var(--ltc-fg);
+}
+
+[data-ltc-root] .ltc-header,
+[data-ltc-root] .ltc-footer {
+  background: color-mix(in srgb, var(--ltc-elevated) 88%, transparent);
+  border-color: var(--ltc-border);
+}
+
+[data-ltc-root] .ltc-panel {
+  background: var(--ltc-panel);
+  border-color: var(--ltc-border-strong);
+}
+
+[data-ltc-root] .ltc-preview-shell {
+  background: color-mix(in srgb, var(--ltc-elevated) 40%, transparent);
+}
+
+[data-ltc-root] .ltc-preview-stage {
+  background: var(--ltc-bg);
+}
+
+[data-ltc-root] .ltc-aside,
+[data-ltc-root] .ltc-preview-bar {
+  border-color: var(--ltc-border);
+}
+
+[data-ltc-root] .ltc-label {
+  color: var(--ltc-accent);
+}
+
+[data-ltc-root] .ltc-fg {
+  color: var(--ltc-fg);
+}
+
+[data-ltc-root] .ltc-muted {
+  color: var(--ltc-muted);
+}
+
+[data-ltc-root] .ltc-subtle {
+  color: var(--ltc-subtle);
+}
+
+[data-ltc-root] .ltc-field {
+  color: var(--ltc-muted);
+}
+
+[data-ltc-root] .ltc-input {
+  background: var(--ltc-input);
+  border-color: var(--ltc-border-strong);
+  color: var(--ltc-fg);
+}
+
+[data-ltc-root] .ltc-btn {
+  border: 1px solid var(--ltc-border-strong);
+  background: var(--ltc-elevated);
+  color: var(--ltc-fg);
+}
+
+[data-ltc-root] .ltc-btn:hover:not(:disabled) {
+  border-color: var(--ltc-accent-border);
+}
+
+[data-ltc-root] .ltc-btn-primary {
+  border: 1px solid transparent;
+  background: var(--ltc-primary-btn);
+  color: var(--ltc-primary-btn-fg);
+}
+
+[data-ltc-root] .ltc-btn-accent {
+  border: 1px solid transparent;
+  background: var(--ltc-accent-border);
+  color: var(--ltc-primary-btn-fg);
+}
+
+[data-ltc-root] .ltc-btn-ghost {
+  background: color-mix(in srgb, var(--ltc-elevated) 70%, var(--ltc-bg));
+  color: var(--ltc-fg);
+  border: none;
+}
+
+[data-ltc-root] .ltc-link {
+  color: var(--ltc-accent);
+}
+
+[data-ltc-root] .ltc-error-banner {
+  background: var(--ltc-error-bg);
+  border-color: var(--ltc-error-border);
+  color: var(--ltc-error-fg);
+}
+
+[data-ltc-root] .ltc-notice-banner {
+  background: var(--ltc-warn-bg);
+  border-color: var(--ltc-warn-border);
+  color: var(--ltc-warn-fg);
+}
+
+[data-ltc-root] .ltc-warn-text {
+  color: var(--ltc-warn-fg);
+}
+
+[data-ltc-root] .ltc-skeleton {
+  background: color-mix(in srgb, var(--ltc-panel) 70%, transparent);
+  border-color: var(--ltc-border);
+  border-style: dashed;
+}
+
+[data-ltc-root] .ltc-skeleton-bar {
+  background: color-mix(in srgb, var(--ltc-border-strong) 55%, transparent);
+}
+
+[data-ltc-root] .ltc-beat {
+  background: color-mix(in srgb, var(--ltc-panel) 85%, transparent);
+  border-color: var(--ltc-border-strong);
+  color: var(--ltc-fg);
+}
+
+[data-ltc-root] .ltc-beat[data-active="true"] {
+  background: var(--ltc-selected-bg);
+  border-color: var(--ltc-selected-border);
+}
+
+[data-ltc-root] .ltc-beat:not([data-active="true"]):hover {
+  border-color: var(--ltc-accent-border);
+}
+
+[data-ltc-root] .ltc-bridge {
+  background: var(--ltc-bridge-bg);
+  border-color: var(--ltc-bridge-border);
+  color: var(--ltc-bridge-fg);
+}
+
+[data-ltc-root] .ltc-bridge-muted {
+  color: var(--ltc-bridge-muted);
+}
+
+[data-ltc-root] .ltc-danger {
+  color: var(--ltc-danger);
+}
+
+[data-ltc-root] .ltc-theme-chip {
+  border: 1px solid var(--ltc-border-strong);
+  background: var(--ltc-input);
+  color: var(--ltc-muted);
+}
+
+[data-ltc-root] .ltc-theme-chip[data-active="true"] {
+  border-color: var(--ltc-selected-border);
+  background: var(--ltc-selected-bg);
+  color: var(--ltc-fg);
+}

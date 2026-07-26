@@ -2208,6 +2208,23 @@ export const mcQuizPayloadSchema = z.object({
   guide: guideSchema,
 });
 
+/** Learning-track bridge shown after a quiz beat and before the next activity. */
+export const postQuizReportPayloadSchema = z.object({
+  type: z.literal("interaction"),
+  subtype: z.literal("post_quiz_report"),
+  source_beat_id: z.string().min(1),
+  source_beat_label: z.string().min(1),
+  /** Inclusive screen index of the quiz beat in the compiled track. */
+  source_screen_start: z.number().int().min(0),
+  /** Exclusive screen index of the quiz beat in the compiled track. */
+  source_screen_end: z.number().int().min(1),
+  title: z.string().min(1).default("Nice work!"),
+  encouragement: z.string().min(1),
+  next_beat_id: z.string().min(1),
+  next_activity_label: z.string().min(1),
+  next_activity_cue: z.string().min(1),
+});
+
 export const clickTargetsPayloadSchema = z
   .object({
     type: z.literal("interaction"),
@@ -2392,8 +2409,17 @@ const exploreHotspotDialogueSchema = z.object({
   turns: z
     .array(
       z.object({
-        speaker: z.string().min(1),
+        /** Display label; empty = untitled / narrator line. */
+        speaker: z.string().default(""),
+        /** Visible dialogue / card text. */
         text: z.string().min(1),
+        /**
+         * Optional TTS line when no audio_url.
+         * Defaults to "Speaker. text" or just text when speaker is empty.
+         */
+        speak_text: z.string().min(1).optional(),
+        /** Recorded clip; preferred over TTS when set. */
+        audio_url: z.string().min(1).optional(),
       }),
     )
     .min(1),
@@ -2629,6 +2655,8 @@ export const languageInFocusPayloadSchema = z
             .optional(),
           /** Optional bubble_id → full bubble text override. */
           bubble_overrides: z.record(z.string(), z.string()).optional(),
+          /** Recorded Listen/Hear clip; preferred over TTS when set. */
+          audio_url: z.string().min(1).optional(),
         }),
       )
       .min(1),
@@ -3489,6 +3517,7 @@ export const guidedDialoguePayloadSchema = z
 export const interactionPayloadSchema = z.intersection(
   z.discriminatedUnion("subtype", [
     mcQuizPayloadSchema,
+    postQuizReportPayloadSchema,
     clickTargetsPayloadSchema,
     dragSentencePayloadSchema,
     trueFalsePayloadSchema,

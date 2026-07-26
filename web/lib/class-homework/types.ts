@@ -8,11 +8,20 @@ import type {
 export const CLASS_HOMEWORK_STATUSES = ["draft", "assigned", "closed"] as const;
 export type ClassHomeworkStatus = (typeof CLASS_HOMEWORK_STATUSES)[number];
 
+/** Bank formats assignable as frozen class homework (Phase 2). */
+export const HOMEWORK_STUDIO_FORMATS = [
+  "multiple_choice",
+  "letter_mixup",
+  "flashcards",
+] as const;
+export type HomeworkStudioFormat = (typeof HOMEWORK_STUDIO_FORMATS)[number];
+
 export const CLASS_HOMEWORK_PAYLOAD_TYPES = [
   "pack_quiz",
   "pack_flashcards",
   "word_pack_practice",
   "external_note",
+  "studio_activity",
 ] as const;
 export type ClassHomeworkPayloadType = (typeof CLASS_HOMEWORK_PAYLOAD_TYPES)[number];
 
@@ -49,6 +58,17 @@ export type ClassHomeworkPayload =
   | {
       type: "external_note";
       body: string;
+    }
+  | {
+      type: "studio_activity";
+      /** Provenance — Activity Bank row id at assign time. */
+      activityId: string;
+      format: HomeworkStudioFormat;
+      title: string;
+      screenCount: number;
+      /** Frozen Lesson Player pack snapshot. */
+      pack: Record<string, unknown>;
+      frozenAt: string;
     };
 
 export type ClassHomework = {
@@ -91,7 +111,23 @@ export const CLASS_HOMEWORK_PAYLOAD_LABELS: Record<ClassHomeworkPayloadType, str
   pack_flashcards: "Flashcards",
   word_pack_practice: "Word pack practice",
   external_note: "Note / reminder",
+  studio_activity: "Activity Bank quiz",
 };
+
+export function isHomeworkStudioFormat(
+  value: unknown,
+): value is HomeworkStudioFormat {
+  return (
+    typeof value === "string" &&
+    (HOMEWORK_STUDIO_FORMATS as readonly string[]).includes(value)
+  );
+}
+
+export function homeworkStudioFormatLabel(format: HomeworkStudioFormat): string {
+  if (format === "multiple_choice") return "Multiple choice";
+  if (format === "letter_mixup") return "Letter scramble";
+  return "Flashcards";
+}
 
 /** Re-export face type for consumers that only import homework types. */
 export type { PackFlashcardFace };

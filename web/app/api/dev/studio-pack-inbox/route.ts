@@ -51,11 +51,23 @@ export async function POST(request: Request) {
     return json(request, { error: "Pack is too large for the inbox (max ~28 MB)." }, 413);
   }
 
+  let rawText = "";
+  try {
+    rawText = await request.text();
+  } catch {
+    return json(request, { error: "Could not read request body." }, 400);
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(rawText) as unknown;
   } catch {
-    return json(request, { error: "Invalid JSON body." }, 400);
+    const approxMb = (rawText.length / (1024 * 1024)).toFixed(1);
+    const hint =
+      rawText.length > 9 * 1024 * 1024
+        ? ` Body looked truncated (~${approxMb} MB). Raise experimental.proxyClientMaxBodySize in Lesson Player next.config.ts and restart the LP server.`
+        : "";
+    return json(request, { error: `Invalid JSON body.${hint}` }, 400);
   }
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {

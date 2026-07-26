@@ -108,8 +108,10 @@ export function wkeActivityToExploreHotspotsPayload(
       hotspot_id: d.hotspotId,
       title: d.title,
       turns: d.turns.map((t) => ({
-        speaker: t.speaker,
+        speaker: t.speaker ?? "",
         text: t.text,
+        ...(t.speakText?.trim() ? { speak_text: t.speakText.trim() } : {}),
+        ...(t.audioUrl?.trim() ? { audio_url: t.audioUrl.trim() } : {}),
       })),
     })),
     completion: { type: "visit_all_required_hotspots" as const },

@@ -20,11 +20,17 @@
     ],
     "paths": {
       "@/*": ["./*"],
+      "@wke/explore-hotspots-author": [
+        "../packages/explore-hotspots-author/src/index.ts"
+      ],
+      "@wke/explore-hotspots-author/*": [
+        "../packages/explore-hotspots-author/src/*"
+      ],
       "@wke/explore-hotspots-play": [
-        "../../WKE Animator/svg-edu-studio/packages/explore-hotspots-play/src/index.ts"
+        "../packages/explore-hotspots-play/src/index.ts"
       ],
       "@wke/explore-hotspots-play/*": [
-        "../../WKE Animator/svg-edu-studio/packages/explore-hotspots-play/src/*"
+        "../packages/explore-hotspots-play/src/*"
       ]
     }
   },

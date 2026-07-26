@@ -10,6 +10,10 @@ import {
 import { parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import {
+  homeworkStudioFormatLabel,
+  isHomeworkStudioFormat,
+} from "@/lib/class-homework/types";
+import {
   isPackFlashcardFace,
   sortPackFlashcardFaces,
   type PackFlashcardFace,
@@ -80,6 +84,17 @@ export function defaultHomeworkPayload(
   }
   if (type === "word_pack_practice") {
     return { type: "word_pack_practice", packId: "", packTitle: "", wordCount: 0 };
+  }
+  if (type === "studio_activity") {
+    return {
+      type: "studio_activity",
+      activityId: "",
+      format: "multiple_choice",
+      title: "",
+      screenCount: 0,
+      pack: {},
+      frozenAt: "",
+    };
   }
   return { type: "external_note", body: "" };
 }
@@ -162,6 +177,34 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
     };
   }
 
+  if (input.type === "studio_activity") {
+    const activityId = asString(input.activityId).trim();
+    if (!activityId) return null;
+    if (!isHomeworkStudioFormat(input.format)) return null;
+    const packRaw = input.pack;
+    if (!packRaw || typeof packRaw !== "object" || Array.isArray(packRaw)) {
+      return null;
+    }
+    const screenCount =
+      typeof input.screenCount === "number" && Number.isFinite(input.screenCount)
+        ? Math.max(0, Math.round(input.screenCount))
+        : 0;
+    if (screenCount < 1) return null;
+    const frozenAt =
+      typeof input.frozenAt === "string" && input.frozenAt.trim()
+        ? input.frozenAt.trim()
+        : new Date(0).toISOString();
+    return {
+      type: "studio_activity",
+      activityId,
+      format: input.format,
+      title: asString(input.title).trim() || homeworkStudioFormatLabel(input.format),
+      screenCount,
+      pack: packRaw as Record<string, unknown>,
+      frozenAt,
+    };
+  }
+
   const body = asString(input.body).trim().slice(0, NOTE_MAX);
   if (!body) return null;
   return { type: "external_note", body };
@@ -182,6 +225,11 @@ export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
     return `${payload.packTitle} · ${payload.wordCount} word${
       payload.wordCount === 1 ? "" : "s"
     }`;
+  }
+  if (payload.type === "studio_activity") {
+    return `${payload.title} · ${homeworkStudioFormatLabel(payload.format)} · ${
+      payload.screenCount
+    } screen${payload.screenCount === 1 ? "" : "s"}`;
   }
   return payload.body.length > 80 ? `${payload.body.slice(0, 77)}…` : payload.body;
 }

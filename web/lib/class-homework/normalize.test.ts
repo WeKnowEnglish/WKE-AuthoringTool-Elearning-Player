@@ -91,4 +91,61 @@ describe("class-homework/normalize", () => {
     });
     expect(note).toEqual({ type: "external_note", body: "Finish page 12" });
   });
+
+  it("normalizes studio_activity and rejects incomplete packs", () => {
+    expect(
+      normalizeHomeworkPayload({
+        type: "studio_activity",
+        activityId: "",
+        format: "multiple_choice",
+        title: "Bakery",
+        screenCount: 2,
+        pack: { screens: [] },
+        frozenAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toBeNull();
+    expect(
+      normalizeHomeworkPayload({
+        type: "studio_activity",
+        activityId: "a1",
+        format: "learning_track",
+        title: "Track",
+        screenCount: 2,
+        pack: { screens: [] },
+        frozenAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toBeNull();
+    expect(
+      normalizeHomeworkPayload({
+        type: "studio_activity",
+        activityId: "a1",
+        format: "multiple_choice",
+        title: "Bakery",
+        screenCount: 0,
+        pack: { screens: [] },
+        frozenAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toBeNull();
+
+    const payload = normalizeHomeworkPayload({
+      type: "studio_activity",
+      activityId: "a1",
+      format: "multiple_choice",
+      title: "Bakery quiz",
+      screenCount: 3,
+      pack: { title: "Bakery", screens: [{ id: "s1" }] },
+      frozenAt: "2026-01-01T00:00:00.000Z",
+    });
+    expect(payload).toEqual({
+      type: "studio_activity",
+      activityId: "a1",
+      format: "multiple_choice",
+      title: "Bakery quiz",
+      screenCount: 3,
+      pack: { title: "Bakery", screens: [{ id: "s1" }] },
+      frozenAt: "2026-01-01T00:00:00.000Z",
+    });
+    expect(homeworkPayloadSummary(payload!)).toContain("Bakery quiz");
+    expect(homeworkPayloadSummary(payload!)).toContain("3 screens");
+  });
 });

@@ -107,8 +107,10 @@ const dialogueSchema = z.object({
   turns: z
     .array(
       z.object({
-        speaker: z.string().min(1),
+        speaker: z.string().default(""),
         text: z.string().min(1),
+        speakText: z.string().min(1).optional(),
+        audioUrl: z.string().min(1).optional(),
       }),
     )
     .min(1),

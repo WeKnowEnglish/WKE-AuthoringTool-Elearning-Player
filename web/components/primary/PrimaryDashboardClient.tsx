@@ -11,6 +11,7 @@ import { playSfx } from "@/lib/audio/sfx";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
+import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import { completeStudyCareIfPending } from "@/lib/pet";
 import { buildPrimaryHomeLearningModel } from "@/lib/primary/build-primary-home-learning";
@@ -34,6 +35,7 @@ import { markExplorationNode } from "@/lib/worlds/exploration";
 type Props = {
   classMemberships: StudentClassMembership[];
   assignedHomework?: StudentHomeworkCard[];
+  liveSessions?: StudentClassLiveSession[];
   initialNav?: string | null;
   /** Deep-link a vocab set to open on mount, e.g. `?set=breakfast_food`. */
   initialSetId?: string | null;
@@ -44,6 +46,7 @@ type Props = {
 export function PrimaryDashboardClient({
   classMemberships,
   assignedHomework = [],
+  liveSessions = [],
   initialNav,
   initialSetId,
   initialMessage,
@@ -151,6 +154,7 @@ export function PrimaryDashboardClient({
         progressModel={progressModel}
         reviewModel={reviewModel}
         assignedHomework={assignedHomework}
+        liveSessions={liveSessions}
         enrolledInClass={classMemberships.length > 0}
         initialNav={initialSetId ? "vocabulary" : initialNav}
         onEconomyChange={refreshHomeModel}

@@ -13,6 +13,8 @@ export const MARKETING_EVENT_NAMES = [
   "student_signin_click",
   "join_class_click",
   "sample_lesson_open",
+  "resource_download_unlock",
+  "resource_download_start",
 ] as const;
 
 export type MarketingEventName = (typeof MARKETING_EVENT_NAMES)[number];

@@ -34,3 +34,11 @@ export async function getStudentClassMemberships(): Promise<StudentClassMembersh
     enrolledAt: row.enrolled_at,
   }));
 }
+
+/** Returns the membership for `classId` when the signed-in student is enrolled. */
+export async function getStudentClassMembership(
+  classId: string,
+): Promise<StudentClassMembership | null> {
+  const memberships = await getStudentClassMemberships();
+  return memberships.find((membership) => membership.classId === classId) ?? null;
+}

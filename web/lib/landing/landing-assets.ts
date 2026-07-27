@@ -6,6 +6,8 @@ export const LANDING_CHARACTERS: Record<LandingPathVariant, string> = {
   secondary: "/landing/secondary-mascot.png",
 };
 
+export const LANDING_TEACHER_MASCOT = "/landing/teacher-mascot.png";
+
 export type LandingCharacterSide = "left" | "right";
 
 /** Per-character display tuning for full-body mascots in side-by-side card layout. */

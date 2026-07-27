@@ -544,6 +544,13 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Classroom & collab ──────────────────────────────────────────
   {
+    title: "Private Classroom (student)",
+    description:
+      "Enrollment-gated async classroom at /primary/class/[classId] and /secondary/class/[classId] — teacher posts (announcements/photos), Live-now shell. Distinct from public /wke and live VC join.",
+    group: "classroom",
+    status: "review",
+  },
+  {
     href: "/whiteboard/join",
     title: "Whiteboard (production join)",
     description: "Student/guest join for collaborative whiteboard sessions.",

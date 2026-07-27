@@ -1,7 +1,15 @@
 import { SecondaryHome } from "@/components/secondary/SecondaryHome";
+import { listActiveLiveSessionsForStudent } from "@/lib/data/student-live";
+import { getStudentClassMemberships } from "@/lib/data/student-classes";
 import { requireSecondaryStudentAccess } from "./_lib/requireSecondaryAccess";
 
 export default async function SecondaryHomePage() {
   await requireSecondaryStudentAccess();
-  return <SecondaryHome />;
+  const [classMemberships, liveSessions] = await Promise.all([
+    getStudentClassMemberships(),
+    listActiveLiveSessionsForStudent(),
+  ]);
+  return (
+    <SecondaryHome classMemberships={classMemberships} liveSessions={liveSessions} />
+  );
 }

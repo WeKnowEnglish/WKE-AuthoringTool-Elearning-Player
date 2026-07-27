@@ -8,6 +8,7 @@ import {
   listClassHomeworkCompletionsForClass,
   listClassHomeworkForClass,
 } from "@/lib/data/class-homework";
+import { listClassPostsForClass } from "@/lib/data/class-posts";
 import { listClassLessonsWithStepsForClass } from "@/lib/data/class-lessons";
 import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
@@ -47,6 +48,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     homework,
     activityCards,
     homeworkCompletions,
+    classPosts,
   ] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
@@ -60,6 +62,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     listClassHomeworkForClass(classId),
     listAssignableActivitiesForClass(classId),
     listClassHomeworkCompletionsForClass(classId).catch(() => []),
+    listClassPostsForClass(classId).catch(() => []),
   ]);
 
   const packQuizzes = activityCards
@@ -132,6 +135,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         liveGameSets={liveGameSets}
         homework={homework}
         homeworkCompletions={homeworkCompletions}
+        classPosts={classPosts}
         packQuizzes={packQuizzes}
         packFlashcardSets={packFlashcardSets}
       />

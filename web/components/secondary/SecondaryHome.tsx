@@ -21,8 +21,16 @@ import {
   getSecondaryHomeNextIconUrl,
 } from "@/lib/secondary/secondary-activity-icons";
 import { hasSecondaryActivityAttempt } from "@/lib/secondary/secondary-activity-attempt-snapshot";
+import type { StudentClassMembership } from "@/lib/data/student-classes";
+import type { StudentClassLiveSession } from "@/lib/student-live/types";
+import { ClassroomLiveNowJoin } from "@/components/classroom/ClassroomLiveNowJoin";
+import { StudentLiveNowStrip } from "@/components/classroom/StudentLiveNowStrip";
+import {
+  readActiveStudentClassId,
+  subscribeActiveStudentClassId,
+} from "@/lib/student-classes/active-class";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { SecondaryTodayActivityKey } from "@/lib/secondary/types";
 
 const ACTIVITIES = [
@@ -60,9 +68,33 @@ const ACTIVITIES = [
   },
 ];
 
-export function SecondaryHome() {
+type Props = {
+  classMemberships?: StudentClassMembership[];
+  liveSessions?: StudentClassLiveSession[];
+};
+
+export function SecondaryHome({
+  classMemberships = [],
+  liveSessions = [],
+}: Props) {
   const { todaySession, completion, hydrated, sessionRevision } = useSecondaryTodaySession();
   const { displayName, ready: nameReady } = useStudentDisplayName();
+  const activeClassId = useSyncExternalStore(
+    subscribeActiveStudentClassId,
+    readActiveStudentClassId,
+    () => null,
+  );
+
+  const activeClass =
+    (activeClassId
+      ? classMemberships.find((membership) => membership.classId === activeClassId)
+      : null) ??
+    classMemberships[0] ??
+    null;
+
+  const activeClassLive = activeClass
+    ? liveSessions.find((session) => session.classId === activeClass.classId)
+    : null;
 
   const sessionWordIds = todaySession?.allWordItemIds ?? [];
   const studentId = resolveSecondaryStudentId();
@@ -146,6 +178,47 @@ export function SecondaryHome() {
         )}
       </header>
 
+      <StudentLiveNowStrip
+        sessions={liveSessions}
+        tone="secondary"
+        learningBand="a2"
+      />
+
+      {activeClass ? (
+        <div className="rounded-xl border-2 border-neutral-800 bg-white p-4">
+          <p className={secondaryUi.cardTitle}>{activeClass.title}</p>
+          <p className={`mt-1 ${secondaryUi.bodyMuted}`}>
+            {activeClassLive
+              ? "Your class is live right now — join below or open the classroom."
+              : "Open your classroom for teacher posts and live lessons."}
+          </p>
+          {activeClassLive ? (
+            <div className="mt-3 space-y-2">
+              <ClassroomLiveNowJoin session={activeClassLive} tone="secondary" compact />
+            </div>
+          ) : null}
+          <Link
+            href={`/secondary/class/${encodeURIComponent(activeClass.classId)}`}
+            className={`${activeClassLive ? "mt-2" : "mt-3"} inline-flex ${secondaryUi.btnPrimary}`}
+          >
+            Open classroom
+          </Link>
+        </div>
+      ) : (
+        <div className="rounded-xl border-2 border-dashed border-neutral-400 bg-white p-4">
+          <p className={secondaryUi.cardTitle}>Join your class</p>
+          <p className={`mt-1 ${secondaryUi.bodyMuted}`}>
+            Enter your teacher&apos;s class code so you can see assignments and live lessons.
+          </p>
+          <Link
+            href="/join-class"
+            className="mt-3 inline-flex rounded-md border-2 border-neutral-900 bg-white px-3 py-1.5 text-sm font-bold"
+          >
+            Join a class
+          </Link>
+        </div>
+      )}
+
       <div className="space-y-4">
         {!hydrated ? (
           <div
@@ -156,8 +229,7 @@ export function SecondaryHome() {
           <div className="rounded-xl border-2 border-amber-700 bg-amber-50 p-4">
             <p className={`${secondaryUi.cardTitle} text-amber-950`}>No words ready today</p>
             <p className={`mt-1 ${secondaryUi.bodyMuted} text-amber-900/80`}>
-              The practice bank is empty or unavailable. Check back after content is loaded, or ask
-              your teacher.
+              Nothing ready today. Check back tomorrow, or ask your teacher.
             </p>
           </div>
         ) : (

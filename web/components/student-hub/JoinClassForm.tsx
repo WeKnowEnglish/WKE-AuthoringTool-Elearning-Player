@@ -7,8 +7,11 @@ import { JOIN_CODE_LENGTH, normalizeJoinCode } from "@/lib/teacher-classes/join-
 
 export function JoinClassForm({
   onJoined,
+  homeHref,
 }: {
   onJoined?: (result: { classId: string; title: string }) => void;
+  /** After a successful join from the standalone page, return here. */
+  homeHref?: string;
 } = {}) {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -28,6 +31,10 @@ export function JoinClassForm({
       setSuccess(`You joined "${result.title}".`);
       setCode("");
       onJoined?.({ classId: result.classId, title: result.title });
+      if (homeHref) {
+        router.push(homeHref);
+        return;
+      }
       router.refresh();
     });
   };

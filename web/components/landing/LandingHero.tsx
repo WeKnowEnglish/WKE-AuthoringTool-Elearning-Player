@@ -1,10 +1,65 @@
+import Image from "next/image";
+import { clsx } from "clsx";
+import { TrackedMarketingLink } from "@/components/landing/HomepageAnalytics";
+import {
+  LANDING_CHARACTER_DISPLAY,
+  LANDING_CHARACTERS,
+} from "@/lib/landing/landing-assets";
+
+const primaryMascot = LANDING_CHARACTERS.primary;
+const primaryDisplay = LANDING_CHARACTER_DISPLAY.primary;
+
+/**
+ * Server-rendered hero — H1 and core copy are in the initial HTML without client JS.
+ */
 export function LandingHero() {
   return (
-    <section className="mx-auto max-w-3xl px-4 pt-8 pb-6 text-center sm:pt-12">
-      <h1 className="text-3xl font-extrabold text-kid-ink sm:text-4xl">Choose your learning path</h1>
-      <p className="mt-3 text-base font-semibold text-[var(--landing-body-muted)] sm:text-lg">
-        Two English worlds. One smart learning system.
-      </p>
+    <section className="relative overflow-hidden border-b border-kid-ink/10 bg-gradient-to-b from-[#fff8eb] to-[var(--landing-page-bg)]">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 sm:px-8 sm:py-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div>
+          <p className="text-sm font-extrabold uppercase tracking-wide text-[var(--landing-primary-title)]">
+            All in one, ESL Ecosystem
+          </p>
+          <h1 className="mt-3 text-3xl font-extrabold leading-tight text-kid-ink sm:text-4xl lg:text-[2.75rem]">
+            Interactive ESL activities and teaching tools in one connected platform
+          </h1>
+          <p className="mt-4 max-w-xl text-base font-semibold leading-relaxed text-[var(--landing-body-muted)] sm:text-lg">
+            Create, assign, teach, play, and review - all in one tool!
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <TrackedMarketingLink
+              href="#free-activities"
+              event="free_activity_view"
+              eventProps={{ cta: "explore_free_activities", landingPage: "/" }}
+              className="inline-flex items-center justify-center rounded-xl border-2 border-kid-ink bg-kid-ink px-5 py-3 text-sm font-extrabold text-white shadow-[4px_4px_0_0_var(--kid-shadow)] transition-transform [touch-action:manipulation] hover:translate-y-px active:scale-[0.98] focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-kid-ink"
+            >
+              Explore Free Activities
+            </TrackedMarketingLink>
+            <TrackedMarketingLink
+              href="/login?portal=teacher"
+              event="teacher_signup_start"
+              eventProps={{ cta: "start_teaching", userRole: "teacher", authState: "anonymous" }}
+              className="inline-flex items-center justify-center rounded-xl border-2 border-kid-ink bg-white px-5 py-3 text-sm font-extrabold text-kid-ink shadow-[4px_4px_0_0_var(--kid-shadow)] transition-transform [touch-action:manipulation] hover:translate-y-px active:scale-[0.98] focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-kid-ink"
+            >
+              Start Teaching
+            </TrackedMarketingLink>
+          </div>
+        </div>
+        <div className="relative mx-auto flex w-full max-w-sm items-end justify-center lg:max-w-md">
+          <Image
+            src={primaryMascot}
+            alt="Friendly student character welcoming learners to online English classes"
+            width={400}
+            height={633}
+            priority
+            className={clsx(
+              "h-auto w-full max-h-[min(28rem,70vh)] object-contain object-bottom drop-shadow-[0_12px_24px_rgba(15,23,42,0.12)]",
+              primaryDisplay.flipHorizontal && "scale-x-[-1]",
+            )}
+            style={{ objectPosition: primaryDisplay.objectPosition }}
+          />
+        </div>
+      </div>
     </section>
   );
 }

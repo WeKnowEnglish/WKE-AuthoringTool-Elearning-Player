@@ -22,8 +22,10 @@ import { PrimaryReviewTab } from "@/components/primary/PrimaryReviewTab";
 import { PrimaryVocabularyTab } from "@/components/primary/PrimaryVocabularyTab";
 import { SelfStudySection } from "@/components/primary/SelfStudySection";
 import { TodaysLearningAssignments } from "@/components/primary/TodaysLearningAssignments";
+import { StudentLiveNowStrip } from "@/components/classroom/StudentLiveNowStrip";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
+import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import {
   PRIMARY_CHROME_CLASS,
   PRIMARY_CHROME_STYLE,
@@ -101,6 +103,8 @@ type Props = {
   assignedHomework?: StudentHomeworkCard[];
   /** Whether the student is enrolled in at least one class. */
   enrolledInClass?: boolean;
+  /** Active Virtual Classroom sessions across enrolled classes. */
+  liveSessions?: StudentClassLiveSession[];
 };
 
 const NAV_IDS: PrimaryNavId[] = [
@@ -201,6 +205,7 @@ export function StudentHomeLanding({
   initialNav,
   assignedHomework = [],
   enrolledInClass = false,
+  liveSessions = [],
 }: Props) {
   const router = useRouter();
   const { muted, toggleMuted } = useAudioMuted();
@@ -427,6 +432,8 @@ export function StudentHomeLanding({
             </div>
           ) : (
           <div className="mx-auto flex max-w-5xl flex-col gap-5 pb-24 lg:pb-8">
+            <StudentLiveNowStrip sessions={liveSessions} tone="primary" />
+
             <TodaysLearningAssignments
               enrolled={enrolledInClass}
               items={assignedHomework}

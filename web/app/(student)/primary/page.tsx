@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PrimaryDashboardClient } from "@/components/primary/PrimaryDashboardClient";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
+import { listActiveLiveSessionsForStudent } from "@/lib/data/student-live";
 import { getStudentClassMemberships } from "@/lib/data/student-classes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,15 +39,17 @@ export default async function PrimaryDashboardPage({ searchParams }: Props) {
   }
 
   const params = (await searchParams) ?? {};
-  const [classMemberships, assignedHomework] = await Promise.all([
+  const [classMemberships, assignedHomework, liveSessions] = await Promise.all([
     getStudentClassMemberships(),
     listAssignedHomeworkForStudent(),
+    listActiveLiveSessionsForStudent(),
   ]);
 
   return (
     <PrimaryDashboardClient
       classMemberships={classMemberships}
       assignedHomework={assignedHomework}
+      liveSessions={liveSessions}
       initialNav={params.nav ?? null}
       initialSetId={params.set ?? null}
       initialMessage={params.message ?? null}

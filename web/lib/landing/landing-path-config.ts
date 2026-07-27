@@ -17,7 +17,7 @@ export const LANDING_PATHS: LandingPathConfig[] = [
   {
     band: "a1",
     variant: "primary",
-    title: "Primary English",
+    title: "Primary Learners",
     description: "Games, stories, phonics, and vocabulary practice.",
     meta: [
       { icon: "graduation", label: "Grades 1–5" },
@@ -34,7 +34,7 @@ export const LANDING_PATHS: LandingPathConfig[] = [
   {
     band: "a2",
     variant: "secondary",
-    title: "Secondary English",
+    title: "Secondary Learners",
     description: "Smart practice, grammar tools, quests, and skill tracking.",
     meta: [
       { icon: "graduation", label: "Grades 6–9" },

@@ -1,70 +1,54 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { LandingTrustSection } from "@/components/landing/LandingTrustSection";
-import { LevelLandingClient } from "@/components/landing/LevelLandingClient";
+import { HomepageAnalytics } from "@/components/landing/HomepageAnalytics";
+import { LandingAudiencePathways } from "@/components/landing/LandingAudiencePathways";
+import { LandingExpertiseSection } from "@/components/landing/LandingExpertiseSection";
+import { LandingFreeActivitiesSection } from "@/components/landing/LandingFreeActivitiesSection";
+import { LandingHeader } from "@/components/landing/LandingHeader";
+import { LandingHero } from "@/components/landing/LandingHero";
+import { LandingPathPicker } from "@/components/landing/LandingPathPicker";
+import { LandingTeachersSection } from "@/components/landing/LandingTeachersSection";
+import { LandingWorkflowSection } from "@/components/landing/LandingWorkflowSection";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 import {
   resolveLandingRedirectPath,
   shouldSkipLevelLanding,
 } from "@/lib/landing/should-skip-landing";
+import { buildPublicMetadata } from "@/lib/seo/build-metadata";
+import { SITE_NAME, SITE_URL } from "@/lib/seo/site";
 import { createClient } from "@/lib/supabase/server";
 
-const siteUrl = "https://weknowenglish.online";
-
-const title = "We Know English | ESL Learning Platform for Grades 1–9";
-
 const description =
-  "Interactive English lessons, vocabulary practice, grammar activities, learning games, teacher tools, and progress tracking for primary and secondary students.";
+  "Create interactive English lessons, teach them live, assign homework, guide independent practice and review student progress. Online ESL activities for kids in one connected platform.";
 
-export const metadata: Metadata = {
-  title,
+export const metadata: Metadata = buildPublicMetadata({
+  title: "Interactive ESL Activities & Teaching Tools",
   description,
-  alternates: {
-    canonical: `${siteUrl}/`,
-  },
-  openGraph: {
-    title,
-    description,
-    url: `${siteUrl}/`,
-    siteName: "We Know English",
-    type: "website",
-    locale: "en_US",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title,
-    description,
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-    },
-  },
-};
+  pathname: "/",
+  openGraphImage: "/landing/primary-mascot.png",
+});
 
 const structuredData = {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "Organization",
-      "@id": `${siteUrl}/#organization`,
-      name: "We Know English",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
       alternateName: "We Know English Online",
-      url: `${siteUrl}/`,
+      url: SITE_URL,
     },
     {
       "@type": "WebSite",
-      "@id": `${siteUrl}/#website`,
-      url: `${siteUrl}/`,
-      name: "We Know English",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
       alternateName: "We Know English Online",
       description,
       inLanguage: "en",
       publisher: {
-        "@id": `${siteUrl}/#organization`,
+        "@id": `${SITE_URL}/#organization`,
       },
     },
   ],
@@ -95,11 +79,20 @@ export default async function LevelLandingPage() {
           __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
         }}
       />
-      <main>
-        <LevelLandingClient>
-          <LandingTrustSection />
-        </LevelLandingClient>
-      </main>
+      <HomepageAnalytics />
+      <div className="min-h-dvh bg-[var(--landing-page-bg)] text-kid-ink">
+        <LandingHeader />
+        <main>
+          <LandingHero />
+          <LandingPathPicker />
+          <LandingWorkflowSection />
+          <LandingTeachersSection />
+          <LandingFreeActivitiesSection />
+          <LandingAudiencePathways />
+          <LandingExpertiseSection />
+        </main>
+        <SiteFooter />
+      </div>
     </>
   );
 }

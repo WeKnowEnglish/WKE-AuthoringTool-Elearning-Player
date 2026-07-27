@@ -25,6 +25,7 @@ export function StudentLayoutClient({
     pathname === "/" ||
     pathname === "/primary" ||
     pathname.startsWith("/primary/homework/") ||
+    pathname.startsWith("/primary/class/") ||
     pathname === "/join-class" ||
     pathname === "/secondary/login" ||
     pathname === "/testprimary";

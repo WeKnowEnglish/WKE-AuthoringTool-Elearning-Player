@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { JoinClassForm } from "@/components/student-hub/JoinClassForm";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import {
@@ -21,8 +22,16 @@ function formatEnrolledDate(iso: string): string {
   return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : iso;
 }
 
+function classroomHrefForPath(pathname: string | null, classId: string): string {
+  if (pathname?.startsWith("/secondary")) {
+    return `/secondary/class/${encodeURIComponent(classId)}`;
+  }
+  return `/primary/class/${encodeURIComponent(classId)}`;
+}
+
 export function StudentClassSelectorOverlay({ open, onClose, memberships }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const activeClassId = useSyncExternalStore(
     subscribeActiveStudentClassId,
     readActiveStudentClassId,
@@ -55,6 +64,13 @@ export function StudentClassSelectorOverlay({ open, onClose, memberships }: Prop
     router.refresh();
   };
 
+  const activeMembership =
+    (activeClassId
+      ? sorted.find((membership) => membership.classId === activeClassId)
+      : null) ??
+    sorted[0] ??
+    null;
+
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4"
@@ -74,9 +90,9 @@ export function StudentClassSelectorOverlay({ open, onClose, memberships }: Prop
               My classes
             </h2>
             <p className="mt-1 text-sm font-semibold text-kid-ink/80">
-              {sorted.length > 0 ?
-                "Pick your class or join another with a teacher code."
-              : "Enter your teacher's class code to get started."}
+              {sorted.length > 0
+                ? "Pick your class, open the classroom, or join another with a teacher code."
+                : "Enter your teacher's class code to get started."}
             </p>
           </div>
           <button
@@ -99,9 +115,9 @@ export function StudentClassSelectorOverlay({ open, onClose, memberships }: Prop
                     type="button"
                     onClick={() => selectClass(membership.classId)}
                     className={`w-full rounded-xl border-2 px-3 py-3 text-left transition-colors ${
-                      isActive ?
-                        "border-kid-ink bg-kid-panel"
-                      : "border-kid-ink/40 bg-white hover:bg-kid-panel/60"
+                      isActive
+                        ? "border-kid-ink bg-kid-panel"
+                        : "border-kid-ink/40 bg-white hover:bg-kid-panel/60"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -120,6 +136,18 @@ export function StudentClassSelectorOverlay({ open, onClose, memberships }: Prop
               );
             })}
           </ul>
+        ) : null}
+
+        {activeMembership ? (
+          <div className="mt-4">
+            <Link
+              href={classroomHrefForPath(pathname, activeMembership.classId)}
+              onClick={onClose}
+              className="inline-flex w-full items-center justify-center rounded-lg border-2 border-kid-ink bg-white px-4 py-2.5 text-sm font-extrabold text-kid-ink hover:bg-kid-panel/70"
+            >
+              Open {activeMembership.title}
+            </Link>
+          </div>
         ) : null}
 
         <div className={sorted.length > 0 ? "mt-5 border-t-2 border-kid-ink/20 pt-4" : "mt-4"}>

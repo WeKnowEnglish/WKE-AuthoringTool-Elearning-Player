@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthorByline } from "@/components/marketing/AuthorByline";
+import { LessonPlanDownloadGate } from "@/components/marketing/LessonPlanDownloadGate";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { PillarCtaRow } from "@/components/marketing/PillarCtaRow";
 import { buildPublicMetadata } from "@/lib/seo/build-metadata";
@@ -73,8 +74,10 @@ export default function TeachEnglishOnlinePage() {
         </p>
         <p>
           This guide walks through a practical workflow:{" "}
-          <strong>create → teach live → assign → practise → review</strong>. Parents supporting
-          home learning should also see{" "}
+          <strong>create → teach live → assign → practise → review</strong>. Below you
+          can also download ready-made{" "}
+          <a href="#teacher-lesson-plans">ESL mini-series lesson plans</a> for online
+          classes. Parents supporting home learning should also see{" "}
           <a href="/english-learning-for-kids-at-home">
             English learning for kids at home
           </a>
@@ -165,6 +168,8 @@ export default function TeachEnglishOnlinePage() {
             </tbody>
           </table>
         </div>
+
+        <LessonPlanDownloadGate />
 
         <h2>How We Know English fits this workflow</h2>
         <p>

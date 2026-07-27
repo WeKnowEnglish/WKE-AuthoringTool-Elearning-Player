@@ -20,6 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:smoke": "node scripts/smoke-production-routes.mjs",
+    "test:seo": "node scripts/seo-integration-smoke.mjs",
+    "test:seo:unit": "vitest run lib/seo",
     "test:grammar": "vitest run lib/grammar-builder lib/grammar-templates",
     "test:gke": "vitest run lib/gke",
     "validate:grammar": "vitest run lib/grammar-builder lib/grammar-templates && tsx scripts/validate-grammar-content.ts",

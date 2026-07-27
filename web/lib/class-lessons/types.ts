@@ -75,6 +75,7 @@ export type ClassLesson = {
   title: string;
   status: ClassLessonStatus;
   notes: string;
+  publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
   steps: ClassLessonStep[];
@@ -86,8 +87,24 @@ export type ClassLessonSummary = {
   title: string;
   status: ClassLessonStatus;
   notes: string;
+  publishedAt: string | null;
   stepCount: number;
   updatedAt: string;
+};
+
+/** Student-safe projection of a published lesson (no teacher notes or step configs). */
+export type StudentClassMaterialStep = {
+  position: number;
+  kind: ClassLessonStepKind;
+  title: string;
+};
+
+export type StudentClassMaterial = {
+  id: string;
+  classId: string;
+  title: string;
+  publishedAt: string;
+  steps: StudentClassMaterialStep[];
 };
 
 export type ClassLessonStepInput = {

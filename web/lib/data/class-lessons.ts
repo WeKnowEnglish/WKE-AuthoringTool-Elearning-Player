@@ -1,13 +1,19 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { cache } from "react";
-import { isTeacher } from "@/lib/auth/roles";
+import { isStudent, isTeacher } from "@/lib/auth/roles";
 import {
   mapDbStepRow,
   normalizeClassLessonNotes,
   normalizeClassLessonStatus,
   normalizeClassLessonTitle,
+  isClassLessonStepKind,
 } from "@/lib/class-lessons/normalize";
-import type { ClassLesson, ClassLessonSummary } from "@/lib/class-lessons/types";
+import type {
+  ClassLesson,
+  ClassLessonSummary,
+  ClassLessonStepKind,
+  StudentClassMaterial,
+} from "@/lib/class-lessons/types";
 import { createClient } from "@/lib/supabase/server";
 
 async function requireTeacherUserId(): Promise<string> {
@@ -39,6 +45,7 @@ type LessonRow = {
   title: string;
   status: string;
   notes: string;
+  published_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -63,6 +70,7 @@ function mapLesson(
     title: normalizeClassLessonTitle(row.title),
     status: normalizeClassLessonStatus(row.status),
     notes: normalizeClassLessonNotes(row.notes),
+    publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     steps,
@@ -78,7 +86,7 @@ export const listClassLessonsForClass = cache(async function listClassLessonsFor
 
   const { data: lessons, error } = await supabase
     .from("class_lessons")
-    .select("id, class_id, title, status, notes, updated_at")
+    .select("id, class_id, title, status, notes, published_at, updated_at")
     .eq("class_id", classId)
     .neq("status", "archived")
     .order("updated_at", { ascending: false });
@@ -93,6 +101,7 @@ export const listClassLessonsForClass = cache(async function listClassLessonsFor
     title: string;
     status: string;
     notes: string;
+    published_at: string | null;
     updated_at: string;
   }>;
   if (!rows.length) return [];
@@ -120,10 +129,84 @@ export const listClassLessonsForClass = cache(async function listClassLessonsFor
     title: normalizeClassLessonTitle(row.title),
     status: normalizeClassLessonStatus(row.status),
     notes: normalizeClassLessonNotes(row.notes),
+    publishedAt: row.published_at,
     stepCount: counts.get(row.id) ?? 0,
     updatedAt: row.updated_at,
   }));
 });
+
+/** Published lesson materials visible to an enrolled student for one class. */
+export async function listPublishedClassMaterialsForStudentClass(
+  classId: string,
+  limit = 20,
+): Promise<StudentClassMaterial[]> {
+  noStore();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id || !isStudent(user)) {
+    return [];
+  }
+
+  const { data: lessons, error } = await supabase
+    .from("class_lessons")
+    .select("id, class_id, title, published_at")
+    .eq("class_id", classId)
+    .not("published_at", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    if (isMissingClassLessonsTable(error)) return [];
+    throw error;
+  }
+
+  const rows = (lessons ?? []) as Array<{
+    id: string;
+    class_id: string;
+    title: string;
+    published_at: string;
+  }>;
+  if (!rows.length) return [];
+
+  const lessonIds = rows.map((row) => row.id);
+  const { data: steps, error: stepsError } = await supabase
+    .from("class_lesson_steps")
+    .select("lesson_id, position, kind, title")
+    .in("lesson_id", lessonIds)
+    .order("position", { ascending: true });
+
+  if (stepsError) {
+    if (isMissingClassLessonsTable(stepsError)) return [];
+    throw stepsError;
+  }
+
+  const stepsByLesson = new Map<string, StudentClassMaterial["steps"]>();
+  for (const row of steps ?? []) {
+    const kind = isClassLessonStepKind((row as { kind: string }).kind)
+      ? (row as { kind: ClassLessonStepKind }).kind
+      : null;
+    if (!kind) continue;
+    const lessonId = String((row as { lesson_id: string }).lesson_id);
+    const list = stepsByLesson.get(lessonId) ?? [];
+    list.push({
+      position: Number((row as { position: number }).position),
+      kind,
+      title: String((row as { title: string }).title),
+    });
+    stepsByLesson.set(lessonId, list);
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    classId: row.class_id,
+    title: normalizeClassLessonTitle(row.title),
+    publishedAt: row.published_at,
+    steps: stepsByLesson.get(row.id) ?? [],
+  }));
+}
 
 export async function getClassLesson(lessonId: string): Promise<ClassLesson | null> {
   noStore();

@@ -42,6 +42,7 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
   const isLoginPage = pathname === "/secondary/login";
   const isHomePage = pathname === "/secondary";
   const isClassroomPage = pathname.startsWith("/secondary/class/");
+  const isHomeworkPage = pathname.startsWith("/secondary/homework/");
   const { todaySession, completion, hydrated, sessionRevision } = useSecondaryTodaySession();
   const debugEnabled = useSecondaryDebugEnabled();
   const isDesktopLearnColumn = useMinWidthMedia("(min-width: 1024px)");
@@ -157,7 +158,7 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
     inert: shellInert,
   };
 
-  if (isLoginPage || isClassroomPage) {
+  if (isLoginPage || isClassroomPage || isHomeworkPage) {
     return <>{children}</>;
   }
 

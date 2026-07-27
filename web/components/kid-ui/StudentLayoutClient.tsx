@@ -28,6 +28,7 @@ export function StudentLayoutClient({
     pathname.startsWith("/primary/class/") ||
     pathname === "/join-class" ||
     pathname === "/secondary/login" ||
+    pathname.startsWith("/secondary/homework/") ||
     pathname === "/testprimary";
 
   const autoPromptOpen =

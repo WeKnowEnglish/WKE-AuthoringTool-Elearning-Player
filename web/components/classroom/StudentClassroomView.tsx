@@ -2,12 +2,15 @@ import Link from "next/link";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
+import type { StudentClassMaterial } from "@/lib/class-lessons/types";
 import { ClassPostFeed } from "@/components/classroom/ClassPostFeed";
+import { ClassMaterialsList } from "@/components/classroom/ClassMaterialsList";
 import { ClassroomLiveNowJoin } from "@/components/classroom/ClassroomLiveNowJoin";
 
 type Props = {
   membership: StudentClassMembership;
   posts: ClassPost[];
+  materials?: StudentClassMaterial[];
   liveSession?: StudentClassLiveSession | null;
   /** Portal home for the back link. */
   homeHref: string;
@@ -22,6 +25,7 @@ type Props = {
 export function StudentClassroomView({
   membership,
   posts,
+  materials = [],
   liveSession = null,
   homeHref,
   homeLabel = "Back to home",
@@ -71,14 +75,7 @@ export function StudentClassroomView({
 
       <ClassPostFeed posts={posts} tone={tone} />
 
-      <section className={`${shell} p-5 sm:p-6`} aria-labelledby="classroom-materials-heading">
-        <h2 id="classroom-materials-heading" className="text-base font-extrabold text-neutral-900">
-          Class materials
-        </h2>
-        <p className={`mt-2 text-sm ${muted}`}>
-          Lesson materials your teacher publishes for this class will show up here.
-        </p>
-      </section>
+      <ClassMaterialsList materials={materials} tone={tone} />
     </div>
   );
 }

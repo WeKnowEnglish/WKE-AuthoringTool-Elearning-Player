@@ -8,7 +8,41 @@ const HERO_LIMIT = 5;
 type Props = {
   enrolled: boolean;
   items: StudentHomeworkCard[];
+  tone?: "primary" | "secondary";
+  homeworkPathPrefix?: string;
 };
+
+function toneClasses(tone: "primary" | "secondary") {
+  if (tone === "secondary") {
+    return {
+      section:
+        "overflow-hidden rounded-xl border-2 border-neutral-800 bg-white p-4 sm:p-5",
+      label: "text-xs font-extrabold uppercase tracking-wide text-neutral-700",
+      heading: "text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl",
+      muted: "text-sm font-semibold text-neutral-600 sm:text-base",
+      iconWrap: "flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border-2 border-neutral-800 bg-neutral-50 text-neutral-800",
+      card: "flex flex-wrap items-center justify-between gap-2 rounded-lg border-2 border-neutral-200 bg-white px-3 py-2.5 transition hover:border-neutral-800",
+      cardTitle: "truncate font-extrabold text-neutral-900",
+      cardMeta: "mt-0.5 text-xs font-semibold text-neutral-600",
+      cardLink: "shrink-0 text-sm font-extrabold text-neutral-900",
+      cta: "inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-md border-2 border-neutral-900 bg-neutral-900 px-5 text-sm font-extrabold text-white transition hover:bg-neutral-800 active:scale-[0.98]",
+    };
+  }
+  return {
+    section:
+      "overflow-hidden rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] p-4 shadow-sm sm:p-6",
+    label: "text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--pl-purple)]",
+    heading: "text-2xl font-extrabold tracking-tight text-[var(--pl-ink)] sm:text-3xl",
+    muted: "text-sm font-semibold text-[var(--pl-muted)] sm:text-base",
+    iconWrap:
+      "flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-[var(--pl-purple-soft)] text-[var(--pl-purple)]",
+    card: "flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--pl-border)] bg-white px-3 py-2.5 transition hover:border-[var(--pl-purple)]",
+    cardTitle: "truncate font-extrabold text-[var(--pl-ink)]",
+    cardMeta: "mt-0.5 text-xs font-semibold text-[var(--pl-muted)]",
+    cardLink: "shrink-0 text-sm font-extrabold text-[var(--pl-purple)]",
+    cta: "inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)] active:scale-[0.98]",
+  };
+}
 
 function formatDue(value: string | null) {
   if (!value) return "No due date";
@@ -33,60 +67,50 @@ function sortOpenAssignments(items: StudentHomeworkCard[]) {
 }
 
 /**
- * Home · Today’s Learning — Product C (teacher assignments).
+ * Home · Today's Learning — teacher homework inbox for Primary and Secondary.
  * @see docs/primary/PRIMARY_VOCAB_ACTIVITY_CONTRACT.md
  */
-export function TodaysLearningAssignments({ enrolled, items }: Props) {
+export function TodaysLearningAssignments({
+  enrolled,
+  items,
+  tone = "primary",
+  homeworkPathPrefix = "/primary/homework",
+}: Props) {
+  const ui = toneClasses(tone);
   const openItems = sortOpenAssignments(items);
   const visible = openItems.slice(0, HERO_LIMIT);
   const nextIncomplete = openItems.find((item) => !item.completedAt) ?? null;
 
   return (
-    <section
-      aria-labelledby="todays-learning-heading"
-      className="overflow-hidden rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] p-4 shadow-sm sm:p-6"
-    >
-      <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--pl-purple)]">
-        Today&apos;s Learning
-      </p>
+    <section aria-labelledby="todays-learning-heading" className={ui.section}>
+      <p className={ui.label}>Today&apos;s Learning</p>
 
       {!enrolled ? (
         <div className="mt-4 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-          <div
-            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-[var(--pl-purple-soft)] text-[var(--pl-purple)]"
-            aria-hidden
-          >
+          <div className={ui.iconWrap} aria-hidden>
             <BookOpen className="h-10 w-10" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <h1
-              id="todays-learning-heading"
-              className="text-2xl font-extrabold tracking-tight text-[var(--pl-ink)] sm:text-3xl"
-            >
-              Self-study coming soon
+            <h1 id="todays-learning-heading" className={ui.heading}>
+              {tone === "secondary" ? "Join your class" : "Self-study coming soon"}
             </h1>
-            <p className="mt-2 text-sm font-semibold text-[var(--pl-muted)] sm:text-base">
-              Join a class to get assignments from your teacher. Self-study units will
-              be ready here later.
+            <p className={`mt-2 ${ui.muted}`}>
+              {tone === "secondary"
+                ? "Enter your teacher's class code to get assignments from class."
+                : "Join a class to get assignments from your teacher. Self-study units will be ready here later."}
             </p>
           </div>
         </div>
       ) : openItems.length === 0 ? (
         <div className="mt-4 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-          <div
-            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-[var(--pl-purple-soft)] text-[var(--pl-purple)]"
-            aria-hidden
-          >
+          <div className={ui.iconWrap} aria-hidden>
             <ClipboardList className="h-10 w-10" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <h1
-              id="todays-learning-heading"
-              className="text-2xl font-extrabold tracking-tight text-[var(--pl-ink)] sm:text-3xl"
-            >
+            <h1 id="todays-learning-heading" className={ui.heading}>
               No assignments right now
             </h1>
-            <p className="mt-2 text-sm font-semibold text-[var(--pl-muted)] sm:text-base">
+            <p className={`mt-2 ${ui.muted}`}>
               When your teacher sends work, it will show up here.
             </p>
           </div>
@@ -95,23 +119,17 @@ export function TodaysLearningAssignments({ enrolled, items }: Props) {
         <div className="mt-4 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <h1
-                id="todays-learning-heading"
-                className="text-2xl font-extrabold tracking-tight text-[var(--pl-ink)] sm:text-3xl"
-              >
+              <h1 id="todays-learning-heading" className={ui.heading}>
                 Your assignments
               </h1>
-              <p className="mt-1 text-sm font-semibold text-[var(--pl-muted)]">
+              <p className={`mt-1 ${ui.muted}`}>
                 {openItems.length === 1
                   ? "1 assignment from your teacher"
                   : `${openItems.length} assignments from your teacher`}
               </p>
             </div>
             {nextIncomplete ? (
-              <Link
-                href={`/primary/homework/${nextIncomplete.id}`}
-                className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)] active:scale-[0.98]"
-              >
+              <Link href={`${homeworkPathPrefix}/${nextIncomplete.id}`} className={ui.cta}>
                 Start next
                 <Play className="h-4 w-4 fill-current" />
               </Link>
@@ -121,36 +139,29 @@ export function TodaysLearningAssignments({ enrolled, items }: Props) {
           <ul className="space-y-2">
             {visible.map((item) => (
               <li key={item.id}>
-                <Link
-                  href={`/primary/homework/${item.id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--pl-border)] bg-white px-3 py-2.5 transition hover:border-[var(--pl-purple)]"
-                >
+                <Link href={`${homeworkPathPrefix}/${item.id}`} className={ui.card}>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate font-extrabold text-[var(--pl-ink)]">
-                        {item.title}
-                      </p>
+                      <p className={ui.cardTitle}>{item.title}</p>
                       {item.completedAt ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-900">
+                        <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-900">
                           Done
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-0.5 text-xs font-semibold text-[var(--pl-muted)]">
-                      {item.classTitle} · {CLASS_HOMEWORK_PAYLOAD_LABELS[item.payload.type]}{" "}
-                      · {formatDue(item.dueAt)}
+                    <p className={ui.cardMeta}>
+                      {item.classTitle} · {CLASS_HOMEWORK_PAYLOAD_LABELS[item.payload.type]} ·{" "}
+                      {formatDue(item.dueAt)}
                     </p>
                   </div>
-                  <span className="shrink-0 text-sm font-extrabold text-[var(--pl-purple)]">
-                    Open →
-                  </span>
+                  <span className={ui.cardLink}>Open →</span>
                 </Link>
               </li>
             ))}
           </ul>
 
           {openItems.length > HERO_LIMIT ? (
-            <p className="text-xs font-semibold text-[var(--pl-muted)]">
+            <p className={`text-xs font-semibold ${ui.muted}`}>
               +{openItems.length - HERO_LIMIT} more assigned
             </p>
           ) : null}

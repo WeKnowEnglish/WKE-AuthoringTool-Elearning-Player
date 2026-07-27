@@ -52,3 +52,5 @@ Do not edit SEO helpers/landing, `app-diagnostics` internals, `/wke` Teacher Spa
 - F7 shell: enrollment-gated Classroom page (empty noticeboard + Live-now placeholder) + pilots card.
 - F7 posts: `class_posts` table, teacher noticeboard panel, student feed on Classroom pages.
 - F3 Live-now: read active VC session per enrolled class; `StudentLiveNowStrip` on Primary/Secondary home; `ClassroomLiveNowJoin` on Classroom + home (reuses `POST /api/virtual-classroom/join`).
+- F7 materials: `published_at` on `class_lessons`, teacher **Share with class**, student **Class materials** list on Classroom pages.
+- Secondary homework parity: **Today's Learning** on `/secondary` + `/secondary/homework/[id]` play route.

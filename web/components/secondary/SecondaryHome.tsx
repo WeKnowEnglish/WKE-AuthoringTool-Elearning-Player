@@ -23,6 +23,8 @@ import {
 import { hasSecondaryActivityAttempt } from "@/lib/secondary/secondary-activity-attempt-snapshot";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
+import type { StudentHomeworkCard } from "@/lib/class-homework/types";
+import { TodaysLearningAssignments } from "@/components/primary/TodaysLearningAssignments";
 import { ClassroomLiveNowJoin } from "@/components/classroom/ClassroomLiveNowJoin";
 import { StudentLiveNowStrip } from "@/components/classroom/StudentLiveNowStrip";
 import {
@@ -71,11 +73,13 @@ const ACTIVITIES = [
 type Props = {
   classMemberships?: StudentClassMembership[];
   liveSessions?: StudentClassLiveSession[];
+  assignedHomework?: StudentHomeworkCard[];
 };
 
 export function SecondaryHome({
   classMemberships = [],
   liveSessions = [],
+  assignedHomework = [],
 }: Props) {
   const { todaySession, completion, hydrated, sessionRevision } = useSecondaryTodaySession();
   const { displayName, ready: nameReady } = useStudentDisplayName();
@@ -182,6 +186,13 @@ export function SecondaryHome({
         sessions={liveSessions}
         tone="secondary"
         learningBand="a2"
+      />
+
+      <TodaysLearningAssignments
+        enrolled={classMemberships.length > 0}
+        items={assignedHomework}
+        tone="secondary"
+        homeworkPathPrefix="/secondary/homework"
       />
 
       {activeClass ? (

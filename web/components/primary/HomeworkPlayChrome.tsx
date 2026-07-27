@@ -12,11 +12,12 @@ type Props = {
   dueLabel: string;
   instructions?: string | null;
   closed?: boolean;
+  homeHref?: string;
   children: ReactNode;
 };
 
 /**
- * Product C play frame — sticky Primary header + assignment context.
+ * Product C play frame — sticky header + assignment context.
  * @see docs/primary/PRIMARY_VOCAB_ACTIVITY_CONTRACT.md
  */
 export function HomeworkPlayChrome({
@@ -25,6 +26,7 @@ export function HomeworkPlayChrome({
   dueLabel,
   instructions,
   closed = false,
+  homeHref = "/primary",
   children,
 }: Props) {
   const { muted, toggleMuted } = useAudioMuted();
@@ -34,7 +36,7 @@ export function HomeworkPlayChrome({
       <header className="sticky top-0 z-20 border-b border-[var(--pl-border)] bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link
-            href="/primary"
+            href={homeHref}
             className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-3 text-sm font-extrabold text-[var(--pl-ink)] transition hover:border-[var(--pl-purple)] hover:bg-white"
           >
             ← Home

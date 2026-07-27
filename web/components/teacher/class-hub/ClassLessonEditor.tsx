@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { archiveClassLesson, saveClassLesson } from "@/lib/actions/class-lessons";
+import { useEffect, useState, useTransition } from "react";
+import { archiveClassLesson, publishClassLessonToClassroom, saveClassLesson, unpublishClassLessonFromClassroom } from "@/lib/actions/class-lessons";
 import type {
   ClassLesson,
   ClassLessonStep,
@@ -43,7 +43,12 @@ export function ClassLessonEditor({
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [publishedAt, setPublishedAt] = useState<string | null>(lesson.publishedAt);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setPublishedAt(lesson.publishedAt);
+  }, [lesson.id, lesson.publishedAt]);
 
   const editingStep = editingStepId
     ? (steps.find((step) => step.id === editingStepId) ?? null)
@@ -76,6 +81,28 @@ export function ClassLessonEditor({
         return;
       }
       setMessage("Lesson saved.");
+      setPublishedAt(result.lesson.publishedAt);
+      onSaved(result.lesson);
+    });
+  };
+
+  const togglePublish = () => {
+    setError(null);
+    setMessage(null);
+    startTransition(async () => {
+      const result = publishedAt
+        ? await unpublishClassLessonFromClassroom(lesson.id)
+        : await publishClassLessonToClassroom(lesson.id);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setPublishedAt(result.lesson.publishedAt);
+      setMessage(
+        result.lesson.publishedAt
+          ? "Lesson shared with students on the Classroom page."
+          : "Lesson removed from student Classroom.",
+      );
       onSaved(result.lesson);
     });
   };
@@ -189,8 +216,35 @@ export function ClassLessonEditor({
         </div>
         <p className="text-xs text-neutral-500">
           Ready lessons can be bound when you start Virtual Classroom from the Teach tab.
+          {publishedAt ? " This lesson is visible on the student Classroom." : null}
         </p>
       </fieldset>
+
+      {status === "ready" && steps.length > 0 ? (
+        <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-3">
+          <p className="text-sm font-semibold text-teal-950">Student Classroom</p>
+          <p className="mt-1 text-xs text-teal-900/80">
+            Share this lesson on the private Classroom noticeboard so enrolled students can see the
+            activity outline before or after class.
+          </p>
+          <button
+            type="button"
+            disabled={archivedClass || isPending}
+            onClick={togglePublish}
+            className={`mt-3 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 ${
+              publishedAt
+                ? "border border-teal-800 bg-white text-teal-900"
+                : "bg-teal-800 text-white"
+            }`}
+          >
+            {isPending
+              ? "Updating…"
+              : publishedAt
+                ? "Remove from Classroom"
+                : "Share with class"}
+          </button>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">

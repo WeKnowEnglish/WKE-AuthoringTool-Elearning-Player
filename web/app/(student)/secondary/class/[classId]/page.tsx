@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { StudentClassroomView } from "@/components/classroom/StudentClassroomView";
 import { getStudentClassMembership } from "@/lib/data/student-classes";
 import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
+import { listPublishedClassMaterialsForStudentClass } from "@/lib/data/class-lessons";
 import { getActiveLiveSessionForStudentClass } from "@/lib/data/student-live";
 import { createClient } from "@/lib/supabase/server";
 import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
@@ -37,12 +38,14 @@ export default async function SecondaryClassroomPage({ params }: Props) {
   }
 
   const posts = await listClassPostsForStudentClass(classId);
+  const materials = await listPublishedClassMaterialsForStudentClass(classId);
   const liveSession = await getActiveLiveSessionForStudentClass(classId);
 
   return (
     <StudentClassroomView
       membership={membership}
       posts={posts}
+      materials={materials}
       liveSession={liveSession}
       homeHref="/secondary"
       homeLabel="Back to Secondary home"

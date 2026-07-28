@@ -8,6 +8,7 @@ import {
   parseWkeActivity,
   type WkeActivityV2Parsed,
 } from "@/lib/wke-activity/schema";
+import type { WkeResponseCard } from "@/lib/wke-activity/types";
 
 function isHotspot(
   el: WkeActivityV2Parsed["layout"]["elements"][number],
@@ -30,6 +31,48 @@ function isDialoguePanel(
   return el.kind === "dialogue-panel";
 }
 
+function mapResponseCards(cards: WkeResponseCard[] | undefined) {
+  if (!cards?.length) return undefined;
+  return cards.map((card) => {
+    switch (card.kind) {
+      case "info":
+        return {
+          id: card.id,
+          kind: "info" as const,
+          text: card.text,
+          ...(card.imageUrl ? { image_url: card.imageUrl } : {}),
+        };
+      case "audio":
+        return {
+          id: card.id,
+          kind: "audio" as const,
+          audio_url: card.audioUrl,
+          ...(card.label ? { label: card.label } : {}),
+        };
+      case "dialogue":
+        return {
+          id: card.id,
+          kind: "dialogue" as const,
+          ...(card.dialogueId ? { dialogue_id: card.dialogueId } : {}),
+        };
+      case "question":
+        return {
+          id: card.id,
+          kind: "question" as const,
+          prompt: card.prompt,
+          question_type: card.questionType,
+          choices: card.choices,
+          correct_choice_id: card.correctChoiceId,
+          ...(card.gateDiscover != null ? { gate_discover: card.gateDiscover } : {}),
+        };
+      default: {
+        const _exhaustive: never = card;
+        return _exhaustive;
+      }
+    }
+  });
+}
+
 /** Map a Studio `.wkeactivity` document to a Lesson Player `explore_hotspots` payload. */
 export function wkeActivityToExploreHotspotsPayload(
   raw: unknown,
@@ -47,6 +90,23 @@ export function wkeActivityToExploreHotspotsPayload(
   const mediaRegion = activity.layout.regions.find((r) => r.id === media.regionId);
   const dialoguePanel = activity.layout.elements.find(isDialoguePanel);
   const hotspots = activity.layout.elements.filter(isHotspot);
+
+  const phases =
+    activity.interaction.phases?.map((phase) => {
+      const phaseAsset = activity.assets.find((a) => a.id === phase.imageAssetId);
+      if (!phaseAsset) {
+        throw new Error(`Missing phase asset ${phase.imageAssetId}`);
+      }
+      return {
+        id: phase.id,
+        title: phase.title,
+        image_url: phaseAsset.src,
+        image_alt: phaseAsset.alt,
+        image_width: phaseAsset.intrinsicSize?.width,
+        image_height: phaseAsset.intrinsicSize?.height,
+        hotspot_ids: phase.hotspotIds,
+      };
+    }) ?? undefined;
 
   const payload = {
     type: "interaction" as const,
@@ -94,6 +154,12 @@ export function wkeActivityToExploreHotspotsPayload(
               background_dim: h.highlight.backgroundDim,
             }
           : undefined,
+        interaction_kind: h.interactionKind,
+        order_index: h.orderIndex,
+        initial_state: h.initialState,
+        wrong_order_hint: h.wrongOrderHint,
+        response_cards: mapResponseCards(h.responseCards),
+        enable_hint_pulse: h.enableHintPulse,
       };
     }),
     dialogue_panel: {
@@ -114,6 +180,16 @@ export function wkeActivityToExploreHotspotsPayload(
         ...(t.audioUrl?.trim() ? { audio_url: t.audioUrl.trim() } : {}),
       })),
     })),
+    ...(phases?.length ? { phases } : {}),
+    ...(activity.interaction.objective
+      ? { objective: { label: activity.interaction.objective.label } }
+      : {}),
+    ...(activity.interaction.strictOrder != null
+      ? { strict_order: activity.interaction.strictOrder }
+      : {}),
+    ...(activity.interaction.hintPulseEnabled != null
+      ? { hint_pulse_enabled: activity.interaction.hintPulseEnabled }
+      : {}),
     completion: { type: "visit_all_required_hotspots" as const },
     visited_when:
       activity.interaction.visitedWhen === "dialogue-completed" ||

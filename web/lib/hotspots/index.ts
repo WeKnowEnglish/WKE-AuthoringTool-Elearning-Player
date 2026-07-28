@@ -28,4 +28,10 @@ export {
   type StudioExploreHotspotsRef,
 } from "./studio";
 export { HOBBIES_HOTSPOT_ACTIVITY } from "./fixtures/hobbiesHotspot";
+export {
+  ensurePhases,
+  hotspotsForPhase,
+  nextPhaseId,
+  withEnsuredPhases,
+} from "./phases";
 export { useHotspotSamModel } from "./sam";

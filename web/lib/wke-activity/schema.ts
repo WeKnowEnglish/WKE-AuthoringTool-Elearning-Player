@@ -68,6 +68,50 @@ const hotspotElementSchema = z.object({
       score: z.number().optional(),
     })
     .optional(),
+  interactionKind: z.enum(["dialogue", "info", "audio", "question"]).optional(),
+  orderIndex: z.number().int().optional(),
+  initialState: z.enum(["locked", "available"]).optional(),
+  wrongOrderHint: z.string().optional(),
+  responseCards: z
+    .array(
+      z.discriminatedUnion("kind", [
+        z.object({
+          id: z.string().min(1),
+          kind: z.literal("info"),
+          text: z.string().min(1),
+          imageUrl: z.string().min(1).optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          kind: z.literal("audio"),
+          audioUrl: z.string().min(1),
+          label: z.string().optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          kind: z.literal("dialogue"),
+          dialogueId: z.string().min(1).optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          kind: z.literal("question"),
+          prompt: z.string().min(1),
+          questionType: z.enum(["mc", "true_false"]),
+          choices: z
+            .array(
+              z.object({
+                id: z.string().min(1),
+                label: z.string().min(1),
+              }),
+            )
+            .min(2),
+          correctChoiceId: z.string().min(1),
+          gateDiscover: z.boolean().optional(),
+        }),
+      ]),
+    )
+    .optional(),
+  enableHintPulse: z.boolean().optional(),
 });
 
 const mediaElementSchema = z.object({
@@ -159,7 +203,24 @@ export const wkeActivityV2Schema = z
         .enum(["dialogue-started", "dialogue-finished", "dialogue-completed"])
         .optional(),
       autoPlayOnSelect: z.boolean().optional(),
-      dialogues: z.array(dialogueSchema).min(1),
+      dialogues: z.array(dialogueSchema),
+      phases: z
+        .array(
+          z.object({
+            id: z.string().min(1),
+            title: z.string().optional(),
+            imageAssetId: z.string().min(1),
+            hotspotIds: z.array(z.string().min(1)),
+          }),
+        )
+        .optional(),
+      objective: z
+        .object({
+          label: z.string().optional(),
+        })
+        .optional(),
+      strictOrder: z.boolean().optional(),
+      hintPulseEnabled: z.boolean().optional(),
     }),
     accessibility: z
       .object({
@@ -181,6 +242,10 @@ export const wkeActivityV2Schema = z
       return;
     }
     const hotspotIds = new Set(hotspots.map((h) => h.id));
+    const dialogueByHotspot = new Map(
+      data.interaction.dialogues.map((d) => [d.hotspotId, d] as const),
+    );
+
     for (const dialogue of data.interaction.dialogues) {
       if (!hotspotIds.has(dialogue.hotspotId)) {
         ctx.addIssue({
@@ -189,6 +254,36 @@ export const wkeActivityV2Schema = z
         });
       }
     }
+
+    for (const hotspot of hotspots) {
+      const hasDialogue = dialogueByHotspot.has(hotspot.id);
+      const hasCards = (hotspot.responseCards?.length ?? 0) > 0;
+      if (!hasDialogue && !hasCards) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Object ${hotspot.id} needs a dialogue or responseCards`,
+        });
+      }
+      for (const card of hotspot.responseCards ?? []) {
+        if (card.kind === "question") {
+          if (!card.choices.some((choice) => choice.id === card.correctChoiceId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Question card ${card.id} correctChoiceId is not in choices`,
+            });
+          }
+        }
+        if (card.kind === "dialogue" && card.dialogueId) {
+          if (!data.interaction.dialogues.some((d) => d.id === card.dialogueId)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Dialogue card ${card.id} references unknown dialogue ${card.dialogueId}`,
+            });
+          }
+        }
+      }
+    }
+
     const media = data.layout.elements.find((el) => el.kind === "media");
     if (!media || media.kind !== "media") {
       ctx.addIssue({
@@ -202,6 +297,24 @@ export const wkeActivityV2Schema = z
         code: z.ZodIssueCode.custom,
         message: `Media element references unknown asset ${media.assetId}`,
       });
+    }
+
+    const assetIds = new Set(data.assets.map((a) => a.id));
+    for (const phase of data.interaction.phases ?? []) {
+      if (!assetIds.has(phase.imageAssetId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Phase ${phase.id} references unknown image asset ${phase.imageAssetId}`,
+        });
+      }
+      for (const hotspotId of phase.hotspotIds) {
+        if (!hotspotIds.has(hotspotId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Phase ${phase.id} references unknown hotspot ${hotspotId}`,
+          });
+        }
+      }
     }
   });
 

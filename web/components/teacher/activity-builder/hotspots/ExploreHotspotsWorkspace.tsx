@@ -24,6 +24,13 @@ import {
   type NormalizedSamPrompt,
   type StudioExploreHotspotsRef,
 } from "@/lib/hotspots";
+import {
+  ensurePhases,
+  hotspotsForPhase,
+  nextPhaseId,
+  withEnsuredPhases,
+} from "@/lib/hotspots/phases";
+import type { WkeObjectInteractionKind, WkeResponseCard } from "@/lib/wke-activity/types";
 import { wkeActivityToLessonScreen } from "@/lib/wke-activity";
 import {
   HotspotMediaCanvas,
@@ -118,17 +125,26 @@ export function ExploreHotspotsWorkspace() {
   const [bankEntries, setBankEntries] = useState<StudioExploreHotspotsRef[]>([]);
   const [bankBusy, setBankBusy] = useState(false);
   const [showBankPanel, setShowBankPanel] = useState(false);
+  const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const openRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
   const segmentationRequestRef = useRef(0);
   const { samStatus, samReady, samError, retrySam } =
     useHotspotSamModel(segmentationMode);
 
-  const media = document.assets.find((asset) => asset.kind === "image")!;
-  const hotspots = document.layout.elements.filter(
+  const phases = ensurePhases(document);
+  const resolvedPhaseId = activePhaseId ?? phases[0]?.id ?? null;
+  const activePhase =
+    phases.find((phase) => phase.id === resolvedPhaseId) ?? phases[0] ?? null;
+  const phaseAsset =
+    document.assets.find((asset) => asset.id === activePhase?.imageAssetId) ??
+    document.assets.find((asset) => asset.kind === "image")!;
+  const media = phaseAsset;
+  const hotspots = hotspotsForPhase(document, resolvedPhaseId);
+  const allHotspots = document.layout.elements.filter(
     (element): element is HotspotElement => element.kind === "hotspot",
   );
-  const selected = hotspots.find((hotspot) => hotspot.id === selectedId) ?? null;
+  const selected = allHotspots.find((hotspot) => hotspot.id === selectedId) ?? null;
   const selectedDialogue =
     document.interaction.dialogues.find(
       (dialogue) => dialogue.hotspotId === selectedId,
@@ -178,6 +194,7 @@ export function ExploreHotspotsWorkspace() {
       const loaded = await getStudioExploreHotspots(activityId);
       stopSegmentation();
       setDocument(cloneDocument(loaded.document));
+      setActivePhaseId(ensurePhases(loaded.document)[0]?.id ?? null);
       setSelectedId(
         loaded.document.layout.elements.find((element) => element.kind === "hotspot")
           ?.id ?? null,
@@ -321,72 +338,95 @@ export function ExploreHotspotsWorkspace() {
   };
 
   const createHotspot = (geometry: HotspotGeometry) => {
-    let number = hotspots.length + 1;
-    while (hotspots.some((hotspot) => hotspot.id === `hotspot-${number}`)) number += 1;
+    let number = allHotspots.length + 1;
+    while (allHotspots.some((hotspot) => hotspot.id === `hotspot-${number}`)) number += 1;
     const id = `hotspot-${number}`;
-    const name = `Child ${number}`;
-    setDocument((current) => ({
-      ...current,
-      layout: {
-        ...current.layout,
-        elements: [
-          ...current.layout.elements,
-          {
-            id,
-            kind: "hotspot",
-            regionId: "main-media",
-            name,
-            accessibleLabel: `${name} in the activity picture`,
-            geometry,
-            tabOrder: hotspots.length + 1,
-            required: true,
-          },
-        ],
-      },
-      interaction: {
-        ...current.interaction,
-        dialogues: [
-          ...current.interaction.dialogues,
-          {
-            id: `dialogue-${id}`,
-            hotspotId: id,
-            title: `${name}'s hobby`,
-            turns: [
-              { speaker: "AJ", text: "What do you like doing?" },
-              { speaker: name, text: "I like…" },
-            ],
-          },
-        ],
-      },
-    }));
+    const name = `Object ${number}`;
+    setDocument((current) => {
+      const withPhases = withEnsuredPhases(current);
+      const targetPhaseId =
+        resolvedPhaseId ?? ensurePhases(withPhases)[0]?.id ?? null;
+      const nextPhases = ensurePhases(withPhases).map((phase) =>
+        phase.id === targetPhaseId
+          ? { ...phase, hotspotIds: [...phase.hotspotIds, id] }
+          : phase,
+      );
+      return {
+        ...withPhases,
+        layout: {
+          ...withPhases.layout,
+          elements: [
+            ...withPhases.layout.elements,
+            {
+              id,
+              kind: "hotspot" as const,
+              regionId: "main-media",
+              name,
+              accessibleLabel: `${name} in the activity picture`,
+              geometry,
+              tabOrder: allHotspots.length + 1,
+              required: true,
+              interactionKind: "dialogue" as const,
+              orderIndex: hotspots.length,
+              initialState: "available" as const,
+            },
+          ],
+        },
+        interaction: {
+          ...withPhases.interaction,
+          phases: nextPhases,
+          dialogues: [
+            ...withPhases.interaction.dialogues,
+            {
+              id: `dialogue-${id}`,
+              hotspotId: id,
+              title: name,
+              turns: [
+                { speaker: "AJ", text: "What is this?" },
+                { speaker: "Student", text: "It is…" },
+              ],
+            },
+          ],
+        },
+      };
+    });
     setSelectedId(id);
     setTool("select");
   };
 
   const removeSelected = () => {
     if (!selected) return;
-    if (hotspots.length <= 1) {
-      setNotice("Keep at least one hotspot. Draw a new one before deleting this.");
+    if (allHotspots.length <= 1) {
+      setNotice("Keep at least one object. Draw a new one before deleting this.");
       return;
     }
-    setDocument((current) => ({
-      ...current,
-      layout: {
-        ...current.layout,
-        elements: current.layout.elements.filter(
-          (element) => element.id !== selected.id,
-        ),
-      },
-      interaction: {
-        ...current.interaction,
-        dialogues: current.interaction.dialogues.filter(
-          (dialogue) => dialogue.hotspotId !== selected.id,
-        ),
-      },
-    }));
+    setDocument((current) => {
+      const withPhases = withEnsuredPhases(current);
+      return {
+        ...withPhases,
+        layout: {
+          ...withPhases.layout,
+          elements: withPhases.layout.elements.filter(
+            (element) => element.id !== selected.id,
+          ),
+        },
+        interaction: {
+          ...withPhases.interaction,
+          dialogues: withPhases.interaction.dialogues.filter(
+            (dialogue) => dialogue.hotspotId !== selected.id,
+          ),
+          phases: ensurePhases(withPhases).map((phase) => ({
+            ...phase,
+            hotspotIds: phase.hotspotIds.filter((hotspotId) => hotspotId !== selected.id),
+          })),
+        },
+      };
+    });
     stopSegmentation();
     setSelectedId(
-      hotspots.find((hotspot) => hotspot.id !== selected.id)?.id ?? null,
+      hotspots.find((hotspot) => hotspot.id !== selected.id)?.id ??
+        allHotspots.find((hotspot) => hotspot.id !== selected.id)?.id ??
+        null,
     );
   };
 
@@ -479,6 +519,7 @@ export function ExploreHotspotsWorkspace() {
       const loaded = validateExploreHotspotsDocument(JSON.parse(await file.text()));
       stopSegmentation();
       setDocument(cloneDocument(loaded));
+      setActivePhaseId(ensurePhases(loaded)[0]?.id ?? null);
       setSelectedId(
         loaded.layout.elements.find((element) => element.kind === "hotspot")?.id ??
           null,
@@ -497,34 +538,232 @@ export function ExploreHotspotsWorkspace() {
     try {
       const next = await readImage(file);
       stopSegmentation();
-      setDocument((current) => ({
-        ...current,
-        assets: current.assets.map((asset) =>
-          asset.id === media.id
-            ? {
-                ...asset,
-                src: next.src,
-                mimeType: file.type,
-                alt: asset.alt || file.name,
-                intrinsicSize: { width: next.width, height: next.height },
-              }
-            : asset,
-        ),
-        layout: {
-          ...current.layout,
-          elements: current.layout.elements.map((element) =>
-            element.kind === "hotspot"
-              ? { ...element, visualShape: undefined }
-              : element,
+      const targetAssetId = activePhase?.imageAssetId ?? media.id;
+      const phaseHotspotIds = new Set(activePhase?.hotspotIds ?? []);
+      setDocument((current) => {
+        const withPhases = withEnsuredPhases(current);
+        return {
+          ...withPhases,
+          assets: withPhases.assets.map((asset) =>
+            asset.id === targetAssetId
+              ? {
+                  ...asset,
+                  src: next.src,
+                  mimeType: file.type,
+                  alt: asset.alt || file.name,
+                  intrinsicSize: { width: next.width, height: next.height },
+                }
+              : asset,
           ),
-        },
-      }));
+          layout: {
+            ...withPhases.layout,
+            elements: withPhases.layout.elements.map((element) =>
+              element.kind === "hotspot" &&
+              (phaseHotspotIds.size === 0 || phaseHotspotIds.has(element.id))
+                ? { ...element, visualShape: undefined }
+                : element,
+            ),
+          },
+        };
+      });
       setNotice(
-        `Imported ${file.name} (${next.width} × ${next.height}). Existing detected outlines were cleared because they belonged to the previous image.`,
+        `Imported ${file.name} (${next.width} × ${next.height}) for this scene. Outlines on this scene were cleared.`,
       );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not import the image.");
     }
+  };
+
+  const addPhase = () => {
+    const nextId = nextPhaseId(phases);
+    setDocument((current) => {
+      const withPhases = withEnsuredPhases(current);
+      const currentPhases = ensurePhases(withPhases);
+      const imageAssetId =
+        activePhase?.imageAssetId ??
+        currentPhases[0]?.imageAssetId ??
+        media.id;
+      return {
+        ...withPhases,
+        interaction: {
+          ...withPhases.interaction,
+          phases: [
+            ...currentPhases,
+            {
+              id: nextId,
+              title: `Scene ${currentPhases.length + 1}`,
+              imageAssetId,
+              hotspotIds: [],
+            },
+          ],
+        },
+      };
+    });
+    setActivePhaseId(nextId);
+    setSelectedId(null);
+    setNotice("Added a new scene. Replace the image and draw objects for this phase.");
+  };
+
+  const removeActivePhase = () => {
+    if (phases.length <= 1 || !activePhase) {
+      setNotice("Keep at least one scene.");
+      return;
+    }
+    const removingIds = new Set(activePhase.hotspotIds);
+    setDocument((current) => {
+      const withPhases = withEnsuredPhases(current);
+      const remaining = ensurePhases(withPhases).filter(
+        (phase) => phase.id !== activePhase.id,
+      );
+      return {
+        ...withPhases,
+        layout: {
+          ...withPhases.layout,
+          elements: withPhases.layout.elements.filter(
+            (element) =>
+              element.kind !== "hotspot" || !removingIds.has(element.id),
+          ),
+        },
+        interaction: {
+          ...withPhases.interaction,
+          dialogues: withPhases.interaction.dialogues.filter(
+            (dialogue) => !removingIds.has(dialogue.hotspotId),
+          ),
+          phases: remaining,
+        },
+      };
+    });
+    const nextPhase =
+      phases.find((phase) => phase.id !== activePhase.id) ?? null;
+    setActivePhaseId(nextPhase?.id ?? null);
+    setSelectedId(null);
+    setNotice("Removed scene and its objects.");
+  };
+
+  const patchPhase = (
+    phaseId: string,
+    patch: Partial<{ title: string; imageAssetId: string }>,
+  ) => {
+    setDocument((current) => {
+      const withPhases = withEnsuredPhases(current);
+      return {
+        ...withPhases,
+        interaction: {
+          ...withPhases.interaction,
+          phases: ensurePhases(withPhases).map((phase) =>
+            phase.id === phaseId ? { ...phase, ...patch } : phase,
+          ),
+        },
+      };
+    });
+  };
+
+  const ensureDialogueForSelected = () => {
+    if (!selected || selectedDialogue) return;
+    const id = selected.id;
+    const name = selected.name ?? "Object";
+    setDocument((current) => ({
+      ...current,
+      interaction: {
+        ...current.interaction,
+        dialogues: [
+          ...current.interaction.dialogues,
+          {
+            id: `dialogue-${id}`,
+            hotspotId: id,
+            title: name,
+            turns: [
+              { speaker: "AJ", text: "What is this?" },
+              { speaker: "Student", text: "It is…" },
+            ],
+          },
+        ],
+      },
+    }));
+  };
+
+  const addResponseCard = (kind: WkeResponseCard["kind"]) => {
+    if (!selected) return;
+    const hotspotId = selected.id;
+    const cards = selected.responseCards ?? [];
+    const id = `card-${hotspotId}-${cards.length + 1}`;
+    let card: WkeResponseCard;
+    switch (kind) {
+      case "info":
+        card = { id, kind: "info", text: "New info card" };
+        break;
+      case "audio":
+        card = { id, kind: "audio", audioUrl: "", label: "Listen" };
+        break;
+      case "dialogue":
+        card = { id, kind: "dialogue" };
+        break;
+      case "question":
+        card = {
+          id,
+          kind: "question",
+          prompt: "True or false?",
+          questionType: "true_false",
+          choices: [
+            { id: "true", label: "True" },
+            { id: "false", label: "False" },
+          ],
+          correctChoiceId: "true",
+          gateDiscover: true,
+        };
+        break;
+    }
+    const needsDialogue =
+      kind === "dialogue" &&
+      !document.interaction.dialogues.some((d) => d.hotspotId === hotspotId);
+    const name = selected.name ?? "Object";
+    setDocument((current) => ({
+      ...current,
+      layout: {
+        ...current.layout,
+        elements: current.layout.elements.map((element) => {
+          if (element.id !== hotspotId || element.kind !== "hotspot") return element;
+          const hotspot = element as HotspotElement;
+          return {
+            ...hotspot,
+            responseCards: [...(hotspot.responseCards ?? []), card],
+          };
+        }),
+      },
+      interaction: {
+        ...current.interaction,
+        dialogues: needsDialogue
+          ? [
+              ...current.interaction.dialogues,
+              {
+                id: `dialogue-${hotspotId}`,
+                hotspotId,
+                title: name,
+                turns: [
+                  { speaker: "AJ", text: "What is this?" },
+                  { speaker: "Student", text: "It is…" },
+                ],
+              },
+            ]
+          : current.interaction.dialogues,
+      },
+    }));
+  };
+
+  const patchResponseCard = (cardId: string, patch: Partial<WkeResponseCard>) => {
+    if (!selected?.responseCards) return;
+    patchHotspot(selected.id, {
+      responseCards: selected.responseCards.map((card) =>
+        card.id === cardId ? ({ ...card, ...patch } as WkeResponseCard) : card,
+      ),
+    });
+  };
+
+  const removeResponseCard = (cardId: string) => {
+    if (!selected?.responseCards) return;
+    patchHotspot(selected.id, {
+      responseCards: selected.responseCards.filter((card) => card.id !== cardId),
+    });
   };
 
   const rectangleFields =
@@ -747,9 +986,133 @@ export function ExploreHotspotsWorkspace() {
             </section>
 
             <section className="mt-6 rounded-xl border border-stone-200 bg-stone-50/80 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+                  Scenes
+                </h2>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-sky-800 hover:underline"
+                    onClick={addPhase}
+                  >
+                    + Add
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-rose-700 hover:underline disabled:opacity-40"
+                    disabled={phases.length <= 1}
+                    onClick={removeActivePhase}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {phases.map((phase, index) => (
+                  <button
+                    key={phase.id}
+                    type="button"
+                    onClick={() => {
+                      stopSegmentation();
+                      setActivePhaseId(phase.id);
+                      setSelectedId(null);
+                    }}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+                      phase.id === resolvedPhaseId
+                        ? "bg-sky-800 text-white"
+                        : "border border-stone-200 bg-white text-stone-700 hover:border-stone-300"
+                    }`}
+                  >
+                    {phase.title?.trim() || `Scene ${index + 1}`}
+                  </button>
+                ))}
+              </div>
+              {activePhase ? (
+                <label className="mt-3 block text-xs text-stone-600">
+                  Scene title
+                  <input
+                    className={inputClass}
+                    value={activePhase.title ?? ""}
+                    onChange={(event) =>
+                      patchPhase(activePhase.id, { title: event.target.value })
+                    }
+                  />
+                </label>
+              ) : null}
+              <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+                Replace image updates the picture for the active scene only.
+              </p>
+            </section>
+
+            <section className="mt-6 rounded-xl border border-stone-200 bg-stone-50/80 p-3">
               <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
                 Playback
               </h2>
+              <label className="mt-3 block text-xs text-stone-600">
+                Objective label
+                <input
+                  className={inputClass}
+                  value={document.interaction.objective?.label ?? ""}
+                  placeholder="Find Mia’s morning objects"
+                  onChange={(event) =>
+                    setDocument((current) => ({
+                      ...current,
+                      interaction: {
+                        ...current.interaction,
+                        objective: {
+                          ...current.interaction.objective,
+                          label: event.target.value,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="mt-3 flex items-start gap-2 text-sm text-stone-800">
+                <input
+                  type="checkbox"
+                  className="mt-1 rounded border-stone-300"
+                  checked={document.interaction.strictOrder ?? false}
+                  onChange={(event) =>
+                    setDocument((current) => ({
+                      ...current,
+                      interaction: {
+                        ...current.interaction,
+                        strictOrder: event.target.checked,
+                      },
+                    }))
+                  }
+                />
+                <span>
+                  <span className="font-medium">Strict object order</span>
+                  <span className="mt-1 block text-xs text-stone-500">
+                    Students must finish objects by order index within each scene.
+                  </span>
+                </span>
+              </label>
+              <label className="mt-3 flex items-start gap-2 text-sm text-stone-800">
+                <input
+                  type="checkbox"
+                  className="mt-1 rounded border-stone-300"
+                  checked={document.interaction.hintPulseEnabled ?? false}
+                  onChange={(event) =>
+                    setDocument((current) => ({
+                      ...current,
+                      interaction: {
+                        ...current.interaction,
+                        hintPulseEnabled: event.target.checked,
+                      },
+                    }))
+                  }
+                />
+                <span>
+                  <span className="font-medium">Hint pulse</span>
+                  <span className="mt-1 block text-xs text-stone-500">
+                    Students can pulse the next available object.
+                  </span>
+                </span>
+              </label>
               <label className="mt-3 flex items-start gap-2 text-sm text-stone-800">
                 <input
                   type="checkbox"
@@ -800,7 +1163,7 @@ export function ExploreHotspotsWorkspace() {
             <section className="mt-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-                  Hotspots
+                  Objects
                 </h2>
                 <span className="text-xs text-stone-400">{hotspots.length}</span>
               </div>
@@ -817,15 +1180,27 @@ export function ExploreHotspotsWorkspace() {
                     }`}
                   >
                     <span className="font-medium text-stone-900">
-                      {hotspot.tabOrder}. {hotspot.name ?? "Child"}
+                      {hotspot.orderIndex != null
+                        ? `${hotspot.orderIndex + 1}. `
+                        : hotspot.tabOrder != null
+                          ? `${hotspot.tabOrder}. `
+                          : ""}
+                      {hotspot.name ?? "Object"}
                     </span>
                     <span className="mt-1 block truncate text-xs text-stone-500">
+                      {hotspot.interactionKind ?? "dialogue"} ·{" "}
                       {hotspot.visualShape
                         ? "Precise object outline"
                         : `${hotspot.geometry.shape} click target`}
                     </span>
                   </button>
                 ))}
+                {hotspots.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-stone-200 px-3 py-4 text-xs text-stone-500">
+                    No objects in this scene yet. Draw a rectangle, ellipse, or polygon on
+                    the image.
+                  </p>
+                ) : null}
               </div>
             </section>
           </aside>
@@ -874,28 +1249,28 @@ export function ExploreHotspotsWorkspace() {
                 onRemoveSegmentationPrompt={removeSegmentationPrompt}
               />
               <p className="mt-3 text-center text-xs text-stone-500">
-                Hotspots are stored as image-relative coordinates and stay aligned at
+                Objects are stored as image-relative coordinates and stay aligned at
                 every display size.
               </p>
             </div>
           </section>
 
           <aside className="min-h-0 overflow-y-auto border-l border-stone-200 bg-white p-3 sm:p-4">
-            {selected && selectedDialogue ? (
+            {selected ? (
               <div className="space-y-5">
                 <section>
                   <div className="flex items-center justify-between">
                     <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-                      Selected hotspot
+                      Selected object
                     </h2>
                     <button
                       type="button"
                       className="text-xs text-rose-700 hover:underline disabled:opacity-40"
-                      disabled={hotspots.length <= 1}
+                      disabled={allHotspots.length <= 1}
                       title={
-                        hotspots.length <= 1
-                          ? "Keep at least one hotspot"
-                          : "Delete selected hotspot"
+                        allHotspots.length <= 1
+                          ? "Keep at least one object"
+                          : "Delete selected object"
                       }
                       onClick={removeSelected}
                     >
@@ -936,6 +1311,240 @@ export function ExploreHotspotsWorkspace() {
                     />
                     Required for completion
                   </label>
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Interaction
+                    <select
+                      className={inputClass}
+                      value={selected.interactionKind ?? "dialogue"}
+                      onChange={(event) => {
+                        const kind = event.target.value as WkeObjectInteractionKind;
+                        patchHotspot(selected.id, { interactionKind: kind });
+                        if (kind === "dialogue") ensureDialogueForSelected();
+                      }}
+                    >
+                      <option value="dialogue">Dialogue</option>
+                      <option value="info">Info card</option>
+                      <option value="audio">Audio</option>
+                      <option value="question">Question</option>
+                    </select>
+                  </label>
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Order index
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className={inputClass}
+                      value={selected.orderIndex ?? 0}
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          orderIndex: Number(event.target.value) || 0,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Initial state
+                    <select
+                      className={inputClass}
+                      value={selected.initialState ?? "available"}
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          initialState: event.target.value as "locked" | "available",
+                        })
+                      }
+                    >
+                      <option value="available">Available</option>
+                      <option value="locked">Locked</option>
+                    </select>
+                  </label>
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Wrong-order hint
+                    <input
+                      className={inputClass}
+                      value={selected.wrongOrderHint ?? ""}
+                      placeholder="Try another object first"
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          wrongOrderHint: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="mt-3 flex items-center gap-2 text-sm text-stone-800">
+                    <input
+                      type="checkbox"
+                      className="rounded border-stone-300"
+                      checked={selected.enableHintPulse ?? false}
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          enableHintPulse: event.target.checked,
+                        })
+                      }
+                    />
+                    Eligible for hint pulse
+                  </label>
+                </section>
+
+                <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                      Response cards
+                    </h2>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {(
+                        [
+                          ["info", "Info"],
+                          ["audio", "Audio"],
+                          ["dialogue", "Dialogue"],
+                          ["question", "Q"],
+                        ] as const
+                      ).map(([kind, label]) => (
+                        <button
+                          key={kind}
+                          type="button"
+                          className="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-[10px] text-stone-700 hover:border-sky-400"
+                          onClick={() => addResponseCard(kind)}
+                        >
+                          + {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+                    Played in order on tap. Empty stack falls back to dialogue for
+                    dialogue objects.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {(selected.responseCards ?? []).map((card, index) => (
+                      <div
+                        key={card.id}
+                        className="rounded-lg border border-stone-200 bg-white p-2.5"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                            {index + 1}. {card.kind}
+                          </p>
+                          <button
+                            type="button"
+                            className="text-xs text-rose-700 hover:underline"
+                            onClick={() => removeResponseCard(card.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        {card.kind === "info" ? (
+                          <textarea
+                            rows={2}
+                            className={inputClass}
+                            value={card.text}
+                            onChange={(event) =>
+                              patchResponseCard(card.id, { text: event.target.value })
+                            }
+                          />
+                        ) : null}
+                        {card.kind === "audio" ? (
+                          <>
+                            <input
+                              className={inputClass}
+                              placeholder="Audio URL"
+                              value={card.audioUrl}
+                              onChange={(event) =>
+                                patchResponseCard(card.id, {
+                                  audioUrl: event.target.value,
+                                })
+                              }
+                            />
+                            <input
+                              className={`${inputClass} mt-2`}
+                              placeholder="Label"
+                              value={card.label ?? ""}
+                              onChange={(event) =>
+                                patchResponseCard(card.id, {
+                                  label: event.target.value,
+                                })
+                              }
+                            />
+                          </>
+                        ) : null}
+                        {card.kind === "dialogue" ? (
+                          <p className="text-xs text-stone-500">
+                            Uses this object’s dialogue below.
+                          </p>
+                        ) : null}
+                        {card.kind === "question" ? (
+                          <>
+                            <textarea
+                              rows={2}
+                              className={inputClass}
+                              value={card.prompt}
+                              onChange={(event) =>
+                                patchResponseCard(card.id, {
+                                  prompt: event.target.value,
+                                })
+                              }
+                            />
+                            <select
+                              className={`${inputClass} mt-2`}
+                              value={card.questionType}
+                              onChange={(event) =>
+                                patchResponseCard(card.id, {
+                                  questionType: event.target.value as
+                                    | "mc"
+                                    | "true_false",
+                                })
+                              }
+                            >
+                              <option value="true_false">True / false</option>
+                              <option value="mc">Multiple choice</option>
+                            </select>
+                            <label className="mt-2 block text-xs text-stone-600">
+                              Correct choice id
+                              <input
+                                className={inputClass}
+                                value={card.correctChoiceId}
+                                onChange={(event) =>
+                                  patchResponseCard(card.id, {
+                                    correctChoiceId: event.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <div className="mt-2 space-y-1">
+                              {card.choices.map((choice, choiceIndex) => (
+                                <div key={choice.id} className="flex gap-1">
+                                  <input
+                                    className={inputClass}
+                                    value={choice.id}
+                                    onChange={(event) => {
+                                      const choices = card.choices.map((item, i) =>
+                                        i === choiceIndex
+                                          ? { ...item, id: event.target.value }
+                                          : item,
+                                      );
+                                      patchResponseCard(card.id, { choices });
+                                    }}
+                                  />
+                                  <input
+                                    className={inputClass}
+                                    value={choice.label}
+                                    onChange={(event) => {
+                                      const choices = card.choices.map((item, i) =>
+                                        i === choiceIndex
+                                          ? { ...item, label: event.target.value }
+                                          : item,
+                                      );
+                                      patchResponseCard(card.id, { choices });
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
                 </section>
 
                 {rectangleFields ? (
@@ -1222,6 +1831,7 @@ export function ExploreHotspotsWorkspace() {
                   ) : null}
                 </section>
 
+                {selectedDialogue ? (
                 <section>
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
@@ -1347,14 +1957,23 @@ export function ExploreHotspotsWorkspace() {
                   {selectedDialogue.turns.length >= 8 ? (
                     <p className="mt-2 text-[11px] leading-relaxed text-amber-800">
                       Long dialogues can be hard for A1 listeners. Consider splitting into
-                      another hotspot.
+                      another object.
                     </p>
                   ) : null}
                 </section>
+                ) : (
+                  <button
+                    type="button"
+                    className="w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm text-stone-800 hover:border-sky-400 hover:bg-sky-50/50"
+                    onClick={ensureDialogueForSelected}
+                  >
+                    + Add dialogue for this object
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-sm text-stone-500">
-                Select a hotspot to edit its label, geometry, and dialogue.
+                Select an object to edit its label, interaction, and responses.
               </p>
             )}
           </aside>

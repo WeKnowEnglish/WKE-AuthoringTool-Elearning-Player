@@ -123,6 +123,10 @@ export type ExploreHotspotsMediaPlayProps = {
   hotspots: PlayHotspot[];
   selectedId?: string | null;
   visitedIds?: string[];
+  /** Soft pulse outline for the next hinted object. */
+  hintPulseId?: string | null;
+  /** Locked / not-yet-available objects (still visible, not selectable). */
+  lockedIds?: string[];
   onSelect?: (id: string) => void;
 };
 
@@ -135,6 +139,8 @@ export function ExploreHotspotsMediaPlay({
   hotspots,
   selectedId = null,
   visitedIds = [],
+  hintPulseId = null,
+  lockedIds = [],
   onSelect,
 }: ExploreHotspotsMediaPlayProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -152,6 +158,7 @@ export function ExploreHotspotsMediaPlay({
     ...selectedHotspot?.highlight,
   };
   const effectId = `hotspot-${reactId}-${(selectedId ?? "none").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const lockedSet = new Set(lockedIds);
 
   const pointerPoint = (event: ReactPointerEvent) => {
     const rect = svgRef.current!.getBoundingClientRect();
@@ -163,7 +170,12 @@ export function ExploreHotspotsMediaPlay({
 
   const updateHoverFromPointer = (event: ReactPointerEvent) => {
     const id = pickHotspotId(pointerPoint(event), hotspots);
-    setHoveredId(id);
+    setHoveredId(id && !lockedSet.has(id) ? id : null);
+  };
+
+  const trySelect = (id: string | null) => {
+    if (!onSelect || !id || lockedSet.has(id)) return;
+    onSelect(id);
   };
 
   return (
@@ -188,9 +200,7 @@ export function ExploreHotspotsMediaPlay({
         onPointerMove={updateHoverFromPointer}
         onPointerLeave={() => setHoveredId(null)}
         onPointerDown={(event) => {
-          if (!onSelect) return;
-          const id = pickHotspotId(pointerPoint(event), hotspots);
-          if (id) onSelect(id);
+          trySelect(pickHotspotId(pointerPoint(event), hotspots));
         }}
       >
         {selectedHotspot ? (
@@ -223,8 +233,10 @@ export function ExploreHotspotsMediaPlay({
         {orderedHotspots.map((hotspot) => {
           const selected = selectedId === hotspot.id;
           const visited = visitedIds.includes(hotspot.id);
-          const hovered = hoveredId === hotspot.id;
-          const focused = focusedId === hotspot.id;
+          const locked = lockedSet.has(hotspot.id);
+          const pulsed = hintPulseId === hotspot.id;
+          const hovered = !locked && hoveredId === hotspot.id;
+          const focused = !locked && focusedId === hotspot.id;
           const color = hotspot.highlight?.color ?? DEFAULT_HOTSPOT_HIGHLIGHT.color;
           const outlineWidth =
             hotspot.highlight?.outlineWidth ?? DEFAULT_HOTSPOT_HIGHLIGHT.outlineWidth;
@@ -239,15 +251,22 @@ export function ExploreHotspotsMediaPlay({
           if (selected) {
             stroke.strokeWidth = outlineWidth;
           }
+          if (pulsed && !selected) {
+            stroke.stroke = color;
+            stroke.strokeWidth = Math.max(stroke.strokeWidth, 4);
+          }
 
           return (
             <g
               key={hotspot.id}
               role="button"
-              tabIndex={0}
+              tabIndex={locked ? -1 : 0}
+              aria-disabled={locked || undefined}
               aria-label={hotspot.accessibleLabel}
               className="outline-none"
-              onFocus={() => setFocusedId(hotspot.id)}
+              onFocus={() => {
+                if (!locked) setFocusedId(hotspot.id);
+              }}
               onBlur={(event: ReactFocusEvent<SVGGElement>) => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                   setFocusedId((current) => (current === hotspot.id ? null : current));
@@ -256,19 +275,32 @@ export function ExploreHotspotsMediaPlay({
               onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  onSelect?.(hotspot.id);
+                  trySelect(hotspot.id);
                 }
               }}
             >
               <VisualShape
                 hotspot={hotspot}
-                fill={selected ? `${color}12` : hovered || focused ? `${HOVER_STROKE}18` : "transparent"}
+                fill={
+                  selected
+                    ? `${color}12`
+                    : hovered || focused
+                      ? `${HOVER_STROKE}18`
+                      : "transparent"
+                }
                 stroke={stroke.stroke}
                 strokeWidth={stroke.strokeWidth}
+                opacity={locked ? 0.45 : pulsed ? 0.95 : 1}
+                strokeDasharray={pulsed && !selected ? "10 8" : undefined}
                 filter={
                   selected && style !== "outline" ? `url(#${effectId}-glow)` : undefined
                 }
                 className="pointer-events-none"
+                style={
+                  pulsed && !selected
+                    ? { animation: "explore-hotspot-hint-pulse 1.2s ease-in-out infinite" }
+                    : undefined
+                }
               />
               {/* Wide invisible hit target for mouse / touch / hover detection. */}
               <HotspotShape
@@ -283,6 +315,12 @@ export function ExploreHotspotsMediaPlay({
           );
         })}
       </svg>
+      <style>{`
+        @keyframes explore-hotspot-hint-pulse {
+          0%, 100% { opacity: 0.55; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -4,18 +4,26 @@ import { ExploreHotspotsMediaPlay, type PlayHotspot } from "@wke/explore-hotspot
 import { useEffect, useMemo, useRef, useState } from "react";
 import { playSfx } from "@/lib/audio/sfx";
 import { speakTextAndWait, stopSpeaking, unlockSpeechSynthesis } from "@/lib/audio/tts";
-import type { ScreenPayload } from "@/lib/lesson-schemas";
+import {
+  canSelectInStrictOrder,
+  hintTargetId,
+  hotspotsInPhase,
+  initialObjectStates,
+  isObjectComplete,
+  phaseComplete,
+  resolvePlayPhases,
+  responseStackFor,
+  type ExploreHotspotItem,
+  type ExploreHotspotResponseCard,
+  type ExploreHotspotsParsed,
+  type ObjectRuntimeState,
+} from "@/lib/wke-activity/explore-hotspots-play-runtime";
 import {
   GuideBlock,
   InteractionLessonNav,
   interactionNavReservePaddingClass,
   type NavProps,
 } from "./shared";
-
-type ExploreHotspotsParsed = Extract<
-  ScreenPayload,
-  { type: "interaction"; subtype: "explore_hotspots" }
->;
 
 function SpeakerIcon({ playing = false }: { playing?: boolean }) {
   return (
@@ -60,8 +68,8 @@ function ListeningPromptIcon() {
   );
 }
 
-function toPlayHotspots(parsed: ExploreHotspotsParsed): PlayHotspot[] {
-  return parsed.hotspots.map((h) => ({
+function toPlayHotspots(hotspots: ExploreHotspotItem[]): PlayHotspot[] {
+  return hotspots.map((h) => ({
     id: h.id,
     accessibleLabel: h.accessible_label ?? h.name,
     tabOrder: h.tab_order,
@@ -133,26 +141,90 @@ export function ExploreHotspotsView({
   parsed: ExploreHotspotsParsed;
   onPass: () => void;
 } & NavProps) {
-  const [visited, setVisited] = useState<Set<string>>(() => new Set());
+  const phases = useMemo(() => resolvePlayPhases(parsed), [parsed]);
+  const [phaseIndex, setPhaseIndex] = useState(0);
+  const [objectStates, setObjectStates] = useState<Record<string, ObjectRuntimeState>>(
+    () => initialObjectStates(parsed.hotspots),
+  );
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
+  const [cardIndex, setCardIndex] = useState(0);
+  const [orderHint, setOrderHint] = useState<string | null>(null);
+  const [showHintPulse, setShowHintPulse] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [questionFeedback, setQuestionFeedback] = useState<string | null>(null);
   const playGenRef = useRef(0);
   const passedRef = useRef(false);
 
   const panel = parsed.dialogue_panel;
-  const requiredIds = parsed.hotspots
-    .filter((h) => h.required !== false)
-    .map((h) => h.id);
-  const visitedRequired = requiredIds.filter((id) => visited.has(id)).length;
-  const allRequiredVisited =
-    requiredIds.length === 0 || requiredIds.every((id) => visited.has(id));
+  const currentPhase = phases[Math.min(phaseIndex, phases.length - 1)]!;
+  const phaseHotspots = useMemo(
+    () => hotspotsInPhase(parsed, currentPhase),
+    [parsed, currentPhase],
+  );
+  const playHotspots = useMemo(() => toPlayHotspots(phaseHotspots), [phaseHotspots]);
 
-  const activeDialogue = activeHotspotId
-    ? (parsed.dialogues.find((d) => d.hotspot_id === activeHotspotId) ?? null)
-    : null;
+  const requiredAll = parsed.hotspots.filter((h) => h.required !== false);
+  const completedRequired = requiredAll.filter((h) =>
+    isObjectComplete(h, objectStates[h.id]),
+  ).length;
+  const allRequiredDone =
+    requiredAll.length === 0 ||
+    requiredAll.every((h) => isObjectComplete(h, objectStates[h.id]));
+  const currentPhaseDone = phaseComplete(phaseHotspots, objectStates);
+  const hasNextPhase = phaseIndex < phases.length - 1;
+  const activityComplete = allRequiredDone && !hasNextPhase;
 
-  const playHotspots = useMemo(() => toPlayHotspots(parsed), [parsed]);
-  const visitedList = useMemo(() => Array.from(visited), [visited]);
+  const activeHotspot =
+    phaseHotspots.find((h) => h.id === activeHotspotId) ??
+    parsed.hotspots.find((h) => h.id === activeHotspotId) ??
+    null;
+  const cards = activeHotspot ? responseStackFor(activeHotspot) : [];
+  const activeCard: ExploreHotspotResponseCard | null = cards[cardIndex] ?? null;
+
+  const activeDialogue =
+    activeHotspot &&
+    (activeCard?.kind === "dialogue" ||
+      (!activeCard && (activeHotspot.interaction_kind ?? "dialogue") === "dialogue"))
+      ? (parsed.dialogues.find((d) =>
+          activeCard?.kind === "dialogue" && activeCard.dialogue_id
+            ? d.id === activeCard.dialogue_id
+            : d.hotspot_id === activeHotspot.id,
+        ) ?? null)
+      : null;
+
+  const visitedList = useMemo(
+    () =>
+      Object.entries(objectStates)
+        .filter(([, state]) => state === "discovered" || state === "completed")
+        .map(([id]) => id),
+    [objectStates],
+  );
+
+  const lockedIds = useMemo(() => {
+    const locked: string[] = [];
+    for (const hotspot of phaseHotspots) {
+      const state = objectStates[hotspot.id];
+      if (state === "locked") locked.push(hotspot.id);
+      else if (
+        parsed.strict_order &&
+        !canSelectInStrictOrder(
+          hotspot,
+          phaseHotspots,
+          objectStates,
+          true,
+        ) &&
+        !isObjectComplete(hotspot, state)
+      ) {
+        // Still selectable to show wrong-order hint; do not lock visually.
+      }
+    }
+    return locked;
+  }, [phaseHotspots, objectStates, parsed.strict_order]);
+
+  const pulseId =
+    showHintPulse && parsed.hint_pulse_enabled
+      ? hintTargetId(phaseHotspots, objectStates, true)
+      : null;
 
   const dialogueText = useMemo(
     () =>
@@ -173,21 +245,23 @@ export function ExploreHotspotsView({
   }, []);
 
   useEffect(() => {
-    if (!allRequiredVisited || passedRef.current) return;
+    if (!activityComplete || passedRef.current) return;
     passedRef.current = true;
     onPass();
-  }, [allRequiredVisited, onPass]);
+  }, [activityComplete, onPass]);
 
-  function markVisited(hotspotId: string) {
-    setVisited((prev) => {
-      if (prev.has(hotspotId)) return prev;
-      const next = new Set(prev);
-      next.add(hotspotId);
-      return next;
+  function setObjectState(hotspotId: string, state: ObjectRuntimeState) {
+    setObjectStates((prev) => {
+      if (prev[hotspotId] === state) return prev;
+      return { ...prev, [hotspotId]: state };
     });
   }
 
-  async function playDialogue(hotspotId: string) {
+  function markDiscoveredOrCompleted(hotspot: ExploreHotspotItem, completed: boolean) {
+    setObjectState(hotspot.id, completed ? "completed" : "discovered");
+  }
+
+  async function playDialogueFor(hotspotId: string) {
     const dialogue = parsed.dialogues.find((d) => d.hotspot_id === hotspotId);
     if (!dialogue) return;
     const gen = ++playGenRef.current;
@@ -195,10 +269,16 @@ export function ExploreHotspotsView({
     stopSpeaking();
     setSpeaking(false);
     unlockSpeechSynthesis();
-    if (parsed.visited_when !== "dialogue_finished") {
-      markVisited(hotspotId);
+    const hotspot = parsed.hotspots.find((h) => h.id === hotspotId);
+    if (hotspot && parsed.visited_when !== "dialogue_finished") {
+      markDiscoveredOrCompleted(hotspot, true);
     }
-    if (muted) return;
+    if (muted) {
+      if (hotspot && parsed.visited_when === "dialogue_finished") {
+        markDiscoveredOrCompleted(hotspot, true);
+      }
+      return;
+    }
     setSpeaking(true);
     try {
       for (const turn of dialogue.turns) {
@@ -219,25 +299,102 @@ export function ExploreHotspotsView({
     } finally {
       if (gen === playGenRef.current) {
         setSpeaking(false);
-        if (parsed.visited_when === "dialogue_finished") {
-          markVisited(hotspotId);
+        if (hotspot && parsed.visited_when === "dialogue_finished") {
+          markDiscoveredOrCompleted(hotspot, true);
         }
       }
     }
   }
 
+  function advanceCardOrComplete(hotspot: ExploreHotspotItem, forceComplete = true) {
+    const stack = responseStackFor(hotspot);
+    if (cardIndex + 1 < stack.length) {
+      setCardIndex((value) => value + 1);
+      setQuestionFeedback(null);
+      return;
+    }
+    if (forceComplete) markDiscoveredOrCompleted(hotspot, true);
+  }
+
+  async function beginCardStack(hotspot: ExploreHotspotItem) {
+    const stack = responseStackFor(hotspot);
+    const first = stack[0];
+    setQuestionFeedback(null);
+    if (!first) {
+      markDiscoveredOrCompleted(hotspot, true);
+      return;
+    }
+    if (first.kind === "dialogue") {
+      if (parsed.auto_play_on_select !== false) {
+        void playDialogueFor(hotspot.id);
+      } else if (parsed.visited_when !== "dialogue_finished") {
+        // Visit credit deferred until Listen when autoplay off + started semantics
+      }
+    } else if (first.kind === "info") {
+      markDiscoveredOrCompleted(hotspot, false);
+    } else if (first.kind === "audio" && first.audio_url && !muted) {
+      const gen = ++playGenRef.current;
+      setSpeaking(true);
+      try {
+        await playHtmlAudio(first.audio_url, () => gen !== playGenRef.current);
+      } finally {
+        if (gen === playGenRef.current) setSpeaking(false);
+      }
+      markDiscoveredOrCompleted(hotspot, stack.length === 1);
+    }
+  }
+
   function selectHotspot(hotspotId: string) {
     playSfx("tap", muted);
-    setActiveHotspotId(hotspotId);
-    if (parsed.auto_play_on_select !== false) {
-      void playDialogue(hotspotId);
+    const hotspot = phaseHotspots.find((h) => h.id === hotspotId);
+    if (!hotspot) return;
+
+    if (objectStates[hotspotId] === "locked") {
+      setOrderHint("This object is locked for now.");
+      return;
     }
-    // When autoplay is off, visit credit is awarded only when Listen/Replay starts or finishes
-    // (matches Studio visitedWhen semantics).
+
+    if (
+      !canSelectInStrictOrder(
+        hotspot,
+        phaseHotspots,
+        objectStates,
+        Boolean(parsed.strict_order),
+      )
+    ) {
+      setOrderHint(
+        hotspot.wrong_order_hint?.trim() ||
+          "Try another object first — follow the order.",
+      );
+      setActiveHotspotId(null);
+      setCardIndex(0);
+      return;
+    }
+
+    setOrderHint(null);
+    setShowHintPulse(false);
+    setActiveHotspotId(hotspotId);
+    setCardIndex(0);
+    void beginCardStack(hotspot);
+  }
+
+  function goNextPhase() {
+    if (!hasNextPhase || !currentPhaseDone) return;
+    playGenRef.current += 1;
+    stopSpeaking();
+    setSpeaking(false);
+    setPhaseIndex((value) => value + 1);
+    setActiveHotspotId(null);
+    setCardIndex(0);
+    setOrderHint(null);
+    setQuestionFeedback(null);
+    setShowHintPulse(false);
   }
 
   const emptyState =
-    panel?.empty_state_text ?? "Choose a child in the picture to hear about their hobby.";
+    panel?.empty_state_text ?? "Choose something in the picture to explore.";
+
+  const checklistItems = phaseHotspots.filter((h) => h.required !== false);
 
   return (
     <div className={interactionNavReservePaddingClass}>
@@ -248,30 +405,47 @@ export function ExploreHotspotsView({
         <header className="hotspot-player-header mb-5 gap-4">
           <div>
             <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-sky-600">
-              Listening explorer
+              {phases.length > 1
+                ? `Scene ${phaseIndex + 1} of ${phases.length}`
+                : "Listening explorer"}
             </p>
             <h2 className="mt-1 text-[clamp(1.55rem,3.2cqi,2.35rem)] font-extrabold leading-tight tracking-tight text-[#10254d]">
-              {parsed.activity_name ?? "Explore"}
+              {currentPhase.title ?? parsed.activity_name ?? "Explore"}
             </h2>
+            {parsed.objective?.label ? (
+              <p className="mt-2 text-sm font-semibold text-slate-600">
+                {parsed.objective.label}
+              </p>
+            ) : null}
           </div>
           {panel?.show_progress !== false ? (
             <div
-              className="flex items-center gap-3"
-              aria-label={`Listened to ${visitedRequired} of ${requiredIds.length}`}
+              className="flex flex-col items-end gap-2"
+              aria-label={`Completed ${completedRequired} of ${requiredAll.length}`}
             >
               <span className="whitespace-nowrap rounded-full bg-[#e9f4ff] px-4 py-2 text-sm font-bold text-[#1766bb] shadow-sm">
-                {visitedRequired} of {requiredIds.length} heard
+                {completedRequired} of {requiredAll.length} done
               </span>
-              <div className="flex gap-1.5" aria-hidden>
-                {requiredIds.map((id) => (
-                  <span
-                    key={id}
-                    className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                      visited.has(id) ? "bg-[#2e87e8]" : "bg-slate-300"
-                    }`}
-                  />
-                ))}
-              </div>
+              {checklistItems.length > 0 ? (
+                <ul className="flex max-w-xs flex-wrap justify-end gap-1.5">
+                  {checklistItems.map((item) => {
+                    const done = isObjectComplete(item, objectStates[item.id]);
+                    return (
+                      <li
+                        key={item.id}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          done
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {done ? "✓ " : ""}
+                        {item.name ?? item.id}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
             </div>
           ) : null}
         </header>
@@ -280,16 +454,41 @@ export function ExploreHotspotsView({
           <div className="rounded-2xl bg-white p-1.5 shadow-[0_16px_38px_rgba(30,64,175,0.16)] ring-1 ring-slate-200/80">
             <ExploreHotspotsMediaPlay
               media={{
-                src: parsed.image_url,
-                alt: parsed.image_alt,
-                intrinsicWidth: parsed.image_width,
-                intrinsicHeight: parsed.image_height,
+                src: currentPhase.image_url,
+                alt: currentPhase.image_alt ?? parsed.image_alt,
+                intrinsicWidth: currentPhase.image_width ?? parsed.image_width,
+                intrinsicHeight: currentPhase.image_height ?? parsed.image_height,
               }}
               hotspots={playHotspots}
               selectedId={activeHotspotId}
               visitedIds={visitedList}
+              lockedIds={lockedIds}
+              hintPulseId={pulseId}
               onSelect={selectHotspot}
             />
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 pb-1">
+              {parsed.hint_pulse_enabled ? (
+                <button
+                  type="button"
+                  className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-200"
+                  onClick={() => setShowHintPulse(true)}
+                >
+                  Hint
+                </button>
+              ) : (
+                <span />
+              )}
+              {hasNextPhase ? (
+                <button
+                  type="button"
+                  disabled={!currentPhaseDone}
+                  className="rounded-full bg-sky-700 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-40"
+                  onClick={goNextPhase}
+                >
+                  Next scene
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <aside className="flex min-h-64 flex-col gap-4" aria-live="polite">
@@ -299,6 +498,120 @@ export function ExploreHotspotsView({
                 <p className="text-[clamp(1rem,1.8cqi,1.3rem)] font-bold leading-snug">
                   {parsed.body_text}
                 </p>
+              </div>
+            ) : null}
+
+            {orderHint ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+                {orderHint}
+              </div>
+            ) : null}
+
+            {activeHotspot && activeCard?.kind === "info" ? (
+              <div className="rounded-[1.75rem] border-2 border-slate-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.1)]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-600">
+                  {activeHotspot.name ?? "Info"}
+                </p>
+                <p className="mt-3 text-[clamp(1.15rem,2.1cqi,1.5rem)] font-bold leading-snug text-[#13264a]">
+                  {activeCard.text}
+                </p>
+                {activeCard.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={activeCard.image_url}
+                    alt=""
+                    className="mt-4 max-h-40 rounded-xl object-contain"
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  className="mt-4 rounded-full bg-sky-700 px-4 py-2 text-sm font-bold text-white"
+                  onClick={() => advanceCardOrComplete(activeHotspot)}
+                >
+                  Continue
+                </button>
+              </div>
+            ) : null}
+
+            {activeHotspot && activeCard?.kind === "audio" ? (
+              <div className="rounded-[1.75rem] border-2 border-slate-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.1)]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-600">
+                  {activeCard.label ?? "Listen"}
+                </p>
+                <button
+                  type="button"
+                  className="mt-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#3198f5] to-[#146dcc] text-white shadow-lg"
+                  aria-label="Play audio"
+                  onClick={() => {
+                    if (!activeCard.audio_url || muted) return;
+                    void (async () => {
+                      const gen = ++playGenRef.current;
+                      setSpeaking(true);
+                      try {
+                        await playHtmlAudio(
+                          activeCard.audio_url,
+                          () => gen !== playGenRef.current,
+                        );
+                      } finally {
+                        if (gen === playGenRef.current) setSpeaking(false);
+                      }
+                    })();
+                  }}
+                >
+                  <SpeakerIcon playing={speaking} />
+                </button>
+                <button
+                  type="button"
+                  className="mt-4 rounded-full bg-sky-700 px-4 py-2 text-sm font-bold text-white"
+                  onClick={() => advanceCardOrComplete(activeHotspot)}
+                >
+                  Continue
+                </button>
+              </div>
+            ) : null}
+
+            {activeHotspot && activeCard?.kind === "question" ? (
+              <div className="rounded-[1.75rem] border-2 border-slate-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.1)]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-600">
+                  Question
+                </p>
+                <p className="mt-3 text-[clamp(1.15rem,2.1cqi,1.5rem)] font-bold leading-snug text-[#13264a]">
+                  {activeCard.prompt}
+                </p>
+                <div className="mt-4 flex flex-col gap-2">
+                  {activeCard.choices.map((choice) => (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-800 hover:border-sky-400 hover:bg-sky-50"
+                      onClick={() => {
+                        const correct = choice.id === activeCard.correct_choice_id;
+                        if (correct) {
+                          setQuestionFeedback("Correct!");
+                          playSfx("correct", muted);
+                          if (activeCard.gate_discover !== false) {
+                            markDiscoveredOrCompleted(activeHotspot, true);
+                          }
+                          window.setTimeout(
+                            () => advanceCardOrComplete(activeHotspot, true),
+                            450,
+                          );
+                        } else {
+                          setQuestionFeedback("Try again.");
+                          setObjectState(activeHotspot.id, "incorrect");
+                          playSfx("wrong", muted);
+                        }
+                      }}
+                    >
+                      {choice.label}
+                    </button>
+                  ))}
+                </div>
+                {questionFeedback ? (
+                  <p className="mt-3 text-sm font-semibold text-slate-600">
+                    {questionFeedback}
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -352,7 +665,7 @@ export function ExploreHotspotsView({
                       type="button"
                       onClick={() => {
                         if (!activeHotspotId) return;
-                        void playDialogue(activeHotspotId);
+                        void playDialogueFor(activeHotspotId);
                       }}
                       className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3198f5] to-[#146dcc] text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-300"
                       aria-label={
@@ -368,15 +681,30 @@ export function ExploreHotspotsView({
                   ) : null}
                 </div>
                 <span className="sr-only">{dialogueText}</span>
-              <p className="mt-4 text-right text-xs font-semibold text-slate-400">
-                {speaking
-                  ? "Playing dialogue…"
-                  : parsed.auto_play_on_select === false
-                    ? "Tap Listen to hear this dialogue"
-                    : "Tap to listen again"}
-              </p>
+                <div className="mt-4 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-slate-400">
+                    {speaking
+                      ? "Playing dialogue…"
+                      : parsed.auto_play_on_select === false
+                        ? "Tap Listen to hear this dialogue"
+                        : "Tap to listen again"}
+                  </p>
+                  {cards.length > 1 ? (
+                    <button
+                      type="button"
+                      className="rounded-full bg-sky-700 px-3 py-1.5 text-xs font-bold text-white"
+                      onClick={() =>
+                        activeHotspot && advanceCardOrComplete(activeHotspot)
+                      }
+                    >
+                      Continue
+                    </button>
+                  ) : null}
+                </div>
               </div>
-            ) : (
+            ) : null}
+
+            {!activeHotspot && !orderHint ? (
               <div className="hotspot-speech-bubble relative mt-1 flex min-h-52 flex-1 items-center rounded-[1.75rem] border-2 border-slate-200 bg-white p-7 shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-600">
@@ -385,17 +713,14 @@ export function ExploreHotspotsView({
                   <p className="mt-3 text-[clamp(1.25rem,2.3cqi,1.7rem)] font-bold leading-snug text-[#13264a]">
                     {emptyState}
                   </p>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-500">
-                    Each child has something different to share.
-                  </p>
                 </div>
               </div>
-            )}
+            ) : null}
 
-            {allRequiredVisited && parsed.completion_message ? (
+            {activityComplete ? (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 shadow-sm">
                 <span aria-hidden>✓ </span>
-                {parsed.completion_message}
+                {parsed.completion_message ?? "Great exploring — you found everything!"}
               </div>
             ) : null}
           </aside>
@@ -408,7 +733,7 @@ export function ExploreHotspotsView({
         onBack={onBack}
         passed={passed}
         onNext={onNext}
-        nextDisabled={!allRequiredVisited}
+        nextDisabled={!activityComplete}
       />
     </div>
   );

@@ -26,6 +26,41 @@ export type WkeHotspotVisualShape = {
   score?: number;
 };
 
+/** Object interaction kinds enabled in the next upgrade. */
+export type WkeObjectInteractionKind = "dialogue" | "info" | "audio" | "question";
+
+export type WkeObjectInitialState = "locked" | "available";
+
+export type WkeResponseCard =
+  | {
+      id: string;
+      kind: "info";
+      text: string;
+      imageUrl?: string;
+    }
+  | {
+      id: string;
+      kind: "audio";
+      audioUrl: string;
+      label?: string;
+    }
+  | {
+      id: string;
+      kind: "dialogue";
+      /** Prefer existing dialogue for this hotspot when omitted. */
+      dialogueId?: string;
+    }
+  | {
+      id: string;
+      kind: "question";
+      prompt: string;
+      questionType: "mc" | "true_false";
+      choices: Array<{ id: string; label: string }>;
+      correctChoiceId: string;
+      /** When true, discover/complete only after correct answer. */
+      gateDiscover?: boolean;
+    };
+
 export type WkeHotspotElement = {
   id: string;
   kind: "hotspot";
@@ -43,6 +78,15 @@ export type WkeHotspotElement = {
     backgroundDim?: number;
   };
   visualShape?: WkeHotspotVisualShape;
+  /** Extensible interaction kind (defaults to dialogue). */
+  interactionKind?: WkeObjectInteractionKind;
+  /** Strict-order index within its phase (lower first). */
+  orderIndex?: number;
+  initialState?: WkeObjectInitialState;
+  wrongOrderHint?: string;
+  /** Ordered response stack; when empty, fall back to dialogue. */
+  responseCards?: WkeResponseCard[];
+  enableHintPulse?: boolean;
 };
 
 export type WkeMediaElement = {
@@ -85,12 +129,28 @@ export type WkeDialogue = {
   turns: WkeDialogueTurn[];
 };
 
+export type WkePhase = {
+  id: string;
+  title?: string;
+  imageAssetId: string;
+  hotspotIds: string[];
+};
+
 export type WkeExploreHotspotsInteraction = {
   type: "explore-hotspots";
   completion: { type: "visit-all-required-hotspots" };
   visitedWhen?: "dialogue-started" | "dialogue-finished" | "dialogue-completed";
   autoPlayOnSelect?: boolean;
   dialogues: WkeDialogue[];
+  /** Multi-scene storytelling; omit for single-image activities. */
+  phases?: WkePhase[];
+  objective?: {
+    label?: string;
+  };
+  /** When true, objects must be completed in orderIndex order within a phase. */
+  strictOrder?: boolean;
+  /** Activity-level hint pulse available to students. */
+  hintPulseEnabled?: boolean;
 };
 
 export type WkeActivityV2 = {

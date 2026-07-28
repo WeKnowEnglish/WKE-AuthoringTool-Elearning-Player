@@ -2372,6 +2372,42 @@ const exploreHotspotPointSchema = z.object({
   y: z.number(),
 });
 
+const exploreHotspotResponseCardSchema = z.discriminatedUnion("kind", [
+  z.object({
+    id: z.string().min(1),
+    kind: z.literal("info"),
+    text: z.string().min(1),
+    image_url: z.string().min(1).optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    kind: z.literal("audio"),
+    audio_url: z.string().min(1),
+    label: z.string().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    kind: z.literal("dialogue"),
+    dialogue_id: z.string().min(1).optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    kind: z.literal("question"),
+    prompt: z.string().min(1),
+    question_type: z.enum(["mc", "true_false"]),
+    choices: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+        }),
+      )
+      .min(2),
+    correct_choice_id: z.string().min(1),
+    gate_discover: z.boolean().optional(),
+  }),
+]);
+
 const exploreHotspotItemSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
@@ -2400,6 +2436,12 @@ const exploreHotspotItemSchema = z.object({
       background_dim: z.number().optional(),
     })
     .optional(),
+  interaction_kind: z.enum(["dialogue", "info", "audio", "question"]).optional(),
+  order_index: z.number().int().optional(),
+  initial_state: z.enum(["locked", "available"]).optional(),
+  wrong_order_hint: z.string().optional(),
+  response_cards: z.array(exploreHotspotResponseCardSchema).optional(),
+  enable_hint_pulse: z.boolean().optional(),
 });
 
 const exploreHotspotDialogueSchema = z.object({
@@ -2449,7 +2491,27 @@ export const exploreHotspotsPayloadSchema = z
         show_progress: z.boolean().optional().default(true),
       })
       .optional(),
-    dialogues: z.array(exploreHotspotDialogueSchema).min(1),
+    dialogues: z.array(exploreHotspotDialogueSchema),
+    phases: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          title: z.string().optional(),
+          image_url: z.string().min(1),
+          image_alt: z.string().optional(),
+          image_width: z.number().positive().optional(),
+          image_height: z.number().positive().optional(),
+          hotspot_ids: z.array(z.string().min(1)),
+        }),
+      )
+      .optional(),
+    objective: z
+      .object({
+        label: z.string().optional(),
+      })
+      .optional(),
+    strict_order: z.boolean().optional(),
+    hint_pulse_enabled: z.boolean().optional(),
     completion: z
       .object({
         type: z.literal("visit_all_required_hotspots"),
@@ -2471,6 +2533,16 @@ export const exploreHotspotsPayloadSchema = z
           code: z.ZodIssueCode.custom,
           message: `Dialogue ${dialogue.id} references unknown hotspot ${dialogue.hotspot_id}`,
         });
+      }
+    }
+    for (const phase of data.phases ?? []) {
+      for (const hotspotId of phase.hotspot_ids) {
+        if (!hotspotIds.has(hotspotId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Phase ${phase.id} references unknown hotspot ${hotspotId}`,
+          });
+        }
       }
     }
   });

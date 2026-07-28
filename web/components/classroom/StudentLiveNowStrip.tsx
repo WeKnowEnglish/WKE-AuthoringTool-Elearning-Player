@@ -24,7 +24,7 @@ export function StudentLiveNowStrip({ sessions, tone = "primary", learningBand }
           <Link
             href={resolveStudentClassroomPath(session.classId, learningBand)}
             className={`text-sm font-semibold underline underline-offset-2 ${
-              isSecondary ? "text-neutral-700" : "text-[var(--pl-muted,#64748b)]"
+              isSecondary ? "text-sec-muted" : "text-[var(--pl-muted,#64748b)]"
             }`}
           >
             Open {session.classTitle}

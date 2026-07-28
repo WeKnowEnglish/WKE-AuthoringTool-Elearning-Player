@@ -5,6 +5,7 @@ import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { getStudentClassMembership } from "@/lib/data/student-classes";
 import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
 import { listPublishedClassMaterialsForStudentClass } from "@/lib/data/class-lessons";
+import { getClassScheduleForStudentClass } from "@/lib/data/class-meeting-slots";
 import { getActiveLiveSessionForStudentClass } from "@/lib/data/student-live";
 import {
   PRIMARY_CHROME_CLASS,
@@ -47,6 +48,7 @@ export default async function PrimaryClassroomPage({ params }: Props) {
 
   const posts = await listClassPostsForStudentClass(classId);
   const materials = await listPublishedClassMaterialsForStudentClass(classId);
+  const schedule = await getClassScheduleForStudentClass(classId);
   const liveSession = await getActiveLiveSessionForStudentClass(classId);
 
   return (
@@ -58,6 +60,7 @@ export default async function PrimaryClassroomPage({ params }: Props) {
         membership={membership}
         posts={posts}
         materials={materials}
+        schedule={schedule}
         liveSession={liveSession}
         homeHref="/primary"
         homeLabel="Back to Primary home"

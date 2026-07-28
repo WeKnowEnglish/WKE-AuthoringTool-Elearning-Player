@@ -9,6 +9,7 @@ import { TeachTab } from "@/components/teacher/class-hub/TeachTab";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
 import type { ClassPost } from "@/lib/class-posts/types";
+import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
 import type { ClassLesson, LiveGameQuestionSetOption } from "@/lib/class-lessons/types";
 import type { LiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
@@ -52,6 +53,7 @@ export type TeacherClassHubClientProps = {
   homework: ClassHomework[];
   homeworkCompletions: HomeworkCompletionSummary[];
   classPosts: ClassPost[];
+  meetingSlots: ClassMeetingSlot[];
   packQuizzes: Array<{
     id: string;
     title: string;
@@ -86,6 +88,7 @@ export function TeacherClassHubClient({
   homework,
   homeworkCompletions,
   classPosts,
+  meetingSlots,
   packQuizzes,
   packFlashcardSets,
 }: TeacherClassHubClientProps) {
@@ -199,6 +202,7 @@ export function TeacherClassHubClient({
           homework={homework}
           homeworkCompletions={homeworkCompletions}
           classPosts={classPosts}
+          meetingSlots={meetingSlots}
           packQuizzes={packQuizzes}
           packFlashcardSets={packFlashcardSets}
         />

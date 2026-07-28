@@ -3,9 +3,11 @@ import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
 import { SentenceStripClassPanel } from "@/components/teacher/SentenceStripClassPanel";
 import { ClassHomeworkPanel } from "@/components/teacher/class-hub/ClassHomeworkPanel";
 import { ClassPostsPanel } from "@/components/teacher/class-hub/ClassPostsPanel";
+import { ClassMeetingSchedulePanel } from "@/components/teacher/class-hub/ClassMeetingSchedulePanel";
 import { ClassWordPacksPanel } from "@/components/teacher/word-packs/ClassWordPacksPanel";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
+import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
@@ -37,6 +39,7 @@ type Props = {
   wordPacks: TeacherWordPackSummary[];
   homework: ClassHomework[];
   classPosts: ClassPost[];
+  meetingSlots: ClassMeetingSlot[];
   packQuizzes: QuizOption[];
   packFlashcardSets: FlashcardSetOption[];
   homeworkCompletions: HomeworkCompletionSummary[];
@@ -54,6 +57,7 @@ export function StudentsHomeworkTab({
   wordPacks,
   homework,
   classPosts,
+  meetingSlots,
   packQuizzes,
   packFlashcardSets,
   homeworkCompletions,
@@ -79,6 +83,12 @@ export function StudentsHomeworkTab({
       <ClassJoinCodePanel classId={classId} joinCode={joinCode} archived={archived} />
 
       <ClassPostsPanel classId={classId} archived={archived} initialPosts={classPosts} />
+
+      <ClassMeetingSchedulePanel
+        classId={classId}
+        archived={archived}
+        initialSlots={meetingSlots}
+      />
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

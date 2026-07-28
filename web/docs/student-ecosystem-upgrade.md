@@ -1,6 +1,6 @@
 # Student ecosystem upgrade brief
 
-Last updated: 2026-07-27  
+Last updated: 2026-07-28  
 Companion to the Cursor plan `student_portal_upgrade_ec6917f2` and [`lesson-player-master-document.md`](./lesson-player-master-document.md).
 
 ## Why this exists
@@ -31,7 +31,7 @@ Parents will later get a read view of the same private Classroom data. Do not in
 ## Portal roles
 
 - **Primary** — playful home base (Learn / Class / Play / Progress). Loud play chrome stays on Pet/Garden, not every tab.
-- **Secondary** — focused study desk (daily path first). Same class spine; calmer chrome; no Pet/Garden parity.
+- **Secondary** — study portal: **Home** · **Class** (private classroom) · **Learn** (vocabulary path) · **Progress**. Calmer `--sec-*` chrome; no Pet/Garden parity.
 
 ## Implementation spine (shared)
 
@@ -54,3 +54,7 @@ Do not edit SEO helpers/landing, `app-diagnostics` internals, `/wke` Teacher Spa
 - F3 Live-now: read active VC session per enrolled class; `StudentLiveNowStrip` on Primary/Secondary home; `ClassroomLiveNowJoin` on Classroom + home (reuses `POST /api/virtual-classroom/join`).
 - F7 materials: `published_at` on `class_lessons`, teacher **Share with class**, student **Class materials** list on Classroom pages.
 - Secondary homework parity: **Today's Learning** on `/secondary` + `/secondary/homework/[id]` play route.
+- F4 schedule: `class_meeting_slots` weekly times; teacher edit on Students & Homework; student **Class schedule** + **Next lesson** on Classroom and Secondary home card.
+- F8a Secondary desk chrome: `--sec-*` tokens (`secondary-chrome.ts`), `secondaryUi` off `kid-*`, `SecondaryButton` replaces `KidButton` on Secondary intros/learn, calmer `StudentShell` for Secondary, shared Classroom / Today's Learning secondary tone uses desk tokens.
+- Secondary IA S1: `/secondary` Home (homework/class/Continue→Match); `/secondary/learn` vocab path + word tray; `/secondary/progress` placeholder; header + mobile bottom nav Home/Learn/Progress.
+- Secondary Class tab: `/secondary/class` opens active (or first) classroom; join prompt when not enrolled; nav Home · Class · Learn · Progress.

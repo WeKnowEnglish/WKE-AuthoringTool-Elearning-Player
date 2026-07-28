@@ -3,14 +3,17 @@ import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import type { StudentClassMaterial } from "@/lib/class-lessons/types";
+import type { StudentClassSchedule } from "@/lib/class-schedule/types";
 import { ClassPostFeed } from "@/components/classroom/ClassPostFeed";
 import { ClassMaterialsList } from "@/components/classroom/ClassMaterialsList";
+import { ClassMeetingSchedule } from "@/components/classroom/ClassMeetingSchedule";
 import { ClassroomLiveNowJoin } from "@/components/classroom/ClassroomLiveNowJoin";
 
 type Props = {
   membership: StudentClassMembership;
   posts: ClassPost[];
   materials?: StudentClassMaterial[];
+  schedule?: StudentClassSchedule;
   liveSession?: StudentClassLiveSession | null;
   /** Portal home for the back link. */
   homeHref: string;
@@ -26,6 +29,7 @@ export function StudentClassroomView({
   membership,
   posts,
   materials = [],
+  schedule = { slots: [], nextMeeting: null },
   liveSession = null,
   homeHref,
   homeLabel = "Back to home",
@@ -33,12 +37,12 @@ export function StudentClassroomView({
 }: Props) {
   const isSecondary = tone === "secondary";
   const shell = isSecondary
-    ? "rounded-xl border-2 border-neutral-800 bg-white"
+    ? "rounded-xl border border-sec-border bg-sec-card"
     : "rounded-[1.75rem] border border-[var(--pl-border,#e5e0f0)] bg-white shadow-sm";
   const titleClass = isSecondary
-    ? "text-2xl font-extrabold tracking-tight text-neutral-900"
+    ? "text-2xl font-extrabold tracking-tight text-sec-ink"
     : "text-2xl font-extrabold tracking-tight text-[var(--pl-ink,#1e1b4b)]";
-  const muted = isSecondary ? "text-neutral-600" : "text-[var(--pl-muted,#64748b)]";
+  const muted = isSecondary ? "text-sec-muted" : "text-[var(--pl-muted,#64748b)]";
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
@@ -63,7 +67,10 @@ export function StudentClassroomView({
         <ClassroomLiveNowJoin session={liveSession} tone={tone} />
       ) : (
         <section className={`${shell} p-5 sm:p-6`} aria-labelledby="classroom-live-heading">
-          <h2 id="classroom-live-heading" className="text-base font-extrabold text-neutral-900">
+          <h2
+            id="classroom-live-heading"
+            className={`text-base font-extrabold ${isSecondary ? "text-sec-ink" : "text-neutral-900"}`}
+          >
             Live now
           </h2>
           <p className={`mt-2 text-sm ${muted}`}>
@@ -72,6 +79,8 @@ export function StudentClassroomView({
           </p>
         </section>
       )}
+
+      <ClassMeetingSchedule schedule={schedule} tone={tone} />
 
       <ClassPostFeed posts={posts} tone={tone} />
 

@@ -19,13 +19,13 @@ function formatPublishedDate(iso: string): string {
 export function ClassMaterialsList({ materials, tone = "primary" }: Props) {
   const isSecondary = tone === "secondary";
   const shell = isSecondary
-    ? "rounded-xl border-2 border-neutral-800 bg-white"
+    ? "rounded-xl border border-sec-border bg-sec-card"
     : "rounded-[1.75rem] border border-[var(--pl-border,#e5e0f0)] bg-white shadow-sm";
-  const muted = isSecondary ? "text-neutral-600" : "text-[var(--pl-muted,#64748b)]";
+  const muted = isSecondary ? "text-sec-muted" : "text-[var(--pl-muted,#64748b)]";
 
   return (
     <section className={`${shell} p-5 sm:p-6`} aria-labelledby="classroom-materials-heading">
-      <h2 id="classroom-materials-heading" className="text-base font-extrabold text-neutral-900">
+      <h2 id="classroom-materials-heading" className={`text-base font-extrabold ${isSecondary ? "text-sec-ink" : "text-neutral-900"}`}>
         Class materials
       </h2>
 
@@ -39,7 +39,7 @@ export function ClassMaterialsList({ materials, tone = "primary" }: Props) {
             <li
               key={material.id}
               className={`rounded-xl border p-4 ${
-                isSecondary ? "border-neutral-200" : "border-[var(--pl-border,#e5e0f0)]"
+                isSecondary ? "border-sec-border" : "border-[var(--pl-border,#e5e0f0)]"
               }`}
             >
               <p className={`text-xs font-semibold ${muted}`}>

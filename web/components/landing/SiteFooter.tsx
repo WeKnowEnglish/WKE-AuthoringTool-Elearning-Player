@@ -14,6 +14,7 @@ const GUIDE_LINKS = [
   { href: "/esl-activities-for-kids", label: "ESL activities for kids" },
   { href: "/teach-english-online", label: "Teach English online" },
   { href: "/english-learning-for-kids-at-home", label: "English learning at home" },
+  { href: "/resources", label: "Resources" },
 ] as const;
 
 const ACCESS_LINKS = [

@@ -351,7 +351,7 @@ export function MatchActivity() {
   }
 
   return (
-    <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
+    <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
       <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
       <h2 className={secondaryUi.pageTitle}>Match The Word To The Definition</h2>
       <p className={secondaryUi.bodyMuted}>
@@ -462,8 +462,8 @@ export function MatchActivity() {
           <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
             Try again
           </button>
-          <Link className={secondaryUi.btnSecondary} href="/secondary">
-            Back to vocabulary home
+          <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+            Back to Learn
           </Link>
         </div>
       ) : null}

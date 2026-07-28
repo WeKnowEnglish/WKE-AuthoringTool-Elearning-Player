@@ -15,6 +15,7 @@ import {
 } from "@/lib/secondary/secondary-mastery-display";
 import { useStudentStorageIdReady } from "@/lib/auth/use-student-storage-id-ready";
 import { hasSeenDailyWordIntro } from "@/lib/secondary/secondary-daily-word-intro";
+import { isSecondaryLearnDeskPath } from "@/lib/secondary/secondary-nav";
 import { useSecondaryDebugEnabled } from "@/lib/secondary/use-secondary-debug-enabled";
 import { useSecondaryFocusWordSwapQueue } from "@/lib/secondary/use-secondary-focus-word-swap-queue";
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
@@ -40,9 +41,15 @@ type WordListProps = {
 export function SecondaryPracticeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/secondary/login";
-  const isHomePage = pathname === "/secondary";
-  const isClassroomPage = pathname.startsWith("/secondary/class/");
+  const isLearnDesk = isSecondaryLearnDeskPath(pathname);
+  const isLearnHub = pathname === "/secondary/learn";
+  const isClassroomPage =
+    pathname === "/secondary/class" || pathname.startsWith("/secondary/class/");
   const isHomeworkPage = pathname.startsWith("/secondary/homework/");
+  const isHubWithoutTray =
+    pathname === "/secondary" ||
+    pathname === "/secondary/" ||
+    pathname.startsWith("/secondary/progress");
   const { todaySession, completion, hydrated, sessionRevision } = useSecondaryTodaySession();
   const debugEnabled = useSecondaryDebugEnabled();
   const isDesktopLearnColumn = useMinWidthMedia("(min-width: 1024px)");
@@ -64,7 +71,7 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
 
   const shouldShowIntro =
     storageReady &&
-    isHomePage &&
+    isLearnHub &&
     hydrated &&
     hasWordsToday &&
     Boolean(dateKey) &&
@@ -121,7 +128,7 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
     sessionRevision,
     studentId,
     introOpen,
-    enabled: !isLoginPage,
+    enabled: isLearnDesk,
   });
 
   const drawerOpen = selectedWordItemId !== null;
@@ -158,7 +165,11 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
     inert: shellInert,
   };
 
-  if (isLoginPage || isClassroomPage || isHomeworkPage) {
+  if (isLoginPage || isClassroomPage || isHomeworkPage || isHubWithoutTray) {
+    return <>{children}</>;
+  }
+
+  if (!isLearnDesk) {
     return <>{children}</>;
   }
 

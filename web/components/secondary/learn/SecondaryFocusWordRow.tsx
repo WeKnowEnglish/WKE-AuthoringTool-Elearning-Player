@@ -86,11 +86,11 @@ export function SecondaryFocusWordRow({
 
   return (
     <section
-      className="mb-4 overflow-hidden rounded-xl border-2 border-kid-ink bg-white lg:hidden"
+      className="mb-4 overflow-hidden rounded-xl border-2 border-sec-ink bg-white lg:hidden"
       aria-label="Today's vocabulary chips"
       {...(inert ? { inert: true } : {})}
     >
-      <div className="rounded-t-xl border-b-2 border-kid-ink/15 bg-kid-panel px-3 py-2">
+      <div className="rounded-t-xl border-b-2 border-sec-ink/15 bg-sec-panel px-3 py-2">
         <p className={secondaryUi.eyebrow}>Today&apos;s words</p>
       </div>
 
@@ -99,7 +99,7 @@ export function SecondaryFocusWordRow({
           {Array.from({ length: 5 }).map((_, index) => (
             <div
               key={index}
-              className="h-20 min-w-[8.5rem] shrink-0 animate-pulse rounded-lg border border-kid-ink/15 bg-kid-panel/60"
+              className="h-20 min-w-[8.5rem] shrink-0 animate-pulse rounded-lg border border-sec-ink/15 bg-sec-panel/60"
             />
           ))}
         </div>

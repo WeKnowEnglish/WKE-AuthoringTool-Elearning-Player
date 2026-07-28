@@ -77,7 +77,9 @@ export default function TeachEnglishOnlinePage() {
           <strong>create → teach live → assign → practise → review</strong>. Below you
           can also download ready-made{" "}
           <a href="#teacher-lesson-plans">ESL mini-series lesson plans</a> for online
-          classes. Parents supporting home learning should also see{" "}
+          classes. For the wider tool landscape, see{" "}
+          <a href="/resources/what-is-edtech">What is EdTech?</a>. Parents supporting home
+          learning should also see{" "}
           <a href="/english-learning-for-kids-at-home">
             English learning for kids at home
           </a>

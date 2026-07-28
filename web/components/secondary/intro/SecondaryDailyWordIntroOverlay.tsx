@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { KidButton } from "@/components/kid-ui/KidButton";
+import { SecondaryButton } from "@/components/secondary/SecondaryButton";
 import { SecondaryDailyWordIntroWordList } from "@/components/secondary/intro/SecondaryDailyWordIntroWordList";
 import {
   SecondaryIntroModalShell,
@@ -89,13 +89,14 @@ export function SecondaryDailyWordIntroOverlay({
       completion,
     });
     dismissIntro();
-    if (href !== "/secondary") {
+    if (href !== "/secondary/learn") {
       router.push(href);
     }
   }
 
   function handleBackHome() {
     dismissIntro();
+    router.push("/secondary");
   }
 
   return (
@@ -109,21 +110,21 @@ export function SecondaryDailyWordIntroOverlay({
       liveMessage={`Today's words ready — ${totalWords} words to practice.`}
       footer={
         <div className={secondaryIntroModalFooterClass}>
-          <KidButton
+          <SecondaryButton
             type="button"
             className={secondaryIntroModalButtonClass}
             onClick={handleStartStudying}
           >
             Start Studying
-          </KidButton>
-          <KidButton
+          </SecondaryButton>
+          <SecondaryButton
             type="button"
             variant="secondary"
             className={secondaryIntroModalButtonClass}
             onClick={handleBackHome}
           >
             Back Home
-          </KidButton>
+          </SecondaryButton>
         </div>
       }
     >

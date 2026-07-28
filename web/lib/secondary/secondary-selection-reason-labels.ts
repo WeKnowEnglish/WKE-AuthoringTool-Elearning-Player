@@ -60,6 +60,6 @@ export function secondaryStudentReasonChipClass(reason: string): string {
     case "stretch":
       return "text-violet-800";
     default:
-      return "text-kid-ink/80";
+      return "text-sec-ink/80";
   }
 }

@@ -7,6 +7,10 @@ import { StudentClassMenu } from "@/components/student-hub/StudentClassMenu";
 import { StudentClassSelectorOverlay } from "@/components/student-hub/StudentClassSelectorOverlay";
 import { MasterySyncDebugPanel } from "@/components/mastery/MasterySyncDebugPanel";
 import { StudentShell } from "@/components/kid-ui/StudentShell";
+import {
+  SecondaryHeaderNav,
+  SecondaryMobileNav,
+} from "@/components/secondary/SecondaryPortalNav";
 import { useMasterySyncDebugEnabled } from "@/lib/mastery/use-mastery-sync-debug-enabled";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 
@@ -21,8 +25,20 @@ export function StudentLayoutClient({
   const showMasterySyncDebug = useMasterySyncDebugEnabled();
   const [classSelectorOpen, setClassSelectorOpen] = useState(false);
   const [autoPromptDismissed, setAutoPromptDismissed] = useState(false);
+  const onMarketing =
+    pathname === "/about" ||
+    pathname === "/contact" ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
+    pathname === "/child-safety" ||
+    pathname === "/esl-activities-for-kids" ||
+    pathname === "/teach-english-online" ||
+    pathname === "/english-learning-for-kids-at-home" ||
+    pathname === "/resources" ||
+    pathname.startsWith("/resources/");
   const bareChrome =
     pathname === "/" ||
+    onMarketing ||
     pathname === "/primary" ||
     pathname.startsWith("/primary/homework/") ||
     pathname.startsWith("/primary/class/") ||
@@ -63,11 +79,17 @@ export function StudentLayoutClient({
       fullWidth={onSecondary}
       hidePrimaryNav={onSecondary}
       homeHref={onSecondary ? "/secondary" : "/primary"}
+      headerNav={onSecondary ? <SecondaryHeaderNav /> : null}
+      mobileNav={onSecondary ? <SecondaryMobileNav /> : null}
       classMenu={
         <StudentClassMenu
           memberships={classMemberships}
           onOpenClassSelector={() => setClassSelectorOpen(true)}
-          className="rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
+          className={
+            onSecondary
+              ? "rounded-md border border-[var(--sec-border,#cbd5e1)] bg-white px-3 py-2 text-sm font-semibold text-[var(--sec-ink,#1e293b)] transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-[var(--sec-panel-muted,#eef2f7)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+              : "rounded-md border-2 border-neutral-900 px-3 py-2 text-sm font-semibold transition-[transform,background-color] duration-100 ease-out [touch-action:manipulation] hover:bg-neutral-100 active:scale-[0.96] active:bg-neutral-200 motion-reduce:transition-none motion-reduce:active:scale-100"
+          }
         />
       }
     >

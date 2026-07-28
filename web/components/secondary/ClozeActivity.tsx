@@ -281,7 +281,7 @@ function ClozePracticeRun({
             : `Practicing ${practicedWordIds.length} word${practicedWordIds.length === 1 ? "" : "s"} from today's list. Fill each blank from the word bank.`}
       </p>
 
-      <article className="rounded-lg border border-kid-ink/20 bg-kid-panel p-4">
+      <article className="rounded-lg border border-sec-ink/20 bg-sec-panel p-4">
         <h3 className={secondaryUi.cardTitle}>{template.title}</h3>
         {template.topicTitle ? (
           <p className={`mt-1 ${secondaryUi.captionMuted}`}>
@@ -381,8 +381,8 @@ function ClozePracticeRun({
         <button className={secondaryUi.btnSecondary} onClick={onRequestRetry} type="button">
           Try again
         </button>
-        <Link className={secondaryUi.btnSecondary} href="/secondary">
-          Back to vocabulary home
+        <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+          Back to Learn
         </Link>
       </div>
 
@@ -480,7 +480,7 @@ export function ClozeActivity() {
 
   if (!todaySession) {
     return (
-      <section className="space-y-3 rounded-xl border-2 border-kid-ink bg-white p-5">
+      <section className="space-y-3 rounded-xl border-2 border-sec-ink bg-white p-5">
         <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
@@ -488,22 +488,22 @@ export function ClozeActivity() {
 
   if (!template) {
     return (
-      <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
+      <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
         <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
         <h2 className={secondaryUi.pageTitle}>Cloze Paragraph</h2>
         <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 p-3 ${secondaryUi.body} text-amber-900`}>
           Cloze needs at least two words from today&apos;s list with example sentences. Try Match or
           Spelling, or keep practicing to rotate new words onto your list.
         </div>
-        <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary">
-          Back to vocabulary home
+        <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary/learn">
+          Back to Learn
         </Link>
       </section>
     );
   }
 
   return (
-    <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
+    <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
       <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
       <h2 className={secondaryUi.pageTitle}>Cloze Paragraph</h2>
       <ClozePracticeRun

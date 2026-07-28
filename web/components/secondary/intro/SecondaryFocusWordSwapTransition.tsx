@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { KidButton } from "@/components/kid-ui/KidButton";
+import { SecondaryButton } from "@/components/secondary/SecondaryButton";
 import {
   SecondaryIntroModalShell,
   secondaryIntroModalButtonClass,
@@ -70,22 +70,22 @@ export function SecondaryFocusWordSwapTransition({ open, swap, onContinue }: Pro
       liveMessage={`A new focus word joined your list: ${inWord}.`}
       footer={
         <div className="flex justify-center">
-          <KidButton type="button" className={clsx(secondaryIntroModalButtonClass, "sm:flex-none")} onClick={onContinue}>
+          <SecondaryButton type="button" className={clsx(secondaryIntroModalButtonClass, "sm:flex-none")} onClick={onContinue}>
             Continue
-          </KidButton>
+          </SecondaryButton>
         </div>
       }
     >
       <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
         <span
           className={clsx(
-            `inline-flex max-w-full rounded-lg border-2 border-kid-ink/25 bg-kid-panel/50 px-4 py-3 text-center ${secondaryUi.word} transition-all duration-300 motion-reduce:transition-none`,
+            `inline-flex max-w-full rounded-lg border-2 border-sec-ink/25 bg-sec-panel/50 px-4 py-3 text-center ${secondaryUi.word} transition-all duration-300 motion-reduce:transition-none`,
             animateIn ? "opacity-40 motion-reduce:opacity-70" : "opacity-100",
           )}
         >
           {outWord}
         </span>
-        <span className={`${secondaryUi.body} shrink-0 text-kid-ink/50`} aria-hidden>
+        <span className={`${secondaryUi.body} shrink-0 text-sec-ink/50`} aria-hidden>
           ↓
         </span>
         <span

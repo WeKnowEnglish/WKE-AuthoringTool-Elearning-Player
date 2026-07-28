@@ -87,13 +87,13 @@ function SecondaryWordLearnDrawerBody({
         Word helper: {item.word}
       </p>
 
-      <div className="flex min-h-10 shrink-0 items-center justify-between gap-2 border-b-2 border-kid-ink/15 bg-kid-panel px-3 py-2.5">
-        <h2 className={`${secondaryUi.eyebrow} text-kid-ink`} id="secondary-word-learn-title">
+      <div className="flex min-h-10 shrink-0 items-center justify-between gap-2 border-b-2 border-sec-ink/15 bg-sec-panel px-3 py-2.5">
+        <h2 className={`${secondaryUi.eyebrow} text-sec-ink`} id="secondary-word-learn-title">
           Word Helper
         </h2>
         <button
           type="button"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-kid-ink bg-white text-base font-bold leading-none text-kid-ink transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-kid-panel/80 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-sec-ink bg-white text-base font-bold leading-none text-sec-ink transition-[transform,background-color] duration-100 [touch-action:manipulation] hover:bg-sec-panel/80 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100"
           onClick={onClose}
           aria-label="Close word helper"
         >
@@ -284,10 +284,10 @@ export function SecondaryWordLearnDrawer({
       : `fixed inset-0 ${layerClass.backdrop}`;
 
   const panelClass = usesAnchoredMain
-    ? `fixed ${layerClass.panel} flex min-h-0 flex-col border-2 border-kid-ink border-l-4 bg-white shadow-2xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none`
+    ? `fixed ${layerClass.panel} flex min-h-0 flex-col border-2 border-sec-ink border-l-4 bg-white shadow-2xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none`
     : isMainCoverage
-      ? `relative absolute inset-y-0 right-0 left-0 ${layerClass.panel} flex h-full min-h-0 flex-col border-2 border-kid-ink border-l-4 bg-white shadow-2xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none`
-      : `fixed ${layerClass.panel} flex max-h-[min(90dvh,720px)] w-full flex-col border-2 border-kid-ink bg-white shadow-2xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none bottom-0 left-0 right-0 rounded-t-2xl md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-dvh md:max-h-none md:max-w-md md:rounded-none md:border-l-4 md:border-t-0`;
+      ? `relative absolute inset-y-0 right-0 left-0 ${layerClass.panel} flex h-full min-h-0 flex-col border-2 border-sec-ink border-l-4 bg-white shadow-2xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none`
+      : `fixed ${layerClass.panel} flex max-h-[min(90dvh,720px)] w-full flex-col border-2 border-sec-ink bg-white shadow-2xl transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none bottom-0 left-0 right-0 rounded-t-2xl md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-dvh md:max-h-none md:max-w-md md:rounded-none md:border-l-4 md:border-t-0`;
 
   const panelVisibleClass = isMainCoverage
     ? "translate-x-0 opacity-100"

@@ -100,6 +100,6 @@ export function resolveSecondaryStudyActivityKey(
 
 export function resolveSecondaryStudyActivityHref(ctx: SecondaryStudyActivityContext): string {
   const key = resolveSecondaryStudyActivityKey(ctx);
-  if (!key) return "/secondary";
+  if (!key) return "/secondary/learn";
   return SECONDARY_ACTIVITY_HREF[key];
 }

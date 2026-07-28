@@ -16,16 +16,17 @@ function toneClasses(tone: "primary" | "secondary") {
   if (tone === "secondary") {
     return {
       section:
-        "overflow-hidden rounded-xl border-2 border-neutral-800 bg-white p-4 sm:p-5",
-      label: "text-xs font-extrabold uppercase tracking-wide text-neutral-700",
-      heading: "text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl",
-      muted: "text-sm font-semibold text-neutral-600 sm:text-base",
-      iconWrap: "flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border-2 border-neutral-800 bg-neutral-50 text-neutral-800",
-      card: "flex flex-wrap items-center justify-between gap-2 rounded-lg border-2 border-neutral-200 bg-white px-3 py-2.5 transition hover:border-neutral-800",
-      cardTitle: "truncate font-extrabold text-neutral-900",
-      cardMeta: "mt-0.5 text-xs font-semibold text-neutral-600",
-      cardLink: "shrink-0 text-sm font-extrabold text-neutral-900",
-      cta: "inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-md border-2 border-neutral-900 bg-neutral-900 px-5 text-sm font-extrabold text-white transition hover:bg-neutral-800 active:scale-[0.98]",
+        "overflow-hidden rounded-xl border border-sec-border bg-sec-card p-4 sm:p-5",
+      label: "text-xs font-extrabold uppercase tracking-wide text-sec-muted",
+      heading: "text-2xl font-extrabold tracking-tight text-sec-ink sm:text-3xl",
+      muted: "text-sm font-semibold text-sec-muted sm:text-base",
+      iconWrap:
+        "flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-sec-border bg-sec-panel-muted text-sec-ink",
+      card: "flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sec-border bg-white px-3 py-2.5 transition hover:border-sec-accent",
+      cardTitle: "truncate font-extrabold text-sec-ink",
+      cardMeta: "mt-0.5 text-xs font-semibold text-sec-muted",
+      cardLink: "shrink-0 text-sm font-extrabold text-sec-accent",
+      cta: "inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-lg border border-sec-accent bg-sec-accent px-5 text-sm font-extrabold text-white transition hover:bg-sec-accent-hover active:scale-[0.98]",
     };
   }
   return {

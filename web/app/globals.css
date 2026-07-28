@@ -23,6 +23,19 @@
   --kid-border-strong: var(--kid-ink);
   --kid-shadow: var(--kid-ink);
 
+  /* Secondary study-desk palette (calm paper; F8) */
+  --sec-bg: #f3f6fa;
+  --sec-card: #ffffff;
+  --sec-ink: #1e293b;
+  --sec-muted: #64748b;
+  --sec-border: #cbd5e1;
+  --sec-accent: #0f766e;
+  --sec-accent-hover: #0d9488;
+  --sec-accent-soft: #ccfbf1;
+  --sec-panel: #ffffff;
+  --sec-panel-muted: #eef2f7;
+  --sec-success: #059669;
+
   /* Landing page — scoped tokens (not used in app shells) */
   --landing-page-bg: #ffffff;
   --landing-primary-bg: #fff7ed;
@@ -55,6 +68,17 @@
   --color-kid-panel: var(--kid-panel);
   --color-kid-success: var(--kid-success);
   --color-kid-border-strong: var(--kid-border-strong);
+  --color-sec-bg: var(--sec-bg);
+  --color-sec-card: var(--sec-card);
+  --color-sec-ink: var(--sec-ink);
+  --color-sec-muted: var(--sec-muted);
+  --color-sec-border: var(--sec-border);
+  --color-sec-accent: var(--sec-accent);
+  --color-sec-accent-hover: var(--sec-accent-hover);
+  --color-sec-accent-soft: var(--sec-accent-soft);
+  --color-sec-panel: var(--sec-panel);
+  --color-sec-panel-muted: var(--sec-panel-muted);
+  --color-sec-success: var(--sec-success);
 }
 
 @layer utilities {
@@ -89,6 +113,18 @@
 
   .marketing-prose a {
     @apply font-extrabold text-kid-ink underline underline-offset-2;
+  }
+
+  .marketing-prose strong {
+    @apply font-extrabold text-kid-ink;
+  }
+
+  .marketing-prose li {
+    @apply leading-relaxed;
+  }
+
+  .marketing-prose blockquote {
+    @apply mt-4 border-l-4 border-kid-ink/20 pl-4 text-base font-semibold italic leading-relaxed text-kid-ink/75;
   }
 
   .landing-cta-primary {

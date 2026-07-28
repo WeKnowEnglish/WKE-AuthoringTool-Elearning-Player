@@ -401,7 +401,7 @@ export function SpellingActivity() {
 
   if (!todaySession) {
     return (
-      <section className="space-y-3 rounded-xl border-2 border-kid-ink bg-white p-5">
+      <section className="space-y-3 rounded-xl border-2 border-sec-ink bg-white p-5">
         <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
@@ -409,14 +409,14 @@ export function SpellingActivity() {
 
   if (requiredWordIds.length === 0) {
     return (
-      <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
+      <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
         <h2 className={secondaryUi.pageTitle}>Spelling Activity</h2>
         <p className={secondaryUi.bodyMuted}>
           No spelling prompts are available in today&apos;s set.
         </p>
         <div className="flex items-center gap-2">
-          <Link className={secondaryUi.btnSecondary} href="/secondary">
-            Back to vocabulary home
+          <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+            Back to Learn
           </Link>
         </div>
       </section>
@@ -441,7 +441,7 @@ export function SpellingActivity() {
       : null;
 
   return (
-    <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
+    <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
       <h2 className={secondaryUi.pageTitle}>Spelling Activity</h2>
       {isComplete ? (
         <p className={secondaryUi.bodyMuted}>
@@ -482,8 +482,8 @@ export function SpellingActivity() {
           </div>
         </>
       ) : currentItem ? (
-        <div className="space-y-3 rounded-lg border border-kid-ink/20 bg-kid-panel p-4">
-          <p className={`${secondaryUi.caption} font-extrabold text-kid-ink/70`}>
+        <div className="space-y-3 rounded-lg border border-sec-ink/20 bg-sec-panel p-4">
+          <p className={`${secondaryUi.caption} font-extrabold text-sec-ink/70`}>
             Word {Math.min(queuePosition, requiredWordIds.length)} of {requiredWordIds.length}
             {currentPending && currentPending.wrongAttempts > 0
               ? ` · Attempt ${currentPending.wrongAttempts + 1} of ${SECONDARY_MAX_WRONG_ATTEMPTS}`
@@ -492,14 +492,14 @@ export function SpellingActivity() {
           <div>
             <p className={secondaryUi.bodyLarge}>Read the sentence and write the word that means:</p>
             <p
-              className={`mt-2 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-kid-ink`}
+              className={`mt-2 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-sec-ink`}
             >
               &ldquo;{currentItem.studentMeaningEn}&rdquo;
             </p>
           </div>
           {currentItem.exampleSentence ? (
             <p
-              className={`mt-4 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-kid-ink`}
+              className={`mt-4 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-sec-ink`}
             >
               {currentItem.exampleSentence}
             </p>
@@ -527,7 +527,7 @@ export function SpellingActivity() {
                     ? "border-red-500 bg-red-50"
                     : feedback === "correct"
                       ? "border-green-500 bg-green-50 text-green-900"
-                      : "border-kid-ink"
+                      : "border-sec-ink"
                 }`}
                 disabled={feedback !== null && feedback !== "incorrect"}
                 onChange={(event) => setValue(event.target.value)}
@@ -570,8 +570,8 @@ export function SpellingActivity() {
         <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
           Try again
         </button>
-        <Link className={secondaryUi.btnSecondary} href="/secondary">
-          Back to vocabulary home
+        <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+          Back to Learn
         </Link>
       </div>
     </section>

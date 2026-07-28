@@ -54,7 +54,7 @@ export function SecondaryIntroModalShell({
       >
         <div
           className={clsx(
-            `flex max-h-[min(85dvh,640px)] w-full ${maxWidthClass} flex-col rounded-2xl border-2 border-kid-ink bg-white shadow-2xl transition-transform duration-200 motion-reduce:transition-none motion-reduce:transform-none`,
+            `flex max-h-[min(85dvh,640px)] w-full ${maxWidthClass} flex-col rounded-2xl border-2 border-sec-ink bg-white shadow-2xl transition-transform duration-200 motion-reduce:transition-none motion-reduce:transform-none`,
             visible ? "scale-100" : "scale-[0.98]",
           )}
         >
@@ -62,7 +62,7 @@ export function SecondaryIntroModalShell({
             {liveMessage}
           </p>
 
-          <header className="shrink-0 border-b-2 border-kid-ink/15 px-5 py-4">
+          <header className="shrink-0 border-b-2 border-sec-ink/15 px-5 py-4">
             <h2 className={secondaryUi.pageTitle} id={titleId}>
               {title}
             </h2>
@@ -73,7 +73,7 @@ export function SecondaryIntroModalShell({
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 
-          <footer className="shrink-0 border-t-2 border-kid-ink/15 px-5 py-4">{footer}</footer>
+          <footer className="shrink-0 border-t-2 border-sec-ink/15 px-5 py-4">{footer}</footer>
         </div>
       </div>
     </>

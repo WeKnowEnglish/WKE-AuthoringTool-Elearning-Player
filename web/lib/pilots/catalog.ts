@@ -16,6 +16,7 @@ export type PilotGroup =
   | "pet_minigames"
   | "classroom"
   | "grammar_product"
+  | "community"
   | "dead";
 
 export type PilotEntry = {
@@ -48,6 +49,7 @@ export type PilotSectionId =
   | "pet_minigames"
   | "classroom"
   | "grammar_product"
+  | "community"
   | "dead";
 
 export type PilotSectionDef = {
@@ -141,6 +143,14 @@ export const PILOT_SECTIONS: PilotSectionDef[] = [
     tone: "product",
   },
   {
+    id: "community",
+    title: "Public content & community",
+    purpose:
+      "Indexable thought-leadership and teacher resources (/resources). Not product pilots — listed so triage does not miss public content routes.",
+    groups: ["community"],
+    tone: "product",
+  },
+  {
     id: "dead",
     title: "Dead / redirects",
     purpose:
@@ -230,7 +240,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/explore-hotspots",
     title: "Explore hotspots",
     description:
-      "Tap targets on a scene for listening and vocabulary discovery. Author in Lesson Player Activity Builder.",
+      "Tap targets on a scene for listening and vocabulary discovery. Supports multi-scene phases, response cards, and object order. Author in Lesson Player Activity Builder.",
     group: "activities",
     status: "active",
     studioHref: "/teacher/activity-builder/hotspots",
@@ -314,7 +324,8 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     href: "/grammar/pilot/layouts",
     title: "Grammar layout lab",
-    description: "Dev-only grammar poster layout demos (404 in production).",
+    description:
+      "Dev-only layout-type gallery for card bodies (404 in production). Primary authoring is Grammar Poster Editor.",
     group: "authoring",
     status: "review",
   },
@@ -602,15 +613,42 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     href: "/grammar",
     title: "Grammar posters (student)",
-    description: "Public/student grammar poster catalog and slug pages.",
+    description:
+      "Public/student grammar poster catalog and slug pages. Unified variation-driven student hub is deferred.",
     group: "grammar_product",
     status: "review",
   },
   {
     href: "/teacher/grammar",
-    title: "Grammar editor (teacher)",
-    description: "Teacher grammar module authoring index.",
+    title: "Grammar Poster Editor",
+    description:
+      "Single teacher editor for all grammar posters as template variations (canonical: There is / There are).",
     group: "grammar_product",
+    status: "review",
+  },
+
+  // ── Public content & community ─────────────────────────────────
+  {
+    href: "/resources",
+    title: "Resources hub",
+    description:
+      "Teacher thought-leadership hub (/resources). Indexable EdTech guides; news + email capture still deferred.",
+    group: "community",
+    status: "review",
+  },
+  {
+    href: "/resources/what-is-edtech",
+    title: "What is EdTech?",
+    description: "Definitional guide for English teachers — categories, ESL fit, evaluation checklist.",
+    group: "community",
+    status: "review",
+  },
+  {
+    href: "/resources/how-is-technology-changing-education",
+    title: "How is technology changing education?",
+    description:
+      "Thought leadership on real classroom shifts, equity, and AI — links to teach-online pillar.",
+    group: "community",
     status: "review",
   },
 

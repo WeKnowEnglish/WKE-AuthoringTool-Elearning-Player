@@ -25,7 +25,7 @@ export function SecondaryHomeIcon({ src, size = "md", className }: Props) {
       loading="lazy"
       decoding="async"
       className={clsx(
-        "shrink-0 rounded-lg border border-kid-ink/10 bg-kid-panel/50",
+        "shrink-0 rounded-lg border border-sec-ink/10 bg-sec-panel/50",
         isIcon ? "object-contain p-0.5" : "object-cover",
         sizeClass[size],
         className,

@@ -74,7 +74,7 @@ function studentSentenceStatusLabel(
     default:
       return {
         label: "Not submitted",
-        className: "border-kid-ink/25 bg-kid-panel/40 text-kid-ink/80",
+        className: "border-sec-ink/25 bg-sec-panel/40 text-sec-ink/80",
       };
   }
 }
@@ -458,7 +458,7 @@ export function SentenceActivity() {
 
   if (!todaySession || !wordSetReady) {
     return (
-      <section className="space-y-3 rounded-xl border-2 border-kid-ink bg-white p-5">
+      <section className="space-y-3 rounded-xl border-2 border-sec-ink bg-white p-5">
         <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
@@ -466,14 +466,14 @@ export function SentenceActivity() {
 
   if (requiredWordIds.length === 0) {
     return (
-      <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
+      <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
         <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
         <h2 className={secondaryUi.pageTitle}>Write a Sentence</h2>
         <p className={secondaryUi.bodyMuted}>
           No sentence prompts are available in the vocabulary list yet.
         </p>
-        <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary">
-          Back to vocabulary home
+        <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary/learn">
+          Back to Learn
         </Link>
       </section>
     );
@@ -485,7 +485,7 @@ export function SentenceActivity() {
   );
 
   return (
-    <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
+    <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
       <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
       <h2 className={secondaryUi.pageTitle}>Write a Sentence</h2>
       <p className={secondaryUi.bodyMuted}>
@@ -595,11 +595,11 @@ export function SentenceActivity() {
           ) : null}
         </>
       ) : currentItem && currentPrompt && !isReviewMode ? (
-        <div className="space-y-3 rounded-lg border border-kid-ink/20 bg-kid-panel p-4">
-          <p className={`${secondaryUi.caption} font-extrabold text-kid-ink/70`}>
+        <div className="space-y-3 rounded-lg border border-sec-ink/20 bg-sec-panel p-4">
+          <p className={`${secondaryUi.caption} font-extrabold text-sec-ink/70`}>
             Word {Math.min(queuePosition, requiredWordIds.length)} of {requiredWordIds.length}
           </p>
-          <p className={`${secondaryUi.bodyLarge} text-kid-ink`}>
+          <p className={`${secondaryUi.bodyLarge} text-sec-ink`}>
             {currentPrompt.instruction}
           </p>
           {currentPrompt.frameHint ? (
@@ -608,7 +608,7 @@ export function SentenceActivity() {
             </p>
           ) : null}
           {currentItem.exampleSentence ? (
-            <p className={`${secondaryUi.caption} font-bold text-kid-ink/70`}>
+            <p className={`${secondaryUi.caption} font-bold text-sec-ink/70`}>
               Example: {currentItem.exampleSentence}
             </p>
           ) : null}
@@ -648,8 +648,8 @@ export function SentenceActivity() {
         <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
           New words
         </button>
-        <Link className={secondaryUi.btnSecondary} href="/secondary">
-          Back to vocabulary home
+        <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+          Back to Learn
         </Link>
       </div>
     </section>

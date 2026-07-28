@@ -1,5 +1,6 @@
 ﻿import type { MetadataRoute } from "next";
 import { getPublishedGrammarSlugs } from "@/lib/grammar-builder/load-catalog";
+import { getResourceSitemapSources } from "@/lib/resources/load-articles";
 import { canonicalUrl } from "@/lib/seo/canonical";
 
 export type SitemapEntrySource = {
@@ -63,6 +64,7 @@ export function collectSitemapSources(
   return [
     ...getStaticPublicSitemapSources(),
     ...getGrammarSitemapSources(),
+    ...getResourceSitemapSources(),
     ...extras,
   ];
 }

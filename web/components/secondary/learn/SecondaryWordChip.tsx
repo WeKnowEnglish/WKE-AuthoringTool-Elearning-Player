@@ -58,7 +58,7 @@ function buildChipMetaParts(input: {
     parts.push({
       key: "focus",
       label: "Focus",
-      className: "text-kid-ink/55",
+      className: "text-sec-ink/55",
     });
   }
 
@@ -100,7 +100,7 @@ function ChipMetaLine({
     >
       {parts.map((part, index) => (
         <span key={part.key} className="inline-flex items-center gap-1.5">
-          {index > 0 ? <span className="text-kid-ink/35" aria-hidden>·</span> : null}
+          {index > 0 ? <span className="text-sec-ink/35" aria-hidden>·</span> : null}
           <span className={clsx("font-extrabold", part.className)}>{part.label}</span>
         </span>
       ))}
@@ -113,7 +113,7 @@ function ChipMetaLine({
         />
       ) : null}
       {debugLabel ? (
-        <span className="font-mono text-[0.65rem] font-bold normal-case text-kid-ink/50">
+        <span className="font-mono text-[0.65rem] font-bold normal-case text-sec-ink/50">
           [{debugLabel}]
         </span>
       ) : null}
@@ -163,7 +163,7 @@ export function SecondaryWordChip({
         "rounded-lg",
         chipClass,
         isRow ? "min-w-[8rem] shrink-0 snap-start px-2.5 py-2" : "w-full px-2 py-1",
-        isFocusHighlight && !isSelected && "!border-2 !border-kid-ink",
+        isFocusHighlight && !isSelected && "!border-2 !border-sec-ink",
         isSelected && "!border-2 !border-sky-700",
       )}
     >
@@ -171,13 +171,13 @@ export function SecondaryWordChip({
         <div className={clsx("min-w-0 flex-1", isRow ? "flex flex-col gap-0.5" : "flex flex-col gap-0")}>
           <div className="flex min-w-0 items-baseline gap-1.5">
             {!isRow && typeof index === "number" ? (
-              <span className="shrink-0 tabular-nums text-xs font-extrabold text-kid-ink/70">
+              <span className="shrink-0 tabular-nums text-xs font-extrabold text-sec-ink/70">
                 {index + 1}.
               </span>
             ) : null}
             <span
               className={clsx(
-                "min-w-0 truncate font-extrabold leading-tight text-kid-ink",
+                "min-w-0 truncate font-extrabold leading-tight text-sec-ink",
                 secondaryUi.word,
               )}
             >

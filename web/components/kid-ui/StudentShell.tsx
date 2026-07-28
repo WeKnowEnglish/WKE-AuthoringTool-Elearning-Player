@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useLayoutEffect, useSyncExternalStore } from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
@@ -18,8 +19,10 @@ export function StudentShell({
   hidePrimaryNav = false,
   homeHref = "/primary",
   classMenu,
+  headerNav,
+  mobileNav,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   /** Wider main column for grammar infographics and multi-column layouts. */
   wide?: boolean;
   /** Tighter vertical padding for dense infographic pages. */
@@ -31,46 +34,70 @@ export function StudentShell({
   /** Brand link target — secondary pages stay on `/secondary`. */
   homeHref?: string;
   /** Optional class join/select control for student enrollment UI. */
-  classMenu?: React.ReactNode;
+  classMenu?: ReactNode;
+  /** Optional primary portal links in the header (e.g. Secondary Home/Learn/Progress). */
+  headerNav?: ReactNode;
+  /** Optional fixed mobile bottom nav (e.g. Secondary). */
+  mobileNav?: ReactNode;
 }) {
+  const isSecondary = homeHref === "/secondary" || hidePrimaryNav;
   const presetId = useSyncExternalStore(
     studentSoftChromeStore.subscribe,
     studentSoftChromeStore.getSnapshot,
     studentSoftChromeStore.getServerSnapshot,
   );
   const preset = getSoftChromePreset(presetId);
-  const pageBackground = preset.page;
-  const headerBackground = preset.header;
+  const pageBackground = isSecondary
+    ? "var(--sec-bg, #f3f6fa)"
+    : preset.page;
+  const headerBackground = isSecondary
+    ? "var(--sec-card, #ffffff)"
+    : preset.header;
 
   useLayoutEffect(() => {
-    document.documentElement.style.setProperty("--student-chrome-page", pageBackground);
+    const pageValue = isSecondary ? "#f3f6fa" : pageBackground;
+    document.documentElement.style.setProperty("--student-chrome-page", pageValue);
     return () => {
       document.documentElement.style.removeProperty("--student-chrome-page");
     };
-  }, [pageBackground]);
+  }, [isSecondary, pageBackground]);
 
   return (
     <div
       data-student-shell
-      className="flex min-h-min flex-col text-neutral-900"
+      data-portal={isSecondary ? "secondary" : "primary"}
+      className={`flex min-h-min flex-col ${
+        isSecondary ? "text-[var(--sec-ink,#1e293b)]" : "text-neutral-900"
+      }`}
       style={{ backgroundColor: pageBackground }}
     >
       <header
-        className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-neutral-900 px-4 py-3"
+        className={
+          isSecondary
+            ? "flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sec-border,#cbd5e1)] px-4 py-3"
+            : "flex flex-wrap items-center justify-between gap-3 border-b-4 border-neutral-900 px-4 py-3"
+        }
         style={{ backgroundColor: headerBackground }}
       >
-        <Link
-          href={homeHref}
-          className="text-xl font-bold tracking-tight text-neutral-900"
-        >
-          We Know English
-        </Link>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <Link
+            href={homeHref}
+            className={`text-xl font-bold tracking-tight ${
+              isSecondary ? "text-[var(--sec-ink,#1e293b)]" : "text-neutral-900"
+            }`}
+          >
+            We Know English
+          </Link>
+          {headerNav}
+        </div>
         <nav className="flex flex-wrap items-center gap-2">
-          <SoftChromePresetSwatches
-            headerBackground={headerBackground}
-            presetId={presetId}
-            onPresetChange={studentSoftChromeStore.persist}
-          />
+          {!isSecondary ? (
+            <SoftChromePresetSwatches
+              headerBackground={headerBackground}
+              presetId={presetId}
+              onPresetChange={studentSoftChromeStore.persist}
+            />
+          ) : null}
           {!hidePrimaryNav ? (
             <Link
               href="/primary?nav=progress"
@@ -81,11 +108,15 @@ export function StudentShell({
           ) : null}
           {classMenu}
           <SoundMuteButton />
-          <SignOutForm label="Log out" variant="kid" className="!min-h-10" />
+          <SignOutForm
+            label="Log out"
+            variant={isSecondary ? "secondary" : "kid"}
+            className="!min-h-10"
+          />
         </nav>
       </header>
       <main
-        className={
+        className={`${
           fullWidth ?
             compact ? "w-full px-4 py-4 sm:px-6"
             : "w-full px-4 py-6 sm:px-6"
@@ -94,10 +125,11 @@ export function StudentShell({
           : wide ?
             "mx-auto w-full max-w-[90rem] px-4 py-6"
           : "mx-auto w-full max-w-3xl px-4 py-8"
-        }
+        }${mobileNav ? " pb-20 sm:pb-0" : ""}`}
       >
         {children}
       </main>
+      {mobileNav}
     </div>
   );
 }

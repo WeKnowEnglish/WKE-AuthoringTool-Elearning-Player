@@ -40,11 +40,11 @@ function WordSection({
                 aria-label={`View details for ${word}`}
                 onClick={(event) => onWordSelect(wordItemId, event.currentTarget)}
                 className={clsx(
-                  "inline-flex items-center gap-1.5 rounded-lg border-2 bg-kid-panel/50 px-3 py-2 text-left transition-[box-shadow,transform] duration-150 [touch-action:manipulation] hover:brightness-[0.98] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100",
+                  "inline-flex items-center gap-1.5 rounded-lg border-2 bg-sec-panel/50 px-3 py-2 text-left transition-[box-shadow,transform] duration-150 [touch-action:manipulation] hover:brightness-[0.98] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100",
                   secondaryUi.word,
                   isSelected
                     ? "border-sky-700 shadow-sm"
-                    : "border-kid-ink/20 hover:border-kid-ink/35",
+                    : "border-sec-ink/20 hover:border-sec-ink/35",
                 )}
               >
                 <SecondaryWordIllustration imageUrl={imageUrl} word={word} size="chip" />

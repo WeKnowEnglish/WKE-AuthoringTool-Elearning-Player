@@ -22,9 +22,9 @@ export function SecondaryWordProgressDots({
           <span
             key={index}
             className={clsx(
-              "rounded-full border border-kid-ink/30",
+              "rounded-full border border-sec-ink/30",
               dotClassName,
-              index < filledDots ? "bg-kid-ink" : "bg-white",
+              index < filledDots ? "bg-sec-ink" : "bg-white",
             )}
           />
         ))}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { KidButton } from "@/components/kid-ui/KidButton";
+import { SecondaryButton } from "@/components/secondary/SecondaryButton";
 import { SecondarySyllableSpeechSpeedToggle } from "@/components/secondary/learn/SecondarySyllableSpeechSpeedToggle";
 import { SecondaryWordSyllableDisplay } from "@/components/secondary/learn/SecondaryWordSyllableDisplay";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
@@ -120,7 +120,7 @@ export function SecondaryWordMemoryTipCard({ item, centered: _centered = false }
   }
 
   return (
-    <section className="rounded-xl border-2 border-kid-ink/20 bg-kid-panel/40 p-4">
+    <section className="rounded-xl border-2 border-sec-ink/20 bg-sec-panel/40 p-4">
       <h3 className={secondaryUi.cardTitle}>Remember the word</h3>
 
       {hasSyllables ? (
@@ -130,7 +130,7 @@ export function SecondaryWordMemoryTipCard({ item, centered: _centered = false }
         />
       ) : (
         <p
-          className="mt-2 font-mono text-xl font-extrabold tracking-wide text-kid-ink"
+          className="mt-2 font-mono text-xl font-extrabold tracking-wide text-sec-ink"
           aria-live="polite"
         >
           <span
@@ -152,7 +152,7 @@ export function SecondaryWordMemoryTipCard({ item, centered: _centered = false }
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <KidButton
+        <SecondaryButton
           type="button"
           variant="secondary"
           className="!min-h-10 text-base"
@@ -160,7 +160,7 @@ export function SecondaryWordMemoryTipCard({ item, centered: _centered = false }
           onClick={() => void handleListen()}
         >
           {isSpeaking ? "Listening…" : "Listen"}
-        </KidButton>
+        </SecondaryButton>
         <SecondarySyllableSpeechSpeedToggle
           mode={speechMode}
           disabled={!speechAvailable}

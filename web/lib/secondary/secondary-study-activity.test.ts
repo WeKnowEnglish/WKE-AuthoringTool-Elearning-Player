@@ -95,7 +95,7 @@ describe("secondary-study-activity", () => {
         ...baseCtx,
         sessionWordIds: [],
       }),
-    ).toBe("/secondary");
+    ).toBe("/secondary/learn");
   });
 
   it("sentence available without session words", () => {

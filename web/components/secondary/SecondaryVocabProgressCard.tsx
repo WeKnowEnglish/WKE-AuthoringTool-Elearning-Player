@@ -30,7 +30,7 @@ export function SecondaryVocabProgressCard({ masteredCount, goal }: Props) {
   const goalReached = masteredCount >= goal && goal > 0;
 
   return (
-    <div className="rounded-xl border-2 border-kid-ink bg-white p-5">
+    <div className="rounded-xl border-2 border-sec-ink bg-white p-5">
       <div className="flex items-center gap-3">
         <SecondaryHomeIcon src={getSecondaryHomeGoalIconUrl()} size="lg" />
         <div className="min-w-0 flex-1">
@@ -44,7 +44,7 @@ export function SecondaryVocabProgressCard({ masteredCount, goal }: Props) {
       </div>
 
       <div
-        className="mt-4 h-5 overflow-hidden rounded-full border-2 border-kid-ink bg-kid-panel"
+        className="mt-4 h-5 overflow-hidden rounded-full border-2 border-sec-ink bg-sec-panel"
         role="meter"
         aria-label="Daily vocabulary mastery goal"
         aria-valuemin={0}
@@ -54,7 +54,7 @@ export function SecondaryVocabProgressCard({ masteredCount, goal }: Props) {
       >
         <div
           className={`h-full rounded-full transition-[width] duration-300 ${
-            goalReached ? "bg-emerald-500" : percent >= 50 ? "bg-emerald-400" : "bg-kid-accent"
+            goalReached ? "bg-emerald-500" : percent >= 50 ? "bg-emerald-400" : "bg-sec-accent"
           }`}
           style={{ width: `${fillWidth}%` }}
         />
@@ -65,7 +65,7 @@ export function SecondaryVocabProgressCard({ masteredCount, goal }: Props) {
           ? `${masteredCount} words mastered today — goal complete`
           : `${masteredCount} mastered today · ${remainingCount} to go`}
       </p>
-      <p className={`mt-2 ${secondaryUi.body} font-extrabold text-kid-ink`}>
+      <p className={`mt-2 ${secondaryUi.body} font-extrabold text-sec-ink`}>
         {encouragementMessage(masteredCount, goal)}
       </p>
     </div>

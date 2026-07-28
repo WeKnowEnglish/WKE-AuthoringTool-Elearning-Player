@@ -40,7 +40,7 @@ describe("sitemap registry", () => {
     expect(entries[0]?.lastModified).toBe("2026-01-15");
   });
 
-  it("collects homepage, trust pages, pillar guides, grammar hub, and published grammar posters", () => {
+  it("collects homepage, trust pages, pillar guides, resources, grammar hub, and published grammar posters", () => {
     const filtered = filterSitemapSources(collectSitemapSources());
     const paths = filtered.map((entry) => entry.path);
     expect(paths).toContain("/");
@@ -48,6 +48,9 @@ describe("sitemap registry", () => {
     expect(paths).toContain("/esl-activities-for-kids");
     expect(paths).toContain("/teach-english-online");
     expect(paths).toContain("/english-learning-for-kids-at-home");
+    expect(paths).toContain("/resources");
+    expect(paths).toContain("/resources/what-is-edtech");
+    expect(paths).toContain("/resources/how-is-technology-changing-education");
     expect(paths).toContain("/grammar");
     expect(paths.some((path) => path.startsWith("/grammar/"))).toBe(true);
     expect(paths).not.toContain("/login");

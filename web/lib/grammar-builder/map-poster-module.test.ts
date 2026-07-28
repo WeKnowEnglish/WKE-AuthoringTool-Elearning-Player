@@ -18,13 +18,15 @@ const EXPECTED_SECTIONS: Pick<
   | "rightLabel"
   | "leftExamples"
   | "rightExamples"
+  | "subHeader"
+  | "stackedExamples"
   | "rememberBanner"
 >[] = [
   {
     number: 1,
     kidTitle: "Is there…?",
     kidSubtitle: "One thing",
-    glanceRule: { text: "Is there = one thing?", highlight: "one thing" },
+    glanceRule: { text: "Is there = one thing?", highlight: "one thing", align: "center" },
     internalLayout: "two_equal",
     leftLabel: "SINGULAR",
     leftEmoji: "⭐",
@@ -33,6 +35,7 @@ const EXPECTED_SECTIONS: Pick<
         sentence: "Is there a book on the desk?",
         highlight: "Is there",
         emoji: "📘",
+        align: "center",
       },
     ],
     rightLabel: "UNCOUNTABLE",
@@ -42,6 +45,7 @@ const EXPECTED_SECTIONS: Pick<
         sentence: "Is there any milk?",
         highlight: "Is there",
         emoji: "🥛",
+        align: "center",
       },
     ],
   },
@@ -49,29 +53,22 @@ const EXPECTED_SECTIONS: Pick<
     number: 2,
     kidTitle: "Are there…?",
     kidSubtitle: "Many things",
-    glanceRule: { text: "Are there = many things?", highlight: "many things" },
-    internalLayout: "two_equal_narrow",
-    leftLabel: "PLURAL",
-    leftEmoji: "👧👦",
-    leftExamples: [
-      {
-        sentence: "ANY",
-        emoji: "👧👦👧👦",
-        label: "people",
-      },
-    ],
-    rightExamples: [
+    glanceRule: { text: "Are there = many things?", highlight: "many things", align: "center" },
+    internalLayout: "full_width",
+    subHeader: { label: "PLURAL", badge: "👧👦" },
+    stackedExamples: [
       {
         sentence: "Are there any chairs in the room?",
         highlight: "Are there",
         emoji: "🪑",
+        align: "center",
       },
     ],
   },
   {
     number: 3,
     kidTitle: "Remember!",
-    glanceRule: { text: "Put Is or Are first!", highlight: "Is or Are" },
+    glanceRule: { text: "Put Is or Are first!", highlight: "Is or Are", align: "center" },
     internalLayout: "banner",
     rememberBanner: {
       title: "Remember!",
@@ -102,7 +99,9 @@ describe("mapPosterModule", () => {
     view.sections.forEach((mapped, index) => {
       const expected = EXPECTED_SECTIONS[index]!;
 
-      expect(mapped.layoutType).toBe(index === 2 ? "banner" : "two-equal");
+      expect(mapped.layoutType).toBe(
+        index === 2 ? "banner" : index === 1 ? "full-width" : "two-equal",
+      );
       expect(mapped.internalLayout).toBe(expected.internalLayout);
       expect(mapped.number).toBe(expected.number);
       expect(mapped.kidTitle).toBe(expected.kidTitle);
@@ -113,6 +112,8 @@ describe("mapPosterModule", () => {
       expect(mapped.rightLabel).toBe(expected.rightLabel);
       expect(mapped.leftExamples).toEqual(expected.leftExamples);
       expect(mapped.rightExamples).toEqual(expected.rightExamples);
+      expect(mapped.subHeader).toEqual(expected.subHeader);
+      expect(mapped.stackedExamples).toEqual(expected.stackedExamples);
       expect(mapped.rememberBanner).toEqual(expected.rememberBanner);
     });
   });

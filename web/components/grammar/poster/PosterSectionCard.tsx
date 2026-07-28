@@ -16,6 +16,7 @@ type Props = {
   number: number;
   kidTitle: string;
   kidSubtitle?: string;
+  chromeAlign?: "left" | "center" | "right";
   /** Showcase fallback when demo cards use author-style titles */
   title?: string;
   glanceRule?: PosterGlanceRuleData;
@@ -29,6 +30,7 @@ export function PosterSectionCard({
   number,
   kidTitle,
   kidSubtitle,
+  chromeAlign = "center",
   title,
   glanceRule,
   color,
@@ -43,6 +45,14 @@ export function PosterSectionCard({
   const showInlineSubtitle =
     !isShowcase &&
     (kidSubtitle || (inlineEdit?.enabled && inlineEdit.selectedCardId === number));
+  const headerJustify =
+    chromeAlign === "left" ? "justify-start"
+    : chromeAlign === "right" ? "justify-end"
+    : "justify-center";
+  const headerTextAlign =
+    chromeAlign === "left" ? "text-left"
+    : chromeAlign === "right" ? "text-right"
+    : "text-center";
 
   return (
     <section
@@ -55,32 +65,25 @@ export function PosterSectionCard({
         borderColor: resolvedPalette.border,
       }}
     >
-      {!isShowcase ? (
-        <span
-          className="absolute -left-3.5 -top-3.5 z-10 flex h-9 w-9 items-center justify-center rounded-full border-2 border-black/80 text-lg font-extrabold text-white"
-          style={{ backgroundColor: resolvedPalette.header }}
-          aria-hidden
-        >
-          {number}
-        </span>
-      ) : null}
       <div
         className={
           isShowcase ?
             "flex items-center gap-2 px-3 py-2"
-          : "flex items-center gap-3 px-3 py-2 sm:px-4"
+          : clsx("flex items-center gap-3 px-3 py-2 sm:px-4", headerJustify)
         }
         style={{ backgroundColor: resolvedPalette.header }}
       >
-        {isShowcase ? (
-          <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-sm font-extrabold text-white"
-            aria-hidden
-          >
-            {number}
-          </span>
-        ) : null}
-        <div className="min-w-0 flex-1">
+        <span
+          className={
+            isShowcase ?
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-sm font-extrabold text-white"
+            : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-white/20 text-lg font-extrabold text-white"
+          }
+          aria-hidden
+        >
+          {number}
+        </span>
+        <div className={clsx("min-w-0", isShowcase ? "flex-1" : headerTextAlign)}>
           {isShowcase ?
             <h2 className="text-[11px] font-extrabold uppercase leading-tight text-white sm:text-xs">
               {number}. {headerTitle}
@@ -93,7 +96,7 @@ export function PosterSectionCard({
               maxLength={40}
               placeholder="Card title"
             >
-              <span className="text-sm font-extrabold uppercase leading-snug text-white md:text-base">
+              <span className="text-[28px] font-extrabold uppercase leading-snug text-white md:text-[30px]">
                 {headerTitle}
               </span>
             </PosterEditableText>
@@ -123,6 +126,7 @@ export function PosterSectionCard({
               cardId={number}
               text={glanceRule.text}
               highlight={glanceRule.highlight}
+              align={glanceRule.align}
             />
           </PosterInteractiveTarget>
         : null}

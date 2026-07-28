@@ -17,6 +17,7 @@ import {
 import { mapPosterModule, type PosterModuleView } from "@/lib/grammar-builder/map-poster-module";
 import type { GrammarModule } from "@/lib/grammar-builder/schema";
 import type { InteractionTargetKey } from "@/lib/grammar-builder/interactions/resolve-interaction-target";
+import { getGrammarPosterVariationBySlug } from "@/lib/grammar-builder/editor/grammar-poster-variations";
 import { parseGrammarModule, safeParseGrammarModule } from "@/lib/grammar-builder/validate-module";
 import { GrammarPosterEditorCanvas } from "./GrammarPosterEditorCanvas";
 import { PosterInlineEditProvider } from "./PosterInlineEditContext";
@@ -47,6 +48,7 @@ export function GrammarPosterEditorApp({
     () => parseGrammarModule(initialModule, { posterContentRules: false }),
     [initialModule],
   );
+  const variation = useMemo(() => getGrammarPosterVariationBySlug(slug) ?? null, [slug]);
 
   const [draft, setDraft] = useState<GrammarModule>(initialDraft);
   const [savedSnapshot, setSavedSnapshot] = useState(() => grammarModuleSnapshot(initialDraft));
@@ -194,6 +196,7 @@ export function GrammarPosterEditorApp({
       <GrammarPosterEditorToolbar
         slug={slug}
         title={title}
+        variation={variation}
         dirty={dirty}
         previewMode={previewMode}
         lenientValid={lenientValid}

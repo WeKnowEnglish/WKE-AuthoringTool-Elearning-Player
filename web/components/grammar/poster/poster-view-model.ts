@@ -8,6 +8,7 @@ export type PosterSectionColor = "blue" | "orange" | "purple" | "green" | "yello
 export type PosterGlanceRule = {
   text: string;
   highlight?: string;
+  align?: "left" | "center" | "right";
 };
 
 export type PosterHeroData = {
@@ -21,8 +22,12 @@ export type PosterHeroData = {
 export type PosterExample = {
   sentence: string;
   highlight?: string;
+  /** Emoji fallback / emoji asset value */
   emoji: string;
+  /** When set, prefer image over emoji */
+  imageUrl?: string;
   label?: string;
+  align?: "left" | "center" | "right";
   transformationRow?: PosterTransformationRow;
 };
 
@@ -98,6 +103,7 @@ export type PosterSection = {
   title?: string;
   kidTitle: string;
   kidSubtitle?: string;
+  chromeAlign?: "left" | "center" | "right";
   glanceRule: PosterGlanceRule;
   color: PosterSectionColor;
   theme?: GrammarThemeId;

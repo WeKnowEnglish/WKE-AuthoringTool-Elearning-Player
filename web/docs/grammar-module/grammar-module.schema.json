@@ -151,7 +151,21 @@
       "required": ["text"],
       "properties": {
         "text": { "type": "string", "maxLength": 60 },
-        "highlight": { "type": "string" }
+        "highlight": { "type": "string" },
+        "align": { "$ref": "#/$defs/align" }
+      }
+    },
+    "align": {
+      "type": "string",
+      "enum": ["left", "center", "right"]
+    },
+    "graphicAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["emoji", "url"] },
+        "value": { "type": "string", "minLength": 1 }
       }
     },
     "subHeader": {
@@ -171,8 +185,10 @@
       "properties": {
         "text": { "type": "string" },
         "graphic": { "type": "string" },
+        "graphicAsset": { "$ref": "#/$defs/graphicAsset" },
         "caption": { "type": "string" },
         "highlight": { "type": "string" },
+        "align": { "$ref": "#/$defs/align" },
         "transformationRow": { "$ref": "#/$defs/transformationRow" }
       },
       "anyOf": [
@@ -324,6 +340,7 @@
         },
         "theme": { "$ref": "#/$defs/themeId" },
         "layoutType": { "$ref": "#/$defs/layoutType" },
+        "chromeAlign": { "$ref": "#/$defs/align" },
         "glanceRule": { "$ref": "#/$defs/glanceRule" },
         "subHeader": { "$ref": "#/$defs/subHeader" },
         "items": {

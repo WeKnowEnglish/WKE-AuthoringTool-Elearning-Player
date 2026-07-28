@@ -68,9 +68,11 @@ export function buildSectionBase(
     title: card.title,
     kidTitle,
     kidSubtitle: card.kidSubtitle,
+    chromeAlign: card.chromeAlign ?? "center",
     glanceRule: {
       text: glanceRule?.text ?? "",
       highlight: glanceRule?.highlight,
+      align: glanceRule?.align ?? "center",
     },
     color: THEME_TO_LEGACY_COLOR[card.theme],
     theme: card.theme,

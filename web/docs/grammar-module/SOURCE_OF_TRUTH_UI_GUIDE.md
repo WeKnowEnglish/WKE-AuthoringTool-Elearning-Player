@@ -248,6 +248,11 @@ The current pilot at `/grammar/pilot` implements Steps 2–5 (poster/showcase sp
 | Content/runtime sync | Single source | ✅ `content/grammar/` + sync test vs `docs/examples/` |
 | Parse strictness | Reject unknown JSON fields | ✅ Zod `.strict()` on module + card schemas |
 | Max cards (student A1) | 3 | 3 on poster; showcase demos on layouts route |
+| **Grammar Poster Editor** | One teacher editor; catalog posters = template variations | ✅ Canonical: There is / There are questions |
+| `graphicAsset` + `align` | Emoji or URL icon; left/center/right | ✅ There-is shapes first (`two-equal`, `full-width`, `banner`) |
+| Student hub collapse | Single variation-driven `/grammar` player | ⏳ Deferred |
+
+**Authoring note:** Use `/teacher/grammar` as the single Grammar Poster Editor. Existing published modules remain intact as **template variations** (switch in the toolbar). Layout lab (`/grammar/pilot/layouts`) is a card-body gallery only. Prefer `graphicAsset: { kind: "emoji"|"url", value }` for new icons; legacy `graphic` emoji strings still work. Optional `align` / `chromeAlign` / `glanceRule.align` default to `center`.
 
 ---
 

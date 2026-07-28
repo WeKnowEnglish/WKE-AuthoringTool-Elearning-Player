@@ -1,11 +1,17 @@
 "use client";
 
+import { clsx } from "clsx";
 import {
   posterExampleFieldKey,
   type PosterColumnSide,
 } from "@/lib/grammar-builder/editor/poster-inline-edit-fields";
 import { PosterEditableText } from "./PosterEditableText";
 import { usePosterInlineEdit } from "./PosterInlineEditContext";
+import {
+  PosterGraphic,
+  posterAlignClass,
+  posterAlignItemsClass,
+} from "../PosterGraphic";
 
 type ExampleRegion = "item" | PosterColumnSide;
 
@@ -16,7 +22,9 @@ type Props = {
   sentence: string;
   highlight?: string;
   emoji: string;
+  imageUrl?: string;
   label?: string;
+  align?: "left" | "center" | "right";
   layout: "row" | "stack";
   sentenceClassName: string;
   emojiBoxClassName: string;
@@ -80,7 +88,9 @@ export function PosterEditableExampleFields({
   sentence,
   highlight,
   emoji,
+  imageUrl,
   label,
+  align = "center",
   layout,
   sentenceClassName,
   emojiBoxClassName,
@@ -89,6 +99,7 @@ export function PosterEditableExampleFields({
   const inlineEdit = usePosterInlineEdit();
   const showCaptionEditor =
     inlineEdit?.enabled && inlineEdit.selectedCardId === cardId;
+  const alignItems = posterAlignItemsClass(align);
 
   const sentenceEditor = (
     <>
@@ -120,7 +131,7 @@ export function PosterEditableExampleFields({
       trimOnCommit={false}
     >
       <div className={emojiBoxClassName} aria-hidden>
-        {emoji}
+        <PosterGraphic emoji={emoji} imageUrl={imageUrl} imgClassName="h-14 w-14" />
       </div>
     </PosterEditableText>
   );
@@ -142,7 +153,13 @@ export function PosterEditableExampleFields({
 
   if (layout === "stack") {
     return (
-      <div className="flex flex-col items-center justify-center gap-1.5 py-1.5 text-center">
+      <div
+        className={clsx(
+          "flex flex-col justify-center gap-1.5 py-1.5",
+          alignItems,
+          posterAlignClass(align),
+        )}
+      >
         {emojiEditor}
         {sentenceEditor}
         {captionEditor}
@@ -152,7 +169,7 @@ export function PosterEditableExampleFields({
 
   return (
     <div className="flex items-center gap-3 sm:gap-4">
-      <div className="flex shrink-0 flex-col items-center gap-0.5">
+      <div className={clsx("flex shrink-0 flex-col gap-0.5", alignItems)}>
         {emojiEditor}
         {captionEditor}
       </div>

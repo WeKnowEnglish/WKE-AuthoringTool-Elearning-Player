@@ -59,7 +59,7 @@ export function groupPublishedGrammarModulesByTopic(): {
   }));
 }
 
-const GRAMMAR_TOPIC_GROUP_LABELS: Record<string, string> = {
+export const GRAMMAR_TOPIC_GROUP_LABELS: Record<string, string> = {
   "there-is-there-are": "There is / There are",
   nouns: "Nouns",
   quantifiers: "Some and Any",

@@ -23,14 +23,22 @@ export type StudioActivityDetail = StudioActivitySummary & {
   authoring: Record<string, unknown> | null;
 };
 
-function mapSummary(row: {
+type StudioActivityRow = {
   id: string;
   title: string;
   format: string;
   created_at: string;
   updated_at: string;
   source?: unknown;
-}): StudioActivitySummary {
+  pack?: unknown;
+  authoring?: unknown;
+};
+
+function asStudioActivityRow(value: unknown): StudioActivityRow {
+  return value as StudioActivityRow;
+}
+
+function mapSummary(row: StudioActivityRow): StudioActivitySummary {
   const format = row.format as StudioActivityFormat;
   return {
     id: row.id,
@@ -73,7 +81,7 @@ export async function listStudioActivitiesForTeacher(
         : "";
     throw new Error(`${error.message}${hint}`);
   }
-  return (data ?? []).map((row) => mapSummary(row as Parameters<typeof mapSummary>[0]));
+  return (data ?? []).map((row) => mapSummary(asStudioActivityRow(row)));
 }
 
 export async function getStudioActivityForTeacher(
@@ -103,13 +111,14 @@ export async function getStudioActivityForTeacher(
   }
   if (!data) return null;
 
-  const summary = mapSummary(data as Parameters<typeof mapSummary>[0]);
+  const row = asStudioActivityRow(data);
+  const summary = mapSummary(row);
   return {
     ...summary,
-    pack: includePack ? (data as { pack?: unknown }).pack : null,
+    pack: includePack ? row.pack : null,
     authoring:
-      data.authoring && typeof data.authoring === "object" && !Array.isArray(data.authoring)
-        ? (data.authoring as Record<string, unknown>)
+      row.authoring && typeof row.authoring === "object" && !Array.isArray(row.authoring)
+        ? (row.authoring as Record<string, unknown>)
         : null,
   };
 }

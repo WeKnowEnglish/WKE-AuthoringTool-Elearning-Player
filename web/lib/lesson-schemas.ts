@@ -2436,7 +2436,11 @@ const exploreHotspotItemSchema = z.object({
       background_dim: z.number().optional(),
     })
     .optional(),
-  interaction_kind: z.enum(["dialogue", "info", "audio", "question"]).optional(),
+  interaction_kind: z
+    .enum(["dialogue", "info", "audio", "question", "none", "silent"])
+    .optional(),
+  presentation: z.enum(["target", "sprite"]).optional(),
+  sprite_url: z.string().min(1).optional(),
   order_index: z.number().int().optional(),
   initial_state: z.enum(["locked", "available"]).optional(),
   wrong_order_hint: z.string().optional(),

@@ -31,6 +31,9 @@ export type PlayHotspot = {
   geometry: HotspotGeometry;
   visualShape?: HotspotVisualShape;
   highlight?: Partial<HotspotHighlight>;
+  presentation?: "target" | "sprite";
+  spriteSrc?: string;
+  interactionKind?: "dialogue" | "info" | "audio" | "question" | "none" | "silent";
 };
 
 export type PlayMedia = {

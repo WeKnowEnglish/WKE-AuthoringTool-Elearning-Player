@@ -74,6 +74,15 @@ describe("explore-hotspots-play-runtime", () => {
     expect(stack[0]?.kind).toBe("dialogue");
   });
 
+  it("returns empty stack for silent sprites", () => {
+    const stack = responseStackFor({
+      ...baseParsed().hotspots[0]!,
+      interaction_kind: "silent",
+      presentation: "sprite",
+    });
+    expect(stack).toHaveLength(0);
+  });
+
   it("reports phase complete and hint target", () => {
     const hotspots = baseParsed().hotspots;
     expect(phaseComplete(hotspots, { a: "completed", b: "discovered" })).toBe(

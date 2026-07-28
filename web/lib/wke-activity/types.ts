@@ -26,8 +26,16 @@ export type WkeHotspotVisualShape = {
   score?: number;
 };
 
-/** Object interaction kinds enabled in the next upgrade. */
-export type WkeObjectInteractionKind = "dialogue" | "info" | "audio" | "question";
+/** Object interaction kinds enabled in the scene engine. */
+export type WkeObjectInteractionKind =
+  | "dialogue"
+  | "info"
+  | "audio"
+  | "question"
+  | "none"
+  | "silent";
+
+export type WkeObjectPresentation = "target" | "sprite";
 
 export type WkeObjectInitialState = "locked" | "available";
 
@@ -78,7 +86,11 @@ export type WkeHotspotElement = {
     backgroundDim?: number;
   };
   visualShape?: WkeHotspotVisualShape;
-  /** Extensible interaction kind (defaults to dialogue). */
+  /** `target` = invisible region + highlight; `sprite` = visible PNG overlay. */
+  presentation?: WkeObjectPresentation;
+  /** Asset id for `presentation: "sprite"`. */
+  spriteAssetId?: string;
+  /** Extensible interaction kind (defaults to dialogue for targets, silent for sprites). */
   interactionKind?: WkeObjectInteractionKind;
   /** Strict-order index within its phase (lower first). */
   orderIndex?: number;

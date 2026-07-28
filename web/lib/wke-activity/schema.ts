@@ -68,7 +68,11 @@ const hotspotElementSchema = z.object({
       score: z.number().optional(),
     })
     .optional(),
-  interactionKind: z.enum(["dialogue", "info", "audio", "question"]).optional(),
+  interactionKind: z
+    .enum(["dialogue", "info", "audio", "question", "none", "silent"])
+    .optional(),
+  presentation: z.enum(["target", "sprite"]).optional(),
+  spriteAssetId: z.string().min(1).optional(),
   orderIndex: z.number().int().optional(),
   initialState: z.enum(["locked", "available"]).optional(),
   wrongOrderHint: z.string().optional(),
@@ -256,13 +260,37 @@ export const wkeActivityV2Schema = z
     }
 
     for (const hotspot of hotspots) {
+      const presentation = hotspot.presentation ?? "target";
+      const interactionKind =
+        hotspot.interactionKind ?? (presentation === "sprite" ? "silent" : "dialogue");
       const hasDialogue = dialogueByHotspot.has(hotspot.id);
       const hasCards = (hotspot.responseCards?.length ?? 0) > 0;
-      if (!hasDialogue && !hasCards) {
+      const needsContent =
+        interactionKind !== "none" && interactionKind !== "silent";
+      if (needsContent && !hasDialogue && !hasCards) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `Object ${hotspot.id} needs a dialogue or responseCards`,
         });
+      }
+      if (presentation === "sprite") {
+        if (!hotspot.spriteAssetId) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Sprite object ${hotspot.id} requires spriteAssetId`,
+          });
+        } else if (!data.assets.some((asset) => asset.id === hotspot.spriteAssetId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Sprite object ${hotspot.id} references unknown asset ${hotspot.spriteAssetId}`,
+          });
+        }
+        if (hotspot.geometry.shape !== "rectangle") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Sprite object ${hotspot.id} must use rectangle geometry`,
+          });
+        }
       }
       for (const card of hotspot.responseCards ?? []) {
         if (card.kind === "question") {

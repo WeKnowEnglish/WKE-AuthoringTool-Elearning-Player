@@ -155,6 +155,13 @@ export function wkeActivityToExploreHotspotsPayload(
             }
           : undefined,
         interaction_kind: h.interactionKind,
+        presentation: h.presentation,
+        ...(h.presentation === "sprite" && h.spriteAssetId
+          ? {
+              sprite_url: activity.assets.find((asset) => asset.id === h.spriteAssetId)
+                ?.src,
+            }
+          : {}),
         order_index: h.orderIndex,
         initial_state: h.initialState,
         wrong_order_hint: h.wrongOrderHint,

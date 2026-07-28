@@ -93,8 +93,9 @@ export function canSelectInStrictOrder(
 export function responseStackFor(
   hotspot: ExploreHotspotItem,
 ): ExploreHotspotResponseCard[] {
-  if (hotspot.response_cards?.length) return hotspot.response_cards;
   const kind = hotspot.interaction_kind ?? "dialogue";
+  if (kind === "none" || kind === "silent") return [];
+  if (hotspot.response_cards?.length) return hotspot.response_cards;
   if (kind === "dialogue") {
     return [{ id: `fallback-dialogue-${hotspot.id}`, kind: "dialogue" as const }];
   }
@@ -108,6 +109,18 @@ export function responseStackFor(
     ];
   }
   return [{ id: `fallback-dialogue-${hotspot.id}`, kind: "dialogue" as const }];
+}
+
+export function isSpriteObject(hotspot: ExploreHotspotItem): boolean {
+  return hotspot.presentation === "sprite";
+}
+
+export function isDecorativeObject(hotspot: ExploreHotspotItem): boolean {
+  return hotspot.interaction_kind === "none";
+}
+
+export function isSilentObject(hotspot: ExploreHotspotItem): boolean {
+  return hotspot.interaction_kind === "silent";
 }
 
 export function initialObjectStates(

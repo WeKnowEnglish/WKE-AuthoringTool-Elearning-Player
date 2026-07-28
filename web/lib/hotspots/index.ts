@@ -29,9 +29,19 @@ export {
 } from "./studio";
 export { HOBBIES_HOTSPOT_ACTIVITY } from "./fixtures/hobbiesHotspot";
 export {
+  duplicateImageAsset,
   ensurePhases,
+  forkPhaseImageAsset,
   hotspotsForPhase,
   nextPhaseId,
+  nextPhaseImageAssetId,
+  phasesUsingAsset,
   withEnsuredPhases,
 } from "./phases";
+export {
+  defaultSpriteGeometry,
+  isSilentOrDecorativeSprite,
+  isSpriteHotspot,
+  spriteRect,
+} from "./sprites";
 export { useHotspotSamModel } from "./sam";

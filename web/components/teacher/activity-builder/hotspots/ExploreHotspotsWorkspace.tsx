@@ -25,11 +25,21 @@ import {
   type StudioExploreHotspotsRef,
 } from "@/lib/hotspots";
 import {
+  duplicateImageAsset,
   ensurePhases,
+  forkPhaseImageAsset,
   hotspotsForPhase,
   nextPhaseId,
+  nextPhaseImageAssetId,
   withEnsuredPhases,
 } from "@/lib/hotspots/phases";
+import {
+  loadImageDataFromSrc,
+  normalizedSpriteAspect,
+  removeSpriteSolidBackground,
+  shouldAutoRemoveSpriteBackground,
+} from "@/lib/hotspots/sprite-background";
+import { defaultSpriteGeometry, isSpriteHotspot } from "@/lib/hotspots/sprites";
 import type { WkeObjectInteractionKind, WkeResponseCard } from "@/lib/wke-activity/types";
 import { wkeActivityToLessonScreen } from "@/lib/wke-activity";
 import {
@@ -126,8 +136,10 @@ export function ExploreHotspotsWorkspace() {
   const [bankBusy, setBankBusy] = useState(false);
   const [showBankPanel, setShowBankPanel] = useState(false);
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
+  const [spriteBgBusy, setSpriteBgBusy] = useState(false);
   const openRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
+  const spriteRef = useRef<HTMLInputElement>(null);
   const segmentationRequestRef = useRef(0);
   const { samStatus, samReady, samError, retrySam } =
     useHotspotSamModel(segmentationMode);
@@ -149,6 +161,34 @@ export function ExploreHotspotsWorkspace() {
     document.interaction.dialogues.find(
       (dialogue) => dialogue.hotspotId === selectedId,
     ) ?? null;
+
+  const spriteSources = useMemo(() => {
+    const sources: Record<string, string> = {};
+    for (const hotspot of hotspots) {
+      if (!isSpriteHotspot(hotspot) || !hotspot.spriteAssetId) continue;
+      const asset = document.assets.find((entry) => entry.id === hotspot.spriteAssetId);
+      if (asset?.src) sources[hotspot.id] = asset.src;
+    }
+    return sources;
+  }, [hotspots, document.assets]);
+
+  const spriteAspectRatios = useMemo(() => {
+    const mediaSize = media.intrinsicSize ?? { width: 16, height: 9 };
+    const ratios: Record<string, number> = {};
+    for (const hotspot of hotspots) {
+      if (!isSpriteHotspot(hotspot) || !hotspot.spriteAssetId) continue;
+      const asset = document.assets.find((entry) => entry.id === hotspot.spriteAssetId);
+      const spriteW = asset?.intrinsicSize?.width ?? 1;
+      const spriteH = asset?.intrinsicSize?.height ?? 1;
+      ratios[hotspot.id] = normalizedSpriteAspect(
+        spriteW,
+        spriteH,
+        mediaSize.width,
+        mediaSize.height,
+      );
+    }
+    return ratios;
+  }, [hotspots, document.assets, media.intrinsicSize]);
 
   const lessonId = `activity-${document.id}`;
 
@@ -394,6 +434,126 @@ export function ExploreHotspotsWorkspace() {
     setTool("select");
   };
 
+  const removeSelectedSpriteBackground = async () => {
+    if (!selected || !isSpriteHotspot(selected) || !selected.spriteAssetId) return;
+    const asset = document.assets.find((entry) => entry.id === selected.spriteAssetId);
+    if (!asset?.src) return;
+    setSpriteBgBusy(true);
+    try {
+      const keyed = await removeSpriteSolidBackground(asset.src);
+      setDocument((current) => ({
+        ...current,
+        assets: current.assets.map((entry) =>
+          entry.id === selected.spriteAssetId
+            ? {
+                ...entry,
+                src: keyed.src,
+                intrinsicSize: { width: keyed.width, height: keyed.height },
+              }
+            : entry,
+        ),
+      }));
+      setNotice("Removed solid background from PNG.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "Could not remove background.",
+      );
+    } finally {
+      setSpriteBgBusy(false);
+    }
+  };
+
+  const addSpriteFromFile = async (file: File) => {
+    try {
+      let next = await readImage(file);
+      try {
+        const { data, width, height } = await loadImageDataFromSrc(next.src);
+        if (shouldAutoRemoveSpriteBackground(data.data, width, height)) {
+          const keyed = await removeSpriteSolidBackground(next.src);
+          next = { src: keyed.src, width: keyed.width, height: keyed.height };
+        }
+      } catch {
+        // Keep the original PNG when auto-keying is unavailable.
+      }
+      let number = allHotspots.length + 1;
+      let id = `sprite-${number}`;
+      let assetId = `sprite-asset-${number}`;
+      const usedIds = new Set([
+        ...allHotspots.map((hotspot) => hotspot.id),
+        ...document.assets.map((asset) => asset.id),
+      ]);
+      while (usedIds.has(id) || usedIds.has(assetId)) {
+        number += 1;
+        id = `sprite-${number}`;
+        assetId = `sprite-asset-${number}`;
+      }
+      const name = `Prop ${number}`;
+      const mediaSize = media.intrinsicSize ?? { width: 16, height: 9 };
+      const geometry = defaultSpriteGeometry(
+        next.width,
+        next.height,
+        mediaSize.width,
+        mediaSize.height,
+      );
+      setDocument((current) => {
+        const withPhases = withEnsuredPhases(current);
+        const targetPhaseId =
+          resolvedPhaseId ?? ensurePhases(withPhases)[0]?.id ?? null;
+        const nextPhases = ensurePhases(withPhases).map((phase) =>
+          phase.id === targetPhaseId
+            ? { ...phase, hotspotIds: [...phase.hotspotIds, id] }
+            : phase,
+        );
+        return {
+          ...withPhases,
+          assets: [
+            ...withPhases.assets,
+            {
+              id: assetId,
+              kind: "image" as const,
+              src: next.src,
+              mimeType: file.type,
+              alt: file.name,
+              intrinsicSize: { width: next.width, height: next.height },
+            },
+          ],
+          layout: {
+            ...withPhases.layout,
+            elements: [
+              ...withPhases.layout.elements,
+              {
+                id,
+                kind: "hotspot" as const,
+                regionId: "main-media",
+                name,
+                accessibleLabel: name,
+                geometry,
+                tabOrder: allHotspots.length + 1,
+                required: true,
+                presentation: "sprite" as const,
+                spriteAssetId: assetId,
+                interactionKind: "silent" as const,
+                orderIndex: hotspots.length,
+                initialState: "available" as const,
+              },
+            ],
+          },
+          interaction: {
+            ...withPhases.interaction,
+            phases: nextPhases,
+          },
+        };
+      });
+      setSelectedId(id);
+      setTool("select");
+      setNotice(
+        `Added ${file.name} as a PNG object. Drag the handles to position it.`,
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not import the PNG.");
+    }
+  };
+
   const removeSelected = () => {
     if (!selected) return;
     if (allHotspots.length <= 1) {
@@ -538,10 +698,20 @@ export function ExploreHotspotsWorkspace() {
     try {
       const next = await readImage(file);
       stopSegmentation();
-      const targetAssetId = activePhase?.imageAssetId ?? media.id;
+      const activePhaseId = activePhase?.id ?? null;
       const phaseHotspotIds = new Set(activePhase?.hotspotIds ?? []);
       setDocument((current) => {
-        const withPhases = withEnsuredPhases(current);
+        let withPhases = withEnsuredPhases(current);
+        if (activePhaseId) {
+          withPhases = forkPhaseImageAsset(withPhases, activePhaseId);
+        }
+        const resolvedPhase = activePhaseId
+          ? ensurePhases(withPhases).find((phase) => phase.id === activePhaseId)
+          : null;
+        const targetAssetId =
+          resolvedPhase?.imageAssetId ??
+          withPhases.assets.find((asset) => asset.kind === "image")?.id;
+        if (!targetAssetId) return withPhases;
         return {
           ...withPhases,
           assets: withPhases.assets.map((asset) =>
@@ -579,20 +749,23 @@ export function ExploreHotspotsWorkspace() {
     setDocument((current) => {
       const withPhases = withEnsuredPhases(current);
       const currentPhases = ensurePhases(withPhases);
-      const imageAssetId =
+      const sourceAssetId =
         activePhase?.imageAssetId ??
         currentPhases[0]?.imageAssetId ??
-        media.id;
+        withPhases.assets.find((asset) => asset.kind === "image")?.id;
+      if (!sourceAssetId) return withPhases;
+      const newAssetId = nextPhaseImageAssetId(withPhases);
+      const withAsset = duplicateImageAsset(withPhases, sourceAssetId, newAssetId);
       return {
-        ...withPhases,
+        ...withAsset,
         interaction: {
-          ...withPhases.interaction,
+          ...withAsset.interaction,
           phases: [
             ...currentPhases,
             {
               id: nextId,
               title: `Scene ${currentPhases.length + 1}`,
-              imageAssetId,
+              imageAssetId: newAssetId,
               hotspotIds: [],
             },
           ],
@@ -821,6 +994,13 @@ export function ExploreHotspotsWorkspace() {
           <button
             type="button"
             className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-800"
+            onClick={() => spriteRef.current?.click()}
+          >
+            Add PNG object
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-800"
             onClick={() => imageRef.current?.click()}
           >
             Replace image
@@ -881,6 +1061,17 @@ export function ExploreHotspotsWorkspace() {
           onChange={async (event) => {
             const file = event.target.files?.[0];
             if (file) await replaceImage(file);
+            event.target.value = "";
+          }}
+        />
+        <input
+          ref={spriteRef}
+          hidden
+          type="file"
+          accept="image/png,image/webp,image/gif"
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            if (file) await addSpriteFromFile(file);
             event.target.value = "";
           }}
         />
@@ -1188,7 +1379,7 @@ export function ExploreHotspotsWorkspace() {
                       {hotspot.name ?? "Object"}
                     </span>
                     <span className="mt-1 block truncate text-xs text-stone-500">
-                      {hotspot.interactionKind ?? "dialogue"} ·{" "}
+                      {isSpriteHotspot(hotspot) ? "sprite" : hotspot.interactionKind ?? "dialogue"} ·{" "}
                       {hotspot.visualShape
                         ? "Precise object outline"
                         : `${hotspot.geometry.shape} click target`}
@@ -1234,6 +1425,8 @@ export function ExploreHotspotsWorkspace() {
                 key={`${tool}-${segmentationMode ? "segment" : "layout"}`}
                 media={media}
                 hotspots={hotspots}
+                spriteSources={spriteSources}
+                spriteAspectRatios={spriteAspectRatios}
                 mode="author"
                 selectedId={selectedId}
                 tool={tool}
@@ -1315,19 +1508,48 @@ export function ExploreHotspotsWorkspace() {
                     Interaction
                     <select
                       className={inputClass}
-                      value={selected.interactionKind ?? "dialogue"}
+                      value={
+                        selected.interactionKind ??
+                        (isSpriteHotspot(selected) ? "silent" : "dialogue")
+                      }
                       onChange={(event) => {
                         const kind = event.target.value as WkeObjectInteractionKind;
                         patchHotspot(selected.id, { interactionKind: kind });
                         if (kind === "dialogue") ensureDialogueForSelected();
                       }}
                     >
-                      <option value="dialogue">Dialogue</option>
-                      <option value="info">Info card</option>
-                      <option value="audio">Audio</option>
-                      <option value="question">Question</option>
+                      {isSpriteHotspot(selected) ? (
+                        <>
+                          <option value="silent">Silent tap (no card)</option>
+                          <option value="none">Decorative only</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="dialogue">Dialogue</option>
+                          <option value="info">Info card</option>
+                          <option value="audio">Audio</option>
+                          <option value="question">Question</option>
+                        </>
+                      )}
                     </select>
                   </label>
+                  {isSpriteHotspot(selected) ? (
+                    <>
+                      <button
+                        type="button"
+                        className="mt-3 w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-800 hover:bg-stone-100 disabled:opacity-50"
+                        disabled={spriteBgBusy}
+                        onClick={() => void removeSelectedSpriteBackground()}
+                      >
+                        {spriteBgBusy ? "Removing background…" : "Remove white background"}
+                      </button>
+                      <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+                        PNG objects render without borders in play. Resize keeps the
+                        sprite proportions. Solid backgrounds are auto-removed on import
+                        when corners look uniform.
+                      </p>
+                    </>
+                  ) : null}
                   <label className="mt-3 block text-xs text-stone-600">
                     Order index
                     <input
@@ -1386,6 +1608,7 @@ export function ExploreHotspotsWorkspace() {
                   </label>
                 </section>
 
+                {!isSpriteHotspot(selected) ? (
                 <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
@@ -1546,6 +1769,7 @@ export function ExploreHotspotsWorkspace() {
                     ))}
                   </div>
                 </section>
+                ) : null}
 
                 {rectangleFields ? (
                   <section>
@@ -1620,6 +1844,7 @@ export function ExploreHotspotsWorkspace() {
                   </p>
                 ) : null}
 
+                {!isSpriteHotspot(selected) ? (
                 <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
                   <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
                     Object highlight
@@ -1830,8 +2055,9 @@ export function ExploreHotspotsWorkspace() {
                     </div>
                   ) : null}
                 </section>
+                ) : null}
 
-                {selectedDialogue ? (
+                {selectedDialogue && !isSpriteHotspot(selected) ? (
                 <section>
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
@@ -1961,7 +2187,7 @@ export function ExploreHotspotsWorkspace() {
                     </p>
                   ) : null}
                 </section>
-                ) : (
+                ) : !isSpriteHotspot(selected) ? (
                   <button
                     type="button"
                     className="w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm text-stone-800 hover:border-sky-400 hover:bg-sky-50/50"
@@ -1969,7 +2195,7 @@ export function ExploreHotspotsWorkspace() {
                   >
                     + Add dialogue for this object
                   </button>
-                )}
+                ) : null}
               </div>
             ) : (
               <p className="text-sm text-stone-500">

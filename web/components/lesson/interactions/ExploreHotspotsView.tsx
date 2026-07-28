@@ -9,7 +9,9 @@ import {
   hintTargetId,
   hotspotsInPhase,
   initialObjectStates,
+  isDecorativeObject,
   isObjectComplete,
+  isSilentObject,
   phaseComplete,
   resolvePlayPhases,
   responseStackFor,
@@ -68,12 +70,36 @@ function ListeningPromptIcon() {
   );
 }
 
+function pointsToRectangle(
+  points: Array<{ x: number; y: number }>,
+): { shape: "rectangle"; x: number; y: number; width: number; height: number } {
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  return {
+    shape: "rectangle",
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
+}
+
 function toPlayHotspots(hotspots: ExploreHotspotItem[]): PlayHotspot[] {
   return hotspots.map((h) => ({
     id: h.id,
     accessibleLabel: h.accessible_label ?? h.name,
     tabOrder: h.tab_order,
-    geometry: { shape: "polygon" as const, points: h.points },
+    geometry:
+      h.presentation === "sprite"
+        ? pointsToRectangle(h.points)
+        : { shape: "polygon" as const, points: h.points },
+    presentation: h.presentation,
+    spriteSrc: h.sprite_url,
+    interactionKind: h.interaction_kind,
     visualShape: h.visual_shape
       ? {
           type: "segmentation-contour" as const,
@@ -349,6 +375,8 @@ export function ExploreHotspotsView({
     const hotspot = phaseHotspots.find((h) => h.id === hotspotId);
     if (!hotspot) return;
 
+    if (isDecorativeObject(hotspot)) return;
+
     if (objectStates[hotspotId] === "locked") {
       setOrderHint("This object is locked for now.");
       return;
@@ -373,6 +401,15 @@ export function ExploreHotspotsView({
 
     setOrderHint(null);
     setShowHintPulse(false);
+
+    if (isSilentObject(hotspot) || responseStackFor(hotspot).length === 0) {
+      markDiscoveredOrCompleted(hotspot, true);
+      setActiveHotspotId(null);
+      setCardIndex(0);
+      setQuestionFeedback(null);
+      return;
+    }
+
     setActiveHotspotId(hotspotId);
     setCardIndex(0);
     void beginCardStack(hotspot);

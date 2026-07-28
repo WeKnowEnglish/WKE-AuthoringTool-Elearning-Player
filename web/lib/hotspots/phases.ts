@@ -73,3 +73,59 @@ export function nextPhaseId(phases: WkePhase[]): string {
   }
   return id;
 }
+
+export function nextPhaseImageAssetId(document: ExploreHotspotsDocument): string {
+  const used = new Set(document.assets.map((asset) => asset.id));
+  let index = document.assets.length + 1;
+  let id = `phase-image-${index}`;
+  while (used.has(id)) {
+    index += 1;
+    id = `phase-image-${index}`;
+  }
+  return id;
+}
+
+export function phasesUsingAsset(phases: WkePhase[], assetId: string): number {
+  return phases.filter((phase) => phase.imageAssetId === assetId).length;
+}
+
+/** Clone an image asset so a scene can have its own background without affecting others. */
+export function duplicateImageAsset(
+  document: ExploreHotspotsDocument,
+  sourceAssetId: string,
+  newAssetId: string,
+): ExploreHotspotsDocument {
+  const source = document.assets.find((asset) => asset.id === sourceAssetId);
+  if (!source) return document;
+  if (document.assets.some((asset) => asset.id === newAssetId)) return document;
+  return {
+    ...document,
+    assets: [...document.assets, { ...source, id: newAssetId }],
+  };
+}
+
+/**
+ * When multiple scenes point at the same asset, give this scene its own copy
+ * so Replace image only affects the active scene.
+ */
+export function forkPhaseImageAsset(
+  document: ExploreHotspotsDocument,
+  phaseId: string,
+): ExploreHotspotsDocument {
+  const phases = ensurePhases(document);
+  const phase = phases.find((entry) => entry.id === phaseId);
+  if (!phase || phasesUsingAsset(phases, phase.imageAssetId) <= 1) {
+    return document;
+  }
+  const newAssetId = nextPhaseImageAssetId(document);
+  const withAsset = duplicateImageAsset(document, phase.imageAssetId, newAssetId);
+  return {
+    ...withAsset,
+    interaction: {
+      ...withAsset.interaction,
+      phases: ensurePhases(withAsset).map((entry) =>
+        entry.id === phaseId ? { ...entry, imageAssetId: newAssetId } : entry,
+      ),
+    },
+  };
+}

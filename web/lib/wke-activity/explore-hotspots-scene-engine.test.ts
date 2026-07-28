@@ -84,4 +84,51 @@ describe("explore-hotspots scene engine schema", () => {
     expect(payload.hotspots[0]?.response_cards?.[0]?.kind).toBe("question");
     expect(parseScreenPayload("interaction", payload)?.subtype).toBe("explore_hotspots");
   });
+
+  it("parses a sprite PNG object without dialogue or cards", () => {
+    const base = structuredClone(hobbiesActivity) as Record<string, unknown>;
+    const layout = base.layout as { elements: Array<Record<string, unknown>> };
+    const assets = base.assets as Array<Record<string, unknown>>;
+    assets.push({
+      id: "toothbrush-png",
+      kind: "image",
+      src: "/sprites/toothbrush.png",
+      intrinsicSize: { width: 120, height: 320 },
+    });
+    layout.elements.push({
+      id: "toothbrush",
+      kind: "hotspot",
+      regionId: "main-media",
+      name: "Toothbrush",
+      accessibleLabel: "Toothbrush",
+      geometry: { shape: "rectangle", x: 0.2, y: 0.5, width: 0.08, height: 0.2 },
+      tabOrder: 5,
+      required: true,
+      presentation: "sprite",
+      spriteAssetId: "toothbrush-png",
+      interactionKind: "silent",
+    });
+    const interaction = base.interaction as { phases: unknown[] };
+    interaction.phases = [
+      {
+        id: "phase-1",
+        title: "Morning",
+        imageAssetId: (
+          layout.elements.find((el) => el.kind === "media") as { assetId: string }
+        ).assetId,
+        hotspotIds: layout.elements
+          .filter((el) => el.kind === "hotspot")
+          .map((el) => el.id as string),
+      },
+    ];
+
+    const activity = parseWkeActivity(base);
+    expect(activity.layout.elements.filter((el) => el.kind === "hotspot")).toHaveLength(5);
+
+    const payload = wkeActivityToExploreHotspotsPayload(base);
+    const sprite = payload.hotspots.find((h) => h.id === "toothbrush");
+    expect(sprite?.presentation).toBe("sprite");
+    expect(sprite?.sprite_url).toContain("toothbrush.png");
+    expect(sprite?.interaction_kind).toBe("silent");
+  });
 });

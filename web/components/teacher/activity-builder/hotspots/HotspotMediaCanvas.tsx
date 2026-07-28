@@ -10,12 +10,18 @@ import type {
   HotspotVisualShape,
   NormalizedPoint,
 } from "@/lib/hotspots/types";
+import { resizeRectangleWithAspect } from "@/lib/hotspots/sprite-background";
+import { isSpriteHotspot } from "@/lib/hotspots/sprites";
 
 export type HotspotCanvasTool = "select" | "rectangle" | "ellipse" | "polygon";
 
 type Props = {
   media: ActivityAssetReference;
   hotspots: HotspotElement[];
+  /** Resolved sprite image src keyed by hotspot id. */
+  spriteSources?: Record<string, string>;
+  /** Normalized width/height ratio (scene space) for aspect-locked sprite resize. */
+  spriteAspectRatios?: Record<string, number>;
   mode: "author" | "play";
   selectedId?: string | null;
   visitedIds?: string[];
@@ -64,7 +70,7 @@ function VisualShape({ hotspot, visualShape, ...style }: { hotspot: HotspotEleme
   return <HotspotShape geometry={hotspot.geometry} {...style} />;
 }
 
-export function HotspotMediaCanvas({ media, hotspots, mode, selectedId = null, visitedIds = [], tool = "select", onSelect, onCreate, onGeometryChange, segmentationMode = false, segmentationPrompts = [], segmentationPreview = null, segmentationPromptLabel = 1, autoSeedPoints = [], onSegmentationPrompt, onRemoveSegmentationPrompt }: Props) {
+export function HotspotMediaCanvas({ media, hotspots, spriteSources = {}, spriteAspectRatios = {}, mode, selectedId = null, visitedIds = [], tool = "select", onSelect, onCreate, onGeometryChange, segmentationMode = false, segmentationPrompts = [], segmentationPreview = null, segmentationPromptLabel = 1, autoSeedPoints = [], onSegmentationPrompt, onRemoveSegmentationPrompt }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const draftStartRef = useRef<NormalizedPoint | null>(null);
   const dragHandleRef = useRef<{ hotspotId: string; index: number } | null>(null);
@@ -100,6 +106,14 @@ export function HotspotMediaCanvas({ media, hotspots, mode, selectedId = null, v
     }
     if (geometry.shape === "rectangle") {
       const opposite = geometryPoints(geometry)[(index + 2) % 4];
+      const aspect = spriteAspectRatios[hotspot.id];
+      if (aspect && isSpriteHotspot(hotspot)) {
+        onGeometryChange?.(hotspot.id, {
+          shape: "rectangle",
+          ...resizeRectangleWithAspect(opposite, point, aspect),
+        });
+        return;
+      }
       onGeometryChange?.(hotspot.id, {
         shape: "rectangle",
         x: Math.min(point.x, opposite.x), y: Math.min(point.y, opposite.y),
@@ -139,7 +153,7 @@ export function HotspotMediaCanvas({ media, hotspots, mode, selectedId = null, v
       <svg
         ref={svgRef}
         viewBox={`0 0 ${SCALE} ${SCALE}`}
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
         className={`absolute inset-0 h-full w-full ${mode === "author" && tool !== "select" ? "cursor-crosshair" : ""}`}
         onPointerDown={(event) => {
           const point = pointerPoint(event);
@@ -194,6 +208,10 @@ export function HotspotMediaCanvas({ media, hotspots, mode, selectedId = null, v
         {hotspots.map((hotspot) => {
           const selected = selectedId === hotspot.id;
           const visited = visitedIds.includes(hotspot.id);
+          const sprite = isSpriteHotspot(hotspot);
+          const spriteSrc = spriteSources[hotspot.id];
+          const rect =
+            hotspot.geometry.shape === "rectangle" ? hotspot.geometry : null;
           return (
             <g
               key={hotspot.id}
@@ -204,17 +222,44 @@ export function HotspotMediaCanvas({ media, hotspots, mode, selectedId = null, v
               onClick={(event) => { event.stopPropagation(); if (!segmentationMode) onSelect?.(hotspot.id); }}
               onKeyDown={(event) => { if (mode === "play" && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onSelect?.(hotspot.id); } }}
             >
+              {sprite && spriteSrc && rect ? (
+                <image
+                  href={spriteSrc}
+                  x={rect.x * SCALE}
+                  y={rect.y * SCALE}
+                  width={rect.width * SCALE}
+                  height={rect.height * SCALE}
+                  preserveAspectRatio="xMidYMid meet"
+                  className="pointer-events-none"
+                />
+              ) : null}
               {mode === "author" ? <>
-                <VisualShape hotspot={hotspot} fill="transparent" stroke={selected ? "#38bdf8" : "rgba(255,255,255,.42)"} strokeWidth={selected ? 4 : 2} strokeDasharray={hotspot.visualShape ? undefined : "8 7"} />
-                {selected && hotspot.visualShape && <HotspotShape geometry={hotspot.geometry} fill="transparent" stroke="rgba(56,189,248,.38)" strokeWidth={2} strokeDasharray="8 7" />}
-              </> : <VisualShape
+                {sprite && rect ? (
+                  <rect
+                    x={rect.x * SCALE}
+                    y={rect.y * SCALE}
+                    width={rect.width * SCALE}
+                    height={rect.height * SCALE}
+                    fill="transparent"
+                    stroke={selected ? "#38bdf8" : "rgba(255,255,255,.35)"}
+                    strokeWidth={selected ? 3 : 2}
+                    strokeDasharray="8 6"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : (
+                  <>
+                    <VisualShape hotspot={hotspot} fill="transparent" stroke={selected ? "#38bdf8" : "rgba(255,255,255,.42)"} strokeWidth={selected ? 4 : 2} strokeDasharray={hotspot.visualShape ? undefined : "8 7"} />
+                    {selected && hotspot.visualShape && <HotspotShape geometry={hotspot.geometry} fill="transparent" stroke="rgba(56,189,248,.38)" strokeWidth={2} strokeDasharray="8 7" />}
+                  </>
+                )}
+              </> : !sprite ? <VisualShape
                 hotspot={hotspot}
                 fill={selected ? `${hotspot.highlight?.color ?? "#fbbf24"}12` : "transparent"}
                 stroke={selected ? hotspot.highlight?.color ?? "#fbbf24" : visited ? "rgba(52,211,153,.7)" : "transparent"}
                 strokeWidth={selected ? hotspot.highlight?.outlineWidth ?? 5 : visited ? 2 : 3}
                 filter={selected && (hotspot.highlight?.style ?? "spotlight-outline") !== "outline" ? `url(#${effectId}-glow)` : undefined}
                 className="group-hover:stroke-white group-focus:stroke-amber-300"
-              />}
+              /> : null}
               <HotspotShape geometry={hotspot.geometry} fill="transparent" stroke="transparent" strokeWidth={22} />
               <title>{hotspot.accessibleLabel}</title>
             </g>

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "bug-market-v1",
+  "modeId": "bug_market",
+  "title": "Sunny Meadow",
+  "size": { "widthPx": 1280, "heightPx": 720 },
+  "terrain": {
+    "backgroundColor": "#8bd20b",
+    "textureUrl": "/assets/live-game/bug-market/world/meadow-grass.png",
+    "tileSizePx": 420
+  },
+  "collisionRects": [
+    { "id": "north-boundary", "x": 0, "y": 0, "w": 1280, "h": 32 },
+    { "id": "south-boundary", "x": 0, "y": 688, "w": 1280, "h": 32 },
+    { "id": "west-boundary", "x": 0, "y": 0, "w": 32, "h": 720 },
+    { "id": "east-boundary", "x": 1248, "y": 0, "w": 32, "h": 720 },
+    { "id": "counter-fronts", "x": 60, "y": 610, "w": 890, "h": 82 },
+    { "id": "upgrade-shop-footprint", "x": 990, "y": 515, "w": 230, "h": 177 }
+  ],
+  "spawnPoints": [
+    { "id": "meadow-1", "x": 520, "y": 560 },
+    { "id": "meadow-2", "x": 600, "y": 560 },
+    { "id": "meadow-3", "x": 680, "y": 560 },
+    { "id": "meadow-4", "x": 760, "y": 560 }
+  ],
+  "regions": [
+    { "id": "main-bug-meadow", "kind": "bug_spawn", "label": "Meadow", "x": 51, "y": 36, "w": 1178, "h": 418, "displayBounds": { "x": 51, "y": 36, "w": 1178, "h": 418 } },
+    { "id": "personal-counters", "kind": "counter", "label": "Personal counters", "x": 40, "y": 500, "w": 930, "h": 125, "displayBounds": { "x": 51, "y": 511, "w": 922, "h": 180 } },
+    { "id": "long-net-shop", "kind": "upgrade_shop", "label": "Upgrade shop", "x": 850, "y": 470, "w": 160, "h": 190, "displayBounds": { "x": 973, "y": 482, "w": 256, "h": 209 } }
+  ],
+  "exits": []
+}

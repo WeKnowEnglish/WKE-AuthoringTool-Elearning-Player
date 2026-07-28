@@ -1,6 +1,15 @@
 import type { LiveMap, LiveObject } from "@liveblocks/client";
 import { LIVE_GAME_DEFAULT_AVATAR_ID } from "@/lib/live-game/characters/boy-character";
 import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-craft/config";
+import type { LiveGameModeId } from "@/lib/live-game/modes/types";
+import type {
+  BugMarketModeState,
+  BugMarketCatchReceipt,
+  BugMarketSaleReceipt,
+  BugMarketPurchaseReceipt,
+  BugMarketPlayerState,
+  BugMarketWorldBug,
+} from "@/lib/live-game/modes/bug-market/state";
 
 export type LiveGamePhase = "lobby" | "playing" | "paused" | "completed" | "ended";
 
@@ -13,7 +22,7 @@ export type LiveGameLobbyNotice = {
   at: number;
 };
 
-export type LiveGameModeId = "english_craft";
+export type { LiveGameModeId } from "@/lib/live-game/modes/types";
 
 export type LiveGameDirection = "up" | "down" | "left" | "right";
 
@@ -163,6 +172,13 @@ export type LiveGameStorageRoot = {
   playerInventory: LiveMap<string, LiveObject<LiveGamePlayerInventory>>;
   playerHunger: LiveMap<string, LiveObject<LiveGamePlayerHunger>>;
   questionDeckCursors: LiveMap<string, number>;
+  /** Bug Market mode fields are absent from English Craft rooms. */
+  modeState?: LiveObject<BugMarketModeState>;
+  bugMarketPlayers?: LiveMap<string, LiveObject<BugMarketPlayerState>>;
+  bugs?: LiveMap<string, LiveObject<BugMarketWorldBug>>;
+  bugMarketCatchReceipts?: LiveMap<string, LiveObject<BugMarketCatchReceipt>>;
+  bugMarketSaleReceipts?: LiveMap<string, LiveObject<BugMarketSaleReceipt>>;
+  bugMarketPurchaseReceipts?: LiveMap<string, LiveObject<BugMarketPurchaseReceipt>>;
 };
 
 /** Plain snapshot returned by useStorage selectors on the client. */
@@ -180,6 +196,12 @@ export type LiveGameStorageSnapshot = {
   playerInventory?: Record<string, LiveGamePlayerInventory>;
   playerHunger?: Record<string, LiveGamePlayerHunger>;
   questionDeckCursors?: Record<string, number>;
+  modeState?: BugMarketModeState;
+  bugMarketPlayers?: Record<string, BugMarketPlayerState>;
+  bugs?: Record<string, BugMarketWorldBug>;
+  bugMarketCatchReceipts?: Record<string, BugMarketCatchReceipt>;
+  bugMarketSaleReceipts?: Record<string, BugMarketSaleReceipt>;
+  bugMarketPurchaseReceipts?: Record<string, BugMarketPurchaseReceipt>;
 };
 
 /** Minimal client/server fields used by craft recipe gate helpers. */

@@ -12,6 +12,17 @@ import {
 import { contoursToSvgPath } from "./contours";
 import { pickHotspotId } from "./hitTest";
 import {
+  OBJECT_ANIMATION_KEYFRAMES_CSS,
+  objectAnimationStyle,
+} from "./objectAnimation";
+import { geometryCenter, normalizeRotationDeg } from "./rotation";
+import {
+  resolveTextStyle,
+  textAnchorForAlign,
+  textFontSize,
+  textXForAlign,
+} from "./textStyle";
+import {
   DEFAULT_HOTSPOT_HIGHLIGHT,
   type HotspotGeometry,
   type HotspotVisualShape,
@@ -22,6 +33,13 @@ import {
 const SCALE = 1000;
 const HOVER_STROKE = "#ffffff";
 const FOCUS_STROKE = "#fcd34d"; // amber-300
+
+function svgRotateTransform(geometry: HotspotGeometry, rotationDeg = 0): string | undefined {
+  const rotation = normalizeRotationDeg(rotationDeg);
+  if (!rotation) return undefined;
+  const center = geometryCenter(geometry);
+  return `rotate(${rotation} ${center.x * SCALE} ${center.y * SCALE})`;
+}
 
 type ShapeStyle = {
   className?: string;
@@ -149,17 +167,22 @@ export function ExploreHotspotsMediaPlay({
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const width = media.intrinsicWidth ?? 16;
   const height = media.intrinsicHeight ?? 9;
-  const orderedHotspots = [...hotspots].sort(
-    (a, b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0),
-  );
+  const orderedHotspots = [...hotspots].sort((a, b) => {
+    const az = a.zIndex ?? a.tabOrder ?? 0;
+    const bz = b.zIndex ?? b.tabOrder ?? 0;
+    return az - bz;
+  });
+  const visibleHotspots = orderedHotspots.filter((hotspot) => hotspot.visible !== false);
   const lockedSet = new Set(lockedIds);
-  const selectableHotspots = orderedHotspots.filter(
+  const selectableHotspots = visibleHotspots.filter(
     (hotspot) =>
       hotspot.interactionKind !== "none" && !lockedSet.has(hotspot.id),
   );
   const selectedHotspotCandidate = hotspots.find((h) => h.id === selectedId) ?? null;
   const selectedHotspot =
-    selectedHotspotCandidate?.presentation === "sprite"
+    selectedHotspotCandidate?.presentation === "sprite" ||
+    selectedHotspotCandidate?.presentation === "shape" ||
+    selectedHotspotCandidate?.presentation === "text"
       ? null
       : selectedHotspotCandidate;
   const selectedHighlight = {
@@ -199,11 +222,189 @@ export function ExploreHotspotsMediaPlay({
         className="absolute inset-0 h-full w-full select-none object-contain"
         draggable={false}
       />
+      <div className="pointer-events-none absolute inset-0">
+        {visibleHotspots.map((hotspot, index) => {
+          const stackZ = hotspot.zIndex ?? hotspot.tabOrder ?? index;
+          const locked = lockedSet.has(hotspot.id);
+          if (hotspot.presentation === "sprite") {
+            if (hotspot.geometry.shape !== "rectangle" || !hotspot.spriteSrc) return null;
+            const { x, y, width: w, height: h } = hotspot.geometry;
+            const opacity = (hotspot.opacity ?? 1) * (locked ? 0.45 : 1);
+            const motion = objectAnimationStyle(hotspot.animation, {
+              forcePulse: hotspot.pulse === true,
+              rotationDeg: hotspot.rotationDeg ?? 0,
+            });
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={hotspot.id}
+                src={hotspot.spriteSrc}
+                alt=""
+                draggable={false}
+                className="explore-object-motion absolute select-none object-contain"
+                style={{
+                  zIndex: stackZ,
+                  left: `${x * 100}%`,
+                  top: `${y * 100}%`,
+                  width: `${w * 100}%`,
+                  height: `${h * 100}%`,
+                  opacity,
+                  ...motion,
+                  transition:
+                    "left 80ms linear, top 80ms linear, width 80ms linear, height 80ms linear, opacity 80ms linear",
+                }}
+              />
+            );
+          }
+
+          const selected = selectedId === hotspot.id;
+          const visited = visitedIds.includes(hotspot.id);
+          const pulsed = hintPulseId === hotspot.id;
+          const interactive =
+            hotspot.interactionKind !== "none" && !locked;
+          const hovered = interactive && hoveredId === hotspot.id;
+          const focused = interactive && focusedId === hotspot.id;
+          const color = hotspot.highlight?.color ?? DEFAULT_HOTSPOT_HIGHLIGHT.color;
+          const outlineWidth =
+            hotspot.highlight?.outlineWidth ?? DEFAULT_HOTSPOT_HIGHLIGHT.outlineWidth;
+          const style = hotspot.highlight?.style ?? DEFAULT_HOTSPOT_HIGHLIGHT.style;
+          const stroke = resolveStroke({
+            selected,
+            visited,
+            hovered,
+            focused,
+            color,
+          });
+          if (selected) stroke.strokeWidth = outlineWidth;
+          if (pulsed && !selected) {
+            stroke.stroke = color;
+            stroke.strokeWidth = Math.max(stroke.strokeWidth, 4);
+          }
+          const motion = objectAnimationStyle(hotspot.animation, {
+            forcePulse: hotspot.pulse === true,
+          });
+          const hasMotion = Boolean(motion.animationName);
+
+          return (
+            <svg
+              key={hotspot.id}
+              viewBox={`0 0 ${SCALE} ${SCALE}`}
+              preserveAspectRatio="none"
+              className="absolute inset-0 h-full w-full"
+              style={{ zIndex: stackZ }}
+              aria-hidden
+            >
+              {selected && style !== "outline" ? (
+                <defs>
+                  <filter id={`${effectId}-glow`} x="-25%" y="-25%" width="150%" height="150%">
+                    <feGaussianBlur stdDeviation={selectedHighlight.glowRadius} result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+              ) : null}
+              <g transform={svgRotateTransform(hotspot.geometry, hotspot.rotationDeg ?? 0)}>
+                <g
+                  className={hasMotion ? "explore-object-motion" : undefined}
+                  style={hasMotion ? motion : undefined}
+                >
+                  {hotspot.presentation === "shape" || hotspot.presentation === "text" ? (
+                    hotspot.geometry.shape === "rectangle" ? (
+                      <>
+                        <rect
+                          x={hotspot.geometry.x * SCALE}
+                          y={hotspot.geometry.y * SCALE}
+                          width={hotspot.geometry.width * SCALE}
+                          height={hotspot.geometry.height * SCALE}
+                          rx={12}
+                          fill={
+                            hotspot.presentation === "text"
+                              ? "rgba(255,255,255,.88)"
+                              : `${color}55`
+                          }
+                          stroke={color}
+                          strokeWidth={2}
+                          opacity={locked ? 0.45 : hotspot.opacity ?? 1}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        {hotspot.presentation === "text" ? (
+                          (() => {
+                            const textStyle = resolveTextStyle(hotspot.textStyle);
+                            return (
+                              <text
+                                x={textXForAlign(
+                                  hotspot.geometry,
+                                  SCALE,
+                                  textStyle.align,
+                                )}
+                                y={
+                                  (hotspot.geometry.y + hotspot.geometry.height / 2) *
+                                  SCALE
+                                }
+                                textAnchor={textAnchorForAlign(textStyle.align)}
+                                dominantBaseline="middle"
+                                fill={color}
+                                fontSize={textFontSize(
+                                  hotspot.geometry.height,
+                                  SCALE,
+                                  textStyle.role,
+                                )}
+                                fontFamily="system-ui, sans-serif"
+                                fontWeight={textStyle.role === "title" ? 700 : 500}
+                                opacity={locked ? 0.45 : hotspot.opacity ?? 1}
+                                className="select-none"
+                              >
+                                {hotspot.labelText?.trim() ||
+                                  hotspot.accessibleLabel ||
+                                  "Text"}
+                              </text>
+                            );
+                          })()
+                        ) : null}
+                      </>
+                    ) : null
+                  ) : (
+                    <VisualShape
+                      hotspot={hotspot}
+                      fill={
+                        selected
+                          ? `${color}12`
+                          : hovered || focused
+                            ? `${HOVER_STROKE}18`
+                            : "transparent"
+                      }
+                      stroke={stroke.stroke}
+                      strokeWidth={stroke.strokeWidth}
+                      opacity={locked ? 0.45 : pulsed ? 0.95 : 1}
+                      strokeDasharray={pulsed && !selected ? "10 8" : undefined}
+                      filter={
+                        selected && style !== "outline"
+                          ? `url(#${effectId}-glow)`
+                          : undefined
+                      }
+                      style={
+                        pulsed && !selected
+                          ? {
+                              animation:
+                                "explore-hotspot-hint-pulse 1.2s ease-in-out infinite",
+                            }
+                          : undefined
+                      }
+                    />
+                  )}
+                </g>
+              </g>
+            </svg>
+          );
+        })}
+      </div>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${SCALE} ${SCALE}`}
-        preserveAspectRatio="xMidYMid meet"
-        className="absolute inset-0 h-full w-full"
+        preserveAspectRatio="none"
+        className="absolute inset-0 z-[1000] h-full w-full"
         style={{ cursor: hoveredId || focusedId ? "pointer" : "default" }}
         onPointerMove={updateHoverFromPointer}
         onPointerLeave={() => setHoveredId(null)}
@@ -215,7 +416,9 @@ export function ExploreHotspotsMediaPlay({
           <defs>
             <mask id={`${effectId}-spotlight`}>
               <rect width={SCALE} height={SCALE} fill="white" />
-              <VisualShape hotspot={selectedHotspot} fill="black" />
+              <g transform={svgRotateTransform(selectedHotspot.geometry, selectedHotspot.rotationDeg ?? 0)}>
+                <VisualShape hotspot={selectedHotspot} fill="black" />
+              </g>
             </mask>
             <filter id={`${effectId}-glow`} x="-25%" y="-25%" width="150%" height="150%">
               <feGaussianBlur stdDeviation={selectedHighlight.glowRadius} result="blur" />
@@ -238,113 +441,40 @@ export function ExploreHotspotsMediaPlay({
           />
         ) : null}
 
-        {orderedHotspots.map((hotspot) => {
-          const isSprite = hotspot.presentation === "sprite";
+        {visibleHotspots.map((hotspot) => {
           const isDecorative = hotspot.interactionKind === "none";
-          const selected = selectedId === hotspot.id;
-          const visited = visitedIds.includes(hotspot.id);
           const locked = lockedSet.has(hotspot.id);
-          const pulsed = hintPulseId === hotspot.id;
           const interactive = !isDecorative && !locked;
-          const hovered = interactive && hoveredId === hotspot.id;
-          const focused = interactive && focusedId === hotspot.id;
-          const color = hotspot.highlight?.color ?? DEFAULT_HOTSPOT_HIGHLIGHT.color;
-          const outlineWidth =
-            hotspot.highlight?.outlineWidth ?? DEFAULT_HOTSPOT_HIGHLIGHT.outlineWidth;
-          const style = hotspot.highlight?.style ?? DEFAULT_HOTSPOT_HIGHLIGHT.style;
-          const stroke = resolveStroke({
-            selected: selected && !isSprite,
-            visited,
-            hovered,
-            focused,
-            color,
-          });
-          if (selected && !isSprite) {
-            stroke.strokeWidth = outlineWidth;
-          }
-          if (pulsed && !selected && !isSprite) {
-            stroke.stroke = color;
-            stroke.strokeWidth = Math.max(stroke.strokeWidth, 4);
-          }
-          const rect =
-            hotspot.geometry.shape === "rectangle" ? hotspot.geometry : null;
-
+          if (!interactive) return null;
           return (
             <g
-              key={hotspot.id}
-              role={interactive ? "button" : undefined}
-              tabIndex={interactive ? 0 : -1}
-              aria-disabled={locked || isDecorative || undefined}
+              key={`hit-${hotspot.id}`}
+              role="button"
+              tabIndex={0}
               aria-label={hotspot.accessibleLabel}
-              aria-hidden={isDecorative || undefined}
               className="outline-none"
-              onFocus={() => {
-                if (interactive) setFocusedId(hotspot.id);
-              }}
+              transform={svgRotateTransform(hotspot.geometry, hotspot.rotationDeg ?? 0)}
+              onFocus={() => setFocusedId(hotspot.id)}
               onBlur={(event: ReactFocusEvent<SVGGElement>) => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                   setFocusedId((current) => (current === hotspot.id ? null : current));
                 }
               }}
               onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
-                if (interactive && (event.key === "Enter" || event.key === " ")) {
+                if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   trySelect(hotspot.id);
                 }
               }}
             >
-              {isSprite && hotspot.spriteSrc && rect ? (
-                <image
-                  href={hotspot.spriteSrc}
-                  x={rect.x * SCALE}
-                  y={rect.y * SCALE}
-                  width={rect.width * SCALE}
-                  height={rect.height * SCALE}
-                  preserveAspectRatio="xMidYMid meet"
-                  className="pointer-events-none"
-                  opacity={locked ? 0.45 : 1}
-                />
-              ) : null}
-              {!isSprite ? (
-                <VisualShape
-                  hotspot={hotspot}
-                  fill={
-                    selected
-                      ? `${color}12`
-                      : hovered || focused
-                        ? `${HOVER_STROKE}18`
-                        : "transparent"
-                  }
-                  stroke={stroke.stroke}
-                  strokeWidth={stroke.strokeWidth}
-                  opacity={locked ? 0.45 : pulsed ? 0.95 : 1}
-                  strokeDasharray={pulsed && !selected ? "10 8" : undefined}
-                  filter={
-                    selected && style !== "outline"
-                      ? `url(#${effectId}-glow)`
-                      : undefined
-                  }
-                  className="pointer-events-none"
-                  style={
-                    pulsed && !selected
-                      ? {
-                          animation:
-                            "explore-hotspot-hint-pulse 1.2s ease-in-out infinite",
-                        }
-                      : undefined
-                  }
-                />
-              ) : null}
-              {interactive ? (
-                <HotspotShape
-                  geometry={hotspot.geometry}
-                  fill="transparent"
-                  stroke="transparent"
-                  strokeWidth={22}
-                  className="pointer-events-none"
-                />
-              ) : null}
-              {!isDecorative ? <title>{hotspot.accessibleLabel}</title> : null}
+              <HotspotShape
+                geometry={hotspot.geometry}
+                fill="transparent"
+                stroke="transparent"
+                strokeWidth={22}
+                className="pointer-events-none"
+              />
+              <title>{hotspot.accessibleLabel}</title>
             </g>
           );
         })}
@@ -354,6 +484,7 @@ export function ExploreHotspotsMediaPlay({
           0%, 100% { opacity: 0.55; }
           50% { opacity: 1; }
         }
+        ${OBJECT_ANIMATION_KEYFRAMES_CSS}
       `}</style>
     </div>
   );

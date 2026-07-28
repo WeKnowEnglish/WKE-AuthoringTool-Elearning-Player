@@ -53,10 +53,14 @@ export async function listStudioExploreHotspots(): Promise<StudioExploreHotspots
 export async function getStudioExploreHotspots(
   activityId: string,
 ): Promise<{ id: string; document: ExploreHotspotsDocument }> {
-  const response = await fetch(`/api/studio/activities/${encodeURIComponent(activityId)}`, {
-    method: "GET",
-    credentials: "same-origin",
-  });
+  // Skip pack — authoring is enough for the workspace and avoids duplicating large media.
+  const response = await fetch(
+    `/api/studio/activities/${encodeURIComponent(activityId)}?include_pack=0`,
+    {
+      method: "GET",
+      credentials: "same-origin",
+    },
+  );
   const payload = (await response.json().catch(() => null)) as {
     ok?: boolean;
     id?: string;

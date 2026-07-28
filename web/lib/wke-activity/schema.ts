@@ -71,10 +71,29 @@ const hotspotElementSchema = z.object({
   interactionKind: z
     .enum(["dialogue", "info", "audio", "question", "none", "silent"])
     .optional(),
-  presentation: z.enum(["target", "sprite"]).optional(),
+  presentation: z.enum(["target", "sprite", "shape", "text"]).optional(),
   spriteAssetId: z.string().min(1).optional(),
+  labelText: z.string().optional(),
+  textStyle: z
+    .object({
+      role: z.enum(["title", "body", "caption"]).optional(),
+      align: z.enum(["left", "center", "right"]).optional(),
+    })
+    .optional(),
+  rotationDeg: z.number().optional(),
+  zIndex: z.number().int().optional(),
+  animation: z
+    .object({
+      entrance: z
+        .enum(["none", "fade_in", "pop", "slide_up", "slide_down"])
+        .optional(),
+      entranceDurationMs: z.number().min(0).max(12_000).optional(),
+      entranceDelayMs: z.number().min(0).max(12_000).optional(),
+      idle: z.enum(["none", "pulse", "bob", "wiggle"]).optional(),
+    })
+    .optional(),
   orderIndex: z.number().int().optional(),
-  initialState: z.enum(["locked", "available"]).optional(),
+  initialState: z.enum(["locked", "available", "hidden"]).optional(),
   wrongOrderHint: z.string().optional(),
   responseCards: z
     .array(
@@ -111,6 +130,112 @@ const hotspotElementSchema = z.object({
             .min(2),
           correctChoiceId: z.string().min(1),
           gateDiscover: z.boolean().optional(),
+        }),
+      ]),
+    )
+    .optional(),
+  onTap: z
+    .array(
+      z.discriminatedUnion("type", [
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("play_audio"),
+          audioUrl: z.string(),
+          label: z.string().optional(),
+          wait: z.boolean().optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("show_dialogue"),
+          dialogueId: z.string().min(1).optional(),
+          wait: z.boolean().optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("show_info"),
+          text: z.string().min(1),
+          imageUrl: z.string().min(1).optional(),
+          wait: z.boolean().optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("ask_question"),
+          prompt: z.string().min(1),
+          questionType: z.enum(["mc", "true_false"]),
+          choices: z
+            .array(
+              z.object({
+                id: z.string().min(1),
+                label: z.string().min(1),
+              }),
+            )
+            .min(2),
+          correctChoiceId: z.string().min(1),
+          gateDiscover: z.boolean().optional(),
+          wait: z.boolean().optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("wait"),
+          ms: z.number().nonnegative(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("set_object_state"),
+          targetId: z.string().min(1),
+          state: z.enum(["hidden", "visible", "locked", "available"]),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("swap_sprite_asset"),
+          targetId: z.string().min(1),
+          spriteAssetId: z.string().min(1),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("tween_object"),
+          targetId: z.string().min(1),
+          to: z.object({
+            x: z.number(),
+            y: z.number(),
+            width: z.number().positive(),
+            height: z.number().positive(),
+          }),
+          durationMs: z.number().nonnegative(),
+          easing: z.enum(["linear", "easeOut"]).optional(),
+          wait: z.boolean().optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("enter_object"),
+          targetId: z.string().min(1),
+          to: z.object({
+            x: z.number(),
+            y: z.number(),
+            width: z.number().positive(),
+            height: z.number().positive(),
+          }),
+          durationMs: z.number().nonnegative(),
+          from: z
+            .object({
+              x: z.number().optional(),
+              y: z.number().optional(),
+              width: z.number().positive().optional(),
+              height: z.number().positive().optional(),
+            })
+            .optional(),
+          wait: z.boolean().optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("complete_object"),
+          targetId: z.string().min(1).optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("pulse_object"),
+          targetId: z.string().min(1),
+          enabled: z.boolean().optional(),
         }),
       ]),
     )
@@ -215,6 +340,18 @@ export const wkeActivityV2Schema = z
             title: z.string().optional(),
             imageAssetId: z.string().min(1),
             hotspotIds: z.array(z.string().min(1)),
+            onEnter: hotspotElementSchema.shape.onTap,
+            objective: z
+              .object({
+                label: z.string().optional(),
+              })
+              .optional(),
+            strictOrder: z.boolean().optional(),
+            hintPulseEnabled: z.boolean().optional(),
+            visitedWhen: z
+              .enum(["dialogue-started", "dialogue-finished", "dialogue-completed"])
+              .optional(),
+            autoPlayOnSelect: z.boolean().optional(),
           }),
         )
         .optional(),
@@ -265,12 +402,13 @@ export const wkeActivityV2Schema = z
         hotspot.interactionKind ?? (presentation === "sprite" ? "silent" : "dialogue");
       const hasDialogue = dialogueByHotspot.has(hotspot.id);
       const hasCards = (hotspot.responseCards?.length ?? 0) > 0;
+      const hasOnTap = (hotspot.onTap?.length ?? 0) > 0;
       const needsContent =
         interactionKind !== "none" && interactionKind !== "silent";
-      if (needsContent && !hasDialogue && !hasCards) {
+      if (needsContent && !hasDialogue && !hasCards && !hasOnTap) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Object ${hotspot.id} needs a dialogue or responseCards`,
+          message: `Object ${hotspot.id} needs a dialogue, responseCards, or onTap sequence`,
         });
       }
       if (presentation === "sprite") {

@@ -17,6 +17,7 @@ import type {
 } from "@/lib/teacher-space/types";
 import { AssignStudioActivityHomeworkOverlay } from "@/components/teacher/AssignStudioActivityHomeworkOverlay";
 import { TeacherSpacePanel } from "@/components/teacher/TeacherSpacePanel";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 const FORMAT_LABEL: Record<StudioActivityFormat, string> = {
   multiple_choice: "MCQ",
@@ -77,6 +78,13 @@ export function TeacherClassesHome({
   useEffect(() => {
     setAssignOpen(false);
   }, [selectedId]);
+
+  useEffect(() => {
+    recordAppDiagnostic("teacher", "mark", "teacher_classes_loaded", {
+      classCount: classes.length,
+      activityCount: activities.length,
+    });
+  }, [activities.length, classes.length]);
 
   useEffect(() => {
     setActivities(initialActivities);

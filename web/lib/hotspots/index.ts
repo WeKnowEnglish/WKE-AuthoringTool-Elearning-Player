@@ -1,3 +1,11 @@
+export {
+  effectiveZIndex,
+  nextZIndex,
+  reorderZIndex,
+  sortHotspotsBackToFront,
+  sortHotspotsFrontToBack,
+  type LayerReorderDirection,
+} from "./layers";
 export type {
   ActivityAssetReference,
   Dialogue,
@@ -20,6 +28,15 @@ export {
 } from "./hotspotSegmentation";
 export { maskToNormalizedContours, contoursToSvgPath } from "./maskContours";
 export {
+  buildHotspotClipboardPayload,
+  imageFileFromClipboardData,
+  imageFileFromSystemClipboard,
+  insertHotspotClipboardPayload,
+  isEditableKeyboardTarget,
+  parseHotspotClipboardPayload,
+  type HotspotClipboardPayload,
+} from "./clipboard";
+export {
   downloadExploreHotspotsJson,
   getStudioExploreHotspots,
   listStudioExploreHotspots,
@@ -27,12 +44,21 @@ export {
   validateExploreHotspotsDocument,
   type StudioExploreHotspotsRef,
 } from "./studio";
+export {
+  EXPLORE_HOTSPOTS_WKE_LIBRARY,
+  getExploreHotspotsLibraryRef,
+  loadExploreHotspotsLibraryExample,
+  type WkeLibraryExampleRef,
+} from "./wke-library";
 export { HOBBIES_HOTSPOT_ACTIVITY } from "./fixtures/hobbiesHotspot";
+export { createBlankExploreHotspotsDocument } from "./fixtures/blankExploreHotspots";
 export {
   duplicateImageAsset,
   ensurePhases,
   forkPhaseImageAsset,
   hotspotsForPhase,
+  movePhase,
+  movePhaseInDocument,
   nextPhaseId,
   nextPhaseImageAssetId,
   phasesUsingAsset,
@@ -41,7 +67,10 @@ export {
 export {
   defaultSpriteGeometry,
   isSilentOrDecorativeSprite,
+  isShapeHotspot,
   isSpriteHotspot,
+  isTargetHotspot,
+  isTextHotspot,
   spriteRect,
 } from "./sprites";
 export { useHotspotSamModel } from "./sam";

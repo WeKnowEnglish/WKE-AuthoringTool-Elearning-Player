@@ -2408,6 +2408,111 @@ const exploreHotspotResponseCardSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("play_audio"),
+    audio_url: z.string(),
+    label: z.string().optional(),
+    wait: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("show_dialogue"),
+    dialogue_id: z.string().min(1).optional(),
+    wait: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("show_info"),
+    text: z.string().min(1),
+    image_url: z.string().min(1).optional(),
+    wait: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("ask_question"),
+    prompt: z.string().min(1),
+    question_type: z.enum(["mc", "true_false"]),
+    choices: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+        }),
+      )
+      .min(2),
+    correct_choice_id: z.string().min(1),
+    gate_discover: z.boolean().optional(),
+    wait: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("wait"),
+    ms: z.number().nonnegative(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("set_object_state"),
+    target_id: z.string().min(1),
+    state: z.enum(["hidden", "visible", "locked", "available"]),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("swap_sprite_asset"),
+    target_id: z.string().min(1),
+    sprite_asset_id: z.string().min(1),
+    /** Resolved at export for play (optional when asset missing). */
+    sprite_url: z.string().min(1).optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("tween_object"),
+    target_id: z.string().min(1),
+    to: z.object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number().positive(),
+      height: z.number().positive(),
+    }),
+    duration_ms: z.number().nonnegative(),
+    easing: z.enum(["linear", "easeOut"]).optional(),
+    wait: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("enter_object"),
+    target_id: z.string().min(1),
+    to: z.object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number().positive(),
+      height: z.number().positive(),
+    }),
+    duration_ms: z.number().nonnegative(),
+    from: z
+      .object({
+        x: z.number().optional(),
+        y: z.number().optional(),
+        width: z.number().positive().optional(),
+        height: z.number().positive().optional(),
+      })
+      .optional(),
+    wait: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("complete_object"),
+    target_id: z.string().min(1).optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("pulse_object"),
+    target_id: z.string().min(1),
+    enabled: z.boolean().optional(),
+  }),
+]);
+
 const exploreHotspotItemSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
@@ -2439,12 +2544,33 @@ const exploreHotspotItemSchema = z.object({
   interaction_kind: z
     .enum(["dialogue", "info", "audio", "question", "none", "silent"])
     .optional(),
-  presentation: z.enum(["target", "sprite"]).optional(),
+  presentation: z.enum(["target", "sprite", "shape", "text"]).optional(),
   sprite_url: z.string().min(1).optional(),
+  label_text: z.string().optional(),
+  text_style: z
+    .object({
+      role: z.enum(["title", "body", "caption"]).optional(),
+      align: z.enum(["left", "center", "right"]).optional(),
+    })
+    .optional(),
+  rotation_deg: z.number().optional(),
+  z_index: z.number().int().optional(),
+  animation: z
+    .object({
+      entrance: z
+        .enum(["none", "fade_in", "pop", "slide_up", "slide_down"])
+        .optional(),
+      entrance_duration_ms: z.number().min(0).max(12_000).optional(),
+      entrance_delay_ms: z.number().min(0).max(12_000).optional(),
+      idle: z.enum(["none", "pulse", "bob", "wiggle"]).optional(),
+    })
+    .optional(),
+  sprite_asset_id: z.string().min(1).optional(),
   order_index: z.number().int().optional(),
-  initial_state: z.enum(["locked", "available"]).optional(),
+  initial_state: z.enum(["locked", "available", "hidden"]).optional(),
   wrong_order_hint: z.string().optional(),
   response_cards: z.array(exploreHotspotResponseCardSchema).optional(),
+  on_tap: z.array(exploreHotspotOnTapActionSchema).optional(),
   enable_hint_pulse: z.boolean().optional(),
 });
 
@@ -2506,6 +2632,18 @@ export const exploreHotspotsPayloadSchema = z
           image_width: z.number().positive().optional(),
           image_height: z.number().positive().optional(),
           hotspot_ids: z.array(z.string().min(1)),
+          on_enter: z.array(exploreHotspotOnTapActionSchema).optional(),
+          objective: z
+            .object({
+              label: z.string().optional(),
+            })
+            .optional(),
+          strict_order: z.boolean().optional(),
+          hint_pulse_enabled: z.boolean().optional(),
+          visited_when: z
+            .enum(["dialogue_started", "dialogue_finished"])
+            .optional(),
+          auto_play_on_select: z.boolean().optional(),
         }),
       )
       .optional(),

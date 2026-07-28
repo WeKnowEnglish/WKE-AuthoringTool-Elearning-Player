@@ -11,6 +11,7 @@ import {
 } from "@/lib/live-game/liveblocks/identity";
 import { isValidJoinCode } from "@/lib/live-game/liveblocks/join-code";
 import { ENGLISH_CRAFT_MODE, normalizeEnglishCraftDurationMinutes } from "@/lib/live-game/modes/english-craft/config";
+import type { LiveGameModeId } from "@/lib/live-game/modes/types";
 import {
   LIVE_GAME_DEFAULT_AVATAR_ID,
   type LiveGameCharacterId,
@@ -64,7 +65,7 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
         body: JSON.stringify({ sessionId: code, displayName: name, avatarId }),
       }, { phase: "room", name: "student_join_request", detail: { sessionId: code } });
       const payload = (await response.json()) as {
-        error?: string; userId?: string; mapId?: string; durationMinutes?: number | null;
+        error?: string; userId?: string; modeId?: LiveGameModeId; mapId?: string; durationMinutes?: number | null;
         questionSetId?: string; questionSetVersion?: number;
         classId?: string | null; classTitle?: string | null;
       };
@@ -78,7 +79,7 @@ export function LiveGameJoinForm({ initialCode = "" }: Props) {
         classId: payload.classId ?? null,
         classTitle: payload.classTitle ?? null,
         avatarId,
-        modeId: "english_craft",
+        modeId: payload.modeId ?? "english_craft",
         mapId: payload.mapId ?? ENGLISH_CRAFT_MODE.defaultMapId,
         durationMinutes: normalizeEnglishCraftDurationMinutes(
           typeof payload.durationMinutes === "number" ? payload.durationMinutes : ENGLISH_CRAFT_MODE.defaultDurationMinutes,

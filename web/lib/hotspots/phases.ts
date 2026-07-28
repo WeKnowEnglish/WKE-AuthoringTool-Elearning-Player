@@ -23,12 +23,24 @@ export function ensurePhases(document: ExploreHotspotsDocument): WkePhase[] {
   if (document.interaction.phases?.length) {
     return document.interaction.phases;
   }
+  const interaction = document.interaction;
   return [
     {
       id: "phase-1",
       title: "Scene 1",
       imageAssetId: mediaAssetId(document),
       hotspotIds: allHotspotIds(document),
+      ...(interaction.objective ? { objective: interaction.objective } : {}),
+      ...(interaction.strictOrder != null
+        ? { strictOrder: interaction.strictOrder }
+        : {}),
+      ...(interaction.hintPulseEnabled != null
+        ? { hintPulseEnabled: interaction.hintPulseEnabled }
+        : {}),
+      ...(interaction.visitedWhen ? { visitedWhen: interaction.visitedWhen } : {}),
+      ...(interaction.autoPlayOnSelect != null
+        ? { autoPlayOnSelect: interaction.autoPlayOnSelect }
+        : {}),
     },
   ];
 }
@@ -87,6 +99,40 @@ export function nextPhaseImageAssetId(document: ExploreHotspotsDocument): string
 
 export function phasesUsingAsset(phases: WkePhase[], assetId: string): number {
   return phases.filter((phase) => phase.imageAssetId === assetId).length;
+}
+
+/** Swap a phase one step left (`-1`) or right (`+1`). No-op at ends / missing id. */
+export function movePhase(
+  phases: WkePhase[],
+  phaseId: string,
+  direction: -1 | 1,
+): WkePhase[] {
+  const index = phases.findIndex((phase) => phase.id === phaseId);
+  if (index < 0) return phases;
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= phases.length) return phases;
+  const next = [...phases];
+  const [item] = next.splice(index, 1);
+  next.splice(nextIndex, 0, item!);
+  return next;
+}
+
+export function movePhaseInDocument(
+  document: ExploreHotspotsDocument,
+  phaseId: string,
+  direction: -1 | 1,
+): ExploreHotspotsDocument {
+  const withPhases = withEnsuredPhases(document);
+  const current = ensurePhases(withPhases);
+  const reordered = movePhase(current, phaseId, direction);
+  if (reordered === current) return document;
+  return {
+    ...withPhases,
+    interaction: {
+      ...withPhases.interaction,
+      phases: reordered,
+    },
+  };
 }
 
 /** Clone an image asset so a scene can have its own background without affecting others. */

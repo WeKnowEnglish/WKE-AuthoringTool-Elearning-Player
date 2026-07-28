@@ -7,6 +7,8 @@ import {
 } from "@/lib/live-game/modes/english-craft/config";
 import { normalizeQuestionSetRefForSession } from "@/lib/live-game/question-banks/question-set-ids";
 import { LIVE_GAME_ROOM_PREFIX } from "@/lib/liveblocks/room-prefix";
+import type { LiveGameModeId } from "@/lib/live-game/modes/types";
+import { isLiveGameModeId } from "@/lib/live-game/modes/registry";
 
 const SESSION_CONTEXT_KEY = "wke-live-game-session-context";
 
@@ -22,7 +24,7 @@ export type LiveGameSessionContext = {
   classId?: string | null;
   classTitle?: string | null;
   avatarId: string;
-  modeId: "english_craft";
+  modeId: LiveGameModeId;
   mapId: string;
   durationMinutes: EnglishCraftSessionDuration;
   /** Canonical question-set uuid from host/join API. */
@@ -55,7 +57,8 @@ export function getLiveGameSessionContext(): LiveGameSessionContext | null {
       typeof parsed.avatarId !== "string" ||
       (parsed.classId !== undefined && parsed.classId !== null && typeof parsed.classId !== "string") ||
       (parsed.classTitle !== undefined && parsed.classTitle !== null && typeof parsed.classTitle !== "string") ||
-      parsed.modeId !== "english_craft" ||
+      typeof parsed.modeId !== "string" ||
+      !isLiveGameModeId(parsed.modeId) ||
       typeof parsed.mapId !== "string" ||
       typeof parsed.questionSetId !== "string" ||
       parsed.questionSetId.trim().length === 0 ||

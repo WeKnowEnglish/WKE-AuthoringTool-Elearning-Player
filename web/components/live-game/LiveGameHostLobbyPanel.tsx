@@ -16,6 +16,9 @@ import {
 } from "@/lib/live-game/modes/english-craft/config";
 
 type Props = {
+  gameTitle?: string;
+  startLabel?: string;
+  previewTopOffset?: boolean;
   joinCode: string;
   durationMinutes: EnglishCraftSessionDuration;
   onDurationChange: (duration: EnglishCraftSessionDuration) => void;
@@ -34,6 +37,9 @@ type Props = {
 export const LiveGameHostLobbyPanel = memo(LiveGameHostLobbyPanelInner);
 
 function LiveGameHostLobbyPanelInner({
+  gameTitle = ENGLISH_CRAFT_MODE.title,
+  startLabel = `Start ${ENGLISH_CRAFT_MODE.title}`,
+  previewTopOffset = false,
   joinCode,
   durationMinutes,
   onDurationChange,
@@ -67,12 +73,13 @@ function LiveGameHostLobbyPanelInner({
         "pointer-events-auto fixed z-30 flex flex-col border-white/20 bg-neutral-950/95 text-white shadow-2xl",
         "inset-x-0 bottom-0 max-h-[58dvh] rounded-t-2xl border-t",
         "md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-80 md:rounded-none md:border-t-0 md:border-l",
+        previewTopOffset && "md:top-11",
         !mobileExpanded && "max-h-14 md:max-h-none",
       )}
     >
       <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2 md:px-4 md:py-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-extrabold">{ENGLISH_CRAFT_MODE.title}</p>
+          <p className="truncate text-sm font-extrabold">{gameTitle}</p>
           <p className="text-[11px] font-semibold text-white/65">Host lobby</p>
         </div>
         <button
@@ -199,7 +206,7 @@ function LiveGameHostLobbyPanelInner({
             disabled={!canStart}
             onClick={onStart}
           >
-            Start English Craft
+            {startLabel}
           </KidButton>
           {!canStart ?
             <p className="text-xs font-semibold text-white/65">

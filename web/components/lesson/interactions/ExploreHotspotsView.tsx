@@ -6,20 +6,26 @@ import { playSfx } from "@/lib/audio/sfx";
 import { speakTextAndWait, stopSpeaking, unlockSpeechSynthesis } from "@/lib/audio/tts";
 import {
   canSelectInStrictOrder,
+  contentActionAsCard,
   hintTargetId,
   hotspotsInPhase,
   initialObjectStates,
+  initialStageStates,
   isDecorativeObject,
   isObjectComplete,
   isSilentObject,
   phaseComplete,
+  resolvePlayOnTap,
   resolvePlayPhases,
-  responseStackFor,
+  resolvePhasePlayback,
+  stageStateForHotspot,
   type ExploreHotspotItem,
-  type ExploreHotspotResponseCard,
   type ExploreHotspotsParsed,
+  type ExploreHotspotOnTapAction,
   type ObjectRuntimeState,
+  type StageObjectPlayState,
 } from "@/lib/wke-activity/explore-hotspots-play-runtime";
+import { easeOutCubic, lerp } from "@/lib/wke-activity/on-tap-actions";
 import {
   GuideBlock,
   InteractionLessonNav,
@@ -88,38 +94,67 @@ function pointsToRectangle(
   };
 }
 
-function toPlayHotspots(hotspots: ExploreHotspotItem[]): PlayHotspot[] {
-  return hotspots.map((h) => ({
-    id: h.id,
-    accessibleLabel: h.accessible_label ?? h.name,
-    tabOrder: h.tab_order,
-    geometry:
-      h.presentation === "sprite"
-        ? pointsToRectangle(h.points)
-        : { shape: "polygon" as const, points: h.points },
-    presentation: h.presentation,
-    spriteSrc: h.sprite_url,
-    interactionKind: h.interaction_kind,
-    visualShape: h.visual_shape
-      ? {
-          type: "segmentation-contour" as const,
-          sourceAssetId: h.visual_shape.source_asset_id,
-          sourceWidth: h.visual_shape.source_width,
-          sourceHeight: h.visual_shape.source_height,
-          paths: h.visual_shape.paths,
-          score: h.visual_shape.score,
-        }
-      : undefined,
-    highlight: h.highlight
-      ? {
-          style: h.highlight.style,
-          color: h.highlight.color,
-          outlineWidth: h.highlight.outline_width,
-          glowRadius: h.highlight.glow_radius,
-          backgroundDim: h.highlight.background_dim,
-        }
-      : undefined,
-  }));
+function toPlayHotspots(
+  hotspots: ExploreHotspotItem[],
+  stageStates: Record<string, StageObjectPlayState>,
+): PlayHotspot[] {
+  return hotspots.map((h) => {
+    const stage = stageStates[h.id];
+    return {
+      id: h.id,
+      accessibleLabel: h.accessible_label ?? h.name,
+      tabOrder: h.tab_order,
+      geometry:
+        stage?.geometry ??
+        (h.presentation === "sprite" ||
+        h.presentation === "shape" ||
+        h.presentation === "text"
+          ? pointsToRectangle(h.points)
+          : { shape: "polygon" as const, points: h.points }),
+      presentation: h.presentation,
+      spriteSrc: stage?.spriteSrc ?? h.sprite_url,
+      interactionKind: h.interaction_kind,
+      labelText: h.label_text,
+      textStyle: h.text_style
+        ? {
+            role: h.text_style.role,
+            align: h.text_style.align,
+          }
+        : undefined,
+      rotationDeg: h.rotation_deg,
+      zIndex: h.z_index,
+      animation: h.animation
+        ? {
+            entrance: h.animation.entrance,
+            entranceDurationMs: h.animation.entrance_duration_ms,
+            entranceDelayMs: h.animation.entrance_delay_ms,
+            idle: h.animation.idle,
+          }
+        : undefined,
+      visible: stage?.visible ?? h.initial_state !== "hidden",
+      opacity: stage?.opacity ?? 1,
+      pulse: stage?.pulse ?? false,
+      visualShape: h.visual_shape
+        ? {
+            type: "segmentation-contour" as const,
+            sourceAssetId: h.visual_shape.source_asset_id,
+            sourceWidth: h.visual_shape.source_width,
+            sourceHeight: h.visual_shape.source_height,
+            paths: h.visual_shape.paths,
+            score: h.visual_shape.score,
+          }
+        : undefined,
+      highlight: h.highlight
+        ? {
+            style: h.highlight.style,
+            color: h.highlight.color,
+            outlineWidth: h.highlight.outline_width,
+            glowRadius: h.highlight.glow_radius,
+            backgroundDim: h.highlight.background_dim,
+          }
+        : undefined,
+    };
+  });
 }
 
 async function playHtmlAudio(
@@ -172,22 +207,38 @@ export function ExploreHotspotsView({
   const [objectStates, setObjectStates] = useState<Record<string, ObjectRuntimeState>>(
     () => initialObjectStates(parsed.hotspots),
   );
+  const [stageStates, setStageStates] = useState<Record<string, StageObjectPlayState>>(
+    () => initialStageStates(parsed.hotspots),
+  );
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
-  const [cardIndex, setCardIndex] = useState(0);
+  const [actionIndex, setActionIndex] = useState(0);
   const [orderHint, setOrderHint] = useState<string | null>(null);
   const [showHintPulse, setShowHintPulse] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [questionFeedback, setQuestionFeedback] = useState<string | null>(null);
   const playGenRef = useRef(0);
+  const enterGenRef = useRef(0);
+  const runStageActionRef = useRef<(action: ExploreHotspotOnTapAction) => Promise<void>>(
+    async () => {},
+  );
   const passedRef = useRef(false);
+  const stageStatesRef = useRef(stageStates);
+  stageStatesRef.current = stageStates;
 
   const panel = parsed.dialogue_panel;
   const currentPhase = phases[Math.min(phaseIndex, phases.length - 1)]!;
+  const playback = useMemo(
+    () => resolvePhasePlayback(currentPhase, parsed),
+    [currentPhase, parsed],
+  );
   const phaseHotspots = useMemo(
     () => hotspotsInPhase(parsed, currentPhase),
     [parsed, currentPhase],
   );
-  const playHotspots = useMemo(() => toPlayHotspots(phaseHotspots), [phaseHotspots]);
+  const playHotspots = useMemo(
+    () => toPlayHotspots(phaseHotspots, stageStates),
+    [phaseHotspots, stageStates],
+  );
 
   const requiredAll = parsed.hotspots.filter((h) => h.required !== false);
   const completedRequired = requiredAll.filter((h) =>
@@ -204,8 +255,9 @@ export function ExploreHotspotsView({
     phaseHotspots.find((h) => h.id === activeHotspotId) ??
     parsed.hotspots.find((h) => h.id === activeHotspotId) ??
     null;
-  const cards = activeHotspot ? responseStackFor(activeHotspot) : [];
-  const activeCard: ExploreHotspotResponseCard | null = cards[cardIndex] ?? null;
+  const actions = activeHotspot ? resolvePlayOnTap(activeHotspot) : [];
+  const activeAction: ExploreHotspotOnTapAction | null = actions[actionIndex] ?? null;
+  const activeCard = activeAction ? contentActionAsCard(activeAction) : null;
 
   const activeDialogue =
     activeHotspot &&
@@ -232,7 +284,7 @@ export function ExploreHotspotsView({
       const state = objectStates[hotspot.id];
       if (state === "locked") locked.push(hotspot.id);
       else if (
-        parsed.strict_order &&
+        playback.strictOrder &&
         !canSelectInStrictOrder(
           hotspot,
           phaseHotspots,
@@ -245,10 +297,10 @@ export function ExploreHotspotsView({
       }
     }
     return locked;
-  }, [phaseHotspots, objectStates, parsed.strict_order]);
+  }, [phaseHotspots, objectStates, playback.strictOrder]);
 
   const pulseId =
-    showHintPulse && parsed.hint_pulse_enabled
+    showHintPulse && playback.hintPulseEnabled
       ? hintTargetId(phaseHotspots, objectStates, true)
       : null;
 
@@ -287,20 +339,24 @@ export function ExploreHotspotsView({
     setObjectState(hotspot.id, completed ? "completed" : "discovered");
   }
 
-  async function playDialogueFor(hotspotId: string) {
-    const dialogue = parsed.dialogues.find((d) => d.hotspot_id === hotspotId);
+  async function playDialogueFor(hotspotId: string, dialogueId?: string) {
+    const dialogue =
+      (dialogueId
+        ? parsed.dialogues.find((d) => d.id === dialogueId)
+        : undefined) ?? parsed.dialogues.find((d) => d.hotspot_id === hotspotId);
     if (!dialogue) return;
     const gen = ++playGenRef.current;
     const isCancelled = () => gen !== playGenRef.current;
+    // Unlock during the user gesture (tap), before any await.
+    unlockSpeechSynthesis();
     stopSpeaking();
     setSpeaking(false);
-    unlockSpeechSynthesis();
     const hotspot = parsed.hotspots.find((h) => h.id === hotspotId);
-    if (hotspot && parsed.visited_when !== "dialogue_finished") {
+    if (hotspot && playback.visitedWhen !== "dialogue_finished") {
       markDiscoveredOrCompleted(hotspot, true);
     }
     if (muted) {
-      if (hotspot && parsed.visited_when === "dialogue_finished") {
+      if (hotspot && playback.visitedWhen === "dialogue_finished") {
         markDiscoveredOrCompleted(hotspot, true);
       }
       return;
@@ -318,64 +374,288 @@ export function ExploreHotspotsView({
           stopSpeaking();
           await playHtmlAudio(clip, isCancelled);
         } else if (line.trim()) {
-          unlockSpeechSynthesis();
-          await speakTextAndWait(line, { muted: false, rate: 0.88 });
+          await speakTextAndWait(line, { muted, rate: 0.88 });
         }
       }
     } finally {
       if (gen === playGenRef.current) {
         setSpeaking(false);
-        if (hotspot && parsed.visited_when === "dialogue_finished") {
+        if (hotspot && playback.visitedWhen === "dialogue_finished") {
           markDiscoveredOrCompleted(hotspot, true);
         }
       }
     }
   }
 
-  function advanceCardOrComplete(hotspot: ExploreHotspotItem, forceComplete = true) {
-    const stack = responseStackFor(hotspot);
-    if (cardIndex + 1 < stack.length) {
-      setCardIndex((value) => value + 1);
-      setQuestionFeedback(null);
+  function patchStage(targetId: string, patch: Partial<StageObjectPlayState>) {
+    setStageStates((prev) => {
+      const current = prev[targetId] ?? {
+        visible: true,
+        opacity: 1,
+        geometry: null,
+        spriteSrc: undefined,
+      };
+      return { ...prev, [targetId]: { ...current, ...patch } };
+    });
+  }
+
+  function animateTween(
+    targetId: string,
+    from: NonNullable<StageObjectPlayState["geometry"]>,
+    to: NonNullable<StageObjectPlayState["geometry"]>,
+    durationMs: number,
+    easing: "linear" | "easeOut" | undefined,
+    fromOpacity: number,
+    toOpacity: number,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const start = performance.now();
+      const duration = Math.max(0, durationMs);
+      const tick = (now: number) => {
+        const raw = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
+        const t = easing === "easeOut" ? easeOutCubic(raw) : raw;
+        patchStage(targetId, {
+          visible: true,
+          geometry: {
+            shape: "rectangle",
+            x: lerp(from.x, to.x, t),
+            y: lerp(from.y, to.y, t),
+            width: lerp(from.width, to.width, t),
+            height: lerp(from.height, to.height, t),
+          },
+          opacity: lerp(fromOpacity, toOpacity, t),
+        });
+        if (raw < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          resolve();
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  async function runStageAction(action: ExploreHotspotOnTapAction): Promise<void> {
+    switch (action.type) {
+      case "wait":
+        await new Promise((resolve) => window.setTimeout(resolve, action.ms));
+        return;
+      case "set_object_state": {
+        if (action.state === "hidden") {
+          patchStage(action.target_id, { visible: false });
+          setObjectState(action.target_id, "hidden");
+        } else if (action.state === "visible") {
+          patchStage(action.target_id, { visible: true, opacity: 1 });
+          setObjectStates((prev) => {
+            const prevState = prev[action.target_id];
+            if (prevState === "completed" || prevState === "discovered") return prev;
+            return { ...prev, [action.target_id]: "available" };
+          });
+        } else if (action.state === "locked") {
+          setObjectState(action.target_id, "locked");
+          patchStage(action.target_id, { visible: true });
+        } else {
+          setObjectState(action.target_id, "available");
+          patchStage(action.target_id, { visible: true });
+        }
+        return;
+      }
+      case "swap_sprite_asset": {
+        const url =
+          "sprite_url" in action && typeof action.sprite_url === "string"
+            ? action.sprite_url
+            : undefined;
+        if (url) patchStage(action.target_id, { spriteSrc: url, visible: true });
+        return;
+      }
+      case "tween_object": {
+        const current = stageStatesRef.current[action.target_id];
+        const from = current?.geometry ?? {
+          shape: "rectangle" as const,
+          x: action.to.x,
+          y: action.to.y,
+          width: action.to.width,
+          height: action.to.height,
+        };
+        const to = { shape: "rectangle" as const, ...action.to };
+        await animateTween(
+          action.target_id,
+          from,
+          to,
+          action.duration_ms,
+          action.easing,
+          current?.opacity ?? 1,
+          current?.opacity ?? 1,
+        );
+        return;
+      }
+      case "enter_object": {
+        const to = { shape: "rectangle" as const, ...action.to };
+        const from = {
+          shape: "rectangle" as const,
+          x: action.from?.x ?? to.x,
+          y: action.from?.y ?? to.y - Math.max(0.08, to.height),
+          width: action.from?.width ?? to.width,
+          height: action.from?.height ?? to.height,
+        };
+        patchStage(action.target_id, { visible: true, opacity: 0, geometry: from });
+        setObjectStates((prev) => {
+          const prevState = prev[action.target_id];
+          if (prevState === "completed" || prevState === "discovered") return prev;
+          return { ...prev, [action.target_id]: "available" };
+        });
+        await animateTween(
+          action.target_id,
+          from,
+          to,
+          action.duration_ms,
+          "easeOut",
+          0,
+          1,
+        );
+        return;
+      }
+      case "complete_object": {
+        const id = action.target_id;
+        if (id) setObjectState(id, "completed");
+        return;
+      }
+      case "pulse_object": {
+        patchStage(action.target_id, { pulse: action.enabled !== false });
+        return;
+      }
+      case "play_audio": {
+        if (action.audio_url && !muted) {
+          const gen = ++playGenRef.current;
+          setSpeaking(true);
+          try {
+            await playHtmlAudio(action.audio_url, () => gen !== playGenRef.current);
+          } finally {
+            if (gen === playGenRef.current) setSpeaking(false);
+          }
+        }
+        return;
+      }
+      default:
+        return;
+    }
+  }
+
+  runStageActionRef.current = runStageAction;
+
+  useEffect(() => {
+    const gen = ++enterGenRef.current;
+    setStageStates((prev) => {
+      const next = { ...prev };
+      for (const hotspot of phaseHotspots) {
+        next[hotspot.id] = stageStateForHotspot(hotspot);
+      }
+      return next;
+    });
+
+    const actions = currentPhase.on_enter;
+    if (!actions?.length) return;
+
+    void (async () => {
+      for (const action of actions) {
+        if (gen !== enterGenRef.current) return;
+        await runStageActionRef.current(action);
+      }
+    })();
+  }, [phaseIndex, currentPhase.id, currentPhase.on_enter, phaseHotspots]);
+
+  async function presentContentAction(
+    hotspot: ExploreHotspotItem,
+    action: ExploreHotspotOnTapAction,
+    sequence: ExploreHotspotOnTapAction[],
+  ) {
+    setQuestionFeedback(null);
+    if (action.type === "show_dialogue") {
+      if (playback.autoPlayOnSelect !== false) {
+        void playDialogueFor(hotspot.id, action.dialogue_id);
+      }
+      return;
+    }
+    if (action.type === "show_info") {
+      markDiscoveredOrCompleted(hotspot, false);
+      return;
+    }
+    if (action.type === "play_audio") {
+      if (action.audio_url && !muted) {
+        const gen = ++playGenRef.current;
+        setSpeaking(true);
+        try {
+          await playHtmlAudio(action.audio_url, () => gen !== playGenRef.current);
+        } finally {
+          if (gen === playGenRef.current) setSpeaking(false);
+        }
+      }
+      if (sequence.length === 1) markDiscoveredOrCompleted(hotspot, true);
+      return;
+    }
+    if (action.type === "ask_question") {
+      return;
+    }
+  }
+
+  async function runSequenceFrom(
+    hotspot: ExploreHotspotItem,
+    startIndex: number,
+  ): Promise<void> {
+    const sequence = resolvePlayOnTap(hotspot);
+    let index = startIndex;
+    while (index < sequence.length) {
+      const action = sequence[index]!;
+      if (
+        action.type === "wait" ||
+        action.type === "set_object_state" ||
+        action.type === "swap_sprite_asset" ||
+        action.type === "tween_object" ||
+        action.type === "enter_object" ||
+        action.type === "complete_object" ||
+        action.type === "pulse_object"
+      ) {
+        setActionIndex(index);
+        await runStageAction(action);
+        if (action.type === "complete_object" && !action.target_id) {
+          markDiscoveredOrCompleted(hotspot, true);
+        }
+        index += 1;
+        continue;
+      }
+      setActionIndex(index);
+      setActiveHotspotId(hotspot.id);
+      await presentContentAction(hotspot, action, sequence);
+      return;
+    }
+    markDiscoveredOrCompleted(hotspot, true);
+    setActiveHotspotId(null);
+    setActionIndex(0);
+    setQuestionFeedback(null);
+  }
+
+  function advanceActionOrComplete(hotspot: ExploreHotspotItem, forceComplete = true) {
+    const sequence = resolvePlayOnTap(hotspot);
+    const next = actionIndex + 1;
+    setQuestionFeedback(null);
+    if (next < sequence.length) {
+      void runSequenceFrom(hotspot, next);
       return;
     }
     if (forceComplete) markDiscoveredOrCompleted(hotspot, true);
-  }
-
-  async function beginCardStack(hotspot: ExploreHotspotItem) {
-    const stack = responseStackFor(hotspot);
-    const first = stack[0];
-    setQuestionFeedback(null);
-    if (!first) {
-      markDiscoveredOrCompleted(hotspot, true);
-      return;
-    }
-    if (first.kind === "dialogue") {
-      if (parsed.auto_play_on_select !== false) {
-        void playDialogueFor(hotspot.id);
-      } else if (parsed.visited_when !== "dialogue_finished") {
-        // Visit credit deferred until Listen when autoplay off + started semantics
-      }
-    } else if (first.kind === "info") {
-      markDiscoveredOrCompleted(hotspot, false);
-    } else if (first.kind === "audio" && first.audio_url && !muted) {
-      const gen = ++playGenRef.current;
-      setSpeaking(true);
-      try {
-        await playHtmlAudio(first.audio_url, () => gen !== playGenRef.current);
-      } finally {
-        if (gen === playGenRef.current) setSpeaking(false);
-      }
-      markDiscoveredOrCompleted(hotspot, stack.length === 1);
-    }
+    setActiveHotspotId(null);
+    setActionIndex(0);
   }
 
   function selectHotspot(hotspotId: string) {
+    // Keep speech unlocked in the same user-gesture turn as the tap.
+    unlockSpeechSynthesis();
     playSfx("tap", muted);
     const hotspot = phaseHotspots.find((h) => h.id === hotspotId);
     if (!hotspot) return;
 
     if (isDecorativeObject(hotspot)) return;
+    if (objectStates[hotspotId] === "hidden") return;
 
     if (objectStates[hotspotId] === "locked") {
       setOrderHint("This object is locked for now.");
@@ -387,7 +667,7 @@ export function ExploreHotspotsView({
         hotspot,
         phaseHotspots,
         objectStates,
-        Boolean(parsed.strict_order),
+        Boolean(playback.strictOrder),
       )
     ) {
       setOrderHint(
@@ -395,24 +675,25 @@ export function ExploreHotspotsView({
           "Try another object first — follow the order.",
       );
       setActiveHotspotId(null);
-      setCardIndex(0);
+      setActionIndex(0);
       return;
     }
 
     setOrderHint(null);
     setShowHintPulse(false);
 
-    if (isSilentObject(hotspot) || responseStackFor(hotspot).length === 0) {
+    const sequence = resolvePlayOnTap(hotspot);
+    if (isSilentObject(hotspot) || sequence.length === 0) {
       markDiscoveredOrCompleted(hotspot, true);
       setActiveHotspotId(null);
-      setCardIndex(0);
+      setActionIndex(0);
       setQuestionFeedback(null);
       return;
     }
 
     setActiveHotspotId(hotspotId);
-    setCardIndex(0);
-    void beginCardStack(hotspot);
+    setActionIndex(0);
+    void runSequenceFrom(hotspot, 0);
   }
 
   function goNextPhase() {
@@ -422,7 +703,7 @@ export function ExploreHotspotsView({
     setSpeaking(false);
     setPhaseIndex((value) => value + 1);
     setActiveHotspotId(null);
-    setCardIndex(0);
+    setActionIndex(0);
     setOrderHint(null);
     setQuestionFeedback(null);
     setShowHintPulse(false);
@@ -449,9 +730,9 @@ export function ExploreHotspotsView({
             <h2 className="mt-1 text-[clamp(1.55rem,3.2cqi,2.35rem)] font-extrabold leading-tight tracking-tight text-[#10254d]">
               {currentPhase.title ?? parsed.activity_name ?? "Explore"}
             </h2>
-            {parsed.objective?.label ? (
+            {playback.objectiveLabel ? (
               <p className="mt-2 text-sm font-semibold text-slate-600">
-                {parsed.objective.label}
+                {playback.objectiveLabel}
               </p>
             ) : null}
           </div>
@@ -490,6 +771,7 @@ export function ExploreHotspotsView({
         <div className="hotspot-player-layout">
           <div className="rounded-2xl bg-white p-1.5 shadow-[0_16px_38px_rgba(30,64,175,0.16)] ring-1 ring-slate-200/80">
             <ExploreHotspotsMediaPlay
+              key={currentPhase.id}
               media={{
                 src: currentPhase.image_url,
                 alt: currentPhase.image_alt ?? parsed.image_alt,
@@ -504,7 +786,7 @@ export function ExploreHotspotsView({
               onSelect={selectHotspot}
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 pb-1">
-              {parsed.hint_pulse_enabled ? (
+              {playback.hintPulseEnabled ? (
                 <button
                   type="button"
                   className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-200"
@@ -563,7 +845,7 @@ export function ExploreHotspotsView({
                 <button
                   type="button"
                   className="mt-4 rounded-full bg-sky-700 px-4 py-2 text-sm font-bold text-white"
-                  onClick={() => advanceCardOrComplete(activeHotspot)}
+                  onClick={() => advanceActionOrComplete(activeHotspot)}
                 >
                   Continue
                 </button>
@@ -600,7 +882,7 @@ export function ExploreHotspotsView({
                 <button
                   type="button"
                   className="mt-4 rounded-full bg-sky-700 px-4 py-2 text-sm font-bold text-white"
-                  onClick={() => advanceCardOrComplete(activeHotspot)}
+                  onClick={() => advanceActionOrComplete(activeHotspot)}
                 >
                   Continue
                 </button>
@@ -630,7 +912,7 @@ export function ExploreHotspotsView({
                             markDiscoveredOrCompleted(activeHotspot, true);
                           }
                           window.setTimeout(
-                            () => advanceCardOrComplete(activeHotspot, true),
+                            () => advanceActionOrComplete(activeHotspot, true),
                             450,
                           );
                         } else {
@@ -708,7 +990,7 @@ export function ExploreHotspotsView({
                       aria-label={
                         speaking
                           ? `Playing ${activeDialogue.title}`
-                          : parsed.auto_play_on_select === false
+                          : playback.autoPlayOnSelect === false
                             ? `Listen to ${activeDialogue.title}`
                             : `Listen to ${activeDialogue.title} again`
                       }
@@ -722,16 +1004,16 @@ export function ExploreHotspotsView({
                   <p className="text-xs font-semibold text-slate-400">
                     {speaking
                       ? "Playing dialogue…"
-                      : parsed.auto_play_on_select === false
+                      : playback.autoPlayOnSelect === false
                         ? "Tap Listen to hear this dialogue"
                         : "Tap to listen again"}
                   </p>
-                  {cards.length > 1 ? (
+                  {actions.length > 1 ? (
                     <button
                       type="button"
                       className="rounded-full bg-sky-700 px-3 py-1.5 text-xs font-bold text-white"
                       onClick={() =>
-                        activeHotspot && advanceCardOrComplete(activeHotspot)
+                        activeHotspot && advanceActionOrComplete(activeHotspot)
                       }
                     >
                       Continue

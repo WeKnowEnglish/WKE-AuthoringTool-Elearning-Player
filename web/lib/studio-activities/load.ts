@@ -80,10 +80,16 @@ export async function getStudioActivityForTeacher(
   supabase: SupabaseClient,
   teacherId: string,
   id: string,
+  options?: { includePack?: boolean },
 ): Promise<StudioActivityDetail | null> {
+  const includePack = options?.includePack !== false;
   const { data, error } = await supabase
     .from("studio_activities")
-    .select("id, title, format, pack, authoring, source, created_at, updated_at")
+    .select(
+      includePack
+        ? "id, title, format, pack, authoring, source, created_at, updated_at"
+        : "id, title, format, authoring, source, created_at, updated_at",
+    )
     .eq("teacher_id", teacherId)
     .eq("id", id)
     .maybeSingle();
@@ -100,7 +106,7 @@ export async function getStudioActivityForTeacher(
   const summary = mapSummary(data as Parameters<typeof mapSummary>[0]);
   return {
     ...summary,
-    pack: data.pack,
+    pack: includePack ? (data as { pack?: unknown }).pack : null,
     authoring:
       data.authoring && typeof data.authoring === "object" && !Array.isArray(data.authoring)
         ? (data.authoring as Record<string, unknown>)

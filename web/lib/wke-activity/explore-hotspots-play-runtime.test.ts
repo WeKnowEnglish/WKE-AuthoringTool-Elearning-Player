@@ -4,6 +4,7 @@ import {
   hintTargetId,
   nextRequiredInOrder,
   phaseComplete,
+  resolvePhasePlayback,
   resolvePlayPhases,
   responseStackFor,
   type ExploreHotspotsParsed,
@@ -83,6 +84,16 @@ describe("explore-hotspots-play-runtime", () => {
     expect(stack).toHaveLength(0);
   });
 
+  it("returns an audio fallback card for audio interaction", () => {
+    const stack = responseStackFor({
+      ...baseParsed().hotspots[0]!,
+      interaction_kind: "audio",
+      presentation: "sprite",
+    });
+    expect(stack).toHaveLength(1);
+    expect(stack[0]?.kind).toBe("audio");
+  });
+
   it("reports phase complete and hint target", () => {
     const hotspots = baseParsed().hotspots;
     expect(phaseComplete(hotspots, { a: "completed", b: "discovered" })).toBe(
@@ -90,5 +101,43 @@ describe("explore-hotspots-play-runtime", () => {
     );
     expect(hintTargetId(hotspots, { a: "available" }, true)).toBe("a");
     expect(hintTargetId(hotspots, { a: "completed" }, true)).toBe("b");
+  });
+
+  it("treats decorative objects as complete without a visit", () => {
+    const hotspots = [
+      {
+        ...baseParsed().hotspots[0]!,
+        id: "prop",
+        required: true,
+        interaction_kind: "none" as const,
+      },
+      baseParsed().hotspots[1]!,
+    ];
+    expect(phaseComplete(hotspots, { b: "available" })).toBe(false);
+    expect(phaseComplete(hotspots, { b: "completed" })).toBe(true);
+    expect(nextRequiredInOrder(hotspots, {})?.id).toBe("b");
+  });
+
+  it("resolves scene playback with activity fallback", () => {
+    const activity = baseParsed({
+      strict_order: true,
+      hint_pulse_enabled: false,
+      auto_play_on_select: true,
+      objective: { label: "Activity goal" },
+      visited_when: "dialogue_started",
+    });
+    const phase = {
+      id: "p1",
+      image_url: "/a.png",
+      hotspot_ids: ["a"],
+      strict_order: false,
+      objective: { label: "Scene goal" },
+    };
+    const settings = resolvePhasePlayback(phase, activity);
+    expect(settings.strictOrder).toBe(false);
+    expect(settings.objectiveLabel).toBe("Scene goal");
+    expect(settings.hintPulseEnabled).toBe(false);
+    expect(settings.autoPlayOnSelect).toBe(true);
+    expect(settings.visitedWhen).toBe("dialogue_started");
   });
 });

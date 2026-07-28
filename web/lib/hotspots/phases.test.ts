@@ -4,6 +4,7 @@ import {
   duplicateImageAsset,
   ensurePhases,
   forkPhaseImageAsset,
+  movePhase,
   nextPhaseImageAssetId,
   phasesUsingAsset,
   withEnsuredPhases,
@@ -56,5 +57,25 @@ describe("hotspot phase image assets", () => {
     expect(phases[0]?.imageAssetId).toBe(sharedAsset);
     expect(phases[1]?.imageAssetId).not.toBe(sharedAsset);
     expect(forked.assets.length).toBe(bothShare.assets.length + 1);
+  });
+
+  it("reorders phases left and right without losing entries", () => {
+    const phases = [
+      { id: "a", title: "A", imageAssetId: "img", hotspotIds: [] },
+      { id: "b", title: "B", imageAssetId: "img", hotspotIds: [] },
+      { id: "c", title: "C", imageAssetId: "img", hotspotIds: [] },
+    ];
+    expect(movePhase(phases, "b", -1).map((phase) => phase.id)).toEqual([
+      "b",
+      "a",
+      "c",
+    ]);
+    expect(movePhase(phases, "b", 1).map((phase) => phase.id)).toEqual([
+      "a",
+      "c",
+      "b",
+    ]);
+    expect(movePhase(phases, "a", -1)).toBe(phases);
+    expect(movePhase(phases, "c", 1)).toBe(phases);
   });
 });

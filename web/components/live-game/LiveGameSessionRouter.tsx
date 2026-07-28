@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import { useStatus, useStorage } from "@liveblocks/react/suspense";
-import { LiveGameCanvas } from "@/components/live-game/LiveGameCanvas";
+import { LiveGameModeRenderer } from "@/components/live-game/LiveGameModeRenderer";
 import { LiveGameLobbyCanvas } from "@/components/live-game/LiveGameLobbyCanvas";
+import { BugMarketLobbyCanvas } from "@/components/live-game/bug-market/BugMarketLobbyCanvas";
 import { LiveGameSessionEndedScreen } from "@/components/live-game/LiveGameSessionEndedScreen";
 import type { LiveGameSessionContext } from "@/lib/live-game/liveblocks/identity";
 import type { LiveGameStorageSnapshot } from "@/lib/live-game/liveblocks/config";
@@ -26,6 +27,7 @@ function SessionLoading() {
 
 export function LiveGameSessionRouter({ context }: Props) {
   const phase = useStorage((root) => (root as unknown as LiveGameStorageSnapshot).session.phase);
+  const modeId = useStorage((root) => (root as unknown as LiveGameStorageSnapshot).session.modeId);
   const connectionStatus = useStatus();
   const { isHost } = useLiveGameLobby();
 
@@ -55,11 +57,13 @@ export function LiveGameSessionRouter({ context }: Props) {
   }
 
   if (phase === "playing" || phase === "paused" || phase === "completed") {
-    return <LiveGameCanvas context={context} />;
+    return <LiveGameModeRenderer modeId={modeId} context={context} />;
   }
 
   if (phase === "lobby") {
-    return <LiveGameLobbyCanvas context={context} />;
+    return modeId === "bug_market" ?
+        <BugMarketLobbyCanvas context={context} />
+      : <LiveGameLobbyCanvas context={context} />;
   }
 
   return <SessionLoading />;

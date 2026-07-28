@@ -35,9 +35,9 @@ export type WkeObjectInteractionKind =
   | "none"
   | "silent";
 
-export type WkeObjectPresentation = "target" | "sprite";
+export type WkeObjectPresentation = "target" | "sprite" | "shape" | "text";
 
-export type WkeObjectInitialState = "locked" | "available";
+export type WkeObjectInitialState = "locked" | "available" | "hidden";
 
 export type WkeResponseCard =
   | {
@@ -69,6 +69,96 @@ export type WkeResponseCard =
       gateDiscover?: boolean;
     };
 
+export type WkeNormalizedRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+/**
+ * Ordered on-tap sequence. Content actions replace responseCards over time;
+ * stage actions drive show/hide, motion, and sprite swaps.
+ */
+export type WkeObjectAction =
+  | {
+      id: string;
+      type: "play_audio";
+      audioUrl: string;
+      label?: string;
+      wait?: boolean;
+    }
+  | {
+      id: string;
+      type: "show_dialogue";
+      dialogueId?: string;
+      wait?: boolean;
+    }
+  | {
+      id: string;
+      type: "show_info";
+      text: string;
+      imageUrl?: string;
+      wait?: boolean;
+    }
+  | {
+      id: string;
+      type: "ask_question";
+      prompt: string;
+      questionType: "mc" | "true_false";
+      choices: Array<{ id: string; label: string }>;
+      correctChoiceId: string;
+      gateDiscover?: boolean;
+      wait?: boolean;
+    }
+  | {
+      id: string;
+      type: "wait";
+      ms: number;
+    }
+  | {
+      id: string;
+      type: "set_object_state";
+      targetId: string;
+      state: "hidden" | "visible" | "locked" | "available";
+    }
+  | {
+      id: string;
+      type: "swap_sprite_asset";
+      targetId: string;
+      spriteAssetId: string;
+    }
+  | {
+      id: string;
+      type: "tween_object";
+      targetId: string;
+      to: WkeNormalizedRect;
+      durationMs: number;
+      easing?: "linear" | "easeOut";
+      wait?: boolean;
+    }
+  | {
+      id: string;
+      type: "enter_object";
+      targetId: string;
+      to: WkeNormalizedRect;
+      durationMs: number;
+      from?: Partial<WkeNormalizedRect>;
+      wait?: boolean;
+    }
+  | {
+      id: string;
+      type: "complete_object";
+      targetId?: string;
+    }
+  | {
+      id: string;
+      type: "pulse_object";
+      targetId: string;
+      /** Defaults to true when omitted. */
+      enabled?: boolean;
+    };
+
 export type WkeHotspotElement = {
   id: string;
   kind: "hotspot";
@@ -86,18 +176,38 @@ export type WkeHotspotElement = {
     backgroundDim?: number;
   };
   visualShape?: WkeHotspotVisualShape;
-  /** `target` = invisible region + highlight; `sprite` = visible PNG overlay. */
+  /** `target` = invisible region + highlight; `sprite` = visible PNG; `shape`/`text` = simple overlays. */
   presentation?: WkeObjectPresentation;
   /** Asset id for `presentation: "sprite"`. */
   spriteAssetId?: string;
+  /** Visible label for `presentation: "text"` overlays. */
+  labelText?: string;
+  /** Typography for text overlays. */
+  textStyle?: {
+    role?: "title" | "body" | "caption";
+    align?: "left" | "center" | "right";
+  };
+  /** Clockwise rotation in degrees around the object center (0–360). */
+  rotationDeg?: number;
+  /** Draw / hit stack order within a scene (higher = in front). */
+  zIndex?: number;
+  /** Simple entrance + idle motion presets for sprites, shapes, text, and targets. */
+  animation?: {
+    entrance?: "none" | "fade_in" | "pop" | "slide_up" | "slide_down";
+    entranceDurationMs?: number;
+    entranceDelayMs?: number;
+    idle?: "none" | "pulse" | "bob" | "wiggle";
+  };
   /** Extensible interaction kind (defaults to dialogue for targets, silent for sprites). */
   interactionKind?: WkeObjectInteractionKind;
   /** Strict-order index within its phase (lower first). */
   orderIndex?: number;
   initialState?: WkeObjectInitialState;
   wrongOrderHint?: string;
-  /** Ordered response stack; when empty, fall back to dialogue. */
+  /** Ordered response stack; when empty, fall back to dialogue. Prefer `onTap`. */
   responseCards?: WkeResponseCard[];
+  /** Ordered on-tap action sequence (content + stage). */
+  onTap?: WkeObjectAction[];
   enableHintPulse?: boolean;
 };
 
@@ -146,6 +256,16 @@ export type WkePhase = {
   title?: string;
   imageAssetId: string;
   hotspotIds: string[];
+  /** Stage actions run automatically when this scene becomes active. */
+  onEnter?: WkeObjectAction[];
+  /** Scene-level playback (falls back to activity interaction defaults when omitted). */
+  objective?: {
+    label?: string;
+  };
+  strictOrder?: boolean;
+  hintPulseEnabled?: boolean;
+  visitedWhen?: "dialogue-started" | "dialogue-finished" | "dialogue-completed";
+  autoPlayOnSelect?: boolean;
 };
 
 export type WkeExploreHotspotsInteraction = {

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   ACTIVITY_BUILDER_SECTIONS,
   type ActivityBuilderCard,
 } from "@/lib/activity-builder/catalog";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   studioOrigin: string | null;
@@ -120,6 +121,10 @@ function SectionLabel({
 
 /** Landing menu for Activity Builder (LP-native tools + Studio interim cards). */
 export function ActivityBuilderHub({ studioOrigin }: Props) {
+  useEffect(() => {
+    recordAppDiagnostic("teacher", "mark", "activity_builder_hub_loaded");
+  }, []);
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4 sm:px-4 sm:py-5">
       <header className="flex flex-wrap items-end justify-between gap-3">

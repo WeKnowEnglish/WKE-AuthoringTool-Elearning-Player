@@ -31,6 +31,7 @@ import { newSessionSeed } from "@/lib/student-hub/session-seed";
 import type { TestStartTopicId } from "@/lib/teststartpage/bank";
 import { isVocabSetId, type VocabSetId } from "@/lib/vocabulary-templates";
 import { markExplorationNode } from "@/lib/worlds/exploration";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   classMemberships: StudentClassMembership[];
@@ -88,6 +89,13 @@ export function PrimaryDashboardClient({
     if (!hydrated) return;
     refreshHomeModel();
   }, [hydrated, refreshHomeModel]);
+
+  useEffect(() => {
+    recordAppDiagnostic("student", "mark", "primary_hub_loaded", {
+      classCount: classMemberships.length,
+      homeworkCount: assignedHomework.length,
+    });
+  }, [assignedHomework.length, classMemberships.length]);
 
   const openVocabularySet = useCallback(
     (id: VocabSetId, opts?: { resumeScreenIndex?: number }) => {

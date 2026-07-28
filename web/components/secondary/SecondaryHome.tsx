@@ -15,7 +15,8 @@ import {
 import { SECONDARY_HOME_CONTINUE_HREF } from "@/lib/secondary/secondary-nav";
 import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   classMemberships?: StudentClassMembership[];
@@ -37,6 +38,13 @@ export function SecondaryHome({
     readActiveStudentClassId,
     () => null,
   );
+
+  useEffect(() => {
+    recordAppDiagnostic("student", "mark", "secondary_hub_loaded", {
+      classCount: classMemberships.length,
+      homeworkCount: assignedHomework.length,
+    });
+  }, [assignedHomework.length, classMemberships.length]);
 
   const activeClass =
     (activeClassId

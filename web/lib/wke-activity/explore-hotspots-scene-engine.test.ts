@@ -82,6 +82,7 @@ describe("explore-hotspots scene engine schema", () => {
     expect(payload.objective?.label).toBe("Help Mia get ready");
     expect(payload.strict_order).toBe(true);
     expect(payload.hotspots[0]?.response_cards?.[0]?.kind).toBe("question");
+    expect(payload.hotspots[0]?.on_tap?.[0]?.type).toBe("ask_question");
     expect(parseScreenPayload("interaction", payload)?.subtype).toBe("explore_hotspots");
   });
 

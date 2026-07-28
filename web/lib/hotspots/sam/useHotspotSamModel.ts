@@ -8,6 +8,7 @@ import {
   subscribeSamModelStatus,
 } from "./loader";
 import type { SamModelStatus } from "./types";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 /** Teacher-only SlimSAM preload hook for hotspot authoring. */
 export function useHotspotSamModel(enabled: boolean) {
@@ -16,6 +17,23 @@ export function useHotspotSamModel(enabled: boolean) {
   useEffect(() => {
     return subscribeSamModelStatus(setStatus);
   }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (status.state === "loading") {
+      recordAppDiagnostic("teacher", "mark", "sam_model_load_start");
+    } else if (status.state === "ready") {
+      recordAppDiagnostic("teacher", "mark", "sam_model_load_complete");
+    } else if (status.state === "error") {
+      recordAppDiagnostic(
+        "teacher",
+        "error",
+        "sam_model_load_failed",
+        { error: status.error ?? "unknown" },
+        { kind: "error" },
+      );
+    }
+  }, [enabled, status.error, status.state]);
 
   const preload = useCallback(async () => {
     if (!enabled) return;

@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { clsx } from "clsx";
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -93,6 +92,8 @@ import {
   type GrammarRunStats,
 } from "@/lib/grammar-templates/grammar-run-session";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
+import { lazyWithDiagnostics } from "@/lib/app-diagnostics/lazy";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import {
   interactionImageFitClass,
@@ -122,86 +123,86 @@ import type { LessonPlayerVisualEdit } from "@/components/lesson/lesson-player-e
 
 export type { LessonPlayerVisualEdit };
 
-const LazyMcQuiz = lazy(() =>
+const LazyMcQuiz = lazyWithDiagnostics("interaction:McQuizView", () =>
   import("./interactions/McQuizView").then((m) => ({ default: m.McQuizView })),
 );
-const LazyTrueFalse = lazy(() =>
+const LazyTrueFalse = lazyWithDiagnostics("interaction:TrueFalseView", () =>
   import("./interactions/TrueFalseView").then((m) => ({ default: m.TrueFalseView })),
 );
-const LazyShortAnswer = lazy(() =>
+const LazyShortAnswer = lazyWithDiagnostics("interaction:ShortAnswerView", () =>
   import("./interactions/ShortAnswerView").then((m) => ({ default: m.ShortAnswerView })),
 );
-const LazyFixText = lazy(() =>
+const LazyFixText = lazyWithDiagnostics("interaction:FixTextView", () =>
   import("./interactions/FixTextView").then((m) => ({ default: m.FixTextView })),
 );
-const LazyFillBlanks = lazy(() =>
+const LazyFillBlanks = lazyWithDiagnostics("interaction:FillBlanksView", () =>
   import("./interactions/FillBlanksView").then((m) => ({ default: m.FillBlanksView })),
 );
-const LazyEssay = lazy(() =>
+const LazyEssay = lazyWithDiagnostics("interaction:EssayView", () =>
   import("./interactions/EssayView").then((m) => ({ default: m.EssayView })),
 );
-const LazyExploreHotspots = lazy(() =>
+const LazyExploreHotspots = lazyWithDiagnostics("interaction:ExploreHotspotsView", () =>
   import("./interactions/ExploreHotspotsView").then((m) => ({
     default: m.ExploreHotspotsView,
   })),
 );
-const LazyLanguageInFocus = lazy(() =>
+const LazyLanguageInFocus = lazyWithDiagnostics("interaction:LanguageInFocusView", () =>
   import("./interactions/LanguageInFocusView").then((m) => ({
     default: m.LanguageInFocusView,
   })),
 );
-const LazyDragMatch = lazy(() =>
+const LazyDragMatch = lazyWithDiagnostics("interaction:DragMatchView", () =>
   import("./interactions/DragMatchView").then((m) => ({ default: m.DragMatchView })),
 );
-const LazyLineMatch = lazy(() =>
+const LazyLineMatch = lazyWithDiagnostics("interaction:LineMatchView", () =>
   import("./interactions/LineMatchView").then((m) => ({ default: m.LineMatchView })),
 );
-const LazyClickTargets = lazy(() =>
+const LazyClickTargets = lazyWithDiagnostics("interaction:ClickTargetsView", () =>
   import("./interactions/ClickTargetsView").then((m) => ({ default: m.ClickTargetsView })),
 );
-const LazySoundSort = lazy(() =>
+const LazySoundSort = lazyWithDiagnostics("interaction:SoundSortView", () =>
   import("./interactions/SoundSortView").then((m) => ({ default: m.SoundSortView })),
 );
-const LazyListenAndChoose = lazy(() =>
+const LazyListenAndChoose = lazyWithDiagnostics("interaction:ListenAndChooseView", () =>
   import("./interactions/ListenAndChooseView").then((m) => ({
     default: m.ListenAndChooseView,
   })),
 );
-const LazyFlashcards = lazy(() =>
+const LazyFlashcards = lazyWithDiagnostics("interaction:FlashcardsView", () =>
   import("./interactions/FlashcardsView").then((m) => ({
     default: m.FlashcardsView,
   })),
 );
-const LazyListenColorWrite = lazy(() =>
+const LazyListenColorWrite = lazyWithDiagnostics("interaction:ListenColorWriteView", () =>
   import("./interactions/ListenColorWriteView").then((m) => ({
     default: m.ListenColorWriteView,
   })),
 );
-const LazyLetterMixup = lazy(() =>
+const LazyLetterMixup = lazyWithDiagnostics("interaction:LetterMixupView", () =>
   import("./interactions/LetterMixupView").then((m) => ({ default: m.LetterMixupView })),
 );
-const LazyWordShapeHunt = lazy(() =>
+const LazyWordShapeHunt = lazyWithDiagnostics("interaction:WordShapeHuntView", () =>
   import("./interactions/WordShapeHuntView").then((m) => ({ default: m.WordShapeHuntView })),
 );
-const LazyTableComplete = lazy(() =>
+const LazyTableComplete = lazyWithDiagnostics("interaction:TableCompleteView", () =>
   import("./interactions/TableCompleteView").then((m) => ({ default: m.TableCompleteView })),
 );
-const LazySortingGame = lazy(() =>
+const LazySortingGame = lazyWithDiagnostics("interaction:SortingGameView", () =>
   import("./interactions/SortingGameView").then((m) => ({ default: m.SortingGameView })),
 );
-const LazyVoiceQuestion = lazy(() =>
+const LazyVoiceQuestion = lazyWithDiagnostics("interaction:VoiceQuestionView", () =>
   import("./interactions/VoiceQuestionView").then((m) => ({ default: m.VoiceQuestionView })),
 );
-const LazyGuidedDialogue = lazy(() =>
+const LazyGuidedDialogue = lazyWithDiagnostics("interaction:GuidedDialogueView", () =>
   import("./interactions/GuidedDialogueView").then((m) => ({ default: m.GuidedDialogueView })),
 );
-const LazyDragSentence = lazy(() =>
+const LazyDragSentence = lazyWithDiagnostics("interaction:DragSentenceView", () =>
   import("./interactions/DragSentenceView").then((m) => ({ default: m.DragSentenceView })),
 );
-const LazyWordBucketCatch = lazy(() =>
+const LazyWordBucketCatch = lazyWithDiagnostics("interaction:WordBucketCatchView", () =>
   import("./interactions/WordBucketCatchView").then((m) => ({ default: m.WordBucketCatchView })),
 );
-const LazyExploreRun = lazy(() =>
+const LazyExploreRun = lazyWithDiagnostics("interaction:ExploreRunView", () =>
   import("./interactions/ExploreRunView").then((m) => ({ default: m.ExploreRunView })),
 );
 
@@ -483,8 +484,10 @@ export function LessonPlayer({
     breakdown: GrammarRewardBreakdown;
   } | null>(null);
 
-  const { muted } = useAudioMuted();
+  const { muted: storedMuted } = useAudioMuted();
   const isPreview = mode === "preview";
+  /** Teacher Activity Builder preview should always hear TTS / clips. */
+  const muted = isPreview ? false : storedMuted;
   const isVocabLesson =
     lessonId.startsWith("vocab-") && (vocabPracticeWords?.length ?? 0) > 0;
   const isGrammarLesson = lessonId.startsWith("grammar-");
@@ -522,6 +525,25 @@ export function LessonPlayer({
   useEffect(() => {
     onScreenIndexChange?.(index);
   }, [index, onScreenIndexChange]);
+
+  const lessonStartedRef = useRef(false);
+  useEffect(() => {
+    if (!lessonStartedRef.current) {
+      lessonStartedRef.current = true;
+      recordAppDiagnostic("lesson", "mark", "lesson_start", {
+        lessonId,
+        screenCount: screens.length,
+        mode,
+      });
+      return;
+    }
+    recordAppDiagnostic("lesson", "mark", "screen_advance", {
+      lessonId,
+      index,
+      screenId: screen?.id ?? null,
+      screenType: screen?.screen_type ?? null,
+    });
+  }, [index, lessonId, mode, screen?.id, screen?.screen_type, screens.length]);
 
   const recordCurrentVocabMasteryEvidence = useCallback(
     (input: { success: boolean; firstTry: boolean; attempts: number }) => {
@@ -869,6 +891,11 @@ export function LessonPlayer({
         setExperience(snapshot.experience);
       }
       setDone(true);
+      recordAppDiagnostic("lesson", "mark", "lesson_complete", {
+        lessonId,
+        screenCount: screens.length,
+        mode,
+      });
       if (isPreview) {
         onPreviewComplete?.();
       }
@@ -886,6 +913,7 @@ export function LessonPlayer({
     completeGrammarLesson,
     clearInteractionScreenState,
     onPreviewComplete,
+    mode,
   ]);
 
   const goBack = useCallback(() => {

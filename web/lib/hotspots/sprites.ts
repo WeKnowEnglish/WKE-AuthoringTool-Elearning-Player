@@ -4,6 +4,20 @@ export function isSpriteHotspot(hotspot: HotspotElement): boolean {
   return hotspot.presentation === "sprite";
 }
 
+export function isShapeHotspot(hotspot: HotspotElement): boolean {
+  return hotspot.presentation === "shape";
+}
+
+export function isTextHotspot(hotspot: HotspotElement): boolean {
+  return hotspot.presentation === "text";
+}
+
+/** Invisible click targets (SAM outline / dialogue regions). */
+export function isTargetHotspot(hotspot: HotspotElement): boolean {
+  const presentation = hotspot.presentation ?? "target";
+  return presentation === "target";
+}
+
 export function isSilentOrDecorativeSprite(hotspot: HotspotElement): boolean {
   if (!isSpriteHotspot(hotspot)) return false;
   const kind = hotspot.interactionKind ?? "silent";

@@ -254,6 +254,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/teacher/admin/diagnostics",
+    title: "Session diagnostics",
+    description:
+      "Admin-only session load-time and interaction timing export. Records vitals, chunk loads, and manual marks across student/teacher surfaces.",
+    group: "experiments",
+    status: "review",
+  },
+  {
     href: "/pilots/learning-track",
     title: "Learning track",
     description:
@@ -352,6 +360,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     description: "Learning-loop architecture test for the bakery quest flow.",
     group: "experiments",
     status: "review",
+  },
+  {
+    href: "/pilots/bug-market",
+    title: "Bug Market multiplayer mechanics",
+    description: "Developer-only two-student in-memory meadow with offline action queue and reconnect replay. No Liveblocks or login required.",
+    group: "experiments",
+    status: "review",
+    notShippable: true,
   },
 
   // ── Deferred · worlds ───────────────────────────────────────────

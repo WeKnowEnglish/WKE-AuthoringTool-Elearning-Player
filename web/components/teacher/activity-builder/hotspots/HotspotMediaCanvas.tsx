@@ -551,7 +551,7 @@ export function HotspotMediaCanvas({ media, hotspots, spriteSources = {}, sprite
               ? objectAnimationStyle(hotspot.animation, {
                   rotationDeg: hotspot.rotationDeg ?? 0,
                 })
-              : null;
+              : undefined;
             const motionKey = showMotionPreview
               ? `${hotspot.id}-${hotspot.animation?.entrance ?? ""}-${hotspot.animation?.idle ?? ""}-${hotspot.animation?.entranceDurationMs ?? ""}-${hotspot.animation?.entranceDelayMs ?? ""}`
               : hotspot.id;
@@ -610,7 +610,7 @@ export function HotspotMediaCanvas({ media, hotspots, spriteSources = {}, sprite
           const fillColor = hotspot.highlight?.color ?? "#38bdf8";
           const motion = showMotionPreview
             ? objectAnimationStyle(hotspot.animation)
-            : null;
+            : undefined;
           const hasMotion = Boolean(motion?.animationName);
           const motionKey = showMotionPreview
             ? `${hotspot.id}-${hotspot.animation?.entrance ?? ""}-${hotspot.animation?.idle ?? ""}-${hotspot.animation?.entranceDurationMs ?? ""}-${hotspot.animation?.entranceDelayMs ?? ""}`

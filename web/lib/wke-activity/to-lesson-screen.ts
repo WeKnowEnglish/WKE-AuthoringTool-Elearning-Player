@@ -157,6 +157,7 @@ function mapOnTapActions(
           target_id: action.targetId,
           to: action.to,
           duration_ms: action.durationMs,
+          ...(action.from ? { from: action.from } : {}),
           ...(action.easing ? { easing: action.easing } : {}),
           ...(action.wait != null ? { wait: action.wait } : {}),
           ...timingFields(action),
@@ -185,6 +186,7 @@ function mapOnTapActions(
           type: "pulse_object" as const,
           target_id: action.targetId,
           ...(action.enabled != null ? { enabled: action.enabled } : {}),
+          ...(action.durationMs != null ? { duration_ms: action.durationMs } : {}),
           ...timingFields(action),
         };
       case "advance_scene":
@@ -331,7 +333,8 @@ export function wkeActivityToExploreHotspotsPayload(
         ((h.animation.entrance && h.animation.entrance !== "none") ||
           (h.animation.idle && h.animation.idle !== "none") ||
           h.animation.entranceDurationMs != null ||
-          h.animation.entranceDelayMs != null)
+          h.animation.entranceDelayMs != null ||
+          (h.animation.entranceRequirements?.length ?? 0) > 0)
           ? {
               animation: {
                 ...(h.animation.entrance && h.animation.entrance !== "none"
@@ -345,6 +348,9 @@ export function wkeActivityToExploreHotspotsPayload(
                   : {}),
                 ...(h.animation.idle && h.animation.idle !== "none"
                   ? { idle: h.animation.idle }
+                  : {}),
+                ...(h.animation.entranceRequirements?.length
+                  ? { entrance_requirements: h.animation.entranceRequirements }
                   : {}),
               },
             }

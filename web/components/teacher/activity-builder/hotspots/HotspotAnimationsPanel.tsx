@@ -12,14 +12,26 @@ import {
 import type { HotspotElement } from "@/lib/hotspots/types";
 import { HotspotCollapsibleCard } from "./HotspotCollapsibleCard";
 
+type RequirementObject = {
+  id: string;
+  label: string;
+  sceneLabel?: string;
+};
+
 type Props = {
   selected: HotspotElement | null;
   inputClass: string;
   motionPreviewEnabled?: boolean;
   onMotionPreviewChange?: (enabled: boolean) => void;
+  sceneRequirementObjects: RequirementObject[];
+  activityRequirementObjects: RequirementObject[];
   onPatchAnimation: (
     hotspotId: string,
     animation: HotspotElement["animation"] | undefined,
+  ) => void;
+  onPatchHotspot?: (
+    hotspotId: string,
+    patch: Pick<HotspotElement, "initialState" | "animation">,
   ) => void;
 };
 
@@ -31,6 +43,7 @@ function normalizeAnimation(
     entranceDurationMs: animation?.entranceDurationMs ?? 500,
     entranceDelayMs: animation?.entranceDelayMs ?? 0,
     idle: animation?.idle ?? "none",
+    entranceRequirements: animation?.entranceRequirements ?? [],
   };
 }
 
@@ -39,7 +52,10 @@ function compactAnimation(
 ): HotspotElement["animation"] | undefined {
   const entrance = next.entrance && next.entrance !== "none" ? next.entrance : undefined;
   const idle = next.idle && next.idle !== "none" ? next.idle : undefined;
-  if (!entrance && !idle) return undefined;
+  const requirements = next.entranceRequirements?.length
+    ? next.entranceRequirements
+    : undefined;
+  if (!entrance && !idle && !requirements) return undefined;
   return {
     ...(entrance ? { entrance } : {}),
     ...(entrance
@@ -49,7 +65,90 @@ function compactAnimation(
         }
       : {}),
     ...(idle ? { idle } : {}),
+    ...(requirements ? { entranceRequirements: requirements } : {}),
   };
+}
+
+function RequirementPicker({
+  tab,
+  onTabChange,
+  sceneObjects,
+  activityObjects,
+  selectedIds,
+  excludeId,
+  onToggle,
+}: {
+  tab: "scene" | "activity";
+  onTabChange: (tab: "scene" | "activity") => void;
+  sceneObjects: RequirementObject[];
+  activityObjects: RequirementObject[];
+  selectedIds: string[];
+  excludeId: string;
+  onToggle: (objectId: string, checked: boolean) => void;
+}) {
+  const list = tab === "scene" ? sceneObjects : activityObjects;
+
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="flex rounded-lg border border-stone-200 bg-stone-50 p-0.5">
+        <button
+          type="button"
+          className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium ${
+            tab === "scene"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-600 hover:text-stone-800"
+          }`}
+          onClick={() => onTabChange("scene")}
+        >
+          This scene
+        </button>
+        <button
+          type="button"
+          className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium ${
+            tab === "activity"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-600 hover:text-stone-800"
+          }`}
+          onClick={() => onTabChange("activity")}
+        >
+          Whole activity
+        </button>
+      </div>
+      {list.length === 0 ? (
+        <p className="text-[11px] text-stone-500">
+          No other objects {tab === "scene" ? "on this scene" : "in this activity"}.
+        </p>
+      ) : (
+        <ul className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-stone-200 bg-white p-2">
+          {list
+            .filter((item) => item.id !== excludeId)
+            .map((item) => {
+              const checked = selectedIds.includes(item.id);
+              return (
+                <li key={item.id}>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-stone-50">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-stone-300"
+                      checked={checked}
+                      onChange={(event) => onToggle(item.id, event.target.checked)}
+                    />
+                    <span className="min-w-0 text-xs text-stone-800">
+                      <span className="block truncate font-medium">{item.label}</span>
+                      {item.sceneLabel ? (
+                        <span className="block truncate text-[10px] text-stone-500">
+                          {item.sceneLabel}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 export function HotspotAnimationsPanel({
@@ -57,9 +156,13 @@ export function HotspotAnimationsPanel({
   inputClass,
   motionPreviewEnabled = false,
   onMotionPreviewChange,
+  sceneRequirementObjects,
+  activityRequirementObjects,
   onPatchAnimation,
+  onPatchHotspot,
 }: Props) {
   const [openId, setOpenId] = useState<string | null>("motion");
+  const [requirementsTab, setRequirementsTab] = useState<"scene" | "activity">("scene");
 
   if (!selected) {
     return (
@@ -92,9 +195,23 @@ export function HotspotAnimationsPanel({
 
   const current = normalizeAnimation(selected.animation);
   const entranceActive = current.entrance !== "none";
+  const requirements = current.entranceRequirements ?? [];
 
   const commit = (patch: Partial<NonNullable<HotspotElement["animation"]>>) => {
-    onPatchAnimation(selected.id, compactAnimation({ ...current, ...patch }));
+    const next = compactAnimation({ ...current, ...patch });
+    const hasRequirements = (next?.entranceRequirements?.length ?? 0) > 0;
+    if (onPatchHotspot && hasRequirements && selected.initialState !== "hidden") {
+      onPatchHotspot(selected.id, { animation: next, initialState: "hidden" });
+      return;
+    }
+    onPatchAnimation(selected.id, next);
+  };
+
+  const toggleRequirement = (objectId: string, checked: boolean) => {
+    const nextIds = checked
+      ? [...requirements, objectId]
+      : requirements.filter((id) => id !== objectId);
+    commit({ entranceRequirements: nextIds });
   };
 
   return (
@@ -188,6 +305,28 @@ export function HotspotAnimationsPanel({
             </label>
           </div>
         ) : null}
+
+        <div className="mt-4 border-t border-stone-200 pt-3">
+          <p className="text-xs font-semibold text-stone-700">Show when tapped</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+            Object stays hidden until every checked object has been tapped by the student.
+          </p>
+          <RequirementPicker
+            tab={requirementsTab}
+            onTabChange={setRequirementsTab}
+            sceneObjects={sceneRequirementObjects}
+            activityObjects={activityRequirementObjects}
+            selectedIds={requirements}
+            excludeId={selected.id}
+            onToggle={toggleRequirement}
+          />
+          {requirements.length > 0 ? (
+            <p className="mt-2 text-[10px] text-stone-500">
+              {requirements.length} requirement{requirements.length === 1 ? "" : "s"} selected.
+              Initial visibility set to hidden.
+            </p>
+          ) : null}
+        </div>
       </HotspotCollapsibleCard>
 
       <HotspotCollapsibleCard

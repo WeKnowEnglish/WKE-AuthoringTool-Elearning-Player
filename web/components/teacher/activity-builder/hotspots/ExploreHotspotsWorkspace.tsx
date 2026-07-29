@@ -57,11 +57,13 @@ import type {
   WkeObjectAction,
   WkeObjectInteractionKind,
   WkeDialoguePanelElement,
+  WkeNormalizedRect,
   WkePhase,
   WkeResponseCard,
 } from "@/lib/wke-activity/types";
 import {
   applyInteractionKindTemplate,
+  rectFromGeometry,
   resolveOnTapActions,
   responseCardToAction,
   syncResponseCardsFromOnTap,
@@ -195,6 +197,16 @@ export function ExploreHotspotsWorkspace() {
     message: string;
   } | null>(null);
   const [previewGeneration, setPreviewGeneration] = useState(0);
+  const [previewPhaseIndex, setPreviewPhaseIndex] = useState<number>(0);
+  const [showPreviewMenu, setShowPreviewMenu] = useState(false);
+  const previewMenuRef = useRef<HTMLDivElement | null>(null);
+  const [movePlacement, setMovePlacement] = useState<{
+    actionId: string;
+    ownerHotspotId: string;
+    targetId: string;
+    originalGeometry: HotspotGeometry;
+  } | null>(null);
+  const movePreviewRafRef = useRef<number | null>(null);
   const [segmentationMode, setSegmentationMode] = useState(false);
   const [segmentationPrompts, setSegmentationPrompts] = useState<NormalizedSamPrompt[]>(
     [],
@@ -236,6 +248,31 @@ export function ExploreHotspotsWorkspace() {
   const hotspots = hotspotsForPhase(document, resolvedPhaseId);
   const allHotspots = document.layout.elements.filter(
     (element): element is HotspotElement => element.kind === "hotspot",
+  );
+  const objectDisplayLabel = (hotspot: HotspotElement) =>
+    hotspot.name?.trim() || hotspot.labelText?.trim() || hotspot.id;
+  const sceneTitleForHotspot = (hotspotId: string) => {
+    const phaseIndex = phases.findIndex((phase) => phase.hotspotIds.includes(hotspotId));
+    if (phaseIndex < 0) return undefined;
+    const phase = phases[phaseIndex];
+    return phase.title?.trim() || `Scene ${phaseIndex + 1}`;
+  };
+  const sceneRequirementObjects = useMemo(
+    () =>
+      hotspots.map((hotspot) => ({
+        id: hotspot.id,
+        label: objectDisplayLabel(hotspot),
+      })),
+    [hotspots],
+  );
+  const activityRequirementObjects = useMemo(
+    () =>
+      allHotspots.map((hotspot) => ({
+        id: hotspot.id,
+        label: objectDisplayLabel(hotspot),
+        sceneLabel: sceneTitleForHotspot(hotspot.id),
+      })),
+    [allHotspots, phases],
   );
   const selected = allHotspots.find((hotspot) => hotspot.id === selectedId) ?? null;
   const selectedDialogue =
@@ -1086,6 +1123,12 @@ export function ExploreHotspotsWorkspace() {
 
       if (event.key === "Escape") {
         event.preventDefault();
+        if (movePlacement) {
+          cancelMovePlacement(true);
+          setSelectedId(movePlacement.ownerHotspotId);
+          setNotice(null);
+          return;
+        }
         stopSegmentation();
         setSelectedId(null);
         setTool("select");
@@ -1164,7 +1207,15 @@ export function ExploreHotspotsWorkspace() {
       window.removeEventListener("paste", onPaste);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStarted, mode, resolvedPhaseId]);
+  }, [sessionStarted, mode, resolvedPhaseId, movePlacement]);
+
+  useEffect(() => {
+    return () => {
+      if (movePreviewRafRef.current != null) {
+        window.cancelAnimationFrame(movePreviewRafRef.current);
+      }
+    };
+  }, []);
 
   const patchDialogue = (
     patch: Partial<NonNullable<typeof selectedDialogue>>,
@@ -1322,17 +1373,23 @@ export function ExploreHotspotsWorkspace() {
           ),
           layout: {
             ...withPhases.layout,
-            elements: withPhases.layout.elements.map((element) =>
-              element.kind === "hotspot" &&
-              (phaseHotspotIds.size === 0 || phaseHotspotIds.has(element.id))
-                ? { ...element, visualShape: undefined }
-                : element,
-            ),
+            // Only clear outlines for hotspots on this scene. An empty hotspotIds
+            // list must NOT wipe outlines across the whole activity.
+            elements:
+              phaseHotspotIds.size === 0
+                ? withPhases.layout.elements
+                : withPhases.layout.elements.map((element) =>
+                    element.kind === "hotspot" && phaseHotspotIds.has(element.id)
+                      ? { ...element, visualShape: undefined }
+                      : element,
+                  ),
           },
         };
       });
       setNotice(
-        `Imported ${file.name} (${next.width} × ${next.height}) for this scene. Outlines on this scene were cleared.`,
+        phaseHotspotIds.size === 0
+          ? `Imported ${file.name} (${next.width} × ${next.height}) for this scene.`
+          : `Imported ${file.name} (${next.width} × ${next.height}) for this scene. Outlines on this scene were cleared.`,
       );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not import the image.");
@@ -1551,7 +1608,7 @@ export function ExploreHotspotsWorkspace() {
     if (!selected) return;
     const hotspotId = selected.id;
     const actions = resolveOnTapActions(selected);
-    const id = `card-${hotspotId}-${actions.length + 1}`;
+    const id = `card-${hotspotId}-${crypto.randomUUID().slice(0, 8)}`;
     let card: WkeResponseCard;
     switch (kind) {
       case "info":
@@ -1633,6 +1690,182 @@ export function ExploreHotspotsWorkspace() {
     );
   };
 
+  const moveOnTapAction = (actionId: string, direction: -1 | 1) => {
+    if (!selected) return;
+    const actions = resolveOnTapActions(selected);
+    const index = actions.findIndex((action) => action.id === actionId);
+    if (index < 0) return;
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= actions.length) return;
+
+    const nextActions = [...actions];
+    const [moved] = nextActions.splice(index, 1);
+    nextActions.splice(nextIndex, 0, moved);
+    writeOnTap(selected.id, nextActions);
+  };
+
+  const objectRect = (hotspotId: string): WkeNormalizedRect => {
+    const hotspot = allHotspots.find((item) => item.id === hotspotId);
+    return (
+      (hotspot ? rectFromGeometry(hotspot.geometry) : null) ?? {
+        x: 0.35,
+        y: 0.35,
+        width: 0.12,
+        height: 0.12,
+      }
+    );
+  };
+
+  const setHotspotRectangle = (hotspotId: string, rect: WkeNormalizedRect) => {
+    patchHotspot(hotspotId, {
+      geometry: {
+        shape: "rectangle",
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      },
+    });
+  };
+
+  const cancelMovePlacement = (restore = true) => {
+    if (movePlacement && restore) {
+      patchHotspot(movePlacement.targetId, {
+        geometry: movePlacement.originalGeometry,
+      });
+    }
+    setMovePlacement(null);
+  };
+
+  const beginPlaceMoveEnd = (actionId: string, targetId: string) => {
+    const target = allHotspots.find((item) => item.id === targetId);
+    if (!target || !selected) return;
+    if (movePreviewRafRef.current != null) {
+      window.cancelAnimationFrame(movePreviewRafRef.current);
+      movePreviewRafRef.current = null;
+    }
+    const ownerActions = resolveOnTapActions(selected);
+    const action = ownerActions.find(
+      (item) => item.id === actionId && item.type === "tween_object",
+    );
+    const startRect =
+      (action && action.type === "tween_object" ? action.from : undefined) ??
+      rectFromGeometry(target.geometry) ??
+      objectRect(targetId);
+    setHotspotRectangle(targetId, startRect);
+    setMovePlacement({
+      actionId,
+      ownerHotspotId: selected.id,
+      targetId,
+      originalGeometry: {
+        shape: "rectangle",
+        x: startRect.x,
+        y: startRect.y,
+        width: startRect.width,
+        height: startRect.height,
+      },
+    });
+    setSelectedId(targetId);
+    setTool("select");
+    setCreateIntent(null);
+    setNotice(
+      "Drag the object to its final position, then click Set final position.",
+    );
+  };
+
+  const commitMoveEndPosition = () => {
+    if (!movePlacement) return;
+    const owner = allHotspots.find((item) => item.id === movePlacement.ownerHotspotId);
+    const target = allHotspots.find((item) => item.id === movePlacement.targetId);
+    if (!owner || !target) return;
+    const action = resolveOnTapActions(owner).find(
+      (item) => item.id === movePlacement.actionId && item.type === "tween_object",
+    );
+    const startRect =
+      (action && action.type === "tween_object" ? action.from : undefined) ??
+      rectFromGeometry(movePlacement.originalGeometry) ??
+      objectRect(movePlacement.targetId);
+    const live = rectFromGeometry(target.geometry) ?? startRect;
+    const to: WkeNormalizedRect = {
+      x: live.x,
+      y: live.y,
+      width: startRect.width,
+      height: startRect.height,
+    };
+    writeOnTap(
+      owner.id,
+      resolveOnTapActions(owner).map((item) =>
+        item.id === movePlacement.actionId && item.type === "tween_object"
+          ? ({ ...item, to } as WkeObjectAction)
+          : item,
+      ),
+    );
+    setHotspotRectangle(movePlacement.targetId, startRect);
+    setMovePlacement(null);
+    setSelectedId(owner.id);
+    setNotice("Final position saved. Object returned to the start position.");
+  };
+
+  const setMoveStartFromCanvas = (actionId: string, targetId: string) => {
+    const rect = objectRect(targetId);
+    const action = selected
+      ? resolveOnTapActions(selected).find((item) => item.id === actionId)
+      : null;
+    const nextTo =
+      action && action.type === "tween_object"
+        ? {
+            x: action.to.x,
+            y: action.to.y,
+            width: rect.width,
+            height: rect.height,
+          }
+        : { ...rect, x: Math.min(0.85, rect.x + 0.12) };
+    patchOnTapAction(actionId, { from: rect, to: nextTo, targetId });
+    setNotice("Starting position captured from the object on the canvas.");
+  };
+
+  const previewMoveAction = (action: Extract<WkeObjectAction, { type: "tween_object" }>) => {
+    const target = allHotspots.find((item) => item.id === action.targetId);
+    if (!target) return;
+    const size = objectRect(action.targetId);
+    const from: WkeNormalizedRect = action.from
+      ? { ...action.from, width: size.width, height: size.height }
+      : size;
+    const to: WkeNormalizedRect = {
+      x: action.to.x,
+      y: action.to.y,
+      width: size.width,
+      height: size.height,
+    };
+    if (movePreviewRafRef.current != null) {
+      window.cancelAnimationFrame(movePreviewRafRef.current);
+      movePreviewRafRef.current = null;
+    }
+    const restoreGeometry = target.geometry;
+    setHotspotRectangle(action.targetId, from);
+    const duration = Math.max(0, action.durationMs || 600);
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
+      const eased = 1 - (1 - t) * (1 - t);
+      setHotspotRectangle(action.targetId, {
+        x: from.x + (to.x - from.x) * eased,
+        y: from.y + (to.y - from.y) * eased,
+        width: size.width,
+        height: size.height,
+      });
+      if (t < 1) {
+        movePreviewRafRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+      movePreviewRafRef.current = null;
+      window.setTimeout(() => {
+        patchHotspot(action.targetId, { geometry: restoreGeometry });
+      }, 250);
+    };
+    movePreviewRafRef.current = window.requestAnimationFrame(tick);
+  };
+
   const addStageAction = (
     type:
       | "wait"
@@ -1647,17 +1880,9 @@ export function ExploreHotspotsWorkspace() {
   ) => {
     if (!selected) return;
     const actions = resolveOnTapActions(selected);
-    const id = `action-${selected.id}-${actions.length + 1}`;
+    const id = `action-${selected.id}-${crypto.randomUUID().slice(0, 8)}`;
     const targetId = selected.id;
-    const rect =
-      selected.geometry.shape === "rectangle"
-        ? {
-            x: selected.geometry.x,
-            y: selected.geometry.y,
-            width: selected.geometry.width,
-            height: selected.geometry.height,
-          }
-        : { x: 0.35, y: 0.35, width: 0.3, height: 0.3 };
+    const rect = objectRect(targetId);
     let action: WkeObjectAction;
     switch (type) {
       case "wait":
@@ -1684,7 +1909,8 @@ export function ExploreHotspotsWorkspace() {
           id,
           type: "tween_object",
           targetId,
-          to: { ...rect, x: Math.min(0.7, rect.x + 0.15) },
+          from: rect,
+          to: { ...rect, x: Math.min(0.85, rect.x + 0.12) },
           durationMs: 600,
           easing: "easeOut",
           wait: true,
@@ -1723,6 +1949,11 @@ export function ExploreHotspotsWorkspace() {
         break;
     }
     writeOnTap(selected.id, [...actions, action]);
+    if (type === "tween_object") {
+      setNotice(
+        "Move added. Set the starting position, drag to the end, then preview.",
+      );
+    }
   };
 
   const rectangleFields =
@@ -1734,9 +1965,25 @@ export function ExploreHotspotsWorkspace() {
       ? (["cx", "cy", "rx", "ry"] as const)
       : null;
 
-  const togglePreview = () => {
+  useEffect(() => {
+    if (!showPreviewMenu) return;
+    const handler = (event: MouseEvent) => {
+      const menuEl = previewMenuRef.current;
+      // If the user clicked inside the dropdown, don't close it.
+      if (menuEl && event.target instanceof Node && menuEl.contains(event.target)) {
+        return;
+      }
+      setShowPreviewMenu(false);
+    };
+    window.addEventListener("mousedown", handler, { capture: true });
+    return () =>
+      window.removeEventListener("mousedown", handler, { capture: true });
+  }, [showPreviewMenu]);
+
+  const togglePreview = (phaseIndex?: number) => {
     setMode((current) => {
       if (current === "layout") {
+        setPreviewPhaseIndex(phaseIndex ?? 0);
         setPreviewGeneration((value) => value + 1);
         return "preview";
       }
@@ -1876,17 +2123,64 @@ export function ExploreHotspotsWorkspace() {
           >
             {bankBusy ? "Saving…" : "Save to bank"}
           </button>
-          <button
-            type="button"
-            className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${
-              mode === "preview"
-                ? "border border-amber-300 bg-amber-100 text-amber-950"
-                : "bg-sky-800 text-white"
-            }`}
-            onClick={togglePreview}
-          >
-            {mode === "layout" ? "Preview" : "Layout"}
-          </button>
+          {mode === "preview" ? (
+            <button
+              type="button"
+              className="rounded-lg border border-amber-300 bg-amber-100 px-2.5 py-1.5 text-xs font-medium text-amber-950"
+              onClick={() => togglePreview()}
+            >
+              Layout
+            </button>
+          ) : (
+            <div className="relative flex">
+              <button
+                type="button"
+                className="rounded-l-lg bg-sky-800 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-sky-700"
+                onClick={() => {
+                  setShowPreviewMenu(false);
+                  togglePreview(0);
+                }}
+              >
+                Preview
+              </button>
+              <button
+                type="button"
+                className="rounded-r-lg border-l border-sky-600 bg-sky-800 px-1.5 py-1.5 text-xs text-white hover:bg-sky-700"
+                onClick={() => setShowPreviewMenu((v) => !v)}
+                aria-label="Preview options"
+              >
+                ▾
+              </button>
+              {showPreviewMenu && (
+                <div
+                  ref={previewMenuRef}
+                  className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lg"
+                >
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-xs text-stone-700 hover:bg-stone-50"
+                    onClick={() => {
+                      setShowPreviewMenu(false);
+                      togglePreview(0);
+                    }}
+                  >
+                    From beginning
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-xs text-stone-700 hover:bg-stone-50"
+                    onClick={() => {
+                      setShowPreviewMenu(false);
+                      const idx = phases.findIndex((p) => p.id === resolvedPhaseId);
+                      togglePreview(idx < 0 ? 0 : idx);
+                    }}
+                  >
+                    From current scene
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <input
           ref={openRef}
@@ -2200,6 +2494,31 @@ export function ExploreHotspotsWorkspace() {
                 </div>
               </div>
             ) : null}
+            {movePlacement ? (
+              <div className="mx-3 mt-3 shrink-0 sm:mx-4 sm:mt-4">
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2">
+                  <p className="text-xs text-sky-900">
+                    Placing move end · Drag the object · click{" "}
+                    <span className="font-semibold">Set final position</span> when ready · Esc
+                    cancels
+                  </p>
+                  <button
+                    type="button"
+                    className="ml-auto rounded-lg border border-sky-300 bg-white px-2.5 py-1 text-xs font-medium text-sky-900 hover:bg-sky-100"
+                    onClick={commitMoveEndPosition}
+                  >
+                    Set final position
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                    onClick={() => cancelMovePlacement(true)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="relative min-h-0 flex-1 overflow-hidden px-3 py-2 sm:px-4">
               <div className="flex h-full min-h-0 w-full items-center justify-center [container-type:size]">
@@ -2216,7 +2535,26 @@ export function ExploreHotspotsWorkspace() {
                   onSelect={selectHotspot}
                   onClearSelection={() => setSelectedId(null)}
                   onCreate={handleCanvasCreate}
-                  onGeometryChange={(id, geometry) => patchHotspot(id, { geometry })}
+                  onGeometryChange={(id, geometry) => {
+                    if (movePlacement && id === movePlacement.targetId) {
+                      const locked =
+                        rectFromGeometry(movePlacement.originalGeometry) ??
+                        objectRect(id);
+                      if (geometry.shape === "rectangle") {
+                        patchHotspot(id, {
+                          geometry: {
+                            shape: "rectangle",
+                            x: geometry.x,
+                            y: geometry.y,
+                            width: locked.width,
+                            height: locked.height,
+                          },
+                        });
+                        return;
+                      }
+                    }
+                    patchHotspot(id, { geometry });
+                  }}
                   onRotationChange={(id, rotationDeg) =>
                     patchHotspot(id, { rotationDeg })
                   }
@@ -2374,9 +2712,12 @@ export function ExploreHotspotsWorkspace() {
                 inputClass={inputClass}
                 motionPreviewEnabled={motionPreviewEnabled}
                 onMotionPreviewChange={setMotionPreviewEnabled}
+                sceneRequirementObjects={sceneRequirementObjects}
+                activityRequirementObjects={activityRequirementObjects}
                 onPatchAnimation={(hotspotId, animation) =>
                   patchHotspot(hotspotId, { animation })
                 }
+                onPatchHotspot={(hotspotId, patch) => patchHotspot(hotspotId, patch)}
               />
             ) : !selected ? (
               <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
@@ -2896,13 +3237,41 @@ export function ExploreHotspotsWorkspace() {
                                 ? "Wait for tap then advance"
                                 : action.type.replaceAll("_", " ")}
                           </p>
-                          <button
-                            type="button"
-                            className="text-xs text-rose-700 hover:underline"
-                            onClick={() => removeOnTapAction(action.id)}
-                          >
-                            Remove
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className={`text-xs hover:underline ${
+                                index === 0
+                                  ? "cursor-not-allowed text-stone-300"
+                                  : "text-stone-600"
+                              }`}
+                              disabled={index === 0}
+                              aria-label="Move up"
+                              onClick={() => moveOnTapAction(action.id, -1)}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className={`text-xs hover:underline ${
+                                index === selectedOnTap.length - 1
+                                  ? "cursor-not-allowed text-stone-300"
+                                  : "text-stone-600"
+                              }`}
+                              disabled={index === selectedOnTap.length - 1}
+                              aria-label="Move down"
+                              onClick={() => moveOnTapAction(action.id, 1)}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              className="text-xs text-rose-700 hover:underline"
+                              onClick={() => removeOnTapAction(action.id)}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
                         <div className="mb-2">
                           <ActionStartTimingSelect
@@ -3043,39 +3412,64 @@ export function ExploreHotspotsWorkspace() {
                           </label>
                         ) : null}
                         {action.type === "pulse_object" ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            <label className="text-xs text-stone-600">
-                              Target id
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="text-xs text-stone-600">
+                                Object
+                                <select
+                                  className={inputClass}
+                                  value={action.targetId}
+                                  onChange={(event) =>
+                                    patchOnTapAction(action.id, {
+                                      targetId: event.target.value,
+                                    })
+                                  }
+                                >
+                                  {allHotspots.map((h) => (
+                                    <option key={h.id} value={h.id}>
+                                      {h.name?.trim() || h.labelText?.trim() || h.id}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex items-end gap-2 pb-2 text-sm text-stone-800">
+                                <input
+                                  type="checkbox"
+                                  className="rounded border-stone-300"
+                                  checked={action.enabled !== false}
+                                  onChange={(event) =>
+                                    patchOnTapAction(action.id, {
+                                      enabled: event.target.checked,
+                                    })
+                                  }
+                                />
+                                Pulse on
+                              </label>
+                            </div>
+                            <label className="block text-xs text-stone-600">
+                              Duration (ms, blank = indefinite)
                               <input
+                                type="number"
+                                min={0}
+                                placeholder="indefinite"
                                 className={inputClass}
-                                value={action.targetId}
+                                value={action.durationMs ?? ""}
                                 onChange={(event) =>
                                   patchOnTapAction(action.id, {
-                                    targetId: event.target.value,
+                                    durationMs: event.target.value
+                                      ? Number(event.target.value)
+                                      : undefined,
                                   })
                                 }
                               />
-                            </label>
-                            <label className="flex items-end gap-2 pb-2 text-sm text-stone-800">
-                              <input
-                                type="checkbox"
-                                className="rounded border-stone-300"
-                                checked={action.enabled !== false}
-                                onChange={(event) =>
-                                  patchOnTapAction(action.id, {
-                                    enabled: event.target.checked,
-                                  })
-                                }
-                              />
-                              Pulse on
                             </label>
                           </div>
                         ) : null}
                         {action.type === "set_object_state" ? (
                           <div className="grid grid-cols-2 gap-2">
                             <label className="text-xs text-stone-600">
-                              Target id
-                              <input
+                              Object
+                              <select
                                 className={inputClass}
                                 value={action.targetId}
                                 onChange={(event) =>
@@ -3083,7 +3477,13 @@ export function ExploreHotspotsWorkspace() {
                                     targetId: event.target.value,
                                   })
                                 }
-                              />
+                              >
+                                {allHotspots.map((h) => (
+                                  <option key={h.id} value={h.id}>
+                                    {h.name?.trim() || h.labelText?.trim() || h.id}
+                                  </option>
+                                ))}
+                              </select>
                             </label>
                             <label className="text-xs text-stone-600">
                               State
@@ -3111,8 +3511,8 @@ export function ExploreHotspotsWorkspace() {
                         {action.type === "swap_sprite_asset" ? (
                           <div className="grid grid-cols-1 gap-2">
                             <label className="text-xs text-stone-600">
-                              Target id
-                              <input
+                              Object
+                              <select
                                 className={inputClass}
                                 value={action.targetId}
                                 onChange={(event) =>
@@ -3120,7 +3520,13 @@ export function ExploreHotspotsWorkspace() {
                                     targetId: event.target.value,
                                   })
                                 }
-                              />
+                              >
+                                {allHotspots.map((h) => (
+                                  <option key={h.id} value={h.id}>
+                                    {h.name?.trim() || h.labelText?.trim() || h.id}
+                                  </option>
+                                ))}
+                              </select>
                             </label>
                             <label className="text-xs text-stone-600">
                               Sprite asset id
@@ -3145,12 +3551,114 @@ export function ExploreHotspotsWorkspace() {
                             </label>
                           </div>
                         ) : null}
-                        {action.type === "tween_object" ||
-                        action.type === "enter_object" ? (
+                        {action.type === "tween_object" ? (
                           <div className="space-y-2">
                             <label className="block text-xs text-stone-600">
-                              Target id
+                              Object to move
+                              <select
+                                className={inputClass}
+                                value={action.targetId}
+                                onChange={(event) => {
+                                  const nextTargetId = event.target.value;
+                                  const rect = objectRect(nextTargetId);
+                                  patchOnTapAction(action.id, {
+                                    targetId: nextTargetId,
+                                    from: rect,
+                                    to: {
+                                      ...rect,
+                                      x: Math.min(0.85, rect.x + 0.12),
+                                    },
+                                  });
+                                }}
+                              >
+                                {allHotspots.map((h) => (
+                                  <option key={h.id} value={h.id}>
+                                    {h.name?.trim() || h.labelText?.trim() || h.id}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <div className="rounded-lg border border-sky-100 bg-sky-50/70 p-2">
+                              <p className="text-[11px] leading-relaxed text-sky-900">
+                                1. Set start · 2. Drag to the end on the canvas · 3. Set
+                                final · Preview anytime. Size stays locked.
+                              </p>
+                              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                <button
+                                  type="button"
+                                  className="rounded-md border border-sky-200 bg-white px-2 py-1.5 text-[11px] font-medium text-sky-900 hover:bg-sky-100"
+                                  onClick={() =>
+                                    setMoveStartFromCanvas(action.id, action.targetId)
+                                  }
+                                >
+                                  Set starting position
+                                </button>
+                                {movePlacement?.actionId === action.id ? (
+                                  <button
+                                    type="button"
+                                    className="rounded-md bg-sky-800 px-2 py-1.5 text-[11px] font-medium text-white hover:bg-sky-700"
+                                    onClick={commitMoveEndPosition}
+                                  >
+                                    Set final position
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="rounded-md border border-sky-200 bg-white px-2 py-1.5 text-[11px] font-medium text-sky-900 hover:bg-sky-100"
+                                    onClick={() =>
+                                      beginPlaceMoveEnd(action.id, action.targetId)
+                                    }
+                                  >
+                                    Place end on canvas
+                                  </button>
+                                )}
+                              </div>
+                              {movePlacement?.actionId === action.id ? (
+                                <button
+                                  type="button"
+                                  className="mt-1.5 w-full rounded-md border border-stone-300 bg-white px-2 py-1 text-[11px] text-stone-600 hover:bg-stone-50"
+                                  onClick={() => cancelMovePlacement(true)}
+                                >
+                                  Cancel placing
+                                </button>
+                              ) : null}
+                              <p className="mt-2 text-[10px] text-stone-500">
+                                Start:{" "}
+                                {action.from
+                                  ? `${action.from.x.toFixed(2)}, ${action.from.y.toFixed(2)}`
+                                  : "object’s current position"}
+                                {" · "}
+                                End: {action.to.x.toFixed(2)}, {action.to.y.toFixed(2)}
+                              </p>
+                            </div>
+                            <label className="block text-xs text-stone-600">
+                              Duration (ms)
                               <input
+                                type="number"
+                                min={0}
+                                className={inputClass}
+                                value={action.durationMs}
+                                onChange={(event) =>
+                                  patchOnTapAction(action.id, {
+                                    durationMs: Number(event.target.value) || 0,
+                                  })
+                                }
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-950 hover:bg-amber-100"
+                              onClick={() => previewMoveAction(action)}
+                            >
+                              Preview movement
+                            </button>
+                          </div>
+                        ) : null}
+                        {action.type === "enter_object" ? (
+                          <div className="space-y-2">
+                            <label className="block text-xs text-stone-600">
+                              Object
+                              <select
                                 className={inputClass}
                                 value={action.targetId}
                                 onChange={(event) =>
@@ -3158,7 +3666,13 @@ export function ExploreHotspotsWorkspace() {
                                     targetId: event.target.value,
                                   })
                                 }
-                              />
+                              >
+                                {allHotspots.map((h) => (
+                                  <option key={h.id} value={h.id}>
+                                    {h.name?.trim() || h.labelText?.trim() || h.id}
+                                  </option>
+                                ))}
+                              </select>
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                               {(
@@ -3203,8 +3717,8 @@ export function ExploreHotspotsWorkspace() {
                         ) : null}
                         {action.type === "complete_object" ? (
                           <label className="block text-xs text-stone-600">
-                            Target id (blank = tapped object)
-                            <input
+                            Object (blank = tapped object)
+                            <select
                               className={inputClass}
                               value={action.targetId ?? ""}
                               onChange={(event) =>
@@ -3212,7 +3726,14 @@ export function ExploreHotspotsWorkspace() {
                                   targetId: event.target.value || undefined,
                                 })
                               }
-                            />
+                            >
+                              <option value="">— tapped object —</option>
+                              {allHotspots.map((h) => (
+                                <option key={h.id} value={h.id}>
+                                  {h.name?.trim() || h.labelText?.trim() || h.id}
+                                </option>
+                              ))}
+                            </select>
                           </label>
                         ) : null}
                         {action.type === "advance_scene" ? (
@@ -3804,6 +4325,7 @@ export function ExploreHotspotsWorkspace() {
                 lessonTitle={document.name}
                 screens={previewScreens}
                 mode="preview"
+                initialPhaseIndex={previewPhaseIndex}
               />
             ) : (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-rose-900">

@@ -51,7 +51,10 @@ export type PlayHotspot = {
     entranceDurationMs?: number;
     entranceDelayMs?: number;
     idle?: "none" | "pulse" | "bob" | "wiggle";
+    entranceRequirements?: string[];
   };
+  /** Bumps when a gated entrance plays so CSS animation remounts. */
+  entranceMotionKey?: number;
   /** Runtime overrides (on-tap stage actions). */
   visible?: boolean;
   opacity?: number;

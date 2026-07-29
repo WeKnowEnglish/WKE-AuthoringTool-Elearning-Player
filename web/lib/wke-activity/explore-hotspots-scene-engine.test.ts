@@ -132,4 +132,22 @@ describe("explore-hotspots scene engine schema", () => {
     expect(sprite?.sprite_url).toContain("toothbrush.png");
     expect(sprite?.interaction_kind).toBe("silent");
   });
+
+  it("serializes entrance requirements on animation", () => {
+    const base = structuredClone(hobbiesActivity) as Record<string, unknown>;
+    const layout = base.layout as { elements: Array<Record<string, unknown>> };
+    const firstHotspot = layout.elements.find((el) => el.kind === "hotspot")!;
+    const secondHotspot = layout.elements.filter((el) => el.kind === "hotspot")[1]!;
+    secondHotspot.animation = {
+      entrance: "pop",
+      entranceRequirements: [firstHotspot.id as string],
+    };
+    secondHotspot.initialState = "hidden";
+
+    const payload = wkeActivityToExploreHotspotsPayload(base);
+    const gated = payload.hotspots.find((h) => h.id === secondHotspot.id);
+    expect(gated?.animation?.entrance).toBe("pop");
+    expect(gated?.animation?.entrance_requirements).toEqual([firstHotspot.id]);
+    expect(gated?.initial_state).toBe("hidden");
+  });
 });

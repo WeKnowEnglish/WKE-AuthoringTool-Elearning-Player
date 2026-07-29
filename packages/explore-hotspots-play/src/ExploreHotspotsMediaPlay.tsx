@@ -237,7 +237,7 @@ export function ExploreHotspotsMediaPlay({
             return (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                key={hotspot.id}
+                key={`${hotspot.id}-${hotspot.entranceMotionKey ?? 0}`}
                 src={hotspot.spriteSrc}
                 alt=""
                 draggable={false}
@@ -287,7 +287,7 @@ export function ExploreHotspotsMediaPlay({
 
           return (
             <svg
-              key={hotspot.id}
+              key={`${hotspot.id}-${hotspot.entranceMotionKey ?? 0}`}
               viewBox={`0 0 ${SCALE} ${SCALE}`}
               preserveAspectRatio="none"
               className="absolute inset-0 h-full w-full"

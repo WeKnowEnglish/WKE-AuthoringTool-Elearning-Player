@@ -143,6 +143,8 @@ export type WkeObjectAction =
       type: "tween_object";
       targetId: string;
       to: WkeNormalizedRect;
+      /** Optional start rect. When omitted, play uses the object’s current position. */
+      from?: WkeNormalizedRect;
       durationMs: number;
       easing?: "linear" | "easeOut";
       wait?: boolean;
@@ -170,6 +172,8 @@ export type WkeObjectAction =
       targetId: string;
       /** Defaults to true when omitted. */
       enabled?: boolean;
+      /** Stop pulsing after this many milliseconds. Omit for indefinite. */
+      durationMs?: number;
       timing?: WkeActionStartTiming;
     }
   | {
@@ -222,6 +226,8 @@ export type WkeHotspotElement = {
     entranceDurationMs?: number;
     entranceDelayMs?: number;
     idle?: "none" | "pulse" | "bob" | "wiggle";
+    /** Hotspot ids that must be tapped before this object appears and plays entrance. */
+    entranceRequirements?: string[];
   };
   /** Extensible interaction kind (defaults to dialogue for targets, silent for sprites). */
   interactionKind?: WkeObjectInteractionKind;

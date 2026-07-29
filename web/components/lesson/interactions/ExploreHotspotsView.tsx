@@ -7,6 +7,8 @@ import { speakTextAndWait, stopSpeaking, unlockSpeechSynthesis } from "@/lib/aud
 import {
   canSelectInStrictOrder,
   contentActionAsCard,
+  entranceRequirementsFor,
+  entranceRequirementsMet,
   hintTargetId,
   hotspotsInPhase,
   initialObjectStates,
@@ -198,12 +200,14 @@ export function ExploreHotspotsView({
   onNext,
   onBack,
   showBack,
+  initialPhaseIndex,
 }: {
   parsed: ExploreHotspotsParsed;
   onPass: () => void;
+  initialPhaseIndex?: number;
 } & NavProps) {
   const phases = useMemo(() => resolvePlayPhases(parsed), [parsed]);
-  const [phaseIndex, setPhaseIndex] = useState(0);
+  const [phaseIndex, setPhaseIndex] = useState(() => Math.max(0, initialPhaseIndex ?? 0));
   const [objectStates, setObjectStates] = useState<Record<string, ObjectRuntimeState>>(
     () => initialObjectStates(parsed.hotspots),
   );
@@ -215,6 +219,7 @@ export function ExploreHotspotsView({
   const [orderHint, setOrderHint] = useState<string | null>(null);
   const [showHintPulse, setShowHintPulse] = useState(false);
   const [clickAdvanceTargetId, setClickAdvanceTargetId] = useState<string | null>(null);
+  const [entranceMotionKeys, setEntranceMotionKeys] = useState<Record<string, number>>({});
   const [speaking, setSpeaking] = useState(false);
   const [questionFeedback, setQuestionFeedback] = useState<string | null>(null);
   const playGenRef = useRef(0);
@@ -245,14 +250,37 @@ export function ExploreHotspotsView({
     [parsed, currentPhase],
   );
   const playHotspots = useMemo(() => {
-    const base = toPlayHotspots(phaseHotspots, stageStates);
+    const base = toPlayHotspots(phaseHotspots, stageStates).map((hotspot) => {
+      const source = phaseHotspots.find((item) => item.id === hotspot.id);
+      if (!source) return hotspot;
+
+      const gated = entranceRequirementsFor(source).length > 0;
+      const met = entranceRequirementsMet(source, objectStates);
+      const stageVisible = hotspot.visible !== false;
+      const visible = stageVisible && met;
+
+      return {
+        ...hotspot,
+        visible,
+        opacity: visible ? (hotspot.opacity ?? 1) : 0,
+        animation: gated && !met ? undefined : hotspot.animation,
+        entranceMotionKey: gated && met ? entranceMotionKeys[hotspot.id] : undefined,
+      };
+    });
+
     if (!clickAdvanceTargetId) return base;
     return base.map((hotspot) =>
       hotspot.id === clickAdvanceTargetId && hotspot.interactionKind === "none"
         ? { ...hotspot, interactionKind: "silent" as const }
         : hotspot,
     );
-  }, [phaseHotspots, stageStates, clickAdvanceTargetId]);
+  }, [
+    phaseHotspots,
+    stageStates,
+    objectStates,
+    entranceMotionKeys,
+    clickAdvanceTargetId,
+  ]);
 
   const requiredAll = parsed.hotspots.filter((h) => h.required !== false);
   const completedRequired = requiredAll.filter((h) =>
@@ -415,6 +443,49 @@ export function ExploreHotspotsView({
     });
   }
 
+  useEffect(() => {
+    const toReveal: string[] = [];
+    for (const hotspot of parsed.hotspots) {
+      if (!entranceRequirementsFor(hotspot).length) continue;
+      if (!entranceRequirementsMet(hotspot, objectStates)) continue;
+      toReveal.push(hotspot.id);
+    }
+    if (!toReveal.length) return;
+
+    setObjectStates((prev) => {
+      let next: Record<string, ObjectRuntimeState> | null = null;
+      for (const id of toReveal) {
+        if (prev[id] !== "hidden") continue;
+        if (!next) next = { ...prev };
+        next[id] = "available";
+      }
+      return next ?? prev;
+    });
+
+    setStageStates((prev) => {
+      let next: Record<string, StageObjectPlayState> | null = null;
+      for (const id of toReveal) {
+        const source = parsed.hotspots.find((hotspot) => hotspot.id === id);
+        if (!source) continue;
+        const current = prev[id] ?? stageStateForHotspot(source);
+        if (current.visible && current.opacity === 1) continue;
+        if (!next) next = { ...prev };
+        next[id] = { ...current, visible: true, opacity: 1 };
+      }
+      return next ?? prev;
+    });
+
+    setEntranceMotionKeys((prev) => {
+      let next: Record<string, number> | null = null;
+      for (const id of toReveal) {
+        if (prev[id]) continue;
+        if (!next) next = { ...prev };
+        next[id] = (prev[id] ?? 0) + 1;
+      }
+      return next ?? prev;
+    });
+  }, [parsed.hotspots, objectStates]);
+
   function animateTween(
     targetId: string,
     from: NonNullable<StageObjectPlayState["geometry"]>,
@@ -486,14 +557,26 @@ export function ExploreHotspotsView({
       }
       case "tween_object": {
         const current = stageStatesRef.current[action.target_id];
-        const from = current?.geometry ?? {
+        // Keep size locked to the live object (or from/to fallback) so position-only
+        // moves never accidentally scale sprites when `to.width/height` are stale.
+        const sizeWidth =
+          current?.geometry?.width ?? action.from?.width ?? action.to.width;
+        const sizeHeight =
+          current?.geometry?.height ?? action.from?.height ?? action.to.height;
+        const from = {
+          shape: "rectangle" as const,
+          x: action.from?.x ?? current?.geometry?.x ?? action.to.x,
+          y: action.from?.y ?? current?.geometry?.y ?? action.to.y,
+          width: sizeWidth,
+          height: sizeHeight,
+        };
+        const to = {
           shape: "rectangle" as const,
           x: action.to.x,
           y: action.to.y,
-          width: action.to.width,
-          height: action.to.height,
+          width: sizeWidth,
+          height: sizeHeight,
         };
-        const to = { shape: "rectangle" as const, ...action.to };
         await animateTween(
           action.target_id,
           from,
@@ -538,6 +621,10 @@ export function ExploreHotspotsView({
       }
       case "pulse_object": {
         patchStage(action.target_id, { pulse: action.enabled !== false });
+        if (action.duration_ms != null && action.duration_ms > 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, action.duration_ms));
+          patchStage(action.target_id, { pulse: false });
+        }
         return;
       }
       case "advance_scene": {

@@ -369,6 +369,8 @@ type Props = {
   mode?: LessonPlayerMode;
   /** When set (e.g. teacher preview), open this screen index first */
   initialScreenIndex?: number;
+  /** When set, ExploreHotspots preview starts at this scene index (0 = beginning) */
+  initialPhaseIndex?: number;
   /** When mode is preview, show inline editors on the student layout */
   visualEdit?: LessonPlayerVisualEdit;
   /** Story screens: inset nav on the stage (vocabulary overlay). */
@@ -426,6 +428,7 @@ export function LessonPlayer({
   completionPlayground = null,
   mode = "student",
   initialScreenIndex = 0,
+  initialPhaseIndex,
   visualEdit,
   storyControlsPlacement = "below",
   immersiveLayout = false,
@@ -1758,7 +1761,7 @@ export function LessonPlayer({
       {parsed.type === "interaction" && parsed.subtype === "explore_hotspots" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
-            <LazyExploreHotspots parsed={parsed} {...nav} {...passHandlers} />
+            <LazyExploreHotspots parsed={parsed} {...nav} {...passHandlers} initialPhaseIndex={initialPhaseIndex} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}

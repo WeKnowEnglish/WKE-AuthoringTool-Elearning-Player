@@ -90,6 +90,7 @@ const hotspotElementSchema = z.object({
       entranceDurationMs: z.number().min(0).max(12_000).optional(),
       entranceDelayMs: z.number().min(0).max(12_000).optional(),
       idle: z.enum(["none", "pulse", "bob", "wiggle"]).optional(),
+      entranceRequirements: z.array(z.string().min(1)).optional(),
     })
     .optional(),
   orderIndex: z.number().int().optional(),
@@ -208,6 +209,14 @@ const hotspotElementSchema = z.object({
             width: z.number().positive(),
             height: z.number().positive(),
           }),
+          from: z
+            .object({
+              x: z.number(),
+              y: z.number(),
+              width: z.number().positive(),
+              height: z.number().positive(),
+            })
+            .optional(),
           durationMs: z.number().nonnegative(),
           easing: z.enum(["linear", "easeOut"]).optional(),
           wait: z.boolean().optional(),
@@ -246,6 +255,7 @@ const hotspotElementSchema = z.object({
           type: z.literal("pulse_object"),
           targetId: z.string().min(1),
           enabled: z.boolean().optional(),
+          durationMs: z.number().optional(),
           timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({

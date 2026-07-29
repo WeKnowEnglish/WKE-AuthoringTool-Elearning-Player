@@ -71,6 +71,28 @@ export type ObjectRuntimeState =
   | "incorrect"
   | "hidden";
 
+/** True when the student has tapped / started interacting with this object. */
+export function isObjectTapped(
+  state: ObjectRuntimeState | undefined,
+): boolean {
+  return state === "discovered" || state === "completed";
+}
+
+export function entranceRequirementsFor(
+  hotspot: ExploreHotspotItem,
+): string[] {
+  return hotspot.animation?.entrance_requirements ?? [];
+}
+
+export function entranceRequirementsMet(
+  hotspot: ExploreHotspotItem,
+  states: Record<string, ObjectRuntimeState>,
+): boolean {
+  const requirements = entranceRequirementsFor(hotspot);
+  if (!requirements.length) return true;
+  return requirements.every((id) => isObjectTapped(states[id]));
+}
+
 export type StageObjectPlayState = {
   visible: boolean;
   opacity: number;

@@ -2482,6 +2482,14 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
       width: z.number().positive(),
       height: z.number().positive(),
     }),
+    from: z
+      .object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number().positive(),
+        height: z.number().positive(),
+      })
+      .optional(),
     duration_ms: z.number().nonnegative(),
     easing: z.enum(["linear", "easeOut"]).optional(),
     wait: z.boolean().optional(),
@@ -2520,6 +2528,7 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
     type: z.literal("pulse_object"),
     target_id: z.string().min(1),
     enabled: z.boolean().optional(),
+    duration_ms: z.number().optional(),
     timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
@@ -2585,6 +2594,7 @@ const exploreHotspotItemSchema = z.object({
       entrance_duration_ms: z.number().min(0).max(12_000).optional(),
       entrance_delay_ms: z.number().min(0).max(12_000).optional(),
       idle: z.enum(["none", "pulse", "bob", "wiggle"]).optional(),
+      entrance_requirements: z.array(z.string().min(1)).optional(),
     })
     .optional(),
   sprite_asset_id: z.string().min(1).optional(),

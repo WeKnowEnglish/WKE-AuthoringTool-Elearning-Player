@@ -68,7 +68,7 @@ async function queryClassPosts(
 
     if (!result.error) {
       return sortClassPostsForFeed(
-        ((result.data ?? []) as ClassPostRow[])
+        ((result.data ?? []) as unknown as ClassPostRow[])
           .map(mapClassPostRow)
           .filter((post): post is ClassPost => post !== null),
       );

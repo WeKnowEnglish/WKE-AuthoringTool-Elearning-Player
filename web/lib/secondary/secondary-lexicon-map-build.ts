@@ -22,18 +22,20 @@ export function buildSecondaryToPrimaryLexiconMapDataset(
   const unmapped: SecondaryLexiconReviewEntry[] = [];
 
   for (const row of report.rows) {
-    if (row.status === "exact" && row.primaryIds[0]) {
-      mappings.push({
-        wordItemId: row.wordItemId,
-        lexiconId: row.primaryIds[0],
-        status: "mapped",
-        confidence: "exact",
-        lemma: row.lemma,
-        rawPos: row.rawPos,
-        matchPos: row.matchPos,
-        topicId: row.topicId,
-        setId: row.setId,
-      });
+    if (row.status === "exact") {
+      if (row.primaryIds[0]) {
+        mappings.push({
+          wordItemId: row.wordItemId,
+          lexiconId: row.primaryIds[0],
+          status: "mapped",
+          confidence: "exact",
+          lemma: row.lemma,
+          rawPos: row.rawPos,
+          matchPos: row.matchPos,
+          topicId: row.topicId,
+          setId: row.setId,
+        });
+      }
       continue;
     }
 

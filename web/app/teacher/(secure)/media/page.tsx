@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MediaAssetGrid } from "@/components/teacher/media/MediaAssetGrid";
 import { MediaBulkUploadCard } from "@/components/teacher/media/MediaBulkUploadCard";
+import { MediaLexiconMatchQueuePanel } from "@/components/teacher/media/MediaLexiconMatchQueuePanel";
 import { MediaMetadataCsvImport } from "@/components/teacher/media/MediaMetadataCsvImport";
 import {
   applyTeacherMediaMetadataCsv,
@@ -12,9 +13,11 @@ import {
   updateTeacherMediaMetadataFromForm,
   uploadTeacherMediaSingleFromForm,
   type MediaDuplicateIssue,
+  type MediaLibraryScope,
   type MediaMetadataCsvImportResult,
   type UploadTeacherMediaBulkItemResult,
 } from "@/lib/actions/media";
+import { listPendingMediaLexiconMatches } from "@/lib/actions/media-lexicon-match";
 
 type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -43,6 +46,10 @@ function buildSearchUrl(values: Record<string, string>): string {
   return qs ? `/teacher/media?${qs}` : "/teacher/media";
 }
 
+function parseLibraryScope(raw: string): MediaLibraryScope {
+  return raw.trim().toLowerCase() === "mine" ? "mine" : "school";
+}
+
 const MEDIA_PAGE_SIZE = 48;
 
 function parseMediaPage(raw: string): number {
@@ -64,7 +71,10 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
   const view = firstParam(params.view) || "icons_medium";
   const status = firstParam(params.status);
   const message = firstParam(params.message);
+  const scope = parseLibraryScope(firstParam(params.scope));
   const pageNum = parseMediaPage(firstParam(params.page));
+  /** Persist shelf + filters across pagination / actions (omit default school). */
+  const scopeQs = scope === "mine" ? "mine" : "";
 
   const { rows: assets, total } = await searchTeacherMedia({
     q,
@@ -75,24 +85,31 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
     tags: csvToList(tags),
     categories: csvToList(categories),
     skills: csvToList(skills),
+    scope,
     limit: MEDIA_PAGE_SIZE,
     offset: (pageNum - 1) * MEDIA_PAGE_SIZE,
   });
 
+  const matchQueue = await listPendingMediaLexiconMatches(24);
+
   const totalPages = Math.max(1, Math.ceil(total / MEDIA_PAGE_SIZE));
   const pageQs = pageNum > 1 ? String(pageNum) : "";
+  const filterBase = {
+    q,
+    kind,
+    level,
+    word_type: wordType,
+    countability,
+    tags,
+    categories,
+    skills,
+    view,
+    scope: scopeQs,
+  };
   if (total > 0 && pageNum > totalPages) {
     redirect(
       buildSearchUrl({
-        q,
-        kind,
-        level,
-        word_type: wordType,
-        countability,
-        tags,
-        categories,
-        skills,
-        view,
+        ...filterBase,
         page: String(totalPages),
       }),
     );
@@ -127,6 +144,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
       categories,
       skills,
       view,
+      scope: scopeQs,
     };
     let targetUrl = "";
 
@@ -159,6 +177,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
       categories,
       skills,
       view,
+      scope: scopeQs,
       page: pageQs,
     };
     let targetUrl = "";
@@ -205,13 +224,51 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Media Library</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Media Library</h1>
+          <p className="mt-1 text-sm text-neutral-600">
+            {scope === "mine" ?
+              "Your uploads — edit metadata and delete here. School library still includes these for everyone."
+            : "Shared school catalog — every teacher can browse and use these in activities."}
+          </p>
+        </div>
         <div className="flex flex-shrink-0 items-center gap-3">
           <MediaMetadataCsvImport importAction={importMediaMetadataCsvAction} />
           <Link href="/teacher/classes" className="text-sm text-blue-700 underline">
             Go to Classes
           </Link>
         </div>
+      </div>
+
+      <div
+        className="flex flex-wrap gap-1 rounded-lg border border-neutral-200 bg-white p-1"
+        role="tablist"
+        aria-label="Library shelf"
+      >
+        <Link
+          href={buildSearchUrl({ ...filterBase, scope: "", page: "" })}
+          role="tab"
+          aria-selected={scope === "school"}
+          className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
+            scope === "school" ?
+              "bg-neutral-900 text-white"
+            : "text-neutral-700 hover:bg-neutral-100"
+          }`}
+        >
+          School library
+        </Link>
+        <Link
+          href={buildSearchUrl({ ...filterBase, scope: "mine", page: "" })}
+          role="tab"
+          aria-selected={scope === "mine"}
+          className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
+            scope === "mine" ?
+              "bg-neutral-900 text-white"
+            : "text-neutral-700 hover:bg-neutral-100"
+          }`}
+        >
+          My uploads
+        </Link>
       </div>
 
       {status && message ? (
@@ -233,9 +290,12 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         uploadSingleAction={uploadSingleMediaAction}
       />
 
+      <MediaLexiconMatchQueuePanel rows={matchQueue.rows} total={matchQueue.total} />
+
       <section className="rounded-lg border border-neutral-200 bg-white p-4">
         <h2 className="text-sm font-bold text-neutral-900">Search and filters</h2>
-        <form className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <form method="get" action="/teacher/media" className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          {scope === "mine" ? <input type="hidden" name="scope" value="mine" /> : null}
           <label className="text-sm">
             Search
             <input
@@ -331,7 +391,10 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
             >
               Apply
             </button>
-            <Link href="/teacher/media" className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold">
+            <Link
+              href={scope === "mine" ? "/teacher/media?scope=mine" : "/teacher/media"}
+              className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold"
+            >
               Clear
             </Link>
           </div>
@@ -341,7 +404,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-bold text-neutral-900">
-            Assets (
+            {scope === "mine" ? "My uploads" : "Assets"} (
             {total === 0 ?
               "0"
             : `${(pageNum - 1) * MEDIA_PAGE_SIZE + 1}–${(pageNum - 1) * MEDIA_PAGE_SIZE + assets.length} of ${total}`}
@@ -350,14 +413,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
           <div className="flex items-center gap-1">
             <Link
               href={buildSearchUrl({
-                q,
-                kind,
-                level,
-                word_type: wordType,
-                countability,
-                tags,
-                categories,
-                skills,
+                ...filterBase,
                 view: "list",
                 page: pageQs,
               })}
@@ -369,14 +425,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
             </Link>
             <Link
               href={buildSearchUrl({
-                q,
-                kind,
-                level,
-                word_type: wordType,
-                countability,
-                tags,
-                categories,
-                skills,
+                ...filterBase,
                 view: "icons_small",
                 page: pageQs,
               })}
@@ -388,14 +437,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
             </Link>
             <Link
               href={buildSearchUrl({
-                q,
-                kind,
-                level,
-                word_type: wordType,
-                countability,
-                tags,
-                categories,
-                skills,
+                ...filterBase,
                 view: "icons_medium",
                 page: pageQs,
               })}
@@ -409,7 +451,11 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         </div>
         {assets.length === 0 ? (
           <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-600">
-            No media matched your search.
+            {scope === "mine" ?
+              q || kind !== "all" || level || wordType || tags || categories || skills ?
+                "No uploads matched your search in My uploads."
+              : "You haven’t uploaded any media yet. Use the upload card above — new files show up here and in the School library."
+            : "No media matched your search."}
           </p>
         ) : (
           <MediaAssetGrid
@@ -432,15 +478,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
               {pageNum > 1 ? (
                 <Link
                   href={buildSearchUrl({
-                    q,
-                    kind,
-                    level,
-                    word_type: wordType,
-                    countability,
-                    tags,
-                    categories,
-                    skills,
-                    view,
+                    ...filterBase,
                     page: pageNum - 1 > 1 ? String(pageNum - 1) : "",
                   })}
                   className="rounded border border-neutral-300 px-3 py-1.5 font-semibold hover:bg-neutral-50"
@@ -453,15 +491,7 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
               {pageNum < totalPages ? (
                 <Link
                   href={buildSearchUrl({
-                    q,
-                    kind,
-                    level,
-                    word_type: wordType,
-                    countability,
-                    tags,
-                    categories,
-                    skills,
-                    view,
+                    ...filterBase,
                     page: String(pageNum + 1),
                   })}
                   className="rounded border border-neutral-300 px-3 py-1.5 font-semibold hover:bg-neutral-50"

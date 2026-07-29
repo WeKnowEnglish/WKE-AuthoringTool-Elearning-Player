@@ -1,0 +1,2493 @@
+{
+  "generatedAt": "2026-07-29T17:40:15.085Z",
+  "mode": "dry-run-review-only",
+  "note": "No lexicon_media_links were written.",
+  "counts": {
+    "multiWordImageCandidates": 50,
+    "byConfidence": {
+      "skip_noise_label": 13,
+      "head_noun_only": 16,
+      "ambiguous_multi_token": 2,
+      "ambiguous_both_words": 7,
+      "modifier_only_weak": 5,
+      "ambiguous_no_head": 1,
+      "exact_phrase": 2,
+      "none": 3,
+      "alt_name_match": 1
+    },
+    "alreadyHasIllustrationLink": 0,
+    "withSuggestedLink": 41,
+    "needsNewDictionaryLemma": 3
+  },
+  "reviewQueue": [
+    {
+      "itemName": "Ice cream",
+      "confidence": "exact_phrase",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "ice cream (pv_ice_cream_noun)",
+      "alternatives": "—",
+      "notes": "Matched full phrase \"ice cream\" as a dictionary lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Rain coat",
+      "confidence": "exact_phrase",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "raincoat (pv_raincoat_noun)",
+      "alternatives": "—",
+      "notes": "Matched compound \"raincoat\" (spaces removed) as dictionary lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Sea Turtle",
+      "confidence": "alt_name_match",
+      "reviewHint": "review_alt_vs_phrase",
+      "suggested": "turtle (pv_turtle_noun)",
+      "alternatives": "—",
+      "notes": "Matched alternative name \"turtle\" → turtle. Confirm the image is really that word.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Arctic Fox",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "fox (pv_fox_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"fox\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Cheese 2",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "cheese (pv_cheese_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"cheese\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Featured image weather",
+      "confidence": "head_noun_only",
+      "reviewHint": "review_noise_label",
+      "suggested": "weather (pv_weather_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase. Only head noun \"weather\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Featured image weather",
+      "confidence": "head_noun_only",
+      "reviewHint": "review_noise_label",
+      "suggested": "weather (pv_weather_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase. Only head noun \"weather\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Folded shirts",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "shirt (pv_shirt_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"shirts\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Pizza 2",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "pizza (pv_pizza_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"pizza\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Polar Bear",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "bear (pv_bear_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"bear\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Rice 2",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "rice (pv_rice_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"rice\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Ruined backpack",
+      "confidence": "head_noun_only",
+      "reviewHint": "review_noise_label",
+      "suggested": "backpack (pv_backpack_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: ruined — likely asset meta, not a vocab phrase. Only head noun \"backpack\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Scared Boy",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "boy (pv_boy_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"boy\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Scared man",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "man (pv_man_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"man\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Stacking ring",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "ring (pv_ring_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"ring\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Stuffed animals",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "animal (pv_animal_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"animals\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Tank top",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "top (pv_top_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"top\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Teddy bear",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "bear (pv_bear_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"bear\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Tropical storm",
+      "confidence": "head_noun_only",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "suggested": "storm (pv_storm_noun)",
+      "alternatives": "—",
+      "notes": "Only head noun \"storm\" found — suggested illustration link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Bag of chips",
+      "confidence": "ambiguous_both_words",
+      "reviewHint": "choose_head_or_add_phrase",
+      "suggested": "chip (pv_chip_noun)",
+      "alternatives": "bag",
+      "notes": "Both words exist: \"bag\" + \"chip\". Prefer head noun unless you want a new phrase lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Baseball gloves",
+      "confidence": "ambiguous_both_words",
+      "reviewHint": "choose_head_or_add_phrase",
+      "suggested": "glove (pv_glove_noun)",
+      "alternatives": "baseball",
+      "notes": "Both words exist: \"baseball\" + \"glove\". Prefer head noun unless you want a new phrase lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Black Bear",
+      "confidence": "ambiguous_both_words",
+      "reviewHint": "choose_head_or_add_phrase",
+      "suggested": "bear (pv_bear_noun)",
+      "alternatives": "black",
+      "notes": "Both words exist: \"black\" + \"bear\". Prefer head noun unless you want a new phrase lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Fishing page",
+      "confidence": "ambiguous_both_words",
+      "reviewHint": "choose_head_or_add_phrase",
+      "suggested": "page (pv_page_noun)",
+      "alternatives": "fishing",
+      "notes": "Noise tokens in label: page — likely asset meta, not a vocab phrase. Both words exist: \"fishing\" + \"page\". Prefer head noun unless you want a new phrase lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Rain boots",
+      "confidence": "ambiguous_both_words",
+      "reviewHint": "choose_head_or_add_phrase",
+      "suggested": "boot (pv_boot_noun)",
+      "alternatives": "rain",
+      "notes": "Both words exist: \"rain\" + \"boot\". Prefer head noun unless you want a new phrase lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Red Panda",
+      "confidence": "ambiguous_both_words",
+      "reviewHint": "choose_head_or_add_phrase",
+      "suggested": "panda (pv_panda_noun)",
+      "alternatives": "red",
+      "notes": "Both words exist: \"red\" + \"panda\". Prefer head noun unless you want a new phrase lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Roller skate",
+      "confidence": "ambiguous_both_words",
+      "reviewHint": "choose_head_or_add_phrase",
+      "suggested": "skate (pv_skate_noun)",
+      "alternatives": "roller",
+      "notes": "Both words exist: \"roller\" + \"skate\". Prefer head noun unless you want a new phrase lemma.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Big Brown Bear Cover",
+      "confidence": "ambiguous_multi_token",
+      "reviewHint": "manual_review",
+      "suggested": "cover (pv_cover_noun)",
+      "alternatives": "big, brown, bear",
+      "notes": "Noise tokens in label: cover — likely asset meta, not a vocab phrase. Head noun \"cover\" suggested; also matched: big, brown, bear, cover.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Image hot spot",
+      "confidence": "ambiguous_multi_token",
+      "reviewHint": "manual_review",
+      "suggested": "spot (pv_spot_noun)",
+      "alternatives": "hot",
+      "notes": "Noise tokens in label: image — likely asset meta, not a vocab phrase. Head noun \"spot\" suggested; also matched: hot, spot.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Action figure",
+      "confidence": "modifier_only_weak",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "suggested": "action (pv_action_noun)",
+      "alternatives": "—",
+      "notes": "Head noun \"figure\" missing; only \"action\" found (weak).",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Chocolate bar",
+      "confidence": "modifier_only_weak",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "suggested": "chocolate (pv_chocolate_noun)",
+      "alternatives": "—",
+      "notes": "Head noun \"bar\" missing; only \"chocolate\" found (weak).",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Computer programmer",
+      "confidence": "modifier_only_weak",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "suggested": "computer (pv_computer_noun)",
+      "alternatives": "—",
+      "notes": "Head noun \"programmer\" missing; only \"computer\" found (weak).",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Student 1crop",
+      "confidence": "modifier_only_weak",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "suggested": "student (pv_student_noun)",
+      "alternatives": "—",
+      "notes": "Head noun \"1crop\" missing; only \"student\" found (weak).",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Swim trunks",
+      "confidence": "modifier_only_weak",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "suggested": "swim (pv_swim_noun)",
+      "alternatives": "—",
+      "notes": "Head noun \"trunks\" missing; only \"swim\" found (weak).",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "What do you like eating",
+      "confidence": "ambiguous_no_head",
+      "reviewHint": "manual_or_skip",
+      "suggested": "(none)",
+      "alternatives": "what, do, you, like",
+      "notes": "Head noun missing; multiple other hits — do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Aj with mic",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: aj, mic — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Aj with mic crop",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: aj, mic, crop — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Featured image body parts",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "body (pv_body_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Featured image body parts",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "body (pv_body_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Featured image body parts",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "body (pv_body_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "My classroom hotspot",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "my (pv_my_determiner)",
+      "alternatives": "classroom",
+      "notes": "Noise tokens in label: hotspot — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "spilled cooler",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: spilled — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Spilled Cooler",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: spilled — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Student 2 crop",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "student (pv_student_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: crop — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Student 3 crop",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "student (pv_student_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: crop — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Toys games banner",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "toy (pv_toy_noun)",
+      "alternatives": "game",
+      "notes": "Noise tokens in label: banner — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Walking with backpack transparent",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "backpack (pv_backpack_noun)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: walking, transparent — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Waving transparent",
+      "confidence": "skip_noise_label",
+      "reviewHint": "skip",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "Noise tokens in label: waving, transparent — likely asset meta, not a vocab phrase. Treat as non-vocab asset; do not auto-link.",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Flip flops",
+      "confidence": "none",
+      "reviewHint": "consider_new_phrase_or_head_lemma",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "No dictionary lemmas for tokens: flip, flops",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "French fries",
+      "confidence": "none",
+      "reviewHint": "consider_new_phrase_or_head_lemma",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "No dictionary lemmas for tokens: french, fries",
+      "alreadyLinked": false
+    },
+    {
+      "itemName": "Komodo Dragon",
+      "confidence": "none",
+      "reviewHint": "consider_new_phrase_or_head_lemma",
+      "suggested": "(none)",
+      "alternatives": "—",
+      "notes": "No dictionary lemmas for tokens: komodo, dragon",
+      "alreadyLinked": false
+    }
+  ],
+  "rows": [
+    {
+      "mediaId": "937e78cb-6331-4d23-b1ed-855288895c54",
+      "itemName": "Ice cream",
+      "filename": "ice cream.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/dbd30b7b-ae37-4426-9ee0-5faaa3c5733d-ice_cream.png",
+      "categories": [
+        "desserts",
+        "food"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "exact_phrase",
+      "strategy": "exact_phrase",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Matched full phrase \"ice cream\" as a dictionary lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_ice_cream_noun",
+        "lemma": "ice cream",
+        "pos": "noun",
+        "matchKey": "ice cream",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "4af94156-5ab4-4530-866b-b5c741920598",
+      "itemName": "Rain coat",
+      "filename": "rain coat.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b469e666-7208-41c7-a195-02b512cc6578-rain_coat.png",
+      "categories": [
+        "clothes"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "exact_phrase",
+      "strategy": "compound_nospaces",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Matched compound \"raincoat\" (spaces removed) as dictionary lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_raincoat_noun",
+        "lemma": "raincoat",
+        "pos": "noun",
+        "matchKey": "raincoat",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "c1bc8488-ea6b-4a2b-96b5-d51eaf599993",
+      "itemName": "Sea Turtle",
+      "filename": "sea turtle.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1c9d03d2-15e0-4ff4-937e-4754d30ef6da-sea_turtle.png",
+      "categories": [
+        "animals",
+        "misc"
+      ],
+      "tags": [
+        "animals",
+        "sea turtle",
+        "vocabulary"
+      ],
+      "alternativeNames": [
+        "turtle"
+      ],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "alt_name_match",
+      "strategy": "alternative_name",
+      "reviewHint": "review_alt_vs_phrase",
+      "notes": [
+        "Matched alternative name \"turtle\" → turtle. Confirm the image is really that word."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_turtle_noun",
+        "lemma": "turtle",
+        "pos": "noun",
+        "matchKey": "turtle",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "fff3f4c0-01b1-435d-8ca0-1922665b96a9",
+      "itemName": "Arctic Fox",
+      "filename": "artic fox.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/b3bd03f0-3dd3-4ecb-b758-8e1a37717c33-artic_fox.png",
+      "categories": [
+        "animals",
+        "misc"
+      ],
+      "tags": [
+        "animals",
+        "arctic fox",
+        "artic fox",
+        "vocabulary"
+      ],
+      "alternativeNames": [
+        "artic fox"
+      ],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"fox\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_fox_noun",
+        "lemma": "fox",
+        "pos": "noun",
+        "matchKey": "fox",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "fox",
+          "lexiconId": "pv_fox_noun",
+          "lemma": "fox",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "ecce8be2-c18a-4fd9-8302-5ce147f4a5c7",
+      "itemName": "Cheese 2",
+      "filename": "cheese (2).png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/485a3ef2-0c5a-4708-9acf-ab72df49b560-cheese__2_.png",
+      "categories": [
+        "food"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"cheese\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_cheese_noun",
+        "lemma": "cheese",
+        "pos": "noun",
+        "matchKey": "cheese",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "cheese",
+          "lexiconId": "pv_cheese_noun",
+          "lemma": "cheese",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "ea893d83-7db9-4f8a-a94f-691ebd1749f5",
+      "itemName": "Featured image weather",
+      "filename": "Featured Image Weather.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ca779b85-0413-47a1-9721-1db50d3401e0-Featured_Image_Weather.png",
+      "categories": [
+        "weather"
+      ],
+      "tags": [
+        "cover"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "review_noise_label",
+      "notes": [
+        "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase.",
+        "Only head noun \"weather\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_weather_noun",
+        "lemma": "weather",
+        "pos": "noun",
+        "matchKey": "weather",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "weather",
+          "lexiconId": "pv_weather_noun",
+          "lemma": "weather",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "ec602750-ab14-4fa7-a2bb-25d486ec4004",
+      "itemName": "Featured image weather",
+      "filename": "Featured Image Weather.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/145f6a2c-1e0e-4087-8947-0714cde29548-Featured_Image_Weather.png",
+      "categories": [
+        "weather"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "review_noise_label",
+      "notes": [
+        "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase.",
+        "Only head noun \"weather\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_weather_noun",
+        "lemma": "weather",
+        "pos": "noun",
+        "matchKey": "weather",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "weather",
+          "lexiconId": "pv_weather_noun",
+          "lemma": "weather",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "f76de0fa-f45a-470b-9e6e-b3928d5899f9",
+      "itemName": "Folded shirts",
+      "filename": "12.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/afd908b1-d681-4a1f-8a91-9f9079dab1be-12.png",
+      "categories": [
+        "camping"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"shirts\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_shirt_noun",
+        "lemma": "shirt",
+        "pos": "noun",
+        "matchKey": "shirt",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "shirts",
+          "lexiconId": "pv_shirt_noun",
+          "lemma": "shirt",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "f86845ac-0124-4498-a6d7-9dec52be1a28",
+      "itemName": "Pizza 2",
+      "filename": "pizza (2).png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/57af8613-5127-496f-95eb-4e35758785d7-pizza__2_.png",
+      "categories": [
+        "food"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"pizza\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_pizza_noun",
+        "lemma": "pizza",
+        "pos": "noun",
+        "matchKey": "pizza",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "pizza",
+          "lexiconId": "pv_pizza_noun",
+          "lemma": "pizza",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "05532c18-8918-47fd-a05b-b6b088275c48",
+      "itemName": "Polar Bear",
+      "filename": "polar bear.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/86c4b83b-8b15-498e-bd84-0c00bd911584-polar_bear.png",
+      "categories": [
+        "animals",
+        "zoo"
+      ],
+      "tags": [
+        "animals",
+        "polar bear",
+        "vocabulary",
+        "zoo"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"bear\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_bear_noun",
+        "lemma": "bear",
+        "pos": "noun",
+        "matchKey": "bear",
+        "ambiguousPos": true,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "bear",
+          "lexiconId": "pv_bear_noun",
+          "lemma": "bear",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "a86b5c60-b64d-4d1d-aa7f-f4181bc59236",
+      "itemName": "Rice 2",
+      "filename": "rice (2).png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1e313a55-4c2a-4300-ba79-d22a2839179c-rice__2_.png",
+      "categories": [
+        "food"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"rice\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_rice_noun",
+        "lemma": "rice",
+        "pos": "noun",
+        "matchKey": "rice",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "rice",
+          "lexiconId": "pv_rice_noun",
+          "lemma": "rice",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "9e1cc96a-4d34-4ad5-bcc5-721bd7c44efb",
+      "itemName": "Ruined backpack",
+      "filename": "9.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/f07247d1-66f8-4431-84e4-294fe4d56205-9.png",
+      "categories": [
+        "camping"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "review_noise_label",
+      "notes": [
+        "Noise tokens in label: ruined — likely asset meta, not a vocab phrase.",
+        "Only head noun \"backpack\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_backpack_noun",
+        "lemma": "backpack",
+        "pos": "noun",
+        "matchKey": "backpack",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "backpack",
+          "lexiconId": "pv_backpack_noun",
+          "lemma": "backpack",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "3acd5d7d-60f6-40c6-8327-b8193cc4f23d",
+      "itemName": "Scared Boy",
+      "filename": "7.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/c2de34e1-0bfb-4c70-9f6e-f187c590036a-7.png",
+      "categories": [
+        "people"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"boy\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_boy_noun",
+        "lemma": "boy",
+        "pos": "noun",
+        "matchKey": "boy",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "boy",
+          "lexiconId": "pv_boy_noun",
+          "lemma": "boy",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "572eaf58-f3c0-4005-954c-9ee3f577650b",
+      "itemName": "Scared man",
+      "filename": "6.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/d08744b0-e674-4c77-8d99-226c7c062e26-6.png",
+      "categories": [
+        "people"
+      ],
+      "tags": [
+        "character"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"man\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_man_noun",
+        "lemma": "man",
+        "pos": "noun",
+        "matchKey": "man",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "man",
+          "lexiconId": "pv_man_noun",
+          "lemma": "man",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "d2104872-dfce-4e4c-9992-567adea4e0dd",
+      "itemName": "Stacking ring",
+      "filename": "Stacking ring.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/5bbb0adc-d716-41d9-bf62-ee03e7f641ce-Stacking_ring.png",
+      "categories": [
+        "toys"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"ring\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_ring_noun",
+        "lemma": "ring",
+        "pos": "noun",
+        "matchKey": "ring",
+        "ambiguousPos": true,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "ring",
+          "lexiconId": "pv_ring_noun",
+          "lemma": "ring",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "570dddc6-3d55-4411-9038-5c37303633c2",
+      "itemName": "Stuffed animals",
+      "filename": "stuffed animals.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/6f1fee9b-7783-4614-886e-9d055e660c7b-stuffed_animals.png",
+      "categories": [
+        "toys"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"animals\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_animal_noun",
+        "lemma": "animal",
+        "pos": "noun",
+        "matchKey": "animal",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "animals",
+          "lexiconId": "pv_animal_noun",
+          "lemma": "animal",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "e36ab3ea-eb12-463e-9e01-7cd602764fcf",
+      "itemName": "Tank top",
+      "filename": "tank top.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/8d7bc0d0-7d41-4005-9a52-88fe79a17467-tank_top.png",
+      "categories": [
+        "clothes"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"top\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_top_noun",
+        "lemma": "top",
+        "pos": "noun",
+        "matchKey": "top",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "top",
+          "lexiconId": "pv_top_noun",
+          "lemma": "top",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "c1d0d4cc-cfcd-4332-bd4f-060aca713805",
+      "itemName": "Teddy bear",
+      "filename": "Teddy bear.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ad17c91b-fb1c-408e-8f38-ddbdee684212-Teddy_bear.png",
+      "categories": [
+        "toys"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"bear\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_bear_noun",
+        "lemma": "bear",
+        "pos": "noun",
+        "matchKey": "bear",
+        "ambiguousPos": true,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "bear",
+          "lexiconId": "pv_bear_noun",
+          "lemma": "bear",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "79be1f00-758c-4faf-9665-c17de608d7d0",
+      "itemName": "Tropical storm",
+      "filename": "tropical storm.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/357a0d6b-c862-4fc3-9916-30631b8c0d26-tropical_storm.png",
+      "categories": [
+        "weather"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "head_noun_only",
+      "strategy": "head_noun",
+      "reviewHint": "safe_to_link_after_spotcheck",
+      "notes": [
+        "Only head noun \"storm\" found — suggested illustration link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_storm_noun",
+        "lemma": "storm",
+        "pos": "noun",
+        "matchKey": "storm",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "storm",
+          "lexiconId": "pv_storm_noun",
+          "lemma": "storm",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "6269a370-e6a8-46ab-991b-5ff8cfff1104",
+      "itemName": "Bag of chips",
+      "filename": "bag of chips.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/472bd6af-7867-4007-bc6d-5a7f295261d0-bag_of_chips.png",
+      "categories": [
+        "food",
+        "snacks"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_both_words",
+      "strategy": "both_content_tokens",
+      "reviewHint": "choose_head_or_add_phrase",
+      "notes": [
+        "Both words exist: \"bag\" + \"chip\". Prefer head noun unless you want a new phrase lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_chip_noun",
+        "lemma": "chip",
+        "pos": "noun",
+        "matchKey": "chip",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_bag_noun",
+          "lemma": "bag",
+          "pos": "noun",
+          "token": "bag"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "bag",
+          "lexiconId": "pv_bag_noun",
+          "lemma": "bag",
+          "pos": "noun"
+        },
+        {
+          "token": "chips",
+          "lexiconId": "pv_chip_noun",
+          "lemma": "chip",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "cae5b0d0-3e27-4634-b059-0fdb55feb29c",
+      "itemName": "Baseball gloves",
+      "filename": "Baseball gloves.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/84020c35-96ef-4a80-bcc1-8fa681e60a9d-Baseball_gloves.png",
+      "categories": [
+        "sports"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_both_words",
+      "strategy": "both_content_tokens",
+      "reviewHint": "choose_head_or_add_phrase",
+      "notes": [
+        "Both words exist: \"baseball\" + \"glove\". Prefer head noun unless you want a new phrase lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_glove_noun",
+        "lemma": "glove",
+        "pos": "noun",
+        "matchKey": "glove",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_baseball_noun",
+          "lemma": "baseball",
+          "pos": "noun",
+          "token": "baseball"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "baseball",
+          "lexiconId": "pv_baseball_noun",
+          "lemma": "baseball",
+          "pos": "noun"
+        },
+        {
+          "token": "gloves",
+          "lexiconId": "pv_glove_noun",
+          "lemma": "glove",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "15f5ba6e-1c5d-4857-9664-2243a2d45a10",
+      "itemName": "Black Bear",
+      "filename": "11.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4788446a-30ca-4834-ac24-719395140367-11.png",
+      "categories": [
+        "animals"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_both_words",
+      "strategy": "both_content_tokens",
+      "reviewHint": "choose_head_or_add_phrase",
+      "notes": [
+        "Both words exist: \"black\" + \"bear\". Prefer head noun unless you want a new phrase lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_bear_noun",
+        "lemma": "bear",
+        "pos": "noun",
+        "matchKey": "bear",
+        "ambiguousPos": true,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_black_adjective",
+          "lemma": "black",
+          "pos": "adjective",
+          "token": "black"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "black",
+          "lexiconId": "pv_black_adjective",
+          "lemma": "black",
+          "pos": "adjective"
+        },
+        {
+          "token": "bear",
+          "lexiconId": "pv_bear_noun",
+          "lemma": "bear",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "6a1643f7-c32b-4b72-98ff-995ed6be2f82",
+      "itemName": "Fishing page",
+      "filename": "fishing page 1.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ec1eaf65-a398-42b5-a208-d3e5c4edfa1c-fishing_page_1.png",
+      "categories": [
+        "misc"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_both_words",
+      "strategy": "both_content_tokens",
+      "reviewHint": "choose_head_or_add_phrase",
+      "notes": [
+        "Noise tokens in label: page — likely asset meta, not a vocab phrase.",
+        "Both words exist: \"fishing\" + \"page\". Prefer head noun unless you want a new phrase lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_page_noun",
+        "lemma": "page",
+        "pos": "noun",
+        "matchKey": "page",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_fishing_noun",
+          "lemma": "fishing",
+          "pos": "noun",
+          "token": "fishing"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "fishing",
+          "lexiconId": "pv_fishing_noun",
+          "lemma": "fishing",
+          "pos": "noun"
+        },
+        {
+          "token": "page",
+          "lexiconId": "pv_page_noun",
+          "lemma": "page",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "7236952c-47fd-4dbf-82a1-3ae8bf247c37",
+      "itemName": "Rain boots",
+      "filename": "rain boots.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/575727b1-d926-4699-b386-22e0ccfc010d-rain_boots.png",
+      "categories": [
+        "clothes"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_both_words",
+      "strategy": "both_content_tokens",
+      "reviewHint": "choose_head_or_add_phrase",
+      "notes": [
+        "Both words exist: \"rain\" + \"boot\". Prefer head noun unless you want a new phrase lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_boot_noun",
+        "lemma": "boot",
+        "pos": "noun",
+        "matchKey": "boot",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_rain_noun",
+          "lemma": "rain",
+          "pos": "noun",
+          "token": "rain"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "rain",
+          "lexiconId": "pv_rain_noun",
+          "lemma": "rain",
+          "pos": "noun"
+        },
+        {
+          "token": "boots",
+          "lexiconId": "pv_boot_noun",
+          "lemma": "boot",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "69902c5b-4e8e-41aa-b875-cf6efbf310cc",
+      "itemName": "Red Panda",
+      "filename": "red panda.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/21a21237-0dce-4597-81f1-63a68f02906c-red_panda.png",
+      "categories": [
+        "animals",
+        "zoo"
+      ],
+      "tags": [
+        "animals",
+        "red panda",
+        "vocabulary",
+        "zoo"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_both_words",
+      "strategy": "both_content_tokens",
+      "reviewHint": "choose_head_or_add_phrase",
+      "notes": [
+        "Both words exist: \"red\" + \"panda\". Prefer head noun unless you want a new phrase lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_panda_noun",
+        "lemma": "panda",
+        "pos": "noun",
+        "matchKey": "panda",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_red_adjective",
+          "lemma": "red",
+          "pos": "adjective",
+          "token": "red"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "red",
+          "lexiconId": "pv_red_adjective",
+          "lemma": "red",
+          "pos": "adjective"
+        },
+        {
+          "token": "panda",
+          "lexiconId": "pv_panda_noun",
+          "lemma": "panda",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "db61f25c-cafc-4ac6-8f08-a31eaf3dcad3",
+      "itemName": "Roller skate",
+      "filename": "Roller skate.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/3ff2ebf5-9170-4858-8622-224b9d119352-Roller_skate.png",
+      "categories": [
+        "transport"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_both_words",
+      "strategy": "both_content_tokens",
+      "reviewHint": "choose_head_or_add_phrase",
+      "notes": [
+        "Both words exist: \"roller\" + \"skate\". Prefer head noun unless you want a new phrase lemma."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_skate_noun",
+        "lemma": "skate",
+        "pos": "noun",
+        "matchKey": "skate",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_09b2e284d7bc5381",
+          "lemma": "roller",
+          "pos": "noun",
+          "token": "roller"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "roller",
+          "lexiconId": "pv_09b2e284d7bc5381",
+          "lemma": "roller",
+          "pos": "noun"
+        },
+        {
+          "token": "skate",
+          "lexiconId": "pv_skate_noun",
+          "lemma": "skate",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "4d7c8898-a369-4a8a-b2e2-02e80306431c",
+      "itemName": "Big Brown Bear Cover",
+      "filename": "2.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/3098fc9a-b3ab-4324-aa22-6a10753616b1-2.png",
+      "categories": [
+        "cover"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_multi_token",
+      "strategy": "head_plus_other_tokens",
+      "reviewHint": "manual_review",
+      "notes": [
+        "Noise tokens in label: cover — likely asset meta, not a vocab phrase.",
+        "Head noun \"cover\" suggested; also matched: big, brown, bear, cover."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_cover_noun",
+        "lemma": "cover",
+        "pos": "noun",
+        "matchKey": "cover",
+        "ambiguousPos": true,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_big_adjective",
+          "lemma": "big",
+          "pos": "adjective",
+          "token": "big"
+        },
+        {
+          "lexiconId": "pv_brown_adjective",
+          "lemma": "brown",
+          "pos": "adjective",
+          "token": "brown"
+        },
+        {
+          "lexiconId": "pv_bear_noun",
+          "lemma": "bear",
+          "pos": "noun",
+          "token": "bear"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "big",
+          "lexiconId": "pv_big_adjective",
+          "lemma": "big",
+          "pos": "adjective"
+        },
+        {
+          "token": "brown",
+          "lexiconId": "pv_brown_adjective",
+          "lemma": "brown",
+          "pos": "adjective"
+        },
+        {
+          "token": "bear",
+          "lexiconId": "pv_bear_noun",
+          "lemma": "bear",
+          "pos": "noun"
+        },
+        {
+          "token": "cover",
+          "lexiconId": "pv_cover_noun",
+          "lemma": "cover",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "45256232-f122-4d2d-b64e-47bcbe7f4e13",
+      "itemName": "Image hot spot",
+      "filename": "Image Hot Spot.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ece32f78-ca83-484e-8a7b-177932dc6dc3-Image_Hot_Spot.png",
+      "categories": [
+        "misc"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_multi_token",
+      "strategy": "head_plus_other_tokens",
+      "reviewHint": "manual_review",
+      "notes": [
+        "Noise tokens in label: image — likely asset meta, not a vocab phrase.",
+        "Head noun \"spot\" suggested; also matched: hot, spot."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_spot_noun",
+        "lemma": "spot",
+        "pos": "noun",
+        "matchKey": "spot",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_hot_adjective",
+          "lemma": "hot",
+          "pos": "adjective",
+          "token": "hot"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "hot",
+          "lexiconId": "pv_hot_adjective",
+          "lemma": "hot",
+          "pos": "adjective"
+        },
+        {
+          "token": "spot",
+          "lexiconId": "pv_spot_noun",
+          "lemma": "spot",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "fd00e941-4cef-4de7-a950-eb20ddcfbf60",
+      "itemName": "Action figure",
+      "filename": "action figure.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/7c84f4b9-8ac6-4b6f-be83-901bf337a3a3-action_figure.png",
+      "categories": [
+        "toys"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "modifier_only_weak",
+      "strategy": "non_head_token",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "notes": [
+        "Head noun \"figure\" missing; only \"action\" found (weak)."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_action_noun",
+        "lemma": "action",
+        "pos": "noun",
+        "matchKey": "action",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "action",
+          "lexiconId": "pv_action_noun",
+          "lemma": "action",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "6d49d227-a732-46c4-afcf-77b677a6fe25",
+      "itemName": "Chocolate bar",
+      "filename": "chocolate bar.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/80f8fb91-c985-4078-af59-039a62983977-chocolate_bar.png",
+      "categories": [
+        "food",
+        "snacks"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "modifier_only_weak",
+      "strategy": "non_head_token",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "notes": [
+        "Head noun \"bar\" missing; only \"chocolate\" found (weak)."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_chocolate_noun",
+        "lemma": "chocolate",
+        "pos": "noun",
+        "matchKey": "chocolate",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "chocolate",
+          "lexiconId": "pv_chocolate_noun",
+          "lemma": "chocolate",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "f6e10bb1-d19e-4770-86a2-12b0c9a1a05f",
+      "itemName": "Computer programmer",
+      "filename": "computer programmer.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4c4c7cce-5a53-4f81-bee6-dc9789397385-computer_programmer.png",
+      "categories": [
+        "jobs",
+        "people"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "modifier_only_weak",
+      "strategy": "non_head_token",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "notes": [
+        "Head noun \"programmer\" missing; only \"computer\" found (weak)."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_computer_noun",
+        "lemma": "computer",
+        "pos": "noun",
+        "matchKey": "computer",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "computer",
+          "lexiconId": "pv_computer_noun",
+          "lemma": "computer",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "7b2c975d-b73b-4a8b-9e00-d11f709d7dae",
+      "itemName": "Student 1crop",
+      "filename": "Student 1Crop.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/76cd97a7-ece2-49ac-ba35-8efaa1aaf643-Student_1Crop.png",
+      "categories": [
+        "people"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "modifier_only_weak",
+      "strategy": "non_head_token",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "notes": [
+        "Head noun \"1crop\" missing; only \"student\" found (weak)."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_student_noun",
+        "lemma": "student",
+        "pos": "noun",
+        "matchKey": "student",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "student",
+          "lexiconId": "pv_student_noun",
+          "lemma": "student",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "b8837634-98b5-4dd3-b9fb-096e9bf2eb40",
+      "itemName": "Swim trunks",
+      "filename": "swim trunks.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/9b67655a-2015-49db-9231-be34f6e1bceb-swim_trunks.png",
+      "categories": [
+        "clothes",
+        "swimwear"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "modifier_only_weak",
+      "strategy": "non_head_token",
+      "reviewHint": "prefer_add_head_lemma_or_skip",
+      "notes": [
+        "Head noun \"trunks\" missing; only \"swim\" found (weak)."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_swim_noun",
+        "lemma": "swim",
+        "pos": "noun",
+        "matchKey": "swim",
+        "ambiguousPos": true,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "swim",
+          "lexiconId": "pv_swim_noun",
+          "lemma": "swim",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "ea73a57e-5385-40ce-b4bd-ec05816e7177",
+      "itemName": "What do you like eating",
+      "filename": "What do you like eating?.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/331c5d10-715c-44a4-a31d-b204f70e3d22-What_do_you_like_eating_.png",
+      "categories": [
+        "misc"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "ambiguous_no_head",
+      "strategy": "non_head_tokens",
+      "reviewHint": "manual_or_skip",
+      "notes": [
+        "Head noun missing; multiple other hits — do not auto-link."
+      ],
+      "suggestedLink": null,
+      "alternatives": [
+        {
+          "lexiconId": "pv_what_determiner",
+          "lemma": "what",
+          "pos": "determiner",
+          "token": "what"
+        },
+        {
+          "lexiconId": "pv_do_verb",
+          "lemma": "do",
+          "pos": "verb",
+          "token": "do"
+        },
+        {
+          "lexiconId": "pv_you_pronoun",
+          "lemma": "you",
+          "pos": "pronoun",
+          "token": "you"
+        },
+        {
+          "lexiconId": "pv_like_verb",
+          "lemma": "like",
+          "pos": "verb",
+          "token": "like"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "what",
+          "lexiconId": "pv_what_determiner",
+          "lemma": "what",
+          "pos": "determiner"
+        },
+        {
+          "token": "do",
+          "lexiconId": "pv_do_verb",
+          "lemma": "do",
+          "pos": "verb"
+        },
+        {
+          "token": "you",
+          "lexiconId": "pv_you_pronoun",
+          "lemma": "you",
+          "pos": "pronoun"
+        },
+        {
+          "token": "like",
+          "lexiconId": "pv_like_verb",
+          "lemma": "like",
+          "pos": "verb"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "b4107f9d-e96d-49d4-8041-a600c837793f",
+      "itemName": "Aj with mic",
+      "filename": "AJ with Mic.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/4a16853d-d48c-4add-8029-da36f05ade30-AJ_with_Mic.png",
+      "categories": [
+        "people"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: aj, mic — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "fd427213-eb2a-4355-a7bf-af0cff066bcb",
+      "itemName": "Aj with mic crop",
+      "filename": "AJ with Mic Crop.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/6b445cef-79ab-40ae-83f5-4ef20e60029b-AJ_with_Mic_Crop.png",
+      "categories": [
+        "people"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: aj, mic, crop — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "71d2af74-f547-4609-862c-4fddfc013814",
+      "itemName": "Featured image body parts",
+      "filename": "Featured Image Body Parts.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/2193cf17-b5d4-497e-91cd-03ef2e708d26-Featured_Image_Body_Parts.png",
+      "categories": [
+        "body"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_body_noun",
+        "lemma": "body",
+        "pos": "noun",
+        "matchKey": "body",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "body",
+          "lexiconId": "pv_body_noun",
+          "lemma": "body",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "d545e021-4c02-4f4a-982f-5f83b157ce95",
+      "itemName": "Featured image body parts",
+      "filename": "Featured Image Body Parts.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/0b6dbcdd-2396-4f37-a131-45865ce8fb1e-Featured_Image_Body_Parts.png",
+      "categories": [
+        "body"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_body_noun",
+        "lemma": "body",
+        "pos": "noun",
+        "matchKey": "body",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "body",
+          "lexiconId": "pv_body_noun",
+          "lemma": "body",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "2a35f028-742a-41b7-9828-773da9fcdcff",
+      "itemName": "Featured image body parts",
+      "filename": "Featured Image Body Parts.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/caa15670-d5d5-4a12-9433-4d0144141582-Featured_Image_Body_Parts.png",
+      "categories": [
+        "body"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: featured, image — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_body_noun",
+        "lemma": "body",
+        "pos": "noun",
+        "matchKey": "body",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "body",
+          "lexiconId": "pv_body_noun",
+          "lemma": "body",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "7a69d7c8-a31b-4e96-b204-f934dc8d600d",
+      "itemName": "My classroom hotspot",
+      "filename": "my classroom hotspot.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/ccfff9cf-4c70-4efb-94d8-d766d67b7b90-my_classroom_hotspot.png",
+      "categories": [
+        "misc"
+      ],
+      "tags": [
+        "cover"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: hotspot — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_my_determiner",
+        "lemma": "my",
+        "pos": "determiner",
+        "matchKey": "my",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_classroom_noun",
+          "lemma": "classroom",
+          "pos": "noun",
+          "token": "classroom"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "my",
+          "lexiconId": "pv_my_determiner",
+          "lemma": "my",
+          "pos": "determiner"
+        },
+        {
+          "token": "classroom",
+          "lexiconId": "pv_classroom_noun",
+          "lemma": "classroom",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "c815e6b1-c053-4981-b920-828d28937eba",
+      "itemName": "spilled cooler",
+      "filename": "10.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/17d98c46-be9d-47ff-9af1-e4785648c7b2-10.png",
+      "categories": [
+        "camping"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: spilled — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "6c1ffc26-9f42-4c12-ac86-07b838516c8c",
+      "itemName": "Spilled Cooler",
+      "filename": "9.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/6378f904-0c59-4446-814b-002d7990b07f-9.png",
+      "categories": [
+        "camping"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: spilled — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "9c3dd185-1b11-4961-90f6-24c02cd4d854",
+      "itemName": "Student 2 crop",
+      "filename": "student 2 Crop.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/73fd4c83-97e3-4b33-add4-699b87f2d8ca-student_2_Crop.png",
+      "categories": [
+        "people"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: crop — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_student_noun",
+        "lemma": "student",
+        "pos": "noun",
+        "matchKey": "student",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "student",
+          "lexiconId": "pv_student_noun",
+          "lemma": "student",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "4d6151a9-a99a-488b-9539-a50896b1691d",
+      "itemName": "Student 3 crop",
+      "filename": "student 3 crop.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/1aea7166-3951-4265-983e-0ac91e1fb7d5-student_3_crop.png",
+      "categories": [
+        "people"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: crop — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_student_noun",
+        "lemma": "student",
+        "pos": "noun",
+        "matchKey": "student",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "student",
+          "lexiconId": "pv_student_noun",
+          "lemma": "student",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "f5aaaa62-3b6f-4627-b2a2-3ceee1dc3ce5",
+      "itemName": "Toys games banner",
+      "filename": "Toys games banner.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/25c4bdd9-3704-4689-94e6-998556db127d-Toys_games_banner.png",
+      "categories": [
+        "toys"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: banner — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_toy_noun",
+        "lemma": "toy",
+        "pos": "noun",
+        "matchKey": "toy",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [
+        {
+          "lexiconId": "pv_game_noun",
+          "lemma": "game",
+          "pos": "noun",
+          "token": "games"
+        }
+      ],
+      "tokenHits": [
+        {
+          "token": "toys",
+          "lexiconId": "pv_toy_noun",
+          "lemma": "toy",
+          "pos": "noun"
+        },
+        {
+          "token": "games",
+          "lexiconId": "pv_game_noun",
+          "lemma": "game",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "97a96641-2b44-463f-bdcd-07829222c30b",
+      "itemName": "Walking with backpack transparent",
+      "filename": "walking with backpack transparent.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/5239e12a-dfe4-4332-b8e4-391f605cc67c-walking_with_backpack_transparent.png",
+      "categories": [
+        "misc"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: walking, transparent — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": {
+        "lexiconId": "pv_backpack_noun",
+        "lemma": "backpack",
+        "pos": "noun",
+        "matchKey": "backpack",
+        "ambiguousPos": false,
+        "role": "illustration"
+      },
+      "alternatives": [],
+      "tokenHits": [
+        {
+          "token": "backpack",
+          "lexiconId": "pv_backpack_noun",
+          "lemma": "backpack",
+          "pos": "noun"
+        }
+      ],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "8b321e66-8128-46ae-b28a-227c9e559b05",
+      "itemName": "Waving transparent",
+      "filename": "Waving transparent.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/08858e68-61b2-4138-86fa-57386e4608d3-Waving_transparent.png",
+      "categories": [
+        "misc"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "skip_noise_label",
+      "strategy": "noise_meta",
+      "reviewHint": "skip",
+      "notes": [
+        "Noise tokens in label: waving, transparent — likely asset meta, not a vocab phrase.",
+        "Treat as non-vocab asset; do not auto-link."
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": null
+    },
+    {
+      "mediaId": "ccb2d16c-9d25-4b45-b9da-74428c68f659",
+      "itemName": "Flip flops",
+      "filename": "flip flops.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/5cf2bcf2-9a5c-4c8f-b0e2-477ee58809fc-flip_flops.png",
+      "categories": [
+        "clothes"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "none",
+      "strategy": "no_match",
+      "reviewHint": "consider_new_phrase_or_head_lemma",
+      "notes": [
+        "No dictionary lemmas for tokens: flip, flops"
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": "flip flops"
+    },
+    {
+      "mediaId": "9d60c230-216a-4788-bbfb-b5daf4a6a095",
+      "itemName": "French fries",
+      "filename": "French fries.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/19d60ae0-2383-4e3f-a1fa-fc0fac840c46-French_fries.png",
+      "categories": [
+        "food"
+      ],
+      "tags": [
+        "vocabulary"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "none",
+      "strategy": "no_match",
+      "reviewHint": "consider_new_phrase_or_head_lemma",
+      "notes": [
+        "No dictionary lemmas for tokens: french, fries"
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": "french fries"
+    },
+    {
+      "mediaId": "b545080f-aec2-40b5-ade4-a0cdb56c5d03",
+      "itemName": "Komodo Dragon",
+      "filename": "komodo dragon.png",
+      "publicUrl": "https://vmqvhzghfbwcfnxittta.supabase.co/storage/v1/object/public/lesson_media/8b0f1d53-aeb0-42e0-af1c-b1d07bffc02f/7e175935-915e-42f5-aafd-b1324c28ca20-komodo_dragon.png",
+      "categories": [
+        "animals",
+        "zoo"
+      ],
+      "tags": [
+        "animals",
+        "komodo dragon",
+        "vocabulary",
+        "zoo"
+      ],
+      "alternativeNames": [],
+      "alreadyHasIllustrationLink": false,
+      "confidence": "none",
+      "strategy": "no_match",
+      "reviewHint": "consider_new_phrase_or_head_lemma",
+      "notes": [
+        "No dictionary lemmas for tokens: komodo, dragon"
+      ],
+      "suggestedLink": null,
+      "alternatives": [],
+      "tokenHits": [],
+      "suggestedNewLemma": "komodo dragon"
+    }
+  ]
+}

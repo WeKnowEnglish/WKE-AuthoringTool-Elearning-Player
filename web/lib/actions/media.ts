@@ -302,7 +302,12 @@ export async function uploadTeacherMedia(
 
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
   const publicUrl = pub.publicUrl;
-  const itemName = normalizeOptionalText(formData.get("meta_item_name"), 120);
+  const itemNameFromForm = normalizeOptionalText(formData.get("meta_item_name"), 120);
+  const { itemNameFromFilename } = await import(
+    "@/lib/vocabulary/lexicon-media/match-from-item-name"
+  );
+  const itemName =
+    itemNameFromForm || itemNameFromFilename(f.name)?.slice(0, 120) || null;
 
   const { data: row, error: insErr } = await supabase
     .from("media_assets")
@@ -319,6 +324,19 @@ export async function uploadTeacherMedia(
     .select("id")
     .single();
   if (insErr) throw new Error(insErr.message);
+
+  // Auto-link high-confidence dictionary matches; otherwise enqueue review.
+  try {
+    const { processMediaLexiconMatch } = await import("@/lib/actions/media-lexicon-match");
+    await processMediaLexiconMatch({
+      mediaAssetId: row.id as string,
+      itemName,
+      originalFilename: f.name,
+      contentType,
+    });
+  } catch {
+    // Non-fatal: upload already succeeded
+  }
 
   revalidatePath("/teacher/media");
   return { url: publicUrl, id: row.id as string, duplicate_status: "uploaded" };
@@ -486,6 +504,8 @@ export async function inspectTeacherMediaBulkDuplicates(
   return issues;
 }
 
+export type MediaLibraryScope = "school" | "mine";
+
 export type SearchTeacherMediaParams = {
   q?: string;
   kind?: MediaKindFilter;
@@ -497,6 +517,11 @@ export type SearchTeacherMediaParams = {
   skills?: string[];
   /** When set, only return media linked to this dictionary id (pv_ or tw_ entries). */
   lexiconId?: string;
+  /**
+   * Library shelf scope. `school` = shared catalog (default).
+   * `mine` = only rows uploaded by the signed-in teacher.
+   */
+  scope?: MediaLibraryScope;
   limit?: number;
   /** Zero-based offset for pagination (default 0). */
   offset?: number;
@@ -519,20 +544,27 @@ function parseRpcTotal(raw: unknown): number {
 export async function searchTeacherMedia(
   params: SearchTeacherMediaParams = {},
 ): Promise<SearchTeacherMediaResult> {
-  const { supabase } = await requireTeacher();
+  const { supabase, user } = await requireTeacher();
   const kind = params.kind ?? "all";
   const limit = Math.min(Math.max(params.limit ?? 200, 1), 1000);
   const offset = Math.max(params.offset ?? 0, 0);
   const lexiconId = params.lexiconId?.trim();
+  const scope: MediaLibraryScope = params.scope === "mine" ? "mine" : "school";
 
   if (lexiconId) {
-    return searchTeacherMediaForLexicon(supabase, {
+    const linked = await searchTeacherMediaForLexicon(supabase, {
       lexiconId,
       kind,
       q: params.q?.trim() ?? "",
-      limit,
-      offset,
+      limit: scope === "mine" ? Math.max(limit + offset, limit) : limit,
+      offset: scope === "mine" ? 0 : offset,
     });
+    if (scope !== "mine") return linked;
+    const mine = linked.rows.filter((r) => r.uploaded_by === user.id);
+    return {
+      rows: mine.slice(offset, offset + limit),
+      total: mine.length,
+    };
   }
 
   const countability = params.countability ?? "all";
@@ -553,12 +585,15 @@ export async function searchTeacherMedia(
     p_skills: skills,
     p_limit: limit,
     p_offset: offset,
+    p_uploaded_by: scope === "mine" ? user.id : null,
   });
 
   if (error) {
     const hint =
-      /teacher_search_media_assets|42883|function.*does not exist/i.test(`${error.message} ${error.code ?? ""}`) ?
-        " Run migration web/supabase/migrations/016_teacher_search_media_assets.sql in the Supabase SQL editor."
+      /teacher_search_media_assets|42883|function.*does not exist|PGRST202/i.test(
+        `${error.message} ${error.code ?? ""}`,
+      ) ?
+        " Run migration web/supabase/migrations/080_teacher_search_media_uploaded_by.sql in the Supabase SQL editor."
       : "";
     throw new Error(`${error.message}${hint}`);
   }
@@ -693,6 +728,21 @@ export async function updateTeacherMediaMetadata(
       "Could not update this media item. It may not exist, or you may not have permission to edit it.",
     );
   }
+
+  try {
+    const { processMediaLexiconMatch } = await import("@/lib/actions/media-lexicon-match");
+    await processMediaLexiconMatch({
+      mediaAssetId: data.id as string,
+      itemName: (data.meta_item_name as string) || itemName,
+      originalFilename: data.original_filename as string,
+      contentType: data.content_type as string,
+      metaTags: (data.meta_tags as string[]) || tags,
+      metaCategories: (data.meta_categories as string[]) || categories,
+    });
+  } catch {
+    // Non-fatal
+  }
+
   revalidatePath("/teacher/media");
   return data as unknown as MediaAssetRow;
 }

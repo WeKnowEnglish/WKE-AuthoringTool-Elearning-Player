@@ -64,7 +64,6 @@ const NO_SINGULARIZE = new Set([
   "octopus",
   "platypus",
   "walrus",
-  "chips", // keep trying chip via irregular map
 ]);
 
 const IRREGULAR_SINGULAR = {
@@ -136,7 +135,7 @@ function pickBestLexicon(candidates, matchKey) {
 function contentTokens(phrase) {
   return normalize(phrase)
     .split(" ")
-    .filter((t) => t && !STOP.has(t));
+    .filter((t) => t && !STOP.has(t) && !/^\d+$/.test(t));
 }
 
 function dropArticles(phrase) {
@@ -258,34 +257,12 @@ function suggest(itemName, alts = []) {
     notes.push(`Noise tokens in label: ${noiseHits.join(", ")} — likely asset meta, not a vocab phrase.`);
   }
 
-  // 1a) Exact phrase (and no-space compound) as dictionary lemma
-  const phraseVariants = [phrase, dropArticles(phrase), phrase.replace(/ /g, "")].filter(
-    (v, i, arr) => v && arr.indexOf(v) === i,
-  );
-  for (const v of phraseVariants) {
+  // 1a) Exact phrase as dictionary lemma
+  for (const v of [phrase, dropArticles(phrase)].filter((x, i, arr) => x && arr.indexOf(x) === i)) {
     tried.push(`exact:${v}`);
+    if (!v.includes(" ")) continue; // multi-word path only for spaced phrases here
     const hit = lookupLemma(v);
-    if (hit && (v.includes(" ") || v === phrase.replace(/ /g, "") || v === dropArticles(phrase))) {
-      // bare lookupLemma on single-token dropArticles of multiword shouldn't happen often
-      if (normalize(v) === phrase || normalize(v) === dropArticles(phrase) || !v.includes(" ")) {
-        const isCompound = !v.includes(" ") && phrase.includes(" ");
-        return {
-          confidence: "exact_phrase",
-          strategy: isCompound ? "compound_nospaces" : "exact_phrase",
-          primary: hit,
-          alternatives: [],
-          notes: [
-            ...notes,
-            isCompound
-              ? `Matched compound "${v}" (spaces removed) as dictionary lemma.`
-              : `Matched full phrase "${v}" as a dictionary lemma.`,
-          ],
-          tried,
-          reviewHint: "safe_to_link_after_spotcheck",
-        };
-      }
-    }
-    if (hit && (v === phrase || v === dropArticles(phrase))) {
+    if (hit) {
       return {
         confidence: "exact_phrase",
         strategy: "exact_phrase",
@@ -298,7 +275,25 @@ function suggest(itemName, alts = []) {
     }
   }
 
-  // 1b) Alternative names (weaker than phrase — often a head noun shortcut)
+  // 1b) Spaced phrase → compound (rain coat → raincoat)
+  const compound = phrase.replace(/ /g, "");
+  if (compound && compound !== phrase) {
+    tried.push(`compound:${compound}`);
+    const hit = lookupLemma(compound);
+    if (hit) {
+      return {
+        confidence: "exact_phrase",
+        strategy: "compound_nospaces",
+        primary: hit,
+        alternatives: [],
+        notes: [...notes, `Matched compound "${compound}" (spaces removed) as dictionary lemma.`],
+        tried,
+        reviewHint: "safe_to_link_after_spotcheck",
+      };
+    }
+  }
+
+  // 1c) Alternative names (weaker — often a head-noun shortcut in meta)
   for (const alt of alts.map((a) => normalize(a)).filter(Boolean)) {
     tried.push(`alt:${alt}`);
     const hit = lookupLemma(alt);
@@ -480,6 +475,7 @@ for (const asset of candidates) {
     alreadyHasIllustrationLink: alreadyLinked,
     confidence: suggestion.confidence,
     strategy: suggestion.strategy,
+    reviewHint: suggestion.reviewHint || null,
     notes: suggestion.notes,
     suggestedLink: suggestion.primary
       ? {
@@ -513,11 +509,13 @@ for (const asset of candidates) {
 rows.sort((a, b) => {
   const order = [
     "exact_phrase",
+    "alt_name_match",
     "head_noun_only",
     "ambiguous_both_words",
     "ambiguous_multi_token",
     "modifier_only_weak",
     "ambiguous_no_head",
+    "skip_noise_label",
     "none",
   ];
   const d = order.indexOf(a.confidence) - order.indexOf(b.confidence);
@@ -528,6 +526,7 @@ rows.sort((a, b) => {
 const reviewQueue = rows.map((r) => ({
   itemName: r.itemName,
   confidence: r.confidence,
+  reviewHint: r.reviewHint,
   suggested: r.suggestedLink
     ? `${r.suggestedLink.lemma} (${r.suggestedLink.lexiconId})`
     : "(none)",
@@ -569,18 +568,20 @@ const mdLines = [
   "",
   "| Confidence | Count | Meaning |",
   "|---|---:|---|",
-  `| exact_phrase | ${byConfidence.exact_phrase || 0} | Full phrase exists as a dictionary lemma |`,
+  `| exact_phrase | ${byConfidence.exact_phrase || 0} | Full phrase / compound exists as lemma |`,
+  `| alt_name_match | ${byConfidence.alt_name_match || 0} | Matched meta alternative name |`,
   `| head_noun_only | ${byConfidence.head_noun_only || 0} | Only last content word matches — usually safe |`,
   `| ambiguous_both_words | ${byConfidence.ambiguous_both_words || 0} | Both words exist — pick head vs phrase sense |`,
   `| ambiguous_multi_token | ${byConfidence.ambiguous_multi_token || 0} | Head + other tokens match — review |`,
   `| modifier_only_weak | ${byConfidence.modifier_only_weak || 0} | Only a non-head word matches — weak |`,
   `| ambiguous_no_head | ${byConfidence.ambiguous_no_head || 0} | Head missing; multiple other hits — skip auto |`,
+  `| skip_noise_label | ${byConfidence.skip_noise_label || 0} | Label looks like asset meta (featured/crop/…) |`,
   `| none | ${byConfidence.none || 0} | No dictionary match — consider new lemma |`,
   "",
   "## Review table",
   "",
-  "| Item name | Confidence | Suggested link | Alternatives | Notes |",
-  "|---|---|---|---|---|",
+  "| Item name | Confidence | Suggested link | Alternatives | Hint | Notes |",
+  "|---|---|---|---|---|---|",
 ];
 
 for (const r of rows) {
@@ -592,7 +593,7 @@ for (const r of rows) {
     : "—";
   const notes = r.notes.join(" ").replace(/\|/g, "/");
   mdLines.push(
-    `| ${r.itemName} | ${r.confidence} | ${sug} | ${alts} | ${notes} |`,
+    `| ${r.itemName} | ${r.confidence} | ${sug} | ${alts} | ${r.reviewHint || "—"} | ${notes} |`,
   );
 }
 

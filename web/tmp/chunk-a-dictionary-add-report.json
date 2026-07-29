@@ -1,0 +1,729 @@
+{
+  "generatedAt": "2026-07-29T17:34:57.302Z",
+  "added": [
+    {
+      "id": "pv_acrobat_noun",
+      "lemma": "acrobat",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_actress_noun",
+      "lemma": "actress",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_alligator_noun",
+      "lemma": "alligator",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_artist_noun",
+      "lemma": "artist",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_axolotl_noun",
+      "lemma": "axolotl",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_baboon_noun",
+      "lemma": "baboon",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_backpack_noun",
+      "lemma": "backpack",
+      "primaryTopic": "school_learning"
+    },
+    {
+      "id": "pv_balloon_noun",
+      "lemma": "balloon",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_banker_noun",
+      "lemma": "banker",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_beanie_noun",
+      "lemma": "beanie",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_beaver_noun",
+      "lemma": "beaver",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_biologist_noun",
+      "lemma": "biologist",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_boot_noun",
+      "lemma": "boot",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_buffalo_noun",
+      "lemma": "buffalo",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_builder_noun",
+      "lemma": "builder",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_calf_noun",
+      "lemma": "calf",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_camel_noun",
+      "lemma": "camel",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_capybara_noun",
+      "lemma": "capybara",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_cell_noun",
+      "lemma": "cell",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_chameleon_noun",
+      "lemma": "chameleon",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_cheetah_noun",
+      "lemma": "cheetah",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_chef_noun",
+      "lemma": "chef",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_chimpanzee_noun",
+      "lemma": "chimpanzee",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_chip_noun",
+      "lemma": "chip",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_clown_noun",
+      "lemma": "clown",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_cobra_noun",
+      "lemma": "cobra",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_crab_noun",
+      "lemma": "crab",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_crane_noun",
+      "lemma": "crane",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_crayon_noun",
+      "lemma": "crayon",
+      "primaryTopic": "school_learning"
+    },
+    {
+      "id": "pv_crocodile_noun",
+      "lemma": "crocodile",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_cupcake_noun",
+      "lemma": "cupcake",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_deer_noun",
+      "lemma": "deer",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_detective_noun",
+      "lemma": "detective",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_dinosaur_noun",
+      "lemma": "dinosaur",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_dolphin_noun",
+      "lemma": "dolphin",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_donut_noun",
+      "lemma": "donut",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_drought_noun",
+      "lemma": "drought",
+      "primaryTopic": "weather_seasons"
+    },
+    {
+      "id": "pv_duck_noun",
+      "lemma": "duck",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_eagle_noun",
+      "lemma": "eagle",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_earthquake_noun",
+      "lemma": "earthquake",
+      "primaryTopic": "weather_seasons"
+    },
+    {
+      "id": "pv_elbow_noun",
+      "lemma": "elbow",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_electrician_noun",
+      "lemma": "electrician",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_elephant_noun",
+      "lemma": "elephant",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_english_noun",
+      "lemma": "english",
+      "primaryTopic": "language_learning"
+    },
+    {
+      "id": "pv_eraser_noun",
+      "lemma": "eraser",
+      "primaryTopic": "school_learning"
+    },
+    {
+      "id": "pv_foot_noun",
+      "lemma": "foot",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_finger_noun",
+      "lemma": "finger",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_firefighter_noun",
+      "lemma": "firefighter",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_flamingo_noun",
+      "lemma": "flamingo",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_fox_noun",
+      "lemma": "fox",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_giraffe_noun",
+      "lemma": "giraffe",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_gorilla_noun",
+      "lemma": "gorilla",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_ham_noun",
+      "lemma": "ham",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_hamster_noun",
+      "lemma": "hamster",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_hedgehog_noun",
+      "lemma": "hedgehog",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_hippo_noun",
+      "lemma": "hippo",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_hotdog_noun",
+      "lemma": "hotdog",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_hyena_noun",
+      "lemma": "hyena",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_iguana_noun",
+      "lemma": "iguana",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_jaguar_noun",
+      "lemma": "jaguar",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_jellyfish_noun",
+      "lemma": "jellyfish",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_kangaroo_noun",
+      "lemma": "kangaroo",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_koala_noun",
+      "lemma": "koala",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_lego_noun",
+      "lemma": "lego",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_lemur_noun",
+      "lemma": "lemur",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_leopard_noun",
+      "lemma": "leopard",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_lettuce_noun",
+      "lemma": "lettuce",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_librarian_noun",
+      "lemma": "librarian",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_lightning_noun",
+      "lemma": "lightning",
+      "primaryTopic": "weather_seasons"
+    },
+    {
+      "id": "pv_lip_noun",
+      "lemma": "lip",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_lizard_noun",
+      "lemma": "lizard",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_lobster_noun",
+      "lemma": "lobster",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_lunchbox_noun",
+      "lemma": "lunchbox",
+      "primaryTopic": "school_learning"
+    },
+    {
+      "id": "pv_lung_noun",
+      "lemma": "lung",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_marker_noun",
+      "lemma": "marker",
+      "primaryTopic": "school_learning"
+    },
+    {
+      "id": "pv_mechanic_noun",
+      "lemma": "mechanic",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_meerkat_noun",
+      "lemma": "meerkat",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_mitten_noun",
+      "lemma": "mitten",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_model_noun",
+      "lemma": "model",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_moose_noun",
+      "lemma": "moose",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_muscle_noun",
+      "lemma": "muscle",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_nest_noun",
+      "lemma": "nest",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_noodle_noun",
+      "lemma": "noodle",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_nut_noun",
+      "lemma": "nut",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_octopus_noun",
+      "lemma": "octopus",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_orangutan_noun",
+      "lemma": "orangutan",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_orca_noun",
+      "lemma": "orca",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_organ_noun",
+      "lemma": "organ",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_ostrich_noun",
+      "lemma": "ostrich",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_otter_noun",
+      "lemma": "otter",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_owl_noun",
+      "lemma": "owl",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_pancake_noun",
+      "lemma": "pancake",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_panda_noun",
+      "lemma": "panda",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_panther_noun",
+      "lemma": "panther",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_parrot_noun",
+      "lemma": "parrot",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_peacock_noun",
+      "lemma": "peacock",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_penguin_noun",
+      "lemma": "penguin",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_pilot_noun",
+      "lemma": "pilot",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_platypus_noun",
+      "lemma": "platypus",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_popcorn_noun",
+      "lemma": "popcorn",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_puppet_noun",
+      "lemma": "puppet",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_puzzle_noun",
+      "lemma": "puzzle",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_raccoon_noun",
+      "lemma": "raccoon",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_reindeer_noun",
+      "lemma": "reindeer",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_rhino_noun",
+      "lemma": "rhino",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_robot_noun",
+      "lemma": "robot",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_sandal_noun",
+      "lemma": "sandal",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_scooter_noun",
+      "lemma": "scooter",
+      "primaryTopic": "travel_transport"
+    },
+    {
+      "id": "pv_scorpion_noun",
+      "lemma": "scorpion",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_seahorse_noun",
+      "lemma": "seahorse",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_seal_noun",
+      "lemma": "seal",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_shark_noun",
+      "lemma": "shark",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_shorts_noun",
+      "lemma": "shorts",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_shrimp_noun",
+      "lemma": "shrimp",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_skateboard_noun",
+      "lemma": "skateboard",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_skunk_noun",
+      "lemma": "skunk",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_sloth_noun",
+      "lemma": "sloth",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_sneaker_noun",
+      "lemma": "sneaker",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_spider_noun",
+      "lemma": "spider",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_squirrel_noun",
+      "lemma": "squirrel",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_starfish_noun",
+      "lemma": "starfish",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_stingray_noun",
+      "lemma": "stingray",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_storm_noun",
+      "lemma": "storm",
+      "primaryTopic": "weather_seasons"
+    },
+    {
+      "id": "pv_strawberry_noun",
+      "lemma": "strawberry",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_swan_noun",
+      "lemma": "swan",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_sweater_noun",
+      "lemma": "sweater",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_taco_noun",
+      "lemma": "taco",
+      "primaryTopic": "food_drink"
+    },
+    {
+      "id": "pv_thermometer_noun",
+      "lemma": "thermometer",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_throat_noun",
+      "lemma": "throat",
+      "primaryTopic": "body_health"
+    },
+    {
+      "id": "pv_tornado_noun",
+      "lemma": "tornado",
+      "primaryTopic": "weather_seasons"
+    },
+    {
+      "id": "pv_toucan_noun",
+      "lemma": "toucan",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_tracksuit_noun",
+      "lemma": "tracksuit",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_trophy_noun",
+      "lemma": "trophy",
+      "primaryTopic": "hobbies_free_time"
+    },
+    {
+      "id": "pv_tsunami_noun",
+      "lemma": "tsunami",
+      "primaryTopic": "weather_seasons"
+    },
+    {
+      "id": "pv_turtle_noun",
+      "lemma": "turtle",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_tutu_noun",
+      "lemma": "tutu",
+      "primaryTopic": "clothes_appearance"
+    },
+    {
+      "id": "pv_vet_noun",
+      "lemma": "vet",
+      "primaryTopic": "jobs_community"
+    },
+    {
+      "id": "pv_volcano_noun",
+      "lemma": "volcano",
+      "primaryTopic": "world_places"
+    },
+    {
+      "id": "pv_walrus_noun",
+      "lemma": "walrus",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_whale_noun",
+      "lemma": "whale",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_yo_noun",
+      "lemma": "yo",
+      "primaryTopic": "general_language"
+    },
+    {
+      "id": "pv_zookeeper_noun",
+      "lemma": "zookeeper",
+      "primaryTopic": "jobs_community"
+    }
+  ],
+  "alreadyPresent": [
+    {
+      "name": "Cookies",
+      "lemma": "cookie",
+      "existingId": "pv_cookie_noun"
+    },
+    {
+      "name": "Strawberry",
+      "lemma": "strawberry",
+      "existingId": "pv_strawberry_noun"
+    }
+  ],
+  "skipped": [],
+  "entryCount": 2142
+}

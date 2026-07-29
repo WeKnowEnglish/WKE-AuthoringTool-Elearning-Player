@@ -1,94 +1,94 @@
 {
-  "generatedAt": "2026-07-29T22:39:35.022Z",
+  "generatedAt": "2026-07-29T22:49:19.761Z",
   "secondaryPackId": "g7-a2-complete-core-vocab-v1-2",
   "secondaryPackVersion": "1.2.0",
   "secondaryItemCount": 240,
-  "primaryEntryCount": 2142,
+  "primaryEntryCount": 2218,
   "counts": {
-    "exact": 164,
+    "exact": 240,
     "ambiguous_same_pos": 0,
-    "pos_conflict": 10,
-    "secondary_only": 66
+    "pos_conflict": 0,
+    "secondary_only": 0
   },
   "percents": {
-    "exact": 68.3,
+    "exact": 100,
     "ambiguous_same_pos": 0,
-    "pos_conflict": 4.2,
-    "secondary_only": 27.5
+    "pos_conflict": 0,
+    "secondary_only": 0
   },
-  "exactPrimaryIdCount": 164,
+  "exactPrimaryIdCount": 240,
   "byTopic": [
     {
       "topicId": "school-life",
       "total": 20,
-      "exact": 8,
+      "exact": 20,
       "ambiguous_same_pos": 0,
-      "pos_conflict": 2,
-      "secondary_only": 10
+      "pos_conflict": 0,
+      "secondary_only": 0
     },
     {
       "topicId": "daily-routines",
       "total": 20,
-      "exact": 9,
+      "exact": 20,
       "ambiguous_same_pos": 0,
-      "pos_conflict": 2,
-      "secondary_only": 9
+      "pos_conflict": 0,
+      "secondary_only": 0
     },
     {
       "topicId": "personality",
       "total": 20,
-      "exact": 12,
+      "exact": 20,
       "ambiguous_same_pos": 0,
       "pos_conflict": 0,
-      "secondary_only": 8
+      "secondary_only": 0
     },
     {
       "topicId": "feelings-opinions",
       "total": 20,
-      "exact": 16,
+      "exact": 20,
       "ambiguous_same_pos": 0,
       "pos_conflict": 0,
-      "secondary_only": 4
+      "secondary_only": 0
     },
     {
       "topicId": "food-health",
       "total": 20,
-      "exact": 15,
+      "exact": 20,
       "ambiguous_same_pos": 0,
       "pos_conflict": 0,
-      "secondary_only": 5
+      "secondary_only": 0
     },
     {
       "topicId": "places-directions",
       "total": 20,
-      "exact": 14,
+      "exact": 20,
       "ambiguous_same_pos": 0,
       "pos_conflict": 0,
-      "secondary_only": 6
+      "secondary_only": 0
     },
     {
       "topicId": "technology-online-life",
       "total": 20,
-      "exact": 13,
+      "exact": 20,
       "ambiguous_same_pos": 0,
       "pos_conflict": 0,
-      "secondary_only": 7
+      "secondary_only": 0
     },
     {
       "topicId": "environment",
       "total": 20,
-      "exact": 13,
+      "exact": 20,
       "ambiguous_same_pos": 0,
-      "pos_conflict": 1,
-      "secondary_only": 6
+      "pos_conflict": 0,
+      "secondary_only": 0
     },
     {
       "topicId": "stories-past-events",
       "total": 20,
-      "exact": 17,
+      "exact": 20,
       "ambiguous_same_pos": 0,
       "pos_conflict": 0,
-      "secondary_only": 3
+      "secondary_only": 0
     },
     {
       "topicId": "future-plans-jobs",
@@ -101,18 +101,18 @@
     {
       "topicId": "social-life-communication",
       "total": 20,
-      "exact": 14,
+      "exact": 20,
       "ambiguous_same_pos": 0,
       "pos_conflict": 0,
-      "secondary_only": 6
+      "secondary_only": 0
     },
     {
       "topicId": "academic-classroom-language",
       "total": 20,
-      "exact": 13,
+      "exact": 20,
       "ambiguous_same_pos": 0,
-      "pos_conflict": 5,
-      "secondary_only": 2
+      "pos_conflict": 0,
+      "secondary_only": 0
     }
   ],
   "rows": [
@@ -201,10 +201,20 @@
       "normalizedLemma": "geography",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_geography_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_geography_noun",
+          "lemma": "geography",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-library",
@@ -241,10 +251,20 @@
       "normalizedLemma": "laboratory",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_laboratory_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_laboratory_noun",
+          "lemma": "laboratory",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-classmate",
@@ -281,21 +301,20 @@
       "normalizedLemma": "principal",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_principal_adjective"
+        "pv_principal_noun"
       ],
       "primarySummaries": [
         {
-          "id": "pv_principal_adjective",
+          "id": "pv_principal_noun",
           "lemma": "principal",
-          "pos": "adjective",
+          "pos": "noun",
           "cefrBandCandidate": "A2",
           "primaryStageCandidate": "A2_1",
-          "primaryTopic": "general_language"
+          "primaryTopic": "school_learning"
         }
-      ],
-      "note": "Lemma exists in Primary as adjective, not noun."
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-timetable",
@@ -307,10 +326,20 @@
       "normalizedLemma": "timetable",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_timetable_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_timetable_noun",
+          "lemma": "timetable",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-uniform",
@@ -322,21 +351,20 @@
       "normalizedLemma": "uniform",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_uniform_adjective"
+        "pv_uniform_noun"
       ],
       "primarySummaries": [
         {
-          "id": "pv_uniform_adjective",
+          "id": "pv_uniform_noun",
           "lemma": "uniform",
-          "pos": "adjective",
+          "pos": "noun",
           "cefrBandCandidate": "A2",
-          "primaryStageCandidate": "A2_2",
-          "primaryTopic": "general_language"
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
         }
-      ],
-      "note": "Lemma exists in Primary as adjective, not noun."
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-assignment",
@@ -348,10 +376,20 @@
       "normalizedLemma": "assignment",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_assignment_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_assignment_noun",
+          "lemma": "assignment",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-project",
@@ -363,10 +401,20 @@
       "normalizedLemma": "project",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_project_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_project_noun",
+          "lemma": "project",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-test",
@@ -403,10 +451,20 @@
       "normalizedLemma": "exam",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_exam_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_exam_noun",
+          "lemma": "exam",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-score",
@@ -443,10 +501,20 @@
       "normalizedLemma": "mistake",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_mistake_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_mistake_noun",
+          "lemma": "mistake",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-revise",
@@ -458,10 +526,20 @@
       "normalizedLemma": "revise",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_revise_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_revise_verb",
+          "lemma": "revise",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-submit",
@@ -473,10 +551,20 @@
       "normalizedLemma": "submit",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_submit_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_submit_verb",
+          "lemma": "submit",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-school-life-lesson",
@@ -513,10 +601,20 @@
       "normalizedLemma": "deadline",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_deadline_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_deadline_noun",
+          "lemma": "deadline",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-daily-routines-wake-up",
@@ -528,10 +626,21 @@
       "normalizedLemma": "wake up",
       "rawPos": "phrasal verb",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_wake_up_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_wake_up_verb",
+          "lemma": "wake up",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-daily-routines-get-dressed",
@@ -543,10 +652,21 @@
       "normalizedLemma": "get dressed",
       "rawPos": "verb phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_get_dressed_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_get_dressed_verb",
+          "lemma": "get dressed",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-daily-routines-brush",
@@ -658,10 +778,20 @@
       "normalizedLemma": "relax",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_relax_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_relax_verb",
+          "lemma": "relax",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-daily-routines-shower",
@@ -673,21 +803,20 @@
       "normalizedLemma": "shower",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_shower_noun"
+        "pv_shower_verb"
       ],
       "primarySummaries": [
         {
-          "id": "pv_shower_noun",
+          "id": "pv_shower_verb",
           "lemma": "shower",
-          "pos": "noun",
-          "cefrBandCandidate": "A1",
-          "primaryStageCandidate": "A1_2",
-          "primaryTopic": "home_objects"
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
         }
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
+      ]
     },
     {
       "wordItemId": "g7-a2-daily-routines-sleep",
@@ -749,10 +878,20 @@
       "normalizedLemma": "chore",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_chore_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_chore_noun",
+          "lemma": "chore",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-daily-routines-tidy",
@@ -814,21 +953,20 @@
       "normalizedLemma": "feed",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_feed_noun"
+        "pv_feed_verb"
       ],
       "primarySummaries": [
         {
-          "id": "pv_feed_noun",
+          "id": "pv_feed_verb",
           "lemma": "feed",
-          "pos": "noun",
-          "cefrBandCandidate": "PRE_A1",
-          "primaryStageCandidate": "PRE_A1_1",
-          "primaryTopic": "food_drink"
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
         }
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
+      ]
     },
     {
       "wordItemId": "g7-a2-daily-routines-sweep",
@@ -840,10 +978,20 @@
       "normalizedLemma": "sweep",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_sweep_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_sweep_verb",
+          "lemma": "sweep",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-daily-routines-take-out",
@@ -855,10 +1003,21 @@
       "normalizedLemma": "take out",
       "rawPos": "phrasal verb",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_take_out_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_take_out_verb",
+          "lemma": "take out",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-daily-routines-hang-out",
@@ -870,10 +1029,21 @@
       "normalizedLemma": "hang out",
       "rawPos": "phrasal verb",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_hang_out_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_hang_out_verb",
+          "lemma": "hang out",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-daily-routines-rest",
@@ -885,10 +1055,20 @@
       "normalizedLemma": "rest",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_rest_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_rest_verb",
+          "lemma": "rest",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-daily-routines-free-time",
@@ -900,10 +1080,21 @@
       "normalizedLemma": "free time",
       "rawPos": "noun phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_free_time_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_free_time_noun",
+          "lemma": "free time",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "daily_routines"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-daily-routines-hobby",
@@ -940,10 +1131,20 @@
       "normalizedLemma": "friendly",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_friendly_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_friendly_adjective",
+          "lemma": "friendly",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-personality-kind",
@@ -1105,10 +1306,20 @@
       "normalizedLemma": "honest",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_honest_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_honest_adjective",
+          "lemma": "honest",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-personality-brave",
@@ -1145,10 +1356,20 @@
       "normalizedLemma": "patient",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_patient_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_patient_adjective",
+          "lemma": "patient",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-personality-shy",
@@ -1235,10 +1456,20 @@
       "normalizedLemma": "careless",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_careless_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_careless_adjective",
+          "lemma": "careless",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-personality-noisy",
@@ -1250,10 +1481,20 @@
       "normalizedLemma": "noisy",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_noisy_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_noisy_adjective",
+          "lemma": "noisy",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-personality-quiet",
@@ -1290,10 +1531,20 @@
       "normalizedLemma": "selfish",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_selfish_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_selfish_adjective",
+          "lemma": "selfish",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-personality-nervous",
@@ -1330,10 +1581,20 @@
       "normalizedLemma": "serious",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_serious_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_serious_adjective",
+          "lemma": "serious",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-personality-stubborn",
@@ -1345,10 +1606,20 @@
       "normalizedLemma": "stubborn",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_stubborn_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_stubborn_adjective",
+          "lemma": "stubborn",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-feelings-opinions-happy",
@@ -1560,10 +1831,20 @@
       "normalizedLemma": "proud",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_proud_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_proud_adjective",
+          "lemma": "proud",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-feelings-opinions-calm",
@@ -1575,10 +1856,20 @@
       "normalizedLemma": "calm",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_calm_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_calm_adjective",
+          "lemma": "calm",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-feelings-opinions-opinion",
@@ -1590,10 +1881,20 @@
       "normalizedLemma": "opinion",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_opinion_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_opinion_noun",
+          "lemma": "opinion",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-feelings-opinions-prefer",
@@ -1655,10 +1956,20 @@
       "normalizedLemma": "disagree",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_disagree_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_disagree_verb",
+          "lemma": "disagree",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "feelings_personality"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-feelings-opinions-favorite",
@@ -1970,10 +2281,20 @@
       "normalizedLemma": "snack",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_snack_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_snack_noun",
+          "lemma": "snack",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "body_health"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-food-health-sugar",
@@ -2085,10 +2406,20 @@
       "normalizedLemma": "stomachache",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_stomachache_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_stomachache_noun",
+          "lemma": "stomachache",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "body_health"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-food-health-fever",
@@ -2125,10 +2456,20 @@
       "normalizedLemma": "cough",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_cough_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_cough_noun",
+          "lemma": "cough",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "body_health"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-food-health-sick",
@@ -2215,10 +2556,21 @@
       "normalizedLemma": "take a break",
       "rawPos": "phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_take_a_break_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_take_a_break_verb",
+          "lemma": "take a break",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "body_health"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-food-health-clinic",
@@ -2230,10 +2582,20 @@
       "normalizedLemma": "clinic",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_clinic_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_clinic_noun",
+          "lemma": "clinic",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "body_health"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-food-health-habit",
@@ -2370,10 +2732,20 @@
       "normalizedLemma": "museum",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_museum_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_museum_noun",
+          "lemma": "museum",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "town_services"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-places-directions-hospital",
@@ -2485,10 +2857,20 @@
       "normalizedLemma": "pharmacy",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_pharmacy_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_pharmacy_noun",
+          "lemma": "pharmacy",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "town_services"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-places-directions-turn-left",
@@ -2500,10 +2882,21 @@
       "normalizedLemma": "turn left",
       "rawPos": "phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_turn_left_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_turn_left_verb",
+          "lemma": "turn left",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "town_services"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-places-directions-turn-right",
@@ -2515,10 +2908,21 @@
       "normalizedLemma": "turn right",
       "rawPos": "phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_turn_right_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_turn_right_verb",
+          "lemma": "turn right",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "town_services"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-places-directions-go-straight",
@@ -2530,10 +2934,21 @@
       "normalizedLemma": "go straight",
       "rawPos": "phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_go_straight_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_go_straight_verb",
+          "lemma": "go straight",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "town_services"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-places-directions-cross",
@@ -2670,10 +3085,20 @@
       "normalizedLemma": "motorbike",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_motorbike_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_motorbike_noun",
+          "lemma": "motorbike",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "town_services"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-places-directions-traffic",
@@ -2710,10 +3135,20 @@
       "normalizedLemma": "device",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_device_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_device_noun",
+          "lemma": "device",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-technology-online-life-laptop",
@@ -2750,10 +3185,20 @@
       "normalizedLemma": "tablet",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_tablet_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_tablet_noun",
+          "lemma": "tablet",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-technology-online-life-screen",
@@ -2765,10 +3210,20 @@
       "normalizedLemma": "screen",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_screen_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_screen_noun",
+          "lemma": "screen",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-technology-online-life-keyboard",
@@ -2780,10 +3235,20 @@
       "normalizedLemma": "keyboard",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_keyboard_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_keyboard_noun",
+          "lemma": "keyboard",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-technology-online-life-app",
@@ -2895,10 +3360,20 @@
       "normalizedLemma": "search",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_search_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_search_verb",
+          "lemma": "search",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-technology-online-life-message",
@@ -2960,10 +3435,20 @@
       "normalizedLemma": "comment",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_comment_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_comment_noun",
+          "lemma": "comment",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-technology-online-life-password",
@@ -3125,10 +3610,20 @@
       "normalizedLemma": "report",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_report_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_report_verb",
+          "lemma": "report",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-environment-forest",
@@ -3190,10 +3685,20 @@
       "normalizedLemma": "ocean",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_ocean_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_ocean_noun",
+          "lemma": "ocean",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "environment_sustainability"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-environment-mountain",
@@ -3280,10 +3785,20 @@
       "normalizedLemma": "plant",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_plant_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_plant_noun",
+          "lemma": "plant",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "environment_sustainability"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-environment-habitat",
@@ -3395,10 +3910,20 @@
       "normalizedLemma": "trash",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_trash_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_trash_noun",
+          "lemma": "trash",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "environment_sustainability"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-environment-plastic",
@@ -3410,21 +3935,20 @@
       "normalizedLemma": "plastic",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_plastic_adjective"
+        "pv_plastic_noun"
       ],
       "primarySummaries": [
         {
-          "id": "pv_plastic_adjective",
+          "id": "pv_plastic_noun",
           "lemma": "plastic",
-          "pos": "adjective",
+          "pos": "noun",
           "cefrBandCandidate": "A2",
           "primaryStageCandidate": "A2_1",
-          "primaryTopic": "general_language"
+          "primaryTopic": "environment_sustainability"
         }
-      ],
-      "note": "Lemma exists in Primary as adjective, not noun."
+      ]
     },
     {
       "wordItemId": "g7-a2-environment-recycle",
@@ -3461,10 +3985,20 @@
       "normalizedLemma": "reuse",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_reuse_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_reuse_verb",
+          "lemma": "reuse",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "environment_sustainability"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-environment-save",
@@ -3551,10 +4085,20 @@
       "normalizedLemma": "protect",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_protect_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_protect_verb",
+          "lemma": "protect",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "environment_sustainability"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-environment-waste",
@@ -3566,10 +4110,20 @@
       "normalizedLemma": "waste",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_waste_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_waste_noun",
+          "lemma": "waste",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "environment_sustainability"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-stories-past-events-visit",
@@ -3906,10 +4460,21 @@
       "normalizedLemma": "after that",
       "rawPos": "phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_after_that_adverb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_after_that_adverb",
+          "lemma": "after that",
+          "pos": "adverb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "stories_reading"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-stories-past-events-finally",
@@ -3946,10 +4511,20 @@
       "normalizedLemma": "suddenly",
       "rawPos": "adverb",
       "matchPos": "adverb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_suddenly_adverb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_suddenly_adverb",
+          "lemma": "suddenly",
+          "pos": "adverb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "stories_reading"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-stories-past-events-because",
@@ -4036,10 +4611,20 @@
       "normalizedLemma": "solution",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_solution_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_solution_noun",
+          "lemma": "solution",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "stories_reading"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-future-plans-jobs-doctor",
@@ -4726,10 +5311,21 @@
       "normalizedLemma": "make plans",
       "rawPos": "phrase",
       "matchPos": null,
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_make_plans_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_make_plans_verb",
+          "lemma": "make plans",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "social_communication"
+        }
+      ],
+      "note": "Phrase-like Secondary POS; unique Primary lemma hit (POS not enforced)."
     },
     {
       "wordItemId": "g7-a2-social-life-communication-together",
@@ -4816,10 +5412,20 @@
       "normalizedLemma": "argument",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_argument_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_argument_noun",
+          "lemma": "argument",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "social_communication"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-social-life-communication-sorry",
@@ -4856,10 +5462,20 @@
       "normalizedLemma": "apologize",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_apologize_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_apologize_verb",
+          "lemma": "apologize",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "social_communication"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-social-life-communication-forgive",
@@ -4871,10 +5487,20 @@
       "normalizedLemma": "forgive",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_forgive_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_forgive_verb",
+          "lemma": "forgive",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "social_communication"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-social-life-communication-advice",
@@ -4886,10 +5512,20 @@
       "normalizedLemma": "advice",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_advice_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_advice_noun",
+          "lemma": "advice",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "social_communication"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-social-life-communication-listen",
@@ -4951,10 +5587,20 @@
       "normalizedLemma": "respectful",
       "rawPos": "adjective",
       "matchPos": "adjective",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_respectful_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_respectful_adjective",
+          "lemma": "respectful",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "social_communication"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-social-life-communication-fair",
@@ -5016,21 +5662,20 @@
       "normalizedLemma": "match",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_match_noun"
+        "pv_match_verb"
       ],
       "primarySummaries": [
         {
-          "id": "pv_match_noun",
+          "id": "pv_match_verb",
           "lemma": "match",
-          "pos": "noun",
-          "cefrBandCandidate": "A1",
-          "primaryStageCandidate": "A1_2",
-          "primaryTopic": "hobbies_free_time"
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
         }
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
+      ]
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-complete",
@@ -5042,21 +5687,20 @@
       "normalizedLemma": "complete",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_complete_adjective"
+        "pv_complete_verb"
       ],
       "primarySummaries": [
         {
-          "id": "pv_complete_adjective",
+          "id": "pv_complete_verb",
           "lemma": "complete",
-          "pos": "adjective",
+          "pos": "verb",
           "cefrBandCandidate": "A2",
-          "primaryStageCandidate": "A2_2",
-          "primaryTopic": "general_language"
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
         }
-      ],
-      "note": "Lemma exists in Primary as adjective, not verb."
+      ]
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-circle",
@@ -5068,21 +5712,20 @@
       "normalizedLemma": "circle",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_circle_noun"
+        "pv_circle_verb"
       ],
       "primarySummaries": [
         {
-          "id": "pv_circle_noun",
+          "id": "pv_circle_verb",
           "lemma": "circle",
-          "pos": "noun",
-          "cefrBandCandidate": "A1",
-          "primaryStageCandidate": "A1_2",
-          "primaryTopic": "general_language"
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
         }
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
+      ]
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-underline",
@@ -5094,21 +5737,20 @@
       "normalizedLemma": "underline",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_underline_noun"
+        "pv_underline_verb"
       ],
       "primarySummaries": [
         {
-          "id": "pv_underline_noun",
+          "id": "pv_underline_verb",
           "lemma": "underline",
-          "pos": "noun",
-          "cefrBandCandidate": "PRE_A1",
-          "primaryStageCandidate": "PRE_A1_1",
-          "primaryTopic": "general_language"
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
         }
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
+      ]
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-correct",
@@ -5120,21 +5762,20 @@
       "normalizedLemma": "correct",
       "rawPos": "verb",
       "matchPos": "verb",
-      "status": "pos_conflict",
+      "status": "exact",
       "primaryIds": [
-        "pv_correct_adjective"
+        "pv_correct_verb"
       ],
       "primarySummaries": [
         {
-          "id": "pv_correct_adjective",
+          "id": "pv_correct_verb",
           "lemma": "correct",
-          "pos": "adjective",
-          "cefrBandCandidate": "A1",
-          "primaryStageCandidate": "A1_2",
-          "primaryTopic": "general_language"
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
         }
-      ],
-      "note": "Lemma exists in Primary as adjective, not verb."
+      ]
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-describe",
@@ -5321,10 +5962,20 @@
       "normalizedLemma": "detail",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_detail_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_detail_noun",
+          "lemma": "detail",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-reply",
@@ -5336,10 +5987,20 @@
       "normalizedLemma": "reply",
       "rawPos": "noun",
       "matchPos": "noun",
-      "status": "secondary_only",
-      "primaryIds": [],
-      "primarySummaries": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
+      "status": "exact",
+      "primaryIds": [
+        "pv_reply_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_reply_noun",
+          "lemma": "reply",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-question",

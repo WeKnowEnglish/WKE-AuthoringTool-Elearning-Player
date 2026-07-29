@@ -5,13 +5,13 @@
   "secondaryPackId": "g7-a2-complete-core-vocab-v1-2",
   "secondaryPackVersion": "1.2.0",
   "primaryIndexPath": "content/vocabulary/reference/primary-candidates/data/primary-vocabulary-search-index.v1.json",
-  "primaryEntryCount": 2142,
+  "primaryEntryCount": 2218,
   "method": "exact_lemma_pos_v1",
-  "generatedAt": "2026-07-29T22:39:35.022Z",
+  "generatedAt": "2026-07-29T22:49:19.761Z",
   "counts": {
-    "mapped": 164,
-    "pos_conflict": 10,
-    "secondary_only": 66,
+    "mapped": 240,
+    "pos_conflict": 0,
+    "secondary_only": 0,
     "ambiguous_same_pos": 0,
     "total": 240
   },
@@ -39,11 +39,44 @@
       "setId": "task-instruction-verbs"
     },
     {
+      "wordItemId": "g7-a2-academic-classroom-language-circle",
+      "lexiconId": "pv_circle_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "circle",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs"
+    },
+    {
       "wordItemId": "g7-a2-academic-classroom-language-compare",
       "lexiconId": "pv_compare_verb",
       "status": "mapped",
       "confidence": "exact",
       "lemma": "compare",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs"
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-complete",
+      "lexiconId": "pv_complete_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "complete",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs"
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-correct",
+      "lexiconId": "pv_correct_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "correct",
       "rawPos": "verb",
       "matchPos": "verb",
       "topicId": "academic-classroom-language",
@@ -59,6 +92,17 @@
       "matchPos": "verb",
       "topicId": "academic-classroom-language",
       "setId": "task-instruction-verbs"
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-detail",
+      "lexiconId": "pv_detail_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "detail",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining"
     },
     {
       "wordItemId": "g7-a2-academic-classroom-language-different",
@@ -127,6 +171,17 @@
       "setId": "thinking-and-explaining"
     },
     {
+      "wordItemId": "g7-a2-academic-classroom-language-match",
+      "lexiconId": "pv_match_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "match",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs"
+    },
+    {
       "wordItemId": "g7-a2-academic-classroom-language-question",
       "lexiconId": "pv_question_noun",
       "status": "mapped",
@@ -149,6 +204,17 @@
       "setId": "thinking-and-explaining"
     },
     {
+      "wordItemId": "g7-a2-academic-classroom-language-reply",
+      "lexiconId": "pv_reply_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "reply",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining"
+    },
+    {
       "wordItemId": "g7-a2-academic-classroom-language-same",
       "lexiconId": "pv_same_adjective",
       "status": "mapped",
@@ -158,6 +224,17 @@
       "matchPos": "adjective",
       "topicId": "academic-classroom-language",
       "setId": "thinking-and-explaining"
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-underline",
+      "lexiconId": "pv_underline_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "underline",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs"
     },
     {
       "wordItemId": "g7-a2-daily-routines-arrive",
@@ -180,6 +257,61 @@
       "matchPos": "verb",
       "topicId": "daily-routines",
       "setId": "morning-and-evening-routines"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-chore",
+      "lexiconId": "pv_chore_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "chore",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-feed",
+      "lexiconId": "pv_feed_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "feed",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-free-time",
+      "lexiconId": "pv_free_time_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "free time",
+      "rawPos": "noun phrase",
+      "matchPos": null,
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-get-dressed",
+      "lexiconId": "pv_get_dressed_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "get dressed",
+      "rawPos": "verb phrase",
+      "matchPos": null,
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-hang-out",
+      "lexiconId": "pv_hang_out_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "hang out",
+      "rawPos": "phrasal verb",
+      "matchPos": null,
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time"
     },
     {
       "wordItemId": "g7-a2-daily-routines-hobby",
@@ -226,6 +358,39 @@
       "setId": "morning-and-evening-routines"
     },
     {
+      "wordItemId": "g7-a2-daily-routines-relax",
+      "lexiconId": "pv_relax_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "relax",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-rest",
+      "lexiconId": "pv_rest_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "rest",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-shower",
+      "lexiconId": "pv_shower_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "shower",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines"
+    },
+    {
       "wordItemId": "g7-a2-daily-routines-sleep",
       "lexiconId": "pv_sleep_verb",
       "status": "mapped",
@@ -237,6 +402,28 @@
       "setId": "morning-and-evening-routines"
     },
     {
+      "wordItemId": "g7-a2-daily-routines-sweep",
+      "lexiconId": "pv_sweep_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "sweep",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-take-out",
+      "lexiconId": "pv_take_out_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "take out",
+      "rawPos": "phrasal verb",
+      "matchPos": null,
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time"
+    },
+    {
       "wordItemId": "g7-a2-daily-routines-tidy",
       "lexiconId": "pv_tidy_verb",
       "status": "mapped",
@@ -246,6 +433,17 @@
       "matchPos": "verb",
       "topicId": "daily-routines",
       "setId": "chores-and-free-time"
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-wake-up",
+      "lexiconId": "pv_wake_up_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "wake up",
+      "rawPos": "phrasal verb",
+      "matchPos": null,
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines"
     },
     {
       "wordItemId": "g7-a2-daily-routines-wash",
@@ -347,6 +545,39 @@
       "setId": "nature-and-animals"
     },
     {
+      "wordItemId": "g7-a2-environment-ocean",
+      "lexiconId": "pv_ocean_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "ocean",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "environment",
+      "setId": "nature-and-animals"
+    },
+    {
+      "wordItemId": "g7-a2-environment-plant",
+      "lexiconId": "pv_plant_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "plant",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "environment",
+      "setId": "nature-and-animals"
+    },
+    {
+      "wordItemId": "g7-a2-environment-plastic",
+      "lexiconId": "pv_plastic_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "plastic",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling"
+    },
+    {
       "wordItemId": "g7-a2-environment-pollution",
       "lexiconId": "pv_pollution_noun",
       "status": "mapped",
@@ -358,11 +589,33 @@
       "setId": "pollution-and-recycling"
     },
     {
+      "wordItemId": "g7-a2-environment-protect",
+      "lexiconId": "pv_protect_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "protect",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling"
+    },
+    {
       "wordItemId": "g7-a2-environment-recycle",
       "lexiconId": "pv_recycle_verb",
       "status": "mapped",
       "confidence": "exact",
       "lemma": "recycle",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling"
+    },
+    {
+      "wordItemId": "g7-a2-environment-reuse",
+      "lexiconId": "pv_reuse_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "reuse",
       "rawPos": "verb",
       "matchPos": "verb",
       "topicId": "environment",
@@ -387,6 +640,28 @@
       "lemma": "save",
       "rawPos": "verb",
       "matchPos": "verb",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling"
+    },
+    {
+      "wordItemId": "g7-a2-environment-trash",
+      "lexiconId": "pv_trash_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "trash",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling"
+    },
+    {
+      "wordItemId": "g7-a2-environment-waste",
+      "lexiconId": "pv_waste_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "waste",
+      "rawPos": "noun",
+      "matchPos": "noun",
       "topicId": "environment",
       "setId": "pollution-and-recycling"
     },
@@ -446,6 +721,17 @@
       "setId": "opinions-and-preferences"
     },
     {
+      "wordItemId": "g7-a2-feelings-opinions-calm",
+      "lexiconId": "pv_calm_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "calm",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions"
+    },
+    {
       "wordItemId": "g7-a2-feelings-opinions-difficult",
       "lexiconId": "pv_difficult_adjective",
       "status": "mapped",
@@ -453,6 +739,17 @@
       "lemma": "difficult",
       "rawPos": "adjective",
       "matchPos": "adjective",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences"
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-disagree",
+      "lexiconId": "pv_disagree_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "disagree",
+      "rawPos": "verb",
+      "matchPos": "verb",
       "topicId": "feelings-opinions",
       "setId": "opinions-and-preferences"
     },
@@ -512,6 +809,17 @@
       "setId": "opinions-and-preferences"
     },
     {
+      "wordItemId": "g7-a2-feelings-opinions-opinion",
+      "lexiconId": "pv_opinion_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "opinion",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences"
+    },
+    {
       "wordItemId": "g7-a2-feelings-opinions-prefer",
       "lexiconId": "pv_prefer_verb",
       "status": "mapped",
@@ -521,6 +829,17 @@
       "matchPos": "verb",
       "topicId": "feelings-opinions",
       "setId": "opinions-and-preferences"
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-proud",
+      "lexiconId": "pv_proud_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "proud",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions"
     },
     {
       "wordItemId": "g7-a2-feelings-opinions-sad",
@@ -576,6 +895,28 @@
       "matchPos": "adjective",
       "topicId": "feelings-opinions",
       "setId": "feelings-and-reactions"
+    },
+    {
+      "wordItemId": "g7-a2-food-health-clinic",
+      "lexiconId": "pv_clinic_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "clinic",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice"
+    },
+    {
+      "wordItemId": "g7-a2-food-health-cough",
+      "lexiconId": "pv_cough_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "cough",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice"
     },
     {
       "wordItemId": "g7-a2-food-health-exercise",
@@ -699,6 +1040,17 @@
       "setId": "health-problems-and-advice"
     },
     {
+      "wordItemId": "g7-a2-food-health-snack",
+      "lexiconId": "pv_snack_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "snack",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks"
+    },
+    {
       "wordItemId": "g7-a2-food-health-soup",
       "lexiconId": "pv_soup_noun",
       "status": "mapped",
@@ -710,6 +1062,17 @@
       "setId": "healthy-food-and-drinks"
     },
     {
+      "wordItemId": "g7-a2-food-health-stomachache",
+      "lexiconId": "pv_stomachache_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "stomachache",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice"
+    },
+    {
       "wordItemId": "g7-a2-food-health-sugar",
       "lexiconId": "pv_sugar_noun",
       "status": "mapped",
@@ -719,6 +1082,17 @@
       "matchPos": "noun",
       "topicId": "food-health",
       "setId": "healthy-food-and-drinks"
+    },
+    {
+      "wordItemId": "g7-a2-food-health-take-a-break",
+      "lexiconId": "pv_take_a_break_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "take a break",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice"
     },
     {
       "wordItemId": "g7-a2-food-health-vegetable",
@@ -985,6 +1359,17 @@
       "setId": "positive-personality-traits"
     },
     {
+      "wordItemId": "g7-a2-personality-careless",
+      "lexiconId": "pv_careless_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "careless",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits"
+    },
+    {
       "wordItemId": "g7-a2-personality-confident",
       "lexiconId": "pv_confident_adjective",
       "status": "mapped",
@@ -1007,11 +1392,33 @@
       "setId": "positive-personality-traits"
     },
     {
+      "wordItemId": "g7-a2-personality-friendly",
+      "lexiconId": "pv_friendly_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "friendly",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "positive-personality-traits"
+    },
+    {
       "wordItemId": "g7-a2-personality-helpful",
       "lexiconId": "pv_helpful_adjective",
       "status": "mapped",
       "confidence": "exact",
       "lemma": "helpful",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "positive-personality-traits"
+    },
+    {
+      "wordItemId": "g7-a2-personality-honest",
+      "lexiconId": "pv_honest_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "honest",
       "rawPos": "adjective",
       "matchPos": "adjective",
       "topicId": "personality",
@@ -1051,6 +1458,28 @@
       "setId": "challenging-personality-traits"
     },
     {
+      "wordItemId": "g7-a2-personality-noisy",
+      "lexiconId": "pv_noisy_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "noisy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits"
+    },
+    {
+      "wordItemId": "g7-a2-personality-patient",
+      "lexiconId": "pv_patient_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "patient",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "positive-personality-traits"
+    },
+    {
       "wordItemId": "g7-a2-personality-polite",
       "lexiconId": "pv_polite_adjective",
       "status": "mapped",
@@ -1084,11 +1513,44 @@
       "setId": "challenging-personality-traits"
     },
     {
+      "wordItemId": "g7-a2-personality-selfish",
+      "lexiconId": "pv_selfish_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "selfish",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits"
+    },
+    {
+      "wordItemId": "g7-a2-personality-serious",
+      "lexiconId": "pv_serious_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "serious",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits"
+    },
+    {
       "wordItemId": "g7-a2-personality-shy",
       "lexiconId": "pv_shy_adjective",
       "status": "mapped",
       "confidence": "exact",
       "lemma": "shy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits"
+    },
+    {
+      "wordItemId": "g7-a2-personality-stubborn",
+      "lexiconId": "pv_stubborn_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "stubborn",
       "rawPos": "adjective",
       "matchPos": "adjective",
       "topicId": "personality",
@@ -1150,6 +1612,17 @@
       "setId": "directions-and-transport"
     },
     {
+      "wordItemId": "g7-a2-places-directions-go-straight",
+      "lexiconId": "pv_go_straight_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "go straight",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "topicId": "places-directions",
+      "setId": "directions-and-transport"
+    },
+    {
       "wordItemId": "g7-a2-places-directions-hospital",
       "lexiconId": "pv_hospital_noun",
       "status": "mapped",
@@ -1166,6 +1639,28 @@
       "status": "mapped",
       "confidence": "exact",
       "lemma": "market",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "places-directions",
+      "setId": "places-in-town"
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-motorbike",
+      "lexiconId": "pv_motorbike_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "motorbike",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport"
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-museum",
+      "lexiconId": "pv_museum_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "museum",
       "rawPos": "noun",
       "matchPos": "noun",
       "topicId": "places-directions",
@@ -1199,6 +1694,17 @@
       "status": "mapped",
       "confidence": "exact",
       "lemma": "park",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "places-directions",
+      "setId": "places-in-town"
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-pharmacy",
+      "lexiconId": "pv_pharmacy_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "pharmacy",
       "rawPos": "noun",
       "matchPos": "noun",
       "topicId": "places-directions",
@@ -1249,6 +1755,39 @@
       "setId": "directions-and-transport"
     },
     {
+      "wordItemId": "g7-a2-places-directions-turn-left",
+      "lexiconId": "pv_turn_left_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "turn left",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "topicId": "places-directions",
+      "setId": "directions-and-transport"
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-turn-right",
+      "lexiconId": "pv_turn_right_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "turn right",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "topicId": "places-directions",
+      "setId": "directions-and-transport"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-assignment",
+      "lexiconId": "pv_assignment_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "assignment",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions"
+    },
+    {
       "wordItemId": "g7-a2-school-life-classmate",
       "lexiconId": "pv_classmate_noun",
       "status": "mapped",
@@ -1260,11 +1799,55 @@
       "setId": "subjects-places-and-people"
     },
     {
+      "wordItemId": "g7-a2-school-life-deadline",
+      "lexiconId": "pv_deadline_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "deadline",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-exam",
+      "lexiconId": "pv_exam_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "exam",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-geography",
+      "lexiconId": "pv_geography_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "geography",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people"
+    },
+    {
       "wordItemId": "g7-a2-school-life-history",
       "lexiconId": "pv_history_noun",
       "status": "mapped",
       "confidence": "exact",
       "lemma": "history",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-laboratory",
+      "lexiconId": "pv_laboratory_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "laboratory",
       "rawPos": "noun",
       "matchPos": "noun",
       "topicId": "school-life",
@@ -1291,6 +1874,50 @@
       "matchPos": "noun",
       "topicId": "school-life",
       "setId": "subjects-places-and-people"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-mistake",
+      "lexiconId": "pv_mistake_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "mistake",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-principal",
+      "lexiconId": "pv_principal_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "principal",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-project",
+      "lexiconId": "pv_project_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "project",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-revise",
+      "lexiconId": "pv_revise_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "revise",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions"
     },
     {
       "wordItemId": "g7-a2-school-life-science",
@@ -1326,6 +1953,17 @@
       "setId": "subjects-places-and-people"
     },
     {
+      "wordItemId": "g7-a2-school-life-submit",
+      "lexiconId": "pv_submit_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "submit",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions"
+    },
+    {
       "wordItemId": "g7-a2-school-life-test",
       "lexiconId": "pv_test_noun",
       "status": "mapped",
@@ -1337,6 +1975,28 @@
       "setId": "homework-tests-and-actions"
     },
     {
+      "wordItemId": "g7-a2-school-life-timetable",
+      "lexiconId": "pv_timetable_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "timetable",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people"
+    },
+    {
+      "wordItemId": "g7-a2-school-life-uniform",
+      "lexiconId": "pv_uniform_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "uniform",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people"
+    },
+    {
       "wordItemId": "g7-a2-social-life-communication-activity",
       "lexiconId": "pv_activity_noun",
       "status": "mapped",
@@ -1346,6 +2006,39 @@
       "matchPos": "noun",
       "topicId": "social-life-communication",
       "setId": "friends-and-activities"
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-advice",
+      "lexiconId": "pv_advice_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "advice",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice"
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-apologize",
+      "lexiconId": "pv_apologize_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "apologize",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice"
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-argument",
+      "lexiconId": "pv_argument_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "argument",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice"
     },
     {
       "wordItemId": "g7-a2-social-life-communication-club",
@@ -1366,6 +2059,17 @@
       "lemma": "fair",
       "rawPos": "adjective",
       "matchPos": "adjective",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice"
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-forgive",
+      "lexiconId": "pv_forgive_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "forgive",
+      "rawPos": "verb",
+      "matchPos": "verb",
       "topicId": "social-life-communication",
       "setId": "problems-apologies-and-advice"
     },
@@ -1414,6 +2118,17 @@
       "setId": "problems-apologies-and-advice"
     },
     {
+      "wordItemId": "g7-a2-social-life-communication-make-plans",
+      "lexiconId": "pv_make_plans_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "make plans",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities"
+    },
+    {
       "wordItemId": "g7-a2-social-life-communication-meet",
       "lexiconId": "pv_meet_verb",
       "status": "mapped",
@@ -1443,6 +2158,17 @@
       "lemma": "problem",
       "rawPos": "noun",
       "matchPos": "noun",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice"
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-respectful",
+      "lexiconId": "pv_respectful_adjective",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "respectful",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
       "topicId": "social-life-communication",
       "setId": "problems-apologies-and-advice"
     },
@@ -1489,6 +2215,17 @@
       "matchPos": "adverb",
       "topicId": "social-life-communication",
       "setId": "friends-and-activities"
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-after-that",
+      "lexiconId": "pv_after_that_adverb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "after that",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events"
     },
     {
       "wordItemId": "g7-a2-stories-past-events-because",
@@ -1634,6 +2371,17 @@
       "setId": "story-sequence-and-events"
     },
     {
+      "wordItemId": "g7-a2-stories-past-events-solution",
+      "lexiconId": "pv_solution_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "solution",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events"
+    },
+    {
       "wordItemId": "g7-a2-stories-past-events-start",
       "lexiconId": "pv_start_verb",
       "status": "mapped",
@@ -1643,6 +2391,17 @@
       "matchPos": "verb",
       "topicId": "stories-past-events",
       "setId": "past-action-verbs"
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-suddenly",
+      "lexiconId": "pv_suddenly_adverb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "suddenly",
+      "rawPos": "adverb",
+      "matchPos": "adverb",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events"
     },
     {
       "wordItemId": "g7-a2-stories-past-events-then",
@@ -1689,6 +2448,17 @@
       "setId": "devices-apps-and-actions"
     },
     {
+      "wordItemId": "g7-a2-technology-online-life-comment",
+      "lexiconId": "pv_comment_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "comment",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety"
+    },
+    {
       "wordItemId": "g7-a2-technology-online-life-dangerous",
       "lexiconId": "pv_dangerous_adjective",
       "status": "mapped",
@@ -1700,6 +2470,17 @@
       "setId": "online-communication-and-safety"
     },
     {
+      "wordItemId": "g7-a2-technology-online-life-device",
+      "lexiconId": "pv_device_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "device",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions"
+    },
+    {
       "wordItemId": "g7-a2-technology-online-life-download",
       "lexiconId": "pv_download_verb",
       "status": "mapped",
@@ -1707,6 +2488,17 @@
       "lemma": "download",
       "rawPos": "verb",
       "matchPos": "verb",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions"
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-keyboard",
+      "lexiconId": "pv_keyboard_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "keyboard",
+      "rawPos": "noun",
+      "matchPos": "noun",
       "topicId": "technology-online-life",
       "setId": "devices-apps-and-actions"
     },
@@ -1777,6 +2569,17 @@
       "setId": "online-communication-and-safety"
     },
     {
+      "wordItemId": "g7-a2-technology-online-life-report",
+      "lexiconId": "pv_report_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "report",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety"
+    },
+    {
       "wordItemId": "g7-a2-technology-online-life-safe",
       "lexiconId": "pv_safe_adjective",
       "status": "mapped",
@@ -1788,6 +2591,28 @@
       "setId": "online-communication-and-safety"
     },
     {
+      "wordItemId": "g7-a2-technology-online-life-screen",
+      "lexiconId": "pv_screen_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "screen",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions"
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-search",
+      "lexiconId": "pv_search_verb",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "search",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions"
+    },
+    {
       "wordItemId": "g7-a2-technology-online-life-share",
       "lexiconId": "pv_share_verb",
       "status": "mapped",
@@ -1797,6 +2622,17 @@
       "matchPos": "verb",
       "topicId": "technology-online-life",
       "setId": "online-communication-and-safety"
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-tablet",
+      "lexiconId": "pv_tablet_noun",
+      "status": "mapped",
+      "confidence": "exact",
+      "lemma": "tablet",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions"
     },
     {
       "wordItemId": "g7-a2-technology-online-life-upload",
@@ -1821,940 +2657,6 @@
       "setId": "devices-apps-and-actions"
     }
   ],
-  "reviewQueue": [
-    {
-      "wordItemId": "g7-a2-academic-classroom-language-circle",
-      "status": "pos_conflict",
-      "lemma": "circle",
-      "word": "circle",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "academic-classroom-language",
-      "setId": "task-instruction-verbs",
-      "candidateLexiconIds": [
-        "pv_circle_noun"
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
-    },
-    {
-      "wordItemId": "g7-a2-academic-classroom-language-complete",
-      "status": "pos_conflict",
-      "lemma": "complete",
-      "word": "complete",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "academic-classroom-language",
-      "setId": "task-instruction-verbs",
-      "candidateLexiconIds": [
-        "pv_complete_adjective"
-      ],
-      "note": "Lemma exists in Primary as adjective, not verb."
-    },
-    {
-      "wordItemId": "g7-a2-academic-classroom-language-correct",
-      "status": "pos_conflict",
-      "lemma": "correct",
-      "word": "correct",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "academic-classroom-language",
-      "setId": "task-instruction-verbs",
-      "candidateLexiconIds": [
-        "pv_correct_adjective"
-      ],
-      "note": "Lemma exists in Primary as adjective, not verb."
-    },
-    {
-      "wordItemId": "g7-a2-academic-classroom-language-match",
-      "status": "pos_conflict",
-      "lemma": "match",
-      "word": "match",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "academic-classroom-language",
-      "setId": "task-instruction-verbs",
-      "candidateLexiconIds": [
-        "pv_match_noun"
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
-    },
-    {
-      "wordItemId": "g7-a2-academic-classroom-language-underline",
-      "status": "pos_conflict",
-      "lemma": "underline",
-      "word": "underline",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "academic-classroom-language",
-      "setId": "task-instruction-verbs",
-      "candidateLexiconIds": [
-        "pv_underline_noun"
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-feed",
-      "status": "pos_conflict",
-      "lemma": "feed",
-      "word": "feed",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "daily-routines",
-      "setId": "chores-and-free-time",
-      "candidateLexiconIds": [
-        "pv_feed_noun"
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-shower",
-      "status": "pos_conflict",
-      "lemma": "shower",
-      "word": "shower",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "daily-routines",
-      "setId": "morning-and-evening-routines",
-      "candidateLexiconIds": [
-        "pv_shower_noun"
-      ],
-      "note": "Lemma exists in Primary as noun, not verb."
-    },
-    {
-      "wordItemId": "g7-a2-environment-plastic",
-      "status": "pos_conflict",
-      "lemma": "plastic",
-      "word": "plastic",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "environment",
-      "setId": "pollution-and-recycling",
-      "candidateLexiconIds": [
-        "pv_plastic_adjective"
-      ],
-      "note": "Lemma exists in Primary as adjective, not noun."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-principal",
-      "status": "pos_conflict",
-      "lemma": "principal",
-      "word": "principal",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "subjects-places-and-people",
-      "candidateLexiconIds": [
-        "pv_principal_adjective"
-      ],
-      "note": "Lemma exists in Primary as adjective, not noun."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-uniform",
-      "status": "pos_conflict",
-      "lemma": "uniform",
-      "word": "uniform",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "subjects-places-and-people",
-      "candidateLexiconIds": [
-        "pv_uniform_adjective"
-      ],
-      "note": "Lemma exists in Primary as adjective, not noun."
-    }
-  ],
-  "unmapped": [
-    {
-      "wordItemId": "g7-a2-academic-classroom-language-detail",
-      "status": "secondary_only",
-      "lemma": "detail",
-      "word": "detail",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "academic-classroom-language",
-      "setId": "thinking-and-explaining",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-academic-classroom-language-reply",
-      "status": "secondary_only",
-      "lemma": "reply",
-      "word": "reply",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "academic-classroom-language",
-      "setId": "thinking-and-explaining",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-chore",
-      "status": "secondary_only",
-      "lemma": "chore",
-      "word": "chore",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "daily-routines",
-      "setId": "chores-and-free-time",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-free-time",
-      "status": "secondary_only",
-      "lemma": "free time",
-      "word": "free time",
-      "rawPos": "noun phrase",
-      "matchPos": null,
-      "topicId": "daily-routines",
-      "setId": "chores-and-free-time",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-get-dressed",
-      "status": "secondary_only",
-      "lemma": "get dressed",
-      "word": "get dressed",
-      "rawPos": "verb phrase",
-      "matchPos": null,
-      "topicId": "daily-routines",
-      "setId": "morning-and-evening-routines",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-hang-out",
-      "status": "secondary_only",
-      "lemma": "hang out",
-      "word": "hang out",
-      "rawPos": "phrasal verb",
-      "matchPos": null,
-      "topicId": "daily-routines",
-      "setId": "chores-and-free-time",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-relax",
-      "status": "secondary_only",
-      "lemma": "relax",
-      "word": "relax",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "daily-routines",
-      "setId": "morning-and-evening-routines",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-rest",
-      "status": "secondary_only",
-      "lemma": "rest",
-      "word": "rest",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "daily-routines",
-      "setId": "chores-and-free-time",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-sweep",
-      "status": "secondary_only",
-      "lemma": "sweep",
-      "word": "sweep",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "daily-routines",
-      "setId": "chores-and-free-time",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-take-out",
-      "status": "secondary_only",
-      "lemma": "take out",
-      "word": "take out",
-      "rawPos": "phrasal verb",
-      "matchPos": null,
-      "topicId": "daily-routines",
-      "setId": "chores-and-free-time",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-daily-routines-wake-up",
-      "status": "secondary_only",
-      "lemma": "wake up",
-      "word": "wake up",
-      "rawPos": "phrasal verb",
-      "matchPos": null,
-      "topicId": "daily-routines",
-      "setId": "morning-and-evening-routines",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-environment-ocean",
-      "status": "secondary_only",
-      "lemma": "ocean",
-      "word": "ocean",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "environment",
-      "setId": "nature-and-animals",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-environment-plant",
-      "status": "secondary_only",
-      "lemma": "plant",
-      "word": "plant",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "environment",
-      "setId": "nature-and-animals",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-environment-protect",
-      "status": "secondary_only",
-      "lemma": "protect",
-      "word": "protect",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "environment",
-      "setId": "pollution-and-recycling",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-environment-reuse",
-      "status": "secondary_only",
-      "lemma": "reuse",
-      "word": "reuse",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "environment",
-      "setId": "pollution-and-recycling",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-environment-trash",
-      "status": "secondary_only",
-      "lemma": "trash",
-      "word": "trash",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "environment",
-      "setId": "pollution-and-recycling",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-environment-waste",
-      "status": "secondary_only",
-      "lemma": "waste",
-      "word": "waste",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "environment",
-      "setId": "pollution-and-recycling",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-feelings-opinions-calm",
-      "status": "secondary_only",
-      "lemma": "calm",
-      "word": "calm",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "feelings-opinions",
-      "setId": "feelings-and-reactions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-feelings-opinions-disagree",
-      "status": "secondary_only",
-      "lemma": "disagree",
-      "word": "disagree",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "feelings-opinions",
-      "setId": "opinions-and-preferences",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-feelings-opinions-opinion",
-      "status": "secondary_only",
-      "lemma": "opinion",
-      "word": "opinion",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "feelings-opinions",
-      "setId": "opinions-and-preferences",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-feelings-opinions-proud",
-      "status": "secondary_only",
-      "lemma": "proud",
-      "word": "proud",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "feelings-opinions",
-      "setId": "feelings-and-reactions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-food-health-clinic",
-      "status": "secondary_only",
-      "lemma": "clinic",
-      "word": "clinic",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "food-health",
-      "setId": "health-problems-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-food-health-cough",
-      "status": "secondary_only",
-      "lemma": "cough",
-      "word": "cough",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "food-health",
-      "setId": "health-problems-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-food-health-snack",
-      "status": "secondary_only",
-      "lemma": "snack",
-      "word": "snack",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "food-health",
-      "setId": "healthy-food-and-drinks",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-food-health-stomachache",
-      "status": "secondary_only",
-      "lemma": "stomachache",
-      "word": "stomachache",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "food-health",
-      "setId": "health-problems-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-food-health-take-a-break",
-      "status": "secondary_only",
-      "lemma": "take a break",
-      "word": "take a break",
-      "rawPos": "phrase",
-      "matchPos": null,
-      "topicId": "food-health",
-      "setId": "health-problems-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-careless",
-      "status": "secondary_only",
-      "lemma": "careless",
-      "word": "careless",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "challenging-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-friendly",
-      "status": "secondary_only",
-      "lemma": "friendly",
-      "word": "friendly",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "positive-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-honest",
-      "status": "secondary_only",
-      "lemma": "honest",
-      "word": "honest",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "positive-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-noisy",
-      "status": "secondary_only",
-      "lemma": "noisy",
-      "word": "noisy",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "challenging-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-patient",
-      "status": "secondary_only",
-      "lemma": "patient",
-      "word": "patient",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "positive-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-selfish",
-      "status": "secondary_only",
-      "lemma": "selfish",
-      "word": "selfish",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "challenging-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-serious",
-      "status": "secondary_only",
-      "lemma": "serious",
-      "word": "serious",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "challenging-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-personality-stubborn",
-      "status": "secondary_only",
-      "lemma": "stubborn",
-      "word": "stubborn",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "personality",
-      "setId": "challenging-personality-traits",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-places-directions-go-straight",
-      "status": "secondary_only",
-      "lemma": "go straight",
-      "word": "go straight",
-      "rawPos": "phrase",
-      "matchPos": null,
-      "topicId": "places-directions",
-      "setId": "directions-and-transport",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-places-directions-motorbike",
-      "status": "secondary_only",
-      "lemma": "motorbike",
-      "word": "motorbike",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "places-directions",
-      "setId": "directions-and-transport",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-places-directions-museum",
-      "status": "secondary_only",
-      "lemma": "museum",
-      "word": "museum",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "places-directions",
-      "setId": "places-in-town",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-places-directions-pharmacy",
-      "status": "secondary_only",
-      "lemma": "pharmacy",
-      "word": "pharmacy",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "places-directions",
-      "setId": "places-in-town",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-places-directions-turn-left",
-      "status": "secondary_only",
-      "lemma": "turn left",
-      "word": "turn left",
-      "rawPos": "phrase",
-      "matchPos": null,
-      "topicId": "places-directions",
-      "setId": "directions-and-transport",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-places-directions-turn-right",
-      "status": "secondary_only",
-      "lemma": "turn right",
-      "word": "turn right",
-      "rawPos": "phrase",
-      "matchPos": null,
-      "topicId": "places-directions",
-      "setId": "directions-and-transport",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-assignment",
-      "status": "secondary_only",
-      "lemma": "assignment",
-      "word": "assignment",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "homework-tests-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-deadline",
-      "status": "secondary_only",
-      "lemma": "deadline",
-      "word": "deadline",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "homework-tests-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-exam",
-      "status": "secondary_only",
-      "lemma": "exam",
-      "word": "exam",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "homework-tests-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-geography",
-      "status": "secondary_only",
-      "lemma": "geography",
-      "word": "geography",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "subjects-places-and-people",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-laboratory",
-      "status": "secondary_only",
-      "lemma": "laboratory",
-      "word": "laboratory",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "subjects-places-and-people",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-mistake",
-      "status": "secondary_only",
-      "lemma": "mistake",
-      "word": "mistake",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "homework-tests-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-project",
-      "status": "secondary_only",
-      "lemma": "project",
-      "word": "project",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "homework-tests-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-revise",
-      "status": "secondary_only",
-      "lemma": "revise",
-      "word": "revise",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "school-life",
-      "setId": "homework-tests-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-submit",
-      "status": "secondary_only",
-      "lemma": "submit",
-      "word": "submit",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "school-life",
-      "setId": "homework-tests-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-school-life-timetable",
-      "status": "secondary_only",
-      "lemma": "timetable",
-      "word": "timetable",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "school-life",
-      "setId": "subjects-places-and-people",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-social-life-communication-advice",
-      "status": "secondary_only",
-      "lemma": "advice",
-      "word": "advice",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "social-life-communication",
-      "setId": "problems-apologies-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-social-life-communication-apologize",
-      "status": "secondary_only",
-      "lemma": "apologize",
-      "word": "apologize",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "social-life-communication",
-      "setId": "problems-apologies-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-social-life-communication-argument",
-      "status": "secondary_only",
-      "lemma": "argument",
-      "word": "argument",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "social-life-communication",
-      "setId": "problems-apologies-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-social-life-communication-forgive",
-      "status": "secondary_only",
-      "lemma": "forgive",
-      "word": "forgive",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "social-life-communication",
-      "setId": "problems-apologies-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-social-life-communication-make-plans",
-      "status": "secondary_only",
-      "lemma": "make plans",
-      "word": "make plans",
-      "rawPos": "phrase",
-      "matchPos": null,
-      "topicId": "social-life-communication",
-      "setId": "friends-and-activities",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-social-life-communication-respectful",
-      "status": "secondary_only",
-      "lemma": "respectful",
-      "word": "respectful",
-      "rawPos": "adjective",
-      "matchPos": "adjective",
-      "topicId": "social-life-communication",
-      "setId": "problems-apologies-and-advice",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-stories-past-events-after-that",
-      "status": "secondary_only",
-      "lemma": "after that",
-      "word": "after that",
-      "rawPos": "phrase",
-      "matchPos": null,
-      "topicId": "stories-past-events",
-      "setId": "story-sequence-and-events",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-stories-past-events-solution",
-      "status": "secondary_only",
-      "lemma": "solution",
-      "word": "solution",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "stories-past-events",
-      "setId": "story-sequence-and-events",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-stories-past-events-suddenly",
-      "status": "secondary_only",
-      "lemma": "suddenly",
-      "word": "suddenly",
-      "rawPos": "adverb",
-      "matchPos": "adverb",
-      "topicId": "stories-past-events",
-      "setId": "story-sequence-and-events",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-technology-online-life-comment",
-      "status": "secondary_only",
-      "lemma": "comment",
-      "word": "comment",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "technology-online-life",
-      "setId": "online-communication-and-safety",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-technology-online-life-device",
-      "status": "secondary_only",
-      "lemma": "device",
-      "word": "device",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "technology-online-life",
-      "setId": "devices-apps-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-technology-online-life-keyboard",
-      "status": "secondary_only",
-      "lemma": "keyboard",
-      "word": "keyboard",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "technology-online-life",
-      "setId": "devices-apps-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-technology-online-life-report",
-      "status": "secondary_only",
-      "lemma": "report",
-      "word": "report",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "technology-online-life",
-      "setId": "online-communication-and-safety",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-technology-online-life-screen",
-      "status": "secondary_only",
-      "lemma": "screen",
-      "word": "screen",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "technology-online-life",
-      "setId": "devices-apps-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-technology-online-life-search",
-      "status": "secondary_only",
-      "lemma": "search",
-      "word": "search",
-      "rawPos": "verb",
-      "matchPos": "verb",
-      "topicId": "technology-online-life",
-      "setId": "devices-apps-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    },
-    {
-      "wordItemId": "g7-a2-technology-online-life-tablet",
-      "status": "secondary_only",
-      "lemma": "tablet",
-      "word": "tablet",
-      "rawPos": "noun",
-      "matchPos": "noun",
-      "topicId": "technology-online-life",
-      "setId": "devices-apps-and-actions",
-      "candidateLexiconIds": [],
-      "note": "No Primary candidate with this normalized lemma/surface."
-    }
-  ]
+  "reviewQueue": [],
+  "unmapped": []
 }

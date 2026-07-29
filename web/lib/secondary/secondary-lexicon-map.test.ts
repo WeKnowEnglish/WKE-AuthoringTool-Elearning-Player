@@ -11,14 +11,14 @@ import { buildSecondaryToPrimaryLexiconMapDataset } from "@/lib/secondary/second
 import type { SecondaryLexiconMapAuditReport } from "@/lib/secondary/secondary-to-primary-lexicon-audit";
 
 describe("secondary-lexicon-map (generated dataset)", () => {
-  it("exposes exact maps and review buckets", () => {
+  it("exposes full exact coverage after Secondary gap fill", () => {
     const counts = getSecondaryLexiconMapCounts();
     expect(counts.total).toBe(240);
-    expect(counts.mapped).toBe(164);
-    expect(counts.pos_conflict).toBe(10);
-    expect(counts.secondary_only).toBe(66);
-    expect(listSecondaryLexiconReviewQueue()).toHaveLength(10);
-    expect(listSecondaryLexiconUnmapped()).toHaveLength(66);
+    expect(counts.mapped).toBe(240);
+    expect(counts.pos_conflict).toBe(0);
+    expect(counts.secondary_only).toBe(0);
+    expect(listSecondaryLexiconReviewQueue()).toHaveLength(0);
+    expect(listSecondaryLexiconUnmapped()).toHaveLength(0);
   });
 
   it("resolves known school-life subject → pv_subject_noun", () => {
@@ -28,8 +28,15 @@ describe("secondary-lexicon-map (generated dataset)", () => {
     );
   });
 
-  it("returns null for unmapped / unknown ids", () => {
-    expect(getSecondaryLexiconId("g7-a2-school-life-geography")).toBeNull();
+  it("resolves former gaps (geography, principal noun, circle verb)", () => {
+    expect(getSecondaryLexiconId("g7-a2-school-life-geography")).toBe("pv_geography_noun");
+    expect(getSecondaryLexiconId("g7-a2-school-life-principal")).toBe("pv_principal_noun");
+    expect(getSecondaryLexiconId("g7-a2-academic-classroom-language-circle")).toBe(
+      "pv_circle_verb",
+    );
+  });
+
+  it("returns null for unknown ids", () => {
     expect(getSecondaryLexiconId("not-a-real-id")).toBeNull();
   });
 
@@ -37,10 +44,6 @@ describe("secondary-lexicon-map (generated dataset)", () => {
     const mapped = secondaryEvidenceWordKey("g7-a2-school-life-subject");
     expect(mapped.lexiconId).toBe("pv_subject_noun");
     expect(mapped.preferredKey).toBe("pv_subject_noun");
-
-    const unmapped = secondaryEvidenceWordKey("g7-a2-school-life-geography");
-    expect(unmapped.lexiconId).toBeNull();
-    expect(unmapped.preferredKey).toBe("g7-a2-school-life-geography");
   });
 });
 

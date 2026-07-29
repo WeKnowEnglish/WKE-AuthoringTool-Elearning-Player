@@ -14,4 +14,10 @@ Regenerate after Secondary pack or Primary search-index changes:
 npm run generate:secondary-primary-lexicon-map
 ```
 
+To add Secondary gaps into the Primary candidate bank (then regenerate the map):
+
+```bash
+npm run add:secondary-lexicon-gaps
+```
+
 Do not hand-edit mapped rows in bulk — change the matcher or approve review items, then regenerate.

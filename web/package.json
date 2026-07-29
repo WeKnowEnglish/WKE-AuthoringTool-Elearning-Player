@@ -37,6 +37,7 @@
     "report:secondary-cloze": "tsx scripts/report-secondary-cloze-coverage.ts",
     "audit:secondary-primary-lexicon": "tsx scripts/audit-secondary-primary-lexicon-map.ts",
     "generate:secondary-primary-lexicon-map": "tsx scripts/generate-secondary-primary-lexicon-map.ts",
+    "add:secondary-lexicon-gaps": "node scripts/add-secondary-lexicon-gaps-to-dictionary.mjs",
     "prepare:landing-mascots": "tsx scripts/prepare-landing-mascots.ts",
     "build:primary-vocab-search-index": "node scripts/build-primary-vocabulary-search-index.mjs"
   },

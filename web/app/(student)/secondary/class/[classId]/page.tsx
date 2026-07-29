@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { StudentClassroomView } from "@/components/classroom/StudentClassroomView";
+import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
 import { getStudentClassMembership } from "@/lib/data/student-classes";
 import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
 import { listPublishedClassMaterialsForStudentClass } from "@/lib/data/class-lessons";
@@ -38,10 +39,23 @@ export default async function SecondaryClassroomPage({ params }: Props) {
     notFound();
   }
 
-  const posts = await listClassPostsForStudentClass(classId);
-  const materials = await listPublishedClassMaterialsForStudentClass(classId);
-  const schedule = await getClassScheduleForStudentClass(classId);
-  const liveSession = await getActiveLiveSessionForStudentClass(classId);
+  const [posts, materials, schedule, liveSession, assignedHomework] =
+    await Promise.all([
+      listClassPostsForStudentClass(classId),
+      listPublishedClassMaterialsForStudentClass(classId),
+      getClassScheduleForStudentClass(classId),
+      getActiveLiveSessionForStudentClass(classId),
+      listAssignedHomeworkForStudent(),
+    ]);
+
+  const recentHomework = assignedHomework
+    .filter((item) => item.classId === classId)
+    .sort((a, b) => {
+      const aTime = a.assignedAt ?? "";
+      const bTime = b.assignedAt ?? "";
+      if (aTime !== bTime) return bTime.localeCompare(aTime);
+      return b.id.localeCompare(a.id);
+    });
 
   return (
     <StudentClassroomView
@@ -50,9 +64,12 @@ export default async function SecondaryClassroomPage({ params }: Props) {
       materials={materials}
       schedule={schedule}
       liveSession={liveSession}
+      recentHomework={recentHomework}
+      homeworkBasePath="/secondary"
       homeHref="/secondary"
       homeLabel="Back to Home"
       tone="secondary"
+      tabSettings={membership.studentTabs}
     />
   );
 }

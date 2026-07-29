@@ -66,6 +66,8 @@ function ActivityCard({
               ? "Generate from a list, edit questions, save to Activity Bank."
             : card.lpPath === "/hotspots"
               ? "Author here, save to Activity Bank, use in the track compiler."
+              : card.lpPath === "/library"
+                ? "Browse curated templates, then copy into your private bank."
               : "Authoring lives in Lesson Player."}
         </p>
       ) : null}

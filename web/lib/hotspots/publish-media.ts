@@ -54,7 +54,11 @@ export async function publishLocalHotspotMedia(
         ...(asset.alt?.trim() ? { alt: asset.alt.trim(), word: asset.alt.trim() } : {}),
       },
     });
-    assets[i] = { ...asset, src: uploaded.public_url };
+    assets[i] = {
+      ...asset,
+      src: uploaded.public_url,
+      ...(uploaded.media_asset_id ? { mediaAssetId: uploaded.media_asset_id } : {}),
+    };
   }
   return { ...document, assets };
 }

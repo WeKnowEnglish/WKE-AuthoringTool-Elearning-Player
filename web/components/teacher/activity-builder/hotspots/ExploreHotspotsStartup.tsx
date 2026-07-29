@@ -161,8 +161,15 @@ export function ExploreHotspotsStartup({
               WKE Library
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-stone-600">
-              Curated example activities you can open, preview, and remix. Save your own copy
-              to Activity Bank when you are ready.
+              Curated example activities you can open here, or copy into My Activity Bank from
+              the full{" "}
+              <Link
+                href="/teacher/activity-builder/library"
+                className="font-semibold text-sky-900 underline underline-offset-2"
+              >
+                WKE Library
+              </Link>
+              .
             </p>
             <ul className="mt-4 space-y-3">
               {EXPLORE_HOTSPOTS_WKE_LIBRARY.map((example) => (

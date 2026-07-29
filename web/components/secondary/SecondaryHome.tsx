@@ -99,6 +99,7 @@ export function SecondaryHome({
         items={assignedHomework}
         tone="secondary"
         homeworkPathPrefix="/secondary/homework"
+        joinHref="/join-class"
       />
 
       {activeClass ? (

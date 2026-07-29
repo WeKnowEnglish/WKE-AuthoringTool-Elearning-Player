@@ -672,6 +672,29 @@ export async function listTeacherMedia(kind: MediaKind = "image"): Promise<Media
   return rows;
 }
 
+/** Batch-load teacher media rows by id (for resolving stored mediaAssetId → public_url). */
+export async function getTeacherMediaByIds(ids: string[]): Promise<MediaAssetRow[]> {
+  const unique = [
+    ...new Set(
+      ids
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0),
+    ),
+  ];
+  if (unique.length === 0) return [];
+
+  const { supabase } = await requireTeacher();
+  const { data, error } = await supabase
+    .from("media_assets")
+    .select(
+      "id,storage_path,public_url,original_filename,content_type,uploaded_by,created_at,sha256_hash,phash,meta_categories,meta_tags,meta_alternative_names,meta_plural,meta_countability,meta_level,meta_word_type,meta_skills,meta_past_tense,meta_notes,meta_item_name",
+    )
+    .in("id", unique);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MediaAssetRow[];
+}
+
 type UpdateTeacherMediaMetadataInput = {
   id: string;
   itemName?: string | null;

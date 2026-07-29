@@ -12,6 +12,9 @@ export type TeacherClassRow = {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
+  student_tab_schedule_enabled: boolean;
+  student_tab_noticeboard_enabled: boolean;
+  student_tab_materials_enabled: boolean;
 };
 
 export type ClassEnrollmentRow = {
@@ -56,7 +59,7 @@ export const listTeacherClasses = cache(async function listTeacherClasses(): Pro
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  const rows = (classes ?? []) as TeacherClassRow[];
+  const rows = ((classes ?? []) as TeacherClassRow[]).map(normalizeTeacherClassRow);
   if (!rows.length) return [];
 
   const classIds = rows.map((row) => row.id);
@@ -91,7 +94,16 @@ export async function getTeacherClass(classId: string): Promise<TeacherClassRow 
     .maybeSingle();
 
   if (error) throw error;
-  return (data as TeacherClassRow | null) ?? null;
+  return data ? normalizeTeacherClassRow(data as TeacherClassRow) : null;
+}
+
+function normalizeTeacherClassRow(row: TeacherClassRow): TeacherClassRow {
+  return {
+    ...row,
+    student_tab_schedule_enabled: Boolean(row.student_tab_schedule_enabled),
+    student_tab_noticeboard_enabled: Boolean(row.student_tab_noticeboard_enabled),
+    student_tab_materials_enabled: Boolean(row.student_tab_materials_enabled),
+  };
 }
 
 export async function getClassRoster(classId: string): Promise<ClassRosterStudent[]> {

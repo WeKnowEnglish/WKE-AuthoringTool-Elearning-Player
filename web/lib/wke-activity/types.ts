@@ -14,6 +14,12 @@ export type WkeAsset = {
   mimeType?: string;
   intrinsicSize?: { width: number; height: number };
   alt?: string;
+  /**
+   * Optional teacher `media_assets.id` when this asset came from (or was
+   * published into) the shared media library. Document-local `id` stays the
+   * authoring graph key; this is the durable library identity.
+   */
+  mediaAssetId?: string;
 };
 
 export type WkeHotspotVisualShape = {
@@ -88,6 +94,8 @@ export type WkeObjectAction =
       id: string;
       type: "play_audio";
       audioUrl: string;
+      /** Teacher `media_assets.id` when the clip was picked/uploaded from the library. */
+      mediaAssetId?: string;
       label?: string;
       wait?: boolean;
       timing?: WkeActionStartTiming;
@@ -273,6 +281,8 @@ export type WkeDialogueTurn = {
   speakText?: string;
   /** Recorded clip URL; preferred over TTS when set. */
   audioUrl?: string;
+  /** Teacher `media_assets.id` when the clip came from the library. */
+  mediaAssetId?: string;
 };
 
 export type WkeDialogue = {

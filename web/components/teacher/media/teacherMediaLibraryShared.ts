@@ -38,9 +38,12 @@ export type TeacherMediaFolderPreview = TeacherMediaFolderDef & {
 
 export type TeacherMediaLibraryView = "home" | "folder";
 
+export type TeacherMediaLibraryPresentation = "modal" | "embedded";
+
 export type TeacherMediaLibraryState = {
   open: boolean;
   ownerId: string | null;
+  presentation: TeacherMediaLibraryPresentation;
   /** Kind of the field that opened the picker (image/audio/video). */
   fieldKind: MediaKind;
   lexiconId: string | null;
@@ -76,6 +79,7 @@ let folderRequestSeq = 0;
 let sharedLibraryState: TeacherMediaLibraryState = {
   open: false,
   ownerId: null,
+  presentation: "modal",
   fieldKind: "image",
   lexiconId: null,
   view: "home",
@@ -273,11 +277,13 @@ export function openTeacherMediaLibrary(
   onSelect: (url: string, detail?: MediaUrlChangeDetail) => void,
   _queryHint?: string,
   lexiconId?: string,
+  presentation: TeacherMediaLibraryPresentation = "modal",
 ) {
   const linkedId = lexiconId?.trim() || null;
   setTeacherMediaLibraryState({
     open: true,
     ownerId,
+    presentation,
     fieldKind: kind,
     lexiconId: linkedId,
     view: "home",
@@ -310,6 +316,7 @@ export function closeTeacherMediaLibrary() {
   setTeacherMediaLibraryState({
     open: false,
     ownerId: null,
+    presentation: "modal",
     view: "home",
     folderId: null,
     onSelect: null,
@@ -454,7 +461,20 @@ export function selectTeacherMediaLibraryAsset(url: string, asset?: MediaAssetRo
     sharedLibraryRecentByKind.set(sharedLibraryState.fieldKind, next);
   }
   sharedLibraryState.onSelect?.(url, hit ? { mediaAssetId: hit.id } : undefined);
-  closeTeacherMediaLibrary();
+  // Embedded panel stays open so teachers can keep browsing; modal closes.
+  if (sharedLibraryState.presentation === "modal") {
+    closeTeacherMediaLibrary();
+  }
+}
+
+export function setTeacherMediaLibraryFieldKind(kind: MediaKind) {
+  setTeacherMediaLibraryState({ fieldKind: kind });
+}
+
+export function setTeacherMediaLibraryOnSelect(
+  onSelect: ((url: string, detail?: MediaUrlChangeDetail) => void) | null,
+) {
+  setTeacherMediaLibraryState({ onSelect });
 }
 
 export function getTeacherMediaLibraryRecent(kind: MediaKind): MediaAssetRow[] {

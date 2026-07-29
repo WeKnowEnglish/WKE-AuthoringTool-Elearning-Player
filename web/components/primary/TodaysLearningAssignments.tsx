@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { BookOpen, ClipboardList, Play } from "lucide-react";
+import { ClipboardList, Play, Users } from "lucide-react";
+import { StudentHomeGreeting } from "@/components/primary/StudentHomeGreeting";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS } from "@/lib/class-homework/types";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
 
@@ -10,6 +13,10 @@ type Props = {
   items: StudentHomeworkCard[];
   tone?: "primary" | "secondary";
   homeworkPathPrefix?: string;
+  /** Opens join-class flow when the student is not enrolled. */
+  onJoinClass?: () => void;
+  /** Fallback join link when `onJoinClass` is not provided. */
+  joinHref?: string;
 };
 
 function toneClasses(tone: "primary" | "secondary") {
@@ -76,6 +83,8 @@ export function TodaysLearningAssignments({
   items,
   tone = "primary",
   homeworkPathPrefix = "/primary/homework",
+  onJoinClass,
+  joinHref = "/join-class",
 }: Props) {
   const ui = toneClasses(tone);
   const openItems = sortOpenAssignments(items);
@@ -87,20 +96,29 @@ export function TodaysLearningAssignments({
       <p className={ui.label}>Today&apos;s Learning</p>
 
       {!enrolled ? (
-        <div className="mt-4 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-          <div className={ui.iconWrap} aria-hidden>
-            <BookOpen className="h-10 w-10" strokeWidth={1.5} />
+        <div className="mt-4 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
+          <div className="flex min-w-0 flex-col items-center gap-4 sm:flex-row sm:items-start">
+            <div className={ui.iconWrap} aria-hidden>
+              <Users className="h-10 w-10" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0">
+              <h1 id="todays-learning-heading" className={ui.heading}>
+                Join Class
+              </h1>
+              <p className={`mt-2 ${ui.muted}`}>
+                Enter your teacher&apos;s class code to get assignments and class updates.
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 id="todays-learning-heading" className={ui.heading}>
-              {tone === "secondary" ? "Join your class" : "Self-study coming soon"}
-            </h1>
-            <p className={`mt-2 ${ui.muted}`}>
-              {tone === "secondary"
-                ? "Enter your teacher's class code to get assignments from class."
-                : "Join a class to get assignments from your teacher. Self-study units will be ready here later."}
-            </p>
-          </div>
+          {onJoinClass ? (
+            <button type="button" onClick={onJoinClass} className={ui.cta}>
+              Join Class
+            </button>
+          ) : (
+            <Link href={joinHref} className={ui.cta}>
+              Join Class
+            </Link>
+          )}
         </div>
       ) : openItems.length === 0 ? (
         <div className="mt-4 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
@@ -108,11 +126,9 @@ export function TodaysLearningAssignments({
             <ClipboardList className="h-10 w-10" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <h1 id="todays-learning-heading" className={ui.heading}>
-              No assignments right now
-            </h1>
+            <StudentHomeGreeting id="todays-learning-heading" className={ui.heading} />
             <p className={`mt-2 ${ui.muted}`}>
-              When your teacher sends work, it will show up here.
+              No assignments right now. When your teacher sends work, it will show up here.
             </p>
           </div>
         </div>
@@ -120,9 +136,7 @@ export function TodaysLearningAssignments({
         <div className="mt-4 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <h1 id="todays-learning-heading" className={ui.heading}>
-                Your assignments
-              </h1>
+              <StudentHomeGreeting id="todays-learning-heading" className={ui.heading} />
               <p className={`mt-1 ${ui.muted}`}>
                 {openItems.length === 1
                   ? "1 assignment from your teacher"

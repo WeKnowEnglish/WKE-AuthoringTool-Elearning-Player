@@ -1,0 +1,5470 @@
+{
+  "generatedAt": "2026-07-29T22:39:35.022Z",
+  "secondaryPackId": "g7-a2-complete-core-vocab-v1-2",
+  "secondaryPackVersion": "1.2.0",
+  "secondaryItemCount": 240,
+  "primaryEntryCount": 2142,
+  "counts": {
+    "exact": 164,
+    "ambiguous_same_pos": 0,
+    "pos_conflict": 10,
+    "secondary_only": 66
+  },
+  "percents": {
+    "exact": 68.3,
+    "ambiguous_same_pos": 0,
+    "pos_conflict": 4.2,
+    "secondary_only": 27.5
+  },
+  "exactPrimaryIdCount": 164,
+  "byTopic": [
+    {
+      "topicId": "school-life",
+      "total": 20,
+      "exact": 8,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 2,
+      "secondary_only": 10
+    },
+    {
+      "topicId": "daily-routines",
+      "total": 20,
+      "exact": 9,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 2,
+      "secondary_only": 9
+    },
+    {
+      "topicId": "personality",
+      "total": 20,
+      "exact": 12,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 8
+    },
+    {
+      "topicId": "feelings-opinions",
+      "total": 20,
+      "exact": 16,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 4
+    },
+    {
+      "topicId": "food-health",
+      "total": 20,
+      "exact": 15,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 5
+    },
+    {
+      "topicId": "places-directions",
+      "total": 20,
+      "exact": 14,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 6
+    },
+    {
+      "topicId": "technology-online-life",
+      "total": 20,
+      "exact": 13,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 7
+    },
+    {
+      "topicId": "environment",
+      "total": 20,
+      "exact": 13,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 1,
+      "secondary_only": 6
+    },
+    {
+      "topicId": "stories-past-events",
+      "total": 20,
+      "exact": 17,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 3
+    },
+    {
+      "topicId": "future-plans-jobs",
+      "total": 20,
+      "exact": 20,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 0
+    },
+    {
+      "topicId": "social-life-communication",
+      "total": 20,
+      "exact": 14,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 0,
+      "secondary_only": 6
+    },
+    {
+      "topicId": "academic-classroom-language",
+      "total": 20,
+      "exact": 13,
+      "ambiguous_same_pos": 0,
+      "pos_conflict": 5,
+      "secondary_only": 2
+    }
+  ],
+  "rows": [
+    {
+      "wordItemId": "g7-a2-school-life-subject",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "subject",
+      "lemma": "subject",
+      "normalizedLemma": "subject",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_subject_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_subject_noun",
+          "lemma": "subject",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "school_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-science",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "science",
+      "lemma": "science",
+      "normalizedLemma": "science",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_science_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_science_noun",
+          "lemma": "science",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "school_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-history",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "history",
+      "lemma": "history",
+      "normalizedLemma": "history",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_history_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_history_noun",
+          "lemma": "history",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-geography",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "geography",
+      "lemma": "geography",
+      "normalizedLemma": "geography",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-library",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "library",
+      "lemma": "library",
+      "normalizedLemma": "library",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_library_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_library_noun",
+          "lemma": "library",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-laboratory",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "laboratory",
+      "lemma": "laboratory",
+      "normalizedLemma": "laboratory",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-classmate",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "classmate",
+      "lemma": "classmate",
+      "normalizedLemma": "classmate",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_classmate_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_classmate_noun",
+          "lemma": "classmate",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "school_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-principal",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "principal",
+      "lemma": "principal",
+      "normalizedLemma": "principal",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_principal_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_principal_adjective",
+          "lemma": "principal",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ],
+      "note": "Lemma exists in Primary as adjective, not noun."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-timetable",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "timetable",
+      "lemma": "timetable",
+      "normalizedLemma": "timetable",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-uniform",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "subjects-places-and-people",
+      "word": "uniform",
+      "lemma": "uniform",
+      "normalizedLemma": "uniform",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_uniform_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_uniform_adjective",
+          "lemma": "uniform",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ],
+      "note": "Lemma exists in Primary as adjective, not noun."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-assignment",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "assignment",
+      "lemma": "assignment",
+      "normalizedLemma": "assignment",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-project",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "project",
+      "lemma": "project",
+      "normalizedLemma": "project",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-test",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "test",
+      "lemma": "test",
+      "normalizedLemma": "test",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_test_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_test_noun",
+          "lemma": "test",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-exam",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "exam",
+      "lemma": "exam",
+      "normalizedLemma": "exam",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-score",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "score",
+      "lemma": "score",
+      "normalizedLemma": "score",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_score_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_score_noun",
+          "lemma": "score",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "platform_navigation"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-mistake",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "mistake",
+      "lemma": "mistake",
+      "normalizedLemma": "mistake",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-revise",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "revise",
+      "lemma": "revise",
+      "normalizedLemma": "revise",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-submit",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "submit",
+      "lemma": "submit",
+      "normalizedLemma": "submit",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-school-life-lesson",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "lesson",
+      "lemma": "lesson",
+      "normalizedLemma": "lesson",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_lesson_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_lesson_noun",
+          "lemma": "lesson",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "school_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-school-life-deadline",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "school-life",
+      "setId": "homework-tests-and-actions",
+      "word": "deadline",
+      "lemma": "deadline",
+      "normalizedLemma": "deadline",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-wake-up",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "wake up",
+      "lemma": "wake up",
+      "normalizedLemma": "wake up",
+      "rawPos": "phrasal verb",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-get-dressed",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "get dressed",
+      "lemma": "get dressed",
+      "normalizedLemma": "get dressed",
+      "rawPos": "verb phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-brush",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "brush",
+      "lemma": "brush",
+      "normalizedLemma": "brush",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_brush_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_brush_verb",
+          "lemma": "brush",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-pack",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "pack",
+      "lemma": "pack",
+      "normalizedLemma": "pack",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_pack_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_pack_verb",
+          "lemma": "pack",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-leave",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "leave",
+      "lemma": "leave",
+      "normalizedLemma": "leave",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_leave_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_leave_verb",
+          "lemma": "leave",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-arrive",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "arrive",
+      "lemma": "arrive",
+      "normalizedLemma": "arrive",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_arrive_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_arrive_verb",
+          "lemma": "arrive",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-relax",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "relax",
+      "lemma": "relax",
+      "normalizedLemma": "relax",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-shower",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "shower",
+      "lemma": "shower",
+      "normalizedLemma": "shower",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_shower_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_shower_noun",
+          "lemma": "shower",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "home_objects"
+        }
+      ],
+      "note": "Lemma exists in Primary as noun, not verb."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-sleep",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "sleep",
+      "lemma": "sleep",
+      "normalizedLemma": "sleep",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_sleep_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_sleep_verb",
+          "lemma": "sleep",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-prepare",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "morning-and-evening-routines",
+      "word": "prepare",
+      "lemma": "prepare",
+      "normalizedLemma": "prepare",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_prepare_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_prepare_verb",
+          "lemma": "prepare",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-chore",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "chore",
+      "lemma": "chore",
+      "normalizedLemma": "chore",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-tidy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "tidy",
+      "lemma": "tidy",
+      "normalizedLemma": "tidy",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_tidy_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_tidy_verb",
+          "lemma": "tidy",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-wash",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "wash",
+      "lemma": "wash",
+      "normalizedLemma": "wash",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_wash_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_wash_verb",
+          "lemma": "wash",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-feed",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "feed",
+      "lemma": "feed",
+      "normalizedLemma": "feed",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_feed_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_feed_noun",
+          "lemma": "feed",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "food_drink"
+        }
+      ],
+      "note": "Lemma exists in Primary as noun, not verb."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-sweep",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "sweep",
+      "lemma": "sweep",
+      "normalizedLemma": "sweep",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-take-out",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "take out",
+      "lemma": "take out",
+      "normalizedLemma": "take out",
+      "rawPos": "phrasal verb",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-hang-out",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "hang out",
+      "lemma": "hang out",
+      "normalizedLemma": "hang out",
+      "rawPos": "phrasal verb",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-rest",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "rest",
+      "lemma": "rest",
+      "normalizedLemma": "rest",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-free-time",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "free time",
+      "lemma": "free time",
+      "normalizedLemma": "free time",
+      "rawPos": "noun phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-daily-routines-hobby",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "daily-routines",
+      "setId": "chores-and-free-time",
+      "word": "hobby",
+      "lemma": "hobby",
+      "normalizedLemma": "hobby",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_hobby_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_hobby_noun",
+          "lemma": "hobby",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-friendly",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "friendly",
+      "lemma": "friendly",
+      "normalizedLemma": "friendly",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-personality-kind",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "kind",
+      "lemma": "kind",
+      "normalizedLemma": "kind",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_kind_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_kind_adjective",
+          "lemma": "kind",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-helpful",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "helpful",
+      "lemma": "helpful",
+      "normalizedLemma": "helpful",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_helpful_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_helpful_adjective",
+          "lemma": "helpful",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-polite",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "polite",
+      "lemma": "polite",
+      "normalizedLemma": "polite",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_polite_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_polite_adjective",
+          "lemma": "polite",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-careful",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "careful",
+      "lemma": "careful",
+      "normalizedLemma": "careful",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_careful_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_careful_adjective",
+          "lemma": "careful",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-creative",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "creative",
+      "lemma": "creative",
+      "normalizedLemma": "creative",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_creative_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_creative_adjective",
+          "lemma": "creative",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-confident",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "confident",
+      "lemma": "confident",
+      "normalizedLemma": "confident",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_confident_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_confident_adjective",
+          "lemma": "confident",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-honest",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "honest",
+      "lemma": "honest",
+      "normalizedLemma": "honest",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-personality-brave",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "brave",
+      "lemma": "brave",
+      "normalizedLemma": "brave",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_brave_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_brave_adjective",
+          "lemma": "brave",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-patient",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "positive-personality-traits",
+      "word": "patient",
+      "lemma": "patient",
+      "normalizedLemma": "patient",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-personality-shy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "shy",
+      "lemma": "shy",
+      "normalizedLemma": "shy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_shy_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_shy_adjective",
+          "lemma": "shy",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-lazy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "lazy",
+      "lemma": "lazy",
+      "normalizedLemma": "lazy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_lazy_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_lazy_adjective",
+          "lemma": "lazy",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-rude",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "rude",
+      "lemma": "rude",
+      "normalizedLemma": "rude",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_rude_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_rude_adjective",
+          "lemma": "rude",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-careless",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "careless",
+      "lemma": "careless",
+      "normalizedLemma": "careless",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-personality-noisy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "noisy",
+      "lemma": "noisy",
+      "normalizedLemma": "noisy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-personality-quiet",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "quiet",
+      "lemma": "quiet",
+      "normalizedLemma": "quiet",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_quiet_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_quiet_adjective",
+          "lemma": "quiet",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-selfish",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "selfish",
+      "lemma": "selfish",
+      "normalizedLemma": "selfish",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-personality-nervous",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "nervous",
+      "lemma": "nervous",
+      "normalizedLemma": "nervous",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_nervous_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_nervous_adjective",
+          "lemma": "nervous",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-personality-serious",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "serious",
+      "lemma": "serious",
+      "normalizedLemma": "serious",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-personality-stubborn",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "personality",
+      "setId": "challenging-personality-traits",
+      "word": "stubborn",
+      "lemma": "stubborn",
+      "normalizedLemma": "stubborn",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-happy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "happy",
+      "lemma": "happy",
+      "normalizedLemma": "happy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_happy_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_happy_adjective",
+          "lemma": "happy",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-sad",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "sad",
+      "lemma": "sad",
+      "normalizedLemma": "sad",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_sad_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_sad_adjective",
+          "lemma": "sad",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-angry",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "angry",
+      "lemma": "angry",
+      "normalizedLemma": "angry",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_angry_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_angry_adjective",
+          "lemma": "angry",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-worried",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "worried",
+      "lemma": "worried",
+      "normalizedLemma": "worried",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_worried_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_worried_adjective",
+          "lemma": "worried",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-excited",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "excited",
+      "lemma": "excited",
+      "normalizedLemma": "excited",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_excited_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_excited_adjective",
+          "lemma": "excited",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-bored",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "bored",
+      "lemma": "bored",
+      "normalizedLemma": "bored",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_bored_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_bored_adjective",
+          "lemma": "bored",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-tired",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "tired",
+      "lemma": "tired",
+      "normalizedLemma": "tired",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_tired_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_tired_adjective",
+          "lemma": "tired",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-surprised",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "surprised",
+      "lemma": "surprised",
+      "normalizedLemma": "surprised",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_surprised_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_surprised_adjective",
+          "lemma": "surprised",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-proud",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "proud",
+      "lemma": "proud",
+      "normalizedLemma": "proud",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-calm",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "feelings-and-reactions",
+      "word": "calm",
+      "lemma": "calm",
+      "normalizedLemma": "calm",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-opinion",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "opinion",
+      "lemma": "opinion",
+      "normalizedLemma": "opinion",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-prefer",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "prefer",
+      "lemma": "prefer",
+      "normalizedLemma": "prefer",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_prefer_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_prefer_verb",
+          "lemma": "prefer",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-agree",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "agree",
+      "lemma": "agree",
+      "normalizedLemma": "agree",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_agree_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_agree_verb",
+          "lemma": "agree",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-disagree",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "disagree",
+      "lemma": "disagree",
+      "normalizedLemma": "disagree",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-favorite",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "favorite",
+      "lemma": "favorite",
+      "normalizedLemma": "favorite",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_favorite_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_favorite_adjective",
+          "lemma": "favorite",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-interesting",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "interesting",
+      "lemma": "interesting",
+      "normalizedLemma": "interesting",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_interesting_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_interesting_adjective",
+          "lemma": "interesting",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-boring",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "boring",
+      "lemma": "boring",
+      "normalizedLemma": "boring",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_boring_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_boring_adjective",
+          "lemma": "boring",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-useful",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "useful",
+      "lemma": "useful",
+      "normalizedLemma": "useful",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_useful_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_useful_adjective",
+          "lemma": "useful",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-difficult",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "difficult",
+      "lemma": "difficult",
+      "normalizedLemma": "difficult",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_difficult_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_difficult_adjective",
+          "lemma": "difficult",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-feelings-opinions-easy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "feelings-opinions",
+      "setId": "opinions-and-preferences",
+      "word": "easy",
+      "lemma": "easy",
+      "normalizedLemma": "easy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_easy_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_easy_adjective",
+          "lemma": "easy",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-meal",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "meal",
+      "lemma": "meal",
+      "normalizedLemma": "meal",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_meal_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_meal_noun",
+          "lemma": "meal",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-vegetable",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "vegetable",
+      "lemma": "vegetable",
+      "normalizedLemma": "vegetable",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_vegetable_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_vegetable_noun",
+          "lemma": "vegetable",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-fruit",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "fruit",
+      "lemma": "fruit",
+      "normalizedLemma": "fruit",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_fruit_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_fruit_noun",
+          "lemma": "fruit",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-rice",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "rice",
+      "lemma": "rice",
+      "normalizedLemma": "rice",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_rice_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_rice_noun",
+          "lemma": "rice",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-meat",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "meat",
+      "lemma": "meat",
+      "normalizedLemma": "meat",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_meat_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_meat_noun",
+          "lemma": "meat",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-soup",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "soup",
+      "lemma": "soup",
+      "normalizedLemma": "soup",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_soup_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_soup_noun",
+          "lemma": "soup",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-snack",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "snack",
+      "lemma": "snack",
+      "normalizedLemma": "snack",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-food-health-sugar",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "sugar",
+      "lemma": "sugar",
+      "normalizedLemma": "sugar",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_sugar_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_sugar_noun",
+          "lemma": "sugar",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-water",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "water",
+      "lemma": "water",
+      "normalizedLemma": "water",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_water_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_water_noun",
+          "lemma": "water",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "food_drink"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-healthy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "healthy-food-and-drinks",
+      "word": "healthy",
+      "lemma": "healthy",
+      "normalizedLemma": "healthy",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_healthy_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_healthy_adjective",
+          "lemma": "healthy",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-headache",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "headache",
+      "lemma": "headache",
+      "normalizedLemma": "headache",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_headache_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_headache_noun",
+          "lemma": "headache",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "travel_transport"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-stomachache",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "stomachache",
+      "lemma": "stomachache",
+      "normalizedLemma": "stomachache",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-food-health-fever",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "fever",
+      "lemma": "fever",
+      "normalizedLemma": "fever",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_fever_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_fever_noun",
+          "lemma": "fever",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "travel_transport"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-cough",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "cough",
+      "lemma": "cough",
+      "normalizedLemma": "cough",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-food-health-sick",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "sick",
+      "lemma": "sick",
+      "normalizedLemma": "sick",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_sick_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_sick_adjective",
+          "lemma": "sick",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-medicine",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "medicine",
+      "lemma": "medicine",
+      "normalizedLemma": "medicine",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_medicine_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_medicine_noun",
+          "lemma": "medicine",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "travel_transport"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-exercise",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "exercise",
+      "lemma": "exercise",
+      "normalizedLemma": "exercise",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_exercise_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_exercise_noun",
+          "lemma": "exercise",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-food-health-take-a-break",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "take a break",
+      "lemma": "take a break",
+      "normalizedLemma": "take a break",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-food-health-clinic",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "clinic",
+      "lemma": "clinic",
+      "normalizedLemma": "clinic",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-food-health-habit",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "food-health",
+      "setId": "health-problems-and-advice",
+      "word": "habit",
+      "lemma": "habit",
+      "normalizedLemma": "habit",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_habit_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_habit_noun",
+          "lemma": "habit",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "personal_information"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-market",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "market",
+      "lemma": "market",
+      "normalizedLemma": "market",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_market_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_market_noun",
+          "lemma": "market",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "shopping_money"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-supermarket",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "supermarket",
+      "lemma": "supermarket",
+      "normalizedLemma": "supermarket",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_supermarket_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_supermarket_noun",
+          "lemma": "supermarket",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-restaurant",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "restaurant",
+      "lemma": "restaurant",
+      "normalizedLemma": "restaurant",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_restaurant_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_restaurant_noun",
+          "lemma": "restaurant",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-cinema",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "cinema",
+      "lemma": "cinema",
+      "normalizedLemma": "cinema",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_cinema_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_cinema_noun",
+          "lemma": "cinema",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-museum",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "museum",
+      "lemma": "museum",
+      "normalizedLemma": "museum",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-hospital",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "hospital",
+      "lemma": "hospital",
+      "normalizedLemma": "hospital",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_hospital_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_hospital_noun",
+          "lemma": "hospital",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-station",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "station",
+      "lemma": "station",
+      "normalizedLemma": "station",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_station_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_station_noun",
+          "lemma": "station",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-park",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "park",
+      "lemma": "park",
+      "normalizedLemma": "park",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_park_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_park_noun",
+          "lemma": "park",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-bank",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "bank",
+      "lemma": "bank",
+      "normalizedLemma": "bank",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_bank_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_bank_noun",
+          "lemma": "bank",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-pharmacy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "places-in-town",
+      "word": "pharmacy",
+      "lemma": "pharmacy",
+      "normalizedLemma": "pharmacy",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-turn-left",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "turn left",
+      "lemma": "turn left",
+      "normalizedLemma": "turn left",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-turn-right",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "turn right",
+      "lemma": "turn right",
+      "normalizedLemma": "turn right",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-go-straight",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "go straight",
+      "lemma": "go straight",
+      "normalizedLemma": "go straight",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-cross",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "cross",
+      "lemma": "cross",
+      "normalizedLemma": "cross",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_cross_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_cross_verb",
+          "lemma": "cross",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-near",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "near",
+      "lemma": "near",
+      "normalizedLemma": "near",
+      "rawPos": "preposition",
+      "matchPos": "preposition",
+      "status": "exact",
+      "primaryIds": [
+        "pv_near_preposition"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_near_preposition",
+          "lemma": "near",
+          "pos": "preposition",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-opposite",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "opposite",
+      "lemma": "opposite",
+      "normalizedLemma": "opposite",
+      "rawPos": "preposition",
+      "matchPos": "preposition",
+      "status": "exact",
+      "primaryIds": [
+        "pv_opposite_preposition"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_opposite_preposition",
+          "lemma": "opposite",
+          "pos": "preposition",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-between",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "between",
+      "lemma": "between",
+      "normalizedLemma": "between",
+      "rawPos": "preposition",
+      "matchPos": "preposition",
+      "status": "exact",
+      "primaryIds": [
+        "pv_between_preposition"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_between_preposition",
+          "lemma": "between",
+          "pos": "preposition",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-bus",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "bus",
+      "lemma": "bus",
+      "normalizedLemma": "bus",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_bus_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_bus_noun",
+          "lemma": "bus",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "travel_transport"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-motorbike",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "motorbike",
+      "lemma": "motorbike",
+      "normalizedLemma": "motorbike",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-places-directions-traffic",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "places-directions",
+      "setId": "directions-and-transport",
+      "word": "traffic",
+      "lemma": "traffic",
+      "normalizedLemma": "traffic",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_traffic_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_traffic_noun",
+          "lemma": "traffic",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-device",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "device",
+      "lemma": "device",
+      "normalizedLemma": "device",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-laptop",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "laptop",
+      "lemma": "laptop",
+      "normalizedLemma": "laptop",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_laptop_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_laptop_noun",
+          "lemma": "laptop",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-tablet",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "tablet",
+      "lemma": "tablet",
+      "normalizedLemma": "tablet",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-screen",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "screen",
+      "lemma": "screen",
+      "normalizedLemma": "screen",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-keyboard",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "keyboard",
+      "lemma": "keyboard",
+      "normalizedLemma": "keyboard",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-app",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "app",
+      "lemma": "app",
+      "normalizedLemma": "app",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_app_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_app_noun",
+          "lemma": "app",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-website",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "website",
+      "lemma": "website",
+      "normalizedLemma": "website",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_website_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_website_noun",
+          "lemma": "website",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "digital_media"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-download",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "download",
+      "lemma": "download",
+      "normalizedLemma": "download",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_download_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_download_verb",
+          "lemma": "download",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-upload",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "upload",
+      "lemma": "upload",
+      "normalizedLemma": "upload",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_upload_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_upload_verb",
+          "lemma": "upload",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "digital_media"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-search",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "devices-apps-and-actions",
+      "word": "search",
+      "lemma": "search",
+      "normalizedLemma": "search",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-message",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "message",
+      "lemma": "message",
+      "normalizedLemma": "message",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_message_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_message_noun",
+          "lemma": "message",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "digital_media"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-post",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "post",
+      "lemma": "post",
+      "normalizedLemma": "post",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_post_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_post_noun",
+          "lemma": "post",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-comment",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "comment",
+      "lemma": "comment",
+      "normalizedLemma": "comment",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-password",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "password",
+      "lemma": "password",
+      "normalizedLemma": "password",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_password_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_password_noun",
+          "lemma": "password",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "digital_safety"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-private",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "private",
+      "lemma": "private",
+      "normalizedLemma": "private",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_private_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_private_adjective",
+          "lemma": "private",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-safe",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "safe",
+      "lemma": "safe",
+      "normalizedLemma": "safe",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_safe_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_safe_adjective",
+          "lemma": "safe",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-dangerous",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "dangerous",
+      "lemma": "dangerous",
+      "normalizedLemma": "dangerous",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_dangerous_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_dangerous_adjective",
+          "lemma": "dangerous",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-online",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "online",
+      "lemma": "online",
+      "normalizedLemma": "online",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_online_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_online_adjective",
+          "lemma": "online",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-share",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "share",
+      "lemma": "share",
+      "normalizedLemma": "share",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_share_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_share_verb",
+          "lemma": "share",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-technology-online-life-report",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "technology-online-life",
+      "setId": "online-communication-and-safety",
+      "word": "report",
+      "lemma": "report",
+      "normalizedLemma": "report",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-environment-forest",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "forest",
+      "lemma": "forest",
+      "normalizedLemma": "forest",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_forest_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_forest_noun",
+          "lemma": "forest",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "home_environment"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-river",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "river",
+      "lemma": "river",
+      "normalizedLemma": "river",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_river_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_river_noun",
+          "lemma": "river",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-ocean",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "ocean",
+      "lemma": "ocean",
+      "normalizedLemma": "ocean",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-environment-mountain",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "mountain",
+      "lemma": "mountain",
+      "normalizedLemma": "mountain",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_mountain_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_mountain_noun",
+          "lemma": "mountain",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "world_places"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-island",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "island",
+      "lemma": "island",
+      "normalizedLemma": "island",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_island_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_island_noun",
+          "lemma": "island",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "world_places"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-animal",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "animal",
+      "lemma": "animal",
+      "normalizedLemma": "animal",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_animal_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_animal_noun",
+          "lemma": "animal",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-plant",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "plant",
+      "lemma": "plant",
+      "normalizedLemma": "plant",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-environment-habitat",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "habitat",
+      "lemma": "habitat",
+      "normalizedLemma": "habitat",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_habitat_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_habitat_noun",
+          "lemma": "habitat",
+          "pos": "noun",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "animals_nature"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-wild",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "wild",
+      "lemma": "wild",
+      "normalizedLemma": "wild",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_wild_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_wild_adjective",
+          "lemma": "wild",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-nature",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "nature-and-animals",
+      "word": "nature",
+      "lemma": "nature",
+      "normalizedLemma": "nature",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_nature_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_nature_noun",
+          "lemma": "nature",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "animals_nature"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-pollution",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "pollution",
+      "lemma": "pollution",
+      "normalizedLemma": "pollution",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_pollution_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_pollution_noun",
+          "lemma": "pollution",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "global_citizenship"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-trash",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "trash",
+      "lemma": "trash",
+      "normalizedLemma": "trash",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-environment-plastic",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "plastic",
+      "lemma": "plastic",
+      "normalizedLemma": "plastic",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_plastic_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_plastic_adjective",
+          "lemma": "plastic",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ],
+      "note": "Lemma exists in Primary as adjective, not noun."
+    },
+    {
+      "wordItemId": "g7-a2-environment-recycle",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "recycle",
+      "lemma": "recycle",
+      "normalizedLemma": "recycle",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_recycle_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_recycle_verb",
+          "lemma": "recycle",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "environment_sustainability"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-reuse",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "reuse",
+      "lemma": "reuse",
+      "normalizedLemma": "reuse",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-environment-save",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "save",
+      "lemma": "save",
+      "normalizedLemma": "save",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_save_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_save_verb",
+          "lemma": "save",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-clean",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "clean",
+      "lemma": "clean",
+      "normalizedLemma": "clean",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_clean_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_clean_adjective",
+          "lemma": "clean",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-dirty",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "dirty",
+      "lemma": "dirty",
+      "normalizedLemma": "dirty",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_dirty_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_dirty_adjective",
+          "lemma": "dirty",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-environment-protect",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "protect",
+      "lemma": "protect",
+      "normalizedLemma": "protect",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-environment-waste",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "environment",
+      "setId": "pollution-and-recycling",
+      "word": "waste",
+      "lemma": "waste",
+      "normalizedLemma": "waste",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-visit",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "visited",
+      "lemma": "visit",
+      "normalizedLemma": "visit",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_visit_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_visit_verb",
+          "lemma": "visit",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-watch",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "watched",
+      "lemma": "watch",
+      "normalizedLemma": "watch",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_watch_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_watch_verb",
+          "lemma": "watch",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-play",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "played",
+      "lemma": "play",
+      "normalizedLemma": "play",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_play_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_play_verb",
+          "lemma": "play",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-help",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "helped",
+      "lemma": "help",
+      "normalizedLemma": "help",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_help_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_help_verb",
+          "lemma": "help",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-start",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "started",
+      "lemma": "start",
+      "normalizedLemma": "start",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_start_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_start_verb",
+          "lemma": "start",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-finish",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "finished",
+      "lemma": "finish",
+      "normalizedLemma": "finish",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_finish_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_finish_verb",
+          "lemma": "finish",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-find",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "found",
+      "lemma": "find",
+      "normalizedLemma": "find",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_find_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_find_verb",
+          "lemma": "find",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-lose",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "lost",
+      "lemma": "lose",
+      "normalizedLemma": "lose",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_lose_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_lose_verb",
+          "lemma": "lose",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-buy",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "bought",
+      "lemma": "buy",
+      "normalizedLemma": "buy",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_buy_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_buy_verb",
+          "lemma": "buy",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-make",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "past-action-verbs",
+      "word": "made",
+      "lemma": "make",
+      "normalizedLemma": "make",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_make_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_make_verb",
+          "lemma": "make",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-first",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "first",
+      "lemma": "first",
+      "normalizedLemma": "first",
+      "rawPos": "adverb",
+      "matchPos": "adverb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_first_adverb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_first_adverb",
+          "lemma": "first",
+          "pos": "adverb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-then",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "then",
+      "lemma": "then",
+      "normalizedLemma": "then",
+      "rawPos": "adverb",
+      "matchPos": "adverb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_then_adverb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_then_adverb",
+          "lemma": "then",
+          "pos": "adverb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-next",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "next",
+      "lemma": "next",
+      "normalizedLemma": "next",
+      "rawPos": "adverb",
+      "matchPos": "adverb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_next_adverb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_next_adverb",
+          "lemma": "next",
+          "pos": "adverb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-after-that",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "after that",
+      "lemma": "after that",
+      "normalizedLemma": "after that",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-finally",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "finally",
+      "lemma": "finally",
+      "normalizedLemma": "finally",
+      "rawPos": "adverb",
+      "matchPos": "adverb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_finally_adverb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_finally_adverb",
+          "lemma": "finally",
+          "pos": "adverb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-suddenly",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "suddenly",
+      "lemma": "suddenly",
+      "normalizedLemma": "suddenly",
+      "rawPos": "adverb",
+      "matchPos": "adverb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-because",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "because",
+      "lemma": "because",
+      "normalizedLemma": "because",
+      "rawPos": "conjunction",
+      "matchPos": "conjunction",
+      "status": "exact",
+      "primaryIds": [
+        "pv_because_conjunction"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_because_conjunction",
+          "lemma": "because",
+          "pos": "conjunction",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-so",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "so",
+      "lemma": "so",
+      "normalizedLemma": "so",
+      "rawPos": "conjunction",
+      "matchPos": "conjunction",
+      "status": "exact",
+      "primaryIds": [
+        "pv_so_conjunction"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_so_conjunction",
+          "lemma": "so",
+          "pos": "conjunction",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-event",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "event",
+      "lemma": "event",
+      "normalizedLemma": "event",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_event_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_event_noun",
+          "lemma": "event",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-stories-past-events-solution",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "stories-past-events",
+      "setId": "story-sequence-and-events",
+      "word": "solution",
+      "lemma": "solution",
+      "normalizedLemma": "solution",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-doctor",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "doctor",
+      "lemma": "doctor",
+      "normalizedLemma": "doctor",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_doctor_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_doctor_noun",
+          "lemma": "doctor",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "jobs_community"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-nurse",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "nurse",
+      "lemma": "nurse",
+      "normalizedLemma": "nurse",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_nurse_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_nurse_noun",
+          "lemma": "nurse",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "jobs_community"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-engineer",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "engineer",
+      "lemma": "engineer",
+      "normalizedLemma": "engineer",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_engineer_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_engineer_noun",
+          "lemma": "engineer",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "jobs_community"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-artist",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "artist",
+      "lemma": "artist",
+      "normalizedLemma": "artist",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_artist_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_artist_noun",
+          "lemma": "artist",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "jobs_community"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-teacher",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "teacher",
+      "lemma": "teacher",
+      "normalizedLemma": "teacher",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_teacher_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_teacher_noun",
+          "lemma": "teacher",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "school_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-chef",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "chef",
+      "lemma": "chef",
+      "normalizedLemma": "chef",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_chef_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_chef_noun",
+          "lemma": "chef",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "jobs_community"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-farmer",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "farmer",
+      "lemma": "farmer",
+      "normalizedLemma": "farmer",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_farmer_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_farmer_noun",
+          "lemma": "farmer",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "jobs_community"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-pilot",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "pilot",
+      "lemma": "pilot",
+      "normalizedLemma": "pilot",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_pilot_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_pilot_noun",
+          "lemma": "pilot",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "jobs_community"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-office",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "office",
+      "lemma": "office",
+      "normalizedLemma": "office",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_office_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_office_noun",
+          "lemma": "office",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-factory",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "jobs-and-workplaces",
+      "word": "factory",
+      "lemma": "factory",
+      "normalizedLemma": "factory",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_factory_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_factory_noun",
+          "lemma": "factory",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "town_services"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-skill",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "skill",
+      "lemma": "skill",
+      "normalizedLemma": "skill",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_skill_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_skill_noun",
+          "lemma": "skill",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-goal",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "goal",
+      "lemma": "goal",
+      "normalizedLemma": "goal",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_goal_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_goal_noun",
+          "lemma": "goal",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-plan",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "plan",
+      "lemma": "plan",
+      "normalizedLemma": "plan",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_plan_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_plan_noun",
+          "lemma": "plan",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "holidays_celebrations"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-future",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "future",
+      "lemma": "future",
+      "normalizedLemma": "future",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_future_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_future_noun",
+          "lemma": "future",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-dream",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "dream",
+      "lemma": "dream",
+      "normalizedLemma": "dream",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_dream_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_dream_noun",
+          "lemma": "dream",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-practice",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "practice",
+      "lemma": "practice",
+      "normalizedLemma": "practice",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_practice_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_practice_verb",
+          "lemma": "practice",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-improve",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "improve",
+      "lemma": "improve",
+      "normalizedLemma": "improve",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_improve_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_improve_verb",
+          "lemma": "improve",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-learn",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "learn",
+      "lemma": "learn",
+      "normalizedLemma": "learn",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_learn_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_learn_verb",
+          "lemma": "learn",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-decide",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "decide",
+      "lemma": "decide",
+      "normalizedLemma": "decide",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_decide_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_decide_verb",
+          "lemma": "decide",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-future-plans-jobs-become",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "future-plans-jobs",
+      "setId": "skills-goals-and-plans",
+      "word": "become",
+      "lemma": "become",
+      "normalizedLemma": "become",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_become_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_become_verb",
+          "lemma": "become",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-friend",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "friend",
+      "lemma": "friend",
+      "normalizedLemma": "friend",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_friend_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_friend_noun",
+          "lemma": "friend",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "personal_information"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-team",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "team",
+      "lemma": "team",
+      "normalizedLemma": "team",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_team_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_team_noun",
+          "lemma": "team",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-club",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "club",
+      "lemma": "club",
+      "normalizedLemma": "club",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_club_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_club_noun",
+          "lemma": "club",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-party",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "party",
+      "lemma": "party",
+      "normalizedLemma": "party",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_party_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_party_noun",
+          "lemma": "party",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-invite",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "invite",
+      "lemma": "invite",
+      "normalizedLemma": "invite",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_invite_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_invite_verb",
+          "lemma": "invite",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-join",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "join",
+      "lemma": "join",
+      "normalizedLemma": "join",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_join_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_join_verb",
+          "lemma": "join",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-meet",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "meet",
+      "lemma": "meet",
+      "normalizedLemma": "meet",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_meet_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_meet_verb",
+          "lemma": "meet",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-make-plans",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "make plans",
+      "lemma": "make plans",
+      "normalizedLemma": "make plans",
+      "rawPos": "phrase",
+      "matchPos": null,
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-together",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "together",
+      "lemma": "together",
+      "normalizedLemma": "together",
+      "rawPos": "adverb",
+      "matchPos": "adverb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_together_adverb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_together_adverb",
+          "lemma": "together",
+          "pos": "adverb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-activity",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "friends-and-activities",
+      "word": "activity",
+      "lemma": "activity",
+      "normalizedLemma": "activity",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_activity_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_activity_noun",
+          "lemma": "activity",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-problem",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "problem",
+      "lemma": "problem",
+      "normalizedLemma": "problem",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_problem_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_problem_noun",
+          "lemma": "problem",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "social_communication"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-argument",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "argument",
+      "lemma": "argument",
+      "normalizedLemma": "argument",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-sorry",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "sorry",
+      "lemma": "sorry",
+      "normalizedLemma": "sorry",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_sorry_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_sorry_adjective",
+          "lemma": "sorry",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-apologize",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "apologize",
+      "lemma": "apologize",
+      "normalizedLemma": "apologize",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-forgive",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "forgive",
+      "lemma": "forgive",
+      "normalizedLemma": "forgive",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-advice",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "advice",
+      "lemma": "advice",
+      "normalizedLemma": "advice",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-listen",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "listen",
+      "lemma": "listen",
+      "normalizedLemma": "listen",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_listen_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_listen_verb",
+          "lemma": "listen",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-talk",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "talk",
+      "lemma": "talk",
+      "normalizedLemma": "talk",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_talk_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_talk_verb",
+          "lemma": "talk",
+          "pos": "verb",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-respectful",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "respectful",
+      "lemma": "respectful",
+      "normalizedLemma": "respectful",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-social-life-communication-fair",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "social-life-communication",
+      "setId": "problems-apologies-and-advice",
+      "word": "fair",
+      "lemma": "fair",
+      "normalizedLemma": "fair",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_fair_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_fair_adjective",
+          "lemma": "fair",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-choose",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "choose",
+      "lemma": "choose",
+      "normalizedLemma": "choose",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_choose_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_choose_verb",
+          "lemma": "choose",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-match",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "match",
+      "lemma": "match",
+      "normalizedLemma": "match",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_match_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_match_noun",
+          "lemma": "match",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "hobbies_free_time"
+        }
+      ],
+      "note": "Lemma exists in Primary as noun, not verb."
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-complete",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "complete",
+      "lemma": "complete",
+      "normalizedLemma": "complete",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_complete_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_complete_adjective",
+          "lemma": "complete",
+          "pos": "adjective",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ],
+      "note": "Lemma exists in Primary as adjective, not verb."
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-circle",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "circle",
+      "lemma": "circle",
+      "normalizedLemma": "circle",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_circle_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_circle_noun",
+          "lemma": "circle",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ],
+      "note": "Lemma exists in Primary as noun, not verb."
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-underline",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "underline",
+      "lemma": "underline",
+      "normalizedLemma": "underline",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_underline_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_underline_noun",
+          "lemma": "underline",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_1",
+          "primaryTopic": "general_language"
+        }
+      ],
+      "note": "Lemma exists in Primary as noun, not verb."
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-correct",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "correct",
+      "lemma": "correct",
+      "normalizedLemma": "correct",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "pos_conflict",
+      "primaryIds": [
+        "pv_correct_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_correct_adjective",
+          "lemma": "correct",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ],
+      "note": "Lemma exists in Primary as adjective, not verb."
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-describe",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "describe",
+      "lemma": "describe",
+      "normalizedLemma": "describe",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_describe_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_describe_verb",
+          "lemma": "describe",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-compare",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "compare",
+      "lemma": "compare",
+      "normalizedLemma": "compare",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_compare_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_compare_verb",
+          "lemma": "compare",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-explain",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "explain",
+      "lemma": "explain",
+      "normalizedLemma": "explain",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_explain_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_explain_verb",
+          "lemma": "explain",
+          "pos": "verb",
+          "cefrBandCandidate": "A2",
+          "primaryStageCandidate": "A2_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-answer",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "task-instruction-verbs",
+      "word": "answer",
+      "lemma": "answer",
+      "normalizedLemma": "answer",
+      "rawPos": "verb",
+      "matchPos": "verb",
+      "status": "exact",
+      "primaryIds": [
+        "pv_answer_verb"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_answer_verb",
+          "lemma": "answer",
+          "pos": "verb",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-reason",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "reason",
+      "lemma": "reason",
+      "normalizedLemma": "reason",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_reason_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_reason_noun",
+          "lemma": "reason",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-example",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "example",
+      "lemma": "example",
+      "normalizedLemma": "example",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_example_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_example_noun",
+          "lemma": "example",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-idea",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "idea",
+      "lemma": "idea",
+      "normalizedLemma": "idea",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_idea_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_idea_noun",
+          "lemma": "idea",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-detail",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "detail",
+      "lemma": "detail",
+      "normalizedLemma": "detail",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-reply",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "reply",
+      "lemma": "reply",
+      "normalizedLemma": "reply",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "secondary_only",
+      "primaryIds": [],
+      "primarySummaries": [],
+      "note": "No Primary candidate with this normalized lemma/surface."
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-question",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "question",
+      "lemma": "question",
+      "normalizedLemma": "question",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_question_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_question_noun",
+          "lemma": "question",
+          "pos": "noun",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_1",
+          "primaryTopic": "language_learning"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-different",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "different",
+      "lemma": "different",
+      "normalizedLemma": "different",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_different_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_different_adjective",
+          "lemma": "different",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-same",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "same",
+      "lemma": "same",
+      "normalizedLemma": "same",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_same_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_same_adjective",
+          "lemma": "same",
+          "pos": "adjective",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-important",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "important",
+      "lemma": "important",
+      "normalizedLemma": "important",
+      "rawPos": "adjective",
+      "matchPos": "adjective",
+      "status": "exact",
+      "primaryIds": [
+        "pv_important_adjective"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_important_adjective",
+          "lemma": "important",
+          "pos": "adjective",
+          "cefrBandCandidate": "A1",
+          "primaryStageCandidate": "A1_2",
+          "primaryTopic": "general_language"
+        }
+      ]
+    },
+    {
+      "wordItemId": "g7-a2-academic-classroom-language-information",
+      "packId": "g7-a2-complete-core-vocab-v1-2",
+      "topicId": "academic-classroom-language",
+      "setId": "thinking-and-explaining",
+      "word": "information",
+      "lemma": "information",
+      "normalizedLemma": "information",
+      "rawPos": "noun",
+      "matchPos": "noun",
+      "status": "exact",
+      "primaryIds": [
+        "pv_information_noun"
+      ],
+      "primarySummaries": [
+        {
+          "id": "pv_information_noun",
+          "lemma": "information",
+          "pos": "noun",
+          "cefrBandCandidate": "PRE_A1",
+          "primaryStageCandidate": "PRE_A1_2",
+          "primaryTopic": "digital_media"
+        }
+      ]
+    }
+  ]
+}

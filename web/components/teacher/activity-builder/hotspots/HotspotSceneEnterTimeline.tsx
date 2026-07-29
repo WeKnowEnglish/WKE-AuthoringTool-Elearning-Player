@@ -14,6 +14,10 @@ type Props = {
   disabled?: boolean;
   onChange: (actions: WkeObjectAction[]) => void;
   onPreviewSceneOpen?: () => void;
+  /** Opens docked media library to pick audio for a clip field. */
+  onOpenAudioLibrary?: (
+    applyUrl: (url: string, detail?: { mediaAssetId?: string }) => void,
+  ) => void;
 };
 
 type SceneEnterActionType =
@@ -59,6 +63,7 @@ export function HotspotSceneEnterTimeline({
   disabled = false,
   onChange,
   onPreviewSceneOpen,
+  onOpenAudioLibrary,
 }: Props) {
   const [openActionId, setOpenActionId] = useState<string | null>(
     () => actions[0]?.id ?? null,
@@ -287,8 +292,28 @@ export function HotspotSceneEnterTimeline({
                         label="Clip"
                         hint="Plays at this step when the scene opens."
                         value={action.audioUrl}
-                        onChange={(url) =>
-                          patchAction(action.id, { audioUrl: url.trim() })
+                        onChange={(url, detail) => {
+                          const libraryId = detail?.mediaAssetId?.trim();
+                          const { mediaAssetId: _drop, ...rest } = action;
+                          patchAction(action.id, {
+                            ...rest,
+                            audioUrl: url.trim(),
+                            ...(libraryId ? { mediaAssetId: libraryId } : {}),
+                          });
+                        }}
+                        onOpenLibrary={
+                          onOpenAudioLibrary
+                            ? () =>
+                                onOpenAudioLibrary((url, detail) => {
+                                  const libraryId = detail?.mediaAssetId?.trim();
+                                  const { mediaAssetId: _drop, ...rest } = action;
+                                  patchAction(action.id, {
+                                    ...rest,
+                                    audioUrl: url.trim(),
+                                    ...(libraryId ? { mediaAssetId: libraryId } : {}),
+                                  });
+                                })
+                            : undefined
                         }
                       />
                     ) : null}

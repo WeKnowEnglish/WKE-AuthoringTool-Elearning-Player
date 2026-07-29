@@ -223,6 +223,33 @@
     }
   }
 
+  @keyframes student-home-greeting-in {
+    0% {
+      opacity: 0;
+      transform: translateY(0.4rem);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(-0.08rem);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .student-home-greeting-in {
+    animation: student-home-greeting-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .student-home-greeting-in {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .scrollbar-reveal {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;

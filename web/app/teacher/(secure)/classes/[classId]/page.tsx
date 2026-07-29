@@ -16,6 +16,7 @@ import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
 import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
 import { listTeacherWordPacksForClass } from "@/lib/data/teacher-word-packs";
 import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
+import { listMyTeacherSpaceItems } from "@/lib/data/teacher-space";
 import { listPublishedQuestionSetsForHost } from "@/lib/live-game/server/question-set-list";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
@@ -51,6 +52,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     homeworkCompletions,
     classPosts,
     meetingSlots,
+    spaceItems,
   ] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
@@ -66,6 +68,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     listClassHomeworkCompletionsForClass(classId).catch(() => []),
     listClassPostsForClass(classId).catch(() => []),
     listMeetingSlotsForClass(classId).catch(() => []),
+    listMyTeacherSpaceItems(),
   ]);
 
   const packQuizzes = activityCards
@@ -142,6 +145,12 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         meetingSlots={meetingSlots}
         packQuizzes={packQuizzes}
         packFlashcardSets={packFlashcardSets}
+        spaceItems={spaceItems}
+        studentTabSettings={{
+          schedule: teacherClass.student_tab_schedule_enabled,
+          noticeboard: teacherClass.student_tab_noticeboard_enabled,
+          materials: teacherClass.student_tab_materials_enabled,
+        }}
       />
     </Suspense>
   );

@@ -45,6 +45,10 @@ export {
   type StudioExploreHotspotsRef,
 } from "./studio";
 export {
+  applyMediaAssetUrlMap,
+  resolveExploreHotspotsMediaUrls,
+} from "./resolve-media-asset-urls";
+export {
   EXPLORE_HOTSPOTS_WKE_LIBRARY,
   getExploreHotspotsLibraryRef,
   loadExploreHotspotsLibraryExample,

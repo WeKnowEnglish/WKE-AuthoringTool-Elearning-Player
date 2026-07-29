@@ -8,6 +8,7 @@ import {
   Home,
   Library,
   Menu,
+  School,
   Trophy,
   Volume2,
   VolumeX,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { SignOutForm } from "@/components/auth/SignOutForm";
+import { PrimaryClassTab } from "@/components/primary/PrimaryClassTab";
 import { PrimaryGamesTab } from "@/components/primary/PrimaryGamesTab";
 import {
   PrimaryLearnTab,
@@ -23,9 +25,11 @@ import {
 import { PrimaryProgressTab } from "@/components/primary/PrimaryProgressTab";
 import { PrimaryReviewTab } from "@/components/primary/PrimaryReviewTab";
 import { TodaysLearningAssignments } from "@/components/primary/TodaysLearningAssignments";
+import { PrimaryHomeResumeRow } from "@/components/primary/PrimaryHomeResumeRow";
 import { StudentLiveNowStrip } from "@/components/classroom/StudentLiveNowStrip";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
+import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import {
   PRIMARY_CHROME_CLASS,
@@ -38,6 +42,7 @@ import type { VocabSetId } from "@/lib/vocabulary-templates";
 export type PrimaryNavId =
   | "home"
   | "learn"
+  | "class"
   | "games"
   | "review"
   | "progress";
@@ -90,6 +95,8 @@ type Props = {
   onNavigate?: (destination: PrimaryNavId | string) => void;
   /** Open a vocabulary set in the lesson overlay (Phase 1). */
   onOpenVocabularySet?: (id: VocabSetId) => void;
+  /** Open a grammar poster in an overlay (stay on Primary). */
+  onOpenGrammarPoster?: (slug: string) => void;
   /** Refresh economy / progress after games (Phase 5). */
   onEconomyChange?: () => void;
   /** Optional controls in the top bar (e.g. class menu). */
@@ -102,11 +109,16 @@ type Props = {
   enrolledInClass?: boolean;
   /** Active Virtual Classroom sessions across enrolled classes. */
   liveSessions?: StudentClassLiveSession[];
+  /** Classes the student is enrolled in. */
+  classMemberships?: StudentClassMembership[];
+  /** Open the join / switch class overlay. */
+  onOpenClassSelector?: () => void;
 };
 
 const NAV_IDS: PrimaryNavId[] = [
   "home",
   "learn",
+  "class",
   "games",
   "review",
   "progress",
@@ -180,6 +192,7 @@ const DEFAULT_MODEL: PrimaryHomeModel = {
 const NAV: Array<{ id: PrimaryNavId; label: string; icon: typeof Home }> = [
   { id: "home", label: "Home", icon: Home },
   { id: "learn", label: "Learn", icon: Library },
+  { id: "class", label: "Class", icon: School },
   { id: "games", label: "Games", icon: Gamepad2 },
   { id: "progress", label: "My Progress", icon: Trophy },
 ];
@@ -202,12 +215,15 @@ export function StudentHomeLanding({
   reviewModel,
   onNavigate,
   onOpenVocabularySet,
+  onOpenGrammarPoster,
   onEconomyChange,
   headerExtra,
   initialNav,
   assignedHomework = [],
   enrolledInClass = false,
   liveSessions = [],
+  classMemberships = [],
+  onOpenClassSelector,
 }: Props) {
   const { muted, toggleMuted } = useAudioMuted();
   const model = mergeModel(modelPartial);
@@ -399,6 +415,7 @@ export function StudentHomeLanding({
               playerLevel={model.level}
               category={learnCategory}
               onCategoryChange={setLearnCategory}
+              onOpenGrammarPoster={onOpenGrammarPoster}
               onOpenSet={(id) => {
                 if (onOpenVocabularySet) {
                   onOpenVocabularySet(id);
@@ -419,6 +436,12 @@ export function StudentHomeLanding({
               playerLevel={model.level}
               onEconomyChange={onEconomyChange}
               onGoLearn={() => go("learn")}
+            />
+          ) : activeNav === "class" ? (
+            <PrimaryClassTab
+              memberships={classMemberships}
+              liveSessions={liveSessions}
+              onOpenClassSelector={onOpenClassSelector}
             />
           ) : activeNav === "review" && reviewModel ? (
             <PrimaryReviewTab
@@ -448,6 +471,14 @@ export function StudentHomeLanding({
             <TodaysLearningAssignments
               enrolled={enrolledInClass}
               items={assignedHomework}
+              onJoinClass={onOpenClassSelector}
+            />
+
+            <PrimaryHomeResumeRow
+              progressModel={progressModel}
+              today={model.today}
+              onContinueLearning={openContinueLearning}
+              onOpenProgress={() => go("progress")}
             />
           </div>
           )}

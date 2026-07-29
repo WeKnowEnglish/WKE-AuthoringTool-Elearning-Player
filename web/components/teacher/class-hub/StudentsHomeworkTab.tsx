@@ -12,6 +12,7 @@ import type { ClassPost } from "@/lib/class-posts/types";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
 import type { TeacherClassStudentMasteryPreview } from "@/lib/mastery/teacher-mastery-summary";
+import type { TeacherSpaceItemSummary } from "@/lib/teacher-space/types";
 
 type QuizOption = {
   id: string;
@@ -43,6 +44,7 @@ type Props = {
   packQuizzes: QuizOption[];
   packFlashcardSets: FlashcardSetOption[];
   homeworkCompletions: HomeworkCompletionSummary[];
+  spaceItems: TeacherSpaceItemSummary[];
 };
 
 export function StudentsHomeworkTab({
@@ -61,6 +63,7 @@ export function StudentsHomeworkTab({
   packQuizzes,
   packFlashcardSets,
   homeworkCompletions,
+  spaceItems,
 }: Props) {
   const isLight = teacherTier === "light";
 
@@ -82,7 +85,13 @@ export function StudentsHomeworkTab({
 
       <ClassJoinCodePanel classId={classId} joinCode={joinCode} archived={archived} />
 
-      <ClassPostsPanel classId={classId} archived={archived} initialPosts={classPosts} />
+      <ClassPostsPanel
+        classId={classId}
+        archived={archived}
+        initialPosts={classPosts}
+        homework={homework}
+        spaceItems={spaceItems}
+      />
 
       <ClassMeetingSchedulePanel
         classId={classId}

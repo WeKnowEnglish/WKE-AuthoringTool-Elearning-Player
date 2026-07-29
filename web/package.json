@@ -35,6 +35,8 @@
     "expand:sentence-variants": "node scripts/expand-sentence-variants.mjs",
     "snapshot:quiz-eligibility": "tsx scripts/generate-quiz-eligibility-snapshot.ts",
     "report:secondary-cloze": "tsx scripts/report-secondary-cloze-coverage.ts",
+    "audit:secondary-primary-lexicon": "tsx scripts/audit-secondary-primary-lexicon-map.ts",
+    "generate:secondary-primary-lexicon-map": "tsx scripts/generate-secondary-primary-lexicon-map.ts",
     "prepare:landing-mascots": "tsx scripts/prepare-landing-mascots.ts",
     "build:primary-vocab-search-index": "node scripts/build-primary-vocabulary-search-index.mjs"
   },

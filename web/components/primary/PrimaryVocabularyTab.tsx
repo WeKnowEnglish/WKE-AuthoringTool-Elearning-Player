@@ -1,7 +1,7 @@
 "use client";
 
 import NextImage from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronRight, Lock } from "lucide-react";
 import { resumeScreenIndexForSet } from "@/lib/primary/vocab-continue";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
@@ -54,12 +54,22 @@ const HUB_HEADINGS: Record<VocabHubId, { title: string; subtitle: string }> = {
 type Props = {
   playerLevel: number;
   onOpenSet?: (id: VocabSetId, label: string) => void;
+  /** Open directly into a topic hub from the Learn shelf. */
+  initialHubId?: VocabHubId | null;
 };
 
-export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
+export function PrimaryVocabularyTab({
+  playerLevel,
+  onOpenSet,
+  initialHubId = null,
+}: Props) {
   const hydrated = useClientHydrated();
-  const [view, setView] = useState<VocabView>("top");
+  const [view, setView] = useState<VocabView>(() => initialHubId ?? "top");
   const hubView = view === "top" ? null : view;
+
+  useEffect(() => {
+    setView(initialHubId ?? "top");
+  }, [initialHubId]);
   const heading = hubView
     ? HUB_HEADINGS[hubView]
     : {

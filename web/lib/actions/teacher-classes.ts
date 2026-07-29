@@ -87,6 +87,57 @@ export async function archiveTeacherClass(classId: string): Promise<TeacherClass
   return { ok: true };
 }
 
+export async function updateClassStudentTabSettings(input: {
+  classId: string;
+  schedule: boolean;
+  noticeboard: boolean;
+  materials: boolean;
+}): Promise<TeacherClassActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const classId = input.classId.trim();
+    if (!classId) return { ok: false, error: "Missing class." };
+
+    const supabase = await createClient();
+    const { data: ownedClass, error: classError } = await supabase
+      .from("teacher_classes")
+      .select("id")
+      .eq("id", classId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (classError) return { ok: false, error: classError.message };
+    if (!ownedClass) return { ok: false, error: "Class not found." };
+
+    const { error } = await supabase
+      .from("teacher_classes")
+      .update({
+        student_tab_schedule_enabled: Boolean(input.schedule),
+        student_tab_noticeboard_enabled: Boolean(input.noticeboard),
+        student_tab_materials_enabled: Boolean(input.materials),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", classId)
+      .eq("teacher_id", teacherId);
+
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath("/teacher/classes");
+    revalidatePath(`/teacher/classes/${classId}`);
+    revalidatePath(`/primary/class/${classId}`);
+    revalidatePath(`/secondary/class/${classId}`);
+    revalidatePath("/primary");
+    revalidatePath("/secondary");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error ? error.message : "Could not update classroom tabs.",
+    };
+  }
+}
+
 export async function removeStudentFromClass(
   classId: string,
   studentId: string,

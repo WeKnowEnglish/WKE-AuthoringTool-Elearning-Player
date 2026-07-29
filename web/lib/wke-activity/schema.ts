@@ -17,6 +17,8 @@ const assetSchema = z.object({
     })
     .optional(),
   alt: z.string().optional(),
+  /** Shared teacher media library id (`media_assets.id`). */
+  mediaAssetId: z.string().min(1).optional(),
 });
 
 const hotspotGeometrySchema = z.discriminatedUnion("shape", [
@@ -142,6 +144,7 @@ const hotspotElementSchema = z.object({
           id: z.string().min(1),
           type: z.literal("play_audio"),
           audioUrl: z.string(),
+          mediaAssetId: z.string().min(1).optional(),
           label: z.string().optional(),
           wait: z.boolean().optional(),
           timing: z.enum(["after_previous", "with_previous"]).optional(),
@@ -316,6 +319,7 @@ const dialogueSchema = z.object({
         text: z.string().min(1),
         speakText: z.string().min(1).optional(),
         audioUrl: z.string().min(1).optional(),
+        mediaAssetId: z.string().min(1).optional(),
       }),
     )
     .min(1),

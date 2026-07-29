@@ -37,6 +37,22 @@ export type ActivityBuilderSection = {
 
 export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
   {
+    id: "library",
+    label: "0 · WKE Library",
+    toneClass: "text-teal-800",
+    cards: [
+      {
+        id: "wke-library",
+        title: "WKE Library",
+        description:
+          "Curated starters and teacher contributions you can copy into My Activity Bank. Private class work stays private.",
+        badge: "Library",
+        lpPath: "/library",
+        status: "authoring_ready",
+      },
+    ],
+  },
+  {
     id: "vocab",
     label: "1 · Vocabulary",
     toneClass: "text-sky-800",

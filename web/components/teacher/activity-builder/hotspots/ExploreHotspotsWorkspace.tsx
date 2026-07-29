@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   DEFAULT_OBJECT_HIGHLIGHT,
   detectActivityHotspotContour,
@@ -85,6 +85,17 @@ import { ActionStartTimingSelect } from "./ActionStartTimingSelect";
 import { HotspotCollapsibleCard } from "./HotspotCollapsibleCard";
 import { SCENE_ENTER_AUDIO_ID } from "@/lib/hotspots/scene-enter";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
+import { SubmitToWkeLibraryButton } from "@/components/teacher/wke-library/SubmitToWkeLibraryButton";
+import { TeacherMediaLibraryBrowser } from "@/components/teacher/media/TeacherMediaLibraryBrowser";
+import {
+  closeTeacherMediaLibrary,
+  getTeacherMediaLibraryRecent,
+  openTeacherMediaLibrary,
+  setTeacherMediaLibraryFieldKind,
+  setTeacherMediaLibraryOnSelect,
+  teacherMediaLibrarySnapshot,
+} from "@/components/teacher/media/teacherMediaLibraryShared";
+import type { MediaAssetRow } from "@/lib/actions/media";
 import {
   recordAppDiagnostic,
   startAppDiagnosticSpan,
@@ -142,6 +153,76 @@ function readImage(
   });
 }
 
+function loadImageFromSrc(
+  src: string,
+): Promise<{ src: string; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () =>
+      resolve({
+        src,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+    image.onerror = () =>
+      reject(new Error("The selected file is not a supported image."));
+    image.src = src;
+  });
+}
+
+function filenameFromMediaUrl(url: string, fallback: string): string {
+  try {
+    const base = new URL(url).pathname.split("/").pop();
+    if (base) return decodeURIComponent(base);
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
+function assetLooksLikeImage(asset: MediaAssetRow | null | undefined, url: string): boolean {
+  const type = asset?.content_type?.toLowerCase() ?? "";
+  if (type.startsWith("image/")) return true;
+  if (type.startsWith("audio/") || type.startsWith("video/")) return false;
+  return /\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(url);
+}
+
+function assetLooksLikeAudio(asset: MediaAssetRow | null | undefined, url: string): boolean {
+  const type = asset?.content_type?.toLowerCase() ?? "";
+  if (type.startsWith("audio/")) return true;
+  if (type.startsWith("image/") || type.startsWith("video/")) return false;
+  return /\.(mp3|wav|ogg|webm|m4a|aac)(\?|$)/i.test(url);
+}
+
+type HotspotsLibraryPickTarget = "background" | "sprite" | "audio";
+
+function withPlayAudioClip(
+  action: Extract<WkeObjectAction, { type: "play_audio" }>,
+  url: string,
+  detail?: { mediaAssetId?: string },
+): WkeObjectAction {
+  const libraryId = detail?.mediaAssetId?.trim();
+  const { mediaAssetId: _drop, ...rest } = action;
+  return {
+    ...rest,
+    type: "play_audio",
+    audioUrl: url.trim(),
+    ...(libraryId ? { mediaAssetId: libraryId } : {}),
+  };
+}
+
+async function fileFromRemoteUrl(url: string, fallbackName: string): Promise<File> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Could not download that media file.");
+  }
+  const blob = await response.blob();
+  const name = filenameFromMediaUrl(url, fallbackName);
+  return new File([blob], name, {
+    type: blob.type || "application/octet-stream",
+  });
+}
+
 function geometryNumber(geometry: HotspotGeometry, field: string): number {
   return (geometry as unknown as Record<string, number>)[field] ?? 0;
 }
@@ -176,9 +257,15 @@ export function ExploreHotspotsWorkspace() {
     cloneDocument(createBlankExploreHotspotsDocument()),
   );
   const [mode, setMode] = useState<"layout" | "preview">("layout");
-  const [rightPanelTab, setRightPanelTab] = useState<"properties" | "animations">(
-    "properties",
-  );
+  const [rightPanelTab, setRightPanelTab] = useState<
+    "properties" | "animations" | "library"
+  >("properties");
+  const [libraryPickTarget, setLibraryPickTarget] =
+    useState<HotspotsLibraryPickTarget>("background");
+  const libraryOwnerId = useId();
+  const libraryAudioApplyRef = useRef<
+    ((url: string, detail?: { mediaAssetId?: string }) => void) | null
+  >(null);
   const [leftSettingsOpenId, setLeftSettingsOpenId] = useState<string | null>(
     "scene-open",
   );
@@ -356,6 +443,23 @@ export function ExploreHotspotsWorkspace() {
     }, 3000);
     return () => window.clearTimeout(timer);
   }, [flash]);
+
+  useEffect(() => {
+    if (rightPanelTab === "library") return;
+    const snap = teacherMediaLibrarySnapshot();
+    if (snap.open && snap.ownerId === libraryOwnerId) {
+      closeTeacherMediaLibrary();
+    }
+  }, [rightPanelTab, libraryOwnerId]);
+
+  useEffect(() => {
+    return () => {
+      const snap = teacherMediaLibrarySnapshot();
+      if (snap.open && snap.ownerId === libraryOwnerId) {
+        closeTeacherMediaLibrary();
+      }
+    };
+  }, [libraryOwnerId]);
 
   /** Only build when valid — parse must not throw during layout edits (e.g. zero hotspots). */
   const previewScreens = useMemo(() => {
@@ -882,7 +986,10 @@ export function ExploreHotspotsWorkspace() {
     }
   };
 
-  const addSpriteFromFile = async (file: File) => {
+  const addSpriteFromFile = async (
+    file: File,
+    opts?: { mediaAssetId?: string },
+  ) => {
     const finish = startAppDiagnosticSpan("teacher", "hotspots", "sprite_prepare", {
       fileName: file.name,
       fileSize: file.size,
@@ -935,6 +1042,7 @@ export function ExploreHotspotsWorkspace() {
             ? { ...phase, hotspotIds: [...phase.hotspotIds, id] }
             : phase,
         );
+        const libraryId = opts?.mediaAssetId?.trim();
         return {
           ...withPhases,
           assets: [
@@ -946,6 +1054,7 @@ export function ExploreHotspotsWorkspace() {
               mimeType: file.type || "image/png",
               alt: file.name,
               intrinsicSize: { width: next.width, height: next.height },
+              ...(libraryId ? { mediaAssetId: libraryId } : {}),
             },
           ],
           layout: {
@@ -1340,12 +1449,18 @@ export function ExploreHotspotsWorkspace() {
     }
   };
 
-  const replaceImage = async (file: File) => {
+  const replaceImage = async (
+    file: File,
+    opts?: { mediaAssetId?: string; preferSrc?: string },
+  ) => {
     try {
-      const next = await readImage(file);
+      const next = opts?.preferSrc
+        ? await loadImageFromSrc(opts.preferSrc)
+        : await readImage(file);
       stopSegmentation();
       const activePhaseId = activePhase?.id ?? null;
       const phaseHotspotIds = new Set(activePhase?.hotspotIds ?? []);
+      const libraryId = opts?.mediaAssetId?.trim();
       setDocument((current) => {
         let withPhases = withEnsuredPhases(current);
         if (activePhaseId) {
@@ -1360,17 +1475,21 @@ export function ExploreHotspotsWorkspace() {
         if (!targetAssetId) return withPhases;
         return {
           ...withPhases,
-          assets: withPhases.assets.map((asset) =>
-            asset.id === targetAssetId
-              ? {
-                  ...asset,
-                  src: next.src,
-                  mimeType: file.type,
-                  alt: asset.alt || file.name,
-                  intrinsicSize: { width: next.width, height: next.height },
-                }
-              : asset,
-          ),
+          assets: withPhases.assets.map((asset) => {
+            if (asset.id !== targetAssetId) return asset;
+            const nextAsset = {
+              ...asset,
+              src: next.src,
+              mimeType: file.type || asset.mimeType,
+              alt: asset.alt || file.name,
+              intrinsicSize: { width: next.width, height: next.height },
+            };
+            if (libraryId) {
+              return { ...nextAsset, mediaAssetId: libraryId };
+            }
+            const { mediaAssetId: _removed, ...rest } = nextAsset;
+            return rest;
+          }),
           layout: {
             ...withPhases.layout,
             // Only clear outlines for hotspots on this scene. An empty hotspotIds
@@ -1394,6 +1513,119 @@ export function ExploreHotspotsWorkspace() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not import the image.");
     }
+  };
+
+  const replaceImageFromUrl = async (url: string, mediaAssetId?: string) => {
+    const name = filenameFromMediaUrl(url, "library-background.png");
+    const mime =
+      /\.jpe?g(\?|$)/i.test(name) ? "image/jpeg"
+      : /\.webp(\?|$)/i.test(name) ? "image/webp"
+      : /\.gif(\?|$)/i.test(name) ? "image/gif"
+      : "image/png";
+    await replaceImage(new File([], name, { type: mime }), {
+      preferSrc: url,
+      mediaAssetId,
+    });
+  };
+
+  const addSpriteFromUrl = async (url: string, mediaAssetId?: string) => {
+    try {
+      const file = await fileFromRemoteUrl(url, "library-sprite.png");
+      await addSpriteFromFile(file, { mediaAssetId });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not import the PNG.");
+    }
+  };
+
+  const applyLibraryPick = (
+    url: string,
+    asset: MediaAssetRow | null | undefined,
+    target: HotspotsLibraryPickTarget,
+  ) => {
+    const mediaAssetId = asset?.id?.trim() || undefined;
+    if (target === "audio") {
+      if (!assetLooksLikeAudio(asset, url)) {
+        setNotice("Pick an audio clip for this field.");
+        return;
+      }
+      const apply = libraryAudioApplyRef.current;
+      if (apply) {
+        apply(url, mediaAssetId ? { mediaAssetId } : undefined);
+        setNotice("Applied audio from library.");
+      } else {
+        setNotice("Open Library from an audio field to apply a clip.");
+      }
+      return;
+    }
+    if (!assetLooksLikeImage(asset, url)) {
+      setNotice(
+        target === "background"
+          ? "Pick an image for the scene background."
+          : "Pick an image to insert as a sprite.",
+      );
+      return;
+    }
+    if (target === "background") {
+      if (!activePhase) {
+        setNotice("Select a scene before changing the background.");
+        return;
+      }
+      void replaceImageFromUrl(url, mediaAssetId);
+      return;
+    }
+    void addSpriteFromUrl(url, mediaAssetId);
+  };
+
+  const openHotspotsLibrary = (opts: {
+    target: HotspotsLibraryPickTarget;
+    applyAudio?: (url: string, detail?: { mediaAssetId?: string }) => void;
+  }) => {
+    setLibraryPickTarget(opts.target);
+    libraryAudioApplyRef.current = opts.applyAudio ?? null;
+    setRightPanelTab("library");
+    const kind = opts.target === "audio" ? "audio" : "image";
+    const onSelect = (url: string, detail?: { mediaAssetId?: string }) => {
+      const snap = teacherMediaLibrarySnapshot();
+      const recent = getTeacherMediaLibraryRecent(snap.fieldKind);
+      const pool = [
+        ...snap.assets,
+        ...snap.folders.flatMap((folder) => folder.assets),
+        ...recent,
+      ];
+      const asset =
+        (detail?.mediaAssetId
+          ? pool.find((row) => row.id === detail.mediaAssetId)
+          : null) ??
+        pool.find((row) => row.public_url === url) ??
+        null;
+      applyLibraryPick(url, asset, opts.target);
+    };
+    const snap = teacherMediaLibrarySnapshot();
+    if (
+      snap.open &&
+      snap.ownerId === libraryOwnerId &&
+      snap.presentation === "embedded"
+    ) {
+      setTeacherMediaLibraryFieldKind(kind);
+      setTeacherMediaLibraryOnSelect(onSelect);
+      return;
+    }
+    openTeacherMediaLibrary(
+      libraryOwnerId,
+      kind,
+      onSelect,
+      undefined,
+      undefined,
+      "embedded",
+    );
+  };
+
+  const closeHotspotsLibraryIfOwned = () => {
+    const snap = teacherMediaLibrarySnapshot();
+    if (snap.open && snap.ownerId === libraryOwnerId) {
+      closeTeacherMediaLibrary();
+    }
+    libraryAudioApplyRef.current = null;
   };
 
   const addPhase = () => {
@@ -1522,7 +1754,10 @@ export function ExploreHotspotsWorkspace() {
     return action?.type === "play_audio" ? action.audioUrl : "";
   })();
 
-  const setSceneEnterAudio = (url: string) => {
+  const setSceneEnterAudio = (
+    url: string,
+    detail?: { mediaAssetId?: string },
+  ) => {
     if (!activePhase) return;
     const trimmed = url.trim();
     const current = activePhase.onEnter ?? [];
@@ -1535,13 +1770,21 @@ export function ExploreHotspotsWorkspace() {
       });
       return;
     }
-    const audioAction: WkeObjectAction = {
-      id: SCENE_ENTER_AUDIO_ID,
-      type: "play_audio",
-      audioUrl: trimmed,
-      label: "Scene audio",
-      wait: true,
-    };
+    const existing = current.find(
+      (entry): entry is Extract<WkeObjectAction, { type: "play_audio" }> =>
+        entry.type === "play_audio" && entry.id === SCENE_ENTER_AUDIO_ID,
+    );
+    const audioAction = withPlayAudioClip(
+      existing ?? {
+        id: SCENE_ENTER_AUDIO_ID,
+        type: "play_audio",
+        audioUrl: "",
+        label: "Scene audio",
+        wait: true,
+      },
+      trimmed,
+      detail,
+    );
     const existingIndex = current.findIndex(
       (entry) => entry.type === "play_audio" && entry.id === SCENE_ENTER_AUDIO_ID,
     );
@@ -2067,6 +2310,16 @@ export function ExploreHotspotsWorkspace() {
             <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-500">
               {bankActivityId ? "In Activity Bank" : "Unsaved"}
             </span>
+            {bankActivityId ? (
+              <SubmitToWkeLibraryButton
+                studioActivityId={bankActivityId}
+                activityTitle={document.name}
+                disabled={bankBusy}
+                onSubmitted={(result) =>
+                  setNotice(`Submitted “${result.title}” to WKE Library for review.`)
+                }
+              />
+            ) : null}
           </div>
           <input
             aria-label="Shown to students"
@@ -2256,6 +2509,16 @@ export function ExploreHotspotsWorkspace() {
                   >
                     Open
                   </button>
+                  <SubmitToWkeLibraryButton
+                    studioActivityId={entry.id}
+                    activityTitle={entry.name}
+                    disabled={bankBusy}
+                    onSubmitted={(result) =>
+                      setNotice(
+                        `Submitted “${result.title}” to WKE Library for review.`,
+                      )
+                    }
+                  />
                 </li>
               ))}
             </ul>
@@ -2283,10 +2546,25 @@ export function ExploreHotspotsWorkspace() {
                 </button>
                 <button
                   type="button"
+                  className="rounded-lg border border-dashed border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-sky-50 hover:border-sky-300 disabled:opacity-40"
+                  disabled={!activePhase}
+                  onClick={() => openHotspotsLibrary({ target: "background" })}
+                >
+                  Background from library
+                </button>
+                <button
+                  type="button"
                   className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 hover:bg-stone-50"
                   onClick={() => spriteRef.current?.click()}
                 >
                   Insert PNG sprite
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-dashed border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-sky-50 hover:border-sky-300"
+                  onClick={() => openHotspotsLibrary({ target: "sprite" })}
+                >
+                  Sprite from library
                 </button>
               </div>
             </HotspotCollapsibleCard>
@@ -2304,6 +2582,12 @@ export function ExploreHotspotsWorkspace() {
                   value={sceneEnterAudioUrl}
                   disabled={!activePhase}
                   onChange={setSceneEnterAudio}
+                  onOpenLibrary={() =>
+                    openHotspotsLibrary({
+                      target: "audio",
+                      applyAudio: setSceneEnterAudio,
+                    })
+                  }
                 />
               </div>
               <div className="mt-3 border-t border-stone-200 pt-3">
@@ -2313,6 +2597,12 @@ export function ExploreHotspotsWorkspace() {
                   inputClass={inputClass}
                   disabled={!activePhase}
                   onPreviewSceneOpen={togglePreview}
+                  onOpenAudioLibrary={(applyUrl) =>
+                    openHotspotsLibrary({
+                      target: "audio",
+                      applyAudio: applyUrl,
+                    })
+                  }
                   onChange={(onEnter) => {
                     if (!activePhase) return;
                     patchPhase(activePhase.id, {
@@ -2681,11 +2971,12 @@ export function ExploreHotspotsWorkspace() {
           </section>
 
           <aside className="flex min-h-0 flex-col border-l border-stone-200 bg-white">
-            <div className="flex shrink-0 gap-1 border-b border-stone-200 px-3 pt-3 sm:px-4">
+            <div className="flex shrink-0 gap-1 border-b border-stone-200 px-2 pt-3 sm:px-3">
               {(
                 [
                   { id: "properties", label: "Properties" },
                   { id: "animations", label: "Animations" },
+                  { id: "library", label: "Library" },
                 ] as const
               ).map((tab) => {
                 const active = rightPanelTab === tab.id;
@@ -2693,8 +2984,21 @@ export function ExploreHotspotsWorkspace() {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setRightPanelTab(tab.id)}
-                    className={`rounded-t-lg px-3 py-2 text-xs font-semibold ${
+                    onClick={() => {
+                      if (tab.id === "library") {
+                        openHotspotsLibrary({
+                          target: libraryPickTarget,
+                          applyAudio:
+                            libraryPickTarget === "audio"
+                              ? libraryAudioApplyRef.current ?? undefined
+                              : undefined,
+                        });
+                        return;
+                      }
+                      closeHotspotsLibraryIfOwned();
+                      setRightPanelTab(tab.id);
+                    }}
+                    className={`rounded-t-lg px-2.5 py-2 text-xs font-semibold sm:px-3 ${
                       active
                         ? "bg-sky-50 text-sky-900 ring-1 ring-inset ring-sky-200"
                         : "text-stone-500 hover:bg-stone-50 hover:text-stone-800"
@@ -2705,6 +3009,62 @@ export function ExploreHotspotsWorkspace() {
                 );
               })}
             </div>
+            {rightPanelTab === "library" ? (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="shrink-0 space-y-2 border-b border-stone-100 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
+                    Apply pick as
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(
+                      [
+                        { id: "background", label: "Background" },
+                        { id: "sprite", label: "Sprite" },
+                        { id: "audio", label: "Audio" },
+                      ] as const
+                    ).map((target) => {
+                      const active = libraryPickTarget === target.id;
+                      return (
+                        <button
+                          key={target.id}
+                          type="button"
+                          onClick={() =>
+                            openHotspotsLibrary({
+                              target: target.id,
+                              applyAudio:
+                                target.id === "audio"
+                                  ? libraryAudioApplyRef.current ?? undefined
+                                  : undefined,
+                            })
+                          }
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            active
+                              ? "bg-sky-700 text-white"
+                              : "border border-stone-300 bg-white text-stone-700 hover:bg-stone-50"
+                          }`}
+                        >
+                          {target.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] leading-snug text-stone-500">
+                    {libraryPickTarget === "background"
+                      ? "Click an image to replace this scene’s background."
+                      : libraryPickTarget === "sprite"
+                        ? "Click an image to insert a PNG sprite on this scene."
+                        : libraryAudioApplyRef.current
+                          ? "Click an audio clip to fill the field that opened Library."
+                          : "Use Library on an audio field first, then pick a clip here."}
+                  </p>
+                </div>
+                <TeacherMediaLibraryBrowser
+                  ownerId={libraryOwnerId}
+                  compact
+                  className="min-h-0 flex-1 overflow-y-auto p-3"
+                />
+              </div>
+            ) : (
             <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
             {rightPanelTab === "animations" ? (
               <HotspotAnimationsPanel
@@ -2971,9 +3331,20 @@ export function ExploreHotspotsWorkspace() {
                             label="Clip"
                             hint="Record, upload, or pick from your library."
                             value={primaryAudioAction.audioUrl}
-                            onChange={(url) =>
-                              patchOnTapAction(primaryAudioAction.id, {
-                                audioUrl: url.trim(),
+                            onChange={(url, detail) =>
+                              patchOnTapAction(
+                                primaryAudioAction.id,
+                                withPlayAudioClip(primaryAudioAction, url, detail),
+                              )
+                            }
+                            onOpenLibrary={() =>
+                              openHotspotsLibrary({
+                                target: "audio",
+                                applyAudio: (url, detail) =>
+                                  patchOnTapAction(
+                                    primaryAudioAction.id,
+                                    withPlayAudioClip(primaryAudioAction, url, detail),
+                                  ),
                               })
                             }
                           />
@@ -3124,17 +3495,54 @@ export function ExploreHotspotsWorkspace() {
                           label="Turn audio (optional)"
                           hint="Record or upload a clip for this turn. When set, play uses the clip instead of TTS."
                           value={turn.audioUrl ?? ""}
-                          onChange={(url) =>
+                          onChange={(url, detail) =>
                             patchDialogue({
                               turns: selectedDialogue.turns.map((item, turnIndex) => {
                                 if (turnIndex !== index) return item;
                                 const next = url.trim();
                                 if (!next) {
-                                  const { audioUrl: _removed, ...rest } = item;
+                                  const {
+                                    audioUrl: _removed,
+                                    mediaAssetId: _media,
+                                    ...rest
+                                  } = item;
                                   return rest;
                                 }
-                                return { ...item, audioUrl: next };
+                                const libraryId = detail?.mediaAssetId?.trim();
+                                const { mediaAssetId: _drop, ...rest } = item;
+                                return {
+                                  ...rest,
+                                  audioUrl: next,
+                                  ...(libraryId ? { mediaAssetId: libraryId } : {}),
+                                };
                               }),
+                            })
+                          }
+                          onOpenLibrary={() =>
+                            openHotspotsLibrary({
+                              target: "audio",
+                              applyAudio: (url, detail) =>
+                                patchDialogue({
+                                  turns: selectedDialogue.turns.map((item, turnIndex) => {
+                                    if (turnIndex !== index) return item;
+                                    const next = url.trim();
+                                    if (!next) {
+                                      const {
+                                        audioUrl: _removed,
+                                        mediaAssetId: _media,
+                                        ...rest
+                                      } = item;
+                                      return rest;
+                                    }
+                                    const libraryId = detail?.mediaAssetId?.trim();
+                                    const { mediaAssetId: _drop, ...rest } = item;
+                                    return {
+                                      ...rest,
+                                      audioUrl: next,
+                                      ...(libraryId ? { mediaAssetId: libraryId } : {}),
+                                    };
+                                  }),
+                                }),
                             })
                           }
                         />
@@ -3299,9 +3707,20 @@ export function ExploreHotspotsWorkspace() {
                               label="Clip"
                               hint="Record, upload, or pick from your library. Preview plays this clip instead of TTS."
                               value={action.audioUrl}
-                              onChange={(url) =>
-                                patchOnTapAction(action.id, {
-                                  audioUrl: url.trim(),
+                              onChange={(url, detail) =>
+                                patchOnTapAction(
+                                  action.id,
+                                  withPlayAudioClip(action, url, detail),
+                                )
+                              }
+                              onOpenLibrary={() =>
+                                openHotspotsLibrary({
+                                  target: "audio",
+                                  applyAudio: (url, detail) =>
+                                    patchOnTapAction(
+                                      action.id,
+                                      withPlayAudioClip(action, url, detail),
+                                    ),
                                 })
                               }
                             />
@@ -4313,6 +4732,7 @@ export function ExploreHotspotsWorkspace() {
               </div>
             )}
             </div>
+            )}
           </aside>
         </div>
       ) : (

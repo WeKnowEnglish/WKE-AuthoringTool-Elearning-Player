@@ -339,6 +339,15 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Review · Authoring labs ─────────────────────────────────────
   {
+    href: "/teacher/activity-builder/library",
+    title: "WKE Library",
+    description:
+      "Curated public activity catalog + teacher submit-for-review. Fork into My Activity Bank; private bank stays private. Admin review at /teacher/admin/wke-library.",
+    group: "authoring",
+    status: "active",
+    studioHref: "/teacher/activity-builder/library",
+  },
+  {
     href: "/grammar/pilot/layouts",
     title: "Grammar layout lab",
     description:

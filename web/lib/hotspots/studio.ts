@@ -4,6 +4,7 @@ import {
   countLocalHotspotMedia,
   publishLocalHotspotMedia,
 } from "@/lib/hotspots/publish-media";
+import { resolveExploreHotspotsMediaUrls } from "@/lib/hotspots/resolve-media-asset-urls";
 import type { ExploreHotspotsDocument } from "@/lib/hotspots/types";
 
 export type StudioExploreHotspotsRef = {
@@ -128,6 +129,10 @@ export async function saveExploreHotspotsToStudio(input: {
       );
     }
   }
+
+  document = validateExploreHotspotsDocument(
+    await resolveExploreHotspotsMediaUrls(document),
+  );
 
   const pack = wkeActivityToExploreHotspotsPayload(document);
   const response = await fetch("/api/studio/activities", {

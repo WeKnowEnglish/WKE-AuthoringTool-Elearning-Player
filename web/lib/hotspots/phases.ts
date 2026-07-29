@@ -8,7 +8,8 @@ import type {
   WkeResponseCard,
 } from "@/lib/wke-activity/types";
 
-function mediaAssetId(document: ExploreHotspotsDocument): string {
+/** Layout media element's document-local asset id (not teacher media_assets UUID). */
+function layoutMediaDocumentAssetId(document: ExploreHotspotsDocument): string {
   const media = document.layout.elements.find((element) => element.kind === "media");
   if (!media || media.kind !== "media") {
     throw new Error("Missing media element");
@@ -32,7 +33,7 @@ export function ensurePhases(document: ExploreHotspotsDocument): WkePhase[] {
     {
       id: "phase-1",
       title: "Scene 1",
-      imageAssetId: mediaAssetId(document),
+      imageAssetId: layoutMediaDocumentAssetId(document),
       hotspotIds: allHotspotIds(document),
       ...(interaction.objective ? { objective: interaction.objective } : {}),
       ...(interaction.strictOrder != null

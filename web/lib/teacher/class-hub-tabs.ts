@@ -1,12 +1,12 @@
 import type { TeacherTier } from "@/lib/auth/roles";
 
-export const CLASS_HUB_TABS = ["teach", "lesson", "students"] as const;
+export const CLASS_HUB_TABS = ["teach", "lesson", "students", "settings"] as const;
 
 export type ClassHubTab = (typeof CLASS_HUB_TABS)[number];
 
-const LIGHT_CLASS_HUB_TABS: readonly ClassHubTab[] = ["students"];
+const LIGHT_CLASS_HUB_TABS: readonly ClassHubTab[] = ["students", "settings"];
 
-/** Tabs visible for a teacher tier. Light teachers only get Students & Homework. */
+/** Tabs visible for a teacher tier. Light teachers get Students & Settings. */
 export function classHubTabsForTier(tier: TeacherTier): readonly ClassHubTab[] {
   return tier === "light" ? LIGHT_CLASS_HUB_TABS : CLASS_HUB_TABS;
 }
@@ -20,13 +20,22 @@ export function parseClassHubTab(
   tier: TeacherTier = "plus",
 ): ClassHubTab {
   const allowed = classHubTabsForTier(tier);
-  if (value === "lesson" || value === "students" || value === "teach") {
+  if (
+    value === "lesson" ||
+    value === "students" ||
+    value === "teach" ||
+    value === "settings"
+  ) {
     if (allowed.includes(value)) return value;
   }
   return defaultClassHubTab(tier);
 }
 
-export function classHubTabHref(classId: string, tab: ClassHubTab, tier: TeacherTier = "plus"): string {
+export function classHubTabHref(
+  classId: string,
+  tab: ClassHubTab,
+  tier: TeacherTier = "plus",
+): string {
   const base = `/teacher/classes/${classId}`;
   const defaultTab = defaultClassHubTab(tier);
   return tab === defaultTab ? base : `${base}?tab=${tab}`;

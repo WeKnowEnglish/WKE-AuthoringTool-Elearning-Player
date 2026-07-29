@@ -6,6 +6,7 @@ import { StudentHomeLanding } from "@/components/primary/StudentHomeLanding";
 import { StudentClassMenu } from "@/components/student-hub/StudentClassMenu";
 import { StudentClassSelectorOverlay } from "@/components/student-hub/StudentClassSelectorOverlay";
 import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
+import { PrimaryGrammarPosterOverlay } from "@/components/primary/PrimaryGrammarPosterOverlay";
 import { playSfx } from "@/lib/audio/sfx";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
@@ -69,6 +70,7 @@ export function PrimaryDashboardClient({
   const [vocabSessionSeed, setVocabSessionSeed] = useState<string | null>(null);
   const [vocabResumeIndex, setVocabResumeIndex] = useState(0);
   const [initialSetConsumed, setInitialSetConsumed] = useState(false);
+  const [grammarPosterSlug, setGrammarPosterSlug] = useState<string | null>(null);
 
   const refreshHomeModel = useCallback(() => {
     const rewards = getRewards();
@@ -159,6 +161,8 @@ export function PrimaryDashboardClient({
         assignedHomework={assignedHomework}
         liveSessions={liveSessions}
         enrolledInClass={classMemberships.length > 0}
+        classMemberships={classMemberships}
+        onOpenClassSelector={() => setClassSelectorOpen(true)}
         initialNav={initialSetId ? "vocabulary" : initialNav}
         onEconomyChange={refreshHomeModel}
         onOpenVocabularySet={(id) => {
@@ -167,6 +171,10 @@ export function PrimaryDashboardClient({
               ? (homeModel.resumeScreenIndex ?? resumeScreenIndexForSet(id))
               : resumeScreenIndexForSet(id);
           openVocabularySet(id, { resumeScreenIndex: resume });
+        }}
+        onOpenGrammarPoster={(slug) => {
+          playSfx("tap", muted);
+          setGrammarPosterSlug(slug);
         }}
         headerExtra={
           <StudentClassMenu
@@ -204,6 +212,17 @@ export function PrimaryDashboardClient({
             setVocabSessionSeed(null);
             setVocabResumeIndex(0);
             refreshHomeModel();
+          }}
+        />
+      ) : null}
+
+      {grammarPosterSlug ? (
+        <PrimaryGrammarPosterOverlay
+          slug={grammarPosterSlug}
+          muted={muted}
+          onClose={() => {
+            playSfx("tap", muted);
+            setGrammarPosterSlug(null);
           }}
         />
       ) : null}

@@ -15,6 +15,7 @@ Related Lesson Player docs:
 - [`docs/adaptive-learning-architecture-plan.md`](../adaptive-learning-architecture-plan.md)
 - `lib/mastery/*` (canonical runtime mastery)
 - `lib/secondary/*` (Lower Secondary vocab lane)
+- [`SECONDARY_TO_PRIMARY_LEXICON_MAP.md`](./SECONDARY_TO_PRIMARY_LEXICON_MAP.md) (Phase 1 `wordItemId` → `pv_*` bridge)
 
 Related ai-tutor prototype (reference only; do not continue feature work there):
 

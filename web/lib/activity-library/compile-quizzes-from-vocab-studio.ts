@@ -16,6 +16,7 @@ import {
   validateVocabularyListDocument,
   type VocabularyListDocument,
 } from "@/lib/activity-builder/vocabulary-list";
+import { enrichVocabListMediaFromLexicon } from "@/lib/actions/lexicon-media";
 import {
   bankPathForStudioActivity,
   playPathForStudioActivity,
@@ -195,6 +196,11 @@ export async function compileAndPublishQuizzesFromVocabList(input: {
       );
     }
   }
+
+  // Pull linked dictionary media into empty picture/audio slots before compile.
+  list = validateVocabularyListDocument(
+    await enrichVocabListMediaFromLexicon(list),
+  );
 
   const built = buildQuizPacksFromVocabList({
     list,

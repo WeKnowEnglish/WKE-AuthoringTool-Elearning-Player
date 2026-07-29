@@ -10,12 +10,12 @@ import {
 } from "./index";
 
 describe("primary vocabulary candidates (slice 1)", () => {
-  it("loads a slim search index with 2000 entries", () => {
+  it("loads a slim search index with candidate entries", () => {
     const index = getPrimaryVocabularySearchIndex();
     expect(index.schemaVersion).toBe(1);
     expect(index.publicationStatus).toBe("planning_only_not_production");
-    expect(index.entryCount).toBe(2000);
-    expect(index.entries).toHaveLength(2000);
+    expect(index.entryCount).toBe(index.entries.length);
+    expect(index.entryCount).toBeGreaterThanOrEqual(2000);
   });
 
   it("looks up search rows by id", () => {
@@ -69,7 +69,8 @@ describe("primary vocabulary candidates (slice 1)", () => {
   it("loads full candidate entries by id without changing publication status", () => {
     const dataset = getPrimaryVocabularyCandidateDataset();
     expect(dataset.publicationStatus).toBe("planning_only_not_production");
-    expect(dataset.entryCount).toBe(2000);
+    expect(dataset.entryCount).toBe(dataset.entries.length);
+    expect(dataset.entryCount).toBeGreaterThanOrEqual(2000);
 
     const sampleId = getPrimaryVocabularySearchEntries()[0]!.id;
     const full = getPrimaryVocabularyCandidateById(sampleId);

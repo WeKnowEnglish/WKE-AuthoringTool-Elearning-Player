@@ -23,4 +23,8 @@ export type PublishStudioAssetResult = {
   byte_size: number;
   /** True when an existing identical file for this teacher was reused. */
   reused?: boolean;
+  /** Present when the upload was mirrored into the shared media library. */
+  media_asset_id?: string;
+  /** Prefer for vocab lists — searchable in /teacher/media. */
+  media_public_url?: string;
 };

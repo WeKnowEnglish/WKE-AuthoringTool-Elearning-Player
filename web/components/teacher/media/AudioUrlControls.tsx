@@ -8,16 +8,32 @@ import { searchTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/li
 type Props = {
   label: string;
   value: string;
-  onChange: (url: string) => void;
+  onChange: (url: string, detail?: { mediaAssetId?: string }) => void;
   disabled?: boolean;
   compact?: boolean;
+  /** Prefill media-library search when opening the picker. */
+  libraryQueryHint?: string;
+  /** Soft-label new uploads with this item name in the media library. */
+  uploadItemName?: string;
+  /** When set, default the picker to media linked to this dictionary id. */
+  lexiconId?: string;
 };
 
-export function AudioUrlControls({ label, value, onChange, disabled, compact }: Props) {
+export function AudioUrlControls({
+  label,
+  value,
+  onChange,
+  disabled,
+  compact,
+  libraryQueryHint,
+  uploadItemName,
+  lexiconId,
+}: Props) {
   const inputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const librarySearchRef = useRef<HTMLInputElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [linkedOnly, setLinkedOnly] = useState(Boolean(lexiconId));
   const [assets, setAssets] = useState<MediaAssetRow[]>([]);
   const [libTotal, setLibTotal] = useState(0);
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -45,6 +61,7 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
         q: libraryQuery.trim(),
         limit: MEDIA_PICKER_PAGE_SIZE,
         offset: 0,
+        ...(linkedOnly && lexiconId ? { lexiconId } : {}),
       })
         .then(({ rows, total }) => {
           if (!cancelled) {
@@ -63,7 +80,7 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [libraryOpen, libraryQuery]);
+  }, [libraryOpen, libraryQuery, linkedOnly, lexiconId]);
 
   const loadMoreLibrary = useCallback(async () => {
     if (libLoadingMore || libLoading || assets.length >= libTotal) return;
@@ -75,6 +92,7 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
         q: libraryQuery.trim(),
         limit: MEDIA_PICKER_PAGE_SIZE,
         offset: assets.length,
+        ...(linkedOnly && lexiconId ? { lexiconId } : {}),
       });
       setLibTotal(total);
       setAssets((prev) => [...prev, ...rows]);
@@ -83,7 +101,7 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
     } finally {
       setLibLoadingMore(false);
     }
-  }, [libLoadingMore, libLoading, assets.length, libTotal, libraryQuery]);
+  }, [libLoadingMore, libLoading, assets.length, libTotal, libraryQuery, linkedOnly, lexiconId]);
 
   useEffect(() => {
     return () => {
@@ -105,8 +123,9 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
 
   useEffect(() => {
     if (!libraryOpen) return;
-    setLibraryQuery("");
-  }, [libraryOpen]);
+    setLibraryQuery(libraryQueryHint?.trim() ?? "");
+    setLinkedOnly(Boolean(lexiconId?.trim()));
+  }, [libraryOpen, libraryQueryHint, lexiconId]);
 
   useEffect(() => {
     if (!libraryOpen) return;
@@ -135,8 +154,11 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
     try {
       const fd = new FormData();
       fd.set("file", f);
+      if (uploadItemName?.trim()) {
+        fd.set("meta_item_name", uploadItemName.trim());
+      }
       const r = await uploadTeacherMedia(fd, "audio");
-      onChange(r.url);
+      onChange(r.url, { mediaAssetId: r.id });
     } catch (err) {
       setUploadErr(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -174,8 +196,11 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
           );
           const fd = new FormData();
           fd.set("file", file);
+          if (uploadItemName?.trim()) {
+            fd.set("meta_item_name", uploadItemName.trim());
+          }
           const r = await uploadTeacherMedia(fd, "audio");
-          onChange(r.url);
+          onChange(r.url, { mediaAssetId: r.id });
         } catch (err) {
           setUploadErr(err instanceof Error ? err.message : "Recording upload failed");
         } finally {
@@ -317,6 +342,32 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
                 </button>
               </div>
               <div className="max-h-[calc(85vh-3.5rem)] overflow-y-auto p-4">
+                {lexiconId ? (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                        linkedOnly
+                          ? "bg-sky-800 text-white"
+                          : "border border-neutral-300 bg-white text-neutral-800"
+                      }`}
+                      onClick={() => setLinkedOnly(true)}
+                    >
+                      Linked to this word
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                        !linkedOnly
+                          ? "bg-sky-800 text-white"
+                          : "border border-neutral-300 bg-white text-neutral-800"
+                      }`}
+                      onClick={() => setLinkedOnly(false)}
+                    >
+                      Whole library
+                    </button>
+                  </div>
+                ) : null}
                 <label className="mb-3 block text-sm">
                   Search library
                   <input
@@ -350,7 +401,7 @@ export function AudioUrlControls({ label, value, onChange, disabled, compact }: 
                             type="button"
                             className="w-full text-left text-sm font-medium text-sky-900 underline underline-offset-2"
                             onClick={() => {
-                              onChange(a.public_url);
+                              onChange(a.public_url, { mediaAssetId: a.id });
                               setLibraryOpen(false);
                             }}
                           >

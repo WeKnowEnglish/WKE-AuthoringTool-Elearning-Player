@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import {
-  ACTIVITY_BUILDER_SECTIONS,
+  visibleActivityBuilderSections,
   type ActivityBuilderCard,
 } from "@/lib/activity-builder/catalog";
+import { adminTeacherPreviewStore } from "@/lib/admin-teacher-preview";
 import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   studioOrigin: string | null;
+  /** Platform admins see Studio-interim / unshipped formats (unless previewing Light). */
+  isAdmin?: boolean;
 };
 
 function statusLabel(card: ActivityBuilderCard): string {
@@ -120,7 +123,21 @@ function SectionLabel({
 }
 
 /** Landing menu for Activity Builder (LP-native tools + Studio interim cards). */
-export function ActivityBuilderHub({ studioOrigin }: Props) {
+export function ActivityBuilderHub({
+  studioOrigin,
+  isAdmin = false,
+}: Props) {
+  const previewAsTeacherLight = useSyncExternalStore(
+    adminTeacherPreviewStore.subscribe,
+    adminTeacherPreviewStore.getSnapshot,
+    adminTeacherPreviewStore.getServerSnapshot,
+  );
+  const effectiveIsAdmin = isAdmin && !previewAsTeacherLight;
+  const sections = useMemo(
+    () => visibleActivityBuilderSections(effectiveIsAdmin),
+    [effectiveIsAdmin],
+  );
+
   useEffect(() => {
     recordAppDiagnostic("teacher", "mark", "activity_builder_hub_loaded");
   }, []);
@@ -135,7 +152,10 @@ export function ActivityBuilderHub({ studioOrigin }: Props) {
           <p className="mt-1 max-w-2xl text-sm text-stone-600">
             Build activities for your Activity Bank and Classroom Wall.
             Vocabulary lists, Explore hotspots, and the Learning Track Compiler
-            author here; some scene/quiz tools still open in EDU Studio.
+            author here
+            {effectiveIsAdmin
+              ? "; some scene/quiz tools still open in EDU Studio."
+              : "."}
           </p>
         </div>
         <Link
@@ -146,7 +166,7 @@ export function ActivityBuilderHub({ studioOrigin }: Props) {
         </Link>
       </header>
 
-      {!studioOrigin ? (
+      {effectiveIsAdmin && !studioOrigin ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           Set <code className="font-mono">NEXT_PUBLIC_STUDIO_ORIGIN</code> to
           enable “Open in EDU Studio” links for tools that are still interim.
@@ -154,7 +174,7 @@ export function ActivityBuilderHub({ studioOrigin }: Props) {
       ) : null}
 
       <div className="flex flex-col gap-4">
-        {ACTIVITY_BUILDER_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <section key={section.id}>
             <SectionLabel toneClass={section.toneClass}>
               {section.label}

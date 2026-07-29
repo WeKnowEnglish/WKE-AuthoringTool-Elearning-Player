@@ -6,7 +6,6 @@ import { StudentHomeLanding } from "@/components/primary/StudentHomeLanding";
 import { StudentClassMenu } from "@/components/student-hub/StudentClassMenu";
 import { StudentClassSelectorOverlay } from "@/components/student-hub/StudentClassSelectorOverlay";
 import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
-import { SelfStudyTopicQuizOverlay } from "@/components/primary/SelfStudyTopicQuizOverlay";
 import { playSfx } from "@/lib/audio/sfx";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
@@ -28,7 +27,6 @@ import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import { isUnlockAvailable } from "@/lib/progress/unlock-registry";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { newSessionSeed } from "@/lib/student-hub/session-seed";
-import type { TestStartTopicId } from "@/lib/teststartpage/bank";
 import { isVocabSetId, type VocabSetId } from "@/lib/vocabulary-templates";
 import { markExplorationNode } from "@/lib/worlds/exploration";
 import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
@@ -71,9 +69,6 @@ export function PrimaryDashboardClient({
   const [vocabSessionSeed, setVocabSessionSeed] = useState<string | null>(null);
   const [vocabResumeIndex, setVocabResumeIndex] = useState(0);
   const [initialSetConsumed, setInitialSetConsumed] = useState(false);
-  const [selfStudyTopicId, setSelfStudyTopicId] = useState<TestStartTopicId | null>(
-    null,
-  );
 
   const refreshHomeModel = useCallback(() => {
     const rewards = getRewards();
@@ -173,14 +168,6 @@ export function PrimaryDashboardClient({
               : resumeScreenIndexForSet(id);
           openVocabularySet(id, { resumeScreenIndex: resume });
         }}
-        onOpenSelfStudyTopic={(topicId) => {
-          if (!isUnlockAvailable("topic_quiz", getPlayerLevel())) {
-            playSfx("wrong", muted);
-            return;
-          }
-          playSfx("tap", muted);
-          setSelfStudyTopicId(topicId);
-        }}
         headerExtra={
           <StudentClassMenu
             memberships={classMemberships}
@@ -189,14 +176,6 @@ export function PrimaryDashboardClient({
           />
         }
       />
-
-      {selfStudyTopicId ? (
-        <SelfStudyTopicQuizOverlay
-          topicId={selfStudyTopicId}
-          muted={muted}
-          onClose={() => setSelfStudyTopicId(null)}
-        />
-      ) : null}
 
       {vocabSetOpen && activeVocabSetId && vocabSessionSeed ? (
         <VocabularySetOverlay

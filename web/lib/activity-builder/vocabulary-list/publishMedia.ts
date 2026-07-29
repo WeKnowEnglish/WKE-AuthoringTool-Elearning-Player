@@ -56,7 +56,7 @@ export async function publishVocabStudioAsset(input: {
   filename: string;
   kind: "image" | "audio";
   meta?: Record<string, unknown>;
-}): Promise<{ public_url: string }> {
+}): Promise<{ public_url: string; media_asset_id?: string }> {
   const form = new FormData();
   form.append("file", input.file, input.filename);
   form.append("kind", input.kind);
@@ -70,12 +70,18 @@ export async function publishVocabStudioAsset(input: {
   const body = (await response.json().catch(() => null)) as {
     ok?: boolean;
     public_url?: string;
+    media_public_url?: string;
+    media_asset_id?: string;
     error?: string;
   } | null;
-  if (!response.ok || !body?.public_url) {
+  if (!response.ok || !(body?.media_public_url || body?.public_url)) {
     throw new Error(body?.error || `Upload failed (${response.status}).`);
   }
-  return { public_url: body.public_url };
+  return {
+    // Prefer shared media library URL when the Studio upload was bridged.
+    public_url: (body.media_public_url || body.public_url) as string,
+    ...(body.media_asset_id ? { media_asset_id: body.media_asset_id } : {}),
+  };
 }
 
 /**
@@ -126,6 +132,8 @@ export async function publishLocalVocabMedia(
             entryId: entry.id,
             field: "imageUrl",
             batch: true,
+            ...(entry.sourceWordId ? { sourceWordId: entry.sourceWordId } : {}),
+            ...(entry.word.trim() ? { word: entry.word.trim() } : {}),
           },
         });
         imageUrl = published.public_url;
@@ -155,6 +163,8 @@ export async function publishLocalVocabMedia(
             entryId: entry.id,
             field: "audioUrl",
             batch: true,
+            ...(entry.sourceWordId ? { sourceWordId: entry.sourceWordId } : {}),
+            ...(entry.word.trim() ? { word: entry.word.trim() } : {}),
           },
         });
         audioUrl = published.public_url;

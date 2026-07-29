@@ -17,6 +17,7 @@ import {
   getActivityLibraryEntry,
   readVocabularyListFromLibraryEntry,
 } from "@/lib/activity-library";
+import { enrichVocabListMediaFromLexicon } from "@/lib/actions/lexicon-media";
 import {
   defaultFlashcardsSettings,
   defaultLetterMixupSettings,
@@ -454,7 +455,12 @@ async function compileQuizScreensFromList(
   format: LearningTrackVocabCompileFormat,
   beat?: LearningTrackBeatInstance,
 ): Promise<LearningTrackScreenPayload[]> {
-  const list = await loadVocabularyList(listId);
+  let list = await loadVocabularyList(listId);
+  try {
+    list = await enrichVocabListMediaFromLexicon(list);
+  } catch {
+    // Non-fatal: compile with list media as authored if link enrich fails.
+  }
   const label =
     listId === HOBBIES_DEFAULT_VOCAB_LIST_ID
       ? "hobbies vocabulary"

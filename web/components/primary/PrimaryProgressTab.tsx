@@ -197,7 +197,7 @@ export function PrimaryProgressTab({
               onClick={onOpenVocabulary}
               className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-4 text-sm font-extrabold text-[var(--pl-purple)] hover:bg-[var(--pl-purple-soft)]"
             >
-              Browse Vocabulary
+              Browse Learn
             </button>
           ) : null}
         </div>

@@ -56,10 +56,17 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
           Learning track
         </TeacherNavMenuLink>
         <TeacherNavMenuLink
+          href="/teacher/activity-builder/vocabulary-lists"
+          active={pathname.startsWith("/teacher/activity-builder/vocabulary-lists")}
+        >
+          Vocabulary lists
+        </TeacherNavMenuLink>
+        <TeacherNavMenuLink
           href="/teacher/activity-builder"
           active={
             onActivityBuilder &&
-            !pathname.startsWith("/teacher/activity-builder/learning-tracks")
+            !pathname.startsWith("/teacher/activity-builder/learning-tracks") &&
+            !pathname.startsWith("/teacher/activity-builder/vocabulary-lists")
           }
         >
           Single quiz / activity

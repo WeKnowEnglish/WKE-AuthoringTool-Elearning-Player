@@ -17,11 +17,21 @@ function extensionFromDataUrl(dataUrl: string, fallback: string): string {
   return fallback;
 }
 
+function mediaRoleForHotspotAsset(
+  document: ExploreHotspotsDocument,
+  assetId: string,
+): "background" | "scene" {
+  const usedAsPhaseBackground = (document.interaction.phases ?? []).some(
+    (phase) => phase.imageAssetId === assetId,
+  );
+  return usedAsPhaseBackground ? "background" : "scene";
+}
+
 export function countLocalHotspotMedia(document: ExploreHotspotsDocument): number {
   return document.assets.filter((asset) => isDataUrl(asset.src)).length;
 }
 
-/** Upload data-URL assets to studio_assets before bank save. */
+/** Upload data-URL assets to studio_assets (+ media library bridge) before bank save. */
 export async function publishLocalHotspotMedia(
   document: ExploreHotspotsDocument,
 ): Promise<ExploreHotspotsDocument> {
@@ -31,11 +41,18 @@ export async function publishLocalHotspotMedia(
     if (!isDataUrl(asset.src)) continue;
     const blob = await dataUrlToBlob(asset.src);
     const ext = extensionFromDataUrl(asset.src, "png");
+    const mediaRole = mediaRoleForHotspotAsset(document, asset.id);
     const uploaded = await publishVocabStudioAsset({
       file: blob,
       filename: `${asset.id}.${ext}`,
       kind: "image",
-      meta: { via: "explore_hotspots_workspace", assetId: asset.id },
+      meta: {
+        source: "explore_hotspots",
+        via: "explore_hotspots_workspace",
+        assetId: asset.id,
+        mediaRole,
+        ...(asset.alt?.trim() ? { alt: asset.alt.trim(), word: asset.alt.trim() } : {}),
+      },
     });
     assets[i] = { ...asset, src: uploaded.public_url };
   }

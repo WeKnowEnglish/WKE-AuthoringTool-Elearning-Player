@@ -175,3 +175,22 @@ export function studioOriginFromEnv(): string | null {
   if (!raw) return null;
   return raw.replace(/\/$/, "");
 }
+
+/** Cards teachers can use without admin (live LP authoring). */
+export function isShippableActivityBuilderCard(card: ActivityBuilderCard): boolean {
+  return card.status === "authoring_ready" || card.status === "play_in_bank";
+}
+
+/**
+ * Hub sections for the signed-in teacher.
+ * Non-admins only see shippable cards; empty sections are omitted.
+ */
+export function visibleActivityBuilderSections(
+  isAdmin: boolean,
+): ActivityBuilderSection[] {
+  if (isAdmin) return ACTIVITY_BUILDER_SECTIONS;
+  return ACTIVITY_BUILDER_SECTIONS.map((section) => ({
+    ...section,
+    cards: section.cards.filter(isShippableActivityBuilderCard),
+  })).filter((section) => section.cards.length > 0);
+}

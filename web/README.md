@@ -28,6 +28,7 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
    - `supabase/migrations/032_teacher_access_requests.sql` — teacher access request form storage (optional)
    - `supabase/migrations/034_grammar_modules.sql` — **grammar poster Save/Publish** (`grammar_modules` table + RLS)
    - `supabase/migrations/069_studio_assets.sql` — **EDU Studio cloud assets** (`studio_assets` + public `studio_media` bucket; additive, does not change `media_assets`)
+   - `supabase/migrations/079_lexicon_media_links.sql` — **dictionary ↔ media library links** (many-to-many). Vocab list + explore-hotspots Studio uploads mirror into `media_assets` (scene vs vocabulary categories); lexicon links only when `sourceWordId` is set. LTC quiz compile enriches empty slots from links.
    - EDU Studio upload API: `POST /api/studio/assets` (multipart `file` + optional `kind`/`meta`; `Authorization: Bearer <teacher access_token>`; CORS via `STUDIO_ORIGIN`)
    - `supabase/migrations/070_studio_activities.sql` — **EDU Studio Activity Bank** (`studio_activities` teacher-owned pack staging; additive; not homework / not `teacher_pack_*`)
    - EDU Studio activity publish API: `POST /api/studio/activities` (JSON `{ format, pack, authoring?, title? }`; teacher Bearer auth; CORS via `STUDIO_ORIGIN`)

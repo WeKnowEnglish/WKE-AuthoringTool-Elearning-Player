@@ -4,16 +4,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addVocabEntry,
-  compressGamesChoiceImageFile,
   countLocalVocabMedia,
   createBakeryVocabularyListDocument,
   createBlankVocabularyListDocument,
-  dataUrlToBlob,
-  formatBytes,
   patchVocabEntry,
   pickVocabularyListFile,
   publishLocalVocabMedia,
-  publishVocabStudioAsset,
   removeVocabEntry,
   renameVocabularyList,
   saveVocabularyListToDisk,
@@ -32,10 +28,20 @@ import {
   type StudioVocabularyListRef,
   type VocabCompileFormat,
 } from "@/lib/activity-library";
+import {
+  linkLexiconMedia,
+  linkLexiconMediaByPublicUrl,
+} from "@/lib/actions/lexicon-media";
+import { LexiconLinkedMediaStrip } from "@/components/teacher/activity-builder/LexiconLinkedMediaStrip";
 import { VocabEntryAudioControls } from "@/components/teacher/activity-builder/VocabEntryAudioControls";
 import { VocabularyListLexiconPicker } from "@/components/teacher/activity-builder/VocabularyListLexiconPicker";
+import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import type { PrimaryVocabularySearchIndexEntry } from "@/lib/vocabulary/primary-candidates";
 import type { TeacherLexiconEntry } from "@/lib/vocabulary/teacher-lexicon";
+import type { LexiconMediaRole } from "@/lib/vocabulary/lexicon-media";
+
+/** Match Explore Hotspots status banners — auto-clear after a short beat. */
+const BANNER_DISMISS_MS = 3000;
 
 const STARTERS = [
   {
@@ -103,7 +109,6 @@ export function VocabularyListWorkspace({
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState<string | null>(null);
-  const [uploadingPicture, setUploadingPicture] = useState(false);
   const [uploadingAllLocal, setUploadingAllLocal] = useState(false);
   const [libraryId, setLibraryId] = useState<string | null>(openLibraryId);
   const [libraryEntries, setLibraryEntries] = useState<StudioVocabularyListRef[]>([]);
@@ -117,9 +122,12 @@ export function VocabularyListWorkspace({
   const [publishedQuizzes, setPublishedQuizzes] = useState<PublishedVocabQuiz[]>(
     [],
   );
+  const [editorTab, setEditorTab] = useState<"dictionary" | "details">("details");
+  const [compileOverlayOpen, setCompileOverlayOpen] = useState(false);
+  const [showValidationBanner, setShowValidationBanner] = useState(true);
+  const [lexiconMediaRefreshKey, setLexiconMediaRefreshKey] = useState(0);
   const [overlayBooting, setOverlayBooting] = useState(isOverlay);
   const openRef = useRef<HTMLInputElement>(null);
-  const pictureFileRef = useRef<HTMLInputElement>(null);
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const documentRef = useRef(document);
   documentRef.current = document;
@@ -127,6 +135,12 @@ export function VocabularyListWorkspace({
   const studioCompileHref = studioOrigin
     ? `${studioOrigin}/activity-builder/vocabulary-lists`
     : null;
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), BANNER_DISMISS_MS);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   const refreshLibrary = async () => {
     try {
@@ -223,6 +237,15 @@ export function VocabularyListWorkspace({
     }
   }, [document]);
 
+  useEffect(() => {
+    setShowValidationBanner(true);
+    const timer = window.setTimeout(
+      () => setShowValidationBanner(false),
+      BANNER_DISMISS_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [validation.ok, validation.message]);
+
   const loadDocument = (
     next: VocabularyListDocument,
     label: string,
@@ -241,6 +264,40 @@ export function VocabularyListWorkspace({
     updater: (current: VocabularyListDocument) => VocabularyListDocument,
   ) => {
     setDocument((current) => updater(current));
+  };
+
+  const attachMediaToLexicon = async (input: {
+    lexiconId?: string;
+    surface: string;
+    role: LexiconMediaRole;
+    mediaAssetId?: string;
+    publicUrl?: string;
+  }) => {
+    if (!input.lexiconId) return;
+    const result = input.mediaAssetId
+      ? await linkLexiconMedia({
+          lexiconId: input.lexiconId,
+          mediaAssetId: input.mediaAssetId,
+          role: input.role,
+          surface: input.surface,
+        })
+      : input.publicUrl
+        ? await linkLexiconMediaByPublicUrl({
+            lexiconId: input.lexiconId,
+            publicUrl: input.publicUrl,
+            role: input.role,
+            surface: input.surface,
+          })
+        : null;
+    if (!result) return;
+    if (result.ok) {
+      setLexiconMediaRefreshKey((key) => key + 1);
+      return;
+    }
+    // Missing migration / Studio-only URL — keep list media; don't block authoring.
+    if (!/not in the shared media library|Run migration/i.test(result.error)) {
+      setNotice(result.error);
+    }
   };
 
   const openSavedList = async () => {
@@ -562,11 +619,11 @@ export function VocabularyListWorkspace({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-stone-200 bg-white/70 px-3 py-2.5 sm:px-4">
+      <header className="flex shrink-0 flex-wrap items-start gap-2 border-b border-stone-200 bg-white/70 px-3 py-2.5 sm:items-center sm:px-4">
         {isOverlay ? (
           <button
             type="button"
-            className="text-xs font-medium text-sky-800 hover:underline"
+            className="mt-0.5 shrink-0 text-xs font-medium text-sky-800 hover:underline sm:mt-0"
             onClick={() => onClose?.()}
           >
             ← Close
@@ -574,20 +631,63 @@ export function VocabularyListWorkspace({
         ) : (
           <Link
             href="/teacher/activity-builder"
-            className="text-xs font-medium text-sky-800 hover:underline"
+            aria-label="Back to Activity Builder"
+            title="Back to Activity Builder"
+            className="mt-0.5 flex shrink-0 items-center justify-center rounded-lg p-1 text-sky-800 hover:bg-sky-50 sm:mt-0"
           >
-            ← Activity Builder
+            <svg
+              viewBox="0 0 24 40"
+              className="h-10 w-6"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path d="M18 4 L6 20 L18 36 L22 32 L13 20 L22 8 Z" />
+            </svg>
           </Link>
         )}
-        <div className="min-w-0">
-          <h1 className="text-base font-semibold text-stone-900">
-            {isOverlay ? "Track vocabulary list" : "Vocabulary list"}
-          </h1>
-          <p className="truncate text-xs text-stone-500">
-            {document.name}
-            {libraryId ? " · in library" : " · unsaved"}
-            {fileLabel ? ` · file ${fileLabel}` : ""}
-          </p>
+        <div className="min-w-0 flex-1 basis-[16rem]">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              aria-label="List name"
+              className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-base font-semibold text-stone-900 outline-none hover:border-stone-200 focus:border-sky-300 focus:bg-white"
+              value={document.name}
+              placeholder="List name"
+              onChange={(event) =>
+                patchDocument((current) =>
+                  renameVocabularyList(current, event.target.value),
+                )
+              }
+            />
+            <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-500">
+              {libraryId ? "In library" : "Unsaved"}
+              {fileLabel ? ` · ${fileLabel}` : ""}
+            </span>
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 px-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-stone-500">
+              <span className="shrink-0 font-medium uppercase tracking-wide">
+                CEFR
+              </span>
+              <input
+                aria-label="CEFR level"
+                className="w-14 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm text-stone-600 outline-none placeholder:text-stone-400 hover:border-stone-200 focus:border-sky-300 focus:bg-white"
+                value={document.cefr ?? ""}
+                placeholder="A1"
+                onChange={(event) =>
+                  patchDocument((current) => ({
+                    ...current,
+                    cefr: event.target.value || undefined,
+                  }))
+                }
+              />
+            </label>
+            <span className="text-xs text-stone-500">
+              {completeness.total} word{completeness.total === 1 ? "" : "s"} ·{" "}
+              {completeness.withDefinition} def · {completeness.withExample}{" "}
+              example · {completeness.withImage} picture ·{" "}
+              {completeness.withAudio} audio
+            </span>
+          </div>
         </div>
         <div className="ml-auto flex flex-wrap gap-1.5">
           {isOverlay ? (
@@ -623,6 +723,19 @@ export function VocabularyListWorkspace({
                 ? `Upload local media (${localMedia.total})`
                 : "Upload local media"}
           </button>
+          {!isOverlay ? (
+            <button
+              type="button"
+              className="rounded-lg bg-amber-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+              disabled={!validation.ok}
+              onClick={() => {
+                setPublishedQuizzes([]);
+                setCompileOverlayOpen(true);
+              }}
+            >
+              Compile
+            </button>
+          ) : null}
           <button
             type="button"
             className="rounded-lg bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-40"
@@ -663,41 +776,68 @@ export function VocabularyListWorkspace({
         </button>
       ) : null}
 
-      {isOverlay ? null : (
-        <section className="shrink-0 border-b border-stone-200 bg-white px-3 py-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-                Compile to Activity Bank
-              </h2>
-              <p className="mt-1 text-xs text-stone-600">
-                Builds playable quizzes from this list and saves them beside your
-                other bank activities.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-3">
-                {VOCAB_COMPILE_FORMAT_OPTIONS.map((option) => {
-                  const checked = compileFormats.includes(option.format);
-                  return (
-                    <label
-                      key={option.format}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-800"
-                    >
-                      <input
-                        type="checkbox"
-                        className="rounded border-stone-300"
-                        checked={checked}
-                        onChange={() => toggleCompileFormat(option.format)}
-                      />
-                      {option.label}
-                    </label>
-                  );
-                })}
+      {compileOverlayOpen && !isOverlay ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vocab-compile-title"
+          onClick={() => {
+            if (!compiling) setCompileOverlayOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-4 shadow-xl sm:p-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2
+                  id="vocab-compile-title"
+                  className="text-base font-semibold text-stone-900"
+                >
+                  Compile quizzes
+                </h2>
+                <p className="mt-1 text-sm text-stone-600">
+                  Choose quiz types to build from this list and save them to the
+                  Activity Bank.
+                </p>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+                className="shrink-0 rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-40"
+                disabled={compiling}
+                onClick={() => setCompileOverlayOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {VOCAB_COMPILE_FORMAT_OPTIONS.map((option) => {
+                const checked = compileFormats.includes(option.format);
+                return (
+                  <label
+                    key={option.format}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2.5 text-sm font-medium text-stone-800 hover:border-stone-300"
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded border-stone-300"
+                      checked={checked}
+                      disabled={compiling}
+                      onChange={() => toggleCompileFormat(option.format)}
+                    />
+                    {option.label}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
                 disabled={!validation.ok || compiling || compileFormats.length < 1}
                 onClick={() => void compileAndPublishQuizzes()}
               >
@@ -714,65 +854,55 @@ export function VocabularyListWorkspace({
                 </a>
               ) : null}
             </div>
+
+            {publishedQuizzes.length > 0 ? (
+              <ul className="mt-4 space-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2">
+                {publishedQuizzes.map((quiz) => (
+                  <li
+                    key={quiz.id}
+                    className="flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-950"
+                  >
+                    <span className="font-medium">
+                      {quiz.label} · {quiz.itemCount} item
+                      {quiz.itemCount === 1 ? "" : "s"}
+                    </span>
+                    <span className="flex flex-wrap gap-2">
+                      <a
+                        href={quiz.playPath}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold underline"
+                      >
+                        Play
+                      </a>
+                      <Link
+                        href={quiz.bankPath}
+                        className="font-semibold underline"
+                      >
+                        Bank
+                      </Link>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-          {publishedQuizzes.length > 0 ? (
-            <ul className="mt-3 space-y-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
-              {publishedQuizzes.map((quiz) => (
-                <li
-                  key={quiz.id}
-                  className="flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-950"
-                >
-                  <span className="font-medium">
-                    {quiz.label} · {quiz.itemCount} item
-                    {quiz.itemCount === 1 ? "" : "s"}
-                  </span>
-                  <span className="flex flex-wrap gap-2">
-                    <a
-                      href={quiz.playPath}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold underline"
-                    >
-                      Play
-                    </a>
-                    <Link href={quiz.bankPath} className="font-semibold underline">
-                      Bank
-                    </Link>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-      )}
+        </div>
+      ) : null}
 
-      <div
-        className={`shrink-0 border-b px-3 py-2 text-sm ${
-          validation.ok
-            ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-            : "border-rose-200 bg-rose-50 text-rose-900"
-        }`}
-      >
-        {validation.message}
-      </div>
-
-      <VocabularyListLexiconPicker
-        document={document}
-        initialPlatformEntries={initialPlatformEntries}
-        initialTeacherLexicon={initialTeacherLexicon}
-        showLexiconReviewLink={showLexiconReviewLink}
-        onAddFields={(fields) => {
-          const result = addVocabEntryFromFields(documentRef.current, fields);
-          if (!result.ok) {
-            return { ok: false, reason: result.reason };
-          }
-          documentRef.current = result.document;
-          setDocument(result.document);
-          setSelectedEntryId(result.entryId);
-          setNotice(`Added “${fields.word}” from the dictionary.`);
-          return { ok: true, entryId: result.entryId };
-        }}
-      />
+      {showValidationBanner ? (
+        <button
+          type="button"
+          className={`shrink-0 border-b px-3 py-2 text-left text-sm ${
+            validation.ok
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : "border-rose-200 bg-rose-50 text-rose-900"
+          }`}
+          onClick={() => setShowValidationBanner(false)}
+        >
+          {validation.message} ×
+        </button>
+      ) : null}
 
       <div className="grid min-h-0 flex-1 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="flex min-h-0 flex-col border-r border-stone-200 bg-stone-50/50">
@@ -787,6 +917,7 @@ export function VocabularyListWorkspace({
                 patchDocument((current) => {
                   const next = addVocabEntry(current);
                   setSelectedEntryId(next.entries.at(-1)?.id ?? "");
+                  setEditorTab("details");
                   return next;
                 });
               }}
@@ -799,7 +930,10 @@ export function VocabularyListWorkspace({
               <button
                 key={entry.id}
                 type="button"
-                onClick={() => setSelectedEntryId(entry.id)}
+                onClick={() => {
+                  setSelectedEntryId(entry.id);
+                  setEditorTab("details");
+                }}
                 className={`w-full rounded-lg border p-3 text-left ${
                   selectedEntry?.id === entry.id
                     ? "border-stone-900 bg-white"
@@ -820,48 +954,78 @@ export function VocabularyListWorkspace({
           </div>
         </aside>
 
-        <div className="min-h-0 overflow-y-auto p-4">
-          <div className="mx-auto max-w-2xl space-y-4">
-            <section className="space-y-3 rounded-xl border border-stone-200 bg-white/80 p-4">
-              <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-                List
-              </h2>
-              <label className="block text-sm text-stone-800">
-                List name
-                <input
-                  className={inputClass}
-                  value={document.name}
-                  onChange={(event) =>
-                    patchDocument((current) =>
-                      renameVocabularyList(current, event.target.value),
-                    )
-                  }
-                />
-              </label>
-              <label className="block text-sm text-stone-800">
-                CEFR (optional)
-                <input
-                  className={inputClass}
-                  value={document.cefr ?? ""}
-                  placeholder="A1"
-                  onChange={(event) =>
-                    patchDocument((current) => ({
-                      ...current,
-                      cefr: event.target.value || undefined,
-                    }))
-                  }
-                />
-              </label>
-              <p className="text-xs text-stone-500">
-                {completeness.total} word{completeness.total === 1 ? "" : "s"} ·{" "}
-                {completeness.withDefinition} def · {completeness.withExample}{" "}
-                example · {completeness.withImage} picture ·{" "}
-                {completeness.withAudio} audio
-              </p>
-            </section>
+        <div className="flex min-h-0 flex-col">
+          <div
+            className="flex shrink-0 gap-1 border-b border-stone-200 bg-white px-3 pt-2"
+            role="tablist"
+            aria-label="Word editor"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={editorTab === "dictionary"}
+              id="vocab-editor-tab-dictionary"
+              className={`rounded-t-lg border border-b-0 px-3 py-2 text-xs font-semibold transition ${
+                editorTab === "dictionary"
+                  ? "relative z-10 -mb-px border-stone-200 bg-white text-stone-900"
+                  : "border-transparent bg-stone-100 text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+              }`}
+              onClick={() => setEditorTab("dictionary")}
+            >
+              Dictionary
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={editorTab === "details"}
+              id="vocab-editor-tab-details"
+              className={`rounded-t-lg border border-b-0 px-3 py-2 text-xs font-semibold transition ${
+                editorTab === "details"
+                  ? "relative z-10 -mb-px border-stone-200 bg-white text-stone-900"
+                  : "border-transparent bg-stone-100 text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+              }`}
+              onClick={() => setEditorTab("details")}
+            >
+              Word details
+            </button>
+          </div>
 
+          {editorTab === "dictionary" ? (
+            <div
+              className="min-h-0 flex-1 overflow-y-auto"
+              role="tabpanel"
+              aria-labelledby="vocab-editor-tab-dictionary"
+            >
+              <VocabularyListLexiconPicker
+                document={document}
+                initialPlatformEntries={initialPlatformEntries}
+                initialTeacherLexicon={initialTeacherLexicon}
+                showLexiconReviewLink={showLexiconReviewLink}
+                onAddFields={(fields) => {
+                  const result = addVocabEntryFromFields(
+                    documentRef.current,
+                    fields,
+                  );
+                  if (!result.ok) {
+                    return { ok: false, reason: result.reason };
+                  }
+                  documentRef.current = result.document;
+                  setDocument(result.document);
+                  setSelectedEntryId(result.entryId);
+                  setNotice(`Added “${fields.word}” from the dictionary.`);
+                  return { ok: true, entryId: result.entryId };
+                }}
+              />
+            </div>
+          ) : (
+            <div
+              className="min-h-0 flex-1 overflow-y-auto p-4"
+              role="tabpanel"
+              aria-labelledby="vocab-editor-tab-details"
+            >
+          <div className="mx-auto w-full max-w-5xl space-y-4">
             {selectedEntry ? (
-              <section className="space-y-3 rounded-xl border border-stone-200 bg-white/80 p-4">
+              <section className="space-y-4 rounded-xl border border-stone-200 bg-white/80 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
                     Selected word
@@ -890,246 +1054,217 @@ export function VocabularyListWorkspace({
                     Remove word
                   </button>
                 </div>
-                <label className="block text-sm text-stone-800">
-                  Word
-                  <input
-                    className={inputClass}
-                    value={selectedEntry.word}
-                    onChange={(event) =>
-                      patchDocument((current) =>
-                        patchVocabEntry(current, selectedEntry.id, {
-                          word: event.target.value,
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                {selectedEntry.sourceWordId ? (
-                  <p className="text-xs text-stone-500">
-                    Linked to dictionary{" "}
-                    <span className="font-mono text-stone-700">
-                      {selectedEntry.sourceWordId}
-                    </span>
-                    . Edits here stay on this list only.
-                  </p>
-                ) : null}
-                <label className="block text-sm text-stone-800">
-                  Definition (English)
-                  <textarea
-                    className={inputClass}
-                    rows={3}
-                    value={selectedEntry.definitionEn ?? ""}
-                    onChange={(event) =>
-                      patchDocument((current) =>
-                        patchVocabEntry(current, selectedEntry.id, {
-                          definitionEn: event.target.value || undefined,
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                <label className="block text-sm text-stone-800">
-                  Example sentence
-                  <textarea
-                    className={inputClass}
-                    rows={3}
-                    value={selectedEntry.example ?? ""}
-                    onChange={(event) =>
-                      patchDocument((current) =>
-                        patchVocabEntry(current, selectedEntry.id, {
-                          example: event.target.value || undefined,
-                        }),
-                      )
-                    }
-                  />
-                </label>
 
-                <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50/80 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-medium text-stone-800">
-                      Picture (optional)
-                    </h3>
-                    {selectedEntry.imageUrl?.startsWith("data:") ? (
-                      <span className="text-xs text-emerald-800">Local image</span>
-                    ) : null}
-                    {selectedEntry.imageUrl?.startsWith("http") ? (
-                      <span className="text-xs text-sky-800">Cloud URL</span>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-                      disabled={uploadingPicture}
-                      onClick={() => pictureFileRef.current?.click()}
-                    >
-                      {uploadingPicture ? "Working…" : "Choose from computer"}
-                    </button>
-                    {selectedEntry.imageUrl ? (
-                      <button
-                        type="button"
-                        className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs"
-                        onClick={() =>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="min-w-0 space-y-3">
+                    <label className="block text-sm text-stone-800">
+                      Word
+                      <input
+                        className={inputClass}
+                        value={selectedEntry.word}
+                        onChange={(event) =>
                           patchDocument((current) =>
                             patchVocabEntry(current, selectedEntry.id, {
-                              imageUrl: undefined,
-                              imageFit: undefined,
+                              word: event.target.value,
                             }),
                           )
                         }
-                      >
-                        Clear picture
-                      </button>
-                    ) : null}
-                  </div>
-                  <label className="block text-xs text-stone-500">
-                    Or paste image URL
-                    <input
-                      className={inputClass}
-                      placeholder="https://…"
-                      value={
-                        selectedEntry.imageUrl?.startsWith("data:")
-                          ? ""
-                          : (selectedEntry.imageUrl ?? "")
-                      }
-                      onChange={(event) =>
-                        patchDocument((current) =>
-                          patchVocabEntry(current, selectedEntry.id, {
-                            imageUrl: event.target.value || undefined,
-                          }),
-                        )
-                      }
-                    />
-                  </label>
-                  {selectedEntry.imageUrl?.trim() ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedEntry.imageUrl}
-                        alt=""
-                        className="h-24 w-24 rounded-lg border border-stone-200 object-contain"
                       />
-                      <label className="flex items-center gap-2 text-sm text-stone-800">
-                        Image fit
-                        <select
-                          className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm"
-                          value={selectedEntry.imageFit ?? "contain"}
-                          onChange={(event) =>
-                            patchDocument((current) =>
-                              patchVocabEntry(current, selectedEntry.id, {
-                                imageFit: event.target.value as "cover" | "contain",
-                              }),
-                            )
+                    </label>
+                    {selectedEntry.sourceWordId ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-stone-500">
+                          Linked to dictionary{" "}
+                          <span className="font-mono text-stone-700">
+                            {selectedEntry.sourceWordId}
+                          </span>
+                          . Edits here stay on this list only; media library picks
+                          also attach to the dictionary word.
+                        </p>
+                        <LexiconLinkedMediaStrip
+                          lexiconId={selectedEntry.sourceWordId}
+                          refreshKey={lexiconMediaRefreshKey}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-stone-500">
+                        Add this word from the Dictionary tab to link media to the
+                        shared dictionary (many images/audio per word allowed).
+                      </p>
+                    )}
+                    <label className="block text-sm text-stone-800">
+                      Definition (English)
+                      <textarea
+                        className={inputClass}
+                        rows={3}
+                        value={selectedEntry.definitionEn ?? ""}
+                        onChange={(event) =>
+                          patchDocument((current) =>
+                            patchVocabEntry(current, selectedEntry.id, {
+                              definitionEn: event.target.value || undefined,
+                            }),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm text-stone-800">
+                      Example sentence
+                      <textarea
+                        className={inputClass}
+                        rows={3}
+                        value={selectedEntry.example ?? ""}
+                        onChange={(event) =>
+                          patchDocument((current) =>
+                            patchVocabEntry(current, selectedEntry.id, {
+                              example: event.target.value || undefined,
+                            }),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm text-stone-800">
+                      Notes (optional)
+                      <textarea
+                        className={inputClass}
+                        rows={2}
+                        value={selectedEntry.notes ?? ""}
+                        onChange={(event) =>
+                          patchDocument((current) =>
+                            patchVocabEntry(current, selectedEntry.id, {
+                              notes: event.target.value || undefined,
+                            }),
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <div className="min-w-0 space-y-3">
+                    <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50/80 p-3">
+                  <MediaUrlControls
+                    label="Picture (optional)"
+                    compact
+                    value={
+                      selectedEntry.imageUrl?.startsWith("data:")
+                        ? ""
+                        : (selectedEntry.imageUrl ?? "")
+                    }
+                    libraryQueryHint={selectedEntry.word}
+                    uploadItemName={selectedEntry.word.trim() || undefined}
+                    lexiconId={selectedEntry.sourceWordId}
+                    onChange={(url, detail) => {
+                          const next = url.trim() || undefined;
+                          patchDocument((current) =>
+                            patchVocabEntry(current, selectedEntry.id, {
+                              imageUrl: next,
+                              imageFit: next
+                                ? (current.entries.find(
+                                    (entry) => entry.id === selectedEntry.id,
+                                  )?.imageFit ?? "contain")
+                                : undefined,
+                            }),
+                          );
+                          if (next) {
+                            void attachMediaToLexicon({
+                              lexiconId: selectedEntry.sourceWordId,
+                              surface: selectedEntry.word,
+                              role: "illustration",
+                              mediaAssetId: detail?.mediaAssetId,
+                              publicUrl: next,
+                            });
                           }
-                        >
-                          <option value="contain">Contain</option>
-                          <option value="cover">Cover</option>
-                        </select>
-                      </label>
-                    </>
-                  ) : null}
-                </div>
+                        }}
+                        extraButtons={
+                          selectedEntry.imageUrl ? (
+                            <button
+                              type="button"
+                              className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
+                              onClick={() =>
+                                patchDocument((current) =>
+                                  patchVocabEntry(current, selectedEntry.id, {
+                                    imageUrl: undefined,
+                                    imageFit: undefined,
+                                  }),
+                                )
+                              }
+                            >
+                              Clear picture
+                            </button>
+                          ) : null
+                        }
+                      />
+                      {selectedEntry.imageUrl?.startsWith("data:") ? (
+                        <div className="space-y-1">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={selectedEntry.imageUrl}
+                            alt=""
+                            className="h-24 w-24 rounded-lg border border-stone-200 object-contain"
+                          />
+                          <p className="text-xs text-amber-800">
+                            Local image still on this list — use Upload above to put it
+                            in the shared media library.
+                          </p>
+                        </div>
+                      ) : null}
+                      {selectedEntry.imageUrl?.trim() ? (
+                        <label className="flex items-center gap-2 text-sm text-stone-800">
+                          Image fit
+                          <select
+                            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm"
+                            value={selectedEntry.imageFit ?? "contain"}
+                            onChange={(event) =>
+                              patchDocument((current) =>
+                                patchVocabEntry(current, selectedEntry.id, {
+                                  imageFit: event.target.value as
+                                    | "cover"
+                                    | "contain",
+                                }),
+                              )
+                            }
+                          >
+                            <option value="contain">Contain</option>
+                            <option value="cover">Cover</option>
+                          </select>
+                        </label>
+                      ) : null}
+                    </div>
 
                 <VocabEntryAudioControls
                   value={selectedEntry.audioUrl}
-                  cloudMeta={{
-                    source: "vocabulary_list",
-                    listId: document.id,
-                    entryId: selectedEntry.id,
-                    field: "audioUrl",
-                  }}
-                  onChange={(next) =>
-                    patchDocument((current) =>
-                      patchVocabEntry(current, selectedEntry.id, {
-                        audioUrl: next,
-                      }),
-                    )
-                  }
-                />
-
-                <label className="block text-sm text-stone-800">
-                  Notes (optional)
-                  <textarea
-                    className={inputClass}
-                    rows={2}
-                    value={selectedEntry.notes ?? ""}
-                    onChange={(event) =>
-                      patchDocument((current) =>
-                        patchVocabEntry(current, selectedEntry.id, {
-                          notes: event.target.value || undefined,
-                        }),
-                      )
-                    }
-                  />
-                </label>
+                  libraryQueryHint={selectedEntry.word}
+                  uploadItemName={selectedEntry.word.trim() || undefined}
+                  lexiconId={selectedEntry.sourceWordId}
+                  onChange={(next, detail) => {
+                        patchDocument((current) =>
+                          patchVocabEntry(current, selectedEntry.id, {
+                            audioUrl: next,
+                          }),
+                        );
+                        if (next) {
+                          void attachMediaToLexicon({
+                            lexiconId: selectedEntry.sourceWordId,
+                            surface: selectedEntry.word,
+                            role: "pronunciation",
+                            mediaAssetId: detail?.mediaAssetId,
+                            publicUrl: next,
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
               </section>
-            ) : null}
+            ) : (
+              <p className="rounded-xl border border-dashed border-stone-300 bg-white/60 px-4 py-8 text-center text-sm text-stone-500">
+                Select a word in the list, or switch to Dictionary to add words.
+              </p>
+            )}
           </div>
+            </div>
+          )}
         </div>
       </div>
-
-      <input
-        ref={pictureFileRef}
-        hidden
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        onChange={async (event) => {
-          const file = event.target.files?.[0];
-          const entryId = selectedEntryId;
-          event.target.value = "";
-          if (!file || !entryId) return;
-          setUploadingPicture(true);
-          try {
-            const compressed = await compressGamesChoiceImageFile(file);
-            let imageUrl = compressed.dataUrl;
-            let cloudNote = "";
-            try {
-              const blob = await dataUrlToBlob(compressed.dataUrl);
-              const ext =
-                compressed.mimeType === "image/jpeg"
-                  ? "jpg"
-                  : compressed.mimeType === "image/png"
-                    ? "png"
-                    : "webp";
-              const published = await publishVocabStudioAsset({
-                file: blob,
-                filename: `vocab-${entryId}.${ext}`,
-                kind: "image",
-                meta: {
-                  source: "vocabulary_list",
-                  listId: document.id,
-                  entryId,
-                },
-              });
-              imageUrl = published.public_url;
-              cloudNote = " · published to cloud";
-            } catch (publishError) {
-              cloudNote = ` · cloud publish failed (${
-                publishError instanceof Error ? publishError.message : "error"
-              }); kept local`;
-            }
-            patchDocument((current) =>
-              patchVocabEntry(current, entryId, {
-                imageUrl,
-                imageFit:
-                  current.entries.find((entry) => entry.id === entryId)?.imageFit ??
-                  "contain",
-              }),
-            );
-            const shrink =
-              compressed.outputBytes < compressed.originalBytes
-                ? ` · ${formatBytes(compressed.originalBytes)} → ${formatBytes(compressed.outputBytes)}`
-                : ` · ${formatBytes(compressed.outputBytes)}`;
-            setNotice(
-              `Loaded picture${shrink} (${compressed.width}×${compressed.height})${cloudNote}.`,
-            );
-          } catch (error) {
-            setNotice(error instanceof Error ? error.message : "Could not import image.");
-          } finally {
-            setUploadingPicture(false);
-          }
-        }}
-      />
     </div>
   );
 }

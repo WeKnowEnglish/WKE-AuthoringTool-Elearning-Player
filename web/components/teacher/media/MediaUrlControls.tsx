@@ -13,10 +13,15 @@ import {
 import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 import { computeClientImageHashes } from "@/components/teacher/media/client-image-hash";
 
+export type MediaUrlChangeDetail = {
+  /** Present when the URL comes from the shared media library (upload or pick). */
+  mediaAssetId?: string;
+};
+
 type Props = {
   label: string;
   value: string;
-  onChange: (url: string) => void;
+  onChange: (url: string, detail?: MediaUrlChangeDetail) => void;
   disabled?: boolean;
   /** Image (default) or video uploads + library */
   mediaKind?: MediaKind;
@@ -28,6 +33,12 @@ type Props = {
   hideUrlInput?: boolean;
   /** Optional extra controls rendered next to Upload/Media library buttons */
   extraButtons?: ReactNode;
+  /** Prefill media-library search when opening the picker (e.g. current word). */
+  libraryQueryHint?: string;
+  /** Soft-label new uploads with this item name in the media library. */
+  uploadItemName?: string;
+  /** When set, media library can filter to assets linked to this dictionary id. */
+  lexiconId?: string;
 };
 
 type SharedLibraryState = {
@@ -35,12 +46,14 @@ type SharedLibraryState = {
   ownerId: string | null;
   kind: MediaKind;
   query: string;
+  lexiconId: string | null;
+  linkedOnly: boolean;
   assets: MediaAssetRow[];
   total: number;
   loading: boolean;
   loadingMore: boolean;
   err: string | null;
-  onSelect: ((url: string) => void) | null;
+  onSelect: ((url: string, detail?: MediaUrlChangeDetail) => void) | null;
 };
 
 const SHARED_LIBRARY_DEBOUNCE_MS = 350;
@@ -57,6 +70,8 @@ let sharedLibraryState: SharedLibraryState = {
   ownerId: null,
   kind: "image",
   query: "",
+  lexiconId: null,
+  linkedOnly: false,
   assets: [],
   total: 0,
   loading: false,
@@ -85,8 +100,8 @@ function setSharedLibraryState(next: Partial<SharedLibraryState>) {
   emitSharedLibrary();
 }
 
-function sharedLibraryCacheKey(kind: MediaKind, query: string) {
-  return `${kind}::${query.trim().toLowerCase()}`;
+function sharedLibraryCacheKey(kind: MediaKind, query: string, lexiconId: string | null, linkedOnly: boolean) {
+  return `${kind}::${query.trim().toLowerCase()}::${linkedOnly ? lexiconId ?? "" : ""}`;
 }
 
 async function runSharedLibrarySearch(opts: { reset: boolean; debounced: boolean }) {
@@ -100,7 +115,15 @@ async function runSharedLibrarySearch(opts: { reset: boolean; debounced: boolean
     if (!sharedLibraryState.open) return;
     const q = sharedLibraryState.query.trim();
     const kind = sharedLibraryState.kind;
-    const cacheKey = sharedLibraryCacheKey(kind, q);
+    const lexiconId = sharedLibraryState.linkedOnly
+      ? sharedLibraryState.lexiconId
+      : null;
+    const cacheKey = sharedLibraryCacheKey(
+      kind,
+      q,
+      sharedLibraryState.lexiconId,
+      sharedLibraryState.linkedOnly,
+    );
     const offset = reset ? 0 : sharedLibraryState.assets.length;
     if (reset) {
       const cached = sharedLibraryFirstPageCache.get(cacheKey);
@@ -126,6 +149,7 @@ async function runSharedLibrarySearch(opts: { reset: boolean; debounced: boolean
         q,
         limit: MEDIA_PICKER_PAGE_SIZE,
         offset,
+        ...(lexiconId ? { lexiconId } : {}),
       });
       if (requestId !== sharedRequestSeq) return;
       if (reset) {
@@ -157,13 +181,23 @@ async function runSharedLibrarySearch(opts: { reset: boolean; debounced: boolean
   }
 }
 
-function openSharedLibrary(ownerId: string, kind: MediaKind, onSelect: (url: string) => void) {
+function openSharedLibrary(
+  ownerId: string,
+  kind: MediaKind,
+  onSelect: (url: string, detail?: MediaUrlChangeDetail) => void,
+  queryHint?: string,
+  lexiconId?: string,
+) {
   const rememberedQuery = sharedLibraryLastQueryByKind.get(kind) ?? "";
+  const query = queryHint?.trim() || rememberedQuery;
+  const linkedId = lexiconId?.trim() || null;
   setSharedLibraryState({
     open: true,
     ownerId,
     kind,
-    query: rememberedQuery,
+    query,
+    lexiconId: linkedId,
+    linkedOnly: Boolean(linkedId),
     assets: [],
     total: 0,
     loading: false,
@@ -187,6 +221,8 @@ function closeSharedLibrary() {
     loadingMore: false,
     err: null,
     onSelect: null,
+    lexiconId: null,
+    linkedOnly: false,
   });
 }
 
@@ -223,7 +259,7 @@ function selectSharedLibraryAsset(url: string) {
     );
     sharedLibraryRecentByKind.set(sharedLibraryState.kind, next);
   }
-  sharedLibraryState.onSelect?.(url);
+  sharedLibraryState.onSelect?.(url, hit ? { mediaAssetId: hit.id } : undefined);
   closeSharedLibrary();
 }
 
@@ -241,6 +277,9 @@ export function MediaUrlControls({
   hidePreview,
   hideUrlInput,
   extraButtons,
+  libraryQueryHint,
+  uploadItemName,
+  lexiconId,
 }: Props) {
   const inputId = useId();
   const ownerId = useId();
@@ -278,6 +317,9 @@ export function MediaUrlControls({
     try {
       const fd = new FormData();
       fd.set("file", f);
+      if (uploadItemName?.trim()) {
+        fd.set("meta_item_name", uploadItemName.trim());
+      }
       if (mediaKind === "image") {
         const hashes = await computeClientImageHashes(f);
         if (hashes?.sha256Hex) {
@@ -290,7 +332,7 @@ export function MediaUrlControls({
         fd.set("skip_near_duplicate", "1");
       }
       const r = await uploadTeacherMedia(fd, mediaKind);
-      onChange(r.url);
+      onChange(r.url, { mediaAssetId: r.id });
     } catch (err) {
       setUploadErr(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -337,9 +379,15 @@ export function MediaUrlControls({
           type="button"
           disabled={disabled}
           onClick={() =>
-            openSharedLibrary(ownerId, mediaKind, (url) => {
-              onChange(url);
-            })
+            openSharedLibrary(
+              ownerId,
+              mediaKind,
+              (url, detail) => {
+                onChange(url, detail);
+              },
+              libraryQueryHint,
+              lexiconId,
+            )
           }
           className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50 active:bg-neutral-200 disabled:opacity-50"
         >
@@ -403,6 +451,38 @@ export function MediaUrlControls({
                 </button>
               </div>
               <div className="max-h-[calc(85vh-3.5rem)] overflow-y-auto p-4">
+                {sharedLibrary.lexiconId ? (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                        sharedLibrary.linkedOnly
+                          ? "bg-sky-800 text-white"
+                          : "border border-neutral-300 bg-white text-neutral-800"
+                      }`}
+                      onClick={() => {
+                        setSharedLibraryState({ linkedOnly: true });
+                        void runSharedLibrarySearch({ reset: true, debounced: false });
+                      }}
+                    >
+                      Linked to this word
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                        !sharedLibrary.linkedOnly
+                          ? "bg-sky-800 text-white"
+                          : "border border-neutral-300 bg-white text-neutral-800"
+                      }`}
+                      onClick={() => {
+                        setSharedLibraryState({ linkedOnly: false });
+                        void runSharedLibrarySearch({ reset: true, debounced: false });
+                      }}
+                    >
+                      Whole library
+                    </button>
+                  </div>
+                ) : null}
                 <label className="mb-3 block text-sm">
                   Search library
                   <input
@@ -461,7 +541,9 @@ export function MediaUrlControls({
                 ) : sharedLibrary.assets.length === 0 ? (
                   <p className="text-sm text-neutral-600">
                     {sharedLibrary.total === 0 && !sharedLibrary.query.trim() ?
-                      emptyLibraryHint
+                      sharedLibrary.linkedOnly
+                        ? "No media linked to this dictionary word yet. Switch to Whole library or upload a new file."
+                      : emptyLibraryHint
                     : "No media matched your search."}
                   </p>
                 ) : (

@@ -18,6 +18,7 @@ import {
   TeacherNavMenuLink,
 } from "@/components/teacher/TeacherNavDropdown";
 import { TeacherThemeControls } from "@/components/teacher/TeacherThemeControls";
+import { adminTeacherPreviewStore } from "@/lib/admin-teacher-preview";
 import type { TeacherTier } from "@/lib/auth/roles";
 import {
   resolveTeacherThemeCssVars,
@@ -71,11 +72,22 @@ function SettingsGearIcon() {
   );
 }
 
-function TeacherSettingsMenu({ userEmail }: { userEmail: string }) {
+function TeacherSettingsMenu({
+  userEmail,
+  isAdmin,
+}: {
+  userEmail: string;
+  isAdmin: boolean;
+}) {
   const theme = useSyncExternalStore(
     teacherThemeStore.subscribe,
     teacherThemeStore.getSnapshot,
     teacherThemeStore.getServerSnapshot,
+  );
+  const previewAsTeacherLight = useSyncExternalStore(
+    adminTeacherPreviewStore.subscribe,
+    adminTeacherPreviewStore.getSnapshot,
+    adminTeacherPreviewStore.getServerSnapshot,
   );
 
   return (
@@ -98,6 +110,31 @@ function TeacherSettingsMenu({ userEmail }: { userEmail: string }) {
           onChange={teacherThemeStore.persist}
         />
       </div>
+      {isAdmin ? (
+        <>
+          <TeacherNavMenuDivider />
+          <div className="px-2 py-2">
+            <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border"
+                checked={previewAsTeacherLight}
+                onChange={(event) =>
+                  adminTeacherPreviewStore.setPreviewAsTeacherLight(
+                    event.target.checked,
+                  )
+                }
+              />
+              <span>
+                <span className="block">Preview Teacher Light</span>
+                <span className="teacher-chrome-muted mt-0.5 block text-[11px] font-normal leading-snug">
+                  Hide Go Live, Admin, and unshipped Activity Builder tools.
+                </span>
+              </span>
+            </label>
+          </div>
+        </>
+      ) : null}
       <TeacherNavMenuDivider />
       <TeacherNavMenuLink href="/primary">View student site</TeacherNavMenuLink>
       <div className="px-1 py-1">
@@ -114,13 +151,35 @@ function TeacherChromeHeader({
   userEmail,
   teacherTier,
   isAdmin,
+  realIsAdmin,
 }: {
   userEmail: string;
   teacherTier: TeacherTier;
   isAdmin: boolean;
+  realIsAdmin: boolean;
 }) {
+  const previewAsTeacherLight = useSyncExternalStore(
+    adminTeacherPreviewStore.subscribe,
+    adminTeacherPreviewStore.getSnapshot,
+    adminTeacherPreviewStore.getServerSnapshot,
+  );
+
   return (
     <header className="teacher-chrome-header shrink-0 border-b px-2 py-1 sm:px-3">
+      {realIsAdmin && previewAsTeacherLight ? (
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-950">
+          <span>Previewing Teacher Light</span>
+          <button
+            type="button"
+            className="rounded border border-amber-400 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide hover:bg-amber-100"
+            onClick={() =>
+              adminTeacherPreviewStore.setPreviewAsTeacherLight(false)
+            }
+          >
+            Exit preview
+          </button>
+        </div>
+      ) : null}
       <div className="grid w-full grid-cols-1 items-center gap-y-2 gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-x-1 sm:gap-y-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:justify-self-start">
           <Link
@@ -144,7 +203,7 @@ function TeacherChromeHeader({
           </Suspense>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs sm:justify-self-end sm:text-sm">
-          <TeacherSettingsMenu userEmail={userEmail} />
+          <TeacherSettingsMenu userEmail={userEmail} isAdmin={realIsAdmin} />
         </div>
       </div>
     </header>
@@ -155,10 +214,12 @@ function TeacherChromeHeaderDrawer({
   userEmail,
   teacherTier,
   isAdmin,
+  realIsAdmin,
 }: {
   userEmail: string;
   teacherTier: TeacherTier;
   isAdmin: boolean;
+  realIsAdmin: boolean;
 }) {
   const [headerOpen, setHeaderOpen] = useState(true);
   const headerHoverRef = useRef(false);
@@ -227,6 +288,7 @@ function TeacherChromeHeaderDrawer({
           userEmail={userEmail}
           teacherTier={teacherTier}
           isAdmin={isAdmin}
+          realIsAdmin={realIsAdmin}
         />
       </div>
     </div>
@@ -248,10 +310,18 @@ export function TeacherSecureShell({
     teacherThemeStore.getSnapshot,
     teacherThemeStore.getServerSnapshot,
   );
+  const previewAsTeacherLight = useSyncExternalStore(
+    adminTeacherPreviewStore.subscribe,
+    adminTeacherPreviewStore.getSnapshot,
+    adminTeacherPreviewStore.getServerSnapshot,
+  );
   const themeVars = useMemo(
     () => resolveTeacherThemeCssVars(theme) as React.CSSProperties,
     [theme],
   );
+  const effectiveTier: TeacherTier =
+    isAdmin && previewAsTeacherLight ? "light" : teacherTier;
+  const effectiveIsAdmin = isAdmin && !previewAsTeacherLight;
 
   return (
     <div
@@ -264,14 +334,16 @@ export function TeacherSecureShell({
       {autoHideChrome ? (
         <TeacherChromeHeaderDrawer
           userEmail={userEmail}
-          teacherTier={teacherTier}
-          isAdmin={isAdmin}
+          teacherTier={effectiveTier}
+          isAdmin={effectiveIsAdmin}
+          realIsAdmin={isAdmin}
         />
       ) : (
         <TeacherChromeHeader
           userEmail={userEmail}
-          teacherTier={teacherTier}
-          isAdmin={isAdmin}
+          teacherTier={effectiveTier}
+          isAdmin={effectiveIsAdmin}
+          realIsAdmin={isAdmin}
         />
       )}
       <div

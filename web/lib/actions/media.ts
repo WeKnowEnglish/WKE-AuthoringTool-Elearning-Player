@@ -302,6 +302,7 @@ export async function uploadTeacherMedia(
 
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
   const publicUrl = pub.publicUrl;
+  const itemName = normalizeOptionalText(formData.get("meta_item_name"), 120);
 
   const { data: row, error: insErr } = await supabase
     .from("media_assets")
@@ -313,6 +314,7 @@ export async function uploadTeacherMedia(
       uploaded_by: user.id,
       sha256_hash: sha256Hash,
       phash,
+      ...(itemName ? { meta_item_name: itemName } : {}),
     })
     .select("id")
     .single();
@@ -493,6 +495,8 @@ export type SearchTeacherMediaParams = {
   tags?: string[];
   categories?: string[];
   skills?: string[];
+  /** When set, only return media linked to this dictionary id (pv_ or tw_ entries). */
+  lexiconId?: string;
   limit?: number;
   /** Zero-based offset for pagination (default 0). */
   offset?: number;
@@ -519,6 +523,17 @@ export async function searchTeacherMedia(
   const kind = params.kind ?? "all";
   const limit = Math.min(Math.max(params.limit ?? 200, 1), 1000);
   const offset = Math.max(params.offset ?? 0, 0);
+  const lexiconId = params.lexiconId?.trim();
+
+  if (lexiconId) {
+    return searchTeacherMediaForLexicon(supabase, {
+      lexiconId,
+      kind,
+      q: params.q?.trim() ?? "",
+      limit,
+      offset,
+    });
+  }
 
   const countability = params.countability ?? "all";
   const tags = normalizeAndDedupList(params.tags ?? []);
@@ -552,6 +567,69 @@ export async function searchTeacherMedia(
   const total = parseRpcTotal(payload?.total);
   const items = (Array.isArray(payload?.items) ? payload?.items : []) as MediaAssetRow[];
   return { rows: items, total };
+}
+
+async function searchTeacherMediaForLexicon(
+  supabase: Awaited<ReturnType<typeof requireTeacher>>["supabase"],
+  input: {
+    lexiconId: string;
+    kind: MediaKindFilter;
+    q: string;
+    limit: number;
+    offset: number;
+  },
+): Promise<SearchTeacherMediaResult> {
+  const { data, error } = await supabase
+    .from("lexicon_media_links")
+    .select(
+      "created_at,media_assets(id,storage_path,public_url,original_filename,content_type,uploaded_by,created_at,sha256_hash,phash,meta_categories,meta_tags,meta_alternative_names,meta_plural,meta_countability,meta_level,meta_word_type,meta_skills,meta_past_tense,meta_notes,meta_item_name)",
+    )
+    .eq("lexicon_id", input.lexiconId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (/lexicon_media_links|does not exist|42P01/i.test(error.message)) {
+      return { rows: [], total: 0 };
+    }
+    throw new Error(error.message);
+  }
+
+  const q = input.q.toLowerCase();
+  const rows: MediaAssetRow[] = [];
+  const seen = new Set<string>();
+  for (const raw of data ?? []) {
+    const media = Array.isArray(raw.media_assets)
+      ? raw.media_assets[0]
+      : raw.media_assets;
+    if (!media?.id || seen.has(media.id as string)) continue;
+    const contentType = String(media.content_type ?? "");
+    if (input.kind === "image" && !contentType.startsWith("image/")) continue;
+    if (input.kind === "audio" && !contentType.startsWith("audio/")) continue;
+    if (input.kind === "video" && !contentType.startsWith("video/")) continue;
+    if (q) {
+      const hay = [
+        media.meta_item_name,
+        media.original_filename,
+        media.public_url,
+        ...(Array.isArray(media.meta_tags) ? media.meta_tags : []),
+        ...(Array.isArray(media.meta_alternative_names)
+          ? media.meta_alternative_names
+          : []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(q)) continue;
+    }
+    seen.add(media.id as string);
+    rows.push(media as unknown as MediaAssetRow);
+  }
+
+  const total = rows.length;
+  return {
+    rows: rows.slice(input.offset, input.offset + input.limit),
+    total,
+  };
 }
 
 export async function listTeacherMedia(kind: MediaKind = "image"): Promise<MediaAssetRow[]> {

@@ -87,14 +87,14 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
           <h2 className="text-lg font-extrabold text-[var(--pl-ink)]">{payload.packTitle}</h2>
           <p className="mt-1 text-sm font-semibold text-[var(--pl-muted)]">
             Practice {payload.wordCount} word{payload.wordCount === 1 ? "" : "s"} from this pack in
-            Vocabulary.
+            Learn.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
               href="/primary?nav=vocabulary"
               className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)]"
             >
-              Open Vocabulary
+              Open Learn
             </Link>
             <Link
               href="/primary"

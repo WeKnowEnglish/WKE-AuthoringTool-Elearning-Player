@@ -50,7 +50,7 @@ export function PrimaryReviewTab({ model, onPracticeSet, onOpenVocabulary }: Pro
               className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[var(--pl-teal)] px-5 text-sm font-extrabold text-white hover:bg-[var(--pl-teal-hover)]"
             >
               <BookOpen className="h-4 w-4" />
-              Browse Vocabulary
+              Browse Learn
             </button>
           ) : null}
         </section>

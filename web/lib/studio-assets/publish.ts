@@ -16,6 +16,7 @@ import {
   parseStudioAssetMeta,
   sanitizeStudioFilename,
 } from "@/lib/studio-assets/validate";
+import { bridgeStudioPublishToMediaLibrary } from "@/lib/studio-assets/bridge-to-media-library";
 
 function computeSha256Hex(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -211,7 +212,18 @@ export async function publishStudioAssetFromFormData(
     throw new Error(`${existingErr.message}${hint}`);
   }
   if (existing) {
-    return rowToPublishResult(existing, f.size, true);
+    const reused = rowToPublishResult(existing, f.size, true);
+    return bridgeStudioPublishToMediaLibrary({
+      supabase,
+      user,
+      bytes,
+      contentSha256,
+      contentType,
+      kind,
+      originalFilename: f.name.slice(0, 260) || sanitizeStudioFilename(f.name),
+      meta,
+      studioResult: reused,
+    });
   }
 
   const assetId = crypto.randomUUID();
@@ -262,7 +274,17 @@ export async function publishStudioAssetFromFormData(
         .eq("content_sha256", contentSha256)
         .maybeSingle();
       if (raced) {
-        return rowToPublishResult(raced, f.size, true);
+        return bridgeStudioPublishToMediaLibrary({
+          supabase,
+          user,
+          bytes,
+          contentSha256,
+          contentType,
+          kind,
+          originalFilename: f.name.slice(0, 260) || safe,
+          meta,
+          studioResult: rowToPublishResult(raced, f.size, true),
+        });
       }
     }
     // Best-effort cleanup so failed catalog writes don't leave orphans.
@@ -276,5 +298,15 @@ export async function publishStudioAssetFromFormData(
     throw new Error(`${insErr?.message ?? "Could not save studio asset."}${hint}`);
   }
 
-  return rowToPublishResult(row, f.size, false);
+  return bridgeStudioPublishToMediaLibrary({
+    supabase,
+    user,
+    bytes,
+    contentSha256,
+    contentType,
+    kind,
+    originalFilename: f.name.slice(0, 260) || safe,
+    meta,
+    studioResult: rowToPublishResult(row, f.size, false),
+  });
 }

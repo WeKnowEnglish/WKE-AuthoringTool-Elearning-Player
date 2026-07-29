@@ -62,6 +62,8 @@ function ActivityCard({
         <p className="mt-2 text-[11px] text-emerald-800">
           {card.lpPath === "/vocabulary-lists" && card.bankFormats?.length
             ? "Compile from Vocabulary lists in Lesson Player."
+            : card.lpPath === "/quizzes"
+              ? "Generate from a list, edit questions, save to Activity Bank."
             : card.lpPath === "/hotspots"
               ? "Author here, save to Activity Bank, use in the track compiler."
               : "Authoring lives in Lesson Player."}

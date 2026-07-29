@@ -163,6 +163,15 @@ export const PILOT_SECTIONS: PilotSectionDef[] = [
 export const PILOT_CATALOG: PilotEntry[] = [
   // ── Active · Quizzes ──────────────────────────────────────────────
   {
+    href: "/teacher/activity-builder/quizzes",
+    title: "Quiz builder",
+    description:
+      "Unified Activity Builder quiz workspace: generate from vocabulary lists, edit questions, save to Activity Bank. MCQ ready; letter/flashcards via generate path next.",
+    group: "games",
+    status: "active",
+    studioHref: "/teacher/activity-builder/quizzes",
+  },
+  {
     href: "/pilots/games-mc-quiz",
     title: "Multiple choice",
     description: "Studio Quiz MC packs play as Lesson Player mc_quiz screens.",

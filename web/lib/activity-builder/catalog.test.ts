@@ -11,20 +11,20 @@ describe("visibleActivityBuilderSections", () => {
     expect(sections).toEqual(ACTIVITY_BUILDER_SECTIONS);
   });
 
-  it("hides studio-interim cards for non-admins", () => {
+  it("hides studio-interim and admin-only cards for non-admins", () => {
     const sections = visibleActivityBuilderSections(false);
     const ids = sections.flatMap((section) => section.cards.map((card) => card.id));
     expect(ids).toEqual([
       "vocabulary-lists",
-      "multiple-choice",
-      "flashcards",
-      "letter-mixup",
+      "quiz-builder",
       "hotspots",
       "learning-tracks",
     ]);
     expect(
       sections.every((section) =>
-        section.cards.every(isShippableActivityBuilderCard),
+        section.cards.every(
+          (card) => isShippableActivityBuilderCard(card) && !card.adminOnly,
+        ),
       ),
     ).toBe(true);
   });

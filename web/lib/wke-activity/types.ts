@@ -76,6 +76,9 @@ export type WkeNormalizedRect = {
   height: number;
 };
 
+/** When this action starts relative to the previous one in a sequence. */
+export type WkeActionStartTiming = "after_previous" | "with_previous";
+
 /**
  * Ordered on-tap sequence. Content actions replace responseCards over time;
  * stage actions drive show/hide, motion, and sprite swaps.
@@ -87,12 +90,14 @@ export type WkeObjectAction =
       audioUrl: string;
       label?: string;
       wait?: boolean;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
       type: "show_dialogue";
       dialogueId?: string;
       wait?: boolean;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
@@ -100,6 +105,7 @@ export type WkeObjectAction =
       text: string;
       imageUrl?: string;
       wait?: boolean;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
@@ -110,23 +116,27 @@ export type WkeObjectAction =
       correctChoiceId: string;
       gateDiscover?: boolean;
       wait?: boolean;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
       type: "wait";
       ms: number;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
       type: "set_object_state";
       targetId: string;
       state: "hidden" | "visible" | "locked" | "available";
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
       type: "swap_sprite_asset";
       targetId: string;
       spriteAssetId: string;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
@@ -136,6 +146,7 @@ export type WkeObjectAction =
       durationMs: number;
       easing?: "linear" | "easeOut";
       wait?: boolean;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
@@ -145,11 +156,13 @@ export type WkeObjectAction =
       durationMs: number;
       from?: Partial<WkeNormalizedRect>;
       wait?: boolean;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
       type: "complete_object";
       targetId?: string;
+      timing?: WkeActionStartTiming;
     }
   | {
       id: string;
@@ -157,6 +170,18 @@ export type WkeObjectAction =
       targetId: string;
       /** Defaults to true when omitted. */
       enabled?: boolean;
+      timing?: WkeActionStartTiming;
+    }
+  | {
+      id: string;
+      type: "advance_scene";
+      timing?: WkeActionStartTiming;
+    }
+  | {
+      id: string;
+      type: "click_advance_scene";
+      targetId: string;
+      timing?: WkeActionStartTiming;
     };
 
 export type WkeHotspotElement = {

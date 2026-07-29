@@ -39,6 +39,7 @@ import {
   movePhaseInDocument,
   nextPhaseId,
   nextPhaseImageAssetId,
+  duplicatePhaseInDocument,
   withEnsuredPhases,
 } from "@/lib/hotspots/phases";
 import {
@@ -55,10 +56,12 @@ import {
 import type {
   WkeObjectAction,
   WkeObjectInteractionKind,
+  WkeDialoguePanelElement,
   WkePhase,
   WkeResponseCard,
 } from "@/lib/wke-activity/types";
 import {
+  applyInteractionKindTemplate,
   resolveOnTapActions,
   responseCardToAction,
   syncResponseCardsFromOnTap,
@@ -76,6 +79,8 @@ import {
 import { HotspotObjectTray } from "./HotspotObjectTray";
 import { HotspotAnimationsPanel } from "./HotspotAnimationsPanel";
 import { HotspotSceneEnterTimeline } from "./HotspotSceneEnterTimeline";
+import { ActionStartTimingSelect } from "./ActionStartTimingSelect";
+import { HotspotCollapsibleCard } from "./HotspotCollapsibleCard";
 import { SCENE_ENTER_AUDIO_ID } from "@/lib/hotspots/scene-enter";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
 import {
@@ -103,6 +108,14 @@ const inputClass =
 
 function cloneDocument(document: ExploreHotspotsDocument): ExploreHotspotsDocument {
   return structuredClone(document);
+}
+
+/** Selection must belong to the active scene — never a hotspot from another phase. */
+function selectedIdForPhase(
+  document: ExploreHotspotsDocument,
+  phaseId: string | null,
+): string | null {
+  return hotspotsForPhase(document, phaseId)[0]?.id ?? null;
 }
 
 function readImage(
@@ -164,9 +177,17 @@ export function ExploreHotspotsWorkspace() {
   const [rightPanelTab, setRightPanelTab] = useState<"properties" | "animations">(
     "properties",
   );
+  const [leftSettingsOpenId, setLeftSettingsOpenId] = useState<string | null>(
+    "scene-open",
+  );
+  const [rightSettingsOpenId, setRightSettingsOpenId] = useState<string | null>(
+    "identity",
+  );
   const [motionPreviewEnabled, setMotionPreviewEnabled] = useState(false);
   const [tool, setTool] = useState<HotspotCanvasTool>("select");
-  const [selectedId, setSelectedId] = useState<string | null>("hotspot-1");
+  const [createIntent, setCreateIntent] = useState<"target" | "shape" | null>(null);
+  const [addObjectMenu, setAddObjectMenu] = useState<"shape" | "hotspot" | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [flash, setFlash] = useState<{
     id: number;
@@ -270,6 +291,19 @@ export function ExploreHotspotsWorkspace() {
   }, [notice]);
 
   useEffect(() => {
+    if (selectedId) setRightSettingsOpenId("identity");
+  }, [selectedId]);
+
+  // Drop stale selection when the active scene does not own that object.
+  useEffect(() => {
+    if (!selectedId) return;
+    const onActiveScene = hotspotsForPhase(document, resolvedPhaseId).some(
+      (hotspot) => hotspot.id === selectedId,
+    );
+    if (!onActiveScene) setSelectedId(null);
+  }, [document, resolvedPhaseId, selectedId]);
+
+  useEffect(() => {
     setFlash({
       id: Date.now(),
       tone: validation.ok ? "emerald" : "rose",
@@ -347,10 +381,9 @@ export function ExploreHotspotsWorkspace() {
   ) => {
     stopSegmentation();
     setDocument(options?.clone === false ? next : cloneDocument(next));
-    setActivePhaseId(ensurePhases(next)[0]?.id ?? null);
-    setSelectedId(
-      next.layout.elements.find((element) => element.kind === "hotspot")?.id ?? null,
-    );
+    const phaseId = ensurePhases(next)[0]?.id ?? null;
+    setActivePhaseId(phaseId);
+    setSelectedId(selectedIdForPhase(next, phaseId));
     setBankActivityId(options?.bankActivityId ?? null);
     setMode("layout");
     setShowBankPanel(false);
@@ -409,6 +442,20 @@ export function ExploreHotspotsWorkspace() {
       },
     }));
 
+  const patchDialoguePanel = (patch: Partial<WkeDialoguePanelElement>) => {
+    setDocument((current) => ({
+      ...current,
+      layout: {
+        ...current.layout,
+        elements: current.layout.elements.map((element) =>
+          element.kind === "dialogue-panel"
+            ? ({ ...element, ...patch } as WkeDialoguePanelElement)
+            : element,
+        ),
+      },
+    }));
+  };
+
   const reorderLayer = (id: string, direction: LayerReorderDirection) => {
     const updates = reorderZIndex(hotspots, id, direction);
     if (!updates) return;
@@ -432,6 +479,15 @@ export function ExploreHotspotsWorkspace() {
     stopSegmentation();
     setSelectedId(id);
     setTool("select");
+    setCreateIntent(null);
+    setAddObjectMenu(null);
+    const hotspot = allHotspots.find((entry) => entry.id === id);
+    if (!hotspot) return;
+    if (isShapeHotspot(hotspot) || isTextHotspot(hotspot)) {
+      setRightSettingsOpenId("appearance");
+      return;
+    }
+    setRightSettingsOpenId("identity");
   };
 
   const runSegmentation = async (
@@ -494,6 +550,8 @@ export function ExploreHotspotsWorkspace() {
   const beginSegmentation = () => {
     setTool("select");
     setSegmentationMode(true);
+    setRightPanelTab("properties");
+    setRightSettingsOpenId("highlight");
     setSegmentationPrompts([]);
     setSegmentationPreview(null);
     setUseAutoSeeds(true);
@@ -536,6 +594,27 @@ export function ExploreHotspotsWorkspace() {
 
   const clearSegmentationPrompts = () => {
     void runSegmentation([], "Restoring the automatic outline…");
+  };
+
+  const exitDrawTool = () => {
+    setTool("select");
+    setCreateIntent(null);
+  };
+
+  const beginCreateDraw = (
+    intent: "target" | "shape",
+    shapeTool: Exclude<HotspotCanvasTool, "select">,
+  ) => {
+    setAddObjectMenu(intent === "shape" ? "shape" : "hotspot");
+    setCreateIntent(intent);
+    setTool(shapeTool);
+    setSelectedId(null);
+    setRightPanelTab("properties");
+    setNotice(
+      intent === "shape"
+        ? `Draw a ${shapeTool} on the picture. Esc cancels.`
+        : `Draw a ${shapeTool} hotspot on the picture. Esc cancels.`,
+    );
   };
 
   const createHotspot = (geometry: HotspotGeometry) => {
@@ -596,7 +675,9 @@ export function ExploreHotspotsWorkspace() {
       };
     });
     setSelectedId(id);
-    setTool("select");
+    setAddObjectMenu(null);
+    exitDrawTool();
+    setRightSettingsOpenId("identity");
   };
 
   const nextObjectId = (prefix: string) => {
@@ -607,26 +688,80 @@ export function ExploreHotspotsWorkspace() {
     return `${prefix}-${number}`;
   };
 
-  const insertPanelObject = (kind: "shape" | "text" | "hotspot") => {
-    if (kind === "hotspot") {
-      createHotspot({
-        shape: "rectangle",
-        x: 0.35,
-        y: 0.35,
-        width: 0.28,
-        height: 0.22,
-      });
+  const createShapeFromGeometry = (geometry: HotspotGeometry) => {
+    pushHistory();
+    const id = nextObjectId("shape");
+    const name = "Shape";
+    const zIndex = nextZIndex(hotspots);
+    setDocument((current) => {
+      const withPhases = withEnsuredPhases(current);
+      const targetPhaseId =
+        resolvedPhaseId ?? ensurePhases(withPhases)[0]?.id ?? null;
+      const nextPhases = ensurePhases(withPhases).map((phase) =>
+        phase.id === targetPhaseId
+          ? { ...phase, hotspotIds: [...phase.hotspotIds, id] }
+          : phase,
+      );
+      return {
+        ...withPhases,
+        layout: {
+          ...withPhases.layout,
+          elements: [
+            ...withPhases.layout.elements,
+            {
+              id,
+              kind: "hotspot" as const,
+              regionId: "main-media",
+              name,
+              accessibleLabel: name,
+              geometry,
+              tabOrder: allHotspots.length + 1,
+              required: false,
+              interactionKind: "none" as const,
+              presentation: "shape" as const,
+              orderIndex: hotspots.length,
+              zIndex,
+              initialState: "available" as const,
+              highlight: {
+                ...DEFAULT_OBJECT_HIGHLIGHT,
+                color: "#38bdf8",
+                style: "outline" as const,
+              },
+            },
+          ],
+        },
+        interaction: {
+          ...withPhases.interaction,
+          phases: nextPhases,
+        },
+      };
+    });
+    setSelectedId(id);
+    setAddObjectMenu(null);
+    exitDrawTool();
+    setNotice("Added a shape overlay. Edit fill color in Object properties.");
+  };
+
+  const handleCanvasCreate = (geometry: HotspotGeometry) => {
+    if (createIntent === "shape") {
+      createShapeFromGeometry(geometry);
       return;
     }
+    createHotspot(geometry);
+  };
 
+  const insertPanelObject = (kind: "text") => {
     pushHistory();
     const id = nextObjectId(kind);
-    const name = kind === "text" ? "Text" : "Shape";
+    const name = "Text";
     const zIndex = nextZIndex(hotspots);
-    const geometry =
-      kind === "text"
-        ? { shape: "rectangle" as const, x: 0.3, y: 0.4, width: 0.4, height: 0.1 }
-        : { shape: "rectangle" as const, x: 0.38, y: 0.35, width: 0.24, height: 0.2 };
+    const geometry = {
+      shape: "rectangle" as const,
+      x: 0.3,
+      y: 0.4,
+      width: 0.4,
+      height: 0.1,
+    };
 
     setDocument((current) => {
       const withPhases = withEnsuredPhases(current);
@@ -653,14 +788,14 @@ export function ExploreHotspotsWorkspace() {
               tabOrder: allHotspots.length + 1,
               required: false,
               interactionKind: "none" as const,
-              presentation: kind,
+              presentation: "text" as const,
               orderIndex: hotspots.length,
               zIndex,
               initialState: "available" as const,
-              ...(kind === "text" ? { labelText: "New text" } : {}),
+              labelText: "New text",
               highlight: {
                 ...DEFAULT_OBJECT_HIGHLIGHT,
-                color: kind === "text" ? "#1c1917" : "#38bdf8",
+                color: "#1c1917",
                 style: "outline" as const,
               },
             },
@@ -673,12 +808,9 @@ export function ExploreHotspotsWorkspace() {
       };
     });
     setSelectedId(id);
-    setTool("select");
-    setNotice(
-      kind === "text"
-        ? "Added a text overlay. Edit the wording in Object properties."
-        : "Added a shape overlay. Edit fill color in Object properties.",
-    );
+    setAddObjectMenu(null);
+    exitDrawTool();
+    setNotice("Added a text overlay. Edit the wording in Object properties.");
   };
 
   const removeSelectedSpriteBackground = async () => {
@@ -957,6 +1089,8 @@ export function ExploreHotspotsWorkspace() {
         stopSegmentation();
         setSelectedId(null);
         setTool("select");
+        setCreateIntent(null);
+        setAddObjectMenu(null);
         const active = window.document.activeElement;
         if (active instanceof HTMLElement) active.blur();
         return;
@@ -1256,6 +1390,23 @@ export function ExploreHotspotsWorkspace() {
     setNotice("Added a new scene. Replace the image and draw objects for this phase.");
   };
 
+  const duplicateActivePhase = () => {
+    if (!activePhase) {
+      setNotice("Select a scene to duplicate.");
+      return;
+    }
+    pushHistory();
+    const result = duplicatePhaseInDocument(document, activePhase.id);
+    if (!result) {
+      setNotice("Could not duplicate that scene.");
+      return;
+    }
+    setDocument(result.document);
+    setActivePhaseId(result.newPhaseId);
+    setSelectedId(null);
+    setNotice("Duplicated scene with its objects.");
+  };
+
   const removeActivePhase = () => {
     if (phases.length <= 1 || !activePhase) {
       setNotice("Keep at least one scene.");
@@ -1387,6 +1538,14 @@ export function ExploreHotspotsWorkspace() {
   };
 
   const selectedOnTap = selected ? resolveOnTapActions(selected) : [];
+  const selectedKind: WkeObjectInteractionKind | null = selected
+    ? (selected.interactionKind ??
+      (isSpriteHotspot(selected) ? "silent" : "dialogue"))
+    : null;
+  const showInteractionChrome =
+    !!selected && !isShapeHotspot(selected) && !isTextHotspot(selected);
+  const primaryInfoAction = selectedOnTap.find((action) => action.type === "show_info");
+  const primaryAudioAction = selectedOnTap.find((action) => action.type === "play_audio");
 
   const addResponseCard = (kind: WkeResponseCard["kind"]) => {
     if (!selected) return;
@@ -1482,7 +1641,9 @@ export function ExploreHotspotsWorkspace() {
       | "tween_object"
       | "enter_object"
       | "pulse_object"
-      | "complete_object",
+      | "complete_object"
+      | "advance_scene"
+      | "click_advance_scene",
   ) => {
     if (!selected) return;
     const actions = resolveOnTapActions(selected);
@@ -1549,6 +1710,16 @@ export function ExploreHotspotsWorkspace() {
         break;
       case "complete_object":
         action = { id, type: "complete_object", targetId };
+        break;
+      case "advance_scene":
+        action = { id, type: "advance_scene" };
+        break;
+      case "click_advance_scene":
+        action = {
+          id,
+          type: "click_advance_scene",
+          targetId,
+        };
         break;
     }
     writeOnTap(selected.id, [...actions, action]);
@@ -1800,12 +1971,14 @@ export function ExploreHotspotsWorkspace() {
 
       {mode === "layout" ? (
         <div className="grid min-h-0 flex-1 lg:grid-cols-[300px_minmax(0,1fr)_300px]">
-          <aside className="min-h-0 overflow-y-auto border-r border-stone-200 bg-white p-3 sm:p-4">
-            <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-              <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-                Scene settings
-              </h2>
-              <div className="mt-3 grid grid-cols-1 gap-2">
+          <aside className="min-h-0 space-y-3 overflow-y-auto border-r border-stone-200 bg-white p-3 sm:p-4">
+            <HotspotCollapsibleCard
+              id="scene-media"
+              title="Scene media"
+              openId={leftSettingsOpenId}
+              onOpenChange={setLeftSettingsOpenId}
+            >
+              <div className="mt-2 grid grid-cols-1 gap-2">
                 <button
                   type="button"
                   className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 hover:bg-stone-50 disabled:opacity-40"
@@ -1822,7 +1995,15 @@ export function ExploreHotspotsWorkspace() {
                   Insert PNG sprite
                 </button>
               </div>
-              <div className="mt-3">
+            </HotspotCollapsibleCard>
+
+            <HotspotCollapsibleCard
+              id="scene-open"
+              title="Scene open"
+              openId={leftSettingsOpenId}
+              onOpenChange={setLeftSettingsOpenId}
+            >
+              <div className="mt-2">
                 <AudioClipControls
                   label="Scene open audio"
                   hint="Shortcut for the first scene-open audio step. Full sequence is below."
@@ -1846,7 +2027,15 @@ export function ExploreHotspotsWorkspace() {
                   }}
                 />
               </div>
-              <label className="mt-3 block text-xs text-stone-600">
+            </HotspotCollapsibleCard>
+
+            <HotspotCollapsibleCard
+              id="scene-rules"
+              title="Scene rules"
+              openId={leftSettingsOpenId}
+              onOpenChange={setLeftSettingsOpenId}
+            >
+              <label className="mt-2 block text-xs text-stone-600">
                 Objectives - for students
                 <input
                   className={inputClass}
@@ -1861,6 +2050,25 @@ export function ExploreHotspotsWorkspace() {
                     if (!activePhase) return;
                     patchPhase(activePhase.id, {
                       objective: { label: event.target.value },
+                    });
+                  }}
+                />
+              </label>
+              <label className="mt-3 block text-xs text-stone-600">
+                Side panel prompt (before tap)
+                <input
+                  className={inputClass}
+                  value={
+                    document.layout.elements.find(
+                      (element): element is WkeDialoguePanelElement =>
+                        element.kind === "dialogue-panel",
+                    )?.emptyStateText ?? ""
+                  }
+                  placeholder="Choose something in the picture to explore."
+                  disabled={!activePhase}
+                  onChange={(event) => {
+                    patchDialoguePanel({
+                      emptyStateText: event.target.value,
                     });
                   }}
                 />
@@ -1962,35 +2170,36 @@ export function ExploreHotspotsWorkspace() {
                   <option value="dialogue-completed">Dialogue completed</option>
                 </select>
               </label>
-            </section>
+            </HotspotCollapsibleCard>
           </aside>
 
           <section className="flex min-h-0 flex-col overflow-hidden bg-stone-50">
-            <div className="mx-3 mt-3 shrink-0 sm:mx-4 sm:mt-4">
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-white p-2">
-                {(["select", "rectangle", "ellipse", "polygon"] as HotspotCanvasTool[]).map(
-                  (candidate) => (
-                    <button
-                      key={candidate}
-                      type="button"
-                      onClick={() => setTool(candidate)}
-                      className={`rounded-lg px-3 py-2 text-sm capitalize ${
-                        tool === candidate
-                          ? "bg-sky-800 text-white"
-                          : "text-stone-600 hover:bg-stone-100"
-                      }`}
-                    >
-                      {candidate === "select" ? "Select / resize" : `Draw ${candidate}`}
-                    </button>
-                  ),
-                )}
-                {tool === "polygon" ? (
-                  <p className="ml-auto text-xs text-amber-800">
-                    Click points · Enter or double-click to finish · Esc to cancel
+            {tool !== "select" ? (
+              <div className="mx-3 mt-3 shrink-0 sm:mx-4 sm:mt-4">
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                  <p className="text-xs text-amber-900">
+                    Drawing{" "}
+                    <span className="font-semibold capitalize">{tool}</span>{" "}
+                    {createIntent === "shape" ? "shape" : "hotspot"}
+                    {tool === "polygon"
+                      ? " · Click points · Enter or double-click to finish"
+                      : " · Drag on the picture"}
+                    {" · Esc cancels"}
                   </p>
-                ) : null}
+                  <button
+                    type="button"
+                    className="ml-auto rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                    onClick={() => {
+                      setTool("select");
+                      setCreateIntent(null);
+                      setNotice(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
 
             <div className="relative min-h-0 flex-1 overflow-hidden px-3 py-2 sm:px-4">
               <div className="flex h-full min-h-0 w-full items-center justify-center [container-type:size]">
@@ -2006,7 +2215,7 @@ export function ExploreHotspotsWorkspace() {
                   tool={tool}
                   onSelect={selectHotspot}
                   onClearSelection={() => setSelectedId(null)}
-                  onCreate={createHotspot}
+                  onCreate={handleCanvasCreate}
                   onGeometryChange={(id, geometry) => patchHotspot(id, { geometry })}
                   onRotationChange={(id, rotationDeg) =>
                     patchHotspot(id, { rotationDeg })
@@ -2097,6 +2306,15 @@ export function ExploreHotspotsWorkspace() {
                   </button>
                   <button
                     type="button"
+                    className="rounded-md px-1.5 py-1 text-[11px] font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-40"
+                    disabled={!activePhase}
+                    onClick={duplicateActivePhase}
+                    title="Duplicate active scene"
+                  >
+                    Duplicate
+                  </button>
+                  <button
+                    type="button"
                     className="rounded-md px-1.5 py-1 text-[11px] text-rose-700 hover:bg-rose-50 disabled:opacity-40"
                     disabled={phases.length <= 1}
                     onClick={removeActivePhase}
@@ -2169,16 +2387,52 @@ export function ExploreHotspotsWorkspace() {
                   Create an object, then edit it here.
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-2">
-                  <button
-                    type="button"
-                    className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-left text-sm text-stone-800 hover:border-sky-300 hover:bg-sky-50"
-                    onClick={() => insertPanelObject("shape")}
-                  >
-                    <span className="font-semibold text-stone-900">Create shape</span>
-                    <span className="mt-0.5 block text-xs text-stone-500">
-                      Rectangle overlay — color and size in properties.
-                    </span>
-                  </button>
+                  <div className="rounded-lg border border-stone-300 bg-white">
+                    <button
+                      type="button"
+                      className={`w-full rounded-lg px-3 py-3 text-left text-sm text-stone-800 hover:border-sky-300 hover:bg-sky-50 ${
+                        addObjectMenu === "shape" ? "bg-sky-50" : ""
+                      }`}
+                      onClick={() =>
+                        setAddObjectMenu((current) =>
+                          current === "shape" ? null : "shape",
+                        )
+                      }
+                    >
+                      <span className="font-semibold text-stone-900">Create shape</span>
+                      <span className="mt-0.5 block text-xs text-stone-500">
+                        Decorative overlay — pick a shape, then draw it.
+                      </span>
+                    </button>
+                    {addObjectMenu === "shape" ? (
+                      <div className="grid grid-cols-3 gap-1.5 border-t border-stone-200 px-2 pb-2 pt-2">
+                        {(
+                          [
+                            ["rectangle", "Rectangle"],
+                            ["ellipse", "Ellipse"],
+                            ["polygon", "Polygon"],
+                          ] as const
+                        ).map(([shapeTool, label]) => {
+                          const active =
+                            createIntent === "shape" && tool === shapeTool;
+                          return (
+                            <button
+                              key={shapeTool}
+                              type="button"
+                              className={`rounded-md px-2 py-2 text-center text-xs font-medium ${
+                                active
+                                  ? "bg-sky-800 text-white"
+                                  : "bg-stone-100 text-stone-700 hover:bg-sky-100 hover:text-sky-900"
+                              }`}
+                              onClick={() => beginCreateDraw("shape", shapeTool)}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                   <button
                     type="button"
                     className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-left text-sm text-stone-800 hover:border-sky-300 hover:bg-sky-50"
@@ -2189,25 +2443,64 @@ export function ExploreHotspotsWorkspace() {
                       Simple label on the scene — edit wording here.
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-stone-300 bg-white px-3 py-3 text-left text-sm text-stone-800 hover:border-sky-300 hover:bg-sky-50"
-                    onClick={() => insertPanelObject("hotspot")}
-                  >
-                    <span className="font-semibold text-stone-900">Create hotspot</span>
-                    <span className="mt-0.5 block text-xs text-stone-500">
-                      Tap target with dialogue, audio, or other responses.
-                    </span>
-                  </button>
+                  <div className="rounded-lg border border-stone-300 bg-white">
+                    <button
+                      type="button"
+                      className={`w-full rounded-lg px-3 py-3 text-left text-sm text-stone-800 hover:border-sky-300 hover:bg-sky-50 ${
+                        addObjectMenu === "hotspot" ? "bg-sky-50" : ""
+                      }`}
+                      onClick={() =>
+                        setAddObjectMenu((current) =>
+                          current === "hotspot" ? null : "hotspot",
+                        )
+                      }
+                    >
+                      <span className="font-semibold text-stone-900">
+                        Create hotspot
+                      </span>
+                      <span className="mt-0.5 block text-xs text-stone-500">
+                        Tap target — pick a shape, then draw it on the picture.
+                      </span>
+                    </button>
+                    {addObjectMenu === "hotspot" ? (
+                      <div className="grid grid-cols-3 gap-1.5 border-t border-stone-200 px-2 pb-2 pt-2">
+                        {(
+                          [
+                            ["rectangle", "Rectangle"],
+                            ["ellipse", "Ellipse"],
+                            ["polygon", "Polygon"],
+                          ] as const
+                        ).map(([shapeTool, label]) => {
+                          const active =
+                            createIntent === "target" && tool === shapeTool;
+                          return (
+                            <button
+                              key={shapeTool}
+                              type="button"
+                              className={`rounded-md px-2 py-2 text-center text-xs font-medium ${
+                                active
+                                  ? "bg-sky-800 text-white"
+                                  : "bg-stone-100 text-stone-700 hover:bg-sky-100 hover:text-sky-900"
+                              }`}
+                              onClick={() => beginCreateDraw("target", shapeTool)}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </section>
             ) : (
-              <div className="space-y-4">
-                <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-                      Identity
-                    </h2>
+              <div className="space-y-3">
+                <HotspotCollapsibleCard
+                  id="identity"
+                  title="Identity"
+                  openId={rightSettingsOpenId}
+                  onOpenChange={setRightSettingsOpenId}
+                  headerEnd={
                     <button
                       type="button"
                       className="text-xs text-rose-700 hover:underline disabled:opacity-40"
@@ -2221,8 +2514,9 @@ export function ExploreHotspotsWorkspace() {
                     >
                       Delete
                     </button>
-                  </div>
-                  <label className="mt-3 block text-xs text-stone-600">
+                  }
+                >
+                  <label className="mt-2 block text-xs text-stone-600">
                     Display name
                     <input
                       className={inputClass}
@@ -2245,320 +2539,300 @@ export function ExploreHotspotsWorkspace() {
                       }
                     />
                   </label>
-                </section>
+                  {showInteractionChrome ? (
+                    <label className="mt-3 block text-xs text-stone-600">
+                      Interaction kind
+                      <select
+                        className={inputClass}
+                        value={selectedKind ?? "dialogue"}
+                        onChange={(event) => {
+                          const kind = event.target.value as WkeObjectInteractionKind;
+                          const nextActions = applyInteractionKindTemplate(
+                            selected,
+                            kind,
+                          );
+                          patchHotspot(selected.id, {
+                            interactionKind: kind,
+                            required:
+                              kind === "none" || kind === "silent"
+                                ? false
+                                : (selected.required ?? true),
+                            onTap: nextActions.length > 0 ? nextActions : undefined,
+                            responseCards: syncResponseCardsFromOnTap(nextActions),
+                          });
+                          if (kind === "dialogue") {
+                            ensureDialogueForSelected();
+                            setRightSettingsOpenId("dialogue");
+                          } else if (kind === "question") {
+                            setRightSettingsOpenId("on-tap");
+                          } else {
+                            setRightSettingsOpenId("identity");
+                          }
+                        }}
+                      >
+                        <option value="dialogue">Dialogue</option>
+                        <option value="audio">Audio</option>
+                        <option value="info">Info card</option>
+                        <option value="question">Tap sequence</option>
+                        <option value="silent">Silent tap (no card)</option>
+                        <option value="none">Decorative only</option>
+                      </select>
+                    </label>
+                  ) : null}
+                  {showInteractionChrome && selectedKind === "none" ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+                      Decorative only — no tap response.
+                    </p>
+                  ) : null}
+                  {showInteractionChrome && selectedKind === "silent" ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+                      Silent tap — counts as visited with no card or audio.
+                    </p>
+                  ) : null}
+                </HotspotCollapsibleCard>
 
-                <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                  <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-                    Appearance
-                  </h2>
-                  {isTextHotspot(selected) ? (
-                    <>
-                      <label className="mt-3 block text-xs text-stone-600">
-                        Text on scene
-                        <input
+                {showInteractionChrome && selectedKind === "info" ? (
+                  <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                    <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                      Info card
+                    </h2>
+                    {primaryInfoAction?.type === "show_info" ? (
+                      <label className="mt-2 block text-xs text-stone-600">
+                        Text
+                        <textarea
+                          rows={4}
                           className={inputClass}
-                          value={selected.labelText ?? ""}
-                          placeholder="New text"
+                          value={primaryInfoAction.text}
                           onChange={(event) =>
-                            patchHotspot(selected.id, {
-                              labelText: event.target.value,
-                              name: event.target.value || selected.name,
+                            patchOnTapAction(primaryInfoAction.id, {
+                              text: event.target.value,
                             })
                           }
                         />
                       </label>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <label className="block text-xs text-stone-600">
-                          Role
-                          <select
-                            className={inputClass}
-                            value={selected.textStyle?.role ?? "body"}
-                            onChange={(event) =>
-                              patchHotspot(selected.id, {
-                                textStyle: {
-                                  ...selected.textStyle,
-                                  role: event.target.value as
-                                    | "title"
-                                    | "body"
-                                    | "caption",
-                                },
-                              })
-                            }
-                          >
-                            <option value="title">Title</option>
-                            <option value="body">Body</option>
-                            <option value="caption">Caption</option>
-                          </select>
-                        </label>
-                        <label className="block text-xs text-stone-600">
-                          Align
-                          <select
-                            className={inputClass}
-                            value={selected.textStyle?.align ?? "center"}
-                            onChange={(event) =>
-                              patchHotspot(selected.id, {
-                                textStyle: {
-                                  ...selected.textStyle,
-                                  align: event.target.value as
-                                    | "left"
-                                    | "center"
-                                    | "right",
-                                },
-                              })
-                            }
-                          >
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                          </select>
-                        </label>
-                      </div>
-                    </>
-                  ) : null}
-                  {isShapeHotspot(selected) || isTextHotspot(selected) ? (
-                    <label className="mt-3 block text-xs text-stone-600">
-                      {isTextHotspot(selected) ? "Text color" : "Fill color"}
-                      <input
-                        type="color"
-                        className="mt-1 h-9 w-full rounded border border-stone-300"
-                        value={
-                          selected.highlight?.color ??
-                          (isTextHotspot(selected) ? "#1c1917" : "#38bdf8")
-                        }
-                        onChange={(event) =>
-                          patchHotspot(selected.id, {
-                            highlight: {
-                              ...(selected.highlight ?? DEFAULT_OBJECT_HIGHLIGHT),
-                              color: event.target.value,
-                              style: "outline",
-                            },
-                          })
-                        }
-                      />
-                    </label>
-                  ) : null}
-                  {isSpriteHotspot(selected) ||
-                  isShapeHotspot(selected) ||
-                  isTextHotspot(selected) ? (
-                    <label className="mt-3 block text-xs text-stone-600">
-                      Rotation (degrees)
-                      <div className="mt-1 flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={-180}
-                          max={180}
-                          step={1}
-                          className={inputClass}
-                          value={Math.round(selected.rotationDeg ?? 0)}
-                          onChange={(event) => {
-                            const raw = Number(event.target.value);
-                            if (!Number.isFinite(raw)) return;
-                            const clamped = Math.max(-180, Math.min(180, raw));
-                            patchHotspot(selected.id, {
-                              rotationDeg: clamped === 0 ? undefined : clamped,
-                            });
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="shrink-0 rounded-md border border-stone-300 bg-white px-2 py-1.5 text-[11px] text-stone-700 hover:bg-stone-100"
-                          onClick={() =>
-                            patchHotspot(selected.id, { rotationDeg: undefined })
-                          }
-                        >
-                          Reset
-                        </button>
-                      </div>
-                      <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
-                        Drag the top handle on the canvas, or enter an exact angle.
+                    ) : (
+                      <p className="mt-2 text-xs text-stone-500">
+                        No info content yet — reselect Info card kind to reset the template.
                       </p>
-                    </label>
-                  ) : null}
-                  {isSpriteHotspot(selected) ? (
-                    <>
-                      <button
-                        type="button"
-                        className="mt-3 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 hover:bg-stone-100 disabled:opacity-50"
-                        disabled={spriteBgBusy}
-                        onClick={() => void removeSelectedSpriteBackground()}
-                      >
-                        {spriteBgBusy ? "Removing background…" : "Remove white background"}
-                      </button>
-                      <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
-                        Drag to move; corner handles resize with locked proportions.
-                      </p>
-                    </>
-                  ) : null}
-                  {!isSpriteHotspot(selected) &&
-                  !isShapeHotspot(selected) &&
-                  !isTextHotspot(selected) ? (
-                    <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
-                      Outline and detect tools are in Highlight below.
-                    </p>
-                  ) : null}
-                </section>
-
-                {!isShapeHotspot(selected) && !isTextHotspot(selected) ? (
-                  <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                    <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
-                      Interaction
-                    </h2>
-                    <label className="mt-3 block text-xs text-stone-600">
-                      Kind
-                      <select
-                        className={inputClass}
-                        value={
-                          selected.interactionKind ??
-                          (isSpriteHotspot(selected) ? "silent" : "dialogue")
-                        }
-                        onChange={(event) => {
-                          const kind = event.target.value as WkeObjectInteractionKind;
-                          const existing = resolveOnTapActions(selected);
-                          const nextActions =
-                            kind === "audio" &&
-                            !existing.some((action) => action.type === "play_audio")
-                              ? [
-                                  ...existing,
-                                  responseCardToAction({
-                                    id: `card-${selected.id}-audio`,
-                                    kind: "audio" as const,
-                                    audioUrl: "",
-                                    label: "Listen",
-                                  }),
-                                ]
-                              : existing;
-                          patchHotspot(selected.id, {
-                            interactionKind: kind,
-                            ...(kind === "none" ? { required: false } : {}),
-                            ...(kind !== "none" &&
-                            kind !== "silent" &&
-                            isSpriteHotspot(selected)
-                              ? { required: selected.required ?? true }
-                              : {}),
-                            onTap: nextActions,
-                            responseCards: syncResponseCardsFromOnTap(nextActions),
-                          });
-                          if (kind === "dialogue") ensureDialogueForSelected();
-                        }}
-                      >
-                        {isSpriteHotspot(selected) ? (
-                          <>
-                            <option value="audio">Play audio</option>
-                            <option value="dialogue">Dialogue</option>
-                            <option value="info">Info card</option>
-                            <option value="question">Question</option>
-                            <option value="silent">Silent tap (no card)</option>
-                            <option value="none">Decorative only</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="dialogue">Dialogue</option>
-                            <option value="info">Info card</option>
-                            <option value="audio">Audio</option>
-                            <option value="question">Question</option>
-                          </>
-                        )}
-                      </select>
-                    </label>
-                    <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
-                      On tap sequence below runs when students select this object.
-                    </p>
+                    )}
                   </section>
                 ) : null}
 
-                <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                  <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-                    Rules
-                  </h2>
-                  <label className="mt-3 flex items-center gap-2 text-sm text-stone-800">
-                    <input
-                      type="checkbox"
-                      className="rounded border-stone-300"
-                      checked={selected.required ?? true}
-                      disabled={
-                        isShapeHotspot(selected) ||
-                        isTextHotspot(selected) ||
-                        selected.interactionKind === "none"
-                      }
-                      onChange={(event) =>
-                        patchHotspot(selected.id, { required: event.target.checked })
-                      }
-                    />
-                    Required for completion
-                  </label>
-                  <label className="mt-3 block text-xs text-stone-600">
-                    Start state
-                    <select
-                      className={inputClass}
-                      value={selected.initialState ?? "available"}
-                      onChange={(event) =>
-                        patchHotspot(selected.id, {
-                          initialState: event.target.value as
-                            | "locked"
-                            | "available"
-                            | "hidden",
-                        })
-                      }
-                    >
-                      <option value="available">Available</option>
-                      <option value="locked">Locked</option>
-                      <option value="hidden">Hidden (enter later)</option>
-                    </select>
-                  </label>
-                  <label className="mt-3 block text-xs text-stone-600">
-                    Order index
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      className={inputClass}
-                      value={selected.orderIndex ?? 0}
-                      onChange={(event) =>
-                        patchHotspot(selected.id, {
-                          orderIndex: Number(event.target.value) || 0,
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="mt-3 block text-xs text-stone-600">
-                    Wrong-order hint
-                    <input
-                      className={inputClass}
-                      value={selected.wrongOrderHint ?? ""}
-                      placeholder="Try another object first"
-                      onChange={(event) =>
-                        patchHotspot(selected.id, {
-                          wrongOrderHint: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="mt-3 flex items-center gap-2 text-sm text-stone-800">
-                    <input
-                      type="checkbox"
-                      className="rounded border-stone-300"
-                      checked={selected.enableHintPulse ?? false}
-                      onChange={(event) =>
-                        patchHotspot(selected.id, {
-                          enableHintPulse: event.target.checked,
-                        })
-                      }
-                    />
-                    Eligible for hint pulse
-                  </label>
-                </section>
-
-                {(!isSpriteHotspot(selected) ||
-                  ((selected.interactionKind ?? "silent") !== "silent" &&
-                    selected.interactionKind !== "none")) &&
-                !isShapeHotspot(selected) &&
-                !isTextHotspot(selected) ? (
-                <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                  <div className="flex items-center justify-between gap-2">
+                {showInteractionChrome && selectedKind === "audio" ? (
+                  <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-3">
                     <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
-                      On tap sequence
+                      Audio
                     </h2>
-                    <div className="flex flex-wrap justify-end gap-1">
+                    {primaryAudioAction?.type === "play_audio" ? (
+                      <>
+                        <div className="mt-2">
+                          <AudioClipControls
+                            label="Clip"
+                            hint="Record, upload, or pick from your library."
+                            value={primaryAudioAction.audioUrl}
+                            onChange={(url) =>
+                              patchOnTapAction(primaryAudioAction.id, {
+                                audioUrl: url.trim(),
+                              })
+                            }
+                          />
+                        </div>
+                        <label className="mt-2 block text-xs text-stone-600">
+                          Label
+                          <input
+                            className={inputClass}
+                            placeholder="Listen"
+                            value={primaryAudioAction.label ?? ""}
+                            onChange={(event) =>
+                              patchOnTapAction(primaryAudioAction.id, {
+                                label: event.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-xs text-stone-500">
+                        No audio step yet — reselect Audio kind to reset the template.
+                      </p>
+                    )}
+                  </section>
+                ) : null}
+
+                {selectedKind === "dialogue" &&
+                selectedDialogue &&
+                showInteractionChrome ? (
+                <HotspotCollapsibleCard
+                  id="dialogue"
+                  title="Dialogue"
+                  tone="amber"
+                  openId={rightSettingsOpenId}
+                  onOpenChange={setRightSettingsOpenId}
+                  headerEnd={
+                    <span className="text-[11px] text-stone-500">
+                      {selectedDialogue.turns.length} turn
+                      {selectedDialogue.turns.length === 1 ? "" : "s"}
+                    </span>
+                  }
+                >
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Card title
+                    <input
+                      className={inputClass}
+                      value={selectedDialogue.title}
+                      onChange={(event) => patchDialogue({ title: event.target.value })}
+                    />
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-[11px] text-stone-700 hover:bg-stone-50"
+                      onClick={() => applyTurnTemplate("ask-answer")}
+                    >
+                      Ask + answer
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-[11px] text-stone-700 hover:bg-stone-50"
+                      onClick={() => applyTurnTemplate("one-line")}
+                    >
+                      1 line
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-[11px] text-stone-700 hover:bg-stone-50"
+                      onClick={() => applyTurnTemplate("three-turn")}
+                    >
+                      3 turns
+                    </button>
+                  </div>
+                  {selectedDialogue.turns.map((turn, index) => (
+                    <div
+                      key={index}
+                      className="mt-3 rounded-lg border border-stone-200 bg-stone-50/80 p-3"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                          Turn {index + 1}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            aria-label={`Move turn ${index + 1} up`}
+                            disabled={index === 0}
+                            className="rounded px-1.5 py-0.5 text-xs text-stone-500 hover:bg-stone-200 disabled:opacity-30"
+                            onClick={() => moveTurn(index, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Move turn ${index + 1} down`}
+                            disabled={index === selectedDialogue.turns.length - 1}
+                            className="rounded px-1.5 py-0.5 text-xs text-stone-500 hover:bg-stone-200 disabled:opacity-30"
+                            onClick={() => moveTurn(index, 1)}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Remove turn ${index + 1}`}
+                            disabled={selectedDialogue.turns.length <= 1}
+                            className="rounded px-1.5 py-0.5 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-30"
+                            onClick={() => removeTurn(index)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                      <label className="block text-xs text-stone-600">
+                        Speaker
+                        <input
+                          className={inputClass}
+                          value={turn.speaker}
+                          onChange={(event) =>
+                            patchDialogue({
+                              turns: selectedDialogue.turns.map((item, turnIndex) =>
+                                turnIndex === index
+                                  ? { ...item, speaker: event.target.value }
+                                  : item,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="mt-2 block text-xs text-stone-600">
+                        Line
+                        <textarea
+                          rows={2}
+                          className={inputClass}
+                          value={turn.text}
+                          onChange={(event) =>
+                            patchDialogue({
+                              turns: selectedDialogue.turns.map((item, turnIndex) =>
+                                turnIndex === index
+                                  ? { ...item, text: event.target.value }
+                                  : item,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                      <div className="mt-3 border-t border-stone-200/80 pt-3">
+                        <AudioClipControls
+                          label="Turn audio (optional)"
+                          hint="Record or upload a clip for this turn. When set, play uses the clip instead of TTS."
+                          value={turn.audioUrl ?? ""}
+                          onChange={(url) =>
+                            patchDialogue({
+                              turns: selectedDialogue.turns.map((item, turnIndex) => {
+                                if (turnIndex !== index) return item;
+                                const next = url.trim();
+                                if (!next) {
+                                  const { audioUrl: _removed, ...rest } = item;
+                                  return rest;
+                                }
+                                return { ...item, audioUrl: next };
+                              }),
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="mt-3 w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm text-stone-800 hover:border-sky-400 hover:bg-sky-50/50"
+                    onClick={addTurn}
+                  >
+                    + Add turn
+                  </button>
+                  {selectedDialogue.turns.length >= 8 ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-amber-800">
+                      Long dialogues can be hard for A1 listeners. Consider splitting into
+                      another object.
+                    </p>
+                  ) : null}
+                </HotspotCollapsibleCard>
+                ) : selectedKind === "dialogue" && showInteractionChrome ? (
+                  <button
+                    type="button"
+                    className="w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm text-stone-800 hover:border-sky-400 hover:bg-sky-50/50"
+                    onClick={ensureDialogueForSelected}
+                  >
+                    + Add dialogue for this object
+                  </button>
+                ) : null}
+
+                {showInteractionChrome && selectedKind === "question" ? (
+                <HotspotCollapsibleCard
+                  id="on-tap"
+                  title="Tap sequence"
+                  tone="amber"
+                  openId={rightSettingsOpenId}
+                  onOpenChange={setRightSettingsOpenId}
+                >
+                  <div className="mt-2 flex flex-wrap gap-1">
                       {(
                         [
                           ["info", "Info"],
@@ -2576,7 +2850,6 @@ export function ExploreHotspotsWorkspace() {
                           + {label}
                         </button>
                       ))}
-                    </div>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {(
@@ -2588,6 +2861,8 @@ export function ExploreHotspotsWorkspace() {
                         ["tween_object", "Move"],
                         ["swap_sprite_asset", "Swap PNG"],
                         ["complete_object", "Complete"],
+                        ["advance_scene", "Advance scene"],
+                        ["click_advance_scene", "Wait for tap"],
                       ] as const
                     ).map(([type, label]) => (
                       <button
@@ -2601,8 +2876,10 @@ export function ExploreHotspotsWorkspace() {
                     ))}
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
-                    Runs in order on tap. Content steps show cards; stage steps
-                    show/hide, move, or swap sprites.
+                    Runs on tap. Use After previous or With previous to sequence or
+                    overlap steps. Content cards still pause for Continue. Advance
+                    scene moves to the next scene when this step runs (e.g. Start
+                    Learning).
                   </p>
                   <div className="mt-3 space-y-2">
                     {selectedOnTap.map((action, index) => (
@@ -2612,7 +2889,12 @@ export function ExploreHotspotsWorkspace() {
                       >
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
-                            {index + 1}. {action.type.replaceAll("_", " ")}
+                            {index + 1}.{" "}
+                            {action.type === "advance_scene"
+                              ? "Advance scene"
+                              : action.type === "click_advance_scene"
+                                ? "Wait for tap then advance"
+                                : action.type.replaceAll("_", " ")}
                           </p>
                           <button
                             type="button"
@@ -2621,6 +2903,16 @@ export function ExploreHotspotsWorkspace() {
                           >
                             Remove
                           </button>
+                        </div>
+                        <div className="mb-2">
+                          <ActionStartTimingSelect
+                            index={index}
+                            inputClass={inputClass}
+                            value={action.timing}
+                            onChange={(timing) =>
+                              patchOnTapAction(action.id, { timing })
+                            }
+                          />
                         </div>
                         {action.type === "show_info" ? (
                           <textarea
@@ -2923,104 +3215,72 @@ export function ExploreHotspotsWorkspace() {
                             />
                           </label>
                         ) : null}
+                        {action.type === "advance_scene" ? (
+                          <p className="text-[10px] leading-snug text-stone-500">
+                            Moves to the next scene when this step runs (after any
+                            earlier tap-sequence steps).
+                          </p>
+                        ) : null}
+                        {action.type === "click_advance_scene" ? (
+                          <div className="space-y-2">
+                            <label className="block text-xs text-stone-600">
+                              Object to tap
+                              <select
+                                className={inputClass}
+                                value={action.targetId}
+                                onChange={(event) =>
+                                  patchOnTapAction(action.id, {
+                                    targetId: event.target.value,
+                                  })
+                                }
+                              >
+                                {hotspots.length === 0 ? (
+                                  <option value="">No objects in scene</option>
+                                ) : (
+                                  hotspots.map((hotspot) => (
+                                    <option key={hotspot.id} value={hotspot.id}>
+                                      {hotspot.name?.trim() ||
+                                        hotspot.labelText?.trim() ||
+                                        hotspot.id}
+                                    </option>
+                                  ))
+                                )}
+                              </select>
+                            </label>
+                            <p className="text-[10px] leading-snug text-stone-500">
+                              Sequence pauses until students tap this glowing object,
+                              then advances to the next scene.
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     ))}
                   </div>
-                </section>
-                ) : null}
-
-                {rectangleFields ? (
-                  <details className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                    <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-                      Geometry
-                    </summary>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      {rectangleFields.map((field) => (
-                        <label key={field} className="text-xs text-stone-600">
-                          {field}
-                          <input
-                            type="number"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            className={inputClass}
-                            value={geometryNumber(selected.geometry, field)}
-                            onChange={(event) => {
-                              if (selected.geometry.shape !== "rectangle") return;
-                              patchHotspot(selected.id, {
-                                geometry: patchRectangleGeometry(
-                                  selected.geometry,
-                                  field,
-                                  Number(event.target.value),
-                                ),
-                              });
-                            }}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </details>
-                ) : null}
-
-                {ellipseFields ? (
-                  <details className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                    <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-                      Geometry
-                    </summary>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      {ellipseFields.map((field) => (
-                        <label key={field} className="text-xs text-stone-600">
-                          {field}
-                          <input
-                            type="number"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            className={inputClass}
-                            value={geometryNumber(selected.geometry, field)}
-                            onChange={(event) => {
-                              if (selected.geometry.shape !== "ellipse") return;
-                              patchHotspot(selected.id, {
-                                geometry: patchEllipseGeometry(
-                                  selected.geometry,
-                                  field,
-                                  Number(event.target.value),
-                                ),
-                              });
-                            }}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </details>
-                ) : null}
-
-                {selected.geometry.shape === "polygon" ? (
-                  <p className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600">
-                    Polygon with {selected.geometry.points.length} points. Drag the white
-                    vertex handles on the canvas to edit it.
-                  </p>
+                </HotspotCollapsibleCard>
                 ) : null}
 
                 {!isSpriteHotspot(selected) &&
                 !isShapeHotspot(selected) &&
                 !isTextHotspot(selected) ? (
-                <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-                  <h2 className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
-                    Highlight
-                  </h2>
+                <HotspotCollapsibleCard
+                  id="highlight"
+                  title="Highlight"
+                  tone="amber"
+                  openId={rightSettingsOpenId}
+                  onOpenChange={setRightSettingsOpenId}
+                >
                   {!segmentationMode ? (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-2 space-y-2">
                       <p className="text-xs leading-relaxed text-stone-600">
-                        Resize the hotspot closely around the intended character. Its
-                        bounds guide detection and suppress nearby objects.
+                        Detect a precise outline from the picture, then set highlight style
+                        and color.
                       </p>
                       <button
                         type="button"
                         onClick={beginSegmentation}
                         className="w-full rounded-lg bg-amber-700 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600"
                       >
-                        {selected.visualShape ? "Redetect object" : "Detect object"}
+                        {selected.visualShape ? "Redetect outline" : "Detect precise outline"}
                       </button>
                       {selected.visualShape ? (
                         <button
@@ -3035,7 +3295,7 @@ export function ExploreHotspotsWorkspace() {
                       ) : null}
                     </div>
                   ) : (
-                    <div className="mt-3 space-y-3">
+                    <div className="mt-2 space-y-3">
                       <p className="text-xs leading-relaxed text-stone-700">
                         The dashed hotspot boundary guides the first outline automatically.
                         Amber dots are auto seeds (dropped if they land in a hole). Choose
@@ -3168,223 +3428,367 @@ export function ExploreHotspotsWorkspace() {
                       ) : null}
                     </div>
                   )}
-                  {selected.visualShape && !segmentationMode ? (
-                    <div className="mt-4 space-y-3">
-                      <label className="block text-xs text-stone-600">
-                        Highlight style
-                        <select
-                          className={inputClass}
-                          value={
-                            selected.highlight?.style ?? DEFAULT_OBJECT_HIGHLIGHT.style
-                          }
-                          onChange={(event) =>
-                            patchHotspot(selected.id, {
-                              highlight: {
-                                ...(selected.highlight ?? DEFAULT_OBJECT_HIGHLIGHT),
-                                style: event.target.value as
-                                  | "outline"
-                                  | "soft-glow"
-                                  | "spotlight-outline",
-                              },
-                            })
-                          }
-                        >
-                          <option value="spotlight-outline">Spotlight + outline</option>
-                          <option value="soft-glow">Soft glow</option>
-                          <option value="outline">Outline only</option>
-                        </select>
-                      </label>
-                      <label className="block text-xs text-stone-600">
-                        Highlight color
-                        <input
-                          type="color"
-                          className="mt-1 h-9 w-full rounded border border-stone-300"
-                          value={
-                            selected.highlight?.color ?? DEFAULT_OBJECT_HIGHLIGHT.color
-                          }
-                          onChange={(event) =>
-                            patchHotspot(selected.id, {
-                              highlight: {
-                                ...(selected.highlight ?? DEFAULT_OBJECT_HIGHLIGHT),
-                                color: event.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </label>
-                    </div>
-                  ) : null}
-                </section>
+                  <div className="mt-4 space-y-3 border-t border-stone-200 pt-3">
+                    <label className="block text-xs text-stone-600">
+                      Highlight style
+                      <select
+                        className={inputClass}
+                        value={
+                          selected.highlight?.style ?? DEFAULT_OBJECT_HIGHLIGHT.style
+                        }
+                        onChange={(event) =>
+                          patchHotspot(selected.id, {
+                            highlight: {
+                              ...(selected.highlight ?? DEFAULT_OBJECT_HIGHLIGHT),
+                              style: event.target.value as
+                                | "outline"
+                                | "soft-glow"
+                                | "spotlight-outline",
+                            },
+                          })
+                        }
+                      >
+                        <option value="spotlight-outline">Spotlight + outline</option>
+                        <option value="soft-glow">Soft glow</option>
+                        <option value="outline">Outline only</option>
+                      </select>
+                    </label>
+                    <label className="block text-xs text-stone-600">
+                      Highlight color
+                      <input
+                        type="color"
+                        className="mt-1 h-9 w-full rounded border border-stone-300"
+                        value={
+                          selected.highlight?.color ?? DEFAULT_OBJECT_HIGHLIGHT.color
+                        }
+                        onChange={(event) =>
+                          patchHotspot(selected.id, {
+                            highlight: {
+                              ...(selected.highlight ?? DEFAULT_OBJECT_HIGHLIGHT),
+                              color: event.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                </HotspotCollapsibleCard>
                 ) : null}
 
-                {selectedDialogue &&
-                !isShapeHotspot(selected) &&
-                !isTextHotspot(selected) &&
-                (!isSpriteHotspot(selected) ||
-                  selected.interactionKind === "dialogue" ||
-                  (selected.responseCards ?? []).some((card) => card.kind === "dialogue") ||
-                  selectedOnTap.some((action) => action.type === "show_dialogue")) ? (
-                <section>
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-                      Dialogue card
-                    </h2>
-                    <span className="text-[11px] text-stone-500">
-                      {selectedDialogue.turns.length} turn
-                      {selectedDialogue.turns.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <label className="mt-3 block text-xs text-stone-600">
-                    Card title
-                    <input
-                      className={inputClass}
-                      value={selectedDialogue.title}
-                      onChange={(event) => patchDialogue({ title: event.target.value })}
-                    />
-                  </label>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-[11px] text-stone-700 hover:bg-stone-50"
-                      onClick={() => applyTurnTemplate("ask-answer")}
-                    >
-                      Ask + answer
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-[11px] text-stone-700 hover:bg-stone-50"
-                      onClick={() => applyTurnTemplate("one-line")}
-                    >
-                      1 line
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-[11px] text-stone-700 hover:bg-stone-50"
-                      onClick={() => applyTurnTemplate("three-turn")}
-                    >
-                      3 turns
-                    </button>
-                  </div>
-                  {selectedDialogue.turns.map((turn, index) => (
-                    <div
-                      key={index}
-                      className="mt-3 rounded-lg border border-stone-200 bg-stone-50/80 p-3"
-                    >
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
-                          Turn {index + 1}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            aria-label={`Move turn ${index + 1} up`}
-                            disabled={index === 0}
-                            className="rounded px-1.5 py-0.5 text-xs text-stone-500 hover:bg-stone-200 disabled:opacity-30"
-                            onClick={() => moveTurn(index, -1)}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Move turn ${index + 1} down`}
-                            disabled={index === selectedDialogue.turns.length - 1}
-                            className="rounded px-1.5 py-0.5 text-xs text-stone-500 hover:bg-stone-200 disabled:opacity-30"
-                            onClick={() => moveTurn(index, 1)}
-                          >
-                            ↓
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Remove turn ${index + 1}`}
-                            disabled={selectedDialogue.turns.length <= 1}
-                            className="rounded px-1.5 py-0.5 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-30"
-                            onClick={() => removeTurn(index)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                      <label className="block text-xs text-stone-600">
-                        Speaker
+                {isSpriteHotspot(selected) ||
+                isShapeHotspot(selected) ||
+                isTextHotspot(selected) ? (
+                <HotspotCollapsibleCard
+                  id="appearance"
+                  title="Appearance"
+                  openId={rightSettingsOpenId}
+                  onOpenChange={setRightSettingsOpenId}
+                >
+                  {isTextHotspot(selected) ? (
+                    <>
+                      <label className="mt-3 block text-xs text-stone-600">
+                        Text on scene
                         <input
                           className={inputClass}
-                          value={turn.speaker}
+                          value={selected.labelText ?? ""}
+                          placeholder="New text"
                           onChange={(event) =>
-                            patchDialogue({
-                              turns: selectedDialogue.turns.map((item, turnIndex) =>
-                                turnIndex === index
-                                  ? { ...item, speaker: event.target.value }
-                                  : item,
-                              ),
+                            patchHotspot(selected.id, {
+                              labelText: event.target.value,
+                              name: event.target.value || selected.name,
                             })
                           }
                         />
                       </label>
-                      <label className="mt-2 block text-xs text-stone-600">
-                        Line
-                        <textarea
-                          rows={2}
-                          className={inputClass}
-                          value={turn.text}
-                          onChange={(event) =>
-                            patchDialogue({
-                              turns: selectedDialogue.turns.map((item, turnIndex) =>
-                                turnIndex === index
-                                  ? { ...item, text: event.target.value }
-                                  : item,
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                      <div className="mt-3 border-t border-stone-200/80 pt-3">
-                        <AudioClipControls
-                          label="Turn audio (optional)"
-                          hint="Record or upload a clip for this turn. When set, play uses the clip instead of TTS."
-                          value={turn.audioUrl ?? ""}
-                          onChange={(url) =>
-                            patchDialogue({
-                              turns: selectedDialogue.turns.map((item, turnIndex) => {
-                                if (turnIndex !== index) return item;
-                                const next = url.trim();
-                                if (!next) {
-                                  const { audioUrl: _removed, ...rest } = item;
-                                  return rest;
-                                }
-                                return { ...item, audioUrl: next };
-                              }),
-                            })
-                          }
-                        />
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <label className="block text-xs text-stone-600">
+                          Role
+                          <select
+                            className={inputClass}
+                            value={selected.textStyle?.role ?? "body"}
+                            onChange={(event) =>
+                              patchHotspot(selected.id, {
+                                textStyle: {
+                                  ...selected.textStyle,
+                                  role: event.target.value as
+                                    | "title"
+                                    | "body"
+                                    | "caption",
+                                },
+                              })
+                            }
+                          >
+                            <option value="title">Title</option>
+                            <option value="body">Body</option>
+                            <option value="caption">Caption</option>
+                          </select>
+                        </label>
+                        <label className="block text-xs text-stone-600">
+                          Align
+                          <select
+                            className={inputClass}
+                            value={selected.textStyle?.align ?? "center"}
+                            onChange={(event) =>
+                              patchHotspot(selected.id, {
+                                textStyle: {
+                                  ...selected.textStyle,
+                                  align: event.target.value as
+                                    | "left"
+                                    | "center"
+                                    | "right",
+                                },
+                              })
+                            }
+                          >
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
+                          </select>
+                        </label>
                       </div>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className="mt-3 w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm text-stone-800 hover:border-sky-400 hover:bg-sky-50/50"
-                    onClick={addTurn}
-                  >
-                    + Add turn
-                  </button>
-                  {selectedDialogue.turns.length >= 8 ? (
-                    <p className="mt-2 text-[11px] leading-relaxed text-amber-800">
-                      Long dialogues can be hard for A1 listeners. Consider splitting into
-                      another object.
-                    </p>
+                    </>
                   ) : null}
-                </section>
-                ) : !isShapeHotspot(selected) &&
-                  !isTextHotspot(selected) &&
-                  (!isSpriteHotspot(selected) ||
-                    selected.interactionKind === "dialogue") ? (
-                  <button
-                    type="button"
-                    className="w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm text-stone-800 hover:border-sky-400 hover:bg-sky-50/50"
-                    onClick={ensureDialogueForSelected}
-                  >
-                    + Add dialogue for this object
-                  </button>
+                  {isShapeHotspot(selected) || isTextHotspot(selected) ? (
+                    <label className="mt-3 block text-xs text-stone-600">
+                      {isTextHotspot(selected) ? "Text color" : "Fill color"}
+                      <input
+                        type="color"
+                        className="mt-1 h-9 w-full rounded border border-stone-300"
+                        value={
+                          selected.highlight?.color ??
+                          (isTextHotspot(selected) ? "#1c1917" : "#38bdf8")
+                        }
+                        onChange={(event) =>
+                          patchHotspot(selected.id, {
+                            highlight: {
+                              ...(selected.highlight ?? DEFAULT_OBJECT_HIGHLIGHT),
+                              color: event.target.value,
+                              style: "outline",
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  ) : null}
+                  {isSpriteHotspot(selected) ||
+                  isShapeHotspot(selected) ||
+                  isTextHotspot(selected) ? (
+                    <label className="mt-3 block text-xs text-stone-600">
+                      Rotation (degrees)
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={-180}
+                          max={180}
+                          step={1}
+                          className={inputClass}
+                          value={Math.round(selected.rotationDeg ?? 0)}
+                          onChange={(event) => {
+                            const raw = Number(event.target.value);
+                            if (!Number.isFinite(raw)) return;
+                            const clamped = Math.max(-180, Math.min(180, raw));
+                            patchHotspot(selected.id, {
+                              rotationDeg: clamped === 0 ? undefined : clamped,
+                            });
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="shrink-0 rounded-md border border-stone-300 bg-white px-2 py-1.5 text-[11px] text-stone-700 hover:bg-stone-100"
+                          onClick={() =>
+                            patchHotspot(selected.id, { rotationDeg: undefined })
+                          }
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+                        Drag the top handle on the canvas, or enter an exact angle.
+                      </p>
+                    </label>
+                  ) : null}
+                  {isSpriteHotspot(selected) ? (
+                    <>
+                      <button
+                        type="button"
+                        className="mt-3 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 hover:bg-stone-100 disabled:opacity-50"
+                        disabled={spriteBgBusy}
+                        onClick={() => void removeSelectedSpriteBackground()}
+                      >
+                        {spriteBgBusy ? "Removing background…" : "Remove white background"}
+                      </button>
+                      <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+                        Drag to move; corner handles resize with locked proportions.
+                      </p>
+                    </>
+                  ) : null}
+                </HotspotCollapsibleCard>
                 ) : null}
+
+                <HotspotCollapsibleCard
+                  id="rules"
+                  title="Rules"
+                  openId={rightSettingsOpenId}
+                  onOpenChange={setRightSettingsOpenId}
+                >
+                  <label className="mt-2 flex items-center gap-2 text-sm text-stone-800">
+                    <input
+                      type="checkbox"
+                      className="rounded border-stone-300"
+                      checked={selected.required ?? true}
+                      disabled={
+                        isShapeHotspot(selected) ||
+                        isTextHotspot(selected) ||
+                        selected.interactionKind === "none"
+                      }
+                      onChange={(event) =>
+                        patchHotspot(selected.id, { required: event.target.checked })
+                      }
+                    />
+                    Required for completion
+                  </label>
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Start state
+                    <select
+                      className={inputClass}
+                      value={selected.initialState ?? "available"}
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          initialState: event.target.value as
+                            | "locked"
+                            | "available"
+                            | "hidden",
+                        })
+                      }
+                    >
+                      <option value="available">Available</option>
+                      <option value="locked">Locked</option>
+                      <option value="hidden">Hidden (enter later)</option>
+                    </select>
+                  </label>
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Order index
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className={inputClass}
+                      value={selected.orderIndex ?? 0}
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          orderIndex: Number(event.target.value) || 0,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="mt-3 block text-xs text-stone-600">
+                    Wrong-order hint
+                    <input
+                      className={inputClass}
+                      value={selected.wrongOrderHint ?? ""}
+                      placeholder="Try another object first"
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          wrongOrderHint: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="mt-3 flex items-center gap-2 text-sm text-stone-800">
+                    <input
+                      type="checkbox"
+                      className="rounded border-stone-300"
+                      checked={selected.enableHintPulse ?? false}
+                      onChange={(event) =>
+                        patchHotspot(selected.id, {
+                          enableHintPulse: event.target.checked,
+                        })
+                      }
+                    />
+                    Eligible for hint pulse
+                  </label>
+                </HotspotCollapsibleCard>
+
+
+                {rectangleFields ? (
+                  <HotspotCollapsibleCard
+                    id="geometry"
+                    title="Geometry"
+                    tone="stone"
+                    openId={rightSettingsOpenId}
+                    onOpenChange={setRightSettingsOpenId}
+                  >
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {rectangleFields.map((field) => (
+                        <label key={field} className="text-xs text-stone-600">
+                          {field}
+                          <input
+                            type="number"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            className={inputClass}
+                            value={geometryNumber(selected.geometry, field)}
+                            onChange={(event) => {
+                              if (selected.geometry.shape !== "rectangle") return;
+                              patchHotspot(selected.id, {
+                                geometry: patchRectangleGeometry(
+                                  selected.geometry,
+                                  field,
+                                  Number(event.target.value),
+                                ),
+                              });
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </HotspotCollapsibleCard>
+                ) : null}
+
+                {ellipseFields ? (
+                  <HotspotCollapsibleCard
+                    id="geometry"
+                    title="Geometry"
+                    tone="stone"
+                    openId={rightSettingsOpenId}
+                    onOpenChange={setRightSettingsOpenId}
+                  >
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {ellipseFields.map((field) => (
+                        <label key={field} className="text-xs text-stone-600">
+                          {field}
+                          <input
+                            type="number"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            className={inputClass}
+                            value={geometryNumber(selected.geometry, field)}
+                            onChange={(event) => {
+                              if (selected.geometry.shape !== "ellipse") return;
+                              patchHotspot(selected.id, {
+                                geometry: patchEllipseGeometry(
+                                  selected.geometry,
+                                  field,
+                                  Number(event.target.value),
+                                ),
+                              });
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </HotspotCollapsibleCard>
+                ) : null}
+
+                {selected.geometry.shape === "polygon" ? (
+                  <p className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600">
+                    Polygon with {selected.geometry.points.length} points. Drag the white
+                    vertex handles on the canvas to edit it.
+                  </p>
+                ) : null}
+
               </div>
             )}
             </div>

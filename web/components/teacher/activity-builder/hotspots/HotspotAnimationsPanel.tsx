@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   OBJECT_ENTRANCE_LABELS,
   OBJECT_ENTRANCE_PRESETS,
@@ -9,6 +10,7 @@ import {
   type ObjectIdlePreset,
 } from "@wke/explore-hotspots-play";
 import type { HotspotElement } from "@/lib/hotspots/types";
+import { HotspotCollapsibleCard } from "./HotspotCollapsibleCard";
 
 type Props = {
   selected: HotspotElement | null;
@@ -57,28 +59,34 @@ export function HotspotAnimationsPanel({
   onMotionPreviewChange,
   onPatchAnimation,
 }: Props) {
+  const [openId, setOpenId] = useState<string | null>("motion");
+
   if (!selected) {
     return (
-      <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-        <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-          Animations
-        </h2>
-        <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
-          Select a sprite, shape, text, or hotspot on the canvas. This tab stays open while
-          you switch objects.
-        </p>
-        {onMotionPreviewChange ? (
-          <label className="mt-3 flex items-center gap-2 text-sm text-stone-800">
-            <input
-              type="checkbox"
-              className="rounded border-stone-300"
-              checked={motionPreviewEnabled}
-              onChange={(event) => onMotionPreviewChange(event.target.checked)}
-            />
-            Preview motion on canvas
-          </label>
-        ) : null}
-      </section>
+      <div className="space-y-3">
+        <HotspotCollapsibleCard
+          id="motion"
+          title="Animations"
+          openId={openId}
+          onOpenChange={setOpenId}
+        >
+          <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+            Select a sprite, shape, text, or hotspot on the canvas. This tab stays open while
+            you switch objects.
+          </p>
+          {onMotionPreviewChange ? (
+            <label className="mt-3 flex items-center gap-2 text-sm text-stone-800">
+              <input
+                type="checkbox"
+                className="rounded border-stone-300"
+                checked={motionPreviewEnabled}
+                onChange={(event) => onMotionPreviewChange(event.target.checked)}
+              />
+              Preview motion on canvas
+            </label>
+          ) : null}
+        </HotspotCollapsibleCard>
+      </div>
     );
   }
 
@@ -90,19 +98,20 @@ export function HotspotAnimationsPanel({
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-3">
-        <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
-          Animations
-        </h2>
-        <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+    <div className="space-y-3">
+      <HotspotCollapsibleCard
+        id="motion"
+        title="Motion"
+        openId={openId}
+        onOpenChange={setOpenId}
+      >
+        <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
           Editing{" "}
           <span className="font-medium text-stone-700">
             {selected.name?.trim() || selected.labelText?.trim() || selected.id}
           </span>
-          . Entrance plays when the scene opens; idle loops while the object is visible.
+          .
         </p>
-
         {onMotionPreviewChange ? (
           <label className="mt-3 flex items-center gap-2 text-sm text-stone-800">
             <input
@@ -114,8 +123,15 @@ export function HotspotAnimationsPanel({
             Preview motion on canvas
           </label>
         ) : null}
+      </HotspotCollapsibleCard>
 
-        <label className="mt-3 block text-xs text-stone-600">
+      <HotspotCollapsibleCard
+        id="entrance"
+        title="Entrance"
+        openId={openId}
+        onOpenChange={setOpenId}
+      >
+        <label className="mt-2 block text-xs text-stone-600">
           Entrance
           <select
             className={inputClass}
@@ -172,8 +188,15 @@ export function HotspotAnimationsPanel({
             </label>
           </div>
         ) : null}
+      </HotspotCollapsibleCard>
 
-        <label className="mt-3 block text-xs text-stone-600">
+      <HotspotCollapsibleCard
+        id="idle"
+        title="Idle loop"
+        openId={openId}
+        onOpenChange={setOpenId}
+      >
+        <label className="mt-2 block text-xs text-stone-600">
           Idle loop
           <select
             className={inputClass}
@@ -197,7 +220,7 @@ export function HotspotAnimationsPanel({
         >
           Clear animations
         </button>
-      </section>
+      </HotspotCollapsibleCard>
     </div>
   );
 }

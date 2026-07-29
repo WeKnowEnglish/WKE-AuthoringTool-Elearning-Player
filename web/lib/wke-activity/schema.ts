@@ -143,12 +143,14 @@ const hotspotElementSchema = z.object({
           audioUrl: z.string(),
           label: z.string().optional(),
           wait: z.boolean().optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
           type: z.literal("show_dialogue"),
           dialogueId: z.string().min(1).optional(),
           wait: z.boolean().optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
@@ -156,6 +158,7 @@ const hotspotElementSchema = z.object({
           text: z.string().min(1),
           imageUrl: z.string().min(1).optional(),
           wait: z.boolean().optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
@@ -173,23 +176,27 @@ const hotspotElementSchema = z.object({
           correctChoiceId: z.string().min(1),
           gateDiscover: z.boolean().optional(),
           wait: z.boolean().optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
           type: z.literal("wait"),
           ms: z.number().nonnegative(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
           type: z.literal("set_object_state"),
           targetId: z.string().min(1),
           state: z.enum(["hidden", "visible", "locked", "available"]),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
           type: z.literal("swap_sprite_asset"),
           targetId: z.string().min(1),
           spriteAssetId: z.string().min(1),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
@@ -204,6 +211,7 @@ const hotspotElementSchema = z.object({
           durationMs: z.number().nonnegative(),
           easing: z.enum(["linear", "easeOut"]).optional(),
           wait: z.boolean().optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
@@ -225,17 +233,31 @@ const hotspotElementSchema = z.object({
             })
             .optional(),
           wait: z.boolean().optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
           type: z.literal("complete_object"),
           targetId: z.string().min(1).optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
         z.object({
           id: z.string().min(1),
           type: z.literal("pulse_object"),
           targetId: z.string().min(1),
           enabled: z.boolean().optional(),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("advance_scene"),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
+        }),
+        z.object({
+          id: z.string().min(1),
+          type: z.literal("click_advance_scene"),
+          targetId: z.string().min(1),
+          timing: z.enum(["after_previous", "with_previous"]).optional(),
         }),
       ]),
     )

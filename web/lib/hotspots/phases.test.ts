@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { HOBBIES_HOTSPOT_ACTIVITY } from "./fixtures/hobbiesHotspot";
 import {
   duplicateImageAsset,
+  duplicatePhaseInDocument,
   ensurePhases,
   forkPhaseImageAsset,
+  hotspotsForPhase,
   movePhase,
   nextPhaseImageAssetId,
   phasesUsingAsset,
@@ -77,5 +79,32 @@ describe("hotspot phase image assets", () => {
     ]);
     expect(movePhase(phases, "a", -1)).toBe(phases);
     expect(movePhase(phases, "c", 1)).toBe(phases);
+  });
+
+  it("duplicates a scene with its own image, objects, and dialogues", () => {
+    const withPhases = withEnsuredPhases(HOBBIES_HOTSPOT_ACTIVITY);
+    const source = ensurePhases(withPhases)[0]!;
+    const sourceHotspotCount = source.hotspotIds.length;
+    const sourceDialogueCount = withPhases.interaction.dialogues.filter((dialogue) =>
+      source.hotspotIds.includes(dialogue.hotspotId),
+    ).length;
+
+    const result = duplicatePhaseInDocument(withPhases, source.id);
+    expect(result).not.toBeNull();
+    const { document: next, newPhaseId } = result!;
+    const phases = ensurePhases(next);
+    expect(phases).toHaveLength(2);
+    expect(phases[1]?.id).toBe(newPhaseId);
+    expect(phases[1]?.imageAssetId).not.toBe(source.imageAssetId);
+    expect(phases[1]?.hotspotIds).toHaveLength(sourceHotspotCount);
+    expect(
+      phases[1]?.hotspotIds.every((id) => !source.hotspotIds.includes(id)),
+    ).toBe(true);
+    expect(hotspotsForPhase(next, newPhaseId)).toHaveLength(sourceHotspotCount);
+    expect(
+      next.interaction.dialogues.filter((dialogue) =>
+        phases[1]!.hotspotIds.includes(dialogue.hotspotId),
+      ),
+    ).toHaveLength(sourceDialogueCount);
   });
 });

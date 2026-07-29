@@ -98,3 +98,20 @@ export function getBugMarketMapRegion(
   if (!region) throw new Error(`Bug Market map ${document.id} is missing its ${kind} region.`);
   return region;
 }
+
+export function parseBugMarketMapCatalog(values: readonly unknown[]): BugMarketMapDocument[] {
+  const documents = values.map(parseBugMarketMapDocument);
+  const byId = new Map(documents.map((document) => [document.id, document]));
+  if (byId.size !== documents.length) throw new Error("Bug Market map ids must be unique.");
+
+  documents.forEach((document) => document.exits.forEach((exit) => {
+    const destination = byId.get(exit.destinationMapId);
+    if (!destination) {
+      throw new Error(`${document.id}/${exit.id} points to missing map ${exit.destinationMapId}.`);
+    }
+    if (!destination.spawnPoints.some((spawn) => spawn.id === exit.destinationSpawnId)) {
+      throw new Error(`${document.id}/${exit.id} points to missing spawn ${exit.destinationSpawnId}.`);
+    }
+  }));
+  return documents;
+}

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   actionToResponseCard,
+  applyInteractionKindTemplate,
+  groupActionsByStartTiming,
   resolveOnTapActions,
   responseCardToAction,
   syncResponseCardsFromOnTap,
+  templateOnTapForInteractionKind,
 } from "@/lib/wke-activity/on-tap-actions";
 import type { WkeHotspotElement, WkeResponseCard } from "@/lib/wke-activity/types";
 
@@ -61,5 +64,51 @@ describe("on-tap-actions", () => {
       { id: "e", type: "enter_object", targetId: "h1", to: { x: 0, y: 0, width: 0.2, height: 0.2 }, durationMs: 400 },
     ]);
     expect(cards).toEqual([{ id: "a", kind: "audio", audioUrl: "/a.mp3" }]);
+  });
+
+  it("groups with_previous actions into parallel start cohorts", () => {
+    const groups = groupActionsByStartTiming([
+      { id: "a", type: "play_audio" as const, audioUrl: "/a.mp3", timing: "with_previous" as const },
+      { id: "b", type: "enter_object" as const, targetId: "h1", to: { x: 0, y: 0, width: 0.2, height: 0.2 }, durationMs: 400, timing: "with_previous" as const },
+      { id: "c", type: "wait" as const, ms: 200, timing: "after_previous" as const },
+      { id: "d", type: "pulse_object" as const, targetId: "h1", timing: "with_previous" as const },
+    ]);
+    expect(groups.map((group) => group.map((action) => action.id))).toEqual([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
+  });
+
+  it("builds interaction-kind templates for onTap", () => {
+    expect(
+      templateOnTapForInteractionKind("dialogue", { id: "h1", name: "Cat" }).map(
+        (a) => a.type,
+      ),
+    ).toEqual(["show_dialogue"]);
+    expect(
+      templateOnTapForInteractionKind("info", { id: "h1", name: "Cat" })[0],
+    ).toMatchObject({ type: "show_info", text: "Cat" });
+    expect(templateOnTapForInteractionKind("silent", { id: "h1" })).toEqual([]);
+    expect(
+      applyInteractionKindTemplate(
+        {
+          id: "h1",
+          kind: "hotspot",
+          regionId: "r1",
+          geometry: { shape: "rectangle", x: 0, y: 0, width: 0.2, height: 0.2 },
+          onTap: [
+            { id: "old", type: "show_info", text: "Old" },
+            {
+              id: "enter",
+              type: "enter_object",
+              targetId: "h1",
+              to: { x: 0, y: 0, width: 0.2, height: 0.2 },
+              durationMs: 300,
+            },
+          ],
+        },
+        "audio",
+      ).map((a) => a.type),
+    ).toEqual(["play_audio", "enter_object"]);
   });
 });

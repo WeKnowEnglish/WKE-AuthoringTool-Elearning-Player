@@ -82,6 +82,8 @@ function mapOnTapActions(
   assets: WkeActivityV2Parsed["assets"],
 ) {
   if (!actions.length) return undefined;
+  const timingFields = (action: WkeObjectAction) =>
+    action.timing ? { timing: action.timing } : {};
   return actions.map((action) => {
     switch (action.type) {
       case "play_audio":
@@ -91,6 +93,7 @@ function mapOnTapActions(
           audio_url: action.audioUrl,
           ...(action.label ? { label: action.label } : {}),
           ...(action.wait != null ? { wait: action.wait } : {}),
+          ...timingFields(action),
         };
       case "show_dialogue":
         return {
@@ -98,6 +101,7 @@ function mapOnTapActions(
           type: "show_dialogue" as const,
           ...(action.dialogueId ? { dialogue_id: action.dialogueId } : {}),
           ...(action.wait != null ? { wait: action.wait } : {}),
+          ...timingFields(action),
         };
       case "show_info":
         return {
@@ -106,6 +110,7 @@ function mapOnTapActions(
           text: action.text,
           ...(action.imageUrl ? { image_url: action.imageUrl } : {}),
           ...(action.wait != null ? { wait: action.wait } : {}),
+          ...timingFields(action),
         };
       case "ask_question":
         return {
@@ -117,15 +122,22 @@ function mapOnTapActions(
           correct_choice_id: action.correctChoiceId,
           ...(action.gateDiscover != null ? { gate_discover: action.gateDiscover } : {}),
           ...(action.wait != null ? { wait: action.wait } : {}),
+          ...timingFields(action),
         };
       case "wait":
-        return { id: action.id, type: "wait" as const, ms: action.ms };
+        return {
+          id: action.id,
+          type: "wait" as const,
+          ms: action.ms,
+          ...timingFields(action),
+        };
       case "set_object_state":
         return {
           id: action.id,
           type: "set_object_state" as const,
           target_id: action.targetId,
           state: action.state,
+          ...timingFields(action),
         };
       case "swap_sprite_asset": {
         const src = assets.find((a) => a.id === action.spriteAssetId)?.src;
@@ -135,6 +147,7 @@ function mapOnTapActions(
           target_id: action.targetId,
           sprite_asset_id: action.spriteAssetId,
           ...(src ? { sprite_url: src } : {}),
+          ...timingFields(action),
         };
       }
       case "tween_object":
@@ -146,6 +159,7 @@ function mapOnTapActions(
           duration_ms: action.durationMs,
           ...(action.easing ? { easing: action.easing } : {}),
           ...(action.wait != null ? { wait: action.wait } : {}),
+          ...timingFields(action),
         };
       case "enter_object":
         return {
@@ -156,12 +170,14 @@ function mapOnTapActions(
           duration_ms: action.durationMs,
           ...(action.from ? { from: action.from } : {}),
           ...(action.wait != null ? { wait: action.wait } : {}),
+          ...timingFields(action),
         };
       case "complete_object":
         return {
           id: action.id,
           type: "complete_object" as const,
           ...(action.targetId ? { target_id: action.targetId } : {}),
+          ...timingFields(action),
         };
       case "pulse_object":
         return {
@@ -169,6 +185,20 @@ function mapOnTapActions(
           type: "pulse_object" as const,
           target_id: action.targetId,
           ...(action.enabled != null ? { enabled: action.enabled } : {}),
+          ...timingFields(action),
+        };
+      case "advance_scene":
+        return {
+          id: action.id,
+          type: "advance_scene" as const,
+          ...timingFields(action),
+        };
+      case "click_advance_scene":
+        return {
+          id: action.id,
+          type: "click_advance_scene" as const,
+          target_id: action.targetId,
+          ...timingFields(action),
         };
       default: {
         const _exhaustive: never = action;

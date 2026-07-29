@@ -92,9 +92,6 @@ function TeacherSettingsMenu({ userEmail }: { userEmail: string }) {
       </div>
       <TeacherNavMenuDivider />
       <div className="px-2 py-2">
-        <p className="teacher-theme-label mb-1.5 text-[10px] font-semibold uppercase tracking-wide">
-          Theme
-        </p>
         <TeacherThemeControls
           compact
           value={theme}

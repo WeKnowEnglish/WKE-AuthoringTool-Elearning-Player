@@ -2415,12 +2415,14 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
     audio_url: z.string(),
     label: z.string().optional(),
     wait: z.boolean().optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
     type: z.literal("show_dialogue"),
     dialogue_id: z.string().min(1).optional(),
     wait: z.boolean().optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
@@ -2428,6 +2430,7 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
     text: z.string().min(1),
     image_url: z.string().min(1).optional(),
     wait: z.boolean().optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
@@ -2445,17 +2448,20 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
     correct_choice_id: z.string().min(1),
     gate_discover: z.boolean().optional(),
     wait: z.boolean().optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
     type: z.literal("wait"),
     ms: z.number().nonnegative(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
     type: z.literal("set_object_state"),
     target_id: z.string().min(1),
     state: z.enum(["hidden", "visible", "locked", "available"]),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
@@ -2464,6 +2470,7 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
     sprite_asset_id: z.string().min(1),
     /** Resolved at export for play (optional when asset missing). */
     sprite_url: z.string().min(1).optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
@@ -2478,6 +2485,7 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
     duration_ms: z.number().nonnegative(),
     easing: z.enum(["linear", "easeOut"]).optional(),
     wait: z.boolean().optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
@@ -2499,17 +2507,31 @@ const exploreHotspotOnTapActionSchema = z.discriminatedUnion("type", [
       })
       .optional(),
     wait: z.boolean().optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
     type: z.literal("complete_object"),
     target_id: z.string().min(1).optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
   z.object({
     id: z.string().min(1),
     type: z.literal("pulse_object"),
     target_id: z.string().min(1),
     enabled: z.boolean().optional(),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("advance_scene"),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("click_advance_scene"),
+    target_id: z.string().min(1),
+    timing: z.enum(["after_previous", "with_previous"]).optional(),
   }),
 ]);
 

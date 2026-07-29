@@ -1,6 +1,7 @@
 import type {
   WkeHotspotElement,
   WkeObjectAction,
+  WkeActionStartTiming,
   WkeResponseCard,
 } from "@/lib/wke-activity/types";
 
@@ -93,33 +94,79 @@ export function resolveOnTapActions(
   if (hotspot.responseCards?.length) {
     return hotspot.responseCards.map(responseCardToAction);
   }
-  const kind = hotspot.interactionKind ?? "dialogue";
-  if (kind === "none" || kind === "silent") return [];
-  if (kind === "dialogue") {
-    return [{ id: `fallback-dialogue-${hotspot.id}`, type: "show_dialogue", wait: true }];
+  return templateOnTapForInteractionKind(hotspot.interactionKind ?? "dialogue", hotspot);
+}
+
+/** Default on-tap content for an interaction kind (used as authoring template). */
+export function templateOnTapForInteractionKind(
+  kind: WkeHotspotElement["interactionKind"] | undefined,
+  hotspot: Pick<WkeHotspotElement, "id" | "name">,
+): WkeObjectAction[] {
+  switch (kind) {
+    case "none":
+    case "silent":
+      return [];
+    case "info":
+      return [
+        {
+          id: `tap-info-${hotspot.id}`,
+          type: "show_info",
+          text: hotspot.name?.trim() || "Look closely.",
+          wait: true,
+        },
+      ];
+    case "audio":
+      return [
+        {
+          id: `tap-audio-${hotspot.id}`,
+          type: "play_audio",
+          audioUrl: "",
+          label: "Listen",
+          wait: true,
+        },
+      ];
+    case "question":
+      return [
+        {
+          id: `tap-question-${hotspot.id}`,
+          type: "ask_question",
+          prompt: "Is this true?",
+          questionType: "true_false",
+          choices: [
+            { id: "true", label: "True" },
+            { id: "false", label: "False" },
+          ],
+          correctChoiceId: "true",
+          wait: true,
+        },
+      ];
+    case "dialogue":
+    case undefined:
+      return [
+        {
+          id: `tap-dialogue-${hotspot.id}`,
+          type: "show_dialogue",
+          wait: true,
+        },
+      ];
+    default:
+      return [];
   }
-  if (kind === "info") {
-    return [
-      {
-        id: `fallback-info-${hotspot.id}`,
-        type: "show_info",
-        text: hotspot.name ?? "Look closely.",
-        wait: true,
-      },
-    ];
-  }
-  if (kind === "audio") {
-    return [
-      {
-        id: `fallback-audio-${hotspot.id}`,
-        type: "play_audio",
-        audioUrl: "",
-        label: "Listen",
-        wait: true,
-      },
-    ];
-  }
-  return [];
+}
+
+/**
+ * Replace content actions with the kind template; keep stage steps (enter, pulse, etc.).
+ */
+export function applyInteractionKindTemplate(
+  hotspot: Pick<
+    WkeHotspotElement,
+    "onTap" | "responseCards" | "interactionKind" | "id" | "name"
+  >,
+  kind: NonNullable<WkeHotspotElement["interactionKind"]>,
+): WkeObjectAction[] {
+  const existing = resolveOnTapActions(hotspot);
+  const keptStage = existing.filter((action) => !isContentAction(action));
+  return [...templateOnTapForInteractionKind(kind, hotspot), ...keptStage];
 }
 
 /** Keep legacy responseCards in sync with content actions for older play paths. */
@@ -133,15 +180,7 @@ export function syncResponseCardsFromOnTap(
   return cards.length ? cards : undefined;
 }
 
-export function isContentAction(
-  action: WkeObjectAction,
-): action is Extract<
-  WkeObjectAction,
-  | { type: "play_audio" }
-  | { type: "show_dialogue" }
-  | { type: "show_info" }
-  | { type: "ask_question" }
-> {
+export function isContentAction(action: { type: string }): boolean {
   return (
     action.type === "play_audio" ||
     action.type === "show_dialogue" ||
@@ -150,8 +189,34 @@ export function isContentAction(
   );
 }
 
-export function isStageAction(action: WkeObjectAction): boolean {
+export function isStageAction(action: { type: string }): boolean {
   return !isContentAction(action) && action.type !== "wait" && action.type !== "complete_object";
+}
+
+export function actionStartTiming(action: {
+  timing?: WkeActionStartTiming;
+}): WkeActionStartTiming {
+  return action.timing === "with_previous" ? "with_previous" : "after_previous";
+}
+
+/**
+ * Group actions that should start together.
+ * `with_previous` joins the prior group; the first action always starts on its own
+ * (even if marked with_previous), so scene-open / sequences begin immediately.
+ */
+export function groupActionsByStartTiming<T extends { timing?: WkeActionStartTiming }>(
+  actions: T[],
+): T[][] {
+  const groups: T[][] = [];
+  for (const action of actions) {
+    const last = groups[groups.length - 1];
+    if (actionStartTiming(action) === "with_previous" && last) {
+      last.push(action);
+    } else {
+      groups.push([action]);
+    }
+  }
+  return groups;
 }
 
 export type NormalizedRect = {

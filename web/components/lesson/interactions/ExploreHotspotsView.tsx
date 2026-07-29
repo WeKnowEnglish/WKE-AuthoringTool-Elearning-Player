@@ -25,7 +25,7 @@ import {
   type ObjectRuntimeState,
   type StageObjectPlayState,
 } from "@/lib/wke-activity/explore-hotspots-play-runtime";
-import { easeOutCubic, lerp } from "@/lib/wke-activity/on-tap-actions";
+import { easeOutCubic, groupActionsByStartTiming, isContentAction, lerp } from "@/lib/wke-activity/on-tap-actions";
 import {
   GuideBlock,
   InteractionLessonNav,
@@ -214,12 +214,21 @@ export function ExploreHotspotsView({
   const [actionIndex, setActionIndex] = useState(0);
   const [orderHint, setOrderHint] = useState<string | null>(null);
   const [showHintPulse, setShowHintPulse] = useState(false);
+  const [clickAdvanceTargetId, setClickAdvanceTargetId] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [questionFeedback, setQuestionFeedback] = useState<string | null>(null);
   const playGenRef = useRef(0);
   const enterGenRef = useRef(0);
+  const hasNextPhaseRef = useRef(false);
+  const clickAdvanceWaiterRef = useRef<{
+    targetId: string;
+    resolve: () => void;
+  } | null>(null);
   const runStageActionRef = useRef<(action: ExploreHotspotOnTapAction) => Promise<void>>(
     async () => {},
+  );
+  const advancePhaseRef = useRef<(options?: { requireComplete?: boolean }) => boolean>(
+    () => false,
   );
   const passedRef = useRef(false);
   const stageStatesRef = useRef(stageStates);
@@ -235,10 +244,15 @@ export function ExploreHotspotsView({
     () => hotspotsInPhase(parsed, currentPhase),
     [parsed, currentPhase],
   );
-  const playHotspots = useMemo(
-    () => toPlayHotspots(phaseHotspots, stageStates),
-    [phaseHotspots, stageStates],
-  );
+  const playHotspots = useMemo(() => {
+    const base = toPlayHotspots(phaseHotspots, stageStates);
+    if (!clickAdvanceTargetId) return base;
+    return base.map((hotspot) =>
+      hotspot.id === clickAdvanceTargetId && hotspot.interactionKind === "none"
+        ? { ...hotspot, interactionKind: "silent" as const }
+        : hotspot,
+    );
+  }, [phaseHotspots, stageStates, clickAdvanceTargetId]);
 
   const requiredAll = parsed.hotspots.filter((h) => h.required !== false);
   const completedRequired = requiredAll.filter((h) =>
@@ -250,6 +264,7 @@ export function ExploreHotspotsView({
   const currentPhaseDone = phaseComplete(phaseHotspots, objectStates);
   const hasNextPhase = phaseIndex < phases.length - 1;
   const activityComplete = allRequiredDone && !hasNextPhase;
+  hasNextPhaseRef.current = hasNextPhase;
 
   const activeHotspot =
     phaseHotspots.find((h) => h.id === activeHotspotId) ??
@@ -300,9 +315,10 @@ export function ExploreHotspotsView({
   }, [phaseHotspots, objectStates, playback.strictOrder]);
 
   const pulseId =
-    showHintPulse && playback.hintPulseEnabled
+    clickAdvanceTargetId ??
+    (showHintPulse && playback.hintPulseEnabled
       ? hintTargetId(phaseHotspots, objectStates, true)
-      : null;
+      : null);
 
   const dialogueText = useMemo(
     () =>
@@ -524,6 +540,26 @@ export function ExploreHotspotsView({
         patchStage(action.target_id, { pulse: action.enabled !== false });
         return;
       }
+      case "advance_scene": {
+        advancePhaseRef.current({ requireComplete: false });
+        return;
+      }
+      case "click_advance_scene": {
+        if (!hasNextPhaseRef.current) return;
+        const targetId = action.target_id;
+        setClickAdvanceTargetId(targetId);
+        setOrderHint("Tap the glowing object to go to the next scene.");
+        patchStage(targetId, { pulse: true, visible: true });
+        await new Promise<void>((resolve) => {
+          clickAdvanceWaiterRef.current = { targetId, resolve };
+        });
+        clickAdvanceWaiterRef.current = null;
+        setClickAdvanceTargetId(null);
+        setOrderHint(null);
+        patchStage(targetId, { pulse: false });
+        advancePhaseRef.current({ requireComplete: false });
+        return;
+      }
       case "play_audio": {
         if (action.audio_url && !muted) {
           const gen = ++playGenRef.current;
@@ -557,9 +593,10 @@ export function ExploreHotspotsView({
     if (!actions?.length) return;
 
     void (async () => {
-      for (const action of actions) {
+      const groups = groupActionsByStartTiming(actions);
+      for (const group of groups) {
         if (gen !== enterGenRef.current) return;
-        await runStageActionRef.current(action);
+        await Promise.all(group.map((action) => runStageActionRef.current(action)));
       }
     })();
   }, [phaseIndex, currentPhase.id, currentPhase.on_enter, phaseHotspots]);
@@ -603,31 +640,42 @@ export function ExploreHotspotsView({
     startIndex: number,
   ): Promise<void> {
     const sequence = resolvePlayOnTap(hotspot);
-    let index = startIndex;
-    while (index < sequence.length) {
-      const action = sequence[index]!;
-      if (
-        action.type === "wait" ||
-        action.type === "set_object_state" ||
-        action.type === "swap_sprite_asset" ||
-        action.type === "tween_object" ||
-        action.type === "enter_object" ||
-        action.type === "complete_object" ||
-        action.type === "pulse_object"
-      ) {
-        setActionIndex(index);
-        await runStageAction(action);
-        if (action.type === "complete_object" && !action.target_id) {
-          markDiscoveredOrCompleted(hotspot, true);
-        }
-        index += 1;
-        continue;
+    const groups = groupActionsByStartTiming(sequence.slice(startIndex));
+    let absoluteIndex = startIndex;
+
+    for (const group of groups) {
+      const stageActions = group.filter((action) => !isContentAction(action));
+      const contentActions = group.filter((action) => isContentAction(action));
+
+      const stageRun =
+        stageActions.length > 0
+          ? Promise.all(
+              stageActions.map(async (action) => {
+                await runStageAction(action);
+                if (action.type === "complete_object" && !action.target_id) {
+                  markDiscoveredOrCompleted(hotspot, true);
+                }
+              }),
+            )
+          : Promise.resolve();
+
+      if (contentActions.length > 0) {
+        const action = contentActions[0]!;
+        const actionIndexInSequence = sequence.findIndex((entry) => entry.id === action.id);
+        setActionIndex(actionIndexInSequence >= 0 ? actionIndexInSequence : absoluteIndex);
+        setActiveHotspotId(hotspot.id);
+        await Promise.all([
+          stageRun,
+          presentContentAction(hotspot, action, sequence),
+        ]);
+        return;
       }
-      setActionIndex(index);
-      setActiveHotspotId(hotspot.id);
-      await presentContentAction(hotspot, action, sequence);
-      return;
+
+      setActionIndex(absoluteIndex);
+      await stageRun;
+      absoluteIndex += group.length;
     }
+
     markDiscoveredOrCompleted(hotspot, true);
     setActiveHotspotId(null);
     setActionIndex(0);
@@ -651,6 +699,19 @@ export function ExploreHotspotsView({
     // Keep speech unlocked in the same user-gesture turn as the tap.
     unlockSpeechSynthesis();
     playSfx("tap", muted);
+
+    const waiter = clickAdvanceWaiterRef.current;
+    if (waiter) {
+      if (hotspotId === waiter.targetId) {
+        const resolve = waiter.resolve;
+        clickAdvanceWaiterRef.current = null;
+        resolve();
+        return;
+      }
+      setOrderHint("Tap the glowing object to go to the next scene.");
+      return;
+    }
+
     const hotspot = phaseHotspots.find((h) => h.id === hotspotId);
     if (!hotspot) return;
 
@@ -697,8 +758,19 @@ export function ExploreHotspotsView({
   }
 
   function goNextPhase() {
-    if (!hasNextPhase || !currentPhaseDone) return;
+    advancePhase({ requireComplete: true });
+  }
+
+  function advancePhase(options?: { requireComplete?: boolean }) {
+    const requireComplete = options?.requireComplete !== false;
+    if (!hasNextPhase) return false;
+    if (requireComplete && !currentPhaseDone) return false;
     playGenRef.current += 1;
+    enterGenRef.current += 1;
+    if (clickAdvanceWaiterRef.current) {
+      clickAdvanceWaiterRef.current = null;
+      setClickAdvanceTargetId(null);
+    }
     stopSpeaking();
     setSpeaking(false);
     setPhaseIndex((value) => value + 1);
@@ -707,7 +779,10 @@ export function ExploreHotspotsView({
     setOrderHint(null);
     setQuestionFeedback(null);
     setShowHintPulse(false);
+    return true;
   }
+
+  advancePhaseRef.current = advancePhase;
 
   const emptyState =
     panel?.empty_state_text ?? "Choose something in the picture to explore.";

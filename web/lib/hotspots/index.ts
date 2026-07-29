@@ -54,6 +54,7 @@ export { HOBBIES_HOTSPOT_ACTIVITY } from "./fixtures/hobbiesHotspot";
 export { createBlankExploreHotspotsDocument } from "./fixtures/blankExploreHotspots";
 export {
   duplicateImageAsset,
+  duplicatePhaseInDocument,
   ensurePhases,
   forkPhaseImageAsset,
   hotspotsForPhase,

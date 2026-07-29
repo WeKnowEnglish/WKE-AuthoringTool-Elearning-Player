@@ -30,7 +30,7 @@ describe("Bug Market round state", () => {
     expect(map.widthPx).toBe(1280);
     expect(map.heightPx).toBe(720);
     expect(map.spawnPoints).toHaveLength(4);
-    expect(map.collisionRects).toHaveLength(6);
+    expect(map.collisionRects).toHaveLength(7);
     expect(BUG_MARKET_MAP_V1_DOCUMENT.title).toBe("Sunny Meadow");
   });
 

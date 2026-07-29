@@ -2,7 +2,11 @@ import type {
   ExploreHotspotsDocument,
   HotspotElement,
 } from "@/lib/hotspots";
-import type { WkePhase } from "@/lib/wke-activity/types";
+import type {
+  WkeObjectAction,
+  WkePhase,
+  WkeResponseCard,
+} from "@/lib/wke-activity/types";
 
 function mediaAssetId(document: ExploreHotspotsDocument): string {
   const media = document.layout.elements.find((element) => element.kind === "media");
@@ -172,6 +176,169 @@ export function forkPhaseImageAsset(
       phases: ensurePhases(withAsset).map((entry) =>
         entry.id === phaseId ? { ...entry, imageAssetId: newAssetId } : entry,
       ),
+    },
+  };
+}
+
+function uniquePrefixedId(prefix: string, used: Set<string>): string {
+  let index = 1;
+  let id = `${prefix}-${index}`;
+  while (used.has(id)) {
+    index += 1;
+    id = `${prefix}-${index}`;
+  }
+  used.add(id);
+  return id;
+}
+
+function hotspotIdPrefix(hotspot: HotspotElement): string {
+  if (hotspot.presentation === "sprite") return "sprite";
+  if (hotspot.presentation === "shape") return "shape";
+  if (hotspot.presentation === "text") return "text";
+  return "hotspot";
+}
+
+function remapActionIds(
+  actions: WkeObjectAction[] | undefined,
+  hotspotMap: Map<string, string>,
+  dialogueMap: Map<string, string>,
+): WkeObjectAction[] | undefined {
+  if (!actions?.length) return actions;
+  return actions.map((action) => {
+    const next = { ...action } as WkeObjectAction & {
+      targetId?: string;
+      dialogueId?: string;
+    };
+    if (next.targetId && hotspotMap.has(next.targetId)) {
+      next.targetId = hotspotMap.get(next.targetId)!;
+    }
+    if (next.dialogueId && dialogueMap.has(next.dialogueId)) {
+      next.dialogueId = dialogueMap.get(next.dialogueId)!;
+    }
+    return next as WkeObjectAction;
+  });
+}
+
+function remapResponseCards(
+  cards: WkeResponseCard[] | undefined,
+  dialogueMap: Map<string, string>,
+): WkeResponseCard[] | undefined {
+  if (!cards?.length) return cards;
+  return cards.map((card) => {
+    if (card.kind !== "dialogue" || !card.dialogueId) return structuredClone(card);
+    const remapped = dialogueMap.get(card.dialogueId);
+    return {
+      ...structuredClone(card),
+      ...(remapped ? { dialogueId: remapped } : {}),
+    };
+  });
+}
+
+/**
+ * Clone a scene after the source: own image asset, cloned objects/dialogues,
+ * and remapped in-scene action targets.
+ */
+export function duplicatePhaseInDocument(
+  document: ExploreHotspotsDocument,
+  phaseId: string,
+): { document: ExploreHotspotsDocument; newPhaseId: string } | null {
+  const withPhases = withEnsuredPhases(document);
+  const phases = ensurePhases(withPhases);
+  const sourceIndex = phases.findIndex((phase) => phase.id === phaseId);
+  if (sourceIndex < 0) return null;
+  const source = phases[sourceIndex]!;
+
+  const newPhaseId = nextPhaseId(phases);
+  const newImageAssetId = nextPhaseImageAssetId(withPhases);
+  const withImage = duplicateImageAsset(
+    withPhases,
+    source.imageAssetId,
+    newImageAssetId,
+  );
+
+  const usedHotspotIds = new Set(
+    withImage.layout.elements
+      .filter((element): element is HotspotElement => element.kind === "hotspot")
+      .map((hotspot) => hotspot.id),
+  );
+  const usedDialogueIds = new Set(
+    withImage.interaction.dialogues.map((dialogue) => dialogue.id),
+  );
+
+  const hotspotMap = new Map<string, string>();
+  const sourceHotspots: HotspotElement[] = [];
+  for (const oldId of source.hotspotIds) {
+    const hotspot = withImage.layout.elements.find(
+      (element): element is HotspotElement =>
+        element.kind === "hotspot" && element.id === oldId,
+    );
+    if (!hotspot) continue;
+    sourceHotspots.push(hotspot);
+    hotspotMap.set(oldId, uniquePrefixedId(hotspotIdPrefix(hotspot), usedHotspotIds));
+  }
+
+  const dialogueMap = new Map<string, string>();
+  const clonedDialogues = withImage.interaction.dialogues
+    .filter((dialogue) => hotspotMap.has(dialogue.hotspotId))
+    .map((dialogue) => {
+      const newHotspotId = hotspotMap.get(dialogue.hotspotId)!;
+      const newDialogueId = uniquePrefixedId(
+        `dialogue-${newHotspotId}`,
+        usedDialogueIds,
+      );
+      dialogueMap.set(dialogue.id, newDialogueId);
+      return {
+        ...structuredClone(dialogue),
+        id: newDialogueId,
+        hotspotId: newHotspotId,
+      };
+    });
+
+  const clonedHotspots = sourceHotspots.map((hotspot) => {
+    const newId = hotspotMap.get(hotspot.id)!;
+    const clone = structuredClone(hotspot);
+    const visualShape =
+      clone.visualShape?.sourceAssetId === source.imageAssetId
+        ? { ...clone.visualShape, sourceAssetId: newImageAssetId }
+        : clone.visualShape;
+    return {
+      ...clone,
+      id: newId,
+      ...(visualShape ? { visualShape } : {}),
+      onTap: remapActionIds(clone.onTap, hotspotMap, dialogueMap),
+      responseCards: remapResponseCards(clone.responseCards, dialogueMap),
+    } as HotspotElement;
+  });
+
+  const clonedPhase: WkePhase = {
+    ...structuredClone(source),
+    id: newPhaseId,
+    title: source.title?.trim()
+      ? `${source.title.trim()} copy`
+      : `Scene ${phases.length + 1}`,
+    imageAssetId: newImageAssetId,
+    hotspotIds: source.hotspotIds
+      .map((id) => hotspotMap.get(id))
+      .filter((id): id is string => Boolean(id)),
+    onEnter: remapActionIds(source.onEnter, hotspotMap, dialogueMap),
+  };
+
+  const nextPhases = [...phases];
+  nextPhases.splice(sourceIndex + 1, 0, clonedPhase);
+
+  return {
+    newPhaseId,
+    document: {
+      ...withImage,
+      layout: {
+        ...withImage.layout,
+        elements: [...withImage.layout.elements, ...clonedHotspots],
+      },
+      interaction: {
+        ...withImage.interaction,
+        dialogues: [...withImage.interaction.dialogues, ...clonedDialogues],
+        phases: nextPhases,
+      },
     },
   };
 }

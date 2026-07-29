@@ -176,7 +176,7 @@ function createBlankSession(format: VocabCompileFormat): QuizSession {
           completionMessage: "Great spelling!",
         },
         interaction: {
-          type: "game",
+          type: "games",
           format: "letter_mixup",
           quizGroupId: id,
           quizGroupTitle: "New letter scramble",
@@ -207,7 +207,7 @@ function createBlankSession(format: VocabCompileFormat): QuizSession {
           completionMessage: "Nice studying!",
         },
         interaction: {
-          type: "game",
+          type: "games",
           format: "flashcards",
           quizGroupId: id,
           quizGroupTitle: "New flashcards",
@@ -800,45 +800,35 @@ export function QuizBuilderWorkspace() {
     if (sessionItemCount(session) <= 1) return;
     const removeId = selectedItemId;
     patchSession((current) => {
-      if (current.format === "flashcards") {
-        const cards = current.document.interaction.cards.filter(
-          (card) => card.id !== removeId,
-        );
-        setSelectedItemId(cards[0]?.id ?? "");
-        return {
-          ...current,
-          document: {
-            ...current.document,
-            interaction: { ...current.document.interaction, cards },
-          },
-        };
+      const next = cloneSession(current);
+      if (next.format === "flashcards") {
+        next.document.interaction.cards =
+          next.document.interaction.cards.filter((card) => card.id !== removeId);
+        setSelectedItemId(next.document.interaction.cards[0]?.id ?? "");
+        return next;
       }
-      const items = current.document.interaction.items.filter(
+      if (next.format === "letter_mixup") {
+        next.document.interaction.items =
+          next.document.interaction.items.filter((item) => item.id !== removeId);
+        setSelectedItemId(next.document.interaction.items[0]?.id ?? "");
+        return next;
+      }
+      next.document.interaction.items = next.document.interaction.items.filter(
         (item) => item.id !== removeId,
       );
-      setSelectedItemId(items[0]?.id ?? "");
-      return {
-        ...current,
-        document: {
-          ...current.document,
-          interaction: { ...current.document.interaction, items },
-        },
-      };
+      setSelectedItemId(next.document.interaction.items[0]?.id ?? "");
+      return next;
     });
   };
 
   const renameQuiz = (name: string) => {
-    patchSession((current) => ({
-      ...current,
-      document: {
-        ...current.document,
-        name,
-        interaction: {
-          ...current.document.interaction,
-          quizGroupTitle: name || current.document.interaction.quizGroupTitle,
-        },
-      },
-    }));
+    patchSession((current) => {
+      const next = cloneSession(current);
+      next.document.name = name;
+      next.document.interaction.quizGroupTitle =
+        name || next.document.interaction.quizGroupTitle;
+      return next;
+    });
   };
 
   // ── Landing ────────────────────────────────────────────────────────

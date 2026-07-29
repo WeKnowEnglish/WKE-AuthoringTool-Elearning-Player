@@ -14,7 +14,9 @@ function collectMediaAssetIds(document: ExploreHotspotsDocument): string[] {
   }
   for (const element of document.layout.elements) {
     if (element.kind !== "hotspot") continue;
-    for (const action of element.onTap ?? []) {
+    const onTap = element.onTap;
+    if (!Array.isArray(onTap)) continue;
+    for (const action of onTap) {
       if (action.type === "play_audio" && action.mediaAssetId?.trim()) {
         ids.push(action.mediaAssetId.trim());
       }
@@ -70,7 +72,9 @@ export function applyMediaAssetUrlMap(
   });
 
   const elements = document.layout.elements.map((element) => {
-    if (element.kind !== "hotspot" || !element.onTap?.length) return element;
+    if (element.kind !== "hotspot" || !Array.isArray(element.onTap) || !element.onTap.length) {
+      return element;
+    }
     let actionDirty = false;
     const onTap = element.onTap.map((action) => {
       const next = mapPlayAudioAction(action, urlById);

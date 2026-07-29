@@ -166,7 +166,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/teacher/activity-builder/quizzes",
     title: "Quiz builder",
     description:
-      "Unified Activity Builder quiz workspace: generate from vocabulary lists, edit questions, save to Activity Bank. MCQ ready; letter/flashcards via generate path next.",
+      "Unified Activity Builder quiz workspace: generate MCQ, letter scramble, or flashcards from vocabulary lists; edit questions and media; save to Activity Bank.",
     group: "games",
     status: "active",
     studioHref: "/teacher/activity-builder/quizzes",
@@ -358,6 +358,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/whiteboard",
     title: "Whiteboard (guest pilot)",
     description: "Guest whiteboard pilot landing. Production routes listed under Classroom.",
+    group: "authoring",
+    status: "review",
+  },
+  {
+    href: "/pilots/media-picker",
+    title: "Media picker (Mine shelf)",
+    description:
+      "Canva-style media picker preview: folder rows (School images / My uploads / School audio) → 3-column mini library. Not fully attached to every builder yet.",
     group: "authoring",
     status: "review",
   },

@@ -188,7 +188,7 @@ function PetGamePreview({ studyPending }: { studyPending: boolean }) {
         </span>
       </span>
       <span className="absolute inset-0 flex items-end justify-center pb-2 sm:pb-3">
-        <AnimatedPet mood="happy" size="md" displayAnchor="bottom" playing />
+        <AnimatedPet mood="excited" size="md" displayAnchor="bottom" playing />
       </span>
       {studyPending ? (
         <span className="absolute bottom-2 right-2 rounded-full bg-[var(--pl-teal)] px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">

@@ -339,7 +339,6 @@ export function buildSecondaryToPrimaryLexiconAuditFromPack(
     metadata: {
       packId: pack.metadata.packId,
       version: pack.metadata.version,
-      itemCount: pack.metadata.itemCount,
     },
     topics: pack.topics.map((topic) => ({
       topicId: topic.topicId,

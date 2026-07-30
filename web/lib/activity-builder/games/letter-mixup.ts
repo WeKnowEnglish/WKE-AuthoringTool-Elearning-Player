@@ -221,7 +221,7 @@ export function exportGamesLetterMixupForLessonPlayer(
     };
     if (item.imageUrl) {
       screen.image_url = item.imageUrl;
-      screen.image_fit = item.imageFit ?? "contain";
+      screen.image_fit = "contain";
     }
     if (item.imageAudioUrl) {
       screen.image_audio_url = item.imageAudioUrl;

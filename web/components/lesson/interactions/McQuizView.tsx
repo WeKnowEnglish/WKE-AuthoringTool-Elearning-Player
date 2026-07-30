@@ -10,6 +10,7 @@ import { speakText, speakTextAndWait, stopSpeaking } from "@/lib/audio/tts";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
+  interactionImageFitClass,
   interactionLessonShellClass,
   InteractionShellNav,
   isStageFooterNav,
@@ -290,11 +291,7 @@ export function McQuizView({
                 src={imageUrl}
                 alt=""
                 fill
-                className={
-                  (parsed.image_fit ?? "contain") === "cover"
-                    ? "object-cover"
-                    : "object-contain"
-                }
+                className={interactionImageFitClass("contain")}
                 unoptimized={unopt(imageUrl)}
                 sizes="(max-width: 768px) 100vw, 50vw"
               />

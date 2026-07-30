@@ -239,9 +239,9 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/vocab-player",
     title: "Vocabulary player",
     description:
-      "Compile-once Primary vocab loop: sample 6 words → flashcards, letter scramble, drag match, MCQ, listen-and-choose. Warms chunks + media before play (no mid-run hitch).",
+      "Primary Product A quiz spine. Themed banks keep words without art; quizzes sample 6 image-ready words (flashcards → letter → line match → MC → listen).",
     group: "games",
-    status: "review",
+    status: "active",
   },
 
   // ── Active · Core activities ────────────────────────────────────

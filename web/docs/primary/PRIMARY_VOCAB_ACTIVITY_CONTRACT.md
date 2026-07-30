@@ -9,7 +9,7 @@ Primary Learning has distinct “quiz / practice” products. Do not conflate th
 
 | ID | Name | Student home | Runtime | Status |
 | --- | --- | --- | --- | --- |
-| **A** | **Vocab set practice** | **Learn** → Vocabulary → set overlay | `VocabularySetOverlay` → `LessonPlayer` (learn, T/F, match, cloze, letter). Not MC topic quizzes. | Live |
+| **A** | **Vocab set practice** | **Learn** → Vocabulary → set overlay | `VocabularySetOverlay` → `LessonPlayer` Vocab Player spine (flashcards, letter, line match, MC, listen). Not MC topic quizzes. | Live |
 | **B** | **Topic quizzes** | *(entry removed)* | `compileQuizForTopic*` / `loadTestStartQuizWithMedia` → MC / cloze / letter | Modules kept; no Primary Home entry (was Self Study). `/teststartpage` is lab-only |
 | **C** | **Teacher pack activities** | Home → Today’s Learning → `/primary/homework/[id]` | Pack quiz (`HomeworkPackQuizPlayer`) and flashcards (`HomeworkFlashcardsPlayer`) | Live |
 | **G** | **Grammar library** | **Learn** → Grammar → `/grammar/[slug]` | Grammar poster / lesson pages | Live (catalog shelf) |

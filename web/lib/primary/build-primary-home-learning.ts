@@ -112,20 +112,20 @@ function buildPathStatuses(args: {
   let path: PrimaryHomeLearningModel["path"] = [
     {
       id: "learn",
-      title: "Learn Words",
+      title: "Flashcards",
       description: "See and hear new words.",
       status: learnStatus,
     },
     {
       id: "practice",
       title: "Practice",
-      description: "Match, choose, and spell.",
+      description: "Spell, match, and choose.",
       status: practiceStatus,
     },
     {
       id: "review",
       title: "Review",
-      description: "Check what you remember.",
+      description: "Listen and check what you remember.",
       status: reviewStatus,
     },
     {
@@ -220,19 +220,19 @@ export function buildPrimaryHomeLearningModel(
     recommended: [
       {
         id: "match",
-        title: "Match the Word",
+        title: "Match Pictures",
         icon: "match",
         rewardLabel: "+ gold & XP",
       },
       {
         id: "cloze",
-        title: "Fill in the Blanks",
+        title: "Choose the Word",
         icon: "cloze",
         rewardLabel: "+ gold & XP",
       },
       {
         id: "listen",
-        title: "Spell the Word",
+        title: "Listen and Choose",
         icon: "listen",
         rewardLabel: "+ gold & XP",
       },

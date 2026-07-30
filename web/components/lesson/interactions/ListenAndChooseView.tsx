@@ -198,7 +198,7 @@ export function ListenAndChooseView({
                 src={choice.image_url}
                 alt={choice.label ?? ""}
                 fill
-                className={interactionImageFitClass(parsed.image_fit)}
+                className={interactionImageFitClass("contain")}
                 unoptimized={unopt(choice.image_url)}
               />
             </button>

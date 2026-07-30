@@ -156,7 +156,7 @@ function compileMcQuizFromEntries(
     };
     if (entry.imageUrl) {
       item.imageUrl = entry.imageUrl;
-      item.imageFit = entry.imageFit ?? "contain";
+      item.imageFit = "contain";
     }
     if (entry.audioUrl) {
       item.promptAudioUrl = entry.audioUrl;
@@ -246,7 +246,7 @@ function compileLetterMixupFromEntries(
     };
     if (entry.imageUrl) {
       item.imageUrl = entry.imageUrl;
-      item.imageFit = entry.imageFit ?? "contain";
+      item.imageFit = "contain";
     }
     if (entry.audioUrl) {
       item.imageAudioUrl = entry.audioUrl;

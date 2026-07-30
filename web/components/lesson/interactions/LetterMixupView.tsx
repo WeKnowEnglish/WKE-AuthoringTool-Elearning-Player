@@ -757,7 +757,7 @@ export function LetterMixupView({
                   alt=""
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
-                  className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
+                  className={interactionImageFitClass("contain", vocabImgOpts)}
                   unoptimized={unopt(parsed.image_url)}
                 />
                 {!passed &&

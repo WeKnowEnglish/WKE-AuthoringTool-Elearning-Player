@@ -400,6 +400,11 @@ type Props = {
   vocabLearnPhraseTheme?: VocabLearnPhraseTheme;
   /** Words in this run (for completion stats / review list). */
   vocabPracticeWords?: VocabPracticeWordMeta[];
+  /**
+   * Reward screen layout. Defaults to report for `vocab-player-*` lesson ids;
+   * Primary Product A passes `"report"` while keeping stable `vocab-${setId}` ids.
+   */
+  vocabRewardLayout?: "default" | "report";
   onVocabFinish?: () => void;
   vocabFinishLabel?: string;
   /** New run seed (remount player); used by vocabulary Play again. */
@@ -444,6 +449,7 @@ export function LessonPlayer({
   vocabWordsById,
   vocabLearnPhraseTheme,
   vocabPracticeWords,
+  vocabRewardLayout,
   onVocabFinish,
   vocabFinishLabel,
   onVocabPlayAgain,
@@ -500,6 +506,11 @@ export function LessonPlayer({
   const isVocabLesson =
     lessonId.startsWith("vocab-") && (vocabPracticeWords?.length ?? 0) > 0;
   const isVocabPlayerLesson = lessonId.startsWith(`${VOCAB_PLAYER_LESSON_ID_PREFIX}-`);
+  const useVocabReportReward =
+    vocabRewardLayout === "report" ||
+    (vocabRewardLayout !== "default" && isVocabPlayerLesson);
+  /** Vocab Player pilot runs in preview chrome but still awards + scores like a live run. */
+  const persistVocabProgress = isVocabLesson && (!isPreview || isVocabPlayerLesson);
   const effectiveImmersiveLayout = immersiveLayout || isVocabPlayerLesson;
   const fillInteractionStage = effectiveImmersiveLayout && !embedNaturalHeight;
   const isGrammarLesson = lessonId.startsWith("grammar-");
@@ -628,13 +639,13 @@ export function LessonPlayer({
   );
 
   useEffect(() => {
-    if (isPreview) return;
+    if (isPreview && !isVocabPlayerLesson) return;
     queueMicrotask(() => {
       const rewards = getRewards();
       setGold(rewards.gold);
       setExperience(rewards.experience);
     });
-  }, [isPreview]);
+  }, [isPreview, isVocabPlayerLesson]);
 
   useEffect(() => {
     const max = Math.max(0, screens.length - 1);
@@ -651,7 +662,7 @@ export function LessonPlayer({
   }, [lessonId, runSeed]);
 
   useEffect(() => {
-    if (isPreview || studentPracticeSessionStartedRef.current) return;
+    if ((!persistVocabProgress && isPreview) || studentPracticeSessionStartedRef.current) return;
 
     if (isVocabLesson) {
       const event = startPracticeSession({
@@ -669,6 +680,8 @@ export function LessonPlayer({
       return;
     }
 
+    if (isPreview) return;
+
     if (isGrammarLesson && grammarSlug) {
       const event = startPracticeSession({
         activityId: grammarSlug,
@@ -682,7 +695,16 @@ export function LessonPlayer({
       studentPracticeSessionStartedRef.current = true;
       studentPracticeSessionCompletedRef.current = false;
     }
-  }, [grammarSlug, isGrammarLesson, isPreview, isVocabLesson, lessonId, runSeed, vocabPracticeWords]);
+  }, [
+    grammarSlug,
+    isGrammarLesson,
+    isPreview,
+    isVocabLesson,
+    lessonId,
+    persistVocabProgress,
+    runSeed,
+    vocabPracticeWords,
+  ]);
 
   const quizProgress = useMemo(
     () => getQuizProgressForLessonIndex(screens, index),
@@ -780,11 +802,11 @@ export function LessonPlayer({
   );
 
   const refreshEconomy = useCallback(() => {
-    if (isPreview) return;
+    if (isPreview && !isVocabPlayerLesson) return;
     const rewards = getRewards();
     setGold(rewards.gold);
     setExperience(rewards.experience);
-  }, [isPreview]);
+  }, [isPreview, isVocabPlayerLesson]);
 
   const resetVocabRun = useCallback(() => {
     vocabSessionRef.current = createVocabRunSession();
@@ -854,7 +876,7 @@ export function LessonPlayer({
     const completionGold = vocabCompletionGoldDelta(breakdown, stats.practiceGold);
     const completionSeed = runSeed?.trim() || lessonId;
     const completionRewardEventId = `${lessonId}:${completionSeed}:complete`;
-    if (!isPreview) {
+    if (persistVocabProgress) {
       playSfx("complete", muted);
       const sessionId = getStudentPracticeSessionId();
       const { snapshot } = awardPracticeReward({
@@ -888,11 +910,11 @@ export function LessonPlayer({
     }
     setVocabComplete({ stats, breakdown });
   }, [
-    isPreview,
+    getStudentPracticeSessionId,
     lessonId,
     muted,
-    getStudentPracticeSessionId,
     onEconomyChange,
+    persistVocabProgress,
     runSeed,
     vocabPracticeWords?.length,
   ]);
@@ -1031,6 +1053,40 @@ export function LessonPlayer({
   }
 
   if (done) {
+    if (isVocabLesson && vocabComplete && vocabPracticeWords) {
+      return (
+        <div className={clsx(effectiveImmersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
+          <VocabActivityRewardScreen
+            lessonTitle={lessonTitle}
+            stats={vocabComplete.stats}
+            breakdown={vocabComplete.breakdown}
+            practiceWords={vocabPracticeWords}
+            muted={muted}
+            layout={useVocabReportReward ? "report" : "default"}
+            onPlayAgain={() => {
+              if (onVocabPlayAgain) {
+                onVocabPlayAgain();
+                return;
+              }
+              resetVocabRun();
+              resetRunScreenOutcomes();
+              setDone(false);
+              setIndex(0);
+              visualEdit?.onScreenIndexChange?.(0);
+            }}
+            onFinish={onVocabFinish}
+            finishHref={!onVocabFinish ? previewFinishHref : undefined}
+            finishLabel={
+              vocabFinishLabel ??
+              (useVocabReportReward
+                ? previewFinishLabel ?? "Try another activity"
+                : undefined)
+            }
+            playAgainLabel={useVocabReportReward ? "Replay this set" : undefined}
+          />
+        </div>
+      );
+    }
     if (isPreview) {
       const restartPreview = () => {
         playSfx("tap", muted);
@@ -1102,32 +1158,6 @@ export function LessonPlayer({
         </KidPanel>
       );
     }
-    if (isVocabLesson && vocabComplete && vocabPracticeWords) {
-      return (
-        <div className={clsx(effectiveImmersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
-        <VocabActivityRewardScreen
-          lessonTitle={lessonTitle}
-          stats={vocabComplete.stats}
-          breakdown={vocabComplete.breakdown}
-          practiceWords={vocabPracticeWords}
-          muted={muted}
-          onPlayAgain={() => {
-            if (onVocabPlayAgain) {
-              onVocabPlayAgain();
-              return;
-            }
-            resetVocabRun();
-            resetRunScreenOutcomes();
-            setDone(false);
-            setIndex(0);
-            visualEdit?.onScreenIndexChange?.(0);
-          }}
-          onFinish={onVocabFinish}
-          finishLabel={vocabFinishLabel}
-        />
-        </div>
-      );
-    }
     if (isGrammarLesson && grammarComplete) {
       return (
         <div className={clsx(effectiveImmersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
@@ -1184,7 +1214,7 @@ export function LessonPlayer({
       window.setTimeout(() => setInteractionFeedback("none"), 750);
       setInteractionPass(true);
       playSfx("correct", muted);
-      if (!isPreview) {
+      if (persistVocabProgress || !isPreview) {
         const perQuestionGold =
           (parsed.type === "interaction" || parsed.type === "story") &&
           typeof parsed.gold_reward_on_pass === "number" &&
@@ -1209,16 +1239,18 @@ export function LessonPlayer({
             experienceDelta: 2,
           });
           rewardSnapshot = awarded.snapshot;
-        } else {
+        } else if (!isPreview) {
           rewardSnapshot = awardRewards({
             eventId: rewardEventId,
             goldDelta: perQuestionGold,
             experienceDelta: 2,
           });
         }
-        grantGardenSeedForQuiz(rewardEventId);
-        setGold(rewardSnapshot.gold);
-        setExperience(rewardSnapshot.experience);
+        if (persistVocabProgress || !isPreview) {
+          grantGardenSeedForQuiz(rewardEventId);
+          setGold(rewardSnapshot.gold);
+          setExperience(rewardSnapshot.experience);
+        }
         if (isVocabLesson && isVocabGradedInteraction(parsed)) {
           const firstTry = !screenHadWrongRef.current;
           recordCurrentVocabMasteryEvidence({
@@ -1230,6 +1262,7 @@ export function LessonPlayer({
           recordVocabPracticeGold(vocabSessionRef.current, perQuestionGold);
         }
         if (
+          !isPreview &&
           isGrammarLesson &&
           parsed?.type === "interaction" &&
           parsed.subtype === "true_false"
@@ -1251,6 +1284,9 @@ export function LessonPlayer({
         }
         const trackedWords = extractTrackedWords(parsed);
         recordWordInteraction(trackedWords, true);
+      } else if (isVocabLesson && isVocabGradedInteraction(parsed)) {
+        // Preview without persisted rewards still tracks first-try accuracy for the report.
+        recordVocabRunPass(vocabSessionRef.current, screenHadWrongRef.current);
       }
     },
     onWrong: () => {
@@ -1265,11 +1301,13 @@ export function LessonPlayer({
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
       if (isVocabLesson && isVocabGradedInteraction(parsed)) {
-        recordCurrentVocabMasteryEvidence({
-          success: false,
-          firstTry: false,
-          attempts: screenHadWrongRef.current ? 2 : 1,
-        });
+        if (persistVocabProgress) {
+          recordCurrentVocabMasteryEvidence({
+            success: false,
+            firstTry: false,
+            attempts: screenHadWrongRef.current ? 2 : 1,
+          });
+        }
         if (!screenHadWrongRef.current) {
           recordVocabRunWrong(vocabSessionRef.current, extractVocabWordId(parsed));
         }
@@ -1288,7 +1326,7 @@ export function LessonPlayer({
         });
         screenHadWrongRef.current = true;
       }
-      if (!isPreview) {
+      if (persistVocabProgress || !isPreview) {
         if (isVocabLesson) {
           recordAttempt({
             sessionId: getStudentPracticeSessionId(),
@@ -2089,6 +2127,8 @@ function vocabResponseKind(payload: ScreenPayload | null): StudentResponseKind {
     case "letter_mixup":
       return "type";
     case "true_false":
+    case "mc_quiz":
+    case "listen_and_choose":
       return "tap";
     default:
       return "other";
@@ -2099,6 +2139,8 @@ function vocabEvidenceMode(payload: ScreenPayload | null): EvidenceMode {
   if (!payload || payload.type !== "interaction") return "recall";
   switch (payload.subtype) {
     case "true_false":
+    case "mc_quiz":
+    case "listen_and_choose":
       return "recognition";
     case "letter_mixup":
       return "production";

@@ -1,6 +1,6 @@
 /**
- * Compile a frozen Vocabulary Player run: sample 6 words → fixed quiz spine.
- * All screens are built up-front (no per-question fetch).
+ * Compile a frozen Vocabulary Player run: sample 6 image-ready words → fixed quiz spine.
+ * Theme banks keep full word lists; only words with real images enter the quiz.
  */
 import { buildQuizPacksFromVocabList } from "@/lib/activity-library/compile-quizzes-from-vocab-studio";
 import { pickDistractors } from "@/lib/activity-builder/games/pick-distractors";
@@ -8,10 +8,23 @@ import type { VocabListEntry, VocabularyListDocument } from "@/lib/activity-buil
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import type { LessonScreenRow } from "@/lib/lesson/types";
 import { pickNWithSeed, shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
-import { buildVocabPlayerPoolDocument } from "@/lib/pilots/vocab-player-pool";
+import {
+  VOCAB_PLAYER_LESSON_ID_PREFIX,
+  VOCAB_PLAYER_SAMPLE_SIZE,
+  expectedVocabPlayerScreenCount,
+} from "@/lib/pilots/compile-vocab-player-run-constants";
+import {
+  buildVocabPlayerPoolDocument,
+  buildVocabPlayerThemePool,
+  filterImageReadyEntries,
+  type VocabPlayerThemeId,
+} from "@/lib/pilots/vocab-player-pool";
 
-export const VOCAB_PLAYER_SAMPLE_SIZE = 6;
-export const VOCAB_PLAYER_LESSON_ID_PREFIX = "vocab-player";
+export {
+  VOCAB_PLAYER_LESSON_ID_PREFIX,
+  VOCAB_PLAYER_SAMPLE_SIZE,
+  expectedVocabPlayerScreenCount,
+} from "@/lib/pilots/compile-vocab-player-run-constants";
 
 export type VocabPlayerPhaseId =
   | "flashcards"
@@ -24,6 +37,10 @@ export type VocabPlayerCompiledRun = {
   seed: string;
   lessonId: string;
   quizGroupId: string;
+  themeId?: VocabPlayerThemeId;
+  /** Full themed bank (may include words still missing images). */
+  bankEntries: VocabListEntry[];
+  /** Image-ready words actually used in this quiz run. */
   entries: VocabListEntry[];
   screens: LessonScreenRow[];
   phaseStarts: Record<VocabPlayerPhaseId, number>;
@@ -36,6 +53,23 @@ function asPackScreens(pack: unknown): ScreenPayload[] {
   const screens = (pack as { screens?: unknown }).screens;
   if (!Array.isArray(screens)) return [];
   return screens as ScreenPayload[];
+}
+
+/** Stamp vocab word id (+ optional auto-advance) onto interaction screens by order. */
+function stampVocabScreens(
+  screens: ScreenPayload[],
+  entries: VocabListEntry[],
+  options?: { autoAdvance?: boolean },
+): ScreenPayload[] {
+  return screens.map((screen, index) => {
+    const entry = entries[index];
+    if (!entry || screen.type !== "interaction") return screen;
+    return {
+      ...screen,
+      vocab_word_id: entry.id,
+      ...(options?.autoAdvance ? { auto_advance_on_pass: true as const } : {}),
+    };
+  });
 }
 
 function vocabImageUrl(entry: VocabListEntry): string {
@@ -121,6 +155,7 @@ function buildListenAndChooseScreens(
       shuffle_choices: true,
       choices,
       correct_choice_id: correct?.id ?? "a",
+      vocab_word_id: entry.id,
       quiz_group_id: quizGroupId,
       quiz_group_title: "Listen and choose",
       quiz_group_order: order,
@@ -186,26 +221,81 @@ function toRows(
   }));
 }
 
+function entryMatchesPreferredId(entry: VocabListEntry, preferredId: string): boolean {
+  if (entry.id === preferredId) return true;
+  const bare = entry.id.includes(":") ? entry.id.slice(entry.id.lastIndexOf(":") + 1) : entry.id;
+  return bare === preferredId;
+}
+
 /**
- * Sample 6 words from the pool (or provided list) and compile the full run.
+ * Prefer mastery / review word ids among image-ready entries, then fill randomly.
+ * Mirrors Product A `buildVocabularyPracticeContext` preferred-first sampling.
+ */
+function pickImageReadySample(
+  imageReady: VocabListEntry[],
+  sampleSize: number,
+  seed: string,
+  preferredWordIds?: string[],
+): VocabListEntry[] {
+  const preferredOrder = (preferredWordIds ?? []).filter(Boolean);
+  if (preferredOrder.length === 0) {
+    return pickNWithSeed(imageReady, sampleSize, seed);
+  }
+
+  const preferred: VocabListEntry[] = [];
+  const preferredSeen = new Set<string>();
+  for (const id of preferredOrder) {
+    const match = imageReady.find(
+      (entry) => !preferredSeen.has(entry.id) && entryMatchesPreferredId(entry, id),
+    );
+    if (!match) continue;
+    preferredSeen.add(match.id);
+    preferred.push(match);
+    if (preferred.length >= sampleSize) break;
+  }
+
+  const remaining = imageReady.filter((entry) => !preferredSeen.has(entry.id));
+  const fill = pickNWithSeed(
+    remaining,
+    Math.max(0, sampleSize - preferred.length),
+    `${seed}:practice`,
+  );
+  return [...preferred, ...fill];
+}
+
+/**
+ * Sample image-ready words from a themed bank (or provided pool) and compile the full run.
+ * Words without real images stay on the bank list but never enter the quiz.
  */
 export function compileVocabPlayerRun(input?: {
   seed?: string;
   pool?: VocabularyListDocument;
+  themeId?: VocabPlayerThemeId;
   sampleSize?: number;
+  /** Prefer these word ids (bare or `set:word`) among image-ready entries. */
+  preferredWordIds?: string[];
 }): VocabPlayerCompiledRun {
   const seed = input?.seed?.trim() || `vp-${Date.now().toString(36)}`;
-  const pool = input?.pool ?? buildVocabPlayerPoolDocument();
+  const themeId = input?.themeId;
+  const bank =
+    input?.pool ??
+    (themeId ? buildVocabPlayerThemePool(themeId) : buildVocabPlayerPoolDocument());
   const sampleSize = input?.sampleSize ?? VOCAB_PLAYER_SAMPLE_SIZE;
-  const picked = pickNWithSeed(pool.entries, sampleSize, seed);
-  if (picked.length < sampleSize) {
+  const imageReady = filterImageReadyEntries(bank.entries);
+  if (imageReady.length < sampleSize) {
     throw new Error(
-      `Vocabulary pool only has ${picked.length} words; need at least ${sampleSize}.`,
+      `This theme only has ${imageReady.length} words with pictures; need at least ${sampleSize}. Add images to unlock the quiz.`,
     );
   }
+  const picked = pickImageReadySample(
+    imageReady,
+    sampleSize,
+    seed,
+    input?.preferredWordIds,
+  );
 
   const list: VocabularyListDocument = {
-    ...pool,
+    ...bank,
     id: `vocab-player-run-${seed}`,
     name: `Vocabulary run (${picked.map((e) => e.word).join(", ")})`,
     entries: picked,
@@ -225,10 +315,21 @@ export function compileVocabPlayerRun(input?: {
 
   const byFormat = new Map(built.packs.map((p) => [p.format, p]));
   const flashScreens = asPackScreens(byFormat.get("flashcards")?.pack);
-  const letterScreens = asPackScreens(byFormat.get("letter_mixup")?.pack);
-  const mcScreens = asPackScreens(byFormat.get("multiple_choice")?.pack);
+  const letterScreens = stampVocabScreens(
+    asPackScreens(byFormat.get("letter_mixup")?.pack),
+    picked,
+  );
+  const mcScreens = stampVocabScreens(
+    asPackScreens(byFormat.get("multiple_choice")?.pack),
+    picked,
+    { autoAdvance: true },
+  );
   const matchScreens = [buildLineMatchScreen(picked, quizGroupId, seed)];
-  const listenScreens = buildListenAndChooseScreens(picked, quizGroupId);
+  const listenScreens = stampVocabScreens(
+    buildListenAndChooseScreens(picked, quizGroupId),
+    picked,
+    { autoAdvance: true },
+  );
 
   if (flashScreens.length === 0) {
     throw new Error("Flashcards compile produced no screens.");
@@ -263,6 +364,8 @@ export function compileVocabPlayerRun(input?: {
     seed,
     lessonId,
     quizGroupId,
+    themeId,
+    bankEntries: bank.entries,
     entries: picked,
     screens,
     phaseStarts,
@@ -270,9 +373,7 @@ export function compileVocabPlayerRun(input?: {
     practiceWords: picked.map((entry) => ({
       id: entry.id,
       lemma: entry.word,
-      imageUrl:
-        entry.imageUrl?.trim() ||
-        `https://placehold.co/400x400/e2e8f0/334155?text=${encodeURIComponent(entry.word)}`,
+      imageUrl: entry.imageUrl!.trim(),
     })),
   };
 }

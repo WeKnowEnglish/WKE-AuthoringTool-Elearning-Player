@@ -269,7 +269,7 @@ export function LineMatchView({
             src={zoneImageUrl}
             alt={z.label ?? ""}
             fill
-            className={interactionImageFitClass(parsed.image_fit)}
+            className={interactionImageFitClass("contain")}
             unoptimized={unopt(zoneImageUrl)}
           />
         ) : (
@@ -294,7 +294,7 @@ export function LineMatchView({
             src={parsed.image_url}
             alt=""
             fill
-            className={interactionImageFitClass(parsed.image_fit)}
+            className={interactionImageFitClass("contain")}
             unoptimized={unopt(parsed.image_url)}
           />
         </div>

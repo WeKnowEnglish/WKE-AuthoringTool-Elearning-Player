@@ -9,6 +9,7 @@ import { PrimaryGrammarPosterThumbnail } from "@/components/primary/PrimaryGramm
 import { getPublishedGrammarModules } from "@/lib/grammar-builder/load-catalog";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { resumeScreenIndexForSet } from "@/lib/primary/vocab-continue";
+import { isVocabSetQuizReady } from "@/lib/pilots/vocab-player-pool";
 import {
   isUnlockAvailable,
   minLevelForUnlock,
@@ -70,6 +71,7 @@ export function PrimaryLearnTab({
   function openVocabSet(id: VocabSetId, label: string) {
     const setUnlockId = `vocab_set:${id}` as const;
     if (!isUnlockAvailable(setUnlockId, playerLevel)) return;
+    if (!isVocabSetQuizReady(id)) return;
     onOpenSet?.(id, label);
   }
 
@@ -193,15 +195,20 @@ export function PrimaryLearnTab({
 
           const setUnlockId = `vocab_set:${entry.id}` as const;
           const setLocked = !isUnlockAvailable(setUnlockId, playerLevel);
+          const needsPictures = hydrated && !setLocked && !isVocabSetQuizReady(entry.id);
           return (
             <ShelfCard
               key={entry.id}
               label={entry.label}
               imageSrc={vocabSetCoverImageSrc(entry.id)}
               locked={setLocked}
+              needsPictures={needsPictures}
               unlockLevel={minLevelForUnlock(setUnlockId)}
               continueLabel={
-                hydrated && !setLocked && resumeScreenIndexForSet(entry.id) > 0
+                hydrated &&
+                !setLocked &&
+                !needsPictures &&
+                resumeScreenIndexForSet(entry.id) > 0
                   ? "Continue"
                   : null
               }
@@ -370,6 +377,7 @@ function ShelfCard({
   subtitle,
   imageSrc,
   locked,
+  needsPictures = false,
   unlockLevel,
   continueLabel,
   onClick,
@@ -378,19 +386,27 @@ function ShelfCard({
   subtitle?: string;
   imageSrc: string;
   locked: boolean;
+  needsPictures?: boolean;
   unlockLevel: number;
   continueLabel?: string | null;
   onClick: () => void;
 }) {
+  const disabled = locked || needsPictures;
   return (
     <button
       type="button"
       data-shelf-card
-      disabled={locked}
-      aria-label={locked ? `${label} — unlocks at level ${unlockLevel}` : label}
+      disabled={disabled}
+      aria-label={
+        locked
+          ? `${label} — unlocks at level ${unlockLevel}`
+          : needsPictures
+            ? `${label} — pictures coming soon`
+            : label
+      }
       onClick={onClick}
       className={`group flex w-[11.5rem] shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-[var(--pl-border)] bg-white text-left shadow-sm transition sm:w-[13rem] ${
-        locked
+        disabled
           ? "cursor-not-allowed opacity-55"
           : "hover:border-[var(--pl-purple)]/40 hover:shadow-md"
       }`}
@@ -401,7 +417,7 @@ function ShelfCard({
           alt=""
           fill
           draggable={false}
-          className={`pointer-events-none object-cover ${locked ? "grayscale" : ""}`}
+          className={`pointer-events-none object-cover ${disabled ? "grayscale" : ""}`}
           unoptimized
         />
         {locked ? (
@@ -412,7 +428,14 @@ function ShelfCard({
             </span>
           </span>
         ) : null}
-        {!locked && continueLabel ? (
+        {!locked && needsPictures ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-slate-900/30">
+            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-extrabold text-[var(--pl-ink)]">
+              Soon
+            </span>
+          </span>
+        ) : null}
+        {!locked && !needsPictures && continueLabel ? (
           <span className="absolute left-2 top-2 rounded-full bg-[var(--pl-teal)] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white">
             {continueLabel}
           </span>
@@ -427,13 +450,17 @@ function ShelfCard({
             <span className="mt-1 block text-[11px] font-semibold text-[var(--pl-muted)]">
               Unlocks at level {unlockLevel}
             </span>
+          ) : needsPictures ? (
+            <span className="mt-1 block text-[11px] font-semibold text-[var(--pl-muted)]">
+              Pictures coming soon
+            </span>
           ) : subtitle ? (
             <span className="mt-1 block line-clamp-2 text-[11px] font-semibold text-[var(--pl-muted)]">
               {subtitle}
             </span>
           ) : null}
         </span>
-        {!locked ? (
+        {!disabled ? (
           <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--pl-muted)] transition group-hover:text-[var(--pl-purple)]" />
         ) : null}
       </span>

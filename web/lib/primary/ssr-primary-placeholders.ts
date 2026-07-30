@@ -27,25 +27,25 @@ export const PRIMARY_SSR_LEARNING: PrimaryHomeLearningModel = {
     skill: "Vocabulary",
     activitiesDone: 0,
     activitiesTotal: 5,
-    nextActivityLabel: "Learn words",
+    nextActivityLabel: "Flashcards",
   },
   path: [
     {
       id: "learn",
-      title: "Learn Words",
+      title: "Flashcards",
       description: "See and hear new words.",
       status: "current",
     },
     {
       id: "practice",
       title: "Practice",
-      description: "Match, choose, and spell.",
+      description: "Spell, match, and choose.",
       status: "available",
     },
     {
       id: "review",
       title: "Review",
-      description: "Check what you remember.",
+      description: "Listen and check what you remember.",
       status: "locked",
     },
     {

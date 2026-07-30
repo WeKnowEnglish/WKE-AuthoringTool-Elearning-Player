@@ -15,6 +15,7 @@ describe("visibleActivityBuilderSections", () => {
     const sections = visibleActivityBuilderSections(false);
     const ids = sections.flatMap((section) => section.cards.map((card) => card.id));
     expect(ids).toEqual([
+      "wke-library",
       "vocabulary-lists",
       "quiz-builder",
       "hotspots",

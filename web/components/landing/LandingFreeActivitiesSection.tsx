@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FREE_ACTIVITY_CARDS } from "@/lib/landing/free-activities";
 import { TrackedMarketingLink } from "@/components/landing/HomepageAnalytics";
 
@@ -50,9 +51,9 @@ export function LandingFreeActivitiesSection() {
       </ul>
       <p className="mt-6 text-sm font-semibold text-[var(--landing-body-muted)]">
         Browse more grammar posters in the{" "}
-        <a href="/grammar" className="font-extrabold text-kid-ink underline underline-offset-2">
+        <Link href="/grammar" className="font-extrabold text-kid-ink underline underline-offset-2">
           grammar library
-        </a>
+        </Link>
         .
       </p>
     </section>

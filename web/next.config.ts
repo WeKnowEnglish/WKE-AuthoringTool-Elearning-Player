@@ -1,14 +1,18 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
+import path from "node:path";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
 
-/**
- * Relative to the Lesson Player `web/` app root.
- * Turbopack rejects absolute Windows paths in resolveAlias ("windows imports are not implemented yet").
- */
-const exploreHotspotsPlayEntry = "../packages/explore-hotspots-play/src/index.ts";
-const exploreHotspotsAuthorEntry = "../packages/explore-hotspots-author/src/index.ts";
+const repositoryRoot = path.resolve(process.cwd(), "..");
+const exploreHotspotsPlayEntry = path.join(
+  repositoryRoot,
+  "packages/explore-hotspots-play/src/index.ts",
+);
+const exploreHotspotsAuthorEntry = path.join(
+  repositoryRoot,
+  "packages/explore-hotspots-author/src/index.ts",
+);
 
 function supabaseStoragePattern():
   | {
@@ -36,9 +40,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@wke/explore-hotspots-play", "@wke/explore-hotspots-author"],
   turbopack: {
+    // Local file dependencies live beside web/, outside the auto-detected root.
+    root: repositoryRoot,
     resolveAlias: {
-      "@wke/explore-hotspots-play": exploreHotspotsPlayEntry,
-      "@wke/explore-hotspots-author": exploreHotspotsAuthorEntry,
       // Node-only ONNX backend used by @huggingface/transformers — stub in browser.
       "onnxruntime-node": "./lib/empty-module.ts",
     },

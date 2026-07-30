@@ -19,7 +19,10 @@ describe("live game module registry", () => {
     const gameModule = getLiveGameModule("bug_market");
 
     expect(gameModule.status).toBe("available");
-    expect(gameModule.maps.map((map) => map.id)).toEqual(["bug-market-v1"]);
+    expect(gameModule.maps.map((map) => map.id)).toEqual([
+      "bug-market-v1",
+      "bug-market-cliffside",
+    ]);
     expect(listAvailableLiveGameModules().map((item) => item.id)).toEqual([
       "english_craft",
       "bug_market",

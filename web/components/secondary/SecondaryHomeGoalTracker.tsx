@@ -6,8 +6,8 @@ import { useMemo } from "react";
 import { getSecondaryWordDisplaySnapshot } from "@/lib/secondary/secondary-mastery-display";
 import { dailyMasteryGoalProgressFromSession } from "@/lib/secondary/secondary-daily-mastery-goal";
 import {
+  buildSecondaryLearnPracticeHref,
   resolveSecondaryNextActivityKey,
-  SECONDARY_ACTIVITY_HREF,
   SECONDARY_STUDY_ACTIVITY_ORDER,
 } from "@/lib/secondary/secondary-study-activity";
 import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
@@ -106,12 +106,10 @@ export function SecondaryHomeGoalTracker() {
     [studyCtx],
   );
 
-  const continueHref = nextActivityKey
-    ? SECONDARY_ACTIVITY_HREF[nextActivityKey]
-    : "/secondary/learn";
+  const continueHref = buildSecondaryLearnPracticeHref(nextActivityKey);
   const continueLabel = nextActivityKey
     ? ACTIVITY_LABELS[nextActivityKey]
-    : "Learn";
+    : "Practice";
 
   return (
     <section

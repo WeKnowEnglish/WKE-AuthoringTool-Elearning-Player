@@ -89,9 +89,7 @@ export function SecondaryDailyWordIntroOverlay({
       completion,
     });
     dismissIntro();
-    if (href !== "/secondary/learn") {
-      router.push(href);
-    }
+    router.push(href);
   }
 
   function handleBackHome() {

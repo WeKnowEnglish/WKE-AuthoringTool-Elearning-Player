@@ -15,8 +15,8 @@ export const SECONDARY_LEARN_SUBNAV = [
 
 export type SecondaryLearnSubNavId = (typeof SECONDARY_LEARN_SUBNAV)[number]["id"];
 
-/** Home Continue CTA — Match for now; wire smarter next later. */
-export const SECONDARY_HOME_CONTINUE_HREF = "/secondary/match";
+/** Home Continue CTA — Learn Practice desk (seeds next activity via ?activity=). */
+export const SECONDARY_HOME_CONTINUE_HREF = "/secondary/learn";
 
 export function resolveSecondaryPortalNavId(
   pathname: string | null,

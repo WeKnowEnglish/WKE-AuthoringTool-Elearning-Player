@@ -1,9 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   buildSecondaryActivityAvailabilityCounts,
   isSecondaryActivityAvailableToday,
+  parseSecondaryLearnActivityParam,
   resolveSecondaryNextActivityKey,
 } from "@/lib/secondary/secondary-study-activity";
 import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
@@ -50,8 +52,8 @@ function lockedReason(activityKey: SecondaryTodayActivityKey): string {
   return "Not available today";
 }
 
-/** Learn hub — quiz first, four circle/pill activity switches. */
-export function SecondaryLearnHome() {
+function SecondaryLearnHomeInner() {
+  const searchParams = useSearchParams();
   const { todaySession, completion, hydrated } = useSecondaryTodaySession();
   const [index, setIndex] = useState(0);
   const didSeedIndex = useRef(false);
@@ -59,6 +61,7 @@ export function SecondaryLearnHome() {
   const sessionWordIds = todaySession?.allWordItemIds ?? [];
   const studentId = resolveSecondaryStudentId();
   const dateKey = todaySession?.dateKey ?? "";
+  const activityFromQuery = parseSecondaryLearnActivityParam(searchParams.get("activity"));
 
   const studyCtx = useMemo(
     () => ({
@@ -80,12 +83,13 @@ export function SecondaryLearnHome() {
 
   useEffect(() => {
     if (!hydrated || didSeedIndex.current) return;
-    if (nextActivityKey) {
-      const nextIndex = ACTIVITIES.findIndex((activity) => activity.key === nextActivityKey);
+    const seedKey = activityFromQuery ?? nextActivityKey;
+    if (seedKey) {
+      const nextIndex = ACTIVITIES.findIndex((activity) => activity.key === seedKey);
       if (nextIndex >= 0) setIndex(nextIndex);
     }
     didSeedIndex.current = true;
-  }, [hydrated, nextActivityKey]);
+  }, [hydrated, activityFromQuery, nextActivityKey]);
 
   const activity = ACTIVITIES[index]!;
   const canOpen = isSecondaryActivityAvailableToday(activity.key, availabilityCounts);
@@ -152,5 +156,24 @@ export function SecondaryLearnHome() {
         )}
       </div>
     </section>
+  );
+}
+
+/** Learn hub — quiz first, four circle/pill activity switches. */
+export function SecondaryLearnHome() {
+  return (
+    <Suspense
+      fallback={
+        <section className="space-y-2">
+          <div
+            className="h-10 animate-pulse rounded-xl border border-sec-border bg-white/70"
+            aria-hidden
+          />
+          <ActivityLoading />
+        </section>
+      }
+    >
+      <SecondaryLearnHomeInner />
+    </Suspense>
   );
 }

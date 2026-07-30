@@ -155,8 +155,8 @@ export interface SecondaryTodaySession {
   warmUpWordItemIds: string[];
   todayWordItemIds: string[];
   allWordItemIds: string[];
-  /** Present on sessions built by selection v2 (S1b+). */
-  selectionVersion?: 2 | 3;
+  /** Present on sessions built by selection v2+ (S1b+). */
+  selectionVersion?: 2 | 3 | 4;
   /** Today-list words in FIFO order they crossed mastered while on this session. */
   masteredOnListOrder?: string[];
   /** Words evicted from today's list via slow replace (audit / exclude from re-picks). */
@@ -164,7 +164,7 @@ export interface SecondaryTodaySession {
   /** Vocab pack used when this session was built (invalidates on pack bump). */
   packId?: string;
   packVersion?: string;
-  /** Snapshot of today's 10 at first build — used for "new today" labels after slow-replace. */
+  /** Snapshot of today's focus list at first build — used for "new today" labels after slow-replace. */
   initialTodayWordItemIds?: string[];
   /** Words swapped onto today's list via slow-replace during this session day. */
   introducedWordItemIds?: string[];

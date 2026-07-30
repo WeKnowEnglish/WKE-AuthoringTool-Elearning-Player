@@ -47,7 +47,11 @@ import {
 } from "@/lib/secondary/secondary-word-progress";
 import type { SecondaryWordOutcome } from "@/lib/secondary/secondary-scaffold";
 import type { SecondaryClozeTemplate } from "@/lib/secondary/types";
-import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
+import {
+  secondaryActivityShell,
+  secondaryActivityTitle,
+  secondaryUi,
+} from "@/lib/secondary/secondary-ui-typography";
 
 type ClozePracticeRunProps = {
   template: SecondaryClozeTemplate;
@@ -57,6 +61,7 @@ type ClozePracticeRunProps = {
   replayIndex: number;
   isReviewMode?: boolean;
   reviewSnapshot?: SecondaryActivityAttemptSnapshot | null;
+  compact?: boolean;
 };
 
 function ClozePracticeRun({
@@ -67,6 +72,7 @@ function ClozePracticeRun({
   replayIndex,
   isReviewMode = false,
   reviewSnapshot = null,
+  compact = false,
 }: ClozePracticeRunProps) {
   const [answers, setAnswers] = useState(() => template.blankWordItemIds.map(() => ""));
   const [lockedAnswers, setLockedAnswers] = useState<Record<string, string>>({});
@@ -271,32 +277,40 @@ function ClozePracticeRun({
 
   return (
     <>
-      <p className={secondaryUi.bodyMuted}>
-        {isReviewMode && phase === "done"
-          ? "Reviewing your last attempt."
-          : phase === "done"
-          ? "Here is how you did today."
-          : phase === "repair"
-            ? "Fix the blanks you missed. You have up to three tries per word."
-            : `Practicing ${practicedWordIds.length} word${practicedWordIds.length === 1 ? "" : "s"} from today's list. Fill each blank from the word bank.`}
-      </p>
+      {!compact ? (
+        <p className={secondaryUi.bodyMuted}>
+          {isReviewMode && phase === "done"
+            ? "Reviewing your last attempt."
+            : phase === "done"
+            ? "Here is how you did today."
+            : phase === "repair"
+              ? "Fix the blanks you missed. You have up to three tries per word."
+              : `Practicing ${practicedWordIds.length} word${practicedWordIds.length === 1 ? "" : "s"} from today's list. Fill each blank from the word bank.`}
+        </p>
+      ) : null}
 
-      <article className="rounded-lg border border-sec-ink/20 bg-sec-panel p-4">
-        <h3 className={secondaryUi.cardTitle}>{template.title}</h3>
+      <article
+        className={`rounded-lg border border-sec-ink/20 bg-sec-panel ${compact ? "p-3" : "p-4"}`}
+      >
+        <h3 className={compact ? `${secondaryUi.cardTitle} !text-base` : secondaryUi.cardTitle}>
+          {template.title}
+        </h3>
         {template.topicTitle ? (
           <p className={`mt-1 ${secondaryUi.captionMuted}`}>
             {template.topicTitle} · {practicedWordIds.length} blank
             {practicedWordIds.length === 1 ? "" : "s"}
           </p>
         ) : null}
-        <p className={`mt-2 ${secondaryUi.bodyLarge}`}>{template.paragraph}</p>
+        <p className={`mt-2 ${compact ? secondaryUi.body : secondaryUi.bodyLarge}`}>
+          {template.paragraph}
+        </p>
       </article>
 
-      <div className="flex flex-wrap gap-2">
+      <div className={`flex flex-wrap ${compact ? "gap-1.5" : "gap-2"}`}>
         {wordBank.map((word) => (
           <span
             key={word}
-            className={secondaryUi.wordBankChip}
+            className={compact ? secondaryUi.wordBankChipCompact : secondaryUi.wordBankChip}
           >
             {word}
           </span>
@@ -305,7 +319,7 @@ function ClozePracticeRun({
 
       {phase === "done" ? <SecondaryActivitySummary activityLabel="Cloze" summary={scoreSummary} /> : null}
 
-      <div className="space-y-3">
+      <div className={compact ? "space-y-1.5" : "space-y-3"}>
         {template.blankWordItemIds.map((wordItemId, index) => {
           if (!visibleBlankIds.includes(wordItemId)) return null;
 
@@ -313,13 +327,18 @@ function ClozePracticeRun({
           const pending = outcome?.kind === "pending" ? outcome : null;
           const isSuccess = outcome?.kind === "success";
           const isRevealed = outcome?.kind === "revealed";
+          const rowCols = compact
+            ? "md:grid-cols-[100px_minmax(0,1fr)]"
+            : "md:grid-cols-[220px_minmax(0,1fr)]";
 
           if (phase === "done" || isReviewMode) {
             return (
-              <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={wordItemId}>
-                <span className={secondaryUi.word}>Blank {index + 1}</span>
+              <div className={`grid gap-1.5 ${rowCols}`} key={wordItemId}>
+                <span className={compact ? `${secondaryUi.word} !text-base` : secondaryUi.word}>
+                  Blank {index + 1}
+                </span>
                 <div
-                  className={`rounded-lg border-2 px-3 py-2.5 ${secondaryUi.body} ${
+                  className={`rounded-lg border-2 px-3 ${compact ? "py-1.5" : "py-2.5"} ${secondaryUi.body} ${
                     isSuccess
                       ? "border-green-500 bg-green-50 text-green-900"
                       : "border-red-500 bg-red-50 text-red-900"
@@ -342,9 +361,12 @@ function ClozePracticeRun({
           const showWrong = checked && pending && pending.wrongAttempts > 0 && !answers[index]?.trim();
 
           return (
-            <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={wordItemId}>
+            <div className={`grid gap-1.5 ${rowCols}`} key={wordItemId}>
               <div>
-                <label className={secondaryUi.word} htmlFor={`cloze-${wordItemId}`}>
+                <label
+                  className={compact ? `${secondaryUi.word} !text-base` : secondaryUi.word}
+                  htmlFor={`cloze-${wordItemId}`}
+                >
                   Blank {index + 1}
                 </label>
                 {pending && pending.wrongAttempts > 0 ? (
@@ -354,7 +376,7 @@ function ClozePracticeRun({
                 ) : null}
               </div>
               <input
-                className={`${secondaryUi.inputField} ${
+                className={`${compact ? secondaryUi.inputFieldCompact : secondaryUi.inputField} ${
                   showWrong ? "border-red-500 bg-red-50" : ""
                 }`}
                 id={`cloze-${wordItemId}`}
@@ -370,7 +392,7 @@ function ClozePracticeRun({
       <div className="flex flex-wrap items-center gap-2">
         {phase !== "done" ? (
           <button
-            className={secondaryUi.btnPrimary}
+            className={compact ? secondaryUi.btnPrimaryCompact : secondaryUi.btnPrimary}
             disabled={!canCheck}
             onClick={handleCheckAnswers}
             type="button"
@@ -378,16 +400,22 @@ function ClozePracticeRun({
             {phase === "repair" ? "Check repairs" : "Check answers"}
           </button>
         ) : null}
-        <button className={secondaryUi.btnSecondary} onClick={onRequestRetry} type="button">
+        <button
+          className={compact ? secondaryUi.btnSecondaryCompact : secondaryUi.btnSecondary}
+          onClick={onRequestRetry}
+          type="button"
+        >
           Try again
         </button>
-        <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
-          Back to Learn
-        </Link>
+        {!compact ? (
+          <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+            Back to Learn
+          </Link>
+        ) : null}
       </div>
 
       {phase === "repair" && pendingWordIds.length > 0 ? (
-        <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 p-3 ${secondaryUi.body} font-bold text-amber-900`}>
+        <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 ${compact ? "p-2" : "p-3"} ${secondaryUi.body} font-bold text-amber-900`}>
           Keep going · {pendingWordIds.length} blank{pendingWordIds.length === 1 ? "" : "s"} still to
           fix
         </div>
@@ -396,7 +424,11 @@ function ClozePracticeRun({
   );
 }
 
-export function ClozeActivity() {
+type ClozeActivityProps = {
+  compact?: boolean;
+};
+
+export function ClozeActivity({ compact = false }: ClozeActivityProps) {
   const { todaySession } = useSecondaryTodaySession();
   const { isReviewMode, isRetry } = useSecondaryActivityMode();
   const studentId = resolveSecondaryStudentId();
@@ -480,7 +512,7 @@ export function ClozeActivity() {
 
   if (!todaySession) {
     return (
-      <section className="space-y-3 rounded-xl border-2 border-sec-ink bg-white p-5">
+      <section className={secondaryActivityShell(compact)}>
         <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
@@ -488,26 +520,29 @@ export function ClozeActivity() {
 
   if (!template) {
     return (
-      <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
-        <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
-        <h2 className={secondaryUi.pageTitle}>Cloze Paragraph</h2>
+      <section className={secondaryActivityShell(compact)}>
+        {!compact ? <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p> : null}
+        <h2 className={secondaryActivityTitle(compact)}>Cloze Paragraph</h2>
         <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 p-3 ${secondaryUi.body} text-amber-900`}>
           Cloze needs at least two words from today&apos;s list with example sentences. Try Match or
           Spelling, or keep practicing to rotate new words onto your list.
         </div>
-        <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary/learn">
-          Back to Learn
-        </Link>
+        {!compact ? (
+          <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary/learn">
+            Back to Learn
+          </Link>
+        ) : null}
       </section>
     );
   }
 
   return (
-    <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
-      <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
-      <h2 className={secondaryUi.pageTitle}>Cloze Paragraph</h2>
+    <section className={secondaryActivityShell(compact)}>
+      {!compact ? <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p> : null}
+      <h2 className={secondaryActivityTitle(compact)}>Cloze Paragraph</h2>
       <ClozePracticeRun
         key={`${template.id}:${runId}`}
+        compact={compact}
         dateKey={clozeDateKey}
         isReviewMode={isReviewMode}
         onRequestRetry={handleRetry}

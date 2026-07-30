@@ -223,6 +223,56 @@
     }
   }
 
+  /** Lesson / quiz player Next arrow: pop in, then loop until tapped. */
+  .kid-lesson-nav-next-callout {
+    animation:
+      kid-lesson-nav-next-enter 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+      kid-lesson-nav-next-bounce 0.9s ease-in-out 0.45s infinite;
+    transform-origin: center center;
+    box-shadow:
+      0 0 0 2px rgba(250, 204, 21, 0.4),
+      0 4px 12px rgba(250, 204, 21, 0.28);
+  }
+
+  @keyframes kid-lesson-nav-next-enter {
+    0% {
+      opacity: 0;
+      transform: scale(0.5) translateY(0.5rem);
+    }
+    55% {
+      opacity: 1;
+      transform: scale(1.12) translateY(-0.2rem);
+    }
+    75% {
+      transform: scale(0.98) translateY(0.05rem);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1.06) translateY(-0.1rem);
+    }
+  }
+
+  @keyframes kid-lesson-nav-next-bounce {
+    0%,
+    100% {
+      transform: scale(1.06) translateY(-0.1rem);
+    }
+    35% {
+      transform: scale(1.14) translateY(-0.35rem);
+    }
+    65% {
+      transform: scale(1.02) translateY(0.04rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kid-lesson-nav-next-callout {
+      animation: none;
+      transform: none;
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.45);
+    }
+  }
+
   @keyframes student-home-greeting-in {
     0% {
       opacity: 0;

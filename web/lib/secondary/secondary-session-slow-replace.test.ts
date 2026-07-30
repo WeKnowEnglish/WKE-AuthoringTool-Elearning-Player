@@ -68,7 +68,7 @@ function todaySession(todayWordItemIds: string[]): SecondaryTodaySession {
     warmUpWordItemIds: [],
     todayWordItemIds,
     allWordItemIds: todayWordItemIds,
-    selectionVersion: 2,
+    selectionVersion: 4,
   };
 }
 
@@ -106,7 +106,7 @@ describe("secondary-session-slow-replace", () => {
     expect(result.swaps).toHaveLength(0);
     expect(result.session.todayWordItemIds).toEqual(today);
     expect(result.session.masteredOnListOrder).toEqual(["w1", "w2"]);
-    expect(result.session.selectionVersion).toBe(3);
+    expect(result.session.selectionVersion).toBe(4);
   });
 
   it("FIFO-evicts the earliest mastered word when threshold is reached", () => {
@@ -176,7 +176,7 @@ describe("secondary-session-slow-replace", () => {
       warmUpWordItemIds: [],
       todayWordItemIds: ["w5", "w2", "w3", "w4"],
       allWordItemIds: ["w5", "w2", "w3", "w4"],
-      selectionVersion: 3,
+      selectionVersion: 4,
       masteredOnListOrder: ["w2", "w3"],
       replacedOutWordItemIds: ["w1"],
     };

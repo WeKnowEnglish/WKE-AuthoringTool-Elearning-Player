@@ -3515,6 +3515,7 @@ export const sortingGamePayloadSchema = z
 const dragZoneSchema = z.object({
   id: z.string(),
   label: z.string().optional(),
+  image_url: z.string().optional(),
 });
 
 const dragTokenSchema = z.object({

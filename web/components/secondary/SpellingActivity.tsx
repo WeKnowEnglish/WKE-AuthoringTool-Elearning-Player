@@ -40,11 +40,19 @@ import {
 } from "@/lib/secondary/secondary-word-progress";
 import type { SecondaryWordOutcome } from "@/lib/secondary/secondary-scaffold";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
-import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
+import {
+  secondaryActivityShell,
+  secondaryActivityTitle,
+  secondaryUi,
+} from "@/lib/secondary/secondary-ui-typography";
 
 const SPELLING_CORRECT_PAUSE_MS = 750;
 
-export function SpellingActivity() {
+type SpellingActivityProps = {
+  compact?: boolean;
+};
+
+export function SpellingActivity({ compact = false }: SpellingActivityProps) {
   const { todaySession } = useSecondaryTodaySession();
   const { isReviewMode, isRetry } = useSecondaryActivityMode();
   const studentId = resolveSecondaryStudentId();
@@ -401,7 +409,7 @@ export function SpellingActivity() {
 
   if (!todaySession) {
     return (
-      <section className="space-y-3 rounded-xl border-2 border-sec-ink bg-white p-5">
+      <section className={secondaryActivityShell(compact)}>
         <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
@@ -409,16 +417,18 @@ export function SpellingActivity() {
 
   if (requiredWordIds.length === 0) {
     return (
-      <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
-        <h2 className={secondaryUi.pageTitle}>Spelling Activity</h2>
+      <section className={secondaryActivityShell(compact)}>
+        <h2 className={secondaryActivityTitle(compact)}>Spelling Activity</h2>
         <p className={secondaryUi.bodyMuted}>
           No spelling prompts are available in today&apos;s set.
         </p>
-        <div className="flex items-center gap-2">
-          <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
-            Back to Learn
-          </Link>
-        </div>
+        {!compact ? (
+          <div className="flex items-center gap-2">
+            <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+              Back to Learn
+            </Link>
+          </div>
+        ) : null}
       </section>
     );
   }
@@ -441,9 +451,9 @@ export function SpellingActivity() {
       : null;
 
   return (
-    <section className="space-y-4 rounded-xl border-2 border-sec-ink bg-white p-5">
-      <h2 className={secondaryUi.pageTitle}>Spelling Activity</h2>
-      {isComplete ? (
+    <section className={secondaryActivityShell(compact)}>
+      <h2 className={secondaryActivityTitle(compact)}>Spelling Activity</h2>
+      {isComplete && !compact ? (
         <p className={secondaryUi.bodyMuted}>
           {isReviewMode ? "Reviewing your last attempt." : "Here is how you did today."}
         </p>
@@ -452,7 +462,7 @@ export function SpellingActivity() {
       {isComplete ? (
         <>
           <SecondaryActivitySummary activityLabel="Spelling" summary={scoreSummary} />
-          <div className="space-y-2">
+          <div className={compact ? "space-y-1.5" : "space-y-2"}>
             {requiredWordIds.map((wordItemId) => {
               const item = promptById.get(wordItemId);
               const outcome = outcomes[wordItemId];
@@ -461,7 +471,7 @@ export function SpellingActivity() {
               return (
                 <div
                   key={wordItemId}
-                  className={`rounded-lg border-2 px-3 py-2.5 ${secondaryUi.body} ${
+                  className={`rounded-lg border-2 px-3 ${compact ? "py-1.5" : "py-2.5"} ${secondaryUi.body} ${
                     isSuccess
                       ? "border-green-500 bg-green-50 text-green-900"
                       : "border-red-500 bg-red-50 text-red-900"
@@ -482,7 +492,11 @@ export function SpellingActivity() {
           </div>
         </>
       ) : currentItem ? (
-        <div className="space-y-3 rounded-lg border border-sec-ink/20 bg-sec-panel p-4">
+        <div
+          className={`rounded-lg border border-sec-ink/20 bg-sec-panel ${
+            compact ? "space-y-2 p-3" : "space-y-3 p-4"
+          }`}
+        >
           <p className={`${secondaryUi.caption} font-extrabold text-sec-ink/70`}>
             Word {Math.min(queuePosition, requiredWordIds.length)} of {requiredWordIds.length}
             {currentPending && currentPending.wrongAttempts > 0
@@ -490,16 +504,22 @@ export function SpellingActivity() {
               : ""}
           </p>
           <div>
-            <p className={secondaryUi.bodyLarge}>Read the sentence and write the word that means:</p>
+            {!compact ? (
+              <p className={secondaryUi.bodyLarge}>Read the sentence and write the word that means:</p>
+            ) : null}
             <p
-              className={`mt-2 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-sec-ink`}
+              className={`${compact ? "" : "mt-2"} text-center ${
+                compact ? secondaryUi.body : secondaryUi.bodyLarge
+              } font-extrabold leading-snug text-sec-ink`}
             >
               &ldquo;{currentItem.studentMeaningEn}&rdquo;
             </p>
           </div>
           {currentItem.exampleSentence ? (
             <p
-              className={`mt-4 text-center ${secondaryUi.bodyLarge} font-extrabold leading-snug text-sec-ink`}
+              className={`${compact ? "mt-1" : "mt-4"} text-center ${
+                compact ? secondaryUi.body : secondaryUi.bodyLarge
+              } font-extrabold leading-snug text-sec-ink`}
             >
               {currentItem.exampleSentence}
             </p>
@@ -522,7 +542,9 @@ export function SpellingActivity() {
             <div className="flex justify-center">
               <input
                 ref={inputRef}
-                className={`w-full max-w-sm text-center ${secondaryUi.inputField} ${
+                className={`w-full max-w-sm text-center ${
+                  compact ? secondaryUi.inputFieldCompact : secondaryUi.inputField
+                } ${
                   feedback === "incorrect"
                     ? "border-red-500 bg-red-50"
                     : feedback === "correct"
@@ -539,7 +561,7 @@ export function SpellingActivity() {
           <div className="flex flex-wrap items-center gap-2">
             {feedback === null || feedback === "incorrect" ? (
               <button
-                className={secondaryUi.btnPrimary}
+                className={compact ? secondaryUi.btnPrimaryCompact : secondaryUi.btnPrimary}
                 disabled={feedback === "incorrect" ? !value.trim() : !value.trim()}
                 onClick={handleSubmitAnswer}
                 type="button"
@@ -548,7 +570,11 @@ export function SpellingActivity() {
               </button>
             ) : null}
             {feedback === "revealed" ? (
-              <button className={secondaryUi.btnSecondary} onClick={handleNext} type="button">
+              <button
+                className={compact ? secondaryUi.btnSecondaryCompact : secondaryUi.btnSecondary}
+                onClick={handleNext}
+                type="button"
+              >
                 Next
               </button>
             ) : null}
@@ -567,12 +593,18 @@ export function SpellingActivity() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
+        <button
+          className={compact ? secondaryUi.btnSecondaryCompact : secondaryUi.btnSecondary}
+          onClick={handleRetry}
+          type="button"
+        >
           Try again
         </button>
-        <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
-          Back to Learn
-        </Link>
+        {!compact ? (
+          <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+            Back to Learn
+          </Link>
+        ) : null}
       </div>
     </section>
   );

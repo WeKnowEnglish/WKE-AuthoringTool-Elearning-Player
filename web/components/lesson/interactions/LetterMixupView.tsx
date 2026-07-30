@@ -726,13 +726,13 @@ export function LetterMixupView({
         <audio ref={wordAudioRef} preload="metadata" className="hidden" />
         <div className="flex min-h-0 flex-1 flex-col gap-3 md:flex-row md:items-stretch md:gap-4">
           {parsed.image_url ?
-            <div className="flex w-full shrink-0 items-center justify-center md:w-[33%] md:max-w-[33%]">
+            <div className="flex w-full shrink-0 items-center justify-center md:w-1/3">
               <button
                 type="button"
                 disabled={passed || passing}
                 onClick={playPictureWord}
                 className={clsx(
-                  "relative h-full w-full max-h-[40dvh] overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4 md:max-h-none",
+                  "relative h-full w-full max-h-[44dvh] overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4 md:max-h-none",
                   interactionHeroImageFrameClass(vocabImgOpts),
                   !passed &&
                     (Boolean(parsed.image_audio_url?.trim()) ||
@@ -740,8 +740,8 @@ export function LetterMixupView({
                     "cursor-pointer",
                 )}
                 style={{
-                  aspectRatio: "4 / 5",
-                  minHeight: "min(28dvh, 12rem)",
+                  aspectRatio: "1 / 1",
+                  minHeight: "min(32dvh, 14rem)",
                   ...interactionHeroImageFrameStyle(vocabImgOpts),
                 }}
                 aria-label={
@@ -773,7 +773,7 @@ export function LetterMixupView({
           <div
             className={clsx(
               "flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 px-1",
-              parsed.image_url ? "md:w-[67%]" : "w-full",
+              parsed.image_url ? "md:w-2/3" : "w-full",
             )}
           >
             <div className="w-full text-center">{promptBlock}</div>
@@ -807,19 +807,19 @@ export function LetterMixupView({
           )}
           style={vocabStageTint ? { backgroundColor: VOCAB_STAGE_BACKGROUND } : undefined}
         >
-          <div className="flex w-full shrink-0 items-center justify-center sm:w-[36%] sm:max-w-[14rem]">
+          <div className="flex w-full shrink-0 items-center justify-center sm:w-1/3">
             <button
               type="button"
               disabled={passed || passing}
               onClick={playPictureWord}
               className={clsx(
-                "relative w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
+                "relative h-full w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
                 interactionHeroImageFrameClass(vocabImgOpts),
                 !passed && "cursor-pointer",
               )}
               style={{
-                aspectRatio: "4 / 5",
-                maxHeight: "min(42dvh, 16rem)",
+                aspectRatio: "1 / 1",
+                maxHeight: "min(48dvh, 20rem)",
                 ...interactionHeroImageFrameStyle(vocabImgOpts),
               }}
               aria-label={
@@ -834,6 +834,7 @@ export function LetterMixupView({
                 src={parsed.image_url}
                 alt=""
                 fill
+                sizes="(max-width: 640px) 100vw, 33vw"
                 className={interactionImageFitClass("contain", vocabImgOpts)}
                 unoptimized={unopt(parsed.image_url)}
               />
@@ -844,7 +845,7 @@ export function LetterMixupView({
               ) : null}
             </button>
           </div>
-          <KidPanel className="min-w-0 flex-1">
+          <KidPanel className="flex min-w-0 flex-1 flex-col justify-center sm:w-2/3">
             {promptBlock}
             <p className="sr-only">
               Fill each slot left to right. Tap Check or fill every slot to verify letters. Green

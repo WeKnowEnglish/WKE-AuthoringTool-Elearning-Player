@@ -26,6 +26,7 @@ describe("compileQuizzesFromVocabList", () => {
     expect(letter?.itemCount).toBe(4);
     const letterPack = exportGamesLetterMixupForLessonPlayer(letter!.document as never);
     expect(letterPack.screens[0]?.subtype).toBe("letter_mixup");
+    expect(letterPack.screens[0]?.auto_advance_on_pass).toBe(true);
 
     const cards = output.results.find((row) => row.format === "flashcards");
     expect(cards?.itemCount).toBe(4);

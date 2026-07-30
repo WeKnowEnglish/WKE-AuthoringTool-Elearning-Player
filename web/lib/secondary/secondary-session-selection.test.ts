@@ -49,6 +49,7 @@ function select(input: {
   studentId?: string;
   dateKey?: string;
   now?: Date;
+  quotas?: Partial<typeof DEFAULT_SECONDARY_SELECTION_QUOTAS>;
 }) {
   return selectSecondaryTodayWords({
     candidateWordItemIds: input.candidateWordItemIds,
@@ -57,6 +58,7 @@ function select(input: {
     now: input.now ?? NOW,
     clozeBlankIds: input.clozeBlankIds ?? [],
     masteryRecords: input.masteryRecords ?? {},
+    quotas: input.quotas,
   });
 }
 
@@ -248,6 +250,7 @@ describe("secondary-session-selection", () => {
     const result = select({
       candidateWordItemIds: ["due-seen", "due-unseen", "frag-seen", "new-1", "new-2"],
       masteryRecords,
+      quotas: { warmupWords: 3 },
     });
 
     expect(result.warmUpWordItemIds.length).toBeGreaterThan(0);
@@ -255,5 +258,27 @@ describe("secondary-session-selection", () => {
     expect(result.warmUpWordItemIds).toContain("due-seen");
     expect(result.warmUpWordItemIds).toContain("frag-seen");
     expect(result.warmUpWordItemIds).not.toContain("due-unseen");
+  });
+
+  it("defaults to no warm-up words", () => {
+    const result = select({
+      candidateWordItemIds: ["due-1", "frag-1", "new-1", "new-2", "new-3"],
+      masteryRecords: {
+        [wordKey("due-1")]: record("due-1", {
+          nextReviewAt: "2026-07-03T08:00:00.000Z",
+          exposureCount: 3,
+        }),
+        [wordKey("frag-1")]: record("frag-1", {
+          state: "stuck",
+          exposureCount: 4,
+          masteryScore: 0.15,
+        }),
+      },
+    });
+
+    expect(result.warmUpWordItemIds).toEqual([]);
+    expect(result.todayWordItemIds.length).toBeLessThanOrEqual(
+      DEFAULT_SECONDARY_SELECTION_QUOTAS.targetTodayWords,
+    );
   });
 });

@@ -132,7 +132,9 @@ export function SecondaryHomeGoalTracker() {
             id="secondary-home-goal-heading"
             className="mt-1 text-lg font-extrabold tracking-tight text-[var(--sec-ink)]"
           >
-            {goalProgress.goalReached ? "Goal complete" : "Master 10 words"}
+            {goalProgress.goalReached
+              ? "Goal complete"
+              : `Master ${goalProgress.goal || 8} words`}
           </h2>
 
           <ol className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Today's activities">

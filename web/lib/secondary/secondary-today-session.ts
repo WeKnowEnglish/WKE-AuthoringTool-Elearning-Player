@@ -95,7 +95,7 @@ function normalizeSession(raw: SecondaryTodaySession | null | undefined): Second
     todayWordItemIds,
     allWordItemIds,
   };
-  if (raw.selectionVersion === 2 || raw.selectionVersion === 3) {
+  if (raw.selectionVersion === 2 || raw.selectionVersion === 3 || raw.selectionVersion === 4) {
     session.selectionVersion = raw.selectionVersion;
   }
   if (Array.isArray(raw.masteredOnListOrder)) {
@@ -158,11 +158,16 @@ function isStalePackSession(session: SecondaryTodaySession): boolean {
   );
 }
 
+function isStaleSelectionVersion(session: SecondaryTodaySession): boolean {
+  return session.selectionVersion !== SECONDARY_SELECTION_VERSION;
+}
+
 function isStaleCachedSession(session: SecondaryTodaySession): boolean {
   return (
     isStaleEmptySession(session) ||
     isStalePackSession(session) ||
-    isStaleUnknownWordSession(session)
+    isStaleUnknownWordSession(session) ||
+    isStaleSelectionVersion(session)
   );
 }
 

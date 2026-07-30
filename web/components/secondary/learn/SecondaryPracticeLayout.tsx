@@ -173,6 +173,41 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
     return <>{children}</>;
   }
 
+  // Learn hub: quiz-first — no word tray chrome above the activity carousel.
+  if (isLearnHub) {
+    return (
+      <>
+        <div className="secondary-practice w-full" {...(shellInert ? { inert: true } : {})}>
+          <main ref={mainAreaRef}>{children}</main>
+        </div>
+
+        <SecondaryDailyWordIntroOverlay
+          open={introOpen}
+          studentId={studentId}
+          dateKey={dateKey}
+          sessionWordIds={sessionWordIds}
+          warmUpWordItemIds={sortedWarmUpWordItemIds}
+          focusWordItemIds={sortedFocusWordItemIds}
+          selectionReasons={selectionReasons}
+          completion={completion}
+          imageUrlsByWordId={imageUrlsByWordId}
+          selectedWordItemId={selectedWordItemId}
+          drawerOpen={drawerOpen}
+          onWordSelect={handleWordSelect}
+          onDismiss={handleIntroDismiss}
+        />
+
+        <SecondaryFocusWordSwapTransition
+          open={swapModalOpen}
+          swap={currentSwap}
+          onContinue={acknowledgeCurrentSwap}
+        />
+
+        <SecondaryWordLearnDrawer {...drawerProps} coverage="viewport" />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="secondary-practice w-full" {...(shellInert ? { inert: true } : {})}>

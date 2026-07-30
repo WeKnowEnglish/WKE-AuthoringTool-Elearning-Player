@@ -7,7 +7,7 @@ import { pickDistractors } from "@/lib/activity-builder/games/pick-distractors";
 import type { VocabListEntry, VocabularyListDocument } from "@/lib/activity-builder/vocabulary-list/types";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import type { LessonScreenRow } from "@/lib/lesson/types";
-import { pickNWithSeed } from "@/lib/vocabulary-templates/shuffle";
+import { pickNWithSeed, shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 import { buildVocabPlayerPoolDocument } from "@/lib/pilots/vocab-player-pool";
 
 export const VOCAB_PLAYER_SAMPLE_SIZE = 6;
@@ -16,7 +16,7 @@ export const VOCAB_PLAYER_LESSON_ID_PREFIX = "vocab-player";
 export type VocabPlayerPhaseId =
   | "flashcards"
   | "letter_mixup"
-  | "drag_match"
+  | "line_match"
   | "mc_quiz"
   | "listen_and_choose";
 
@@ -38,35 +38,38 @@ function asPackScreens(pack: unknown): ScreenPayload[] {
   return screens as ScreenPayload[];
 }
 
-function shortGloss(entry: VocabListEntry): string {
-  const def = entry.definitionEn?.trim();
-  if (def && def.length <= 48) return def;
-  if (def) return `${def.slice(0, 45)}…`;
-  const ex = entry.example?.trim();
-  if (ex && ex.length <= 48) return ex;
-  if (ex) return `${ex.slice(0, 45)}…`;
-  return entry.word;
+function vocabImageUrl(entry: VocabListEntry): string {
+  return (
+    entry.imageUrl?.trim() ||
+    `https://placehold.co/400x400/e2e8f0/334155?text=${encodeURIComponent(entry.word)}`
+  );
 }
 
-function buildDragMatchScreen(
+function buildLineMatchScreen(
   entries: VocabListEntry[],
   quizGroupId: string,
+  seed: string,
 ): ScreenPayload {
   const tokens = entries.map((entry) => ({
     id: `tok_${entry.id}`,
     label: entry.word,
   }));
-  const zones = entries.map((entry) => ({
-    id: `z_${entry.id}`,
-    label: shortGloss(entry),
-  }));
+  const zones = shuffleWithSeed(
+    entries.map((entry) => ({
+      id: `z_${entry.id}`,
+      image_url: vocabImageUrl(entry),
+      label: entry.word,
+    })),
+    `${seed}:drag-match-zones`,
+  );
   const correct_map = Object.fromEntries(
     entries.map((entry) => [`tok_${entry.id}`, `z_${entry.id}`]),
   );
   return {
     type: "interaction",
-    subtype: "drag_match",
-    body_text: "Match each word to its meaning.",
+    subtype: "line_match",
+    body_text: "Draw a line from each word to its picture.",
+    image_fit: "contain",
     tokens,
     zones,
     correct_map,
@@ -224,7 +227,7 @@ export function compileVocabPlayerRun(input?: {
   const flashScreens = asPackScreens(byFormat.get("flashcards")?.pack);
   const letterScreens = asPackScreens(byFormat.get("letter_mixup")?.pack);
   const mcScreens = asPackScreens(byFormat.get("multiple_choice")?.pack);
-  const dragScreens = [buildDragMatchScreen(picked, quizGroupId)];
+  const matchScreens = [buildLineMatchScreen(picked, quizGroupId, seed)];
   const listenScreens = buildListenAndChooseScreens(picked, quizGroupId);
 
   if (flashScreens.length === 0) {
@@ -240,16 +243,16 @@ export function compileVocabPlayerRun(input?: {
   const phaseStarts: Record<VocabPlayerPhaseId, number> = {
     flashcards: 0,
     letter_mixup: flashScreens.length,
-    drag_match: flashScreens.length + letterScreens.length,
-    mc_quiz: flashScreens.length + letterScreens.length + dragScreens.length,
+    line_match: flashScreens.length + letterScreens.length,
+    mc_quiz: flashScreens.length + letterScreens.length + matchScreens.length,
     listen_and_choose:
-      flashScreens.length + letterScreens.length + dragScreens.length + mcScreens.length,
+      flashScreens.length + letterScreens.length + matchScreens.length + mcScreens.length,
   };
 
   const allPayloads = [
     ...flashScreens,
     ...letterScreens,
-    ...dragScreens,
+    ...matchScreens,
     ...mcScreens,
     ...listenScreens,
   ];

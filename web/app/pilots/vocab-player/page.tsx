@@ -3,14 +3,16 @@ import { VocabPlayerPilot } from "@/components/pilots/VocabPlayerPilot";
 
 export default function VocabPlayerPilotPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-5xl px-4 py-10 text-center text-sm text-stone-500">
-          Loading vocabulary player…
-        </div>
-      }
-    >
-      <VocabPlayerPilot />
-    </Suspense>
+    <div className="h-[100dvh] overflow-hidden">
+      <Suspense
+        fallback={
+          <div className="flex h-full items-center justify-center text-sm text-stone-500">
+            Loading vocabulary player…
+          </div>
+        }
+      >
+        <VocabPlayerPilot />
+      </Suspense>
+    </div>
   );
 }

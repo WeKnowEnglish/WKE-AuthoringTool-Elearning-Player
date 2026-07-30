@@ -235,7 +235,8 @@ export function ExploreHotspotsView({
   const advancePhaseRef = useRef<(options?: { requireComplete?: boolean }) => boolean>(
     () => false,
   );
-  const passedRef = useRef(false);
+  const passedRef = useRef(passed);
+  passedRef.current = passed;
   const stageStatesRef = useRef(stageStates);
   stageStatesRef.current = stageStates;
 
@@ -1198,7 +1199,7 @@ export function ExploreHotspotsView({
               </div>
             ) : null}
 
-            {activityComplete ? (
+            {(activityComplete || passed) ? (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 shadow-sm">
                 <span aria-hidden>✓ </span>
                 {parsed.completion_message ?? "Great exploring — you found everything!"}
@@ -1214,7 +1215,7 @@ export function ExploreHotspotsView({
         onBack={onBack}
         passed={passed}
         onNext={onNext}
-        nextDisabled={!activityComplete}
+        nextDisabled={!activityComplete && !passed}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import { BookOpen, Mic, Quote, Type } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { clsx } from "clsx";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import {
@@ -22,8 +23,9 @@ import type {
 import {
   deterministicShuffle,
   GuideBlock,
-  InteractionLessonNav,
-  interactionNavReservePaddingClass,
+  interactionLessonShellClass,
+  InteractionShellNav,
+  isStageFooterNav,
   NavProps,
 } from "./shared";
 
@@ -39,6 +41,17 @@ type PlayableCard = PackFlashcardCompiledCard & {
 };
 
 type SpeakableFace = Exclude<PackFlashcardFace, "picture">;
+
+const REVIEW_CARD_ASPECT = 4 / 5;
+const STUDY_CARD_ASPECT = 5 / 6;
+
+function proportionalCardSizeStyle(aspect: number): CSSProperties {
+  return {
+    aspectRatio: `${aspect}`,
+    width: `min(100cqw, calc(100cqh * ${aspect}))`,
+    height: `min(100cqh, calc(100cqw / ${aspect}))`,
+  };
+}
 
 function toPlayableCard(card: FlashcardsPayload["cards"][number]): PlayableCard {
   return {
@@ -87,9 +100,14 @@ function faceAriaLabel(face: SpeakableFace): string {
 function ReviewFlipCard({
   card,
   muted,
+  compact = false,
+  fit = false,
 }: {
   card: PlayableCard;
   muted: boolean;
+  compact?: boolean;
+  /** Fill the grid cell (quick review viewport-fit). */
+  fit?: boolean;
 }) {
   const [tappedOpen, setTappedOpen] = useState(false);
   const word = card.faces.word?.trim() || "—";
@@ -108,18 +126,24 @@ function ReviewFlipCard({
         }
       }}
       onMouseLeave={() => setTappedOpen(false)}
-      className="group w-full [perspective:900px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kid-ink/40 focus-visible:ring-offset-2"
+      className={clsx(
+        "group [perspective:900px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kid-ink/40 focus-visible:ring-offset-2",
+        fit ? "flex h-full w-full items-center justify-center" : "w-full",
+      )}
       aria-label={`${word}. Hover or tap to flip.`}
       aria-pressed={tappedOpen}
     >
       <div
-        className={[
-          "relative aspect-[5/6] w-full transition-transform duration-300 ease-out [transform-style:preserve-3d]",
+        className={clsx(
+          "relative transition-transform duration-300 ease-out [transform-style:preserve-3d]",
+          !fit && (compact ? "aspect-[4/5]" : "aspect-[5/6]"),
+          !fit && "w-full",
           // Desktop / trackpad: flip on hover
           "[@media(hover:hover)_and_(pointer:fine)]:group-hover:[transform:rotateY(180deg)]",
           // Touch / sticky tap: flip while pressed open
           tappedOpen ? "[transform:rotateY(180deg)]" : "",
-        ].join(" ")}
+        )}
+        style={fit ? proportionalCardSizeStyle(REVIEW_CARD_ASPECT) : undefined}
       >
         {/* Front — picture */}
         <div className="absolute inset-0 flex flex-col overflow-hidden rounded-xl border-2 border-kid-ink/20 bg-white shadow-sm [backface-visibility:hidden]">
@@ -128,7 +152,7 @@ function ReviewFlipCard({
               // eslint-disable-next-line @next/next/no-img-element -- pack URLs may be remote or relative
               <img src={picture} alt="" className="h-full w-full object-contain p-1.5" />
             ) : (
-              <div className="flex h-full items-center justify-center px-1.5 text-center text-sm font-extrabold capitalize text-kid-ink/50">
+              <div className="flex h-full items-center justify-center px-1 text-center text-[10px] font-extrabold capitalize leading-tight text-kid-ink/50 sm:px-1.5 sm:text-xs">
                 {word}
               </div>
             )}
@@ -137,7 +161,12 @@ function ReviewFlipCard({
 
         {/* Back — word */}
         <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl border-2 border-emerald-700/30 bg-emerald-50 px-1.5 shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]">
-          <p className="text-center text-sm font-extrabold capitalize leading-tight text-kid-ink sm:text-base">
+          <p
+            className={clsx(
+              "text-center font-extrabold capitalize leading-tight text-kid-ink",
+              fit ? "text-[clamp(0.625rem,22cqw,1.125rem)]" : "text-sm sm:text-base",
+            )}
+          >
             {word}
           </p>
         </div>
@@ -179,6 +208,7 @@ export function FlashcardsView({
   onNext,
   onBack,
   showBack,
+  controlsPlacement,
 }: {
   parsed: FlashcardsPayload;
   muted: boolean;
@@ -186,6 +216,9 @@ export function FlashcardsView({
   onPass: () => void;
   onWrong: () => void;
 } & NavProps) {
+  const stageFooter = isStageFooterNav(controlsPlacement);
+  const shellClass = interactionLessonShellClass(controlsPlacement);
+  const panelClass = stageFooter ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined;
   const playGenRef = useRef(0);
   const [shuffleSeed] = useState(() => {
     if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
@@ -314,8 +347,8 @@ export function FlashcardsView({
 
   if (!current) {
     return (
-      <div className={interactionNavReservePaddingClass}>
-        <KidPanel>
+      <div className={shellClass}>
+        <KidPanel className={panelClass}>
           <p className="text-2xl font-extrabold text-kid-ink">This deck has no cards.</p>
         </KidPanel>
       </div>
@@ -323,34 +356,73 @@ export function FlashcardsView({
   }
 
   if ((finished || passed) && !replaying) {
+    const reviewRows = Math.max(1, Math.ceil(cards.length / 3));
+    const reviewGridAspectW = 3 * 4;
+    const reviewGridAspectH = reviewRows * 5;
+    const reviewGridStyle: CSSProperties = stageFooter
+      ? {
+          gridTemplateRows: `repeat(${reviewRows}, minmax(0, 1fr))`,
+          width: `min(100cqw, calc(100cqh * ${reviewGridAspectW} / ${reviewGridAspectH}))`,
+          height: `min(100cqh, calc(100cqw * ${reviewGridAspectH} / ${reviewGridAspectW}))`,
+        }
+      : {
+          gridTemplateRows: `repeat(${reviewRows}, minmax(0, 1fr))`,
+          width: "100%",
+          maxHeight: "min(40dvh, 20rem)",
+          aspectRatio: `${reviewGridAspectW} / ${reviewGridAspectH}`,
+        };
+    const reviewPanelClass = clsx(
+      "flex min-h-0 flex-1 flex-col overflow-hidden",
+      stageFooter ? "gap-2 !p-3 sm:gap-3 sm:!p-4" : "gap-3 space-y-0",
+    );
+
     return (
-      <div className={interactionNavReservePaddingClass}>
-        <KidPanel className="space-y-4">
-          <div className="text-center">
-            <p className="text-xl font-extrabold text-kid-ink sm:text-2xl">Quick review</p>
-            <p className="mt-1 text-sm font-semibold text-kid-ink/70">
+      <div className={shellClass}>
+        <KidPanel className={reviewPanelClass}>
+          <div className="shrink-0 text-center">
+            <p
+              className={clsx(
+                "font-extrabold text-kid-ink",
+                stageFooter ? "text-lg sm:text-xl" : "text-xl sm:text-2xl",
+              )}
+            >
+              Quick review
+            </p>
+            <p
+              className={clsx(
+                "mt-0.5 font-semibold text-kid-ink/70",
+                stageFooter ? "text-xs" : "text-sm",
+              )}
+            >
               Hover or tap a card to flip · then continue
             </p>
           </div>
 
-          <ul className="mx-auto grid max-w-md grid-cols-3 gap-2 sm:max-w-lg sm:gap-2.5">
-            {cards.map((card) => (
-              <li key={card.id}>
-                <ReviewFlipCard card={card} muted={muted} />
-              </li>
-            ))}
-          </ul>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-            <KidButton
-              type="button"
-              onClick={() => {
-                playSfx("tap", muted);
-                onNext();
-              }}
+          <div
+            className={clsx(
+              "flex min-h-0 w-full items-center justify-center overflow-hidden [container-type:size]",
+              stageFooter ? "@container/review flex-1" : "max-h-[min(40dvh,20rem)]",
+            )}
+          >
+            <ul
+              className={clsx(
+                "grid w-full grid-cols-3",
+                stageFooter ? "gap-1 sm:gap-1.5" : "gap-2 sm:gap-2.5",
+              )}
+              style={reviewGridStyle}
             >
-              Continue
-            </KidButton>
+              {cards.map((card) => (
+                <li
+                  key={card.id}
+                  className="flex min-h-0 min-w-0 items-center justify-center [container-type:size] @container/card"
+                >
+                  <ReviewFlipCard card={card} muted={muted} fit />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 pt-0.5 sm:gap-3">
             <KidButton
               type="button"
               variant="accent"
@@ -363,14 +435,24 @@ export function FlashcardsView({
             >
               Study again
             </KidButton>
+            <KidButton
+              type="button"
+              onClick={() => {
+                playSfx("tap", muted);
+                onNext();
+              }}
+            >
+              Continue
+            </KidButton>
           </div>
         </KidPanel>
         <GuideBlock guide={parsed.guide} />
-        <InteractionLessonNav
+        <InteractionShellNav
           showBack={showBack}
           onBack={onBack}
           passed={passed}
           onNext={onNext}
+          controlsPlacement={controlsPlacement}
         />
       </div>
     );
@@ -387,30 +469,45 @@ export function FlashcardsView({
   );
 
   return (
-    <div className={interactionNavReservePaddingClass}>
-      <KidPanel>
-        <p className="mb-4 text-center text-3xl font-extrabold tabular-nums text-kid-ink">
+    <div className={shellClass}>
+      <KidPanel className={panelClass}>
+        <p
+          className={clsx(
+            "mb-4 text-center font-extrabold tabular-nums text-kid-ink",
+            stageFooter ? "text-2xl" : "text-3xl",
+          )}
+        >
           {index + 1}
           <span className="text-kid-ink/40"> / {total}</span>
         </p>
 
         <div
-          role="button"
-          tabIndex={0}
-          onClick={() => {
-            playSfx("tap", muted);
-            setFlipped((value) => !value);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
+          className={clsx(
+            stageFooter &&
+              "flex min-h-0 flex-1 items-center justify-center [container-type:size] @container/study",
+          )}
+        >
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => {
               playSfx("tap", muted);
               setFlipped((value) => !value);
-            }
-          }}
-          className="flex min-h-[min(70vh,40rem)] w-full cursor-pointer flex-col items-center justify-center gap-5 rounded-[2rem] border-4 border-kid-ink bg-white px-4 py-5 text-center transition hover:scale-[1.01] active:scale-[0.99] sm:px-8 sm:py-6"
-          aria-label={flipped ? "Card back. Tap to flip." : "Card front. Tap to flip."}
-        >
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                playSfx("tap", muted);
+                setFlipped((value) => !value);
+              }
+            }}
+            className={clsx(
+              "flex cursor-pointer flex-col items-center justify-center gap-5 rounded-[2rem] border-4 border-kid-ink bg-white px-4 py-5 text-center transition hover:scale-[1.01] active:scale-[0.99] sm:px-8 sm:py-6",
+              stageFooter ? "max-w-full" : "w-full min-h-[min(70vh,40rem)]",
+            )}
+            style={stageFooter ? proportionalCardSizeStyle(STUDY_CARD_ASPECT) : undefined}
+            aria-label={flipped ? "Card back. Tap to flip." : "Card front. Tap to flip."}
+          >
           {!flipped ? (
             <>
               <FlashcardFaceStack faces={sideFaces} values={current.faces} size="xl" />
@@ -483,6 +580,7 @@ export function FlashcardsView({
               )}
             </div>
           )}
+          </div>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
@@ -517,7 +615,13 @@ export function FlashcardsView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+      <InteractionShellNav
+        showBack={showBack}
+        onBack={onBack}
+        passed={passed}
+        onNext={onNext}
+        controlsPlacement={controlsPlacement}
+      />
     </div>
   );
 }

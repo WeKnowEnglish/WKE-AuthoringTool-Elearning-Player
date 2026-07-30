@@ -45,6 +45,7 @@ type Props = {
 export function SecondaryPortalShell({ children, classMenu }: Props) {
   const pathname = usePathname();
   const activeId = resolveSecondaryPortalNavId(pathname);
+  const isLearnDesk = pathname === "/secondary/learn" || pathname.startsWith("/secondary/learn/");
   const { muted, toggleMuted } = useAudioMuted();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -154,7 +155,13 @@ export function SecondaryPortalShell({ children, classMenu }: Props) {
           </div>
         ) : null}
 
-        <main className="min-w-0 flex-1 overflow-y-auto bg-[var(--sec-bg)] px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:pb-8">
+        <main
+          className={`min-w-0 flex-1 overflow-y-auto bg-[var(--sec-bg)] ${
+            isLearnDesk
+              ? "px-3 py-3 pb-20 sm:px-4 lg:px-5 lg:pb-4"
+              : "px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:pb-8"
+          }`}
+        >
           {children}
         </main>
       </div>

@@ -105,7 +105,7 @@ export function SecondaryDailyWordIntroOverlay({
       visible={visible}
       title="Today's words"
       titleId="secondary-daily-word-intro-title"
-      description={`${totalWords} words to practice today · warm-up first, then focus.`}
+      description={`${totalWords} words to practice today.`}
       descriptionId="secondary-daily-word-intro-description"
       liveMessage={`Today's words ready — ${totalWords} words to practice.`}
       footer={

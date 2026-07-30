@@ -1,4 +1,7 @@
-import type { SecondarySessionSelectionReason } from "@/lib/secondary/secondary-session-selection";
+import {
+  TARGET_TODAY_WORDS,
+  type SecondarySessionSelectionReason,
+} from "@/lib/secondary/secondary-session-selection";
 import { getSecondaryVocabItemById } from "@/lib/secondary/secondary-vocab-bank";
 
 export const SECONDARY_MAX_WORDS_PER_TOPIC = 4;
@@ -112,7 +115,7 @@ export function applyStretchWordToTodayList(input: {
     input.picked.delete(replaced);
     delete input.reasons[replaced];
     input.todayWordItemIds[refreshIndex] = stretchPick;
-  } else if (input.todayWordItemIds.length < 10) {
+  } else if (input.todayWordItemIds.length < TARGET_TODAY_WORDS) {
     input.todayWordItemIds.push(stretchPick);
   } else {
     return;

@@ -13,6 +13,7 @@ import { MatchActivity } from "@/components/secondary/MatchActivity";
 import { ClozeActivity } from "@/components/secondary/ClozeActivity";
 import { SpellingActivity } from "@/components/secondary/SpellingActivity";
 import { SentenceActivity } from "@/components/secondary/SentenceActivity";
+import { SecondaryLearnSubNav } from "@/components/secondary/learn/SecondaryLearnSubNav";
 import type { SecondaryTodayActivityKey } from "@/lib/secondary/types";
 
 const ACTIVITIES = [
@@ -91,6 +92,8 @@ export function SecondaryLearnHome() {
 
   return (
     <section className="space-y-2">
+      <SecondaryLearnSubNav />
+
       {!hydrated ? (
         <div
           className="h-10 animate-pulse rounded-xl border border-sec-border bg-white/70"

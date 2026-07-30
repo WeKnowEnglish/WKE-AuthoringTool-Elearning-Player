@@ -69,6 +69,8 @@ type Props = {
   onWordSelect?: (wordItemId: string, trigger: HTMLButtonElement) => void;
   inert?: boolean;
   embedded?: boolean;
+  /** Full-page Words mode — visible on mobile, not a desktop-only sidebar. */
+  layout?: "sidebar" | "page";
 };
 
 export function SecondaryFocusWordsPanel({
@@ -85,8 +87,10 @@ export function SecondaryFocusWordsPanel({
   onWordSelect,
   inert = false,
   embedded = false,
+  layout = "sidebar",
 }: Props) {
   const wordTrayScrollRef = useScrollRevealScrollbar<HTMLDivElement>();
+  const isPage = layout === "page";
 
   if (hydrated && !hasWordsToday) return null;
 
@@ -105,7 +109,9 @@ export function SecondaryFocusWordsPanel({
       className={clsx(
         embedded
           ? "flex h-full w-56 shrink-0 flex-col bg-sec-panel/25 xl:w-64"
-          : "hidden w-full shrink-0 flex-col overflow-hidden rounded-xl border-2 border-sec-ink bg-white lg:flex lg:max-h-[calc(100dvh-5.5rem)] lg:min-h-0 lg:w-72 xl:w-80",
+          : isPage
+            ? "mx-auto flex w-full max-w-xl flex-col overflow-hidden rounded-xl border border-sec-border bg-white shadow-sm"
+            : "hidden w-full shrink-0 flex-col overflow-hidden rounded-xl border-2 border-sec-ink bg-white lg:flex lg:max-h-[calc(100dvh-5.5rem)] lg:min-h-0 lg:w-72 xl:w-80",
       )}
       aria-label="Today's vocabulary list"
       {...(inert ? { inert: true } : {})}
@@ -123,7 +129,11 @@ export function SecondaryFocusWordsPanel({
         ref={wordTrayScrollRef}
         className={clsx(
           "scrollbar-reveal",
-          embedded ? "min-h-0 flex-1 overflow-y-auto" : "lg:min-h-0 lg:flex-1 lg:overflow-y-auto",
+          embedded
+            ? "min-h-0 flex-1 overflow-y-auto"
+            : isPage
+              ? "max-h-[min(70dvh,36rem)] overflow-y-auto"
+              : "lg:min-h-0 lg:flex-1 lg:overflow-y-auto",
         )}
       >
         {!hydrated ? (

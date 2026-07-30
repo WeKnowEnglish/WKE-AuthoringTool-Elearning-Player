@@ -7,6 +7,14 @@ export const SECONDARY_PORTAL_NAV = [
 
 export type SecondaryPortalNavId = (typeof SECONDARY_PORTAL_NAV)[number]["id"];
 
+/** Learn section modes — Words study vs Practice quizzes. */
+export const SECONDARY_LEARN_SUBNAV = [
+  { id: "words", href: "/secondary/learn/words", label: "Words" },
+  { id: "practice", href: "/secondary/learn", label: "Practice" },
+] as const;
+
+export type SecondaryLearnSubNavId = (typeof SECONDARY_LEARN_SUBNAV)[number]["id"];
+
 /** Home Continue CTA — Match for now; wire smarter next later. */
 export const SECONDARY_HOME_CONTINUE_HREF = "/secondary/match";
 
@@ -31,11 +39,27 @@ export function resolveSecondaryPortalNavId(
   return "home";
 }
 
+export function resolveSecondaryLearnSubNavId(
+  pathname: string | null,
+): SecondaryLearnSubNavId {
+  if (pathname?.startsWith("/secondary/learn/words")) return "words";
+  return "practice";
+}
+
+export function isSecondaryLearnPracticePath(pathname: string | null): boolean {
+  return pathname === "/secondary/learn" || pathname === "/secondary/learn/";
+}
+
+export function isSecondaryLearnWordsPath(pathname: string | null): boolean {
+  return Boolean(pathname?.startsWith("/secondary/learn/words"));
+}
+
 /** True when Secondary word tray / daily intro should wrap the page. */
 export function isSecondaryLearnDeskPath(pathname: string | null): boolean {
   if (!pathname) return false;
   return (
     pathname === "/secondary/learn" ||
+    pathname.startsWith("/secondary/learn/") ||
     pathname.startsWith("/secondary/match") ||
     pathname.startsWith("/secondary/cloze") ||
     pathname.startsWith("/secondary/spelling") ||

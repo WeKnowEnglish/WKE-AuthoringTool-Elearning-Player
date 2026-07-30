@@ -30,6 +30,10 @@ function addWord(
   pool.push(normalized);
 }
 
+/**
+ * Distractors come only from the student's current session word list
+ * (words not already used as blanks). No pack-level relatedWords / distractors.
+ */
 export function buildClozeDistractorPool(input: {
   picked: SecondaryVocabItem[];
   sessionPool: SecondaryVocabItem[];
@@ -39,25 +43,8 @@ export function buildClozeDistractorPool(input: {
   const pool: string[] = [];
   const seen = new Set<string>();
 
-  for (const item of input.picked) {
-    addWord(pool, seen, correct, item.word);
-  }
-
-  for (const item of input.picked) {
-    for (const word of item.distractors ?? []) {
-      addWord(pool, seen, correct, word);
-    }
-    for (const word of item.relatedWords ?? []) {
-      addWord(pool, seen, correct, word);
-    }
-  }
-
-  const pickedTopicIds = new Set(input.picked.map((item) => item.topicId));
-  const sameTopicFillers = input.sessionPool.filter(
-    (item) => pickedTopicIds.has(item.topicId) && !pickedIds.has(item.wordItemId),
-  );
-
-  for (const item of sameTopicFillers) {
+  for (const item of input.sessionPool) {
+    if (pickedIds.has(item.wordItemId)) continue;
     addWord(pool, seen, correct, item.word);
   }
 

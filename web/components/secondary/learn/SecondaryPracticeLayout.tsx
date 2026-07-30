@@ -15,7 +15,11 @@ import {
 } from "@/lib/secondary/secondary-mastery-display";
 import { useStudentStorageIdReady } from "@/lib/auth/use-student-storage-id-ready";
 import { hasSeenDailyWordIntro } from "@/lib/secondary/secondary-daily-word-intro";
-import { isSecondaryLearnDeskPath } from "@/lib/secondary/secondary-nav";
+import {
+  isSecondaryLearnDeskPath,
+  isSecondaryLearnPracticePath,
+  isSecondaryLearnWordsPath,
+} from "@/lib/secondary/secondary-nav";
 import { useSecondaryDebugEnabled } from "@/lib/secondary/use-secondary-debug-enabled";
 import { useSecondaryFocusWordSwapQueue } from "@/lib/secondary/use-secondary-focus-word-swap-queue";
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
@@ -42,7 +46,9 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const isLoginPage = pathname === "/secondary/login";
   const isLearnDesk = isSecondaryLearnDeskPath(pathname);
-  const isLearnHub = pathname === "/secondary/learn";
+  const isLearnPractice = isSecondaryLearnPracticePath(pathname);
+  const isLearnWords = isSecondaryLearnWordsPath(pathname);
+  const isLearnMode = isLearnPractice || isLearnWords;
   const isClassroomPage =
     pathname === "/secondary/class" || pathname.startsWith("/secondary/class/");
   const isHomeworkPage = pathname.startsWith("/secondary/homework/");
@@ -71,7 +77,7 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
 
   const shouldShowIntro =
     storageReady &&
-    isLearnHub &&
+    isLearnMode &&
     hydrated &&
     hasWordsToday &&
     Boolean(dateKey) &&
@@ -173,12 +179,52 @@ export function SecondaryPracticeLayout({ children }: { children: React.ReactNod
     return <>{children}</>;
   }
 
-  // Learn hub: quiz-first — no word tray chrome above the activity carousel.
-  if (isLearnHub) {
+  // Learn Practice: quiz-first — no word tray above the activity carousel.
+  if (isLearnPractice) {
     return (
       <>
         <div className="secondary-practice w-full" {...(shellInert ? { inert: true } : {})}>
           <main ref={mainAreaRef}>{children}</main>
+        </div>
+
+        <SecondaryDailyWordIntroOverlay
+          open={introOpen}
+          studentId={studentId}
+          dateKey={dateKey}
+          sessionWordIds={sessionWordIds}
+          warmUpWordItemIds={sortedWarmUpWordItemIds}
+          focusWordItemIds={sortedFocusWordItemIds}
+          selectionReasons={selectionReasons}
+          completion={completion}
+          imageUrlsByWordId={imageUrlsByWordId}
+          selectedWordItemId={selectedWordItemId}
+          drawerOpen={drawerOpen}
+          onWordSelect={handleWordSelect}
+          onDismiss={handleIntroDismiss}
+        />
+
+        <SecondaryFocusWordSwapTransition
+          open={swapModalOpen}
+          swap={currentSwap}
+          onContinue={acknowledgeCurrentSwap}
+        />
+
+        <SecondaryWordLearnDrawer {...drawerProps} coverage="viewport" />
+      </>
+    );
+  }
+
+  // Learn Words: page owns sub-nav / empty state; layout owns list + drawer.
+  if (isLearnWords) {
+    return (
+      <>
+        <div className="secondary-practice w-full" {...(shellInert ? { inert: true } : {})}>
+          <main ref={mainAreaRef} className="space-y-3">
+            {children}
+            {hydrated && hasWordsToday ? (
+              <SecondaryFocusWordsPanel {...wordListProps} layout="page" />
+            ) : null}
+          </main>
         </div>
 
         <SecondaryDailyWordIntroOverlay

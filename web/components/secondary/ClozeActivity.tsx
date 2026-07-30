@@ -39,6 +39,7 @@ import { useSecondaryActivityMode } from "@/lib/secondary/use-secondary-activity
 import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-session";
 import { buildSecondaryClozeWordBank } from "@/lib/secondary/secondary-cloze-distractors";
+import { buildClozeClause } from "@/lib/secondary/secondary-cloze-clause";
 import { getSecondaryVocabItemById } from "@/lib/secondary/secondary-vocab-bank";
 import {
   clearSecondaryLocalActivitySession,
@@ -275,8 +276,94 @@ function ClozePracticeRun({
       return index >= 0 && Boolean(answers[index]?.trim());
     });
 
+  const sentenceCards = useMemo(
+    () =>
+      template.blankWordItemIds.map((wordItemId, index) => {
+        const item = getSecondaryVocabItemById(wordItemId);
+        const clause = item ? buildClozeClause(item) : "____";
+        const parts = clause.split("____");
+        return { wordItemId, index, parts };
+      }),
+    [template.blankWordItemIds],
+  );
+
+  const clozeContentWidth = compact
+    ? "mx-auto w-full max-w-3xl px-2 sm:max-w-4xl sm:px-4"
+    : "w-full";
+
+  function fillBlankFromWordBank(word: string) {
+    if (phase === "done" || isReviewMode) return;
+    const targetId =
+      visibleBlankIds.find((wordItemId) => {
+        const index = template.blankWordItemIds.indexOf(wordItemId);
+        return index >= 0 && !answers[index]?.trim();
+      }) ?? visibleBlankIds[0];
+    if (!targetId) return;
+    const index = template.blankWordItemIds.indexOf(targetId);
+    if (index < 0) return;
+    setBlankValue(index, word);
+  }
+
+  function renderInlineBlank(wordItemId: string, index: number) {
+    const outcome = outcomes[wordItemId];
+    const pending = outcome?.kind === "pending" ? outcome : null;
+    const isSuccess = outcome?.kind === "success";
+    const isRevealed = outcome?.kind === "revealed";
+    const expected = getSecondaryVocabItemById(wordItemId)?.word ?? "";
+    const inputCh = Math.max(7, Math.min(18, expected.length + 2));
+    const locked = lockedAnswers[wordItemId] ?? expected;
+    const isEditable =
+      !isReviewMode &&
+      phase !== "done" &&
+      visibleBlankIds.includes(wordItemId) &&
+      !isSecondaryWordOutcomeDone(outcome);
+    const showWrong =
+      checked && pending && pending.wrongAttempts > 0 && !answers[index]?.trim();
+
+    if (!isEditable) {
+      const showResult = phase === "done" || isReviewMode || isSuccess || isRevealed;
+      return (
+        <span
+          className={`mx-0.5 inline-flex min-w-[4.5rem] items-baseline justify-center rounded-md border-2 px-1.5 py-0.5 align-baseline text-[1.05em] font-extrabold ${
+            showResult
+              ? isSuccess
+                ? "border-green-500 bg-green-50 text-green-900"
+                : isRevealed
+                  ? "border-red-500 bg-red-50 text-red-900"
+                  : "border-sec-border bg-white text-sec-ink"
+              : "border-sec-border bg-white text-sec-ink"
+          }`}
+        >
+          {locked || "____"}
+          {showResult && isSuccess && outcome.attemptsToSuccess > 1 ? (
+            <span className="ml-1 text-[0.7em] font-bold text-green-800/80">
+              (try {outcome.attemptsToSuccess})
+            </span>
+          ) : null}
+          {showResult && isRevealed ? (
+            <span className="ml-1 text-[0.7em] font-bold text-red-800/80">(help)</span>
+          ) : null}
+        </span>
+      );
+    }
+
+    return (
+      <input
+        aria-label={`Blank ${index + 1}`}
+        className={`mx-0.5 inline-block rounded-md border-2 bg-white px-1.5 py-0.5 align-baseline text-center text-[1.05em] font-extrabold text-sec-ink outline-none focus:border-sec-accent focus:ring-2 focus:ring-sec-accent/25 ${
+          showWrong ? "border-red-500 bg-red-50" : "border-sec-ink/40"
+        }`}
+        id={`cloze-${wordItemId}`}
+        onChange={(event) => setBlankValue(index, event.target.value)}
+        placeholder="…"
+        style={{ width: `${inputCh}ch` }}
+        value={answers[index] ?? ""}
+      />
+    );
+  }
+
   return (
-    <>
+    <div className={`${clozeContentWidth} space-y-4`}>
       {!compact ? (
         <p className={secondaryUi.bodyMuted}>
           {isReviewMode && phase === "done"
@@ -289,105 +376,48 @@ function ClozePracticeRun({
         </p>
       ) : null}
 
-      <article
-        className={`rounded-lg border border-sec-ink/20 bg-sec-panel ${compact ? "p-3" : "p-4"}`}
-      >
-        <h3 className={compact ? `${secondaryUi.cardTitle} !text-base` : secondaryUi.cardTitle}>
-          {template.title}
-        </h3>
-        {template.topicTitle ? (
-          <p className={`mt-1 ${secondaryUi.captionMuted}`}>
-            {template.topicTitle} · {practicedWordIds.length} blank
-            {practicedWordIds.length === 1 ? "" : "s"}
+      <div className="space-y-3">
+        <h3 className={`${secondaryUi.cardTitle} sm:text-xl`}>Fill in the blanks</h3>
+        {sentenceCards.map(({ wordItemId, index, parts }) => (
+          <article
+            key={wordItemId}
+            className="rounded-xl border border-sec-border bg-sec-panel-muted px-4 py-3 shadow-sm sm:px-5 sm:py-4"
+          >
+            <p className="text-lg font-semibold leading-relaxed text-sec-ink sm:text-xl sm:leading-relaxed">
+              {parts.map((part, partIndex) => (
+                <span key={`${wordItemId}-part-${partIndex}`}>
+                  {part}
+                  {partIndex < parts.length - 1
+                    ? renderInlineBlank(wordItemId, index)
+                    : null}
+                </span>
+              ))}
+            </p>
+          </article>
+        ))}
+        {phase === "repair" && pendingWordIds.length > 0 ? (
+          <p className={`${secondaryUi.caption} font-bold text-amber-900`}>
+            Fix the open blanks · {pendingWordIds.length} still to go
           </p>
         ) : null}
-        <p className={`mt-2 ${compact ? secondaryUi.body : secondaryUi.bodyLarge}`}>
-          {template.paragraph}
-        </p>
-      </article>
-
-      <div className={`flex flex-wrap ${compact ? "gap-1.5" : "gap-2"}`}>
-        {wordBank.map((word) => (
-          <span
-            key={word}
-            className={compact ? secondaryUi.wordBankChipCompact : secondaryUi.wordBankChip}
-          >
-            {word}
-          </span>
-        ))}
       </div>
+
+      {phase !== "done" && !isReviewMode ? (
+        <div className="flex flex-wrap justify-center gap-2">
+          {wordBank.map((word) => (
+            <button
+              key={word}
+              className={`${secondaryUi.wordBankChip} cursor-pointer transition hover:border-sec-accent hover:bg-sec-accent-soft`}
+              onClick={() => fillBlankFromWordBank(word)}
+              type="button"
+            >
+              {word}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {phase === "done" ? <SecondaryActivitySummary activityLabel="Cloze" summary={scoreSummary} /> : null}
-
-      <div className={compact ? "space-y-1.5" : "space-y-3"}>
-        {template.blankWordItemIds.map((wordItemId, index) => {
-          if (!visibleBlankIds.includes(wordItemId)) return null;
-
-          const outcome = outcomes[wordItemId];
-          const pending = outcome?.kind === "pending" ? outcome : null;
-          const isSuccess = outcome?.kind === "success";
-          const isRevealed = outcome?.kind === "revealed";
-          const rowCols = compact
-            ? "md:grid-cols-[100px_minmax(0,1fr)]"
-            : "md:grid-cols-[220px_minmax(0,1fr)]";
-
-          if (phase === "done" || isReviewMode) {
-            return (
-              <div className={`grid gap-1.5 ${rowCols}`} key={wordItemId}>
-                <span className={compact ? `${secondaryUi.word} !text-base` : secondaryUi.word}>
-                  Blank {index + 1}
-                </span>
-                <div
-                  className={`rounded-lg border-2 px-3 ${compact ? "py-1.5" : "py-2.5"} ${secondaryUi.body} ${
-                    isSuccess
-                      ? "border-green-500 bg-green-50 text-green-900"
-                      : "border-red-500 bg-red-50 text-red-900"
-                  }`}
-                >
-                  {lockedAnswers[wordItemId] ?? getSecondaryVocabItemById(wordItemId)?.word}
-                  {isSuccess && outcome.attemptsToSuccess > 1 ? (
-                    <span className={`ml-2 ${secondaryUi.caption} font-bold text-green-800/80`}>
-                      (try {outcome.attemptsToSuccess})
-                    </span>
-                  ) : null}
-                  {isRevealed ? (
-                    <span className={`ml-2 ${secondaryUi.caption} font-bold text-red-800/80`}>(needed help)</span>
-                  ) : null}
-                </div>
-              </div>
-            );
-          }
-
-          const showWrong = checked && pending && pending.wrongAttempts > 0 && !answers[index]?.trim();
-
-          return (
-            <div className={`grid gap-1.5 ${rowCols}`} key={wordItemId}>
-              <div>
-                <label
-                  className={compact ? `${secondaryUi.word} !text-base` : secondaryUi.word}
-                  htmlFor={`cloze-${wordItemId}`}
-                >
-                  Blank {index + 1}
-                </label>
-                {pending && pending.wrongAttempts > 0 ? (
-                  <p className={`${secondaryUi.caption} text-red-800/80`}>
-                    Attempt {pending.wrongAttempts + 1} of {SECONDARY_MAX_WRONG_ATTEMPTS}
-                  </p>
-                ) : null}
-              </div>
-              <input
-                className={`${compact ? secondaryUi.inputFieldCompact : secondaryUi.inputField} ${
-                  showWrong ? "border-red-500 bg-red-50" : ""
-                }`}
-                id={`cloze-${wordItemId}`}
-                onChange={(event) => setBlankValue(index, event.target.value)}
-                placeholder="Type the word"
-                value={answers[index] ?? ""}
-              />
-            </div>
-          );
-        })}
-      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {phase !== "done" ? (
@@ -413,14 +443,7 @@ function ClozePracticeRun({
           </Link>
         ) : null}
       </div>
-
-      {phase === "repair" && pendingWordIds.length > 0 ? (
-        <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 ${compact ? "p-2" : "p-3"} ${secondaryUi.body} font-bold text-amber-900`}>
-          Keep going · {pendingWordIds.length} blank{pendingWordIds.length === 1 ? "" : "s"} still to
-          fix
-        </div>
-      ) : null}
-    </>
+    </div>
   );
 }
 
@@ -522,7 +545,7 @@ export function ClozeActivity({ compact = false }: ClozeActivityProps) {
     return (
       <section className={secondaryActivityShell(compact)}>
         {!compact ? <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p> : null}
-        <h2 className={secondaryActivityTitle(compact)}>Cloze Paragraph</h2>
+        <h2 className={secondaryActivityTitle(compact)}>Fill in the blanks</h2>
         <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 p-3 ${secondaryUi.body} text-amber-900`}>
           Cloze needs at least two words from today&apos;s list with example sentences. Try Match or
           Spelling, or keep practicing to rotate new words onto your list.
@@ -539,7 +562,9 @@ export function ClozeActivity({ compact = false }: ClozeActivityProps) {
   return (
     <section className={secondaryActivityShell(compact)}>
       {!compact ? <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p> : null}
-      <h2 className={secondaryActivityTitle(compact)}>Cloze Paragraph</h2>
+      {!compact ? (
+        <h2 className={secondaryActivityTitle(compact)}>Fill in the blanks</h2>
+      ) : null}
       <ClozePracticeRun
         key={`${template.id}:${runId}`}
         compact={compact}

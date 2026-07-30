@@ -28,7 +28,7 @@ export type VocabPlayerCompiledRun = {
   screens: LessonScreenRow[];
   phaseStarts: Record<VocabPlayerPhaseId, number>;
   imageUrls: string[];
-  practiceWords: Array<{ id: string; lemma: string }>;
+  practiceWords: Array<{ id: string; lemma: string; imageUrl: string }>;
 };
 
 function asPackScreens(pack: unknown): ScreenPayload[] {
@@ -264,6 +264,12 @@ export function compileVocabPlayerRun(input?: {
     screens,
     phaseStarts,
     imageUrls: collectImageUrls(allPayloads, picked),
-    practiceWords: picked.map((entry) => ({ id: entry.id, lemma: entry.word })),
+    practiceWords: picked.map((entry) => ({
+      id: entry.id,
+      lemma: entry.word,
+      imageUrl:
+        entry.imageUrl?.trim() ||
+        `https://placehold.co/400x400/e2e8f0/334155?text=${encodeURIComponent(entry.word)}`,
+    })),
   };
 }

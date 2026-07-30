@@ -170,6 +170,7 @@ export function VocabPlayerPilot() {
           <LessonPlayer
             key={`${run.lessonId}-${generation}`}
             lessonId={run.lessonId}
+            lessonTitle="Vocabulary Player"
             screens={run.screens}
             mode="student"
             runSeed={run.seed}

@@ -2043,7 +2043,12 @@ export function LessonPlayer({
 
 function screenAutoAdvancesOnPass(payload: ScreenPayload | null): boolean {
   if (!payload) return false;
-  if (payload.auto_advance_on_pass === true) return true;
+  if (
+    (payload.type === "story" || payload.type === "interaction") &&
+    payload.auto_advance_on_pass === true
+  ) {
+    return true;
+  }
   return payload.type === "interaction" && payload.subtype === "letter_mixup";
 }
 

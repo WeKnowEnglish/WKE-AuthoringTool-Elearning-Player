@@ -4,6 +4,7 @@ import { createVocabularyEvidenceEvent } from "@/lib/mastery/vocabulary";
 import { masteryRecordToRow } from "@/lib/mastery/supabase-rows";
 import type { StudentMasteryRecordRow } from "@/lib/mastery/supabase-rows";
 import { rowsToMasteryRecords } from "@/lib/mastery/teacher-mastery-summary";
+import { resolveSecondaryMasteryWordKeys } from "@/lib/secondary/secondary-mastery-keys";
 
 export type TeacherSentenceApprovalInput = {
   studentId: string;
@@ -18,11 +19,14 @@ export function buildTeacherSentenceApprovalEvidence(
   input: TeacherSentenceApprovalInput,
 ): LearningEvidenceEvent {
   const reviewedAt = input.reviewedAt ?? new Date();
+  const keys = resolveSecondaryMasteryWordKeys(input.wordItemId);
+  const aliasWordIds = keys.writeKeys.filter((id) => id !== keys.wordItemId);
   const base = createVocabularyEvidenceEvent({
     studentId: input.studentId,
     sessionId: `secondary:${input.dateKey}`,
     activityId: "secondary:sentence",
-    wordId: input.wordItemId,
+    wordId: keys.wordItemId,
+    aliasWordIds,
     lemma: input.lemma,
     itemId: input.submissionId,
     success: true,

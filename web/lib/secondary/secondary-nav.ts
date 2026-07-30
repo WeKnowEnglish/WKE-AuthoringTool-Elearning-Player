@@ -1,7 +1,7 @@
 export const SECONDARY_PORTAL_NAV = [
   { id: "home", href: "/secondary", label: "Home" },
-  { id: "class", href: "/secondary/class", label: "Class" },
   { id: "learn", href: "/secondary/learn", label: "Learn" },
+  { id: "class", href: "/secondary/class", label: "Class" },
   { id: "progress", href: "/secondary/progress", label: "Progress" },
 ] as const;
 

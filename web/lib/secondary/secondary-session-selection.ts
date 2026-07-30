@@ -1,4 +1,4 @@
-import { learningTargetKey } from "@/lib/mastery/engine";
+import { getMasteryRecordForSecondaryWord } from "@/lib/secondary/secondary-mastery-keys";
 import {
   classifyWordForPractice,
   type VocabularyRecommendationReason,
@@ -261,8 +261,7 @@ export function selectSecondaryTodayWords(input: {
   }
 
   const candidates = input.candidateWordItemIds.map((wordItemId) => {
-    const targetKey = learningTargetKey({ type: "word", key: wordItemId });
-    const record = input.masteryRecords[targetKey] ?? null;
+    const record = getMasteryRecordForSecondaryWord(wordItemId, input.masteryRecords);
     return buildCandidate(wordItemId, record, input.now);
   });
 

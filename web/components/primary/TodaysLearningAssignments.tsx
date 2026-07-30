@@ -17,6 +17,8 @@ type Props = {
   onJoinClass?: () => void;
   /** Fallback join link when `onJoinClass` is not provided. */
   joinHref?: string;
+  /** When false, use a static homework heading instead of the time-of-day greeting. */
+  showGreeting?: boolean;
 };
 
 function toneClasses(tone: "primary" | "secondary") {
@@ -85,11 +87,20 @@ export function TodaysLearningAssignments({
   homeworkPathPrefix = "/primary/homework",
   onJoinClass,
   joinHref = "/join-class",
+  showGreeting = true,
 }: Props) {
   const ui = toneClasses(tone);
   const openItems = sortOpenAssignments(items);
   const visible = openItems.slice(0, HERO_LIMIT);
   const nextIncomplete = openItems.find((item) => !item.completedAt) ?? null;
+
+  const homeworkHeading = showGreeting ? (
+    <StudentHomeGreeting id="todays-learning-heading" className={ui.heading} />
+  ) : (
+    <h2 id="todays-learning-heading" className={ui.heading}>
+      Your assignments
+    </h2>
+  );
 
   return (
     <section aria-labelledby="todays-learning-heading" className={ui.section}>
@@ -126,7 +137,7 @@ export function TodaysLearningAssignments({
             <ClipboardList className="h-10 w-10" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <StudentHomeGreeting id="todays-learning-heading" className={ui.heading} />
+            {homeworkHeading}
             <p className={`mt-2 ${ui.muted}`}>
               No assignments right now. When your teacher sends work, it will show up here.
             </p>
@@ -136,7 +147,7 @@ export function TodaysLearningAssignments({
         <div className="mt-4 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <StudentHomeGreeting id="todays-learning-heading" className={ui.heading} />
+              {homeworkHeading}
               <p className={`mt-1 ${ui.muted}`}>
                 {openItems.length === 1
                   ? "1 assignment from your teacher"

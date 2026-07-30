@@ -1,4 +1,6 @@
-import { getMasteryRecordForTarget } from "@/lib/mastery/local-storage";
+import {
+  getMasteryRecordForSecondaryWord,
+} from "@/lib/secondary/secondary-mastery-keys";
 import {
   applyLocalAttemptTransition,
   applyLocalRevealTransition,
@@ -140,10 +142,7 @@ export function recordSecondaryWordAttemptDetailed(
   );
 
   if (!localPrevious) {
-    const mastery = getMasteryRecordForTarget({
-      type: "word",
-      key: attempt.wordItemId,
-    });
+    const mastery = getMasteryRecordForSecondaryWord(attempt.wordItemId);
     localPrevious = createInitialLocalActivityWordState({
       studentId,
       activitySessionId,
@@ -219,10 +218,7 @@ export function finalizeSecondaryWordAsRevealed(
 
   let localPrevious = getLocalActivityWordState(studentId, activitySessionId, wordItemId);
   if (!localPrevious) {
-    const mastery = getMasteryRecordForTarget({
-      type: "word",
-      key: wordItemId,
-    });
+    const mastery = getMasteryRecordForSecondaryWord(wordItemId);
     localPrevious = createInitialLocalActivityWordState({
       studentId,
       activitySessionId,
@@ -253,10 +249,7 @@ export function recordSecondarySentenceSubmittedLocal(
 
   let localPrevious = getLocalActivityWordState(studentId, activitySessionId, wordItemId);
   if (!localPrevious) {
-    const mastery = getMasteryRecordForTarget({
-      type: "word",
-      key: wordItemId,
-    });
+    const mastery = getMasteryRecordForSecondaryWord(wordItemId);
     localPrevious = createInitialLocalActivityWordState({
       studentId,
       activitySessionId,

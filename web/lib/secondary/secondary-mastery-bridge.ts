@@ -2,8 +2,11 @@
  * M1/M2 secondary → platform mastery bridge.
  */
 
-import { getMasteryRecordForTarget } from "@/lib/mastery/local-storage";
 import { recordVocabularyEvidence } from "@/lib/mastery/vocabulary";
+import {
+  getMasteryRecordForSecondaryWord,
+  resolveSecondaryMasteryWordKeys,
+} from "@/lib/secondary/secondary-mastery-keys";
 import type {
   SecondaryWordAttempt,
   SecondaryWordProgressRecord,
@@ -101,10 +104,13 @@ export function applySecondaryAttemptToPlatformMastery(input: {
 
   const attempts = Math.max(1, evidenceMeta?.attempts ?? 1);
   const firstTry = evidenceMeta?.firstTry ?? attempts === 1;
+  const keys = resolveSecondaryMasteryWordKeys(attempt.wordItemId);
+  const aliasWordIds = keys.writeKeys.filter((id) => id !== keys.wordItemId);
 
   recordVocabularyEvidence({
     studentId,
-    wordId: attempt.wordItemId,
+    wordId: keys.wordItemId,
+    aliasWordIds,
     itemId: attempt.wordItemId,
     activityId: shape.activityId,
     sessionId: `secondary:${dateKey}`,
@@ -116,10 +122,7 @@ export function applySecondaryAttemptToPlatformMastery(input: {
     occurredAt: Number.isNaN(occurredAt.getTime()) ? new Date() : occurredAt,
   });
 
-  const mastery = getMasteryRecordForTarget({
-    type: "word",
-    key: attempt.wordItemId,
-  });
+  const mastery = getMasteryRecordForSecondaryWord(attempt.wordItemId);
 
   return projectPlatformMasteryToSecondaryRecord({
     wordItemId: attempt.wordItemId,

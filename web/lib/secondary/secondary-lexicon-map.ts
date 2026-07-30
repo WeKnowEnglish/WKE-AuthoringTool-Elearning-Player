@@ -55,7 +55,7 @@ export function listSecondaryLexiconUnmapped(): readonly SecondaryLexiconReviewE
 export function secondaryEvidenceWordKey(wordItemId: string): {
   wordItemId: string;
   lexiconId: string | null;
-  /** Stable key for new writes once dual-key mastery is enabled. */
+  /** Lexicon id when mapped; otherwise the Secondary wordItemId. */
   preferredKey: string;
 } {
   const id = wordItemId.trim();

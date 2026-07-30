@@ -2,7 +2,7 @@
 
 Generated: 2026-07-29T22:49:19.761Z
 
-Stable mapping table from Secondary `wordItemId` → Primary candidate `pv_*`. Runtime mastery still keys on `wordItemId`; this file is the bridge for media, dictionary, and future dual-key mastery.
+Stable mapping table from Secondary `wordItemId` → Primary candidate `pv_*`. Secondary practice **dual-writes** mastery to both `word:{wordItemId}` and `word:{pv_*}` when mapped; reads resolve either alias.
 
 | Field | Value |
 |-------|-------|

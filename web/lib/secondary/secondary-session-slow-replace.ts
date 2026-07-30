@@ -1,5 +1,5 @@
-import { learningTargetKey } from "@/lib/mastery/engine";
 import type { StudentMasteryRecord } from "@/lib/mastery/types";
+import { getMasteryRecordForSecondaryWord } from "@/lib/secondary/secondary-mastery-keys";
 import {
   buildCandidate,
   SECONDARY_SELECTION_VERSION,
@@ -41,8 +41,7 @@ function masteryRecordForWord(
   wordItemId: string,
   masteryRecords: Record<string, StudentMasteryRecord>,
 ): StudentMasteryRecord | null {
-  const targetKey = learningTargetKey({ type: "word", key: wordItemId });
-  return masteryRecords[targetKey] ?? null;
+  return getMasteryRecordForSecondaryWord(wordItemId, masteryRecords);
 }
 
 export function isWordMasteredForSlowReplace(

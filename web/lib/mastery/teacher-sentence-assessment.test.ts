@@ -48,4 +48,26 @@ describe("teacher-sentence-assessment", () => {
     expect(wordRecord?.exposureCount).toBeGreaterThan(0);
     expect(wordRecord?.retrievalSuccessCount).toBeGreaterThan(0);
   });
+
+  it("dual-writes mapped Secondary words to lexicon ids on approval", () => {
+    const evidence = buildTeacherSentenceApprovalEvidence({
+      studentId: "student-1",
+      submissionId: "sub-2",
+      wordItemId: "g7-a2-school-life-subject",
+      dateKey: "2026-07-10",
+      lemma: "subject",
+    });
+
+    const wordKeys = evidence.targetRefs
+      .filter((ref) => ref.type === "word")
+      .map((ref) => ref.key);
+    expect(wordKeys).toContain("g7-a2-school-life-subject");
+    expect(wordKeys).toContain("pv_subject_noun");
+
+    const updated = applyTeacherSentenceApprovalToRecords({}, evidence);
+    expect(
+      updated.some((r) => r.targetKey === "word:g7-a2-school-life-subject"),
+    ).toBe(true);
+    expect(updated.some((r) => r.targetKey === "word:pv_subject_noun")).toBe(true);
+  });
 });

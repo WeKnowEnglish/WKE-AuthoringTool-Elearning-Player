@@ -83,6 +83,69 @@ function faceAriaLabel(face: SpeakableFace): string {
   return "Play example";
 }
 
+/** Compact review tile: picture front → word back (hover on fine pointer, tap on touch). */
+function ReviewFlipCard({
+  card,
+  muted,
+}: {
+  card: PlayableCard;
+  muted: boolean;
+}) {
+  const [tappedOpen, setTappedOpen] = useState(false);
+  const word = card.faces.word?.trim() || "—";
+  const picture = card.faces.pictureUrl?.trim() || null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        playSfx("tap", muted);
+        const fineHover =
+          typeof window !== "undefined" &&
+          window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+        if (!fineHover) {
+          setTappedOpen((open) => !open);
+        }
+      }}
+      onMouseLeave={() => setTappedOpen(false)}
+      className="group w-full [perspective:900px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kid-ink/40 focus-visible:ring-offset-2"
+      aria-label={`${word}. Hover or tap to flip.`}
+      aria-pressed={tappedOpen}
+    >
+      <div
+        className={[
+          "relative aspect-[5/6] w-full transition-transform duration-300 ease-out [transform-style:preserve-3d]",
+          // Desktop / trackpad: flip on hover
+          "[@media(hover:hover)_and_(pointer:fine)]:group-hover:[transform:rotateY(180deg)]",
+          // Touch / sticky tap: flip while pressed open
+          tappedOpen ? "[transform:rotateY(180deg)]" : "",
+        ].join(" ")}
+      >
+        {/* Front — picture */}
+        <div className="absolute inset-0 flex flex-col overflow-hidden rounded-xl border-2 border-kid-ink/20 bg-white shadow-sm [backface-visibility:hidden]">
+          <div className="relative min-h-0 flex-1 bg-stone-50">
+            {picture ? (
+              // eslint-disable-next-line @next/next/no-img-element -- pack URLs may be remote or relative
+              <img src={picture} alt="" className="h-full w-full object-contain p-1.5" />
+            ) : (
+              <div className="flex h-full items-center justify-center px-1.5 text-center text-sm font-extrabold capitalize text-kid-ink/50">
+                {word}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Back — word */}
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl border-2 border-emerald-700/30 bg-emerald-50 px-1.5 shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]">
+          <p className="text-center text-sm font-extrabold capitalize leading-tight text-kid-ink sm:text-base">
+            {word}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 async function playHtmlAudio(url: string): Promise<void> {
   const el = new Audio(url);
   try {
@@ -142,12 +205,15 @@ export function FlashcardsView({
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [finished, setFinished] = useState(false);
+  /** Parent `passed` stays true after first clear — allow local re-study anyway. */
+  const [replaying, setReplaying] = useState(false);
   const [playingFace, setPlayingFace] = useState<SpeakableFace | "front" | null>(null);
 
   useEffect(() => {
     setIndex(0);
     setFlipped(false);
     setFinished(false);
+    setReplaying(false);
   }, [parsed.activity_name, parsed.cards.length, shuffleSeed]);
 
   const total = cards.length;
@@ -239,6 +305,7 @@ export function FlashcardsView({
     playSfx("tap", muted);
     if (index >= total - 1) {
       setFinished(true);
+      setReplaying(false);
       if (!passed) onPass();
       return;
     }
@@ -255,19 +322,41 @@ export function FlashcardsView({
     );
   }
 
-  if (finished || passed) {
+  if ((finished || passed) && !replaying) {
     return (
       <div className={interactionNavReservePaddingClass}>
-        <KidPanel>
-          <p className="text-4xl font-extrabold text-kid-ink">Nice studying!</p>
-          <p className="mt-3 text-xl font-bold text-kid-ink/80">
-            You finished {total} card{total === 1 ? "" : "s"}.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+        <KidPanel className="space-y-4">
+          <div className="text-center">
+            <p className="text-xl font-extrabold text-kid-ink sm:text-2xl">Quick review</p>
+            <p className="mt-1 text-sm font-semibold text-kid-ink/70">
+              Hover or tap a card to flip · then continue
+            </p>
+          </div>
+
+          <ul className="mx-auto grid max-w-md grid-cols-3 gap-2 sm:max-w-lg sm:gap-2.5">
+            {cards.map((card) => (
+              <li key={card.id}>
+                <ReviewFlipCard card={card} muted={muted} />
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <KidButton
+              type="button"
+              onClick={() => {
+                playSfx("tap", muted);
+                onNext();
+              }}
+            >
+              Continue
+            </KidButton>
             <KidButton
               type="button"
               variant="accent"
               onClick={() => {
+                playSfx("tap", muted);
+                setReplaying(true);
                 setFinished(false);
                 goTo(0);
               }}
@@ -277,7 +366,12 @@ export function FlashcardsView({
           </div>
         </KidPanel>
         <GuideBlock guide={parsed.guide} />
-        <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+        <InteractionLessonNav
+          showBack={showBack}
+          onBack={onBack}
+          passed={passed}
+          onNext={onNext}
+        />
       </div>
     );
   }

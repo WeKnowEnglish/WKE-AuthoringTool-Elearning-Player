@@ -235,6 +235,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "active",
     studioHref: "/activity-builder/games/line-match",
   },
+  {
+    href: "/pilots/vocab-player",
+    title: "Vocabulary player",
+    description:
+      "Compile-once Primary vocab loop: sample 6 words → flashcards, letter scramble, drag match, MCQ, listen-and-choose. Warms chunks + media before play (no mid-run hitch).",
+    group: "games",
+    status: "review",
+  },
 
   // ── Active · Core activities ────────────────────────────────────
   {

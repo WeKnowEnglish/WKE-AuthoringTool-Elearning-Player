@@ -622,13 +622,78 @@ export type RecordHomeworkCompletionResult =
   | { ok: true; finishedAt: string }
   | { ok: false; error: string };
 
+/** Assign the curated six-part Primary homework template from WKE Library. */
+export async function assignHomeworkTemplateOne(input: {
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const classId = input.classId.trim();
+    if (!classId) return { ok: false, error: "Choose a class." };
+    const supabase = await createClient();
+    const { data: ownedClass, error: classError } = await supabase
+      .from("teacher_classes")
+      .select("id, archived_at")
+      .eq("id", classId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+    if (classError) return { ok: false, error: classError.message };
+    if (!ownedClass || ownedClass.archived_at) {
+      return { ok: false, error: "Class not found." };
+    }
+
+    const status: ClassHomeworkStatus =
+      input.status === "assigned" ? "assigned" : "draft";
+    const now = new Date().toISOString();
+    const payload = {
+      type: "homework_template" as const,
+      templateId: "homework-template-one" as const,
+      title: "Homework Template One",
+      sectionCount: 6 as const,
+      frozenAt: now,
+    };
+    const { data: inserted, error: insertError } = await supabase
+      .from("class_homework")
+      .insert({
+        class_id: classId,
+        teacher_id: teacherId,
+        title: normalizeHomeworkTitle(input.title, payload.title),
+        instructions: normalizeHomeworkInstructions(input.instructions),
+        due_at: normalizeDueAt(input.dueAt),
+        status,
+        payload,
+        assigned_at: status === "assigned" ? now : null,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+    if (insertError || !inserted?.id) {
+      return { ok: false, error: insertError?.message ?? "Could not create homework." };
+    }
+    const homework = await getClassHomework(inserted.id);
+    if (!homework) return { ok: false, error: "Homework was created but could not be loaded." };
+    revalidateClass(classId);
+    revalidatePath("/teacher/activity-builder/library");
+    return { ok: true, homework };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not assign the homework template.",
+    };
+  }
+}
+
 /**
  * Student marks catalog activity homework as finished (upsert one row per student).
  * questions_total stores question count (quiz) or card count (flashcards).
  */
 async function recordCatalogHomeworkCompletion(input: {
   homeworkId: string;
-  allowedTypes: ReadonlyArray<"pack_quiz" | "pack_flashcards" | "studio_activity">;
+  allowedTypes: ReadonlyArray<"pack_quiz" | "pack_flashcards" | "studio_activity" | "homework_template">;
 }): Promise<RecordHomeworkCompletionResult> {
   try {
     const supabase = await createClient();
@@ -664,7 +729,8 @@ async function recordCatalogHomeworkCompletion(input: {
       !payload ||
       (payload.type !== "pack_quiz" &&
         payload.type !== "pack_flashcards" &&
-        payload.type !== "studio_activity") ||
+        payload.type !== "studio_activity" &&
+        payload.type !== "homework_template") ||
       !input.allowedTypes.includes(payload.type)
     ) {
       return { ok: false, error: "This homework type can’t be marked complete here." };
@@ -683,6 +749,8 @@ async function recordCatalogHomeworkCompletion(input: {
           : Math.max(0, payload.cardCount);
     } else if (payload.type === "studio_activity") {
       questionsTotal = Math.max(0, payload.screenCount);
+    } else if (payload.type === "homework_template") {
+      questionsTotal = payload.sectionCount;
     }
 
     const { data: memberships, error: membershipError } = await supabase.rpc(
@@ -768,6 +836,15 @@ export async function recordStudioActivityHomeworkCompletion(input: {
   return recordCatalogHomeworkCompletion({
     homeworkId: input.homeworkId,
     allowedTypes: ["studio_activity"],
+  });
+}
+
+export async function recordHomeworkTemplateCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["homework_template"],
   });
 }
 

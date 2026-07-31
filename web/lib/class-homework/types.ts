@@ -22,6 +22,7 @@ export const CLASS_HOMEWORK_PAYLOAD_TYPES = [
   "word_pack_practice",
   "external_note",
   "studio_activity",
+  "homework_template",
 ] as const;
 export type ClassHomeworkPayloadType = (typeof CLASS_HOMEWORK_PAYLOAD_TYPES)[number];
 
@@ -69,6 +70,13 @@ export type ClassHomeworkPayload =
       /** Frozen Lesson Player pack snapshot. */
       pack: Record<string, unknown>;
       frozenAt: string;
+    }
+  | {
+      type: "homework_template";
+      templateId: "homework-template-one";
+      title: string;
+      sectionCount: 6;
+      frozenAt: string;
     };
 
 export type ClassHomework = {
@@ -112,6 +120,7 @@ export const CLASS_HOMEWORK_PAYLOAD_LABELS: Record<ClassHomeworkPayloadType, str
   word_pack_practice: "Word pack practice",
   external_note: "Note / reminder",
   studio_activity: "Activity Bank quiz",
+  homework_template: "Homework template",
 };
 
 export function isHomeworkStudioFormat(

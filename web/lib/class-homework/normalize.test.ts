@@ -148,4 +148,28 @@ describe("class-homework/normalize", () => {
     expect(homeworkPayloadSummary(payload!)).toContain("Bakery quiz");
     expect(homeworkPayloadSummary(payload!)).toContain("3 screens");
   });
+
+  it("normalizes the curated six-part homework template", () => {
+    const payload = normalizeHomeworkPayload({
+      type: "homework_template",
+      templateId: "homework-template-one",
+      title: "Homework Template One",
+      sectionCount: 99,
+      frozenAt: "2026-07-31T00:00:00.000Z",
+    });
+    expect(payload).toEqual({
+      type: "homework_template",
+      templateId: "homework-template-one",
+      title: "Homework Template One",
+      sectionCount: 6,
+      frozenAt: "2026-07-31T00:00:00.000Z",
+    });
+    expect(homeworkPayloadSummary(payload!)).toContain("6 parts");
+    expect(
+      normalizeHomeworkPayload({
+        type: "homework_template",
+        templateId: "unknown-template",
+      }),
+    ).toBeNull();
+  });
 });

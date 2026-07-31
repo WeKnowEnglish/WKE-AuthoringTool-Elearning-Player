@@ -192,7 +192,8 @@ export function ClassHomeworkPanel({
             const doneCount = completionsByHomework.get(item.id)?.length ?? 0;
             const showDone =
               (item.payload.type === "pack_quiz" ||
-                item.payload.type === "pack_flashcards") &&
+                item.payload.type === "pack_flashcards" ||
+                item.payload.type === "homework_template") &&
               (item.status === "assigned" || item.status === "closed");
             return (
               <li key={item.id}>
@@ -290,12 +291,14 @@ function HomeworkEditor({
           ["pack_quiz", ACTIVITY_LABEL],
           ["pack_flashcards", FLASHCARDS_LABEL],
           ["word_pack_practice", "Word pack practice"],
+          ["homework_template", "Homework template"],
         ] as const)
       : ([
           ["pack_quiz", ACTIVITY_LABEL],
           ["pack_flashcards", FLASHCARDS_LABEL],
           ["word_pack_practice", "Word pack practice"],
           ["external_note", "Note / reminder"],
+          ["homework_template", "Homework template"],
         ] as const)
   );
   const initialType =
@@ -322,6 +325,9 @@ function HomeworkEditor({
   const pending = busy || isPending;
 
   const buildPayload = (): ClassHomeworkPayload | null => {
+    if (payloadType === "homework_template") {
+      return homework.payload.type === "homework_template" ? homework.payload : null;
+    }
     if (payloadType === "pack_quiz") {
       const quiz = packQuizzes.find((item) => item.id === quizId);
       if (!quiz) return null;

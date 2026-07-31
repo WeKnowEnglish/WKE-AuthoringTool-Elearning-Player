@@ -14,6 +14,7 @@ import {
 } from "@/lib/actions/wke-library";
 import type { WkeLibraryItemSummary } from "@/lib/wke-library/types";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
+import { AssignHomeworkTemplateOverlay } from "@/components/teacher/wke-library/AssignHomeworkTemplateOverlay";
 
 const FORMAT_LABELS: Record<StudioActivityFormat, string> = {
   explore_hotspots: "Hotspots",
@@ -32,9 +33,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 type Props = {
   isAdmin?: boolean;
+  classes?: readonly { id: string; title: string }[];
 };
 
-export function WkeLibraryBrowse({ isAdmin = false }: Props) {
+export function WkeLibraryBrowse({ isAdmin = false, classes = [] }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<WkeLibraryItemSummary[]>([]);
   const [mine, setMine] = useState<WkeLibraryItemSummary[]>([]);
@@ -47,6 +49,7 @@ export function WkeLibraryBrowse({ isAdmin = false }: Props) {
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [catalogCount, setCatalogCount] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
+  const [assignTemplateOpen, setAssignTemplateOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -274,6 +277,14 @@ export function WkeLibraryBrowse({ isAdmin = false }: Props) {
         </section>
       ) : null}
 
+      <section className="flex flex-col rounded-xl border-2 border-sky-300 bg-gradient-to-br from-sky-50 to-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">Homework template</span><span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-900">Primary</span></div>
+        <h2 className="mt-1 text-base font-semibold text-stone-900">Homework Template One</h2>
+        <p className="mt-1 text-sm leading-snug text-stone-600">Six connected parts covering vocabulary, adjectives and adverbs, sentence building, verb forms, picture writing, and question writing.</p>
+        <p className="mt-2 text-[11px] text-stone-500">6 parts · about 30 minutes · teacher completion reporting</p>
+        <div className="mt-4 grid max-w-md grid-cols-2 gap-2"><Link href="/pilots/homework-template-one" className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-sm font-semibold text-stone-800 hover:bg-stone-50">Preview</Link><button type="button" onClick={() => setAssignTemplateOpen(true)} className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-semibold text-white hover:bg-stone-800">Assign homework</button></div>
+      </section>
+
       {loading ? (
         <p className="text-sm text-stone-500">Loading library…</p>
       ) : items.length === 0 ? (
@@ -343,6 +354,7 @@ export function WkeLibraryBrowse({ isAdmin = false }: Props) {
           })}
         </ul>
       )}
+      <AssignHomeworkTemplateOverlay open={assignTemplateOpen} onClose={() => setAssignTemplateOpen(false)} classes={classes} />
     </div>
   );
 }

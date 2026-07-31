@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { TrackedMarketingLink } from "@/components/landing/HomepageAnalytics";
 
-const HERO_IMAGE = "/landing/hero-family.png";
+const HERO_IMAGE = "/landing/hero-family-standing.png";
 
 /**
  * Server-rendered hero — H1 and core copy are in the initial HTML without client JS.
@@ -15,21 +15,21 @@ export function LandingHero() {
         fill
         priority
         sizes="100vw"
-        className="hidden object-cover object-center sm:block"
+        className="hidden object-cover object-top sm:block"
       />
       <div className="absolute inset-0 hidden bg-gradient-to-r from-[#fff8ec]/95 via-[#fff8ec]/70 to-transparent sm:block" />
       <div className="relative mx-auto grid max-w-6xl items-center px-4 pt-8 sm:min-h-[31rem] sm:px-8 sm:py-14 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-        <div className="relative z-10 pb-8 sm:pb-0">
+        <div className="relative z-10 pb-8 text-center sm:pb-0">
           <p className="text-sm font-extrabold uppercase tracking-wide text-[var(--landing-primary-title)]">
-            1 Website - Many Features
+            Students - Teachers - Parents
           </p>
           <h1 className="mt-2 text-[1.75rem] font-extrabold leading-[1.12] text-kid-ink sm:mt-3 sm:text-4xl lg:text-[2.75rem]">
-            More time for what you love about teaching!
+            Teaching + Learning
           </h1>
-          <p className="mt-3 max-w-xl text-base font-semibold leading-relaxed text-[var(--landing-body-muted)] sm:mt-4 sm:text-lg">
-            Spend time on teaching, not managing websites.
+          <p className="mx-auto mt-3 max-w-xl text-base font-semibold leading-relaxed text-[var(--landing-body-muted)] sm:mt-4 sm:text-lg">
+            Real education, one website.
           </p>
-          <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-7 sm:flex sm:flex-wrap sm:gap-3">
+          <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-7 sm:flex sm:flex-wrap sm:justify-center sm:gap-3">
             <TrackedMarketingLink
               href="#free-activities"
               event="free_activity_view"

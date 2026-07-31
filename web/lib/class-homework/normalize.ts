@@ -96,6 +96,15 @@ export function defaultHomeworkPayload(
       frozenAt: "",
     };
   }
+  if (type === "homework_template") {
+    return {
+      type: "homework_template",
+      templateId: "homework-template-one",
+      title: "Homework Template One",
+      sectionCount: 6,
+      frozenAt: "",
+    };
+  }
   return { type: "external_note", body: "" };
 }
 
@@ -205,6 +214,20 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
     };
   }
 
+  if (input.type === "homework_template") {
+    if (input.templateId !== "homework-template-one") return null;
+    return {
+      type: "homework_template",
+      templateId: "homework-template-one",
+      title: asString(input.title).trim() || "Homework Template One",
+      sectionCount: 6,
+      frozenAt:
+        typeof input.frozenAt === "string" && input.frozenAt.trim()
+          ? input.frozenAt.trim()
+          : new Date(0).toISOString(),
+    };
+  }
+
   const body = asString(input.body).trim().slice(0, NOTE_MAX);
   if (!body) return null;
   return { type: "external_note", body };
@@ -230,6 +253,9 @@ export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
     return `${payload.title} · ${homeworkStudioFormatLabel(payload.format)} · ${
       payload.screenCount
     } screen${payload.screenCount === 1 ? "" : "s"}`;
+  }
+  if (payload.type === "homework_template") {
+    return `${payload.title} · ${payload.sectionCount} parts`;
   }
   return payload.body.length > 80 ? `${payload.body.slice(0, 77)}…` : payload.body;
 }

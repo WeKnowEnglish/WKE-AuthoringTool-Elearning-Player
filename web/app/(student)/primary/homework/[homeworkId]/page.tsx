@@ -5,6 +5,7 @@ import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcard
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
 import { HomeworkStudioActivityPlayer } from "@/components/primary/HomeworkStudioActivityPlayer";
+import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
@@ -143,6 +144,13 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
           format={payload.format}
           title={payload.title}
           pack={payload.pack}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "homework_template" && payload.templateId === "homework-template-one" ? (
+        <HomeworkTemplateOnePilot
+          homeworkId={homework.id}
           alreadyCompleted={Boolean(homework.completedAt)}
         />
       ) : null}

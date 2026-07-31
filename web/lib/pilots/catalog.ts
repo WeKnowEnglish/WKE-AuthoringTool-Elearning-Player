@@ -243,6 +243,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     group: "games",
     status: "active",
   },
+  {
+    href: "/pilots/homework-template-one",
+    title: "Homework Template One",
+    description:
+      "Complete six-part Primary homework pilot: picture cloze, grammar marking, sentence building, verb tables, picture writing, and question writing with teacher-review handoff.",
+    group: "activities",
+    status: "review",
+  },
 
   // ── Active · Core activities ────────────────────────────────────
   {

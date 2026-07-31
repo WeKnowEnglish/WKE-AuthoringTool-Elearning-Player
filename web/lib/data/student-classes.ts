@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 export type StudentClassMembership = {
   classId: string;
   title: string;
+  joinCode: string;
   enrolledAt: string;
   studentTabs: StudentClassroomTabSettings;
 };
@@ -16,6 +17,7 @@ export type StudentClassMembership = {
 type StudentClassMembershipRow = {
   class_id: string;
   title: string;
+  join_code: string;
   enrolled_at: string;
   student_tab_schedule_enabled?: boolean | null;
   student_tab_noticeboard_enabled?: boolean | null;
@@ -40,6 +42,7 @@ export async function getStudentClassMemberships(): Promise<StudentClassMembersh
   return rows.map((row) => ({
     classId: row.class_id,
     title: row.title,
+    joinCode: row.join_code,
     enrolledAt: row.enrolled_at,
     studentTabs: normalizeStudentClassroomTabSettings({
       schedule: row.student_tab_schedule_enabled ?? false,

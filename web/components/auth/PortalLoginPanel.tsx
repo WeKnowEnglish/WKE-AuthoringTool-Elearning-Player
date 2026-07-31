@@ -112,6 +112,16 @@ export function PortalLoginPanel({
     e.preventDefault();
     setMessage("");
     setInfo("");
+
+    if (!username.trim()) {
+      setMessage("Enter your username.");
+      return;
+    }
+    if (!/^\d{4,6}$/.test(pin.trim())) {
+      setMessage("Secret code must be 4–6 numbers.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -200,6 +210,8 @@ export function PortalLoginPanel({
 
       setMessage("Pick Primary or Secondary on the home screen first.");
       await supabase.auth.signOut();
+    } catch {
+      setMessage("We couldn't connect to the sign-in service. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -338,7 +350,7 @@ export function PortalLoginPanel({
             </button>
           </div>
 
-          <form onSubmit={onStudentSubmit} className="space-y-3">
+          <form onSubmit={onStudentSubmit} className="space-y-3" noValidate>
             <div>
               <label className="block text-sm font-bold" htmlFor="portal-username">
                 Username

@@ -48,6 +48,7 @@ export default async function PrimaryDashboardPage({ searchParams }: Props) {
   return (
     <PrimaryDashboardClient
       studentKey={user.id}
+      primaryTourSeen={user.user_metadata?.primary_home_tour_version === 2}
       classMemberships={classMemberships}
       assignedHomework={assignedHomework}
       liveSessions={liveSessions}

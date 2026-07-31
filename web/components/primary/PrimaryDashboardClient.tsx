@@ -34,6 +34,7 @@ import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   studentKey: string;
+  primaryTourSeen?: boolean;
   classMemberships: StudentClassMembership[];
   assignedHomework?: StudentHomeworkCard[];
   liveSessions?: StudentClassLiveSession[];
@@ -46,6 +47,7 @@ type Props = {
 
 export function PrimaryDashboardClient({
   studentKey,
+  primaryTourSeen = false,
   classMemberships,
   assignedHomework = [],
   liveSessions = [],
@@ -153,6 +155,7 @@ export function PrimaryDashboardClient({
 
       <StudentHomeLanding
         studentKey={studentKey}
+        primaryTourSeen={primaryTourSeen}
         guideEnabled={!overlayOpen && !vocabSetOpen && !grammarPosterSlug}
         model={homeModel}
         progressModel={progressModel}

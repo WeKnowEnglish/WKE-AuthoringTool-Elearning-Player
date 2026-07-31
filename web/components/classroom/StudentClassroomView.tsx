@@ -20,6 +20,7 @@ import { ClassMeetingSchedule } from "@/components/classroom/ClassMeetingSchedul
 
 type Props = {
   membership: StudentClassMembership;
+  memberships: StudentClassMembership[];
   posts: ClassPost[];
   materials?: StudentClassMaterial[];
   schedule?: StudentClassSchedule;
@@ -38,6 +39,7 @@ type Props = {
  */
 export function StudentClassroomView({
   membership,
+  memberships,
   posts,
   materials = [],
   schedule = { slots: [], nextMeeting: null },
@@ -67,6 +69,8 @@ export function StudentClassroomView({
     >
       <ClassroomShell
         classTitle={membership.title}
+        currentClass={membership}
+        memberships={memberships}
         homeHref={homeHref}
         homeLabel={homeLabel}
         liveSession={liveSession}

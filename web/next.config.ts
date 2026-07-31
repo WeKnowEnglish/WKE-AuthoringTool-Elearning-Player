@@ -38,6 +38,7 @@ function supabaseStoragePattern():
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  allowedDevOrigins: ["127.0.0.1", "192.168.2.84"],
   transpilePackages: ["@wke/explore-hotspots-play", "@wke/explore-hotspots-author"],
   turbopack: {
     // Local file dependencies live beside web/, outside the auto-detected root.

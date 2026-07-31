@@ -8,10 +8,13 @@ import { JOIN_CODE_LENGTH, normalizeJoinCode } from "@/lib/teacher-classes/join-
 export function JoinClassForm({
   onJoined,
   homeHref,
+  classroomBasePath,
 }: {
   onJoined?: (result: { classId: string; title: string }) => void;
   /** After a successful join from the standalone page, return here. */
   homeHref?: string;
+  /** After joining, open the newly joined classroom directly. */
+  classroomBasePath?: "/primary/class" | "/secondary/class";
 } = {}) {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -31,6 +34,10 @@ export function JoinClassForm({
       setSuccess(`You joined "${result.title}".`);
       setCode("");
       onJoined?.({ classId: result.classId, title: result.title });
+      if (classroomBasePath) {
+        router.push(`${classroomBasePath}/${encodeURIComponent(result.classId)}`);
+        return;
+      }
       if (homeHref) {
         router.push(homeHref);
         return;

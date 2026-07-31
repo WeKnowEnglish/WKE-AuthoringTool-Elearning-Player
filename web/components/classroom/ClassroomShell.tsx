@@ -20,6 +20,8 @@ import {
   type StudentClassroomTabSettings,
 } from "@/lib/classroom/classroom-tabs";
 import { ClassroomLiveStatusButton } from "@/components/classroom/ClassroomLiveStatusButton";
+import { ClassroomClassSwitcher } from "@/components/classroom/ClassroomClassSwitcher";
+import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
 
 const TAB_ICONS: Record<ClassroomTabId, typeof Home> = {
@@ -31,6 +33,8 @@ const TAB_ICONS: Record<ClassroomTabId, typeof Home> = {
 
 type Props = {
   classTitle: string;
+  currentClass: StudentClassMembership;
+  memberships: StudentClassMembership[];
   homeHref: string;
   homeLabel?: string;
   liveSession?: StudentClassLiveSession | null;
@@ -42,6 +46,8 @@ type Props = {
 
 export function ClassroomShell({
   classTitle,
+  currentClass,
+  memberships,
   homeHref,
   homeLabel = "Back to home",
   liveSession = null,
@@ -173,7 +179,14 @@ export function ClassroomShell({
             </h1>
           </div>
 
-          <ClassroomLiveStatusButton session={liveSession} />
+          <div className="flex shrink-0 items-center gap-2">
+            <ClassroomLiveStatusButton session={liveSession} />
+            <ClassroomClassSwitcher
+              currentClass={currentClass}
+              memberships={memberships}
+              tone={tone}
+            />
+          </div>
         </div>
 
         {showNav ? (

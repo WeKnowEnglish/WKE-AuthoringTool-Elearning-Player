@@ -37,9 +37,9 @@ function tabletEntryStyle(progress: number, index: number): CSSProperties {
 
 const onlineStudents = [
   { src: `${ASSET_ROOT}/student-purple-online-transparent.webp`, position: "left-0 top-0" },
-  { src: `${ASSET_ROOT}/student-blue-online-transparent.webp`, position: "left-[8%] bottom-0" },
+  { src: `${ASSET_ROOT}/student-blue-online-transparent.webp`, position: "left-[8%] bottom-[18%] sm:bottom-0" },
   { src: `${ASSET_ROOT}/student-green-online-transparent.webp`, position: "right-0 top-0" },
-  { src: `${ASSET_ROOT}/student-yellow-online-transparent.webp`, position: "right-[8%] bottom-0" },
+  { src: `${ASSET_ROOT}/student-yellow-online-transparent.webp`, position: "right-[8%] bottom-[18%] sm:bottom-0" },
 ] as const;
 
 const teacherBenefits: Array<{
@@ -152,7 +152,7 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
 
       <section ref={scrollSceneRef} aria-label={embedded ? "Connected classroom learning story" : undefined} className="relative h-[300svh] min-h-[100rem] sm:h-[400svh] sm:min-h-[124rem]">
         <div className={`sticky top-0 flex h-dvh min-h-[34rem] flex-col overflow-hidden bg-white sm:min-h-[38rem] ${embedded ? "pt-0" : "pt-16"}`}>
-          <div className="relative z-30 mx-auto w-full max-w-7xl px-4 pt-4 text-center sm:px-8 sm:pt-6">
+          <div className="relative z-30 mx-auto w-full max-w-7xl translate-y-6 px-4 pt-4 text-center sm:translate-y-0 sm:px-8 sm:pt-6">
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#d55f3d]">
               One learning relationship
             </p>
@@ -181,32 +181,32 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
           <div className="relative mx-auto min-h-0 w-full max-w-7xl flex-1 px-2 pb-4 sm:px-6 sm:pb-6">
             <div className="relative mx-auto h-full min-h-[26rem] max-w-6xl">
               <div
-                className="absolute bottom-[8%] left-0 h-[80%] w-[44%] transition-[opacity,transform] duration-75 ease-linear sm:bottom-0 sm:h-[88%] sm:w-[34%]"
+                className="absolute bottom-[12%] left-[2%] h-[66%] w-[36%] transition-[opacity,transform] duration-75 ease-linear sm:bottom-0 sm:left-0 sm:h-[88%] sm:w-[34%]"
                 style={tabletExitStyle(classroomOut, "left")}
               >
                 <Image src={`${ASSET_ROOT}/students-left-transparent.webp`} alt="Two students sharing a tablet in class" fill sizes="34vw" className="object-contain object-bottom" priority />
               </div>
               <div
-                className="absolute bottom-[8%] right-0 h-[80%] w-[44%] transition-[opacity,transform] duration-75 ease-linear sm:bottom-0 sm:h-[88%] sm:w-[34%]"
+                className="absolute bottom-[12%] right-[2%] h-[66%] w-[36%] transition-[opacity,transform] duration-75 ease-linear sm:bottom-0 sm:right-0 sm:h-[88%] sm:w-[34%]"
                 style={tabletExitStyle(classroomOut, "right")}
               >
                 <Image src={`${ASSET_ROOT}/students-right-transparent.webp`} alt="Two students sharing a tablet in class" fill sizes="34vw" className="object-contain object-bottom" priority />
               </div>
 
               <div
-                className="absolute bottom-[8%] left-1/2 z-20 h-full w-[46%] -translate-x-1/2 scale-125 sm:bottom-auto sm:top-1/2 sm:h-full sm:w-[44%] sm:-translate-y-1/2 sm:scale-100"
+                className="absolute bottom-[18%] left-1/2 z-20 h-full w-[46%] -translate-x-1/2 scale-125 sm:bottom-auto sm:top-1/2 sm:h-full sm:w-[44%] sm:-translate-y-1/2 sm:scale-100"
                 style={{
                   left: `${50 + teacherBenefitsIn * 28}%`,
                   marginTop: `${teacherLift * -10}px`,
                   width: `${44 - teacherBenefitsIn * 7}%`,
                 }}
               >
-                <Image src={`${ASSET_ROOT}/teacher-transparent.webp`} alt="English teacher guiding the class with a tablet" fill sizes="(max-width: 640px) 46vw, 44vw" className="object-contain object-bottom sm:object-center" priority />
+                <Image src={`${ASSET_ROOT}/teacher-transparent.webp`} alt="English teacher guiding the class with a tablet" fill sizes="(max-width: 640px) 38vw, 44vw" className="scale-[0.84] object-contain object-bottom sm:scale-100 sm:object-center" priority />
               </div>
 
               <svg
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-10 h-full w-full"
+                className="pointer-events-none absolute inset-0 z-10 h-full w-full -translate-y-[9%] sm:translate-y-0"
                 viewBox="0 0 1000 650"
                 fill="none"
                 style={{ opacity: connectionIn * (1 - onlineStudentsOut) }}
@@ -226,7 +226,7 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
                 return (
                   <div
                     key={student.src}
-                    className={`absolute z-0 h-[43%] w-[39%] transition-[opacity,transform] duration-75 ease-linear sm:w-[31%] ${student.position}`}
+                    className={`absolute z-0 h-[34%] w-[31%] transition-[opacity,transform] duration-75 ease-linear sm:h-[43%] sm:w-[31%] ${student.position}`}
                     style={{
                       ...tabletEntryStyle(itemIn, index),
                       opacity: itemIn * (1 - onlineStudentsOut),
@@ -239,7 +239,7 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
               })}
 
               <div
-                className="absolute bottom-[7%] left-[2%] z-30 grid h-[78%] w-[62%] grid-cols-2 gap-2 transition-[opacity,transform] duration-100 sm:bottom-[5%] sm:left-[4%] sm:h-[82%] sm:w-[55%] sm:gap-4"
+                className="absolute bottom-[19%] left-[5%] z-30 grid h-[46%] w-[48%] grid-cols-2 gap-1.5 transition-[opacity,transform] duration-100 sm:bottom-[5%] sm:left-[4%] sm:h-[82%] sm:w-[55%] sm:gap-4"
                 style={{
                   opacity: teacherBenefitsIn,
                   transform: `translate3d(${(1 - teacherBenefitsIn) * -12}vw, 0, 0) scale(${0.9 + teacherBenefitsIn * 0.1})`,
@@ -253,27 +253,27 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
                     <button
                       key={benefit.title}
                       type="button"
-                      className="teacher-benefit-card group relative min-h-0 rounded-2xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#83bffc] focus-visible:ring-offset-2"
+                      className="teacher-benefit-card group relative min-h-0 rounded-xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#83bffc] focus-visible:ring-offset-2 sm:rounded-2xl"
                       aria-label={`${benefit.title}: ${benefit.detail}`}
                       aria-pressed={flippedCard === benefit.title}
                       onClick={() => setFlippedCard((current) => current === benefit.title ? null : benefit.title)}
                     >
-                      <span className={`teacher-benefit-card-inner absolute inset-0 block rounded-2xl ${flippedCard === benefit.title ? "is-flipped" : ""}`}>
-                        <span className="teacher-benefit-card-face absolute inset-0 flex overflow-hidden rounded-2xl border-2 border-[#14245e]/10 bg-gradient-to-br from-white to-[#f6f8fc] p-2 text-center shadow-[0_8px_24px_rgba(20,36,94,0.12)] sm:p-4">
+                      <span className={`teacher-benefit-card-inner absolute inset-0 block rounded-xl sm:rounded-2xl ${flippedCard === benefit.title ? "is-flipped" : ""}`}>
+                        <span className="teacher-benefit-card-face absolute inset-0 flex overflow-hidden rounded-xl border-2 border-[#14245e]/10 bg-gradient-to-br from-white to-[#f6f8fc] p-1.5 text-center shadow-[0_8px_24px_rgba(20,36,94,0.12)] sm:rounded-2xl sm:p-4">
                           <span className="m-auto flex flex-col items-center">
                           <span
-                            className="flex h-10 w-10 items-center justify-center rounded-2xl text-white shadow-sm sm:h-14 sm:w-14"
+                            className="flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-sm sm:h-14 sm:w-14 sm:rounded-2xl"
                             style={{ backgroundColor: benefit.color }}
                           >
-                            <Icon className="h-5 w-5 sm:h-7 sm:w-7" aria-hidden="true" />
+                            <Icon className="h-4 w-4 sm:h-7 sm:w-7" aria-hidden="true" />
                           </span>
-                          <strong className="mt-2 text-sm font-black text-[#14245e] sm:mt-3 sm:text-xl">
+                          <strong className="mt-1.5 text-xs font-black text-[#14245e] sm:mt-3 sm:text-xl">
                             {benefit.title}
                           </strong>
                           </span>
                         </span>
                         <span
-                          className="teacher-benefit-card-face teacher-benefit-card-back absolute inset-0 flex overflow-hidden rounded-2xl border-2 border-white/30 p-3 text-center text-white shadow-[0_8px_24px_rgba(20,36,94,0.18)] sm:p-5"
+                          className="teacher-benefit-card-face teacher-benefit-card-back absolute inset-0 flex overflow-hidden rounded-xl border-2 border-white/30 p-2 text-center text-white shadow-[0_8px_24px_rgba(20,36,94,0.18)] sm:rounded-2xl sm:p-5"
                           style={{ backgroundColor: benefit.color }}
                         >
                           <span>

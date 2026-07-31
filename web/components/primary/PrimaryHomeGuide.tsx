@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { playSfx } from "@/lib/audio/sfx";
+import { createClient } from "@/lib/supabase/client";
 
 type GuideStep = {
   target?: string;
@@ -81,6 +82,7 @@ type Props = {
   enabled: boolean;
   muted: boolean;
   studentKey: string;
+  initiallySeen: boolean;
   enrolledInClass: boolean;
   hasIncompleteHomework: boolean;
   onJoinClass: () => void;
@@ -102,6 +104,7 @@ export function PrimaryHomeGuide({
   enabled,
   muted,
   studentKey,
+  initiallySeen,
   enrolledInClass,
   hasIncompleteHomework,
   onJoinClass,
@@ -141,15 +144,19 @@ export function PrimaryHomeGuide({
 
   useEffect(() => {
     if (!enabled) return;
+    if (initiallySeen) return;
     if (window.localStorage.getItem(storageKey)) return;
     const timer = window.setTimeout(() => setStep(0), 450);
     return () => window.clearTimeout(timer);
-  }, [enabled, storageKey]);
+  }, [enabled, initiallySeen, storageKey]);
 
   const finish = useCallback((status: "completed" | "skipped") => {
     window.localStorage.setItem(storageKey, status);
     setStep(null);
     setTargetRect(null);
+    void createClient().auth.updateUser({
+      data: { primary_home_tour_version: 2 },
+    });
   }, [storageKey]);
 
   const replayTour = useCallback(() => {

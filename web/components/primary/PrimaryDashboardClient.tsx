@@ -33,6 +33,7 @@ import { markExplorationNode } from "@/lib/worlds/exploration";
 import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
+  studentKey: string;
   classMemberships: StudentClassMembership[];
   assignedHomework?: StudentHomeworkCard[];
   liveSessions?: StudentClassLiveSession[];
@@ -44,6 +45,7 @@ type Props = {
 };
 
 export function PrimaryDashboardClient({
+  studentKey,
   classMemberships,
   assignedHomework = [],
   liveSessions = [],
@@ -60,10 +62,7 @@ export function PrimaryDashboardClient({
     ...PRIMARY_SSR_PROGRESS,
   }));
   const [reviewModel, setReviewModel] = useState(() => ({ ...PRIMARY_SSR_REVIEW }));
-  const [classSelectorOpen, setClassSelectorOpen] = useState(
-    classMemberships.length === 0,
-  );
-  const [autoPromptDismissed, setAutoPromptDismissed] = useState(false);
+  const [classSelectorOpen, setClassSelectorOpen] = useState(false);
 
   const [vocabSetOpen, setVocabSetOpen] = useState(false);
   const [activeVocabSetId, setActiveVocabSetId] = useState<VocabSetId | null>(null);
@@ -124,8 +123,7 @@ export function PrimaryDashboardClient({
     openVocabularySet(initialSetId);
   }, [hydrated, initialSetConsumed, initialSetId, openVocabularySet]);
 
-  const overlayOpen =
-    classSelectorOpen || (classMemberships.length === 0 && !autoPromptDismissed);
+  const overlayOpen = classSelectorOpen;
 
   const showSecondaryNotice =
     initialMessage === "secondary_for_a2" || initialMessage === "secondary_path_only";
@@ -149,12 +147,13 @@ export function PrimaryDashboardClient({
         open={overlayOpen}
         onClose={() => {
           setClassSelectorOpen(false);
-          setAutoPromptDismissed(true);
         }}
         memberships={classMemberships}
       />
 
       <StudentHomeLanding
+        studentKey={studentKey}
+        guideEnabled={!overlayOpen && !vocabSetOpen && !grammarPosterSlug}
         model={homeModel}
         progressModel={progressModel}
         reviewModel={reviewModel}

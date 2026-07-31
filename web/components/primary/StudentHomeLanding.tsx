@@ -26,6 +26,7 @@ import { PrimaryProgressTab } from "@/components/primary/PrimaryProgressTab";
 import { PrimaryReviewTab } from "@/components/primary/PrimaryReviewTab";
 import { TodaysLearningAssignments } from "@/components/primary/TodaysLearningAssignments";
 import { PrimaryHomeResumeRow } from "@/components/primary/PrimaryHomeResumeRow";
+import { PrimaryHomeGuide } from "@/components/primary/PrimaryHomeGuide";
 import { StudentLiveNowStrip } from "@/components/classroom/StudentLiveNowStrip";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
@@ -87,6 +88,8 @@ export type PrimaryHomeModel = {
 };
 
 type Props = {
+  studentKey?: string;
+  guideEnabled?: boolean;
   model?: Partial<PrimaryHomeModel>;
   /** Live My Progress summary (Phase 4). */
   progressModel?: PrimaryProgressModel;
@@ -210,6 +213,8 @@ function mergeModel(partial?: Partial<PrimaryHomeModel>): PrimaryHomeModel {
 }
 
 export function StudentHomeLanding({
+  studentKey = "student",
+  guideEnabled = true,
   model: modelPartial,
   progressModel,
   reviewModel,
@@ -273,6 +278,7 @@ export function StudentHomeLanding({
           return (
             <button
               key={item.id}
+              data-guide={item.id === "learn" || item.id === "class" ? item.id : undefined}
               type="button"
               onClick={() => go(item.id)}
               className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-bold transition ${
@@ -385,6 +391,7 @@ export function StudentHomeLanding({
 
           <button
             type="button"
+            data-guide="progress"
             onClick={() => go("progress")}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pl-purple)] text-sm font-black text-white"
             aria-label={`${model.studentName} — My Progress`}
@@ -468,18 +475,22 @@ export function StudentHomeLanding({
           <div className="mx-auto flex max-w-5xl flex-col gap-5 pb-24 lg:pb-8">
             <StudentLiveNowStrip sessions={liveSessions} tone="primary" />
 
-            <TodaysLearningAssignments
-              enrolled={enrolledInClass}
-              items={assignedHomework}
-              onJoinClass={onOpenClassSelector}
-            />
+            <div data-guide="assignments">
+              <TodaysLearningAssignments
+                enrolled={enrolledInClass}
+                items={assignedHomework}
+                onJoinClass={onOpenClassSelector}
+              />
+            </div>
 
-            <PrimaryHomeResumeRow
-              progressModel={progressModel}
-              today={model.today}
-              onContinueLearning={openContinueLearning}
-              onOpenProgress={() => go("progress")}
-            />
+            <div data-guide="continue">
+              <PrimaryHomeResumeRow
+                progressModel={progressModel}
+                today={model.today}
+                onContinueLearning={openContinueLearning}
+                onOpenProgress={() => go("progress")}
+              />
+            </div>
           </div>
           )}
         </main>
@@ -491,13 +502,14 @@ export function StudentHomeLanding({
         aria-label="Primary mobile"
       >
         {NAV.filter((item) =>
-          ["home", "learn", "games"].includes(item.id),
+          ["home", "learn", "class", "games"].includes(item.id),
         ).map((item) => {
           const Icon = item.icon;
           const active = activeNav === item.id;
           return (
             <button
               key={item.id}
+              data-guide={item.id === "learn" || item.id === "class" ? item.id : undefined}
               type="button"
               onClick={() => go(item.id)}
               className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-extrabold ${
@@ -523,6 +535,19 @@ export function StudentHomeLanding({
           </button>
         </div>
       )}
+
+      <PrimaryHomeGuide
+        enabled={guideEnabled}
+        muted={muted}
+        studentKey={studentKey}
+        enrolledInClass={enrolledInClass}
+        hasIncompleteHomework={assignedHomework.some((item) => !item.completedAt)}
+        onJoinClass={() => onOpenClassSelector?.()}
+        onGoHome={() => go("home")}
+        onGoLearn={() => go("learn")}
+        onGoProgress={() => go("progress")}
+        onContinueLearning={openContinueLearning}
+      />
     </div>
   );
 }

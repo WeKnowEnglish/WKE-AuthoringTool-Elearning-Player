@@ -396,6 +396,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/pilots/connected-classroom-hero",
+    title: "Connected classroom homepage hero",
+    description:
+      "Scroll-driven homepage concept that transforms an in-person tablet lesson into four connected online student windows while keeping the teacher central.",
+    group: "experiments",
+    status: "review",
+  },
+  {
     href: "/pilots/bug-market",
     title: "Bug Market multiplayer mechanics",
     description: "Developer-only two-student in-memory meadow with offline action queue and reconnect replay. No Liveblocks or login required.",

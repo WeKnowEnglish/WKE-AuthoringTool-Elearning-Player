@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { HomepageAnalytics } from "@/components/landing/HomepageAnalytics";
+import { ConnectedClassroomHeroPilot } from "@/components/pilots/ConnectedClassroomHeroPilot";
 import { LandingAudiencePathways } from "@/components/landing/LandingAudiencePathways";
 import { LandingExpertiseSection } from "@/components/landing/LandingExpertiseSection";
 import { LandingFreeActivitiesSection } from "@/components/landing/LandingFreeActivitiesSection";
@@ -84,6 +85,7 @@ export default async function LevelLandingPage() {
         <LandingHeader />
         <main>
           <LandingHero />
+          <ConnectedClassroomHeroPilot embedded />
           <LandingPathPicker />
           <LandingWorkflowSection />
           <LandingTeachersSection />

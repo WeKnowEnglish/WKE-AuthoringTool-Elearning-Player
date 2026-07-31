@@ -11,6 +11,8 @@ export type LandingPathConfig = {
   meta: { icon: LandingIconName; label: string }[];
   pills: { label: string; icon: LandingIconName; tone: string }[];
   ctaLabel: string;
+  /** Compact bullets under the path CTA (Age · Skills · Activities). */
+  highlights: [string, string, string];
 };
 
 export const LANDING_PATHS: LandingPathConfig[] = [
@@ -30,6 +32,11 @@ export const LANDING_PATHS: LandingPathConfig[] = [
       { label: "Games", icon: "game", tone: "bg-violet-100 text-violet-800" },
     ],
     ctaLabel: "Enter Primary",
+    highlights: [
+      "Ages 6–11 · Grades 1–5",
+      "Phonics, vocabulary & early reading",
+      "Games, stories & interactive practice",
+    ],
   },
   {
     band: "a2",
@@ -47,6 +54,11 @@ export const LANDING_PATHS: LandingPathConfig[] = [
       { label: "Quests", icon: "compass", tone: "bg-cyan-100 text-cyan-800" },
     ],
     ctaLabel: "Enter Secondary",
+    highlights: [
+      "Ages 11–15 · Grades 6–9",
+      "Grammar, vocabulary & skill tracking",
+      "Quests, smart practice & tools",
+    ],
   },
 ];
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { joinClassByCode } from "@/lib/actions/student-classes";
 import { JOIN_CODE_LENGTH, normalizeJoinCode } from "@/lib/teacher-classes/join-code";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 export function JoinClassForm({
   onJoined,
@@ -25,13 +26,22 @@ export function JoinClassForm({
   const submit = () => {
     setError(null);
     setSuccess(null);
+    recordAppDiagnostic("student", "class", "class_join_submitted", undefined, {
+      status: "started",
+    });
     startTransition(async () => {
       const result = await joinClassByCode(code);
       if (!result.ok) {
+        recordAppDiagnostic("student", "class", "class_join_failed", {
+          reason: result.error,
+        }, { kind: "error", status: "failed", errorCode: "class_join_rejected" });
         setError(result.error);
         return;
       }
       setSuccess(`You joined "${result.title}".`);
+      recordAppDiagnostic("student", "class", "class_joined", {
+        classTitle: result.title,
+      }, { classId: result.classId, status: "succeeded" });
       setCode("");
       onJoined?.({ classId: result.classId, title: result.title });
       if (classroomBasePath) {

@@ -34,6 +34,7 @@ import type { StudentHomeworkCard } from "@/lib/class-homework/types";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import { readActiveStudentClassId } from "@/lib/student-classes/active-class";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 import {
   PRIMARY_CHROME_CLASS,
   PRIMARY_CHROME_STYLE,
@@ -253,6 +254,9 @@ export function StudentHomeLanding({
         (storedClassId
           ? classMemberships.find((item) => item.classId === storedClassId)
           : null) ?? classMemberships[0] ?? null;
+      recordAppDiagnostic("student", "class", membership ? "classroom_open_requested" : "join_class_opened", {
+        enrolled: Boolean(membership),
+      }, membership ? { classId: membership.classId, status: "started" } : { status: "started" });
       router.push(
         membership
           ? `/primary/class/${encodeURIComponent(membership.classId)}`

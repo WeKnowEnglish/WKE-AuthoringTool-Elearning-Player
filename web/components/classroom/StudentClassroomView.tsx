@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
@@ -17,6 +17,7 @@ import { ClassroomStream } from "@/components/classroom/ClassroomStream";
 import { ClassPostFeed } from "@/components/classroom/ClassPostFeed";
 import { ClassMaterialsList } from "@/components/classroom/ClassMaterialsList";
 import { ClassMeetingSchedule } from "@/components/classroom/ClassMeetingSchedule";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   membership: StudentClassMembership;
@@ -52,6 +53,13 @@ export function StudentClassroomView({
   initialTab = "stream",
   tabSettings = membership.studentTabs ?? DEFAULT_STUDENT_CLASSROOM_TAB_SETTINGS,
 }: Props) {
+  useEffect(() => {
+    recordAppDiagnostic("student", "class", "classroom_opened", {
+      classTitle: membership.title,
+      live: Boolean(liveSession),
+    }, { classId: membership.classId, status: "succeeded" });
+  }, [liveSession, membership.classId, membership.title]);
+
   const noticeboardHref = tabSettings.noticeboard
     ? `${homeworkBasePath}/class/${encodeURIComponent(membership.classId)}?tab=noticeboard`
     : undefined;

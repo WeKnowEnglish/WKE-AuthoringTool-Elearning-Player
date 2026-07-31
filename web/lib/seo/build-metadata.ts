@@ -11,6 +11,8 @@ type BuildPublicMetadataInput = {
   pathname: string;
   /** When true, ignore the root title template. */
   absoluteTitle?: boolean;
+  /** Override Open Graph / Twitter title (defaults to `title | SITE_NAME`). */
+  openGraphTitle?: string;
   robots?: Metadata["robots"];
   openGraphImage?: string;
 };
@@ -20,6 +22,7 @@ export function buildPublicMetadata({
   description,
   pathname,
   absoluteTitle = false,
+  openGraphTitle,
   robots = robotsIndexFollow,
   openGraphImage,
 }: BuildPublicMetadataInput): Metadata {
@@ -27,13 +30,15 @@ export function buildPublicMetadata({
   const resolvedTitle = absoluteTitle
     ? { absolute: title }
     : title;
+  const socialTitle =
+    openGraphTitle ?? (absoluteTitle ? title : `${title} | ${SITE_NAME}`);
 
   return {
     title: resolvedTitle,
     description,
     alternates: { canonical: url },
     openGraph: {
-      title: absoluteTitle ? title : `${title} | ${SITE_NAME}`,
+      title: socialTitle,
       description,
       url,
       siteName: SITE_NAME,
@@ -45,7 +50,7 @@ export function buildPublicMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: absoluteTitle ? title : `${title} | ${SITE_NAME}`,
+      title: socialTitle,
       description,
     },
     robots,

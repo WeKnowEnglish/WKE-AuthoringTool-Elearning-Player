@@ -216,7 +216,7 @@ export function exportGamesMcQuizForLessonPlayer(
     if (item.bodyText) screen.body_text = item.bodyText;
     if (item.imageUrl) {
       screen.image_url = item.imageUrl;
-      screen.image_fit = item.imageFit ?? "contain";
+      screen.image_fit = "contain";
     }
     if (item.promptAudioUrl) screen.prompt_audio_url = item.promptAudioUrl;
     return screen;

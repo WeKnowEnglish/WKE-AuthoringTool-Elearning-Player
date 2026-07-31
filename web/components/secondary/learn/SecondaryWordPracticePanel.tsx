@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { KidButton } from "@/components/kid-ui/KidButton";
+import { SecondaryButton } from "@/components/secondary/SecondaryButton";
 import { flushMasterySyncQueueForCurrentStudent } from "@/lib/mastery/supabase-sync";
 import { notifySecondarySessionChanged } from "@/lib/secondary/secondary-session-events";
 import {
@@ -211,22 +211,22 @@ export function SecondaryWordPracticePanel({
   if (questions.length === 0) return null;
 
   return (
-    <section className="rounded-xl border-2 border-kid-ink/25 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border-2 border-sec-ink/25 bg-white p-4 shadow-sm">
       <h3 className={secondaryUi.cardTitle}>Practice this word</h3>
 
       {isComplete ? (
         <div className="mt-3 space-y-3">
-          <p className={`${secondaryUi.body} text-kid-ink/85`} role="status">
+          <p className={`${secondaryUi.body} text-sec-ink/85`} role="status">
             You finished {questions.length} question{questions.length === 1 ? "" : "s"} — {correctCount}{" "}
             correct.
           </p>
           <div className={clsx("flex flex-wrap gap-2", centered && "justify-center")}>
-            <KidButton type="button" variant="secondary" className="!min-h-10 text-base" onClick={handlePracticeAgain}>
+            <SecondaryButton type="button" variant="secondary" className="!min-h-10 text-base" onClick={handlePracticeAgain}>
               Practice again
-            </KidButton>
-            <KidButton type="button" className="!min-h-10 text-base" onClick={onClose}>
+            </SecondaryButton>
+            <SecondaryButton type="button" className="!min-h-10 text-base" onClick={onClose}>
               Back to quiz
-            </KidButton>
+            </SecondaryButton>
           </div>
         </div>
       ) : currentQuestion ? (
@@ -254,12 +254,12 @@ export function SecondaryWordPracticePanel({
                 className={clsx(
                   `w-full rounded-lg border-2 px-3 py-3 text-left ${secondaryUi.body} font-extrabold leading-snug transition-[transform,box-shadow] [touch-action:manipulation] hover:brightness-[0.98] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100`,
                   selectedChoiceId === choice.id
-                    ? "border-kid-ink bg-kid-accent text-kid-ink"
-                    : "border-kid-ink/25 bg-kid-panel/30 text-kid-ink",
+                    ? "border-sec-ink bg-sec-accent text-sec-ink"
+                    : "border-sec-ink/25 bg-sec-panel/30 text-sec-ink",
                   choiceLocked && "opacity-80",
                 )}
               >
-                <span className="mr-2 tabular-nums text-kid-ink/50">{index + 1}.</span>
+                <span className="mr-2 tabular-nums text-sec-ink/50">{index + 1}.</span>
                 {choice.label}
               </button>
               );

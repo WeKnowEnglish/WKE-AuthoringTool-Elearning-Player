@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import questionsJson from "@/content/grammar/there-is-there-are-poster-a1.json";
 import {
   buildInteractionTarget,
   indexInteractionsByTarget,
   interactionTargetKey,
 } from "./resolve-interaction-target";
-import { parseGrammarModule } from "../validate-module";
+import type { GrammarInteraction } from "../schema";
 
 describe("resolve-interaction-target", () => {
   it("builds stable target keys", () => {
@@ -21,8 +20,23 @@ describe("resolve-interaction-target", () => {
   });
 
   it("indexes interactions by target", () => {
-    const module = parseGrammarModule(questionsJson, { posterContentRules: false });
-    const map = indexInteractionsByTarget(module.interactions);
+    const interactions: GrammarInteraction[] = [
+      {
+        id: "reveal-card1-left-0",
+        target: { cardId: 1, region: "leftColumn", itemIndex: 0 },
+        trigger: "tap",
+        action: "reveal",
+        payload: { text: "Example reveal", label: "Hint" },
+      },
+      {
+        id: "highlight-card3-banner",
+        target: { cardId: 3, region: "banner" },
+        trigger: "tap",
+        action: "highlight",
+        payload: { durationMs: 1200 },
+      },
+    ];
+    const map = indexInteractionsByTarget(interactions);
     expect(map.get("1:leftColumn:0")?.[0]?.action).toBe("reveal");
     expect(map.get("3:banner")?.[0]?.action).toBe("highlight");
   });

@@ -108,7 +108,7 @@ describe("buildVocabularySetScreens", () => {
     if (open?.type === "start") {
       expect(open.cta_label).toBe("Start learning");
       expect(open.read_aloud_title).toBe("Breakfast Food");
-      expect(open.image_fit).toBe("cover");
+      expect(open.image_fit).toBe("contain");
       expect(open.image_url).toContain("supabase.co");
     }
     expect(last?.type).toBe("interaction");

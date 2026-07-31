@@ -4,6 +4,7 @@ import {
   countLocalHotspotMedia,
   publishLocalHotspotMedia,
 } from "@/lib/hotspots/publish-media";
+import { resolveExploreHotspotsMediaUrls } from "@/lib/hotspots/resolve-media-asset-urls";
 import type { ExploreHotspotsDocument } from "@/lib/hotspots/types";
 
 export type StudioExploreHotspotsRef = {
@@ -21,10 +22,44 @@ function slugify(value: string): string {
   );
 }
 
+/**
+ * Walk all on-tap action sequences in all hotspot elements and rename any
+ * duplicate action IDs. Activities saved with the old counter-based ID scheme
+ * (`action-${hotspotId}-${actions.length + 1}`) produced collisions after
+ * delete + re-add. This migration fixes them transparently on load.
+ */
+function deduplicateActionIds(doc: ExploreHotspotsDocument): ExploreHotspotsDocument {
+  const seenIds = new Set<string>();
+  let dirty = false;
+
+  const elements = doc.layout.elements.map((el) => {
+    if (el.kind !== "hotspot") return el;
+    const onTap = el.onTap;
+    if (!Array.isArray(onTap) || onTap.length === 0) return el;
+
+    const fixedActions = onTap.map((action) => {
+      if (!seenIds.has(action.id)) {
+        seenIds.add(action.id);
+        return action;
+      }
+      dirty = true;
+      const newId = `${action.id}-${Math.random().toString(36).slice(2, 7)}`;
+      seenIds.add(newId);
+      return { ...action, id: newId };
+    });
+
+    return { ...el, onTap: fixedActions };
+  });
+
+  if (!dirty) return doc;
+  return { ...doc, layout: { ...doc.layout, elements } };
+}
+
 export function validateExploreHotspotsDocument(
   raw: unknown,
 ): ExploreHotspotsDocument {
-  return parseWkeActivity(raw) as ExploreHotspotsDocument;
+  const doc = parseWkeActivity(raw) as ExploreHotspotsDocument;
+  return deduplicateActionIds(doc);
 }
 
 export async function listStudioExploreHotspots(): Promise<StudioExploreHotspotsRef[]> {
@@ -53,10 +88,14 @@ export async function listStudioExploreHotspots(): Promise<StudioExploreHotspots
 export async function getStudioExploreHotspots(
   activityId: string,
 ): Promise<{ id: string; document: ExploreHotspotsDocument }> {
-  const response = await fetch(`/api/studio/activities/${encodeURIComponent(activityId)}`, {
-    method: "GET",
-    credentials: "same-origin",
-  });
+  // Skip pack — authoring is enough for the workspace and avoids duplicating large media.
+  const response = await fetch(
+    `/api/studio/activities/${encodeURIComponent(activityId)}?include_pack=0`,
+    {
+      method: "GET",
+      credentials: "same-origin",
+    },
+  );
   const payload = (await response.json().catch(() => null)) as {
     ok?: boolean;
     id?: string;
@@ -90,6 +129,10 @@ export async function saveExploreHotspotsToStudio(input: {
       );
     }
   }
+
+  document = validateExploreHotspotsDocument(
+    await resolveExploreHotspotsMediaUrls(document),
+  );
 
   const pack = wkeActivityToExploreHotspotsPayload(document);
   const response = await fetch("/api/studio/activities", {

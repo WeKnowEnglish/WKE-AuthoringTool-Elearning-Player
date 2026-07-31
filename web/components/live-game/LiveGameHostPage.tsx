@@ -17,6 +17,8 @@ import {
   parseEnglishCraftDurationSelectValue,
   type EnglishCraftSessionDuration,
 } from "@/lib/live-game/modes/english-craft/config";
+import { BUG_MARKET_MODE } from "@/lib/live-game/modes/bug-market/config";
+import type { LiveGameModeId } from "@/lib/live-game/modes/types";
 import {
   LIVE_GAME_DEFAULT_AVATAR_ID,
   type LiveGameCharacterId,
@@ -53,6 +55,7 @@ export function LiveGameHostPage({
   const setupMountedAtRef = useRef(0);
   const creationIdRef = useRef<string | null>(null);
   const [displayName, setDisplayName] = useState("Teacher");
+  const [modeId, setModeId] = useState<LiveGameModeId>("english_craft");
   const [avatarId, setAvatarId] = useState<LiveGameCharacterId>(LIVE_GAME_DEFAULT_AVATAR_ID);
   const [durationMinutes, setDurationMinutes] = useState<EnglishCraftSessionDuration>(
     ENGLISH_CRAFT_MODE.defaultDurationMinutes as EnglishCraftSessionDuration,
@@ -275,7 +278,7 @@ export function LiveGameHostPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           displayName: name,
-          modeId: ENGLISH_CRAFT_MODE.id,
+          modeId,
           durationMinutes,
           avatarId,
           questionSetId: setId,
@@ -311,8 +314,8 @@ export function LiveGameHostPage({
         classId: payload.classId ?? null,
         classTitle: payload.classTitle ?? null,
         avatarId,
-        modeId: ENGLISH_CRAFT_MODE.id,
-        mapId: payload.mapId ?? ENGLISH_CRAFT_MODE.defaultMapId,
+        modeId,
+        mapId: payload.mapId ?? (modeId === "bug_market" ? BUG_MARKET_MODE.defaultMapId : ENGLISH_CRAFT_MODE.defaultMapId),
         durationMinutes: normalizeEnglishCraftDurationMinutes(
           payload.durationMinutes ?? durationMinutes ?? ENGLISH_CRAFT_MODE.defaultDurationMinutes,
         ),
@@ -342,15 +345,33 @@ export function LiveGameHostPage({
     <LiveGameLandingShell
       eyebrow="Teacher setup"
       title="Build a lively English session."
-      description={`${ENGLISH_CRAFT_MODE.title}: ${ENGLISH_CRAFT_MODE.subtitle}. Choose the practice, invite your students, and play together.`}
+      description="Choose a live game, pair it with English practice, invite your students, and play together."
       wide
     >
       <div>
         <h2 className="text-xl font-extrabold text-kid-ink">Room details</h2>
         <p className="mt-1 text-sm font-semibold text-kid-ink/70">
-          Mode: {ENGLISH_CRAFT_MODE.title} — {ENGLISH_CRAFT_MODE.subtitle}
+          Mode: {modeId === "bug_market" ? BUG_MARKET_MODE.title : ENGLISH_CRAFT_MODE.title}
         </p>
       </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-bold text-kid-ink">Game</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[ENGLISH_CRAFT_MODE, BUG_MARKET_MODE].map((mode) => (
+            <button
+              key={mode.id}
+              type="button"
+              onClick={() => setModeId(mode.id)}
+              aria-pressed={modeId === mode.id}
+              className={`rounded-2xl border-4 p-4 text-left transition ${modeId === mode.id ? "border-emerald-600 bg-emerald-50" : "border-kid-ink/20 bg-white hover:border-kid-ink/45"}`}
+            >
+              <span className="block text-lg font-black text-kid-ink">{mode.title}</span>
+              <span className="mt-1 block text-sm font-semibold text-kid-ink/70">{mode.subtitle}</span>
+            </button>
+          ))}
+        </div>
+      </fieldset>
 
       <label className="block space-y-1">
         <span className="text-sm font-bold text-kid-ink">Your name</span>
@@ -459,7 +480,7 @@ export function LiveGameHostPage({
         disabled={!createEnabled}
         onClick={() => void handleCreate()}
       >
-        {isSubmitting ? "Creating..." : "Create English Craft room"}
+        {isSubmitting ? "Creating..." : `Create ${modeId === "bug_market" ? BUG_MARKET_MODE.title : ENGLISH_CRAFT_MODE.title} room`}
       </KidButton>
     </LiveGameLandingShell>
   );

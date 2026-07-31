@@ -9,6 +9,8 @@ import type { EnglishCraftSessionDuration } from "@/lib/live-game/modes/english-
 import { ENGLISH_CRAFT_RESOURCE_NODES_V1 } from "@/lib/live-game/modes/english-craft/map-objects-v1";
 import { EMPTY_LIVE_GAME_RESOURCE_POOL } from "@/lib/live-game/resource-pool";
 import { DEFAULT_LIVE_GAME_CRAFTED_ITEMS } from "@/lib/live-game/server/read-crafted-items";
+import { getLiveGameModule } from "@/lib/live-game/modes/registry";
+import { createBugMarketInitialModeStorage } from "@/lib/live-game/modes/bug-market/state";
 
 function createInitialResourceNodes() {
   const nodes = new LiveMap<string, LiveObject<LiveGameResourceNodeState>>();
@@ -27,6 +29,30 @@ function createInitialResourceNodes() {
   return nodes;
 }
 
+function createEnglishCraftInitialModeStorage() {
+  return {
+    resourcePool: new LiveObject({ ...EMPTY_LIVE_GAME_RESOURCE_POOL }),
+    resourceNodes: createInitialResourceNodes(),
+    awardReceipts: new LiveMap(),
+    craftedItems: new LiveObject({ ...DEFAULT_LIVE_GAME_CRAFTED_ITEMS }),
+    unlockedObjects: new LiveObject({ boat_boarding: false }),
+    craftReceipts: new LiveMap(),
+    playerCarry: new LiveMap<string, LiveObject<LiveGamePlayerCarry>>(),
+    playerInventory: new LiveMap(),
+    playerHunger: new LiveMap(),
+  };
+}
+
+/** Mode-owned Storage fields; platform fields are created below. */
+export function createLiveGameModeInitialStorage(modeId: LiveGameModeId) {
+  switch (modeId) {
+    case "english_craft":
+      return createEnglishCraftInitialModeStorage();
+    case "bug_market":
+      return createBugMarketInitialModeStorage();
+  }
+}
+
 export function createLiveGameInitialStorage(input: {
   hostUserId: string;
   classId?: string | null;
@@ -38,6 +64,11 @@ export function createLiveGameInitialStorage(input: {
   questionSetId: string;
   questionSetVersion: number;
 }) {
+  const gameModule = getLiveGameModule(input.modeId);
+  if (gameModule.status !== "available") {
+    throw new Error(`Live game mode is not available: ${input.modeId}`);
+  }
+
   const session: LiveGameSessionState = {
     modeId: input.modeId,
     phase: "lobby",
@@ -62,17 +93,9 @@ export function createLiveGameInitialStorage(input: {
   return {
     session: new LiveObject(session),
     players: new LiveMap<string, LiveObject<import("@/lib/live-game/liveblocks/config").LiveGameLobbyPlayer>>(),
-    resourcePool: new LiveObject({ ...EMPTY_LIVE_GAME_RESOURCE_POOL }),
-    resourceNodes: createInitialResourceNodes(),
-    awardReceipts: new LiveMap(),
-    craftedItems: new LiveObject({ ...DEFAULT_LIVE_GAME_CRAFTED_ITEMS }),
-    unlockedObjects: new LiveObject({ boat_boarding: false }),
-    craftReceipts: new LiveMap(),
     playerPositions: new LiveMap(),
-    playerCarry: new LiveMap<string, LiveObject<LiveGamePlayerCarry>>(),
-    playerInventory: new LiveMap(),
-    playerHunger: new LiveMap(),
     questionDeckCursors: new LiveMap<string, number>(),
+    ...createLiveGameModeInitialStorage(input.modeId),
   };
 }
 

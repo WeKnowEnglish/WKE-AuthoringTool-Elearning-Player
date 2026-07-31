@@ -14,7 +14,8 @@ type Props = {
 };
 
 /**
- * Product B — Self Study topic quiz grid on Primary Home.
+ * Product B — Self Study topic quiz grid (retired from Primary Home).
+ * Kept for lab / future Learn shelf re-home.
  * @see docs/primary/PRIMARY_VOCAB_ACTIVITY_CONTRACT.md
  */
 export function SelfStudySection({ onOpenTopic }: Props) {

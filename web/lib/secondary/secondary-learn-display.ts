@@ -65,7 +65,7 @@ export function secondaryWordLearnStatusChipClass(status: SecondaryWordLearnStat
     case "mastered":
       return "text-emerald-900";
     default:
-      return "text-kid-ink/70";
+      return "text-sec-ink/70";
   }
 }
 
@@ -82,6 +82,6 @@ export function secondaryWordLearnChipClassName(status: SecondaryWordLearnStatus
     case "mastered":
       return "border-green-500 bg-green-100 text-green-950";
     default:
-      return "border-kid-ink/25 bg-kid-panel/30 text-kid-ink";
+      return "border-sec-ink/25 bg-sec-panel/30 text-sec-ink";
   }
 }

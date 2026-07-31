@@ -80,7 +80,10 @@ export function compileSecondaryClozeFromWordIds(input: {
 
   const { picked, fillerBlankIds, primaryTopicId } = topicPick;
   const title = buildClozeTitle(primaryTopicId, false);
-  const distractorSessionPool = buildDistractorSessionPool(pool, picked);
+  const sessionItems = input.wordItemIds
+    .map((wordItemId) => getSecondaryVocabItemById(wordItemId))
+    .filter((item): item is SecondaryVocabItem => Boolean(item));
+  const distractorSessionPool = buildDistractorSessionPool(sessionItems, picked);
 
   return {
     id: `cloze-daily-v3-${input.dateKey ?? "session"}-r${replayIndex}`,

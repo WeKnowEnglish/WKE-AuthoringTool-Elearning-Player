@@ -29,7 +29,7 @@ function makeItem(
 }
 
 describe("secondary-cloze-distractors", () => {
-  it("dedupes distractors and excludes correct answers", () => {
+  it("uses only non-blank words from the current session list", () => {
     const picked = [
       makeItem({
         wordItemId: "a1",
@@ -55,10 +55,12 @@ describe("secondary-cloze-distractors", () => {
     const pool = buildClozeDistractorPool({ picked, sessionPool });
     expect(pool).not.toContain("library");
     expect(pool).not.toContain("science");
-    expect(pool).toContain("classroom");
-    expect(pool).toContain("book");
     expect(pool).toContain("homework");
-    expect(pool).not.toContain("recipe");
+    expect(pool).toContain("recipe");
+    expect(pool).not.toContain("classroom");
+    expect(pool).not.toContain("book");
+    expect(pool).not.toContain("math");
+    expect(pool).not.toContain("experiment");
     expect(pool.length).toBeLessThanOrEqual(SECONDARY_CLOZE_MAX_DISTRACTORS);
   });
 
@@ -68,12 +70,11 @@ describe("secondary-cloze-distractors", () => {
         wordItemId: "a1",
         word: "library",
         topicId: "school-life",
-        distractors: ["a", "b", "c", "d", "e", "f", "g", "h", "i"],
       }),
     ];
     const sessionPool = [
       ...picked,
-      ...["j", "k", "l"].map((word, index) =>
+      ...["a", "b", "c", "d", "e", "f", "g", "h", "i"].map((word, index) =>
         makeItem({ wordItemId: `x${index}`, word, topicId: "school-life" }),
       ),
     ];

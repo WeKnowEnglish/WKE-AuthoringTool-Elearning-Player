@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArchiveClassButton } from "@/components/teacher/ArchiveClassButton";
+import { ClassSettingsTab } from "@/components/teacher/class-hub/ClassSettingsTab";
 import { CreateLessonTab } from "@/components/teacher/class-hub/CreateLessonTab";
 import { StudentsHomeworkTab } from "@/components/teacher/class-hub/StudentsHomeworkTab";
 import { TeachTab } from "@/components/teacher/class-hub/TeachTab";
 import type { TeacherTier } from "@/lib/auth/roles";
+import type { StudentClassroomTabSettings } from "@/lib/classroom/classroom-tabs";
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
+import type { ClassPost } from "@/lib/class-posts/types";
+import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
 import type { ClassLesson, LiveGameQuestionSetOption } from "@/lib/class-lessons/types";
 import type { LiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
@@ -19,12 +23,14 @@ import {
   parseClassHubTab,
   type ClassHubTab,
 } from "@/lib/teacher/class-hub-tabs";
+import type { TeacherSpaceItemSummary } from "@/lib/teacher-space/types";
 import type { WhiteboardRoundHistoryItem } from "@/lib/whiteboard/server/history";
 
 const TAB_LABELS: Record<ClassHubTab, string> = {
   teach: "Teach",
   lesson: "Create Lesson",
   students: "Students & Homework",
+  settings: "Settings",
 };
 
 export type TeacherClassHubClientProps = {
@@ -50,6 +56,8 @@ export type TeacherClassHubClientProps = {
   liveGameSets: LiveGameQuestionSetOption[];
   homework: ClassHomework[];
   homeworkCompletions: HomeworkCompletionSummary[];
+  classPosts: ClassPost[];
+  meetingSlots: ClassMeetingSlot[];
   packQuizzes: Array<{
     id: string;
     title: string;
@@ -62,6 +70,8 @@ export type TeacherClassHubClientProps = {
     cardCount: number;
     packId: string | null;
   }>;
+  spaceItems: TeacherSpaceItemSummary[];
+  studentTabSettings: StudentClassroomTabSettings;
 };
 
 export function TeacherClassHubClient({
@@ -83,8 +93,12 @@ export function TeacherClassHubClient({
   liveGameSets,
   homework,
   homeworkCompletions,
+  classPosts,
+  meetingSlots,
   packQuizzes,
   packFlashcardSets,
+  spaceItems,
+  studentTabSettings,
 }: TeacherClassHubClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -195,8 +209,19 @@ export function TeacherClassHubClient({
           wordPacks={wordPacks}
           homework={homework}
           homeworkCompletions={homeworkCompletions}
+          classPosts={classPosts}
+          meetingSlots={meetingSlots}
           packQuizzes={packQuizzes}
           packFlashcardSets={packFlashcardSets}
+          spaceItems={spaceItems}
+        />
+      ) : null}
+
+      {activeTab === "settings" ? (
+        <ClassSettingsTab
+          classId={classId}
+          archived={archived}
+          initialSettings={studentTabSettings}
         />
       ) : null}
     </div>

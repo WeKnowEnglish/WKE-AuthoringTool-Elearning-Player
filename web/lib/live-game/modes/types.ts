@@ -1,7 +1,7 @@
 import type { Rect } from "@/lib/teststartpage/chase-game-physics";
 import type { GrassTileId } from "@/lib/live-game/tiles/grass-tile-pack";
 
-export type LiveGameModeId = "english_craft";
+export type LiveGameModeId = "english_craft" | "bug_market";
 
 export type LiveGameModeConfig = {
   id: LiveGameModeId;
@@ -9,6 +9,22 @@ export type LiveGameModeConfig = {
   subtitle: string;
   defaultDurationMinutes: number;
   defaultMapId: string;
+};
+
+export type LiveGameModuleStatus = "available" | "foundation";
+
+/**
+ * Client-safe contract registered by every live game.
+ *
+ * Gameplay state, server commands, and React renderers stay in the game module;
+ * this manifest only exposes the platform metadata needed before a room starts.
+ */
+export type LiveGameModuleDefinition = {
+  id: LiveGameModeId;
+  version: number;
+  status: LiveGameModuleStatus;
+  config: LiveGameModeConfig;
+  maps: readonly LiveGameMapDef[];
 };
 
 export type LiveGameSpawnPoint = {

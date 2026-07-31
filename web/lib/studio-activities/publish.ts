@@ -32,7 +32,7 @@ export async function publishStudioActivity(
 ): Promise<PublishStudioActivityResult> {
   if (!isStudioActivityFormat(input.format)) {
     throw new StudioActivityValidationError(
-      "format must be one of: multiple_choice, letter_mixup, flashcards, learning_track, vocabulary_list.",
+      "format must be one of: multiple_choice, letter_mixup, flashcards, learning_track, vocabulary_list, explore_hotspots.",
     );
   }
   const format = input.format as StudioActivityFormat;

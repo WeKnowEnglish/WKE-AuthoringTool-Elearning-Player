@@ -18,7 +18,7 @@ export function SecondaryWordExampleList({ item }: Props) {
   if (lines.length === 0 && patterns.length === 0 && confusions.length === 0 && !prompt) return null;
 
   return (
-    <section className="rounded-xl border-2 border-kid-ink/20 bg-kid-panel/40 p-4">
+    <section className="rounded-xl border-2 border-sec-ink/20 bg-sec-panel/40 p-4">
       <h3 className={secondaryUi.cardTitle}>See how it works</h3>
       <ul className="mt-2 space-y-2">
         {lines.map((line, index) => (
@@ -33,7 +33,7 @@ export function SecondaryWordExampleList({ item }: Props) {
                     part.highlight ? (
                       <mark
                         key={partIndex}
-                        className="rounded bg-amber-200/80 px-0.5 font-extrabold text-kid-ink not-italic"
+                        className="rounded bg-amber-200/80 px-0.5 font-extrabold text-sec-ink not-italic"
                       >
                         {part.text}
                       </mark>
@@ -44,8 +44,8 @@ export function SecondaryWordExampleList({ item }: Props) {
                 </p>
               </div>
             ) : (
-              <span className="text-kid-ink/75">
-                <span className="font-extrabold text-kid-ink/50" aria-hidden>
+              <span className="text-sec-ink/75">
+                <span className="font-extrabold text-sec-ink/50" aria-hidden>
                   ·{" "}
                 </span>
                 {line.text}
@@ -56,13 +56,13 @@ export function SecondaryWordExampleList({ item }: Props) {
       </ul>
 
       {patterns.length > 0 ? (
-        <div className="mt-4 border-t-2 border-kid-ink/10 pt-3">
+        <div className="mt-4 border-t-2 border-sec-ink/10 pt-3">
           <h4 className={secondaryUi.eyebrow}>Useful patterns</h4>
           <ul className="mt-2 space-y-2">
             {patterns.map((pattern) => (
               <li key={pattern.id} className={secondaryUi.body}>
-                <span className="font-extrabold text-kid-ink">{pattern.pattern}</span>
-                <span className="block text-kid-ink/75">{pattern.example}</span>
+                <span className="font-extrabold text-sec-ink">{pattern.pattern}</span>
+                <span className="block text-sec-ink/75">{pattern.example}</span>
                 {pattern.note ? <span className={`block ${secondaryUi.caption}`}>{pattern.note}</span> : null}
               </li>
             ))}
@@ -77,7 +77,7 @@ export function SecondaryWordExampleList({ item }: Props) {
           {confusions.map((confusion) => (
             <div key={confusion.word} className="mt-2">
               <p className={secondaryUi.body}>
-                <span className="font-extrabold text-kid-ink">{item.word} / {confusion.word}: </span>
+                <span className="font-extrabold text-sec-ink">{item.word} / {confusion.word}: </span>
                 {confusion.distinction}
               </p>
               <p className={secondaryUi.caption}>{confusion.contrastExample}</p>
@@ -92,7 +92,7 @@ export function SecondaryWordExampleList({ item }: Props) {
           <p className={`mt-1 ${secondaryUi.bodyLarge}`}>{prompt.prompt}</p>
           {prompt.sentenceStarter ? (
             <p className={`mt-2 ${secondaryUi.body}`}>
-              <span className="font-extrabold text-kid-ink">Start with: </span>{prompt.sentenceStarter}
+              <span className="font-extrabold text-sec-ink">Start with: </span>{prompt.sentenceStarter}
             </p>
           ) : null}
           <details className="mt-2">

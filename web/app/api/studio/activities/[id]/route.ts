@@ -48,10 +48,13 @@ export async function GET(request: Request, { params }: Params) {
   }
 
   try {
+    const url = new URL(request.url);
+    const includePack = url.searchParams.get("include_pack") !== "0";
     const activity = await getStudioActivityForTeacher(
       teacher.supabase,
       teacher.user.id,
       id,
+      { includePack },
     );
     if (!activity) {
       return json(

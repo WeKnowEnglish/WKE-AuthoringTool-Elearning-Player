@@ -1,11 +1,11 @@
-import { getMasteryRecordForTarget } from "@/lib/mastery/local-storage";
-import type { MasteryState } from "@/lib/mastery/types";
+import { getMasteryRecordForSecondaryWord } from "@/lib/secondary/secondary-mastery-keys";
 import {
   projectMasteryScoreToLegacyLevel,
   projectPlatformMasteryToSecondaryRecord,
 } from "@/lib/secondary/secondary-mastery-bridge";
 import { readLegacySecondaryWordProgressRecord } from "@/lib/secondary/secondary-word-progress-legacy";
 import type { SecondaryWordProgressRecord, WordMasteryLevel } from "@/lib/secondary/types";
+import type { MasteryState } from "@/lib/mastery/types";
 
 export type SecondaryWordDisplaySnapshot = {
   wordItemId: string;
@@ -35,7 +35,7 @@ function emptySnapshot(wordItemId: string): SecondaryWordDisplaySnapshot {
 export function getSecondaryWordDisplaySnapshot(
   wordItemId: string,
 ): SecondaryWordDisplaySnapshot {
-  const mastery = getMasteryRecordForTarget({ type: "word", key: wordItemId });
+  const mastery = getMasteryRecordForSecondaryWord(wordItemId);
 
   if (mastery && mastery.exposureCount > 0) {
     const attempts = mastery.retrievalSuccessCount + mastery.retrievalFailureCount;

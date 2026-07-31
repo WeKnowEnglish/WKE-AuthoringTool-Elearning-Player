@@ -6,11 +6,12 @@ import { StudentHomeLanding } from "@/components/primary/StudentHomeLanding";
 import { StudentClassMenu } from "@/components/student-hub/StudentClassMenu";
 import { StudentClassSelectorOverlay } from "@/components/student-hub/StudentClassSelectorOverlay";
 import { VocabularySetOverlay } from "@/components/teststartpage/VocabularySetOverlay";
-import { SelfStudyTopicQuizOverlay } from "@/components/primary/SelfStudyTopicQuizOverlay";
+import { PrimaryGrammarPosterOverlay } from "@/components/primary/PrimaryGrammarPosterOverlay";
 import { playSfx } from "@/lib/audio/sfx";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import { useStudentDisplayName } from "@/lib/auth/use-student-display-name";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
+import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import { completeStudyCareIfPending } from "@/lib/pet";
 import { buildPrimaryHomeLearningModel } from "@/lib/primary/build-primary-home-learning";
@@ -27,13 +28,14 @@ import { getPlayerLevel, getRewards } from "@/lib/progress/rewards";
 import { isUnlockAvailable } from "@/lib/progress/unlock-registry";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { newSessionSeed } from "@/lib/student-hub/session-seed";
-import type { TestStartTopicId } from "@/lib/teststartpage/bank";
 import { isVocabSetId, type VocabSetId } from "@/lib/vocabulary-templates";
 import { markExplorationNode } from "@/lib/worlds/exploration";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   classMemberships: StudentClassMembership[];
   assignedHomework?: StudentHomeworkCard[];
+  liveSessions?: StudentClassLiveSession[];
   initialNav?: string | null;
   /** Deep-link a vocab set to open on mount, e.g. `?set=breakfast_food`. */
   initialSetId?: string | null;
@@ -44,6 +46,7 @@ type Props = {
 export function PrimaryDashboardClient({
   classMemberships,
   assignedHomework = [],
+  liveSessions = [],
   initialNav,
   initialSetId,
   initialMessage,
@@ -67,9 +70,7 @@ export function PrimaryDashboardClient({
   const [vocabSessionSeed, setVocabSessionSeed] = useState<string | null>(null);
   const [vocabResumeIndex, setVocabResumeIndex] = useState(0);
   const [initialSetConsumed, setInitialSetConsumed] = useState(false);
-  const [selfStudyTopicId, setSelfStudyTopicId] = useState<TestStartTopicId | null>(
-    null,
-  );
+  const [grammarPosterSlug, setGrammarPosterSlug] = useState<string | null>(null);
 
   const refreshHomeModel = useCallback(() => {
     const rewards = getRewards();
@@ -85,6 +86,13 @@ export function PrimaryDashboardClient({
     if (!hydrated) return;
     refreshHomeModel();
   }, [hydrated, refreshHomeModel]);
+
+  useEffect(() => {
+    recordAppDiagnostic("student", "mark", "primary_hub_loaded", {
+      classCount: classMemberships.length,
+      homeworkCount: assignedHomework.length,
+    });
+  }, [assignedHomework.length, classMemberships.length]);
 
   const openVocabularySet = useCallback(
     (id: VocabSetId, opts?: { resumeScreenIndex?: number }) => {
@@ -151,7 +159,10 @@ export function PrimaryDashboardClient({
         progressModel={progressModel}
         reviewModel={reviewModel}
         assignedHomework={assignedHomework}
+        liveSessions={liveSessions}
         enrolledInClass={classMemberships.length > 0}
+        classMemberships={classMemberships}
+        onOpenClassSelector={() => setClassSelectorOpen(true)}
         initialNav={initialSetId ? "vocabulary" : initialNav}
         onEconomyChange={refreshHomeModel}
         onOpenVocabularySet={(id) => {
@@ -161,13 +172,9 @@ export function PrimaryDashboardClient({
               : resumeScreenIndexForSet(id);
           openVocabularySet(id, { resumeScreenIndex: resume });
         }}
-        onOpenSelfStudyTopic={(topicId) => {
-          if (!isUnlockAvailable("topic_quiz", getPlayerLevel())) {
-            playSfx("wrong", muted);
-            return;
-          }
+        onOpenGrammarPoster={(slug) => {
           playSfx("tap", muted);
-          setSelfStudyTopicId(topicId);
+          setGrammarPosterSlug(slug);
         }}
         headerExtra={
           <StudentClassMenu
@@ -177,14 +184,6 @@ export function PrimaryDashboardClient({
           />
         }
       />
-
-      {selfStudyTopicId ? (
-        <SelfStudyTopicQuizOverlay
-          topicId={selfStudyTopicId}
-          muted={muted}
-          onClose={() => setSelfStudyTopicId(null)}
-        />
-      ) : null}
 
       {vocabSetOpen && activeVocabSetId && vocabSessionSeed ? (
         <VocabularySetOverlay
@@ -213,6 +212,17 @@ export function PrimaryDashboardClient({
             setVocabSessionSeed(null);
             setVocabResumeIndex(0);
             refreshHomeModel();
+          }}
+        />
+      ) : null}
+
+      {grammarPosterSlug ? (
+        <PrimaryGrammarPosterOverlay
+          slug={grammarPosterSlug}
+          muted={muted}
+          onClose={() => {
+            playSfx("tap", muted);
+            setGrammarPosterSlug(null);
           }}
         />
       ) : null}

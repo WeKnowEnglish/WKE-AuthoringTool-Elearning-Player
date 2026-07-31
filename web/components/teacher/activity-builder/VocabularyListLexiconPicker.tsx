@@ -196,15 +196,15 @@ export function VocabularyListLexiconPicker({
   const sheetResolved = resolveSheetSurface(sheetText, allEntries, { excludeIds: inList });
 
   return (
-    <section className="shrink-0 border-b border-stone-200 bg-white px-3 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <section className="flex h-full min-h-0 flex-col bg-white px-3 py-3">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
             Dictionary picker
           </h2>
           <p className="mt-1 text-xs text-stone-600">
             Search Primary candidates and your words. Snapshots fill word / definition /
-            example — you can still edit them.
+            example — you can still edit them on Word details.
           </p>
         </div>
         <button
@@ -294,7 +294,7 @@ export function VocabularyListLexiconPicker({
             </select>
           </div>
 
-          <ul className="max-h-40 overflow-y-auto rounded-lg border border-stone-200 bg-stone-50/70">
+          <ul className="max-h-[min(28rem,55vh)] overflow-y-auto rounded-lg border border-stone-200 bg-stone-50/70">
             {addableResults.length === 0 ? (
               <li className="px-3 py-4 text-xs text-stone-500">
                 {query.trim() || stage || pos || topic || sourceFilter !== "all"

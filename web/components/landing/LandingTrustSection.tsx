@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import Link from "next/link";
 import { LandingIcon } from "@/components/landing/LandingIcon";
 import type { LandingIconName } from "@/lib/landing/landing-icons";
 
@@ -6,6 +7,8 @@ const AUDIENCES: {
   icon: LandingIconName;
   title: string;
   body: string;
+  href: string;
+  cta: string;
   badgeClass: string;
   iconClass: string;
 }[] = [
@@ -13,6 +16,8 @@ const AUDIENCES: {
     icon: "graduation",
     title: "For students",
     body: "Interactive lessons, vocabulary, grammar, stories, and games that turn English practice into something students want to finish.",
+    href: "/esl-activities-for-kids",
+    cta: "Try free activities",
     badgeClass: "bg-[#ffe135]",
     iconClass: "text-kid-ink",
   },
@@ -20,6 +25,8 @@ const AUDIENCES: {
     icon: "users",
     title: "For teachers",
     body: "Classroom tools to assign work, run live learning games, and see where each learner needs support.",
+    href: "/teach-english-online",
+    cta: "Teach online guide",
     badgeClass: "bg-[#b8e8fb]",
     iconClass: "text-kid-ink",
   },
@@ -27,6 +34,8 @@ const AUDIENCES: {
     icon: "trophy",
     title: "For parents",
     body: "Clear grade-band paths and visible progress—so home practice connects to what students learn at school.",
+    href: "/english-learning-for-kids-at-home",
+    cta: "Home practice guide",
     badgeClass: "bg-[#f7bf4d]",
     iconClass: "text-kid-ink",
   },
@@ -53,7 +62,7 @@ export function LandingTrustSection() {
       >
         <div className="mx-auto max-w-3xl text-center">
           <p className="inline-flex items-center rounded-full border-2 border-kid-ink bg-[#ffe135] px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-kid-ink">
-            Built for real classrooms
+            Built for online classes
           </p>
           <h2
             id="landing-trust-heading"
@@ -86,6 +95,12 @@ export function LandingTrustSection() {
               <p className="mt-2 text-sm font-semibold leading-relaxed text-kid-ink/75">
                 {item.body}
               </p>
+              <Link
+                href={item.href}
+                className="mt-3 inline-flex text-sm font-extrabold text-kid-ink underline underline-offset-2"
+              >
+                {item.cta} →
+              </Link>
             </li>
           ))}
         </ul>

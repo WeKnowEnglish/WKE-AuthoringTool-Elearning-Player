@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
+import { AppDiagnosticsInit } from "@/components/app-diagnostics/AppDiagnosticsInit";
 import { IdleSessionLogout } from "@/components/auth/IdleSessionLogout";
+import { SITE_NAME, SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -10,8 +12,12 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "We Know English — Lesson Player",
-  description: "Narrative English lessons for young learners",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: "Interactive English learning for kids — lessons, activities, and teaching tools.",
 };
 
 export default function RootLayout({
@@ -22,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${nunito.variable} h-full`}>
       <body className="min-h-full font-sans antialiased">
+        <AppDiagnosticsInit />
         <IdleSessionLogout />
         {children}
       </body>

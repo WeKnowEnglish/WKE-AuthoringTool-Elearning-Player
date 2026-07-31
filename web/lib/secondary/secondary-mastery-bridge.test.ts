@@ -170,7 +170,7 @@ describe("recordSecondaryWordAttempt (M5 platform SoT)", () => {
     ).toContain("word:g7-a2-brave");
   });
 
-  it("records learn-drawer evidence without legacy dual-write", () => {
+  it("records learn-drawer evidence with lexicon dual-write when mapped", () => {
     const progress = recordSecondaryLearnWordAttempt(
       {
         wordItemId: "g7-a2-school-life-subject",
@@ -183,6 +183,10 @@ describe("recordSecondaryWordAttempt (M5 platform SoT)", () => {
     expect(progress.timesSeen).toBeGreaterThanOrEqual(1);
     const snapshot = readMasterySnapshot();
     expect(snapshot.records["word:g7-a2-school-life-subject"]).toBeTruthy();
+    expect(snapshot.records["word:pv_subject_noun"]).toBeTruthy();
+    expect(snapshot.records["word:pv_subject_noun"]!.masteryScore).toBe(
+      snapshot.records["word:g7-a2-school-life-subject"]!.masteryScore,
+    );
   });
 
   it("rejects learn activity on recordSecondaryWordAttempt", () => {

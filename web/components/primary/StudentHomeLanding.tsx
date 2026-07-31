@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   BookOpen,
@@ -9,6 +8,7 @@ import {
   Home,
   Library,
   Menu,
+  School,
   Trophy,
   Volume2,
   VolumeX,
@@ -16,27 +16,33 @@ import {
 } from "lucide-react";
 
 import { SignOutForm } from "@/components/auth/SignOutForm";
+import { PrimaryClassTab } from "@/components/primary/PrimaryClassTab";
 import { PrimaryGamesTab } from "@/components/primary/PrimaryGamesTab";
+import {
+  PrimaryLearnTab,
+  type LearnCategoryId,
+} from "@/components/primary/PrimaryLearnTab";
 import { PrimaryProgressTab } from "@/components/primary/PrimaryProgressTab";
 import { PrimaryReviewTab } from "@/components/primary/PrimaryReviewTab";
-import { PrimaryVocabularyTab } from "@/components/primary/PrimaryVocabularyTab";
-import { SelfStudySection } from "@/components/primary/SelfStudySection";
 import { TodaysLearningAssignments } from "@/components/primary/TodaysLearningAssignments";
+import { PrimaryHomeResumeRow } from "@/components/primary/PrimaryHomeResumeRow";
+import { StudentLiveNowStrip } from "@/components/classroom/StudentLiveNowStrip";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
+import type { StudentClassMembership } from "@/lib/data/student-classes";
+import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import {
   PRIMARY_CHROME_CLASS,
   PRIMARY_CHROME_STYLE,
 } from "@/lib/primary/primary-chrome";
 import type { PrimaryProgressModel } from "@/lib/primary/build-primary-progress-model";
 import type { PrimaryReviewModel } from "@/lib/primary/build-primary-review-model";
-import type { TestStartTopicId } from "@/lib/teststartpage/bank";
 import type { VocabSetId } from "@/lib/vocabulary-templates";
 
 export type PrimaryNavId =
   | "home"
-  | "vocabulary"
-  | "grammar"
+  | "learn"
+  | "class"
   | "games"
   | "review"
   | "progress";
@@ -89,34 +95,47 @@ type Props = {
   onNavigate?: (destination: PrimaryNavId | string) => void;
   /** Open a vocabulary set in the lesson overlay (Phase 1). */
   onOpenVocabularySet?: (id: VocabSetId) => void;
-  /** Open a Self Study topic quiz (Product B). */
-  onOpenSelfStudyTopic?: (id: TestStartTopicId) => void;
+  /** Open a grammar poster in an overlay (stay on Primary). */
+  onOpenGrammarPoster?: (slug: string) => void;
   /** Refresh economy / progress after games (Phase 5). */
   onEconomyChange?: () => void;
   /** Optional controls in the top bar (e.g. class menu). */
   headerExtra?: ReactNode;
-  /** Deep-link tab, e.g. `?nav=vocabulary`. */
+  /** Deep-link tab, e.g. `?nav=learn`. */
   initialNav?: string | null;
   /** Teacher-assigned offline work for Today's Learning. */
   assignedHomework?: StudentHomeworkCard[];
   /** Whether the student is enrolled in at least one class. */
   enrolledInClass?: boolean;
+  /** Active Virtual Classroom sessions across enrolled classes. */
+  liveSessions?: StudentClassLiveSession[];
+  /** Classes the student is enrolled in. */
+  classMemberships?: StudentClassMembership[];
+  /** Open the join / switch class overlay. */
+  onOpenClassSelector?: () => void;
 };
 
 const NAV_IDS: PrimaryNavId[] = [
   "home",
-  "vocabulary",
-  "grammar",
+  "learn",
+  "class",
   "games",
   "review",
   "progress",
 ];
 
 function parseInitialNav(nav: string | null | undefined): PrimaryNavId {
-  // Old Learn tab deep-links land on Home (assignments live there now).
-  if (nav === "learn") return "home";
+  // Legacy Vocabulary / Grammar deep-links open the Learn shelf.
+  if (nav === "vocabulary" || nav === "grammar") return "learn";
   if (nav && (NAV_IDS as string[]).includes(nav)) return nav as PrimaryNavId;
   return "home";
+}
+
+function parseInitialLearnCategory(
+  nav: string | null | undefined,
+): LearnCategoryId | null {
+  if (nav === "vocabulary" || nav === "grammar") return nav;
+  return null;
 }
 
 const DEFAULT_MODEL: PrimaryHomeModel = {
@@ -133,25 +152,25 @@ const DEFAULT_MODEL: PrimaryHomeModel = {
     skill: "Vocabulary",
     activitiesDone: 0,
     activitiesTotal: 5,
-    nextActivityLabel: "Learn words",
+    nextActivityLabel: "Flashcards",
   },
   path: [
     {
       id: "learn",
-      title: "Learn Words",
+      title: "Flashcards",
       description: "See and hear new words.",
       status: "current",
     },
     {
       id: "practice",
       title: "Practice",
-      description: "Match, choose, and spell.",
+      description: "Spell, match, and choose.",
       status: "available",
     },
     {
       id: "review",
       title: "Review",
-      description: "Check what you remember.",
+      description: "Listen and check what you remember.",
       status: "locked",
     },
     {
@@ -162,9 +181,9 @@ const DEFAULT_MODEL: PrimaryHomeModel = {
     },
   ],
   recommended: [
-    { id: "match", title: "Match the Word", icon: "match", rewardLabel: "+ gold & XP" },
-    { id: "cloze", title: "Fill in the Blanks", icon: "cloze", rewardLabel: "+ gold & XP" },
-    { id: "listen", title: "Spell the Word", icon: "listen", rewardLabel: "+ gold & XP" },
+    { id: "match", title: "Match Pictures", icon: "match", rewardLabel: "+ gold & XP" },
+    { id: "cloze", title: "Choose the Word", icon: "cloze", rewardLabel: "+ gold & XP" },
+    { id: "listen", title: "Listen and Choose", icon: "listen", rewardLabel: "+ gold & XP" },
   ],
   words: [],
   encouragement: "Keep learning — gold and XP unlock new topics!",
@@ -172,7 +191,8 @@ const DEFAULT_MODEL: PrimaryHomeModel = {
 
 const NAV: Array<{ id: PrimaryNavId; label: string; icon: typeof Home }> = [
   { id: "home", label: "Home", icon: Home },
-  { id: "vocabulary", label: "Vocabulary", icon: Library },
+  { id: "learn", label: "Learn", icon: Library },
+  { id: "class", label: "Class", icon: School },
   { id: "games", label: "Games", icon: Gamepad2 },
   { id: "progress", label: "My Progress", icon: Trophy },
 ];
@@ -195,32 +215,42 @@ export function StudentHomeLanding({
   reviewModel,
   onNavigate,
   onOpenVocabularySet,
-  onOpenSelfStudyTopic,
+  onOpenGrammarPoster,
   onEconomyChange,
   headerExtra,
   initialNav,
   assignedHomework = [],
   enrolledInClass = false,
+  liveSessions = [],
+  classMemberships = [],
+  onOpenClassSelector,
 }: Props) {
-  const router = useRouter();
   const { muted, toggleMuted } = useAudioMuted();
   const model = mergeModel(modelPartial);
   const [activeNav, setActiveNav] = useState<PrimaryNavId>(() =>
     parseInitialNav(initialNav),
   );
+  const [learnCategory, setLearnCategory] = useState<LearnCategoryId | null>(() =>
+    parseInitialLearnCategory(initialNav),
+  );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   function go(destination: PrimaryNavId | string, message?: string) {
-    if (destination === "grammar") {
+    if (destination === "vocabulary" || destination === "grammar") {
+      setActiveNav("learn");
+      setLearnCategory(destination);
       setMobileNavOpen(false);
+      if (message) setToast(message);
       onNavigate?.(destination);
-      router.push("/grammar");
       return;
     }
     if ((NAV_IDS as string[]).includes(destination)) {
       setActiveNav(destination as PrimaryNavId);
       setMobileNavOpen(false);
+      if (destination === "learn") {
+        setLearnCategory(null);
+      }
     }
     if (message) setToast(message);
     onNavigate?.(destination);
@@ -231,7 +261,7 @@ export function StudentHomeLanding({
       onOpenVocabularySet(model.continueSetId);
       return;
     }
-    go("vocabulary");
+    go("learn");
   }
 
   const sidebar = (
@@ -380,9 +410,12 @@ export function StudentHomeLanding({
         )}
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-[var(--pl-bg)] px-4 py-5 sm:px-6 lg:px-8">
-          {activeNav === "vocabulary" ? (
-            <PrimaryVocabularyTab
+          {activeNav === "learn" ? (
+            <PrimaryLearnTab
               playerLevel={model.level}
+              category={learnCategory}
+              onCategoryChange={setLearnCategory}
+              onOpenGrammarPoster={onOpenGrammarPoster}
               onOpenSet={(id) => {
                 if (onOpenVocabularySet) {
                   onOpenVocabularySet(id);
@@ -402,7 +435,13 @@ export function StudentHomeLanding({
             <PrimaryGamesTab
               playerLevel={model.level}
               onEconomyChange={onEconomyChange}
-              onGoLearn={() => go("home")}
+              onGoLearn={() => go("learn")}
+            />
+          ) : activeNav === "class" ? (
+            <PrimaryClassTab
+              memberships={classMemberships}
+              liveSessions={liveSessions}
+              onOpenClassSelector={onOpenClassSelector}
             />
           ) : activeNav === "review" && reviewModel ? (
             <PrimaryReviewTab
@@ -412,7 +451,7 @@ export function StudentHomeLanding({
                   onOpenVocabularySet(setId);
                   return;
                 }
-                go("vocabulary");
+                go("learn");
               }}
               onOpenVocabulary={() => go("vocabulary")}
             />
@@ -427,19 +466,19 @@ export function StudentHomeLanding({
             </div>
           ) : (
           <div className="mx-auto flex max-w-5xl flex-col gap-5 pb-24 lg:pb-8">
+            <StudentLiveNowStrip sessions={liveSessions} tone="primary" />
+
             <TodaysLearningAssignments
               enrolled={enrolledInClass}
               items={assignedHomework}
+              onJoinClass={onOpenClassSelector}
             />
 
-            <SelfStudySection
-              onOpenTopic={(topicId) => {
-                if (onOpenSelfStudyTopic) {
-                  onOpenSelfStudyTopic(topicId);
-                  return;
-                }
-                setToast("Topic quiz is not available here.");
-              }}
+            <PrimaryHomeResumeRow
+              progressModel={progressModel}
+              today={model.today}
+              onContinueLearning={openContinueLearning}
+              onOpenProgress={() => go("progress")}
             />
           </div>
           )}
@@ -452,7 +491,7 @@ export function StudentHomeLanding({
         aria-label="Primary mobile"
       >
         {NAV.filter((item) =>
-          ["home", "vocabulary", "games"].includes(item.id),
+          ["home", "learn", "games"].includes(item.id),
         ).map((item) => {
           const Icon = item.icon;
           const active = activeNav === item.id;

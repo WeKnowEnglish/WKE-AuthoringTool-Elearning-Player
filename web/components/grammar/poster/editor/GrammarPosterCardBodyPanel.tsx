@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { GrammarCard, GrammarModule } from "@/lib/grammar-builder/schema";
+import type { GrammarAlign, GrammarCard, GrammarModule } from "@/lib/grammar-builder/schema";
 import {
   updateCardComparisonItem,
   updateCardComparisonSide,
@@ -14,6 +14,13 @@ import {
   updateSummaryGridRowLabel,
 } from "@/lib/grammar-builder/editor/grammar-card-body-mutations";
 import {
+  patchItemEmojiGraphic,
+  patchItemUrlGraphic,
+  resolveItemAlign,
+  resolveItemEmoji,
+  resolveItemImageUrl,
+} from "@/lib/grammar-builder/editor/grammar-item-graphic";
+import {
   getColumnItemHint,
   getGlanceRuleHint,
   getKidTitleHint,
@@ -24,6 +31,7 @@ import {
   EditorSectionTitle,
   EditorTextInput,
 } from "./fields/EditorFields";
+import { GrammarPosterIconAlignControls } from "./GrammarPosterIconAlignControls";
 import { GRAMMAR_THEME_IDS } from "@/lib/grammar-builder/theme-tokens";
 import type { GrammarSummaryMark } from "@/lib/grammar-builder/schema";
 
@@ -37,22 +45,30 @@ function ItemFields({
   label,
   text,
   graphic,
+  imageUrl,
   highlight,
   caption,
+  align,
   onText,
   onGraphic,
+  onImageUrl,
   onHighlight,
   onCaption,
+  onAlign,
 }: {
   label: string;
   text: string;
   graphic: string;
+  imageUrl: string;
   highlight: string;
   caption: string;
+  align: GrammarAlign;
   onText: (value: string) => void;
   onGraphic: (value: string) => void;
+  onImageUrl: (value: string) => void;
   onHighlight: (value: string) => void;
   onCaption: (value: string) => void;
+  onAlign: (value: GrammarAlign) => void;
 }) {
   return (
     <div className="rounded-lg border border-dashed border-kid-ink/15 p-2">
@@ -62,10 +78,14 @@ function ItemFields({
           <EditorFieldLabel>Sentence</EditorFieldLabel>
           <EditorTextInput value={text} onChange={onText} />
         </div>
-        <div>
-          <EditorFieldLabel>Graphic</EditorFieldLabel>
-          <EditorTextInput value={graphic} onChange={onGraphic} placeholder="📘" />
-        </div>
+        <GrammarPosterIconAlignControls
+          emoji={graphic}
+          imageUrl={imageUrl}
+          align={align}
+          onEmojiChange={onGraphic}
+          onImageUrlChange={onImageUrl}
+          onAlignChange={onAlign}
+        />
         <div>
           <EditorFieldLabel>Highlight</EditorFieldLabel>
           <EditorTextInput value={highlight} onChange={onHighlight} />
@@ -117,17 +137,22 @@ function TwoEqualBodyEditor({ draft, card, onChange }: Props) {
                 key={`${side}-${index}`}
                 label={`Example ${index + 1}`}
                 text={item.text ?? ""}
-                graphic={item.graphic ?? ""}
+                graphic={resolveItemEmoji(item)}
+                imageUrl={resolveItemImageUrl(item)}
                 highlight={item.highlight ?? ""}
                 caption={item.caption ?? ""}
+                align={resolveItemAlign(item)}
                 onText={(value) =>
                   onChange(updateCardComparisonItem(draft, card.id, side, index, { text: value }))
                 }
                 onGraphic={(value) =>
                   onChange(
-                    updateCardComparisonItem(draft, card.id, side, index, {
-                      graphic: value || undefined,
-                    }),
+                    updateCardComparisonItem(draft, card.id, side, index, patchItemEmojiGraphic(value)),
+                  )
+                }
+                onImageUrl={(value) =>
+                  onChange(
+                    updateCardComparisonItem(draft, card.id, side, index, patchItemUrlGraphic(value)),
                   )
                 }
                 onHighlight={(value) =>
@@ -143,6 +168,9 @@ function TwoEqualBodyEditor({ draft, card, onChange }: Props) {
                       caption: value || undefined,
                     }),
                   )
+                }
+                onAlign={(value) =>
+                  onChange(updateCardComparisonItem(draft, card.id, side, index, { align: value }))
                 }
               />
             ))}
@@ -199,18 +227,26 @@ function FullWidthBodyEditor({ draft, card, onChange }: Props) {
           key={index}
           label={`Item ${index + 1}`}
           text={item.text ?? ""}
-          graphic={item.graphic ?? ""}
+          graphic={resolveItemEmoji(item)}
+          imageUrl={resolveItemImageUrl(item)}
           highlight={item.highlight ?? ""}
           caption={item.caption ?? ""}
+          align={resolveItemAlign(item)}
           onText={(value) => onChange(updateCardItem(draft, card.id, index, { text: value }))}
           onGraphic={(value) =>
-            onChange(updateCardItem(draft, card.id, index, { graphic: value || undefined }))
+            onChange(updateCardItem(draft, card.id, index, patchItemEmojiGraphic(value)))
+          }
+          onImageUrl={(value) =>
+            onChange(updateCardItem(draft, card.id, index, patchItemUrlGraphic(value)))
           }
           onHighlight={(value) =>
             onChange(updateCardItem(draft, card.id, index, { highlight: value || undefined }))
           }
           onCaption={(value) =>
             onChange(updateCardItem(draft, card.id, index, { caption: value || undefined }))
+          }
+          onAlign={(value) =>
+            onChange(updateCardItem(draft, card.id, index, { align: value }))
           }
         />
       ))}

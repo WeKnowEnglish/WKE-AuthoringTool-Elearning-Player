@@ -57,7 +57,7 @@ function patchItemProp(prop: PosterItemProp, value: string) {
     case "highlight":
       return { highlight: value || undefined };
     case "graphic":
-      return { graphic: value || undefined };
+      return { graphic: value || undefined, ...(value.trim() ? { graphicAsset: { kind: "emoji" as const, value } } : { graphicAsset: undefined }) };
     case "caption":
       return { caption: value || undefined };
     default:

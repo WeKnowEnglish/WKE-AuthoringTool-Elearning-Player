@@ -1,8 +1,10 @@
 import { Suspense } from "react";
-import { ExploreHotspotsWorkspace } from "@/components/teacher/activity-builder/hotspots/ExploreHotspotsWorkspace";
+import { ExploreHotspotsWorkspaceLazy } from "@/components/teacher/activity-builder/hotspots/ExploreHotspotsWorkspaceLazy";
 
-export const dynamic = "force-dynamic";
-
+/**
+ * Auth already force-dynamics the teacher secure layout. Avoid statically
+ * importing the large client workspace here — that inflated TTFB/RSC payload.
+ */
 export default function TeacherExploreHotspotsPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -13,7 +15,7 @@ export default function TeacherExploreHotspotsPage() {
           </div>
         }
       >
-        <ExploreHotspotsWorkspace />
+        <ExploreHotspotsWorkspaceLazy />
       </Suspense>
     </div>
   );

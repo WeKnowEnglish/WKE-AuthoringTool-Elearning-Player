@@ -45,7 +45,7 @@ export function SecondaryWordIllustration({ imageUrl, word, size, className }: P
         "shrink-0",
         isEmbedded
           ? "bg-transparent object-contain"
-          : "rounded-lg border border-kid-ink/15 bg-kid-panel/40 object-cover",
+          : "rounded-lg border border-sec-ink/15 bg-sec-panel/40 object-cover",
         isEmbedded && isIcon ? "p-0" : isIcon ? "object-contain p-0.5" : "",
         sizeClass[size],
         className,

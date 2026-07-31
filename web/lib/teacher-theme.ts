@@ -15,12 +15,19 @@ export type TeacherThemeSelection = {
 };
 
 export const TEACHER_THEME_DEFAULT: TeacherThemeSelection = {
-  mode: "dark",
-  tint: "blue",
+  mode: "light",
+  tint: "purple",
+};
+
+export type TeacherThemePreset = TeacherThemeSelection & {
+  id: string;
+  name: string;
 };
 
 const STORAGE_KEY = "wke.teacher.theme.v1";
 const LEGACY_LTC_STORAGE_KEY = "wke.ltc.theme.v1";
+const PRESETS_STORAGE_KEY = "wke.teacher.theme.presets.v1";
+export const TEACHER_THEME_PRESET_MAX = 8;
 
 type SurfaceTokens = {
   bg: string;
@@ -266,6 +273,83 @@ export function persistTeacherThemeSelection(selection: TeacherThemeSelection): 
   }
 }
 
+function parsePresets(raw: string | null): TeacherThemePreset[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const out: TeacherThemePreset[] = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as Partial<TeacherThemePreset>;
+      const mode = TEACHER_THEME_MODES.includes(row.mode as TeacherThemeMode)
+        ? (row.mode as TeacherThemeMode)
+        : null;
+      const tint = TEACHER_THEME_TINTS.includes(row.tint as TeacherThemeTint)
+        ? (row.tint as TeacherThemeTint)
+        : null;
+      const id = typeof row.id === "string" && row.id.trim() ? row.id.trim() : null;
+      const name = typeof row.name === "string" && row.name.trim() ? row.name.trim() : null;
+      if (!mode || !tint || !id || !name) continue;
+      out.push({ id, name, mode, tint });
+      if (out.length >= TEACHER_THEME_PRESET_MAX) break;
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+export function readTeacherThemePresets(): TeacherThemePreset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return parsePresets(localStorage.getItem(PRESETS_STORAGE_KEY));
+  } catch {
+    return [];
+  }
+}
+
+export function persistTeacherThemePresets(presets: TeacherThemePreset[]): void {
+  try {
+    const clipped = presets.slice(0, TEACHER_THEME_PRESET_MAX);
+    localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(clipped));
+  } catch {
+    /* ignore */
+  }
+}
+
+export const TEACHER_MODE_LABELS: Record<TeacherThemeMode, string> = {
+  light: "Light",
+  medium: "Medium",
+  sepia: "Sepia",
+  dark: "Dark",
+};
+
+export const TEACHER_TINT_LABELS: Record<TeacherThemeTint, string> = {
+  green: "Green",
+  blue: "Blue",
+  purple: "Purple",
+  orange: "Orange",
+};
+
+export function defaultTeacherThemePresetName(selection: TeacherThemeSelection): string {
+  return `${TEACHER_MODE_LABELS[selection.mode]} · ${TEACHER_TINT_LABELS[selection.tint]}`;
+}
+
+export function createTeacherThemePreset(
+  name: string,
+  selection: TeacherThemeSelection,
+  id = `preset-${Date.now().toString(36)}`,
+): TeacherThemePreset {
+  const trimmed = name.trim() || defaultTeacherThemePresetName(selection);
+  return {
+    id,
+    name: trimmed.slice(0, 40),
+    mode: selection.mode,
+    tint: selection.tint,
+  };
+}
+
 /** CSS vars for teacher shell + LTC (aliases). */
 export function resolveTeacherThemeCssVars(
   selection: TeacherThemeSelection,
@@ -372,20 +456,6 @@ export function resolveTeacherThemeCssVars(
   return { ...teacher, ...ltc };
 }
 
-export const TEACHER_MODE_LABELS: Record<TeacherThemeMode, string> = {
-  light: "Light",
-  medium: "Medium",
-  sepia: "Sepia",
-  dark: "Dark",
-};
-
-export const TEACHER_TINT_LABELS: Record<TeacherThemeTint, string> = {
-  green: "Green",
-  blue: "Blue",
-  purple: "Purple",
-  orange: "Orange",
-};
-
 type TeacherThemeStore = {
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => TeacherThemeSelection;
@@ -443,3 +513,78 @@ function createTeacherThemeStore(): TeacherThemeStore {
 }
 
 export const teacherThemeStore = createTeacherThemeStore();
+
+type TeacherThemePresetStore = {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => TeacherThemePreset[];
+  getServerSnapshot: () => TeacherThemePreset[];
+  save: (name: string, selection: TeacherThemeSelection) => TeacherThemePreset | null;
+  remove: (id: string) => void;
+};
+
+/** Stable empty list for SSR / getServerSnapshot (must be referentially equal). */
+const EMPTY_TEACHER_THEME_PRESETS: TeacherThemePreset[] = [];
+
+function createTeacherThemePresetStore(): TeacherThemePresetStore {
+  const listeners = new Set<() => void>();
+  let cached: TeacherThemePreset[] | null = null;
+
+  function bump() {
+    cached = null;
+    for (const l of listeners) l();
+  }
+
+  function subscribe(listener: () => void) {
+    listeners.add(listener);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === PRESETS_STORAGE_KEY || e.key === null) bump();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", onStorage);
+    }
+    return () => {
+      listeners.delete(listener);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("storage", onStorage);
+      }
+    };
+  }
+
+  function getSnapshot(): TeacherThemePreset[] {
+    if (typeof window === "undefined") return EMPTY_TEACHER_THEME_PRESETS;
+    if (!cached) cached = readTeacherThemePresets();
+    return cached;
+  }
+
+  function getServerSnapshot(): TeacherThemePreset[] {
+    return EMPTY_TEACHER_THEME_PRESETS;
+  }
+
+  function save(name: string, selection: TeacherThemeSelection): TeacherThemePreset | null {
+    const current = getSnapshot();
+    if (current.length >= TEACHER_THEME_PRESET_MAX) return null;
+    const duplicate = current.find(
+      (preset) =>
+        preset.mode === selection.mode &&
+        preset.tint === selection.tint &&
+        preset.name.toLowerCase() ===
+          (name.trim() || defaultTeacherThemePresetName(selection)).toLowerCase(),
+    );
+    if (duplicate) return duplicate;
+    const nextPreset = createTeacherThemePreset(name, selection);
+    const next = [...current, nextPreset];
+    persistTeacherThemePresets(next);
+    bump();
+    return nextPreset;
+  }
+
+  function remove(id: string) {
+    const next = getSnapshot().filter((preset) => preset.id !== id);
+    persistTeacherThemePresets(next);
+    bump();
+  }
+
+  return { subscribe, getSnapshot, getServerSnapshot, save, remove };
+}
+
+export const teacherThemePresetStore = createTeacherThemePresetStore();

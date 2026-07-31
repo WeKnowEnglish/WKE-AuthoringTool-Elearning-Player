@@ -1,3 +1,4 @@
+import { SecondaryChrome } from "@/components/secondary/SecondaryChrome";
 import { SecondaryPracticeLayout } from "@/components/secondary/learn/SecondaryPracticeLayout";
 
 export default function SecondaryPortalLayout({
@@ -5,5 +6,9 @@ export default function SecondaryPortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <SecondaryPracticeLayout>{children}</SecondaryPracticeLayout>;
+  return (
+    <SecondaryChrome>
+      <SecondaryPracticeLayout>{children}</SecondaryPracticeLayout>
+    </SecondaryChrome>
+  );
 }

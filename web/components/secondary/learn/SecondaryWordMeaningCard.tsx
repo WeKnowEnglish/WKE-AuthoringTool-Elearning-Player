@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { KidButton } from "@/components/kid-ui/KidButton";
+import { SecondaryButton } from "@/components/secondary/SecondaryButton";
 import { flushMasterySyncQueueForCurrentStudent } from "@/lib/mastery/supabase-sync";
 import { notifySecondarySessionChanged } from "@/lib/secondary/secondary-session-events";
 import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
@@ -119,12 +119,12 @@ export function SecondaryWordMeaningCard({
   }
 
   return (
-    <section className="rounded-xl border-2 border-kid-ink/20 bg-kid-panel/40 p-4">
+    <section className="rounded-xl border-2 border-sec-ink/20 bg-sec-panel/40 p-4">
       <h3 className={secondaryUi.cardTitle}>What does it mean?</h3>
       <p className={`mt-2 ${secondaryUi.bodyLarge}`}>{item.studentMeaningEn}</p>
       {hasVietnamese ? (
         <div className={centered ? "mt-3 flex flex-col items-center" : "mt-3"}>
-          <KidButton
+          <SecondaryButton
             type="button"
             variant="secondary"
             className="!min-h-10 text-base"
@@ -132,7 +132,7 @@ export function SecondaryWordMeaningCard({
             onClick={handleToggleQuiz}
           >
             {quizOpen ? "Hide Vietnamese" : "Show Vietnamese"}
-          </KidButton>
+          </SecondaryButton>
 
           {quizOpen && quizAvailable ? (
             <div className="mt-3 w-full space-y-3">
@@ -156,11 +156,11 @@ export function SecondaryWordMeaningCard({
                         isCorrectPick && "border-emerald-600 bg-emerald-50 text-emerald-950",
                         !isRejected &&
                           !isCorrectPick &&
-                          "border-kid-ink/25 bg-white text-kid-ink",
+                          "border-sec-ink/25 bg-white text-sec-ink",
                         (quizComplete || isRejected) && "opacity-90",
                       )}
                     >
-                      <span className="mr-2 tabular-nums text-kid-ink/50">{index + 1}.</span>
+                      <span className="mr-2 tabular-nums text-sec-ink/50">{index + 1}.</span>
                       {choice.label}
                     </button>
                   );

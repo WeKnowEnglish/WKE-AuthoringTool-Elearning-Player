@@ -9,6 +9,7 @@ import {
   returnTeacherLexiconPromotion,
 } from "@/lib/actions/teacher-lexicon";
 import type { TeacherLexiconEntry } from "@/lib/vocabulary/teacher-lexicon";
+import { LexiconLinkedMediaStrip } from "@/components/teacher/activity-builder/LexiconLinkedMediaStrip";
 import {
   promotionStatusLabel,
   teacherLexiconPromotionGaps,
@@ -236,6 +237,9 @@ function QueueCard({
             {" · "}
             <span className="font-mono">{entry.id}</span>
           </p>
+          <div className="mt-2">
+            <LexiconLinkedMediaStrip lexiconId={entry.promotedToId ?? entry.id} />
+          </div>
         </div>
         <span
           className={`rounded px-2 py-0.5 text-xs font-semibold ${

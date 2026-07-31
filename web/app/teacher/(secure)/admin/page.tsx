@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminSubnav } from "@/components/teacher/admin/AdminSubnav";
 import { countPendingAccessRequests } from "@/lib/data/admin-users";
 import { listAdminTeachers } from "@/lib/actions/admin-users";
+import { countPendingWkeLibrarySubmissions } from "@/lib/actions/wke-library";
 
 export const metadata = {
   title: "Admin — Teacher",
@@ -9,9 +10,10 @@ export const metadata = {
 };
 
 export default async function TeacherAdminHubPage() {
-  const [pendingCount, teachersResult] = await Promise.all([
+  const [pendingCount, teachersResult, libraryPending] = await Promise.all([
     countPendingAccessRequests(),
     listAdminTeachers(),
+    countPendingWkeLibrarySubmissions().catch(() => 0),
   ]);
   const teacherCount = teachersResult.ok ? teachersResult.teachers.length : null;
 
@@ -20,13 +22,14 @@ export default async function TeacherAdminHubPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Admin</h1>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-          Manage teacher access requests, teacher tiers, and student PIN recovery.
+          Manage teacher access requests, teacher tiers, student PIN recovery, and WKE
+          Library contributions.
         </p>
       </div>
 
       <AdminSubnav active="hub" />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link
           href="/teacher/admin/requests"
           className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm hover:border-neutral-400"
@@ -35,6 +38,15 @@ export default async function TeacherAdminHubPage() {
             Pending requests
           </p>
           <p className="mt-2 text-3xl font-bold text-neutral-900">{pendingCount}</p>
+        </Link>
+        <Link
+          href="/teacher/admin/wke-library"
+          className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm hover:border-neutral-400"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Library submissions
+          </p>
+          <p className="mt-2 text-3xl font-bold text-neutral-900">{libraryPending}</p>
         </Link>
         <Link
           href="/teacher/admin/teachers"

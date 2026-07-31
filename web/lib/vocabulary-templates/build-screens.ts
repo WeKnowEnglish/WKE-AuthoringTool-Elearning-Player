@@ -262,7 +262,7 @@ export function buildVocabularySetScreens(
 
   const opening = buildDefaultOpeningStartPayload(def.title);
   opening.image_url = def.coverImageUrl;
-  opening.image_fit = "cover";
+  opening.image_fit = "contain";
   rows.push(toLessonScreenRow(def.id, order++, "start", opening));
 
   rows.push(

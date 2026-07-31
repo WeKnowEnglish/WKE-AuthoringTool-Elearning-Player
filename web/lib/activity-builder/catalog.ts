@@ -21,6 +21,11 @@ export type ActivityBuilderCard = {
   status: ActivityBuilderStatus;
   /** Formats already stored/played via Activity Bank. */
   bankFormats?: string[];
+  /**
+   * When true, only platform admins see this card (legacy / backup entry points).
+   * Non-admins never see these even if status is authoring_ready.
+   */
+  adminOnly?: boolean;
 };
 
 export type ActivityBuilderSection = {
@@ -31,6 +36,22 @@ export type ActivityBuilderSection = {
 };
 
 export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
+  {
+    id: "library",
+    label: "0 · WKE Library",
+    toneClass: "text-teal-800",
+    cards: [
+      {
+        id: "wke-library",
+        title: "WKE Library",
+        description:
+          "Curated starters and teacher contributions you can copy into My Activity Bank. Private class work stays private.",
+        badge: "Library",
+        lpPath: "/library",
+        status: "authoring_ready",
+      },
+    ],
+  },
   {
     id: "vocab",
     label: "1 · Vocabulary",
@@ -49,38 +70,55 @@ export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
   },
   {
     id: "quizzes",
-    label: "2 · Quizzes from vocabulary",
+    label: "2 · Quizzes",
     toneClass: "text-amber-800",
     cards: [
       {
-        id: "multiple-choice",
-        title: "Multiple choice",
-        description: "Compile from a vocabulary list in Lesson Player → Activity Bank.",
+        id: "quiz-builder",
+        title: "Quiz builder",
+        description:
+          "Generate from a vocabulary list, edit questions, then save to Activity Bank.",
         badge: "Quizzes",
+        lpPath: "/quizzes",
+        status: "authoring_ready",
+        bankFormats: ["multiple_choice", "letter_mixup", "flashcards"],
+      },
+      // Legacy backup entry points (admin only) — pre–unified Quiz Builder.
+      {
+        id: "multiple-choice",
+        title: "Multiple choice (legacy)",
+        description:
+          "Backup: open Vocabulary lists and compile MCQ from there.",
+        badge: "Legacy",
         lpPath: "/vocabulary-lists",
         studioPath: "/activity-builder/games",
         status: "authoring_ready",
         bankFormats: ["multiple_choice"],
+        adminOnly: true,
       },
       {
         id: "flashcards",
-        title: "Flashcards",
-        description: "Compile from a vocabulary list in Lesson Player → Activity Bank.",
-        badge: "Quizzes",
+        title: "Flashcards (legacy)",
+        description:
+          "Backup: open Vocabulary lists and compile flashcards from there.",
+        badge: "Legacy",
         lpPath: "/vocabulary-lists",
         studioPath: "/activity-builder/games/flashcards",
         status: "authoring_ready",
         bankFormats: ["flashcards"],
+        adminOnly: true,
       },
       {
         id: "letter-mixup",
-        title: "Letter scramble",
-        description: "Compile from a vocabulary list in Lesson Player → Activity Bank.",
-        badge: "Quizzes",
+        title: "Letter scramble (legacy)",
+        description:
+          "Backup: open Vocabulary lists and compile letter scramble from there.",
+        badge: "Legacy",
         lpPath: "/vocabulary-lists",
         studioPath: "/activity-builder/games/letter-mixup",
         status: "authoring_ready",
         bankFormats: ["letter_mixup"],
+        adminOnly: true,
       },
       {
         id: "sentence-scramble",
@@ -174,4 +212,26 @@ export function studioOriginFromEnv(): string | null {
     process.env.STUDIO_ORIGIN?.trim();
   if (!raw) return null;
   return raw.replace(/\/$/, "");
+}
+
+/** Cards teachers can use without admin (live LP authoring). */
+export function isShippableActivityBuilderCard(card: ActivityBuilderCard): boolean {
+  return card.status === "authoring_ready" || card.status === "play_in_bank";
+}
+
+/**
+ * Hub sections for the signed-in teacher.
+ * Non-admins only see shippable, non-adminOnly cards; empty sections are omitted.
+ */
+export function visibleActivityBuilderSections(
+  isAdmin: boolean,
+): ActivityBuilderSection[] {
+  return ACTIVITY_BUILDER_SECTIONS.map((section) => ({
+    ...section,
+    cards: section.cards.filter((card) => {
+      if (card.adminOnly && !isAdmin) return false;
+      if (!isAdmin && !isShippableActivityBuilderCard(card)) return false;
+      return true;
+    }),
+  })).filter((section) => section.cards.length > 0);
 }

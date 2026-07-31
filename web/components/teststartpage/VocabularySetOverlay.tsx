@@ -5,23 +5,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { PrimaryChrome } from "@/components/primary/PrimaryChrome";
 import { HomeworkProgressBar } from "@/components/primary/HomeworkPlayChrome";
+import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
 import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import {
   applyMediaToVocabularySet,
-  buildVocabularyPracticeContext,
-  buildVocabularySetScreens,
   getVocabularySet,
-  practiceWordsInSessionOrder,
   type VocabSetId,
   type VocabularySetDefinition,
 } from "@/lib/vocabulary-templates";
-import { DEFAULT_PRACTICE_COUNT } from "@/lib/vocabulary-templates/types";
 import { playSfx } from "@/lib/audio/sfx";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import {
   VOCAB_PHASE_LABELS,
+  vocabLessonId,
   vocabPhaseFromResumeIndex,
 } from "@/lib/primary/vocab-continue";
+import { compileVocabPlayerRun } from "@/lib/pilots/compile-vocab-player-run";
+import { VOCAB_PLAYER_SAMPLE_SIZE } from "@/lib/pilots/compile-vocab-player-run-constants";
+import { buildPoolFromVocabularySetDefinition } from "@/lib/pilots/vocab-player-pool";
 import { loadVocabularySetMedia } from "@/lib/teststartpage/load-vocabulary-set-media-action";
 import { readMasterySnapshot } from "@/lib/mastery/local-storage";
 import {
@@ -32,6 +33,7 @@ import {
 
 /**
  * Product A — vocab set practice (Primary Vocabulary tab).
+ * Runtime spine: Vocab Player (flashcards → letter → line match → MC → listen).
  * @see docs/primary/PRIMARY_VOCAB_ACTIVITY_CONTRACT.md
  */
 const LessonPlayer = dynamic(
@@ -75,15 +77,13 @@ export function VocabularySetOverlay({
   >([]);
   const [showAdaptiveDebug, setShowAdaptiveDebug] = useState(false);
   const [screenIndex, setScreenIndex] = useState(initialScreenIndex);
+  const [compileError, setCompileError] = useState<string | null>(null);
+  const warmedSeedRef = useRef<string | null>(null);
   const exitPracticeSessionRef = useRef<(() => void) | null>(null);
   const { muted: storeMuted, toggleMuted } = useAudioMuted();
   const effectiveMuted = muted || storeMuted;
 
-  const lessonId = `vocab-${setId}`;
-  const phaseLabel =
-    VOCAB_PHASE_LABELS[
-      vocabPhaseFromResumeIndex(screenIndex, DEFAULT_PRACTICE_COUNT)
-    ];
+  const lessonId = vocabLessonId(setId);
 
   const exitOpenPracticeSession = () => {
     exitPracticeSessionRef.current?.();
@@ -95,6 +95,7 @@ export function VocabularySetOverlay({
     const base = getVocabularySet(setId);
     setDef(base);
     setMediaLoading(true);
+    setCompileError(null);
     void (async () => {
       try {
         const media = await loadVocabularySetMedia(setId);
@@ -117,7 +118,7 @@ export function VocabularySetOverlay({
     const recommendations = recommendVocabularyPracticeWords({
       words: base.words,
       mastery,
-      limit: Math.ceil(DEFAULT_PRACTICE_COUNT / 2),
+      limit: Math.ceil(VOCAB_PLAYER_SAMPLE_SIZE / 2),
     });
     setAdaptiveRecommendations(recommendations);
     setAdaptiveWordIds(recommendations.map((rec) => rec.wordId));
@@ -127,15 +128,42 @@ export function VocabularySetOverlay({
     setShowAdaptiveDebug(new URLSearchParams(window.location.search).has("adaptiveDebug"));
   }, []);
 
-  const screens = useMemo(
-    () =>
-      buildVocabularySetScreens(def, {
+  const compiledRun = useMemo(() => {
+    if (mediaLoading) return null;
+    try {
+      const run = compileVocabPlayerRun({
         seed: sessionSeed,
-        practiceCount: DEFAULT_PRACTICE_COUNT,
+        pool: buildPoolFromVocabularySetDefinition(def),
         preferredWordIds: adaptiveWordIds,
-      }),
-    [adaptiveWordIds, def, sessionSeed],
-  );
+        sampleSize: VOCAB_PLAYER_SAMPLE_SIZE,
+      });
+      return run;
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "This topic needs more pictures before you can play.",
+      } as const;
+    }
+  }, [adaptiveWordIds, def, mediaLoading, sessionSeed]);
+
+  const screens = compiledRun && "screens" in compiledRun ? compiledRun.screens : [];
+  const vocabPracticeWords =
+    compiledRun && "practiceWords" in compiledRun ? compiledRun.practiceWords : [];
+  const runError =
+    compiledRun && "error" in compiledRun ? compiledRun.error : compileError;
+
+  useEffect(() => {
+    if (!compiledRun || !("screens" in compiledRun)) {
+      if (compiledRun && "error" in compiledRun) setCompileError(compiledRun.error);
+      return;
+    }
+    setCompileError(null);
+  }, [compiledRun]);
+
+  const phaseLabel =
+    VOCAB_PHASE_LABELS[vocabPhaseFromResumeIndex(screenIndex, VOCAB_PLAYER_SAMPLE_SIZE)];
 
   const vocabWordsById = useMemo(
     () =>
@@ -147,19 +175,6 @@ export function VocabularySetOverlay({
       ),
     [def.words],
   );
-
-  const vocabPracticeWords = useMemo(() => {
-    const ctx = buildVocabularyPracticeContext(def, {
-      seed: sessionSeed,
-      practiceCount: DEFAULT_PRACTICE_COUNT,
-      preferredWordIds: adaptiveWordIds,
-    });
-    return practiceWordsInSessionOrder(ctx).map((w) => ({
-      id: w.id,
-      lemma: w.lemma,
-      imageUrl: w.imageUrl,
-    }));
-  }, [adaptiveWordIds, def, sessionSeed]);
 
   useEffect(() => {
     setScreenIndex(initialScreenIndex);
@@ -173,9 +188,16 @@ export function VocabularySetOverlay({
   }, []);
 
   useEffect(() => {
-    if (mediaLoading) return;
-    void prefetchImageUrls([def.coverImageUrl, ...def.words.map((w) => w.imageUrl)]);
-  }, [mediaLoading, def.id, def.coverImageUrl, def.words]);
+    if (mediaLoading || !compiledRun || !("imageUrls" in compiledRun)) return;
+    if (warmedSeedRef.current === sessionSeed) return;
+    warmedSeedRef.current = sessionSeed;
+    prefetchInteractionChunk("flashcards");
+    prefetchInteractionChunk("letter_mixup");
+    prefetchInteractionChunk("line_match");
+    prefetchInteractionChunk("mc_quiz");
+    prefetchInteractionChunk("listen_and_choose");
+    void prefetchImageUrls(compiledRun.imageUrls);
+  }, [compiledRun, mediaLoading, sessionSeed]);
 
   return (
     <PrimaryChrome
@@ -224,6 +246,21 @@ export function VocabularySetOverlay({
           <div className="m-auto rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] px-6 py-8 text-center shadow-sm">
             <p className="text-lg font-extrabold text-[var(--pl-ink)]">Loading pictures…</p>
           </div>
+        ) : runError ? (
+          <div className="m-auto max-w-md rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] px-6 py-8 text-center shadow-sm">
+            <p className="text-lg font-extrabold text-[var(--pl-ink)]">Pictures coming soon</p>
+            <p className="mt-2 text-sm font-semibold text-[var(--pl-muted)]">{runError}</p>
+            <button
+              type="button"
+              className="mt-5 inline-flex min-h-10 items-center justify-center rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-4 text-sm font-extrabold text-[var(--pl-ink)] transition hover:border-[var(--pl-purple)] hover:bg-white"
+              onClick={() => {
+                playSfx("tap", effectiveMuted);
+                onClose();
+              }}
+            >
+              Back to Vocabulary
+            </button>
+          </div>
         ) : (
           <>
             {screens.length > 0 ? (
@@ -249,8 +286,8 @@ export function VocabularySetOverlay({
               runSeed={sessionSeed}
               initialScreenIndex={initialScreenIndex}
               vocabWordsById={vocabWordsById}
-              vocabLearnPhraseTheme={def.learnPhraseTheme ?? "default"}
               vocabPracticeWords={vocabPracticeWords}
+              vocabRewardLayout="report"
               onPracticeSessionBind={(api) => {
                 exitPracticeSessionRef.current = api.exitIfOpen;
               }}

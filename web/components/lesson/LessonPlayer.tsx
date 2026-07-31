@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { clsx } from "clsx";
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -29,6 +28,7 @@ import { teardownPlaybackInRoot } from "@/lib/audio/teardown-lesson-playback";
 import { speakText, stopSpeaking } from "@/lib/audio/tts";
 import type { LessonScreenRow } from "@/lib/lesson/types";
 import { getQuizProgressForLessonIndex } from "@/lib/lesson-activity-taxonomy";
+import { VOCAB_PLAYER_LESSON_ID_PREFIX } from "@/lib/pilots/compile-vocab-player-run";
 import { PlayerCharacter } from "@/components/avatar/PlayerCharacter";
 import { PetCompanion } from "@/components/worlds/PetCompanion";
 import {
@@ -93,6 +93,8 @@ import {
   type GrammarRunStats,
 } from "@/lib/grammar-templates/grammar-run-session";
 import { prefetchInteractionChunk } from "@/components/lesson/interactions/loaders";
+import { lazyWithDiagnostics } from "@/lib/app-diagnostics/lazy";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 import { prefetchImageUrls } from "@/lib/media/prefetch-image-urls";
 import {
   interactionImageFitClass,
@@ -122,86 +124,86 @@ import type { LessonPlayerVisualEdit } from "@/components/lesson/lesson-player-e
 
 export type { LessonPlayerVisualEdit };
 
-const LazyMcQuiz = lazy(() =>
+const LazyMcQuiz = lazyWithDiagnostics("interaction:McQuizView", () =>
   import("./interactions/McQuizView").then((m) => ({ default: m.McQuizView })),
 );
-const LazyTrueFalse = lazy(() =>
+const LazyTrueFalse = lazyWithDiagnostics("interaction:TrueFalseView", () =>
   import("./interactions/TrueFalseView").then((m) => ({ default: m.TrueFalseView })),
 );
-const LazyShortAnswer = lazy(() =>
+const LazyShortAnswer = lazyWithDiagnostics("interaction:ShortAnswerView", () =>
   import("./interactions/ShortAnswerView").then((m) => ({ default: m.ShortAnswerView })),
 );
-const LazyFixText = lazy(() =>
+const LazyFixText = lazyWithDiagnostics("interaction:FixTextView", () =>
   import("./interactions/FixTextView").then((m) => ({ default: m.FixTextView })),
 );
-const LazyFillBlanks = lazy(() =>
+const LazyFillBlanks = lazyWithDiagnostics("interaction:FillBlanksView", () =>
   import("./interactions/FillBlanksView").then((m) => ({ default: m.FillBlanksView })),
 );
-const LazyEssay = lazy(() =>
+const LazyEssay = lazyWithDiagnostics("interaction:EssayView", () =>
   import("./interactions/EssayView").then((m) => ({ default: m.EssayView })),
 );
-const LazyExploreHotspots = lazy(() =>
+const LazyExploreHotspots = lazyWithDiagnostics("interaction:ExploreHotspotsView", () =>
   import("./interactions/ExploreHotspotsView").then((m) => ({
     default: m.ExploreHotspotsView,
   })),
 );
-const LazyLanguageInFocus = lazy(() =>
+const LazyLanguageInFocus = lazyWithDiagnostics("interaction:LanguageInFocusView", () =>
   import("./interactions/LanguageInFocusView").then((m) => ({
     default: m.LanguageInFocusView,
   })),
 );
-const LazyDragMatch = lazy(() =>
+const LazyDragMatch = lazyWithDiagnostics("interaction:DragMatchView", () =>
   import("./interactions/DragMatchView").then((m) => ({ default: m.DragMatchView })),
 );
-const LazyLineMatch = lazy(() =>
+const LazyLineMatch = lazyWithDiagnostics("interaction:LineMatchView", () =>
   import("./interactions/LineMatchView").then((m) => ({ default: m.LineMatchView })),
 );
-const LazyClickTargets = lazy(() =>
+const LazyClickTargets = lazyWithDiagnostics("interaction:ClickTargetsView", () =>
   import("./interactions/ClickTargetsView").then((m) => ({ default: m.ClickTargetsView })),
 );
-const LazySoundSort = lazy(() =>
+const LazySoundSort = lazyWithDiagnostics("interaction:SoundSortView", () =>
   import("./interactions/SoundSortView").then((m) => ({ default: m.SoundSortView })),
 );
-const LazyListenAndChoose = lazy(() =>
+const LazyListenAndChoose = lazyWithDiagnostics("interaction:ListenAndChooseView", () =>
   import("./interactions/ListenAndChooseView").then((m) => ({
     default: m.ListenAndChooseView,
   })),
 );
-const LazyFlashcards = lazy(() =>
+const LazyFlashcards = lazyWithDiagnostics("interaction:FlashcardsView", () =>
   import("./interactions/FlashcardsView").then((m) => ({
     default: m.FlashcardsView,
   })),
 );
-const LazyListenColorWrite = lazy(() =>
+const LazyListenColorWrite = lazyWithDiagnostics("interaction:ListenColorWriteView", () =>
   import("./interactions/ListenColorWriteView").then((m) => ({
     default: m.ListenColorWriteView,
   })),
 );
-const LazyLetterMixup = lazy(() =>
+const LazyLetterMixup = lazyWithDiagnostics("interaction:LetterMixupView", () =>
   import("./interactions/LetterMixupView").then((m) => ({ default: m.LetterMixupView })),
 );
-const LazyWordShapeHunt = lazy(() =>
+const LazyWordShapeHunt = lazyWithDiagnostics("interaction:WordShapeHuntView", () =>
   import("./interactions/WordShapeHuntView").then((m) => ({ default: m.WordShapeHuntView })),
 );
-const LazyTableComplete = lazy(() =>
+const LazyTableComplete = lazyWithDiagnostics("interaction:TableCompleteView", () =>
   import("./interactions/TableCompleteView").then((m) => ({ default: m.TableCompleteView })),
 );
-const LazySortingGame = lazy(() =>
+const LazySortingGame = lazyWithDiagnostics("interaction:SortingGameView", () =>
   import("./interactions/SortingGameView").then((m) => ({ default: m.SortingGameView })),
 );
-const LazyVoiceQuestion = lazy(() =>
+const LazyVoiceQuestion = lazyWithDiagnostics("interaction:VoiceQuestionView", () =>
   import("./interactions/VoiceQuestionView").then((m) => ({ default: m.VoiceQuestionView })),
 );
-const LazyGuidedDialogue = lazy(() =>
+const LazyGuidedDialogue = lazyWithDiagnostics("interaction:GuidedDialogueView", () =>
   import("./interactions/GuidedDialogueView").then((m) => ({ default: m.GuidedDialogueView })),
 );
-const LazyDragSentence = lazy(() =>
+const LazyDragSentence = lazyWithDiagnostics("interaction:DragSentenceView", () =>
   import("./interactions/DragSentenceView").then((m) => ({ default: m.DragSentenceView })),
 );
-const LazyWordBucketCatch = lazy(() =>
+const LazyWordBucketCatch = lazyWithDiagnostics("interaction:WordBucketCatchView", () =>
   import("./interactions/WordBucketCatchView").then((m) => ({ default: m.WordBucketCatchView })),
 );
-const LazyExploreRun = lazy(() =>
+const LazyExploreRun = lazyWithDiagnostics("interaction:ExploreRunView", () =>
   import("./interactions/ExploreRunView").then((m) => ({ default: m.ExploreRunView })),
 );
 
@@ -368,6 +370,8 @@ type Props = {
   mode?: LessonPlayerMode;
   /** When set (e.g. teacher preview), open this screen index first */
   initialScreenIndex?: number;
+  /** When set, ExploreHotspots preview starts at this scene index (0 = beginning) */
+  initialPhaseIndex?: number;
   /** When mode is preview, show inline editors on the student layout */
   visualEdit?: LessonPlayerVisualEdit;
   /** Story screens: inset nav on the stage (vocabulary overlay). */
@@ -387,6 +391,8 @@ type Props = {
   /** Published preview finish link (e.g. back to classroom wall). */
   previewFinishHref?: string;
   previewFinishLabel?: string;
+  /** Preview only: header Restart starts a fresh run without leaving the player. */
+  onPreviewRestart?: () => void;
   /** Per-run shuffle seed (vocabulary learn reveal order). */
   runSeed?: string;
   /** Learn word metadata for sticker-match TTS (vocabulary overlay). */
@@ -394,6 +400,11 @@ type Props = {
   vocabLearnPhraseTheme?: VocabLearnPhraseTheme;
   /** Words in this run (for completion stats / review list). */
   vocabPracticeWords?: VocabPracticeWordMeta[];
+  /**
+   * Reward screen layout. Defaults to report for `vocab-player-*` lesson ids;
+   * Primary Product A passes `"report"` while keeping stable `vocab-${setId}` ids.
+   */
+  vocabRewardLayout?: "default" | "report";
   onVocabFinish?: () => void;
   vocabFinishLabel?: string;
   /** New run seed (remount player); used by vocabulary Play again. */
@@ -425,6 +436,7 @@ export function LessonPlayer({
   completionPlayground = null,
   mode = "student",
   initialScreenIndex = 0,
+  initialPhaseIndex,
   visualEdit,
   storyControlsPlacement = "below",
   immersiveLayout = false,
@@ -432,10 +444,12 @@ export function LessonPlayer({
   previewAudience = "authoring",
   previewFinishHref,
   previewFinishLabel,
+  onPreviewRestart,
   runSeed,
   vocabWordsById,
   vocabLearnPhraseTheme,
   vocabPracticeWords,
+  vocabRewardLayout,
   onVocabFinish,
   vocabFinishLabel,
   onVocabPlayAgain,
@@ -461,6 +475,8 @@ export function LessonPlayer({
   const [trackScreenOutcomes, setTrackScreenOutcomes] = useState<
     Record<string, TrackScreenOutcome>
   >({});
+  const trackScreenOutcomesRef = useRef(trackScreenOutcomes);
+  trackScreenOutcomesRef.current = trackScreenOutcomes;
   const [gold, setGold] = useState(0);
   const [experience, setExperience] = useState(0);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -483,10 +499,20 @@ export function LessonPlayer({
     breakdown: GrammarRewardBreakdown;
   } | null>(null);
 
-  const { muted } = useAudioMuted();
+  const { muted: storedMuted } = useAudioMuted();
   const isPreview = mode === "preview";
+  /** Teacher Activity Builder preview should always hear TTS / clips. */
+  const muted = isPreview ? false : storedMuted;
   const isVocabLesson =
     lessonId.startsWith("vocab-") && (vocabPracticeWords?.length ?? 0) > 0;
+  const isVocabPlayerLesson = lessonId.startsWith(`${VOCAB_PLAYER_LESSON_ID_PREFIX}-`);
+  const useVocabReportReward =
+    vocabRewardLayout === "report" ||
+    (vocabRewardLayout !== "default" && isVocabPlayerLesson);
+  /** Vocab Player pilot runs in preview chrome but still awards + scores like a live run. */
+  const persistVocabProgress = isVocabLesson && (!isPreview || isVocabPlayerLesson);
+  const effectiveImmersiveLayout = immersiveLayout || isVocabPlayerLesson;
+  const fillInteractionStage = effectiveImmersiveLayout && !embedNaturalHeight;
   const isGrammarLesson = lessonId.startsWith("grammar-");
   const grammarSlug = isGrammarLesson ? lessonId.slice("grammar-".length) : null;
   const canvasEdit = isPreview && visualEdit != null;
@@ -522,6 +548,25 @@ export function LessonPlayer({
   useEffect(() => {
     onScreenIndexChange?.(index);
   }, [index, onScreenIndexChange]);
+
+  const lessonStartedRef = useRef(false);
+  useEffect(() => {
+    if (!lessonStartedRef.current) {
+      lessonStartedRef.current = true;
+      recordAppDiagnostic("lesson", "mark", "lesson_start", {
+        lessonId,
+        screenCount: screens.length,
+        mode,
+      });
+      return;
+    }
+    recordAppDiagnostic("lesson", "mark", "screen_advance", {
+      lessonId,
+      index,
+      screenId: screen?.id ?? null,
+      screenType: screen?.screen_type ?? null,
+    });
+  }, [index, lessonId, mode, screen?.id, screen?.screen_type, screens.length]);
 
   const recordCurrentVocabMasteryEvidence = useCallback(
     (input: { success: boolean; firstTry: boolean; attempts: number }) => {
@@ -594,13 +639,13 @@ export function LessonPlayer({
   );
 
   useEffect(() => {
-    if (isPreview) return;
+    if (isPreview && !isVocabPlayerLesson) return;
     queueMicrotask(() => {
       const rewards = getRewards();
       setGold(rewards.gold);
       setExperience(rewards.experience);
     });
-  }, [isPreview]);
+  }, [isPreview, isVocabPlayerLesson]);
 
   useEffect(() => {
     const max = Math.max(0, screens.length - 1);
@@ -617,7 +662,7 @@ export function LessonPlayer({
   }, [lessonId, runSeed]);
 
   useEffect(() => {
-    if (isPreview || studentPracticeSessionStartedRef.current) return;
+    if ((!persistVocabProgress && isPreview) || studentPracticeSessionStartedRef.current) return;
 
     if (isVocabLesson) {
       const event = startPracticeSession({
@@ -635,6 +680,8 @@ export function LessonPlayer({
       return;
     }
 
+    if (isPreview) return;
+
     if (isGrammarLesson && grammarSlug) {
       const event = startPracticeSession({
         activityId: grammarSlug,
@@ -648,7 +695,16 @@ export function LessonPlayer({
       studentPracticeSessionStartedRef.current = true;
       studentPracticeSessionCompletedRef.current = false;
     }
-  }, [grammarSlug, isGrammarLesson, isPreview, isVocabLesson, lessonId, runSeed, vocabPracticeWords]);
+  }, [
+    grammarSlug,
+    isGrammarLesson,
+    isPreview,
+    isVocabLesson,
+    lessonId,
+    persistVocabProgress,
+    runSeed,
+    vocabPracticeWords,
+  ]);
 
   const quizProgress = useMemo(
     () => getQuizProgressForLessonIndex(screens, index),
@@ -689,22 +745,39 @@ export function LessonPlayer({
     if (urls.length > 0) void prefetchImageUrls(urls);
   }, [index, lessonId, screens]);
 
-  const clearInteractionScreenState = useCallback(() => {
+  const clearInteractionTransientState = useCallback(() => {
     if (autoAdvanceTimerRef.current) {
       clearTimeout(autoAdvanceTimerRef.current);
       autoAdvanceTimerRef.current = null;
     }
     autoAdvanceCompletedForScreenRef.current = null;
-    interactionPassedScreenIdRef.current = null;
-    setInteractionPass(false);
     setDragFilled([]);
     setInteractionFeedback("none");
   }, []);
 
-  /** Clear pass/feedback before paint so the next interaction never mounts as already passed. */
+  const resetRunScreenOutcomes = useCallback(() => {
+    setTrackScreenOutcomes({});
+    clearInteractionTransientState();
+    interactionPassedScreenIdRef.current = null;
+    setInteractionPass(false);
+  }, [clearInteractionTransientState]);
+
+  /**
+   * Clear timers/feedback before paint; restore pass when revisiting a screen
+   * completed earlier in this run (no auto-advance on restore).
+   */
   useLayoutEffect(() => {
-    clearInteractionScreenState();
-  }, [screen?.id, index, clearInteractionScreenState]);
+    clearInteractionTransientState();
+    const screenId = screen?.id;
+    if (!screenId) {
+      interactionPassedScreenIdRef.current = null;
+      setInteractionPass(false);
+      return;
+    }
+    const alreadyPassed = trackScreenOutcomesRef.current[screenId]?.passed === true;
+    interactionPassedScreenIdRef.current = null;
+    setInteractionPass(alreadyPassed);
+  }, [screen?.id, index, clearInteractionTransientState]);
 
   useEffect(() => {
     stopSpeaking();
@@ -729,11 +802,11 @@ export function LessonPlayer({
   );
 
   const refreshEconomy = useCallback(() => {
-    if (isPreview) return;
+    if (isPreview && !isVocabPlayerLesson) return;
     const rewards = getRewards();
     setGold(rewards.gold);
     setExperience(rewards.experience);
-  }, [isPreview]);
+  }, [isPreview, isVocabPlayerLesson]);
 
   const resetVocabRun = useCallback(() => {
     vocabSessionRef.current = createVocabRunSession();
@@ -803,7 +876,7 @@ export function LessonPlayer({
     const completionGold = vocabCompletionGoldDelta(breakdown, stats.practiceGold);
     const completionSeed = runSeed?.trim() || lessonId;
     const completionRewardEventId = `${lessonId}:${completionSeed}:complete`;
-    if (!isPreview) {
+    if (persistVocabProgress) {
       playSfx("complete", muted);
       const sessionId = getStudentPracticeSessionId();
       const { snapshot } = awardPracticeReward({
@@ -837,17 +910,16 @@ export function LessonPlayer({
     }
     setVocabComplete({ stats, breakdown });
   }, [
-    isPreview,
+    getStudentPracticeSessionId,
     lessonId,
     muted,
-    getStudentPracticeSessionId,
     onEconomyChange,
+    persistVocabProgress,
     runSeed,
     vocabPracticeWords?.length,
   ]);
 
   const goNext = useCallback(() => {
-    clearInteractionScreenState();
     if (index < screens.length - 1) {
       const next = index + 1;
       setIndex(next);
@@ -869,6 +941,11 @@ export function LessonPlayer({
         setExperience(snapshot.experience);
       }
       setDone(true);
+      recordAppDiagnostic("lesson", "mark", "lesson_complete", {
+        lessonId,
+        screenCount: screens.length,
+        mode,
+      });
       if (isPreview) {
         onPreviewComplete?.();
       }
@@ -884,18 +961,17 @@ export function LessonPlayer({
     isGrammarLesson,
     completeVocabLesson,
     completeGrammarLesson,
-    clearInteractionScreenState,
     onPreviewComplete,
+    mode,
   ]);
 
   const goBack = useCallback(() => {
-    clearInteractionScreenState();
     if (index > 0) {
       const next = index - 1;
       setIndex(next);
       visualEdit?.onScreenIndexChange?.(next);
     }
-  }, [index, visualEdit, clearInteractionScreenState]);
+  }, [index, visualEdit]);
 
   useEffect(() => {
     if (!interactionPass) {
@@ -908,7 +984,7 @@ export function LessonPlayer({
     if (!screen) return;
     if (!interactionPass) return;
     if (parsed.type !== "interaction" && parsed.type !== "story") return;
-    if (parsed.auto_advance_on_pass !== true) return;
+    if (!screenAutoAdvancesOnPass(parsed)) return;
     const currentScreenId = screen.id;
     // Pass state must match this screen (avoids scheduling advance on the next screen).
     if (interactionPassedScreenIdRef.current !== currentScreenId) return;
@@ -920,7 +996,7 @@ export function LessonPlayer({
     }
     if (autoAdvanceCompletedForScreenRef.current === currentScreenId) return;
     if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
-    const advanceMs = lessonId.startsWith("vocab-") ? 120 : 650;
+    const advanceMs = autoAdvanceDelayMs(lessonId, parsed);
     autoAdvanceTimerRef.current = setTimeout(() => {
       // Guard against stale timer advancing a newer screen.
       if (screens[index]?.id !== currentScreenId) return;
@@ -977,9 +1053,44 @@ export function LessonPlayer({
   }
 
   if (done) {
+    if (isVocabLesson && vocabComplete && vocabPracticeWords) {
+      return (
+        <div className={clsx(effectiveImmersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
+          <VocabActivityRewardScreen
+            lessonTitle={lessonTitle}
+            stats={vocabComplete.stats}
+            breakdown={vocabComplete.breakdown}
+            practiceWords={vocabPracticeWords}
+            muted={muted}
+            layout={useVocabReportReward ? "report" : "default"}
+            onPlayAgain={() => {
+              if (onVocabPlayAgain) {
+                onVocabPlayAgain();
+                return;
+              }
+              resetVocabRun();
+              resetRunScreenOutcomes();
+              setDone(false);
+              setIndex(0);
+              visualEdit?.onScreenIndexChange?.(0);
+            }}
+            onFinish={onVocabFinish}
+            finishHref={!onVocabFinish ? previewFinishHref : undefined}
+            finishLabel={
+              vocabFinishLabel ??
+              (useVocabReportReward
+                ? previewFinishLabel ?? "Try another activity"
+                : undefined)
+            }
+            playAgainLabel={useVocabReportReward ? "Replay this set" : undefined}
+          />
+        </div>
+      );
+    }
     if (isPreview) {
       const restartPreview = () => {
         playSfx("tap", muted);
+        resetRunScreenOutcomes();
         setDone(false);
         setIndex(0);
         visualEdit?.onScreenIndexChange?.(0);
@@ -989,7 +1100,7 @@ export function LessonPlayer({
         return (
           <div
             className={clsx(
-              immersiveLayout && "flex min-h-0 flex-1 flex-col items-center justify-center",
+              effectiveImmersiveLayout && "flex min-h-0 flex-1 flex-col items-center justify-center",
             )}
           >
             <KidPanel className="space-y-4 text-center">
@@ -1047,34 +1158,9 @@ export function LessonPlayer({
         </KidPanel>
       );
     }
-    if (isVocabLesson && vocabComplete && vocabPracticeWords) {
-      return (
-        <div className={clsx(immersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
-        <VocabActivityRewardScreen
-          lessonTitle={lessonTitle}
-          stats={vocabComplete.stats}
-          breakdown={vocabComplete.breakdown}
-          practiceWords={vocabPracticeWords}
-          muted={muted}
-          onPlayAgain={() => {
-            if (onVocabPlayAgain) {
-              onVocabPlayAgain();
-              return;
-            }
-            resetVocabRun();
-            setDone(false);
-            setIndex(0);
-            visualEdit?.onScreenIndexChange?.(0);
-          }}
-          onFinish={onVocabFinish}
-          finishLabel={vocabFinishLabel}
-        />
-        </div>
-      );
-    }
     if (isGrammarLesson && grammarComplete) {
       return (
-        <div className={clsx(immersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
+        <div className={clsx(effectiveImmersiveLayout && "flex min-h-0 flex-1 flex-col overflow-hidden")}>
           <GrammarActivityRewardScreen
             lessonTitle={lessonTitle}
             stats={grammarComplete.stats}
@@ -1095,6 +1181,7 @@ export function LessonPlayer({
         completionPlayground={completionPlayground}
         onEconomyRefresh={refreshEconomy}
         onPlayAgain={() => {
+          resetRunScreenOutcomes();
           setDone(false);
           setIndex(0);
           visualEdit?.onScreenIndexChange?.(0);
@@ -1109,11 +1196,12 @@ export function LessonPlayer({
     onNext: goNext,
     onBack: goBack,
     showBack: index > 0,
-    ...(immersiveLayout ? { controlsPlacement: "stage-footer" as const } : {}),
+    ...(effectiveImmersiveLayout ? { controlsPlacement: "stage-footer" as const } : {}),
   };
 
   const passHandlers = {
     onPass: () => {
+      if (trackScreenOutcomesRef.current[screen.id]?.passed) return;
       interactionPassedScreenIdRef.current = screen.id;
       setTrackScreenOutcomes((current) => ({
         ...current,
@@ -1126,7 +1214,7 @@ export function LessonPlayer({
       window.setTimeout(() => setInteractionFeedback("none"), 750);
       setInteractionPass(true);
       playSfx("correct", muted);
-      if (!isPreview) {
+      if (persistVocabProgress || !isPreview) {
         const perQuestionGold =
           (parsed.type === "interaction" || parsed.type === "story") &&
           typeof parsed.gold_reward_on_pass === "number" &&
@@ -1151,16 +1239,18 @@ export function LessonPlayer({
             experienceDelta: 2,
           });
           rewardSnapshot = awarded.snapshot;
-        } else {
+        } else if (!isPreview) {
           rewardSnapshot = awardRewards({
             eventId: rewardEventId,
             goldDelta: perQuestionGold,
             experienceDelta: 2,
           });
         }
-        grantGardenSeedForQuiz(rewardEventId);
-        setGold(rewardSnapshot.gold);
-        setExperience(rewardSnapshot.experience);
+        if (persistVocabProgress || !isPreview) {
+          grantGardenSeedForQuiz(rewardEventId);
+          setGold(rewardSnapshot.gold);
+          setExperience(rewardSnapshot.experience);
+        }
         if (isVocabLesson && isVocabGradedInteraction(parsed)) {
           const firstTry = !screenHadWrongRef.current;
           recordCurrentVocabMasteryEvidence({
@@ -1172,6 +1262,7 @@ export function LessonPlayer({
           recordVocabPracticeGold(vocabSessionRef.current, perQuestionGold);
         }
         if (
+          !isPreview &&
           isGrammarLesson &&
           parsed?.type === "interaction" &&
           parsed.subtype === "true_false"
@@ -1193,6 +1284,9 @@ export function LessonPlayer({
         }
         const trackedWords = extractTrackedWords(parsed);
         recordWordInteraction(trackedWords, true);
+      } else if (isVocabLesson && isVocabGradedInteraction(parsed)) {
+        // Preview without persisted rewards still tracks first-try accuracy for the report.
+        recordVocabRunPass(vocabSessionRef.current, screenHadWrongRef.current);
       }
     },
     onWrong: () => {
@@ -1207,11 +1301,13 @@ export function LessonPlayer({
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
       if (isVocabLesson && isVocabGradedInteraction(parsed)) {
-        recordCurrentVocabMasteryEvidence({
-          success: false,
-          firstTry: false,
-          attempts: screenHadWrongRef.current ? 2 : 1,
-        });
+        if (persistVocabProgress) {
+          recordCurrentVocabMasteryEvidence({
+            success: false,
+            firstTry: false,
+            attempts: screenHadWrongRef.current ? 2 : 1,
+          });
+        }
         if (!screenHadWrongRef.current) {
           recordVocabRunWrong(vocabSessionRef.current, extractVocabWordId(parsed));
         }
@@ -1230,7 +1326,7 @@ export function LessonPlayer({
         });
         screenHadWrongRef.current = true;
       }
-      if (!isPreview) {
+      if (persistVocabProgress || !isPreview) {
         if (isVocabLesson) {
           recordAttempt({
             sessionId: getStudentPracticeSessionId(),
@@ -1247,13 +1343,13 @@ export function LessonPlayer({
 
   return (
     <LessonChromeProvider
-      controlsPlacement={immersiveLayout ? "stage-footer" : undefined}
+      controlsPlacement={effectiveImmersiveLayout ? "stage-footer" : undefined}
     >
     <div
       ref={playbackRootRef}
       className={clsx(
         "mx-auto w-full max-w-5xl",
-        immersiveLayout
+        effectiveImmersiveLayout
           ? embedNaturalHeight
             ? "relative flex flex-col gap-2"
             : "relative flex h-full min-h-0 flex-col gap-2 overflow-hidden"
@@ -1266,20 +1362,71 @@ export function LessonPlayer({
           Student preview — progress is not saved.
         </p>
       ) : null}
-      {!immersiveLayout ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-kid-ink pb-3">
-          <h1 className="text-xl font-bold text-kid-ink">{lessonTitle}</h1>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900">
+      {!effectiveImmersiveLayout || isVocabPlayerLesson ? (
+        <div
+          className={clsx(
+            "flex shrink-0 flex-wrap items-center justify-between gap-2 border-b-4 border-kid-ink",
+            isVocabPlayerLesson ? "pb-2" : "gap-3 pb-3",
+          )}
+        >
+          <h1
+            className={clsx(
+              "font-bold text-kid-ink",
+              isVocabPlayerLesson ? "text-lg sm:text-xl" : "text-xl",
+            )}
+          >
+            {lessonTitle}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <p
+              className={clsx(
+                "rounded-full border border-amber-300 bg-amber-50 font-semibold text-amber-900",
+                isVocabPlayerLesson ? "px-2.5 py-0.5 text-xs sm:px-3 sm:py-1 sm:text-sm" : "px-3 py-1 text-sm",
+              )}
+            >
               Gold: {gold}
             </p>
-            <p className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-900">
+            <p
+              className={clsx(
+                "rounded-full border border-sky-300 bg-sky-50 font-semibold text-sky-900",
+                isVocabPlayerLesson ? "px-2.5 py-0.5 text-xs sm:px-3 sm:py-1 sm:text-sm" : "px-3 py-1 text-sm",
+              )}
+            >
               Lv {xpProgressInLevel(experience).level} · {experience} XP
             </p>
+            {isPreview && (onPreviewRestart || previewFinishHref) ? (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {onPreviewRestart ? (
+                  <KidButton
+                    type="button"
+                    variant="secondary"
+                    className="!min-h-8 !min-w-0 px-2.5 py-1 text-xs font-bold sm:!min-h-9 sm:px-3 sm:text-sm"
+                    onClick={() => {
+                      playSfx("tap", muted);
+                      onPreviewRestart();
+                    }}
+                  >
+                    Restart
+                  </KidButton>
+                ) : null}
+                {previewFinishHref ? (
+                  <Link
+                    href={previewFinishHref}
+                    className={clsx(
+                      kidLinkSecondaryClassName,
+                      "!min-h-8 !min-w-0 px-2.5 py-1 text-xs font-bold sm:!min-h-9 sm:px-3 sm:text-sm",
+                    )}
+                    onClick={() => playSfx("tap", muted)}
+                  >
+                    {previewFinishLabel ?? "Exit"}
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
-      {!immersiveLayout && quizProgress ? (
+      {!effectiveImmersiveLayout && quizProgress && !isVocabPlayerLesson ? (
         <div
           className="rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2 shadow-sm"
           role="status"
@@ -1302,7 +1449,7 @@ export function LessonPlayer({
 
       <div
         className={clsx(
-          immersiveLayout &&
+          effectiveImmersiveLayout &&
             !embedNaturalHeight &&
             "flex min-h-0 flex-1 flex-col overflow-hidden",
         )}
@@ -1534,8 +1681,8 @@ export function LessonPlayer({
               />
             </label>
           ) : null}
-          <InteractionFeedbackShell kind={interactionFeedback}>
-            <InteractionLazyShell>
+          <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+            <InteractionLazyShell fillStage={fillInteractionStage}>
               <LazyMcQuiz parsed={parsed} {...nav} {...passHandlers} />
             </InteractionLazyShell>
           </InteractionFeedbackShell>
@@ -1566,8 +1713,8 @@ export function LessonPlayer({
               />
             </label>
           ) : null}
-          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout && !embedNaturalHeight}>
-            <InteractionLazyShell fillStage={immersiveLayout && !embedNaturalHeight}>
+          <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+            <InteractionLazyShell fillStage={fillInteractionStage}>
               <LazyTrueFalse
                 parsed={parsed}
                 {...nav}
@@ -1674,8 +1821,8 @@ export function LessonPlayer({
               />
             </label>
           ) : null}
-          <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout && !embedNaturalHeight}>
-            <InteractionLazyShell fillStage={immersiveLayout && !embedNaturalHeight}>
+          <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+            <InteractionLazyShell fillStage={fillInteractionStage}>
               <LazyFillBlanks
                 key={screen.id}
                 parsed={parsed}
@@ -1730,7 +1877,7 @@ export function LessonPlayer({
       {parsed.type === "interaction" && parsed.subtype === "explore_hotspots" && (
         <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
-            <LazyExploreHotspots parsed={parsed} {...nav} {...passHandlers} />
+            <LazyExploreHotspots parsed={parsed} {...nav} {...passHandlers} initialPhaseIndex={initialPhaseIndex} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
@@ -1742,15 +1889,15 @@ export function LessonPlayer({
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "drag_match" && (
-        <InteractionFeedbackShell kind={interactionFeedback}>
-          <InteractionLazyShell>
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
             <LazyDragMatch parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "line_match" && (
-        <InteractionFeedbackShell kind={interactionFeedback}>
-          <InteractionLazyShell>
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
             <LazyLineMatch parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
@@ -1770,15 +1917,15 @@ export function LessonPlayer({
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "listen_and_choose" && (
-        <InteractionFeedbackShell kind={interactionFeedback}>
-          <InteractionLazyShell>
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
             <LazyListenAndChoose key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "flashcards" && (
-        <InteractionFeedbackShell kind={interactionFeedback}>
-          <InteractionLazyShell>
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
             <LazyFlashcards key={screen.id} parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
@@ -1791,8 +1938,8 @@ export function LessonPlayer({
         </InteractionFeedbackShell>
       )}
       {parsed.type === "interaction" && parsed.subtype === "letter_mixup" && (
-        <InteractionFeedbackShell kind={interactionFeedback} fillStage={immersiveLayout && !embedNaturalHeight}>
-          <InteractionLazyShell fillStage={immersiveLayout && !embedNaturalHeight}>
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
             <LazyLetterMixup
               key={screen.id}
               parsed={parsed}
@@ -1894,6 +2041,23 @@ export function LessonPlayer({
   );
 }
 
+function screenAutoAdvancesOnPass(payload: ScreenPayload | null): boolean {
+  if (!payload) return false;
+  if (
+    (payload.type === "story" || payload.type === "interaction") &&
+    payload.auto_advance_on_pass === true
+  ) {
+    return true;
+  }
+  return payload.type === "interaction" && payload.subtype === "letter_mixup";
+}
+
+function autoAdvanceDelayMs(lessonId: string, payload: ScreenPayload | null): number {
+  if (lessonId.startsWith("vocab-") || lessonId.startsWith("vocab-player-")) return 120;
+  if (payload?.type === "interaction" && payload.subtype === "letter_mixup") return 450;
+  return 650;
+}
+
 function extractWords(text: string): string[] {
   const matches = text.match(/[A-Za-z']+/g) ?? [];
   return matches.map((w) => w.toLowerCase());
@@ -1968,6 +2132,8 @@ function vocabResponseKind(payload: ScreenPayload | null): StudentResponseKind {
     case "letter_mixup":
       return "type";
     case "true_false":
+    case "mc_quiz":
+    case "listen_and_choose":
       return "tap";
     default:
       return "other";
@@ -1978,6 +2144,8 @@ function vocabEvidenceMode(payload: ScreenPayload | null): EvidenceMode {
   if (!payload || payload.type !== "interaction") return "recall";
   switch (payload.subtype) {
     case "true_false":
+    case "mc_quiz":
+    case "listen_and_choose":
       return "recognition";
     case "letter_mixup":
       return "production";

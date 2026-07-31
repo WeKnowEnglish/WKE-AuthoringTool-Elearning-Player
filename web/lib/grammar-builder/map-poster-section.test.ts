@@ -24,6 +24,7 @@ describe("mapPosterItem", () => {
       emoji: "📘",
       highlight: "Is there",
       label: "desk",
+      align: "center",
     });
   });
 });
@@ -36,7 +37,15 @@ describe("inferPosterLayout", () => {
 
   it("maps two-equal with ANY label-only left item to 30_70", () => {
     const module = loadPosterFixture();
-    expect(inferPosterLayout(module.cards[1]!)).toBe("30_70");
+    const narrowCard = {
+      ...module.cards[0]!,
+      leftColumn: {
+        title: "PLURAL",
+        badge: "👧👦",
+        items: [{ text: "ANY", caption: "people" }],
+      },
+    };
+    expect(inferPosterLayout(narrowCard)).toBe("30_70");
   });
 
   it("maps banner layout type to banner", () => {
@@ -61,16 +70,13 @@ describe("mapPosterSection", () => {
     expect(section.leftExamples?.[0]?.sentence).toContain("book");
   });
 
-  it("maps card 2 to two_equal_narrow without a right column pill", () => {
+  it("maps card 2 to a full_width plural section", () => {
     const module = loadPosterFixture();
     const section = mapPosterSection(module.cards[1]!);
 
-    expect(section.internalLayout).toBe("two_equal_narrow");
-    expect(section.leftLabel).toBe("PLURAL");
-    expect(section.leftExamples?.[0]?.sentence).toBe("ANY");
-    expect(section.leftExamples?.[0]?.label).toBe("people");
-    expect(section.rightLabel).toBeUndefined();
-    expect(section.rightExamples?.[0]?.sentence).toContain("chairs");
+    expect(section.internalLayout).toBe("full_width");
+    expect(section.subHeader?.label).toBe("PLURAL");
+    expect(section.stackedExamples?.[0]?.sentence).toContain("chairs");
   });
 
   it("maps card 3 to a banner remember section", () => {

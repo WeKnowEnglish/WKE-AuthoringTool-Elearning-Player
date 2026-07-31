@@ -37,6 +37,7 @@ function renderSectionCard(
       number={section.number}
       kidTitle={section.kidTitle}
       kidSubtitle={section.kidSubtitle}
+      chromeAlign={section.chromeAlign}
       title={section.title}
       glanceRule={section.glanceRule}
       color={section.color}

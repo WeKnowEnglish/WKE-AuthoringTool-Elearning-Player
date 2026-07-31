@@ -128,7 +128,7 @@ describe("secondary-today-session", () => {
     const second = getOrCreateSecondaryTodaySession(now);
 
     expect(first.dateKey).toBe(dateKey);
-    expect(first.selectionVersion).toBe(3);
+    expect(first.selectionVersion).toBe(4);
     expect(first.allWordItemIds.length).toBeGreaterThan(0);
     expect(first.allWordItemIds.length).toBeLessThanOrEqual(
       WARMUP_WORDS + TARGET_TODAY_WORDS + 8,
@@ -154,7 +154,7 @@ describe("secondary-today-session", () => {
     const session = getOrCreateSecondaryTodaySession(now);
     expect(session.allWordItemIds.length).toBeGreaterThan(0);
     expect(session.dateKey).toBe(dateKey);
-    expect(session.selectionVersion).toBe(3);
+    expect(session.selectionVersion).toBe(4);
   });
 
   it("rebuilds when stored session payload is corrupted", () => {
@@ -169,7 +169,7 @@ describe("secondary-today-session", () => {
     expect(session.dateKey).toBe(dateKey);
     expect(Array.isArray(session.allWordItemIds)).toBe(true);
     expect(session.allWordItemIds.length).toBeGreaterThan(0);
-    expect(session.selectionVersion).toBe(3);
+    expect(session.selectionVersion).toBe(4);
   });
 
   it("includes due words when scoped mastery marks them due", () => {
@@ -301,7 +301,7 @@ describe("secondary-today-session", () => {
     migrateLocalStorageToStudentStorageId(authId);
     const session = getOrCreateSecondaryTodaySession(now);
     expect(session.allWordItemIds).toContain(fragileWordId);
-    expect(session.selectionVersion).toBe(3);
+    expect(session.selectionVersion).toBe(4);
   });
 
   it("rebuilds cached session when vocab pack version changes", () => {
@@ -349,7 +349,7 @@ describe("secondary-today-session", () => {
         warmUpWordItemIds: [],
         todayWordItemIds: todayIds,
         allWordItemIds: todayIds,
-        selectionVersion: 2,
+        selectionVersion: 4,
         packId: SECONDARY_VOCAB_PACK_ID,
         packVersion: SECONDARY_VOCAB_PACK_VERSION,
         masteredOnListOrder: masteredIds,
@@ -357,7 +357,7 @@ describe("secondary-today-session", () => {
     );
 
     const reloaded = getOrCreateSecondaryTodaySession(now);
-    expect(reloaded.selectionVersion).toBe(3);
+    expect(reloaded.selectionVersion).toBe(4);
     expect(reloaded.replacedOutWordItemIds).toContain(masteredIds[0]);
     expect(reloaded.todayWordItemIds).not.toContain(masteredIds[0]);
     expect(reloaded.todayWordItemIds.length).toBe(todayIds.length);

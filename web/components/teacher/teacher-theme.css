@@ -221,6 +221,22 @@
   border-color: var(--teacher-border);
 }
 
+[data-teacher-root][data-teacher-themed="true"] .teacher-theme-presets {
+  background: color-mix(in srgb, var(--teacher-panel) 88%, transparent);
+  border-color: var(--teacher-border);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-theme-preset-input {
+  border-color: var(--teacher-border-strong);
+  background: var(--teacher-input);
+  color: var(--teacher-fg);
+}
+
+[data-teacher-root][data-teacher-themed="true"] .teacher-theme-preset-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--teacher-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
 /* Keep Lesson Player / published previews on student light surfaces. */
 [data-teacher-root] [data-student-surface] {
   color: #171717;

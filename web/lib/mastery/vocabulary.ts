@@ -32,6 +32,8 @@ export function createVocabularyEvidenceEvent(input: {
   wordId: string;
   lemma?: string | null;
   itemId?: string;
+  /** Extra word ids updated by the same evidence (e.g. Secondary g7-* + pv_*). */
+  aliasWordIds?: readonly string[];
   success: boolean;
   firstTry: boolean;
   attempts: number;
@@ -45,6 +47,15 @@ export function createVocabularyEvidenceEvent(input: {
     wordId: input.wordId,
     lemma: input.lemma,
   });
+  const aliasTargets = (input.aliasWordIds ?? [])
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0 && id !== input.wordId)
+    .map((wordId) =>
+      createVocabularyLearningTarget({
+        wordId,
+        lemma: input.lemma,
+      }),
+    );
   const strandIds = vocabularyStrandsForPractice({
     evidenceMode: input.evidenceMode,
     responseKind: input.responseKind,
@@ -59,7 +70,7 @@ export function createVocabularyEvidenceEvent(input: {
     source: "vocab_set",
     activityId: input.activityId,
     itemId: input.itemId ?? input.wordId,
-    targetRefs: [target, ...learningStrandTargetRefs(strandIds)],
+    targetRefs: [target, ...aliasTargets, ...learningStrandTargetRefs(strandIds)],
     response: {
       kind: input.responseKind,
       success: input.success,

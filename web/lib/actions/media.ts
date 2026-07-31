@@ -302,6 +302,12 @@ export async function uploadTeacherMedia(
 
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
   const publicUrl = pub.publicUrl;
+  const itemNameFromForm = normalizeOptionalText(formData.get("meta_item_name"), 120);
+  const { itemNameFromFilename } = await import(
+    "@/lib/vocabulary/lexicon-media/match-from-item-name"
+  );
+  const itemName =
+    itemNameFromForm || itemNameFromFilename(f.name)?.slice(0, 120) || null;
 
   const { data: row, error: insErr } = await supabase
     .from("media_assets")
@@ -313,10 +319,24 @@ export async function uploadTeacherMedia(
       uploaded_by: user.id,
       sha256_hash: sha256Hash,
       phash,
+      ...(itemName ? { meta_item_name: itemName } : {}),
     })
     .select("id")
     .single();
   if (insErr) throw new Error(insErr.message);
+
+  // Auto-link high-confidence dictionary matches; otherwise enqueue review.
+  try {
+    const { processMediaLexiconMatch } = await import("@/lib/actions/media-lexicon-match");
+    await processMediaLexiconMatch({
+      mediaAssetId: row.id as string,
+      itemName,
+      originalFilename: f.name,
+      contentType,
+    });
+  } catch {
+    // Non-fatal: upload already succeeded
+  }
 
   revalidatePath("/teacher/media");
   return { url: publicUrl, id: row.id as string, duplicate_status: "uploaded" };
@@ -484,6 +504,8 @@ export async function inspectTeacherMediaBulkDuplicates(
   return issues;
 }
 
+export type MediaLibraryScope = "school" | "mine";
+
 export type SearchTeacherMediaParams = {
   q?: string;
   kind?: MediaKindFilter;
@@ -493,6 +515,13 @@ export type SearchTeacherMediaParams = {
   tags?: string[];
   categories?: string[];
   skills?: string[];
+  /** When set, only return media linked to this dictionary id (pv_ or tw_ entries). */
+  lexiconId?: string;
+  /**
+   * Library shelf scope. `school` = shared catalog (default).
+   * `mine` = only rows uploaded by the signed-in teacher.
+   */
+  scope?: MediaLibraryScope;
   limit?: number;
   /** Zero-based offset for pagination (default 0). */
   offset?: number;
@@ -515,10 +544,28 @@ function parseRpcTotal(raw: unknown): number {
 export async function searchTeacherMedia(
   params: SearchTeacherMediaParams = {},
 ): Promise<SearchTeacherMediaResult> {
-  const { supabase } = await requireTeacher();
+  const { supabase, user } = await requireTeacher();
   const kind = params.kind ?? "all";
   const limit = Math.min(Math.max(params.limit ?? 200, 1), 1000);
   const offset = Math.max(params.offset ?? 0, 0);
+  const lexiconId = params.lexiconId?.trim();
+  const scope: MediaLibraryScope = params.scope === "mine" ? "mine" : "school";
+
+  if (lexiconId) {
+    const linked = await searchTeacherMediaForLexicon(supabase, {
+      lexiconId,
+      kind,
+      q: params.q?.trim() ?? "",
+      limit: scope === "mine" ? Math.max(limit + offset, limit) : limit,
+      offset: scope === "mine" ? 0 : offset,
+    });
+    if (scope !== "mine") return linked;
+    const mine = linked.rows.filter((r) => r.uploaded_by === user.id);
+    return {
+      rows: mine.slice(offset, offset + limit),
+      total: mine.length,
+    };
+  }
 
   const countability = params.countability ?? "all";
   const tags = normalizeAndDedupList(params.tags ?? []);
@@ -538,12 +585,15 @@ export async function searchTeacherMedia(
     p_skills: skills,
     p_limit: limit,
     p_offset: offset,
+    p_uploaded_by: scope === "mine" ? user.id : null,
   });
 
   if (error) {
     const hint =
-      /teacher_search_media_assets|42883|function.*does not exist/i.test(`${error.message} ${error.code ?? ""}`) ?
-        " Run migration web/supabase/migrations/016_teacher_search_media_assets.sql in the Supabase SQL editor."
+      /teacher_search_media_assets|42883|function.*does not exist|PGRST202/i.test(
+        `${error.message} ${error.code ?? ""}`,
+      ) ?
+        " Run migration web/supabase/migrations/080_teacher_search_media_uploaded_by.sql in the Supabase SQL editor."
       : "";
     throw new Error(`${error.message}${hint}`);
   }
@@ -554,9 +604,95 @@ export async function searchTeacherMedia(
   return { rows: items, total };
 }
 
+async function searchTeacherMediaForLexicon(
+  supabase: Awaited<ReturnType<typeof requireTeacher>>["supabase"],
+  input: {
+    lexiconId: string;
+    kind: MediaKindFilter;
+    q: string;
+    limit: number;
+    offset: number;
+  },
+): Promise<SearchTeacherMediaResult> {
+  const { data, error } = await supabase
+    .from("lexicon_media_links")
+    .select(
+      "created_at,media_assets(id,storage_path,public_url,original_filename,content_type,uploaded_by,created_at,sha256_hash,phash,meta_categories,meta_tags,meta_alternative_names,meta_plural,meta_countability,meta_level,meta_word_type,meta_skills,meta_past_tense,meta_notes,meta_item_name)",
+    )
+    .eq("lexicon_id", input.lexiconId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (/lexicon_media_links|does not exist|42P01/i.test(error.message)) {
+      return { rows: [], total: 0 };
+    }
+    throw new Error(error.message);
+  }
+
+  const q = input.q.toLowerCase();
+  const rows: MediaAssetRow[] = [];
+  const seen = new Set<string>();
+  for (const raw of data ?? []) {
+    const media = Array.isArray(raw.media_assets)
+      ? raw.media_assets[0]
+      : raw.media_assets;
+    if (!media?.id || seen.has(media.id as string)) continue;
+    const contentType = String(media.content_type ?? "");
+    if (input.kind === "image" && !contentType.startsWith("image/")) continue;
+    if (input.kind === "audio" && !contentType.startsWith("audio/")) continue;
+    if (input.kind === "video" && !contentType.startsWith("video/")) continue;
+    if (q) {
+      const hay = [
+        media.meta_item_name,
+        media.original_filename,
+        media.public_url,
+        ...(Array.isArray(media.meta_tags) ? media.meta_tags : []),
+        ...(Array.isArray(media.meta_alternative_names)
+          ? media.meta_alternative_names
+          : []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(q)) continue;
+    }
+    seen.add(media.id as string);
+    rows.push(media as unknown as MediaAssetRow);
+  }
+
+  const total = rows.length;
+  return {
+    rows: rows.slice(input.offset, input.offset + input.limit),
+    total,
+  };
+}
+
 export async function listTeacherMedia(kind: MediaKind = "image"): Promise<MediaAssetRow[]> {
   const { rows } = await searchTeacherMedia({ kind, limit: 200 });
   return rows;
+}
+
+/** Batch-load teacher media rows by id (for resolving stored mediaAssetId → public_url). */
+export async function getTeacherMediaByIds(ids: string[]): Promise<MediaAssetRow[]> {
+  const unique = [
+    ...new Set(
+      ids
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0),
+    ),
+  ];
+  if (unique.length === 0) return [];
+
+  const { supabase } = await requireTeacher();
+  const { data, error } = await supabase
+    .from("media_assets")
+    .select(
+      "id,storage_path,public_url,original_filename,content_type,uploaded_by,created_at,sha256_hash,phash,meta_categories,meta_tags,meta_alternative_names,meta_plural,meta_countability,meta_level,meta_word_type,meta_skills,meta_past_tense,meta_notes,meta_item_name",
+    )
+    .in("id", unique);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MediaAssetRow[];
 }
 
 type UpdateTeacherMediaMetadataInput = {
@@ -615,6 +751,21 @@ export async function updateTeacherMediaMetadata(
       "Could not update this media item. It may not exist, or you may not have permission to edit it.",
     );
   }
+
+  try {
+    const { processMediaLexiconMatch } = await import("@/lib/actions/media-lexicon-match");
+    await processMediaLexiconMatch({
+      mediaAssetId: data.id as string,
+      itemName: (data.meta_item_name as string) || itemName,
+      originalFilename: data.original_filename as string,
+      contentType: data.content_type as string,
+      metaTags: (data.meta_tags as string[]) || tags,
+      metaCategories: (data.meta_categories as string[]) || categories,
+    });
+  } catch {
+    // Non-fatal
+  }
+
   revalidatePath("/teacher/media");
   return data as unknown as MediaAssetRow;
 }

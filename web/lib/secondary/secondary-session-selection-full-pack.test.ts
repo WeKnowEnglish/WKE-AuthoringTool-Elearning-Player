@@ -156,9 +156,9 @@ describe("secondary-session-selection full pack (240 words)", () => {
     expect(dueInToday.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("exports selection version 3 for S2 rules", () => {
-    expect(SECONDARY_SELECTION_VERSION).toBe(3);
-    expect(TARGET_TODAY_WORDS).toBe(10);
+  it("exports selection version 4 for 8-word focus lists", () => {
+    expect(SECONDARY_SELECTION_VERSION).toBe(4);
+    expect(TARGET_TODAY_WORDS).toBe(8);
   });
 
   it("keeps all today words in known topics", () => {

@@ -1,6 +1,6 @@
 # Lesson Player Master Document
 
-Last updated: 2026-07-04
+Last updated: 2026-07-27
 
 ## Purpose
 
@@ -50,25 +50,21 @@ Administrator fourth: Leaders need scalable curriculum alignment, safety, conten
 
 ## Current Situation Brief
 
-The app is a Next.js student and teacher platform. The student-facing surface already includes:
+The app is a Next.js student and teacher platform. **Canonical student landings are `/primary` and `/secondary`** (learning band). Legacy `/home` redirects into Primary; the old world-hub `StudentHubClient` is retired from routing.
 
-- Student hub at `app/(student)/home/page.tsx`, routed through `StudentHubClient`.
-- Kid UI primitives in `components/kid-ui`.
-- Home, Learn, Pet, and Collection rooms in `components/student-hub`.
-- Lesson playback in `components/lesson/LessonPlayer.tsx`.
-- Story/page playback in `components/lesson/StoryBookView.tsx`.
-- Many interaction views in `components/lesson/interactions`.
-- Vocabulary practice systems in `lib/vocabulary-templates`.
-- Explore systems in `lib/explore` and `components/student-hub`.
-- Pet care and mini-games in `lib/pet`, `components/pet-*`, and `public/pet`.
-- Progress, rewards, unlocks, stickers, and skills in `lib/progress`, `lib/skills`, and `lib/word-collection`.
-- Teacher authoring, media, course, module, lesson, and AI generation tools under `app/teacher`, `components/teacher`, and `lib/ai`.
+Student-facing surface today includes:
 
-The product direction is promising: there is already a child-friendly hub, an economy layer, vocabulary practice, exploration, story screens, teacher generation, and many tested domain modules.
+- Primary dashboard (`StudentHomeLanding`): vocab, self-study, Games (Pet / Garden), Progress, and teacher `class_homework` inbox.
+- Secondary daily path: Match → Cloze → Spelling → Sentence (teacher sentence review).
+- Shared student shell class menu + `/join-class` enrollment into `teacher_classes`.
+- Private Classroom shell at `/primary/class/[classId]` and `/secondary/class/[classId]` (noticeboard + Live-now placeholders; posts coming next).
+- Lesson playback (`LessonPlayer`, story/interactions), mastery sync, grammar posters at `/grammar`.
+- Progress / rewards / unlocks / stickers / skills; Pet and Garden as Primary Play sinks.
+- Teacher ecosystem: class hub (Teach / Create Lesson / Students & Homework), Activity Builder, Virtual Classroom, Live Game, public Teacher Space at `/wke/[handle]`.
 
-The main architectural risk is that several strong ideas are still partly separate: `teststartpage`, vocabulary overlays, lesson player interactions, explore chapters, pet mini-games, board-game prototypes, and teacher AI generation each carry their own assumptions. The next phase should unify them around one student practice loop and one progress model.
+**Active gap (2026-07):** teachers can assign homework, stage `class_lessons`, and go live, but the private Classroom still needs posts, published materials, and Live-now wiring. Public `/wke` must not be confused with private class. See [`student-ecosystem-upgrade.md`](./student-ecosystem-upgrade.md).
 
-Narrative product decision: the student home world should move toward a top-down 2D narrative game as the primary driver. The runner-style Explore spelling game should not be the main home-world experience; preserve it as prototype/legacy activity code while rebuilding story progression around scene-based exploration.
+Narrative product decision (deferred): a top-down 2D home world remains a long-term intention (`deferred` in pilots), not the current Primary driver. Prefer connecting students to the teacher class spine before rebuilding world roam.
 
 ## Source Of Truth
 
@@ -239,6 +235,7 @@ Deliverables:
 
 ## Milestone Detail Documents
 
+- [Student ecosystem upgrade brief](./student-ecosystem-upgrade.md) — private Classroom vs live VC vs `/wke`; portal spine
 - [Cursor Lesson Creation Handoff](./CURSOR_LESSON_CREATION_HANDOFF.md)
 - [Milestone 1: Student Portal Stabilization](./milestone-1-student-portal-stabilization-plan.md)
 - [Adaptive Learning Architecture Plan](./adaptive-learning-architecture-plan.md)

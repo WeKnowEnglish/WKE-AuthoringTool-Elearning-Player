@@ -66,7 +66,7 @@ export const interactionImmersiveHeroMinStyle: CSSProperties = {
 
 /** Fills the lesson player stage column (vocabulary overlay interactions). */
 export const interactionImmersiveStageClass =
-  "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden pb-11";
+  "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden px-10 sm:px-12";
 
 export function GuideBlock({
   guide,
@@ -217,6 +217,33 @@ export function useLessonChrome(): LessonChromeContextValue {
   return useContext(LessonChromeContext);
 }
 
+/** True when Back/Next sit in the stage footer (vocab overlay / viewport-fit player). */
+export function isStageFooterNav(controlsPlacement?: InteractionControlsPlacement): boolean {
+  return controlsPlacement === "stage-footer";
+}
+
+export function interactionLessonShellClass(
+  controlsPlacement?: InteractionControlsPlacement,
+): string {
+  return isStageFooterNav(controlsPlacement)
+    ? interactionImmersiveStageClass
+    : interactionNavReservePaddingClass;
+}
+
+type InteractionShellNavProps = Omit<NavProps, "muted"> & {
+  nextDisabled?: boolean;
+  nextLabel?: string;
+  backLabel?: string;
+};
+
+/** Picks fixed viewport nav or in-stage footer based on lesson chrome. */
+export function InteractionShellNav(props: InteractionShellNavProps) {
+  if (isStageFooterNav(props.controlsPlacement)) {
+    return <InteractionStageFooter {...props} />;
+  }
+  return <InteractionLessonNav {...props} />;
+}
+
 /** Matches story immersive footer buttons (click-to-reveal learn screen). */
 export const STAGE_OVERLAY_BTN =
   "!min-h-9 !min-w-0 shrink-0 px-3 py-1.5 text-sm shadow-[3px_3px_0_#0a2f86]";
@@ -266,7 +293,13 @@ export const gamesWrongHintClass =
   "mt-3 rounded-lg border-2 border-red-300 bg-red-50 px-3 py-2 text-base font-semibold text-red-900";
 
 const lessonNavArrowBtnClass =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-kid-ink/80 bg-white/95 text-kid-ink shadow-sm transition-[transform,background-color,opacity] duration-100 hover:bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 motion-reduce:active:scale-100";
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-kid-ink/80 bg-white/95 text-kid-ink shadow-sm transition-[transform,background-color,opacity] duration-100 hover:bg-white active:scale-95 motion-reduce:active:scale-100";
+
+const lessonNavNextArrowBtnClass = clsx(
+  lessonNavArrowBtnClass,
+  "border-kid-ink bg-kid-cta text-kid-ink hover:bg-kid-cta/90",
+  "kid-lesson-nav-next-callout",
+);
 
 function LessonNavChevron({ direction }: { direction: "back" | "next" }) {
   return (
@@ -287,8 +320,8 @@ function LessonNavChevron({ direction }: { direction: "back" | "next" }) {
 }
 
 /**
- * Compact Back / Next arrows — centered on the player (all quiz activities).
- * Fixed to the viewport, or absolute inside the stage when chrome is stage-footer.
+ * Compact Back / Next arrows — fixed at viewport bottom, or grouped at the stage card’s
+ * bottom-right (Back then Next) when using stage-footer placement.
  */
 export function InteractionLessonNav({
   showBack,
@@ -309,17 +342,46 @@ export function InteractionLessonNav({
   const placement = controlsPlacementProp ?? chrome.controlsPlacement ?? "fixed";
   const contained = placement === "stage-footer";
   const nextBtnDisabled = nextDisabled !== undefined ? nextDisabled : !passed;
+  const nextAvailable = !nextBtnDisabled;
+
+  if (contained) {
+    return (
+      <>
+        {showBack || nextAvailable ? (
+          <div className="pointer-events-none absolute bottom-2 right-15 z-[100] flex items-end gap-2 sm:bottom-3 sm:right-16">
+            {showBack ? (
+              <button
+                type="button"
+                className={clsx(lessonNavArrowBtnClass, "pointer-events-auto drop-shadow-md")}
+                onClick={onBack}
+                aria-label={backLabel}
+              >
+                <LessonNavChevron direction="back" />
+              </button>
+            ) : null}
+            {nextAvailable ? (
+              <button
+                type="button"
+                className={clsx(lessonNavNextArrowBtnClass, "pointer-events-auto drop-shadow-md")}
+                onClick={() => onNext()}
+                aria-label={nextLabel}
+              >
+                <LessonNavChevron direction="next" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <div
       className={clsx(
         "pointer-events-none z-[100] flex justify-center",
-        contained
-          ? "absolute inset-x-0 bottom-2"
-          : [
-              "fixed",
-              "inset-x-0",
-              "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
-            ],
+        "fixed",
+        "inset-x-0",
+        "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
       )}
     >
       <div className="pointer-events-auto flex items-center gap-2 drop-shadow-md">
@@ -333,15 +395,16 @@ export function InteractionLessonNav({
             <LessonNavChevron direction="back" />
           </button>
         ) : null}
-        <button
-          type="button"
-          className={lessonNavArrowBtnClass}
-          disabled={nextBtnDisabled}
-          onClick={() => onNext()}
-          aria-label={nextLabel}
-        >
-          <LessonNavChevron direction="next" />
-        </button>
+        {nextAvailable ? (
+          <button
+            type="button"
+            className={lessonNavNextArrowBtnClass}
+            onClick={() => onNext()}
+            aria-label={nextLabel}
+          >
+            <LessonNavChevron direction="next" />
+          </button>
+        ) : null}
       </div>
     </div>
   );

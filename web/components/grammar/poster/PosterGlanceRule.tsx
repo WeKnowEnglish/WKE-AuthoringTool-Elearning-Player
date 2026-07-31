@@ -1,13 +1,16 @@
 "use client";
 
+import { clsx } from "clsx";
 import { posterInlineEditFieldKey } from "@/lib/grammar-builder/editor/poster-inline-edit-fields";
 import { PosterEditableText } from "./editor/PosterEditableText";
 import { usePosterInlineEdit } from "./editor/PosterInlineEditContext";
+import { posterAlignClass } from "./PosterGraphic";
 
 type Props = {
   cardId?: number;
   text: string;
   highlight?: string;
+  align?: "left" | "center" | "right";
 };
 
 function highlightText(text: string, highlight?: string) {
@@ -24,7 +27,7 @@ function highlightText(text: string, highlight?: string) {
   );
 }
 
-export function PosterGlanceRule({ cardId, text, highlight }: Props) {
+export function PosterGlanceRule({ cardId, text, highlight, align = "center" }: Props) {
   const inlineEdit = usePosterInlineEdit();
   const showHighlightEditor =
     cardId != null &&
@@ -38,7 +41,7 @@ export function PosterGlanceRule({ cardId, text, highlight }: Props) {
   );
 
   return (
-    <div className="mb-2">
+    <div className={clsx("mb-2", posterAlignClass(align))}>
       {cardId != null ?
         <PosterEditableText
           cardId={cardId}

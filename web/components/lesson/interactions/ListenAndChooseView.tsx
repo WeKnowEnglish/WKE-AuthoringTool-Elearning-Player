@@ -16,8 +16,9 @@ import {
   GuideBlock,
   deterministicShuffle,
   interactionImageFitClass,
-  InteractionLessonNav,
-  interactionNavReservePaddingClass,
+  interactionLessonShellClass,
+  InteractionShellNav,
+  isStageFooterNav,
   NavProps,
   unopt,
 } from "./shared";
@@ -31,6 +32,7 @@ export function ListenAndChooseView({
   onNext,
   onBack,
   showBack,
+  controlsPlacement,
 }: {
   parsed: Extract<ScreenPayload, { type: "interaction"; subtype: "listen_and_choose" }>;
   muted: boolean;
@@ -38,6 +40,9 @@ export function ListenAndChooseView({
   onPass: () => void;
   onWrong: () => void;
 } & NavProps) {
+  const stageFooter = isStageFooterNav(controlsPlacement);
+  const shellClass = interactionLessonShellClass(controlsPlacement);
+  const panelClass = stageFooter ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wrongFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -144,15 +149,20 @@ export function ListenAndChooseView({
   }
 
   return (
-    <div className={interactionNavReservePaddingClass}>
+    <div className={shellClass}>
       {audioUrl ? (
         <audio ref={audioRef} src={audioUrl} preload="auto" className="hidden" />
       ) : null}
-      <KidPanel>
-        <p className="mb-4 text-center text-xl font-semibold text-kid-ink">
+      <KidPanel className={panelClass}>
+        <p
+          className={clsx(
+            "mb-4 text-center font-semibold text-kid-ink",
+            stageFooter ? "mb-2 text-base" : "text-xl",
+          )}
+        >
           {parsed.body_text?.trim() || "Listen, then choose the picture."}
         </p>
-        <div className="mb-6 flex justify-center">
+        <div className={clsx("mb-6 flex justify-center", stageFooter && "mb-3")}>
           <KidButton
             type="button"
             variant="accent"
@@ -162,7 +172,12 @@ export function ListenAndChooseView({
             {playing ? "Playing…" : hasPlayed ? "Replay" : "Listen"}
           </KidButton>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
+        <div
+          className={clsx(
+            "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4",
+            stageFooter && "min-h-0 flex-1 content-center gap-1.5 sm:gap-2",
+          )}
+        >
           {displayChoices.map((choice) => (
             <button
               key={choice.id}
@@ -183,7 +198,7 @@ export function ListenAndChooseView({
                 src={choice.image_url}
                 alt={choice.label ?? ""}
                 fill
-                className={interactionImageFitClass(parsed.image_fit)}
+                className={interactionImageFitClass("contain")}
                 unoptimized={unopt(choice.image_url)}
               />
             </button>
@@ -191,7 +206,13 @@ export function ListenAndChooseView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+      <InteractionShellNav
+        showBack={showBack}
+        onBack={onBack}
+        passed={passed}
+        onNext={onNext}
+        controlsPlacement={controlsPlacement}
+      />
     </div>
   );
 }

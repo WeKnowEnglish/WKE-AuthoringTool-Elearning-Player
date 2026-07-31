@@ -1,11 +1,21 @@
 import Link from "next/link";
 
-export function AdminSubnav({ active }: { active: "hub" | "requests" | "teachers" | "students" }) {
+export function AdminSubnav({
+  active,
+}: {
+  active: "hub" | "requests" | "teachers" | "students" | "diagnostics" | "wke-library";
+}) {
   const items = [
     { id: "hub" as const, href: "/teacher/admin", label: "Overview" },
     { id: "requests" as const, href: "/teacher/admin/requests", label: "Requests" },
     { id: "teachers" as const, href: "/teacher/admin/teachers", label: "Teachers" },
     { id: "students" as const, href: "/teacher/admin/students", label: "Students" },
+    {
+      id: "wke-library" as const,
+      href: "/teacher/admin/wke-library",
+      label: "WKE Library",
+    },
+    { id: "diagnostics" as const, href: "/teacher/admin/diagnostics", label: "Diagnostics" },
   ];
 
   return (

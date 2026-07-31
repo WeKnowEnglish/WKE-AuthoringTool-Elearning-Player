@@ -16,6 +16,7 @@ export type PilotGroup =
   | "pet_minigames"
   | "classroom"
   | "grammar_product"
+  | "community"
   | "dead";
 
 export type PilotEntry = {
@@ -48,6 +49,7 @@ export type PilotSectionId =
   | "pet_minigames"
   | "classroom"
   | "grammar_product"
+  | "community"
   | "dead";
 
 export type PilotSectionDef = {
@@ -141,6 +143,14 @@ export const PILOT_SECTIONS: PilotSectionDef[] = [
     tone: "product",
   },
   {
+    id: "community",
+    title: "Public content & community",
+    purpose:
+      "Indexable thought-leadership and teacher resources (/resources). Not product pilots — listed so triage does not miss public content routes.",
+    groups: ["community"],
+    tone: "product",
+  },
+  {
     id: "dead",
     title: "Dead / redirects",
     purpose:
@@ -152,6 +162,15 @@ export const PILOT_SECTIONS: PilotSectionDef[] = [
 
 export const PILOT_CATALOG: PilotEntry[] = [
   // ── Active · Quizzes ──────────────────────────────────────────────
+  {
+    href: "/teacher/activity-builder/quizzes",
+    title: "Quiz builder",
+    description:
+      "Unified Activity Builder quiz workspace: generate MCQ, letter scramble, or flashcards from vocabulary lists; edit questions and media; save to Activity Bank.",
+    group: "games",
+    status: "active",
+    studioHref: "/teacher/activity-builder/quizzes",
+  },
   {
     href: "/pilots/games-mc-quiz",
     title: "Multiple choice",
@@ -216,6 +235,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "active",
     studioHref: "/activity-builder/games/line-match",
   },
+  {
+    href: "/pilots/vocab-player",
+    title: "Vocabulary player",
+    description:
+      "Primary Product A quiz spine. Themed banks keep words without art; quizzes sample 6 image-ready words (flashcards → letter → line match → MC → listen).",
+    group: "games",
+    status: "active",
+  },
 
   // ── Active · Core activities ────────────────────────────────────
   {
@@ -230,7 +257,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/explore-hotspots",
     title: "Explore hotspots",
     description:
-      "Tap targets on a scene for listening and vocabulary discovery. Author in Lesson Player Activity Builder.",
+      "Tap targets on a scene for listening and vocabulary discovery. Supports multi-scene phases, response cards, and object order. Author in Lesson Player Activity Builder.",
     group: "activities",
     status: "active",
     studioHref: "/teacher/activity-builder/hotspots",
@@ -240,6 +267,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     title: "Activity intro",
     description:
       "StoryBook-based activity intro. Track bridges now use post_quiz_report; keep or fold this intro elsewhere.",
+    group: "experiments",
+    status: "review",
+  },
+  {
+    href: "/teacher/admin/diagnostics",
+    title: "Session diagnostics",
+    description:
+      "Admin-only session load-time and interaction timing export. Records vitals, chunk loads, and manual marks across student/teacher surfaces.",
     group: "experiments",
     status: "review",
   },
@@ -312,9 +347,19 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Review · Authoring labs ─────────────────────────────────────
   {
+    href: "/teacher/activity-builder/library",
+    title: "WKE Library",
+    description:
+      "Curated public activity catalog + teacher submit-for-review. Fork into My Activity Bank; private bank stays private. Admin review at /teacher/admin/wke-library.",
+    group: "authoring",
+    status: "active",
+    studioHref: "/teacher/activity-builder/library",
+  },
+  {
     href: "/grammar/pilot/layouts",
     title: "Grammar layout lab",
-    description: "Dev-only grammar poster layout demos (404 in production).",
+    description:
+      "Dev-only layout-type gallery for card bodies (404 in production). Primary authoring is Grammar Poster Editor.",
     group: "authoring",
     status: "review",
   },
@@ -333,6 +378,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     group: "authoring",
     status: "review",
   },
+  {
+    href: "/pilots/media-picker",
+    title: "Media picker (Mine shelf)",
+    description:
+      "Canva-style media picker preview: folder rows (School images / My uploads / School audio) → 3-column mini library. Not fully attached to every builder yet.",
+    group: "authoring",
+    status: "review",
+  },
 
   // ── Review · Experiments ────────────────────────────────────────
   {
@@ -341,6 +394,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     description: "Learning-loop architecture test for the bakery quest flow.",
     group: "experiments",
     status: "review",
+  },
+  {
+    href: "/pilots/bug-market",
+    title: "Bug Market multiplayer mechanics",
+    description: "Developer-only two-student in-memory meadow with offline action queue and reconnect replay. No Liveblocks or login required.",
+    group: "experiments",
+    status: "review",
+    notShippable: true,
   },
 
   // ── Deferred · worlds ───────────────────────────────────────────
@@ -544,6 +605,13 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Classroom & collab ──────────────────────────────────────────
   {
+    title: "Private Classroom (student)",
+    description:
+      "Enrollment-gated async classroom at /primary/class/[classId] and /secondary/class/[classId] — teacher posts (announcements/photos), Live-now shell. Distinct from public /wke and live VC join.",
+    group: "classroom",
+    status: "review",
+  },
+  {
     href: "/whiteboard/join",
     title: "Whiteboard (production join)",
     description: "Student/guest join for collaborative whiteboard sessions.",
@@ -595,15 +663,42 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     href: "/grammar",
     title: "Grammar posters (student)",
-    description: "Public/student grammar poster catalog and slug pages.",
+    description:
+      "Public/student grammar poster catalog and slug pages. Unified variation-driven student hub is deferred.",
     group: "grammar_product",
     status: "review",
   },
   {
     href: "/teacher/grammar",
-    title: "Grammar editor (teacher)",
-    description: "Teacher grammar module authoring index.",
+    title: "Grammar Poster Editor",
+    description:
+      "Single teacher editor for all grammar posters as template variations (canonical: There is / There are).",
     group: "grammar_product",
+    status: "review",
+  },
+
+  // ── Public content & community ─────────────────────────────────
+  {
+    href: "/resources",
+    title: "Resources hub",
+    description:
+      "Teacher thought-leadership hub (/resources). Indexable EdTech guides; news + email capture still deferred.",
+    group: "community",
+    status: "review",
+  },
+  {
+    href: "/resources/what-is-edtech",
+    title: "What is EdTech?",
+    description: "Definitional guide for English teachers — categories, ESL fit, evaluation checklist.",
+    group: "community",
+    status: "review",
+  },
+  {
+    href: "/resources/how-is-technology-changing-education",
+    title: "How is technology changing education?",
+    description:
+      "Thought leadership on real classroom shifts, equity, and AI — links to teach-online pillar.",
+    group: "community",
     status: "review",
   },
 

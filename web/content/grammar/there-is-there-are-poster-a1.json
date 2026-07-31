@@ -45,32 +45,22 @@
       "kidTitle": "Are there…?",
       "kidSubtitle": "Many things",
       "theme": "tangerine",
-      "layoutType": "two-equal",
+      "layoutType": "full-width",
       "glanceRule": {
         "text": "Are there = many things?",
         "highlight": "many things"
       },
-      "leftColumn": {
-        "title": "PLURAL",
-        "badge": "👧👦",
-        "items": [
-          {
-            "text": "ANY",
-            "graphic": "👧👦👧👦",
-            "caption": "people"
-          }
-        ]
+      "subHeader": {
+        "label": "PLURAL",
+        "badge": "👧👦"
       },
-      "rightColumn": {
-        "title": "EXAMPLES",
-        "items": [
-          {
-            "text": "Are there any chairs in the room?",
-            "graphic": "🪑",
-            "highlight": "Are there"
-          }
-        ]
-      }
+      "items": [
+        {
+          "text": "Are there any chairs in the room?",
+          "graphic": "🪑",
+          "highlight": "Are there"
+        }
+      ]
     },
     {
       "id": 3,
@@ -88,25 +78,6 @@
         "content": "Put Is or Are before There.",
         "example": "Is there a cat? 🐱"
       }
-    }
-  ],
-  "interactions": [
-    {
-      "id": "reveal-card1-left-0",
-      "target": { "cardId": 1, "region": "leftColumn", "itemIndex": 0 },
-      "trigger": "tap",
-      "action": "reveal",
-      "payload": {
-        "text": "มีหนังสืออยู่บนโต๊ะไหม?",
-        "label": "Thai"
-      }
-    },
-    {
-      "id": "highlight-card3-banner",
-      "target": { "cardId": 3, "region": "banner" },
-      "trigger": "tap",
-      "action": "highlight",
-      "payload": { "durationMs": 1200 }
     }
   ]
 }

@@ -29,6 +29,8 @@ async function requireTeacherUserId(): Promise<string> {
 
 function revalidateClass(classId: string) {
   revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/primary/class/${classId}`);
+  revalidatePath(`/secondary/class/${classId}`);
 }
 
 export async function createClassLesson(input: {
@@ -187,6 +189,7 @@ export async function archiveClassLesson(lessonId: string): Promise<ClassLessonA
       .from("class_lessons")
       .update({
         status: "archived",
+        published_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -203,6 +206,92 @@ export async function archiveClassLesson(lessonId: string): Promise<ClassLessonA
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Could not archive lesson.",
+    };
+  }
+}
+
+export async function publishClassLessonToClassroom(
+  lessonId: string,
+): Promise<ClassLessonActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const id = lessonId.trim();
+    if (!id) return { ok: false, error: "Missing lesson." };
+
+    const lesson = await getClassLesson(id);
+    if (!lesson) return { ok: false, error: "Lesson not found." };
+    if (lesson.teacherId !== teacherId) return { ok: false, error: "Lesson not found." };
+    if (lesson.status !== "ready") {
+      return { ok: false, error: "Mark the lesson Ready before sharing with students." };
+    }
+    if (lesson.steps.length === 0) {
+      return { ok: false, error: "Add at least one step before sharing." };
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("class_lessons")
+      .update({
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("teacher_id", teacherId);
+
+    if (error) return { ok: false, error: error.message };
+
+    const updated = await getClassLesson(id);
+    if (!updated) return { ok: false, error: "Lesson published but could not be loaded." };
+
+    revalidateClass(updated.classId);
+    return { ok: true, lesson: updated };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not publish lesson.",
+    };
+  }
+}
+
+export async function unpublishClassLessonFromClassroom(
+  lessonId: string,
+): Promise<ClassLessonActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const id = lessonId.trim();
+    if (!id) return { ok: false, error: "Missing lesson." };
+
+    const supabase = await createClient();
+    const { data: existing, error: existingError } = await supabase
+      .from("class_lessons")
+      .select("id, class_id")
+      .eq("id", id)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (existingError) return { ok: false, error: existingError.message };
+    if (!existing) return { ok: false, error: "Lesson not found." };
+
+    const { error } = await supabase
+      .from("class_lessons")
+      .update({
+        published_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("teacher_id", teacherId);
+
+    if (error) return { ok: false, error: error.message };
+
+    const lesson = await getClassLesson(id);
+    if (!lesson) return { ok: false, error: "Lesson unpublished." };
+
+    revalidateClass(String(existing.class_id));
+    return { ok: true, lesson };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not unpublish lesson.",
     };
   }
 }

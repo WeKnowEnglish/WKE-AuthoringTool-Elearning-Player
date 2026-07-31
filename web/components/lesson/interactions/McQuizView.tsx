@@ -10,8 +10,10 @@ import { speakText, speakTextAndWait, stopSpeaking } from "@/lib/audio/tts";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
-  InteractionLessonNav,
-  interactionNavReservePaddingClass,
+  interactionImageFitClass,
+  interactionLessonShellClass,
+  InteractionShellNav,
+  isStageFooterNav,
   NavProps,
   unopt,
   deterministicShuffle,
@@ -47,6 +49,7 @@ export function McQuizView({
   onNext,
   onBack,
   showBack,
+  controlsPlacement,
   /** When true, correct answer does not block on TTS (snappier quizzes). */
   snappyCorrect,
 }: {
@@ -57,6 +60,9 @@ export function McQuizView({
   onWrong: () => void;
   snappyCorrect?: boolean;
 } & NavProps) {
+  const stageFooter = isStageFooterNav(controlsPlacement);
+  const shellClass = interactionLessonShellClass(controlsPlacement);
+  const panelClass = stageFooter ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined;
   const optionsSignature = useMemo(
     () => JSON.stringify(parsed.options.map((opt: { id: string; label: string }) => [opt.id, opt.label])),
     [parsed.options],
@@ -237,15 +243,20 @@ export function McQuizView({
   );
 
   return (
-    <div className={interactionNavReservePaddingClass}>
+    <div className={shellClass}>
       {audioUrl ? (
         <audio ref={audioRef} src={audioUrl} preload="auto" className="hidden" />
       ) : null}
-      <KidPanel>
+      <KidPanel className={panelClass}>
         {parsed.body_text?.trim() ? (
           <p className="mb-2 text-base font-semibold text-kid-ink/70">{parsed.body_text.trim()}</p>
         ) : null}
-        <p className="mb-3 text-2xl font-extrabold leading-snug text-kid-ink sm:text-3xl">
+        <p
+          className={clsx(
+            "mb-3 font-extrabold leading-snug text-kid-ink",
+            stageFooter ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl",
+          )}
+        >
           {parsed.question}
         </p>
         {audioUrl ? (
@@ -262,17 +273,25 @@ export function McQuizView({
         ) : null}
 
         {imageUrl ? (
-          <div className="mt-2 grid gap-4 md:grid-cols-2 md:items-stretch md:gap-5">
-            <div className="relative aspect-square w-full overflow-hidden rounded-lg border-4 border-kid-ink bg-[#eef3f9] shadow-[inset_3px_-3px_2px_rgba(0,0,0,0.18)] sm:aspect-[4/3] md:aspect-auto md:min-h-[min(52dvh,28rem)]">
+          <div
+            className={clsx(
+              "mt-2 grid gap-4 md:grid-cols-2 md:items-stretch md:gap-5",
+              stageFooter && "min-h-0 flex-1",
+            )}
+          >
+            <div
+              className={clsx(
+                "relative aspect-square w-full overflow-hidden rounded-lg border-4 border-kid-ink bg-[#eef3f9] shadow-[inset_3px_-3px_2px_rgba(0,0,0,0.18)] sm:aspect-[4/3]",
+                stageFooter
+                  ? "md:aspect-auto md:min-h-0 md:flex-1"
+                  : "md:aspect-auto md:min-h-[min(52dvh,28rem)]",
+              )}
+            >
               <Image
                 src={imageUrl}
                 alt=""
                 fill
-                className={
-                  (parsed.image_fit ?? "contain") === "cover"
-                    ? "object-cover"
-                    : "object-contain"
-                }
+                className={interactionImageFitClass("contain")}
                 unoptimized={unopt(imageUrl)}
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
@@ -284,7 +303,13 @@ export function McQuizView({
         )}
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+      <InteractionShellNav
+        showBack={showBack}
+        onBack={onBack}
+        passed={passed}
+        onNext={onNext}
+        controlsPlacement={controlsPlacement}
+      />
     </div>
   );
 }

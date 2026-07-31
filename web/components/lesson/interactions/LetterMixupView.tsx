@@ -32,7 +32,6 @@ import {
   GuideBlock,
   interactionHeroImageFrameClass,
   interactionHeroImageFrameStyle,
-  interactionHeroImageHeightStyle,
   interactionImageFitClass,
   interactionImmersiveStageClass,
   InteractionLessonNav,
@@ -727,13 +726,13 @@ export function LetterMixupView({
         <audio ref={wordAudioRef} preload="metadata" className="hidden" />
         <div className="flex min-h-0 flex-1 flex-col gap-3 md:flex-row md:items-stretch md:gap-4">
           {parsed.image_url ?
-            <div className="flex w-full shrink-0 items-center justify-center md:w-[33%] md:max-w-[33%]">
+            <div className="flex w-full shrink-0 items-center justify-center md:w-1/3">
               <button
                 type="button"
                 disabled={passed || passing}
                 onClick={playPictureWord}
                 className={clsx(
-                  "relative h-full w-full max-h-[40dvh] overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4 md:max-h-none",
+                  "relative h-full w-full max-h-[44dvh] overflow-hidden rounded-lg border-4 border-kid-ink outline-none ring-kid-ink focus-visible:ring-4 md:max-h-none",
                   interactionHeroImageFrameClass(vocabImgOpts),
                   !passed &&
                     (Boolean(parsed.image_audio_url?.trim()) ||
@@ -741,8 +740,8 @@ export function LetterMixupView({
                     "cursor-pointer",
                 )}
                 style={{
-                  aspectRatio: "4 / 5",
-                  minHeight: "min(28dvh, 12rem)",
+                  aspectRatio: "1 / 1",
+                  minHeight: "min(32dvh, 14rem)",
                   ...interactionHeroImageFrameStyle(vocabImgOpts),
                 }}
                 aria-label={
@@ -758,7 +757,7 @@ export function LetterMixupView({
                   alt=""
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
-                  className={interactionImageFitClass(parsed.image_fit, vocabImgOpts)}
+                  className={interactionImageFitClass("contain", vocabImgOpts)}
                   unoptimized={unopt(parsed.image_url)}
                 />
                 {!passed &&
@@ -774,7 +773,7 @@ export function LetterMixupView({
           <div
             className={clsx(
               "flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 px-1",
-              parsed.image_url ? "md:w-[67%]" : "w-full",
+              parsed.image_url ? "md:w-2/3" : "w-full",
             )}
           >
             <div className="w-full text-center">{promptBlock}</div>
@@ -799,57 +798,82 @@ export function LetterMixupView({
   return (
     <div className={interactionNavReservePaddingClass}>
       <audio ref={wordAudioRef} preload="metadata" className="hidden" />
-      {parsed.image_url ?
-        <div className="mb-3">
-          <button
-            type="button"
-            disabled={passed || passing}
-            onClick={playPictureWord}
-            className={clsx(
-              "group relative w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
-              interactionHeroImageFrameClass(vocabImgOpts),
-              !passed && "cursor-pointer",
-            )}
-            style={{
-              ...interactionHeroImageHeightStyle,
-              ...interactionHeroImageFrameStyle(vocabImgOpts),
-            }}
-            aria-label={
-              parsed.image_audio_url?.trim() ?
-                "Tap to hear the word"
-              : parsed.image_use_tts ?
-                `Tap to hear: ${parsed.image_read_aloud_text?.trim() || targetWord || "word"}`
-              : `Tap to hear the word: ${targetWord || "target word"}`
-            }
-          >
-            <Image
-              src={parsed.image_url}
-              alt=""
-              fill
-              className={interactionImageFitClass("contain", vocabImgOpts)}
-              unoptimized={unopt(parsed.image_url)}
-            />
-            {!passed ?
-              <span className="pointer-events-none absolute bottom-2 left-2 rounded-full border-2 border-kid-ink bg-white/95 px-2.5 py-1 text-xs font-bold text-kid-ink shadow-sm">
-                Tap · hear word
-              </span>
-            : null}
-          </button>
+      {parsed.image_url ? (
+        <div
+          className={clsx(
+            "flex min-h-0 w-full flex-col gap-3",
+            "sm:flex-row sm:items-stretch sm:gap-4",
+            vocabStageTint && "rounded-lg px-1 py-1 sm:px-2",
+          )}
+          style={vocabStageTint ? { backgroundColor: VOCAB_STAGE_BACKGROUND } : undefined}
+        >
+          <div className="flex w-full shrink-0 items-center justify-center sm:w-1/3">
+            <button
+              type="button"
+              disabled={passed || passing}
+              onClick={playPictureWord}
+              className={clsx(
+                "relative h-full w-full overflow-hidden rounded-lg border-4 border-kid-ink text-left outline-none ring-kid-ink focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
+                interactionHeroImageFrameClass(vocabImgOpts),
+                !passed && "cursor-pointer",
+              )}
+              style={{
+                aspectRatio: "1 / 1",
+                maxHeight: "min(48dvh, 20rem)",
+                ...interactionHeroImageFrameStyle(vocabImgOpts),
+              }}
+              aria-label={
+                parsed.image_audio_url?.trim()
+                  ? "Tap to hear the word"
+                  : parsed.image_use_tts
+                    ? `Tap to hear: ${parsed.image_read_aloud_text?.trim() || targetWord || "word"}`
+                    : `Tap to hear the word: ${targetWord || "target word"}`
+              }
+            >
+              <Image
+                src={parsed.image_url}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 100vw, 33vw"
+                className={interactionImageFitClass("contain", vocabImgOpts)}
+                unoptimized={unopt(parsed.image_url)}
+              />
+              {!passed ? (
+                <span className="pointer-events-none absolute bottom-2 left-2 rounded-full border-2 border-kid-ink bg-white/95 px-2.5 py-1 text-xs font-bold text-kid-ink shadow-sm">
+                  Tap · hear word
+                </span>
+              ) : null}
+            </button>
+          </div>
+          <KidPanel className="flex min-w-0 flex-1 flex-col justify-center sm:w-2/3">
+            {promptBlock}
+            <p className="sr-only">
+              Fill each slot left to right. Tap Check or fill every slot to verify letters. Green
+              letters stay; wrong letters return to the tray.
+            </p>
+            {answerRow}
+            <p className="mt-2 text-center text-sm font-semibold text-kid-ink/70">
+              Letter tray — tap to add (first empty slot)
+            </p>
+            {trayRow}
+            <div className="mt-4">{actionButtons}</div>
+          </KidPanel>
         </div>
-      : null}
-      <KidPanel>
-        {promptBlock}
-        <p className="sr-only">
-          Fill each slot left to right. Tap Check or fill every slot to verify letters. Green letters stay;
-          wrong letters return to the tray.
-        </p>
-        {answerRow}
-        <p className="mt-2 text-center text-sm font-semibold text-kid-ink/70">
-          Letter tray — tap to add (first empty slot)
-        </p>
-        {trayRow}
-        <div className="mt-4">{actionButtons}</div>
-      </KidPanel>
+      ) : (
+        <KidPanel>
+          {promptBlock}
+          <p className="sr-only">
+            Fill each slot left to right. Tap Check or fill every slot to verify letters. Green
+            letters stay; wrong letters return to the tray.
+          </p>
+          {answerRow}
+          <p className="mt-2 text-center text-sm font-semibold text-kid-ink/70">
+            Letter tray — tap to add (first empty slot)
+          </p>
+          {trayRow}
+          <div className="mt-4">{actionButtons}</div>
+        </KidPanel>
+      )}
       {embeddedMode ? null : <GuideBlock guide={parsed.guide} />}
       {embeddedMode ? null : (
         <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />

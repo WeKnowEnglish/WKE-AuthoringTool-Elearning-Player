@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { LiveGameRoundEndReason } from "@/lib/live-game/liveblocks/config";
-import { resetEnglishCraftGameplayState, resetEnglishCraftVictoryFields } from "@/lib/live-game/liveblocks/gameplay-reset";
+import { resetEnglishCraftVictoryFields } from "@/lib/live-game/liveblocks/gameplay-reset";
+import { resetLiveGameModeRound } from "@/lib/live-game/modes/server-registry";
 import { canUseUnlimitedLiveGameDuration } from "@/lib/live-game/premium";
 import { normalizeEnglishCraftDurationMinutes } from "@/lib/live-game/modes/english-craft/config";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
@@ -74,6 +75,7 @@ async function handlePost(request: Request) {
       const session = storage.get("session");
       if (!session) return;
       const phase = session.get("phase");
+      const modeId = session.get("modeId");
       const hostOnly = body.action !== "end_round" || body.reason !== "timeout";
       if (hostOnly && player.role !== "host") return;
 
@@ -83,14 +85,14 @@ async function handlePost(request: Request) {
         session.set("lobbyNotice", null);
         session.set("endsAt", typeof duration === "number" ? Date.now() + duration * 60_000 : null);
         resetEnglishCraftVictoryFields(session as never);
-        resetEnglishCraftGameplayState(storage);
+        resetLiveGameModeRound(modeId, storage);
         applied = true;
       } else if (body.action === "return_to_lobby" && phase === "completed") {
         session.set("phase", "lobby");
         session.set("endsAt", null);
         session.set("lobbyNotice", null);
         resetEnglishCraftVictoryFields(session as never);
-        resetEnglishCraftGameplayState(storage);
+        resetLiveGameModeRound(modeId, storage);
         applied = true;
       } else if (body.action === "end_round" && phase === "playing") {
         const reason = body.reason === "timeout" ? "timeout" : "host_ended_early";

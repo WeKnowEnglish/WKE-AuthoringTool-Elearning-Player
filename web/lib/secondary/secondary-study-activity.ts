@@ -10,12 +10,33 @@ export const SECONDARY_STUDY_ACTIVITY_ORDER: SecondaryTodayActivityKey[] = [
   "sentence",
 ];
 
+/** Standalone activity pages (review / retry deep links). */
 export const SECONDARY_ACTIVITY_HREF: Record<SecondaryTodayActivityKey, string> = {
   match: "/secondary/match",
   cloze: "/secondary/cloze",
   spelling: "/secondary/spelling",
   sentence: "/secondary/sentence",
 };
+
+/** Canonical Learn Practice desk. */
+export const SECONDARY_LEARN_PRACTICE_HREF = "/secondary/learn";
+
+const ACTIVITY_QUERY_KEYS = new Set<string>(SECONDARY_STUDY_ACTIVITY_ORDER);
+
+/** Learn Practice URL, optionally seeded to a carousel activity. */
+export function buildSecondaryLearnPracticeHref(
+  activityKey?: SecondaryTodayActivityKey | null,
+): string {
+  if (!activityKey) return SECONDARY_LEARN_PRACTICE_HREF;
+  return `${SECONDARY_LEARN_PRACTICE_HREF}?activity=${activityKey}`;
+}
+
+export function parseSecondaryLearnActivityParam(
+  value: string | null | undefined,
+): SecondaryTodayActivityKey | null {
+  if (!value || !ACTIVITY_QUERY_KEYS.has(value)) return null;
+  return value as SecondaryTodayActivityKey;
+}
 
 export type SecondaryStudyActivityContext = {
   sessionWordIds: string[];
@@ -98,8 +119,8 @@ export function resolveSecondaryStudyActivityKey(
   return null;
 }
 
+/** Home Continue / intro Start Studying → Learn Practice desk. */
 export function resolveSecondaryStudyActivityHref(ctx: SecondaryStudyActivityContext): string {
   const key = resolveSecondaryStudyActivityKey(ctx);
-  if (!key) return "/secondary";
-  return SECONDARY_ACTIVITY_HREF[key];
+  return buildSecondaryLearnPracticeHref(key);
 }

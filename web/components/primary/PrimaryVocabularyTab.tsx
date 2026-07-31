@@ -1,10 +1,11 @@
 "use client";
 
 import NextImage from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronRight, Lock } from "lucide-react";
 import { resumeScreenIndexForSet } from "@/lib/primary/vocab-continue";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
+import { isVocabSetQuizReady } from "@/lib/pilots/vocab-player-pool";
 import {
   ANIMALS_VOCAB_SET_MENU,
   BODY_VOCAB_SET_MENU,
@@ -54,12 +55,22 @@ const HUB_HEADINGS: Record<VocabHubId, { title: string; subtitle: string }> = {
 type Props = {
   playerLevel: number;
   onOpenSet?: (id: VocabSetId, label: string) => void;
+  /** Open directly into a topic hub from the Learn shelf. */
+  initialHubId?: VocabHubId | null;
 };
 
-export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
+export function PrimaryVocabularyTab({
+  playerLevel,
+  onOpenSet,
+  initialHubId = null,
+}: Props) {
   const hydrated = useClientHydrated();
-  const [view, setView] = useState<VocabView>("top");
+  const [view, setView] = useState<VocabView>(() => initialHubId ?? "top");
   const hubView = view === "top" ? null : view;
+
+  useEffect(() => {
+    setView(initialHubId ?? "top");
+  }, [initialHubId]);
   const heading = hubView
     ? HUB_HEADINGS[hubView]
     : {
@@ -70,6 +81,7 @@ export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
   function openSet(id: VocabSetId, label: string) {
     const setUnlockId = `vocab_set:${id}` as const;
     if (!isUnlockAvailable(setUnlockId, playerLevel)) return;
+    if (!isVocabSetQuizReady(id)) return;
     onOpenSet?.(id, label);
   }
 
@@ -120,15 +132,20 @@ export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
 
             const setUnlockId = `vocab_set:${entry.id}` as const;
             const setLocked = !isUnlockAvailable(setUnlockId, playerLevel);
+            const needsPictures = hydrated && !setLocked && !isVocabSetQuizReady(entry.id);
             return (
               <li key={entry.id}>
                 <TopicCard
                   label={entry.label}
                   imageSrc={vocabSetCoverImageSrc(entry.id)}
                   locked={setLocked}
+                  needsPictures={needsPictures}
                   unlockLevel={minLevelForUnlock(setUnlockId)}
                   continueLabel={
-                    hydrated && !setLocked && resumeScreenIndexForSet(entry.id) > 0
+                    hydrated &&
+                    !setLocked &&
+                    !needsPictures &&
+                    resumeScreenIndexForSet(entry.id) > 0
                       ? "Continue"
                       : null
                   }
@@ -143,15 +160,20 @@ export function PrimaryVocabularyTab({ playerLevel, onOpenSet }: Props) {
           {HUB_SET_MENUS[view].map((entry) => {
             const setUnlockId = `vocab_set:${entry.id}` as const;
             const setLocked = !isUnlockAvailable(setUnlockId, playerLevel);
+            const needsPictures = hydrated && !setLocked && !isVocabSetQuizReady(entry.id);
             return (
               <li key={entry.id}>
                 <TopicCard
                   label={entry.label}
                   imageSrc={vocabSetCoverImageSrc(entry.id)}
                   locked={setLocked}
+                  needsPictures={needsPictures}
                   unlockLevel={minLevelForUnlock(setUnlockId)}
                   continueLabel={
-                    hydrated && !setLocked && resumeScreenIndexForSet(entry.id) > 0
+                    hydrated &&
+                    !setLocked &&
+                    !needsPictures &&
+                    resumeScreenIndexForSet(entry.id) > 0
                       ? "Continue"
                       : null
                   }
@@ -171,6 +193,7 @@ function TopicCard({
   subtitle,
   imageSrc,
   locked,
+  needsPictures = false,
   unlockLevel,
   continueLabel,
   onClick,
@@ -179,20 +202,26 @@ function TopicCard({
   subtitle?: string;
   imageSrc: string;
   locked: boolean;
+  needsPictures?: boolean;
   unlockLevel: number;
   continueLabel?: string | null;
   onClick: () => void;
 }) {
+  const disabled = locked || needsPictures;
   return (
     <button
       type="button"
-      disabled={locked}
+      disabled={disabled}
       aria-label={
-        locked ? `${label} — unlocks at level ${unlockLevel}` : `${label} vocabulary`
+        locked
+          ? `${label} — unlocks at level ${unlockLevel}`
+          : needsPictures
+            ? `${label} — pictures coming soon`
+            : `${label} vocabulary`
       }
       onClick={onClick}
       className={`group flex w-full flex-col overflow-hidden rounded-[1.5rem] border border-[var(--pl-border)] bg-white text-left shadow-sm transition ${
-        locked
+        disabled
           ? "cursor-not-allowed opacity-55"
           : "hover:border-[var(--pl-purple)]/40 hover:shadow-md active:scale-[0.99]"
       }`}
@@ -202,7 +231,7 @@ function TopicCard({
           src={imageSrc}
           alt=""
           fill
-          className={`object-cover ${locked ? "grayscale" : ""}`}
+          className={`object-cover ${disabled ? "grayscale" : ""}`}
           unoptimized
         />
         {locked && (
@@ -213,7 +242,14 @@ function TopicCard({
             </span>
           </span>
         )}
-        {!locked && continueLabel ? (
+        {!locked && needsPictures ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-slate-900/25">
+            <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-extrabold text-[var(--pl-ink)]">
+              Pictures coming soon
+            </span>
+          </span>
+        ) : null}
+        {!locked && !needsPictures && continueLabel ? (
           <span className="absolute left-2 top-2 rounded-full bg-[var(--pl-teal)] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm">
             {continueLabel}
           </span>
@@ -226,7 +262,7 @@ function TopicCard({
             <p className="mt-1 text-xs font-semibold text-[var(--pl-muted)]">{subtitle}</p>
           )}
         </div>
-        {!locked && (
+        {!disabled && (
           <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-[var(--pl-muted)] transition group-hover:text-[var(--pl-purple)]" />
         )}
       </div>

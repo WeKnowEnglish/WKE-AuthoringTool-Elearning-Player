@@ -1,4 +1,4 @@
-import { learningTargetKey } from "@/lib/mastery/engine";
+import { getMasteryRecordForSecondaryWord } from "@/lib/secondary/secondary-mastery-keys";
 import {
   classifyWordForPractice,
   type VocabularyRecommendationReason,
@@ -10,15 +10,15 @@ import {
   enforceTopicSpreadOnTodayList,
 } from "@/lib/secondary/secondary-selection-s2";
 
-export const WARMUP_WORDS = 3;
-export const TARGET_TODAY_WORDS = 10;
-export const DUE_QUOTA = 4;
-export const FRAGILE_QUOTA = 3;
+export const WARMUP_WORDS = 0;
+export const TARGET_TODAY_WORDS = 8;
+export const DUE_QUOTA = 3;
+export const FRAGILE_QUOTA = 2;
 export const NEW_QUOTA = 2;
 export const REFRESH_QUOTA = 1;
 
-/** Bump when selection rules change (S1=2 quotas only; S2=3 topic spread + stretch). */
-export const SECONDARY_SELECTION_VERSION = 3 as const;
+/** Bump when selection rules change (S3=4: no warm-up, 8 focus words). */
+export const SECONDARY_SELECTION_VERSION = 4 as const;
 
 export type SecondaryWordBucket =
   | "due"
@@ -261,8 +261,7 @@ export function selectSecondaryTodayWords(input: {
   }
 
   const candidates = input.candidateWordItemIds.map((wordItemId) => {
-    const targetKey = learningTargetKey({ type: "word", key: wordItemId });
-    const record = input.masteryRecords[targetKey] ?? null;
+    const record = getMasteryRecordForSecondaryWord(wordItemId, input.masteryRecords);
     return buildCandidate(wordItemId, record, input.now);
   });
 

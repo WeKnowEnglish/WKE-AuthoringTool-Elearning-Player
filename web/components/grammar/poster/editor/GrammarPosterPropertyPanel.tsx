@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { GrammarCard, GrammarLayoutType, GrammarModule } from "@/lib/grammar-builder/schema";
+import { clsx } from "clsx";
+import type { GrammarAlign, GrammarCard, GrammarLayoutType, GrammarModule } from "@/lib/grammar-builder/schema";
 import {
   updateCardField,
   updateCardGlanceRule,
@@ -41,6 +42,39 @@ type Props = {
 };
 
 type CardTab = "chrome" | "body" | "interactions";
+
+const THERE_IS_LAYOUTS = new Set<GrammarLayoutType>(["two-equal", "full-width", "banner"]);
+
+function AlignControl({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: GrammarAlign;
+  onChange: (value: GrammarAlign) => void;
+}) {
+  return (
+    <div>
+      <EditorFieldLabel>{label}</EditorFieldLabel>
+      <div className="mt-1 flex overflow-hidden rounded-lg border-2 border-kid-ink/20">
+        {(["left", "center", "right"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            className={clsx(
+              "flex-1 px-2 py-1.5 text-xs font-extrabold uppercase tracking-wide",
+              value === option ? "bg-kid-cta text-kid-ink" : "bg-white text-kid-ink/60 hover:bg-kid-panel",
+            )}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function CardChromeFields({
   card,
@@ -136,6 +170,25 @@ function CardChromeFields({
           }
         />
       </div>
+
+      {THERE_IS_LAYOUTS.has(card.layoutType) ?
+        <>
+          <AlignControl
+            label="Title justification"
+            value={card.chromeAlign ?? "center"}
+            onChange={(value) => onChange(updateCardField(draft, card.id, "chromeAlign", value))}
+          />
+          <AlignControl
+            label="Glance rule justification"
+            value={card.glanceRule?.align ?? "center"}
+            onChange={(value) => onChange(updateCardGlanceRule(draft, card.id, { align: value }))}
+          />
+        </>
+      : <p className="text-xs font-medium text-kid-ink/50">
+          Icon URL + justification controls are first-class on There is / There are card shapes
+          (two-equal, full-width, banner).
+        </p>
+      }
     </section>
   );
 }

@@ -5,6 +5,8 @@ export const VOCAB_GRADED_SUBTYPES = new Set([
   "true_false",
   "fill_blanks",
   "letter_mixup",
+  "mc_quiz",
+  "listen_and_choose",
 ]);
 
 export type VocabPracticeWordMeta = {

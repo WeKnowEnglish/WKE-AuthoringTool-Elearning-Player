@@ -45,32 +45,22 @@
       "kidTitle": "There are…",
       "kidSubtitle": "Many things",
       "theme": "tangerine",
-      "layoutType": "two-equal",
+      "layoutType": "full-width",
       "glanceRule": {
         "text": "There are = many things.",
         "highlight": "many things"
       },
-      "leftColumn": {
-        "title": "PLURAL",
-        "badge": "👧👦",
-        "items": [
-          {
-            "text": "ANY",
-            "graphic": "👧👦👧👦",
-            "caption": "people"
-          }
-        ]
+      "subHeader": {
+        "label": "PLURAL",
+        "badge": "👧👦"
       },
-      "rightColumn": {
-        "title": "EXAMPLES",
-        "items": [
-          {
-            "text": "There are two books on the desk.",
-            "graphic": "📚",
-            "highlight": "There are"
-          }
-        ]
-      }
+      "items": [
+        {
+          "text": "There are two books on the desk.",
+          "graphic": "📚",
+          "highlight": "There are"
+        }
+      ]
     },
     {
       "id": 3,

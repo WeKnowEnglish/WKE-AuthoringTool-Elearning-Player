@@ -82,14 +82,32 @@ export function LandingPathCard({ config, characterSrc, onEnter }: Props) {
   const { variant } = config;
   const isPrimary = variant === "primary";
   const characterDisplay = LANDING_CHARACTER_DISPLAY[variant];
-  const character = <LandingPathCharacter variant={variant} src={characterSrc} />;
+  const showCharacter = Boolean(characterSrc);
   const content = (
     <LandingPathCardContent
       config={config}
       onEnter={onEnter}
-      contentInsetClass={characterDisplay.contentInsetClass}
+      contentInsetClass={showCharacter ? characterDisplay.contentInsetClass : ""}
     />
   );
+
+  if (!showCharacter) {
+    return (
+      <article
+        className={clsx(
+          "relative overflow-visible rounded-2xl border-2 px-5 py-5 shadow-sm transition-transform sm:px-6 sm:py-6",
+          "hover:-translate-y-0.5 motion-reduce:hover:translate-y-0",
+          isPrimary ?
+            "border-[var(--landing-primary-border)] bg-[var(--landing-primary-bg)]"
+          : "border-[var(--landing-secondary-border)] bg-[var(--landing-secondary-bg)]",
+        )}
+      >
+        {content}
+      </article>
+    );
+  }
+
+  const character = <LandingPathCharacter variant={variant} src={characterSrc} />;
 
   const characterColumn = (
     <div

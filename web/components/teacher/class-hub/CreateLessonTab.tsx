@@ -146,6 +146,11 @@ export function CreateLessonTab({
                     >
                       {lesson.status === "ready" ? "Ready" : "Draft"}
                     </span>
+                    {lesson.publishedAt ? (
+                      <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-900">
+                        On Classroom
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-sm text-neutral-600">
                     {lesson.steps.length} step{lesson.steps.length === 1 ? "" : "s"}

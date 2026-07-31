@@ -18,7 +18,7 @@ const OPTIONS: Array<{ id: SpeakSyllableMode; label: string }> = [
 export function SecondarySyllableSpeechSpeedToggle({ mode, disabled = false, onChange }: Props) {
   return (
     <div
-      className="inline-flex rounded-lg border-2 border-kid-ink/25 bg-kid-panel/50 p-0.5"
+      className="inline-flex rounded-lg border-2 border-sec-ink/25 bg-sec-panel/50 p-0.5"
       role="group"
       aria-label="Speech speed"
     >
@@ -34,8 +34,8 @@ export function SecondarySyllableSpeechSpeedToggle({ mode, disabled = false, onC
             className={clsx(
               `rounded-md px-3 py-1.5 ${secondaryUi.caption} font-extrabold transition-[background-color,box-shadow,color] [touch-action:manipulation]`,
               selected ?
-                "bg-white text-kid-ink shadow-sm"
-              : "text-kid-ink/70 hover:text-kid-ink",
+                "bg-white text-sec-ink shadow-sm"
+              : "text-sec-ink/70 hover:text-sec-ink",
               disabled && "cursor-not-allowed opacity-60",
             )}
           >

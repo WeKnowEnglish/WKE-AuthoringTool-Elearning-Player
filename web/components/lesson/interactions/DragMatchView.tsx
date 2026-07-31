@@ -18,8 +18,9 @@ import {
   gamesWrongHintClass,
   interactionHeroImageHeightStyle,
   interactionImageFitClass,
-  InteractionLessonNav,
-  interactionNavReservePaddingClass,
+  interactionLessonShellClass,
+  InteractionShellNav,
+  isStageFooterNav,
   NavProps,
   unopt,
 } from "./shared";
@@ -33,6 +34,7 @@ export function DragMatchView({
   onNext,
   onBack,
   showBack,
+  controlsPlacement,
 }: {
   parsed: Extract<ScreenPayload, { type: "interaction"; subtype: "drag_match" }>;
   muted: boolean;
@@ -40,6 +42,11 @@ export function DragMatchView({
   onPass: () => void;
   onWrong: () => void;
 } & NavProps) {
+  const stageFooter = isStageFooterNav(controlsPlacement);
+  const shellClass = interactionLessonShellClass(controlsPlacement);
+  const panelClass = stageFooter
+    ? "flex min-h-0 flex-1 flex-col overflow-hidden gap-2 !p-3 sm:!p-4"
+    : undefined;
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   /** tokenId -> zoneId */
   const [assignment, setAssignment] = useState<Record<string, string>>({});
@@ -47,6 +54,7 @@ export function DragMatchView({
 
   const zones = parsed.zones;
   const tokens = parsed.tokens;
+  const imageZones = zones.some((z) => z.image_url?.trim());
 
   function selectToken(id: string) {
     if (passed) return;
@@ -91,9 +99,16 @@ export function DragMatchView({
   };
 
   return (
-    <div className={interactionNavReservePaddingClass}>
+    <div className={shellClass}>
       {parsed.image_url ? (
-        <div className={gamesHeroImageFrameClass} style={interactionHeroImageHeightStyle}>
+        <div
+          className={gamesHeroImageFrameClass}
+          style={
+            stageFooter
+              ? { height: "min(18dvh, calc(100dvh - 24rem))" }
+              : interactionHeroImageHeightStyle
+          }
+        >
           <Image
             src={parsed.image_url}
             alt=""
@@ -103,10 +118,16 @@ export function DragMatchView({
           />
         </div>
       ) : null}
-      <KidPanel>
-        {parsed.body_text ? <p className={gamesBodyTextClass}>{parsed.body_text}</p> : null}
-        <p className={gamesHintTextClass}>Tap a word, then tap a box</p>
-        <div className="mb-4 flex flex-wrap gap-2">
+      <KidPanel className={panelClass}>
+        {parsed.body_text ? (
+          <p className={clsx(gamesBodyTextClass, stageFooter && "!mb-2 !text-lg")}>
+            {parsed.body_text}
+          </p>
+        ) : null}
+        <p className={clsx(gamesHintTextClass, stageFooter && "!mb-2 !text-sm")}>
+          {imageZones ? "Tap a word, then tap a picture" : "Tap a word, then tap a box"}
+        </p>
+        <div className={clsx("mb-4 flex flex-wrap gap-2", stageFooter && "mb-2 gap-1.5")}>
           {tokens.map((t) => {
             const placed = Boolean(assignment[t.id]);
             return (
@@ -123,22 +144,62 @@ export function DragMatchView({
             );
           })}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div
+          className={clsx(
+            "grid gap-3",
+            imageZones
+              ? "grid-cols-2 sm:grid-cols-3"
+              : "sm:grid-cols-2",
+            stageFooter && "min-h-0 flex-1 gap-2",
+          )}
+        >
           {zones.map((z) => {
             const placed = labelForZone(z.id);
-            const label = placed ?? z.label ?? "Drop here";
+            const zoneImageUrl = z.image_url?.trim();
+            const label = placed ?? z.label ?? (imageZones ? "" : "Drop here");
             return (
               <button
                 key={z.id}
                 type="button"
                 disabled={passed}
                 onClick={() => assignToZone(z.id)}
+                aria-label={
+                  zoneImageUrl
+                    ? placed
+                      ? `${placed} matched to ${z.label ?? "picture"}`
+                      : z.label
+                        ? `Picture: ${z.label}`
+                        : "Picture drop zone"
+                    : placed
+                      ? `${placed} matched to ${z.label ?? "box"}`
+                      : z.label ?? "Drop here"
+                }
                 className={clsx(
-                  gamesMatchZoneClass,
-                  placed && "border-solid border-emerald-700 bg-emerald-50 text-emerald-950",
+                  zoneImageUrl
+                    ? "relative aspect-square min-h-0 w-full overflow-hidden rounded-xl border-4 border-dashed border-kid-ink bg-kid-panel p-1 transition hover:bg-kid-surface-muted active:bg-kid-surface disabled:opacity-60"
+                    : gamesMatchZoneClass,
+                  placed &&
+                    (zoneImageUrl
+                      ? "border-solid border-emerald-700 ring-2 ring-emerald-300"
+                      : "border-solid border-emerald-700 bg-emerald-50 text-emerald-950"),
                 )}
               >
-                {placed ? (
+                {zoneImageUrl ? (
+                  <>
+                    <Image
+                      src={zoneImageUrl}
+                      alt={z.label ?? ""}
+                      fill
+                      className={interactionImageFitClass(parsed.image_fit)}
+                      unoptimized={unopt(zoneImageUrl)}
+                    />
+                    {placed ? (
+                      <span className="absolute inset-x-1 bottom-1 rounded-md border-2 border-emerald-800 bg-white/95 px-2 py-0.5 text-center text-sm font-extrabold text-emerald-950">
+                        {placed}
+                      </span>
+                    ) : null}
+                  </>
+                ) : placed ? (
                   <span>
                     <span className="block text-xs font-bold uppercase tracking-wide text-emerald-800/80">
                       {z.label ?? "Box"}
@@ -173,7 +234,13 @@ export function DragMatchView({
         </div>
       </KidPanel>
       <GuideBlock guide={parsed.guide} />
-      <InteractionLessonNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} />
+      <InteractionShellNav
+        showBack={showBack}
+        onBack={onBack}
+        passed={passed}
+        onNext={onNext}
+        controlsPlacement={controlsPlacement}
+      />
     </div>
   );
 }

@@ -26,7 +26,7 @@ describe("loadPosterModuleBySlug", () => {
     expect(view.sections).toHaveLength(3);
     expect(view.hero.highlightA.text).toBe("THERE IS");
     expect(view.hero.suffix).toBe("AFFIRMATIVE");
-    expect(view.sections[1]?.internalLayout).toBe("two_equal_narrow");
+    expect(view.sections[1]?.internalLayout).toBe("full_width");
     expect(view.sections[2]?.rememberBanner?.body).toContain("There's");
   });
 

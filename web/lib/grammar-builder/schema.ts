@@ -3,6 +3,7 @@
  * Authoritative spec: docs/grammar-module/grammar-module.schema.json
  */
 import { z } from "zod";
+import { isAllowedGrammarGraphicUrl } from "./graphic-asset";
 
 export const grammarThemeIdSchema = z.enum([
   "sky-blue",
@@ -38,17 +39,38 @@ export const grammarDisplayModeSchema = z.enum(["poster", "showcase"]);
 
 export const grammarDifficultySchema = z.enum(["A1", "A2", "B1"]);
 
+export const grammarAlignSchema = z.enum(["left", "center", "right"]);
+
+export const grammarGraphicAssetSchema = z
+  .object({
+    kind: z.enum(["emoji", "url"]),
+    value: z.string().min(1),
+  })
+  .strict()
+  .superRefine((asset, ctx) => {
+    if (asset.kind === "url" && !isAllowedGrammarGraphicUrl(asset.value)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "graphicAsset url must be http(s) or a root-relative path",
+        path: ["value"],
+      });
+    }
+  });
+
 export const grammarGlanceRuleSchema = z.object({
   text: z.string().min(1).max(60),
   highlight: z.string().optional(),
+  align: grammarAlignSchema.optional(),
 });
 
 export const grammarItemSchema = z
   .object({
     text: z.string().min(1).optional(),
     graphic: z.string().optional(),
+    graphicAsset: grammarGraphicAssetSchema.optional(),
     caption: z.string().optional(),
     highlight: z.string().optional(),
+    align: grammarAlignSchema.optional(),
     transformationRow: z
       .object({
         from: z.string().min(1),
@@ -168,6 +190,7 @@ export const grammarCardSchema = z
     kidSubtitle: z.string().max(30).optional(),
     theme: grammarThemeIdSchema,
     layoutType: grammarLayoutTypeSchema,
+    chromeAlign: grammarAlignSchema.optional(),
     glanceRule: grammarGlanceRuleSchema.optional(),
     subHeader: grammarSubHeaderSchema.optional(),
     items: z.array(grammarItemSchema).optional(),
@@ -295,6 +318,8 @@ export type GrammarPageLayout = z.infer<typeof grammarPageLayoutSchema>;
 export type GrammarLayoutType = z.infer<typeof grammarLayoutTypeSchema>;
 export type GrammarDisplayMode = z.infer<typeof grammarDisplayModeSchema>;
 export type GrammarDifficulty = z.infer<typeof grammarDifficultySchema>;
+export type GrammarAlign = z.infer<typeof grammarAlignSchema>;
+export type GrammarGraphicAsset = z.infer<typeof grammarGraphicAssetSchema>;
 export type GrammarGlanceRule = z.infer<typeof grammarGlanceRuleSchema>;
 export type GrammarSubHeader = z.infer<typeof grammarSubHeaderSchema>;
 export type GrammarSidePanel = z.infer<typeof grammarSidePanelSchema>;

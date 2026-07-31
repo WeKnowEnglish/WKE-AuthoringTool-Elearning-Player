@@ -2,12 +2,17 @@ import { ClassJoinCodePanel } from "@/components/teacher/ClassJoinCodePanel";
 import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
 import { SentenceStripClassPanel } from "@/components/teacher/SentenceStripClassPanel";
 import { ClassHomeworkPanel } from "@/components/teacher/class-hub/ClassHomeworkPanel";
+import { ClassPostsPanel } from "@/components/teacher/class-hub/ClassPostsPanel";
+import { ClassMeetingSchedulePanel } from "@/components/teacher/class-hub/ClassMeetingSchedulePanel";
 import { ClassWordPacksPanel } from "@/components/teacher/word-packs/ClassWordPacksPanel";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
+import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
+import type { ClassPost } from "@/lib/class-posts/types";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
 import type { TeacherClassStudentMasteryPreview } from "@/lib/mastery/teacher-mastery-summary";
+import type { TeacherSpaceItemSummary } from "@/lib/teacher-space/types";
 
 type QuizOption = {
   id: string;
@@ -34,9 +39,12 @@ type Props = {
   pendingSentenceTotal: number;
   wordPacks: TeacherWordPackSummary[];
   homework: ClassHomework[];
+  classPosts: ClassPost[];
+  meetingSlots: ClassMeetingSlot[];
   packQuizzes: QuizOption[];
   packFlashcardSets: FlashcardSetOption[];
   homeworkCompletions: HomeworkCompletionSummary[];
+  spaceItems: TeacherSpaceItemSummary[];
 };
 
 export function StudentsHomeworkTab({
@@ -50,9 +58,12 @@ export function StudentsHomeworkTab({
   pendingSentenceTotal,
   wordPacks,
   homework,
+  classPosts,
+  meetingSlots,
   packQuizzes,
   packFlashcardSets,
   homeworkCompletions,
+  spaceItems,
 }: Props) {
   const isLight = teacherTier === "light";
 
@@ -73,6 +84,20 @@ export function StudentsHomeworkTab({
       </section>
 
       <ClassJoinCodePanel classId={classId} joinCode={joinCode} archived={archived} />
+
+      <ClassPostsPanel
+        classId={classId}
+        archived={archived}
+        initialPosts={classPosts}
+        homework={homework}
+        spaceItems={spaceItems}
+      />
+
+      <ClassMeetingSchedulePanel
+        classId={classId}
+        archived={archived}
+        initialSlots={meetingSlots}
+      />
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

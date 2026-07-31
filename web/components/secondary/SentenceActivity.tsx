@@ -50,7 +50,11 @@ import {
 } from "@/lib/secondary/secondary-word-progress";
 import type { SecondaryWordOutcome } from "@/lib/secondary/secondary-scaffold";
 import type { SecondaryVocabItem } from "@/lib/secondary/types";
-import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
+import {
+  secondaryActivityShell,
+  secondaryActivityTitle,
+  secondaryUi,
+} from "@/lib/secondary/secondary-ui-typography";
 
 function studentSentenceStatusLabel(
   status: StudentSentenceSubmissionView["status"] | undefined,
@@ -74,7 +78,7 @@ function studentSentenceStatusLabel(
     default:
       return {
         label: "Not submitted",
-        className: "border-kid-ink/25 bg-kid-panel/40 text-kid-ink/80",
+        className: "border-sec-ink/25 bg-sec-panel/40 text-sec-ink/80",
       };
   }
 }
@@ -82,7 +86,11 @@ function studentSentenceStatusLabel(
 const SENTENCE_QUALITY_HINT =
   "Use the word, start with a capital letter, and end with . ? or ! Your teacher will review your writing — this is not a grammar checker.";
 
-export function SentenceActivity() {
+type SentenceActivityProps = {
+  compact?: boolean;
+};
+
+export function SentenceActivity({ compact = false }: SentenceActivityProps) {
   const { todaySession } = useSecondaryTodaySession();
   const { isReviewMode, isRetry } = useSecondaryActivityMode();
   const studentId = resolveSecondaryStudentId();
@@ -458,7 +466,7 @@ export function SentenceActivity() {
 
   if (!todaySession || !wordSetReady) {
     return (
-      <section className="space-y-3 rounded-xl border-2 border-kid-ink bg-white p-5">
+      <section className={secondaryActivityShell(compact)}>
         <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p>
       </section>
     );
@@ -466,15 +474,17 @@ export function SentenceActivity() {
 
   if (requiredWordIds.length === 0) {
     return (
-      <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-        <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
-        <h2 className={secondaryUi.pageTitle}>Write a Sentence</h2>
+      <section className={secondaryActivityShell(compact)}>
+        {!compact ? <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p> : null}
+        <h2 className={secondaryActivityTitle(compact)}>Write a Sentence</h2>
         <p className={secondaryUi.bodyMuted}>
           No sentence prompts are available in the vocabulary list yet.
         </p>
-        <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary">
-          Back to vocabulary home
-        </Link>
+        {!compact ? (
+          <Link className={`inline-flex ${secondaryUi.btnSecondary}`} href="/secondary/learn">
+            Back to Learn
+          </Link>
+        ) : null}
       </section>
     );
   }
@@ -485,23 +495,25 @@ export function SentenceActivity() {
   );
 
   return (
-    <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-      <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
-      <h2 className={secondaryUi.pageTitle}>Write a Sentence</h2>
-      <p className={secondaryUi.bodyMuted}>
-        {isReviewMode && isComplete
-          ? "Reviewing your last attempt."
-          : isComplete
-          ? revisionsNeededCount > 0
-            ? "Your teacher asked you to revise some sentences below."
-            : "Your sentences were sent to your teacher for review."
-          : `Use each word in your own sentence (${SECONDARY_SENTENCE_WORDS_PER_SESSION} words per round). Your teacher will review your writing.`}
-      </p>
+    <section className={secondaryActivityShell(compact)}>
+      {!compact ? <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p> : null}
+      <h2 className={secondaryActivityTitle(compact)}>Write a Sentence</h2>
+      {!compact ? (
+        <p className={secondaryUi.bodyMuted}>
+          {isReviewMode && isComplete
+            ? "Reviewing your last attempt."
+            : isComplete
+            ? revisionsNeededCount > 0
+              ? "Your teacher asked you to revise some sentences below."
+              : "Your sentences were sent to your teacher for review."
+            : `Use each word in your own sentence (${SECONDARY_SENTENCE_WORDS_PER_SESSION} words per round). Your teacher will review your writing.`}
+        </p>
+      ) : null}
 
       {isComplete ? (
         <>
           <SecondaryActivitySummary activityLabel="Sentences" summary={scoreSummary} />
-          <div className="space-y-2">
+          <div className={compact ? "space-y-1.5" : "space-y-2"}>
             {requiredWordIds.map((wordItemId) => {
               const item = promptById.get(wordItemId);
               const outcome = outcomes[wordItemId];
@@ -516,7 +528,7 @@ export function SentenceActivity() {
               return (
                 <div
                   key={wordItemId}
-                  className={`rounded-lg border-2 px-3 py-2.5 ${secondaryUi.body} ${status.className}`}
+                  className={`rounded-lg border-2 px-3 ${compact ? "py-1.5" : "py-2.5"} ${secondaryUi.body} ${status.className}`}
                 >
                   <span className="font-extrabold">{item?.word}</span>
                   <span className={`ml-2 ${secondaryUi.caption} font-bold opacity-80`}>({status.label})</span>
@@ -548,7 +560,9 @@ export function SentenceActivity() {
                     <div className="mt-2 space-y-2">
                       <p className={secondaryUi.caption}>{prompt.instruction}</p>
                       <textarea
-                        className={`min-h-[5rem] w-full ${secondaryUi.inputField} disabled:opacity-60`}
+                        className={`min-h-[5rem] w-full ${
+                          compact ? secondaryUi.inputFieldCompact : secondaryUi.inputField
+                        } disabled:opacity-60`}
                         disabled={isResubmitting}
                         onChange={(event) => setResubmitValue(event.target.value)}
                         placeholder={`Write a revised sentence with "${prompt.targetWord}"…`}
@@ -595,11 +609,15 @@ export function SentenceActivity() {
           ) : null}
         </>
       ) : currentItem && currentPrompt && !isReviewMode ? (
-        <div className="space-y-3 rounded-lg border border-kid-ink/20 bg-kid-panel p-4">
-          <p className={`${secondaryUi.caption} font-extrabold text-kid-ink/70`}>
+        <div
+          className={`rounded-lg border border-sec-ink/20 bg-sec-panel ${
+            compact ? "space-y-2 p-3" : "space-y-3 p-4"
+          }`}
+        >
+          <p className={`${secondaryUi.caption} font-extrabold text-sec-ink/70`}>
             Word {Math.min(queuePosition, requiredWordIds.length)} of {requiredWordIds.length}
           </p>
-          <p className={`${secondaryUi.bodyLarge} text-kid-ink`}>
+          <p className={`${compact ? secondaryUi.body : secondaryUi.bodyLarge} text-sec-ink`}>
             {currentPrompt.instruction}
           </p>
           {currentPrompt.frameHint ? (
@@ -607,23 +625,25 @@ export function SentenceActivity() {
               Frame hint: <span className="font-extrabold">{currentPrompt.frameHint}</span>
             </p>
           ) : null}
-          {currentItem.exampleSentence ? (
-            <p className={`${secondaryUi.caption} font-bold text-kid-ink/70`}>
+          {currentItem.exampleSentence && !compact ? (
+            <p className={`${secondaryUi.caption} font-bold text-sec-ink/70`}>
               Example: {currentItem.exampleSentence}
             </p>
           ) : null}
           <textarea
             ref={textareaRef}
-            className={`min-h-[6rem] w-full ${secondaryUi.inputField} disabled:opacity-60`}
+            className={`${compact ? "min-h-[4.5rem]" : "min-h-[6rem]"} w-full ${
+              compact ? secondaryUi.inputFieldCompact : secondaryUi.inputField
+            } disabled:opacity-60`}
             disabled={isSubmitting || feedback === "submitted"}
             onChange={(event) => setValue(event.target.value)}
             placeholder={`Write a sentence with "${currentPrompt.targetWord}"…`}
             value={value}
           />
-          <p className={secondaryUi.captionMuted}>{SENTENCE_QUALITY_HINT}</p>
+          {!compact ? <p className={secondaryUi.captionMuted}>{SENTENCE_QUALITY_HINT}</p> : null}
           <div className="flex flex-wrap items-center gap-2">
             <button
-              className={secondaryUi.btnPrimary}
+              className={compact ? secondaryUi.btnPrimaryCompact : secondaryUi.btnPrimary}
               disabled={!value.trim() || isSubmitting || feedback === "submitted"}
               onClick={() => void handleSubmitSentence()}
               type="button"
@@ -645,12 +665,18 @@ export function SentenceActivity() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
+        <button
+          className={compact ? secondaryUi.btnSecondaryCompact : secondaryUi.btnSecondary}
+          onClick={handleRetry}
+          type="button"
+        >
           New words
         </button>
-        <Link className={secondaryUi.btnSecondary} href="/secondary">
-          Back to vocabulary home
-        </Link>
+        {!compact ? (
+          <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+            Back to Learn
+          </Link>
+        ) : null}
       </div>
     </section>
   );

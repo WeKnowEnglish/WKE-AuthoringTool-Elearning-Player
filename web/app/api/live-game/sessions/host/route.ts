@@ -7,6 +7,7 @@ import {
 import { generateJoinCode } from "@/lib/live-game/liveblocks/join-code";
 import { toRoomId } from "@/lib/live-game/liveblocks/room-id";
 import { getModeConfig } from "@/lib/live-game/modes";
+import { getLiveGameModule, isLiveGameModeId } from "@/lib/live-game/modes/registry";
 import type { LiveGameModeId } from "@/lib/live-game/modes/types";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import {
@@ -65,12 +66,17 @@ function parseHostRequestBody(
   if (!body || typeof body !== "object") return null;
   const record = body as HostRequestBody;
   const displayName = record.displayName?.trim() ?? "";
-  const modeId = record.modeId === "english_craft" ? "english_craft" : null;
+  const modeId = typeof record.modeId === "string" && isLiveGameModeId(record.modeId) ? record.modeId : null;
   const durationMinutes =
     typeof record.durationMinutes === "number" && record.durationMinutes > 0 ?
       Math.min(60, Math.round(record.durationMinutes))
     : 20;
-  if (!displayName || !modeId || !isValidHostCreationId(record.creationId)) return null;
+  if (
+    !displayName ||
+    !modeId ||
+    getLiveGameModule(modeId).status !== "available" ||
+    !isValidHostCreationId(record.creationId)
+  ) return null;
   return {
     displayName,
     modeId,

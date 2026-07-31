@@ -31,6 +31,35 @@ export type PlayHotspot = {
   geometry: HotspotGeometry;
   visualShape?: HotspotVisualShape;
   highlight?: Partial<HotspotHighlight>;
+  presentation?: "target" | "sprite" | "shape" | "text";
+  spriteSrc?: string;
+  interactionKind?: "dialogue" | "info" | "audio" | "question" | "none" | "silent";
+  /** Visible label for text overlays. */
+  labelText?: string;
+  /** Typography for text overlays. */
+  textStyle?: {
+    role?: "title" | "body" | "caption";
+    align?: "left" | "center" | "right";
+  };
+  /** Clockwise rotation in degrees around the object center. */
+  rotationDeg?: number;
+  /** Draw / hit stack order (higher = in front). */
+  zIndex?: number;
+  /** Declarative entrance + idle motion. */
+  animation?: {
+    entrance?: "none" | "fade_in" | "pop" | "slide_up" | "slide_down";
+    entranceDurationMs?: number;
+    entranceDelayMs?: number;
+    idle?: "none" | "pulse" | "bob" | "wiggle";
+    entranceRequirements?: string[];
+  };
+  /** Bumps when a gated entrance plays so CSS animation remounts. */
+  entranceMotionKey?: number;
+  /** Runtime overrides (on-tap stage actions). */
+  visible?: boolean;
+  opacity?: number;
+  /** Gentle idle scale pulse (stage action). */
+  pulse?: boolean;
 };
 
 export type PlayMedia = {

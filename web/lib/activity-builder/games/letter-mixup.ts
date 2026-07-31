@@ -6,6 +6,7 @@ import type {
 export type GamesLetterMixupLessonPlayerScreen = {
   type: "interaction";
   subtype: "letter_mixup";
+  auto_advance_on_pass?: true;
   prompt: string;
   items: Array<{
     id: string;
@@ -209,6 +210,7 @@ export function exportGamesLetterMixupForLessonPlayer(
     const screen: GamesLetterMixupLessonPlayerScreen = {
       type: "interaction",
       subtype: "letter_mixup",
+      auto_advance_on_pass: true,
       prompt: promptDefault,
       items: [exportedItem],
       shuffle_letters: shuffleLettersDefault,
@@ -219,7 +221,7 @@ export function exportGamesLetterMixupForLessonPlayer(
     };
     if (item.imageUrl) {
       screen.image_url = item.imageUrl;
-      screen.image_fit = item.imageFit ?? "contain";
+      screen.image_fit = "contain";
     }
     if (item.imageAudioUrl) {
       screen.image_audio_url = item.imageAudioUrl;

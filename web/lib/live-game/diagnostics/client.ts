@@ -5,7 +5,7 @@ import type {
   LiveGameDiagnosticEvent,
   LiveGameDiagnosticPhase,
 } from "@/lib/live-game/diagnostics/types";
-import { resolveServerMs } from "@/lib/live-game/diagnostics/server-timing-parse";
+import { instrumentedFetch } from "@/lib/app-diagnostics/client";
 
 const EVENTS_KEY = "wke:live-game:diagnostic-events:v1";
 const TRACE_KEY = "wke:live-game:diagnostic-trace:v1";
@@ -141,23 +141,8 @@ export async function diagnosticFetch(
 ) {
   if (!liveGameDiagnosticsEnabled()) return fetch(input, init);
   const finish = startLiveGameDiagnosticSpan(options.phase, options.name, options.detail);
-  const startedAt = performance.now();
   try {
-    const response = await fetch(input, init);
-    const headersAt = performance.now();
-    const timeToHeadersMs = Math.round(headersAt - startedAt);
-    let serverMs: number | null = null;
-    let metrics: Array<{ name: string; durationMs: number }> = [];
-    try {
-      const resolved = resolveServerMs(
-        response.headers.get("X-Server-Ms"),
-        response.headers.get("Server-Timing"),
-      );
-      serverMs = resolved.serverMs;
-      metrics = resolved.metrics;
-    } catch {
-      // Malformed timing headers must never break gameplay requests.
-    }
+    const { response, timeToHeadersMs, serverMs, metrics } = await instrumentedFetch(input, init);
     for (const metric of metrics) {
       recordLiveGameDiagnostic(options.phase, `server:${metric.name}`, options.detail, {
         kind: "span",
@@ -173,12 +158,12 @@ export async function diagnosticFetch(
       networkOrQueueMs:
         roundedServerMs == null ? null : Math.max(0, timeToHeadersMs - roundedServerMs),
       serverTiming:
-        metrics.length > 0 ?
-          metrics.map((metric) => ({
-            name: metric.name,
-            durationMs: Math.round(metric.durationMs * 10) / 10,
-          }))
-        : null,
+        metrics.length > 0
+          ? metrics.map((metric) => ({
+              name: metric.name,
+              durationMs: Math.round(metric.durationMs * 10) / 10,
+            }))
+          : null,
     });
     return response;
   } catch (error) {
@@ -191,6 +176,9 @@ export async function diagnosticFetch(
     throw error;
   }
 }
+
+/** Site-wide fetch instrumentation (records to app diagnostics store). */
+export { diagnosticFetch as liveGameDiagnosticFetch } from "@/lib/app-diagnostics/client";
 
 export function subscribeToLiveGameDiagnostics(listener: () => void) {
   if (typeof window === "undefined") return () => undefined;

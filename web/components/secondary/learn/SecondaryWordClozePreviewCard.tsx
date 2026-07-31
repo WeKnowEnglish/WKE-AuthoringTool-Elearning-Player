@@ -14,14 +14,14 @@ export function SecondaryWordClozePreviewCard({ item, centered: _centered = fals
   const parts = preview.split("____");
 
   return (
-    <section className="rounded-xl border-2 border-kid-ink/20 bg-kid-panel/40 p-4">
+    <section className="rounded-xl border-2 border-sec-ink/20 bg-sec-panel/40 p-4">
       <h3 className={secondaryUi.cardTitle}>Cloze</h3>
       <p className={`mt-2 ${secondaryUi.bodyLarge}`}>
         {parts.map((part, index) => (
           <span key={index}>
             {part}
             {index < parts.length - 1 ? (
-              <span className="mx-0.5 inline-block min-w-[3.5rem] border-b-2 border-kid-ink font-extrabold text-kid-ink">
+              <span className="mx-0.5 inline-block min-w-[3.5rem] border-b-2 border-sec-ink font-extrabold text-sec-ink">
                 {" "}
               </span>
             ) : null}

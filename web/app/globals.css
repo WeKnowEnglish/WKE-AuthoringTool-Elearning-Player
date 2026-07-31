@@ -23,6 +23,19 @@
   --kid-border-strong: var(--kid-ink);
   --kid-shadow: var(--kid-ink);
 
+  /* Secondary study-desk palette (calm paper; F8) */
+  --sec-bg: #f3f6fa;
+  --sec-card: #ffffff;
+  --sec-ink: #1e293b;
+  --sec-muted: #64748b;
+  --sec-border: #cbd5e1;
+  --sec-accent: #0f766e;
+  --sec-accent-hover: #0d9488;
+  --sec-accent-soft: #ccfbf1;
+  --sec-panel: #ffffff;
+  --sec-panel-muted: #eef2f7;
+  --sec-success: #059669;
+
   /* Landing page — scoped tokens (not used in app shells) */
   --landing-page-bg: #ffffff;
   --landing-primary-bg: #fff7ed;
@@ -55,9 +68,65 @@
   --color-kid-panel: var(--kid-panel);
   --color-kid-success: var(--kid-success);
   --color-kid-border-strong: var(--kid-border-strong);
+  --color-sec-bg: var(--sec-bg);
+  --color-sec-card: var(--sec-card);
+  --color-sec-ink: var(--sec-ink);
+  --color-sec-muted: var(--sec-muted);
+  --color-sec-border: var(--sec-border);
+  --color-sec-accent: var(--sec-accent);
+  --color-sec-accent-hover: var(--sec-accent-hover);
+  --color-sec-accent-soft: var(--sec-accent-soft);
+  --color-sec-panel: var(--sec-panel);
+  --color-sec-panel-muted: var(--sec-panel-muted);
+  --color-sec-success: var(--sec-success);
 }
 
 @layer utilities {
+  .marketing-prose h1 {
+    @apply text-3xl font-extrabold leading-tight text-kid-ink sm:text-4xl;
+  }
+
+  .marketing-prose h2 {
+    @apply mt-10 text-2xl font-extrabold text-kid-ink;
+  }
+
+  .marketing-prose h3 {
+    @apply mt-6 text-lg font-extrabold text-kid-ink;
+  }
+
+  .marketing-prose p {
+    @apply mt-4 text-base font-semibold leading-relaxed text-kid-ink/80;
+  }
+
+  .marketing-prose ul,
+  .marketing-prose ol {
+    @apply mt-4 list-outside space-y-2 pl-5 text-base font-semibold leading-relaxed text-kid-ink/80;
+  }
+
+  .marketing-prose ul {
+    @apply list-disc;
+  }
+
+  .marketing-prose ol {
+    @apply list-decimal;
+  }
+
+  .marketing-prose a {
+    @apply font-extrabold text-kid-ink underline underline-offset-2;
+  }
+
+  .marketing-prose strong {
+    @apply font-extrabold text-kid-ink;
+  }
+
+  .marketing-prose li {
+    @apply leading-relaxed;
+  }
+
+  .marketing-prose blockquote {
+    @apply mt-4 border-l-4 border-kid-ink/20 pl-4 text-base font-semibold italic leading-relaxed text-kid-ink/75;
+  }
+
   .landing-cta-primary {
     background: linear-gradient(
       to right,
@@ -151,6 +220,83 @@
     .kid-animate-shake,
     .kid-animate-pop {
       animation: none;
+    }
+  }
+
+  /** Lesson / quiz player Next arrow: pop in, then loop until tapped. */
+  .kid-lesson-nav-next-callout {
+    animation:
+      kid-lesson-nav-next-enter 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+      kid-lesson-nav-next-bounce 0.9s ease-in-out 0.45s infinite;
+    transform-origin: center center;
+    box-shadow:
+      0 0 0 2px rgba(250, 204, 21, 0.4),
+      0 4px 12px rgba(250, 204, 21, 0.28);
+  }
+
+  @keyframes kid-lesson-nav-next-enter {
+    0% {
+      opacity: 0;
+      transform: scale(0.5) translateY(0.5rem);
+    }
+    55% {
+      opacity: 1;
+      transform: scale(1.12) translateY(-0.2rem);
+    }
+    75% {
+      transform: scale(0.98) translateY(0.05rem);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1.06) translateY(-0.1rem);
+    }
+  }
+
+  @keyframes kid-lesson-nav-next-bounce {
+    0%,
+    100% {
+      transform: scale(1.06) translateY(-0.1rem);
+    }
+    35% {
+      transform: scale(1.14) translateY(-0.35rem);
+    }
+    65% {
+      transform: scale(1.02) translateY(0.04rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kid-lesson-nav-next-callout {
+      animation: none;
+      transform: none;
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.45);
+    }
+  }
+
+  @keyframes student-home-greeting-in {
+    0% {
+      opacity: 0;
+      transform: translateY(0.4rem);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(-0.08rem);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .student-home-greeting-in {
+    animation: student-home-greeting-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .student-home-greeting-in {
+      animation: none;
+      opacity: 1;
+      transform: none;
     }
   }
 

@@ -50,16 +50,44 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
 
       <TeacherNavDropdown label="Activity Builder" active={onActivityBuilder}>
         <TeacherNavMenuLink
+          href="/teacher/activity-builder/library"
+          active={pathname.startsWith("/teacher/activity-builder/library")}
+        >
+          WKE Library
+        </TeacherNavMenuLink>
+        <TeacherNavMenuLink
           href="/teacher/activity-builder/learning-tracks"
           active={pathname.startsWith("/teacher/activity-builder/learning-tracks")}
         >
           Learning track
         </TeacherNavMenuLink>
         <TeacherNavMenuLink
+          href="/teacher/activity-builder/vocabulary-lists"
+          active={pathname.startsWith("/teacher/activity-builder/vocabulary-lists")}
+        >
+          Vocabulary lists
+        </TeacherNavMenuLink>
+        <TeacherNavMenuLink
+          href="/teacher/activity-builder/quizzes"
+          active={pathname.startsWith("/teacher/activity-builder/quizzes")}
+        >
+          Quiz builder
+        </TeacherNavMenuLink>
+        <TeacherNavMenuLink
+          href="/teacher/activity-builder/hotspots"
+          active={pathname.startsWith("/teacher/activity-builder/hotspots")}
+        >
+          Hotspots
+        </TeacherNavMenuLink>
+        <TeacherNavMenuLink
           href="/teacher/activity-builder"
           active={
             onActivityBuilder &&
-            !pathname.startsWith("/teacher/activity-builder/learning-tracks")
+            !pathname.startsWith("/teacher/activity-builder/learning-tracks") &&
+            !pathname.startsWith("/teacher/activity-builder/vocabulary-lists") &&
+            !pathname.startsWith("/teacher/activity-builder/quizzes") &&
+            !pathname.startsWith("/teacher/activity-builder/hotspots") &&
+            !pathname.startsWith("/teacher/activity-builder/library")
           }
         >
           Single quiz / activity

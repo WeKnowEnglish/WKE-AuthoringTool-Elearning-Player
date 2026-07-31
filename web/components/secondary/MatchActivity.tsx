@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SecondaryActivitySummary } from "@/components/secondary/SecondaryActivitySummary";
+import { SecondaryActivityCompleteOverlay } from "@/components/secondary/SecondaryActivityCompleteOverlay";
 import {
   buildFallbackActivityOutcomesFromLocal,
   clearSecondaryActivityAttemptSnapshot,
@@ -32,7 +32,7 @@ import { useSecondaryTodaySession } from "@/lib/secondary/use-secondary-today-se
 import { useSecondaryActivityResetGuard } from "@/lib/secondary/use-secondary-activity-reset-guard";
 import { resolveSecondaryStudentId } from "@/lib/secondary/secondary-student-id";
 import { getSecondaryVocabItemsByIds } from "@/lib/secondary/secondary-vocab-bank";
-import { secondaryUi } from "@/lib/secondary/secondary-ui-typography";
+import { secondaryActivityShell, secondaryActivityTitle, secondaryUi } from "@/lib/secondary/secondary-ui-typography";
 import {
   clearSecondaryLocalActivitySession,
   finalizeSecondaryWordAsRevealed,
@@ -52,7 +52,11 @@ function shuffleDefinitions(definitions: string[]): string[] {
   return copy;
 }
 
-export function MatchActivity() {
+type MatchActivityProps = {
+  compact?: boolean;
+};
+
+export function MatchActivity({ compact = false }: MatchActivityProps) {
   const { todaySession } = useSecondaryTodaySession();
   const { isReviewMode, isRetry } = useSecondaryActivityMode();
   const studentId = resolveSecondaryStudentId();
@@ -65,6 +69,7 @@ export function MatchActivity() {
   const [shuffledDefinitions, setShuffledDefinitions] = useState<string[]>([]);
   const [phase, setPhase] = useState<"practice" | "repair" | "done">("practice");
   const [checked, setChecked] = useState(false);
+  const [completeOverlayOpen, setCompleteOverlayOpen] = useState(false);
 
   const matchDateKey = todaySession?.dateKey ?? "";
   const matchWordSetKey = todaySession?.allWordItemIds.join(",") ?? "";
@@ -152,6 +157,7 @@ export function MatchActivity() {
     setOutcomes(nextOutcomes);
     setPhase("done");
     setChecked(false);
+    setCompleteOverlayOpen(true);
     setShuffledDefinitions(shuffleDefinitions(items.map((item) => item.studentMeaningEn)));
   }
 
@@ -164,6 +170,7 @@ export function MatchActivity() {
     setOutcomes(createPendingOutcomes(items.map((item) => item.wordItemId)));
     setPhase("practice");
     setChecked(false);
+    setCompleteOverlayOpen(false);
     setShuffledDefinitions(shuffleDefinitions(items.map((item) => item.studentMeaningEn)));
   }
 
@@ -325,6 +332,7 @@ export function MatchActivity() {
         now.toISOString(),
       );
       setPhase("done");
+      setCompleteOverlayOpen(true);
       return;
     }
 
@@ -343,6 +351,7 @@ export function MatchActivity() {
     setLockedSelections({});
     setOutcomes(createPendingOutcomes(requiredWordIds));
     setChecked(false);
+    setCompleteOverlayOpen(false);
     setPhase("practice");
     setShuffledDefinitions(shuffleDefinitions(matchItems.map((item) => item.studentMeaningEn)));
     if (matchActivityFingerprint) {
@@ -350,19 +359,30 @@ export function MatchActivity() {
     }
   }
 
+  const matchContentWidth = compact
+    ? "mx-auto w-full max-w-lg px-8 sm:max-w-xl sm:px-12"
+    : "mx-auto w-full max-w-2xl";
+  const matchRowGrid = compact
+    ? "grid gap-1.5 md:grid-cols-[minmax(5rem,7rem)_minmax(0,1fr)]"
+    : "grid gap-1.5 md:grid-cols-[220px_minmax(0,1fr)]";
+
   return (
-    <section className="space-y-4 rounded-xl border-2 border-kid-ink bg-white p-5">
-      <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p>
-      <h2 className={secondaryUi.pageTitle}>Match The Word To The Definition</h2>
-      <p className={secondaryUi.bodyMuted}>
-        {isReviewMode && phase === "done"
-          ? "Reviewing your last attempt."
-          : phase === "done"
-          ? "Here is how you did today."
-          : phase === "repair"
-            ? "Fix the words you missed. You have up to three tries per word."
-            : "Select one definition for each word, then check your answers."}
-      </p>
+    <section className={secondaryActivityShell(compact)}>
+      {!compact ? <p className={secondaryUi.eyebrow}>Lower Secondary Activity</p> : null}
+      <h2 className={secondaryActivityTitle(compact)}>Match The Word To The Definition</h2>
+      {!compact ? (
+        <p className={secondaryUi.bodyMuted}>
+          {phase === "done" && !completeOverlayOpen
+            ? isReviewMode
+              ? "Reviewing your last attempt."
+              : "Here is how you did today."
+            : phase === "repair"
+              ? "Fix the words you missed. You have up to three tries per word."
+              : phase === "done"
+                ? null
+                : "Select one definition for each word, then check your answers."}
+        </p>
+      ) : null}
 
       {!todaySession ? <p className={secondaryUi.bodyMuted}>Loading today&apos;s practice...</p> : null}
 
@@ -373,20 +393,28 @@ export function MatchActivity() {
       ) : null}
 
       {phase === "done" ? (
-        <SecondaryActivitySummary activityLabel="Match" summary={scoreSummary} />
+        <SecondaryActivityCompleteOverlay
+          activityLabel="Match"
+          onContinue={() => setCompleteOverlayOpen(false)}
+          onTryAgain={handleRetry}
+          open={completeOverlayOpen}
+          summary={scoreSummary}
+        />
       ) : null}
 
-      {todaySession && phase === "done" ? (
-        <div className="space-y-3">
+      {todaySession && phase === "done" && !completeOverlayOpen ? (
+        <div className={`${matchContentWidth} ${compact ? "space-y-1.5" : "space-y-3"}`}>
           {matchItems.map((item) => {
             const outcome = outcomes[item.wordItemId];
             const isSuccess = outcome?.kind === "success";
             const isRevealed = outcome?.kind === "revealed";
             return (
-              <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={item.wordItemId}>
-                <span className={secondaryUi.word}>{item.word}</span>
+              <div className={matchRowGrid} key={item.wordItemId}>
+                <span className={compact ? `${secondaryUi.word} !text-base` : secondaryUi.word}>
+                  {item.word}
+                </span>
                 <div
-                  className={`rounded-lg border-2 px-3 py-2.5 ${secondaryUi.body} ${
+                  className={`rounded-lg border-2 px-3 ${compact ? "py-1.5" : "py-2.5"} ${secondaryUi.body} ${
                     isSuccess
                       ? "border-green-500 bg-green-50 text-green-900"
                       : "border-red-500 bg-red-50 text-red-900"
@@ -409,15 +437,18 @@ export function MatchActivity() {
       ) : null}
 
       {todaySession && visibleItems.length > 0 && phase !== "done" && !isReviewMode ? (
-        <div className="space-y-3">
+        <div className={`${matchContentWidth} ${compact ? "space-y-1.5" : "space-y-3"}`}>
           {visibleItems.map((item) => {
             const outcome = outcomes[item.wordItemId];
             const pending = outcome?.kind === "pending" ? outcome : null;
             const showWrong = checked && pending && !selectedDefinitions[item.wordItemId];
             return (
-              <div className="grid gap-2 md:grid-cols-[220px_minmax(0,1fr)]" key={item.wordItemId}>
+              <div className={matchRowGrid} key={item.wordItemId}>
                 <div>
-                  <label className={secondaryUi.word} htmlFor={`match-${item.wordItemId}`}>
+                  <label
+                    className={compact ? `${secondaryUi.word} !text-base` : secondaryUi.word}
+                    htmlFor={`match-${item.wordItemId}`}
+                  >
                     {item.word}
                   </label>
                   {pending && pending.wrongAttempts > 0 ? (
@@ -427,7 +458,7 @@ export function MatchActivity() {
                   ) : null}
                 </div>
                 <select
-                  className={`${secondaryUi.select} ${
+                  className={`${compact ? secondaryUi.selectCompact : secondaryUi.select} ${
                     showWrong ? "border-red-500 bg-red-50" : ""
                   }`}
                   id={`match-${item.wordItemId}`}
@@ -448,10 +479,10 @@ export function MatchActivity() {
       ) : null}
 
       {todaySession && matchItems.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={`${matchContentWidth} flex flex-wrap items-center gap-2`}>
           {phase !== "done" ? (
             <button
-              className={secondaryUi.btnPrimary}
+              className={compact ? secondaryUi.btnPrimaryCompact : secondaryUi.btnPrimary}
               disabled={!canCheck}
               onClick={handleCheckAnswers}
               type="button"
@@ -459,17 +490,25 @@ export function MatchActivity() {
               {phase === "repair" ? "Check repairs" : "Check answers"}
             </button>
           ) : null}
-          <button className={secondaryUi.btnSecondary} onClick={handleRetry} type="button">
+          <button
+            className={compact ? secondaryUi.btnSecondaryCompact : secondaryUi.btnSecondary}
+            onClick={handleRetry}
+            type="button"
+          >
             Try again
           </button>
-          <Link className={secondaryUi.btnSecondary} href="/secondary">
-            Back to vocabulary home
-          </Link>
+          {!compact ? (
+            <Link className={secondaryUi.btnSecondary} href="/secondary/learn">
+              Back to Learn
+            </Link>
+          ) : null}
         </div>
       ) : null}
 
       {phase === "repair" && pendingWordIds.length > 0 ? (
-        <div className={`rounded-lg border-2 border-amber-400 bg-amber-50 p-3 ${secondaryUi.body} font-bold text-amber-900`}>
+        <div
+          className={`${matchContentWidth} rounded-lg border-2 border-amber-400 bg-amber-50 ${compact ? "p-2" : "p-3"} ${secondaryUi.body} font-bold text-amber-900`}
+        >
           Keep going · {pendingWordIds.length} word{pendingWordIds.length === 1 ? "" : "s"} still to
           fix
         </div>

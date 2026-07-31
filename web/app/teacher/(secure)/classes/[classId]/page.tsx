@@ -8,12 +8,15 @@ import {
   listClassHomeworkCompletionsForClass,
   listClassHomeworkForClass,
 } from "@/lib/data/class-homework";
+import { listClassPostsForClass } from "@/lib/data/class-posts";
+import { listMeetingSlotsForClass } from "@/lib/data/class-meeting-slots";
 import { listClassLessonsWithStepsForClass } from "@/lib/data/class-lessons";
 import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
 import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
 import { listTeacherWordPacksForClass } from "@/lib/data/teacher-word-packs";
 import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
+import { listMyTeacherSpaceItems } from "@/lib/data/teacher-space";
 import { listPublishedQuestionSetsForHost } from "@/lib/live-game/server/question-set-list";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
@@ -47,6 +50,9 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     homework,
     activityCards,
     homeworkCompletions,
+    classPosts,
+    meetingSlots,
+    spaceItems,
   ] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
@@ -60,6 +66,9 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     listClassHomeworkForClass(classId),
     listAssignableActivitiesForClass(classId),
     listClassHomeworkCompletionsForClass(classId).catch(() => []),
+    listClassPostsForClass(classId).catch(() => []),
+    listMeetingSlotsForClass(classId).catch(() => []),
+    listMyTeacherSpaceItems(),
   ]);
 
   const packQuizzes = activityCards
@@ -132,8 +141,16 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         liveGameSets={liveGameSets}
         homework={homework}
         homeworkCompletions={homeworkCompletions}
+        classPosts={classPosts}
+        meetingSlots={meetingSlots}
         packQuizzes={packQuizzes}
         packFlashcardSets={packFlashcardSets}
+        spaceItems={spaceItems}
+        studentTabSettings={{
+          schedule: teacherClass.student_tab_schedule_enabled,
+          noticeboard: teacherClass.student_tab_noticeboard_enabled,
+          materials: teacherClass.student_tab_materials_enabled,
+        }}
       />
     </Suspense>
   );

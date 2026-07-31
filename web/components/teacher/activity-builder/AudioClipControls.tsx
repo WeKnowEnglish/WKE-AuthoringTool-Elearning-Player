@@ -6,16 +6,25 @@ import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerCo
 import { normalizeAudioClipUrl } from "@/lib/activity-builder/audio-clip";
 import { searchTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/lib/actions/media";
 
+export type AudioClipChangeDetail = {
+  mediaAssetId?: string;
+};
+
 export type AudioClipControlsProps = {
   label: string;
   /** Stable https URL (or empty). Data URLs are discouraged for saved tracks. */
   value: string;
-  onChange: (url: string) => void;
+  onChange: (url: string, detail?: AudioClipChangeDetail) => void;
   disabled?: boolean;
   /** Extra hint under the label. */
   hint?: string;
   /** Hide the shared media library picker (record + upload + paste still work). */
   hideLibrary?: boolean;
+  /**
+   * When set, Library opens this instead of the built-in audio portal
+   * (e.g. Explore Hotspots docked Library tab).
+   */
+  onOpenLibrary?: () => void;
   className?: string;
 };
 
@@ -33,6 +42,7 @@ export function AudioClipControls({
   disabled = false,
   hint,
   hideLibrary = false,
+  onOpenLibrary,
   className,
 }: AudioClipControlsProps) {
   const inputId = useId();
@@ -158,7 +168,7 @@ export function AudioClipControls({
       const form = new FormData();
       form.set("file", file);
       const result = await uploadTeacherMedia(form, "audio");
-      onChange(result.url);
+      onChange(result.url, { mediaAssetId: result.id });
     } catch (error) {
       setUploadErr(error instanceof Error ? error.message : "Upload failed");
     } finally {
@@ -269,7 +279,10 @@ export function AudioClipControls({
           <button
             type="button"
             disabled={disabled}
-            onClick={() => setLibraryOpen(true)}
+            onClick={() => {
+              if (onOpenLibrary) onOpenLibrary();
+              else setLibraryOpen(true);
+            }}
             className="rounded border border-stone-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-stone-800 hover:bg-stone-50 disabled:opacity-50"
           >
             Library
@@ -331,7 +344,7 @@ export function AudioClipControls({
         <audio className="mt-1 w-full max-w-md" controls preload="metadata" src={clip} />
       ) : null}
 
-      {libraryOpen && !hideLibrary && typeof document !== "undefined"
+      {libraryOpen && !hideLibrary && !onOpenLibrary && typeof document !== "undefined"
         ? createPortal(
             <div
               className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
@@ -388,7 +401,7 @@ export function AudioClipControls({
                               type="button"
                               className="w-full text-left text-sm font-medium text-sky-900 underline underline-offset-2"
                               onClick={() => {
-                                onChange(asset.public_url);
+                                onChange(asset.public_url, { mediaAssetId: asset.id });
                                 setLibraryOpen(false);
                               }}
                             >

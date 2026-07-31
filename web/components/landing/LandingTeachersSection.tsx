@@ -18,7 +18,7 @@ export function LandingTeachersSection() {
       aria-labelledby="teachers-heading"
       className="border-y border-kid-ink/10 bg-[#fff8eb]"
     >
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-12">
         <div className="grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,22rem)] lg:gap-10">
           <div>
             <p className="text-sm font-extrabold uppercase tracking-wide text-[var(--landing-primary-title)]">
@@ -31,13 +31,14 @@ export function LandingTeachersSection() {
               Search for activities, author lessons, run live classes, assign homework, and review
               what each learner still needs — without leaving the platform.
             </p>
-            <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+            <ul className="mt-5 grid gap-x-5 gap-y-2 sm:mt-6 sm:grid-cols-2">
               {CAPABILITIES.map((item) => (
                 <li
                   key={item}
-                  className="rounded-lg border-2 border-kid-ink/15 bg-white px-4 py-3 text-sm font-bold text-kid-ink"
+                  className="flex items-start gap-2 border-b border-kid-ink/10 py-2 text-sm font-bold text-kid-ink sm:rounded-lg sm:border-2 sm:border-kid-ink/15 sm:bg-white sm:px-4 sm:py-3"
                 >
-                  {item}
+                  <span aria-hidden="true" className="text-emerald-700">✓</span>
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
@@ -53,7 +54,7 @@ export function LandingTeachersSection() {
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[18rem] items-end justify-center lg:mx-0 lg:max-w-none">
+          <div className="mx-auto hidden w-full max-w-[18rem] items-end justify-center sm:flex lg:mx-0 lg:max-w-none">
             <Image
               src={LANDING_TEACHER_MASCOT}
               alt=""

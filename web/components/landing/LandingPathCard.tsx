@@ -95,7 +95,7 @@ export function LandingPathCard({ config, characterSrc, onEnter }: Props) {
     return (
       <article
         className={clsx(
-          "relative overflow-visible rounded-2xl border-2 px-5 py-5 shadow-sm transition-transform sm:px-6 sm:py-6",
+          "relative overflow-visible rounded-2xl border-2 px-4 py-4 shadow-sm transition-transform sm:px-6 sm:py-6",
           "hover:-translate-y-0.5 motion-reduce:hover:translate-y-0",
           isPrimary ?
             "border-[var(--landing-primary-border)] bg-[var(--landing-primary-bg)]"

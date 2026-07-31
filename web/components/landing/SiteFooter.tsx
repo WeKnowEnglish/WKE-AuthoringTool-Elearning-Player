@@ -26,8 +26,8 @@ const ACCESS_LINKS = [
 export function SiteFooter() {
   return (
     <footer className="border-t-4 border-kid-ink bg-[#0f172a] text-white">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4 sm:px-8">
-        <div>
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-8 sm:px-8 sm:py-10 lg:grid-cols-4">
+        <div className="col-span-2 lg:col-span-1">
           <p className="text-lg font-extrabold">{SITE_NAME}</p>
           <p className="mt-2 max-w-sm text-sm font-semibold leading-relaxed text-white/70">
             Interactive ESL activities and teaching tools for creating lessons, teaching

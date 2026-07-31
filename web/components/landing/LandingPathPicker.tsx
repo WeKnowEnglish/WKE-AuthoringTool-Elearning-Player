@@ -31,7 +31,7 @@ export function LandingPathPicker() {
     <>
       <section
         aria-labelledby="learning-paths-heading"
-        className="mx-auto max-w-6xl px-4 pb-12 pt-2 sm:px-8"
+        className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:pb-12 sm:pt-2"
       >
         <h2
           id="learning-paths-heading"
@@ -39,7 +39,7 @@ export function LandingPathPicker() {
         >
           Learning Paths
         </h2>
-        <div className="mt-6 grid gap-6 overflow-visible md:grid-cols-2 md:gap-4">
+        <div className="mt-5 grid gap-4 overflow-visible sm:mt-6 md:grid-cols-2">
           {LANDING_PATHS.map((path) => (
             <LandingPathCard
               key={path.band}

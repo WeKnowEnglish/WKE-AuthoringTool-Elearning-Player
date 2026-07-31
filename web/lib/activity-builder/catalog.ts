@@ -204,6 +204,58 @@ export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
       },
     ],
   },
+  {
+    id: "reading",
+    label: "5 · Reading — Development",
+    toneClass: "text-emerald-800",
+    cards: [
+      {
+        id: "reading-definition-match",
+        title: "Definition Match",
+        description: "Match a Primary word bank to child-friendly definitions.",
+        badge: "Reading · Admin draft",
+        lpPath: "/reading/definition-match",
+        status: "authoring_ready",
+        adminOnly: true,
+      },
+      {
+        id: "reading-read-and-answer",
+        title: "Read and Answer",
+        description: "Read a short passage and answer comprehension questions.",
+        badge: "Reading · Admin draft",
+        lpPath: "/reading/read-and-answer",
+        status: "authoring_ready",
+        adminOnly: true,
+      },
+      {
+        id: "reading-cloze-choice",
+        title: "Cloze with Choices",
+        description: "Complete five passage gaps using contextual word choices.",
+        badge: "Reading · Admin draft",
+        lpPath: "/reading/cloze-choice",
+        status: "authoring_ready",
+        adminOnly: true,
+      },
+      {
+        id: "reading-cloze-open",
+        title: "Open Cloze",
+        description: "Type missing passage words without a word bank or choices.",
+        badge: "Reading · Admin draft",
+        lpPath: "/reading/cloze-open",
+        status: "authoring_ready",
+        adminOnly: true,
+      },
+      {
+        id: "reading-picture-story",
+        title: "Picture Story Reading",
+        description: "Follow a story through pictures and words, then complete and answer.",
+        badge: "Reading · Admin draft",
+        lpPath: "/reading/picture-story",
+        status: "authoring_ready",
+        adminOnly: true,
+      },
+    ],
+  },
 ];
 
 export function studioOriginFromEnv(): string | null {

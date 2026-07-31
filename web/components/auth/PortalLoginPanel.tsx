@@ -103,8 +103,9 @@ export function PortalLoginPanel({
       learningBand: band,
       next: nextPath,
     });
-    router.push(path);
-    router.refresh();
+    // Use a full request after sign-in so the Primary server component receives
+    // the newly written Supabase auth cookies on its very first render.
+    window.location.assign(path);
   }
 
   async function onStudentSubmit(e: React.FormEvent) {

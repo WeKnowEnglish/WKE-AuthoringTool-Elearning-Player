@@ -27,7 +27,7 @@ export default async function PrimaryDashboardPage({ searchParams }: Props) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/");
+    redirect("/login?next=/primary");
   }
 
   if (isTeacher(user)) {
@@ -47,6 +47,7 @@ export default async function PrimaryDashboardPage({ searchParams }: Props) {
 
   return (
     <PrimaryDashboardClient
+      studentKey={user.id}
       classMemberships={classMemberships}
       assignedHomework={assignedHomework}
       liveSessions={liveSessions}

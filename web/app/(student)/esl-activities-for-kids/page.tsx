@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AuthorByline } from "@/components/marketing/AuthorByline";
 import { FreeActivityList } from "@/components/marketing/FreeActivityList";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
@@ -56,7 +57,7 @@ export default function EslActivitiesForKidsPage() {
         <h2>Browse by grammar topic</h2>
         <p>
           The{" "}
-          <a href="/grammar">grammar library</a> includes published posters for elementary
+          <Link href="/grammar">grammar library</Link> includes published posters for elementary
           learners — for example There is / There are, countable nouns, and plural forms.
           Each poster combines explanation with interactive practice.
         </p>

@@ -1,0 +1,23 @@
+.workspace {
+  --reading-navy: #17375e;
+  --reading-blue: #2878b5;
+  --reading-pale: #f4f9fd;
+  background: radial-gradient(circle at 100% 0%, rgb(224 242 254 / 45%), transparent 28rem), #f8fafc;
+}
+.workspace > header { border-top: 3px solid var(--reading-blue); box-shadow: 0 1px 0 rgb(15 23 42 / 5%); }
+.workspace > header h1 { color: var(--reading-navy); letter-spacing: -0.02em; }
+.workspace > header button { min-height: 2.25rem; transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease; }
+.workspace > header button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 8px rgb(15 23 42 / 10%); }
+.workspace section, .workspace article { box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
+.workspace section > h2, .workspace section > div:first-child h2 { color: var(--reading-navy); letter-spacing: -0.01em; }
+.workspace input:not([type="radio"]):not([type="checkbox"]), .workspace textarea, .workspace select { transition: border-color 150ms ease, box-shadow 150ms ease; }
+.workspace input:not([type="radio"]):not([type="checkbox"]):focus, .workspace textarea:focus, .workspace select:focus { border-color: var(--reading-blue) !important; box-shadow: 0 0 0 3px rgb(40 120 181 / 14%); outline: none; }
+.workspace aside > div:first-child { color: #486581; }
+.preview, .workspace aside :global(.rounded-3xl.border-4) { overflow: hidden; border-color: var(--reading-navy) !important; background: var(--reading-pale) !important; box-shadow: 0 18px 45px rgb(23 55 94 / 16%) !important; }
+.preview > div:first-child, .workspace aside :global(.rounded-3xl.border-4) > div:first-child { background: linear-gradient(135deg, var(--reading-blue), var(--reading-navy)) !important; }
+.preview > div:first-child p, .workspace aside :global(.rounded-3xl.border-4) > div:first-child p { color: #e0f2fe !important; }
+.preview article, .preview section, .workspace aside :global(.rounded-3xl.border-4) article, .workspace aside :global(.rounded-3xl.border-4) section { border-color: #d7e8f5 !important; }
+.preview button { transition: transform 140ms ease, box-shadow 140ms ease; }
+.preview button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px rgb(23 55 94 / 12%); }
+.preview button:focus-visible, .preview input:focus-visible, .preview select:focus-visible { outline: 3px solid #fbbf24; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .workspace button, .preview button { transition: none; } }

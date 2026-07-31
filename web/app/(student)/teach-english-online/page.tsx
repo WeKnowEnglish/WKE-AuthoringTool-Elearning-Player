@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AuthorByline } from "@/components/marketing/AuthorByline";
 import { LessonPlanDownloadGate } from "@/components/marketing/LessonPlanDownloadGate";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
@@ -78,7 +79,7 @@ export default function TeachEnglishOnlinePage() {
           can also download ready-made{" "}
           <a href="#teacher-lesson-plans">ESL mini-series lesson plans</a> for online
           classes. For the wider tool landscape, see{" "}
-          <a href="/resources/what-is-edtech">What is EdTech?</a>. Parents supporting home
+          <Link href="/resources/what-is-edtech">What is EdTech?</Link>. Parents supporting home
           learning should also see{" "}
           <a href="/english-learning-for-kids-at-home">
             English learning for kids at home

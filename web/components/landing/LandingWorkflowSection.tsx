@@ -38,11 +38,11 @@ const STEPS: {
 /** Static connected workflow — no activity engine in the initial load. */
 export function LandingWorkflowSection() {
   return (
-    <section aria-labelledby="how-it-works-heading" className="mx-auto max-w-6xl px-4 py-12 sm:px-8">
+    <section aria-labelledby="how-it-works-heading" className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-12">
       <div className="mx-auto max-w-3xl text-center">
         <h2
           id="how-it-works-heading"
-          className="text-3xl font-extrabold text-kid-ink sm:text-4xl"
+          className="text-2xl font-extrabold text-kid-ink sm:text-4xl"
         >
           How it works
         </h2>
@@ -52,8 +52,8 @@ export function LandingWorkflowSection() {
         </p>
       </div>
 
-      <div className="mt-10 grid items-end gap-6 lg:grid-cols-[minmax(9rem,14rem)_minmax(0,1fr)] lg:gap-8">
-        <div className="mx-auto flex w-full max-w-[11rem] items-end justify-center lg:mx-0 lg:max-w-none">
+      <div className="mt-7 grid items-end gap-6 sm:mt-10 lg:grid-cols-[minmax(9rem,14rem)_minmax(0,1fr)] lg:gap-8">
+        <div className="mx-auto hidden w-full max-w-[11rem] items-end justify-center sm:flex lg:mx-0 lg:max-w-none">
           <Image
             src={LANDING_CHARACTERS.secondary}
             alt=""
@@ -64,13 +64,13 @@ export function LandingWorkflowSection() {
           />
         </div>
 
-        <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <ol className="grid gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-5">
           {STEPS.map((step, index) => (
             <li
               key={step.title}
-              className="rounded-xl border-2 border-kid-ink/20 bg-white p-4"
+              className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 rounded-xl border-2 border-kid-ink/20 bg-white p-3 sm:block sm:p-4"
             >
-              <div className="flex items-center gap-2">
+              <div className="row-span-2 flex flex-col items-center gap-1.5 sm:flex-row sm:gap-2">
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border-2 border-kid-ink/15 bg-[#eff6ff] text-[var(--landing-secondary-title)]">
                   <LandingIcon name={step.icon} size={18} />
                 </span>
@@ -78,8 +78,8 @@ export function LandingWorkflowSection() {
                   Step {index + 1}
                 </p>
               </div>
-              <h3 className="mt-3 text-lg font-extrabold text-kid-ink">{step.title}</h3>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-kid-ink/70">
+              <h3 className="text-lg font-extrabold text-kid-ink sm:mt-3">{step.title}</h3>
+              <p className="mt-1 text-sm font-semibold leading-snug text-kid-ink/70 sm:mt-2 sm:leading-relaxed">
                 {step.body}
               </p>
             </li>

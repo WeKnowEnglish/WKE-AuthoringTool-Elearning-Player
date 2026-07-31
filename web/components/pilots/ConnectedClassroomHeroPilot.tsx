@@ -150,8 +150,8 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
         </div>
       </section> : null}
 
-      <section ref={scrollSceneRef} aria-label={embedded ? "Connected classroom learning story" : undefined} className="relative h-[400svh] min-h-[124rem]">
-        <div className={`sticky top-0 flex h-dvh min-h-[38rem] flex-col overflow-hidden bg-white ${embedded ? "pt-0" : "pt-16"}`}>
+      <section ref={scrollSceneRef} aria-label={embedded ? "Connected classroom learning story" : undefined} className="relative h-[300svh] min-h-[100rem] sm:h-[400svh] sm:min-h-[124rem]">
+        <div className={`sticky top-0 flex h-dvh min-h-[34rem] flex-col overflow-hidden bg-white sm:min-h-[38rem] ${embedded ? "pt-0" : "pt-16"}`}>
           <div className="relative z-30 mx-auto w-full max-w-7xl px-4 pt-4 text-center sm:px-8 sm:pt-6">
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#d55f3d]">
               One learning relationship
@@ -181,20 +181,20 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
           <div className="relative mx-auto min-h-0 w-full max-w-7xl flex-1 px-2 pb-4 sm:px-6 sm:pb-6">
             <div className="relative mx-auto h-full min-h-[26rem] max-w-6xl">
               <div
-                className="absolute bottom-0 left-0 h-[76%] w-[36%] transition-[opacity,transform] duration-75 ease-linear sm:h-[88%] sm:w-[34%]"
+                className="absolute bottom-[8%] left-0 h-[80%] w-[44%] transition-[opacity,transform] duration-75 ease-linear sm:bottom-0 sm:h-[88%] sm:w-[34%]"
                 style={tabletExitStyle(classroomOut, "left")}
               >
                 <Image src={`${ASSET_ROOT}/students-left-transparent.webp`} alt="Two students sharing a tablet in class" fill sizes="34vw" className="object-contain object-bottom" priority />
               </div>
               <div
-                className="absolute bottom-0 right-0 h-[76%] w-[36%] transition-[opacity,transform] duration-75 ease-linear sm:h-[88%] sm:w-[34%]"
+                className="absolute bottom-[8%] right-0 h-[80%] w-[44%] transition-[opacity,transform] duration-75 ease-linear sm:bottom-0 sm:h-[88%] sm:w-[34%]"
                 style={tabletExitStyle(classroomOut, "right")}
               >
                 <Image src={`${ASSET_ROOT}/students-right-transparent.webp`} alt="Two students sharing a tablet in class" fill sizes="34vw" className="object-contain object-bottom" priority />
               </div>
 
               <div
-                className="absolute bottom-0 left-1/2 z-20 h-full w-[46%] -translate-x-1/2 sm:bottom-auto sm:top-1/2 sm:h-full sm:w-[44%] sm:-translate-y-1/2"
+                className="absolute bottom-[8%] left-1/2 z-20 h-full w-[46%] -translate-x-1/2 scale-125 sm:bottom-auto sm:top-1/2 sm:h-full sm:w-[44%] sm:-translate-y-1/2 sm:scale-100"
                 style={{
                   left: `${50 + teacherBenefitsIn * 28}%`,
                   marginTop: `${teacherLift * -10}px`,

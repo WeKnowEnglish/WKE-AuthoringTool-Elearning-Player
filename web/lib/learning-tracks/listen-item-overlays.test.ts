@@ -7,7 +7,9 @@ import {
 import {
   applyListenAndChooseBeatPresentation,
   loadFixture,
+  resolveBeatScreensSync,
 } from "@/lib/learning-tracks/resolve-beat-screens";
+import { HOBBIES_DEFAULT_VOCAB_LIST_ID } from "@/lib/learning-tracks/composition-types";
 import type {
   LearningTrackBeatInstance,
   LearningTrackScreenPayload,
@@ -108,6 +110,38 @@ describe("Listen & Choose overlays (Phase D)", () => {
     );
     expect(screens[0]?.prompt_audio_url).toBe(
       "https://cdn.example/painting-dialog.webm",
+    );
+    expect(screens[0]?.auto_play).toBe(true);
+  });
+
+  it("stamps overlays on vocab_compile listen screens", () => {
+    const beat: LearningTrackBeatInstance = {
+      id: "beat-listen-vocab",
+      kind: "listen_and_choose",
+      source: {
+        type: "vocab_compile",
+        listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
+        format: "listen_and_choose",
+      },
+      presentation: {
+        listenAndChoose: {
+          itemOverlays: [
+            {
+              itemIndex: 0,
+              bodyText: "Custom listen prompt?",
+              promptAudioUrl: "https://cdn.example/vocab-listen.webm",
+              autoPlay: true,
+            },
+          ],
+        },
+      },
+    };
+    const screens = resolveBeatScreensSync(beat);
+    expect(screens.length).toBeGreaterThan(0);
+    expect(screens[0]?.subtype).toBe("listen_and_choose");
+    expect(screens[0]?.body_text).toBe("Custom listen prompt?");
+    expect(screens[0]?.prompt_audio_url).toBe(
+      "https://cdn.example/vocab-listen.webm",
     );
     expect(screens[0]?.auto_play).toBe(true);
   });

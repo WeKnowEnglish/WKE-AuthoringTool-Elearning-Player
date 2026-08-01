@@ -7,6 +7,11 @@ import type {
   GamesFlashcardFace,
   GamesFlashcardsAuthoringDocument,
 } from "@/lib/activity-builder/games/types-flashcards";
+import type { GamesListenAndChooseAuthoringDocument } from "@/lib/activity-builder/games/types-listen-and-choose";
+import type { GamesLineMatchAuthoringDocument } from "@/lib/activity-builder/games/types-line-match";
+import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/types-true-false";
+import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
+import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
 import type {
   VocabListEntry,
   VocabularyListDocument,
@@ -16,8 +21,29 @@ import { pickDistractors } from "@/lib/activity-builder/games/pick-distractors";
 import { compileFlashcardsFromEntries } from "@/lib/activity-builder/games/compile-flashcards-from-entries";
 import { validateGamesAuthoringDocument } from "@/lib/activity-builder/games/mc-quiz";
 import { validateGamesLetterMixupAuthoringDocument } from "@/lib/activity-builder/games/letter-mixup";
+import { validateGamesListenAndChooseAuthoringDocument } from "@/lib/activity-builder/games/listen-and-choose";
+import { validateGamesLineMatchAuthoringDocument } from "@/lib/activity-builder/games/line-match";
+import { validateGamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/true-false";
+import { validateGamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/sentence-scramble";
+import { validateGamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/fill-blanks";
+import { placeholderImageUrl, slugifyQuizId } from "@/lib/activity-builder/games/authoring-shell";
+import {
+  CORE_MODULE_IDS,
+  type CoreModuleId,
+  getCoreModuleMeta,
+} from "@/lib/activity-builder/core-modules/types";
+import {
+  inferLemmaGrammar,
+  thisLemmaStatement,
+} from "@/lib/vocabulary-templates/lemma-statement";
+import {
+  packSentenceScrambleStarter,
+  tokenizeSentenceForScramble,
+} from "@/lib/vocabulary/pack-quiz/compile-pack-sentence-scramble-quiz";
+import { randomWithSeed, shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 
-export type VocabCompileFormat = "multiple_choice" | "letter_mixup" | "flashcards";
+/** @deprecated Prefer `CoreModuleId` from core-modules — same string union. */
+export type VocabCompileFormat = CoreModuleId;
 
 export type CompileQuizzesFromVocabListInput = {
   list: VocabularyListDocument;
@@ -42,15 +68,22 @@ export type CompileQuizzesFromVocabListInput = {
   flashcardsShuffleCards?: boolean;
 };
 
+export type VocabCompileAuthoringDocument =
+  | GamesAuthoringDocument
+  | GamesLetterMixupAuthoringDocument
+  | GamesFlashcardsAuthoringDocument
+  | GamesListenAndChooseAuthoringDocument
+  | GamesLineMatchAuthoringDocument
+  | GamesTrueFalseAuthoringDocument
+  | GamesSentenceScrambleAuthoringDocument
+  | GamesFillBlanksAuthoringDocument;
+
 export type VocabCompileResult = {
   format: VocabCompileFormat;
   href: string;
   label: string;
   itemCount: number;
-  document:
-    | GamesAuthoringDocument
-    | GamesLetterMixupAuthoringDocument
-    | GamesFlashcardsAuthoringDocument;
+  document: VocabCompileAuthoringDocument;
 };
 
 export type VocabCompileSkipped = {
@@ -65,16 +98,51 @@ export type VocabCompileOutput = {
   skipped: VocabCompileSkipped[];
 };
 
+export type VocabModuleCompileBundle = {
+  document: VocabCompileAuthoringDocument;
+  skipped: VocabCompileSkipped[];
+  itemCount: number;
+};
+
 function slugifyId(value: string): string {
-  return (
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "vocab-quiz"
-  );
+  return slugifyQuizId(value);
 }
 
-function resolveEntries(
+function entryImageUrl(entry: VocabListEntry): string {
+  return entry.imageUrl?.trim() || placeholderImageUrl(entry.word.trim() || "word");
+}
+
+function meaningStatement(entry: VocabListEntry): string | null {
+  const def = entry.definitionEn?.trim();
+  if (!def) return null;
+  return `"${entry.word.trim()}" means ${def.replace(/\.$/, "")}.`;
+}
+
+function lemmaPictureStatement(word: string): string {
+  return thisLemmaStatement({
+    lemma: word.trim(),
+    grammar: inferLemmaGrammar(word),
+  });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function blankWordInSentence(sentence: string, word: string): string | null {
+  const re = new RegExp(`\\b${escapeRegExp(word.trim())}\\b`, "i");
+  if (!re.test(sentence)) return null;
+  return sentence.replace(re, "__1__");
+}
+
+function acceptableForms(word: string): string[] {
+  const trimmed = word.trim();
+  const lower = trimmed.toLowerCase();
+  const titled = lower.charAt(0).toUpperCase() + lower.slice(1);
+  return [...new Set([trimmed, lower, titled].filter(Boolean))];
+}
+
+export function resolveVocabCompileEntries(
   list: VocabularyListDocument,
   selectedEntryIds?: string[],
 ): VocabListEntry[] {
@@ -90,17 +158,17 @@ function clampOptionCount(value: number | undefined): number {
   return Math.min(6, Math.max(2, Math.round(value)));
 }
 
-function compileMcQuizFromEntries(
+export function compileMultipleChoiceModule(
   list: VocabularyListDocument,
   entries: VocabListEntry[],
-  options: {
-    masterQuestion: string;
-    optionCount: number;
-    shuffleOptions: boolean;
-    /** Stable item ids + distractor order (LTC overlays). Play still shuffles when enabled. */
-    stableItems?: boolean;
-  },
-): { document: GamesAuthoringDocument; skipped: VocabCompileSkipped[] } {
+  input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const options = {
+    masterQuestion: input.mcMasterQuestion ?? "What is this?",
+    optionCount: clampOptionCount(input.mcOptionCount),
+    shuffleOptions: input.mcShuffleOptions !== false,
+    stableItems: input.mcStableItems === true,
+  };
   const skipped: VocabCompileSkipped[] = [];
   const usable = entries.filter((entry) => {
     if (!entry.word.trim()) {
@@ -189,18 +257,24 @@ function compileMcQuizFromEntries(
     },
   };
 
-  return { document: validateGamesAuthoringDocument(document), skipped };
+  const validated = validateGamesAuthoringDocument(document);
+  return {
+    document: validated,
+    skipped,
+    itemCount: validated.interaction.items.length,
+  };
 }
 
-function compileLetterMixupFromEntries(
+export function compileLetterMixupModule(
   list: VocabularyListDocument,
   entries: VocabListEntry[],
-  options: {
-    prompt: string;
-    shuffleLetters: boolean;
-    caseSensitive: boolean;
-  },
-): { document: GamesLetterMixupAuthoringDocument; skipped: VocabCompileSkipped[] } {
+  input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const options = {
+    prompt: input.letterPrompt ?? "Unscramble the letters to spell the word.",
+    shuffleLetters: input.letterShuffleLetters !== false,
+    caseSensitive: input.letterCaseSensitive === true,
+  };
   const skipped: VocabCompileSkipped[] = [];
   const usable = entries.filter((entry) => {
     const word = entry.word.trim().replace(/\s+/g, " ");
@@ -282,28 +356,504 @@ function compileLetterMixupFromEntries(
     },
   };
 
+  const validated = validateGamesLetterMixupAuthoringDocument(document);
   return {
-    document: validateGamesLetterMixupAuthoringDocument(document),
+    document: validated,
     skipped,
+    itemCount: validated.interaction.items.length,
   };
 }
 
-const FORMAT_META: Record<VocabCompileFormat, { href: string; label: string }> = {
-  multiple_choice: {
-    href: "/teacher/activity-builder",
-    label: "Multiple choice",
-  },
-  letter_mixup: {
-    href: "/teacher/activity-builder",
-    label: "Letter scramble",
-  },
-  flashcards: {
-    href: "/teacher/activity-builder",
-    label: "Flashcards",
-  },
+export function compileFlashcardsModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const compiled = compileFlashcardsFromEntries(
+    list,
+    entries,
+    {
+      frontFaces: input.flashcardsFrontFaces?.length
+        ? input.flashcardsFrontFaces
+        : ["picture"],
+      backFaces: input.flashcardsBackFaces?.length
+        ? input.flashcardsBackFaces
+        : ["word", "example"],
+    },
+    { shuffleCards: input.flashcardsShuffleCards !== false },
+  );
+  return {
+    document: compiled.document,
+    skipped: compiled.skipped.map((item) => ({
+      ...item,
+      format: "flashcards" as const,
+    })),
+    itemCount: compiled.document.interaction.cards.length,
+  };
+}
+
+export function compileListenAndChooseModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  _input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const skipped: VocabCompileSkipped[] = [];
+  const usable = entries.filter((entry) => {
+    if (!entry.word.trim()) {
+      skipped.push({
+        entryId: entry.id,
+        word: entry.word,
+        format: "listen_and_choose",
+        reason: "Word is empty.",
+      });
+      return false;
+    }
+    return true;
+  });
+  if (usable.length < 1) {
+    throw new Error("Listen and choose needs at least one word.");
+  }
+
+  const vocabulary = usable.map((entry) => entry.word.trim());
+  const byWord = new Map(usable.map((entry) => [entry.word.trim().toLowerCase(), entry]));
+  const name = `${list.name.trim() || "Vocabulary"} · Listen and choose`;
+  const quizGroupId = slugifyId(name);
+  const bodyTextDefault = "Listen, then choose the picture.";
+
+  const document: GamesListenAndChooseAuthoringDocument = {
+    version: 1,
+    kind: "activity-authoring",
+    id: quizGroupId,
+    name,
+    educationalIntent: {
+      objective: `Listen and match pictures for: ${vocabulary.join(", ")}.`,
+      successCriteria: "Students choose the picture that matches each prompt.",
+      vocabulary: [...vocabulary],
+      ...(list.cefr ? { cefr: list.cefr } : {}),
+    },
+    content: {
+      instruction: bodyTextDefault,
+      completionMessage: "Great listening!",
+    },
+    interaction: {
+      type: "games",
+      format: "listen_and_choose",
+      quizGroupId,
+      quizGroupTitle: name,
+      bodyTextDefault,
+      autoPlayDefault: true,
+      shuffleChoicesDefault: true,
+      items: usable.map((entry, index) => {
+        const word = entry.word.trim();
+        const distractorWords = pickDistractors(word, vocabulary, 2, { stable: true });
+        const choiceEntries: VocabListEntry[] = [
+          entry,
+          ...distractorWords.map((distractor) => {
+            const found = byWord.get(distractor.toLowerCase());
+            if (found) return found;
+            return {
+              id: `pad_${distractor}`,
+              word: distractor,
+              imageUrl: placeholderImageUrl(distractor),
+            } satisfies VocabListEntry;
+          }),
+        ];
+        const choices = choiceEntries.map((choice, choiceIndex) => ({
+          id: String.fromCharCode(97 + choiceIndex),
+          imageUrl: entryImageUrl(choice),
+          label: choice.word.trim(),
+        }));
+        const correct = choices.find(
+          (choice) => choice.label.toLowerCase() === word.toLowerCase(),
+        );
+        return {
+          id: `listen-${entry.id}`,
+          dialogText: entry.example?.trim() || word,
+          ...(entry.audioUrl?.trim() ? { promptAudioUrl: entry.audioUrl.trim() } : {}),
+          imageFit: "contain" as const,
+          choices,
+          correctChoiceId: correct?.id ?? "a",
+        };
+      }),
+    },
+  };
+
+  const validated = validateGamesListenAndChooseAuthoringDocument(document);
+  return {
+    document: validated,
+    skipped,
+    itemCount: validated.interaction.items.length,
+  };
+}
+
+export function compileLineMatchModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  _input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const skipped: VocabCompileSkipped[] = [];
+  const usable = entries.filter((entry) => {
+    if (!entry.word.trim()) {
+      skipped.push({
+        entryId: entry.id,
+        word: entry.word,
+        format: "line_match",
+        reason: "Word is empty.",
+      });
+      return false;
+    }
+    return true;
+  });
+  if (usable.length < 2) {
+    throw new Error("Line match needs at least two words.");
+  }
+
+  const vocabulary = usable.map((entry) => entry.word.trim());
+  const name = `${list.name.trim() || "Vocabulary"} · Line match`;
+  const quizGroupId = slugifyId(name);
+  const bodyTextDefault = "Draw a line from each word to its picture.";
+  const tokens = usable.map((entry) => ({
+    id: `tok_${entry.id}`,
+    label: entry.word.trim(),
+  }));
+  const zones = shuffleWithSeed(
+    usable.map((entry) => ({
+      id: `z_${entry.id}`,
+      label: entry.word.trim(),
+      imageUrl: entryImageUrl(entry),
+    })),
+    `${quizGroupId}:zones`,
+  );
+  const correctMap = Object.fromEntries(
+    usable.map((entry) => [`tok_${entry.id}`, `z_${entry.id}`]),
+  );
+
+  const document: GamesLineMatchAuthoringDocument = {
+    version: 1,
+    kind: "activity-authoring",
+    id: quizGroupId,
+    name,
+    educationalIntent: {
+      objective: `Match words to pictures: ${vocabulary.join(", ")}.`,
+      successCriteria: "Students connect every word to the correct picture.",
+      vocabulary: [...vocabulary],
+      ...(list.cefr ? { cefr: list.cefr } : {}),
+    },
+    content: {
+      instruction: bodyTextDefault,
+      completionMessage: "Nice matching!",
+    },
+    interaction: {
+      type: "games",
+      format: "line_match",
+      quizGroupId,
+      quizGroupTitle: name,
+      bodyTextDefault,
+      screens: [
+        {
+          id: "match-1",
+          tokens,
+          zones,
+          correctMap,
+        },
+      ],
+    },
+  };
+
+  const validated = validateGamesLineMatchAuthoringDocument(document);
+  return {
+    document: validated,
+    skipped,
+    itemCount: validated.interaction.screens.length,
+  };
+}
+
+export function compileTrueFalseModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  _input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const skipped: VocabCompileSkipped[] = [];
+  const usable = entries.filter((entry) => {
+    if (!entry.word.trim()) {
+      skipped.push({
+        entryId: entry.id,
+        word: entry.word,
+        format: "true_false",
+        reason: "Word is empty.",
+      });
+      return false;
+    }
+    return true;
+  });
+  if (usable.length < 1) {
+    throw new Error("True/false needs at least one word.");
+  }
+
+  const vocabulary = usable.map((entry) => entry.word.trim());
+  const name = `${list.name.trim() || "Vocabulary"} · True / false`;
+  const quizGroupId = slugifyId(name);
+
+  const items = usable.map((entry) => {
+    const seed = `${quizGroupId}:${entry.id}`;
+    const truthPicture = lemmaPictureStatement(entry.word);
+    const truthMeaning = meaningStatement(entry);
+    const wantTrue = randomWithSeed(`${seed}:polarity`) >= 0.5;
+    const preferMeaning =
+      Boolean(truthMeaning) && randomWithSeed(`${seed}:style`) >= 0.45;
+
+    let statement: string;
+    let correct: boolean;
+    let pictureTruthStatement = truthPicture;
+
+    if (wantTrue || usable.length === 1) {
+      correct = true;
+      statement =
+        preferMeaning && truthMeaning ? truthMeaning : truthPicture;
+      if (preferMeaning && truthMeaning) pictureTruthStatement = truthMeaning;
+    } else {
+      const others = usable.filter((row) => row.id !== entry.id);
+      const other =
+        shuffleWithSeed(others, `${seed}:other`)[0] ?? null;
+      if (!other) {
+        correct = true;
+        statement =
+          preferMeaning && truthMeaning ? truthMeaning : truthPicture;
+      } else {
+        correct = false;
+        const otherMeaning = meaningStatement(other);
+        if (preferMeaning && truthMeaning && otherMeaning) {
+          const def = other.definitionEn!.trim().replace(/\.$/, "");
+          statement = `"${entry.word.trim()}" means ${def}.`;
+          pictureTruthStatement = truthMeaning;
+        } else {
+          statement = lemmaPictureStatement(other.word);
+          pictureTruthStatement = truthPicture;
+        }
+      }
+    }
+
+    return {
+      id: `tf-${entry.id}`,
+      statement,
+      correct,
+      pictureTruthStatement,
+      ...(entry.imageUrl?.trim()
+        ? { imageUrl: entry.imageUrl.trim(), imageFit: "contain" as const }
+        : {}),
+    };
+  });
+
+  const document: GamesTrueFalseAuthoringDocument = {
+    version: 1,
+    kind: "activity-authoring",
+    id: quizGroupId,
+    name,
+    educationalIntent: {
+      objective: `Judge true/false claims about: ${vocabulary.join(", ")}.`,
+      successCriteria: "Students decide whether each statement is true or false.",
+      vocabulary: [...vocabulary],
+      ...(list.cefr ? { cefr: list.cefr } : {}),
+    },
+    content: {
+      instruction: "Is this true or false?",
+      completionMessage: "Nice thinking!",
+    },
+    interaction: {
+      type: "games",
+      format: "true_false",
+      quizGroupId,
+      quizGroupTitle: name,
+      items,
+    },
+  };
+
+  const validated = validateGamesTrueFalseAuthoringDocument(document);
+  return {
+    document: validated,
+    skipped,
+    itemCount: validated.interaction.items.length,
+  };
+}
+
+export function compileSentenceScrambleModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  _input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const skipped: VocabCompileSkipped[] = [];
+  const usable = entries.filter((entry) => {
+    if (!entry.word.trim()) {
+      skipped.push({
+        entryId: entry.id,
+        word: entry.word,
+        format: "sentence_scramble",
+        reason: "Word is empty.",
+      });
+      return false;
+    }
+    return true;
+  });
+  if (usable.length < 1) {
+    throw new Error("Sentence scramble needs at least one word.");
+  }
+
+  const vocabulary = usable.map((entry) => entry.word.trim());
+  const name = `${list.name.trim() || "Vocabulary"} · Sentence scramble`;
+  const quizGroupId = slugifyId(name);
+  const bodyTextDefault = "Put the words in order.";
+
+  const items = usable.map((entry) => {
+    const curated = entry.example?.trim() ?? "";
+    const sentence =
+      curated && tokenizeSentenceForScramble(curated).length >= 2
+        ? curated
+        : packSentenceScrambleStarter(entry.word, `${quizGroupId}:${entry.id}`);
+    const correctOrder = tokenizeSentenceForScramble(sentence);
+    return {
+      id: `ss-${entry.id}`,
+      correctOrder,
+      ...(entry.imageUrl?.trim()
+        ? { imageUrl: entry.imageUrl.trim(), imageFit: "contain" as const }
+        : {}),
+    };
+  });
+
+  const document: GamesSentenceScrambleAuthoringDocument = {
+    version: 1,
+    kind: "activity-authoring",
+    id: quizGroupId,
+    name,
+    educationalIntent: {
+      objective: `Rebuild sentences for: ${vocabulary.join(", ")}.`,
+      successCriteria: "Students put each sentence in the correct order.",
+      vocabulary: [...vocabulary],
+      ...(list.cefr ? { cefr: list.cefr } : {}),
+    },
+    content: {
+      instruction: bodyTextDefault,
+      completionMessage: "Great sentences!",
+    },
+    interaction: {
+      type: "games",
+      format: "sentence_scramble",
+      quizGroupId,
+      quizGroupTitle: name,
+      bodyTextDefault,
+      items,
+    },
+  };
+
+  const validated = validateGamesSentenceScrambleAuthoringDocument(document);
+  return {
+    document: validated,
+    skipped,
+    itemCount: validated.interaction.items.length,
+  };
+}
+
+export function compileFillBlanksModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  _input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const skipped: VocabCompileSkipped[] = [];
+  const usable = entries.filter((entry) => {
+    if (!entry.word.trim()) {
+      skipped.push({
+        entryId: entry.id,
+        word: entry.word,
+        format: "fill_blanks",
+        reason: "Word is empty.",
+      });
+      return false;
+    }
+    return true;
+  });
+  if (usable.length < 1) {
+    throw new Error("Fill in the blanks needs at least one word.");
+  }
+
+  const vocabulary = usable.map((entry) => entry.word.trim());
+  const name = `${list.name.trim() || "Vocabulary"} · Fill in the blanks`;
+  const quizGroupId = slugifyId(name);
+  const bodyTextDefault = "Choose the missing word.";
+
+  const items = usable.map((entry) => {
+    const word = entry.word.trim();
+    const fromExample = entry.example?.trim()
+      ? blankWordInSentence(entry.example.trim(), word)
+      : null;
+    const template =
+      fromExample ??
+      lemmaPictureStatement(word).replace(
+        new RegExp(`\\b${escapeRegExp(word)}\\b`, "i"),
+        "__1__",
+      );
+    const distractors = pickDistractors(word, vocabulary, 3, { stable: true });
+    return {
+      id: `fb-${entry.id}`,
+      template,
+      blanks: [{ id: "1", acceptable: acceptableForms(word) }],
+      wordBank: [word, ...distractors],
+      ...(entry.imageUrl?.trim()
+        ? { imageUrl: entry.imageUrl.trim(), imageFit: "contain" as const }
+        : {}),
+    };
+  });
+
+  const document: GamesFillBlanksAuthoringDocument = {
+    version: 1,
+    kind: "activity-authoring",
+    id: quizGroupId,
+    name,
+    educationalIntent: {
+      objective: `Complete sentences with: ${vocabulary.join(", ")}.`,
+      successCriteria: "Students choose the correct word for each blank.",
+      vocabulary: [...vocabulary],
+      ...(list.cefr ? { cefr: list.cefr } : {}),
+    },
+    content: {
+      instruction: bodyTextDefault,
+      completionMessage: "Nice work!",
+    },
+    interaction: {
+      type: "games",
+      format: "fill_blanks",
+      quizGroupId,
+      quizGroupTitle: name,
+      bodyTextDefault,
+      items,
+    },
+  };
+
+  const validated = validateGamesFillBlanksAuthoringDocument(document);
+  return {
+    document: validated,
+    skipped,
+    itemCount: validated.interaction.items.length,
+  };
+}
+
+const MODULE_COMPILE: Record<
+  CoreModuleId,
+  (
+    list: VocabularyListDocument,
+    entries: VocabListEntry[],
+    input: CompileQuizzesFromVocabListInput,
+  ) => VocabModuleCompileBundle
+> = {
+  multiple_choice: compileMultipleChoiceModule,
+  letter_mixup: compileLetterMixupModule,
+  flashcards: compileFlashcardsModule,
+  listen_and_choose: compileListenAndChooseModule,
+  line_match: compileLineMatchModule,
+  true_false: compileTrueFalseModule,
+  sentence_scramble: compileSentenceScrambleModule,
+  fill_blanks: compileFillBlanksModule,
 };
 
-/** Compile selected vocab list entries into quiz authoring docs. */
+/** Compile selected vocab list entries into quiz authoring docs (via core modules). */
 export function compileQuizzesFromVocabList(
   input: CompileQuizzesFromVocabListInput,
 ): VocabCompileOutput {
@@ -311,7 +861,7 @@ export function compileQuizzesFromVocabList(
     throw new Error("Choose at least one quiz format.");
   }
 
-  const entries = resolveEntries(input.list, input.selectedEntryIds);
+  const entries = resolveVocabCompileEntries(input.list, input.selectedEntryIds);
   if (entries.length < 1) {
     throw new Error("Select at least one vocabulary word.");
   }
@@ -319,64 +869,16 @@ export function compileQuizzesFromVocabList(
   const results: VocabCompileResult[] = [];
   const skipped: VocabCompileSkipped[] = [];
 
-  if (input.formats.includes("multiple_choice")) {
-    const compiled = compileMcQuizFromEntries(input.list, entries, {
-      masterQuestion: input.mcMasterQuestion ?? "What is this?",
-      optionCount: clampOptionCount(input.mcOptionCount),
-      shuffleOptions: input.mcShuffleOptions !== false,
-      stableItems: input.mcStableItems === true,
-    });
+  for (const format of CORE_MODULE_IDS) {
+    if (!input.formats.includes(format)) continue;
+    const meta = getCoreModuleMeta(format);
+    const compiled = MODULE_COMPILE[format](input.list, entries, input);
     skipped.push(...compiled.skipped);
     results.push({
-      format: "multiple_choice",
-      href: FORMAT_META.multiple_choice.href,
-      label: FORMAT_META.multiple_choice.label,
-      itemCount: compiled.document.interaction.items.length,
-      document: compiled.document,
-    });
-  }
-
-  if (input.formats.includes("letter_mixup")) {
-    const compiled = compileLetterMixupFromEntries(input.list, entries, {
-      prompt: input.letterPrompt ?? "Unscramble the letters to spell the word.",
-      shuffleLetters: input.letterShuffleLetters !== false,
-      caseSensitive: input.letterCaseSensitive === true,
-    });
-    skipped.push(...compiled.skipped);
-    results.push({
-      format: "letter_mixup",
-      href: FORMAT_META.letter_mixup.href,
-      label: FORMAT_META.letter_mixup.label,
-      itemCount: compiled.document.interaction.items.length,
-      document: compiled.document,
-    });
-  }
-
-  if (input.formats.includes("flashcards")) {
-    const compiled = compileFlashcardsFromEntries(
-      input.list,
-      entries,
-      {
-        frontFaces: input.flashcardsFrontFaces?.length
-          ? input.flashcardsFrontFaces
-          : ["picture"],
-        backFaces: input.flashcardsBackFaces?.length
-          ? input.flashcardsBackFaces
-          : ["word", "example"],
-      },
-      { shuffleCards: input.flashcardsShuffleCards !== false },
-    );
-    skipped.push(
-      ...compiled.skipped.map((item) => ({
-        ...item,
-        format: "flashcards" as const,
-      })),
-    );
-    results.push({
-      format: "flashcards",
-      href: FORMAT_META.flashcards.href,
-      label: FORMAT_META.flashcards.label,
-      itemCount: compiled.document.interaction.cards.length,
+      format,
+      href: meta.href,
+      label: meta.title,
+      itemCount: compiled.itemCount,
       document: compiled.document,
     });
   }

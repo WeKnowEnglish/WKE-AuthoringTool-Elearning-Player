@@ -9,6 +9,7 @@ export const GAMES_FORMATS = [
   "fill_blanks",
   "drag_match",
   "line_match",
+  "true_false",
 ] as const;
 export type GamesFormat = (typeof GAMES_FORMATS)[number];
 

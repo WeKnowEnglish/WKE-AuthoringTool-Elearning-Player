@@ -1,13 +1,6 @@
-import { notFound } from "next/navigation";
-import { PictureStoryWorkspace } from "@/components/teacher/activity-builder/reading/PictureStoryWorkspace";
-import { isAdmin } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function PictureStoryBuilderPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!isAdmin(user)) notFound();
-  return <PictureStoryWorkspace />;
+/** Legacy reading-admin route — bankable studio lives at /picture-story. */
+export default function PictureStoryBuilderPage() {
+  redirect("/teacher/activity-builder/picture-story");
 }

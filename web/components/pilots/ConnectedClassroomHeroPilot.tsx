@@ -42,6 +42,19 @@ const onlineStudents = [
   { src: `${ASSET_ROOT}/student-yellow-online-transparent.webp`, position: "right-[8%] bottom-[18%] sm:bottom-0" },
 ] as const;
 
+/** Scroll-story stages — progress targets land mid-scene for each beat. */
+const STORY_STAGES = [
+  { id: "classroom", label: "In the classroom", targetProgress: 0.04 },
+  { id: "online", label: "Online", targetProgress: 0.45 },
+  { id: "managing", label: "Managing learning", targetProgress: 0.78 },
+] as const;
+
+function activeStageIndex(progress: number): number {
+  if (progress < 0.32) return 0;
+  if (progress < 0.63) return 1;
+  return 2;
+}
+
 const teacherBenefits: Array<{
   title: string;
   icon: LucideIcon;
@@ -116,11 +129,18 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
   const teacherLift = between(progress, 0.3, 0.5);
   const teacherBenefitsIn = between(progress, 0.63, 0.76);
   const onlineStudentsOut = between(progress, 0.62, 0.74);
-  const stageLabel = progress < 0.32
-    ? "Together in the classroom"
-    : progress < 0.63
-      ? "Connected from anywhere"
-      : "Everything teachers need";
+  const stageIndex = activeStageIndex(progress);
+
+  const goToStage = (targetProgress: number) => {
+    const scene = scrollSceneRef.current;
+    if (!scene) return;
+    const distance = Math.max(1, scene.offsetHeight - window.innerHeight);
+    const sceneTop = window.scrollY + scene.getBoundingClientRect().top;
+    window.scrollTo({
+      top: sceneTop + targetProgress * distance,
+      behavior: "smooth",
+    });
+  };
 
   const Root = embedded ? "div" : "main";
 
@@ -291,13 +311,60 @@ export function ConnectedClassroomHeroPilot({ embedded = false }: ConnectedClass
             </div>
           </div>
 
-          <div className="relative z-30 mx-auto mb-4 flex w-[min(92%,36rem)] items-center gap-3 rounded-full border border-[#14245e]/15 bg-white/90 px-4 py-2 shadow-lg backdrop-blur sm:mb-6">
-            <span className="text-xs font-extrabold uppercase tracking-wide text-[#52617d]">{stageLabel}</span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#dfe8f5]">
-              <div className="h-full rounded-full bg-[#3478f6]" style={{ width: `${Math.max(2, progress * 100)}%` }} />
+          <nav
+            aria-label="Story scenes"
+            className="relative z-30 mx-auto mb-3 w-[min(94%,28rem)] px-2 pb-1 sm:mb-5 sm:w-[min(92%,32rem)]"
+          >
+            <div className="relative">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute left-[16.67%] right-[16.67%] top-[0.7rem] h-0.5 bg-[#dfe8f5] sm:top-[0.85rem]"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute left-[16.67%] top-[0.7rem] h-0.5 bg-[#3478f6] transition-[width] duration-150 ease-out sm:top-[0.85rem]"
+                style={{
+                  width: `${(stageIndex / (STORY_STAGES.length - 1)) * 66.66}%`,
+                }}
+              />
+              <ol className="relative z-10 grid grid-cols-3 gap-1">
+                {STORY_STAGES.map((stage, index) => {
+                  const active = index === stageIndex;
+                  const reached = index <= stageIndex;
+                  return (
+                    <li key={stage.id} className="flex flex-col items-center">
+                      <button
+                        type="button"
+                        onClick={() => goToStage(stage.targetProgress)}
+                        aria-label={`Go to ${stage.label}`}
+                        aria-current={active ? "step" : undefined}
+                        className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-[background-color,border-color,transform,box-shadow] duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#83bffc] focus-visible:ring-offset-2 sm:h-7 sm:w-7 ${
+                          active
+                            ? "scale-110 border-[#3478f6] bg-[#3478f6] shadow-[0_0_0_4px_rgba(52,120,246,0.18)]"
+                            : reached
+                              ? "border-[#3478f6] bg-[#3478f6]"
+                              : "border-[#9eb3d4] bg-white hover:border-[#3478f6]"
+                        }`}
+                      >
+                        <span
+                          className={`block h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5 ${
+                            reached ? "bg-white" : "bg-[#9eb3d4]"
+                          }`}
+                        />
+                      </button>
+                      <span
+                        className={`mt-1.5 max-w-[6.5rem] text-center text-[10px] font-extrabold leading-tight sm:mt-2 sm:max-w-[7.5rem] sm:text-xs ${
+                          active ? "text-[#14245e]" : "text-[#52617d]"
+                        }`}
+                      >
+                        {stage.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
-            <span className="w-9 text-right text-xs font-black tabular-nums">{Math.round(progress * 100)}%</span>
-          </div>
+          </nav>
         </div>
       </section>
 

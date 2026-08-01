@@ -9,22 +9,7 @@ import {
   type VocabCompileFormat,
   type VocabCompileSkipped,
 } from "@/lib/activity-builder/games/compile-from-vocab-list";
-import {
-  createBlankGamesMcQuizDocument,
-  makeMcOptions,
-} from "@/lib/activity-builder/games/mc-options";
-import {
-  exportGamesMcQuizForLessonPlayer,
-  validateGamesAuthoringDocument,
-} from "@/lib/activity-builder/games/mc-quiz";
-import {
-  exportGamesLetterMixupForLessonPlayer,
-  validateGamesLetterMixupAuthoringDocument,
-} from "@/lib/activity-builder/games/letter-mixup";
-import {
-  exportGamesFlashcardsForLessonPlayer,
-  validateGamesFlashcardsAuthoringDocument,
-} from "@/lib/activity-builder/games/flashcards";
+import { makeMcOptions } from "@/lib/activity-builder/games/mc-options";
 import type {
   GamesAuthoringDocument,
   GamesMcItem,
@@ -46,16 +31,41 @@ import {
   QuizBuilderSetupCards,
   type StagedQuizCard,
 } from "@/components/teacher/activity-builder/QuizBuilderSetupCards";
+import {
+  FillBlanksEditor,
+  LineMatchEditor,
+  ListenEditor,
+  SentenceScrambleEditor,
+  TrueFalseEditor,
+} from "@/components/teacher/activity-builder/QuizBuilderCoreFormatEditors";
 import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
+import {
+  QUIZ_FORMATS,
+  appendBlankItem,
+  cloneSession,
+  createBlankSession,
+  exportQuizSession,
+  formatLabel,
+  listEntryLabel,
+  mediaCoverage,
+  mergeQuizSessions,
+  newQuizId,
+  removeSessionItem,
+  sessionFromAuthoring,
+  sessionFromCompileRow,
+  sessionItemCount,
+  sessionItemIds,
+  sessionName,
+  validateQuizSession,
+  type QuizSession,
+  blankFlashcard,
+  blankLetterItem,
+  blankMcItem,
+} from "@/lib/activity-builder/games/quiz-builder-session";
 
 type Screen = "landing" | "editor";
 type LandingPanel = "home" | "bank";
-
-type QuizSession =
-  | { format: "multiple_choice"; document: GamesAuthoringDocument }
-  | { format: "letter_mixup"; document: GamesLetterMixupAuthoringDocument }
-  | { format: "flashcards"; document: GamesFlashcardsAuthoringDocument };
 
 type BankQuizRef = {
   id: string;
@@ -64,42 +74,12 @@ type BankQuizRef = {
   updatedAt: string;
 };
 
-const QUIZ_FORMATS: Array<{
-  format: VocabCompileFormat;
-  label: string;
-  short: string;
-  bankFormat: StudioActivityFormat;
-  hint: string;
-}> = [
-  {
-    format: "multiple_choice",
-    label: "Multiple choice",
-    short: "MCQ",
-    bankFormat: "multiple_choice",
-    hint: "Pick the right answer",
-  },
-  {
-    format: "letter_mixup",
-    label: "Letter scramble",
-    short: "Letters",
-    bankFormat: "letter_mixup",
-    hint: "Rebuild the word",
-  },
-  {
-    format: "flashcards",
-    label: "Flashcards",
-    short: "Cards",
-    bankFormat: "flashcards",
-    hint: "Flip to study",
-  },
-];
-
 const BANNER_MS = 4000;
 const inputClass =
   "mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900";
 
 function newId(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  return newQuizId(prefix);
 }
 
 function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
@@ -117,7 +97,17 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
         ? "Unscramble the letters to spell the word."
         : format === "flashcards"
           ? ""
-          : "What is this?",
+          : format === "listen_and_choose"
+            ? "Listen, then choose the picture."
+            : format === "line_match"
+              ? "Draw a line from each word to its picture."
+              : format === "sentence_scramble"
+                ? "Put the words in order."
+                : format === "fill_blanks"
+                  ? "Choose the missing word."
+                  : format === "true_false"
+                    ? "Is this true or false?"
+                    : "What is this?",
     mcOptionCount: 4,
     mcShuffleOptions: true,
     letterShuffleLetters: true,
@@ -131,199 +121,6 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
 function isCardReady(card: StagedQuizCard): boolean {
   if (card.source === "blank") return true;
   return Boolean(card.listId) && card.selectedEntryIds.length > 0;
-}
-
-function blankMcItem(question = "What is this?"): GamesMcItem {
-  const options = makeMcOptions(["", "", "", ""]);
-  return {
-    id: newId("q"),
-    question,
-    options,
-    correctOptionId: options[0]!.id,
-  };
-}
-
-function blankLetterItem(): GamesLetterMixupItem {
-  return { id: newId("lm"), targetWord: "", imageUseTts: true };
-}
-
-function blankFlashcard(): GamesFlashcardCard {
-  return {
-    id: newId("fc"),
-    faces: { word: "" },
-    frontFaces: ["word"],
-    backFaces: ["definition", "picture"],
-  };
-}
-
-function createBlankSession(format: VocabCompileFormat): QuizSession {
-  if (format === "letter_mixup") {
-    const id = newId("quiz");
-    const item = blankLetterItem();
-    return {
-      format,
-      document: {
-        version: 1,
-        kind: "activity-authoring",
-        id,
-        name: "New letter scramble",
-        educationalIntent: {
-          objective: "Spell target words.",
-          successCriteria: "Students rebuild each word correctly.",
-        },
-        content: {
-          instruction: "Unscramble the letters to spell the word.",
-          completionMessage: "Great spelling!",
-        },
-        interaction: {
-          type: "games",
-          format: "letter_mixup",
-          quizGroupId: id,
-          quizGroupTitle: "New letter scramble",
-          promptDefault: "Unscramble the letters to spell the word.",
-          shuffleLettersDefault: true,
-          caseSensitiveDefault: false,
-          items: [item],
-        },
-      },
-    };
-  }
-  if (format === "flashcards") {
-    const id = newId("quiz");
-    const card = blankFlashcard();
-    return {
-      format,
-      document: {
-        version: 1,
-        kind: "activity-authoring",
-        id,
-        name: "New flashcards",
-        educationalIntent: {
-          objective: "Study vocabulary with flip cards.",
-          successCriteria: "Students flip through each card.",
-        },
-        content: {
-          instruction: "Tap the card to flip.",
-          completionMessage: "Nice studying!",
-        },
-        interaction: {
-          type: "games",
-          format: "flashcards",
-          quizGroupId: id,
-          quizGroupTitle: "New flashcards",
-          shuffleCardsDefault: false,
-          defaultFrontFaces: ["word"],
-          defaultBackFaces: ["definition", "picture"],
-          cards: [card],
-        },
-      },
-    };
-  }
-  const blank = createBlankGamesMcQuizDocument();
-  blank.id = newId("quiz");
-  blank.interaction.quizGroupId = blank.id;
-  blank.interaction.quizGroupTitle = blank.name;
-  return { format: "multiple_choice", document: blank };
-}
-
-function sessionItemIds(session: QuizSession): string[] {
-  if (session.format === "flashcards") {
-    return session.document.interaction.cards.map((card) => card.id);
-  }
-  return session.document.interaction.items.map((item) => item.id);
-}
-
-function sessionItemCount(session: QuizSession): number {
-  return sessionItemIds(session).length;
-}
-
-function sessionName(session: QuizSession): string {
-  return session.document.name;
-}
-
-function formatLabel(format: VocabCompileFormat): string {
-  return QUIZ_FORMATS.find((row) => row.format === format)?.label ?? format;
-}
-
-function mediaCoverage(session: QuizSession): { withImage: number; total: number } {
-  if (session.format === "multiple_choice") {
-    const items = session.document.interaction.items;
-    return {
-      total: items.length,
-      withImage: items.filter((item) => Boolean(item.imageUrl?.trim())).length,
-    };
-  }
-  if (session.format === "letter_mixup") {
-    const items = session.document.interaction.items;
-    return {
-      total: items.length,
-      withImage: items.filter((item) => Boolean(item.imageUrl?.trim())).length,
-    };
-  }
-  const cards = session.document.interaction.cards;
-  return {
-    total: cards.length,
-    withImage: cards.filter((card) => Boolean(card.faces.pictureUrl?.trim())).length,
-  };
-}
-
-function cloneSession(session: QuizSession): QuizSession {
-  return structuredClone(session);
-}
-
-/** Merge same-format sessions into one activity (items/cards concatenated). */
-function mergeQuizSessions(sessions: QuizSession[]): QuizSession {
-  if (sessions.length === 0) {
-    throw new Error("Nothing to merge.");
-  }
-  const formats = new Set(sessions.map((session) => session.format));
-  if (formats.size > 1) {
-    throw new Error(
-      "One quiz needs every card to be the same format. Use separate quizzes for mixed formats.",
-    );
-  }
-  const first = cloneSession(sessions[0]!);
-  if (sessions.length === 1) return first;
-
-  const listBits = sessions
-    .map((session) => session.document.name.replace(/^[^·]+·\s*/, "").trim())
-    .filter(Boolean);
-  const uniqueLists = [...new Set(listBits)];
-  const name =
-    uniqueLists.length > 0
-      ? `${formatLabel(first.format)} · ${uniqueLists.join(" + ")}`
-      : `Combined ${formatLabel(first.format).toLowerCase()}`;
-
-  if (first.format === "flashcards") {
-    const cards = sessions.flatMap((session) => {
-      if (session.format !== "flashcards") return [];
-      return session.document.interaction.cards;
-    });
-    first.document.name = name;
-    first.document.interaction.quizGroupTitle = name;
-    first.document.interaction.cards = cards;
-    return first;
-  }
-
-  if (first.format === "letter_mixup") {
-    const items = sessions.flatMap((session) => {
-      if (session.format !== "letter_mixup") return [];
-      return session.document.interaction.items;
-    });
-    first.document.name = name;
-    first.document.interaction.quizGroupTitle = name;
-    first.document.interaction.items = items;
-    return first;
-  }
-
-  const items = sessions.flatMap((session) => {
-    if (session.format !== "multiple_choice") return [];
-    return session.document.interaction.items;
-  });
-  first.document.name = name;
-  first.document.interaction.quizGroupTitle = name;
-  first.document.interaction.items = items;
-  return first;
 }
 
 export function QuizBuilderWorkspace() {
@@ -428,19 +225,28 @@ export function QuizBuilderWorkspace() {
     if (next.format === "letter_mixup") {
       setLetterPrompt(next.document.interaction.promptDefault);
     }
+    if (next.format === "listen_and_choose") {
+      setMasterPrompt(next.document.interaction.bodyTextDefault);
+    }
+    if (next.format === "line_match") {
+      setMasterPrompt(next.document.interaction.bodyTextDefault);
+    }
+    if (next.format === "sentence_scramble") {
+      setMasterPrompt(next.document.interaction.bodyTextDefault);
+    }
+    if (next.format === "fill_blanks") {
+      setMasterPrompt(next.document.interaction.bodyTextDefault);
+    }
+    if (next.format === "true_false") {
+      setMasterPrompt("Is this true or false?");
+    }
     setScreen("editor");
     setLandingPanel("home");
   };
 
   const validation = useMemo(() => {
     try {
-      if (session.format === "multiple_choice") {
-        validateGamesAuthoringDocument(session.document);
-      } else if (session.format === "letter_mixup") {
-        validateGamesLetterMixupAuthoringDocument(session.document);
-      } else {
-        validateGamesFlashcardsAuthoringDocument(session.document);
-      }
+      validateQuizSession(session);
       return { ok: true as const, message: "Ready to save." };
     } catch (error) {
       return {
@@ -501,27 +307,6 @@ export function QuizBuilderWorkspace() {
     } finally {
       setBankBusy(false);
     }
-  };
-
-  const sessionFromCompileRow = (
-    row: Awaited<ReturnType<typeof compileQuizzesFromVocabList>>["results"][number],
-  ): QuizSession => {
-    if (row.format === "multiple_choice") {
-      return {
-        format: "multiple_choice",
-        document: validateGamesAuthoringDocument(row.document),
-      };
-    }
-    if (row.format === "letter_mixup") {
-      return {
-        format: "letter_mixup",
-        document: validateGamesLetterMixupAuthoringDocument(row.document),
-      };
-    }
-    return {
-      format: "flashcards",
-      document: validateGamesFlashcardsAuthoringDocument(row.document),
-    };
   };
 
   const generateBatch = async (mode: "separate" | "combined") => {
@@ -653,25 +438,11 @@ export function QuizBuilderWorkspace() {
         throw new Error(payload?.error || "Could not open quiz.");
       }
 
-      let next: QuizSession;
-      if (format === "multiple_choice") {
-        next = {
-          format: "multiple_choice",
-          document: validateGamesAuthoringDocument(payload.activity.authoring),
-        };
-      } else if (format === "letter_mixup") {
-        next = {
-          format: "letter_mixup",
-          document: validateGamesLetterMixupAuthoringDocument(payload.activity.authoring),
-        };
-      } else if (format === "flashcards") {
-        next = {
-          format: "flashcards",
-          document: validateGamesFlashcardsAuthoringDocument(payload.activity.authoring),
-        };
-      } else {
+      const bankFormat = format as VocabCompileFormat;
+      if (!QUIZ_FORMATS.some((row) => row.format === bankFormat)) {
         throw new Error("Unsupported quiz format.");
       }
+      const next = sessionFromAuthoring(bankFormat, payload.activity.authoring);
 
       setSkipped([]);
       openEditor(next, payload.activity.id);
@@ -686,30 +457,7 @@ export function QuizBuilderWorkspace() {
   const saveToBank = async () => {
     setBusy(true);
     try {
-      let pack: unknown;
-      let authoring: unknown;
-      let title: string;
-      let format: StudioActivityFormat;
-
-      if (session.format === "multiple_choice") {
-        const valid = validateGamesAuthoringDocument(session.document);
-        pack = exportGamesMcQuizForLessonPlayer(valid);
-        authoring = valid;
-        title = valid.name.trim() || "Untitled quiz";
-        format = "multiple_choice";
-      } else if (session.format === "letter_mixup") {
-        const valid = validateGamesLetterMixupAuthoringDocument(session.document);
-        pack = exportGamesLetterMixupForLessonPlayer(valid);
-        authoring = valid;
-        title = valid.name.trim() || "Untitled letter scramble";
-        format = "letter_mixup";
-      } else {
-        const valid = validateGamesFlashcardsAuthoringDocument(session.document);
-        pack = exportGamesFlashcardsForLessonPlayer(valid);
-        authoring = valid;
-        title = valid.name.trim() || "Untitled flashcards";
-        format = "flashcards";
-      }
+      const { pack, authoring, title, format } = exportQuizSession(session);
 
       const response = await fetch("/api/studio/activities", {
         method: "POST",
@@ -743,82 +491,19 @@ export function QuizBuilderWorkspace() {
   };
 
   const addItem = () => {
-    if (session.format === "multiple_choice") {
-      const item = blankMcItem(masterPrompt.trim() || "What is this?");
-      patchSession((current) => {
-        if (current.format !== "multiple_choice") return current;
-        return {
-          ...current,
-          document: {
-            ...current.document,
-            interaction: {
-              ...current.document.interaction,
-              items: [...current.document.interaction.items, item],
-            },
-          },
-        };
-      });
-      setSelectedItemId(item.id);
-      return;
-    }
-    if (session.format === "letter_mixup") {
-      const item = blankLetterItem();
-      patchSession((current) => {
-        if (current.format !== "letter_mixup") return current;
-        return {
-          ...current,
-          document: {
-            ...current.document,
-            interaction: {
-              ...current.document.interaction,
-              items: [...current.document.interaction.items, item],
-            },
-          },
-        };
-      });
-      setSelectedItemId(item.id);
-      return;
-    }
-    const card = blankFlashcard();
-    patchSession((current) => {
-      if (current.format !== "flashcards") return current;
-      return {
-        ...current,
-        document: {
-          ...current.document,
-          interaction: {
-            ...current.document.interaction,
-            cards: [...current.document.interaction.cards, card],
-          },
-        },
-      };
-    });
-    setSelectedItemId(card.id);
+    const { session: next, selectedItemId: nextId } = appendBlankItem(
+      session,
+      masterPrompt,
+    );
+    setSession(next);
+    setSelectedItemId(nextId);
   };
 
   const removeSelected = () => {
     if (sessionItemCount(session) <= 1) return;
-    const removeId = selectedItemId;
-    patchSession((current) => {
-      const next = cloneSession(current);
-      if (next.format === "flashcards") {
-        next.document.interaction.cards =
-          next.document.interaction.cards.filter((card) => card.id !== removeId);
-        setSelectedItemId(next.document.interaction.cards[0]?.id ?? "");
-        return next;
-      }
-      if (next.format === "letter_mixup") {
-        next.document.interaction.items =
-          next.document.interaction.items.filter((item) => item.id !== removeId);
-        setSelectedItemId(next.document.interaction.items[0]?.id ?? "");
-        return next;
-      }
-      next.document.interaction.items = next.document.interaction.items.filter(
-        (item) => item.id !== removeId,
-      );
-      setSelectedItemId(next.document.interaction.items[0]?.id ?? "");
-      return next;
-    });
+    const next = removeSessionItem(session, selectedItemId);
+    setSession(next);
+    setSelectedItemId(sessionItemIds(next)[0] ?? "");
   };
 
   const renameQuiz = (name: string) => {
@@ -1012,20 +697,10 @@ export function QuizBuilderWorkspace() {
   }
 
   // ── Editor ─────────────────────────────────────────────────────────
-  const listEntries =
-    session.format === "flashcards"
-      ? session.document.interaction.cards.map((card, index) => ({
-          id: card.id,
-          label: card.faces.word?.trim() || `Card ${index + 1}`,
-        }))
-      : session.document.interaction.items.map((item, index) => ({
-          id: item.id,
-          label:
-            session.format === "multiple_choice"
-              ? (item as GamesMcItem).question.trim() || `Question ${index + 1}`
-              : (item as GamesLetterMixupItem).targetWord.trim() ||
-                `Word ${index + 1}`,
-        }));
+  const listEntries = sessionItemIds(session).map((id, index) => ({
+    id,
+    label: listEntryLabel(session, id, index),
+  }));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-stone-50">
@@ -1196,6 +871,61 @@ export function QuizBuilderWorkspace() {
                 }
                 onRemove={removeSelected}
                 canRemove={session.document.interaction.cards.length > 1}
+              />
+            ) : null}
+            {session.format === "listen_and_choose" ? (
+              <ListenEditor
+                document={session.document}
+                selectedItemId={selectedItemId}
+                onPatch={(next) =>
+                  setSession({ format: "listen_and_choose", document: next })
+                }
+                onRemove={removeSelected}
+                canRemove={session.document.interaction.items.length > 1}
+              />
+            ) : null}
+            {session.format === "line_match" ? (
+              <LineMatchEditor
+                document={session.document}
+                selectedItemId={selectedItemId}
+                onPatch={(next) =>
+                  setSession({ format: "line_match", document: next })
+                }
+                onRemove={removeSelected}
+                canRemove={session.document.interaction.screens.length > 1}
+              />
+            ) : null}
+            {session.format === "true_false" ? (
+              <TrueFalseEditor
+                document={session.document}
+                selectedItemId={selectedItemId}
+                onPatch={(next) =>
+                  setSession({ format: "true_false", document: next })
+                }
+                onRemove={removeSelected}
+                canRemove={session.document.interaction.items.length > 1}
+              />
+            ) : null}
+            {session.format === "sentence_scramble" ? (
+              <SentenceScrambleEditor
+                document={session.document}
+                selectedItemId={selectedItemId}
+                onPatch={(next) =>
+                  setSession({ format: "sentence_scramble", document: next })
+                }
+                onRemove={removeSelected}
+                canRemove={session.document.interaction.items.length > 1}
+              />
+            ) : null}
+            {session.format === "fill_blanks" ? (
+              <FillBlanksEditor
+                document={session.document}
+                selectedItemId={selectedItemId}
+                onPatch={(next) =>
+                  setSession({ format: "fill_blanks", document: next })
+                }
+                onRemove={removeSelected}
+                canRemove={session.document.interaction.items.length > 1}
               />
             ) : null}
           </div>

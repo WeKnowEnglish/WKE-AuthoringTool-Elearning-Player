@@ -22,8 +22,9 @@ export type ActivityBuilderCard = {
   /** Formats already stored/played via Activity Bank. */
   bankFormats?: string[];
   /**
-   * When true, only platform admins see this card (legacy / backup entry points).
-   * Non-admins never see these even if status is authoring_ready.
+   * When true, only platform admins see this card on the Activity Builder hub.
+   * Use for legacy backups and individual format workspaces — teachers use the
+   * deep hubs (Quiz builder, vocab lists, hotspots, LTC, library) instead.
    */
   adminOnly?: boolean;
 };
@@ -82,6 +83,128 @@ export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
         lpPath: "/quizzes",
         status: "authoring_ready",
         bankFormats: ["multiple_choice", "letter_mixup", "flashcards"],
+      },
+      // Individual format workspaces — admin hub only; teachers use Quiz builder / deep hubs.
+      {
+        id: "picture-cloze",
+        title: "Picture cloze",
+        description:
+          "Picture + sentence gap from a vocab list. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/picture-cloze",
+        status: "authoring_ready",
+        bankFormats: ["picture_cloze"],
+        adminOnly: true,
+      },
+      {
+        id: "verb-table",
+        title: "Verb table",
+        description:
+          "Base / past / participle gaps from verb lemmas. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/verb-table",
+        status: "authoring_ready",
+        bankFormats: ["verb_table"],
+        adminOnly: true,
+      },
+      {
+        id: "sentence-columns",
+        title: "Sentence columns",
+        description:
+          "Who / Action / Extra placement challenges. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/sentence-columns",
+        status: "authoring_ready",
+        bankFormats: ["sentence_columns"],
+        adminOnly: true,
+      },
+      {
+        id: "word-annotation",
+        title: "Word annotation",
+        description:
+          "Circle adjectives and underline adverbs. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/word-annotation",
+        status: "authoring_ready",
+        bankFormats: ["word_annotation"],
+        adminOnly: true,
+      },
+      {
+        id: "picture-writing",
+        title: "Picture writing",
+        description:
+          "Write sentences from pictures with checklist readiness. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/picture-writing",
+        status: "authoring_ready",
+        bankFormats: ["picture_writing"],
+        adminOnly: true,
+      },
+      {
+        id: "question-writing",
+        title: "Question writing",
+        description:
+          "Form questions from prompts with structure checks. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/question-writing",
+        status: "authoring_ready",
+        bankFormats: ["question_writing"],
+        adminOnly: true,
+      },
+      {
+        id: "definition-match",
+        title: "Definition match",
+        description:
+          "Match words to child-friendly definitions from a vocab list. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/definition-match",
+        status: "authoring_ready",
+        bankFormats: ["definition_match"],
+        adminOnly: true,
+      },
+      {
+        id: "cloze-choice",
+        title: "Cloze with choices",
+        description:
+          "Complete passage gaps with multiple-choice options. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/cloze-choice",
+        status: "authoring_ready",
+        bankFormats: ["cloze_choice"],
+        adminOnly: true,
+      },
+      {
+        id: "cloze-open",
+        title: "Open cloze",
+        description:
+          "Type missing passage words without choices. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/cloze-open",
+        status: "authoring_ready",
+        bankFormats: ["cloze_open"],
+        adminOnly: true,
+      },
+      {
+        id: "read-and-answer",
+        title: "Read and answer",
+        description:
+          "Read a short passage and answer comprehension questions. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/read-and-answer",
+        status: "authoring_ready",
+        bankFormats: ["read_and_answer"],
+        adminOnly: true,
+      },
+      {
+        id: "picture-story",
+        title: "Picture story",
+        description:
+          "Follow a story through pictures, then answer questions. Assign as homework (dedicated player, not Lesson Player).",
+        badge: "Homework",
+        lpPath: "/picture-story",
+        status: "authoring_ready",
+        bankFormats: ["picture_story"],
+        adminOnly: true,
       },
       // Legacy backup entry points (admin only) — pre–unified Quiz Builder.
       {
@@ -173,7 +296,7 @@ export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
         title: "Language in Focus",
         description: "Guided grammar patterns — feeds the track compiler.",
         badge: "Scene",
-        studioPath: "/activity-builder/language-in-focus",
+        studioPath: "/pilots/language-in-focus",
         status: "studio_interim",
       },
       {
@@ -206,52 +329,62 @@ export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
   },
   {
     id: "reading",
-    label: "5 · Reading — Development",
+    label: "5 · Reading",
     toneClass: "text-emerald-800",
     cards: [
       {
         id: "reading-definition-match",
         title: "Definition Match",
-        description: "Match a Primary word bank to child-friendly definitions.",
-        badge: "Reading · Admin draft",
-        lpPath: "/reading/definition-match",
+        description:
+          "Moved to Quizzes · Homework — bankable definition match with vocab compile. Same studio: /teacher/activity-builder/definition-match.",
+        badge: "Homework",
+        lpPath: "/definition-match",
         status: "authoring_ready",
+        bankFormats: ["definition_match"],
         adminOnly: true,
       },
       {
         id: "reading-read-and-answer",
         title: "Read and Answer",
-        description: "Read a short passage and answer comprehension questions.",
-        badge: "Reading · Admin draft",
-        lpPath: "/reading/read-and-answer",
+        description:
+          "Moved to Quizzes · Homework — bankable read and answer. Same studio: /teacher/activity-builder/read-and-answer.",
+        badge: "Homework",
+        lpPath: "/read-and-answer",
         status: "authoring_ready",
+        bankFormats: ["read_and_answer"],
         adminOnly: true,
       },
       {
         id: "reading-cloze-choice",
         title: "Cloze with Choices",
-        description: "Complete five passage gaps using contextual word choices.",
-        badge: "Reading · Admin draft",
-        lpPath: "/reading/cloze-choice",
+        description:
+          "Moved to Quizzes · Homework — bankable cloze with choices. Same studio: /teacher/activity-builder/cloze-choice.",
+        badge: "Homework",
+        lpPath: "/cloze-choice",
         status: "authoring_ready",
+        bankFormats: ["cloze_choice"],
         adminOnly: true,
       },
       {
         id: "reading-cloze-open",
         title: "Open Cloze",
-        description: "Type missing passage words without a word bank or choices.",
-        badge: "Reading · Admin draft",
-        lpPath: "/reading/cloze-open",
+        description:
+          "Moved to Quizzes · Homework — bankable open cloze. Same studio: /teacher/activity-builder/cloze-open.",
+        badge: "Homework",
+        lpPath: "/cloze-open",
         status: "authoring_ready",
+        bankFormats: ["cloze_open"],
         adminOnly: true,
       },
       {
         id: "reading-picture-story",
         title: "Picture Story Reading",
-        description: "Follow a story through pictures and words, then complete and answer.",
-        badge: "Reading · Admin draft",
-        lpPath: "/reading/picture-story",
+        description:
+          "Moved to Quizzes · Homework — bankable picture story. Same studio: /teacher/activity-builder/picture-story.",
+        badge: "Homework",
+        lpPath: "/picture-story",
         status: "authoring_ready",
+        bankFormats: ["picture_story"],
         adminOnly: true,
       },
     ],

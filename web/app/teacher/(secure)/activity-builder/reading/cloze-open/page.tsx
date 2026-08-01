@@ -1,13 +1,6 @@
-import { notFound } from "next/navigation";
-import { ClozeOpenWorkspace } from "@/components/teacher/activity-builder/reading/ClozeOpenWorkspace";
-import { isAdmin } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function ClozeOpenBuilderPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!isAdmin(user)) notFound();
-  return <ClozeOpenWorkspace />;
+/** Legacy reading-admin route — bankable studio lives at /cloze-open. */
+export default function ClozeOpenBuilderPage() {
+  redirect("/teacher/activity-builder/cloze-open");
 }

@@ -15,8 +15,22 @@ import {
 } from "@/lib/class-homework/freeze-pack-flashcards";
 import { freezePackQuizPayload, parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
 import { freezeStudioActivityHomeworkPayload } from "@/lib/class-homework/freeze-studio-activity";
+import { freezePictureClozeHomeworkPayload } from "@/lib/class-homework/freeze-picture-cloze";
+import { freezeVerbTableHomeworkPayload } from "@/lib/class-homework/freeze-verb-table";
+import { freezeSentenceColumnsHomeworkPayload } from "@/lib/class-homework/freeze-sentence-columns";
+import { freezeWordAnnotationHomeworkPayload } from "@/lib/class-homework/freeze-word-annotation";
+import { freezePictureWritingHomeworkPayload } from "@/lib/class-homework/freeze-picture-writing";
+import { freezeQuestionWritingHomeworkPayload } from "@/lib/class-homework/freeze-question-writing";
+import { freezeDefinitionMatchHomeworkPayload } from "@/lib/class-homework/freeze-definition-match";
+import { freezeClozeChoiceHomeworkPayload } from "@/lib/class-homework/freeze-cloze-choice";
+import { freezeClozeOpenHomeworkPayload } from "@/lib/class-homework/freeze-cloze-open";
+import { freezeReadAndAnswerHomeworkPayload } from "@/lib/class-homework/freeze-read-and-answer";
+import { freezePictureStoryHomeworkPayload } from "@/lib/class-homework/freeze-picture-story";
 import {
-  isHomeworkStudioFormat,
+  ASSIGNABLE_DOCUMENT_HOMEWORK_ERROR,
+  isAssignableStudioHomeworkFormat,
+} from "@/lib/class-homework/assignable-studio-formats";
+import {
   type ClassHomework,
   type ClassHomeworkStatus,
 } from "@/lib/class-homework/types";
@@ -693,7 +707,23 @@ export async function assignHomeworkTemplateOne(input: {
  */
 async function recordCatalogHomeworkCompletion(input: {
   homeworkId: string;
-  allowedTypes: ReadonlyArray<"pack_quiz" | "pack_flashcards" | "studio_activity" | "homework_template">;
+  allowedTypes: ReadonlyArray<
+    | "pack_quiz"
+    | "pack_flashcards"
+    | "studio_activity"
+    | "homework_template"
+    | "picture_cloze"
+    | "verb_table"
+    | "sentence_columns"
+    | "word_annotation"
+    | "picture_writing"
+    | "question_writing"
+    | "definition_match"
+    | "cloze_choice"
+    | "cloze_open"
+    | "read_and_answer"
+    | "picture_story"
+  >;
 }): Promise<RecordHomeworkCompletionResult> {
   try {
     const supabase = await createClient();
@@ -730,8 +760,21 @@ async function recordCatalogHomeworkCompletion(input: {
       (payload.type !== "pack_quiz" &&
         payload.type !== "pack_flashcards" &&
         payload.type !== "studio_activity" &&
-        payload.type !== "homework_template") ||
-      !input.allowedTypes.includes(payload.type)
+        payload.type !== "homework_template" &&
+        payload.type !== "picture_cloze" &&
+        payload.type !== "verb_table" &&
+        payload.type !== "sentence_columns" &&
+        payload.type !== "word_annotation" &&
+        payload.type !== "picture_writing" &&
+        payload.type !== "question_writing" &&
+        payload.type !== "definition_match" &&
+        payload.type !== "cloze_choice" &&
+        payload.type !== "cloze_open" &&
+        payload.type !== "read_and_answer" &&
+        payload.type !== "picture_story") ||
+      !input.allowedTypes.includes(
+        payload.type as (typeof input.allowedTypes)[number],
+      )
     ) {
       return { ok: false, error: "This homework type can’t be marked complete here." };
     }
@@ -751,8 +794,29 @@ async function recordCatalogHomeworkCompletion(input: {
       questionsTotal = Math.max(0, payload.screenCount);
     } else if (payload.type === "homework_template") {
       questionsTotal = payload.sectionCount;
+    } else if (payload.type === "picture_cloze") {
+      questionsTotal = Math.max(0, payload.itemCount);
+    } else if (payload.type === "verb_table") {
+      questionsTotal = Math.max(0, payload.rowCount);
+    } else if (payload.type === "sentence_columns") {
+      questionsTotal = Math.max(0, payload.challengeCount);
+    } else if (payload.type === "word_annotation") {
+      questionsTotal = Math.max(0, payload.targetCount);
+    } else if (payload.type === "picture_writing") {
+      questionsTotal = Math.max(0, payload.promptCount);
+    } else if (payload.type === "question_writing") {
+      questionsTotal = Math.max(0, payload.promptCount);
+    } else if (payload.type === "definition_match") {
+      questionsTotal = Math.max(0, payload.pairCount);
+    } else if (payload.type === "cloze_choice") {
+      questionsTotal = Math.max(0, payload.gapCount);
+    } else if (payload.type === "cloze_open") {
+      questionsTotal = Math.max(0, payload.gapCount);
+    } else if (payload.type === "read_and_answer") {
+      questionsTotal = Math.max(0, payload.questionCount);
+    } else if (payload.type === "picture_story") {
+      questionsTotal = Math.max(0, payload.questionCount);
     }
-
     const { data: memberships, error: membershipError } = await supabase.rpc(
       "student_class_memberships",
     );
@@ -848,6 +912,116 @@ export async function recordHomeworkTemplateCompletion(input: {
   });
 }
 
+/** Student marks picture cloze homework finished after mastering the items. */
+export async function recordPictureClozeHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["picture_cloze"],
+  });
+}
+
+/** Student marks verb table homework finished after mastering missing cells. */
+export async function recordVerbTableHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["verb_table"],
+  });
+}
+
+/** Student marks sentence columns homework finished after mastering placements. */
+export async function recordSentenceColumnsHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["sentence_columns"],
+  });
+}
+
+/** Student marks word annotation homework finished after mastering markings. */
+export async function recordWordAnnotationHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["word_annotation"],
+  });
+}
+
+/** Student marks picture writing homework finished after checklist readiness. */
+export async function recordPictureWritingHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["picture_writing"],
+  });
+}
+
+/** Student marks question writing homework finished after checklist readiness. */
+export async function recordQuestionWritingHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["question_writing"],
+  });
+}
+
+/** Student marks definition match homework finished after perfect matching. */
+export async function recordDefinitionMatchHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["definition_match"],
+  });
+}
+
+/** Student marks cloze choice homework finished after perfect gap fill. */
+export async function recordClozeChoiceHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["cloze_choice"],
+  });
+}
+
+/** Student marks open cloze homework finished after perfect gap fill. */
+export async function recordClozeOpenHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["cloze_open"],
+  });
+}
+
+/** Student marks read-and-answer homework finished after perfect answers. */
+export async function recordReadAndAnswerHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["read_and_answer"],
+  });
+}
+
+/** Student marks picture-story homework finished after perfect answers. */
+export async function recordPictureStoryHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["picture_story"],
+  });
+}
+
 /**
  * Create class homework from an Activity Bank quiz (MC / letter / flashcards).
  * Freezes the pack so later bank edits do not change the assignment.
@@ -891,7 +1065,7 @@ export async function assignStudioActivityAsHomework(input: {
 
     const { data: activity, error: activityError } = await supabase
       .from("studio_activities")
-      .select("id, title, format, pack")
+      .select("id, title, format, pack, authoring")
       .eq("id", activityId)
       .eq("teacher_id", teacherId)
       .maybeSingle();
@@ -906,22 +1080,113 @@ export async function assignStudioActivityAsHomework(input: {
       return { ok: false, error: activityError.message };
     }
     if (!activity) return { ok: false, error: "Activity not found." };
-    if (!isHomeworkStudioFormat(activity.format)) {
+
+    const format = activity.format as string;
+    if (!isAssignableStudioHomeworkFormat(format)) {
       return {
         ok: false,
-        error:
-          "Only multiple choice, letter scramble, and flashcards can be assigned as homework for now.",
+        error: ASSIGNABLE_DOCUMENT_HOMEWORK_ERROR,
       };
     }
 
     let payload;
     try {
-      payload = freezeStudioActivityHomeworkPayload({
-        activityId,
-        format: activity.format,
-        pack: activity.pack,
-        titleHint: typeof activity.title === "string" ? activity.title : null,
-      });
+      if (format === "cloze_open") {
+        payload = freezeClozeOpenHomeworkPayload({
+          activityId,
+          format: "cloze_open",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "read_and_answer") {
+        payload = freezeReadAndAnswerHomeworkPayload({
+          activityId,
+          format: "read_and_answer",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "picture_story") {
+        payload = freezePictureStoryHomeworkPayload({
+          activityId,
+          format: "picture_story",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "cloze_choice") {
+        payload = freezeClozeChoiceHomeworkPayload({
+          activityId,
+          format: "cloze_choice",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "definition_match") {
+        payload = freezeDefinitionMatchHomeworkPayload({
+          activityId,
+          format: "definition_match",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "question_writing") {
+        payload = freezeQuestionWritingHomeworkPayload({
+          activityId,
+          format: "question_writing",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "picture_writing") {
+        payload = freezePictureWritingHomeworkPayload({
+          activityId,
+          format: "picture_writing",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "word_annotation") {
+        payload = freezeWordAnnotationHomeworkPayload({
+          activityId,
+          format: "word_annotation",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "sentence_columns") {
+        payload = freezeSentenceColumnsHomeworkPayload({
+          activityId,
+          format: "sentence_columns",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "verb_table") {
+        payload = freezeVerbTableHomeworkPayload({
+          activityId,
+          format: "verb_table",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else if (format === "picture_cloze") {
+        payload = freezePictureClozeHomeworkPayload({
+          activityId,
+          format: "picture_cloze",
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      } else {
+        payload = freezeStudioActivityHomeworkPayload({
+          activityId,
+          format: format as Parameters<typeof freezeStudioActivityHomeworkPayload>[0]["format"],
+          pack: activity.pack,
+          titleHint: typeof activity.title === "string" ? activity.title : null,
+        });
+      }
     } catch (err) {
       return {
         ok: false,

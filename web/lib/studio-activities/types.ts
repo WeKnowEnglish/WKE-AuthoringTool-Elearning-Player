@@ -2,17 +2,49 @@ export type StudioActivityFormat =
   | "multiple_choice"
   | "letter_mixup"
   | "flashcards"
+  | "listen_and_choose"
+  | "line_match"
+  | "true_false"
+  | "sentence_scramble"
+  | "fill_blanks"
   | "learning_track"
   | "vocabulary_list"
-  | "explore_hotspots";
+  | "explore_hotspots"
+  | "picture_cloze"
+  | "verb_table"
+  | "sentence_columns"
+  | "word_annotation"
+  | "picture_writing"
+  | "question_writing"
+  | "definition_match"
+  | "cloze_choice"
+  | "cloze_open"
+  | "read_and_answer"
+  | "picture_story";
 
 export const STUDIO_ACTIVITY_FORMATS: readonly StudioActivityFormat[] = [
   "multiple_choice",
   "letter_mixup",
   "flashcards",
+  "listen_and_choose",
+  "line_match",
+  "true_false",
+  "sentence_scramble",
+  "fill_blanks",
   "learning_track",
   "vocabulary_list",
   "explore_hotspots",
+  "picture_cloze",
+  "verb_table",
+  "sentence_columns",
+  "word_annotation",
+  "picture_writing",
+  "question_writing",
+  "definition_match",
+  "cloze_choice",
+  "cloze_open",
+  "read_and_answer",
+  "picture_story",
 ] as const;
 
 export type PublishStudioActivityInput = {

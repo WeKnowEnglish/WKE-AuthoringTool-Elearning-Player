@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useStudioPackQuerySource } from "@/components/pilots/useStudioPackQuerySource";
 import bakeryLineMatch from "@/content/pilots/games-line-match/bakery-line-match.json";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
@@ -29,12 +30,42 @@ const LessonPlayer = dynamic(
 const BUILTIN_PACK = parseGamesLineMatchLessonPlayerPack(bakeryLineMatch);
 
 export function GamesLineMatchPilot() {
+  const remote = useStudioPackQuerySource();
   const [pack, setPack] = useState<GamesLineMatchLessonPlayerPack>(BUILTIN_PACK);
   const [sourceName, setSourceName] = useState(BUILTIN_PACK.activity_name);
   const [generation, setGeneration] = useState(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const appliedRemoteKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (remote.notice && !remote.rawPack) {
+      setImportNotice(remote.notice);
+      return;
+    }
+    if (!remote.rawPack || !remote.sourceKind) return;
+    const key = `${remote.sourceKind}:${remote.sourceName}`;
+    if (appliedRemoteKeyRef.current === key) return;
+    try {
+      const next = parseGamesLineMatchLessonPlayerPack(remote.rawPack);
+      appliedRemoteKeyRef.current = key;
+      setPack(next);
+      setSourceName(remote.sourceName || next.activity_name);
+      setGeneration((n) => n + 1);
+      setImportNotice(
+        remote.sourceKind === "activity"
+          ? `Loaded from My Activity Bank (${next.screens.length} item${
+              next.screens.length === 1 ? "" : "s"
+            }).`
+          : `Loaded from Studio inbox (${next.screens.length} item${
+              next.screens.length === 1 ? "" : "s"
+            }).`,
+      );
+    } catch (error) {
+      setImportNotice(error instanceof Error ? error.message : "Could not parse pack.");
+    }
+  }, [remote.notice, remote.rawPack, remote.sourceKind, remote.sourceName]);
 
   const screens = useMemo((): LessonScreenRow[] => {
     return pack.screens.map((payload, index) => ({
@@ -80,7 +111,7 @@ export function GamesLineMatchPilot() {
             <p className="mt-1 text-sm font-semibold text-kid-ink/80">
               Studio Quiz line-match packs play as Lesson Player line_match screens.
             </p>
-            <p className="mt-2 text-xs font-semibold text-kid-ink/60">Playing: {sourceName}</p>
+            <p className="mt-2 text-xs font-semibold text-kid-ink/60">Playing: {remote.loading ? "Loading Studio pack…" : sourceName}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <KidButton type="button" variant="secondary" onClick={loadBuiltin}>

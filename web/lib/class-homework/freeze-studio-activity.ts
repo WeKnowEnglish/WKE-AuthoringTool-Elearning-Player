@@ -17,7 +17,7 @@ export {
 
 /**
  * Freeze a validated Activity Bank pack into a `studio_activity` homework payload.
- * Rejects learning tracks / vocab lists (not Phase 2).
+ * Supports quiz formats and learning tracks. Rejects vocabulary lists.
  */
 export function freezeStudioActivityHomeworkPayload(input: {
   activityId: string;
@@ -31,7 +31,7 @@ export function freezeStudioActivityHomeworkPayload(input: {
   }
   if (!isHomeworkStudioFormat(input.format)) {
     throw new Error(
-      "Only multiple choice, letter scramble, and flashcards can be assigned as homework for now.",
+      "Only Activity Bank quiz formats and learning tracks can be assigned as Lesson Player homework. Vocabulary lists and document modules use a different assign path.",
     );
   }
 

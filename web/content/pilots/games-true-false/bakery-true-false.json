@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "kind": "lessonplayer-games-pack",
+  "format": "true_false",
+  "quiz_group_id": "bakery-vocabulary-true-false",
+  "quiz_group_title": "Bakery vocabulary · True / false",
+  "activity_name": "Bakery vocabulary · True / false",
+  "screens": [
+    {
+      "type": "interaction",
+      "subtype": "true_false",
+      "statement": "\"bread\" means Food made from flour that you buy at a bakery.",
+      "correct": true,
+      "quiz_group_id": "bakery-vocabulary-true-false",
+      "quiz_group_title": "Bakery vocabulary · True / false",
+      "quiz_group_order": 0,
+      "picture_truth_statement": "\"bread\" means Food made from flour that you buy at a bakery."
+    },
+    {
+      "type": "interaction",
+      "subtype": "true_false",
+      "statement": "This is a cookie.",
+      "correct": false,
+      "quiz_group_id": "bakery-vocabulary-true-false",
+      "quiz_group_title": "Bakery vocabulary · True / false",
+      "quiz_group_order": 1,
+      "picture_truth_statement": "This is a cake."
+    },
+    {
+      "type": "interaction",
+      "subtype": "true_false",
+      "statement": "\"cookie\" means A sweet food for birthdays.",
+      "correct": false,
+      "quiz_group_id": "bakery-vocabulary-true-false",
+      "quiz_group_title": "Bakery vocabulary · True / false",
+      "quiz_group_order": 2,
+      "picture_truth_statement": "\"cookie\" means A small sweet biscuit."
+    },
+    {
+      "type": "interaction",
+      "subtype": "true_false",
+      "statement": "This is a bakery.",
+      "correct": true,
+      "quiz_group_id": "bakery-vocabulary-true-false",
+      "quiz_group_title": "Bakery vocabulary · True / false",
+      "quiz_group_order": 3,
+      "picture_truth_statement": "This is a bakery."
+    }
+  ]
+}

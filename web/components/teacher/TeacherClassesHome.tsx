@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   publishBankActivityToSpace,
   removeBankActivityFromSpace,
 } from "@/lib/actions/teacher-space";
-import { isHomeworkStudioFormat } from "@/lib/class-homework/types";
+import { isAssignableStudioHomeworkFormat } from "@/lib/class-homework/assignable-studio-formats";
 import type { TeacherClassSummary } from "@/lib/data/teacher-classes";
 import type { StudioActivitySummary } from "@/lib/studio-activities/load";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
@@ -23,9 +29,25 @@ const FORMAT_LABEL: Record<StudioActivityFormat, string> = {
   multiple_choice: "MCQ",
   letter_mixup: "Letter scramble",
   flashcards: "Flashcards",
+  listen_and_choose: "Listen and choose",
+  line_match: "Line match",
+  true_false: "True / false",
+  sentence_scramble: "Sentence scramble",
+  fill_blanks: "Fill in the blanks",
   learning_track: "Learning track",
   vocabulary_list: "Vocabulary list",
   explore_hotspots: "Explore hotspots",
+  picture_cloze: "Picture cloze",
+  verb_table: "Verb table",
+  sentence_columns: "Sentence columns",
+  word_annotation: "Word annotation",
+  picture_writing: "Picture writing",
+  question_writing: "Question writing",
+  definition_match: "Definition match",
+  cloze_choice: "Cloze with choices",
+  cloze_open: "Open cloze",
+  read_and_answer: "Read and answer",
+  picture_story: "Picture story",
 };
 
 type MainTab = "classes" | "wall";
@@ -245,8 +267,8 @@ export function TeacherClassesHome({
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         {/* Left rail: activities + tools */}
-        <aside className="w-full shrink-0 lg:sticky lg:top-4 lg:w-[19rem] xl:w-[21rem]">
-          <div className="overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-sm">
+        <aside className="w-full min-w-0 shrink-0 lg:sticky lg:top-4 lg:w-[19rem] xl:w-[21rem]">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-sm">
             <div className="border-b border-stone-100 px-4 py-3">
               <p className="text-sm font-semibold text-stone-900">My Activity Bank</p>
               <p className="mt-0.5 text-xs text-stone-500">
@@ -254,28 +276,15 @@ export function TeacherClassesHome({
               </p>
             </div>
 
-            <div className="space-y-3 px-3 py-3">
-              <div className="flex flex-wrap gap-1">
-                <FilterChip
-                  active={formatFilter === "all"}
-                  onClick={() => {
-                    setFormatFilter("all");
-                    openBank(selectedId);
-                  }}
-                  label={`All (${counts.all ?? 0})`}
-                />
-                {(Object.keys(FORMAT_LABEL) as StudioActivityFormat[]).map((format) => (
-                  <FilterChip
-                    key={format}
-                    active={formatFilter === format}
-                    onClick={() => {
-                      setFormatFilter(format);
-                      openBank(selectedId);
-                    }}
-                    label={`${FORMAT_LABEL[format]} (${counts[format] ?? 0})`}
-                  />
-                ))}
-              </div>
+            <div className="min-w-0 space-y-3 px-3 py-3">
+              <BankFormatFilterRow
+                formatFilter={formatFilter}
+                counts={counts}
+                onSelect={(next) => {
+                  setFormatFilter(next);
+                  openBank(selectedId);
+                }}
+              />
 
               <ul className="max-h-[16rem] space-y-1 overflow-y-auto">
                 {filtered.length === 0 ? (
@@ -321,7 +330,7 @@ export function TeacherClassesHome({
                     >
                       Play
                     </a>
-                    {isHomeworkStudioFormat(selected.format) ? (
+                    {isAssignableStudioHomeworkFormat(selected.format) ? (
                       <button
                         type="button"
                         className="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1 text-[11px] font-medium text-teal-950 disabled:opacity-50"
@@ -501,7 +510,7 @@ export function TeacherClassesHome({
         </div>
       </div>
 
-      {selected && isHomeworkStudioFormat(selected.format) ? (
+      {selected && isAssignableStudioHomeworkFormat(selected.format) ? (
         <AssignStudioActivityHomeworkOverlay
           open={assignOpen}
           onClose={() => setAssignOpen(false)}
@@ -515,6 +524,104 @@ export function TeacherClassesHome({
   );
 }
 
+function BankFormatFilterRow(props: {
+  formatFilter: StudioActivityFormat | "all";
+  counts: Record<string, number>;
+  onSelect: (next: StudioActivityFormat | "all") => void;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const formats = useMemo(
+    () =>
+      (Object.keys(FORMAT_LABEL) as StudioActivityFormat[]).filter(
+        (format) => (props.counts[format] ?? 0) > 0,
+      ),
+    [props.counts],
+  );
+
+  const updateScrollState = () => {
+    const node = scrollerRef.current;
+    if (!node) return;
+    const max = node.scrollWidth - node.clientWidth;
+    setCanScrollLeft(node.scrollLeft > 2);
+    setCanScrollRight(max - node.scrollLeft > 2);
+  };
+
+  useEffect(() => {
+    updateScrollState();
+    const node = scrollerRef.current;
+    if (!node) return;
+    const onScroll = () => updateScrollState();
+    node.addEventListener("scroll", onScroll, { passive: true });
+    const observer = new ResizeObserver(() => updateScrollState());
+    observer.observe(node);
+    return () => {
+      node.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, [formats, props.counts.all]);
+
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (!node) return;
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      if (node.scrollWidth <= node.clientWidth) return;
+      event.preventDefault();
+      node.scrollLeft += event.deltaY;
+    };
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const scrollBy = (delta: number) => {
+    scrollerRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      <button
+        type="button"
+        aria-label="Scroll filters left"
+        disabled={!canScrollLeft}
+        onClick={() => scrollBy(-120)}
+        className="shrink-0 rounded-md border border-stone-200 bg-white px-1.5 py-1 text-xs font-bold text-stone-700 disabled:opacity-30"
+      >
+        ‹
+      </button>
+      <div
+        ref={scrollerRef}
+        className="flex min-w-0 flex-1 gap-1 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]"
+      >
+        <FilterChip
+          active={props.formatFilter === "all"}
+          onClick={() => props.onSelect("all")}
+          label={`All (${props.counts.all ?? 0})`}
+        />
+        {formats.map((format) => (
+          <FilterChip
+            key={format}
+            active={props.formatFilter === format}
+            onClick={() => props.onSelect(format)}
+            label={`${FORMAT_LABEL[format]} (${props.counts[format] ?? 0})`}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        aria-label="Scroll filters right"
+        disabled={!canScrollRight}
+        onClick={() => scrollBy(120)}
+        className="shrink-0 rounded-md border border-stone-200 bg-white px-1.5 py-1 text-xs font-bold text-stone-700 disabled:opacity-30"
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
 function FilterChip(props: {
   active: boolean;
   onClick: () => void;
@@ -524,7 +631,7 @@ function FilterChip(props: {
     <button
       type="button"
       onClick={props.onClick}
-      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
         props.active
           ? "bg-stone-800 text-white"
           : "bg-stone-100 text-stone-700 hover:bg-stone-200"

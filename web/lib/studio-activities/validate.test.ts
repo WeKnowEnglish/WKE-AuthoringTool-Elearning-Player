@@ -13,7 +13,7 @@ describe("studio-activities validate", () => {
     expect(isStudioActivityFormat("multiple_choice")).toBe(true);
     expect(isStudioActivityFormat("vocabulary_list")).toBe(true);
     expect(isStudioActivityFormat("explore_hotspots")).toBe(true);
-    expect(isStudioActivityFormat("listen_and_choose")).toBe(false);
+    expect(isStudioActivityFormat("listen_and_choose")).toBe(true);
   });
 
   it("validates explore_hotspots authoring into a play payload pack", () => {

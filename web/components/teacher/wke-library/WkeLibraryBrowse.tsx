@@ -22,7 +22,23 @@ const FORMAT_LABELS: Record<StudioActivityFormat, string> = {
   multiple_choice: "Multiple choice",
   letter_mixup: "Letter scramble",
   flashcards: "Flashcards",
+  listen_and_choose: "Listen and choose",
+  line_match: "Line match",
+  true_false: "True / false",
+  sentence_scramble: "Sentence scramble",
+  fill_blanks: "Fill in the blanks",
   learning_track: "Learning track",
+  picture_cloze: "Picture cloze",
+  verb_table: "Verb table",
+  sentence_columns: "Sentence columns",
+  word_annotation: "Word annotation",
+  picture_writing: "Picture writing",
+  question_writing: "Question writing",
+  definition_match: "Definition match",
+  cloze_choice: "Cloze with choices",
+  cloze_open: "Open cloze",
+  read_and_answer: "Read and answer",
+  picture_story: "Picture story",
 };
 
 const STATUS_LABELS: Record<string, string> = {

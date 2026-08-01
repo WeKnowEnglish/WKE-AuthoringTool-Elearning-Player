@@ -212,7 +212,19 @@ export function ClassHomeworkPanel({
             const showDone =
               (item.payload.type === "pack_quiz" ||
                 item.payload.type === "pack_flashcards" ||
-                item.payload.type === "homework_template") &&
+                item.payload.type === "homework_template" ||
+                item.payload.type === "picture_cloze" ||
+                item.payload.type === "verb_table" ||
+                item.payload.type === "sentence_columns" ||
+                item.payload.type === "word_annotation" ||
+                item.payload.type === "picture_writing" ||
+                item.payload.type === "question_writing" ||
+                item.payload.type === "definition_match" ||
+                item.payload.type === "cloze_choice" ||
+                item.payload.type === "cloze_open" ||
+                item.payload.type === "read_and_answer" ||
+                item.payload.type === "picture_story" ||
+                item.payload.type === "studio_activity") &&
               (item.status === "assigned" || item.status === "closed");
             return (
               <li key={item.id} className="flex flex-wrap items-stretch gap-2 rounded-lg border border-neutral-200 p-2 hover:border-neutral-400">

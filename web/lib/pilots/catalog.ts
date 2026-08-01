@@ -166,7 +166,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/teacher/activity-builder/quizzes",
     title: "Quiz builder",
     description:
-      "Unified Activity Builder quiz workspace: generate MCQ, letter scramble, or flashcards from vocabulary lists; edit questions and media; save to Activity Bank.",
+      "Unified Activity Builder quiz workspace: generate, edit, and bank all eight core modules from vocabulary lists.",
     group: "games",
     status: "active",
     studioHref: "/teacher/activity-builder/quizzes",
@@ -177,15 +177,15 @@ export const PILOT_CATALOG: PilotEntry[] = [
     description: "Studio Quiz MC packs play as Lesson Player mc_quiz screens.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/games-listen-choose",
     title: "Listen and choose",
-    description: "Dialog audio or TTS, then pick the matching picture.",
+    description: "Dialog audio or TTS, then pick the matching picture. Vocab-compile via CoreModuleRegistry.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games/listen-and-choose",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/games-flashcards",
@@ -193,7 +193,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     description: "Flip decks with word, example, definition, picture, and audio.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games/flashcards",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/games-letter-mixup",
@@ -201,39 +201,48 @@ export const PILOT_CATALOG: PilotEntry[] = [
     description: "Unscramble letters to spell target words.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games/letter-mixup",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/games-sentence-scramble",
     title: "Sentence scramble",
-    description: "Rebuild sentences from a scrambled word bank.",
+    description: "Rebuild sentences from a scrambled word bank. Vocab-compile via CoreModuleRegistry.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games/sentence-scramble",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/games-fill-blanks",
     title: "Fill in the blanks",
-    description: "Cloze with __1__ gaps, acceptable answers, and word banks.",
+    description: "Cloze with __1__ gaps, acceptable answers, and word banks. Vocab-compile via CoreModuleRegistry.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games/fill-blanks",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/games-drag-match",
     title: "Drag match",
-    description: "Tap a word, then tap a box to match pairs.",
+    description: "Tap a word, then tap a box to match pairs. Prefer line match for vocab-compile.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games/drag-match",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/games-line-match",
     title: "Line match",
-    description: "Same pair model as drag match — draw lines between columns.",
+    description: "Draw lines between words and pictures. Vocab-compile via CoreModuleRegistry.",
     group: "games",
     status: "active",
-    studioHref: "/activity-builder/games/line-match",
+    studioHref: "/teacher/activity-builder/quizzes",
+  },
+  {
+    href: "/pilots/games-true-false",
+    title: "True / false",
+    description:
+      "Judge picture and meaning statements. Vocab-compile + Quiz Builder via CoreModuleRegistry.",
+    group: "games",
+    status: "active",
+    studioHref: "/teacher/activity-builder/quizzes",
   },
   {
     href: "/pilots/vocab-player",
@@ -251,6 +260,105 @@ export const PILOT_CATALOG: PilotEntry[] = [
     group: "activities",
     status: "review",
   },
+  {
+    href: "/pilots/picture-cloze",
+    title: "Picture cloze",
+    description:
+      "Standalone picture + cloze from Activity Bank (vocab compile). Non–Lesson Player homework module; Part 1 of Homework Template One extracted.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/picture-cloze",
+  },
+  {
+    href: "/pilots/verb-table",
+    title: "Verb table",
+    description:
+      "Standalone base/past/participle table from Activity Bank (lexicon verb forms). Non–Lesson Player homework module; Part 4 of Homework Template One extracted.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/verb-table",
+  },
+  {
+    href: "/pilots/sentence-columns",
+    title: "Sentence columns",
+    description:
+      "Standalone Who / Action / Extra placement from Activity Bank. Non–Lesson Player homework module; Part 3 of Homework Template One extracted.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/sentence-columns",
+  },
+  {
+    href: "/pilots/word-annotation",
+    title: "Word annotation",
+    description:
+      "Standalone circle adjectives / underline adverbs from Activity Bank. Non–Lesson Player homework module; Part 2 of Homework Template One extracted.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/word-annotation",
+  },
+  {
+    href: "/pilots/picture-writing",
+    title: "Picture writing",
+    description:
+      "Standalone write-from-picture prompts from Activity Bank. Checklist readiness (not exact-answer mastery); Part 5 of Homework Template One extracted. Teacher review inbox deferred.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/picture-writing",
+  },
+  {
+    href: "/pilots/question-writing",
+    title: "Question writing",
+    description:
+      "Standalone question-from-prompts from Activity Bank. Checklist readiness (question structure); Part 6 of Homework Template One extracted. Teacher review inbox deferred.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/question-writing",
+  },
+  {
+    href: "/pilots/definition-match",
+    title: "Definition match",
+    description:
+      "Standalone word–definition matching from Activity Bank (vocab compile). First V3 reading homework module; non–Lesson Player shell.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/definition-match",
+  },
+  {
+    href: "/pilots/cloze-choice",
+    title: "Cloze with choices",
+    description:
+      "Standalone passage cloze with multiple-choice gaps from Activity Bank. Second V3 reading homework module; non–Lesson Player shell.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/cloze-choice",
+  },
+  {
+    href: "/pilots/cloze-open",
+    title: "Open cloze",
+    description:
+      "Standalone open cloze (typed gaps) from Activity Bank. V3 reading homework module; non–Lesson Player shell.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/cloze-open",
+  },
+  {
+    href: "/pilots/read-and-answer",
+    title: "Read and answer",
+    description:
+      "Standalone passage comprehension from Activity Bank. V3 reading homework module; non–Lesson Player shell.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/read-and-answer",
+  },
+  {
+    href: "/pilots/picture-story",
+    title: "Picture story",
+    description:
+      "Standalone picture-frame story with questions from Activity Bank. V3 reading homework module; non–Lesson Player shell.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/picture-story",
+  },
 
   // ── Active · Core activities ────────────────────────────────────
   {
@@ -259,7 +367,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     description: "Guided pattern practice with scene, tabs, and sentence build.",
     group: "activities",
     status: "active",
-    studioHref: "/activity-builder/language-in-focus",
+    studioHref: "/pilots/language-in-focus",
   },
   {
     href: "/pilots/explore-hotspots",
@@ -522,13 +630,6 @@ export const PILOT_CATALOG: PilotEntry[] = [
     group: "salvageable",
     status: "review",
     subtype: "listen_color_write",
-  },
-  {
-    title: "True / False",
-    description: "Classic T/F quiz. View: TrueFalseView. No Quiz pack pilot.",
-    group: "salvageable",
-    status: "review",
-    subtype: "true_false",
   },
   {
     title: "Short answer",

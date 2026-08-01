@@ -5,6 +5,17 @@ import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcard
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
 import { HomeworkStudioActivityPlayer } from "@/components/primary/HomeworkStudioActivityPlayer";
+import { HomeworkPictureClozePlayer } from "@/components/primary/HomeworkPictureClozePlayer";
+import { HomeworkVerbTablePlayer } from "@/components/primary/HomeworkVerbTablePlayer";
+import { HomeworkSentenceColumnsPlayer } from "@/components/primary/HomeworkSentenceColumnsPlayer";
+import { HomeworkWordAnnotationPlayer } from "@/components/primary/HomeworkWordAnnotationPlayer";
+import { HomeworkPictureWritingPlayer } from "@/components/primary/HomeworkPictureWritingPlayer";
+import { HomeworkQuestionWritingPlayer } from "@/components/primary/HomeworkQuestionWritingPlayer";
+import { HomeworkDefinitionMatchPlayer } from "@/components/primary/HomeworkDefinitionMatchPlayer";
+import { HomeworkClozeChoicePlayer } from "@/components/primary/HomeworkClozeChoicePlayer";
+import { HomeworkClozeOpenPlayer } from "@/components/primary/HomeworkClozeOpenPlayer";
+import { HomeworkReadAndAnswerPlayer } from "@/components/primary/HomeworkReadAndAnswerPlayer";
+import { HomeworkPictureStoryPlayer } from "@/components/primary/HomeworkPictureStoryPlayer";
 import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS } from "@/lib/class-homework/types";
@@ -144,6 +155,105 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
           format={payload.format}
           title={payload.title}
           pack={payload.pack}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "picture_cloze" ? (
+        <HomeworkPictureClozePlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "verb_table" ? (
+        <HomeworkVerbTablePlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "sentence_columns" ? (
+        <HomeworkSentenceColumnsPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "word_annotation" ? (
+        <HomeworkWordAnnotationPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "picture_writing" ? (
+        <HomeworkPictureWritingPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "question_writing" ? (
+        <HomeworkQuestionWritingPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "definition_match" ? (
+        <HomeworkDefinitionMatchPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "cloze_choice" ? (
+        <HomeworkClozeChoicePlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "cloze_open" ? (
+        <HomeworkClozeOpenPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "read_and_answer" ? (
+        <HomeworkReadAndAnswerPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
+          alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "picture_story" ? (
+        <HomeworkPictureStoryPlayer
+          homeworkId={homework.id}
+          title={payload.title}
+          document={payload.document}
           alreadyCompleted={Boolean(homework.completedAt)}
         />
       ) : null}

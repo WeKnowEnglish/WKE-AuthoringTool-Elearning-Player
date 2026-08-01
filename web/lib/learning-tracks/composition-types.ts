@@ -1,4 +1,5 @@
 import type { GamesFlashcardFace } from "@/lib/activity-builder/games/types-flashcards";
+import type { CoreModuleId } from "@/lib/activity-builder/core-modules/types";
 
 /** Lesson Player interaction screen payload (snake_case). Opaque to Studio validators. */
 export type LearningTrackScreenPayload = {
@@ -13,13 +14,21 @@ export type LearningTrackBeatKind =
   | "flashcards"
   | "listen_and_choose"
   | "multiple_choice"
-  | "letter_mixup";
+  | "letter_mixup"
+  | "line_match"
+  | "true_false"
+  | "sentence_scramble"
+  | "fill_blanks";
 
 /** Beat kinds that should get a post-activity report bridge when `afterBridge` is auto. */
 export const QUIZ_REPORT_BEAT_KINDS: readonly LearningTrackBeatKind[] = [
   "multiple_choice",
   "letter_mixup",
   "listen_and_choose",
+  "line_match",
+  "true_false",
+  "sentence_scramble",
+  "fill_blanks",
 ] as const;
 
 export type LearningTrackFixtureId =
@@ -31,10 +40,7 @@ export type LearningTrackFixtureId =
 /** Built-in hobbies vocabulary list (sync; no IndexedDB). */
 export const HOBBIES_DEFAULT_VOCAB_LIST_ID = "hobbies-default";
 
-export type LearningTrackVocabCompileFormat =
-  | "multiple_choice"
-  | "letter_mixup"
-  | "flashcards";
+export type LearningTrackVocabCompileFormat = CoreModuleId;
 
 /** Library / Activity Bank formats that can feed a track beat today. */
 export type LearningTrackLibraryFormat =
@@ -42,6 +48,10 @@ export type LearningTrackLibraryFormat =
   | "letter_mixup"
   | "flashcards"
   | "listen_and_choose"
+  | "line_match"
+  | "true_false"
+  | "sentence_scramble"
+  | "fill_blanks"
   | "explore_hotspots";
 
 export type LearningTrackBeatSource =
@@ -192,6 +202,29 @@ export type LearningTrackLanguageInFocusSettings = {
   exampleOverlays?: LearningTrackLifExampleOverlay[];
 };
 
+/** Pack-wide line match settings (vocab compile). */
+export type LearningTrackLineMatchSettings = {
+  bodyText: string;
+  autoAdvanceOnPass: boolean;
+};
+
+/** Pack-wide true/false settings (vocab compile). */
+export type LearningTrackTrueFalseSettings = {
+  autoAdvanceOnPass: boolean;
+};
+
+/** Pack-wide sentence scramble settings (vocab compile). */
+export type LearningTrackSentenceScrambleSettings = {
+  bodyText: string;
+  autoAdvanceOnPass: boolean;
+};
+
+/** Pack-wide fill-in-the-blanks settings (vocab compile). */
+export type LearningTrackFillBlanksSettings = {
+  bodyText: string;
+  autoAdvanceOnPass: boolean;
+};
+
 export type LearningTrackBeatPresentation = {
   afterBridge?: LearningTrackAfterBridge;
   introTemplateId?: string;
@@ -207,6 +240,14 @@ export type LearningTrackBeatPresentation = {
   exploreHotspots?: LearningTrackExploreHotspotsSettings;
   /** Language in Focus listen-example audio overlays. */
   languageInFocus?: LearningTrackLanguageInFocusSettings;
+  /** Line match activity settings. */
+  lineMatch?: LearningTrackLineMatchSettings;
+  /** True / false activity settings. */
+  trueFalse?: LearningTrackTrueFalseSettings;
+  /** Sentence scramble activity settings. */
+  sentenceScramble?: LearningTrackSentenceScrambleSettings;
+  /** Fill in the blanks activity settings. */
+  fillBlanks?: LearningTrackFillBlanksSettings;
 };
 
 export type LearningTrackBeatInstance = {
@@ -309,6 +350,10 @@ export const LEARNING_TRACK_BEAT_LABELS: Record<LearningTrackBeatKind, string> =
   listen_and_choose: "Listen and choose",
   multiple_choice: "Multiple choice",
   letter_mixup: "Letter scramble",
+  line_match: "Line match",
+  true_false: "True / false",
+  sentence_scramble: "Sentence scramble",
+  fill_blanks: "Fill in the blanks",
 };
 
 export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
@@ -318,4 +363,8 @@ export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
   "listen_and_choose",
   "multiple_choice",
   "letter_mixup",
+  "line_match",
+  "true_false",
+  "sentence_scramble",
+  "fill_blanks",
 ];

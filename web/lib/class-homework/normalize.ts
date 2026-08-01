@@ -18,6 +18,26 @@ import {
   sortPackFlashcardFaces,
   type PackFlashcardFace,
 } from "@/lib/vocabulary/pack-flashcards";
+import { validatePictureClozeDocument } from "@/lib/picture-cloze/document";
+import { validateVerbTableDocument } from "@/lib/verb-table/document";
+import { validateSentenceColumnsDocument } from "@/lib/sentence-columns/document";
+import {
+  countWordAnnotationTargets,
+  validateWordAnnotationDocument,
+} from "@/lib/word-annotation";
+import { validatePictureWritingDocument } from "@/lib/picture-writing";
+import { validateQuestionWritingDocument } from "@/lib/question-writing";
+import { validateDefinitionMatchDocument } from "@/lib/definition-match";
+import {
+  listClozeChoiceGaps,
+  validateClozeChoiceDocument,
+} from "@/lib/cloze-choice";
+import {
+  listClozeOpenGaps,
+  validateClozeOpenDocument,
+} from "@/lib/cloze-open";
+import { validateReadAndAnswerDocument } from "@/lib/read-and-answer";
+import { validatePictureStoryDocument } from "@/lib/picture-story";
 
 const TITLE_MAX = 120;
 const INSTRUCTIONS_MAX = 2000;
@@ -102,6 +122,117 @@ export function defaultHomeworkPayload(
       templateId: "homework-template-one",
       title: "Homework Template One",
       sectionCount: 6,
+      frozenAt: "",
+    };
+  }
+  if (type === "picture_cloze") {
+    return {
+      type: "picture_cloze",
+      activityId: "",
+      title: "",
+      itemCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "verb_table") {
+    return {
+      type: "verb_table",
+      activityId: "",
+      title: "",
+      rowCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "sentence_columns") {
+    return {
+      type: "sentence_columns",
+      activityId: "",
+      title: "",
+      challengeCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "word_annotation") {
+    return {
+      type: "word_annotation",
+      activityId: "",
+      title: "",
+      targetCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "picture_writing") {
+    return {
+      type: "picture_writing",
+      activityId: "",
+      title: "",
+      promptCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "question_writing") {
+    return {
+      type: "question_writing",
+      activityId: "",
+      title: "",
+      promptCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "definition_match") {
+    return {
+      type: "definition_match",
+      activityId: "",
+      title: "",
+      pairCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "cloze_choice") {
+    return {
+      type: "cloze_choice",
+      activityId: "",
+      title: "",
+      gapCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "cloze_open") {
+    return {
+      type: "cloze_open",
+      activityId: "",
+      title: "",
+      gapCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "read_and_answer") {
+    return {
+      type: "read_and_answer",
+      activityId: "",
+      title: "",
+      questionCount: 0,
+      document: {},
+      frozenAt: "",
+    };
+  }
+  if (type === "picture_story") {
+    return {
+      type: "picture_story",
+      activityId: "",
+      title: "",
+      questionCount: 0,
+      frameCount: 0,
+      document: {},
       frozenAt: "",
     };
   }
@@ -228,6 +359,271 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
     };
   }
 
+  if (input.type === "picture_cloze") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validatePictureClozeDocument(documentRaw);
+      return {
+        type: "picture_cloze",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        itemCount: document.items.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "verb_table") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateVerbTableDocument(documentRaw);
+      return {
+        type: "verb_table",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        rowCount: document.rows.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "sentence_columns") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateSentenceColumnsDocument(documentRaw);
+      return {
+        type: "sentence_columns",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        challengeCount: document.challenges.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "word_annotation") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateWordAnnotationDocument(documentRaw);
+      return {
+        type: "word_annotation",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        targetCount: countWordAnnotationTargets(document.sentences),
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "picture_writing") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validatePictureWritingDocument(documentRaw);
+      return {
+        type: "picture_writing",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        promptCount: document.prompts.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "question_writing") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateQuestionWritingDocument(documentRaw);
+      return {
+        type: "question_writing",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        promptCount: document.prompts.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "definition_match") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateDefinitionMatchDocument(documentRaw);
+      return {
+        type: "definition_match",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        pairCount: document.pairs.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "cloze_choice") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateClozeChoiceDocument(documentRaw);
+      return {
+        type: "cloze_choice",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        gapCount: listClozeChoiceGaps(document.segments).length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "cloze_open") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateClozeOpenDocument(documentRaw);
+      return {
+        type: "cloze_open",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        gapCount: listClozeOpenGaps(document.segments).length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "read_and_answer") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validateReadAndAnswerDocument(documentRaw);
+      return {
+        type: "read_and_answer",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        questionCount: document.questions.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (input.type === "picture_story") {
+    const activityId = asString(input.activityId).trim();
+    const documentRaw = input.document;
+    if (!documentRaw || typeof documentRaw !== "object" || Array.isArray(documentRaw)) {
+      return null;
+    }
+    try {
+      const document = validatePictureStoryDocument(documentRaw);
+      return {
+        type: "picture_story",
+        activityId,
+        title: asString(input.title).trim() || document.title,
+        questionCount: document.questions.length,
+        frameCount: document.frames.length,
+        document: document as unknown as Record<string, unknown>,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
   const body = asString(input.body).trim().slice(0, NOTE_MAX);
   if (!body) return null;
   return { type: "external_note", body };
@@ -256,6 +652,61 @@ export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
   }
   if (payload.type === "homework_template") {
     return `${payload.title} · ${payload.sectionCount} parts`;
+  }
+  if (payload.type === "picture_cloze") {
+    return `${payload.title} · ${payload.itemCount} picture${
+      payload.itemCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "verb_table") {
+    return `${payload.title} · ${payload.rowCount} row${
+      payload.rowCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "sentence_columns") {
+    return `${payload.title} · ${payload.challengeCount} sentence${
+      payload.challengeCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "word_annotation") {
+    return `${payload.title} · ${payload.targetCount} target${
+      payload.targetCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "picture_writing") {
+    return `${payload.title} · ${payload.promptCount} prompt${
+      payload.promptCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "question_writing") {
+    return `${payload.title} · ${payload.promptCount} prompt${
+      payload.promptCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "definition_match") {
+    return `${payload.title} · ${payload.pairCount} pair${
+      payload.pairCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "cloze_choice") {
+    return `${payload.title} · ${payload.gapCount} gap${
+      payload.gapCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "cloze_open") {
+    return `${payload.title} · ${payload.gapCount} gap${
+      payload.gapCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "read_and_answer") {
+    return `${payload.title} · ${payload.questionCount} question${
+      payload.questionCount === 1 ? "" : "s"
+    }`;
+  }
+  if (payload.type === "picture_story") {
+    return `${payload.title} · ${payload.questionCount} question${
+      payload.questionCount === 1 ? "" : "s"
+    } · ${payload.frameCount} frame${payload.frameCount === 1 ? "" : "s"}`;
   }
   return payload.body.length > 80 ? `${payload.body.slice(0, 77)}…` : payload.body;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useStudioPackQuerySource } from "@/components/pilots/useStudioPackQuerySource";
 import bakerySentenceScramble from "@/content/pilots/games-sentence-scramble/bakery-sentence-scramble.json";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
@@ -29,12 +30,42 @@ const LessonPlayer = dynamic(
 const BUILTIN_PACK = parseGamesSentenceScrambleLessonPlayerPack(bakerySentenceScramble);
 
 export function GamesSentenceScramblePilot() {
+  const remote = useStudioPackQuerySource();
   const [pack, setPack] = useState<GamesSentenceScrambleLessonPlayerPack>(BUILTIN_PACK);
   const [sourceName, setSourceName] = useState(BUILTIN_PACK.activity_name);
   const [generation, setGeneration] = useState(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const appliedRemoteKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (remote.notice && !remote.rawPack) {
+      setImportNotice(remote.notice);
+      return;
+    }
+    if (!remote.rawPack || !remote.sourceKind) return;
+    const key = `${remote.sourceKind}:${remote.sourceName}`;
+    if (appliedRemoteKeyRef.current === key) return;
+    try {
+      const next = parseGamesSentenceScrambleLessonPlayerPack(remote.rawPack);
+      appliedRemoteKeyRef.current = key;
+      setPack(next);
+      setSourceName(remote.sourceName || next.activity_name);
+      setGeneration((n) => n + 1);
+      setImportNotice(
+        remote.sourceKind === "activity"
+          ? `Loaded from My Activity Bank (${next.screens.length} sentence${
+              next.screens.length === 1 ? "" : "s"
+            }).`
+          : `Loaded from Studio inbox (${next.screens.length} sentence${
+              next.screens.length === 1 ? "" : "s"
+            }).`,
+      );
+    } catch (error) {
+      setImportNotice(error instanceof Error ? error.message : "Could not parse pack.");
+    }
+  }, [remote.notice, remote.rawPack, remote.sourceKind, remote.sourceName]);
 
   const screens = useMemo((): LessonScreenRow[] => {
     return pack.screens.map((payload, index) => ({
@@ -81,7 +112,7 @@ export function GamesSentenceScramblePilot() {
               Studio Quiz sentence scramble packs play as Lesson Player drag_sentence screens.
             </p>
             <p className="mt-2 text-xs font-semibold text-kid-ink/60">
-              Playing: {sourceName}
+              Playing: {remote.loading ? "Loading Studio pack…" : sourceName}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

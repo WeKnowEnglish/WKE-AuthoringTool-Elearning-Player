@@ -57,6 +57,39 @@ function editPathForFormat(format: StudioActivityFormat, activityId: string): st
   if (format === "learning_track") {
     return `/teacher/activity-builder/learning-tracks?activity=${encodeURIComponent(activityId)}`;
   }
+  if (format === "picture_cloze") {
+    return `/teacher/activity-builder/picture-cloze`;
+  }
+  if (format === "verb_table") {
+    return `/teacher/activity-builder/verb-table`;
+  }
+  if (format === "sentence_columns") {
+    return `/teacher/activity-builder/sentence-columns`;
+  }
+  if (format === "word_annotation") {
+    return `/teacher/activity-builder/word-annotation`;
+  }
+  if (format === "picture_writing") {
+    return `/teacher/activity-builder/picture-writing`;
+  }
+  if (format === "question_writing") {
+    return `/teacher/activity-builder/question-writing`;
+  }
+  if (format === "definition_match") {
+    return `/teacher/activity-builder/definition-match`;
+  }
+  if (format === "cloze_choice") {
+    return `/teacher/activity-builder/cloze-choice`;
+  }
+  if (format === "cloze_open") {
+    return `/teacher/activity-builder/cloze-open`;
+  }
+  if (format === "read_and_answer") {
+    return `/teacher/activity-builder/read-and-answer`;
+  }
+  if (format === "picture_story") {
+    return `/teacher/activity-builder/picture-story`;
+  }
   return "/teacher/activity-builder";
 }
 

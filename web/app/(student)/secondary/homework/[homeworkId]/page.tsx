@@ -4,9 +4,10 @@ import { notFound, redirect } from "next/navigation";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
+import { HomeworkStartGate } from "@/components/primary/HomeworkStartGate";
 import { HomeworkStudioActivityPlayer } from "@/components/primary/HomeworkStudioActivityPlayer";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
-import { CLASS_HOMEWORK_PAYLOAD_LABELS } from "@/lib/class-homework/types";
+import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import { createClient } from "@/lib/supabase/server";
@@ -29,15 +30,30 @@ function formatDue(value: string | null) {
   }).format(new Date(value));
 }
 
+function homeworkFrame(
+  type: ClassHomeworkPayloadType,
+): "standard" | "wide" {
+  switch (type) {
+    case "pack_quiz":
+    case "pack_flashcards":
+    case "word_pack_practice":
+    case "external_note":
+      return "standard";
+    default:
+      return "wide";
+  }
+}
+
 export default async function SecondaryHomeworkPage({ params }: Props) {
-  await requireSecondaryStudentAccess();
   const { homeworkId } = await params;
+  const homeworkPath = `/secondary/homework/${encodeURIComponent(homeworkId)}`;
+  await requireSecondaryStudentAccess({ next: homeworkPath });
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect(`/login?next=/secondary/homework/${encodeURIComponent(homeworkId)}`);
+  if (!user) redirect(`/login?portal=student&next=${encodeURIComponent(homeworkPath)}`);
   if (isTeacher(user)) redirect(TEACHER_DEFAULT_PATH);
   if (!isStudent(user)) redirect("/login?error=unknown_role");
 
@@ -61,7 +77,12 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
       instructions={homework.instructions || null}
       closed={homework.status === "closed"}
       homeHref="/secondary"
+      frame={homeworkFrame(payload.type)}
     >
+      <HomeworkStartGate
+        typeLabel={typeLabel}
+        alreadyCompleted={Boolean(homework.completedAt)}
+      >
       {payload.type === "external_note" ? (
         <div className="rounded-xl border-2 border-neutral-800 bg-white px-4 py-5">
           <h2 className="text-sm font-extrabold uppercase tracking-wide text-neutral-600">
@@ -137,6 +158,7 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
           alreadyCompleted={Boolean(homework.completedAt)}
         />
       ) : null}
+      </HomeworkStartGate>
     </HomeworkPlayChrome>
   );
 }

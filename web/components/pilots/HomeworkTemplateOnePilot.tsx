@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Clock3, LockKeyhole, RotateCcw } from "lucide-react";
 import { PictureClozePlayer } from "@/components/picture-cloze/PictureClozePlayer";
@@ -98,10 +99,14 @@ function partDone(order: number, flags: Omit<SavedProgress, "activePart">): bool
 export function HomeworkTemplateOnePilot({
   homeworkId,
   alreadyCompleted = false,
+  homeHref = "/primary",
 }: {
   homeworkId?: string;
   alreadyCompleted?: boolean;
+  /** Where to send the student after they finish assigned homework. */
+  homeHref?: string;
 } = {}) {
+  const router = useRouter();
   const pictureClozeSection = HOMEWORK_TEMPLATE_ONE.sections[0] as PictureClozeSection;
   const annotationSection = HOMEWORK_TEMPLATE_ONE.sections[1] as WordAnnotationSection;
   const sentenceColumnsSection = HOMEWORK_TEMPLATE_ONE
@@ -200,14 +205,21 @@ export function HomeworkTemplateOnePilot({
 
   const finishAssignedHomework = () => {
     setPartSixDone(true);
-    if (!homeworkId || alreadyCompleted) return;
+    if (!homeworkId) return;
+
+    if (alreadyCompleted) {
+      router.push(homeHref);
+      return;
+    }
+
     setCompletionNotice("Saving completion…");
     void recordHomeworkTemplateCompletion({ homeworkId }).then((result) => {
-      setCompletionNotice(
-        result.ok
-          ? "Homework complete — your teacher can now see it."
-          : result.error,
-      );
+      if (!result.ok) {
+        setCompletionNotice(result.error);
+        return;
+      }
+      setCompletionNotice("Homework complete — heading home…");
+      router.push(homeHref);
     });
   };
 
@@ -219,39 +231,49 @@ export function HomeworkTemplateOnePilot({
     );
   }
 
+  const assigned = Boolean(homeworkId);
+
   return (
-    <main className="min-h-dvh bg-[linear-gradient(180deg,#eff8ff_0%,#fff9ed_100%)] px-3 py-5 sm:px-6">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white/95 px-4 py-3 shadow-sm">
-          <div>
-            <Link
-              href={homeworkId ? "/primary" : "/pilots"}
-              className="text-xs font-bold text-sky-700 hover:underline"
-            >
-              ← {homeworkId ? "Primary Home" : "Pilots"}
-            </Link>
-            <h1 className="mt-1 text-2xl font-black tracking-tight text-[#17375e]">
-              {HOMEWORK_TEMPLATE_ONE.title}
-            </h1>
-            <p className="text-sm font-semibold text-slate-600">
-              {HOMEWORK_TEMPLATE_ONE.subtitle}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900">
-              <Clock3 className="h-4 w-4" />~
-              {HOMEWORK_TEMPLATE_ONE.estimatedMinutes} min
-            </span>
-            <button
-              type="button"
-              onClick={reset}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset pilot
-            </button>
-          </div>
-        </header>
+    <div
+      className={
+        assigned
+          ? "space-y-4"
+          : "min-h-dvh bg-[linear-gradient(180deg,#eff8ff_0%,#fff9ed_100%)] px-3 py-5 sm:px-6"
+      }
+    >
+      <div className={assigned ? "space-y-4" : "mx-auto max-w-7xl space-y-4"}>
+        {assigned ? null : (
+          <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white/95 px-4 py-3 shadow-sm">
+            <div>
+              <Link
+                href="/pilots"
+                className="text-xs font-bold text-sky-700 hover:underline"
+              >
+                ← Pilots
+              </Link>
+              <h1 className="mt-1 text-2xl font-black tracking-tight text-[#17375e]">
+                {HOMEWORK_TEMPLATE_ONE.title}
+              </h1>
+              <p className="text-sm font-semibold text-slate-600">
+                {HOMEWORK_TEMPLATE_ONE.subtitle}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900">
+                <Clock3 className="h-4 w-4" />~
+                {HOMEWORK_TEMPLATE_ONE.estimatedMinutes} min
+              </span>
+              <button
+                type="button"
+                onClick={reset}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset pilot
+              </button>
+            </div>
+          </header>
+        )}
 
         {completionNotice ? (
           <p className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900">
@@ -261,9 +283,22 @@ export function HomeworkTemplateOnePilot({
 
         <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
           <aside className="space-y-2 lg:sticky lg:top-4 lg:self-start">
-            <p className="px-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-              Six-part homework
-            </p>
+            <div className="flex items-center justify-between gap-2 px-2">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Six-part homework
+              </p>
+              {assigned ? (
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                  aria-label="Reset progress"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Reset
+                </button>
+              ) : null}
+            </div>
             {HOMEWORK_TEMPLATE_ONE.sections.map((item) => {
               const available = partAvailable(item.order, progressFlags);
               const active = item.order === activePart;
@@ -330,6 +365,7 @@ export function HomeworkTemplateOnePilot({
                 key={`${resetNonce}-part-1`}
                 activity={playables.pictureCloze}
                 eyebrow="Part 1 of 6 · Vocabulary"
+                doneLabel={assigned ? "Continue" : "Done"}
                 onMastered={() => {
                   setPartOneDone(true);
                   setActivePart(2);
@@ -390,12 +426,13 @@ export function HomeworkTemplateOnePilot({
                 key={`${resetNonce}-part-6`}
                 activity={playables.questionWriting}
                 eyebrow="Part 6 of 6 · Writing"
+                doneLabel={assigned ? "Finish homework" : "Done"}
                 onReady={finishAssignedHomework}
               />
             ) : null}
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

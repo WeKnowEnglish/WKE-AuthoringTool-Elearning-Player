@@ -270,7 +270,7 @@ export function ClassHomeworkPanel({
                   onClick={() => void copyStudentLink(item.id)}
                   className="min-h-10 shrink-0 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
                   aria-label={`Copy student link for ${item.title}`}
-                  title="Students must sign in and belong to this class"
+                  title="Opens student login, then Start homework for this assignment"
                 >
                   {copiedId === item.id ? "Copied!" : "Copy student link"}
                 </button>

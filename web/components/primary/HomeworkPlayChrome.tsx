@@ -13,8 +13,17 @@ type Props = {
   instructions?: string | null;
   closed?: boolean;
   homeHref?: string;
+  /** Play surface width — use `wide` for multi-column / template homework. */
+  frame?: "standard" | "wide";
+  /** Due date + instructions block under the sticky bar. */
+  showContext?: boolean;
   children: ReactNode;
 };
+
+const FRAME_MAX = {
+  standard: "max-w-3xl",
+  wide: "max-w-7xl",
+} as const;
 
 /**
  * Product C play frame — sticky header + assignment context.
@@ -27,14 +36,21 @@ export function HomeworkPlayChrome({
   instructions,
   closed = false,
   homeHref = "/primary",
+  frame = "standard",
+  showContext = true,
   children,
 }: Props) {
   const { muted, toggleMuted } = useAudioMuted();
+  const maxWidth = FRAME_MAX[frame];
+  const showMetaBlock =
+    (showContext && (Boolean(dueLabel) || Boolean(instructions))) || closed;
 
   return (
     <PrimaryChrome className="min-h-dvh bg-[var(--pl-bg)]">
       <header className="sticky top-0 z-20 border-b border-[var(--pl-border)] bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div
+          className={`mx-auto flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6 ${maxWidth}`}
+        >
           <Link
             href={homeHref}
             className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-3 text-sm font-extrabold text-[var(--pl-ink)] transition hover:border-[var(--pl-purple)] hover:bg-white"
@@ -61,20 +77,24 @@ export function HomeworkPlayChrome({
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-5 sm:px-6 sm:py-6">
-        <div className="mb-5 space-y-2">
-          <p className="text-sm font-semibold text-[var(--pl-muted)]">Due {dueLabel}</p>
-          {instructions ? (
-            <p className="rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-3 text-sm text-[var(--pl-ink)] shadow-sm">
-              {instructions}
-            </p>
-          ) : null}
-          {closed ? (
-            <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
-              This assignment is closed. You can still review it.
-            </p>
-          ) : null}
-        </div>
+      <main className={`mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 ${maxWidth}`}>
+        {showMetaBlock ? (
+          <div className="mb-5 space-y-2">
+            {showContext ? (
+              <p className="text-sm font-semibold text-[var(--pl-muted)]">Due {dueLabel}</p>
+            ) : null}
+            {showContext && instructions ? (
+              <p className="rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-3 text-sm text-[var(--pl-ink)] shadow-sm">
+                {instructions}
+              </p>
+            ) : null}
+            {closed ? (
+              <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+                This assignment is closed. You can still review it.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {children}
       </main>
     </PrimaryChrome>

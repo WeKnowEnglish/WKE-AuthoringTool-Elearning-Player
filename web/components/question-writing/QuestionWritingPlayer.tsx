@@ -16,12 +16,14 @@ type Stage = "activity" | "review";
 type Props = {
   activity: QuestionWritingPlayable;
   eyebrow?: string;
+  doneLabel?: string;
   onReady?: () => void;
 };
 
 export function QuestionWritingPlayer({
   activity,
   eyebrow = "Question writing",
+  doneLabel = "Done",
   onReady,
 }: Props) {
   const [responses, setResponses] = useState<Record<string, string>>({});
@@ -86,7 +88,9 @@ export function QuestionWritingPlayer({
           >
             Edit my questions
           </KidButton>
-          {onReady ? <KidButton onClick={onReady}>Done</KidButton> : null}
+          {onReady ? (
+            <KidButton onClick={onReady}>{doneLabel}</KidButton>
+          ) : null}
         </div>
       </KidPanel>
     );

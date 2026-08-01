@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PictureClozePlayer } from "@/components/picture-cloze/PictureClozePlayer";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
 import { recordPictureClozeHomeworkCompletion } from "@/lib/actions/class-homework";
@@ -14,6 +15,7 @@ type Props = {
   title: string;
   document: Record<string, unknown>;
   alreadyCompleted: boolean;
+  homeHref?: string;
 };
 
 export function HomeworkPictureClozePlayer({
@@ -21,7 +23,9 @@ export function HomeworkPictureClozePlayer({
   title,
   document: rawDocument,
   alreadyCompleted,
+  homeHref = "/primary",
 }: Props) {
+  const router = useRouter();
   const [finished, setFinished] = useState(false);
   const [completedAt, setCompletedAt] = useState<string | null>(
     alreadyCompleted ? "saved" : null,
@@ -59,8 +63,9 @@ export function HomeworkPictureClozePlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      router.push(homeHref);
     });
-  }, [finished, homeworkId]);
+  }, [finished, homeworkId, homeHref, router]);
 
   if (view.error || !view.activity) {
     return (
@@ -70,7 +75,7 @@ export function HomeworkPictureClozePlayer({
     );
   }
 
-  if (finished || completedAt) {
+  if ((finished || completedAt) && saveError) {
     return (
       <HomeworkFinishPanel
         title="Nice work!"
@@ -78,12 +83,32 @@ export function HomeworkPictureClozePlayer({
           view.activity.items.length === 1 ? "" : "s"
         }).`}
         saving={saving}
-        saved={Boolean(completedAt)}
+        saved={false}
         saveError={saveError}
         retryLabel="Try again"
+        primaryHref={homeHref}
+        primaryLabel="Done"
         onRetry={() => {
           setFinished(false);
           setSaveError(null);
+        }}
+      />
+    );
+  }
+
+  if (finished || completedAt) {
+    return (
+      <HomeworkFinishPanel
+        title="Nice work!"
+        detail={`You finished ${title}. Heading back home…`}
+        saving={saving || Boolean(finished && !completedAt)}
+        saved={Boolean(completedAt)}
+        saveError={null}
+        retryLabel="Stay here"
+        primaryHref={homeHref}
+        primaryLabel="Done"
+        onRetry={() => {
+          setFinished(false);
         }}
       />
     );
@@ -93,6 +118,7 @@ export function HomeworkPictureClozePlayer({
     <PictureClozePlayer
       activity={view.activity}
       eyebrow="Homework · Picture cloze"
+      doneLabel="Done"
       onMastered={() => setFinished(true)}
     />
   );

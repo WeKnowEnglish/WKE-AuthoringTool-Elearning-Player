@@ -3,14 +3,28 @@ import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { isSecondaryEligibleBand } from "@/lib/auth/student-bands";
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireSecondaryStudentAccess(): Promise<void> {
+function safeLoginNext(path: string | undefined): string | null {
+  const next = path?.trim();
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  return next;
+}
+
+export async function requireSecondaryStudentAccess(opts?: {
+  /** Preserve deep links through Secondary login (e.g. homework). */
+  next?: string;
+}): Promise<void> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/secondary/login");
+    const next = safeLoginNext(opts?.next);
+    redirect(
+      next
+        ? `/secondary/login?next=${encodeURIComponent(next)}`
+        : "/secondary/login",
+    );
   }
 
   if (isTeacher(user)) {

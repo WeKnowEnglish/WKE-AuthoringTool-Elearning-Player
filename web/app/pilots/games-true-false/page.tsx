@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { GamesTrueFalsePilot } from "@/components/pilots/GamesTrueFalsePilot";
 
 export const metadata = {
@@ -6,5 +7,15 @@ export const metadata = {
 };
 
 export default function GamesTrueFalsePilotPage() {
-  return <GamesTrueFalsePilot />;
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl p-6 text-lg font-extrabold text-kid-ink">
+          Loading true/false pilot…
+        </div>
+      }
+    >
+      <GamesTrueFalsePilot />
+    </Suspense>
+  );
 }

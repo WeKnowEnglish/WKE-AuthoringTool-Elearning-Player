@@ -100,7 +100,7 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
           href="/teacher/media"
           active={pathname.startsWith("/teacher/media") && !onComicMedia}
         >
-          Media Library
+          Asset Library
         </TeacherNavMenuLink>
         {isAdmin ? (
           <TeacherNavMenuLink href="/teacher/media/comic" active={onComicMedia}>

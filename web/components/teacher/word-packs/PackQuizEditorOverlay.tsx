@@ -146,8 +146,8 @@ export function PackQuizEditorOverlay({ open, onClose, quizId, quizTitle }: Prop
     if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        // Shared media library portal (z-200) should close first, not the quiz editor.
-        if (document.querySelector('[aria-label="Media library"]')) return;
+        // Shared asset library portal (z-200) should close first, not the quiz editor.
+        if (document.querySelector('[aria-label="Asset library"]')) return;
         e.preventDefault();
         onClose();
       }

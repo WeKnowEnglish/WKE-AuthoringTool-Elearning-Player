@@ -225,11 +225,11 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Media Library</h1>
+          <h1 className="text-2xl font-bold">Asset Library</h1>
           <p className="mt-1 text-sm text-neutral-600">
             {scope === "mine" ?
               "Your uploads — edit metadata and delete here. School library still includes these for everyone."
-            : "Shared school catalog — every teacher can browse and use these in activities."}
+            : "Find trusted images and audio for lessons, stories, games, and vocabulary practice."}
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-3">
@@ -239,6 +239,47 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
           </Link>
         </div>
       </div>
+
+      <section className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-sky-950">Browse the collection</h2>
+            <p className="mt-1 max-w-2xl text-xs text-sky-900/80">
+              Start broad, then narrow by learning purpose. AI-generated items are labeled so teachers can review them
+              before placing them in student activities.
+            </p>
+          </div>
+          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-sky-900 shadow-sm">
+            {total} matching asset{total === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2" aria-label="Quick asset filters">
+          {[
+            { label: "All assets", value: "" },
+            { label: "AI generated", value: "ai-generated" },
+            { label: "School life starter", value: "school-life-starter-2026-08" },
+            { label: "Vocabulary objects", value: "vocabulary-object" },
+            { label: "Characters", value: "character" },
+            { label: "Scenes", value: "scene" },
+          ].map((collection) => {
+            const active = tags.trim().toLowerCase() === collection.value;
+            return (
+              <Link
+                key={collection.label}
+                href={buildSearchUrl({ ...filterBase, tags: collection.value, page: "" })}
+                aria-current={active ? "page" : undefined}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  active ?
+                    "border-sky-800 bg-sky-800 text-white"
+                  : "border-sky-200 bg-white text-sky-900 hover:border-sky-400"
+                }`}
+              >
+                {collection.label}
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       <div
         className="flex flex-wrap gap-1 rounded-lg border border-neutral-200 bg-white p-1"
@@ -297,11 +338,11 @@ export default async function TeacherMediaPage({ searchParams }: Props) {
         <form method="get" action="/teacher/media" className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {scope === "mine" ? <input type="hidden" name="scope" value="mine" /> : null}
           <label className="text-sm">
-            Search
+            Search assets
             <input
               name="q"
               defaultValue={q}
-              placeholder="filename, URL, tag, alt name..."
+              placeholder="name, topic, action, or tag..."
               className="mt-1 block w-full rounded border px-2 py-1 text-sm"
             />
           </label>

@@ -36,10 +36,12 @@ function useTeacherMediaLibrary() {
 function Thumb({
   kind,
   url,
+  alt,
   className = "object-cover",
 }: {
   kind: MediaKind;
   url: string;
+  alt: string;
   className?: string;
 }) {
   if (kind === "video") {
@@ -66,7 +68,7 @@ function Thumb({
   return (
     <Image
       src={url}
-      alt=""
+      alt={alt}
       fill
       sizes="120px"
       className={className}
@@ -97,7 +99,7 @@ function AssetTile({
       title={title}
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-md bg-neutral-100">
-        <Thumb kind={kind} url={asset.public_url} />
+        <Thumb kind={kind} url={asset.public_url} alt={title} />
       </div>
       <p className="mt-1 truncate text-xs text-neutral-700">{title}</p>
     </button>
@@ -195,13 +197,13 @@ export function TeacherMediaLibraryBrowser({ ownerId, compact, className }: Prop
       {library.view === "home" ? (
         <div className={compact ? "space-y-4" : "space-y-6"}>
           <label className="block text-sm">
-            Search all folders
+            Search all assets
             <input
               ref={homeSearchRef}
               type="text"
               value={library.homeQuery}
               onChange={(e) => setTeacherMediaLibraryHomeQuery(e.target.value)}
-              placeholder="Search images, uploads, audio…"
+              placeholder="Search images, characters, scenes, audio…"
               className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm"
             />
           </label>

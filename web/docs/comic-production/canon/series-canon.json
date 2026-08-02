@@ -1,0 +1,173 @@
+{
+  "schema_version": "1.0",
+  "series": {
+    "working_title": "WKE Educational Comic Series",
+    "status": "in_production",
+    "updated": "2026-08-02",
+    "learner_profile": {
+      "minimum_age": 9,
+      "maximum_age": 12,
+      "cefr_levels": ["A1", "A2"]
+    },
+    "themes": [
+      "curiosity",
+      "courage",
+      "friendship",
+      "adventure",
+      "science",
+      "empathy"
+    ]
+  },
+  "characters": [
+    {
+      "id": "mia",
+      "name": "Mia",
+      "type": "human_child",
+      "identity_color": "purple",
+      "visual_anchors": [
+        "long straight black hair",
+        "purple hair clip",
+        "purple floral or space-inspired dress",
+        "purple footwear",
+        "purple backpack"
+      ],
+      "observed_traits": ["analytical", "science-oriented", "cautious", "skeptical"],
+      "model_sheet": "references/visual/model-sheets/mia-model-sheet-v1.png"
+    },
+    {
+      "id": "zara",
+      "name": "Zara",
+      "type": "human_child",
+      "identity_color": "yellow",
+      "visual_anchors": [
+        "long dark curly hair",
+        "yellow headband",
+        "yellow shirt with sun symbol",
+        "blue shorts",
+        "yellow or orange backpack"
+      ],
+      "observed_traits": ["warm", "curious", "encouraging", "empathetic"],
+      "model_sheet": "references/visual/model-sheets/zara-model-sheet-v1.png"
+    },
+    {
+      "id": "leo",
+      "name": "Leo",
+      "type": "human_child",
+      "identity_color": "blue",
+      "visual_anchors": [
+        "short black hair",
+        "blue shirt with wave symbol",
+        "dark blue shorts",
+        "blue shoes",
+        "blue backpack"
+      ],
+      "observed_traits": ["energetic", "playful", "curious", "action-oriented"],
+      "model_sheet": "references/visual/model-sheets/leo-model-sheet-v1.png"
+    },
+    {
+      "id": "ethan",
+      "name": "Ethan",
+      "type": "human_child",
+      "identity_color": "green",
+      "visual_anchors": [
+        "curly brown hair",
+        "green shirt with mountain symbol",
+        "khaki cargo shorts",
+        "green shoes",
+        "green backpack"
+      ],
+      "observed_traits": ["imaginative", "hopeful", "adventurous", "persistent"],
+      "model_sheet": "references/visual/model-sheets/ethan-model-sheet-v1.png"
+    },
+    {
+      "id": "keelan",
+      "name": "Keelan",
+      "type": "alien",
+      "identity_color": "blue",
+      "pronouns": ["he", "him"],
+      "visual_anchors": [
+        "small blue fuzzy body",
+        "large pointed ears",
+        "large golden-dark eyes",
+        "orange star markings",
+        "small fangs",
+        "tail"
+      ],
+      "confirmed_abilities": ["speaks the children's language", "limited magic"],
+      "confirmed_condition": "weak after his ship crashed",
+      "model_sheet": "references/visual/model-sheets/keelan-model-sheet-v1.png",
+      "anatomy_lock": {
+        "relative_height": "55-60% of a child's standing height from feet to ear tips",
+        "digits_per_hand": 4,
+        "toes_per_foot": 4,
+        "upper_fangs": 2,
+        "tail": "medium, fuzzy, gently upturned tip",
+        "magic": "small blue-white spiral or orb with soft cyan sparks"
+      },
+      "model_sheet_open_items": []
+    }
+  ],
+  "visual_standard": {
+    "status": "production_standard_v1",
+    "page_width_px": 1122,
+    "page_height_px": 1402,
+    "orientation": "portrait",
+    "panels_per_page": {"minimum": 3, "maximum": 6},
+    "identity_system": {
+      "mia": "purple",
+      "zara": "yellow-sun",
+      "leo": "blue-wave",
+      "ethan": "green-mountain",
+      "keelan": "blue-orange-stars"
+    },
+    "fixed_scene_map": "references/visual/fixed-crash-site-scene-map.svg",
+    "fixed_scene_map_preview": "references/visual/fixed-crash-site-scene-map.png",
+    "scene_axis_rule": "ship west, hollow east, default camera south of the west-east axis"
+  },
+  "locations": {
+    "crash_site": {
+      "status": "production_canon_v1_1",
+      "ship_position": "left",
+      "tree_hollow_position": "right",
+      "ship_entrance_direction": "east",
+      "backpacks": "each color-coded backpack remains with its owner; no duplicate loose packs at the entrance",
+      "keelan_start": "at the hollow threshold facing west",
+      "children_start": "between the ship and Keelan facing east"
+    }
+  },
+  "chapters": [
+    {
+      "number": 1,
+      "slug": "chapter-1",
+      "title": "A New Friend Arrives",
+      "status": "published",
+      "story_pages": 6,
+      "cover": true,
+      "canonical_cover": "source-pages/chapter-01/cover.png",
+      "canonical_pages": [
+        "source-pages/chapter-01/page-01.png",
+        "source-pages/chapter-01/page-02.png",
+        "source-pages/chapter-01/page-03.png",
+        "source-pages/chapter-01/page-04.png",
+        "source-pages/chapter-01/page-05.png",
+        "source-pages/chapter-01/page-06.png"
+      ],
+      "documentation_audit": "audits/chapter-01-documentation-audit.md",
+      "audit_outcome": "pass_with_targeted_corrections"
+    },
+    {
+      "number": 2,
+      "slug": "chapter-2",
+      "title": null,
+      "status": "in_production",
+      "confirmed_pages": 1,
+      "canonical_page_01": "source-pages/chapter-02/page-01.png"
+    }
+  ],
+  "open_decisions": [
+    "Chapter 2 title",
+    "Chapter 2 immediate repair or help goal",
+    "Chapter 2 ending hook",
+    "final page aspect ratio approval"
+  ]
+}

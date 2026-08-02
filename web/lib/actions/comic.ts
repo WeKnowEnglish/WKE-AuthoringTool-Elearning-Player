@@ -1,8 +1,17 @@
 "use server";
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { revalidatePath } from "next/cache";
+import sharp from "sharp";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { chapterOneEditablePackage } from "@/content/comics/chapter-1";
 import { requireAdminContext } from "@/lib/admin/admin-context";
+import {
+  createEmptyComicOverlay,
+  parseComicPageOverlay,
+  type ComicPageOverlay,
+} from "@/lib/comic/overlay";
 import { loadComicChapterBySlug } from "@/lib/comic/load-chapter";
 import {
   COMIC_ALLOWED_TYPES,
@@ -41,7 +50,7 @@ async function loadAdminChapter(
   const { data: pages } = await service
     .from("comic_pages")
     .select(
-      "id, chapter_id, page_index, public_url, original_filename, content_type",
+      "id, chapter_id, page_index, public_url, original_filename, content_type, image_width, image_height, overlay_data",
     )
     .eq("chapter_id", chapter.id)
     .order("page_index", { ascending: true });
@@ -52,6 +61,7 @@ async function loadAdminChapter(
     title: chapter.title as string,
     subtitle: (chapter.subtitle as string | null) ?? null,
     published: Boolean(chapter.published),
+    source: "database",
     pages: (pages ?? []).map((row) => ({
       id: row.id as string,
       chapterId: row.chapter_id as string,
@@ -59,6 +69,9 @@ async function loadAdminChapter(
       publicUrl: row.public_url as string,
       originalFilename: row.original_filename as string,
       contentType: row.content_type as string,
+      imageWidth: (row.image_width as number | null) ?? null,
+      imageHeight: (row.image_height as number | null) ?? null,
+      overlay: parseComicPageOverlay(row.overlay_data),
     })),
   };
 }
@@ -114,6 +127,9 @@ export async function uploadComicPages(formData: FormData): Promise<ComicActionR
     const filename = sanitizeFilename(file.name);
     const storagePath = `${chapter.id}/${pageId}/${filename}`;
     const bytes = Buffer.from(await file.arrayBuffer());
+    const metadata = await sharp(bytes).metadata();
+    const imageWidth = metadata.width ?? 1024;
+    const imageHeight = metadata.height ?? 1536;
 
     const { error: uploadError } = await service.storage
       .from(COMIC_MEDIA_BUCKET)
@@ -137,6 +153,10 @@ export async function uploadComicPages(formData: FormData): Promise<ComicActionR
       public_url: publicData.publicUrl,
       original_filename: filename,
       content_type: file.type,
+      image_width: imageWidth,
+      image_height: imageHeight,
+      overlay_data: createEmptyComicOverlay(imageWidth, imageHeight),
+      overlay_updated_at: new Date().toISOString(),
       uploaded_by: userId,
     });
     if (insertError) {
@@ -270,6 +290,138 @@ export async function reorderComicPages(input: {
   revalidateComicPaths(slug);
   const refreshed = await loadAdminChapter(service, slug);
   if (!refreshed) return { ok: false, error: "Reordered, but could not reload chapter." };
+  return { ok: true, chapter: refreshed };
+}
+
+export async function saveComicPageOverlay(input: {
+  pageId: string;
+  slug?: string;
+  overlay: ComicPageOverlay;
+}): Promise<ComicActionResult> {
+  const gate = await requireAdminContext();
+  if (!gate.ok) return { ok: false, error: gate.error };
+  const slug = input.slug?.trim() || DEFAULT_COMIC_CHAPTER_SLUG;
+  const overlay = parseComicPageOverlay(input.overlay);
+  if (!overlay) {
+    return { ok: false, error: "The lettering document is invalid. Check its text and placement values." };
+  }
+
+  const { error } = await gate.ctx.service
+    .from("comic_pages")
+    .update({
+      overlay_data: overlay,
+      image_width: overlay.canvas.width,
+      image_height: overlay.canvas.height,
+      overlay_updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.pageId);
+
+  if (error) return { ok: false, error: error.message || "Could not save lettering." };
+
+  revalidateComicPaths(slug);
+  const refreshed = await loadAdminChapter(gate.ctx.service, slug);
+  if (!refreshed) return { ok: false, error: "Saved, but could not reload the chapter." };
+  return { ok: true, chapter: refreshed };
+}
+
+/**
+ * Installs the bundled editable Chapter 1 package into Supabase.
+ * Existing storage objects are preserved for recovery; page records are updated in place.
+ */
+export async function installEditableChapterOne(): Promise<ComicActionResult> {
+  const gate = await requireAdminContext();
+  if (!gate.ok) return { ok: false, error: gate.error };
+  const { service, userId } = gate.ctx;
+  const slug = DEFAULT_COMIC_CHAPTER_SLUG;
+  const chapter = await loadAdminChapter(service, slug);
+  if (!chapter) {
+    return { ok: false, error: "Apply comic migrations 098 and 101 before installing Chapter 1." };
+  }
+
+  const uploaded: Array<{
+    pageIndex: number;
+    storagePath: string;
+    publicUrl: string;
+    originalFilename: string;
+    overlay: ComicPageOverlay;
+  }> = [];
+
+  for (const page of chapterOneEditablePackage.pages) {
+    if (!page.overlay) continue;
+    const originalFilename = page.publicUrl.split("/").pop() ?? `page-${page.pageIndex}.png`;
+    const localPath = path.join(process.cwd(), "public", ...page.publicUrl.split("/").filter(Boolean));
+    let bytes: Buffer;
+    try {
+      bytes = await readFile(localPath);
+    } catch {
+      return { ok: false, error: `Bundled comic art is missing: ${originalFilename}` };
+    }
+
+    const storagePath = `${chapter.id}/editable-v1/${originalFilename}`;
+    const { error: uploadError } = await service.storage
+      .from(COMIC_MEDIA_BUCKET)
+      .upload(storagePath, bytes, { contentType: "image/png", upsert: true });
+    if (uploadError) return { ok: false, error: uploadError.message || "Art upload failed." };
+    const { data } = service.storage.from(COMIC_MEDIA_BUCKET).getPublicUrl(storagePath);
+    uploaded.push({
+      pageIndex: page.pageIndex,
+      storagePath,
+      publicUrl: data.publicUrl,
+      originalFilename,
+      overlay: page.overlay,
+    });
+  }
+
+  for (const page of uploaded) {
+    const existing = chapter.pages.find((candidate) => candidate.pageIndex === page.pageIndex);
+    const values = {
+      storage_path: page.storagePath,
+      public_url: page.publicUrl,
+      original_filename: page.originalFilename,
+      content_type: "image/png",
+      image_width: page.overlay.canvas.width,
+      image_height: page.overlay.canvas.height,
+      overlay_data: page.overlay,
+      overlay_updated_at: new Date().toISOString(),
+      uploaded_by: userId,
+    };
+
+    const result = existing
+      ? await service.from("comic_pages").update(values).eq("id", existing.id)
+      : await service.from("comic_pages").insert({
+          id: crypto.randomUUID(),
+          chapter_id: chapter.id,
+          page_index: page.pageIndex,
+          ...values,
+        });
+    if (result.error) {
+      return { ok: false, error: result.error.message || "Could not install editable pages." };
+    }
+  }
+
+  const bundledIndexes = new Set(uploaded.map((page) => page.pageIndex));
+  const extras = chapter.pages.filter((page) => !bundledIndexes.has(page.pageIndex));
+  if (extras.length > 0) {
+    const { error } = await service
+      .from("comic_pages")
+      .delete()
+      .in("id", extras.map((page) => page.id));
+    if (error) return { ok: false, error: error.message || "Could not remove extra page records." };
+  }
+
+  await service
+    .from("comic_chapters")
+    .update({
+      title: chapterOneEditablePackage.title,
+      subtitle: chapterOneEditablePackage.subtitle,
+      published: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", chapter.id);
+
+  revalidateComicPaths(slug);
+  const refreshed = await loadAdminChapter(service, slug);
+  if (!refreshed) return { ok: false, error: "Installed, but could not reload Chapter 1." };
   return { ok: true, chapter: refreshed };
 }
 

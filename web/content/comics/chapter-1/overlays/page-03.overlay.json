@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1536 },
+  "altText": "A spacecraft streaks over the meadow and crashes near the woods while the friends watch in surprise.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-sfx", "kind": "sfx", "text": "WHOOOOSH—", "bounds": { "x": 14, "y": 4, "width": 34, "height": 8 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "shout" },
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 23, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-ethan", "kind": "speech", "text": "Did you see that?!", "speakerId": "ethan", "bounds": { "x": 5, "y": 25, "width": 17, "height": 6 }, "tail": { "side": "bottom", "offset": 75 }, "readOrder": 1, "fontScale": 0.92, "vocabularyIds": [], "emphasis": "shout" },
+    { "id": "p2-mia", "kind": "speech", "text": "That’s… impossible.", "speakerId": "mia", "bounds": { "x": 65, "y": 25, "width": 19, "height": 6 }, "tail": { "side": "bottom", "offset": 42 }, "readOrder": 2, "fontScale": 0.88, "vocabularyIds": ["impossible"], "emphasis": "whisper" },
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 1, "y": 47, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-leo", "kind": "speech", "text": "It’s going down!", "speakerId": "leo", "bounds": { "x": 5, "y": 49, "width": 16, "height": 5 }, "tail": { "side": "bottom", "offset": 68 }, "readOrder": 3, "fontScale": 0.9, "vocabularyIds": [], "emphasis": "shout" },
+    { "id": "p3-ethan", "kind": "speech", "text": "It’s going to crash!", "speakerId": "ethan", "bounds": { "x": 81, "y": 49, "width": 17, "height": 5 }, "tail": { "side": "bottom", "offset": 35 }, "readOrder": 4, "fontScale": 0.86, "vocabularyIds": ["crash"], "emphasis": "shout" },
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 64.5, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-sfx", "kind": "sfx", "text": "KRAAASH!", "bounds": { "x": 27, "y": 65, "width": 45, "height": 8 }, "fontScale": 1.2, "vocabularyIds": [], "emphasis": "shout" },
+    { "id": "p5-number", "kind": "panel_number", "text": "5", "bounds": { "x": 1, "y": 79, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-ethan", "kind": "speech", "text": "We have to see it!", "speakerId": "ethan", "bounds": { "x": 5, "y": 81, "width": 18, "height": 6 }, "tail": { "side": "bottom", "offset": 72 }, "readOrder": 5, "fontScale": 0.9, "vocabularyIds": [], "emphasis": "shout" },
+    { "id": "p5-mia", "kind": "speech", "text": "Okay. But stay together.", "speakerId": "mia", "bounds": { "x": 45, "y": 79.5, "width": 18, "height": 7 }, "tail": { "side": "bottom", "offset": 38 }, "readOrder": 6, "fontScale": 0.84, "vocabularyIds": ["stay-together"], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "impossible", "term": "impossible", "definition": "Not able to happen or be true.", "example": "Mia thinks the spacecraft is impossible." },
+    { "id": "crash", "term": "crash", "definition": "To hit something suddenly and hard.", "example": "The ship is going to crash." },
+    { "id": "stay-together", "term": "stay together", "definition": "Remain with the group and do not separate.", "example": "Mia tells the friends to stay together." }
+  ],
+  "discussionPrompt": "What do you think the friends should do next?"
+}

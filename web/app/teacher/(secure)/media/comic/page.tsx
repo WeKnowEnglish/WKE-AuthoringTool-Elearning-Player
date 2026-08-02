@@ -23,8 +23,8 @@ export default async function TeacherComicMediaPage() {
         {result.error}
         <p className="mt-2 font-normal text-amber-900/80">
           Apply Supabase migration{" "}
-          <code className="rounded bg-amber-100 px-1">098_comic_reader.sql</code> then
-          refresh.
+          <code className="rounded bg-amber-100 px-1">098_comic_reader.sql</code> and{" "}
+          <code className="rounded bg-amber-100 px-1">101_comic_page_overlays.sql</code>, then refresh.
         </p>
       </div>
     );

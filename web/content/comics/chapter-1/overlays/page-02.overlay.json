@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "canvas": { "width": 1122, "height": 1402 },
+  "altText": "Mia and Ethan disagree about aliens while the four friends sit under the meadow tree.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-mia", "kind": "speech", "text": "I don’t think aliens are real.", "speakerId": "mia", "bounds": { "x": 15, "y": 3, "width": 22, "height": 8 }, "tail": { "side": "right", "offset": 68 }, "readOrder": 1, "fontScale": 0.9, "vocabularyIds": ["alien"], "emphasis": "normal" },
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 23, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-mia", "kind": "speech", "text": "And if they are real, they’re too far away. We’ll never meet them.", "speakerId": "mia", "bounds": { "x": 5, "y": 25, "width": 23, "height": 14 }, "tail": { "side": "right", "offset": 72 }, "readOrder": 2, "fontScale": 0.76, "vocabularyIds": ["far-away"], "emphasis": "normal" },
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 1, "y": 47, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-ethan", "kind": "speech", "text": "What? That’s not fair.", "speakerId": "ethan", "bounds": { "x": 27, "y": 48, "width": 18, "height": 6 }, "tail": { "side": "left", "offset": 70 }, "readOrder": 3, "fontScale": 0.88, "vocabularyIds": ["fair"], "emphasis": "normal" },
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 68.5, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-ethan", "kind": "speech", "text": "I won’t give up hope!", "speakerId": "ethan", "bounds": { "x": 8, "y": 70, "width": 19, "height": 9 }, "tail": { "side": "right", "offset": 65 }, "readOrder": 4, "fontScale": 0.95, "vocabularyIds": ["hope"], "emphasis": "shout" },
+    { "id": "p5-number", "kind": "panel_number", "text": "5", "bounds": { "x": 1, "y": 82, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-leo", "kind": "speech", "text": "Don’t give up, Commander!", "speakerId": "leo", "bounds": { "x": 25, "y": 83, "width": 21, "height": 6 }, "tail": { "side": "right", "offset": 70 }, "readOrder": 5, "fontScale": 0.82, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-zara", "kind": "speech", "text": "You really love aliens, don’t you?", "speakerId": "zara", "bounds": { "x": 64, "y": 83, "width": 20, "height": 7 }, "tail": { "side": "bottom", "offset": 35 }, "readOrder": 6, "fontScale": 0.8, "vocabularyIds": ["alien"], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "alien", "term": "alien", "definition": "A living thing from another world.", "example": "Ethan hopes aliens are real." },
+    { "id": "far-away", "term": "far away", "definition": "A long distance from here.", "example": "The stars are far away." },
+    { "id": "fair", "term": "fair", "definition": "Reasonable and right for everyone.", "example": "Ethan says Mia’s idea is not fair." },
+    { "id": "hope", "term": "hope", "definition": "A wish that something good or exciting will happen.", "example": "Ethan will not give up hope." }
+  ],
+  "discussionPrompt": "Do you think aliens are real? Use “I think…” or “I don’t think…”."
+}

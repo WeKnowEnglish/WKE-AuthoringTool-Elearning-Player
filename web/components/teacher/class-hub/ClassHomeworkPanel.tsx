@@ -18,6 +18,11 @@ import { sourceLabelForAssignableKind } from "@/lib/assignable-activities/map";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, ClassHomeworkPayload, HomeworkCompletionSummary } from "@/lib/class-homework/types";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
+import {
+  assessmentProgress,
+  PRIMARY_A2_ASSESSMENT_ID,
+  PRIMARY_A2_ASSESSMENT_PILOT,
+} from "@/lib/assessment";
 
 const ACTIVITY_LABEL = sourceLabelForAssignableKind("pack_mc_quiz");
 const FLASHCARDS_LABEL = sourceLabelForAssignableKind("pack_flashcards");
@@ -152,6 +157,7 @@ export function ClassHomeworkPanel({
   if (editing) {
     return (
       <HomeworkEditor
+        classId={classId}
         homework={editing}
         archived={archived}
         teacherTier={teacherTier}
@@ -298,6 +304,7 @@ function StatusPill({ status }: { status: ClassHomework["status"] }) {
 }
 
 function HomeworkEditor({
+  classId,
   homework,
   archived,
   teacherTier,
@@ -311,6 +318,7 @@ function HomeworkEditor({
   onSaved,
   onDeleted,
 }: {
+  classId: string;
   homework: ClassHomework;
   archived: boolean;
   teacherTier: TeacherTier;
@@ -332,6 +340,7 @@ function HomeworkEditor({
           ["pack_flashcards", FLASHCARDS_LABEL],
           ["word_pack_practice", "Word pack practice"],
           ["homework_template", "Homework template"],
+          ["primary_a2_assessment", "Primary A2 assessment"],
         ] as const)
       : ([
           ["pack_quiz", ACTIVITY_LABEL],
@@ -339,6 +348,7 @@ function HomeworkEditor({
           ["word_pack_practice", "Word pack practice"],
           ["external_note", "Note / reminder"],
           ["homework_template", "Homework template"],
+          ["primary_a2_assessment", "Primary A2 assessment"],
         ] as const)
   );
   const initialType =
@@ -365,6 +375,18 @@ function HomeworkEditor({
   const pending = busy || isPending;
 
   const buildPayload = (): ClassHomeworkPayload | null => {
+    if (payloadType === "primary_a2_assessment") {
+      return homework.payload.type === "primary_a2_assessment"
+        ? homework.payload
+        : {
+            type: "primary_a2_assessment",
+            definitionId: PRIMARY_A2_ASSESSMENT_ID,
+            contentVersion: PRIMARY_A2_ASSESSMENT_PILOT.contentVersion,
+            title: PRIMARY_A2_ASSESSMENT_PILOT.title,
+            itemCount: assessmentProgress(PRIMARY_A2_ASSESSMENT_PILOT, {}).total,
+            frozenAt: new Date().toISOString(),
+          };
+    }
     if (payloadType === "homework_template") {
       return homework.payload.type === "homework_template" ? homework.payload : null;
     }
@@ -642,7 +664,8 @@ function HomeworkEditor({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {(homework.payload.type === "pack_quiz" ||
-        homework.payload.type === "pack_flashcards") &&
+        homework.payload.type === "pack_flashcards" ||
+        homework.payload.type === "primary_a2_assessment") &&
       (homework.status === "assigned" || homework.status === "closed") ? (
         isLight ? (
           <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-3">
@@ -677,6 +700,15 @@ function HomeworkEditor({
             )}
           </div>
         )
+      ) : null}
+
+      {homework.payload.type === "primary_a2_assessment" ? (
+        <Link
+          href={`/teacher/classes/${classId}/assessment-results/${homework.id}`}
+          className="inline-flex min-h-11 items-center rounded-lg border border-teal-700 px-3 text-sm font-semibold text-teal-800"
+        >
+          View assessment results
+        </Link>
       ) : null}
 
       <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-3">

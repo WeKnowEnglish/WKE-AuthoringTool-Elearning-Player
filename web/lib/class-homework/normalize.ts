@@ -38,6 +38,11 @@ import {
 } from "@/lib/cloze-open";
 import { validateReadAndAnswerDocument } from "@/lib/read-and-answer";
 import { validatePictureStoryDocument } from "@/lib/picture-story";
+import {
+  PRIMARY_A2_ASSESSMENT_ID,
+  PRIMARY_A2_ASSESSMENT_PILOT,
+  assessmentProgress,
+} from "@/lib/assessment";
 
 const TITLE_MAX = 120;
 const INSTRUCTIONS_MAX = 2000;
@@ -234,6 +239,16 @@ export function defaultHomeworkPayload(
       frameCount: 0,
       document: {},
       frozenAt: "",
+    };
+  }
+  if (type === "primary_a2_assessment") {
+    return {
+      type: "primary_a2_assessment",
+      definitionId: PRIMARY_A2_ASSESSMENT_ID,
+      contentVersion: PRIMARY_A2_ASSESSMENT_PILOT.contentVersion,
+      title: PRIMARY_A2_ASSESSMENT_PILOT.title,
+      itemCount: assessmentProgress(PRIMARY_A2_ASSESSMENT_PILOT, {}).total,
+      frozenAt: new Date(0).toISOString(),
     };
   }
   return { type: "external_note", body: "" };
@@ -624,6 +639,24 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
     }
   }
 
+  if (input.type === "primary_a2_assessment") {
+    if (input.definitionId !== PRIMARY_A2_ASSESSMENT_ID) return null;
+    if (asString(input.contentVersion).trim() !== PRIMARY_A2_ASSESSMENT_PILOT.contentVersion) {
+      return null;
+    }
+    return {
+      type: "primary_a2_assessment",
+      definitionId: PRIMARY_A2_ASSESSMENT_ID,
+      contentVersion: PRIMARY_A2_ASSESSMENT_PILOT.contentVersion,
+      title: asString(input.title).trim() || PRIMARY_A2_ASSESSMENT_PILOT.title,
+      itemCount: assessmentProgress(PRIMARY_A2_ASSESSMENT_PILOT, {}).total,
+      frozenAt:
+        typeof input.frozenAt === "string" && input.frozenAt.trim()
+          ? input.frozenAt.trim()
+          : new Date(0).toISOString(),
+    };
+  }
+
   const body = asString(input.body).trim().slice(0, NOTE_MAX);
   if (!body) return null;
   return { type: "external_note", body };
@@ -702,6 +735,9 @@ export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
     return `${payload.title} · ${payload.questionCount} question${
       payload.questionCount === 1 ? "" : "s"
     }`;
+  }
+  if (payload.type === "primary_a2_assessment") {
+    return `${payload.title} · ${payload.itemCount} questions · ${payload.contentVersion}`;
   }
   if (payload.type === "picture_story") {
     return `${payload.title} · ${payload.questionCount} question${

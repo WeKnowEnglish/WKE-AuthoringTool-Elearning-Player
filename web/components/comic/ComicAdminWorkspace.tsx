@@ -3,10 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, ExternalLink, GripVertical, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, GripVertical, Layers3, Pencil, Sparkles, Trash2, Upload } from "lucide-react";
+import { ComicOverlayEditor } from "@/components/comic/ComicOverlayEditor";
 import {
   deleteComicPage,
+  installEditableChapterOne,
   reorderComicPages,
+  saveComicPageOverlay,
   uploadComicPages,
   type ComicActionResult,
 } from "@/lib/actions/comic";
@@ -22,6 +25,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [dragId, setDragId] = useState<string | null>(null);
+  const [editingPageId, setEditingPageId] = useState<string | null>(null);
 
   const applyResult = (result: ComicActionResult, successMessage: string) => {
     if (!result.ok) {
@@ -64,6 +68,8 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
     );
   };
 
+  const editingPage = chapter.pages.find((page) => page.id === editingPageId) ?? null;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -75,7 +81,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
             {chapter.title}
           </h1>
           <p className="mt-1 text-sm text-stone-600">
-            Upload page images, then drag or use arrows to set reading order. Students open{" "}
+            Upload clean page art, edit lettering as movable layers, then set reading order. Students open{" "}
             <Link href="/wke/comic" className="font-semibold text-sky-800 underline">
               /wke/comic
             </Link>
@@ -91,6 +97,36 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
           <ExternalLink className="h-4 w-4" />
         </Link>
       </div>
+
+      <section className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-violet-50 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="max-w-2xl">
+            <h2 className="flex items-center gap-2 text-base font-extrabold text-stone-900">
+              <Sparkles className="h-5 w-5 text-sky-700" /> Editable Chapter 1 package
+            </h2>
+            <p className="mt-1 text-sm text-stone-600">
+              Installs the clean art masters plus separate bubbles, text, speakers, reading order,
+              vocabulary, and discussion prompts. Existing storage files are preserved for recovery.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              if (!window.confirm("Install the editable Chapter 1 package and replace the current page records? Existing storage files will be kept.")) return;
+              startTransition(async () => {
+                const result = await installEditableChapterOne();
+                applyResult(result, "Editable Chapter 1 installed.");
+                if (result.ok) setEditingPageId(null);
+              });
+            }}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-sky-700 px-4 text-sm font-bold text-white hover:bg-sky-800 disabled:opacity-50"
+          >
+            <Layers3 className="h-4 w-4" />
+            {isPending ? "Installing…" : "Install editable package"}
+          </button>
+        </div>
+      </section>
 
       <form
         className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm"
@@ -215,8 +251,24 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
                     <p className="truncate text-xs text-stone-600">
                       {page.originalFilename}
                     </p>
+                    <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${
+                      page.overlay ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                    }`}>
+                      {page.overlay ? `${page.overlay.elements.length} editable layers` : "Flat image"}
+                    </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      aria-label={`Edit lettering on page ${index + 1}`}
+                      onClick={() => setEditingPageId((current) => current === page.id ? null : page.id)}
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white hover:border-sky-400 hover:text-sky-800 disabled:opacity-50 ${
+                        editingPageId === page.id ? "border-sky-500 text-sky-800 ring-2 ring-sky-200" : "border-stone-300 text-stone-700"
+                      }`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       disabled={isPending || index === 0}
@@ -259,6 +311,35 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
           </ul>
         )}
       </section>
+
+      {editingPage ? (
+        <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-sky-700">Lettering editor</p>
+              <h2 className="text-lg font-extrabold text-stone-900">Page {editingPage.pageIndex}</h2>
+            </div>
+            <button type="button" onClick={() => setEditingPageId(null)} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50">
+              Close editor
+            </button>
+          </div>
+          <ComicOverlayEditor
+            key={editingPage.id}
+            page={editingPage}
+            disabled={isPending}
+            onSave={(overlay) => {
+              startTransition(async () => {
+                const result = await saveComicPageOverlay({
+                  pageId: editingPage.id,
+                  slug: chapter.slug,
+                  overlay,
+                });
+                applyResult(result, "Lettering and interactions saved.");
+              });
+            }}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }

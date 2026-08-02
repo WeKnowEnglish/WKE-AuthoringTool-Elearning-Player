@@ -1316,3 +1316,63 @@ label[for="demo-homework-title"],
     animation: none;
   }
 }
+
+@keyframes comic-lettering-enter {
+  0% {
+    opacity: 0;
+    scale: 0.72;
+    filter: blur(2px) brightness(1.12);
+  }
+  62% {
+    opacity: 1;
+    scale: 1.08;
+    filter: blur(0) brightness(1.05);
+  }
+  82% {
+    scale: 0.97;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+    filter: blur(0) brightness(1);
+  }
+}
+
+@keyframes comic-lettering-tap {
+  0%,
+  100% {
+    scale: 1;
+  }
+  45% {
+    scale: 1.1;
+  }
+  72% {
+    scale: 0.98;
+  }
+}
+
+.comic-lettering-enter {
+  opacity: 0;
+  animation: comic-lettering-enter 520ms cubic-bezier(0.2, 0.8, 0.2, 1.18) both;
+  animation-delay: var(--comic-enter-delay, 0ms);
+  transform-origin: center;
+  will-change: opacity, scale, filter;
+}
+
+.comic-lettering-tap {
+  opacity: 1;
+  filter: none;
+  animation: comic-lettering-tap 440ms cubic-bezier(0.2, 0.8, 0.2, 1.2);
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comic-lettering-enter,
+  .comic-lettering-tap {
+    opacity: 1;
+    scale: 1;
+    filter: none;
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}

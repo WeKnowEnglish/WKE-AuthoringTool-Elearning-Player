@@ -1,6 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { isStudent, isTeacher } from "@/lib/auth/roles";
-import { assessmentProgress, PRIMARY_A2_ASSESSMENT_PILOT, sanitizeAssessmentResponses, type AssessmentAttempt, type AssessmentSpeakingRecording } from "@/lib/assessment";
+import { assessmentProgress, PRIMARY_A2_ASSESSMENT_PILOT, sanitizeAssessmentResponses, type AssessmentAttempt, type AssessmentSpeakingRecording, type AssessmentSpeakingReview } from "@/lib/assessment";
 import { createClient } from "@/lib/supabase/server";
 
 export async function getMyAssessmentAttempt(homeworkId: string): Promise<AssessmentAttempt | null> {
@@ -46,6 +46,25 @@ export async function getMyAssessmentSpeakingRecordings(homeworkId: string): Pro
   return Promise.all((data ?? []).map((row) => signedRecording(supabase, row)));
 }
 
+function normalizeSpeakingReview(row: { scores: unknown; feedback: unknown; reviewed_at: unknown } | null | undefined): AssessmentSpeakingReview | null {
+  if (!row || !row.scores || typeof row.scores !== "object") return null;
+  const scores = Object.fromEntries(Object.entries(row.scores as Record<string, unknown>).filter(([, score]) => Number.isFinite(score)).map(([id, score]) => [id, Math.max(0, Math.min(5, Math.round(Number(score))))]));
+  return { scores, feedback: typeof row.feedback === "string" ? row.feedback : "", reviewedAt: String(row.reviewed_at) };
+}
+
+export async function getMyAssessmentSpeakingReview(homeworkId: string): Promise<AssessmentSpeakingReview | null> {
+  noStore();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id || !isStudent(user)) return null;
+  const { data, error } = await supabase.from("assessment_speaking_reviews").select("scores, feedback, reviewed_at").eq("homework_id", homeworkId).eq("student_id", user.id).maybeSingle();
+  if (error) {
+    if (/assessment_speaking_reviews|schema cache|does not exist/i.test(error.message)) return null;
+    throw error;
+  }
+  return normalizeSpeakingReview(data);
+}
+
 export type TeacherAssessmentAttemptSummary = {
   studentId: string;
   displayName: string;
@@ -55,6 +74,7 @@ export type TeacherAssessmentAttemptSummary = {
   itemTotal: number;
   objectiveTotal: number;
   recordings: AssessmentSpeakingRecording[];
+  speakingReview: AssessmentSpeakingReview | null;
   updatedAt: string | null;
   submittedAt: string | null;
 };
@@ -70,15 +90,18 @@ export async function listAssessmentResultsForTeacher(input: { classId: string; 
   if (enrollmentError) throw enrollmentError;
   const ids = (enrollments ?? []).map((row) => String(row.student_id));
   if (!ids.length) return [];
-  const [{ data: profiles }, { data: attempts, error: attemptsError }, { data: recordings, error: recordingsError }] = await Promise.all([
+  const [{ data: profiles }, { data: attempts, error: attemptsError }, { data: recordings, error: recordingsError }, { data: reviews, error: reviewsError }] = await Promise.all([
     supabase.from("student_profiles").select("user_id, display_name").in("user_id", ids),
     supabase.from("class_assessment_attempts").select("student_id, status, answered_count, objective_correct, objective_total, updated_at, submitted_at").eq("homework_id", input.homeworkId),
     supabase.from("assessment_speaking_recordings").select("id, student_id, part_id, response_id, duration_ms, storage_path").eq("homework_id", input.homeworkId),
+    supabase.from("assessment_speaking_reviews").select("student_id, scores, feedback, reviewed_at").eq("homework_id", input.homeworkId),
   ]);
   if (attemptsError && !/class_assessment_attempts|schema cache|does not exist/i.test(attemptsError.message)) throw attemptsError;
   if (recordingsError && !/assessment_speaking_recordings|schema cache|does not exist/i.test(recordingsError.message)) throw recordingsError;
+  if (reviewsError && !/assessment_speaking_reviews|schema cache|does not exist/i.test(reviewsError.message)) throw reviewsError;
   const names = new Map((profiles ?? []).map((row) => [String(row.user_id), String(row.display_name)]));
   const byStudent = new Map((attempts ?? []).map((row) => [String(row.student_id), row]));
+  const reviewsByStudent = new Map((reviews ?? []).map((row) => [String(row.student_id), normalizeSpeakingReview(row)]));
   const recordingsByStudent = new Map<string, AssessmentSpeakingRecording[]>();
   await Promise.all((recordings ?? []).map(async (row) => {
     const studentId = String(row.student_id);
@@ -97,6 +120,7 @@ export async function listAssessmentResultsForTeacher(input: { classId: string; 
       itemTotal,
       objectiveTotal: Number(row?.objective_total ?? 0),
       recordings: (recordingsByStudent.get(studentId) ?? []).sort((a, b) => a.partId.localeCompare(b.partId)),
+      speakingReview: reviewsByStudent.get(studentId) ?? null,
       updatedAt: typeof row?.updated_at === "string" ? row.updated_at : null,
       submittedAt: typeof row?.submitted_at === "string" ? row.submitted_at : null,
     };

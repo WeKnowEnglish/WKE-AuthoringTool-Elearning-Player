@@ -4,6 +4,7 @@ import {
   normalizeClassPostActivityTitle,
   normalizeClassPostBody,
   normalizeClassPostHomeworkId,
+  normalizeClassPostGuardianVisibility,
   normalizeClassPostImageUrl,
   normalizeClassPostKind,
   normalizeClassPostLinkTitle,
@@ -26,6 +27,7 @@ export type ClassPostRow = {
   activity_title?: string | null;
   activity_play_path?: string | null;
   pinned_at?: string | null;
+  guardian_visibility?: string | null;
   published_at: string;
   created_at: string;
 };
@@ -49,6 +51,7 @@ export function mapClassPostRow(row: ClassPostRow): ClassPost | null {
     activityTitle: normalizeClassPostActivityTitle(row.activity_title),
     activityPlayPath: normalizeClassPostActivityPlayPath(row.activity_play_path),
     pinnedAt: normalizeClassPostPinnedAt(row.pinned_at),
+    guardianVisibility: normalizeClassPostGuardianVisibility(row.guardian_visibility),
     publishedAt: row.published_at,
     createdAt: row.created_at,
   };

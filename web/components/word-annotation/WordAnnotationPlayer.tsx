@@ -17,7 +17,7 @@ type Stage = "activity" | "review";
 type Props = {
   activity: WordAnnotationPlayable;
   eyebrow?: string;
-  onMastered?: () => void;
+  onMastered?: (snapshot: { answers: Record<string, string>; correct: number; total: number }) => void;
 };
 
 export function WordAnnotationPlayer({
@@ -83,7 +83,7 @@ export function WordAnnotationPlayer({
           >
             {mastered ? "Practise again" : "Fix my markings"}
           </KidButton>
-          {mastered && onMastered ? <KidButton onClick={onMastered}>Done</KidButton> : null}
+          {mastered && onMastered ? <KidButton onClick={() => onMastered({ answers: annotations, correct: result.correct, total: result.expected })}>Done</KidButton> : null}
         </div>
       </KidPanel>
     );

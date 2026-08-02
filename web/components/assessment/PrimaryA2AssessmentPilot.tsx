@@ -8,7 +8,7 @@ import { listClozeChoiceGaps } from "@/lib/cloze-choice";
 import { listClozeOpenGaps } from "@/lib/cloze-open";
 import { savePrimaryA2AssessmentAttempt } from "@/lib/actions/assessment-attempt";
 import { AssessmentSpeakingRecorder } from "@/components/assessment/AssessmentSpeakingRecorder";
-import type { AssessmentSpeakingRecording } from "@/lib/assessment";
+import type { AssessmentSpeakingRecording, AssessmentSpeakingReview } from "@/lib/assessment";
 
 const definition = PRIMARY_A2_ASSESSMENT_PILOT;
 
@@ -206,10 +206,12 @@ export function PrimaryA2AssessmentPilot({
   homeworkId,
   initialAttempt,
   initialSpeakingRecordings = [],
+  speakingReview = null,
 }: {
   homeworkId?: string;
   initialAttempt?: AssessmentAttempt | null;
   initialSpeakingRecordings?: AssessmentSpeakingRecording[];
+  speakingReview?: AssessmentSpeakingReview | null;
 } = {}) {
   const parts = useMemo(() => listAssessmentParts(definition), []);
   const sectionByPartId = useMemo(
@@ -307,11 +309,12 @@ export function PrimaryA2AssessmentPilot({
     </section>
   </main>;
 
-  if (attempt.status === "submitted") return <main className="min-h-screen bg-emerald-50 px-4 py-12"><section className="mx-auto max-w-2xl rounded-[2rem] border-4 border-emerald-800 bg-white p-7 text-center shadow-xl sm:p-12">
+  if (attempt.status === "submitted") return <main className="min-h-screen bg-emerald-50 px-4 py-12"><section className="mx-auto max-w-4xl rounded-[2rem] border-4 border-emerald-800 bg-white p-7 text-center shadow-xl sm:p-12">
     <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><Check className="h-11 w-11" /></span>
     <p className="mt-6 text-xs font-black uppercase tracking-[0.2em] text-emerald-700">Assessment submitted</p>
     <h1 className="mt-2 text-3xl font-black text-slate-900">Well done—you finished this section.</h1>
     <p className="mx-auto mt-4 max-w-lg font-semibold leading-7 text-slate-600">You answered {progress.answered} of {progress.total} questions. {homeworkId ? "Your teacher can now see your result." : "In the production test, your teacher will receive the submitted attempt for reporting."}</p>
+    <StudentAssessmentReport progress={progress} speakingReview={speakingReview} />
     {!homeworkId ? <><p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900">Pilot note: this attempt is saved only in this browser.</p><button type="button" onClick={() => { window.localStorage.removeItem(storageKey); setAttempt(newAttempt()); setScreen("test"); }} className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-5 font-black text-slate-800 hover:bg-slate-50"><RotateCcw className="h-5 w-5" /> Reset pilot</button></> : null}
   </section></main>;
 
@@ -325,6 +328,19 @@ export function PrimaryA2AssessmentPilot({
 function InfoCard({ icon, title, detail, tone }: { icon: React.ReactNode; title: string; detail: string; tone: "cyan" | "amber" | "violet" }) {
   const colors = { cyan: "bg-cyan-50 text-teal-700", amber: "bg-amber-50 text-amber-700", violet: "bg-violet-50 text-violet-700" }[tone];
   return <div className={`rounded-2xl p-4 ${colors}`}><span className="block [&_svg]:h-7 [&_svg]:w-7">{icon}</span><p className="mt-2 text-sm font-black text-slate-900">{title}</p><p className="text-sm font-semibold text-slate-600">{detail}</p></div>;
+}
+
+function StudentAssessmentReport({ progress, speakingReview }: { progress: ReturnType<typeof assessmentProgress>; speakingReview: AssessmentSpeakingReview | null }) {
+  const section = definition.sections.find((item) => item.id === "reading-writing");
+  const rows = (section?.parts ?? []).map((part) => ({ part, score: progress.parts[part.id] }));
+  const correct = rows.reduce((sum, row) => sum + row.score.correct, 0);
+  const total = rows.reduce((sum, row) => sum + row.score.objectiveTotal, 0);
+  const percent = total ? Math.round(correct / total * 100) : 0;
+  const message = percent >= 90 ? "Excellent control of this level." : percent >= 75 ? "Strong work with a few areas to review." : percent >= 60 ? "Good progress—review the parts below and keep practising." : "This is a useful starting point. Your teacher will help you choose what to practise next.";
+  return <div className="mt-8 space-y-5 text-left">
+    <section className="overflow-hidden rounded-2xl border-2 border-sky-200"><div className="grid gap-4 bg-sky-50 p-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center"><div className="flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-sky-700 bg-white text-sky-900"><strong className="text-3xl font-black">{percent}%</strong><span className="text-xs font-black">{correct}/{total}</span></div><div><p className="text-xs font-black uppercase tracking-[0.16em] text-sky-800">Reading &amp; Writing report</p><h2 className="mt-1 text-2xl font-black text-slate-900">{message}</h2><p className="mt-2 text-sm font-semibold leading-6 text-slate-600">This score is ready now because these questions can be checked automatically.</p></div></div><div className="grid gap-3 p-4 sm:grid-cols-2">{rows.map(({ part, score }) => { const partPercent = score.objectiveTotal ? Math.round(score.correct / score.objectiveTotal * 100) : 0; return <div key={part.id} className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wide text-sky-700">Part {part.partNumber}</p><h3 className="mt-1 font-black text-slate-900">{part.title}</h3></div><span className="shrink-0 rounded-full bg-sky-100 px-3 py-1 text-sm font-black text-sky-900">{score.correct}/{score.objectiveTotal}</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200"><div className={`h-full rounded-full ${partPercent >= 75 ? "bg-emerald-500" : partPercent >= 50 ? "bg-amber-500" : "bg-rose-500"}`} style={{ width: `${partPercent}%` }} /></div></div>; })}</div></section>
+    {speakingReview ? <section className="rounded-2xl border-2 border-violet-300 bg-violet-50 p-5"><div className="flex gap-4"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-700 text-lg font-black text-white">{Object.values(speakingReview.scores).reduce((sum, score) => sum + score, 0)}/15</span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-violet-800">Speaking report ready</p><h2 className="mt-1 text-xl font-black text-slate-900">Your teacher reviewed your recordings.</h2></div></div><div className="mt-4 grid grid-cols-3 gap-2">{["speaking-part-1", "speaking-part-2", "speaking-part-3"].map((id, index) => <div key={id} className="rounded-xl bg-white p-3 text-center"><p className="text-xs font-bold text-slate-500">Part {index + 1}</p><p className="text-xl font-black text-violet-800">{speakingReview.scores[id] ?? 0}/5</p></div>)}</div>{speakingReview.feedback ? <div className="mt-4 rounded-xl bg-white p-4"><p className="text-xs font-black uppercase tracking-wide text-violet-700">Teacher feedback</p><p className="mt-2 whitespace-pre-wrap font-semibold leading-7 text-slate-700">{speakingReview.feedback}</p></div> : null}</section> : <section className="flex gap-4 rounded-2xl border-2 border-violet-200 bg-violet-50 p-5"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-700 text-white"><Clock3 className="h-6 w-6" /></span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-violet-800">Speaking report pending</p><h2 className="mt-1 text-xl font-black text-slate-900">Your teacher will listen to your recordings.</h2><p className="mt-2 text-sm font-semibold leading-6 text-slate-700">Speaking needs a teacher’s judgment, so feedback and your speaking result should be returned within one day.</p></div></section>}
+  </div>;
 }
 
 function ReviewScreen({ parts, sectionByPartId, progress, openPart, onSubmit }: { parts: AssessmentPart[]; sectionByPartId: Map<string, string>; progress: ReturnType<typeof assessmentProgress>; openPart: (id: string) => void; onSubmit: () => void }) {

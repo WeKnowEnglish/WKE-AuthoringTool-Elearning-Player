@@ -215,6 +215,7 @@ export function ClassHomeworkPanel({
         <ul className="space-y-2">
           {items.map((item) => {
             const doneCount = completionsByHomework.get(item.id)?.length ?? 0;
+            const assignedCount = item.targetStudentIds?.length ?? rosterSize;
             const showDone =
               (item.payload.type === "pack_quiz" ||
                 item.payload.type === "pack_flashcards" ||
@@ -245,9 +246,12 @@ export function ClassHomeworkPanel({
                       <StatusPill status={item.status} />
                       {showDone ? (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-900">
-                          Done {doneCount}/{rosterSize}
+                          Done {doneCount}/{assignedCount}
                         </span>
                       ) : null}
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-900">
+                        {item.targetStudentIds === null ? "Everyone" : `${item.targetStudentIds.length} student${item.targetStudentIds.length === 1 ? "" : "s"}`}
+                      </span>
                     </div>
                     <p className="mt-0.5 text-xs text-neutral-600">
                       {formatHomeworkListSubtitle(item.payload, {
@@ -333,6 +337,7 @@ function HomeworkEditor({
   onDeleted: (id: string) => void;
 }) {
   const isLight = teacherTier === "light";
+  const rosterStudents = Array.from(nameByStudentId, ([studentId, displayName]) => ({ studentId, displayName }));
   const typeOptions = (
     isLight
       ? ([
@@ -357,6 +362,8 @@ function HomeworkEditor({
   const [instructions, setInstructions] = useState(homework.instructions);
   const [dueLocal, setDueLocal] = useState(toDatetimeLocalValue(homework.dueAt));
   const [status, setStatus] = useState(homework.status);
+  const [assignToAll, setAssignToAll] = useState(homework.targetStudentIds === null);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>(homework.targetStudentIds ?? rosterStudents.map((student) => student.studentId));
   const [payloadType, setPayloadType] = useState(initialType);
   const [quizId, setQuizId] = useState(
     homework.payload.type === "pack_quiz" ? homework.payload.quizId : "",
@@ -440,6 +447,7 @@ function HomeworkEditor({
         dueAt: dueLocal ? new Date(dueLocal).toISOString() : null,
         status: nextStatus,
         payload,
+        targetStudentIds: assignToAll ? null : selectedStudentIds,
       });
       if (!result.ok) {
         setError(result.error);
@@ -634,6 +642,23 @@ function HomeworkEditor({
         </label>
       ) : null}
 
+      <fieldset className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+        <legend className="px-1 text-sm font-semibold">Assign to</legend>
+        <label className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md bg-white px-3 py-2 text-sm font-semibold text-neutral-900">
+          <input type="checkbox" checked={assignToAll} disabled={archived || pending} onChange={(event) => setAssignToAll(event.target.checked)} className="h-5 w-5 accent-teal-700" />
+          Everyone in this class
+        </label>
+        {!assignToAll ? <div className="grid gap-2 sm:grid-cols-2">{rosterStudents.map((student) => {
+          const checked = selectedStudentIds.includes(student.studentId);
+          return <label key={student.studentId} className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md bg-white px-3 py-2 text-sm text-neutral-800">
+            <input type="checkbox" checked={checked} disabled={archived || pending} onChange={() => setSelectedStudentIds((current) => checked ? current.filter((id) => id !== student.studentId) : [...current, student.studentId])} className="h-5 w-5 accent-teal-700" />
+            {student.displayName}
+          </label>;
+        })}</div> : null}
+        {!assignToAll && selectedStudentIds.length === 0 ? <p className="text-xs font-semibold text-red-700">Choose at least one student.</p> : null}
+        {!rosterStudents.length ? <p className="text-xs text-neutral-600">Add students to the class before assigning individual homework.</p> : null}
+      </fieldset>
+
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold">Status</legend>
         <div className="flex flex-wrap gap-2">
@@ -665,6 +690,7 @@ function HomeworkEditor({
 
       {(homework.payload.type === "pack_quiz" ||
         homework.payload.type === "pack_flashcards" ||
+        homework.payload.type === "homework_template" ||
         homework.payload.type === "primary_a2_assessment") &&
       (homework.status === "assigned" || homework.status === "closed") ? (
         isLight ? (
@@ -708,6 +734,15 @@ function HomeworkEditor({
           className="inline-flex min-h-11 items-center rounded-lg border border-teal-700 px-3 text-sm font-semibold text-teal-800"
         >
           View assessment results
+        </Link>
+      ) : null}
+
+      {homework.payload.type === "homework_template" ? (
+        <Link
+          href={`/teacher/classes/${classId}/homework-template-results/${homework.id}`}
+          className="inline-flex min-h-11 items-center rounded-lg border border-teal-700 px-3 text-sm font-semibold text-teal-800"
+        >
+          Review student work
         </Link>
       ) : null}
 

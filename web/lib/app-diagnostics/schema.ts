@@ -18,7 +18,7 @@ export const appDiagnosticEventSchema = z.object({
   sessionId: z.string().min(3).max(160),
   deviceId: z.string().min(3).max(160),
   at: z.number().int().min(1),
-  surface: z.enum(["student", "teacher", "lesson", "live-game", "admin"]),
+  surface: z.enum(["student", "teacher", "lesson", "live-game", "parent", "admin"]),
   phase: z.string().min(1).max(80),
   name: z.string().min(1).max(120),
   kind: z.enum(["mark", "span", "error", "vital"]),
@@ -43,7 +43,11 @@ export type ValidatedAppDiagnosticEvent = z.infer<typeof appDiagnosticEventSchem
 export function sanitizeDiagnosticRoute(route: string | undefined): string | null {
   if (!route) return null;
   const [pathname] = route.split("?");
-  return pathname?.slice(0, 500) || null;
+  if (!pathname) return null;
+  return pathname
+    .replace(/^\/parent\/invitations\/[^/]+/, "/parent/invitations/:token")
+    .replace(/^\/parent\/students\/[^/]+/, "/parent/students/:studentId")
+    .slice(0, 500);
 }
 
 const BLOCKED_METADATA_KEY = /(password|secret|token|email|answer|response|error|stack|content|text)/i;

@@ -11,6 +11,8 @@ import { SentenceColumnsPlayer } from "@/components/sentence-columns/SentenceCol
 import { VerbTablePlayer } from "@/components/verb-table/VerbTablePlayer";
 import { WordAnnotationPlayer } from "@/components/word-annotation/WordAnnotationPlayer";
 import { recordHomeworkTemplateCompletion } from "@/lib/actions/class-homework";
+import { saveHomeworkTemplatePart } from "@/lib/actions/homework-template-submission";
+import type { HomeworkTemplatePartSnapshot } from "@/lib/homework-templates/homework-template-submission";
 import {
   HOMEWORK_TEMPLATE_ONE,
   type PictureClozeSection,
@@ -43,9 +45,9 @@ type SavedProgress = {
   partSixDone: boolean;
 };
 
-function readProgress(): SavedProgress {
+function readProgress(storageKey: string): SavedProgress {
   try {
-    const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null");
+    const value = JSON.parse(window.localStorage.getItem(storageKey) ?? "null");
     if (value && typeof value === "object") {
       return {
         activePart: ([1, 2, 3, 4, 5, 6] as const).includes(value.activePart)
@@ -107,6 +109,7 @@ export function HomeworkTemplateOnePilot({
   homeHref?: string;
 } = {}) {
   const router = useRouter();
+  const storageKey = homeworkId ? `${STORAGE_KEY}:${homeworkId}` : STORAGE_KEY;
   const pictureClozeSection = HOMEWORK_TEMPLATE_ONE.sections[0] as PictureClozeSection;
   const annotationSection = HOMEWORK_TEMPLATE_ONE.sections[1] as WordAnnotationSection;
   const sentenceColumnsSection = HOMEWORK_TEMPLATE_ONE
@@ -146,7 +149,7 @@ export function HomeworkTemplateOnePilot({
   const [resetNonce, setResetNonce] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [completionNotice, setCompletionNotice] = useState(
-    alreadyCompleted ? "This homework is already marked complete." : "",
+    alreadyCompleted ? "This homework is already marked complete. You can redo it to send reviewable answers to your teacher." : "",
   );
 
   const progressFlags = {
@@ -160,7 +163,7 @@ export function HomeworkTemplateOnePilot({
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const saved = readProgress();
+      const saved = readProgress(storageKey);
       setActivePart(saved.activePart);
       setPartOneDone(saved.partOneDone);
       setPartTwoDone(saved.partTwoDone);
@@ -171,18 +174,23 @@ export function HomeworkTemplateOnePilot({
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!hydrated) return;
     window.localStorage.setItem(
-      STORAGE_KEY,
+      storageKey,
       JSON.stringify({
         activePart,
-        ...progressFlags,
+        partOneDone,
+        partTwoDone,
+        partThreeDone,
+        partFourDone,
+        partFiveDone,
+        partSixDone,
       } satisfies SavedProgress),
     );
-  }, [activePart, hydrated, partFiveDone, partFourDone, partOneDone, partSixDone, partThreeDone, partTwoDone]);
+  }, [activePart, hydrated, partFiveDone, partFourDone, partOneDone, partSixDone, partThreeDone, partTwoDone, storageKey]);
 
   const reset = () => {
     setActivePart(1);
@@ -193,7 +201,7 @@ export function HomeworkTemplateOnePilot({
     setPartFiveDone(false);
     setPartSixDone(false);
     setResetNonce((value) => value + 1);
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(storageKey);
     // Clear legacy per-part keys from the pre-shared-player pilot.
     window.localStorage.removeItem("wke-pilot-homework-template-one:v1");
     window.localStorage.removeItem("wke-pilot-homework-template-one:word-annotation:v1");
@@ -203,22 +211,29 @@ export function HomeworkTemplateOnePilot({
     window.localStorage.removeItem("wke-pilot-homework-template-one:question-writing:v1");
   };
 
-  const finishAssignedHomework = () => {
-    setPartSixDone(true);
-    if (!homeworkId) return;
+  const savePartThen = (partId: string, snapshot: HomeworkTemplatePartSnapshot, onSaved: () => void) => {
+    if (!homeworkId) { onSaved(); return; }
+    setCompletionNotice("Saving your work…");
+    void saveHomeworkTemplatePart({ homeworkId, partId, snapshot }).then((result) => {
+      if (!result.ok) { setCompletionNotice(result.error); return; }
+      setCompletionNotice("");
+      onSaved();
+    });
+  };
 
-    if (alreadyCompleted) {
-      router.push(homeHref);
-      return;
-    }
+  const finishAssignedHomework = (snapshot: HomeworkTemplatePartSnapshot) => {
+    if (!homeworkId) { setPartSixDone(true); return; }
 
-    setCompletionNotice("Saving completion…");
-    void recordHomeworkTemplateCompletion({ homeworkId }).then((result) => {
+    setCompletionNotice("Submitting your work…");
+    void saveHomeworkTemplatePart({ homeworkId, partId: "question-writing", snapshot, submit: true }).then(async (submissionResult) => {
+      if (!submissionResult.ok) { setCompletionNotice(submissionResult.error); return; }
+      const result = await recordHomeworkTemplateCompletion({ homeworkId });
       if (!result.ok) {
         setCompletionNotice(result.error);
         return;
       }
-      setCompletionNotice("Homework complete — heading home…");
+      setPartSixDone(true);
+      setCompletionNotice("Homework submitted — heading home…");
       router.push(homeHref);
     });
   };
@@ -366,10 +381,7 @@ export function HomeworkTemplateOnePilot({
                 activity={playables.pictureCloze}
                 eyebrow="Part 1 of 6 · Vocabulary"
                 doneLabel={assigned ? "Continue" : "Done"}
-                onMastered={() => {
-                  setPartOneDone(true);
-                  setActivePart(2);
-                }}
+                onMastered={(snapshot) => savePartThen("picture-cloze", snapshot, () => { setPartOneDone(true); setActivePart(2); })}
               />
             ) : null}
 
@@ -378,10 +390,7 @@ export function HomeworkTemplateOnePilot({
                 key={`${resetNonce}-part-2`}
                 activity={playables.wordAnnotation}
                 eyebrow="Part 2 of 6 · Grammar"
-                onMastered={() => {
-                  setPartTwoDone(true);
-                  setActivePart(3);
-                }}
+                onMastered={(snapshot) => savePartThen("word-annotation", snapshot, () => { setPartTwoDone(true); setActivePart(3); })}
               />
             ) : null}
 
@@ -390,10 +399,7 @@ export function HomeworkTemplateOnePilot({
                 key={`${resetNonce}-part-3`}
                 activity={playables.sentenceColumns}
                 eyebrow="Part 3 of 6 · Grammar"
-                onMastered={() => {
-                  setPartThreeDone(true);
-                  setActivePart(4);
-                }}
+                onMastered={(snapshot) => savePartThen("sentence-columns", snapshot, () => { setPartThreeDone(true); setActivePart(4); })}
               />
             ) : null}
 
@@ -402,10 +408,7 @@ export function HomeworkTemplateOnePilot({
                 key={`${resetNonce}-part-4`}
                 activity={playables.verbTable}
                 eyebrow="Part 4 of 6 · Grammar"
-                onMastered={() => {
-                  setPartFourDone(true);
-                  setActivePart(5);
-                }}
+                onMastered={(snapshot) => savePartThen("verb-table", snapshot, () => { setPartFourDone(true); setActivePart(5); })}
               />
             ) : null}
 
@@ -414,10 +417,7 @@ export function HomeworkTemplateOnePilot({
                 key={`${resetNonce}-part-5`}
                 activity={playables.pictureWriting}
                 eyebrow="Part 5 of 6 · Writing"
-                onReady={() => {
-                  setPartFiveDone(true);
-                  setActivePart(6);
-                }}
+                onReady={(snapshot) => savePartThen("picture-writing", snapshot, () => { setPartFiveDone(true); setActivePart(6); })}
               />
             ) : null}
 

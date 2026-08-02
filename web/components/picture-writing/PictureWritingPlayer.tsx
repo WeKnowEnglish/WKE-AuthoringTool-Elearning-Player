@@ -17,7 +17,7 @@ type Stage = "activity" | "review";
 type Props = {
   activity: PictureWritingPlayable;
   eyebrow?: string;
-  onReady?: () => void;
+  onReady?: (snapshot: { answers: Record<string, string>; correct: null; total: number }) => void;
 };
 
 export function PictureWritingPlayer({
@@ -87,7 +87,7 @@ export function PictureWritingPlayer({
           >
             Edit my writing
           </KidButton>
-          {onReady ? <KidButton onClick={onReady}>Done</KidButton> : null}
+          {onReady ? <KidButton onClick={() => onReady({ answers: responses, correct: null, total: activity.prompts.length })}>Done</KidButton> : null}
         </div>
       </KidPanel>
     );

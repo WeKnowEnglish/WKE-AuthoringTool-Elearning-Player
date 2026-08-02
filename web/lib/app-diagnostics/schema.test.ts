@@ -32,4 +32,11 @@ describe("central app diagnostics schema", () => {
       timeToHeadersMs: 400,
     })).toEqual({ status: 500, timeToHeadersMs: 400 });
   });
+
+  it("removes parent invitation tokens and student identifiers from stored routes", () => {
+    expect(sanitizeDiagnosticRoute("/parent/invitations/private-secret-token"))
+      .toBe("/parent/invitations/:token");
+    expect(sanitizeDiagnosticRoute("/parent/students/7c4d9b8f/progress?tab=latest"))
+      .toBe("/parent/students/:studentId/progress");
+  });
 });

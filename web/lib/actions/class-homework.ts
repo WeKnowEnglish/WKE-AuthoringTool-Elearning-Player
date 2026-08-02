@@ -118,6 +118,8 @@ export async function saveClassHomework(input: {
   dueAt?: string | null;
   status?: ClassHomeworkStatus;
   payload: unknown;
+  /** Null assigns to the whole class; omitted preserves the current audience. */
+  targetStudentIds?: string[] | null;
 }): Promise<ClassHomeworkActionResult> {
   try {
     const teacherId = await requireTeacherUserId();
@@ -127,7 +129,7 @@ export async function saveClassHomework(input: {
     const supabase = await createClient();
     const { data: existing, error: existingError } = await supabase
       .from("class_homework")
-      .select("id, class_id, status, assigned_at, payload")
+      .select("id, class_id, status, assigned_at, payload, target_student_ids")
       .eq("id", homeworkId)
       .eq("teacher_id", teacherId)
       .maybeSingle();
@@ -229,6 +231,23 @@ export async function saveClassHomework(input: {
           ? null
           : existing.assigned_at;
 
+    let targetStudentIds: string[] | null = Array.isArray(existing.target_student_ids)
+      ? existing.target_student_ids.filter((id): id is string => typeof id === "string")
+      : null;
+    if (input.targetStudentIds !== undefined) {
+      if (input.targetStudentIds === null) {
+        targetStudentIds = null;
+      } else {
+        const requested = [...new Set(input.targetStudentIds.map((id) => id.trim()).filter(Boolean))];
+        if (!requested.length) return { ok: false, error: "Choose at least one student or assign to everyone." };
+        const { data: enrolled, error: rosterError } = await supabase.from("class_enrollments").select("student_id").eq("class_id", existing.class_id).in("student_id", requested);
+        if (rosterError) return { ok: false, error: rosterError.message };
+        const validIds = new Set((enrolled ?? []).map((row) => String(row.student_id)));
+        if (requested.some((id) => !validIds.has(id))) return { ok: false, error: "One or more selected students are no longer in this class." };
+        targetStudentIds = requested;
+      }
+    }
+
     if (payload.type === "pack_quiz" && status === "assigned") {
       await supabase
         .from("teacher_pack_quizzes")
@@ -255,6 +274,7 @@ export async function saveClassHomework(input: {
         payload,
         assigned_at: assignedAt,
         updated_at: new Date().toISOString(),
+        target_student_ids: targetStudentIds,
       })
       .eq("id", homeworkId)
       .eq("teacher_id", teacherId);

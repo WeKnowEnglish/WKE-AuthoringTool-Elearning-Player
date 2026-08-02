@@ -17,7 +17,7 @@ type Stage = "activity" | "review";
 type Props = {
   activity: VerbTablePlayable;
   eyebrow?: string;
-  onMastered?: () => void;
+  onMastered?: (snapshot: { answers: Record<string, string>; correct: number; total: number }) => void;
   showTip?: boolean;
 };
 
@@ -68,7 +68,7 @@ export function VerbTablePlayer({
           >
             Practise again
           </KidButton>
-          {onMastered ? <KidButton onClick={onMastered}>Done</KidButton> : null}
+          {onMastered ? <KidButton onClick={() => onMastered({ answers, correct: result.correct, total: result.total })}>Done</KidButton> : null}
         </div>
       </KidPanel>
     );

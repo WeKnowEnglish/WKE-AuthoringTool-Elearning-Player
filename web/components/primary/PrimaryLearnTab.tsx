@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import NextImage from "next/image";
+import Link from "next/link";
 import { ArrowLeft, BookOpen, ChevronRight, Library, Lock } from "lucide-react";
 
 import { PrimaryVocabularyTab } from "@/components/primary/PrimaryVocabularyTab";
@@ -169,6 +170,44 @@ export function PrimaryLearnTab({
           Scroll sideways to browse Vocabulary and Grammar.
         </p>
       </header>
+
+      <LearnShelf
+        title="Comics"
+        subtitle="Read, predict, and explore new words"
+        icon={<BookOpen className="h-5 w-5" aria-hidden />}
+      >
+        <Link
+          href="/wke/comic"
+          data-shelf-card
+          aria-label="Read Comic Adventures: A New Friend Arrives"
+          className="group flex w-[11.5rem] shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-[var(--pl-border)] bg-white text-left shadow-sm transition hover:border-[var(--pl-purple)]/40 hover:shadow-md active:scale-[0.99] sm:w-[13rem]"
+        >
+          <span className="relative aspect-[16/10] w-full overflow-hidden bg-sky-100">
+            <NextImage
+              src="/comics/chapter-1/art/cover-art-v1.png"
+              alt="Mia, Zara, Ethan, and Leo in A New Friend Arrives"
+              fill
+              draggable={false}
+              className="pointer-events-none object-cover object-[center_58%] transition-transform duration-300 group-hover:scale-105"
+              unoptimized
+            />
+            <span className="absolute left-2 top-2 rounded-full bg-sky-500 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+              Interactive
+            </span>
+          </span>
+          <span className="flex items-start justify-between gap-1.5 p-3">
+            <span className="min-w-0">
+              <span className="block text-sm font-extrabold leading-snug text-[var(--pl-ink)]">
+                Comic Adventures
+              </span>
+              <span className="mt-1 block line-clamp-2 text-[11px] font-semibold text-[var(--pl-muted)]">
+                A New Friend Arrives
+              </span>
+            </span>
+            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--pl-muted)] transition group-hover:text-[var(--pl-purple)]" />
+          </span>
+        </Link>
+      </LearnShelf>
 
       <LearnShelf
         title="Vocabulary"

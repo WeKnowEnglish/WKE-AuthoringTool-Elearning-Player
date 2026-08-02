@@ -3,6 +3,7 @@ export type AppDiagnosticSurface =
   | "teacher"
   | "lesson"
   | "live-game"
+  | "parent"
   | "admin";
 
 export type AppDiagnosticKind = "mark" | "span" | "error" | "vital";

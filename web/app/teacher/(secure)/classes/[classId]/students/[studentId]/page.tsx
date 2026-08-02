@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StudentDiagnosticTabs } from "@/components/teacher/mastery/StudentDiagnosticTabs";
+import { GuardianConnectionsPanel } from "@/components/teacher/guardians/GuardianConnectionsPanel";
+import { ParentProgressPublishingPanel } from "@/components/teacher/guardians/ParentProgressPublishingPanel";
+import { ParentStreamPublishingPanel } from "@/components/teacher/guardians/ParentStreamPublishingPanel";
 import { getStudentDiagnosticBundle } from "@/lib/data/teacher-mastery";
 import { getSentenceSubmissionsForStudent } from "@/lib/data/teacher-sentence-submissions";
 import { formatRelativeDate } from "@/lib/mastery/teacher-mastery-display";
+import { listGuardianConnectionsForTeacher } from "@/lib/parent/guardian-data";
+import { listParentStreamPublicationsForTeacher } from "@/lib/parent/parent-stream";
+import { listProgressReportsForTeacher } from "@/lib/parent/progress-report-data";
 
 type Props = {
   params: Promise<{ classId: string; studentId: string }>;
@@ -26,7 +32,12 @@ export default async function TeacherStudentDiagnosticPage({ params, searchParam
   const bundle = await getStudentDiagnosticBundle(classId, studentId);
   if (!bundle) notFound();
 
-  const sentenceSubmissions = await getSentenceSubmissionsForStudent(classId, studentId);
+  const [sentenceSubmissions, guardianBundle, parentStreamPublications, progressReports] = await Promise.all([
+    getSentenceSubmissionsForStudent(classId, studentId),
+    listGuardianConnectionsForTeacher(classId, studentId).catch(() => null),
+    listParentStreamPublicationsForTeacher(classId, studentId).catch(() => null),
+    listProgressReportsForTeacher(classId, studentId).catch(() => null),
+  ]);
   const initialTab = tab === "writing" ? "writing" : undefined;
 
   const { teacherClass, student, diagnostic, needsAttention } = bundle;
@@ -74,6 +85,24 @@ export default async function TeacherStudentDiagnosticPage({ params, searchParam
           )}
         </p>
       </header>
+
+      <GuardianConnectionsPanel
+        classId={classId}
+        studentId={studentId}
+        initialBundle={guardianBundle}
+      />
+
+      <ParentStreamPublishingPanel
+        classId={classId}
+        studentId={studentId}
+        publications={parentStreamPublications}
+      />
+
+      <ParentProgressPublishingPanel
+        classId={classId}
+        studentId={studentId}
+        reports={progressReports}
+      />
 
       <StudentDiagnosticTabs
         classId={classId}

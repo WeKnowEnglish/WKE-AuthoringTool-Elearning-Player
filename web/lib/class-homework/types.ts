@@ -218,6 +218,8 @@ export type ClassHomework = {
   assignedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Null means every enrolled student; otherwise only these student ids. */
+  targetStudentIds: string[] | null;
 };
 
 export type StudentHomeworkCard = {

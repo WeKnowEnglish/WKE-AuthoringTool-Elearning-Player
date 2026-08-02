@@ -201,6 +201,12 @@ export type AssessmentSpeakingRecording = {
   url: string;
 };
 
+export type AssessmentSpeakingReview = {
+  scores: Record<string, number>;
+  feedback: string;
+  reviewedAt: string;
+};
+
 export type AssessmentPartProgress = {
   answered: number;
   total: number;

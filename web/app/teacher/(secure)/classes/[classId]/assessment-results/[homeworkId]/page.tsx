@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { listAssessmentResultsForTeacher } from "@/lib/data/assessment-attempts";
 import { getClassHomework } from "@/lib/data/class-homework";
 import { getTeacherClass } from "@/lib/data/teacher-classes";
+import { AssessmentSpeakingReviewForm } from "@/components/assessment/AssessmentSpeakingReviewForm";
 
 type Props = { params: Promise<{ classId: string; homeworkId: string }> };
 
@@ -38,7 +39,7 @@ export default async function AssessmentResultsPage({ params }: Props) {
             <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${row.status === "submitted" ? "bg-emerald-100 text-emerald-800" : row.status === "in_progress" ? "bg-amber-100 text-amber-900" : "bg-neutral-100 text-neutral-600"}`}>{row.status.replace("_", " ")}</span></td>
             <td className="px-4 py-3 text-neutral-700">{`${row.answered}/${row.itemTotal}`}</td>
             <td className="px-4 py-3 font-semibold text-neutral-900">{row.status === "submitted" && row.objectiveTotal ? `${row.correct}/${row.objectiveTotal} · ${Math.round(row.correct / row.objectiveTotal * 100)}%` : "—"}</td>
-            <td className="px-4 py-3"><div className="flex min-w-52 flex-col gap-2">{row.recordings.length ? row.recordings.map((recording, index) => <div key={recording.id}><p className="mb-1 text-xs font-semibold text-neutral-500">Speaking part {index + 1} · {Math.round(recording.durationMs / 1000)} sec</p>{recording.url ? <audio controls preload="none" src={recording.url} className="h-9 w-52" aria-label={`Play ${row.displayName}'s speaking part ${index + 1}`} /> : <span className="text-xs text-neutral-500">Audio unavailable</span>}</div>) : <span className="text-neutral-500">No recordings</span>}</div></td>
+            <td className="px-4 py-3"><div className="flex min-w-72 flex-col gap-2">{row.recordings.length ? <>{row.recordings.map((recording, index) => <div key={recording.id}><p className="mb-1 text-xs font-semibold text-neutral-500">Speaking part {index + 1} · {Math.round(recording.durationMs / 1000)} sec</p>{recording.url ? <audio controls preload="none" src={recording.url} className="h-9 w-52" aria-label={`Play ${row.displayName}'s speaking part ${index + 1}`} /> : <span className="text-xs text-neutral-500">Audio unavailable</span>}</div>)}<AssessmentSpeakingReviewForm classId={classId} homeworkId={homeworkId} studentId={row.studentId} initialReview={row.speakingReview} /></> : <span className="text-neutral-500">No recordings</span>}</div></td>
             <td className="px-4 py-3 text-neutral-600">{row.updatedAt ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(row.updatedAt)) : "Not started"}</td>
           </tr>)}</tbody>
         </table>

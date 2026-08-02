@@ -15,7 +15,7 @@ type Stage = "activity" | "review";
 type Props = {
   activity: SentenceColumnsPlayable;
   eyebrow?: string;
-  onMastered?: () => void;
+  onMastered?: (snapshot: { answers: Record<string, string>; correct: number; total: number }) => void;
 };
 
 export function SentenceColumnsPlayer({
@@ -75,7 +75,7 @@ export function SentenceColumnsPlayer({
           >
             Practise again
           </KidButton>
-          {onMastered ? <KidButton onClick={onMastered}>Done</KidButton> : null}
+          {onMastered ? <KidButton onClick={() => onMastered({ answers: placements, correct: result.correct, total: result.total })}>Done</KidButton> : null}
         </div>
       </KidPanel>
     );

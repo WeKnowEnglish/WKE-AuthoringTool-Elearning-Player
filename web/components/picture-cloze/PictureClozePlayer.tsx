@@ -30,7 +30,7 @@ type Props = {
   eyebrow?: string;
   /** Label for the mastered review CTA. */
   doneLabel?: string;
-  onMastered?: () => void;
+  onMastered?: (snapshot: { answers: Record<string, string>; correct: number; total: number }) => void;
 };
 
 function shuffleWords(words: readonly string[]): string[] {
@@ -215,7 +215,7 @@ export function PictureClozePlayer({
             {mastered ? "Practise again" : "Fix my answers"}
           </KidButton>
           {mastered && onMastered ? (
-            <KidButton onClick={onMastered}>{doneLabel}</KidButton>
+            <KidButton onClick={() => onMastered({ answers, correct: score, total })}>{doneLabel}</KidButton>
           ) : null}
         </div>
       </KidPanel>

@@ -11,6 +11,7 @@ export {
   diagnosticFetch,
   exportAppDiagnosticsAsCsv,
   exportAppDiagnosticsAsJson,
+  flushAppDiagnosticQueue,
   getAppDiagnosticSessionId,
   instrumentedFetch,
   readAppDiagnosticEvents,

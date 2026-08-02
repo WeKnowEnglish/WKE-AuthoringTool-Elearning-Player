@@ -85,6 +85,7 @@ export function ClassHomeworkPanel({
   const isLight = teacherTier === "light";
   const [items, setItems] = useState(initialHomework);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -128,6 +129,24 @@ export function ClassHomeworkPanel({
       setItems((current) => [result.homework, ...current]);
       setEditingId(result.homework.id);
     });
+  };
+
+  const copyStudentLink = async (homeworkId: string) => {
+    const url = `${window.location.origin}/primary/homework/${encodeURIComponent(homeworkId)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    setCopiedId(homeworkId);
+    window.setTimeout(() => setCopiedId((current) => current === homeworkId ? null : current), 2000);
   };
 
   if (editing) {
@@ -193,14 +212,26 @@ export function ClassHomeworkPanel({
             const showDone =
               (item.payload.type === "pack_quiz" ||
                 item.payload.type === "pack_flashcards" ||
-                item.payload.type === "homework_template") &&
+                item.payload.type === "homework_template" ||
+                item.payload.type === "picture_cloze" ||
+                item.payload.type === "verb_table" ||
+                item.payload.type === "sentence_columns" ||
+                item.payload.type === "word_annotation" ||
+                item.payload.type === "picture_writing" ||
+                item.payload.type === "question_writing" ||
+                item.payload.type === "definition_match" ||
+                item.payload.type === "cloze_choice" ||
+                item.payload.type === "cloze_open" ||
+                item.payload.type === "read_and_answer" ||
+                item.payload.type === "picture_story" ||
+                item.payload.type === "studio_activity") &&
               (item.status === "assigned" || item.status === "closed");
             return (
-              <li key={item.id}>
+              <li key={item.id} className="flex flex-wrap items-stretch gap-2 rounded-lg border border-neutral-200 p-2 hover:border-neutral-400">
                 <button
                   type="button"
                   onClick={() => setEditingId(item.id)}
-                  className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-left hover:border-neutral-400"
+                  className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-1 text-left hover:bg-neutral-50"
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -233,6 +264,15 @@ export function ClassHomeworkPanel({
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-neutral-700">Edit →</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void copyStudentLink(item.id)}
+                  className="min-h-10 shrink-0 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
+                  aria-label={`Copy student link for ${item.title}`}
+                  title="Opens student login, then Start homework for this assignment"
+                >
+                  {copiedId === item.id ? "Copied!" : "Copy student link"}
                 </button>
               </li>
             );

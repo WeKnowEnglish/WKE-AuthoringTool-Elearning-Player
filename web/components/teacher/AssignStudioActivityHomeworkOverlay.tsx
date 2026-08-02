@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { assignStudioActivityAsHomework } from "@/lib/actions/class-homework";
 import {
-  homeworkStudioFormatLabel,
-  isHomeworkStudioFormat,
-  type HomeworkStudioFormat,
-} from "@/lib/class-homework/types";
+  assignableStudioHomeworkFormatLabel,
+  isAssignableStudioHomeworkFormat,
+} from "@/lib/class-homework/assignable-studio-formats";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 
 type ClassOption = {
@@ -35,10 +34,8 @@ export function AssignStudioActivityHomeworkOverlay({
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const defaultClassId = useMemo(() => classes[0]?.id ?? "", [classes]);
-  const assignable = isHomeworkStudioFormat(format);
-  const formatLabel = assignable
-    ? homeworkStudioFormatLabel(format as HomeworkStudioFormat)
-    : format;
+  const assignable = isAssignableStudioHomeworkFormat(format);
+  const formatLabel = assignableStudioHomeworkFormatLabel(format);
 
   const [classId, setClassId] = useState(defaultClassId);
   const [title, setTitle] = useState(activityTitle);
@@ -177,8 +174,8 @@ export function AssignStudioActivityHomeworkOverlay({
             <>
               {!assignable ? (
                 <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                  Learning tracks and vocabulary lists can’t be assigned as homework yet.
-                  Compile a quiz from a vocabulary list first.
+                  Vocabulary lists can’t be assigned as homework yet. Compile a quiz or
+                  learning track first, or use a homework module workspace.
                 </p>
               ) : null}
 

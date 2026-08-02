@@ -12,8 +12,13 @@ import type {
 const EVENTS_KEY = "wke:app-diagnostics:v1";
 const SESSION_KEY = "wke:app-diagnostics:session:v1";
 const DEVICE_KEY = "wke:app-diagnostics:device:v1";
+const QUEUE_KEY = "wke:app-diagnostics:queue:v1";
 const CHANGE_EVENT = "wke-app-diagnostics-change";
 const MAX_EVENTS = 2_000;
+const MAX_QUEUED_EVENTS = 500;
+const BATCH_SIZE = 50;
+let flushTimer: number | null = null;
+let flushPromise: Promise<number> | null = null;
 
 function randomId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
@@ -40,6 +45,72 @@ function writeStorage(key: string, value: unknown) {
   } catch {
     // Diagnostics must never interrupt the app.
   }
+}
+
+function readQueuedEvents() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(QUEUE_KEY);
+    return raw ? (JSON.parse(raw) as AppDiagnosticEvent[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeQueuedEvents(events: AppDiagnosticEvent[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(events.slice(-MAX_QUEUED_EVENTS)));
+  } catch {
+    // Diagnostics must never interrupt the app.
+  }
+}
+
+function deviceCategory(): AppDiagnosticEvent["deviceCategory"] {
+  if (typeof window === "undefined") return "unknown";
+  const width = Math.min(window.innerWidth, window.screen?.width || window.innerWidth);
+  if (width < 640) return "mobile";
+  if (width < 1024) return "tablet";
+  return "desktop";
+}
+
+function scheduleDiagnosticFlush() {
+  if (typeof window === "undefined" || flushTimer != null) return;
+  flushTimer = window.setTimeout(() => {
+    flushTimer = null;
+    void flushAppDiagnosticQueue();
+  }, 1_000);
+}
+
+export async function flushAppDiagnosticQueue(): Promise<number> {
+  if (typeof window === "undefined") return 0;
+  if (flushPromise) return flushPromise;
+
+  flushPromise = (async () => {
+    const batch = readQueuedEvents().slice(0, BATCH_SIZE);
+    if (batch.length === 0) return 0;
+    try {
+      const response = await fetch("/api/diagnostics/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        keepalive: true,
+        body: JSON.stringify({ events: batch }),
+      });
+      if (!response.ok) return 0;
+      const payload = (await response.json()) as { accepted?: string[] };
+      const accepted = new Set(payload.accepted ?? batch.map((event) => event.id));
+      const remaining = readQueuedEvents().filter((event) => !accepted.has(event.id));
+      writeQueuedEvents(remaining);
+      if (remaining.length > 0) scheduleDiagnosticFlush();
+      return accepted.size;
+    } catch {
+      return 0;
+    }
+  })().finally(() => {
+    flushPromise = null;
+  });
+  return flushPromise;
 }
 
 export function getAppDiagnosticSessionId() {
@@ -105,9 +176,18 @@ export function recordAppDiagnostic(
     durationMs: options?.durationMs,
     route: options?.route ?? currentRoute(),
     detail,
+    classId: options?.classId,
+    activityId: options?.activityId,
+    homeworkId: options?.homeworkId,
+    status: options?.status,
+    errorCode: options?.errorCode,
+    appVersion: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "development",
+    deviceCategory: deviceCategory(),
   };
   const events = [...readAppDiagnosticEvents(), event].slice(-MAX_EVENTS);
   writeStorage(EVENTS_KEY, events);
+  writeQueuedEvents([...readQueuedEvents(), event]);
+  scheduleDiagnosticFlush();
   notifyAppDiagnosticsChanged();
   return event;
 }

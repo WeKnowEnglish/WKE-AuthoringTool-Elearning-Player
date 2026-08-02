@@ -13,6 +13,17 @@ export {
   normalizeStudioActivityTitle,
   validateStudioActivityPack,
   vocabularyListStubPack,
+  pictureClozeStubPack,
+  verbTableStubPack,
+  sentenceColumnsStubPack,
+  wordAnnotationStubPack,
+  pictureWritingStubPack,
+  questionWritingStubPack,
+  definitionMatchStubPack,
+  clozeChoiceStubPack,
+  clozeOpenStubPack,
+  readAndAnswerStubPack,
+  pictureStoryStubPack,
 } from "@/lib/studio-activities/validate";
 export {
   publishStudioActivity,

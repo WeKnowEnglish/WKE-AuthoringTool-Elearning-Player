@@ -26,4 +26,21 @@ describe("buildPublicMetadata", () => {
     expect(metadata.title).toEqual({ absolute: "We Know English | Custom" });
     expect(metadata.alternates?.canonical).toBe("https://weknowenglish.online");
   });
+
+  it("allows a dedicated Open Graph title", () => {
+    const metadata = buildPublicMetadata({
+      title: "All-in-One ESL Teaching Platform",
+      description: "Meta description",
+      pathname: "/",
+      openGraphTitle: "We Know English — Connected ESL Teaching and Learning",
+    });
+
+    expect(metadata.openGraph?.title).toBe(
+      "We Know English — Connected ESL Teaching and Learning",
+    );
+    expect(metadata.twitter?.title).toBe(
+      "We Know English — Connected ESL Teaching and Learning",
+    );
+    expect(metadata.title).toBe("All-in-One ESL Teaching Platform");
+  });
 });

@@ -1,13 +1,6 @@
-import { notFound } from "next/navigation";
-import { ClozeChoiceWorkspace } from "@/components/teacher/activity-builder/reading/ClozeChoiceWorkspace";
-import { isAdmin } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function ClozeChoiceBuilderPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!isAdmin(user)) notFound();
-  return <ClozeChoiceWorkspace />;
+/** Legacy reading-admin route — bankable studio lives at /cloze-choice. */
+export default function ClozeChoiceBuilderPage() {
+  redirect("/teacher/activity-builder/cloze-choice");
 }

@@ -1,16 +1,19 @@
 import { compileQuizzesFromVocabList } from "@/lib/activity-builder/games/compile-from-vocab-list";
-import {
-  exportGamesFlashcardsForLessonPlayer,
-  validateGamesFlashcardsAuthoringDocument,
-} from "@/lib/activity-builder/games/flashcards";
-import {
-  exportGamesLetterMixupForLessonPlayer,
-  validateGamesLetterMixupAuthoringDocument,
-} from "@/lib/activity-builder/games/letter-mixup";
-import {
-  exportGamesMcQuizForLessonPlayer,
-  validateGamesAuthoringDocument,
-} from "@/lib/activity-builder/games/mc-quiz";
+import { exportCoreModuleToLessonPlayer } from "@/lib/activity-builder/core-modules/registry";
+import { validateGamesFlashcardsAuthoringDocument } from "@/lib/activity-builder/games/flashcards";
+import { validateGamesLetterMixupAuthoringDocument } from "@/lib/activity-builder/games/letter-mixup";
+import { validateGamesAuthoringDocument } from "@/lib/activity-builder/games/mc-quiz";
+import { validateGamesLineMatchAuthoringDocument } from "@/lib/activity-builder/games/line-match";
+import { validateGamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/true-false";
+import { validateGamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/sentence-scramble";
+import { validateGamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/fill-blanks";
+import type { GamesAuthoringDocument } from "@/lib/activity-builder/games/types-mc";
+import type { GamesLetterMixupAuthoringDocument } from "@/lib/activity-builder/games/types-letter-mixup";
+import type { GamesFlashcardsAuthoringDocument } from "@/lib/activity-builder/games/types-flashcards";
+import type { GamesLineMatchAuthoringDocument } from "@/lib/activity-builder/games/types-line-match";
+import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/types-true-false";
+import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
+import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
 import type { VocabularyListDocument } from "@/lib/activity-builder/vocabulary-list/types";
 import { validateVocabularyListDocument } from "@/lib/activity-builder/vocabulary-list/document";
 import {
@@ -25,6 +28,10 @@ import {
   defaultExploreHotspotsSettings,
   defaultLanguageInFocusSettings,
   defaultMultipleChoiceSettings,
+  defaultLineMatchSettings,
+  defaultTrueFalseSettings,
+  defaultSentenceScrambleSettings,
+  defaultFillBlanksSettings,
   vocabFormatForKind,
 } from "@/lib/learning-tracks/composition";
 import { createHobbiesVocabularyListDocument } from "@/lib/learning-tracks/create-hobbies-vocabulary-list";
@@ -39,6 +46,10 @@ import type {
   LearningTrackExploreHotspotsSettings,
   LearningTrackLanguageInFocusSettings,
   LearningTrackMultipleChoiceSettings,
+  LearningTrackLineMatchSettings,
+  LearningTrackTrueFalseSettings,
+  LearningTrackSentenceScrambleSettings,
+  LearningTrackFillBlanksSettings,
   LearningTrackScreenPayload,
   LearningTrackVocabCompileFormat,
 } from "@/lib/learning-tracks/composition-types";
@@ -109,6 +120,14 @@ export function libraryFormatForBeatKind(
       return "flashcards";
     case "listen_and_choose":
       return "listen_and_choose";
+    case "line_match":
+      return "line_match";
+    case "true_false":
+      return "true_false";
+    case "sentence_scramble":
+      return "sentence_scramble";
+    case "fill_blanks":
+      return "fill_blanks";
     case "explore_hotspots":
       return "explore_hotspots";
     case "language_in_focus":
@@ -188,6 +207,53 @@ function letterMixupSettingsForBeat(
     ...(typeof saved.imageAudioUrl === "string" && saved.imageAudioUrl.trim()
       ? { imageAudioUrl: saved.imageAudioUrl.trim() }
       : {}),
+  };
+}
+
+function lineMatchSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackLineMatchSettings {
+  const defaults = defaultLineMatchSettings();
+  const saved = beat.presentation?.lineMatch;
+  if (!saved) return defaults;
+  return {
+    bodyText: saved.bodyText?.trim() || defaults.bodyText,
+    autoAdvanceOnPass: saved.autoAdvanceOnPass ?? defaults.autoAdvanceOnPass,
+  };
+}
+
+function trueFalseSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackTrueFalseSettings {
+  const defaults = defaultTrueFalseSettings();
+  const saved = beat.presentation?.trueFalse;
+  if (!saved) return defaults;
+  return {
+    autoAdvanceOnPass: saved.autoAdvanceOnPass ?? defaults.autoAdvanceOnPass,
+  };
+}
+
+function sentenceScrambleSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackSentenceScrambleSettings {
+  const defaults = defaultSentenceScrambleSettings();
+  const saved = beat.presentation?.sentenceScramble;
+  if (!saved) return defaults;
+  return {
+    bodyText: saved.bodyText?.trim() || defaults.bodyText,
+    autoAdvanceOnPass: saved.autoAdvanceOnPass ?? defaults.autoAdvanceOnPass,
+  };
+}
+
+function fillBlanksSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackFillBlanksSettings {
+  const defaults = defaultFillBlanksSettings();
+  const saved = beat.presentation?.fillBlanks;
+  if (!saved) return defaults;
+  return {
+    bodyText: saved.bodyText?.trim() || defaults.bodyText,
+    autoAdvanceOnPass: saved.autoAdvanceOnPass ?? defaults.autoAdvanceOnPass,
   };
 }
 
@@ -335,6 +401,17 @@ function exportVocabCompileScreens(
   const letterMixup = beat
     ? letterMixupSettingsForBeat(beat)
     : defaultLetterMixupSettings();
+  const lineMatch = beat ? lineMatchSettingsForBeat(beat) : defaultLineMatchSettings();
+  const trueFalse = beat ? trueFalseSettingsForBeat(beat) : defaultTrueFalseSettings();
+  const sentenceScramble = beat
+    ? sentenceScrambleSettingsForBeat(beat)
+    : defaultSentenceScrambleSettings();
+  const fillBlanks = beat
+    ? fillBlanksSettingsForBeat(beat)
+    : defaultFillBlanksSettings();
+  const listenAndChoose = beat
+    ? listenAndChooseSettingsForBeat(beat)
+    : defaultListenAndChooseSettings();
 
   const compiled = compileQuizzesFromVocabList({
     list,
@@ -355,10 +432,10 @@ function exportVocabCompileScreens(
 
   if (format === "multiple_choice") {
     const authoring = applyMcItemOverlays(
-      validateGamesAuthoringDocument(result.document),
+      validateGamesAuthoringDocument(result.document as GamesAuthoringDocument),
       multipleChoice.itemOverlays,
     );
-    const pack = exportGamesMcQuizForLessonPlayer(authoring);
+    const pack = exportCoreModuleToLessonPlayer("multiple_choice", authoring);
     return applyAutoAdvanceOnPass(
       applyPackPromptAudio(
         screensFromGamesPack(pack, `${label} multiple choice`),
@@ -368,8 +445,11 @@ function exportVocabCompileScreens(
     );
   }
   if (format === "letter_mixup") {
-    const pack = exportGamesLetterMixupForLessonPlayer(
-      validateGamesLetterMixupAuthoringDocument(result.document),
+    const pack = exportCoreModuleToLessonPlayer(
+      "letter_mixup",
+      validateGamesLetterMixupAuthoringDocument(
+        result.document as GamesLetterMixupAuthoringDocument,
+      ),
     );
     return applyAutoAdvanceOnPass(
       applyPackLetterImageAudio(
@@ -379,10 +459,88 @@ function exportVocabCompileScreens(
       letterMixup.autoAdvanceOnPass,
     );
   }
-  const pack = exportGamesFlashcardsForLessonPlayer(
-    validateGamesFlashcardsAuthoringDocument(result.document),
-  );
-  return screensFromGamesPack(pack, `${label} flashcards`);
+  if (format === "flashcards") {
+    const pack = exportCoreModuleToLessonPlayer(
+      "flashcards",
+      validateGamesFlashcardsAuthoringDocument(
+        result.document as GamesFlashcardsAuthoringDocument,
+      ),
+    );
+    return screensFromGamesPack(pack, `${label} flashcards`);
+  }
+  if (format === "line_match") {
+    const base = validateGamesLineMatchAuthoringDocument(
+      result.document as GamesLineMatchAuthoringDocument,
+    );
+    const authoring: GamesLineMatchAuthoringDocument = {
+      ...base,
+      interaction: {
+        ...base.interaction,
+        bodyTextDefault: lineMatch.bodyText,
+      },
+    };
+    const pack = exportCoreModuleToLessonPlayer("line_match", authoring);
+    return applyAutoAdvanceOnPass(
+      screensFromGamesPack(pack, `${label} line match`),
+      lineMatch.autoAdvanceOnPass,
+    );
+  }
+  if (format === "true_false") {
+    const pack = exportCoreModuleToLessonPlayer(
+      "true_false",
+      validateGamesTrueFalseAuthoringDocument(
+        result.document as GamesTrueFalseAuthoringDocument,
+      ),
+    );
+    return applyAutoAdvanceOnPass(
+      screensFromGamesPack(pack, `${label} true false`),
+      trueFalse.autoAdvanceOnPass,
+    );
+  }
+  if (format === "sentence_scramble") {
+    const base = validateGamesSentenceScrambleAuthoringDocument(
+      result.document as GamesSentenceScrambleAuthoringDocument,
+    );
+    const authoring: GamesSentenceScrambleAuthoringDocument = {
+      ...base,
+      interaction: {
+        ...base.interaction,
+        bodyTextDefault: sentenceScramble.bodyText,
+      },
+    };
+    const pack = exportCoreModuleToLessonPlayer("sentence_scramble", authoring);
+    return applyAutoAdvanceOnPass(
+      screensFromGamesPack(pack, `${label} sentence scramble`),
+      sentenceScramble.autoAdvanceOnPass,
+    );
+  }
+  if (format === "fill_blanks") {
+    const base = validateGamesFillBlanksAuthoringDocument(
+      result.document as GamesFillBlanksAuthoringDocument,
+    );
+    const authoring: GamesFillBlanksAuthoringDocument = {
+      ...base,
+      interaction: {
+        ...base.interaction,
+        bodyTextDefault: fillBlanks.bodyText,
+      },
+    };
+    const pack = exportCoreModuleToLessonPlayer("fill_blanks", authoring);
+    return applyAutoAdvanceOnPass(
+      screensFromGamesPack(pack, `${label} fill blanks`),
+      fillBlanks.autoAdvanceOnPass,
+    );
+  }
+  if (format === "listen_and_choose") {
+    const pack = exportCoreModuleToLessonPlayer("listen_and_choose", result.document);
+    return applyListenItemOverlays(
+      screensFromGamesPack(pack, `${label} listen and choose`),
+      listenAndChoose,
+    );
+  }
+
+  const pack = exportCoreModuleToLessonPlayer(format, result.document);
+  return screensFromGamesPack(pack, `${label} ${format}`);
 }
 
 /** Sync path: built-in hobbies list only. */

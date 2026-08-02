@@ -8,11 +8,17 @@ import type {
 export const CLASS_HOMEWORK_STATUSES = ["draft", "assigned", "closed"] as const;
 export type ClassHomeworkStatus = (typeof CLASS_HOMEWORK_STATUSES)[number];
 
-/** Bank formats assignable as frozen class homework (Phase 2). */
+/** Bank formats assignable as frozen class homework (Lesson Player packs). */
 export const HOMEWORK_STUDIO_FORMATS = [
   "multiple_choice",
   "letter_mixup",
   "flashcards",
+  "listen_and_choose",
+  "line_match",
+  "true_false",
+  "sentence_scramble",
+  "fill_blanks",
+  "learning_track",
 ] as const;
 export type HomeworkStudioFormat = (typeof HOMEWORK_STUDIO_FORMATS)[number];
 
@@ -23,6 +29,17 @@ export const CLASS_HOMEWORK_PAYLOAD_TYPES = [
   "external_note",
   "studio_activity",
   "homework_template",
+  "picture_cloze",
+  "verb_table",
+  "sentence_columns",
+  "word_annotation",
+  "picture_writing",
+  "question_writing",
+  "definition_match",
+  "cloze_choice",
+  "cloze_open",
+  "read_and_answer",
+  "picture_story",
 ] as const;
 export type ClassHomeworkPayloadType = (typeof CLASS_HOMEWORK_PAYLOAD_TYPES)[number];
 
@@ -77,6 +94,107 @@ export type ClassHomeworkPayload =
       title: string;
       sectionCount: 6;
       frozenAt: string;
+    }
+  | {
+      type: "picture_cloze";
+      /** Provenance — Activity Bank row id at assign time (empty for ad-hoc). */
+      activityId: string;
+      title: string;
+      itemCount: number;
+      /** Frozen picture cloze authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "verb_table";
+      activityId: string;
+      title: string;
+      rowCount: number;
+      /** Frozen verb table authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "sentence_columns";
+      activityId: string;
+      title: string;
+      challengeCount: number;
+      /** Frozen sentence columns authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "word_annotation";
+      activityId: string;
+      title: string;
+      targetCount: number;
+      /** Frozen word annotation authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "picture_writing";
+      activityId: string;
+      title: string;
+      promptCount: number;
+      /** Frozen picture writing authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "question_writing";
+      activityId: string;
+      title: string;
+      promptCount: number;
+      /** Frozen question writing authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "definition_match";
+      activityId: string;
+      title: string;
+      pairCount: number;
+      /** Frozen definition match authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "cloze_choice";
+      activityId: string;
+      title: string;
+      gapCount: number;
+      /** Frozen cloze-choice authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "cloze_open";
+      activityId: string;
+      title: string;
+      gapCount: number;
+      /** Frozen open-cloze authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "read_and_answer";
+      activityId: string;
+      title: string;
+      questionCount: number;
+      /** Frozen read-and-answer authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
+    }
+  | {
+      type: "picture_story";
+      activityId: string;
+      title: string;
+      questionCount: number;
+      frameCount: number;
+      /** Frozen picture-story authoring document. */
+      document: Record<string, unknown>;
+      frozenAt: string;
     };
 
 export type ClassHomework = {
@@ -119,8 +237,19 @@ export const CLASS_HOMEWORK_PAYLOAD_LABELS: Record<ClassHomeworkPayloadType, str
   pack_flashcards: "Flashcards",
   word_pack_practice: "Word pack practice",
   external_note: "Note / reminder",
-  studio_activity: "Activity Bank quiz",
+  studio_activity: "Activity Bank activity",
   homework_template: "Homework template",
+  picture_cloze: "Picture cloze",
+  verb_table: "Verb table",
+  sentence_columns: "Sentence columns",
+  word_annotation: "Word annotation",
+  picture_writing: "Picture writing",
+  question_writing: "Question writing",
+  definition_match: "Definition match",
+  cloze_choice: "Cloze with choices",
+  cloze_open: "Open cloze",
+  read_and_answer: "Read and answer",
+  picture_story: "Picture story",
 };
 
 export function isHomeworkStudioFormat(
@@ -135,7 +264,13 @@ export function isHomeworkStudioFormat(
 export function homeworkStudioFormatLabel(format: HomeworkStudioFormat): string {
   if (format === "multiple_choice") return "Multiple choice";
   if (format === "letter_mixup") return "Letter scramble";
-  return "Flashcards";
+  if (format === "flashcards") return "Flashcards";
+  if (format === "listen_and_choose") return "Listen and choose";
+  if (format === "line_match") return "Line match";
+  if (format === "true_false") return "True / false";
+  if (format === "sentence_scramble") return "Sentence scramble";
+  if (format === "fill_blanks") return "Fill in the blanks";
+  return "Learning track";
 }
 
 /** Re-export face type for consumers that only import homework types. */

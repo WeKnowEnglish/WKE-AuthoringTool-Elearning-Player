@@ -10,6 +10,7 @@ export type ActivityLibraryFormat =
   | "fill_blanks"
   | "drag_match"
   | "line_match"
+  | "true_false"
   | "learning_track";
 
 export type ActivityLibraryExportSnapshot = {

@@ -154,12 +154,9 @@ export function ActivityBuilderHub({
             Activity Builder
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-stone-600">
-            Build activities for your Activity Bank and Classroom Wall.
-            Vocabulary lists, Explore hotspots, and the Learning Track Compiler
-            author here
             {effectiveIsAdmin
-              ? "; some scene/quiz tools still open in EDU Studio."
-              : "."}
+              ? "Build activities for your Activity Bank and Classroom Wall. Vocabulary lists, Explore hotspots, the Learning Track Compiler, and individual format workspaces author here; some scene/quiz tools still open in EDU Studio."
+              : "Build activities for your Activity Bank and Classroom Wall. Start from Vocabulary lists, Quiz builder, Explore hotspots, the Learning Track Compiler, or the WKE Library."}
           </p>
         </div>
         <Link

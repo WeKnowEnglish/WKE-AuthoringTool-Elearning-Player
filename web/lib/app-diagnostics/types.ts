@@ -34,12 +34,24 @@ export type AppDiagnosticEvent = {
   durationMs?: number;
   route?: string;
   detail?: AppDiagnosticDetail;
+  classId?: string;
+  activityId?: string;
+  homeworkId?: string;
+  status?: string;
+  errorCode?: string;
+  appVersion?: string;
+  deviceCategory?: "mobile" | "tablet" | "desktop" | "unknown";
 };
 
 export type AppDiagnosticRecordOptions = {
   kind?: AppDiagnosticKind;
   durationMs?: number;
   route?: string;
+  classId?: string;
+  activityId?: string;
+  homeworkId?: string;
+  status?: string;
+  errorCode?: string;
 };
 
 export type AppDiagnosticFetchOptions = {

@@ -86,7 +86,12 @@ export function getExplorationSnapshot(): ExplorationSnapshotV1 {
 
 function writeExplorationSnapshot(snapshot: ExplorationSnapshotV1) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(WORLD_EXPLORATION_STORAGE_KEY, JSON.stringify(snapshot));
+  try {
+    localStorage.setItem(WORLD_EXPLORATION_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Exploration markers are optional. A full, blocked, or unavailable storage
+    // area must never prevent the student from opening a learning activity.
+  }
 }
 
 export function isExplorationNodeTouched(key: string, snapshot?: ExplorationSnapshotV1): boolean {
@@ -183,5 +188,5 @@ export function isWorldLevelTouched(
 export function getWorld1ExplorationSummary(
   _snapshot?: ExplorationSnapshotV1,
 ): WorldExplorationSummary {
-  return getWorldExplorationSummary("world_1");
+  return getWorldExplorationSummary("world_1", _snapshot);
 }

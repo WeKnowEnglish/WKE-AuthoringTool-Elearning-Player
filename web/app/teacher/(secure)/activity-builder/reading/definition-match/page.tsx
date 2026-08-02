@@ -1,13 +1,6 @@
-import { notFound } from "next/navigation";
-import { DefinitionMatchWorkspace } from "@/components/teacher/activity-builder/reading/DefinitionMatchWorkspace";
-import { isAdmin } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function DefinitionMatchBuilderPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!isAdmin(user)) notFound();
-  return <DefinitionMatchWorkspace />;
+/** Legacy reading-admin route — bankable studio lives at /definition-match. */
+export default function DefinitionMatchBuilderPage() {
+  redirect("/teacher/activity-builder/definition-match");
 }

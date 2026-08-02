@@ -34,6 +34,7 @@ import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 type Props = {
   studentKey: string;
+  primaryTourSeen?: boolean;
   classMemberships: StudentClassMembership[];
   assignedHomework?: StudentHomeworkCard[];
   liveSessions?: StudentClassLiveSession[];
@@ -46,6 +47,7 @@ type Props = {
 
 export function PrimaryDashboardClient({
   studentKey,
+  primaryTourSeen = false,
   classMemberships,
   assignedHomework = [],
   liveSessions = [],
@@ -102,6 +104,9 @@ export function PrimaryDashboardClient({
         return;
       }
       playSfx("tap", muted);
+      recordAppDiagnostic("student", "activity", "activity_opened", {
+        activityType: "primary_vocabulary",
+      }, { activityId: id, status: "started" });
       markExplorationNode({ kind: "vocab_set", setId: id });
       const resume =
         opts?.resumeScreenIndex ?? resumeScreenIndexForSet(id);
@@ -153,6 +158,7 @@ export function PrimaryDashboardClient({
 
       <StudentHomeLanding
         studentKey={studentKey}
+        primaryTourSeen={primaryTourSeen}
         guideEnabled={!overlayOpen && !vocabSetOpen && !grammarPosterSlug}
         model={homeModel}
         progressModel={progressModel}
@@ -196,6 +202,9 @@ export function PrimaryDashboardClient({
             setVocabSessionSeed(newSessionSeed());
           }}
           onActivityComplete={() => {
+            recordAppDiagnostic("student", "activity", "activity_completed", {
+              activityType: "primary_vocabulary",
+            }, { activityId: activeVocabSetId, status: "completed" });
             if (activeVocabSetId) {
               markExplorationNode({ kind: "vocab_set", setId: activeVocabSetId });
             }

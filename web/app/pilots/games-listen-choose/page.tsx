@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { GamesListenAndChoosePilot } from "@/components/pilots/GamesListenAndChoosePilot";
 
 export const metadata = {
@@ -7,5 +8,15 @@ export const metadata = {
 };
 
 export default function GamesListenAndChoosePilotPage() {
-  return <GamesListenAndChoosePilot />;
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl p-6 text-lg font-extrabold text-kid-ink">
+          Loading listen & choose pilot…
+        </div>
+      }
+    >
+      <GamesListenAndChoosePilot />
+    </Suspense>
+  );
 }

@@ -1,15 +1,11 @@
 import {
   compileQuizzesFromVocabList,
   type CompileQuizzesFromVocabListInput,
+  type VocabCompileAuthoringDocument,
   type VocabCompileFormat,
   type VocabCompileSkipped,
 } from "@/lib/activity-builder/games/compile-from-vocab-list";
-import { exportGamesFlashcardsForLessonPlayer } from "@/lib/activity-builder/games/flashcards";
-import { exportGamesLetterMixupForLessonPlayer } from "@/lib/activity-builder/games/letter-mixup";
-import { exportGamesMcQuizForLessonPlayer } from "@/lib/activity-builder/games/mc-quiz";
-import type { GamesAuthoringDocument } from "@/lib/activity-builder/games/types-mc";
-import type { GamesLetterMixupAuthoringDocument } from "@/lib/activity-builder/games/types-letter-mixup";
-import type { GamesFlashcardsAuthoringDocument } from "@/lib/activity-builder/games/types-flashcards";
+import { exportCoreModuleToLessonPlayer } from "@/lib/activity-builder/core-modules/registry";
 import {
   countLocalVocabMedia,
   publishLocalVocabMedia,
@@ -29,10 +25,7 @@ export type BuiltVocabQuizPack = {
   itemCount: number;
   title: string;
   filename: string;
-  authoring:
-    | GamesAuthoringDocument
-    | GamesLetterMixupAuthoringDocument
-    | GamesFlashcardsAuthoringDocument;
+  authoring: VocabCompileAuthoringDocument;
   pack: unknown;
 };
 
@@ -60,33 +53,15 @@ function slugify(value: string): string {
   );
 }
 
-function authoringTitle(
-  document:
-    | GamesAuthoringDocument
-    | GamesLetterMixupAuthoringDocument
-    | GamesFlashcardsAuthoringDocument,
-): string {
+function authoringTitle(document: VocabCompileAuthoringDocument): string {
   return document.name.trim() || "Vocabulary quiz";
 }
 
 function exportPackForFormat(
   format: VocabCompileFormat,
-  document:
-    | GamesAuthoringDocument
-    | GamesLetterMixupAuthoringDocument
-    | GamesFlashcardsAuthoringDocument,
+  document: VocabCompileAuthoringDocument,
 ): unknown {
-  if (format === "multiple_choice") {
-    return exportGamesMcQuizForLessonPlayer(document as GamesAuthoringDocument);
-  }
-  if (format === "letter_mixup") {
-    return exportGamesLetterMixupForLessonPlayer(
-      document as GamesLetterMixupAuthoringDocument,
-    );
-  }
-  return exportGamesFlashcardsForLessonPlayer(
-    document as GamesFlashcardsAuthoringDocument,
-  );
+  return exportCoreModuleToLessonPlayer(format, document);
 }
 
 /** Compile vocab entries into Lesson Player quiz packs (no network). */
@@ -237,4 +212,9 @@ export const VOCAB_COMPILE_FORMAT_OPTIONS: Array<{
   { format: "multiple_choice", label: "Multiple choice" },
   { format: "letter_mixup", label: "Letter scramble" },
   { format: "flashcards", label: "Flashcards" },
+  { format: "listen_and_choose", label: "Listen and choose" },
+  { format: "line_match", label: "Line match" },
+  { format: "true_false", label: "True / false" },
+  { format: "sentence_scramble", label: "Sentence scramble" },
+  { format: "fill_blanks", label: "Fill in the blanks" },
 ];

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { GamesFillBlanksPilot } from "@/components/pilots/GamesFillBlanksPilot";
 
 export const metadata = {
@@ -7,5 +8,15 @@ export const metadata = {
 };
 
 export default function GamesFillBlanksPilotPage() {
-  return <GamesFillBlanksPilot />;
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl p-6 text-lg font-extrabold text-kid-ink">
+          Loading fill-blanks pilot…
+        </div>
+      }
+    >
+      <GamesFillBlanksPilot />
+    </Suspense>
+  );
 }

@@ -133,6 +133,40 @@ export type AdminStudentSummary = {
   updatedAt: string | null;
 };
 
+const ADMIN_STUDENT_LIST_LIMIT = 1000;
+
+function mapStudentRow(row: Record<string, unknown>): AdminStudentSummary {
+  return {
+    userId: String(row.user_id),
+    username: String(row.username ?? ""),
+    displayName: String(row.display_name ?? row.username ?? ""),
+    learningBand: (row.learning_band as string | null) ?? null,
+    createdAt: (row.created_at as string | null) ?? null,
+    updatedAt: (row.updated_at as string | null) ?? null,
+  };
+}
+
+/** All student profiles for the admin Students panel (service role). */
+export async function listAdminStudents(): Promise<
+  { ok: true; students: AdminStudentSummary[] } | { ok: false; error: string }
+> {
+  const gate = await requireAdminContext();
+  if (!gate.ok) return gate;
+
+  const { data, error } = await gate.ctx.service
+    .from("student_profiles")
+    .select("user_id, username, display_name, learning_band, created_at, updated_at")
+    .order("username_normalized", { ascending: true })
+    .limit(ADMIN_STUDENT_LIST_LIMIT);
+
+  if (error) return { ok: false, error: error.message };
+
+  return {
+    ok: true,
+    students: (data ?? []).map((row) => mapStudentRow(row as Record<string, unknown>)),
+  };
+}
+
 export async function searchAdminStudents(query: string): Promise<
   { ok: true; students: AdminStudentSummary[] } | { ok: false; error: string }
 > {
@@ -140,8 +174,8 @@ export async function searchAdminStudents(query: string): Promise<
   if (!gate.ok) return gate;
 
   const q = query.trim().toLowerCase().replace(/[%_,]/g, "");
-  if (q.length < 2) {
-    return { ok: false, error: "Type at least 2 characters to search." };
+  if (!q) {
+    return listAdminStudents();
   }
 
   const pattern = `%${q}%`;
@@ -151,13 +185,13 @@ export async function searchAdminStudents(query: string): Promise<
       .select("user_id, username, display_name, learning_band, created_at, updated_at")
       .ilike("username_normalized", pattern)
       .order("username_normalized", { ascending: true })
-      .limit(40),
+      .limit(ADMIN_STUDENT_LIST_LIMIT),
     gate.ctx.service
       .from("student_profiles")
       .select("user_id, username, display_name, learning_band, created_at, updated_at")
       .ilike("display_name", pattern)
       .order("username_normalized", { ascending: true })
-      .limit(40),
+      .limit(ADMIN_STUDENT_LIST_LIMIT),
   ]);
 
   if (byUsername.error) return { ok: false, error: byUsername.error.message };
@@ -165,20 +199,13 @@ export async function searchAdminStudents(query: string): Promise<
 
   const byId = new Map<string, AdminStudentSummary>();
   for (const row of [...(byUsername.data ?? []), ...(byDisplay.data ?? [])]) {
-    const userId = String(row.user_id);
-    if (byId.has(userId)) continue;
-    byId.set(userId, {
-      userId,
-      username: String(row.username ?? ""),
-      displayName: String(row.display_name ?? row.username ?? ""),
-      learningBand: (row.learning_band as string | null) ?? null,
-      createdAt: (row.created_at as string | null) ?? null,
-      updatedAt: (row.updated_at as string | null) ?? null,
-    });
+    const mapped = mapStudentRow(row as Record<string, unknown>);
+    if (byId.has(mapped.userId)) continue;
+    byId.set(mapped.userId, mapped);
   }
 
   return {
     ok: true,
-    students: [...byId.values()].sort((a, b) => a.username.localeCompare(b.username)).slice(0, 40),
+    students: [...byId.values()].sort((a, b) => a.username.localeCompare(b.username)),
   };
 }

@@ -26,6 +26,7 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
     pathname.startsWith("/teacher/media") ||
     pathname.startsWith("/teacher/dictionary") ||
     pathname.startsWith("/teacher/grammar");
+  const onComicMedia = pathname.startsWith("/teacher/media/comic");
   const onGoLive =
     pathname.startsWith("/teacher/virtual-classroom") ||
     pathname.startsWith("/live-game");
@@ -97,10 +98,15 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
       <TeacherNavDropdown label="Media" active={onMedia}>
         <TeacherNavMenuLink
           href="/teacher/media"
-          active={pathname.startsWith("/teacher/media")}
+          active={pathname.startsWith("/teacher/media") && !onComicMedia}
         >
           Media Library
         </TeacherNavMenuLink>
+        {isAdmin ? (
+          <TeacherNavMenuLink href="/teacher/media/comic" active={onComicMedia}>
+            WKE Comic
+          </TeacherNavMenuLink>
+        ) : null}
         {!isLight ? (
           <TeacherNavMenuLink
             href="/teacher/dictionary/review"

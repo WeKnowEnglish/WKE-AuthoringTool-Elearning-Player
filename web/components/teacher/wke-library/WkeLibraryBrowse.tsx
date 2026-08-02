@@ -22,7 +22,23 @@ const FORMAT_LABELS: Record<StudioActivityFormat, string> = {
   multiple_choice: "Multiple choice",
   letter_mixup: "Letter scramble",
   flashcards: "Flashcards",
+  listen_and_choose: "Listen and choose",
+  line_match: "Line match",
+  true_false: "True / false",
+  sentence_scramble: "Sentence scramble",
+  fill_blanks: "Fill in the blanks",
   learning_track: "Learning track",
+  picture_cloze: "Picture cloze",
+  verb_table: "Verb table",
+  sentence_columns: "Sentence columns",
+  word_annotation: "Word annotation",
+  picture_writing: "Picture writing",
+  question_writing: "Question writing",
+  definition_match: "Definition match",
+  cloze_choice: "Cloze with choices",
+  cloze_open: "Open cloze",
+  read_and_answer: "Read and answer",
+  picture_story: "Picture story",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -34,9 +50,10 @@ const STATUS_LABELS: Record<string, string> = {
 type Props = {
   isAdmin?: boolean;
   classes?: readonly { id: string; title: string }[];
+  classLoadError?: boolean;
 };
 
-export function WkeLibraryBrowse({ isAdmin = false, classes = [] }: Props) {
+export function WkeLibraryBrowse({ isAdmin = false, classes = [], classLoadError = false }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<WkeLibraryItemSummary[]>([]);
   const [mine, setMine] = useState<WkeLibraryItemSummary[]>([]);
@@ -282,7 +299,8 @@ export function WkeLibraryBrowse({ isAdmin = false, classes = [] }: Props) {
         <h2 className="mt-1 text-base font-semibold text-stone-900">Homework Template One</h2>
         <p className="mt-1 text-sm leading-snug text-stone-600">Six connected parts covering vocabulary, adjectives and adverbs, sentence building, verb forms, picture writing, and question writing.</p>
         <p className="mt-2 text-[11px] text-stone-500">6 parts · about 30 minutes · teacher completion reporting</p>
-        <div className="mt-4 grid max-w-md grid-cols-2 gap-2"><Link href="/pilots/homework-template-one" className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-sm font-semibold text-stone-800 hover:bg-stone-50">Preview</Link><button type="button" onClick={() => setAssignTemplateOpen(true)} className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-semibold text-white hover:bg-stone-800">Assign homework</button></div>
+        {classLoadError ? <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">The activity library is available, but classes could not be loaded. Refresh before assigning homework.</p> : null}
+        <div className="mt-4 grid max-w-md grid-cols-2 gap-2"><Link href="/pilots/homework-template-one" className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-sm font-semibold text-stone-800 hover:bg-stone-50">Preview</Link><button type="button" disabled={classLoadError} onClick={() => setAssignTemplateOpen(true)} className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-semibold text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50">Assign homework</button></div>
       </section>
 
       {loading ? (

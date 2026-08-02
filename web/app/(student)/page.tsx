@@ -21,12 +21,16 @@ import { SITE_NAME, SITE_URL } from "@/lib/seo/site";
 import { createClient } from "@/lib/supabase/server";
 
 const description =
-  "Create interactive English lessons, teach them live, assign homework, guide independent practice and review student progress. Online ESL activities for kids in one connected platform.";
+  "An all-in-one ESL platform for teachers, students and parents. Create lessons, teach online, assign practice, play learning games, and track progress.";
+
+const organizationDescription =
+  "We Know English is a connected ESL teaching and learning platform for creating lessons, running online classes, assigning practice, supporting independent learning, and tracking student progress.";
 
 export const metadata: Metadata = buildPublicMetadata({
-  title: "Interactive ESL Activities & Teaching Tools",
+  title: "All-in-One ESL Teaching Platform",
   description,
   pathname: "/",
+  openGraphTitle: "We Know English — Connected ESL Teaching and Learning",
   openGraphImage: "/landing/primary-mascot.png",
 });
 
@@ -39,6 +43,7 @@ const structuredData = {
       name: SITE_NAME,
       alternateName: "We Know English Online",
       url: SITE_URL,
+      description: organizationDescription,
     },
     {
       "@type": "WebSite",

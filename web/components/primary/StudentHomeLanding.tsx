@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   Coins,
@@ -32,6 +33,8 @@ import { useAudioMuted } from "@/lib/audio/use-audio-muted";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
+import { readActiveStudentClassId } from "@/lib/student-classes/active-class";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 import {
   PRIMARY_CHROME_CLASS,
   PRIMARY_CHROME_STYLE,
@@ -89,6 +92,7 @@ export type PrimaryHomeModel = {
 
 type Props = {
   studentKey?: string;
+  primaryTourSeen?: boolean;
   guideEnabled?: boolean;
   model?: Partial<PrimaryHomeModel>;
   /** Live My Progress summary (Phase 4). */
@@ -214,6 +218,7 @@ function mergeModel(partial?: Partial<PrimaryHomeModel>): PrimaryHomeModel {
 
 export function StudentHomeLanding({
   studentKey = "student",
+  primaryTourSeen = false,
   guideEnabled = true,
   model: modelPartial,
   progressModel,
@@ -230,6 +235,7 @@ export function StudentHomeLanding({
   classMemberships = [],
   onOpenClassSelector,
 }: Props) {
+  const router = useRouter();
   const { muted, toggleMuted } = useAudioMuted();
   const model = mergeModel(modelPartial);
   const [activeNav, setActiveNav] = useState<PrimaryNavId>(() =>
@@ -242,6 +248,23 @@ export function StudentHomeLanding({
   const [toast, setToast] = useState<string | null>(null);
 
   function go(destination: PrimaryNavId | string, message?: string) {
+    if (destination === "class") {
+      const storedClassId = readActiveStudentClassId();
+      const membership =
+        (storedClassId
+          ? classMemberships.find((item) => item.classId === storedClassId)
+          : null) ?? classMemberships[0] ?? null;
+      recordAppDiagnostic("student", "class", membership ? "classroom_open_requested" : "join_class_opened", {
+        enrolled: Boolean(membership),
+      }, membership ? { classId: membership.classId, status: "started" } : { status: "started" });
+      router.push(
+        membership
+          ? `/primary/class/${encodeURIComponent(membership.classId)}`
+          : "/join-class",
+      );
+      setMobileNavOpen(false);
+      return;
+    }
     if (destination === "vocabulary" || destination === "grammar") {
       setActiveNav("learn");
       setLearnCategory(destination);
@@ -540,6 +563,7 @@ export function StudentHomeLanding({
         enabled={guideEnabled}
         muted={muted}
         studentKey={studentKey}
+        initiallySeen={primaryTourSeen}
         enrolledInClass={enrolledInClass}
         hasIncompleteHomework={assignedHomework.some((item) => !item.completedAt)}
         onJoinClass={() => onOpenClassSelector?.()}

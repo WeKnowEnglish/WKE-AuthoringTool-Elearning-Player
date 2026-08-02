@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { GamesSentenceScramblePilot } from "@/components/pilots/GamesSentenceScramblePilot";
 
 export const metadata = {
@@ -7,5 +8,15 @@ export const metadata = {
 };
 
 export default function GamesSentenceScramblePilotPage() {
-  return <GamesSentenceScramblePilot />;
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl p-6 text-lg font-extrabold text-kid-ink">
+          Loading sentence scramble pilot…
+        </div>
+      }
+    >
+      <GamesSentenceScramblePilot />
+    </Suspense>
+  );
 }

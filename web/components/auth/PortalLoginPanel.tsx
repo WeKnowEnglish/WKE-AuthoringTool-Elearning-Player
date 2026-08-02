@@ -24,6 +24,7 @@ import { writeLearningBandCookie } from "@/lib/learning-band-cookie";
 import { setLearningBand } from "@/lib/progress/local-storage";
 import { createClient } from "@/lib/supabase/client";
 import { TeacherAccessRequestForm } from "@/components/auth/TeacherAccessRequestForm";
+import { flushAppDiagnosticQueue, recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 export type PortalKind = "student" | "teacher";
 
@@ -112,7 +113,21 @@ export function PortalLoginPanel({
     e.preventDefault();
     setMessage("");
     setInfo("");
+
+    if (!username.trim()) {
+      setMessage("Enter your username.");
+      return;
+    }
+    if (!/^\d{4,6}$/.test(pin.trim())) {
+      setMessage("Secret code must be 4–6 numbers.");
+      return;
+    }
+
     setLoading(true);
+    recordAppDiagnostic("student", "authentication", "login_submitted", {
+      portal: "student",
+      mode: studentMode,
+    }, { status: "started" });
 
     try {
       const normalized = normalizeUsername(username);
@@ -142,6 +157,10 @@ export function PortalLoginPanel({
         password: pinValue,
       });
       if (error) {
+        recordAppDiagnostic("student", "authentication", "login_failed", {
+          portal: "student",
+          reason: "invalid_credentials",
+        }, { kind: "error", status: "failed", errorCode: "invalid_credentials" });
         setMessage(
           studentMode === "sign_up" ?
             "Account created but sign-in failed. Try signing in."
@@ -164,6 +183,12 @@ export function PortalLoginPanel({
         setMessage("This account cannot be used here.");
         return;
       }
+
+      recordAppDiagnostic("student", "authentication", "login_succeeded", {
+        portal: "student",
+        mode: studentMode,
+      }, { status: "succeeded" });
+      await flushAppDiagnosticQueue();
 
       if (studentMode === "sign_up") {
         if (!doorBand) {
@@ -200,6 +225,12 @@ export function PortalLoginPanel({
 
       setMessage("Pick Primary or Secondary on the home screen first.");
       await supabase.auth.signOut();
+    } catch {
+      recordAppDiagnostic("student", "authentication", "login_failed", {
+        portal: "student",
+        reason: "connection_failed",
+      }, { kind: "error", status: "failed", errorCode: "auth_connection_failed" });
+      setMessage("We couldn't connect to the sign-in service. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -210,6 +241,9 @@ export function PortalLoginPanel({
     setMessage("");
     setInfo("");
     setLoading(true);
+    recordAppDiagnostic("teacher", "authentication", "login_submitted", {
+      portal: "teacher",
+    }, { status: "started" });
 
     try {
       const supabase = createClient();
@@ -218,6 +252,10 @@ export function PortalLoginPanel({
         password: teacherPassword,
       });
       if (error) {
+        recordAppDiagnostic("teacher", "authentication", "login_failed", {
+          portal: "teacher",
+          reason: "authentication_rejected",
+        }, { kind: "error", status: "failed", errorCode: "teacher_auth_rejected" });
         setMessage(error.message);
         return;
       }
@@ -236,6 +274,10 @@ export function PortalLoginPanel({
         next: nextPath,
         mustChangePassword: mustChangePassword(user),
       });
+      recordAppDiagnostic("teacher", "authentication", "login_succeeded", {
+        portal: "teacher",
+      }, { status: "succeeded" });
+      await flushAppDiagnosticQueue();
       router.push(path);
       router.refresh();
     } finally {
@@ -338,7 +380,7 @@ export function PortalLoginPanel({
             </button>
           </div>
 
-          <form onSubmit={onStudentSubmit} className="space-y-3">
+          <form onSubmit={onStudentSubmit} className="space-y-3" noValidate>
             <div>
               <label className="block text-sm font-bold" htmlFor="portal-username">
                 Username

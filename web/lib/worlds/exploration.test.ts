@@ -1,16 +1,35 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   explorationNodeKey,
   flattenExplorationKeys,
   getWorld1ExplorationSummary,
+  markExplorationNode,
 } from "@/lib/worlds/exploration";
 import { WORLD_1_SIMPLE } from "@/lib/worlds/world-1-simple";
 
 describe("explorationNodeKey", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("formats explore area keys", () => {
     expect(explorationNodeKey({ kind: "explore_area", areaId: "bedroom" })).toBe(
       "explore_area:bedroom",
     );
+  });
+
+  it("does not block an activity when browser storage rejects the marker", () => {
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => {
+        throw new DOMException("Storage is unavailable", "QuotaExceededError");
+      },
+    });
+
+    expect(() =>
+      markExplorationNode({ kind: "vocab_set", setId: "breakfast_food" }),
+    ).not.toThrow();
   });
 });
 

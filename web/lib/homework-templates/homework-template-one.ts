@@ -1,4 +1,29 @@
 import { z } from "zod";
+import {
+  isPictureClozeAnswerCorrect as scorePictureClozeAnswer,
+  normalizePictureClozeAnswer,
+} from "@/lib/picture-cloze/scoring";
+import {
+  scoreVerbTableAnswers,
+  verbTableCellId as verbTableCellIdShared,
+  type VerbFormColumn as SharedVerbFormColumn,
+} from "@/lib/verb-table";
+import {
+  scoreSentenceColumnsAnswers,
+  type SentenceColumnId as SharedSentenceColumnId,
+} from "@/lib/sentence-columns";
+import {
+  scoreWordAnnotationAnswers,
+  type WordAnnotationRole as SharedWordAnnotationRole,
+} from "@/lib/word-annotation";
+import {
+  checkPictureWritingResponse,
+  type PictureWritingCheck as SharedPictureWritingCheck,
+} from "@/lib/picture-writing";
+import {
+  checkQuestionWritingResponse,
+  type QuestionWritingCheck as SharedQuestionWritingCheck,
+} from "@/lib/question-writing";
 
 export const HOMEWORK_TEMPLATE_SECTION_KINDS = [
   "picture_cloze",
@@ -234,71 +259,58 @@ export const HOMEWORK_TEMPLATE_ONE: HomeworkTemplateOne = {
 };
 
 export function normalizeTemplateAnswer(value: string): string {
-  return value.trim().replace(/\s+/g, " ").replace(/[.,!?;:'"]/g, "").toLocaleLowerCase();
+  return normalizePictureClozeAnswer(value);
 }
 
 export function isPictureClozeAnswerCorrect(value: string, acceptedAnswers: string[]): boolean {
-  const normalized = normalizeTemplateAnswer(value);
-  return acceptedAnswers.some((answer) => normalizeTemplateAnswer(answer) === normalized);
+  return scorePictureClozeAnswer(value, acceptedAnswers);
 }
 
-export function scoreWordAnnotations(section: WordAnnotationSection, annotations: Record<string, WordAnnotationRole>): { correct: number; expected: number; incorrect: number } {
-  let correct = 0; let expected = 0; let incorrect = 0;
-  section.sentences.flatMap((sentence) => sentence.tokens).forEach((token) => {
-    const marked = annotations[token.id];
-    if (token.role) {
-      expected += 1;
-      if (marked === token.role) correct += 1;
-      else if (marked) incorrect += 1;
-    } else if (marked) incorrect += 1;
-  });
-  return { correct, expected, incorrect };
+export function scoreWordAnnotations(
+  section: WordAnnotationSection,
+  annotations: Record<string, WordAnnotationRole>,
+): { correct: number; expected: number; incorrect: number } {
+  return scoreWordAnnotationAnswers(
+    section.sentences,
+    annotations as Record<string, SharedWordAnnotationRole>,
+  );
 }
 
-export function scoreSentenceColumns(section: SentenceColumnsSection, placements: Record<string, SentenceColumnId>): { correct: number; total: number } {
-  const pieces = section.challenges.flatMap((challenge) => challenge.pieces);
-  return { correct: pieces.filter((piece) => placements[piece.id] === piece.columnId).length, total: pieces.length };
+export function scoreSentenceColumns(
+  section: SentenceColumnsSection,
+  placements: Record<string, SentenceColumnId>,
+): { correct: number; total: number } {
+  return scoreSentenceColumnsAnswers(
+    section.challenges,
+    placements as Record<string, SharedSentenceColumnId>,
+  );
 }
 
-export function verbTableCellId(rowId: string, column: VerbFormColumn): string { return `${rowId}:${column}`; }
-
-export function scoreVerbTable(section: VerbTableSection, answers: Record<string, string>): { correct: number; total: number } {
-  let correct = 0; let total = 0;
-  section.rows.forEach((row) => row.missing.forEach((column) => {
-    total += 1;
-    const expected = row.forms[column].split("/").map(normalizeTemplateAnswer);
-    const given = answers[verbTableCellId(row.id, column)] ?? "";
-    if (expected.includes(normalizeTemplateAnswer(given))) correct += 1;
-  }));
-  return { correct, total };
+export function verbTableCellId(rowId: string, column: VerbFormColumn): string {
+  return verbTableCellIdShared(rowId, column as SharedVerbFormColumn);
 }
 
-export type PictureWritingCheck = { capitalLetter: boolean; endingPunctuation: boolean; minimumWords: boolean; requiredWords: boolean; wordCount: number };
-
-export function checkPictureWriting(response: string, prompt: PictureWritingSection["prompts"][number]): PictureWritingCheck {
-  const trimmed = response.trim();
-  const words = trimmed.match(/[\p{L}\p{N}']+/gu) ?? [];
-  const normalizedWords = new Set(words.map((word) => word.toLocaleLowerCase()));
-  return {
-    capitalLetter: /^[A-Z]/.test(trimmed),
-    endingPunctuation: /[.!?]$/.test(trimmed),
-    minimumWords: words.length >= prompt.minWords,
-    requiredWords: prompt.requiredWords.every((word) => normalizedWords.has(normalizeTemplateAnswer(word))),
-    wordCount: words.length,
-  };
+export function scoreVerbTable(
+  section: VerbTableSection,
+  answers: Record<string, string>,
+): { correct: number; total: number } {
+  return scoreVerbTableAnswers(section.rows, answers);
 }
 
-export type QuestionWritingCheck = { capitalLetter: boolean; questionMark: boolean; minimumWords: boolean; requiredWords: boolean; questionWord: boolean; helpingVerb: boolean; wordCount: number };
+export type PictureWritingCheck = SharedPictureWritingCheck;
 
-export function checkQuestionWriting(response: string, prompt: QuestionWritingSection["prompts"][number]): QuestionWritingCheck {
-  const trimmed = response.trim();
-  const words = trimmed.match(/[\p{L}\p{N}']+/gu) ?? [];
-  const normalized = words.map((word) => word.toLocaleLowerCase());
-  const wordSet = new Set(normalized);
-  return {
-    capitalLetter: /^[A-Z]/.test(trimmed), questionMark: /\?$/.test(trimmed), minimumWords: words.length >= prompt.minWords,
-    requiredWords: prompt.requiredWords.every((word) => wordSet.has(normalizeTemplateAnswer(word))),
-    questionWord: normalized[0] === normalizeTemplateAnswer(prompt.questionWord),
-    helpingVerb: prompt.helpingVerbs.some((word) => wordSet.has(normalizeTemplateAnswer(word))), wordCount: words.length,
-  };
+export function checkPictureWriting(
+  response: string,
+  prompt: PictureWritingSection["prompts"][number],
+): PictureWritingCheck {
+  return checkPictureWritingResponse(response, prompt);
+}
+
+export type QuestionWritingCheck = SharedQuestionWritingCheck;
+
+export function checkQuestionWriting(
+  response: string,
+  prompt: QuestionWritingSection["prompts"][number],
+): QuestionWritingCheck {
+  return checkQuestionWritingResponse(response, prompt);
 }

@@ -1,13 +1,6 @@
-import { notFound } from "next/navigation";
-import { ReadAndAnswerWorkspace } from "@/components/teacher/activity-builder/reading/ReadAndAnswerWorkspace";
-import { isAdmin } from "@/lib/auth/roles";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function ReadAndAnswerBuilderPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!isAdmin(user)) notFound();
-  return <ReadAndAnswerWorkspace />;
+/** Legacy reading-admin route — bankable studio lives at /read-and-answer. */
+export default function ReadAndAnswerBuilderPage() {
+  redirect("/teacher/activity-builder/read-and-answer");
 }

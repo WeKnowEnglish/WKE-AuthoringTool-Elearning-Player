@@ -8,14 +8,23 @@ import type { GamesAuthoringDocument } from "@/lib/activity-builder/games/types-
 import type { GamesLetterMixupAuthoringDocument } from "@/lib/activity-builder/games/types-letter-mixup";
 
 describe("compileQuizzesFromVocabList", () => {
-  it("compiles MCQ, letter scramble, and flashcards from bakery list", () => {
+  it("compiles MCQ, letter scramble, flashcards, and slice-2 formats from bakery list", () => {
     const list = createBakeryVocabularyListDocument();
     const output = compileQuizzesFromVocabList({
       list,
-      formats: ["multiple_choice", "letter_mixup", "flashcards"],
+      formats: [
+        "multiple_choice",
+        "letter_mixup",
+        "flashcards",
+        "listen_and_choose",
+        "line_match",
+        "true_false",
+        "sentence_scramble",
+        "fill_blanks",
+      ],
     });
 
-    expect(output.results).toHaveLength(3);
+    expect(output.results).toHaveLength(8);
 
     const mc = output.results.find((row) => row.format === "multiple_choice");
     expect(mc?.itemCount).toBe(4);
@@ -32,6 +41,12 @@ describe("compileQuizzesFromVocabList", () => {
     expect(cards?.itemCount).toBe(4);
     const cardPack = exportGamesFlashcardsForLessonPlayer(cards!.document as never);
     expect(cardPack.screens.length).toBeGreaterThan(0);
+
+    expect(output.results.find((row) => row.format === "listen_and_choose")?.itemCount).toBe(4);
+    expect(output.results.find((row) => row.format === "line_match")?.itemCount).toBe(1);
+    expect(output.results.find((row) => row.format === "true_false")?.itemCount).toBe(4);
+    expect(output.results.find((row) => row.format === "sentence_scramble")?.itemCount).toBe(4);
+    expect(output.results.find((row) => row.format === "fill_blanks")?.itemCount).toBe(4);
   });
 
   it("applies MC and letter scramble activity settings", () => {

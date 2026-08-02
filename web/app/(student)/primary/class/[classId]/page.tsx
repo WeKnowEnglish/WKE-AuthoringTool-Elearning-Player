@@ -4,7 +4,7 @@ import { StudentClassroomView } from "@/components/classroom/StudentClassroomVie
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { parseClassroomTab } from "@/lib/classroom/classroom-tabs";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
-import { getStudentClassMembership } from "@/lib/data/student-classes";
+import { getStudentClassMemberships } from "@/lib/data/student-classes";
 import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
 import { listPublishedClassMaterialsForStudentClass } from "@/lib/data/class-lessons";
 import { getClassScheduleForStudentClass } from "@/lib/data/class-meeting-slots";
@@ -45,7 +45,8 @@ export default async function PrimaryClassroomPage({ params, searchParams }: Pro
     redirect("/login?error=unknown_role");
   }
 
-  const membership = await getStudentClassMembership(classId);
+  const memberships = await getStudentClassMemberships();
+  const membership = memberships.find((item) => item.classId === classId) ?? null;
   if (!membership) {
     notFound();
   }
@@ -71,6 +72,7 @@ export default async function PrimaryClassroomPage({ params, searchParams }: Pro
     <div className={`${PRIMARY_CHROME_CLASS}`} style={PRIMARY_CHROME_STYLE}>
       <StudentClassroomView
         membership={membership}
+        memberships={memberships}
         posts={posts}
         materials={materials}
         schedule={schedule}

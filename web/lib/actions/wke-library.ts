@@ -57,6 +57,39 @@ function editPathForFormat(format: StudioActivityFormat, activityId: string): st
   if (format === "learning_track") {
     return `/teacher/activity-builder/learning-tracks?activity=${encodeURIComponent(activityId)}`;
   }
+  if (format === "picture_cloze") {
+    return `/teacher/activity-builder/picture-cloze`;
+  }
+  if (format === "verb_table") {
+    return `/teacher/activity-builder/verb-table`;
+  }
+  if (format === "sentence_columns") {
+    return `/teacher/activity-builder/sentence-columns`;
+  }
+  if (format === "word_annotation") {
+    return `/teacher/activity-builder/word-annotation`;
+  }
+  if (format === "picture_writing") {
+    return `/teacher/activity-builder/picture-writing`;
+  }
+  if (format === "question_writing") {
+    return `/teacher/activity-builder/question-writing`;
+  }
+  if (format === "definition_match") {
+    return `/teacher/activity-builder/definition-match`;
+  }
+  if (format === "cloze_choice") {
+    return `/teacher/activity-builder/cloze-choice`;
+  }
+  if (format === "cloze_open") {
+    return `/teacher/activity-builder/cloze-open`;
+  }
+  if (format === "read_and_answer") {
+    return `/teacher/activity-builder/read-and-answer`;
+  }
+  if (format === "picture_story") {
+    return `/teacher/activity-builder/picture-story`;
+  }
   return "/teacher/activity-builder";
 }
 
@@ -66,6 +99,27 @@ function cloneExploreAuthoring(authoring: unknown, title: string) {
   next.id = crypto.randomUUID();
   next.name = title;
   return next;
+}
+
+/** Map PostgREST/schema errors to a clear “which migration?” message. */
+function wkeLibrarySchemaError(message: string): Error | null {
+  const missingColumn =
+    /column .+ does not exist|Could not find the '.+' column/i.test(message);
+  if (missingColumn) {
+    return new Error(
+      "WKE Library needs migration 084_wke_library_submissions.sql (submission/credit columns). Apply 082 then 084.",
+    );
+  }
+  const missingTable =
+    /relation ["']?public\.?wke_library_items["']? does not exist|Could not find the table ['"]public\.wke_library_items['"]/i.test(
+      message,
+    );
+  if (missingTable) {
+    return new Error(
+      "WKE Library is not set up yet. Apply migration 082_wke_library_items.sql (then 084).",
+    );
+  }
+  return null;
 }
 
 /** List published WKE Library items for teachers. */
@@ -87,12 +141,7 @@ export async function listPublishedWkeLibraryItems(input?: {
   }
   const { data, error } = await query;
   if (error) {
-    if (/wke_library_items|does not exist|PGRST/i.test(error.message)) {
-      throw new Error(
-        "WKE Library is not set up yet. Apply migration 082_wke_library_items.sql.",
-      );
-    }
-    throw new Error(error.message);
+    throw wkeLibrarySchemaError(error.message) ?? new Error(error.message);
   }
   return (data ?? []).map((row) => mapWkeLibrarySummary(row as never));
 }
@@ -110,7 +159,9 @@ export async function getPublishedWkeLibraryItem(
     .eq("status", "published")
     .eq("id", key)
     .maybeSingle();
-  if (byId.error) throw new Error(byId.error.message);
+  if (byId.error) {
+    throw wkeLibrarySchemaError(byId.error.message) ?? new Error(byId.error.message);
+  }
   if (byId.data) return mapWkeLibraryDetail(byId.data as never);
 
   const bySlug = await supabase
@@ -119,7 +170,9 @@ export async function getPublishedWkeLibraryItem(
     .eq("status", "published")
     .eq("slug", key)
     .maybeSingle();
-  if (bySlug.error) throw new Error(bySlug.error.message);
+  if (bySlug.error) {
+    throw wkeLibrarySchemaError(bySlug.error.message) ?? new Error(bySlug.error.message);
+  }
   if (!bySlug.data) throw new Error("That WKE Library item was not found.");
   return mapWkeLibraryDetail(bySlug.data as never);
 }
@@ -420,7 +473,9 @@ export async function listMyWkeLibrarySubmissions(): Promise<WkeLibraryItemSumma
     .in("status", ["pending", "rejected", "published"])
     .order("updated_at", { ascending: false })
     .limit(50);
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw wkeLibrarySchemaError(error.message) ?? new Error(error.message);
+  }
   return (data ?? []).map((row) => mapWkeLibrarySummary(row as never));
 }
 
@@ -435,7 +490,9 @@ export async function listPendingWkeLibrarySubmissions(): Promise<WkeLibraryItem
     .eq("status", "pending")
     .order("updated_at", { ascending: true })
     .limit(100);
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw wkeLibrarySchemaError(error.message) ?? new Error(error.message);
+  }
   return (data ?? []).map((row) => mapWkeLibrarySummary(row as never));
 }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { StudentClassroomView } from "@/components/classroom/StudentClassroomView";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
-import { getStudentClassMembership } from "@/lib/data/student-classes";
+import { getStudentClassMemberships } from "@/lib/data/student-classes";
 import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
 import { listPublishedClassMaterialsForStudentClass } from "@/lib/data/class-lessons";
 import { getClassScheduleForStudentClass } from "@/lib/data/class-meeting-slots";
@@ -34,7 +34,8 @@ export default async function SecondaryClassroomPage({ params }: Props) {
     redirect(`/login?next=/secondary/class/${encodeURIComponent(classId)}`);
   }
 
-  const membership = await getStudentClassMembership(classId);
+  const memberships = await getStudentClassMemberships();
+  const membership = memberships.find((item) => item.classId === classId) ?? null;
   if (!membership) {
     notFound();
   }
@@ -60,6 +61,7 @@ export default async function SecondaryClassroomPage({ params }: Props) {
   return (
     <StudentClassroomView
       membership={membership}
+      memberships={memberships}
       posts={posts}
       materials={materials}
       schedule={schedule}

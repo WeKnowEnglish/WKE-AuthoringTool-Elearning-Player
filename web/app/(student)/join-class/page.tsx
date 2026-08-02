@@ -29,6 +29,7 @@ export default async function JoinClassPage() {
   }
 
   const homeHref = resolveStudentHomePath(learningBandFromUser(user));
+  const classroomBasePath = homeHref === "/secondary" ? "/secondary/class" : "/primary/class";
 
   return (
     <div className="min-h-dvh bg-[#f7bf4d] px-4 py-8 text-kid-ink">
@@ -43,7 +44,7 @@ export default async function JoinClassPage() {
             progress in their class roster.
           </p>
         </div>
-        <JoinClassForm homeHref={homeHref} />
+        <JoinClassForm homeHref={homeHref} classroomBasePath={classroomBasePath} />
       </div>
     </div>
   );

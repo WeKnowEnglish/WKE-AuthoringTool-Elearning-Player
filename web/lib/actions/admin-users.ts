@@ -12,6 +12,7 @@ import {
 } from "@/lib/admin/provision-teacher";
 import type { AdminTeacherSummary } from "@/lib/data/admin-users";
 import {
+  listAdminStudents as listAdminStudentsData,
   searchAdminStudents as searchAdminStudentsData,
   type AdminStudentSummary,
 } from "@/lib/data/admin-users";
@@ -446,6 +447,12 @@ export async function resendTeacherInvitationByUserId(input: {
 
   revalidateAdmin();
   return { ok: true, email, tempPassword };
+}
+
+export async function listStudentsForAdmin(): Promise<
+  { ok: true; students: AdminStudentSummary[] } | { ok: false; error: string }
+> {
+  return listAdminStudentsData();
 }
 
 export async function searchStudentsForAdmin(query: string): Promise<

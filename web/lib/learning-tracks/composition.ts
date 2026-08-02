@@ -15,6 +15,10 @@ import {
   type LearningTrackExploreHotspotsSettings,
   type LearningTrackLanguageInFocusSettings,
   type LearningTrackMultipleChoiceSettings,
+  type LearningTrackLineMatchSettings,
+  type LearningTrackTrueFalseSettings,
+  type LearningTrackSentenceScrambleSettings,
+  type LearningTrackFillBlanksSettings,
   type LearningTrackPlannedBridge,
   type LearningTrackRecipe,
   type LearningTrackVocabCompileFormat,
@@ -28,6 +32,10 @@ export const DEFAULT_MC_MASTER_QUESTION = "What is this?";
 export const DEFAULT_MC_OPTION_COUNT = 4;
 export const DEFAULT_LETTER_MIXUP_PROMPT =
   "Unscramble the letters to spell the word.";
+export const DEFAULT_LINE_MATCH_BODY =
+  "Draw a line from each word to its picture.";
+export const DEFAULT_SENTENCE_SCRAMBLE_BODY = "Put the words in order.";
+export const DEFAULT_FILL_BLANKS_BODY = "Choose the missing word.";
 
 export function defaultFlashcardsSettings(): LearningTrackFlashcardsSettings {
   return {
@@ -67,6 +75,33 @@ export function defaultLanguageInFocusSettings(): LearningTrackLanguageInFocusSe
   return {};
 }
 
+export function defaultLineMatchSettings(): LearningTrackLineMatchSettings {
+  return {
+    bodyText: DEFAULT_LINE_MATCH_BODY,
+    autoAdvanceOnPass: true,
+  };
+}
+
+export function defaultTrueFalseSettings(): LearningTrackTrueFalseSettings {
+  return {
+    autoAdvanceOnPass: true,
+  };
+}
+
+export function defaultSentenceScrambleSettings(): LearningTrackSentenceScrambleSettings {
+  return {
+    bodyText: DEFAULT_SENTENCE_SCRAMBLE_BODY,
+    autoAdvanceOnPass: true,
+  };
+}
+
+export function defaultFillBlanksSettings(): LearningTrackFillBlanksSettings {
+  return {
+    bodyText: DEFAULT_FILL_BLANKS_BODY,
+    autoAdvanceOnPass: true,
+  };
+}
+
 export function clampMcOptionCount(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_MC_OPTION_COUNT;
   return Math.min(6, Math.max(2, Math.round(value)));
@@ -83,7 +118,16 @@ function newBeatId(kind: LearningTrackBeatKind): string {
 export function vocabFormatForKind(
   kind: LearningTrackBeatKind,
 ): LearningTrackVocabCompileFormat | null {
-  if (kind === "multiple_choice" || kind === "letter_mixup" || kind === "flashcards") {
+  if (
+    kind === "multiple_choice" ||
+    kind === "letter_mixup" ||
+    kind === "flashcards" ||
+    kind === "listen_and_choose" ||
+    kind === "line_match" ||
+    kind === "true_false" ||
+    kind === "sentence_scramble" ||
+    kind === "fill_blanks"
+  ) {
     return kind;
   }
   return null;
@@ -123,6 +167,30 @@ export function defaultSourceForKind(
         listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
         format: "letter_mixup",
       };
+    case "line_match":
+      return {
+        type: "vocab_compile",
+        listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
+        format: "line_match",
+      };
+    case "true_false":
+      return {
+        type: "vocab_compile",
+        listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
+        format: "true_false",
+      };
+    case "sentence_scramble":
+      return {
+        type: "vocab_compile",
+        listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
+        format: "sentence_scramble",
+      };
+    case "fill_blanks":
+      return {
+        type: "vocab_compile",
+        listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
+        format: "fill_blanks",
+      };
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unsupported beat kind: ${_exhaustive}`);
@@ -157,6 +225,18 @@ export function createBeatInstance(
   const languageInFocus =
     overrides?.presentation?.languageInFocus ??
     (kind === "language_in_focus" ? defaultLanguageInFocusSettings() : undefined);
+  const lineMatch =
+    overrides?.presentation?.lineMatch ??
+    (kind === "line_match" ? defaultLineMatchSettings() : undefined);
+  const trueFalse =
+    overrides?.presentation?.trueFalse ??
+    (kind === "true_false" ? defaultTrueFalseSettings() : undefined);
+  const sentenceScramble =
+    overrides?.presentation?.sentenceScramble ??
+    (kind === "sentence_scramble" ? defaultSentenceScrambleSettings() : undefined);
+  const fillBlanks =
+    overrides?.presentation?.fillBlanks ??
+    (kind === "fill_blanks" ? defaultFillBlanksSettings() : undefined);
   return {
     id: overrides?.id ?? newBeatId(kind),
     kind,
@@ -174,6 +254,10 @@ export function createBeatInstance(
       ...(listenAndChoose ? { listenAndChoose } : {}),
       ...(exploreHotspots ? { exploreHotspots } : {}),
       ...(languageInFocus ? { languageInFocus } : {}),
+      ...(lineMatch ? { lineMatch } : {}),
+      ...(trueFalse ? { trueFalse } : {}),
+      ...(sentenceScramble ? { sentenceScramble } : {}),
+      ...(fillBlanks ? { fillBlanks } : {}),
     },
   };
 }

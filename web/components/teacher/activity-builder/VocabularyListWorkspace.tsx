@@ -130,6 +130,7 @@ export function VocabularyListWorkspace({
   const openRef = useRef<HTMLInputElement>(null);
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const documentRef = useRef(document);
+  const focusWordEntryIdRef = useRef<string | null>(null);
   documentRef.current = document;
 
   const studioCompileHref = studioOrigin
@@ -141,6 +142,17 @@ export function VocabularyListWorkspace({
     const timer = window.setTimeout(() => setNotice(null), BANNER_DISMISS_MS);
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    const entryId = focusWordEntryIdRef.current;
+    if (!entryId) return;
+    focusWordEntryIdRef.current = null;
+    const input = window.document.querySelector<HTMLInputElement>(
+      `input[data-vocab-word-id="${CSS.escape(entryId)}"]`,
+    );
+    input?.focus();
+    input?.select();
+  }, [document.entries]);
 
   const refreshLibrary = async () => {
     try {
@@ -508,10 +520,10 @@ export function VocabularyListWorkspace({
         {notice ? (
           <button
             type="button"
-            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left text-sm text-amber-950"
+            className="fixed bottom-4 left-1/2 z-[60] max-w-sm -translate-x-1/2 rounded-full border border-stone-700/40 bg-stone-900/90 px-4 py-2 text-center text-xs font-medium text-white shadow-lg backdrop-blur-sm"
             onClick={() => setNotice(null)}
           >
-            {notice} ×
+            {notice}
           </button>
         ) : null}
 
@@ -766,16 +778,6 @@ export function VocabularyListWorkspace({
         </div>
       </header>
 
-      {notice ? (
-        <button
-          type="button"
-          className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-2 text-left text-sm text-amber-950"
-          onClick={() => setNotice(null)}
-        >
-          {notice} ×
-        </button>
-      ) : null}
-
       {compileOverlayOpen && !isOverlay ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
@@ -904,11 +906,11 @@ export function VocabularyListWorkspace({
         </button>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="flex min-h-0 flex-col border-r border-stone-200 bg-stone-50/50">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)]">
+        <aside className="flex min-h-0 flex-col border-r border-stone-200 bg-white">
           <div className="flex items-center justify-between border-b border-stone-200 px-3 py-2">
             <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-              Words
+              Words · {document.entries.length}
             </h2>
             <button
               type="button"
@@ -925,32 +927,104 @@ export function VocabularyListWorkspace({
               Add blank
             </button>
           </div>
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
-            {document.entries.map((entry, index) => (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => {
-                  setSelectedEntryId(entry.id);
-                  setEditorTab("details");
-                }}
-                className={`w-full rounded-lg border p-3 text-left ${
-                  selectedEntry?.id === entry.id
-                    ? "border-stone-900 bg-white"
-                    : "border-stone-200 bg-white/70 hover:border-stone-400"
-                }`}
-              >
-                <span className="text-xs text-stone-500">#{index + 1}</span>
-                <span className="mt-1 block truncate text-sm font-semibold text-stone-900">
-                  {entry.word.trim() || "(empty word)"}
-                </span>
-                {entry.sourceWordId ? (
-                  <span className="mt-1 block truncate text-[10px] text-sky-800">
-                    Linked · {entry.sourceWordId}
-                  </span>
-                ) : null}
-              </button>
-            ))}
+          <div className="min-h-0 flex-1 overflow-auto">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-stone-100 shadow-[inset_0_-1px_0_0_#e7e5e4]">
+                <tr>
+                  <th className="w-[38%] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-stone-500">
+                    Word
+                  </th>
+                  <th className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-stone-500">
+                    Definition
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {document.entries.map((entry, index) => {
+                  const selected = selectedEntry?.id === entry.id;
+                  const isLastRow = index === document.entries.length - 1;
+                  return (
+                    <tr
+                      key={entry.id}
+                      className={`border-b border-stone-100 ${
+                        selected
+                          ? "bg-sky-50"
+                          : "bg-white hover:bg-stone-50"
+                      }`}
+                      onClick={() => {
+                        setSelectedEntryId(entry.id);
+                        setEditorTab("details");
+                      }}
+                    >
+                      <td className="align-top p-0">
+                        <input
+                          aria-label="Word"
+                          data-vocab-word-id={entry.id}
+                          value={entry.word}
+                          placeholder="Word"
+                          onFocus={() => {
+                            setSelectedEntryId(entry.id);
+                            setEditorTab("details");
+                          }}
+                          onChange={(event) =>
+                            patchDocument((current) =>
+                              patchVocabEntry(current, entry.id, {
+                                word: event.target.value,
+                              }),
+                            )
+                          }
+                          className={`w-full border-0 bg-transparent px-2 py-1.5 text-sm font-semibold text-stone-900 outline-none placeholder:font-normal placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-inset focus:ring-sky-300 ${
+                            selected ? "bg-sky-50/80" : ""
+                          }`}
+                        />
+                      </td>
+                      <td className="align-top p-0">
+                        <input
+                          aria-label="Definition"
+                          value={entry.definitionEn ?? ""}
+                          placeholder="Definition"
+                          onFocus={() => {
+                            setSelectedEntryId(entry.id);
+                            setEditorTab("details");
+                          }}
+                          onChange={(event) =>
+                            patchDocument((current) =>
+                              patchVocabEntry(current, entry.id, {
+                                definitionEn: event.target.value,
+                              }),
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (
+                              !isLastRow ||
+                              event.key !== "Tab" ||
+                              event.shiftKey
+                            ) {
+                              return;
+                            }
+                            event.preventDefault();
+                            let newEntryId = "";
+                            patchDocument((current) => {
+                              const next = addVocabEntry(current);
+                              newEntryId = next.entries.at(-1)?.id ?? "";
+                              return next;
+                            });
+                            if (newEntryId) {
+                              focusWordEntryIdRef.current = newEntryId;
+                              setSelectedEntryId(newEntryId);
+                              setEditorTab("details");
+                            }
+                          }}
+                          className={`w-full border-0 bg-transparent px-2 py-1.5 text-sm text-stone-700 outline-none placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-inset focus:ring-sky-300 ${
+                            selected ? "bg-sky-50/80" : ""
+                          }`}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </aside>
 
@@ -1265,6 +1339,16 @@ export function VocabularyListWorkspace({
           )}
         </div>
       </div>
+
+      {notice ? (
+        <button
+          type="button"
+          className="fixed bottom-4 left-1/2 z-[60] max-w-sm -translate-x-1/2 rounded-full border border-stone-700/40 bg-stone-900/90 px-4 py-2 text-center text-xs font-medium text-white shadow-lg backdrop-blur-sm"
+          onClick={() => setNotice(null)}
+        >
+          {notice}
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -11,7 +11,7 @@ describe("visibleActivityBuilderSections", () => {
     expect(sections).toEqual(ACTIVITY_BUILDER_SECTIONS);
   });
 
-  it("hides studio-interim and admin-only cards for non-admins", () => {
+  it("shows only deep hubs for non-admins (quiz builder, vocab, LTC, hotspots, library)", () => {
     const sections = visibleActivityBuilderSections(false);
     const ids = sections.flatMap((section) => section.cards.map((card) => card.id));
     expect(ids).toEqual([

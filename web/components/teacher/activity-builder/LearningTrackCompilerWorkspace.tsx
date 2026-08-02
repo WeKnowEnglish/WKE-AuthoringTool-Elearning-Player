@@ -33,6 +33,10 @@ import {
   defaultExploreHotspotsSettings,
   defaultLanguageInFocusSettings,
   defaultMultipleChoiceSettings,
+  defaultLineMatchSettings,
+  defaultTrueFalseSettings,
+  defaultSentenceScrambleSettings,
+  defaultFillBlanksSettings,
   fixtureIdForKind,
   libraryFormatForBeatKind,
   listHotspotPanelsFromScreens,
@@ -60,6 +64,10 @@ import {
   type LearningTrackLanguageInFocusSettings,
   type LearningTrackLessonPlayerPack,
   type LearningTrackMultipleChoiceSettings,
+  type LearningTrackLineMatchSettings,
+  type LearningTrackTrueFalseSettings,
+  type LearningTrackSentenceScrambleSettings,
+  type LearningTrackFillBlanksSettings,
   HOBBIES_DAY_1_COMPOSITION,
 } from "@/lib/learning-tracks/composer";
 import {
@@ -67,6 +75,7 @@ import {
   type GamesFlashcardFace,
 } from "@/lib/activity-builder/games/types-flashcards";
 import type { LessonScreenRow } from "@/lib/lesson/types";
+import { AssignStudioActivityHomeworkOverlay } from "@/components/teacher/AssignStudioActivityHomeworkOverlay";
 import "./ltc-workspace.css";
 
 /** Debounce before recompiling after beat/source edits. */
@@ -215,7 +224,13 @@ function compositionStructureKey(composition: LearningTrackComposition): string 
  * Timeline Learning Track Compiler MVP — Day 1 hobbies.
  * Center = live in-process Lesson Player; left/right = track/beat settings.
  */
-export function LearningTrackCompilerWorkspace() {
+export function LearningTrackCompilerWorkspace({
+  classes = [],
+  classLoadError = false,
+}: {
+  classes?: readonly { id: string; title: string }[];
+  classLoadError?: boolean;
+} = {}) {
   const [composition, setComposition] = useState<LearningTrackComposition>(() =>
     structuredClone(HOBBIES_DAY_1_COMPOSITION),
   );
@@ -225,6 +240,9 @@ export function LearningTrackCompilerWorkspace() {
   const [hotspotPanelOpenId, setHotspotPanelOpenId] = useState<string | null>(null);
   const [previewScreenIndex, setPreviewScreenIndex] = useState(0);
   const [libraryId, setLibraryId] = useState<string | null>(null);
+  const [bankActivityId, setBankActivityId] = useState<string | null>(null);
+  const [bankActivityTitle, setBankActivityTitle] = useState<string | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [addKind, setAddKind] = useState<LearningTrackBeatKind>("flashcards");
@@ -246,6 +264,11 @@ export function LearningTrackCompilerWorkspace() {
   }>(null);
 
   const { pack, beatPlan } = compiled;
+  const trackAssignable =
+    Boolean(pack) &&
+    !compiled.error &&
+    !compiled.compiling &&
+    (pack?.screens.length ?? 0) > 0;
   const structureKey = useMemo(
     () => compositionStructureKey(composition),
     [composition],
@@ -503,6 +526,38 @@ export function LearningTrackCompilerWorkspace() {
       ? {
           ...defaultLanguageInFocusSettings(),
           ...selectedCompositionBeat.presentation?.languageInFocus,
+        }
+      : null;
+
+  const selectedLineMatchSettings: LearningTrackLineMatchSettings | null =
+    selectedCompositionBeat?.kind === "line_match"
+      ? {
+          ...defaultLineMatchSettings(),
+          ...selectedCompositionBeat.presentation?.lineMatch,
+        }
+      : null;
+
+  const selectedTrueFalseSettings: LearningTrackTrueFalseSettings | null =
+    selectedCompositionBeat?.kind === "true_false"
+      ? {
+          ...defaultTrueFalseSettings(),
+          ...selectedCompositionBeat.presentation?.trueFalse,
+        }
+      : null;
+
+  const selectedSentenceScrambleSettings: LearningTrackSentenceScrambleSettings | null =
+    selectedCompositionBeat?.kind === "sentence_scramble"
+      ? {
+          ...defaultSentenceScrambleSettings(),
+          ...selectedCompositionBeat.presentation?.sentenceScramble,
+        }
+      : null;
+
+  const selectedFillBlanksSettings: LearningTrackFillBlanksSettings | null =
+    selectedCompositionBeat?.kind === "fill_blanks"
+      ? {
+          ...defaultFillBlanksSettings(),
+          ...selectedCompositionBeat.presentation?.fillBlanks,
         }
       : null;
 
@@ -799,7 +854,13 @@ export function LearningTrackCompilerWorkspace() {
     }
   };
 
-  const publishToBank = async () => {
+  const publishToBank = async (options?: {
+    openAssignAfter?: boolean;
+  }): Promise<string | null> => {
+    if (compiled.error || !pack || pack.screens.length < 1) {
+      setNotice("Fix compile errors and wait for a playable track before publishing.");
+      return null;
+    }
     setBusy(true);
     try {
       const { entry, pack: next, filename, composition: saved } =
@@ -810,11 +871,15 @@ export function LearningTrackCompilerWorkspace() {
       setLibraryId(entry.id);
       setComposition(saved);
       setNotice("Publishing to My Activity Bank…");
+      if (!next.screens?.length) {
+        throw new Error("Compiled track has no playable screens.");
+      }
       const response = await fetch("/api/studio/activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
+          id: bankActivityId,
           format: "learning_track",
           pack: next,
           authoring: saved,
@@ -825,27 +890,62 @@ export function LearningTrackCompilerWorkspace() {
       });
       const payload = (await response.json().catch(() => null)) as {
         ok?: boolean;
+        id?: string;
         title?: string;
-        playPath?: string;
         bankPath?: string;
         error?: string;
       } | null;
-      if (!response.ok || !payload?.ok) {
+      if (!response.ok || !payload?.ok || !payload.id) {
         throw new Error(payload?.error || `Publish failed (${response.status}).`);
       }
-      if (payload.playPath) {
-        window.open(payload.playPath, "_blank", "noopener,noreferrer");
-      }
+      setBankActivityId(payload.id);
+      setBankActivityTitle(payload.title ?? saved.title ?? next.title);
       setNotice(
-        `Saved “${payload.title ?? next.title}” to My Activity Bank.${
-          payload.bankPath ? " Open Classes → Activity Bank to assign or wall it." : ""
-        }`,
+        options?.openAssignAfter
+          ? `Saved “${payload.title ?? next.title}” to My Activity Bank. Choose a class to assign.`
+          : `Saved “${payload.title ?? next.title}” to My Activity Bank.${
+              classes.length > 0
+                ? " Use Assign homework to give it to a class."
+                : payload.bankPath
+                  ? " Create a class, then assign from here or Activity Bank."
+                  : ""
+            }`,
       );
+      if (options?.openAssignAfter) {
+        if (classes.length === 0 || classLoadError) {
+          setNotice(
+            classLoadError
+              ? "Track saved, but classes could not be loaded. Retry or assign from Activity Bank."
+              : "Track saved. Create a private class first, then assign homework.",
+          );
+        } else {
+          setAssignOpen(true);
+        }
+      }
+      return payload.id;
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Publish failed.");
+      return null;
     } finally {
       setBusy(false);
     }
+  };
+
+  const assignHomework = async () => {
+    if (!trackAssignable) {
+      setNotice("Fix compile errors and wait for a playable track before assigning.");
+      return;
+    }
+    if (classes.length === 0 || classLoadError) {
+      setNotice(
+        classLoadError
+          ? "Could not load classes. Refresh and try again."
+          : "Create a private class first, then assign homework.",
+      );
+      return;
+    }
+    // Republish so homework freezes the latest compile, not a stale bank row.
+    await publishToBank({ openAssignAfter: true });
   };
 
   const canUseFixture = selectedCompositionBeat
@@ -905,10 +1005,34 @@ export function LearningTrackCompilerWorkspace() {
           <button
             type="button"
             className="ltc-btn-accent rounded-lg px-3 py-1.5 text-sm disabled:opacity-40"
-            disabled={busy}
+            disabled={busy || !trackAssignable}
             onClick={() => void publishToBank()}
+            title={
+              !trackAssignable
+                ? "Fix compile errors and wait for a playable track"
+                : bankActivityId
+                  ? "Update this track in My Activity Bank"
+                  : "Save this track to My Activity Bank"
+            }
           >
-            Publish to Bank
+            {bankActivityId ? "Update in Bank" : "Publish to Bank"}
+          </button>
+          <button
+            type="button"
+            className="ltc-btn-primary rounded-lg px-3 py-1.5 text-sm disabled:opacity-40"
+            disabled={busy || !trackAssignable || classes.length === 0 || classLoadError}
+            onClick={() => void assignHomework()}
+            title={
+              classLoadError
+                ? "Classes could not be loaded"
+                : classes.length === 0
+                  ? "Create a private class first"
+                  : !trackAssignable
+                    ? "Fix compile errors and wait for a playable track"
+                    : "Publish latest compile, then assign as homework"
+            }
+          >
+            Assign homework
           </button>
           <button
             type="button"
@@ -1983,12 +2107,208 @@ export function LearningTrackCompilerWorkspace() {
             </CollapsibleSettingsPanel>
           ) : null}
 
+          {selectedLineMatchSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="line-match-settings"
+              title="Line match settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Applies to every screen in this activity when generated from a
+                vocabulary list.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use these settings in the
+                  preview.
+                </p>
+              )}
+              <label className="mt-3 block text-[11px] ltc-muted">
+                Instruction text
+                <input
+                  type="text"
+                  className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                  value={selectedLineMatchSettings.bodyText}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      lineMatch: {
+                        ...selectedLineMatchSettings,
+                        bodyText: event.target.value,
+                      },
+                    })
+                  }
+                />
+              </label>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs ltc-fg">
+                <input
+                  type="checkbox"
+                  className="rounded border"
+                  checked={selectedLineMatchSettings.autoAdvanceOnPass}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      lineMatch: {
+                        ...selectedLineMatchSettings,
+                        autoAdvanceOnPass: event.target.checked,
+                      },
+                    })
+                  }
+                />
+                Auto-advance when correct
+              </label>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
+          {selectedTrueFalseSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="true-false-settings"
+              title="True / false settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Applies to every item in this activity when generated from a vocabulary
+                list.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use these settings in the
+                  preview.
+                </p>
+              )}
+              <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs ltc-fg">
+                <input
+                  type="checkbox"
+                  className="rounded border"
+                  checked={selectedTrueFalseSettings.autoAdvanceOnPass}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      trueFalse: {
+                        ...selectedTrueFalseSettings,
+                        autoAdvanceOnPass: event.target.checked,
+                      },
+                    })
+                  }
+                />
+                Auto-advance when correct
+              </label>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
+          {selectedSentenceScrambleSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="sentence-scramble-settings"
+              title="Sentence scramble settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Applies to every item in this activity when generated from a vocabulary
+                list.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use these settings in the
+                  preview.
+                </p>
+              )}
+              <label className="mt-3 block text-[11px] ltc-muted">
+                Instruction text
+                <input
+                  type="text"
+                  className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                  value={selectedSentenceScrambleSettings.bodyText}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      sentenceScramble: {
+                        ...selectedSentenceScrambleSettings,
+                        bodyText: event.target.value,
+                      },
+                    })
+                  }
+                />
+              </label>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs ltc-fg">
+                <input
+                  type="checkbox"
+                  className="rounded border"
+                  checked={selectedSentenceScrambleSettings.autoAdvanceOnPass}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      sentenceScramble: {
+                        ...selectedSentenceScrambleSettings,
+                        autoAdvanceOnPass: event.target.checked,
+                      },
+                    })
+                  }
+                />
+                Auto-advance when correct
+              </label>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
+          {selectedFillBlanksSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="fill-blanks-settings"
+              title="Fill in the blanks settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Applies to every item in this activity when generated from a vocabulary
+                list.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use these settings in the
+                  preview.
+                </p>
+              )}
+              <label className="mt-3 block text-[11px] ltc-muted">
+                Instruction text
+                <input
+                  type="text"
+                  className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                  value={selectedFillBlanksSettings.bodyText}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      fillBlanks: {
+                        ...selectedFillBlanksSettings,
+                        bodyText: event.target.value,
+                      },
+                    })
+                  }
+                />
+              </label>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs ltc-fg">
+                <input
+                  type="checkbox"
+                  className="rounded border"
+                  checked={selectedFillBlanksSettings.autoAdvanceOnPass}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      fillBlanks: {
+                        ...selectedFillBlanksSettings,
+                        autoAdvanceOnPass: event.target.checked,
+                      },
+                    })
+                  }
+                />
+                Auto-advance when correct
+              </label>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
           {!selectedFlashcardsSettings &&
           !selectedMcSettings &&
           !selectedLetterSettings &&
           !selectedListenSettings &&
           !selectedHotspotsSettings &&
           !selectedLifSettings &&
+          !selectedLineMatchSettings &&
+          !selectedTrueFalseSettings &&
+          !selectedSentenceScrambleSettings &&
+          !selectedFillBlanksSettings &&
           selectedCompositionBeat ? (
             <CollapsibleSettingsPanel
               sectionId="activity-settings"
@@ -2170,6 +2490,17 @@ export function LearningTrackCompilerWorkspace() {
             />
           </div>
         </div>
+      ) : null}
+
+      {bankActivityId ? (
+        <AssignStudioActivityHomeworkOverlay
+          open={assignOpen}
+          onClose={() => setAssignOpen(false)}
+          activityId={bankActivityId}
+          activityTitle={bankActivityTitle || composition.title}
+          format="learning_track"
+          classes={classes}
+        />
       ) : null}
     </main>
   );

@@ -423,6 +423,15 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Review · Standalone ─────────────────────────────────────────
   {
+    href: "/wke/comic",
+    title: "WKE Comic reader",
+    description:
+      "Public comic-book reader for Chapter 1. Admin uploads pages from Media → WKE Comic; adjacent pages prefetch for snappy turns.",
+    group: "standalone",
+    status: "review",
+    studioHref: "/teacher/media/comic",
+  },
+  {
     href: "/board-game",
     title: "Board game (local)",
     description:

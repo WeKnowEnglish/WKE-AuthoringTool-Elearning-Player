@@ -180,7 +180,7 @@ describe("class-homework/normalize", () => {
     expect(homeworkPayloadSummary(trackPayload!)).toContain("Learning track");
   });
 
-  it("normalizes the curated six-part homework template", () => {
+  it("normalizes the curated secondary homework template", () => {
     const payload = normalizeHomeworkPayload({
       type: "homework_template",
       templateId: "homework-template-one",
@@ -202,6 +202,21 @@ describe("class-homework/normalize", () => {
         templateId: "unknown-template",
       }),
     ).toBeNull();
+
+    const secondary = normalizeHomeworkPayload({
+      type: "homework_template",
+      templateId: "secondary-homework-template-one",
+      title: "",
+      sectionCount: 99,
+      frozenAt: "2026-08-03T00:00:00.000Z",
+    });
+    expect(secondary).toEqual({
+      type: "homework_template",
+      templateId: "secondary-homework-template-one",
+      title: "Secondary Homework One",
+      sectionCount: 5,
+      frozenAt: "2026-08-03T00:00:00.000Z",
+    });
   });
 
   it("normalizes frozen picture cloze homework", () => {

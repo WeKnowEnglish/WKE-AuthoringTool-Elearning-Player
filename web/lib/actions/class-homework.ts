@@ -40,6 +40,10 @@ import {
   normalizePackFlashcardOptions,
   type PackFlashcardOptions,
 } from "@/lib/vocabulary/pack-flashcards";
+import {
+  getHomeworkTemplateDefinition,
+  type HomeworkTemplateId,
+} from "@/lib/homework-templates/registry";
 export type ClassHomeworkActionResult =
   | { ok: true; homework: ClassHomework }
   | { ok: false; error: string };
@@ -213,6 +217,12 @@ export async function saveClassHomework(input: {
           : "draft";
 
     if (status === "assigned" || status === "closed") {
+      if (payload.type === "homework_template") {
+        const template = getHomeworkTemplateDefinition(payload.templateId);
+        if (!template || template.contentStatus !== "ready") {
+          return { ok: false, error: "Add and verify the template activities before assigning this shell." };
+        }
+      }
       if (payload.type === "pack_quiz" && payload.questionCount < 1) {
         return { ok: false, error: "Pack quiz needs at least one question." };
       }
@@ -656,8 +666,9 @@ export type RecordHomeworkCompletionResult =
   | { ok: true; finishedAt: string }
   | { ok: false; error: string };
 
-/** Assign the curated six-part Primary homework template from WKE Library. */
-export async function assignHomeworkTemplateOne(input: {
+/** Create an assignment from a registered six-part homework template. */
+export async function assignHomeworkTemplate(input: {
+  templateId: HomeworkTemplateId;
   classId: string;
   title?: string;
   instructions?: string;
@@ -666,6 +677,8 @@ export async function assignHomeworkTemplateOne(input: {
 }): Promise<ClassHomeworkActionResult> {
   try {
     const teacherId = await requireTeacherUserId();
+    const definition = getHomeworkTemplateDefinition(input.templateId);
+    if (!definition) return { ok: false, error: "Homework template not found." };
     const classId = input.classId.trim();
     if (!classId) return { ok: false, error: "Choose a class." };
     const supabase = await createClient();
@@ -682,12 +695,15 @@ export async function assignHomeworkTemplateOne(input: {
 
     const status: ClassHomeworkStatus =
       input.status === "assigned" ? "assigned" : "draft";
+    if (status === "assigned" && definition.contentStatus !== "ready") {
+      return { ok: false, error: "Add and verify the template activities before assigning this shell." };
+    }
     const now = new Date().toISOString();
     const payload = {
       type: "homework_template" as const,
-      templateId: "homework-template-one" as const,
-      title: "Homework Template One",
-      sectionCount: 6 as const,
+      templateId: definition.id,
+      title: definition.title,
+      sectionCount: definition.sectionCount,
       frozenAt: now,
     };
     const { data: inserted, error: insertError } = await supabase
@@ -719,6 +735,28 @@ export async function assignHomeworkTemplateOne(input: {
       error: err instanceof Error ? err.message : "Could not assign the homework template.",
     };
   }
+}
+
+/** Backwards-compatible Primary template assignment action. */
+export async function assignHomeworkTemplateOne(input: {
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  return assignHomeworkTemplate({ ...input, templateId: "homework-template-one" });
+}
+
+/** Assignment seam for the first Secondary homework shell. */
+export async function assignSecondaryHomeworkTemplateOne(input: {
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  return assignHomeworkTemplate({ ...input, templateId: "secondary-homework-template-one" });
 }
 
 /**
@@ -759,7 +797,7 @@ async function recordCatalogHomeworkCompletion(input: {
 
     const { data: homework, error: homeworkError } = await supabase
       .from("class_homework")
-      .select("id, class_id, status, payload")
+      .select("id, class_id, status, payload, target_student_ids")
       .eq("id", homeworkId)
       .maybeSingle();
 
@@ -845,6 +883,12 @@ async function recordCatalogHomeworkCompletion(input: {
       (row) => row.class_id === homework.class_id,
     );
     if (!enrolled) return { ok: false, error: "You’re not in this class." };
+    const targetStudentIds = Array.isArray(homework.target_student_ids)
+      ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
+      : null;
+    if (targetStudentIds && !targetStudentIds.includes(user.id)) {
+      return { ok: false, error: "This homework was not assigned to you." };
+    }
 
     const now = new Date().toISOString();
     const { data: upserted, error: upsertError } = await supabase
@@ -874,7 +918,9 @@ async function recordCatalogHomeworkCompletion(input: {
     }
 
     revalidatePath("/primary");
+    revalidatePath("/secondary");
     revalidatePath(`/primary/homework/${homeworkId}`);
+    revalidatePath(`/secondary/homework/${homeworkId}`);
     revalidatePath(`/teacher/classes/${String(homework.class_id)}`);
 
     return {

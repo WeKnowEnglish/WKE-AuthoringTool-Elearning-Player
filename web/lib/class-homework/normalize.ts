@@ -38,6 +38,7 @@ import {
 } from "@/lib/cloze-open";
 import { validateReadAndAnswerDocument } from "@/lib/read-and-answer";
 import { validatePictureStoryDocument } from "@/lib/picture-story";
+import { getHomeworkTemplateDefinition } from "@/lib/homework-templates/registry";
 import {
   PRIMARY_A2_ASSESSMENT_ID,
   PRIMARY_A2_ASSESSMENT_PILOT,
@@ -361,12 +362,13 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
   }
 
   if (input.type === "homework_template") {
-    if (input.templateId !== "homework-template-one") return null;
+    const definition = getHomeworkTemplateDefinition(input.templateId);
+    if (!definition) return null;
     return {
       type: "homework_template",
-      templateId: "homework-template-one",
-      title: asString(input.title).trim() || "Homework Template One",
-      sectionCount: 6,
+      templateId: definition.id,
+      title: asString(input.title).trim() || definition.title,
+      sectionCount: definition.sectionCount,
       frozenAt:
         typeof input.frozenAt === "string" && input.frozenAt.trim()
           ? input.frozenAt.trim()

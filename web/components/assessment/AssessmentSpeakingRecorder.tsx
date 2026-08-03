@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleStop, Mic, RotateCcw, Save } from "lucide-react";
 import { saveAssessmentSpeakingRecording } from "@/lib/actions/assessment-speaking";
+import { saveHomeworkTemplateSpeakingRecording } from "@/lib/actions/homework-template-speaking";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
   maxDurationSeconds: number;
   initialRecording?: AssessmentSpeakingRecording;
   onSaved: (recording: AssessmentSpeakingRecording) => void;
+  submissionKind?: "assessment" | "homework-template";
 };
 
 function formatTime(ms: number) {
@@ -19,7 +21,7 @@ function formatTime(ms: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, maxDurationSeconds, initialRecording, onSaved }: Props) {
+export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, maxDurationSeconds, initialRecording, onSaved, submissionKind = "assessment" }: Props) {
   const [recording, setRecording] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -99,7 +101,9 @@ export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, max
     formData.set("response_id", responseId);
     formData.set("duration_ms", String(elapsedMs));
     formData.set("audio", new File([blob], `answer.${extension}`, { type: blob.type || "audio/webm" }));
-    const result = await saveAssessmentSpeakingRecording(formData);
+    const result = submissionKind === "homework-template"
+      ? await saveHomeworkTemplateSpeakingRecording(formData)
+      : await saveAssessmentSpeakingRecording(formData);
     setSaving(false);
     if (!result.ok) { setError(result.error); return; }
     setSaved(true);

@@ -4,9 +4,8 @@ import { revalidatePath } from "next/cache";
 import { isStudent } from "@/lib/auth/roles";
 import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import { emptyHomeworkTemplateSubmissionContent, normalizeHomeworkTemplatePartSnapshot, normalizeHomeworkTemplateSubmissionContent } from "@/lib/homework-templates/homework-template-submission";
+import { isHomeworkTemplatePartId } from "@/lib/homework-templates/registry";
 import { createClient } from "@/lib/supabase/server";
-
-const PART_IDS = new Set(["picture-cloze", "word-annotation", "sentence-columns", "verb-table", "picture-writing", "question-writing"]);
 
 export async function saveHomeworkTemplatePart(input: { homeworkId: string; partId: string; snapshot: unknown; submit?: boolean }): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
@@ -16,12 +15,17 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
     const homeworkId = input.homeworkId.trim();
     const partId = input.partId.trim();
     const snapshot = normalizeHomeworkTemplatePartSnapshot(input.snapshot);
-    if (!PART_IDS.has(partId) || !snapshot) return { ok: false, error: "This homework response is invalid." };
-    const { data: homework } = await supabase.from("class_homework").select("id, class_id, status, payload").eq("id", homeworkId).maybeSingle();
+    if (!snapshot) return { ok: false, error: "This homework response is invalid." };
+    const { data: homework } = await supabase.from("class_homework").select("id, class_id, status, payload, target_student_ids").eq("id", homeworkId).maybeSingle();
     const payload = normalizeHomeworkPayload(homework?.payload);
-    if (!homework || !["assigned", "closed"].includes(String(homework.status)) || payload?.type !== "homework_template" || payload.templateId !== "homework-template-one") {
+    if (!homework || !["assigned", "closed"].includes(String(homework.status)) || payload?.type !== "homework_template") {
       return { ok: false, error: "This homework template is not available." };
     }
+    if (!isHomeworkTemplatePartId(payload.templateId, partId)) return { ok: false, error: "This homework response is invalid." };
+    const targets = Array.isArray(homework.target_student_ids)
+      ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
+      : null;
+    if (targets && !targets.includes(user.id)) return { ok: false, error: "This homework was not assigned to you." };
     const { data: memberships, error: membershipError } = await supabase.rpc("student_class_memberships");
     if (membershipError) return { ok: false, error: membershipError.message };
     if (!((memberships ?? []) as Array<{ class_id: string }>).some((row) => row.class_id === homework.class_id)) return { ok: false, error: "You are not enrolled in this class." };
@@ -35,6 +39,7 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
     const { error } = await supabase.from("homework_template_submissions").upsert({ homework_id: homeworkId, student_id: user.id, status: input.submit ? "submitted" : "in_progress", content, submitted_at: input.submit ? now : null, updated_at: now }, { onConflict: "homework_id,student_id" });
     if (error) return { ok: false, error: /homework_template_submissions|schema cache|does not exist/i.test(error.message) ? "Template submissions require migration 102." : error.message };
     revalidatePath(`/primary/homework/${homeworkId}`);
+    revalidatePath(`/secondary/homework/${homeworkId}`);
     revalidatePath(`/teacher/classes/${String(homework.class_id)}/homework-template-results/${homeworkId}`);
     return { ok: true };
   } catch (error) {

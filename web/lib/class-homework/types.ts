@@ -4,6 +4,7 @@ import type {
   PackFlashcardFace,
   PackFlashcardOptions,
 } from "@/lib/vocabulary/pack-flashcards";
+import type { HomeworkTemplateId } from "@/lib/homework-templates/registry";
 
 export const CLASS_HOMEWORK_STATUSES = ["draft", "assigned", "closed"] as const;
 export type ClassHomeworkStatus = (typeof CLASS_HOMEWORK_STATUSES)[number];
@@ -91,9 +92,9 @@ export type ClassHomeworkPayload =
     }
   | {
       type: "homework_template";
-      templateId: "homework-template-one";
+      templateId: HomeworkTemplateId;
       title: string;
-      sectionCount: 6;
+      sectionCount: number;
       frozenAt: string;
     }
   | {

@@ -1,4 +1,7 @@
-import type { ClassPostKind } from "@/lib/class-posts/types";
+import type {
+  ClassPostGuardianVisibility,
+  ClassPostKind,
+} from "@/lib/class-posts/types";
 
 const MAX_BODY = 4000;
 const MAX_IMAGE_URL = 2048;
@@ -103,4 +106,13 @@ export function normalizeClassPostPinnedAt(value: unknown): string | null {
   const date = new Date(trimmed);
   if (!Number.isFinite(date.getTime())) return null;
   return date.toISOString();
+}
+
+export function normalizeClassPostGuardianVisibility(
+  value: unknown,
+): ClassPostGuardianVisibility {
+  if (value === "class_guardians" || value === "tagged_student_guardians") {
+    return value;
+  }
+  return "none";
 }

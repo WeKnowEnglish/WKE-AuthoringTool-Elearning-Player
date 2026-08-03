@@ -170,7 +170,7 @@ export function MediaAssetGrid({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={asset.public_url}
-                    alt=""
+                    alt={asset.meta_item_name || asset.original_filename}
                     className="h-full w-full object-contain"
                     loading="lazy"
                     decoding="async"

@@ -1,9 +1,12 @@
+import type { ComicPageOverlay } from "@/lib/comic/overlay";
+
 export type ComicChapter = {
   id: string;
   slug: string;
   title: string;
   subtitle: string | null;
   published: boolean;
+  source?: "database" | "bundled";
 };
 
 export type ComicPage = {
@@ -13,6 +16,9 @@ export type ComicPage = {
   publicUrl: string;
   originalFilename: string;
   contentType: string;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  overlay: ComicPageOverlay | null;
 };
 
 export type ComicChapterWithPages = ComicChapter & {

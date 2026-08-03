@@ -5,6 +5,11 @@ export type ClassPostKind =
   | "homework_reminder"
   | "activity";
 
+export type ClassPostGuardianVisibility =
+  | "none"
+  | "class_guardians"
+  | "tagged_student_guardians";
+
 export type ClassPost = {
   id: string;
   classId: string;
@@ -19,6 +24,7 @@ export type ClassPost = {
   activityTitle: string | null;
   activityPlayPath: string | null;
   pinnedAt: string | null;
+  guardianVisibility: ClassPostGuardianVisibility;
   publishedAt: string;
   createdAt: string;
 };

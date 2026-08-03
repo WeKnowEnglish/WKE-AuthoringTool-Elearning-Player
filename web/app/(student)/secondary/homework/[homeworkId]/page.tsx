@@ -6,10 +6,15 @@ import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPla
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
 import { HomeworkStartGate } from "@/components/primary/HomeworkStartGate";
 import { HomeworkStudioActivityPlayer } from "@/components/primary/HomeworkStudioActivityPlayer";
+import { SecondaryHomeworkOneShell } from "@/components/secondary/SecondaryHomeworkOneShell";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
+import {
+  getMyHomeworkTemplateSpeakingRecordings,
+  getMyHomeworkTemplateSubmission,
+} from "@/lib/data/homework-template-submissions";
 import { createClient } from "@/lib/supabase/server";
 import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
 
@@ -62,6 +67,13 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
+  const [templateSubmission, templateRecordings] =
+    payload.type === "homework_template" && payload.templateId === "secondary-homework-template-one"
+      ? await Promise.all([
+          getMyHomeworkTemplateSubmission(homework.id),
+          getMyHomeworkTemplateSpeakingRecordings(homework.id),
+        ])
+      : [null, []];
   const flashcardCards =
     payload.type === "pack_flashcards"
       ? parseStoredPackFlashcardCards(payload.cards ?? [])
@@ -156,6 +168,16 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
           title={payload.title}
           pack={payload.pack}
           alreadyCompleted={Boolean(homework.completedAt)}
+        />
+      ) : null}
+
+      {payload.type === "homework_template" && payload.templateId === "secondary-homework-template-one" ? (
+        <SecondaryHomeworkOneShell
+          homeworkId={homework.id}
+          alreadyCompleted={Boolean(homework.completedAt)}
+          homeHref="/secondary"
+          initialSubmission={templateSubmission}
+          initialRecording={templateRecordings[0]}
         />
       ) : null}
       </HomeworkStartGate>

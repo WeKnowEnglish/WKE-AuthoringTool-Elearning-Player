@@ -11,6 +11,7 @@ import {
   Pin,
   PinOff,
   Trash2,
+  UsersRound,
 } from "lucide-react";
 import { ClassroomPostCard } from "@/components/classroom/ClassroomPostCard";
 import {
@@ -20,6 +21,7 @@ import {
   createClassLinkPost,
   createClassPhotoPostFromForm,
   deleteClassPost,
+  setClassPostGuardianVisibility,
   setClassPostPinned,
 } from "@/lib/actions/class-posts";
 import type { ClassHomework } from "@/lib/class-homework/types";
@@ -46,6 +48,7 @@ const emptyDraftFields = {
   activityTitle: null as string | null,
   activityPlayPath: null as string | null,
   pinnedAt: null as string | null,
+  guardianVisibility: "none" as const,
 };
 
 export function ClassPostsPanel({
@@ -391,6 +394,30 @@ export function ClassPostsPanel({
     });
   };
 
+  const handleToggleGuardianVisibility = (post: ClassPost) => {
+    setError(null);
+    const nextVisibility =
+      post.guardianVisibility === "none" ? "class_guardians" : "none";
+    startTransition(async () => {
+      const result = await setClassPostGuardianVisibility({
+        classId,
+        postId: post.id,
+        visibility: nextVisibility,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      upsertPost(result.post);
+      setNotice(
+        nextVisibility === "class_guardians"
+          ? "This update is now visible to connected guardians."
+          : "This update is hidden from guardians.",
+      );
+      refresh();
+    });
+  };
+
   const modeButtons = [
     { id: "message" as const, label: "Message", icon: Megaphone },
     { id: "photo" as const, label: "Photo", icon: Camera },
@@ -673,6 +700,28 @@ export function ClassPostsPanel({
                 <ClassroomPostCard post={post} tone="primary" />
                 {!archived ? (
                   <div className="absolute right-3 top-4 flex flex-col items-end gap-1.5">
+                    <button
+                      type="button"
+                      disabled={disabled || post.kind === "photo"}
+                      onClick={() => handleToggleGuardianVisibility(post)}
+                      title={
+                        post.kind === "photo"
+                          ? "Student photos require private family media before guardian sharing can be enabled."
+                          : undefined
+                      }
+                      className={`inline-flex items-center gap-1 rounded-full border bg-white/95 px-2.5 py-1 text-[11px] font-bold shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${
+                        post.guardianVisibility === "none"
+                          ? "border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                          : "border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                      }`}
+                    >
+                      <UsersRound className="h-3 w-3" aria-hidden />
+                      {post.kind === "photo"
+                        ? "Parents: private media needed"
+                        : post.guardianVisibility === "none"
+                          ? "Share with parents"
+                          : "Parents: visible"}
+                    </button>
                     <button
                       type="button"
                       disabled={disabled}

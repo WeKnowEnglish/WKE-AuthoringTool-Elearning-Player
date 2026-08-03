@@ -31,6 +31,7 @@ type HomeworkRow = {
   assigned_at: string | null;
   created_at: string;
   updated_at: string;
+  target_student_ids?: unknown;
 };
 
 function isMissingHomeworkTable(error: { message?: string; code?: string } | null): boolean {
@@ -68,6 +69,9 @@ function mapHomework(row: HomeworkRow): ClassHomework | null {
     assignedAt: typeof row.assigned_at === "string" ? row.assigned_at : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    targetStudentIds: Array.isArray(row.target_student_ids)
+      ? row.target_student_ids.filter((id): id is string => typeof id === "string")
+      : null,
   };
 }
 

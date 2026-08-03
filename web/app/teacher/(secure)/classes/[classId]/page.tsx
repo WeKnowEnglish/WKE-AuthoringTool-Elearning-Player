@@ -11,6 +11,7 @@ import {
 import { listClassPostsForClass } from "@/lib/data/class-posts";
 import { listMeetingSlotsForClass } from "@/lib/data/class-meeting-slots";
 import { listClassLessonsWithStepsForClass } from "@/lib/data/class-lessons";
+import { listMyStudioActivities } from "@/lib/data/studio-activities";
 import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import { getClassMasteryOverview } from "@/lib/data/teacher-mastery";
 import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
@@ -46,6 +47,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     activeVc,
     wordPacks,
     lessons,
+    studioActivities,
     liveGameSetsRaw,
     homework,
     activityCards,
@@ -62,6 +64,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     getActiveVirtualClassroomForClass(classId),
     listTeacherWordPacksForClass(classId),
     listClassLessonsWithStepsForClass(classId),
+    listMyStudioActivities(),
     listPublishedQuestionSetsForHost(),
     listClassHomeworkForClass(classId),
     listAssignableActivitiesForClass(classId),
@@ -138,6 +141,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         liveGameProject={liveGameProject}
         whiteboardHistory={whiteboardHistory}
         lessons={lessons}
+        studioActivities={studioActivities}
         liveGameSets={liveGameSets}
         homework={homework}
         homeworkCompletions={homeworkCompletions}

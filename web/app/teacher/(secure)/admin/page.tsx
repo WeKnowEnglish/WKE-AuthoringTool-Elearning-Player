@@ -68,6 +68,15 @@ export default async function TeacherAdminHubPage() {
           </p>
           <p className="mt-2 text-lg font-bold text-neutral-900">Search &amp; recover</p>
         </Link>
+        <Link
+          href="/teacher/admin/guardians"
+          className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm hover:border-neutral-400"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Family access
+          </p>
+          <p className="mt-2 text-lg font-bold text-neutral-900">Guardians &amp; audit</p>
+        </Link>
       </div>
 
       <p className="text-sm text-neutral-600">

@@ -17,7 +17,7 @@ type Props = {
   activity: QuestionWritingPlayable;
   eyebrow?: string;
   doneLabel?: string;
-  onReady?: () => void;
+  onReady?: (snapshot: { answers: Record<string, string>; correct: null; total: number }) => void;
 };
 
 export function QuestionWritingPlayer({
@@ -89,7 +89,7 @@ export function QuestionWritingPlayer({
             Edit my questions
           </KidButton>
           {onReady ? (
-            <KidButton onClick={onReady}>{doneLabel}</KidButton>
+            <KidButton onClick={() => onReady({ answers: responses, correct: null, total: activity.prompts.length })}>{doneLabel}</KidButton>
           ) : null}
         </div>
       </KidPanel>

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1536 },
+  "altText": "The children share food with Keelan in the treehouse, ask about his distant home, and leave under Grandpa Minh's supervision while Mia stays for ten more minutes.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-zara", "kind": "speech", "text": "Are you feeling better?", "speakerId": "zara", "bounds": { "x": 24, "y": 2, "width": 22, "height": 7 }, "tail": { "side": "bottom", "offset": 45 }, "readOrder": 1, "fontScale": 0.8, "vocabularyIds": ["better"], "emphasis": "normal" },
+    { "id": "p1-keelan", "kind": "speech", "text": "I'll be all right.", "speakerId": "keelan", "bounds": { "x": 76, "y": 3, "width": 18, "height": 6 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 2, "fontScale": 0.85, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 31, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-mia", "kind": "speech", "text": "Do you eat food like this at home?", "speakerId": "mia", "bounds": { "x": 4, "y": 31.3, "width": 25, "height": 5.5 }, "tail": { "side": "bottom", "offset": 40 }, "readOrder": 3, "fontScale": 0.65, "vocabularyIds": ["home"], "emphasis": "normal" },
+    { "id": "p2-keelan", "kind": "speech", "text": "It's strange, but good.", "speakerId": "keelan", "bounds": { "x": 31, "y": 31.3, "width": 18, "height": 5.5 }, "tail": { "side": "bottom", "offset": 65 }, "readOrder": 4, "fontScale": 0.65, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 51, "y": 31, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-ethan", "kind": "speech", "text": "How far away is your home?", "speakerId": "ethan", "bounds": { "x": 53, "y": 31.3, "width": 23, "height": 5.5 }, "tail": { "side": "bottom", "offset": 52 }, "readOrder": 5, "fontScale": 0.65, "vocabularyIds": ["far"], "emphasis": "normal" },
+    { "id": "p3-keelan", "kind": "speech", "text": "Very far away.", "speakerId": "keelan", "bounds": { "x": 80, "y": 31.3, "width": 17, "height": 5.2 }, "tail": { "side": "bottom", "offset": 50 }, "readOrder": 6, "fontScale": 0.68, "vocabularyIds": ["far"], "emphasis": "normal" },
+
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 53, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-grandpa", "kind": "speech", "text": "Leo! It's time to go home!", "speakerId": "grandpa_minh", "bounds": { "x": 4, "y": 53.3, "width": 22, "height": 5.5 }, "tail": { "side": "bottom", "offset": 40 }, "readOrder": 7, "fontScale": 0.65, "vocabularyIds": [], "emphasis": "shout" },
+
+    { "id": "p5-number", "kind": "panel_number", "text": "5", "bounds": { "x": 51, "y": 53, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-mia", "kind": "speech", "text": "Let's meet here before school.", "speakerId": "mia", "bounds": { "x": 53, "y": 53.3, "width": 21, "height": 5.5 }, "tail": { "side": "bottom", "offset": 32 }, "readOrder": 8, "fontScale": 0.62, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-zara", "kind": "speech", "text": "Okay. See you then!", "speakerId": "zara", "bounds": { "x": 76, "y": 53.3, "width": 20, "height": 5.5 }, "tail": { "side": "bottom", "offset": 35 }, "readOrder": 9, "fontScale": 0.64, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-leo", "kind": "speech", "text": "See you tomorrow.", "speakerId": "leo", "bounds": { "x": 53, "y": 65, "width": 18, "height": 5.2 }, "tail": { "side": "bottom", "offset": 62 }, "readOrder": 10, "fontScale": 0.65, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-ethan", "kind": "speech", "text": "I have to go!", "speakerId": "ethan", "bounds": { "x": 79, "y": 65, "width": 17, "height": 5.2 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 11, "fontScale": 0.68, "vocabularyIds": [], "emphasis": "shout" },
+
+    { "id": "p6-number", "kind": "panel_number", "text": "6", "bounds": { "x": 1, "y": 76, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-grandpa", "kind": "speech", "text": "Mia, ten more minutes.", "speakerId": "grandpa_minh", "bounds": { "x": 4, "y": 78, "width": 21, "height": 7 }, "tail": { "side": "bottom", "offset": 42 }, "readOrder": 12, "fontScale": 0.8, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-mia", "kind": "speech", "text": "Okay.", "speakerId": "mia", "bounds": { "x": 58, "y": 78, "width": 12, "height": 5 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 13, "fontScale": 0.92, "vocabularyIds": [], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "better", "term": "better", "definition": "Healthier or improved compared with before.", "example": "Zara asks if Keelan is feeling better." },
+    { "id": "home", "term": "home", "definition": "The place where someone lives or belongs.", "example": "Keelan's home is far away." },
+    { "id": "far", "term": "far away", "definition": "A long distance from here.", "example": "Keelan's planet is very far away." }
+  ],
+  "discussionPrompt": "What did the friends learn about Keelan's home?"
+}

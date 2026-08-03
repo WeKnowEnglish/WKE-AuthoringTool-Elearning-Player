@@ -3,13 +3,14 @@ import Link from "next/link";
 export function AdminSubnav({
   active,
 }: {
-  active: "hub" | "requests" | "teachers" | "students" | "diagnostics" | "wke-library";
+  active: "hub" | "requests" | "teachers" | "students" | "guardians" | "diagnostics" | "wke-library";
 }) {
   const items = [
     { id: "hub" as const, href: "/teacher/admin", label: "Overview" },
     { id: "requests" as const, href: "/teacher/admin/requests", label: "Requests" },
     { id: "teachers" as const, href: "/teacher/admin/teachers", label: "Teachers" },
     { id: "students" as const, href: "/teacher/admin/students", label: "Students" },
+    { id: "guardians" as const, href: "/teacher/admin/guardians", label: "Guardians" },
     {
       id: "wke-library" as const,
       href: "/teacher/admin/wke-library",

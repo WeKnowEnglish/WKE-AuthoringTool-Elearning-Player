@@ -18,10 +18,12 @@ import { HomeworkClozeOpenPlayer } from "@/components/primary/HomeworkClozeOpenP
 import { HomeworkReadAndAnswerPlayer } from "@/components/primary/HomeworkReadAndAnswerPlayer";
 import { HomeworkPictureStoryPlayer } from "@/components/primary/HomeworkPictureStoryPlayer";
 import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
+import { PrimaryA2AssessmentPilot } from "@/components/assessment/PrimaryA2AssessmentPilot";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
+import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessmentSpeakingReview } from "@/lib/data/assessment-attempts";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -80,6 +82,21 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
+  if (payload.type === "primary_a2_assessment") {
+    const [initialAttempt, initialSpeakingRecordings, speakingReview] = await Promise.all([
+      getMyAssessmentAttempt(homework.id),
+      getMyAssessmentSpeakingRecordings(homework.id),
+      getMyAssessmentSpeakingReview(homework.id),
+    ]);
+    return (
+      <PrimaryA2AssessmentPilot
+        homeworkId={homework.id}
+        initialAttempt={initialAttempt}
+        initialSpeakingRecordings={initialSpeakingRecordings}
+        speakingReview={speakingReview}
+      />
+    );
+  }
   const flashcardCards =
     payload.type === "pack_flashcards"
       ? parseStoredPackFlashcardCards(payload.cards ?? [])

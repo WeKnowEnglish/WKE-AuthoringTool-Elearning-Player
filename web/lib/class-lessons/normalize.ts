@@ -12,16 +12,28 @@ import type {
   ClassLessonStep,
   ClassLessonStepInput,
   ClassLessonStepKind,
+  ClassLessonPhase,
   ClassLessonStatus,
+  CustomLessonStepConfig,
   DocumentLessonStepConfig,
   LiveGameLessonStepConfig,
+  StudioActivityLessonStepConfig,
   WhiteboardLessonStepConfig,
   WordCardsLessonStepConfig,
 } from "@/lib/class-lessons/types";
-import { CLASS_LESSON_STEP_KINDS, CLASS_LESSON_STATUSES } from "@/lib/class-lessons/types";
+import {
+  CLASS_LESSON_PHASES,
+  CLASS_LESSON_STEP_KINDS,
+  CLASS_LESSON_STATUSES,
+} from "@/lib/class-lessons/types";
+import { STUDIO_ACTIVITY_FORMATS } from "@/lib/studio-activities/types";
 
 const TITLE_MAX = 120;
 const NOTES_MAX = 2000;
+const OBJECTIVE_MAX = 1000;
+const TARGET_LANGUAGE_MAX = 1500;
+const SUCCESS_CHECK_MAX = 1000;
+const STEP_ACTION_MAX = 1500;
 const STEPS_MAX = 20;
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -50,6 +62,53 @@ export function normalizeClassLessonTitle(raw: unknown, fallback = "Untitled les
 export function normalizeClassLessonNotes(raw: unknown): string {
   if (typeof raw !== "string") return "";
   return raw.trim().slice(0, NOTES_MAX);
+}
+
+function normalizeText(raw: unknown, max: number): string {
+  if (typeof raw !== "string") return "";
+  return raw.trim().slice(0, max);
+}
+
+export function normalizeClassLessonObjective(raw: unknown): string {
+  return normalizeText(raw, OBJECTIVE_MAX);
+}
+
+export function normalizeClassLessonTargetLanguage(raw: unknown): string {
+  return normalizeText(raw, TARGET_LANGUAGE_MAX);
+}
+
+export function normalizeClassLessonSuccessCheck(raw: unknown): string {
+  return normalizeText(raw, SUCCESS_CHECK_MAX);
+}
+
+export function normalizeClassLessonDuration(raw: unknown, fallback = 45): number {
+  const parsed =
+    typeof raw === "number" && Number.isFinite(raw)
+      ? Math.round(raw)
+      : typeof raw === "string" && raw.trim()
+        ? Number.parseInt(raw, 10)
+        : fallback;
+  return Math.min(240, Math.max(5, Number.isFinite(parsed) ? parsed : fallback));
+}
+
+export function normalizeClassLessonPhase(raw: unknown): ClassLessonPhase {
+  if (
+    typeof raw === "string" &&
+    (CLASS_LESSON_PHASES as readonly string[]).includes(raw)
+  ) {
+    return raw as ClassLessonPhase;
+  }
+  return "custom";
+}
+
+export function normalizeClassLessonStepDuration(raw: unknown, fallback = 5): number {
+  const parsed =
+    typeof raw === "number" && Number.isFinite(raw)
+      ? Math.round(raw)
+      : typeof raw === "string" && raw.trim()
+        ? Number.parseInt(raw, 10)
+        : fallback;
+  return Math.min(120, Math.max(1, Number.isFinite(parsed) ? parsed : fallback));
 }
 
 export function normalizeClassLessonStatus(raw: unknown): ClassLessonStatus {
@@ -121,8 +180,23 @@ export function defaultLiveGameStepConfig(): LiveGameLessonStepConfig {
   };
 }
 
+export function defaultCustomStepConfig(): CustomLessonStepConfig {
+  return { materialNote: "" };
+}
+
+export function defaultStudioActivityStepConfig(): StudioActivityLessonStepConfig {
+  return {
+    activityId: "",
+    activityTitle: "",
+    format: "multiple_choice",
+    playPath: "",
+  };
+}
+
 export function defaultConfigForKind(kind: ClassLessonStepKind) {
   switch (kind) {
+    case "custom":
+      return defaultCustomStepConfig();
     case "whiteboard":
       return defaultWhiteboardStepConfig();
     case "document":
@@ -131,7 +205,14 @@ export function defaultConfigForKind(kind: ClassLessonStepKind) {
       return defaultWordCardsStepConfig();
     case "live_game":
       return defaultLiveGameStepConfig();
+    case "studio_activity":
+      return defaultStudioActivityStepConfig();
   }
+}
+
+export function normalizeCustomStepConfig(raw: unknown): CustomLessonStepConfig {
+  const input = asRecord(raw);
+  return { materialNote: normalizeText(input.materialNote, 500) };
 }
 
 export function normalizeWhiteboardStepConfig(raw: unknown): WhiteboardLessonStepConfig {
@@ -198,8 +279,27 @@ export function normalizeLiveGameStepConfig(raw: unknown): LiveGameLessonStepCon
   };
 }
 
+export function normalizeStudioActivityStepConfig(
+  raw: unknown,
+): StudioActivityLessonStepConfig {
+  const input = asRecord(raw);
+  const format =
+    typeof input.format === "string" &&
+    (STUDIO_ACTIVITY_FORMATS as readonly string[]).includes(input.format)
+      ? input.format
+      : "multiple_choice";
+  return {
+    activityId: asString(input.activityId).trim(),
+    activityTitle: normalizeClassLessonTitle(input.activityTitle, "Activity"),
+    format: format as StudioActivityLessonStepConfig["format"],
+    playPath: asString(input.playPath).trim(),
+  };
+}
+
 export function normalizeStepConfig(kind: ClassLessonStepKind, raw: unknown) {
   switch (kind) {
+    case "custom":
+      return normalizeCustomStepConfig(raw);
     case "whiteboard":
       return normalizeWhiteboardStepConfig(raw);
     case "document":
@@ -208,14 +308,21 @@ export function normalizeStepConfig(kind: ClassLessonStepKind, raw: unknown) {
       return normalizeWordCardsStepConfig(raw);
     case "live_game":
       return normalizeLiveGameStepConfig(raw);
+    case "studio_activity":
+      return normalizeStudioActivityStepConfig(raw);
   }
 }
 
 export function stepTitleFromConfig(kind: ClassLessonStepKind, config: unknown): string {
   const normalized = normalizeStepConfig(kind, config);
+  if (kind === "custom") return "Teaching step";
   if (kind === "live_game") {
     const live = normalized as LiveGameLessonStepConfig;
     return live.questionSetTitle.trim() || "Live Game";
+  }
+  if (kind === "studio_activity") {
+    const activity = normalized as StudioActivityLessonStepConfig;
+    return activity.activityTitle.trim() || "Activity";
   }
   const titled = normalized as { title?: string };
   return normalizeClassLessonTitle(titled.title, kind === "whiteboard" ? "Whiteboard" : kind === "document" ? "Document" : "Word cards");
@@ -236,10 +343,18 @@ export function normalizeClassLessonStepInputs(rawSteps: unknown): ClassLessonSt
       const live = config as LiveGameLessonStepConfig;
       if (!live.questionSetId) continue;
     }
+    if (row.kind === "studio_activity") {
+      const activity = config as StudioActivityLessonStepConfig;
+      if (!activity.activityId || !activity.playPath) continue;
+    }
     out.push({
       id: typeof row.id === "string" && row.id.trim() ? row.id.trim() : undefined,
       kind: row.kind,
       title,
+      phase: normalizeClassLessonPhase(row.phase),
+      durationMinutes: normalizeClassLessonStepDuration(row.durationMinutes),
+      teacherAction: normalizeText(row.teacherAction, STEP_ACTION_MAX),
+      studentAction: normalizeText(row.studentAction, STEP_ACTION_MAX),
       config,
     });
   }
@@ -251,6 +366,10 @@ export function mapDbStepRow(row: {
   position: number;
   kind: string;
   title: string;
+  phase: string;
+  duration_minutes: number;
+  teacher_action: string;
+  student_action: string;
   config: unknown;
 }): ClassLessonStep | null {
   if (!isClassLessonStepKind(row.kind)) return null;
@@ -260,6 +379,10 @@ export function mapDbStepRow(row: {
     position: row.position,
     kind: row.kind,
     title: normalizeClassLessonTitle(row.title, stepTitleFromConfig(row.kind, config)),
+    phase: normalizeClassLessonPhase(row.phase),
+    durationMinutes: normalizeClassLessonStepDuration(row.duration_minutes),
+    teacherAction: normalizeText(row.teacher_action, STEP_ACTION_MAX),
+    studentAction: normalizeText(row.student_action, STEP_ACTION_MAX),
     config,
   };
 }

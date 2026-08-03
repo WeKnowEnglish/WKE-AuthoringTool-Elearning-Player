@@ -5,6 +5,7 @@ export type SendEmailInput = {
   subject: string;
   text: string;
   replyTo?: string;
+  from?: string;
 };
 
 export type SendEmailResult =
@@ -43,7 +44,7 @@ export async function sendResendEmail(input: SendEmailInput): Promise<SendEmailR
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: resendFromAddress(),
+        from: input.from?.trim() || resendFromAddress(),
         to,
         reply_to: input.replyTo?.trim() || undefined,
         subject: input.subject,

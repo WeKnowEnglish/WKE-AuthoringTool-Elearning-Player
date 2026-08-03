@@ -43,7 +43,7 @@ function revalidateClassSurfaces(classId: string) {
 }
 
 const POST_SELECT =
-  "id, class_id, teacher_id, kind, body, image_url, link_url, link_title, homework_id, activity_space_item_id, activity_title, activity_play_path, pinned_at, published_at, created_at";
+  "id, class_id, teacher_id, kind, body, image_url, link_url, link_title, homework_id, activity_space_item_id, activity_title, activity_play_path, pinned_at, guardian_visibility, published_at, created_at";
 
 type PostRow = {
   id: string;
@@ -59,6 +59,7 @@ type PostRow = {
   activity_title: string | null;
   activity_play_path: string | null;
   pinned_at: string | null;
+  guardian_visibility: string | null;
   published_at: string;
   created_at: string;
 };
@@ -502,6 +503,70 @@ export async function setClassPostPinned(input: {
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Could not update pin.",
+    };
+  }
+}
+
+export async function setClassPostGuardianVisibility(input: {
+  classId: string;
+  postId: string;
+  visibility: "none" | "class_guardians" | "tagged_student_guardians";
+  studentIds?: string[];
+}): Promise<ClassPostActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const classId = input.classId.trim();
+    const postId = input.postId.trim();
+    if (!classId || !postId) return { ok: false, error: "Missing post." };
+
+    const ownership = await assertOwnsClass(classId, teacherId);
+    if (!ownership.ok) return ownership;
+
+    const supabase = await createClient();
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      "set_class_post_guardian_visibility",
+      {
+        p_post_id: postId,
+        p_visibility: input.visibility,
+        p_student_ids: input.studentIds?.length ? input.studentIds : null,
+      },
+    );
+    if (rpcError || !rpcResult || typeof rpcResult !== "object") {
+      return { ok: false, error: rpcError?.message ?? "Could not update guardian visibility." };
+    }
+    const result = rpcResult as Record<string, unknown>;
+    if (result.ok !== true) {
+      const code = String(result.error ?? "update_failed");
+      if (code === "private_media_required") {
+        return {
+          ok: false,
+          error: "Class photos cannot be shared with guardians until private family media is enabled.",
+        };
+      }
+      if (code === "student_tag_required") {
+        return { ok: false, error: "Choose at least one student for a tagged guardian post." };
+      }
+      return { ok: false, error: "Could not update guardian visibility." };
+    }
+
+    const { data, error } = await supabase
+      .from("class_posts")
+      .select(POST_SELECT)
+      .eq("id", postId)
+      .eq("class_id", classId)
+      .eq("teacher_id", teacherId)
+      .single();
+    if (error) return { ok: false, error: error.message };
+    const post = mapPostRow(data as PostRow);
+    if (!post) return { ok: false, error: "Could not reload the post." };
+
+    revalidateClassSurfaces(classId);
+    revalidatePath("/parent", "layout");
+    return { ok: true, post };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not update guardian visibility.",
     };
   }
 }

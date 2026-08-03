@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1536 },
+  "altText": "At dusk the children carry Keelan under a blanket, honestly ask Grandpa Minh for help, and settle Keelan safely in Leo's wooden treehouse.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-narration", "kind": "narration", "text": "At dusk, the four friends hurried through the village fields.", "speakerId": "narrator", "bounds": { "x": 7, "y": 0.8, "width": 30, "height": 5.2 }, "readOrder": 1, "fontScale": 0.65, "vocabularyIds": ["dusk"], "emphasis": "normal" },
+    { "id": "p1-keelan", "kind": "speech", "text": "This is a strange way to hide.", "speakerId": "keelan", "bounds": { "x": 64, "y": 0.8, "width": 23, "height": 5.2 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 2, "fontScale": 0.64, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 30, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-leo", "kind": "speech", "text": "Keep the blanket over him.", "speakerId": "leo", "bounds": { "x": 4, "y": 30.3, "width": 21, "height": 5.4 }, "tail": { "side": "bottom", "offset": 62 }, "readOrder": 3, "fontScale": 0.68, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-zara", "kind": "speech", "text": "We're almost there.", "speakerId": "zara", "bounds": { "x": 28, "y": 30.3, "width": 19, "height": 5.4 }, "tail": { "side": "bottom", "offset": 38 }, "readOrder": 4, "fontScale": 0.68, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 54, "y": 30, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-keelan", "kind": "speech", "text": "Why are we hiding?", "speakerId": "keelan", "bounds": { "x": 58, "y": 30.3, "width": 19, "height": 5.4 }, "tail": { "side": "bottom", "offset": 58 }, "readOrder": 5, "fontScale": 0.68, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-mia", "kind": "speech", "text": "So people won't be scared. We'll tell someone we trust.", "speakerId": "mia", "bounds": { "x": 75, "y": 40.5, "width": 23, "height": 8.2 }, "tail": { "side": "left", "offset": 48 }, "readOrder": 6, "fontScale": 0.58, "vocabularyIds": ["trust"], "emphasis": "normal" },
+
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 52, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-grandpa-question", "kind": "speech", "text": "What are you carrying?", "speakerId": "grandpa_minh", "bounds": { "x": 4, "y": 52.3, "width": 20, "height": 5.3 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 7, "fontScale": 0.65, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-mia", "kind": "speech", "text": "Our friend is hurt. We need help.", "speakerId": "mia", "bounds": { "x": 31, "y": 52.3, "width": 23, "height": 5.5 }, "tail": { "side": "bottom", "offset": 45 }, "readOrder": 8, "fontScale": 0.62, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-grandpa-answer", "kind": "speech", "text": "Take him to Leo's treehouse. I'll tell your families.", "speakerId": "grandpa_minh", "bounds": { "x": 69, "y": 52.3, "width": 28, "height": 6.2 }, "tail": { "side": "left", "offset": 55 }, "readOrder": 9, "fontScale": 0.58, "vocabularyIds": ["treehouse"], "emphasis": "normal" },
+
+    { "id": "p5-number", "kind": "panel_number", "text": "5", "bounds": { "x": 1, "y": 74, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-leo", "kind": "speech", "text": "We're here.", "speakerId": "leo", "bounds": { "x": 5, "y": 75, "width": 16, "height": 6 }, "tail": { "side": "bottom", "offset": 50 }, "readOrder": 10, "fontScale": 0.9, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p6-number", "kind": "panel_number", "text": "6", "bounds": { "x": 50, "y": 74, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-mia", "kind": "speech", "text": "I brought food.", "speakerId": "mia", "bounds": { "x": 52, "y": 74.3, "width": 12, "height": 5.2 }, "tail": { "side": "bottom", "offset": 42 }, "readOrder": 11, "fontScale": 0.6, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-zara", "kind": "speech", "text": "And water.", "speakerId": "zara", "bounds": { "x": 64, "y": 74.3, "width": 11, "height": 5.2 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 12, "fontScale": 0.6, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-leo", "kind": "speech", "text": "And a blanket.", "speakerId": "leo", "bounds": { "x": 75, "y": 74.3, "width": 12, "height": 5.2 }, "tail": { "side": "bottom", "offset": 50 }, "readOrder": 13, "fontScale": 0.58, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-ethan", "kind": "speech", "text": "I'll make a bed.", "speakerId": "ethan", "bounds": { "x": 87, "y": 74.3, "width": 12, "height": 5.2 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 14, "fontScale": 0.58, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-keelan", "kind": "speech", "text": "This place is small, but kind.", "speakerId": "keelan", "bounds": { "x": 73, "y": 91, "width": 24, "height": 8 }, "tail": { "side": "top", "offset": 58 }, "readOrder": 15, "fontScale": 0.75, "vocabularyIds": [], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "dusk", "term": "dusk", "definition": "The time when day becomes night.", "example": "The friends cross the fields at dusk." },
+    { "id": "trust", "term": "trust", "definition": "To believe someone is honest and will help.", "example": "The children tell an adult they trust." },
+    { "id": "treehouse", "term": "treehouse", "definition": "A small room or cabin built in a tree.", "example": "Keelan rests in Leo's treehouse." }
+  ],
+  "discussionPrompt": "Why was telling Grandpa Minh a safe and helpful choice?"
+}

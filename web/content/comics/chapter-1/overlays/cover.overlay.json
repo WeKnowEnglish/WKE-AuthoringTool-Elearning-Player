@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "canvas": { "width": 1122, "height": 1402 },
+  "altText": "Mia, Zara, Ethan, and Leo stand together in their valley while a small spacecraft streaks across the blue sky.",
+  "elements": [
+    {
+      "id": "chapter-label",
+      "kind": "subtitle",
+      "text": "CHAPTER 1",
+      "bounds": { "x": 32, "y": 3, "width": 36, "height": 6 },
+      "fontScale": 1,
+      "vocabularyIds": [],
+      "emphasis": "normal"
+    },
+    {
+      "id": "cover-title",
+      "kind": "title",
+      "text": "A NEW FRIEND ARRIVES",
+      "bounds": { "x": 10, "y": 10, "width": 80, "height": 15 },
+      "fontScale": 1.25,
+      "vocabularyIds": [],
+      "emphasis": "shout"
+    },
+    {
+      "id": "cover-values",
+      "kind": "subtitle",
+      "text": "CURIOSITY • COURAGE • FRIENDSHIP • ADVENTURE",
+      "bounds": { "x": 8, "y": 87, "width": 84, "height": 4 },
+      "fontScale": 0.8,
+      "vocabularyIds": [],
+      "emphasis": "normal"
+    },
+    {
+      "id": "cover-tagline",
+      "kind": "caption",
+      "text": "An unexpected mystery begins.",
+      "speakerId": "narrator",
+      "bounds": { "x": 22, "y": 92, "width": 56, "height": 5 },
+      "fontScale": 0.9,
+      "vocabularyIds": ["mystery"],
+      "emphasis": "normal"
+    }
+  ],
+  "cast": [
+    {
+      "speakerId": "mia",
+      "name": "Mia",
+      "color": "#8b5cf6",
+      "description": "Thoughtful, scientific, and curious. She wears purple."
+    },
+    {
+      "speakerId": "zara",
+      "name": "Zara",
+      "color": "#eab308",
+      "description": "Warm, observant, and encouraging. She wears yellow."
+    },
+    {
+      "speakerId": "ethan",
+      "name": "Ethan",
+      "color": "#22c55e",
+      "description": "Imaginative, hopeful, and adventurous. He wears green."
+    },
+    {
+      "speakerId": "leo",
+      "name": "Leo",
+      "color": "#3b82f6",
+      "description": "Energetic, playful, and brave. He wears blue."
+    }
+  ],
+  "vocabulary": [
+    {
+      "id": "mystery",
+      "term": "mystery",
+      "definition": "Something unknown that people want to understand.",
+      "example": "The strange ship is a mystery."
+    }
+  ],
+  "discussionPrompt": "What do you notice? What do you think might arrive?"
+}

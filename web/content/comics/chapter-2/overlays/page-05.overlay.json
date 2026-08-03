@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1536 },
+  "altText": "Mia notices that Keelan is worried. He uses a small blue search spell but cannot find anyone like him.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-mia", "kind": "speech", "text": "Are you still awake?", "speakerId": "mia", "bounds": { "x": 35, "y": 2, "width": 20, "height": 7 }, "tail": { "side": "bottom", "offset": 40 }, "readOrder": 1, "fontScale": 0.82, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-keelan", "kind": "speech", "text": "Yes.", "speakerId": "keelan", "bounds": { "x": 72, "y": 2, "width": 12, "height": 5 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 2, "fontScale": 0.95, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 27, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-mia", "kind": "speech", "text": "You look worried.", "speakerId": "mia", "bounds": { "x": 4, "y": 27.3, "width": 19, "height": 5.5 }, "tail": { "side": "bottom", "offset": 50 }, "readOrder": 3, "fontScale": 0.68, "vocabularyIds": ["worried"], "emphasis": "normal" },
+    { "id": "p2-keelan", "kind": "speech", "text": "I am.", "speakerId": "keelan", "bounds": { "x": 34, "y": 28, "width": 12, "height": 5 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 4, "fontScale": 0.92, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 50, "y": 27, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-keelan", "kind": "speech", "text": "Maybe I can show you.", "speakerId": "keelan", "bounds": { "x": 76, "y": 35.5, "width": 20, "height": 5.8 }, "tail": { "side": "left", "offset": 45 }, "readOrder": 5, "fontScale": 0.66, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-mia", "kind": "speech", "text": "Show me what?", "speakerId": "mia", "bounds": { "x": 53, "y": 38, "width": 16, "height": 6 }, "tail": { "side": "bottom", "offset": 45 }, "readOrder": 6, "fontScale": 0.86, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 50, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p5-number", "kind": "panel_number", "text": "5", "bounds": { "x": 1, "y": 74, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-keelan-first", "kind": "speech", "text": "I still can't find them.", "speakerId": "keelan", "bounds": { "x": 73, "y": 75, "width": 22, "height": 7 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 7, "fontScale": 0.8, "vocabularyIds": ["find"], "emphasis": "normal" },
+    { "id": "p5-mia", "kind": "speech", "text": "Who?", "speakerId": "mia", "bounds": { "x": 55, "y": 84, "width": 11, "height": 5 }, "tail": { "side": "bottom", "offset": 50 }, "readOrder": 8, "fontScale": 0.95, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-keelan-last", "kind": "speech", "text": "Anyone like me.", "speakerId": "keelan", "bounds": { "x": 75, "y": 86, "width": 19, "height": 6 }, "tail": { "side": "bottom", "offset": 42 }, "readOrder": 9, "fontScale": 0.84, "vocabularyIds": ["like-me"], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "worried", "term": "worried", "definition": "Feeling afraid that something may be wrong.", "example": "Mia can see that Keelan is worried." },
+    { "id": "find", "term": "find", "definition": "To discover or locate someone or something.", "example": "Keelan is trying to find others." },
+    { "id": "like-me", "term": "anyone like me", "definition": "Another person or being of the same kind.", "example": "Keelan cannot find anyone like him." }
+  ],
+  "discussionPrompt": "Why is Keelan worried, and how does Mia respond?"
+}

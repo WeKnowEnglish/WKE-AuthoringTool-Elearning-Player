@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1536 },
+  "altText": "The friends leave the ship and approach a dark tree hollow where golden eyes and two small fangs appear.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-ethan", "kind": "speech", "text": "Maybe it powers the ship.", "speakerId": "ethan", "bounds": { "x": 5, "y": 2, "width": 17, "height": 7 }, "tail": { "side": "bottom", "offset": 72 }, "readOrder": 1, "fontScale": 0.88, "vocabularyIds": ["powers"], "emphasis": "normal" },
+    { "id": "p1-leo", "kind": "speech", "text": "Or maybe it’s alien treasure.", "speakerId": "leo", "bounds": { "x": 79, "y": 2, "width": 17, "height": 7 }, "tail": { "side": "bottom", "offset": 35 }, "readOrder": 2, "fontScale": 0.84, "vocabularyIds": ["treasure"], "emphasis": "normal" },
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 22, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-mia", "kind": "speech", "text": "Wait…", "speakerId": "mia", "bounds": { "x": 8, "y": 25, "width": 12, "height": 5 }, "tail": { "side": "right", "offset": 60 }, "readOrder": 3, "fontScale": 0.95, "vocabularyIds": [], "emphasis": "whisper" },
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 1, "y": 40.5, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-mia", "kind": "speech", "text": "Something just moved!", "speakerId": "mia", "bounds": { "x": 55, "y": 44, "width": 18, "height": 6 }, "tail": { "side": "left", "offset": 62 }, "readOrder": 4, "fontScale": 0.9, "vocabularyIds": ["moved"], "emphasis": "shout" },
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 56, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-ethan", "kind": "speech", "text": "Maybe it’s the pilot…", "speakerId": "ethan", "bounds": { "x": 17, "y": 57, "width": 18, "height": 6 }, "tail": { "side": "bottom", "offset": 56 }, "readOrder": 5, "fontScale": 0.88, "vocabularyIds": ["pilot"], "emphasis": "whisper" },
+    { "id": "p4-zara", "kind": "speech", "text": "Do you think it came from the ship?", "speakerId": "zara", "bounds": { "x": 80, "y": 57, "width": 18, "height": 8 }, "tail": { "side": "bottom", "offset": 36 }, "readOrder": 6, "fontScale": 0.78, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-number", "kind": "panel_number", "text": "5", "bounds": { "x": 1, "y": 79, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-sfx", "kind": "sfx", "text": "RUSTLE…", "bounds": { "x": 72, "y": 91, "width": 18, "height": 5 }, "fontScale": 0.95, "vocabularyIds": ["rustle"], "emphasis": "whisper" }
+  ],
+  "vocabulary": [
+    { "id": "powers", "term": "powers", "definition": "Gives energy to make something work.", "example": "Maybe the crystal powers the ship." },
+    { "id": "treasure", "term": "treasure", "definition": "Something rare or valuable.", "example": "Leo wonders if the crystal is treasure." },
+    { "id": "moved", "term": "moved", "definition": "Changed position.", "example": "Something moved in the hollow." },
+    { "id": "pilot", "term": "pilot", "definition": "A person who flies an aircraft or spacecraft.", "example": "The pilot may be in the hollow." },
+    { "id": "rustle", "term": "rustle", "definition": "A soft sound made by leaves or small movements.", "example": "The friends hear a rustle." }
+  ],
+  "discussionPrompt": "Who or what do you think is hiding in the hollow?"
+}

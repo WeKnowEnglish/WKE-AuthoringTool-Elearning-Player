@@ -46,7 +46,7 @@ export function TeacherMediaLibraryModal({ ownerId }: Props) {
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Media library"
+      aria-label="Asset library"
       onClick={() => closeTeacherMediaLibrary()}
     >
       <div
@@ -54,7 +54,7 @@ export function TeacherMediaLibraryModal({ ownerId }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
-          <h3 className="truncate font-semibold text-neutral-900">Media library</h3>
+          <h3 className="truncate font-semibold text-neutral-900">Asset library</h3>
           <button
             type="button"
             className="rounded px-2 py-1 text-sm font-semibold text-neutral-600 underline hover:bg-neutral-100"

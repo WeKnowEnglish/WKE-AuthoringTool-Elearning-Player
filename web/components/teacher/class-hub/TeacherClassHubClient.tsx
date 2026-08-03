@@ -12,7 +12,11 @@ import type { StudentClassroomTabSettings } from "@/lib/classroom/classroom-tabs
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
-import type { ClassLesson, LiveGameQuestionSetOption } from "@/lib/class-lessons/types";
+import type {
+  ClassLesson,
+  LiveGameQuestionSetOption,
+  StudioActivityOption,
+} from "@/lib/class-lessons/types";
 import type { LiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
@@ -28,7 +32,7 @@ import type { WhiteboardRoundHistoryItem } from "@/lib/whiteboard/server/history
 
 const TAB_LABELS: Record<ClassHubTab, string> = {
   teach: "Teach",
-  lesson: "Create Lesson",
+  lesson: "Plan Lesson",
   students: "Students & Homework",
   settings: "Settings",
 };
@@ -53,6 +57,7 @@ export type TeacherClassHubClientProps = {
   liveGameProject: LiveGameClassProjectOverview;
   whiteboardHistory: WhiteboardRoundHistoryItem[];
   lessons: ClassLesson[];
+  studioActivities: StudioActivityOption[];
   liveGameSets: LiveGameQuestionSetOption[];
   homework: ClassHomework[];
   homeworkCompletions: HomeworkCompletionSummary[];
@@ -90,6 +95,7 @@ export function TeacherClassHubClient({
   liveGameProject,
   whiteboardHistory,
   lessons,
+  studioActivities,
   liveGameSets,
   homework,
   homeworkCompletions,
@@ -191,6 +197,7 @@ export function TeacherClassHubClient({
           classId={classId}
           archived={archived}
           lessons={lessons}
+          studioActivities={studioActivities}
           liveGameSets={liveGameSets}
           initialLessonId={lessonId}
         />

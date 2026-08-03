@@ -161,6 +161,14 @@ export const PILOT_SECTIONS: PilotSectionDef[] = [
 ];
 
 export const PILOT_CATALOG: PilotEntry[] = [
+  {
+    href: "/pilots/primary-a2-assessment",
+    title: "Primary A2 assessment",
+    description:
+      "Versioned test runner pilot with autosave, review, submission, and Reading & Writing Parts 1, 5, 6, and 7.",
+    group: "experiments",
+    status: "review",
+  },
   // ── Active · Quizzes ──────────────────────────────────────────────
   {
     href: "/teacher/activity-builder/quizzes",

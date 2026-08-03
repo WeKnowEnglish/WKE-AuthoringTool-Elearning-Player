@@ -40,6 +40,10 @@ import {
   normalizePackFlashcardOptions,
   type PackFlashcardOptions,
 } from "@/lib/vocabulary/pack-flashcards";
+import {
+  getHomeworkTemplateDefinition,
+  type HomeworkTemplateId,
+} from "@/lib/homework-templates/registry";
 export type ClassHomeworkActionResult =
   | { ok: true; homework: ClassHomework }
   | { ok: false; error: string };
@@ -118,6 +122,8 @@ export async function saveClassHomework(input: {
   dueAt?: string | null;
   status?: ClassHomeworkStatus;
   payload: unknown;
+  /** Null assigns to the whole class; omitted preserves the current audience. */
+  targetStudentIds?: string[] | null;
 }): Promise<ClassHomeworkActionResult> {
   try {
     const teacherId = await requireTeacherUserId();
@@ -127,7 +133,7 @@ export async function saveClassHomework(input: {
     const supabase = await createClient();
     const { data: existing, error: existingError } = await supabase
       .from("class_homework")
-      .select("id, class_id, status, assigned_at, payload")
+      .select("id, class_id, status, assigned_at, payload, target_student_ids")
       .eq("id", homeworkId)
       .eq("teacher_id", teacherId)
       .maybeSingle();
@@ -211,6 +217,12 @@ export async function saveClassHomework(input: {
           : "draft";
 
     if (status === "assigned" || status === "closed") {
+      if (payload.type === "homework_template") {
+        const template = getHomeworkTemplateDefinition(payload.templateId);
+        if (!template || template.contentStatus !== "ready") {
+          return { ok: false, error: "Add and verify the template activities before assigning this shell." };
+        }
+      }
       if (payload.type === "pack_quiz" && payload.questionCount < 1) {
         return { ok: false, error: "Pack quiz needs at least one question." };
       }
@@ -228,6 +240,23 @@ export async function saveClassHomework(input: {
         : status === "draft"
           ? null
           : existing.assigned_at;
+
+    let targetStudentIds: string[] | null = Array.isArray(existing.target_student_ids)
+      ? existing.target_student_ids.filter((id): id is string => typeof id === "string")
+      : null;
+    if (input.targetStudentIds !== undefined) {
+      if (input.targetStudentIds === null) {
+        targetStudentIds = null;
+      } else {
+        const requested = [...new Set(input.targetStudentIds.map((id) => id.trim()).filter(Boolean))];
+        if (!requested.length) return { ok: false, error: "Choose at least one student or assign to everyone." };
+        const { data: enrolled, error: rosterError } = await supabase.from("class_enrollments").select("student_id").eq("class_id", existing.class_id).in("student_id", requested);
+        if (rosterError) return { ok: false, error: rosterError.message };
+        const validIds = new Set((enrolled ?? []).map((row) => String(row.student_id)));
+        if (requested.some((id) => !validIds.has(id))) return { ok: false, error: "One or more selected students are no longer in this class." };
+        targetStudentIds = requested;
+      }
+    }
 
     if (payload.type === "pack_quiz" && status === "assigned") {
       await supabase
@@ -255,6 +284,7 @@ export async function saveClassHomework(input: {
         payload,
         assigned_at: assignedAt,
         updated_at: new Date().toISOString(),
+        target_student_ids: targetStudentIds,
       })
       .eq("id", homeworkId)
       .eq("teacher_id", teacherId);
@@ -636,8 +666,9 @@ export type RecordHomeworkCompletionResult =
   | { ok: true; finishedAt: string }
   | { ok: false; error: string };
 
-/** Assign the curated six-part Primary homework template from WKE Library. */
-export async function assignHomeworkTemplateOne(input: {
+/** Create an assignment from a registered six-part homework template. */
+export async function assignHomeworkTemplate(input: {
+  templateId: HomeworkTemplateId;
   classId: string;
   title?: string;
   instructions?: string;
@@ -646,6 +677,8 @@ export async function assignHomeworkTemplateOne(input: {
 }): Promise<ClassHomeworkActionResult> {
   try {
     const teacherId = await requireTeacherUserId();
+    const definition = getHomeworkTemplateDefinition(input.templateId);
+    if (!definition) return { ok: false, error: "Homework template not found." };
     const classId = input.classId.trim();
     if (!classId) return { ok: false, error: "Choose a class." };
     const supabase = await createClient();
@@ -662,12 +695,15 @@ export async function assignHomeworkTemplateOne(input: {
 
     const status: ClassHomeworkStatus =
       input.status === "assigned" ? "assigned" : "draft";
+    if (status === "assigned" && definition.contentStatus !== "ready") {
+      return { ok: false, error: "Add and verify the template activities before assigning this shell." };
+    }
     const now = new Date().toISOString();
     const payload = {
       type: "homework_template" as const,
-      templateId: "homework-template-one" as const,
-      title: "Homework Template One",
-      sectionCount: 6 as const,
+      templateId: definition.id,
+      title: definition.title,
+      sectionCount: definition.sectionCount,
       frozenAt: now,
     };
     const { data: inserted, error: insertError } = await supabase
@@ -699,6 +735,28 @@ export async function assignHomeworkTemplateOne(input: {
       error: err instanceof Error ? err.message : "Could not assign the homework template.",
     };
   }
+}
+
+/** Backwards-compatible Primary template assignment action. */
+export async function assignHomeworkTemplateOne(input: {
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  return assignHomeworkTemplate({ ...input, templateId: "homework-template-one" });
+}
+
+/** Assignment seam for the first Secondary homework shell. */
+export async function assignSecondaryHomeworkTemplateOne(input: {
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  return assignHomeworkTemplate({ ...input, templateId: "secondary-homework-template-one" });
 }
 
 /**
@@ -739,7 +797,7 @@ async function recordCatalogHomeworkCompletion(input: {
 
     const { data: homework, error: homeworkError } = await supabase
       .from("class_homework")
-      .select("id, class_id, status, payload")
+      .select("id, class_id, status, payload, target_student_ids")
       .eq("id", homeworkId)
       .maybeSingle();
 
@@ -825,6 +883,12 @@ async function recordCatalogHomeworkCompletion(input: {
       (row) => row.class_id === homework.class_id,
     );
     if (!enrolled) return { ok: false, error: "You’re not in this class." };
+    const targetStudentIds = Array.isArray(homework.target_student_ids)
+      ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
+      : null;
+    if (targetStudentIds && !targetStudentIds.includes(user.id)) {
+      return { ok: false, error: "This homework was not assigned to you." };
+    }
 
     const now = new Date().toISOString();
     const { data: upserted, error: upsertError } = await supabase
@@ -854,7 +918,9 @@ async function recordCatalogHomeworkCompletion(input: {
     }
 
     revalidatePath("/primary");
+    revalidatePath("/secondary");
     revalidatePath(`/primary/homework/${homeworkId}`);
+    revalidatePath(`/secondary/homework/${homeworkId}`);
     revalidatePath(`/teacher/classes/${String(homework.class_id)}`);
 
     return {

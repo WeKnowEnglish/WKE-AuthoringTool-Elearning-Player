@@ -6,7 +6,7 @@ import { sortClassPostsForFeed, type ClassPost } from "@/lib/class-posts/types";
 import { createClient } from "@/lib/supabase/server";
 
 const POST_SELECT =
-  "id, class_id, teacher_id, kind, body, image_url, link_url, link_title, homework_id, activity_space_item_id, activity_title, activity_play_path, pinned_at, published_at, created_at";
+  "id, class_id, teacher_id, kind, body, image_url, link_url, link_title, homework_id, activity_space_item_id, activity_title, activity_play_path, pinned_at, guardian_visibility, published_at, created_at";
 
 const POST_SELECT_LEGACY =
   "id, class_id, teacher_id, kind, body, image_url, link_url, link_title, homework_id, published_at, created_at";
@@ -35,6 +35,7 @@ function isMissingPostColumns(error: { message?: string; code?: string } | null)
     message.includes("activity_title") ||
     message.includes("activity_play_path") ||
     message.includes("pinned_at") ||
+    message.includes("guardian_visibility") ||
     error.code === "42703" ||
     error.code === "PGRST204"
   );

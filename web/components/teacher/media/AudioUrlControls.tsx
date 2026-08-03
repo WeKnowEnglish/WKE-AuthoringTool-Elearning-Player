@@ -273,7 +273,7 @@ export function AudioUrlControls({
           onClick={() => setLibraryOpen(true)}
           className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50 active:bg-neutral-200 disabled:opacity-50"
         >
-          Media library
+          Asset library
         </button>
         <button
           type="button"

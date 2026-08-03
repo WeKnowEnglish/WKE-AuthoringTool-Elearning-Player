@@ -15,6 +15,7 @@ import {
 import type { WkeLibraryItemSummary } from "@/lib/wke-library/types";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 import { AssignHomeworkTemplateOverlay } from "@/components/teacher/wke-library/AssignHomeworkTemplateOverlay";
+import type { HomeworkTemplateId } from "@/lib/homework-templates/registry";
 
 const FORMAT_LABELS: Record<StudioActivityFormat, string> = {
   explore_hotspots: "Hotspots",
@@ -66,7 +67,7 @@ export function WkeLibraryBrowse({ isAdmin = false, classes = [], classLoadError
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [catalogCount, setCatalogCount] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
-  const [assignTemplateOpen, setAssignTemplateOpen] = useState(false);
+  const [assignTemplateId, setAssignTemplateId] = useState<HomeworkTemplateId | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -300,7 +301,15 @@ export function WkeLibraryBrowse({ isAdmin = false, classes = [], classLoadError
         <p className="mt-1 text-sm leading-snug text-stone-600">Six connected parts covering vocabulary, adjectives and adverbs, sentence building, verb forms, picture writing, and question writing.</p>
         <p className="mt-2 text-[11px] text-stone-500">6 parts · about 30 minutes · teacher completion reporting</p>
         {classLoadError ? <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">The activity library is available, but classes could not be loaded. Refresh before assigning homework.</p> : null}
-        <div className="mt-4 grid max-w-md grid-cols-2 gap-2"><Link href="/pilots/homework-template-one" className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-sm font-semibold text-stone-800 hover:bg-stone-50">Preview</Link><button type="button" disabled={classLoadError} onClick={() => setAssignTemplateOpen(true)} className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-semibold text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50">Assign homework</button></div>
+        <div className="mt-4 grid max-w-md grid-cols-2 gap-2"><Link href="/pilots/homework-template-one" className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-sm font-semibold text-stone-800 hover:bg-stone-50">Preview</Link><button type="button" disabled={classLoadError} onClick={() => setAssignTemplateId("homework-template-one")} className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-semibold text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50">Assign homework</button></div>
+      </section>
+
+      <section className="flex flex-col rounded-xl border-2 border-violet-300 bg-gradient-to-br from-violet-50 to-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-violet-800">Homework template</span><span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">Secondary</span></div>
+        <h2 className="mt-1 text-base font-semibold text-stone-900">Secondary Homework One</h2>
+        <p className="mt-1 text-sm leading-snug text-stone-600">Community reading, simple-past practice, irregular verbs, question building, and a recorded speaking response.</p>
+        <p className="mt-2 text-[11px] text-stone-500">5 parts · about 35 minutes · automatic and teacher grading</p>
+        <div className="mt-4 grid max-w-md grid-cols-2 gap-2"><Link href="/pilots/secondary-homework-one" className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-sm font-semibold text-stone-800 hover:bg-stone-50">Preview</Link><button type="button" disabled={classLoadError} onClick={() => setAssignTemplateId("secondary-homework-template-one")} className="rounded-lg bg-violet-800 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">Assign homework</button></div>
       </section>
 
       {loading ? (
@@ -372,7 +381,7 @@ export function WkeLibraryBrowse({ isAdmin = false, classes = [], classLoadError
           })}
         </ul>
       )}
-      <AssignHomeworkTemplateOverlay open={assignTemplateOpen} onClose={() => setAssignTemplateOpen(false)} classes={classes} />
+      {assignTemplateId ? <AssignHomeworkTemplateOverlay key={assignTemplateId} open onClose={() => setAssignTemplateId(null)} classes={classes} templateId={assignTemplateId} /> : null}
     </div>
   );
 }

@@ -18,7 +18,13 @@ export function AppDiagnosticsInit() {
     if (started.current) return;
     started.current = true;
     initWebVitalsDiagnostics();
-    const surface = pathname.startsWith("/teacher") ? "teacher" : pathname.startsWith("/live-game") ? "live-game" : "student";
+    const surface = pathname.startsWith("/teacher")
+      ? "teacher"
+      : pathname.startsWith("/live-game")
+        ? "live-game"
+        : pathname.startsWith("/parent")
+          ? "parent"
+          : "student";
     recordAppDiagnostic(surface, "session", "session_started", {
       online: navigator.onLine,
     });

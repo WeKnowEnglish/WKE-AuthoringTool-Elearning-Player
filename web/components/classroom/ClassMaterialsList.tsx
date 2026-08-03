@@ -1,5 +1,8 @@
 import type { StudentClassMaterial } from "@/lib/class-lessons/types";
-import { CLASS_LESSON_STEP_KIND_LABELS } from "@/lib/class-lessons/types";
+import {
+  CLASS_LESSON_PHASE_LABELS,
+  CLASS_LESSON_STEP_KIND_LABELS,
+} from "@/lib/class-lessons/types";
 
 type Props = {
   materials: StudentClassMaterial[];
@@ -24,8 +27,16 @@ export function ClassMaterialsList({ materials, tone = "primary" }: Props) {
   const muted = isSecondary ? "text-sec-muted" : "text-[var(--pl-muted,#64748b)]";
 
   return (
-    <section className={`${shell} p-5 sm:p-6`} aria-labelledby="classroom-materials-heading">
-      <h2 id="classroom-materials-heading" className={`text-base font-extrabold ${isSecondary ? "text-sec-ink" : "text-neutral-900"}`}>
+    <section
+      className={`${shell} p-5 sm:p-6`}
+      aria-labelledby="classroom-materials-heading"
+    >
+      <h2
+        id="classroom-materials-heading"
+        className={`text-base font-extrabold ${
+          isSecondary ? "text-sec-ink" : "text-neutral-900"
+        }`}
+      >
         Class materials
       </h2>
 
@@ -45,19 +56,26 @@ export function ClassMaterialsList({ materials, tone = "primary" }: Props) {
               <p className={`text-xs font-semibold ${muted}`}>
                 Published {formatPublishedDate(material.publishedAt)}
               </p>
-              <p className="mt-1 text-base font-extrabold text-neutral-900">{material.title}</p>
+              <p className="mt-1 text-base font-extrabold text-neutral-900">
+                {material.title}
+              </p>
               {material.steps.length > 0 ? (
-                <ol className="mt-3 space-y-1.5">
+                <ol className="mt-3 space-y-2">
                   {material.steps.map((step) => (
                     <li
                       key={`${material.id}-${step.position}`}
-                      className="text-sm text-neutral-800"
+                      className="rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-800"
                     >
-                      <span className="font-semibold text-neutral-500">
-                        {step.position + 1}. {CLASS_LESSON_STEP_KIND_LABELS[step.kind]}
+                      <span className="text-xs font-semibold text-neutral-500">
+                        {step.position + 1}. {CLASS_LESSON_PHASE_LABELS[step.phase]} ·{" "}
+                        {step.durationMinutes} min · {CLASS_LESSON_STEP_KIND_LABELS[step.kind]}
                       </span>
-                      {" — "}
-                      {step.title}
+                      <span className="mt-0.5 block font-semibold">{step.title}</span>
+                      {step.studentAction ? (
+                        <span className="mt-0.5 block text-neutral-600">
+                          {step.studentAction}
+                        </span>
+                      ) : null}
                     </li>
                   ))}
                 </ol>

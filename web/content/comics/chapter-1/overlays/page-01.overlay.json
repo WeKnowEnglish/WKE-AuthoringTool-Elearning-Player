@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1535 },
+  "altText": "The four friends play and read in a flower-filled meadow after school.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-narration", "kind": "narration", "text": "After school, the four friends often played in the meadow behind their homes.", "speakerId": "narrator", "bounds": { "x": 7, "y": 2, "width": 29, "height": 8 }, "readOrder": 1, "fontScale": 0.86, "vocabularyIds": ["meadow"], "emphasis": "normal" },
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 34, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-ethan", "kind": "speech", "text": "Commander Leo! The Star Empire will never defeat us!", "speakerId": "ethan", "bounds": { "x": 5, "y": 35, "width": 25, "height": 9 }, "tail": { "side": "bottom", "offset": 72 }, "readOrder": 2, "fontScale": 0.8, "vocabularyIds": ["commander", "defeat"], "emphasis": "shout" },
+    { "id": "p2-sfx", "kind": "sfx", "text": "CLACK! CLACK!", "bounds": { "x": 43, "y": 36, "width": 17, "height": 8 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "shout" },
+    { "id": "p2-leo", "kind": "speech", "text": "We’ll see about that, Commander Ethan!", "speakerId": "leo", "bounds": { "x": 76, "y": 35, "width": 20, "height": 9 }, "tail": { "side": "bottom", "offset": 28 }, "readOrder": 3, "fontScale": 0.82, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 1, "y": 55, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-zara", "kind": "speech", "text": "They’ve been fighting for ten minutes.", "speakerId": "zara", "bounds": { "x": 76, "y": 56, "width": 20, "height": 7 }, "tail": { "side": "bottom", "offset": 30 }, "readOrder": 4, "fontScale": 0.84, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-mia", "kind": "speech", "text": "At least it keeps them busy.", "speakerId": "mia", "bounds": { "x": 5, "y": 56, "width": 19, "height": 7 }, "tail": { "side": "bottom", "offset": 70 }, "readOrder": 5, "fontScale": 0.84, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 77, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-mia", "kind": "speech", "text": "Space is amazing. It’s real science.", "speakerId": "mia", "bounds": { "x": 4, "y": 80, "width": 18, "height": 9 }, "tail": { "side": "right", "offset": 60 }, "readOrder": 6, "fontScale": 0.82, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-zara", "kind": "speech", "text": "I like the part about distant planets.", "speakerId": "zara", "bounds": { "x": 80, "y": 80, "width": 17, "height": 9 }, "tail": { "side": "left", "offset": 60 }, "readOrder": 7, "fontScale": 0.82, "vocabularyIds": ["distant"], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "meadow", "term": "meadow", "definition": "An open field with grass and flowers.", "example": "The friends play in the meadow." },
+    { "id": "commander", "term": "commander", "definition": "A person who leads a group.", "example": "Leo pretends to be a space commander." },
+    { "id": "defeat", "term": "defeat", "definition": "To win against someone.", "example": "The Star Empire will not defeat us." },
+    { "id": "distant", "term": "distant", "definition": "Far away.", "example": "They read about distant planets." }
+  ],
+  "discussionPrompt": "How are the four friends’ interests different?"
+}

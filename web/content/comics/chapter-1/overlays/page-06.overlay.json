@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1536 },
+  "altText": "The children run from the hollow, but the small blue alien Keelan steps out and asks them to wait.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-leo", "kind": "speech", "text": "RUN!", "speakerId": "leo", "bounds": { "x": 52, "y": 3, "width": 15, "height": 6 }, "tail": { "side": "bottom", "offset": 32 }, "readOrder": 1, "fontScale": 1.2, "vocabularyIds": ["run"], "emphasis": "shout" },
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 34, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-keelan", "kind": "speech", "text": "Wait!", "speakerId": "keelan", "bounds": { "x": 21, "y": 37, "width": 16, "height": 6 }, "tail": { "side": "bottom", "offset": 75 }, "readOrder": 2, "fontScale": 1.15, "vocabularyIds": ["wait"], "emphasis": "shout" },
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 1, "y": 66, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-caption", "kind": "caption", "text": "To be continued…", "speakerId": "narrator", "bounds": { "x": 77, "y": 92, "width": 21, "height": 5 }, "fontScale": 0.88, "vocabularyIds": ["continued"], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "run", "term": "run", "definition": "Move quickly on your feet.", "example": "Leo tells the friends to run." },
+    { "id": "wait", "term": "wait", "definition": "Stay where you are until something happens.", "example": "Keelan asks the children to wait." },
+    { "id": "continued", "term": "to be continued", "definition": "The story is not finished and will continue later.", "example": "Chapter 2 continues the story." }
+  ],
+  "discussionPrompt": "What should the children say or do after Keelan says “Wait”?"
+}

@@ -4,6 +4,7 @@ import type {
   PackFlashcardFace,
   PackFlashcardOptions,
 } from "@/lib/vocabulary/pack-flashcards";
+import type { HomeworkTemplateId } from "@/lib/homework-templates/registry";
 
 export const CLASS_HOMEWORK_STATUSES = ["draft", "assigned", "closed"] as const;
 export type ClassHomeworkStatus = (typeof CLASS_HOMEWORK_STATUSES)[number];
@@ -40,6 +41,7 @@ export const CLASS_HOMEWORK_PAYLOAD_TYPES = [
   "cloze_open",
   "read_and_answer",
   "picture_story",
+  "primary_a2_assessment",
 ] as const;
 export type ClassHomeworkPayloadType = (typeof CLASS_HOMEWORK_PAYLOAD_TYPES)[number];
 
@@ -90,9 +92,9 @@ export type ClassHomeworkPayload =
     }
   | {
       type: "homework_template";
-      templateId: "homework-template-one";
+      templateId: HomeworkTemplateId;
       title: string;
-      sectionCount: 6;
+      sectionCount: number;
       frozenAt: string;
     }
   | {
@@ -195,6 +197,14 @@ export type ClassHomeworkPayload =
       /** Frozen picture-story authoring document. */
       document: Record<string, unknown>;
       frozenAt: string;
+    }
+  | {
+      type: "primary_a2_assessment";
+      definitionId: "primary-a2-exit-pilot";
+      contentVersion: string;
+      title: string;
+      itemCount: number;
+      frozenAt: string;
     };
 
 export type ClassHomework = {
@@ -209,6 +219,8 @@ export type ClassHomework = {
   assignedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Null means every enrolled student; otherwise only these student ids. */
+  targetStudentIds: string[] | null;
 };
 
 export type StudentHomeworkCard = {
@@ -250,6 +262,7 @@ export const CLASS_HOMEWORK_PAYLOAD_LABELS: Record<ClassHomeworkPayloadType, str
   cloze_open: "Open cloze",
   read_and_answer: "Read and answer",
   picture_story: "Picture story",
+  primary_a2_assessment: "Primary A2 assessment",
 };
 
 export function isHomeworkStudioFormat(

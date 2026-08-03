@@ -43,6 +43,20 @@ function bundledComicPackage(slug: string): ComicChapterWithPages | null {
   return null;
 }
 
+function bundledComicAssetPath(publicUrl: string): string {
+  const [namespace, ...assetSegments] = publicUrl.split("/").filter(Boolean);
+  if (
+    namespace !== "comics" ||
+    assetSegments.length === 0 ||
+    assetSegments.some((segment) => segment === "." || segment === "..")
+  ) {
+    throw new Error("Invalid bundled comic asset path");
+  }
+
+  // Keep Next's output file tracing scoped to comic assets instead of all of public/.
+  return path.join(process.cwd(), "public", "comics", ...assetSegments);
+}
+
 async function loadAdminChapter(
   service: SupabaseClient,
   slug: string,
@@ -374,10 +388,9 @@ export async function installEditableComicChapter(slug: string): Promise<ComicAc
   for (const page of bundledPackage.pages) {
     if (!page.overlay) continue;
     const originalFilename = page.publicUrl.split("/").pop() ?? `page-${page.pageIndex}.png`;
-    const localPath = path.join(process.cwd(), "public", ...page.publicUrl.split("/").filter(Boolean));
     let bytes: Buffer;
     try {
-      bytes = await readFile(localPath);
+      bytes = await readFile(bundledComicAssetPath(page.publicUrl));
     } catch {
       return { ok: false, error: `Bundled comic art is missing: ${originalFilename}` };
     }

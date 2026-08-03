@@ -18,6 +18,7 @@ export const comicSpeakerIds = [
   "leo",
   "ethan",
   "keelan",
+  "grandpa_minh",
 ] as const;
 
 export type ComicElementKind = (typeof comicElementKinds)[number];

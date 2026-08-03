@@ -4,7 +4,7 @@ export const CLASS_HUB_TABS = ["teach", "lesson", "students", "settings"] as con
 
 export type ClassHubTab = (typeof CLASS_HUB_TABS)[number];
 
-const LIGHT_CLASS_HUB_TABS: readonly ClassHubTab[] = ["students", "settings"];
+const LIGHT_CLASS_HUB_TABS: readonly ClassHubTab[] = ["lesson", "students", "settings"];
 
 /** Tabs visible for a teacher tier. Light teachers get Students & Settings. */
 export function classHubTabsForTier(tier: TeacherTier): readonly ClassHubTab[] {

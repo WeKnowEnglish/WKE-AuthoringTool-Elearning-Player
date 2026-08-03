@@ -9,11 +9,14 @@ Each page has two primary layers:
 1. **Clean art master** — the panel artwork without speech bubbles, captions, titles, panel numbers, or sound-effect lettering.
 2. **Overlay JSON** — editable lettering and learning metadata placed with percentage-based coordinates.
 
-Chapter 1 is the reference implementation:
+Chapters 1 and 2 are the reference implementations:
 
 - Art: `web/public/comics/chapter-1/art/`
 - Overlays: `web/content/comics/chapter-1/overlays/`
 - Bundled chapter manifest: `web/content/comics/chapter-1/index.ts`
+- Chapter 2 art: `web/public/comics/chapter-2/art/`
+- Chapter 2 overlays: `web/content/comics/chapter-2/overlays/`
+- Chapter 2 bundled manifest: `web/content/comics/chapter-2/index.ts`
 - Validation schema: `web/lib/comic/overlay.ts`
 
 The original flattened pages remain in `web/docs/comic-production/source-pages/chapter-01/` as recovery and comparison references.
@@ -36,7 +39,7 @@ Supported element kinds are speech, thought, narration, caption, sound effect, p
 ## Teacher editing workflow
 
 1. Open **Teacher → Media → Comics**.
-2. Install the bundled editable Chapter 1 package if the database still contains the old flattened pages.
+2. Choose Chapter 1 or Chapter 2 and install its bundled editable package if the database does not yet contain the clean layered version.
 3. Select the pencil on a page.
 4. Drag an element to reposition it, or edit exact percentage values.
 5. Revise the text, speaker, kind, reading order, scale, or discussion prompt.

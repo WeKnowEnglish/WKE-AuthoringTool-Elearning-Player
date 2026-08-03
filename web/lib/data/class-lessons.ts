@@ -45,6 +45,12 @@ type LessonRow = {
   title: string;
   status: string;
   notes: string;
+  objective: string;
+  duration_minutes: number;
+  target_language: string;
+  success_check: string;
+  template_key: string | null;
+  template_version: number | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -56,6 +62,10 @@ type StepRow = {
   position: number;
   kind: string;
   title: string;
+  phase: string;
+  duration_minutes: number;
+  teacher_action: string;
+  student_action: string;
   config: unknown;
 };
 
@@ -70,6 +80,15 @@ function mapLesson(
     title: normalizeClassLessonTitle(row.title),
     status: normalizeClassLessonStatus(row.status),
     notes: normalizeClassLessonNotes(row.notes),
+    objective: typeof row.objective === "string" ? row.objective : "",
+    durationMinutes:
+      typeof row.duration_minutes === "number" ? row.duration_minutes : 45,
+    targetLanguage:
+      typeof row.target_language === "string" ? row.target_language : "",
+    successCheck:
+      typeof row.success_check === "string" ? row.success_check : "",
+    templateKey: row.template_key ?? null,
+    templateVersion: row.template_version ?? null,
     publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -150,61 +169,62 @@ export async function listPublishedClassMaterialsForStudentClass(
     return [];
   }
 
-  const { data: lessons, error } = await supabase
-    .from("class_lessons")
-    .select("id, class_id, title, published_at")
-    .eq("class_id", classId)
-    .not("published_at", "is", null)
-    .order("published_at", { ascending: false })
-    .limit(limit);
+  const { data, error } = await supabase.rpc("list_published_class_materials", {
+    p_class_id: classId,
+    p_limit: limit,
+  });
 
   if (error) {
     if (isMissingClassLessonsTable(error)) return [];
     throw error;
   }
 
-  const rows = (lessons ?? []) as Array<{
-    id: string;
+  const rows = (data ?? []) as Array<{
+    lesson_id: string;
     class_id: string;
-    title: string;
+    lesson_title: string;
     published_at: string;
+    step_id: string | null;
+    step_position: number | null;
+    step_kind: string | null;
+    step_title: string | null;
+    step_phase: string | null;
+    step_duration_minutes: number | null;
+    step_student_action: string | null;
   }>;
   if (!rows.length) return [];
 
-  const lessonIds = rows.map((row) => row.id);
-  const { data: steps, error: stepsError } = await supabase
-    .from("class_lesson_steps")
-    .select("lesson_id, position, kind, title")
-    .in("lesson_id", lessonIds)
-    .order("position", { ascending: true });
-
-  if (stepsError) {
-    if (isMissingClassLessonsTable(stepsError)) return [];
-    throw stepsError;
-  }
-
+  const lessonById = new Map<string, StudentClassMaterial>();
   const stepsByLesson = new Map<string, StudentClassMaterial["steps"]>();
-  for (const row of steps ?? []) {
-    const kind = isClassLessonStepKind((row as { kind: string }).kind)
-      ? (row as { kind: ClassLessonStepKind }).kind
+  for (const row of rows) {
+    if (!lessonById.has(row.lesson_id)) {
+      lessonById.set(row.lesson_id, {
+        id: row.lesson_id,
+        classId: row.class_id,
+        title: normalizeClassLessonTitle(row.lesson_title),
+        publishedAt: row.published_at,
+        steps: [],
+      });
+    }
+    const kind = isClassLessonStepKind(row.step_kind)
+      ? (row.step_kind as ClassLessonStepKind)
       : null;
-    if (!kind) continue;
-    const lessonId = String((row as { lesson_id: string }).lesson_id);
-    const list = stepsByLesson.get(lessonId) ?? [];
+    if (!kind || !row.step_id || row.step_position == null || !row.step_title) continue;
+    const list = stepsByLesson.get(row.lesson_id) ?? [];
     list.push({
-      position: Number((row as { position: number }).position),
+      position: row.step_position,
       kind,
-      title: String((row as { title: string }).title),
+      title: row.step_title,
+      phase: (row.step_phase ?? "custom") as StudentClassMaterial["steps"][number]["phase"],
+      durationMinutes: row.step_duration_minutes ?? 5,
+      studentAction: row.step_student_action ?? "",
     });
-    stepsByLesson.set(lessonId, list);
+    stepsByLesson.set(row.lesson_id, list);
   }
 
-  return rows.map((row) => ({
-    id: row.id,
-    classId: row.class_id,
-    title: normalizeClassLessonTitle(row.title),
-    publishedAt: row.published_at,
-    steps: stepsByLesson.get(row.id) ?? [],
+  return [...lessonById.values()].map((lesson) => ({
+    ...lesson,
+    steps: stepsByLesson.get(lesson.id) ?? [],
   }));
 }
 
@@ -227,7 +247,7 @@ export async function getClassLesson(lessonId: string): Promise<ClassLesson | nu
 
   const { data: steps, error: stepsError } = await supabase
     .from("class_lesson_steps")
-    .select("id, lesson_id, position, kind, title, config")
+    .select("id, lesson_id, position, kind, title, phase, duration_minutes, teacher_action, student_action, config")
     .eq("lesson_id", lessonId)
     .order("position", { ascending: true });
 
@@ -280,7 +300,7 @@ export async function listClassLessonsWithStepsForClass(
   const lessonIds = rows.map((row) => row.id);
   const { data: steps, error: stepsError } = await supabase
     .from("class_lesson_steps")
-    .select("id, lesson_id, position, kind, title, config")
+    .select("id, lesson_id, position, kind, title, phase, duration_minutes, teacher_action, student_action, config")
     .in("lesson_id", lessonIds)
     .order("position", { ascending: true });
 

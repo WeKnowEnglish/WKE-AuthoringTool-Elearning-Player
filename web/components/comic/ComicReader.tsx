@@ -32,6 +32,8 @@ export function ComicReader({ chapter }: Props) {
   const popTimeoutRef = useRef<number | null>(null);
 
   const total = pages.length;
+  const firstPageIsCover =
+    pages[0]?.originalFilename.toLowerCase().includes("cover") ?? false;
   const current = pages[index] ?? null;
   const prevPage = index > 0 ? pages[index - 1] : null;
   const nextPage = index < total - 1 ? pages[index + 1] : null;
@@ -298,24 +300,29 @@ export function ComicReader({ chapter }: Props) {
         {total > 1 ? (
           <div className="mx-auto mt-4 max-w-[1180px] border-t border-white/10 pt-3">
             <div className="flex gap-2.5 overflow-x-auto pb-1">
-              {pages.map((page, pageIndex) => (
-                <button
-                  key={page.id}
-                  type="button"
-                  onClick={() => goTo(pageIndex, pageIndex > index ? "next" : "prev")}
-                  className={`relative h-20 w-[3.75rem] shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-24 sm:w-[4.5rem] ${
-                    pageIndex === index
-                      ? "border-sky-400 ring-2 ring-sky-400/40"
-                      : "border-white/15 opacity-60 hover:border-white/50 hover:opacity-100"
-                  }`}
-                  aria-label={`Go to ${pageIndex === 0 ? "cover" : `page ${pageIndex}`}`}
-                >
-                  <Image src={page.publicUrl} alt="" fill unoptimized className="object-cover" />
-                  <span className="absolute inset-x-0 bottom-0 bg-black/75 py-0.5 text-center text-[10px] font-black">
-                    {pageIndex === 0 ? "Cover" : pageIndex}
-                  </span>
-                </button>
-              ))}
+              {pages.map((page, pageIndex) => {
+                const visiblePageNumber = firstPageIsCover ? pageIndex : pageIndex + 1;
+                const isCover = firstPageIsCover && pageIndex === 0;
+                const pageLabel = isCover ? "cover" : `page ${visiblePageNumber}`;
+                return (
+                  <button
+                    key={page.id}
+                    type="button"
+                    onClick={() => goTo(pageIndex, pageIndex > index ? "next" : "prev")}
+                    className={`relative h-20 w-[3.75rem] shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-24 sm:w-[4.5rem] ${
+                      pageIndex === index
+                        ? "border-sky-400 ring-2 ring-sky-400/40"
+                        : "border-white/15 opacity-60 hover:border-white/50 hover:opacity-100"
+                    }`}
+                    aria-label={`Go to ${pageLabel}`}
+                  >
+                    <Image src={page.publicUrl} alt="" fill unoptimized className="object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 bg-black/75 py-0.5 text-center text-[10px] font-black">
+                      {isCover ? "Cover" : visiblePageNumber}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : null}

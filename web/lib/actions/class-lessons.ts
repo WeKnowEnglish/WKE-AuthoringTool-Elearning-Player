@@ -3,12 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { isTeacher } from "@/lib/auth/roles";
 import {
+  normalizeClassLessonDuration,
   normalizeClassLessonNotes,
+  normalizeClassLessonObjective,
   normalizeClassLessonStatus,
   normalizeClassLessonStepInputs,
+  normalizeClassLessonSuccessCheck,
+  normalizeClassLessonTargetLanguage,
   normalizeClassLessonTitle,
 } from "@/lib/class-lessons/normalize";
 import type { ClassLesson, ClassLessonStatus } from "@/lib/class-lessons/types";
+import { getClassLessonTemplate } from "@/lib/class-lessons/templates";
 import { getClassLesson } from "@/lib/data/class-lessons";
 import { createClient } from "@/lib/supabase/server";
 
@@ -36,6 +41,7 @@ function revalidateClass(classId: string) {
 export async function createClassLesson(input: {
   classId: string;
   title?: string;
+  templateKey?: string;
 }): Promise<ClassLessonActionResult> {
   try {
     const teacherId = await requireTeacherUserId();
@@ -53,24 +59,27 @@ export async function createClassLesson(input: {
     if (classError) return { ok: false, error: classError.message };
     if (!ownedClass) return { ok: false, error: "Class not found." };
 
-    const title = normalizeClassLessonTitle(input.title, "Untitled lesson");
-    const { data, error } = await supabase
-      .from("class_lessons")
-      .insert({
-        class_id: classId,
-        teacher_id: teacherId,
-        title,
-        status: "draft",
-        notes: "",
-      })
-      .select("id")
-      .single();
+    const template = getClassLessonTemplate(input.templateKey);
+    const title = normalizeClassLessonTitle(input.title, template.title);
+    const steps = normalizeClassLessonStepInputs(template.steps);
+    const { data, error } = await supabase.rpc("create_class_lesson_plan", {
+      p_class_id: classId,
+      p_title: title,
+      p_objective: normalizeClassLessonObjective(template.objective),
+      p_duration_minutes: normalizeClassLessonDuration(template.durationMinutes),
+      p_target_language: normalizeClassLessonTargetLanguage(template.targetLanguage),
+      p_success_check: normalizeClassLessonSuccessCheck(template.successCheck),
+      p_template_key: template.key,
+      p_template_version: template.version,
+      p_steps: steps,
+    });
 
-    if (error || !data?.id) {
+    const lessonId = typeof data === "string" ? data : null;
+    if (error || !lessonId) {
       return { ok: false, error: error?.message ?? "Could not create lesson." };
     }
 
-    const lesson = await getClassLesson(data.id);
+    const lesson = await getClassLesson(lessonId);
     if (!lesson) return { ok: false, error: "Lesson created but could not be loaded." };
 
     revalidateClass(classId);
@@ -88,6 +97,10 @@ export async function saveClassLesson(input: {
   title: string;
   notes?: string;
   status?: ClassLessonStatus;
+  objective?: string;
+  durationMinutes?: number;
+  targetLanguage?: string;
+  successCheck?: string;
   steps: unknown;
 }): Promise<ClassLessonActionResult> {
   try {
@@ -111,6 +124,10 @@ export async function saveClassLesson(input: {
 
     const title = normalizeClassLessonTitle(input.title);
     const notes = normalizeClassLessonNotes(input.notes);
+    const objective = normalizeClassLessonObjective(input.objective);
+    const durationMinutes = normalizeClassLessonDuration(input.durationMinutes);
+    const targetLanguage = normalizeClassLessonTargetLanguage(input.targetLanguage);
+    const successCheck = normalizeClassLessonSuccessCheck(input.successCheck);
     const status = normalizeClassLessonStatus(input.status ?? existing.status);
     if (status === "archived") {
       return { ok: false, error: "Use archive to archive a lesson." };
@@ -120,40 +137,27 @@ export async function saveClassLesson(input: {
     if (status === "ready" && steps.length === 0) {
       return { ok: false, error: "Add at least one step before marking Ready." };
     }
+    const objectiveIsStarter =
+      objective === "Students will be able to…" ||
+      objective === "Students will be able to understand and respond to…" ||
+      objective === "Students will be able to retrieve and apply…";
+    if (status === "ready" && (!objective || objectiveIsStarter)) {
+      return { ok: false, error: "Add a learning goal before marking Ready." };
+    }
 
-    const { error: updateError } = await supabase
-      .from("class_lessons")
-      .update({
-        title,
-        notes,
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", lessonId)
-      .eq("teacher_id", teacherId);
+    const { error: updateError } = await supabase.rpc("save_class_lesson_plan", {
+      p_lesson_id: lessonId,
+      p_title: title,
+      p_notes: notes,
+      p_status: status,
+      p_objective: objective,
+      p_duration_minutes: durationMinutes,
+      p_target_language: targetLanguage,
+      p_success_check: successCheck,
+      p_steps: steps,
+    });
 
     if (updateError) return { ok: false, error: updateError.message };
-
-    const { error: deleteError } = await supabase
-      .from("class_lesson_steps")
-      .delete()
-      .eq("lesson_id", lessonId);
-
-    if (deleteError) return { ok: false, error: deleteError.message };
-
-    if (steps.length > 0) {
-      const rows = steps.map((step, index) => ({
-        ...(step.id ? { id: step.id } : {}),
-        lesson_id: lessonId,
-        position: index,
-        kind: step.kind,
-        title: step.title,
-        config: step.config,
-      }));
-
-      const { error: insertError } = await supabase.from("class_lesson_steps").insert(rows);
-      if (insertError) return { ok: false, error: insertError.message };
-    }
 
     const lesson = await getClassLesson(lessonId);
     if (!lesson) return { ok: false, error: "Lesson saved but could not be loaded." };
@@ -206,6 +210,52 @@ export async function archiveClassLesson(lessonId: string): Promise<ClassLessonA
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Could not archive lesson.",
+    };
+  }
+}
+
+export async function duplicateClassLesson(
+  lessonId: string,
+): Promise<ClassLessonActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const id = lessonId.trim();
+    if (!id) return { ok: false, error: "Missing lesson." };
+
+    const source = await getClassLesson(id);
+    if (!source || source.teacherId !== teacherId) {
+      return { ok: false, error: "Lesson not found." };
+    }
+
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("create_class_lesson_plan", {
+      p_class_id: source.classId,
+      p_title: normalizeClassLessonTitle(`${source.title} (copy)`),
+      p_objective: source.objective,
+      p_duration_minutes: source.durationMinutes,
+      p_target_language: source.targetLanguage,
+      p_success_check: source.successCheck,
+      p_template_key: source.templateKey ?? "blank",
+      p_template_version: source.templateVersion ?? 1,
+      p_steps: source.steps,
+    });
+
+    const duplicatedId = typeof data === "string" ? data : null;
+    if (error || !duplicatedId) {
+      return { ok: false, error: error?.message ?? "Could not duplicate lesson." };
+    }
+
+    const lesson = await getClassLesson(duplicatedId);
+    if (!lesson) {
+      return { ok: false, error: "Lesson duplicated but could not be loaded." };
+    }
+
+    revalidateClass(source.classId);
+    return { ok: true, lesson };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not duplicate lesson.",
     };
   }
 }

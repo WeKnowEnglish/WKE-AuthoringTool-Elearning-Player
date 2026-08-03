@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   addVocabEntry,
   countLocalVocabMedia,
@@ -58,12 +59,51 @@ const STARTERS = [
   },
 ] as const;
 
+const MOBILE_WORKSPACE_TABS = [
+  { id: "list", label: "Word List", panelId: "vocab-word-list-panel" },
+  { id: "details", label: "Word Details", panelId: "vocab-word-details-panel" },
+  { id: "dictionary", label: "Dictionary", panelId: "vocab-dictionary-panel" },
+] as const satisfies readonly {
+  id: MobileWorkspaceTab;
+  label: string;
+  panelId: string;
+}[];
+
 function cloneDocument(document: VocabularyListDocument): VocabularyListDocument {
   return structuredClone(document);
 }
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900";
+
+type MobileWorkspaceTab = "list" | "details" | "dictionary";
+
+function usesTouchKeyboardNavigation(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const hasCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  const isTouchOnly =
+    window.navigator.maxTouchPoints > 0 &&
+    window.matchMedia("(hover: none)").matches;
+
+  return hasCoarsePointer || isTouchOnly;
+}
+
+function usesSinglePanelVocabularyLayout(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(max-width: 1023px)").matches ||
+    usesTouchKeyboardNavigation()
+  );
+}
+
+function focusWordInput(entryId: string): void {
+  const input = window.document.querySelector<HTMLInputElement>(
+    `input[data-vocab-word-id="${CSS.escape(entryId)}"]`,
+  );
+  input?.focus();
+  input?.select();
+}
 
 type Props = {
   studioOrigin?: string | null;
@@ -123,6 +163,9 @@ export function VocabularyListWorkspace({
     [],
   );
   const [editorTab, setEditorTab] = useState<"dictionary" | "details">("details");
+  const [mobileWorkspaceTab, setMobileWorkspaceTab] =
+    useState<MobileWorkspaceTab>("list");
+  const [singlePanelLayout, setSinglePanelLayout] = useState(false);
   const [compileOverlayOpen, setCompileOverlayOpen] = useState(false);
   const [showValidationBanner, setShowValidationBanner] = useState(true);
   const [lexiconMediaRefreshKey, setLexiconMediaRefreshKey] = useState(0);
@@ -130,7 +173,6 @@ export function VocabularyListWorkspace({
   const openRef = useRef<HTMLInputElement>(null);
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const documentRef = useRef(document);
-  const focusWordEntryIdRef = useRef<string | null>(null);
   documentRef.current = document;
 
   const studioCompileHref = studioOrigin
@@ -144,15 +186,24 @@ export function VocabularyListWorkspace({
   }, [notice]);
 
   useEffect(() => {
-    const entryId = focusWordEntryIdRef.current;
-    if (!entryId) return;
-    focusWordEntryIdRef.current = null;
-    const input = window.document.querySelector<HTMLInputElement>(
-      `input[data-vocab-word-id="${CSS.escape(entryId)}"]`,
-    );
-    input?.focus();
-    input?.select();
-  }, [document.entries]);
+    const mediaQueries = [
+      window.matchMedia("(max-width: 1023px)"),
+      window.matchMedia("(pointer: coarse)"),
+      window.matchMedia("(hover: none)"),
+    ];
+    const updateLayout = () =>
+      setSinglePanelLayout(usesSinglePanelVocabularyLayout());
+
+    updateLayout();
+    for (const mediaQuery of mediaQueries) {
+      mediaQuery.addEventListener("change", updateLayout);
+    }
+    return () => {
+      for (const mediaQuery of mediaQueries) {
+        mediaQuery.removeEventListener("change", updateLayout);
+      }
+    };
+  }, []);
 
   const refreshLibrary = async () => {
     try {
@@ -187,6 +238,7 @@ export function VocabularyListWorkspace({
           if (cancelled) return;
           setDocument(cloneDocument(loaded.document));
           setSelectedEntryId(loaded.document.entries[0]?.id ?? "");
+          setMobileWorkspaceTab("list");
           setLibraryId(loaded.id);
           setScreen("editor");
           setNotice(`Editing “${loaded.document.name}”.`);
@@ -194,6 +246,7 @@ export function VocabularyListWorkspace({
           const blank = createBlankVocabularyListDocument();
           setDocument(cloneDocument(blank));
           setSelectedEntryId(blank.entries[0]?.id ?? "");
+          setMobileWorkspaceTab("list");
           setLibraryId(null);
           setScreen("editor");
           setNotice("New vocabulary list — add words, then Save.");
@@ -265,6 +318,7 @@ export function VocabularyListWorkspace({
   ) => {
     setDocument(cloneDocument(next));
     setSelectedEntryId(next.entries[0]?.id ?? "");
+    setMobileWorkspaceTab("list");
     setLibraryId(options?.libraryId ?? null);
     setScreen("editor");
     setNotice(label);
@@ -276,6 +330,21 @@ export function VocabularyListWorkspace({
     updater: (current: VocabularyListDocument) => VocabularyListDocument,
   ) => {
     setDocument((current) => updater(current));
+  };
+
+  const addEntryAndFocusWord = () => {
+    const next = addVocabEntry(documentRef.current);
+    const newEntryId = next.entries.at(-1)?.id ?? "";
+    if (!newEntryId) return;
+
+    // Render the new input while this key event is still active so mobile
+    // browsers allow focus to transfer without dismissing the keyboard.
+    flushSync(() => {
+      setDocument(next);
+      setSelectedEntryId(newEntryId);
+      setEditorTab("details");
+    });
+    focusWordInput(newEntryId);
   };
 
   const attachMediaToLexicon = async (input: {
@@ -906,8 +975,58 @@ export function VocabularyListWorkspace({
         </button>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)]">
-        <aside className="flex min-h-0 flex-col border-r border-stone-200 bg-white">
+      {singlePanelLayout ? (
+        <div
+          className="flex shrink-0 gap-1 border-b border-stone-200 bg-stone-100 p-1.5"
+          role="tablist"
+          aria-label="Vocabulary workspace"
+        >
+          {MOBILE_WORKSPACE_TABS.map((tab) => {
+            const active = mobileWorkspaceTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`vocab-mobile-tab-${tab.id}`}
+                aria-controls={tab.panelId}
+                aria-selected={active}
+                className={`min-h-11 min-w-0 flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition sm:text-sm ${
+                  active
+                    ? "bg-stone-900 text-white shadow-sm"
+                    : "bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+                }`}
+                onClick={() => {
+                  setMobileWorkspaceTab(tab.id);
+                  if (tab.id !== "list") setEditorTab(tab.id);
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <div
+        className={`min-h-0 flex-1 ${
+          singlePanelLayout
+            ? "flex flex-col"
+            : "grid lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)]"
+        }`}
+      >
+        <aside
+          id="vocab-word-list-panel"
+          role={singlePanelLayout ? "tabpanel" : undefined}
+          aria-labelledby={
+            singlePanelLayout ? "vocab-mobile-tab-list" : undefined
+          }
+          className={`${
+            singlePanelLayout && mobileWorkspaceTab !== "list" ? "hidden" : "flex"
+          } min-h-0 flex-col bg-white ${
+            singlePanelLayout ? "flex-1" : "border-r border-stone-200"
+          }`}
+        >
           <div className="flex items-center justify-between border-b border-stone-200 px-3 py-2">
             <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
               Words · {document.entries.length}
@@ -960,6 +1079,7 @@ export function VocabularyListWorkspace({
                         <input
                           aria-label="Word"
                           data-vocab-word-id={entry.id}
+                          enterKeyHint="next"
                           value={entry.word}
                           placeholder="Word"
                           onFocus={() => {
@@ -973,6 +1093,26 @@ export function VocabularyListWorkspace({
                               }),
                             )
                           }
+                          onKeyDown={(event) => {
+                            if (
+                              event.key !== "Enter" ||
+                              event.nativeEvent.isComposing ||
+                              !usesTouchKeyboardNavigation()
+                            ) {
+                              return;
+                            }
+
+                            event.preventDefault();
+                            const nextEntryId = document.entries[index + 1]?.id;
+                            if (nextEntryId) {
+                              setSelectedEntryId(nextEntryId);
+                              setEditorTab("details");
+                              focusWordInput(nextEntryId);
+                              return;
+                            }
+
+                            addEntryAndFocusWord();
+                          }}
                           className={`w-full border-0 bg-transparent px-2 py-1.5 text-sm font-semibold text-stone-900 outline-none placeholder:font-normal placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-inset focus:ring-sky-300 ${
                             selected ? "bg-sky-50/80" : ""
                           }`}
@@ -1003,17 +1143,7 @@ export function VocabularyListWorkspace({
                               return;
                             }
                             event.preventDefault();
-                            let newEntryId = "";
-                            patchDocument((current) => {
-                              const next = addVocabEntry(current);
-                              newEntryId = next.entries.at(-1)?.id ?? "";
-                              return next;
-                            });
-                            if (newEntryId) {
-                              focusWordEntryIdRef.current = newEntryId;
-                              setSelectedEntryId(newEntryId);
-                              setEditorTab("details");
-                            }
+                            addEntryAndFocusWord();
                           }}
                           className={`w-full border-0 bg-transparent px-2 py-1.5 text-sm text-stone-700 outline-none placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-inset focus:ring-sky-300 ${
                             selected ? "bg-sky-50/80" : ""
@@ -1028,17 +1158,23 @@ export function VocabularyListWorkspace({
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-col">
-          <div
-            className="flex shrink-0 gap-1 border-b border-stone-200 bg-white px-3 pt-2"
-            role="tablist"
-            aria-label="Word editor"
-          >
+        <div
+          className={`${
+            singlePanelLayout && mobileWorkspaceTab === "list" ? "hidden" : "flex"
+          } min-h-0 flex-col ${singlePanelLayout ? "flex-1" : ""}`}
+        >
+          {!singlePanelLayout ? (
+            <div
+              className="flex shrink-0 gap-1 border-b border-stone-200 bg-white px-3 pt-2"
+              role="tablist"
+              aria-label="Word editor"
+            >
             <button
               type="button"
               role="tab"
               aria-selected={editorTab === "dictionary"}
               id="vocab-editor-tab-dictionary"
+              aria-controls="vocab-dictionary-panel"
               className={`rounded-t-lg border border-b-0 px-3 py-2 text-xs font-semibold transition ${
                 editorTab === "dictionary"
                   ? "relative z-10 -mb-px border-stone-200 bg-white text-stone-900"
@@ -1053,6 +1189,7 @@ export function VocabularyListWorkspace({
               role="tab"
               aria-selected={editorTab === "details"}
               id="vocab-editor-tab-details"
+              aria-controls="vocab-word-details-panel"
               className={`rounded-t-lg border border-b-0 px-3 py-2 text-xs font-semibold transition ${
                 editorTab === "details"
                   ? "relative z-10 -mb-px border-stone-200 bg-white text-stone-900"
@@ -1062,13 +1199,21 @@ export function VocabularyListWorkspace({
             >
               Word details
             </button>
-          </div>
+            </div>
+          ) : null}
 
-          {editorTab === "dictionary" ? (
+          {(singlePanelLayout
+            ? mobileWorkspaceTab === "dictionary"
+            : editorTab === "dictionary") ? (
             <div
+              id="vocab-dictionary-panel"
               className="min-h-0 flex-1 overflow-y-auto"
               role="tabpanel"
-              aria-labelledby="vocab-editor-tab-dictionary"
+              aria-labelledby={
+                singlePanelLayout
+                  ? "vocab-mobile-tab-dictionary"
+                  : "vocab-editor-tab-dictionary"
+              }
             >
               <VocabularyListLexiconPicker
                 document={document}
@@ -1093,9 +1238,14 @@ export function VocabularyListWorkspace({
             </div>
           ) : (
             <div
+              id="vocab-word-details-panel"
               className="min-h-0 flex-1 overflow-y-auto p-4"
               role="tabpanel"
-              aria-labelledby="vocab-editor-tab-details"
+              aria-labelledby={
+                singlePanelLayout
+                  ? "vocab-mobile-tab-details"
+                  : "vocab-editor-tab-details"
+              }
             >
           <div className="mx-auto w-full max-w-5xl space-y-4">
             {selectedEntry ? (

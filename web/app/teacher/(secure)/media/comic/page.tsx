@@ -6,7 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function TeacherComicMediaPage() {
+export default async function TeacherComicMediaPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ chapter?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,7 +20,9 @@ export default async function TeacherComicMediaPage() {
     redirect("/teacher/media");
   }
 
-  const result = await getComicChapterForAdmin();
+  const requestedChapter = (await searchParams)?.chapter;
+  const slug = requestedChapter === "chapter-2" ? "chapter-2" : "chapter-1";
+  const result = await getComicChapterForAdmin(slug);
   if (!result.ok) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-5 text-sm font-semibold text-amber-950">

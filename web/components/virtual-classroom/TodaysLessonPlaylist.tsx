@@ -6,10 +6,14 @@ import type {
   ClassLessonStep,
   DocumentLessonStepConfig,
   LiveGameLessonStepConfig,
+  StudioActivityLessonStepConfig,
   WhiteboardLessonStepConfig,
   WordCardsLessonStepConfig,
 } from "@/lib/class-lessons/types";
-import { CLASS_LESSON_STEP_KIND_LABELS } from "@/lib/class-lessons/types";
+import {
+  CLASS_LESSON_PHASE_LABELS,
+  CLASS_LESSON_STEP_KIND_LABELS,
+} from "@/lib/class-lessons/types";
 import type { DocumentLaunchPayload } from "@/components/document-activity/DocumentLaunchPanel";
 import type { WhiteboardLaunchPayload } from "@/lib/whiteboard/launch-options";
 import type { WordCardsLaunchPayload } from "@/components/word-cards/WordCardsLaunchPanel";
@@ -37,8 +41,6 @@ export function TodaysLessonPlaylist({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     void fetch(`/api/virtual-classroom/${sessionId}/lesson`)
       .then(async (response) => {
         const payload = (await response.json()) as {
@@ -110,9 +112,16 @@ export function TodaysLessonPlaylist({
           >
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                {index + 1}. {CLASS_LESSON_STEP_KIND_LABELS[step.kind]}
+                {index + 1}. {CLASS_LESSON_PHASE_LABELS[step.phase]} · {step.durationMinutes} min ·{" "}
+                {CLASS_LESSON_STEP_KIND_LABELS[step.kind]}
               </p>
               <p className="truncate text-sm font-semibold text-slate-900">{step.title}</p>
+              {step.studentAction ? (
+                <p className="mt-0.5 text-xs text-slate-600">Students: {step.studentAction}</p>
+              ) : null}
+              {step.teacherAction ? (
+                <p className="mt-0.5 text-xs text-slate-500">Teacher: {step.teacherAction}</p>
+              ) : null}
             </div>
             <LaunchStepButton
               step={step}
@@ -144,6 +153,30 @@ function LaunchStepButton({
   onLaunchDocument: (payload: DocumentLaunchPayload) => void;
   onLaunchWordCards: (payload: WordCardsLaunchPayload) => void;
 }) {
+  if (step.kind === "custom") {
+    return (
+      <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
+        No launch needed
+      </span>
+    );
+  }
+
+  if (step.kind === "studio_activity") {
+    const config = step.config as StudioActivityLessonStepConfig;
+    return (
+      <a
+        href={config.playPath}
+        target="_blank"
+        rel="noreferrer"
+        className={`rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-bold text-white ${
+          busy ? "pointer-events-none opacity-50" : "hover:bg-teal-800"
+        }`}
+      >
+        Open activity
+      </a>
+    );
+  }
+
   if (step.kind === "live_game") {
     const config = step.config as LiveGameLessonStepConfig;
     const params = new URLSearchParams();
@@ -175,7 +208,9 @@ function LaunchStepButton({
           onLaunchDocument(step.config as DocumentLessonStepConfig);
           return;
         }
-        onLaunchWordCards(step.config as WordCardsLessonStepConfig);
+        if (step.kind === "word_cards") {
+          onLaunchWordCards(step.config as WordCardsLessonStepConfig);
+        }
       }}
       className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
     >

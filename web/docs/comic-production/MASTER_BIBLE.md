@@ -117,7 +117,7 @@ Four friends discover Keelan, a stranded blue alien, and are drawn into a larger
 
 ### Page and panel format
 
-- **Working page standard:** 1122 x 1402 pixels, portrait, approximately 4:5.
+- **Working web-page standard:** 1024 x 1536 pixels, portrait, approximately 2:3. Preserve approved legacy ratios without cropping.
 - Use 3-6 clearly separated panels per page.
 - Use consistent black panel borders and gutters.
 - Use parchment-style panel numbers in the upper-left corner when panels are numbered.
@@ -126,7 +126,7 @@ Four friends discover Keelan, a stranded blue alien, and are drawn into a larger
 - Reserve yellow, black-outlined display lettering for major sound effects.
 - Do not place essential text too close to a trim edge.
 
-The completed assets currently contain a format conflict: Chapter 1 pages 3-6 are 1024 x 1536 while the cover, Chapter 1 pages 1-2, and Chapter 2 page 1 are 1122 x 1402. Resolve this before print export or a unified reader presentation.
+The responsive reader supports approved mixed legacy ratios without cropping. New Chapter 2 production uses one 1024 x 1536 frame. A separate print-export specification is still required before print production.
 
 ### Art direction
 
@@ -225,22 +225,23 @@ Never overwrite an approved alternate without preserving it. Only one file shoul
 - **Core movement:** The friends debate whether aliens exist, witness a crash, investigate the ship and glowing crystal, find movement in a tree hollow, and meet Keelan.
 - **Ending:** Keelan says, “Wait!”
 
-### Chapter 2 - title TBD
+### Chapter 2 - A Safe Place
 
-- **Status:** In production.
-- **Confirmed assets:** Page 1.
-- **Current movement:** Keelan reassures the children, introduces himself, demonstrates limited magic, explains that the crash left him weak, and prompts the children to consider helping him.
-- **Next required decision:** Define the immediate help Keelan needs and the chapter’s ending hook.
+- **Status:** Corrected editable package complete; release review ready.
+- **Assets:** Six clean 1024 x 1536 story pages plus six overlay documents.
+- **Core movement:** The children help Keelan, tell Grandpa Minh, settle Keelan in Leo's treehouse, learn that he cannot find others like him, and discover that he has left a faint trail toward the hills.
+- **Ending:** The friends decide to follow the trail and find Keelan.
+- **Canon record:** `canon/chapter-02.md`.
 
 ## 11. Known continuity issues to resolve
 
-- Standardize all page dimensions and aspect ratios.
+- Define the print-export treatment for approved legacy Chapter 1 aspect ratios.
 - Lock the crashed ship silhouette to a dedicated spacecraft model sheet; use the approved crash-site map for geography.
 - Use the approved v1 model sheets for all five characters; any redesign requires a numbered replacement.
 - Keep Mia’s single right-side hair clip consistent.
 - Add missing panel-number labels to Chapter 1 page 5 if numbering remains the series standard.
 - Clarify all ambiguous speech-balloon tails.
-- Move the first visible magic effect to the intended reveal panel or revise the page script accordingly.
+- Keep all future Keelan magic localized and visibly tiring while he is weak.
 
 ## 12. Change log
 
@@ -257,6 +258,13 @@ Never overwrite an approved alternate without preserving it. Only one file shoul
 - Locked the crash-site geography and camera axis in a fixed scene map.
 - Added production model sheets for Mia, Zara, Leo, Ethan, and Keelan.
 - Locked Keelan’s scale, digits, toes, fangs, tail, anchor-star markings, and magic effect.
+
+### Chapter 2 remediation - 2026-08-03
+
+- Rebuilt all six Chapter 2 pages as clean, unlettered 1024 x 1536 art masters.
+- Added editable overlay JSON for dialogue, panel numbers, speakers, tails, reading order, vocabulary, and prompts.
+- Restored crash-site geography, supply ownership, backpack continuity, one treehouse, trusted-adult supervision, localized magic, and four-toed evidence.
+- Added the bundled Chapter 2 reader package, Learn-tab shelf link, teacher installer/editor access, tests, and live-reader visual QA.
 
 ### Continuity correction - 2026-08-02
 

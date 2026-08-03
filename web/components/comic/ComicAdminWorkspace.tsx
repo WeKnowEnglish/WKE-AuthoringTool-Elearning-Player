@@ -7,7 +7,7 @@ import { ArrowDown, ArrowUp, ExternalLink, GripVertical, Layers3, Pencil, Sparkl
 import { ComicOverlayEditor } from "@/components/comic/ComicOverlayEditor";
 import {
   deleteComicPage,
-  installEditableChapterOne,
+  installEditableComicChapter,
   reorderComicPages,
   saveComicPageOverlay,
   uploadComicPages,
@@ -69,6 +69,12 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
   };
 
   const editingPage = chapter.pages.find((page) => page.id === editingPageId) ?? null;
+  const readerHref =
+    chapter.slug === "chapter-1"
+      ? "/wke/comic"
+      : `/wke/comic?chapter=${encodeURIComponent(chapter.slug)}`;
+  const packageLabel = chapter.slug.replace(/^chapter-(\d+)$/, "Chapter $1");
+  const canEdit = chapter.source === "database";
 
   return (
     <div className="space-y-5">
@@ -82,14 +88,14 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
           </h1>
           <p className="mt-1 text-sm text-stone-600">
             Upload clean page art, edit lettering as movable layers, then set reading order. Students open{" "}
-            <Link href="/wke/comic" className="font-semibold text-sky-800 underline">
-              /wke/comic
+            <Link href={readerHref} className="font-semibold text-sky-800 underline">
+              {readerHref}
             </Link>
             .
           </p>
         </div>
         <Link
-          href="/wke/comic"
+          href={readerHref}
           target="_blank"
           className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800 hover:bg-stone-50"
         >
@@ -102,7 +108,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="max-w-2xl">
             <h2 className="flex items-center gap-2 text-base font-extrabold text-stone-900">
-              <Sparkles className="h-5 w-5 text-sky-700" /> Editable Chapter 1 package
+              <Sparkles className="h-5 w-5 text-sky-700" /> Editable {packageLabel} package
             </h2>
             <p className="mt-1 text-sm text-stone-600">
               Installs the clean art masters plus separate bubbles, text, speakers, reading order,
@@ -113,10 +119,10 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
             type="button"
             disabled={isPending}
             onClick={() => {
-              if (!window.confirm("Install the editable Chapter 1 package and replace the current page records? Existing storage files will be kept.")) return;
+              if (!window.confirm(`Install the editable ${packageLabel} package and replace the current page records? Existing storage files will be kept.`)) return;
               startTransition(async () => {
-                const result = await installEditableChapterOne();
-                applyResult(result, "Editable Chapter 1 installed.");
+                const result = await installEditableComicChapter(chapter.slug);
+                applyResult(result, `Editable ${packageLabel} installed.`);
                 if (result.ok) setEditingPageId(null);
               });
             }}
@@ -127,6 +133,21 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
           </button>
         </div>
       </section>
+
+      <nav className="flex flex-wrap gap-2" aria-label="Comic chapters">
+        <Link href="/teacher/media/comic" className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-bold text-stone-700 hover:border-sky-400">
+          Chapter 1
+        </Link>
+        <Link href="/teacher/media/comic?chapter=chapter-2" className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-bold text-stone-700 hover:border-sky-400">
+          Chapter 2
+        </Link>
+      </nav>
+
+      {!canEdit ? (
+        <p className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-950">
+          This is the bundled preview. Install the editable package above to enable uploads, reordering, deletion, and the visual lettering editor.
+        </p>
+      ) : null}
 
       <form
         className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm"
@@ -157,6 +178,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
             accept="image/jpeg,image/png,image/webp,image/gif"
             multiple
             required
+            disabled={!canEdit}
             className="mt-2 block w-full text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-900 file:px-3 file:py-2 file:text-sm file:font-bold file:text-white"
           />
         </label>
@@ -165,7 +187,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
         </p>
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || !canEdit}
           className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-stone-900 px-4 text-sm font-bold text-white disabled:opacity-50"
         >
           <Upload className="h-4 w-4" />
@@ -196,13 +218,13 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
           ) : null}
         </div>
         {chapter.pages.length === 0 ? (
-          <p className="mt-3 text-sm text-stone-500">No pages yet. Upload Chapter 1 above.</p>
+          <p className="mt-3 text-sm text-stone-500">No pages yet. Upload {packageLabel} above.</p>
         ) : (
           <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {chapter.pages.map((page, index) => (
               <li
                 key={page.id}
-                draggable={!isPending}
+                draggable={!isPending && canEdit}
                 onDragStart={() => setDragId(page.id)}
                 onDragEnd={() => setDragId(null)}
                 onDragOver={(event) => {
@@ -260,7 +282,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
-                      disabled={isPending}
+                      disabled={isPending || !canEdit}
                       aria-label={`Edit lettering on page ${index + 1}`}
                       onClick={() => setEditingPageId((current) => current === page.id ? null : page.id)}
                       className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white hover:border-sky-400 hover:text-sky-800 disabled:opacity-50 ${
@@ -271,7 +293,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
                     </button>
                     <button
                       type="button"
-                      disabled={isPending || index === 0}
+                      disabled={isPending || !canEdit || index === 0}
                       aria-label={`Move page ${index + 1} earlier`}
                       onClick={() => movePage(page.id, "up")}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-300 bg-white text-stone-700 hover:bg-stone-100 disabled:opacity-35"
@@ -280,7 +302,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
                     </button>
                     <button
                       type="button"
-                      disabled={isPending || index === chapter.pages.length - 1}
+                      disabled={isPending || !canEdit || index === chapter.pages.length - 1}
                       aria-label={`Move page ${index + 1} later`}
                       onClick={() => movePage(page.id, "down")}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-300 bg-white text-stone-700 hover:bg-stone-100 disabled:opacity-35"
@@ -289,7 +311,7 @@ export function ComicAdminWorkspace({ initialChapter }: Props) {
                     </button>
                     <button
                       type="button"
-                      disabled={isPending}
+                      disabled={isPending || !canEdit}
                       aria-label={`Delete page ${index + 1}`}
                       onClick={() => {
                         startTransition(async () => {

@@ -12,6 +12,7 @@ const speakerNames: Record<ComicSpeakerId, string> = {
   leo: "Leo",
   ethan: "Ethan",
   keelan: "Keelan",
+  grandpa_minh: "Grandpa Minh",
 };
 
 const speakerRings: Partial<Record<ComicSpeakerId, string>> = {
@@ -20,6 +21,7 @@ const speakerRings: Partial<Record<ComicSpeakerId, string>> = {
   leo: "#2f7fc1",
   ethan: "#3d8a4c",
   keelan: "#2c9ac5",
+  grandpa_minh: "#8a6b46",
   narrator: "#765f3e",
 };
 

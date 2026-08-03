@@ -1,6 +1,7 @@
 import "server-only";
 
 import { chapterOneEditablePackage } from "@/content/comics/chapter-1";
+import { chapterTwoEditablePackage } from "@/content/comics/chapter-2";
 import { createClient } from "@/lib/supabase/server";
 import { parseComicPageOverlay } from "@/lib/comic/overlay";
 import {
@@ -30,6 +31,12 @@ type PageRow = {
   overlay_data: unknown;
 };
 
+function bundledChapter(slug: string): ComicChapterWithPages | null {
+  if (slug === chapterOneEditablePackage.slug) return chapterOneEditablePackage;
+  if (slug === chapterTwoEditablePackage.slug) return chapterTwoEditablePackage;
+  return null;
+}
+
 function mapChapter(row: ChapterRow): ComicChapter {
   return {
     id: row.id,
@@ -58,6 +65,7 @@ function mapPage(row: PageRow): ComicPage {
 export async function loadComicChapterBySlug(
   slug: string = DEFAULT_COMIC_CHAPTER_SLUG,
 ): Promise<ComicChapterWithPages | null> {
+  const fallback = bundledChapter(slug);
   const supabase = await createClient();
   const { data: chapter, error } = await supabase
     .from("comic_chapters")
@@ -66,7 +74,7 @@ export async function loadComicChapterBySlug(
     .maybeSingle();
 
   if (error || !chapter) {
-    return slug === DEFAULT_COMIC_CHAPTER_SLUG ? chapterOneEditablePackage : null;
+    return fallback;
   }
 
   const { data: pages, error: pagesError } = await supabase
@@ -78,18 +86,18 @@ export async function loadComicChapterBySlug(
     .order("page_index", { ascending: true });
 
   if (pagesError) {
-    return slug === DEFAULT_COMIC_CHAPTER_SLUG ? chapterOneEditablePackage : null;
+    return fallback;
   }
 
   const mappedPages = ((pages ?? []) as PageRow[]).map(mapPage);
 
-  // Until migration 101 and the editable package are installed in Supabase,
-  // serve the bundled Chapter 1 package so students never see duplicate baked lettering.
+  // Until a bundled editable package is installed in Supabase, serve its
+  // clean-art fallback so students never see duplicate baked lettering.
   if (
-    slug === DEFAULT_COMIC_CHAPTER_SLUG &&
+    fallback &&
     (mappedPages.length === 0 || mappedPages.every((page) => page.overlay === null))
   ) {
-    return chapterOneEditablePackage;
+    return fallback;
   }
 
   return {

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { chapterOneEditablePackage } from "@/content/comics/chapter-1";
+import { chapterTwoEditablePackage } from "@/content/comics/chapter-2";
 import { requireAdminContext } from "@/lib/admin/admin-context";
 import {
   createEmptyComicOverlay,
@@ -34,6 +35,12 @@ function revalidateComicPaths(slug: string) {
   revalidatePath("/wke/comic");
   revalidatePath("/teacher/media/comic");
   revalidatePath(`/wke/comic?chapter=${encodeURIComponent(slug)}`);
+}
+
+function bundledComicPackage(slug: string): ComicChapterWithPages | null {
+  if (slug === chapterOneEditablePackage.slug) return chapterOneEditablePackage;
+  if (slug === chapterTwoEditablePackage.slug) return chapterTwoEditablePackage;
+  return null;
 }
 
 async function loadAdminChapter(
@@ -82,7 +89,11 @@ export async function getComicChapterForAdmin(
   const gate = await requireAdminContext();
   if (!gate.ok) return { ok: false, error: gate.error };
   const chapter = await loadAdminChapter(gate.ctx.service, slug);
-  if (!chapter) return { ok: false, error: "Comic chapter not found. Apply migration 098." };
+  if (!chapter) {
+    const bundled = bundledComicPackage(slug);
+    if (bundled) return { ok: true, chapter: bundled };
+    return { ok: false, error: "Comic chapter not found. Apply migration 098." };
+  }
   return { ok: true, chapter };
 }
 
@@ -325,17 +336,31 @@ export async function saveComicPageOverlay(input: {
 }
 
 /**
- * Installs the bundled editable Chapter 1 package into Supabase.
+ * Installs a bundled editable comic package into Supabase.
  * Existing storage objects are preserved for recovery; page records are updated in place.
  */
-export async function installEditableChapterOne(): Promise<ComicActionResult> {
+export async function installEditableComicChapter(slug: string): Promise<ComicActionResult> {
   const gate = await requireAdminContext();
   if (!gate.ok) return { ok: false, error: gate.error };
   const { service, userId } = gate.ctx;
-  const slug = DEFAULT_COMIC_CHAPTER_SLUG;
-  const chapter = await loadAdminChapter(service, slug);
+  const bundledPackage = bundledComicPackage(slug);
+  if (!bundledPackage) return { ok: false, error: "No bundled editable package exists for this chapter." };
+
+  let chapter = await loadAdminChapter(service, slug);
   if (!chapter) {
-    return { ok: false, error: "Apply comic migrations 098 and 101 before installing Chapter 1." };
+    const { error } = await service.from("comic_chapters").insert({
+      slug: bundledPackage.slug,
+      title: bundledPackage.title,
+      subtitle: bundledPackage.subtitle,
+      published: true,
+    });
+    if (error) {
+      return { ok: false, error: error.message || "Could not create the comic chapter." };
+    }
+    chapter = await loadAdminChapter(service, slug);
+  }
+  if (!chapter) {
+    return { ok: false, error: "Apply comic migrations 098 and 101 before installing this chapter." };
   }
 
   const uploaded: Array<{
@@ -346,7 +371,7 @@ export async function installEditableChapterOne(): Promise<ComicActionResult> {
     overlay: ComicPageOverlay;
   }> = [];
 
-  for (const page of chapterOneEditablePackage.pages) {
+  for (const page of bundledPackage.pages) {
     if (!page.overlay) continue;
     const originalFilename = page.publicUrl.split("/").pop() ?? `page-${page.pageIndex}.png`;
     const localPath = path.join(process.cwd(), "public", ...page.publicUrl.split("/").filter(Boolean));
@@ -409,20 +434,27 @@ export async function installEditableChapterOne(): Promise<ComicActionResult> {
     if (error) return { ok: false, error: error.message || "Could not remove extra page records." };
   }
 
-  await service
+  const { error: chapterUpdateError } = await service
     .from("comic_chapters")
     .update({
-      title: chapterOneEditablePackage.title,
-      subtitle: chapterOneEditablePackage.subtitle,
+      title: bundledPackage.title,
+      subtitle: bundledPackage.subtitle,
       published: true,
       updated_at: new Date().toISOString(),
     })
     .eq("id", chapter.id);
+  if (chapterUpdateError) {
+    return { ok: false, error: chapterUpdateError.message || "Could not update the comic chapter." };
+  }
 
   revalidateComicPaths(slug);
   const refreshed = await loadAdminChapter(service, slug);
-  if (!refreshed) return { ok: false, error: "Installed, but could not reload Chapter 1." };
+  if (!refreshed) return { ok: false, error: "Installed, but could not reload the chapter." };
   return { ok: true, chapter: refreshed };
+}
+
+export async function installEditableChapterOne(): Promise<ComicActionResult> {
+  return installEditableComicChapter(DEFAULT_COMIC_CHAPTER_SLUG);
 }
 
 export async function getPublishedComicChapter(

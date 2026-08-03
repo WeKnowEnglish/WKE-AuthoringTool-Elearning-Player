@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "canvas": { "width": 1024, "height": 1535 },
+  "altText": "Keelan shows the children a small image of his home planet, becomes weak, and the friends decide what each person will bring to help him.",
+  "elements": [
+    { "id": "p1-number", "kind": "panel_number", "text": "1", "bounds": { "x": 1, "y": 1, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p1-ethan", "kind": "speech", "text": "Are you really from another planet?", "speakerId": "ethan", "bounds": { "x": 38, "y": 1, "width": 22, "height": 5.5 }, "tail": { "side": "bottom", "offset": 52 }, "readOrder": 1, "fontScale": 0.65, "vocabularyIds": ["planet"], "emphasis": "normal" },
+    { "id": "p1-keelan", "kind": "speech", "text": "Yes.", "speakerId": "keelan", "bounds": { "x": 73, "y": 3, "width": 11, "height": 5 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 2, "fontScale": 0.95, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p2-number", "kind": "panel_number", "text": "2", "bounds": { "x": 1, "y": 26, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p2-keelan", "kind": "speech", "text": "This is my home planet.", "speakerId": "keelan", "bounds": { "x": 2, "y": 36, "width": 20, "height": 5.5 }, "tail": { "side": "right", "offset": 48 }, "readOrder": 3, "fontScale": 0.68, "vocabularyIds": ["planet"], "emphasis": "normal" },
+
+    { "id": "p3-number", "kind": "panel_number", "text": "3", "bounds": { "x": 44, "y": 26, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p3-zara", "kind": "speech", "text": "It's beautiful!", "speakerId": "zara", "bounds": { "x": 45, "y": 26.2, "width": 18, "height": 4.8 }, "tail": { "side": "bottom", "offset": 45 }, "readOrder": 4, "fontScale": 0.68, "vocabularyIds": [], "emphasis": "shout" },
+    { "id": "p3-leo", "kind": "speech", "text": "You're a real alien!", "speakerId": "leo", "bounds": { "x": 79, "y": 26.2, "width": 18, "height": 4.8 }, "tail": { "side": "bottom", "offset": 55 }, "readOrder": 5, "fontScale": 0.66, "vocabularyIds": [], "emphasis": "shout" },
+
+    { "id": "p4-number", "kind": "panel_number", "text": "4", "bounds": { "x": 1, "y": 43, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-keelan-before", "kind": "speech", "text": "I could show you more, but...", "speakerId": "keelan", "bounds": { "x": 3, "y": 43.4, "width": 21, "height": 5.2 }, "tail": { "side": "bottom", "offset": 45 }, "readOrder": 6, "fontScale": 0.62, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p4-mia", "kind": "speech", "text": "You're weak.", "speakerId": "mia", "bounds": { "x": 66, "y": 52, "width": 15, "height": 4.8 }, "tail": { "side": "left", "offset": 48 }, "readOrder": 7, "fontScale": 0.7, "vocabularyIds": ["weak"], "emphasis": "normal" },
+    { "id": "p4-keelan-after", "kind": "speech", "text": "I'll be all right.", "speakerId": "keelan", "bounds": { "x": 5, "y": 52, "width": 17, "height": 6 }, "tail": { "side": "left", "offset": 50 }, "readOrder": 8, "fontScale": 0.82, "vocabularyIds": [], "emphasis": "normal" },
+
+    { "id": "p5-number", "kind": "panel_number", "text": "5", "bounds": { "x": 1, "y": 60, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-mia", "kind": "speech", "text": "I'll bring food.", "speakerId": "mia", "bounds": { "x": 2, "y": 60, "width": 19, "height": 4.2 }, "tail": { "side": "bottom", "offset": 48 }, "readOrder": 9, "fontScale": 0.58, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-zara", "kind": "speech", "text": "I'll bring water.", "speakerId": "zara", "bounds": { "x": 24, "y": 60, "width": 19, "height": 4.2 }, "tail": { "side": "bottom", "offset": 50 }, "readOrder": 10, "fontScale": 0.58, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-ethan", "kind": "speech", "text": "We have to help him. I'll help carry him.", "speakerId": "ethan", "bounds": { "x": 45, "y": 60, "width": 25, "height": 4.5 }, "tail": { "side": "bottom", "offset": 53 }, "readOrder": 11, "fontScale": 0.52, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p5-leo", "kind": "speech", "text": "I'll get a blanket.", "speakerId": "leo", "bounds": { "x": 73, "y": 60, "width": 24, "height": 4.2 }, "tail": { "side": "bottom", "offset": 50 }, "readOrder": 12, "fontScale": 0.58, "vocabularyIds": ["blanket"], "emphasis": "normal" },
+
+    { "id": "p6-number", "kind": "panel_number", "text": "6", "bounds": { "x": 1, "y": 78, "width": 5, "height": 4 }, "fontScale": 1, "vocabularyIds": [], "emphasis": "normal" },
+    { "id": "p6-narration", "kind": "narration", "text": "Together, they carried Keelan toward the village.", "speakerId": "narrator", "bounds": { "x": 65, "y": 92, "width": 32, "height": 6 }, "readOrder": 13, "fontScale": 0.78, "vocabularyIds": [], "emphasis": "normal" }
+  ],
+  "vocabulary": [
+    { "id": "planet", "term": "planet", "definition": "A large round world that moves around a star.", "example": "Keelan shows the children his home planet." },
+    { "id": "weak", "term": "weak", "definition": "Not strong or not having much energy.", "example": "Keelan feels weak after the crash." },
+    { "id": "blanket", "term": "blanket", "definition": "A warm covering used on a bed.", "example": "Leo brings Keelan a blanket." }
+  ],
+  "discussionPrompt": "What did each friend offer to do for Keelan?"
+}

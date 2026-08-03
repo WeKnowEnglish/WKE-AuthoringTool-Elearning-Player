@@ -14,6 +14,12 @@ const exploreHotspotsAuthorEntry = path.join(
   "packages/explore-hotspots-author/src/index.ts",
 );
 
+// These local-only endpoints patch source files through process.cwd(). Next's
+// file tracer consequently treats the whole web project as a runtime dependency.
+// Keep static assets and development artifacts out of their inert production
+// functions; each endpoint returns 403 before touching the filesystem in prod.
+const devSourceWriterTraceExcludes = ["./public/**/*", "./docs/**/*", "./tmp/**/*"];
+
 function supabaseStoragePattern():
   | {
       protocol: "https";
@@ -38,6 +44,11 @@ function supabaseStoragePattern():
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingExcludes: {
+    "/api/dev/apply-letter-fruit-picks": devSourceWriterTraceExcludes,
+    "/api/dev/apply-letter-fruit-plot-picks": devSourceWriterTraceExcludes,
+    "/api/dev/apply-wke-path-picks": devSourceWriterTraceExcludes,
+  },
   allowedDevOrigins: ["127.0.0.1", "192.168.2.84"],
   transpilePackages: ["@wke/explore-hotspots-play", "@wke/explore-hotspots-author"],
   turbopack: {

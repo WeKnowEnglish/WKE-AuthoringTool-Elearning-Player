@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { clearDailyRoomOnSessionEnd } from "@/lib/daily/session-room";
 import {
   decodeVcMemberToken,
   vcHostMatchesJoinCode,
@@ -84,6 +85,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   await markVcSessionEndedInStorage(session.liveblocksRoomId);
   await endVirtualClassroomSession(session.id);
+  try {
+    await clearDailyRoomOnSessionEnd(session.id);
+  } catch {
+    // Non-fatal: session is already ended in Supabase / Liveblocks.
+  }
 
   const whiteboardRooms = await listWhiteboardRoomsForClassSession(session.id);
   await deleteLiveblocksRooms([session.liveblocksRoomId, ...whiteboardRooms]);

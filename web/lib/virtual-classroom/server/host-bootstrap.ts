@@ -4,6 +4,9 @@ import { randomBytes } from "node:crypto";
 import { LiveObject, toPlainLson, type PlainLsonObject } from "@liveblocks/client";
 import { Liveblocks } from "@liveblocks/node";
 import { generateJoinCode } from "@/lib/board-game/liveblocks/join-code";
+import { logDaily } from "@/lib/daily/log";
+import { getOrCreateDailyRoomForSession } from "@/lib/daily/session-room";
+import { isDailyEnabled } from "@/lib/env/daily-server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { createVirtualClassroomInitialStorage } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import {
@@ -29,6 +32,8 @@ export type HostVirtualClassroomResult = {
   role: "host";
   hostCookie: string;
   memberToken: string;
+  /** Present when Daily is enabled and room attach succeeded. */
+  dailyRoomUrl: string | null;
 };
 
 /** Shared bootstrap for class-linked and one-off Virtual Classroom hosts. */
@@ -83,6 +88,20 @@ export async function bootstrapVirtualClassroomHost(input: {
     role: "host",
   });
 
+  // Daily room is best-effort: Liveblocks session must still start if Daily fails.
+  let dailyRoomUrl: string | null = null;
+  if (isDailyEnabled()) {
+    try {
+      const room = await getOrCreateDailyRoomForSession(sessionId);
+      dailyRoomUrl = room?.url ?? null;
+    } catch (error) {
+      logDaily("host_bootstrap_daily_failed", {
+        sessionId,
+        message: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
+
   const memberToken = encodeVcMemberToken({
     sessionId,
     joinCode,
@@ -104,5 +123,6 @@ export async function bootstrapVirtualClassroomHost(input: {
     role: "host",
     hostCookie: formatVcHostCookie(joinCode, hostSecret),
     memberToken,
+    dailyRoomUrl,
   };
 }

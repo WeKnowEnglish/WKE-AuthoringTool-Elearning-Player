@@ -7,6 +7,7 @@ import {
 } from "@liveblocks/react/suspense";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { DailyVideoDock } from "@/components/virtual-classroom/daily/DailyVideoDock";
 import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPanel";
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
 import { TodaysLessonPlaylist } from "@/components/virtual-classroom/TodaysLessonPlaylist";
@@ -936,6 +937,12 @@ export function VirtualClassroomSessionView({
           </ul>
         </aside>
       </div>
+
+      <DailyVideoDock
+        sessionId={sessionId}
+        isHost={role === "host"}
+        sessionEnded={ended || status === "ended"}
+      />
     </div>
   );
 }

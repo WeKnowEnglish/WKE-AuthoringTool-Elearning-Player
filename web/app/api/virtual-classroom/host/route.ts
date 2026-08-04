@@ -109,6 +109,7 @@ export async function POST(request: Request) {
         displayName: hosted.displayName,
         role: hosted.role,
         oneOff: hosted.classId == null,
+        dailyRoomUrl: hosted.dailyRoomUrl,
       });
 
       const cookieOpts = {

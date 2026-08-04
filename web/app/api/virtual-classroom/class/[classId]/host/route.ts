@@ -76,6 +76,7 @@ export async function POST(request: Request, context: RouteContext) {
         displayName: hosted.displayName,
         role: hosted.role,
         oneOff: false,
+        dailyRoomUrl: hosted.dailyRoomUrl,
       });
 
       const cookieOpts = {

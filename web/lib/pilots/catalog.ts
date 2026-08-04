@@ -805,7 +805,8 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     href: "/virtual-classroom/join",
     title: "Virtual classroom",
-    description: "Live virtual classroom join / session surface.",
+    description:
+      "Live virtual classroom join / session surface. Phase 1 Daily Prebuilt video dock (token + provisional attendance) when DAILY_API_KEY is set.",
     group: "classroom",
     status: "review",
   },

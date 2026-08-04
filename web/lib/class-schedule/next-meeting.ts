@@ -192,6 +192,91 @@ export function resolveNextClassMeeting(
   };
 }
 
+export type LiveClassMeetingWindow = {
+  startsAt: Date;
+  endsAt: Date;
+  slot: ClassMeetingSlot;
+  label: string;
+};
+
+/**
+ * In-progress or soon upcoming weekly occurrence for live video join windows.
+ * Unlike resolveNextClassMeeting, includes a class that already started but has not ended.
+ */
+export function resolveLiveClassMeeting(
+  slots: ClassMeetingSlot[],
+  now = new Date(),
+  options?: {
+    /** How far ahead a future start may be to count as “this session’s slot”. */
+    lookAheadMs?: number;
+    /** Keep a meeting eligible this long after scheduled end (room soft close). */
+    postEndGraceMs?: number;
+  },
+): LiveClassMeetingWindow | null {
+  if (!slots.length) return null;
+  const lookAheadMs = options?.lookAheadMs ?? 24 * 60 * 60 * 1000;
+  const postEndGraceMs = options?.postEndGraceMs ?? 15 * 60 * 1000;
+  const nowMs = now.getTime();
+
+  type Candidate = LiveClassMeetingWindow & { priority: number };
+  const candidates: Candidate[] = [];
+
+  for (const slot of slots) {
+    const time = parseStartTime(slot.startTime);
+    if (!time) continue;
+
+    for (let dayOffset = -1; dayOffset <= 8; dayOffset++) {
+      const probe = new Date(nowMs + dayOffset * 24 * 60 * 60 * 1000);
+      const parts = getZonedParts(probe, slot.timezone);
+      if (!parts || parts.weekday !== slot.weekday) continue;
+
+      const startsAt = makeZonedDate(
+        parts.year,
+        parts.month,
+        parts.day,
+        time.hour,
+        time.minute,
+        slot.timezone,
+      );
+      if (!startsAt) continue;
+
+      const endsAt = new Date(
+        startsAt.getTime() + slot.durationMinutes * 60 * 1000,
+      );
+      const softEnd = endsAt.getTime() + postEndGraceMs;
+      const startMs = startsAt.getTime();
+
+      const inProgressOrSoftClose = nowMs >= startMs && nowMs <= softEnd;
+      const upcomingSoon =
+        startMs > nowMs && startMs - nowMs <= lookAheadMs;
+
+      if (!inProgressOrSoftClose && !upcomingSoon) continue;
+
+      candidates.push({
+        startsAt,
+        endsAt,
+        slot,
+        label: formatNextMeetingLabel(slot, startsAt),
+        // Prefer in-progress, then soonest start.
+        priority: inProgressOrSoftClose ? 0 : 1,
+      });
+    }
+  }
+
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.startsAt.getTime() - b.startsAt.getTime();
+  });
+  const best = candidates[0]!;
+  return {
+    startsAt: best.startsAt,
+    endsAt: best.endsAt,
+    slot: best.slot,
+    label: best.label,
+  };
+}
+
 export function formatWeeklySlotLabel(slot: ClassMeetingSlot): string {
   const [hour, minute] = slot.startTime.split(":").map(Number);
   const anchor = makeZonedDate(2026, 1, 4 + slot.weekday, hour, minute, slot.timezone);

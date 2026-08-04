@@ -4,6 +4,7 @@ import {
   recordProvisionalAttendanceLeave,
 } from "@/lib/daily/attendance";
 import { authorizeDailyMeetingToken } from "@/lib/daily/authorize-token";
+import { allowDailyAttendanceRequest } from "@/lib/daily/rate-limit";
 import { getVirtualClassroomSessionWithDaily } from "@/lib/daily/session-room";
 import { isDailyEnabled } from "@/lib/env/daily-server";
 
@@ -15,8 +16,8 @@ type Body = {
 };
 
 /**
- * Provisional browser-reported attendance (Phase 1 pilot).
- * Not authoritative until Daily webhooks verify membership (Phase 2).
+ * Provisional browser-reported attendance.
+ * Not authoritative until Daily webhooks verify membership.
  */
 export async function POST(request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
@@ -37,6 +38,16 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(
       { error: auth.message, code: auth.code },
       { status: auth.status },
+    );
+  }
+
+  if (!allowDailyAttendanceRequest(auth.userId, sessionId)) {
+    return NextResponse.json(
+      {
+        error: "Too many attendance events. Try again shortly.",
+        code: "rate_limited",
+      },
+      { status: 429 },
     );
   }
 

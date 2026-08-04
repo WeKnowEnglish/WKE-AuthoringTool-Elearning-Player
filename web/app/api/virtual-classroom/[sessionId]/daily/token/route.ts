@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorizeDailyMeetingToken } from "@/lib/daily/authorize-token";
 import { computeMeetingTokenExpUnix } from "@/lib/daily/join-window";
+import { allowDailyTokenRequest } from "@/lib/daily/rate-limit";
 import {
   getOrCreateDailyRoomForSession,
   getVirtualClassroomSessionWithDaily,
@@ -34,13 +35,22 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
+  if (!allowDailyTokenRequest(auth.userId, sessionId)) {
+    return NextResponse.json(
+      {
+        error: "Too many video token requests. Try again shortly.",
+        code: "rate_limited",
+      },
+      { status: 429 },
+    );
+  }
+
   try {
     let roomName = session.dailyRoomName;
     let roomUrl = session.dailyRoomUrl;
     let roomExpiresAt = session.dailyRoomExpiresAt;
 
     if (!roomName || !roomUrl) {
-      // Hosts may mint a room on demand; members wait for host bootstrap.
       if (auth.role !== "teacher") {
         return NextResponse.json(
           { error: "Video room is not ready yet.", code: "room_missing" },
@@ -50,7 +60,10 @@ export async function POST(_request: Request, context: RouteContext) {
       const room = await getOrCreateDailyRoomForSession(sessionId);
       if (!room) {
         return NextResponse.json(
-          { error: "Daily video is not configured.", code: "daily_not_configured" },
+          {
+            error: "Daily video is not configured.",
+            code: "daily_not_configured",
+          },
           { status: 503 },
         );
       }
@@ -59,7 +72,10 @@ export async function POST(_request: Request, context: RouteContext) {
       roomExpiresAt = room.expiresAt;
     }
 
-    const exp = computeMeetingTokenExpUnix({ roomExpiresAt });
+    const exp = computeMeetingTokenExpUnix({
+      roomExpiresAt,
+      sessionEnded: session.status === "ended" || Boolean(session.endedAt),
+    });
     const token = await createDailyMeetingToken({
       roomName,
       roomUrl,
@@ -89,7 +105,8 @@ export async function POST(_request: Request, context: RouteContext) {
         { status: error.status },
       );
     }
-    const message = error instanceof Error ? error.message : "Could not issue token.";
+    const message =
+      error instanceof Error ? error.message : "Could not issue token.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

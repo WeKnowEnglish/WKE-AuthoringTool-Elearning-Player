@@ -16,6 +16,7 @@ type TokenResponse = {
   token?: string;
   roomUrl?: string;
   role?: string;
+  exp?: number;
   error?: string;
   code?: string;
 };
@@ -25,6 +26,8 @@ type RoomResponse = {
   error?: string;
   code?: string;
 };
+
+const REFRESH_BEFORE_EXP_MS = 90_000;
 
 async function postAttendance(
   sessionId: string,
@@ -42,50 +45,79 @@ async function postAttendance(
   }
 }
 
+async function fetchMeetingToken(sessionId: string): Promise<TokenResponse & { ok: boolean; status: number }> {
+  const tokenRes = await fetch(`/api/virtual-classroom/${sessionId}/daily/token`, {
+    method: "POST",
+  });
+  const tokenPayload = (await tokenRes.json()) as TokenResponse;
+  return { ...tokenPayload, ok: tokenRes.ok, status: tokenRes.status };
+}
+
 export function useDailyCall(input: {
   sessionId: string;
   isHost: boolean;
-  /** When true, tear down the call (session ended). */
   sessionEnded: boolean;
 }) {
   const { sessionId, isHost, sessionEnded } = input;
   const frameRef = useRef<DailyCall | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const joinedRef = useRef(false);
+  const roomUrlRef = useRef<string | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshingRef = useRef(false);
+  const connectInFlight = useRef(false);
   const [phase, setPhase] = useState<DailyCallPhase>("probing");
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [tokenExp, setTokenExp] = useState<number | null>(null);
 
-  const destroyCall = useCallback(async (reportLeave: boolean) => {
-    const call = frameRef.current;
-    frameRef.current = null;
-    if (joinedRef.current && reportLeave) {
-      joinedRef.current = false;
-      await postAttendance(sessionId, "leave");
-    } else {
-      joinedRef.current = false;
+  const clearRefreshTimer = useCallback(() => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
     }
-    if (!call) return;
-    try {
-      await call.leave();
-    } catch {
-      // already left
-    }
-    try {
-      call.destroy();
-    } catch {
-      // already destroyed
-    }
-  }, [sessionId]);
+  }, []);
+
+  const destroyCall = useCallback(
+    async (reportLeave: boolean) => {
+      clearRefreshTimer();
+      roomUrlRef.current = null;
+      setTokenExp(null);
+      const call = frameRef.current;
+      frameRef.current = null;
+      if (joinedRef.current && reportLeave) {
+        joinedRef.current = false;
+        await postAttendance(sessionId, "leave");
+      } else {
+        joinedRef.current = false;
+      }
+      if (!call) return;
+      try {
+        await call.leave();
+      } catch {
+        // already left
+      }
+      try {
+        call.destroy();
+      } catch {
+        // already destroyed
+      }
+    },
+    [sessionId, clearRefreshTimer],
+  );
 
   const probe = useCallback(async () => {
     setPhase("probing");
     setError(null);
+    setErrorCode(null);
     try {
       const res = await fetch(`/api/virtual-classroom/${sessionId}/daily/room`);
       const payload = (await res.json()) as RoomResponse;
       if (res.status === 503 && payload.code === "daily_disabled") {
         setPhase("disabled");
+        setError(payload.error ?? "Class video is not configured on this server.");
+        setErrorCode("daily_disabled");
         return;
       }
       if (res.ok || payload.code === "room_missing" || res.status === 404) {
@@ -95,6 +127,7 @@ export function useDailyCall(input: {
       if (res.status === 401 || res.status === 403) {
         setPhase("error");
         setError(payload.error ?? "Not authorized for video.");
+        setErrorCode(payload.code ?? "not_authorized");
         return;
       }
       setPhase("ready");
@@ -121,82 +154,67 @@ export function useDailyCall(input: {
     };
   }, [destroyCall]);
 
-  const connectInFlight = useRef(false);
+  const scheduleTokenRefresh = useCallback(
+    (expUnix: number | undefined) => {
+      clearRefreshTimer();
+      if (!expUnix || !Number.isFinite(expUnix)) return;
+      setTokenExp(expUnix);
+      const refreshAt = expUnix * 1000 - REFRESH_BEFORE_EXP_MS;
+      const delay = Math.max(5_000, refreshAt - Date.now());
+      refreshTimerRef.current = setTimeout(() => {
+        void (async () => {
+          const call = frameRef.current;
+          const roomUrl = roomUrlRef.current;
+          if (!call || !roomUrl || !joinedRef.current) return;
+          refreshingRef.current = true;
+          try {
+            const tokenPayload = await fetchMeetingToken(sessionId);
+            if (!tokenPayload.ok || !tokenPayload.token) {
+              setError(
+                tokenPayload.error ??
+                  "Could not refresh video token. Reconnect if the call drops.",
+              );
+              setErrorCode(tokenPayload.code ?? "token_refresh_failed");
+              return;
+            }
+            // Same Prebuilt frame — leave/join refreshes the meeting session without remounting the dock.
+            await call.leave();
+            await call.join({ url: roomUrl, token: tokenPayload.token });
+            scheduleTokenRefresh(tokenPayload.exp);
+          } catch {
+            setError("Video token refresh failed. Try Leave video, then Connect.");
+            setErrorCode("token_refresh_failed");
+          } finally {
+            refreshingRef.current = false;
+          }
+        })();
+      }, delay);
+    },
+    [clearRefreshTimer, sessionId],
+  );
 
-  const connect = useCallback(async () => {
-    if (phase === "disabled" || phase === "joined") return;
-    if (connectInFlight.current) return;
-    connectInFlight.current = true;
-    setPhase("connecting");
-    setError(null);
-    setExpanded(true);
-
-    try {
-      if (isHost) {
-        const ensure = await fetch(
-          `/api/virtual-classroom/${sessionId}/daily/room`,
-          { method: "POST" },
-        );
-        if (ensure.status === 503) {
-          const payload = (await ensure.json()) as RoomResponse;
-          setPhase("disabled");
-          setError(payload.error ?? "Daily video is not enabled.");
-          return;
-        }
-      }
-
-      const tokenRes = await fetch(
-        `/api/virtual-classroom/${sessionId}/daily/token`,
-        { method: "POST" },
-      );
-      const tokenPayload = (await tokenRes.json()) as TokenResponse;
-      if (!tokenRes.ok || !tokenPayload.token || !tokenPayload.roomUrl) {
-        if (tokenPayload.code === "daily_disabled") {
-          setPhase("disabled");
-          setError(tokenPayload.error ?? "Daily video is not enabled.");
-          return;
-        }
-        setPhase("error");
-        setError(tokenPayload.error ?? "Could not get a video token.");
-        return;
-      }
-
-      const parent = containerRef.current;
-      if (!parent) {
-        setPhase("error");
-        setError("Video panel is not ready yet. Open Video and try again.");
-        return;
-      }
-
-      await destroyCall(false);
-
-      const Daily = (await import("@daily-co/daily-js")).default;
-      const call = Daily.createFrame(parent, {
-        iframeStyle: {
-          width: "100%",
-          height: "100%",
-          border: "0",
-          borderRadius: "0.75rem",
-        },
-        showLeaveButton: true,
-        showFullscreenButton: true,
-      });
-      frameRef.current = call;
-
+  const attachCallHandlers = useCallback(
+    (call: DailyCall) => {
       call.on("joined-meeting", () => {
         joinedRef.current = true;
         setPhase("joined");
+        setError(null);
+        setErrorCode(null);
         const local = call.participants()?.local;
         void postAttendance(sessionId, "join", local?.session_id ?? null);
       });
 
       call.on("left-meeting", () => {
+        if (refreshingRef.current) return;
         if (joinedRef.current) {
           joinedRef.current = false;
           void postAttendance(sessionId, "leave");
         }
-        setPhase("ready");
-        setExpanded(false);
+        if (frameRef.current === call) {
+          clearRefreshTimer();
+          setPhase("ready");
+          setExpanded(false);
+        }
       });
 
       call.on("error", (event) => {
@@ -205,36 +223,124 @@ export function useDailyCall(input: {
             ? String((event as { errorMsg?: string }).errorMsg)
             : "Video call error.";
         setError(message);
-        setPhase("error");
+        setErrorCode("daily_error");
+        setPhase((p) => (p === "joined" ? p : "error"));
       });
+    },
+    [sessionId, clearRefreshTimer],
+  );
 
+  const connect = useCallback(async () => {
+    if (phase === "disabled" || phase === "joined") return;
+    if (connectInFlight.current) return;
+    connectInFlight.current = true;
+    setPhase("connecting");
+    setError(null);
+    setErrorCode(null);
+    setExpanded(true);
+
+    try {
+      if (isHost) {
+        const ensure = await fetch(`/api/virtual-classroom/${sessionId}/daily/room`, {
+          method: "POST",
+        });
+        if (ensure.status === 503) {
+          const payload = (await ensure.json()) as RoomResponse;
+          setPhase("disabled");
+          setError(payload.error ?? "Daily video is not enabled.");
+          setErrorCode("daily_disabled");
+          return;
+        }
+      }
+
+      const tokenPayload = await fetchMeetingToken(sessionId);
+      if (!tokenPayload.ok || !tokenPayload.token || !tokenPayload.roomUrl) {
+        if (tokenPayload.code === "daily_disabled") {
+          setPhase("disabled");
+          setError(tokenPayload.error ?? "Daily video is not enabled.");
+          setErrorCode("daily_disabled");
+          return;
+        }
+        setPhase("error");
+        setError(tokenPayload.error ?? "Could not get a video token.");
+        setErrorCode(tokenPayload.code ?? "token_failed");
+        return;
+      }
+
+      const parent = containerRef.current;
+      if (!parent) {
+        setPhase("error");
+        setError("Video panel is not ready yet. Open Video and try again.");
+        setErrorCode("panel_missing");
+        return;
+      }
+
+      // Reuse existing frame when reconnecting after error.
+      let call = frameRef.current;
+      if (call) {
+        try {
+          await call.leave();
+        } catch {
+          // ok
+        }
+      } else {
+        await destroyCall(false);
+        const Daily = (await import("@daily-co/daily-js")).default;
+        call = Daily.createFrame(parent, {
+          iframeStyle: {
+            width: "100%",
+            height: "100%",
+            border: "0",
+            borderRadius: "0.75rem",
+          },
+          showLeaveButton: true,
+          showFullscreenButton: true,
+        });
+        frameRef.current = call;
+        attachCallHandlers(call);
+      }
+
+      roomUrlRef.current = tokenPayload.roomUrl;
       await call.join({
         url: tokenPayload.roomUrl,
         token: tokenPayload.token,
       });
+      scheduleTokenRefresh(tokenPayload.exp);
     } catch (err) {
       setPhase("error");
       setError(err instanceof Error ? err.message : "Could not connect video.");
+      setErrorCode("connect_failed");
       await destroyCall(false);
     } finally {
       connectInFlight.current = false;
     }
-  }, [phase, isHost, sessionId, destroyCall]);
+  }, [
+    phase,
+    isHost,
+    sessionId,
+    destroyCall,
+    attachCallHandlers,
+    scheduleTokenRefresh,
+  ]);
 
   const leave = useCallback(async () => {
     await destroyCall(true);
     setPhase("ready");
     setExpanded(false);
+    setError(null);
+    setErrorCode(null);
   }, [destroyCall]);
 
   return {
     phase,
     error,
+    errorCode,
     expanded,
     setExpanded,
     containerRef,
     connect,
     leave,
     retryProbe: probe,
+    tokenExp,
   };
 }

@@ -4,6 +4,7 @@ import {
   getOrCreateDailyRoomForSession,
   getVirtualClassroomSessionWithDaily,
 } from "@/lib/daily/session-room";
+import { allowDailyRoomCreate } from "@/lib/daily/rate-limit";
 import { DailyApiError, DailyConfigError } from "@/lib/daily/types";
 import { isDailyEnabled } from "@/lib/env/daily-server";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
@@ -67,11 +68,20 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
+  let hostUserId: string;
   try {
-    await requireVirtualClassroomSessionHost(session);
+    const host = await requireVirtualClassroomSessionHost(session);
+    hostUserId = host.userId;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unauthorized";
     return NextResponse.json({ error: message, code: "not_host" }, { status: 403 });
+  }
+
+  if (!allowDailyRoomCreate(hostUserId, sessionId)) {
+    return NextResponse.json(
+      { error: "Too many room create requests. Try again shortly.", code: "rate_limited" },
+      { status: 429 },
+    );
   }
 
   try {

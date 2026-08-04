@@ -1,0 +1,192 @@
+import "server-only";
+
+import {
+  findSessionIdByDailyRoomName,
+  recordVerifiedAttendanceJoin,
+  recordVerifiedAttendanceLeave,
+} from "@/lib/daily/attendance";
+import { logDaily } from "@/lib/daily/log";
+import {
+  dailyRoleFromWebhook,
+  parseDailyWebhookEnvelope,
+  parseParticipantPayload,
+} from "@/lib/daily/webhook-events";
+import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
+
+export type ProcessDailyWebhookResult = {
+  ok: true;
+  status: "processed" | "ignored" | "duplicate";
+  eventType?: string;
+  sessionId?: string | null;
+};
+
+async function claimWebhookEvent(input: {
+  eventId: string;
+  eventType: string;
+  roomName?: string | null;
+}): Promise<"claimed" | "duplicate" | "skipped"> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return "skipped";
+
+  const { error } = await supabase.from("daily_webhook_events").insert({
+    event_id: input.eventId,
+    event_type: input.eventType,
+    room_name: input.roomName ?? null,
+    status: "processed",
+    received_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    // Unique violation → already processed
+    if (error.code === "23505") return "duplicate";
+    logDaily("webhook_claim_failed", {
+      eventId: input.eventId,
+      message: error.message,
+    });
+    return "skipped";
+  }
+  return "claimed";
+}
+
+async function finalizeWebhookEvent(input: {
+  eventId: string;
+  sessionId?: string | null;
+  status: "processed" | "ignored" | "error";
+  errorMessage?: string;
+}): Promise<void> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return;
+  await supabase
+    .from("daily_webhook_events")
+    .update({
+      session_id: input.sessionId ?? null,
+      status: input.status,
+      error_message: input.errorMessage ?? null,
+      processed_at: new Date().toISOString(),
+    })
+    .eq("event_id", input.eventId);
+}
+
+/**
+ * Handle a verified Daily webhook body (signature already checked).
+ * Responds quickly path: claim idempotency key then process join/leave.
+ */
+export async function processDailyWebhookBody(
+  rawJson: unknown,
+): Promise<ProcessDailyWebhookResult> {
+  const envelope = parseDailyWebhookEnvelope(rawJson);
+  if (!envelope?.type) {
+    return { ok: true, status: "ignored" };
+  }
+
+  const eventType = envelope.type;
+  const eventId =
+    typeof envelope.id === "string" && envelope.id.trim()
+      ? envelope.id.trim()
+      : null;
+
+  if (
+    eventType !== "participant.joined" &&
+    eventType !== "participant.left"
+  ) {
+    if (eventId) {
+      await claimWebhookEvent({
+        eventId,
+        eventType,
+        roomName: null,
+      });
+      await finalizeWebhookEvent({
+        eventId,
+        status: "ignored",
+      });
+    }
+    return { ok: true, status: "ignored", eventType };
+  }
+
+  const participant = parseParticipantPayload(envelope.payload);
+  if (!participant) {
+    logDaily("webhook_bad_payload", { eventType, eventId });
+    return { ok: true, status: "ignored", eventType };
+  }
+
+  if (eventId) {
+    const claim = await claimWebhookEvent({
+      eventId,
+      eventType,
+      roomName: participant.room,
+    });
+    if (claim === "duplicate") {
+      return { ok: true, status: "duplicate", eventType };
+    }
+  }
+
+  const sessionId = await findSessionIdByDailyRoomName(participant.room);
+  if (!sessionId) {
+    logDaily("webhook_unknown_room", {
+      eventType,
+      roomName: participant.room,
+    });
+    if (eventId) {
+      await finalizeWebhookEvent({
+        eventId,
+        status: "ignored",
+        errorMessage: "No class_sessions row for daily_room_name",
+      });
+    }
+    return { ok: true, status: "ignored", eventType, sessionId: null };
+  }
+
+  const role = dailyRoleFromWebhook({
+    owner: Boolean(participant.owner),
+    userId: participant.user_id,
+  });
+
+  try {
+    if (eventType === "participant.joined") {
+      await recordVerifiedAttendanceJoin({
+        sessionId,
+        participantKey: participant.user_id,
+        role,
+        dailyParticipantId: participant.session_id,
+        joinedAtUnix: participant.joined_at,
+      });
+    } else {
+      await recordVerifiedAttendanceLeave({
+        sessionId,
+        participantKey: participant.user_id,
+        role,
+        dailyParticipantId: participant.session_id,
+        joinedAtUnix: participant.joined_at,
+        durationSeconds: participant.duration,
+      });
+    }
+
+    if (eventId) {
+      await finalizeWebhookEvent({
+        eventId,
+        sessionId,
+        status: "processed",
+      });
+    }
+
+    return { ok: true, status: "processed", eventType, sessionId };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "process failed";
+    logDaily("webhook_process_error", {
+      eventType,
+      eventId,
+      message,
+    });
+    if (eventId) {
+      await finalizeWebhookEvent({
+        eventId,
+        sessionId,
+        status: "error",
+        errorMessage: message,
+      });
+    }
+    // Still 200 to Daily so circuit breaker doesn't trip on transient DB issues —
+    // we logged + marked error; duplicates won't re-claim if claim succeeded.
+    return { ok: true, status: "ignored", eventType, sessionId };
+  }
+}

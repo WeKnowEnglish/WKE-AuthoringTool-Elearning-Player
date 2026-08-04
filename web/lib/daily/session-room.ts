@@ -2,6 +2,10 @@ import "server-only";
 
 import { createPrivateDailyRoom, deleteDailyRoom } from "@/lib/daily/rooms";
 import { logDaily } from "@/lib/daily/log";
+import {
+  adHocDailyRoomExpiresAt,
+  resolveDailyScheduleBind,
+} from "@/lib/daily/schedule-bind";
 import type { DailyRoomRecord } from "@/lib/daily/types";
 import { isDailyEnabled } from "@/lib/env/daily-server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
@@ -89,7 +93,13 @@ export async function getOrCreateDailyRoomForSession(
     };
   }
 
-  const room = await createPrivateDailyRoom({ sessionId });
+  const bind = await resolveDailyScheduleBind({
+    classId: existing.classId,
+    createdAt: existing.createdAt,
+  });
+  const expiresAt = bind?.roomExpiresAt ?? adHocDailyRoomExpiresAt();
+
+  const room = await createPrivateDailyRoom({ sessionId, expiresAt });
   const supabase = createServiceRoleSupabase();
   if (!supabase) {
     await deleteDailyRoom(room.name);

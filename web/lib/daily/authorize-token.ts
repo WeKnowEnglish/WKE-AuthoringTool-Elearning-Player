@@ -2,13 +2,12 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { isStudent, isTeacher } from "@/lib/auth/roles";
-import {
-  evaluateSessionJoinability,
-} from "@/lib/daily/join-window";
+import { evaluateSessionJoinability } from "@/lib/daily/join-window";
+import { resolveDailyScheduleBind } from "@/lib/daily/schedule-bind";
+import type { VirtualClassroomSessionWithDaily } from "@/lib/daily/session-room";
 import type { DailyCallRole } from "@/lib/daily/types";
 import { callRoleFromVcRole } from "@/lib/daily/tokens";
 import { createClient } from "@/lib/supabase/server";
-import type { VirtualClassroomSessionWithDaily } from "@/lib/daily/session-room";
 import {
   decodeVcMemberToken,
   vcHostMatchesJoinCode,
@@ -34,26 +33,11 @@ export type DailyTokenAuthFailure = {
 
 export type DailyTokenAuthResult = DailyTokenAuthSuccess | DailyTokenAuthFailure;
 
-/**
- * Authorize a short-lived Daily meeting token for an active VC session.
- * Host cookie or member cookie required; role matches authenticated identity.
- */
-export async function authorizeDailyMeetingToken(
-  session: VirtualClassroomSessionWithDaily,
-): Promise<DailyTokenAuthResult> {
-  const joinability = evaluateSessionJoinability({
-    status: session.status,
-    roomExpiresAt: session.dailyRoomExpiresAt,
-  });
-  if (!joinability.ok) {
-    return {
-      ok: false,
-      status: 403,
-      code: joinability.code,
-      message: joinability.message,
-    };
-  }
+type IdentityResult = DailyTokenAuthSuccess | DailyTokenAuthFailure;
 
+async function resolveDailyIdentity(
+  session: VirtualClassroomSessionWithDaily,
+): Promise<IdentityResult> {
   const cookieStore = await cookies();
   const hostOk = vcHostMatchesJoinCode(
     cookieStore.get(VC_HOST_COOKIE)?.value,
@@ -76,7 +60,6 @@ export async function authorizeDailyMeetingToken(
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Prefer signed-in identity when present.
   if (user?.id) {
     if (hostOk) {
       try {
@@ -105,7 +88,6 @@ export async function authorizeDailyMeetingToken(
       }
     }
 
-    // Member path: enrolled student for class-linked sessions.
     if (session.classId) {
       try {
         await requireWhiteboardStudent(session.classId);
@@ -133,11 +115,13 @@ export async function authorizeDailyMeetingToken(
         ok: true,
         userId: user.id,
         displayName,
-        role: callRoleFromVcRole(member?.role === "host" ? "host" : "member", isTeacher(user)),
+        role: callRoleFromVcRole(
+          member?.role === "host" ? "host" : "member",
+          isTeacher(user),
+        ),
       };
     }
 
-    // One-off: signed-in member from cookie.
     if (memberOk && member) {
       return {
         ok: true,
@@ -151,7 +135,6 @@ export async function authorizeDailyMeetingToken(
     }
   }
 
-  // Guest one-off (no Supabase user): member cookie only, guest Daily role.
   if (!session.classId && memberOk && member) {
     return {
       ok: true,
@@ -167,4 +150,39 @@ export async function authorizeDailyMeetingToken(
     code: "auth_required",
     message: "Sign in or join the session to connect video.",
   };
+}
+
+/**
+ * Authorize a short-lived Daily meeting token for an active VC session.
+ * Identity first, then schedule-aware join window (Phase 2b).
+ */
+export async function authorizeDailyMeetingToken(
+  session: VirtualClassroomSessionWithDaily,
+): Promise<DailyTokenAuthResult> {
+  const identity = await resolveDailyIdentity(session);
+  if (!identity.ok) return identity;
+
+  const bind = await resolveDailyScheduleBind({
+    classId: session.classId,
+    createdAt: session.createdAt,
+  });
+
+  const joinability = evaluateSessionJoinability({
+    status: session.status,
+    endedAt: session.endedAt,
+    roomExpiresAt: session.dailyRoomExpiresAt,
+    scheduledStartsAt: bind?.live.startsAt ?? null,
+    role: identity.role,
+  });
+
+  if (!joinability.ok) {
+    return {
+      ok: false,
+      status: 403,
+      code: joinability.code,
+      message: joinability.message,
+    };
+  }
+
+  return identity;
 }

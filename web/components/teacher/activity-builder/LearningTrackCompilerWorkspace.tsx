@@ -17,6 +17,10 @@ import {
 import { downloadTextFile } from "@/lib/activity-builder/games/mc-quiz";
 import { VocabularyListWorkspace } from "@/components/teacher/activity-builder/VocabularyListWorkspace";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
+import {
+  AuthoringItemPager,
+  useAuthoringItemIndex,
+} from "@/components/teacher/activity-builder/AuthoringItemPager";
 import { FitScaleViewport } from "@/components/ui/FitScaleViewport";
 import {
   HOBBIES_DEFAULT_VOCAB_LIST_ID,
@@ -220,27 +224,53 @@ function compositionStructureKey(composition: LearningTrackComposition): string 
   });
 }
 
+export type LearningTrackCompilerDraftSync = {
+  composition: LearningTrackComposition;
+  libraryId: string | null;
+  bankActivityId: string | null;
+};
+
+export type LearningTrackCompilerWorkspaceProps = {
+  classes?: readonly { id: string; title: string }[];
+  classLoadError?: boolean;
+  /**
+   * `standalone` — legacy LTC route chrome.
+   * `embedded` — Track Builder Practice mode (same body, Track Builder header).
+   */
+  chrome?: "standalone" | "embedded";
+  initialComposition?: LearningTrackComposition;
+  initialLibraryId?: string | null;
+  initialBankActivityId?: string | null;
+  /** Persist composition + bank refs onto the Track Builder draft. */
+  onDraftSync?: (patch: LearningTrackCompilerDraftSync) => void;
+};
+
 /**
- * Timeline Learning Track Compiler MVP — Day 1 hobbies.
- * Center = live in-process Lesson Player; left/right = track/beat settings.
+ * Timeline Learning Track Compiler — live Lesson Player preview + beat inspector.
+ * Used standalone at /learning-tracks (redirect) and embedded in Track Builder Practice.
  */
 export function LearningTrackCompilerWorkspace({
   classes = [],
   classLoadError = false,
-}: {
-  classes?: readonly { id: string; title: string }[];
-  classLoadError?: boolean;
-} = {}) {
+  chrome = "standalone",
+  initialComposition,
+  initialLibraryId = null,
+  initialBankActivityId = null,
+  onDraftSync,
+}: LearningTrackCompilerWorkspaceProps = {}) {
+  const embedded = chrome === "embedded";
   const [composition, setComposition] = useState<LearningTrackComposition>(() =>
-    structuredClone(HOBBIES_DAY_1_COMPOSITION),
+    structuredClone(initialComposition ?? HOBBIES_DAY_1_COMPOSITION),
   );
   const [selectedBeatId, setSelectedBeatId] = useState<string | null>(null);
   const [leftOpenSectionId, setLeftOpenSectionId] = useState<string | null>(null);
   const [rightOpenSectionId, setRightOpenSectionId] = useState<string | null>(null);
   const [hotspotPanelOpenId, setHotspotPanelOpenId] = useState<string | null>(null);
   const [previewScreenIndex, setPreviewScreenIndex] = useState(0);
-  const [libraryId, setLibraryId] = useState<string | null>(null);
-  const [bankActivityId, setBankActivityId] = useState<string | null>(null);
+  const [libraryId, setLibraryId] = useState<string | null>(initialLibraryId);
+  const [bankActivityId, setBankActivityId] = useState<string | null>(
+    initialBankActivityId,
+  );
   const [bankActivityTitle, setBankActivityTitle] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -273,6 +303,21 @@ export function LearningTrackCompilerWorkspace({
     () => compositionStructureKey(composition),
     [composition],
   );
+
+  const onDraftSyncRef = useRef(onDraftSync);
+  useEffect(() => {
+    onDraftSyncRef.current = onDraftSync;
+  }, [onDraftSync]);
+
+  // Keep Track Builder localStorage draft aligned with LTC composition + bank refs.
+  useEffect(() => {
+    if (!onDraftSyncRef.current) return;
+    onDraftSyncRef.current({
+      composition,
+      libraryId,
+      bankActivityId,
+    });
+  }, [composition, libraryId, bankActivityId]);
 
   const selectedBeat = useMemo(
     () => beatPlan.find((beat) => beat.id === selectedBeatId) ?? beatPlan[0] ?? null,
@@ -590,6 +635,19 @@ export function LearningTrackCompilerWorkspace({
     );
   }, [pack, selectedBeat, selectedLifSettings]);
 
+  const [mcItemIndex, setMcItemIndex] = useAuthoringItemIndex(
+    selectedMcItems.length,
+    selectedBeat?.id ?? "mc",
+  );
+  const [listenItemIndex, setListenItemIndex] = useAuthoringItemIndex(
+    selectedListenItems.length,
+    selectedBeat?.id ?? "listen",
+  );
+  const [lifExampleIndex, setLifExampleIndex] = useAuthoringItemIndex(
+    selectedLifExamples.length,
+    selectedBeat?.id ?? "lif",
+  );
+
   const updateHotspotsSettings = (
     next: LearningTrackExploreHotspotsSettings,
   ) => {
@@ -885,7 +943,10 @@ export function LearningTrackCompilerWorkspace({
           authoring: saved,
           title: saved.title || next.title,
           filename,
-          source: { libraryId: entry.id, via: "learning_track_compiler" },
+          source: {
+            libraryId: entry.id,
+            via: embedded ? "track_builder_practice" : "learning_track_compiler",
+          },
         }),
       });
       const payload = (await response.json().catch(() => null)) as {
@@ -961,13 +1022,31 @@ export function LearningTrackCompilerWorkspace({
   return (
     <main data-ltc-root className="flex min-h-0 flex-1 flex-col">
       <header className="ltc-header sticky top-0 z-30 flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3">
-        <Link href="/teacher/activity-builder" className="ltc-link text-sm hover:underline">
-          ← Activity Builder
+        <Link
+          href={
+            embedded
+              ? "/teacher/activity-builder/tracks"
+              : "/teacher/activity-builder"
+          }
+          className="ltc-link text-sm hover:underline"
+        >
+          {embedded ? "← Tracks" : "← Activity Builder"}
         </Link>
         <div className="min-w-0">
-          <h1 className="ltc-fg text-lg font-semibold">Learning Track Compiler</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="ltc-fg text-lg font-semibold">
+              {embedded ? "Track builder" : "Learning Track Compiler"}
+            </h1>
+            {embedded ? (
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-900">
+                Practice
+              </span>
+            ) : null}
+          </div>
           <p className="truncate text-xs ltc-subtle">
-            Timeline MVP · {composition.title}
+            {embedded
+              ? `Practice track · ${composition.title}`
+              : `Timeline MVP · ${composition.title}`}
           </p>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -1032,7 +1111,7 @@ export function LearningTrackCompilerWorkspace({
                     : "Publish latest compile, then assign as homework"
             }
           >
-            Assign homework
+            Assign
           </button>
           <button
             type="button"
@@ -1568,105 +1647,111 @@ export function LearningTrackCompilerWorkspace({
                     prompt audio for individual items. Leave a field alone to
                     keep the compiled value.
                   </p>
-                  <ul className="mt-3 space-y-3">
-                    {selectedMcItems.map((item, index) => {
-                      const overlay = selectedMcSettings.itemOverlays?.find(
-                        (entry) => entry.itemId === item.itemId,
-                      );
-                      const question = overlay?.question ?? item.question;
-                      const correctOptionId =
-                        overlay?.correctOptionId ?? item.correctOptionId;
-                      const promptAudioUrl =
-                        overlay?.promptAudioUrl ?? item.promptAudioUrl;
-                      const correctLabel =
-                        item.options.find((option) => option.id === correctOptionId)
-                          ?.label ?? item.itemId;
-                      return (
-                      <li
-                        key={item.itemId}
-                        className="rounded border border-stone-200/80 bg-white/40 px-2.5 py-2"
-                      >
-                        <p className="text-[11px] font-medium ltc-fg">
-                          Question {index + 1}
-                          <span className="ml-1 font-normal ltc-subtle">
-                            · {correctLabel}
-                          </span>
-                        </p>
-                        <label className="mt-2 block text-[11px] ltc-muted">
-                          Question text
-                          <input
-                            type="text"
-                            className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
-                            value={question}
-                            onChange={(event) =>
-                              patchMcItemOverlay(item.itemId, {
-                                question: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                        <div className="mt-2 space-y-1.5">
-                          <p className="text-[11px] ltc-muted">
-                            Options{" "}
-                            <span className="font-normal ltc-subtle">
-                              (radio = correct answer)
-                            </span>
-                          </p>
-                          {item.options.map((option) => (
-                            <div
-                              key={option.id}
-                              className="flex items-center gap-2 text-[11px] ltc-muted"
-                            >
-                              <input
-                                type="radio"
-                                name={`ltc-mc-correct-${item.itemId}`}
-                                className="shrink-0"
-                                checked={correctOptionId === option.id}
-                                onChange={() =>
-                                  patchMcItemOverlay(item.itemId, {
-                                    correctOptionId: option.id,
-                                  })
-                                }
-                                aria-label={`Mark option ${option.id} as correct`}
-                              />
-                              <span className="w-4 shrink-0 font-semibold uppercase ltc-label">
-                                {option.id}
+                  <div className="mt-3">
+                    <AuthoringItemPager
+                      tone="ltc"
+                      count={selectedMcItems.length}
+                      index={mcItemIndex}
+                      onIndexChange={setMcItemIndex}
+                      label="Question"
+                    >
+                      {(() => {
+                        const item = selectedMcItems[mcItemIndex];
+                        if (!item) return null;
+                        const overlay = selectedMcSettings.itemOverlays?.find(
+                          (entry) => entry.itemId === item.itemId,
+                        );
+                        const question = overlay?.question ?? item.question;
+                        const correctOptionId =
+                          overlay?.correctOptionId ?? item.correctOptionId;
+                        const promptAudioUrl =
+                          overlay?.promptAudioUrl ?? item.promptAudioUrl;
+                        const correctLabel =
+                          item.options.find(
+                            (option) => option.id === correctOptionId,
+                          )?.label ?? item.itemId;
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-[11px] font-medium ltc-fg">
+                              Correct:{" "}
+                              <span className="font-normal ltc-subtle">
+                                {correctLabel}
                               </span>
+                            </p>
+                            <label className="block text-[11px] ltc-muted">
+                              Question text
                               <input
                                 type="text"
-                                className="ltc-input min-w-0 flex-1 rounded border px-2 py-1 text-xs"
-                                value={
-                                  overlay?.optionLabels?.[option.id] ??
-                                  option.label
-                                }
+                                className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                                value={question}
                                 onChange={(event) =>
                                   patchMcItemOverlay(item.itemId, {
-                                    optionLabel: {
-                                      optionId: option.id,
-                                      label: event.target.value,
-                                    },
+                                    question: event.target.value,
                                   })
                                 }
                               />
+                            </label>
+                            <div className="space-y-1.5">
+                              <p className="text-[11px] ltc-muted">
+                                Options{" "}
+                                <span className="font-normal ltc-subtle">
+                                  (radio = correct answer)
+                                </span>
+                              </p>
+                              {item.options.map((option) => (
+                                <div
+                                  key={option.id}
+                                  className="flex items-center gap-2 text-[11px] ltc-muted"
+                                >
+                                  <input
+                                    type="radio"
+                                    name={`ltc-mc-correct-${item.itemId}`}
+                                    className="shrink-0"
+                                    checked={correctOptionId === option.id}
+                                    onChange={() =>
+                                      patchMcItemOverlay(item.itemId, {
+                                        correctOptionId: option.id,
+                                      })
+                                    }
+                                    aria-label={`Mark option ${option.id} as correct`}
+                                  />
+                                  <span className="w-4 shrink-0 font-semibold uppercase ltc-label">
+                                    {option.id}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="ltc-input min-w-0 flex-1 rounded border px-2 py-1 text-xs"
+                                    value={
+                                      overlay?.optionLabels?.[option.id] ??
+                                      option.label
+                                    }
+                                    onChange={(event) =>
+                                      patchMcItemOverlay(item.itemId, {
+                                        optionLabel: {
+                                          optionId: option.id,
+                                          label: event.target.value,
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                        <div className="mt-2">
-                          <AudioClipControls
-                            label="Prompt audio"
-                            hint="Overrides word audio and the pack-wide clip for this question only."
-                            value={promptAudioUrl}
-                            onChange={(url) =>
-                              patchMcItemOverlay(item.itemId, {
-                                promptAudioUrl: url.trim() ? url : null,
-                              })
-                            }
-                          />
-                        </div>
-                      </li>
-                      );
-                    })}
-                  </ul>
+                            <AudioClipControls
+                              label="Prompt audio"
+                              hint="Overrides word audio and the pack-wide clip for this question only."
+                              value={promptAudioUrl}
+                              onChange={(url) =>
+                                patchMcItemOverlay(item.itemId, {
+                                  promptAudioUrl: url.trim() ? url : null,
+                                })
+                              }
+                            />
+                          </div>
+                        );
+                      })()}
+                    </AuthoringItemPager>
+                  </div>
                 </div>
               ) : selectedCompositionBeat?.source.type === "vocab_compile" ? (
                 <p className="mt-3 text-[11px] leading-snug ltc-subtle">
@@ -1790,43 +1875,45 @@ export function LearningTrackCompilerWorkspace({
                 text.
               </p>
               {selectedListenItems.length > 0 ? (
-                <ul className="mt-3 space-y-3">
-                  {selectedListenItems.map((item, index) => {
-                    const overlay = selectedListenSettings.itemOverlays?.find(
-                      (entry) => entry.itemIndex === item.itemIndex,
-                    );
-                    const bodyText = overlay?.bodyText ?? item.bodyText;
-                    const promptAudioUrl =
-                      overlay?.promptAudioUrl ?? item.promptAudioUrl;
-                    const autoPlay = overlay?.autoPlay ?? item.autoPlay;
-                    return (
-                      <li
-                        key={item.itemIndex}
-                        className="rounded border border-stone-200/80 bg-white/40 px-2.5 py-2"
-                      >
-                        <p className="text-[11px] font-medium ltc-fg">
-                          Question {index + 1}
-                        </p>
-                        <label className="mt-2 block text-[11px] ltc-muted">
-                          Question prompt
-                          <input
-                            type="text"
-                            className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
-                            value={bodyText}
-                            onChange={(event) =>
-                              patchListenItemOverlay(item.itemIndex, {
-                                bodyText: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                        {item.dialogText.trim() ? (
-                          <p className="mt-1.5 text-[11px] leading-snug ltc-subtle">
-                            Dialog: {item.dialogText.trim().slice(0, 90)}
-                            {item.dialogText.trim().length > 90 ? "…" : ""}
-                          </p>
-                        ) : null}
-                        <div className="mt-2">
+                <div className="mt-3">
+                  <AuthoringItemPager
+                    tone="ltc"
+                    count={selectedListenItems.length}
+                    index={listenItemIndex}
+                    onIndexChange={setListenItemIndex}
+                    label="Question"
+                  >
+                    {(() => {
+                      const item = selectedListenItems[listenItemIndex];
+                      if (!item || !selectedListenSettings) return null;
+                      const overlay = selectedListenSettings.itemOverlays?.find(
+                        (entry) => entry.itemIndex === item.itemIndex,
+                      );
+                      const bodyText = overlay?.bodyText ?? item.bodyText;
+                      const promptAudioUrl =
+                        overlay?.promptAudioUrl ?? item.promptAudioUrl;
+                      const autoPlay = overlay?.autoPlay ?? item.autoPlay;
+                      return (
+                        <div className="space-y-2">
+                          <label className="block text-[11px] ltc-muted">
+                            Question prompt
+                            <input
+                              type="text"
+                              className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                              value={bodyText}
+                              onChange={(event) =>
+                                patchListenItemOverlay(item.itemIndex, {
+                                  bodyText: event.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          {item.dialogText.trim() ? (
+                            <p className="text-[11px] leading-snug ltc-subtle">
+                              Dialog: {item.dialogText.trim().slice(0, 90)}
+                              {item.dialogText.trim().length > 90 ? "…" : ""}
+                            </p>
+                          ) : null}
                           <AudioClipControls
                             label="Prompt audio"
                             hint="Replaces TTS for this dialog when set."
@@ -1837,24 +1924,24 @@ export function LearningTrackCompilerWorkspace({
                               })
                             }
                           />
+                          <label className="flex cursor-pointer items-center gap-2 text-xs ltc-fg">
+                            <input
+                              type="checkbox"
+                              className="rounded border"
+                              checked={autoPlay}
+                              onChange={(event) =>
+                                patchListenItemOverlay(item.itemIndex, {
+                                  autoPlay: event.target.checked,
+                                })
+                              }
+                            />
+                            Auto-play prompt
+                          </label>
                         </div>
-                        <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs ltc-fg">
-                          <input
-                            type="checkbox"
-                            className="rounded border"
-                            checked={autoPlay}
-                            onChange={(event) =>
-                              patchListenItemOverlay(item.itemIndex, {
-                                autoPlay: event.target.checked,
-                              })
-                            }
-                          />
-                          Auto-play prompt
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
+                      );
+                    })()}
+                  </AuthoringItemPager>
+                </div>
               ) : (
                 <p className="mt-3 text-[11px] leading-snug ltc-subtle">
                   Items appear after the preview compiles.
@@ -2064,26 +2151,31 @@ export function LearningTrackCompilerWorkspace({
                 Lesson Player uses TTS from the sentence.
               </p>
               {selectedLifExamples.length > 0 ? (
-                <ul className="mt-3 space-y-3">
-                  {selectedLifExamples.map((example) => {
-                    const overlay = selectedLifSettings.exampleOverlays?.find(
-                      (entry) => entry.exampleId === example.exampleId,
-                    );
-                    const audioUrl = overlay?.audioUrl ?? example.audioUrl;
-                    return (
-                      <li
-                        key={example.exampleId}
-                        className="rounded border border-stone-200/80 bg-white/40 px-2.5 py-2"
-                      >
-                        <p className="text-[11px] font-medium ltc-fg">
-                          {example.tabLabel}
-                        </p>
-                        {example.listenPreview ? (
-                          <p className="mt-0.5 text-[11px] leading-snug ltc-subtle">
-                            {example.listenPreview}
+                <div className="mt-3">
+                  <AuthoringItemPager
+                    tone="ltc"
+                    count={selectedLifExamples.length}
+                    index={lifExampleIndex}
+                    onIndexChange={setLifExampleIndex}
+                    label="Example"
+                  >
+                    {(() => {
+                      const example = selectedLifExamples[lifExampleIndex];
+                      if (!example || !selectedLifSettings) return null;
+                      const overlay = selectedLifSettings.exampleOverlays?.find(
+                        (entry) => entry.exampleId === example.exampleId,
+                      );
+                      const audioUrl = overlay?.audioUrl ?? example.audioUrl;
+                      return (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-medium ltc-fg">
+                            {example.tabLabel}
                           </p>
-                        ) : null}
-                        <div className="mt-2">
+                          {example.listenPreview ? (
+                            <p className="text-[11px] leading-snug ltc-subtle">
+                              {example.listenPreview}
+                            </p>
+                          ) : null}
                           <AudioClipControls
                             label="Listen audio"
                             hint="Replaces TTS when the student taps Listen."
@@ -2095,10 +2187,10 @@ export function LearningTrackCompilerWorkspace({
                             }
                           />
                         </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                      );
+                    })()}
+                  </AuthoringItemPager>
+                </div>
               ) : (
                 <p className="mt-3 text-[11px] leading-snug ltc-subtle">
                   Listen examples appear after the preview compiles.

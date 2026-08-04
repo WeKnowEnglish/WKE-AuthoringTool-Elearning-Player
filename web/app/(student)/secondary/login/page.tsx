@@ -58,7 +58,7 @@ export default async function SecondaryLoginPage({ searchParams }: Props) {
         <p className="text-xs font-extrabold uppercase tracking-wide text-[#1d4ed8]">
           Secondary
         </p>
-        <h1 className="mt-1 text-2xl font-extrabold text-kid-ink">Vocabulary login</h1>
+        <h1 className="mt-1 text-2xl font-extrabold text-kid-ink">Secondary student login</h1>
         <p className="mt-2 text-sm font-semibold text-kid-ink/85">
           Sign in or create a Secondary account for lower-secondary vocabulary practice.
         </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowDown,
@@ -28,16 +28,39 @@ import {
 const TEMPLATE = getHomeworkTemplateDefinition("secondary-homework-template-one")!;
 const PART_IDS = TEMPLATE.parts.map((part) => part.id);
 
+type SecondaryHomeworkContent = typeof SECONDARY_HOMEWORK_ONE;
+
 type Props = {
   homeworkId?: string;
   alreadyCompleted?: boolean;
   homeHref?: string;
   initialSubmission?: HomeworkTemplateSubmission | null;
   initialRecording?: AssessmentSpeakingRecording;
+  /** Frozen graded-track clone; defaults to live source template. */
+  content?: SecondaryHomeworkContent;
+  /** Compiler embed: unlock parts, teacher chrome, follow focus. */
+  mode?: "student" | "authoring-preview";
+  /** Part id to show while authoring (e.g. community-sequence). */
+  focusPartId?: string | null;
+  /** Override nav labels from graded track part labels. */
+  partLabels?: Readonly<Record<string, string>>;
+  title?: string;
+  subtitle?: string;
+  /**
+   * Ordered Secondary part ids to show (graded freeze.parts).
+   * Defaults to the full five-part template.
+   */
+  visiblePartIds?: readonly string[];
 };
 
-function firstIncompletePart(submission?: HomeworkTemplateSubmission | null) {
-  return PART_IDS.find((id) => !submission?.content.parts[id]) ?? PART_IDS[PART_IDS.length - 1]!;
+function firstIncompletePart(
+  partIds: readonly string[],
+  submission?: HomeworkTemplateSubmission | null,
+) {
+  return (
+    partIds.find((id) => !submission?.content.parts[id]) ??
+    partIds[partIds.length - 1]!
+  );
 }
 
 function resultTone(correct: number, total: number) {
@@ -52,12 +75,49 @@ export function SecondaryHomeworkOneShell({
   homeHref = "/secondary",
   initialSubmission,
   initialRecording,
+  content: contentProp,
+  mode = "student",
+  focusPartId = null,
+  partLabels,
+  title,
+  subtitle,
+  visiblePartIds,
 }: Props) {
   const router = useRouter();
+  const authoringPreview = mode === "authoring-preview";
+  const content = contentProp ?? SECONDARY_HOMEWORK_ONE;
+  const displayTitle = title?.trim() || TEMPLATE.title;
+  const displaySubtitle = subtitle?.trim() || TEMPLATE.subtitle;
+  const navParts = useMemo(() => {
+    const allowed = new Set(PART_IDS);
+    const ids =
+      visiblePartIds && visiblePartIds.length > 0
+        ? visiblePartIds.filter((id) => allowed.has(id))
+        : [...PART_IDS];
+    const unique = [...new Set(ids)];
+    return unique.map((id, index) => {
+      const registry = TEMPLATE.parts.find((part) => part.id === id)!;
+      return {
+        id,
+        order: index + 1,
+        label: partLabels?.[id] ?? registry.label,
+      };
+    });
+  }, [partLabels, visiblePartIds]);
+  const navPartIds = useMemo(() => navParts.map((part) => part.id), [navParts]);
   const initialParts = initialSubmission?.content.parts ?? {};
-  const [activePartId, setActivePartId] = useState(() => firstIncompletePart(initialSubmission));
+  const [activePartId, setActivePartId] = useState(() => {
+    if (authoringPreview && focusPartId && navPartIds.includes(focusPartId)) {
+      return focusPartId;
+    }
+    return authoringPreview
+      ? navPartIds[0]!
+      : firstIncompletePart(navPartIds, initialSubmission);
+  });
   const [savedParts, setSavedParts] = useState(() => new Set(Object.keys(initialParts)));
-  const [sequence, setSequence] = useState(() => sequenceFromAnswers(initialParts["community-sequence"]?.answers ?? {}));
+  const [sequence, setSequence] = useState(() =>
+    sequenceFromAnswers(initialParts["community-sequence"]?.answers ?? {}, content.reading),
+  );
   const [corrections, setCorrections] = useState<Record<string, string>>(() => initialParts["past-corrections"]?.answers ?? {});
   const [dialogue, setDialogue] = useState<Record<string, string>>(() => initialParts["irregular-dialogue"]?.answers ?? {});
   const [questionChoices, setQuestionChoices] = useState<Record<string, string>>(() => initialParts["past-question-choice"]?.answers ?? {});
@@ -65,23 +125,38 @@ export function SecondaryHomeworkOneShell({
   const [checkedScores, setCheckedScores] = useState<Record<string, number>>({});
   const [notice, setNotice] = useState(alreadyCompleted ? "This homework has already been submitted. You can review your answers below." : "");
   const [pending, startTransition] = useTransition();
-  const activePart = TEMPLATE.parts.find((part) => part.id === activePartId) ?? TEMPLATE.parts[0]!;
-  const activeIndex = TEMPLATE.parts.findIndex((part) => part.id === activePart.id);
+  const activePart =
+    navParts.find((part) => part.id === activePartId) ?? navParts[0]!;
+  const activeIndex = navParts.findIndex((part) => part.id === activePart.id);
+  const activeLabel = activePart.label;
+
+  useEffect(() => {
+    if (!authoringPreview || !focusPartId) return;
+    if (navPartIds.includes(focusPartId)) {
+      setActivePartId(focusPartId);
+    }
+  }, [authoringPreview, focusPartId, navPartIds]);
+
+  useEffect(() => {
+    if (navPartIds.includes(activePartId)) return;
+    if (navPartIds[0]) setActivePartId(navPartIds[0]);
+  }, [activePartId, navPartIds]);
 
   const correctionScore = useMemo(
-    () => scoreSecondaryAnswers(corrections, SECONDARY_HOMEWORK_ONE.corrections.questions),
-    [corrections],
+    () => scoreSecondaryAnswers(corrections, content.corrections.questions),
+    [content.corrections.questions, corrections],
   );
   const dialogueScore = useMemo(
-    () => scoreSecondaryAnswers(dialogue, SECONDARY_HOMEWORK_ONE.dialogue.lines),
-    [dialogue],
+    () => scoreSecondaryAnswers(dialogue, content.dialogue.lines),
+    [content.dialogue.lines, dialogue],
   );
   const questionScore = useMemo(
-    () => scoreSecondaryAnswers(questionChoices, SECONDARY_HOMEWORK_ONE.questions.items),
-    [questionChoices],
+    () => scoreSecondaryAnswers(questionChoices, content.questions.items),
+    [content.questions.items, questionChoices],
   );
 
-  const isAvailable = (index: number) => index === 0 || savedParts.has(TEMPLATE.parts[index - 1]!.id);
+  const isAvailable = (index: number) =>
+    authoringPreview || index === 0 || savedParts.has(navParts[index - 1]!.id);
 
   function moveSequence(index: number, direction: -1 | 1) {
     const target = index + direction;
@@ -123,7 +198,7 @@ export function SecondaryHomeworkOneShell({
         }
       }
       setSavedParts((current) => new Set(current).add(partId));
-      const nextPart = TEMPLATE.parts.find((part) => part.order === activePart.order + 1);
+      const nextPart = navParts.find((part) => part.order === activePart.order + 1);
       if (nextPart) setActivePartId(nextPart.id);
       setNotice("Part saved.");
     });
@@ -145,9 +220,9 @@ export function SecondaryHomeworkOneShell({
         homeworkId,
         partId: "community-speaking",
         snapshot: {
-          answers: { [SECONDARY_HOMEWORK_ONE.speaking.responseId]: recording.id },
+          answers: { [content.speaking.responseId]: recording.id },
           correct: null,
-          total: SECONDARY_HOMEWORK_ONE.speaking.teacherScoreTotal,
+          total: content.speaking.teacherScoreTotal,
         },
         submit: true,
       });
@@ -168,9 +243,9 @@ export function SecondaryHomeworkOneShell({
 
   function resetPilot() {
     if (homeworkId) return;
-    setActivePartId(PART_IDS[0]!);
+    setActivePartId(navPartIds[0]!);
     setSavedParts(new Set());
-    setSequence(SECONDARY_HOMEWORK_ONE.reading.events.map((event) => event.id));
+    setSequence(content.reading.events.map((event) => event.id));
     setCorrections({});
     setDialogue({});
     setQuestionChoices({});
@@ -218,30 +293,52 @@ export function SecondaryHomeworkOneShell({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={authoringPreview ? "space-y-4 p-3 sm:p-4" : "space-y-4"}>
       <header className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Secondary - Grades 8–9</p>
-            <h2 className="mt-1 text-2xl font-black text-[#17375e]">{TEMPLATE.title}</h2>
-            <p className="mt-2 max-w-3xl text-sm font-semibold text-slate-600">{TEMPLATE.subtitle}</p>
+            {authoringPreview ? (
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                Teacher preview · student view
+              </p>
+            ) : (
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">
+                Secondary - Grades 8–9
+              </p>
+            )}
+            <h2 className="mt-1 text-2xl font-black text-[#17375e]">{displayTitle}</h2>
+            <p className="mt-2 max-w-3xl text-sm font-semibold text-slate-600">
+              {displaySubtitle}
+            </p>
           </div>
           <span className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-2 text-xs font-black text-violet-900">
             <Clock3 className="h-4 w-4" /> About {TEMPLATE.estimatedMinutes} minutes
           </span>
         </div>
-        {!homeworkId ? <button type="button" onClick={resetPilot} className="mt-3 inline-flex items-center gap-1 text-xs font-black text-slate-600 underline"><RotateCcw className="h-3.5 w-3.5" />Reset pilot</button> : null}
+        {!homeworkId ? (
+          <button
+            type="button"
+            onClick={resetPilot}
+            className="mt-3 inline-flex items-center gap-1 text-xs font-black text-slate-600 underline"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {authoringPreview ? "Reset preview" : "Reset pilot"}
+          </button>
+        ) : null}
       </header>
 
       {notice ? <p role="status" className="rounded-xl border-2 border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-900">{notice}</p> : null}
 
       <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <nav aria-label="Homework parts" className="space-y-2 lg:sticky lg:top-4 lg:self-start">
-          <p className="px-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Five-part homework</p>
-          {TEMPLATE.parts.map((part, index) => {
+          <p className="px-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+            {navParts.length}-part homework
+          </p>
+          {navParts.map((part, index) => {
             const active = part.id === activePart.id;
             const done = savedParts.has(part.id);
             const available = isAvailable(index);
+            const label = part.label;
             return (
               <button
                 key={part.id}
@@ -253,7 +350,7 @@ export function SecondaryHomeworkOneShell({
                 <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${done ? "bg-emerald-500 text-white" : active ? "bg-violet-700 text-white" : "bg-slate-200"}`}>
                   {done ? <Check className="h-4 w-4" /> : part.order}
                 </span>
-                <span className="min-w-0 flex-1 text-sm font-black">{part.label}</span>
+                <span className="min-w-0 flex-1 text-sm font-black">{label}</span>
                 {!available ? <LockKeyhole className="h-4 w-4 shrink-0" /> : null}
               </button>
             );
@@ -262,24 +359,26 @@ export function SecondaryHomeworkOneShell({
 
         <section className="min-w-0 rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="mb-5">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-700">Part {activePart.order} of {TEMPLATE.sectionCount}</p>
-            <h3 className="mt-1 text-xl font-black text-[#17375e]">{activePart.label}</h3>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-700">
+              Part {activePart.order} of {navParts.length}
+            </p>
+            <h3 className="mt-1 text-xl font-black text-[#17375e]">{activeLabel}</h3>
           </div>
 
           {activePartId === "community-sequence" ? <div>
-            <p className="font-bold text-slate-700">{SECONDARY_HOMEWORK_ONE.reading.instructions}</p>
+            <p className="font-bold text-slate-700">{content.reading.instructions}</p>
             <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
               <article className="rounded-xl border-2 border-sky-100 bg-sky-50/50 p-4">
-                <h4 className="text-lg font-black text-[#17375e]">{SECONDARY_HOMEWORK_ONE.reading.title}</h4>
+                <h4 className="text-lg font-black text-[#17375e]">{content.reading.title}</h4>
                 <div className="mt-3 space-y-3 text-sm font-medium leading-7 text-slate-700">
-                  {SECONDARY_HOMEWORK_ONE.reading.paragraphs.map((paragraph) => <p key={paragraph.slice(0, 35)}>{paragraph}</p>)}
+                  {content.reading.paragraphs.map((paragraph) => <p key={paragraph.slice(0, 35)}>{paragraph}</p>)}
                 </div>
               </article>
               <div>
                 <p className="mb-2 text-sm font-black text-slate-700">Put the events in the correct order.</p>
                 <ol className="space-y-2">
                   {sequence.map((eventId, index) => {
-                    const event = SECONDARY_HOMEWORK_ONE.reading.events.find((item) => item.id === eventId)!;
+                    const event = content.reading.events.find((item) => item.id === eventId)!;
                     return <li key={event.id} className="flex gap-2 rounded-xl border-2 border-slate-200 bg-white p-3">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-700 text-sm font-black text-white">{index + 1}</span>
                       <p className="min-w-0 flex-1 text-sm font-semibold leading-6 text-slate-700"><span className="font-black">{event.id}.</span> {event.text}</p>
@@ -292,26 +391,32 @@ export function SecondaryHomeworkOneShell({
                 </ol>
               </div>
             </div>
-            {objectiveFooter({ partId: activePartId, answers: sequenceAnswers(sequence), score: scoreSequence(sequence), total: sequence.length, complete: true })}
+            {objectiveFooter({
+              partId: activePartId,
+              answers: sequenceAnswers(sequence),
+              score: scoreSequence(sequence, content.reading.correctOrder),
+              total: sequence.length,
+              complete: true,
+            })}
           </div> : null}
 
           {activePartId === "past-corrections" ? <div>
-            <p className="font-bold text-slate-700">{SECONDARY_HOMEWORK_ONE.corrections.instructions}</p>
+            <p className="font-bold text-slate-700">{content.corrections.instructions}</p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {SECONDARY_HOMEWORK_ONE.corrections.questions.map((question, index) => <label key={question.id} className="rounded-xl border-2 border-slate-200 p-4">
+              {content.corrections.questions.map((question, index) => <label key={question.id} className="rounded-xl border-2 border-slate-200 p-4">
                 <span className="text-xs font-black uppercase tracking-wide text-violet-700">Question {index + 1}</span>
                 <span className="mt-2 block text-sm font-semibold leading-6 text-slate-700">{question.sentence}</span>
                 <span className="mt-3 block text-xs font-black text-slate-600">Correct verb</span>
                 <input value={corrections[question.id] ?? ""} onChange={(event) => setAnswer(setCorrections, activePartId, question.id, event.target.value)} autoCapitalize="none" className="mt-1 min-h-11 w-full rounded-lg border-2 border-slate-300 px-3 font-bold outline-none focus:border-violet-500" />
               </label>)}
             </div>
-            {objectiveFooter({ partId: activePartId, answers: corrections, score: correctionScore, total: SECONDARY_HOMEWORK_ONE.corrections.questions.length, complete: SECONDARY_HOMEWORK_ONE.corrections.questions.every((item) => Boolean(corrections[item.id]?.trim())) })}
+            {objectiveFooter({ partId: activePartId, answers: corrections, score: correctionScore, total: content.corrections.questions.length, complete: content.corrections.questions.every((item) => Boolean(corrections[item.id]?.trim())) })}
           </div> : null}
 
           {activePartId === "irregular-dialogue" ? <div>
-            <p className="font-bold text-slate-700">{SECONDARY_HOMEWORK_ONE.dialogue.instructions}</p>
+            <p className="font-bold text-slate-700">{content.dialogue.instructions}</p>
             <div className="mt-4 space-y-3">
-              {SECONDARY_HOMEWORK_ONE.dialogue.lines.map((line) => <label key={line.id} className="block rounded-xl border-2 border-slate-200 p-3 sm:p-4">
+              {content.dialogue.lines.map((line) => <label key={line.id} className="block rounded-xl border-2 border-slate-200 p-3 sm:p-4">
                 <span className="mb-2 block text-xs font-black uppercase tracking-wide text-violet-700">{line.speaker}</span>
                 <span className="flex flex-wrap items-center gap-2 text-sm font-semibold leading-7 text-slate-700">
                   <span>{line.before}</span>
@@ -321,13 +426,13 @@ export function SecondaryHomeworkOneShell({
                 </span>
               </label>)}
             </div>
-            {objectiveFooter({ partId: activePartId, answers: dialogue, score: dialogueScore, total: SECONDARY_HOMEWORK_ONE.dialogue.lines.length, complete: SECONDARY_HOMEWORK_ONE.dialogue.lines.every((item) => Boolean(dialogue[item.id]?.trim())) })}
+            {objectiveFooter({ partId: activePartId, answers: dialogue, score: dialogueScore, total: content.dialogue.lines.length, complete: content.dialogue.lines.every((item) => Boolean(dialogue[item.id]?.trim())) })}
           </div> : null}
 
           {activePartId === "past-question-choice" ? <div>
-            <p className="font-bold text-slate-700">{SECONDARY_HOMEWORK_ONE.questions.instructions}</p>
+            <p className="font-bold text-slate-700">{content.questions.instructions}</p>
             <div className="mt-4 space-y-3">
-              {SECONDARY_HOMEWORK_ONE.questions.items.map((item, index) => <fieldset key={item.id} className="rounded-xl border-2 border-slate-200 p-4">
+              {content.questions.items.map((item, index) => <fieldset key={item.id} className="rounded-xl border-2 border-slate-200 p-4">
                 <legend className="px-1 text-xs font-black uppercase tracking-wide text-violet-700">Question {index + 1}</legend>
                 <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-700">
                   {item.before ? <span>{item.before}</span> : null}
@@ -338,34 +443,42 @@ export function SecondaryHomeworkOneShell({
                 </div>
               </fieldset>)}
             </div>
-            {objectiveFooter({ partId: activePartId, answers: questionChoices, score: questionScore, total: SECONDARY_HOMEWORK_ONE.questions.items.length, complete: SECONDARY_HOMEWORK_ONE.questions.items.every((item) => Boolean(questionChoices[item.id])) })}
+            {objectiveFooter({ partId: activePartId, answers: questionChoices, score: questionScore, total: content.questions.items.length, complete: content.questions.items.every((item) => Boolean(questionChoices[item.id])) })}
           </div> : null}
 
           {activePartId === "community-speaking" ? <div>
             <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-4">
-              <p className="font-black leading-7 text-slate-800">{SECONDARY_HOMEWORK_ONE.speaking.instructions}</p>
+              <p className="font-black leading-7 text-slate-800">{content.speaking.instructions}</p>
               <ul className="mt-3 space-y-2 text-sm font-semibold text-slate-700">
-                {SECONDARY_HOMEWORK_ONE.speaking.planningPrompts.map((prompt) => <li key={prompt} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />{prompt}</li>)}
+                {content.speaking.planningPrompts.map((prompt) => <li key={prompt} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />{prompt}</li>)}
               </ul>
             </div>
             <div className="mt-4">
               <AssessmentSpeakingRecorder
                 homeworkId={homeworkId}
                 partId="community-speaking"
-                responseId={SECONDARY_HOMEWORK_ONE.speaking.responseId}
-                maxDurationSeconds={SECONDARY_HOMEWORK_ONE.speaking.maxDurationSeconds}
+                responseId={content.speaking.responseId}
+                maxDurationSeconds={content.speaking.maxDurationSeconds}
                 initialRecording={recording}
                 submissionKind="homework-template"
                 onSaved={setRecording}
               />
             </div>
-            <p className="mt-3 text-xs font-bold text-slate-500">Your teacher will listen to this response and award up to {SECONDARY_HOMEWORK_ONE.speaking.teacherScoreTotal} points.</p>
+            <p className="mt-3 text-xs font-bold text-slate-500">Your teacher will listen to this response and award up to {content.speaking.teacherScoreTotal} points.</p>
             <button type="button" disabled={!recording || pending} onClick={finishHomework} className="mt-5 min-h-12 rounded-xl bg-emerald-600 px-6 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
               {pending ? "Submitting..." : homeworkId ? "Submit homework" : "Finish pilot"}
             </button>
           </div> : null}
 
-          {activeIndex > 0 ? <button type="button" onClick={() => setActivePartId(TEMPLATE.parts[activeIndex - 1]!.id)} className="mt-6 text-sm font-black text-violet-800 underline underline-offset-4">Back to Part {activePart.order - 1}</button> : null}
+          {activeIndex > 0 ? (
+            <button
+              type="button"
+              onClick={() => setActivePartId(navParts[activeIndex - 1]!.id)}
+              className="mt-6 text-sm font-black text-violet-800 underline underline-offset-4"
+            >
+              Back to Part {activePart.order - 1}
+            </button>
+          ) : null}
         </section>
       </div>
     </div>

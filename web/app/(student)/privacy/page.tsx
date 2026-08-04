@@ -29,7 +29,7 @@ export default function PrivacyPage() {
             Account details (such as email for teachers), class membership, and learning
             activity needed to deliver lessons and progress. Marketing analytics on public
             pages are limited to non-personal event names and coarse product properties
-            (for example activity type or CEFR band) ΓÇö not student names, emails, join codes,
+            (for example activity type or CEFR band) — not student names, emails, join codes,
             answers, chat, or audio.
           </p>
           <h2 className="pt-2 text-xl font-extrabold text-kid-ink">Children</h2>

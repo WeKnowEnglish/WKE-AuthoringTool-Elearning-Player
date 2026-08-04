@@ -55,7 +55,7 @@ child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
 
 try {
   await waitUntilReady(origin, child);
-  await assertRoute(origin, "/secondary/login", [200], /Vocabulary login/i);
+  await assertRoute(origin, "/secondary/login", [200], /Secondary student login/i);
   await assertRoute(origin, "/secondary", [307, 308], null);
   await assertRoute(origin, "/secondary/match", [307, 308], null);
   await assertRoute(origin, "/secondary/cloze", [307, 308], null);

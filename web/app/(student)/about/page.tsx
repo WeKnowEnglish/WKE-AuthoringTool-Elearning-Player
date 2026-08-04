@@ -8,7 +8,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/seo/site";
 export const metadata: Metadata = buildPublicMetadata({
   title: "About",
   description:
-    "Meet Brady Myers, M.Ed. ΓÇö ESL teacher and curriculum designer behind We Know English interactive activities and teaching tools.",
+    "Meet Brady Myers, M.Ed. — ESL teacher and curriculum designer behind We Know English interactive activities and teaching tools.",
   pathname: "/about",
 });
 
@@ -46,7 +46,7 @@ export default function AboutPage() {
             Built by a teacher for connected English learning
           </h1>
           <p className="mt-4 text-base font-semibold leading-relaxed text-[var(--landing-body-muted)] sm:text-lg">
-            {SITE_NAME} is created by Brady Myers, M.Ed. ΓÇö an ESL teacher and curriculum
+            {SITE_NAME} is created by Brady Myers, M.Ed. — an ESL teacher and curriculum
             designer focused on interactive lessons that work across classroom teaching,
             homework, and self-study.
           </p>

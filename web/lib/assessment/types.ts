@@ -69,12 +69,18 @@ export type AssessmentPart =
       kind: "listening_character_match";
       activity: {
         audioText: string;
+        /** Optional uploaded clip; students hear this instead of TTS when set. */
+        audioUrl?: string;
+        image: { src: string; alt: string };
         names: Array<{ id: string; name: string }>;
-        characters: Array<{
+        /** People hitboxes on the scene; answers map target id → name id. */
+        targets: Array<{
           id: string;
-          imageSrc: string;
-          imageAlt: string;
-          clueLabel: string;
+          label: string;
+          xPercent: number;
+          yPercent: number;
+          widthPercent: number;
+          heightPercent: number;
           correctNameId: string;
         }>;
       };
@@ -83,6 +89,7 @@ export type AssessmentPart =
       kind: "listening_information";
       activity: {
         audioText: string;
+        audioUrl?: string;
         organizerTitle: string;
         fields: Array<{ id: string; label: string; acceptedAnswers: string[] }>;
       };
@@ -91,6 +98,7 @@ export type AssessmentPart =
       kind: "listening_item_match";
       activity: {
         audioText: string;
+        audioUrl?: string;
         choices: Array<{ id: string; label: string; imageSrc?: string }>;
         prompts: Array<{ id: string; label: string; correctChoiceId: string }>;
       };
@@ -101,6 +109,7 @@ export type AssessmentPart =
         items: Array<{
           id: string;
           audioText: string;
+          audioUrl?: string;
           choices: Array<{ id: string; imageSrc: string; imageAlt: string; label: string }>;
           correctChoiceId: string;
         }>;
@@ -110,6 +119,7 @@ export type AssessmentPart =
       kind: "listening_colour_picture";
       activity: {
         audioText: string;
+        audioUrl?: string;
         image: { src: string; alt: string };
         palette: Array<{ id: string; label: string; hex: string }>;
         targets: Array<{

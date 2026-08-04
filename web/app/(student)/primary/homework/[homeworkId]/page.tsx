@@ -22,7 +22,10 @@ import { PrimaryA2AssessmentPilot } from "@/components/assessment/PrimaryA2Asses
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
+import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
+import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolve-assessment-definition";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
+import type { HomeworkTemplateOne } from "@/lib/homework-templates/homework-template-one";
 import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessmentSpeakingReview } from "@/lib/data/assessment-attempts";
 import { createClient } from "@/lib/supabase/server";
 
@@ -91,6 +94,7 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
     return (
       <PrimaryA2AssessmentPilot
         homeworkId={homework.id}
+        definition={resolveHomeworkAssessmentDefinition(payload)}
         initialAttempt={initialAttempt}
         initialSpeakingRecordings={initialSpeakingRecordings}
         speakingReview={speakingReview}
@@ -304,6 +308,24 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
           homeworkId={homework.id}
           alreadyCompleted={Boolean(homework.completedAt)}
         />
+      ) : null}
+
+      {payload.type === "graded_track" && payload.level === "primary" ? (
+        (() => {
+          const freeze = parseGradedTrackFreezeDocument(payload.document);
+          const document = freeze?.primaryDocument as HomeworkTemplateOne | undefined;
+          return document ? (
+            <HomeworkTemplateOnePilot
+              homeworkId={homework.id}
+              alreadyCompleted={Boolean(homework.completedAt)}
+              document={document}
+            />
+          ) : (
+            <p className="rounded-xl border-2 border-dashed border-neutral-400 bg-white px-4 py-5 text-sm font-semibold text-neutral-600">
+              Graded track content is missing. Ask your teacher to re-assign this homework.
+            </p>
+          );
+        })()
       ) : null}
       </HomeworkStartGate>
     </HomeworkPlayChrome>

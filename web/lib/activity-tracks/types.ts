@@ -1,0 +1,309 @@
+/** Track builder — Practice (LTC) vs Graded (homework freeze) vs Assessment (end summary). */
+
+import type { AssessmentDefinition } from "@/lib/assessment/types";
+import type { LearningTrackComposition } from "@/lib/learning-tracks/composition-types";
+import type { HomeworkTemplateId } from "@/lib/homework-templates/registry";
+import { seedPracticeComposition } from "@/lib/activity-tracks/seed-practice";
+
+export const ACTIVITY_TRACK_DOCUMENT_VERSION = 1 as const;
+
+export type ActivityTrackMode = "practice" | "graded" | "assessment";
+
+export type ActivityTrackLevel = "primary" | "secondary" | "either";
+
+export type ActivityTrackPartKind =
+  | "multiple_choice"
+  | "flashcards"
+  | "fill_blanks"
+  | "listen_and_choose"
+  | "line_match"
+  | "true_false"
+  | "sentence_scramble"
+  | "letter_mixup"
+  | "explore_hotspots"
+  | "picture_cloze"
+  | "word_annotation"
+  | "sentence_columns"
+  | "verb_table"
+  | "picture_writing"
+  | "question_writing"
+  | "writing_prompt"
+  | "speaking_prompt"
+  | "secondary_sequence"
+  | "secondary_corrections"
+  | "secondary_dialogue"
+  | "secondary_questions";
+
+export type ActivityTrackPartSource =
+  | { type: "empty" }
+  | {
+      type: "template_section";
+      sectionId: string;
+      /** Cloned template section / secondary part body. */
+      section: Record<string, unknown>;
+    };
+
+export type ActivityTrackPart = {
+  id: string;
+  order: number;
+  kind: ActivityTrackPartKind;
+  label: string;
+  source: ActivityTrackPartSource;
+};
+
+export type ActivityTrackGradedOrigin = {
+  templateId: HomeworkTemplateId;
+  level: "primary" | "secondary";
+};
+
+export type ActivityTrackAssessmentOrigin = {
+  definitionId: string;
+  contentVersion: string;
+};
+
+export type ActivityTrackDocument = {
+  version: typeof ACTIVITY_TRACK_DOCUMENT_VERSION;
+  id: string;
+  mode: ActivityTrackMode;
+  title: string;
+  instructions: string;
+  level: ActivityTrackLevel;
+  estimatedMinutes: number | null;
+  vocabListId: string | null;
+  parts: ActivityTrackPart[];
+  /** Practice mode: LTC composition (live preview + compile). */
+  practiceComposition: LearningTrackComposition | null;
+  /** Graded mode: which homework template was cloned. */
+  gradedOrigin: ActivityTrackGradedOrigin | null;
+  /** Assessment mode: cloned editable definition (Primary A2 / Flyers-shaped). */
+  assessmentDefinition: AssessmentDefinition | null;
+  /** Assessment mode: which fixture was cloned. */
+  assessmentOrigin: ActivityTrackAssessmentOrigin | null;
+  /** IndexedDB Activity Library id after Save. */
+  libraryId: string | null;
+  /** My Activity Bank id after Publish. */
+  bankActivityId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ActivityTrackPartCatalogEntry = {
+  kind: ActivityTrackPartKind;
+  label: string;
+  description: string;
+  /** When true, only Graded homework mode can add this part. */
+  gradedOnly?: boolean;
+};
+
+export const ACTIVITY_TRACK_PART_CATALOG: ActivityTrackPartCatalogEntry[] = [
+  {
+    kind: "multiple_choice",
+    label: "Multiple choice",
+    description: "Pick the right answer from options.",
+  },
+  {
+    kind: "flashcards",
+    label: "Flashcards",
+    description: "Flip cards to study words.",
+  },
+  {
+    kind: "fill_blanks",
+    label: "Fill blanks",
+    description: "Choose the missing word.",
+  },
+  {
+    kind: "listen_and_choose",
+    label: "Listen and choose",
+    description: "Hear a prompt, then pick a picture.",
+  },
+  {
+    kind: "line_match",
+    label: "Line match",
+    description: "Connect words to pictures.",
+  },
+  {
+    kind: "true_false",
+    label: "True / false",
+    description: "Judge each statement.",
+  },
+  {
+    kind: "sentence_scramble",
+    label: "Sentence scramble",
+    description: "Put words in order.",
+  },
+  {
+    kind: "letter_mixup",
+    label: "Letter mixup",
+    description: "Rebuild the word.",
+  },
+  {
+    kind: "explore_hotspots",
+    label: "Explore hotspots",
+    description: "Tap hotspots in a scene.",
+  },
+  {
+    kind: "picture_cloze",
+    label: "Picture cloze",
+    description: "Complete sentences from pictures.",
+    gradedOnly: true,
+  },
+  {
+    kind: "word_annotation",
+    label: "Word annotation",
+    description: "Mark adjectives and adverbs in sentences.",
+    gradedOnly: true,
+  },
+  {
+    kind: "sentence_columns",
+    label: "Sentence columns",
+    description: "Build sentences in subject / action / extra columns.",
+    gradedOnly: true,
+  },
+  {
+    kind: "verb_table",
+    label: "Verb table",
+    description: "Fill verb forms in a table.",
+    gradedOnly: true,
+  },
+  {
+    kind: "picture_writing",
+    label: "Picture writing",
+    description: "Write from a picture prompt.",
+    gradedOnly: true,
+  },
+  {
+    kind: "question_writing",
+    label: "Question writing",
+    description: "Write questions for teacher review.",
+    gradedOnly: true,
+  },
+  {
+    kind: "writing_prompt",
+    label: "Writing prompt",
+    description: "Student writing for teacher review.",
+    gradedOnly: true,
+  },
+  {
+    kind: "speaking_prompt",
+    label: "Speaking prompt",
+    description: "Student recording for teacher review.",
+    gradedOnly: true,
+  },
+  {
+    kind: "secondary_sequence",
+    label: "Read and order",
+    description: "Order events from a reading.",
+    gradedOnly: true,
+  },
+  {
+    kind: "secondary_corrections",
+    label: "Past corrections",
+    description: "Correct simple-past mistakes.",
+    gradedOnly: true,
+  },
+  {
+    kind: "secondary_dialogue",
+    label: "Complete dialogue",
+    description: "Fill past-tense dialogue blanks.",
+    gradedOnly: true,
+  },
+  {
+    kind: "secondary_questions",
+    label: "Past questions",
+    description: "Choose words to build past-tense questions.",
+    gradedOnly: true,
+  },
+];
+
+export const ACTIVITY_TRACK_MODE_COPY: Record<
+  ActivityTrackMode,
+  { title: string; blurb: string; previewHint: string }
+> = {
+  practice: {
+    title: "Practice track",
+    blurb: "Students practice in order. Light completion. Best for classwork and self-study.",
+    previewHint: "Live Lesson Player preview from the Learning Track compiler.",
+  },
+  graded: {
+    title: "Graded homework",
+    blurb: "Clone a homework template, freeze content on assign, and review submissions.",
+    previewHint: "Cloned template parts — assign freezes the full pack for students.",
+  },
+  assessment: {
+    title: "Assessment",
+    blurb:
+      "Free navigation, no answer gating. Students finish the form, then see a results summary.",
+    previewHint:
+      "Live student preview from the cloned definition — Assign freezes content for the class.",
+  },
+};
+
+export function partLabelForKind(kind: ActivityTrackPartKind): string {
+  return (
+    ACTIVITY_TRACK_PART_CATALOG.find((entry) => entry.kind === kind)?.label ?? kind
+  );
+}
+
+export function isPartKindAllowedForMode(
+  kind: ActivityTrackPartKind,
+  mode: ActivityTrackMode,
+): boolean {
+  if (mode === "assessment") return false;
+  const entry = ACTIVITY_TRACK_PART_CATALOG.find((item) => item.kind === kind);
+  if (!entry) return false;
+  if (entry.gradedOnly && mode !== "graded") return false;
+  return true;
+}
+
+export function createEmptyActivityTrack(input: {
+  mode: ActivityTrackMode;
+  title: string;
+}): ActivityTrackDocument {
+  const now = new Date().toISOString();
+  const id = crypto.randomUUID();
+  const title = input.title.trim() || "Untitled track";
+  const practiceComposition =
+    input.mode === "practice"
+      ? seedPracticeComposition({ trackId: id, title })
+      : null;
+  return {
+    version: ACTIVITY_TRACK_DOCUMENT_VERSION,
+    id,
+    mode: input.mode,
+    title,
+    instructions: practiceComposition?.aim ?? "",
+    level: "either",
+    estimatedMinutes: practiceComposition?.durationTargetMin ?? null,
+    vocabListId: practiceComposition?.vocabListId ?? null,
+    parts: [],
+    practiceComposition,
+    gradedOrigin: null,
+    assessmentDefinition: null,
+    assessmentOrigin: null,
+    libraryId: null,
+    bankActivityId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function createEmptyPart(
+  kind: ActivityTrackPartKind,
+  order: number,
+): ActivityTrackPart {
+  return {
+    id: crypto.randomUUID(),
+    order,
+    kind,
+    label: partLabelForKind(kind),
+    source: { type: "empty" },
+  };
+}
+
+export function renumberParts(parts: ActivityTrackPart[]): ActivityTrackPart[] {
+  return parts.map((part, index) => ({ ...part, order: index + 1 }));
+}
+
+export function partHasTemplateContent(part: ActivityTrackPart): boolean {
+  return part.source.type === "template_section";
+}

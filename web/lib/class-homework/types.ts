@@ -30,6 +30,7 @@ export const CLASS_HOMEWORK_PAYLOAD_TYPES = [
   "external_note",
   "studio_activity",
   "homework_template",
+  "graded_track",
   "picture_cloze",
   "verb_table",
   "sentence_columns",
@@ -95,6 +96,17 @@ export type ClassHomeworkPayload =
       templateId: HomeworkTemplateId;
       title: string;
       sectionCount: number;
+      frozenAt: string;
+    }
+  | {
+      /** Track Builder Graded — full template clone frozen at assign time. */
+      type: "graded_track";
+      title: string;
+      sectionCount: number;
+      originTemplateId: HomeworkTemplateId;
+      level: "primary" | "secondary";
+      /** GradedTrackFreezeDocument snapshot. */
+      document: Record<string, unknown>;
       frozenAt: string;
     }
   | {
@@ -205,6 +217,13 @@ export type ClassHomeworkPayload =
       title: string;
       itemCount: number;
       frozenAt: string;
+      /**
+       * Track Builder freeze: full AssessmentDefinition embedded at assign.
+       * Absent = Class Hub pointer to the in-repo fixture.
+       */
+      document?: Record<string, unknown>;
+      /** Provenance when assigned from an Assessment track. */
+      trackId?: string;
     };
 
 export type ClassHomework = {
@@ -251,6 +270,7 @@ export const CLASS_HOMEWORK_PAYLOAD_LABELS: Record<ClassHomeworkPayloadType, str
   external_note: "Note / reminder",
   studio_activity: "Activity Bank activity",
   homework_template: "Homework template",
+  graded_track: "Graded track",
   picture_cloze: "Picture cloze",
   verb_table: "Verb table",
   sentence_columns: "Sentence columns",

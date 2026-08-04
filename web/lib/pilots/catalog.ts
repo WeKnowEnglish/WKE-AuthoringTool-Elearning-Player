@@ -165,9 +165,10 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/primary-a2-assessment",
     title: "Primary A2 assessment",
     description:
-      "Versioned test runner pilot with autosave, review, submission, and Reading & Writing Parts 1, 5, 6, and 7.",
+      "Flyers-shaped Primary A2 English Check. Author as Track builder → Assessment (seeded clone); student pilot still at this route.",
     group: "experiments",
     status: "review",
+    studioHref: "/teacher/activity-builder/tracks",
   },
   // ── Active · Quizzes ──────────────────────────────────────────────
   {
@@ -403,22 +404,31 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/teacher/activity-builder/tracks",
+    title: "Track builder",
+    description:
+      "Practice = LTC. Graded = homework templates with freeze/review. Assessment = Primary A2 English Check (free nav, end summary).",
+    group: "authoring",
+    status: "review",
+    studioHref: "/teacher/activity-builder/tracks",
+  },
+  {
     href: "/pilots/learning-track",
     title: "Learning track",
     description:
-      "Compiled self-study sessions (hobbies Day 1) with timeline authoring and live preview.",
+      "Compiled self-study sessions (hobbies Day 1). Author in Track builder → Practice (old /learning-tracks redirects).",
     group: "activities",
     status: "active",
-    studioHref: "/teacher/activity-builder/learning-tracks",
+    studioHref: "/teacher/activity-builder/tracks",
   },
   {
     href: "/pilots/learning-track",
     title: "Post-quiz report bridge",
     description:
-      "Replaces StoryBook for track transitions: results, encouragement, and next-activity cue from the Learning Track Compiler.",
+      "Replaces StoryBook for track transitions: results, encouragement, and next-activity cue from Practice track compiles.",
     group: "activities",
     status: "active",
-    studioHref: "/teacher/activity-builder/learning-tracks",
+    studioHref: "/teacher/activity-builder/tracks",
     subtype: "post_quiz_report",
   },
   {

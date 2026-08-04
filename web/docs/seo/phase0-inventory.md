@@ -1,4 +1,4 @@
-﻿# Phase 0 ΓÇö SEO URL inventory (repository-based)
+﻿# Phase 0 — SEO URL inventory (repository-based)
 
 **Date:** 2026-07-27  
 **Scope:** Lesson Player Next.js app (`web/`). Legacy WordPress / Grade 3 surfaces are noted but not fully inventoried here.
@@ -97,15 +97,15 @@
 
 ### APIs (disallow in robots.txt)
 
-All `/api/**` ΓÇö not HTML; crawl disallowed in `robots.ts`.
+All `/api/**` — not HTML; crawl disallowed in `robots.ts`.
 
 ## Unresolved legacy URL decisions (for Search Console review)
 
-1. **Legacy Grade 3 / WordPress URLs on the same domain** ΓÇö inventory and 301 vs 404/410 when GSC/backlink data arrives. Do not mass-redirect to `/`.
-2. **Archived activity-library URLs** ΓÇö currently 404 in-app; confirm whether any indexed URLs need a close-replacement 301.
-3. **`/grammar/pilot` legacyRoutes** ΓÇö catalog notes `legacyRoutes: ["/grammar/pilot"]`; confirm Search Console treatment after redirect.
-4. **`/t/*` bookmarks** ΓÇö permanent redirect to `/wke/*`; destination remains noindex (private teacher space).
-5. **www vs apex** ΓÇö enforce apex in proxy; confirm DNS/Vercel domain aliases match.
+1. **Legacy Grade 3 / WordPress URLs on the same domain** — inventory and 301 vs 404/410 when GSC/backlink data arrives. Do not mass-redirect to `/`.
+2. **Archived activity-library URLs** — currently 404 in-app; confirm whether any indexed URLs need a close-replacement 301.
+3. **`/grammar/pilot` legacyRoutes** — catalog notes `legacyRoutes: ["/grammar/pilot"]`; confirm Search Console treatment after redirect.
+4. **`/t/*` bookmarks** — permanent redirect to `/wke/*`; destination remains noindex (private teacher space).
+5. **www vs apex** — enforce apex in proxy; confirm DNS/Vercel domain aliases match.
 
 ## PR 1 acceptance (this inventory)
 
@@ -117,8 +117,8 @@ All `/api/**` ΓÇö not HTML; crawl disallowed in `robots.ts`.
 
 - `/t/[handle]` returns **308** via `permanentRedirect` to `/wke/[handle]` (integration smoke).
 - Preview/local hosts send `X-Robots-Tag: noindex, nofollow` via `proxy.ts`.
-- Unit: `npm run test:seo:unit` ΓÇö pass.
-- Integration: `npm run test:seo` after `npx next build --webpack` ΓÇö pass.
+- Unit: `npm run test:seo:unit` — pass.
+- Integration: `npm run test:seo` after `npx next build --webpack` — pass.
 - Local `next build` currently requires `--webpack` (Turbopack package alias resolution for explore-hotspots); unrelated to SEO content.
 
 ## PR 2 verification notes (2026-07-27)

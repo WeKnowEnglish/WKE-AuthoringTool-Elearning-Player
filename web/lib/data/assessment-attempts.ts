@@ -1,25 +1,52 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { isStudent, isTeacher } from "@/lib/auth/roles";
-import { assessmentProgress, PRIMARY_A2_ASSESSMENT_PILOT, sanitizeAssessmentResponses, type AssessmentAttempt, type AssessmentSpeakingRecording, type AssessmentSpeakingReview } from "@/lib/assessment";
+import {
+  assessmentProgress,
+  PRIMARY_A2_ASSESSMENT_PILOT,
+  sanitizeAssessmentResponses,
+  type AssessmentAttempt,
+  type AssessmentSpeakingRecording,
+  type AssessmentSpeakingReview,
+} from "@/lib/assessment";
+import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
+import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolve-assessment-definition";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getMyAssessmentAttempt(homeworkId: string): Promise<AssessmentAttempt | null> {
+export async function getMyAssessmentAttempt(
+  homeworkId: string,
+): Promise<AssessmentAttempt | null> {
   noStore();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user?.id || !isStudent(user)) return null;
-  const { data, error } = await supabase.from("class_assessment_attempts")
-    .select("id, status, active_part_id, responses, started_at, updated_at, submitted_at")
-    .eq("homework_id", homeworkId).eq("student_id", user.id).maybeSingle();
+
+  const [{ data: homework }, { data, error }] = await Promise.all([
+    supabase.from("class_homework").select("payload").eq("id", homeworkId).maybeSingle(),
+    supabase
+      .from("class_assessment_attempts")
+      .select("id, status, active_part_id, responses, started_at, updated_at, submitted_at")
+      .eq("homework_id", homeworkId)
+      .eq("student_id", user.id)
+      .maybeSingle(),
+  ]);
   if (error || !data) return null;
+
+  const payload = normalizeHomeworkPayload(homework?.payload);
+  const definition =
+    payload?.type === "primary_a2_assessment"
+      ? resolveHomeworkAssessmentDefinition(payload)
+      : PRIMARY_A2_ASSESSMENT_PILOT;
+
   return {
     schemaVersion: 1,
     attemptId: String(data.id),
-    definitionId: PRIMARY_A2_ASSESSMENT_PILOT.id,
-    contentVersion: PRIMARY_A2_ASSESSMENT_PILOT.contentVersion,
+    definitionId: definition.id,
+    contentVersion: definition.contentVersion,
     status: data.status === "submitted" ? "submitted" : "in_progress",
     activePartId: String(data.active_part_id),
-    responses: sanitizeAssessmentResponses(PRIMARY_A2_ASSESSMENT_PILOT, data.responses),
+    responses: sanitizeAssessmentResponses(definition, data.responses),
     startedAt: typeof data.started_at === "string" ? data.started_at : null,
     updatedAt: String(data.updated_at),
     submittedAt: typeof data.submitted_at === "string" ? data.submitted_at : null,
@@ -84,8 +111,19 @@ export async function listAssessmentResultsForTeacher(input: { classId: string; 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.id || !isTeacher(user)) throw new Error("Teacher authentication required.");
-  const { data: homework } = await supabase.from("class_homework").select("id").eq("id", input.homeworkId).eq("class_id", input.classId).eq("teacher_id", user.id).maybeSingle();
+  const { data: homework } = await supabase
+    .from("class_homework")
+    .select("id, payload")
+    .eq("id", input.homeworkId)
+    .eq("class_id", input.classId)
+    .eq("teacher_id", user.id)
+    .maybeSingle();
   if (!homework) return [];
+  const homeworkPayload = normalizeHomeworkPayload(homework.payload);
+  const definition =
+    homeworkPayload?.type === "primary_a2_assessment"
+      ? resolveHomeworkAssessmentDefinition(homeworkPayload)
+      : PRIMARY_A2_ASSESSMENT_PILOT;
   const { data: enrollments, error: enrollmentError } = await supabase.from("class_enrollments").select("student_id").eq("class_id", input.classId);
   if (enrollmentError) throw enrollmentError;
   const ids = (enrollments ?? []).map((row) => String(row.student_id));
@@ -108,7 +146,7 @@ export async function listAssessmentResultsForTeacher(input: { classId: string; 
     const item = await signedRecording(supabase, row);
     recordingsByStudent.set(studentId, [...(recordingsByStudent.get(studentId) ?? []), item]);
   }));
-  const itemTotal = assessmentProgress(PRIMARY_A2_ASSESSMENT_PILOT, {}).total;
+  const itemTotal = assessmentProgress(definition, {}).total;
   return ids.map((studentId) => {
     const row = byStudent.get(studentId);
     return {

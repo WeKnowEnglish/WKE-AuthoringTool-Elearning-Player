@@ -57,10 +57,13 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
           WKE Library
         </TeacherNavMenuLink>
         <TeacherNavMenuLink
-          href="/teacher/activity-builder/learning-tracks"
-          active={pathname.startsWith("/teacher/activity-builder/learning-tracks")}
+          href="/teacher/activity-builder/tracks"
+          active={
+            pathname.startsWith("/teacher/activity-builder/tracks") ||
+            pathname.startsWith("/teacher/activity-builder/learning-tracks")
+          }
         >
-          Learning track
+          Track builder
         </TeacherNavMenuLink>
         <TeacherNavMenuLink
           href="/teacher/activity-builder/vocabulary-lists"
@@ -84,6 +87,7 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
           href="/teacher/activity-builder"
           active={
             onActivityBuilder &&
+            !pathname.startsWith("/teacher/activity-builder/tracks") &&
             !pathname.startsWith("/teacher/activity-builder/learning-tracks") &&
             !pathname.startsWith("/teacher/activity-builder/vocabulary-lists") &&
             !pathname.startsWith("/teacher/activity-builder/quizzes") &&

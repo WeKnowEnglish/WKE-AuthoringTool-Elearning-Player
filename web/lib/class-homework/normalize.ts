@@ -38,12 +38,15 @@ import {
 } from "@/lib/cloze-open";
 import { validateReadAndAnswerDocument } from "@/lib/read-and-answer";
 import { validatePictureStoryDocument } from "@/lib/picture-story";
+import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
+import { isHomeworkTemplateId } from "@/lib/homework-templates/registry";
 import { getHomeworkTemplateDefinition } from "@/lib/homework-templates/registry";
 import {
   PRIMARY_A2_ASSESSMENT_ID,
   PRIMARY_A2_ASSESSMENT_PILOT,
   assessmentProgress,
 } from "@/lib/assessment";
+import { parseAssessmentDefinition } from "@/lib/assessment/parse-definition";
 
 const TITLE_MAX = 120;
 const INSTRUCTIONS_MAX = 2000;
@@ -128,6 +131,17 @@ export function defaultHomeworkPayload(
       templateId: "homework-template-one",
       title: "Homework Template One",
       sectionCount: 6,
+      frozenAt: "",
+    };
+  }
+  if (type === "graded_track") {
+    return {
+      type: "graded_track",
+      title: "Graded track",
+      sectionCount: 0,
+      originTemplateId: "homework-template-one",
+      level: "primary",
+      document: {},
       frozenAt: "",
     };
   }
@@ -369,6 +383,25 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
       templateId: definition.id,
       title: asString(input.title).trim() || definition.title,
       sectionCount: definition.sectionCount,
+      frozenAt:
+        typeof input.frozenAt === "string" && input.frozenAt.trim()
+          ? input.frozenAt.trim()
+          : new Date(0).toISOString(),
+    };
+  }
+
+  if (input.type === "graded_track") {
+    const freeze = parseGradedTrackFreezeDocument(input.document);
+    if (!freeze) return null;
+    if (!isHomeworkTemplateId(freeze.originTemplateId)) return null;
+    if (freeze.level !== "primary" && freeze.level !== "secondary") return null;
+    return {
+      type: "graded_track",
+      title: asString(input.title).trim() || freeze.title,
+      sectionCount: freeze.parts.length,
+      originTemplateId: freeze.originTemplateId,
+      level: freeze.level,
+      document: freeze as unknown as Record<string, unknown>,
       frozenAt:
         typeof input.frozenAt === "string" && input.frozenAt.trim()
           ? input.frozenAt.trim()
@@ -643,6 +676,26 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
 
   if (input.type === "primary_a2_assessment") {
     if (input.definitionId !== PRIMARY_A2_ASSESSMENT_ID) return null;
+
+    const frozen = parseAssessmentDefinition(input.document);
+    if (frozen) {
+      const trackId = asString(input.trackId).trim();
+      return {
+        type: "primary_a2_assessment",
+        definitionId: PRIMARY_A2_ASSESSMENT_ID,
+        contentVersion: frozen.contentVersion,
+        title: asString(input.title).trim() || frozen.title,
+        itemCount: assessmentProgress(frozen, {}).total,
+        frozenAt:
+          typeof input.frozenAt === "string" && input.frozenAt.trim()
+            ? input.frozenAt.trim()
+            : new Date(0).toISOString(),
+        document: frozen as unknown as Record<string, unknown>,
+        ...(trackId ? { trackId } : {}),
+      };
+    }
+
+    // Pointer-only Class Hub path — must match the live fixture version.
     if (asString(input.contentVersion).trim() !== PRIMARY_A2_ASSESSMENT_PILOT.contentVersion) {
       return null;
     }
@@ -687,6 +740,9 @@ export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
   }
   if (payload.type === "homework_template") {
     return `${payload.title} · ${payload.sectionCount} parts`;
+  }
+  if (payload.type === "graded_track") {
+    return `${payload.title} · ${payload.sectionCount} parts (frozen)`;
   }
   if (payload.type === "picture_cloze") {
     return `${payload.title} · ${payload.itemCount} picture${

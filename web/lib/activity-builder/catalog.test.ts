@@ -19,7 +19,7 @@ describe("visibleActivityBuilderSections", () => {
       "vocabulary-lists",
       "quiz-builder",
       "hotspots",
-      "learning-tracks",
+      "track-builder",
     ]);
     expect(
       sections.every((section) =>

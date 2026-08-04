@@ -751,7 +751,47 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     title: "Private Classroom (student)",
     description:
-      "Enrollment-gated async classroom at /primary/class/[classId] and /secondary/class/[classId] — teacher posts (announcements/photos), Live-now shell. Distinct from public /wke and live VC join.",
+      "Enrollment-gated async classroom at /primary/class/[classId] and /secondary/class/[classId] — teacher posts (announcements/photos), Live-now shell, weekly schedule / next lesson. Distinct from public /wke and live VC join.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/parent/login",
+    title: "Parent next lesson",
+    description:
+      "Guardians see confirmed weekly class times and next lesson on the child stream (class_meeting_slots + guardian RLS). Slice A of scheduling.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/teacher/classes",
+    title: "Forming class preferences",
+    description:
+      "Teacher offers 2–6 weekly time windows; linked parents rank availability; teacher locks a time into class_meeting_slots. Slice B grouping board on Class Hub → Students.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/teacher/availability",
+    title: "Trial availability + booking",
+    description:
+      "Teacher publishes open trial slots; parent books via /parent/book-trial (linked child or prospect); confirm creates student+guardian link for prospects, then trial class enrollment.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/parents",
+    title: "Parents landing",
+    description:
+      "Public /parents explains process and methods; CTAs to create account and /parents/teachers directory for trial discovery.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/parents/teachers",
+    title: "Teachers accepting trials",
+    description:
+      "Directory of published Classroom Wall spaces with trials_enabled. Book via /parent/book-trial/wke/[handle].",
     group: "classroom",
     status: "review",
   },

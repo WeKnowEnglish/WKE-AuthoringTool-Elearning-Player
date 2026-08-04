@@ -11,6 +11,9 @@ export function MarketingHeader() {
           We Know English
         </Link>
         <nav aria-label="Account access" className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <Link href="/parents" className={linkClass}>
+            Parents
+          </Link>
           <Link href="/students" className={linkClass}>
             Student sign in
           </Link>

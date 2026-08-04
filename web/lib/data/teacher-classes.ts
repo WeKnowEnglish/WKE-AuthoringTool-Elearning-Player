@@ -1,5 +1,9 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { isTeacher } from "@/lib/auth/roles";
+import {
+  normalizeTeacherClassKind,
+  type TeacherClassKind,
+} from "@/lib/class-schedule/class-kind";
 import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 
@@ -12,6 +16,8 @@ export type TeacherClassRow = {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
+  class_kind: TeacherClassKind;
+  preference_collection_open: boolean;
   student_tab_schedule_enabled: boolean;
   student_tab_noticeboard_enabled: boolean;
   student_tab_materials_enabled: boolean;
@@ -100,6 +106,13 @@ export async function getTeacherClass(classId: string): Promise<TeacherClassRow 
 function normalizeTeacherClassRow(row: TeacherClassRow): TeacherClassRow {
   return {
     ...row,
+    class_kind: normalizeTeacherClassKind(
+      (row as TeacherClassRow & { class_kind?: unknown }).class_kind,
+    ),
+    preference_collection_open: Boolean(
+      (row as TeacherClassRow & { preference_collection_open?: unknown })
+        .preference_collection_open,
+    ),
     student_tab_schedule_enabled: Boolean(row.student_tab_schedule_enabled),
     student_tab_noticeboard_enabled: Boolean(row.student_tab_noticeboard_enabled),
     student_tab_materials_enabled: Boolean(row.student_tab_materials_enabled),

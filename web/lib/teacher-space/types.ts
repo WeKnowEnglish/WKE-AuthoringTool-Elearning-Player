@@ -54,6 +54,7 @@ export type PublicTeacherSpacePage = {
     bio: string;
     hero_image_url: string | null;
     theme_id: ClassroomThemeId;
+    trials_enabled?: boolean;
   };
   items: TeacherSpaceItemSummary[];
 };

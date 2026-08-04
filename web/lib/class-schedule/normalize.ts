@@ -18,6 +18,60 @@ export function normalizeMeetingTimezone(raw: unknown): string {
   return trimmed.length >= 3 && trimmed.length <= 64 ? trimmed : DEFAULT_CLASS_MEETING_TIMEZONE;
 }
 
+/**
+ * Interpret a datetime-local wall clock (`YYYY-MM-DDTHH:mm`) in an IANA zone
+ * and return a UTC ISO string.
+ */
+export function wallClockInTimeZoneToUtcIso(
+  wallLocal: string,
+  timeZone: string,
+): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(wallLocal.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  if (![year, month, day, hour, minute].every((n) => Number.isFinite(n))) return null;
+
+  const zone = normalizeMeetingTimezone(timeZone);
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+
+  for (let i = 0; i < 4; i += 1) {
+    const parts = Object.fromEntries(
+      dtf
+        .formatToParts(new Date(utcMs))
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, part.value]),
+    ) as Record<string, string>;
+    const asUtc = Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute),
+      Number(parts.second ?? "0"),
+    );
+    const desired = Date.UTC(year, month - 1, day, hour, minute, 0);
+    const diff = desired - asUtc;
+    if (diff === 0) break;
+    utcMs += diff;
+  }
+
+  return new Date(utcMs).toISOString();
+}
+
 export function normalizeMeetingStartTime(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const trimmed = raw.trim();

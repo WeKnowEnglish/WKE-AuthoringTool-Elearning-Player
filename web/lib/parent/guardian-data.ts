@@ -231,6 +231,7 @@ export type ParentLinkedStudent = {
   classId: string | null;
   classTitle: string | null;
   enrolledAt: string | null;
+  preferenceCollectionOpen: boolean;
 };
 
 export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]> {
@@ -250,5 +251,6 @@ export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]>
     classId: row.class_id ? String(row.class_id) : null,
     classTitle: row.class_title ? String(row.class_title) : null,
     enrolledAt: row.enrolled_at ? String(row.enrolled_at) : null,
+    preferenceCollectionOpen: Boolean(row.preference_collection_open),
   }));
 }

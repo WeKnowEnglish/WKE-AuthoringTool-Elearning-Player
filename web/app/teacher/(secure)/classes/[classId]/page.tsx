@@ -10,6 +10,7 @@ import {
 } from "@/lib/data/class-homework";
 import { listClassPostsForClass } from "@/lib/data/class-posts";
 import { listMeetingSlotsForClass } from "@/lib/data/class-meeting-slots";
+import { getClassScheduleGroupingBoard } from "@/lib/data/class-schedule-preferences";
 import { listClassLessonsWithStepsForClass } from "@/lib/data/class-lessons";
 import { listMyStudioActivities } from "@/lib/data/studio-activities";
 import { getLiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
@@ -54,6 +55,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     homeworkCompletions,
     classPosts,
     meetingSlots,
+    scheduleGroupingBoard,
     spaceItems,
   ] = await Promise.all([
     getClassRoster(classId),
@@ -71,6 +73,12 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     listClassHomeworkCompletionsForClass(classId).catch(() => []),
     listClassPostsForClass(classId).catch(() => []),
     listMeetingSlotsForClass(classId).catch(() => []),
+    getClassScheduleGroupingBoard(classId).catch(() => ({
+      preferenceCollectionOpen: false,
+      windows: [],
+      preferences: [],
+      firstChoiceCounts: {},
+    })),
     listMyTeacherSpaceItems(),
   ]);
 
@@ -147,6 +155,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         homeworkCompletions={homeworkCompletions}
         classPosts={classPosts}
         meetingSlots={meetingSlots}
+        scheduleGroupingBoard={scheduleGroupingBoard}
         packQuizzes={packQuizzes}
         packFlashcardSets={packFlashcardSets}
         spaceItems={spaceItems}
@@ -155,6 +164,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
           noticeboard: teacherClass.student_tab_noticeboard_enabled,
           materials: teacherClass.student_tab_materials_enabled,
         }}
+        classKind={teacherClass.class_kind}
       />
     </Suspense>
   );

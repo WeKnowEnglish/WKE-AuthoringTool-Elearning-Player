@@ -12,6 +12,7 @@ import type { StudentClassroomTabSettings } from "@/lib/classroom/classroom-tabs
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
+import type { ClassScheduleGroupingBoard } from "@/lib/class-schedule/preference-types";
 import type {
   ClassLesson,
   LiveGameQuestionSetOption,
@@ -63,6 +64,7 @@ export type TeacherClassHubClientProps = {
   homeworkCompletions: HomeworkCompletionSummary[];
   classPosts: ClassPost[];
   meetingSlots: ClassMeetingSlot[];
+  scheduleGroupingBoard: ClassScheduleGroupingBoard;
   packQuizzes: Array<{
     id: string;
     title: string;
@@ -77,6 +79,7 @@ export type TeacherClassHubClientProps = {
   }>;
   spaceItems: TeacherSpaceItemSummary[];
   studentTabSettings: StudentClassroomTabSettings;
+  classKind: "regular" | "trial";
 };
 
 export function TeacherClassHubClient({
@@ -101,10 +104,12 @@ export function TeacherClassHubClient({
   homeworkCompletions,
   classPosts,
   meetingSlots,
+  scheduleGroupingBoard,
   packQuizzes,
   packFlashcardSets,
   spaceItems,
   studentTabSettings,
+  classKind,
 }: TeacherClassHubClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -125,7 +130,12 @@ export function TeacherClassHubClient({
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
+            <span className="rounded-full border border-neutral-300 bg-neutral-50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-neutral-700">
+              {classKind === "trial" ? "Trial" : "Regular"}
+            </span>
+          </div>
           <p className="mt-1 text-sm text-neutral-600">
             {studentCount} student{studentCount === 1 ? "" : "s"}
             {archived ? " · Archived" : ""}
@@ -218,6 +228,7 @@ export function TeacherClassHubClient({
           homeworkCompletions={homeworkCompletions}
           classPosts={classPosts}
           meetingSlots={meetingSlots}
+          scheduleGroupingBoard={scheduleGroupingBoard}
           packQuizzes={packQuizzes}
           packFlashcardSets={packFlashcardSets}
           spaceItems={spaceItems}

@@ -72,17 +72,16 @@ export function LandingAudiencePathways() {
           <article className="rounded-xl border-2 border-kid-ink/20 bg-white p-4 sm:p-5">
             <h3 className="text-lg font-extrabold text-kid-ink">Parents</h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-kid-ink/75">
-              Find structured English practice for your child — not random screen time.
-              Start with free grammar and vocabulary activities, then connect with your
-              child’s teacher when a class is ready.
+              Learn how trials and classes work, create a parent account, and book with a teacher
+              — even before your child has a student login.
             </p>
             <TrackedMarketingLink
-              href="#free-activities"
+              href="/parents"
               event="audience_parent_click"
               eventProps={{ cta: "parent_pathway" }}
               className={`mt-4 min-h-11 w-full sm:w-auto ${linkClass}`}
             >
-              Explore home practice
+              For parents
             </TrackedMarketingLink>
           </article>
         </div>

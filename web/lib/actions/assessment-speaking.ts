@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { isStudent } from "@/lib/auth/roles";
-import { listAssessmentParts, PRIMARY_A2_ASSESSMENT_PILOT, type AssessmentSpeakingRecording } from "@/lib/assessment";
+import { listAssessmentParts, type AssessmentSpeakingRecording } from "@/lib/assessment";
 import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
+import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolve-assessment-definition";
 import { createClient } from "@/lib/supabase/server";
 
 const BUCKET = "voice_submissions";
@@ -28,7 +29,14 @@ export async function saveAssessmentSpeakingRecording(formData: FormData): Promi
   const responseId = String(formData.get("response_id") ?? "").trim();
   const durationMs = Number(formData.get("duration_ms"));
   const audio = formData.get("audio");
-  const part = listAssessmentParts(PRIMARY_A2_ASSESSMENT_PILOT).find((item) => item.id === partId);
+
+  const { data: homework } = await supabase.from("class_homework").select("id, class_id, teacher_id, status, payload").eq("id", homeworkId).maybeSingle();
+  const payload = normalizeHomeworkPayload(homework?.payload);
+  if (!homework || homework.status !== "assigned" || payload?.type !== "primary_a2_assessment") {
+    return { ok: false, error: "This assessment is not available for recording." };
+  }
+  const definition = resolveHomeworkAssessmentDefinition(payload);
+  const part = listAssessmentParts(definition).find((item) => item.id === partId);
   if (!part || !(part.kind === "speaking_picture_differences" || part.kind === "speaking_question_exchange" || part.kind === "speaking_picture_story") || part.activity.responseId !== responseId) {
     return { ok: false, error: "This speaking prompt is not part of the assessment." };
   }
@@ -43,11 +51,6 @@ export async function saveAssessmentSpeakingRecording(formData: FormData): Promi
   if (file.size <= 0 || file.size > MAX_BYTES) return { ok: false, error: "The recording must be smaller than 8 MB." };
   if (!ALLOWED_AUDIO.has(contentType)) return { ok: false, error: "This browser recorded an unsupported audio format." };
 
-  const { data: homework } = await supabase.from("class_homework").select("id, class_id, teacher_id, status, payload").eq("id", homeworkId).maybeSingle();
-  const payload = normalizeHomeworkPayload(homework?.payload);
-  if (!homework || homework.status !== "assigned" || payload?.type !== "primary_a2_assessment") {
-    return { ok: false, error: "This assessment is not available for recording." };
-  }
   const { data: memberships, error: membershipError } = await supabase.rpc("student_class_memberships");
   if (membershipError) return { ok: false, error: membershipError.message };
   if (!((memberships ?? []) as Array<{ class_id: string }>).some((row) => row.class_id === homework.class_id)) {

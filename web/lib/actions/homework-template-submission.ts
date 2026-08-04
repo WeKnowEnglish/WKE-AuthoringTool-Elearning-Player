@@ -18,10 +18,23 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
     if (!snapshot) return { ok: false, error: "This homework response is invalid." };
     const { data: homework } = await supabase.from("class_homework").select("id, class_id, status, payload, target_student_ids").eq("id", homeworkId).maybeSingle();
     const payload = normalizeHomeworkPayload(homework?.payload);
-    if (!homework || !["assigned", "closed"].includes(String(homework.status)) || payload?.type !== "homework_template") {
+    const isTemplate = payload?.type === "homework_template";
+    const isGradedTrack = payload?.type === "graded_track";
+    if (
+      !homework ||
+      !["assigned", "closed"].includes(String(homework.status)) ||
+      (!isTemplate && !isGradedTrack)
+    ) {
       return { ok: false, error: "This homework template is not available." };
     }
-    if (!isHomeworkTemplatePartId(payload.templateId, partId)) return { ok: false, error: "This homework response is invalid." };
+    const templateId = isTemplate
+      ? payload.templateId
+      : isGradedTrack
+        ? payload.originTemplateId
+        : null;
+    if (!templateId || !isHomeworkTemplatePartId(templateId, partId)) {
+      return { ok: false, error: "This homework response is invalid." };
+    }
     const targets = Array.isArray(homework.target_student_ids)
       ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
       : null;

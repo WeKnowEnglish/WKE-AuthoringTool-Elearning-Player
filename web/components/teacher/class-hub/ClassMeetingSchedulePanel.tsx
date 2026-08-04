@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { saveClassMeetingSlots } from "@/lib/actions/class-meeting-slots";
 import {
   CLASS_MEETING_WEEKDAYS,
@@ -10,18 +10,10 @@ import {
   type ClassMeetingWeekday,
 } from "@/lib/class-schedule/types";
 import { formatWeeklySlotLabel } from "@/lib/class-schedule/next-meeting";
-
-const TIMEZONE_OPTIONS = [
-  "Asia/Bangkok",
-  "Asia/Ho_Chi_Minh",
-  "Asia/Singapore",
-  "Asia/Tokyo",
-  "Asia/Shanghai",
-  "Europe/London",
-  "America/New_York",
-  "America/Los_Angeles",
-  "UTC",
-] as const;
+import {
+  classScheduleTimezoneOptions,
+  detectBrowserTimeZone,
+} from "@/lib/class-schedule/timezone";
 
 type DraftSlot = {
   weekday: ClassMeetingWeekday;
@@ -49,6 +41,7 @@ function emptyDraft(): DraftSlot {
 
 export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: Props) {
   const [slots, setSlots] = useState(initialSlots);
+  const [detectedZone, setDetectedZone] = useState<string | null>(null);
   const [timezone, setTimezone] = useState(
     initialSlots[0]?.timezone ?? DEFAULT_CLASS_MEETING_TIMEZONE,
   );
@@ -57,15 +50,30 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  useEffect(() => {
+    const detected = detectBrowserTimeZone();
+    setDetectedZone(detected);
+    if (!initialSlots.length && detected) {
+      setTimezone((current) =>
+        current === DEFAULT_CLASS_MEETING_TIMEZONE ? detected : current,
+      );
+    }
+  }, [initialSlots.length]);
+
+  const timezoneOptions = useMemo(
+    () => classScheduleTimezoneOptions(detectedZone),
+    [detectedZone],
+  );
+
   const disabled = archived || isPending;
 
-  const persist = (nextDrafts: DraftSlot[]) => {
+  const persist = (nextDrafts: DraftSlot[], nextTimezone = timezone) => {
     setError(null);
     setMessage(null);
     startTransition(async () => {
       const result = await saveClassMeetingSlots({
         classId,
-        timezone,
+        timezone: nextTimezone,
         slots: nextDrafts,
       });
       if (!result.ok) {
@@ -73,6 +81,7 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
         return;
       }
       setSlots(result.slots);
+      setTimezone(nextTimezone);
       setMessage("Schedule saved.");
     });
   };
@@ -90,7 +99,7 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
   const saveTimezone = (value: string) => {
     setTimezone(value);
     if (slots.length === 0) return;
-    persist(slotsToDraft(slots));
+    persist(slotsToDraft(slots), value);
   };
 
   return (
@@ -100,25 +109,39 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
       </p>
       <h2 className="mt-1 text-lg font-bold text-neutral-900">Class meeting times</h2>
       <p className="mt-1 text-sm text-neutral-600">
-        Students see the weekly pattern and the next lesson on their Classroom page.
+        Students see the weekly pattern and next lesson in Classroom. Linked parents
+        see the same next lesson on the parent portal.
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-semibold text-neutral-800">
-          Timezone
+          Class timezone
           <select
             value={timezone}
             disabled={disabled}
             onChange={(event) => saveTimezone(event.target.value)}
             className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
           >
-            {TIMEZONE_OPTIONS.map((option) => (
+            {timezoneOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
+                {detectedZone === option ? " (detected)" : ""}
               </option>
             ))}
           </select>
         </label>
+        {detectedZone && detectedZone !== timezone ? (
+          <div className="flex items-end">
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => saveTimezone(detectedZone)}
+              className="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-100 disabled:opacity-50"
+            >
+              Use detected: {detectedZone}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {slots.length > 0 ? (
@@ -168,11 +191,13 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
                 }
                 className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-2 text-sm"
               >
-                {(CLASS_MEETING_WEEKDAYS as readonly ClassMeetingWeekday[]).map((weekday) => (
-                  <option key={weekday} value={weekday}>
-                    {CLASS_MEETING_WEEKDAY_LABELS[weekday]}
-                  </option>
-                ))}
+                {(CLASS_MEETING_WEEKDAYS as readonly ClassMeetingWeekday[]).map(
+                  (weekday) => (
+                    <option key={weekday} value={weekday}>
+                      {CLASS_MEETING_WEEKDAY_LABELS[weekday]}
+                    </option>
+                  ),
+                )}
               </select>
             </label>
             <label className="block text-xs font-semibold text-neutral-700">
@@ -182,7 +207,10 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
                 value={draft.startTime}
                 disabled={disabled || slots.length >= 7}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, startTime: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    startTime: event.target.value,
+                  }))
                 }
                 className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-2 text-sm"
               />

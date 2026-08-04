@@ -55,7 +55,7 @@ function editPathForFormat(format: StudioActivityFormat, activityId: string): st
     return `/teacher/activity-builder/quizzes?activity=${encodeURIComponent(activityId)}`;
   }
   if (format === "learning_track") {
-    return `/teacher/activity-builder/learning-tracks?activity=${encodeURIComponent(activityId)}`;
+    return `/teacher/activity-builder/tracks`;
   }
   if (format === "picture_cloze") {
     return `/teacher/activity-builder/picture-cloze`;

@@ -42,7 +42,7 @@ describe("assessment progress", () => {
 
   it("versions browser drafts by assessment content version", () => {
     expect(assessmentAttemptStorageKey(PRIMARY_A2_ASSESSMENT_PILOT)).toContain(
-      "2026.08-pilot.5",
+      "2026.08-pilot.6",
     );
   });
 
@@ -73,7 +73,7 @@ describe("assessment progress", () => {
 
   it("scores all five listening response formats", () => {
     const progress = assessmentProgress(PRIMARY_A2_ASSESSMENT_PILOT, {
-      "listening-part-1": { "lp1-c1": "lp1-name-oliver", "lp1-c2": "wrong" },
+      "listening-part-1": { "lp1-c1": "lp1-name-lucy", "lp1-c2": "wrong" },
       "listening-part-2": { "lp2-date": "18th", "lp2-teacher": "PARKER." },
       "listening-part-3": { "lp3-mia": "lp3-painting", "lp3-ethan": "wrong" },
       "listening-part-4": { "lp4-q1": "lp4-q1-drawing", "lp4-q2": "wrong" },

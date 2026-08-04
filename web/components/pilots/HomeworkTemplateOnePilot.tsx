@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import { saveHomeworkTemplatePart } from "@/lib/actions/homework-template-submis
 import type { HomeworkTemplatePartSnapshot } from "@/lib/homework-templates/homework-template-submission";
 import {
   HOMEWORK_TEMPLATE_ONE,
+  type HomeworkTemplateOne,
   type PictureClozeSection,
   type PictureWritingSection,
   type QuestionWritingSection,
@@ -31,210 +32,226 @@ import {
   wordAnnotationPlayableFromHt1,
 } from "@/lib/homework-templates/homework-template-one-playables";
 
-const STORAGE_KEY = "wke-pilot-homework-template-one:v2";
+const STORAGE_KEY = "wke-pilot-homework-template-one:v3";
 
-type PartNumber = 1 | 2 | 3 | 4 | 5 | 6;
+type HomeworkTemplateOneSection = HomeworkTemplateOne["sections"][number];
 
 type SavedProgress = {
-  activePart: PartNumber;
-  partOneDone: boolean;
-  partTwoDone: boolean;
-  partThreeDone: boolean;
-  partFourDone: boolean;
-  partFiveDone: boolean;
-  partSixDone: boolean;
+  activeSectionId: string;
+  doneSectionIds: string[];
 };
 
-function readProgress(storageKey: string): SavedProgress {
+function sortSections(document: HomeworkTemplateOne): HomeworkTemplateOneSection[] {
+  return [...document.sections].sort((a, b) => a.order - b.order);
+}
+
+function skillLabel(skill: string): string {
+  return skill.charAt(0).toUpperCase() + skill.slice(1);
+}
+
+function readProgress(
+  storageKey: string,
+  sectionIds: ReadonlySet<string>,
+  fallbackActiveId: string,
+): SavedProgress {
   try {
     const value = JSON.parse(window.localStorage.getItem(storageKey) ?? "null");
     if (value && typeof value === "object") {
-      return {
-        activePart: ([1, 2, 3, 4, 5, 6] as const).includes(value.activePart)
-          ? value.activePart
-          : 1,
-        partOneDone: Boolean(value.partOneDone),
-        partTwoDone: Boolean(value.partTwoDone),
-        partThreeDone: Boolean(value.partThreeDone),
-        partFourDone: Boolean(value.partFourDone),
-        partFiveDone: Boolean(value.partFiveDone),
-        partSixDone: Boolean(value.partSixDone),
-      };
+      const activeSectionId =
+        typeof value.activeSectionId === "string" &&
+        sectionIds.has(value.activeSectionId)
+          ? value.activeSectionId
+          : fallbackActiveId;
+      const doneSectionIds = Array.isArray(value.doneSectionIds)
+        ? value.doneSectionIds.filter(
+            (id: unknown): id is string =>
+              typeof id === "string" && sectionIds.has(id),
+          )
+        : [];
+      return { activeSectionId, doneSectionIds };
     }
   } catch {
     /* Start clean when pilot data is malformed. */
   }
-  return {
-    activePart: 1,
-    partOneDone: false,
-    partTwoDone: false,
-    partThreeDone: false,
-    partFourDone: false,
-    partFiveDone: false,
-    partSixDone: false,
-  };
+  return { activeSectionId: fallbackActiveId, doneSectionIds: [] };
 }
 
-function partAvailable(
-  order: number,
-  flags: Omit<SavedProgress, "activePart">,
+function sectionAvailable(
+  index: number,
+  navSections: HomeworkTemplateOneSection[],
+  doneSectionIds: ReadonlySet<string>,
+  unlockAll: boolean,
 ): boolean {
-  if (order === 1) return true;
-  if (order === 2) return flags.partOneDone;
-  if (order === 3) return flags.partTwoDone;
-  if (order === 4) return flags.partThreeDone;
-  if (order === 5) return flags.partFourDone;
-  if (order === 6) return flags.partFiveDone;
-  return false;
-}
-
-function partDone(order: number, flags: Omit<SavedProgress, "activePart">): boolean {
-  if (order === 1) return flags.partOneDone;
-  if (order === 2) return flags.partTwoDone;
-  if (order === 3) return flags.partThreeDone;
-  if (order === 4) return flags.partFourDone;
-  if (order === 5) return flags.partFiveDone;
-  if (order === 6) return flags.partSixDone;
-  return false;
+  if (unlockAll) return true;
+  if (index <= 0) return true;
+  const previous = navSections[index - 1];
+  return previous ? doneSectionIds.has(previous.id) : false;
 }
 
 export function HomeworkTemplateOnePilot({
   homeworkId,
   alreadyCompleted = false,
   homeHref = "/primary",
+  document: documentProp,
+  mode = "student",
+  focusSectionId = null,
 }: {
   homeworkId?: string;
   alreadyCompleted?: boolean;
   /** Where to send the student after they finish assigned homework. */
   homeHref?: string;
+  /** Frozen graded-track / template clone; defaults to live source template. */
+  document?: HomeworkTemplateOne;
+  /** Compiler embed: unlock parts, skip pilot chrome/storage, follow focus. */
+  mode?: "student" | "authoring-preview";
+  /** Section id (e.g. picture-cloze) to show while authoring. */
+  focusSectionId?: string | null;
 } = {}) {
   const router = useRouter();
+  const authoringPreview = mode === "authoring-preview";
   const storageKey = homeworkId ? `${STORAGE_KEY}:${homeworkId}` : STORAGE_KEY;
-  const pictureClozeSection = HOMEWORK_TEMPLATE_ONE.sections[0] as PictureClozeSection;
-  const annotationSection = HOMEWORK_TEMPLATE_ONE.sections[1] as WordAnnotationSection;
-  const sentenceColumnsSection = HOMEWORK_TEMPLATE_ONE
-    .sections[2] as SentenceColumnsSection;
-  const verbTableSection = HOMEWORK_TEMPLATE_ONE.sections[3] as VerbTableSection;
-  const pictureWritingSection = HOMEWORK_TEMPLATE_ONE
-    .sections[4] as PictureWritingSection;
-  const questionWritingSection = HOMEWORK_TEMPLATE_ONE
-    .sections[5] as QuestionWritingSection;
+  const templateDocument = documentProp ?? HOMEWORK_TEMPLATE_ONE;
 
-  const playables = useMemo(
-    () => ({
-      pictureCloze: pictureClozePlayableFromHt1(pictureClozeSection),
-      wordAnnotation: wordAnnotationPlayableFromHt1(annotationSection),
-      sentenceColumns: sentenceColumnsPlayableFromHt1(sentenceColumnsSection),
-      verbTable: verbTablePlayableFromHt1(verbTableSection),
-      pictureWriting: pictureWritingPlayableFromHt1(pictureWritingSection),
-      questionWriting: questionWritingPlayableFromHt1(questionWritingSection),
-    }),
-    [
-      annotationSection,
-      pictureClozeSection,
-      pictureWritingSection,
-      questionWritingSection,
-      sentenceColumnsSection,
-      verbTableSection,
-    ],
+  const navSections = useMemo(
+    () => sortSections(templateDocument),
+    [templateDocument],
   );
+  const sectionIds = useMemo(
+    () => new Set(navSections.map((section) => section.id)),
+    [navSections],
+  );
+  const firstSectionId = navSections[0]?.id ?? "";
 
-  const [activePart, setActivePart] = useState<PartNumber>(1);
-  const [partOneDone, setPartOneDone] = useState(false);
-  const [partTwoDone, setPartTwoDone] = useState(false);
-  const [partThreeDone, setPartThreeDone] = useState(false);
-  const [partFourDone, setPartFourDone] = useState(false);
-  const [partFiveDone, setPartFiveDone] = useState(false);
-  const [partSixDone, setPartSixDone] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState(() => {
+    if (authoringPreview && focusSectionId && sectionIds.has(focusSectionId)) {
+      return focusSectionId;
+    }
+    return firstSectionId;
+  });
+  const [doneSectionIds, setDoneSectionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [resetNonce, setResetNonce] = useState(0);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydrated, setHydrated] = useState(authoringPreview);
   const [completionNotice, setCompletionNotice] = useState(
-    alreadyCompleted ? "This homework is already marked complete. You can redo it to send reviewable answers to your teacher." : "",
+    alreadyCompleted
+      ? "This homework is already marked complete. You can redo it to send reviewable answers to your teacher."
+      : "",
   );
-
-  const progressFlags = {
-    partOneDone,
-    partTwoDone,
-    partThreeDone,
-    partFourDone,
-    partFiveDone,
-    partSixDone,
-  };
 
   useEffect(() => {
+    if (authoringPreview) return;
     const timer = window.setTimeout(() => {
-      const saved = readProgress(storageKey);
-      setActivePart(saved.activePart);
-      setPartOneDone(saved.partOneDone);
-      setPartTwoDone(saved.partTwoDone);
-      setPartThreeDone(saved.partThreeDone);
-      setPartFourDone(saved.partFourDone);
-      setPartFiveDone(saved.partFiveDone);
-      setPartSixDone(saved.partSixDone);
+      const saved = readProgress(storageKey, sectionIds, firstSectionId);
+      setActiveSectionId(saved.activeSectionId);
+      setDoneSectionIds(new Set(saved.doneSectionIds));
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [storageKey]);
+  }, [authoringPreview, firstSectionId, sectionIds, storageKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (authoringPreview || !hydrated) return;
     window.localStorage.setItem(
       storageKey,
       JSON.stringify({
-        activePart,
-        partOneDone,
-        partTwoDone,
-        partThreeDone,
-        partFourDone,
-        partFiveDone,
-        partSixDone,
+        activeSectionId,
+        doneSectionIds: [...doneSectionIds],
       } satisfies SavedProgress),
     );
-  }, [activePart, hydrated, partFiveDone, partFourDone, partOneDone, partSixDone, partThreeDone, partTwoDone, storageKey]);
+  }, [
+    activeSectionId,
+    authoringPreview,
+    doneSectionIds,
+    hydrated,
+    storageKey,
+  ]);
+
+  useEffect(() => {
+    if (!authoringPreview || !focusSectionId) return;
+    if (sectionIds.has(focusSectionId)) {
+      setActiveSectionId(focusSectionId);
+    }
+  }, [authoringPreview, focusSectionId, sectionIds]);
 
   const reset = () => {
-    setActivePart(1);
-    setPartOneDone(false);
-    setPartTwoDone(false);
-    setPartThreeDone(false);
-    setPartFourDone(false);
-    setPartFiveDone(false);
-    setPartSixDone(false);
+    setActiveSectionId(firstSectionId);
+    setDoneSectionIds(new Set());
     setResetNonce((value) => value + 1);
-    window.localStorage.removeItem(storageKey);
-    // Clear legacy per-part keys from the pre-shared-player pilot.
-    window.localStorage.removeItem("wke-pilot-homework-template-one:v1");
-    window.localStorage.removeItem("wke-pilot-homework-template-one:word-annotation:v1");
-    window.localStorage.removeItem("wke-pilot-homework-template-one:sentence-columns:v1");
-    window.localStorage.removeItem("wke-pilot-homework-template-one:verb-table:v1");
-    window.localStorage.removeItem("wke-pilot-homework-template-one:picture-writing:v1");
-    window.localStorage.removeItem("wke-pilot-homework-template-one:question-writing:v1");
+    setCompletionNotice("");
+    if (!authoringPreview) {
+      window.localStorage.removeItem(storageKey);
+    }
+    window.localStorage.removeItem(
+      "wke-pilot-homework-template-one:picture-writing:v1",
+    );
+    window.localStorage.removeItem(
+      "wke-pilot-homework-template-one:question-writing:v1",
+    );
   };
 
-  const savePartThen = (partId: string, snapshot: HomeworkTemplatePartSnapshot, onSaved: () => void) => {
-    if (!homeworkId) { onSaved(); return; }
-    setCompletionNotice("Saving your work…");
-    void saveHomeworkTemplatePart({ homeworkId, partId, snapshot }).then((result) => {
-      if (!result.ok) { setCompletionNotice(result.error); return; }
-      setCompletionNotice("");
+  const markSectionDoneAndAdvance = (sectionId: string) => {
+    setDoneSectionIds((current) => new Set(current).add(sectionId));
+    const index = navSections.findIndex((section) => section.id === sectionId);
+    const next = index >= 0 ? navSections[index + 1] : undefined;
+    if (next) setActiveSectionId(next.id);
+  };
+
+  const savePartThen = (
+    partId: string,
+    snapshot: HomeworkTemplatePartSnapshot,
+    onSaved: () => void,
+  ) => {
+    if (!homeworkId) {
       onSaved();
-    });
+      return;
+    }
+    setCompletionNotice("Saving your work…");
+    void saveHomeworkTemplatePart({ homeworkId, partId, snapshot }).then(
+      (result) => {
+        if (!result.ok) {
+          setCompletionNotice(result.error);
+          return;
+        }
+        setCompletionNotice("");
+        onSaved();
+      },
+    );
   };
 
-  const finishAssignedHomework = (snapshot: HomeworkTemplatePartSnapshot) => {
-    if (!homeworkId) { setPartSixDone(true); return; }
+  const completeSection = (
+    sectionId: string,
+    snapshot: HomeworkTemplatePartSnapshot,
+  ) => {
+    const index = navSections.findIndex((section) => section.id === sectionId);
+    const isLast = index >= 0 && index === navSections.length - 1;
 
-    setCompletionNotice("Submitting your work…");
-    void saveHomeworkTemplatePart({ homeworkId, partId: "question-writing", snapshot, submit: true }).then(async (submissionResult) => {
-      if (!submissionResult.ok) { setCompletionNotice(submissionResult.error); return; }
-      const result = await recordHomeworkTemplateCompletion({ homeworkId });
-      if (!result.ok) {
-        setCompletionNotice(result.error);
-        return;
-      }
-      setPartSixDone(true);
-      setCompletionNotice("Homework submitted — heading home…");
-      router.push(homeHref);
+    if (isLast && homeworkId) {
+      setCompletionNotice("Submitting your work…");
+      void saveHomeworkTemplatePart({
+        homeworkId,
+        partId: sectionId,
+        snapshot,
+        submit: true,
+      }).then(async (submissionResult) => {
+        if (!submissionResult.ok) {
+          setCompletionNotice(submissionResult.error);
+          return;
+        }
+        const result = await recordHomeworkTemplateCompletion({ homeworkId });
+        if (!result.ok) {
+          setCompletionNotice(result.error);
+          return;
+        }
+        setDoneSectionIds((current) => new Set(current).add(sectionId));
+        setCompletionNotice("Homework submitted — heading home…");
+        router.push(homeHref);
+      });
+      return;
+    }
+
+    savePartThen(sectionId, snapshot, () => {
+      markSectionDoneAndAdvance(sectionId);
     });
   };
 
@@ -247,17 +264,111 @@ export function HomeworkTemplateOnePilot({
   }
 
   const assigned = Boolean(homeworkId);
+  const embedded = authoringPreview || assigned;
+  const activeIndex = navSections.findIndex(
+    (section) => section.id === activeSectionId,
+  );
+  const activeSection =
+    (activeIndex >= 0 ? navSections[activeIndex] : navSections[0]) ?? null;
+  const previousSection =
+    activeIndex > 0 ? (navSections[activeIndex - 1] ?? null) : null;
+  const partNumber = activeIndex >= 0 ? activeIndex + 1 : 1;
+  const partCount = navSections.length;
+
+  const activePlayable = (() => {
+    if (!activeSection) return null;
+    switch (activeSection.kind) {
+      case "picture_cloze":
+        return {
+          kind: "picture_cloze" as const,
+          activity: pictureClozePlayableFromHt1(
+            activeSection as PictureClozeSection,
+          ),
+        };
+      case "word_annotation":
+        return {
+          kind: "word_annotation" as const,
+          activity: wordAnnotationPlayableFromHt1(
+            activeSection as WordAnnotationSection,
+          ),
+        };
+      case "sentence_columns":
+        return {
+          kind: "sentence_columns" as const,
+          activity: sentenceColumnsPlayableFromHt1(
+            activeSection as SentenceColumnsSection,
+          ),
+        };
+      case "verb_table":
+        return {
+          kind: "verb_table" as const,
+          activity: verbTablePlayableFromHt1(
+            activeSection as VerbTableSection,
+          ),
+        };
+      case "picture_writing":
+        return {
+          kind: "picture_writing" as const,
+          activity: pictureWritingPlayableFromHt1(
+            activeSection as PictureWritingSection,
+          ),
+        };
+      case "question_writing":
+        if (activeSection.status !== "ready") return null;
+        return {
+          kind: "question_writing" as const,
+          activity: questionWritingPlayableFromHt1(
+            activeSection as QuestionWritingSection,
+          ),
+        };
+      default:
+        return null;
+    }
+  })();
+
+  const eyebrow =
+    activeSection
+      ? `Part ${partNumber} of ${partCount} · ${skillLabel(activeSection.skill)}`
+      : undefined;
 
   return (
     <div
       className={
-        assigned
-          ? "space-y-4"
+        embedded
+          ? "space-y-4 p-3 sm:p-4"
           : "min-h-dvh bg-[linear-gradient(180deg,#eff8ff_0%,#fff9ed_100%)] px-3 py-5 sm:px-6"
       }
     >
-      <div className={assigned ? "space-y-4" : "mx-auto max-w-7xl space-y-4"}>
-        {assigned ? null : (
+      <div className={embedded ? "space-y-4" : "mx-auto max-w-7xl space-y-4"}>
+        {authoringPreview ? (
+          <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white/95 px-4 py-3 shadow-sm">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                Teacher preview · student view
+              </p>
+              <h1 className="mt-1 text-xl font-black tracking-tight text-[#17375e]">
+                {templateDocument.title}
+              </h1>
+              <p className="text-sm font-semibold text-slate-600">
+                {templateDocument.subtitle}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900">
+                <Clock3 className="h-4 w-4" />~
+                {templateDocument.estimatedMinutes} min
+              </span>
+              <button
+                type="button"
+                onClick={reset}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset preview
+              </button>
+            </div>
+          </header>
+        ) : assigned ? null : (
           <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white/95 px-4 py-3 shadow-sm">
             <div>
               <Link
@@ -267,16 +378,16 @@ export function HomeworkTemplateOnePilot({
                 ← Pilots
               </Link>
               <h1 className="mt-1 text-2xl font-black tracking-tight text-[#17375e]">
-                {HOMEWORK_TEMPLATE_ONE.title}
+                {templateDocument.title}
               </h1>
               <p className="text-sm font-semibold text-slate-600">
-                {HOMEWORK_TEMPLATE_ONE.subtitle}
+                {templateDocument.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900">
                 <Clock3 className="h-4 w-4" />~
-                {HOMEWORK_TEMPLATE_ONE.estimatedMinutes} min
+                {templateDocument.estimatedMinutes} min
               </span>
               <button
                 type="button"
@@ -300,7 +411,7 @@ export function HomeworkTemplateOnePilot({
           <aside className="space-y-2 lg:sticky lg:top-4 lg:self-start">
             <div className="flex items-center justify-between gap-2 px-2">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                Six-part homework
+                {partCount}-part homework
               </p>
               {assigned ? (
                 <button
@@ -314,16 +425,21 @@ export function HomeworkTemplateOnePilot({
                 </button>
               ) : null}
             </div>
-            {HOMEWORK_TEMPLATE_ONE.sections.map((item) => {
-              const available = partAvailable(item.order, progressFlags);
-              const active = item.order === activePart;
-              const done = partDone(item.order, progressFlags);
+            {navSections.map((item, index) => {
+              const available = sectionAvailable(
+                index,
+                navSections,
+                doneSectionIds,
+                authoringPreview,
+              );
+              const active = item.id === activeSectionId;
+              const done = doneSectionIds.has(item.id);
               return (
                 <button
                   type="button"
                   disabled={!available}
                   onClick={() => {
-                    if (available) setActivePart(item.order as PartNumber);
+                    if (available) setActiveSectionId(item.id);
                   }}
                   key={item.id}
                   className={`w-full rounded-xl border-2 p-3 text-left ${
@@ -365,70 +481,97 @@ export function HomeworkTemplateOnePilot({
           </aside>
 
           <div className="min-w-0 space-y-3">
-            {activePart > 1 ? (
+            {previousSection ? (
               <button
                 type="button"
-                onClick={() => setActivePart((activePart - 1) as PartNumber)}
+                onClick={() => setActiveSectionId(previousSection.id)}
                 className="text-sm font-black text-sky-800 underline underline-offset-4"
               >
-                Back to Part {activePart - 1}
+                Back to Part {previousSection.order}
               </button>
             ) : null}
 
-            {activePart === 1 ? (
+            {activeSection &&
+            activePlayable?.kind === "picture_cloze" ? (
               <PictureClozePlayer
-                key={`${resetNonce}-part-1`}
-                activity={playables.pictureCloze}
-                eyebrow="Part 1 of 6 · Vocabulary"
+                key={`${resetNonce}-${activeSection.id}`}
+                activity={activePlayable.activity}
+                eyebrow={eyebrow}
                 doneLabel={assigned ? "Continue" : "Done"}
-                onMastered={(snapshot) => savePartThen("picture-cloze", snapshot, () => { setPartOneDone(true); setActivePart(2); })}
+                onMastered={(snapshot) =>
+                  completeSection(activeSection.id, snapshot)
+                }
               />
             ) : null}
 
-            {activePart === 2 ? (
+            {activeSection &&
+            activePlayable?.kind === "word_annotation" ? (
               <WordAnnotationPlayer
-                key={`${resetNonce}-part-2`}
-                activity={playables.wordAnnotation}
-                eyebrow="Part 2 of 6 · Grammar"
-                onMastered={(snapshot) => savePartThen("word-annotation", snapshot, () => { setPartTwoDone(true); setActivePart(3); })}
+                key={`${resetNonce}-${activeSection.id}`}
+                activity={activePlayable.activity}
+                eyebrow={eyebrow}
+                onMastered={(snapshot) =>
+                  completeSection(activeSection.id, snapshot)
+                }
               />
             ) : null}
 
-            {activePart === 3 ? (
+            {activeSection &&
+            activePlayable?.kind === "sentence_columns" ? (
               <SentenceColumnsPlayer
-                key={`${resetNonce}-part-3`}
-                activity={playables.sentenceColumns}
-                eyebrow="Part 3 of 6 · Grammar"
-                onMastered={(snapshot) => savePartThen("sentence-columns", snapshot, () => { setPartThreeDone(true); setActivePart(4); })}
+                key={`${resetNonce}-${activeSection.id}`}
+                activity={activePlayable.activity}
+                eyebrow={eyebrow}
+                onMastered={(snapshot) =>
+                  completeSection(activeSection.id, snapshot)
+                }
               />
             ) : null}
 
-            {activePart === 4 ? (
+            {activeSection && activePlayable?.kind === "verb_table" ? (
               <VerbTablePlayer
-                key={`${resetNonce}-part-4`}
-                activity={playables.verbTable}
-                eyebrow="Part 4 of 6 · Grammar"
-                onMastered={(snapshot) => savePartThen("verb-table", snapshot, () => { setPartFourDone(true); setActivePart(5); })}
+                key={`${resetNonce}-${activeSection.id}`}
+                activity={activePlayable.activity}
+                eyebrow={eyebrow}
+                onMastered={(snapshot) =>
+                  completeSection(activeSection.id, snapshot)
+                }
               />
             ) : null}
 
-            {activePart === 5 ? (
+            {activeSection &&
+            activePlayable?.kind === "picture_writing" ? (
               <PictureWritingPlayer
-                key={`${resetNonce}-part-5`}
-                activity={playables.pictureWriting}
-                eyebrow="Part 5 of 6 · Writing"
-                onReady={(snapshot) => savePartThen("picture-writing", snapshot, () => { setPartFiveDone(true); setActivePart(6); })}
+                key={`${resetNonce}-${activeSection.id}`}
+                activity={activePlayable.activity}
+                eyebrow={eyebrow}
+                onReady={(snapshot) =>
+                  completeSection(activeSection.id, snapshot)
+                }
               />
             ) : null}
 
-            {activePart === 6 ? (
+            {activeSection &&
+            activePlayable?.kind === "question_writing" ? (
               <QuestionWritingPlayer
-                key={`${resetNonce}-part-6`}
-                activity={playables.questionWriting}
-                eyebrow="Part 6 of 6 · Writing"
-                doneLabel={assigned ? "Finish homework" : "Done"}
-                onReady={finishAssignedHomework}
+                key={`${resetNonce}-${activeSection.id}`}
+                activity={activePlayable.activity}
+                eyebrow={eyebrow}
+                doneLabel={
+                  assigned && activeIndex === navSections.length - 1
+                    ? "Finish homework"
+                    : "Done"
+                }
+                onReady={(snapshot) =>
+                  completeSection(activeSection.id, snapshot)
+                }
               />
+            ) : null}
+
+            {activeSection && !activePlayable ? (
+              <p className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
+                This part isn’t available in the current preview document.
+              </p>
             ) : null}
           </div>
         </div>

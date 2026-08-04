@@ -82,16 +82,26 @@ export default async function PublicTeacherSpacePage({ params }: Props) {
           <p className="mt-4 max-w-xl text-base font-semibold text-white/90 sm:text-lg">
             {bio}
           </p>
-          <a
-            href="#activities"
-            className="mt-8 inline-flex w-fit items-center rounded-xl px-5 py-3 text-base font-extrabold shadow-lg transition hover:brightness-105"
-            style={{
-              background: "var(--classroom-cta)",
-              color: "var(--classroom-cta-ink)",
-            }}
-          >
-            Browse activities
-          </a>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <a
+              href="#activities"
+              className="inline-flex w-fit items-center rounded-xl px-5 py-3 text-base font-extrabold shadow-lg transition hover:brightness-105"
+              style={{
+                background: "var(--classroom-cta)",
+                color: "var(--classroom-cta-ink)",
+              }}
+            >
+              Browse activities
+            </a>
+            {page.space.trials_enabled ? (
+              <Link
+                href={`/parent/login?next=${encodeURIComponent(`/parent/book-trial/wke/${page.space.handle}`)}`}
+                className="inline-flex w-fit items-center rounded-xl border-2 border-white/80 bg-white/15 px-5 py-3 text-base font-extrabold text-white backdrop-blur transition hover:bg-white/25"
+              >
+                Book a trial
+              </Link>
+            ) : null}
+          </div>
         </div>
       </section>
 

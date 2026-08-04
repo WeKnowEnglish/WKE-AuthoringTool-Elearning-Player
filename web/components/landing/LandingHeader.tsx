@@ -24,7 +24,10 @@ export function LandingHeader() {
           aria-label="Account access"
           className="mt-3 grid grid-cols-2 gap-2 sm:mt-0 sm:flex sm:flex-wrap sm:items-center sm:justify-end"
         >
-          <Link href="/login" className={`${solidClass} justify-center sm:border-0 sm:bg-transparent sm:px-2.5`}>
+          <Link href="/parents" className={`${solidClass} justify-center sm:border-0 sm:bg-transparent sm:px-2.5`}>
+            Parents
+          </Link>
+          <Link href="/students" className={`${solidClass} justify-center sm:border-0 sm:bg-transparent sm:px-2.5`}>
             <LandingIcon name="user" size={16} />
             Student sign in
           </Link>

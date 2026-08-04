@@ -2,6 +2,7 @@ import { scoreClozeChoicePlayable, listClozeChoiceGaps } from "@/lib/cloze-choic
 import { scoreClozeOpenPlayable, listClozeOpenGaps } from "@/lib/cloze-open";
 import { scoreDefinitionMatchPlayable } from "@/lib/definition-match";
 import { scoreReadAndAnswerPlayable } from "@/lib/read-and-answer";
+import { normalizeAssessmentPart } from "@/lib/assessment/normalize-definition";
 import type {
   AssessmentDefinition,
   AssessmentPart,
@@ -14,77 +15,79 @@ export function listAssessmentParts(definition: AssessmentDefinition): Assessmen
 }
 
 export function assessmentPartItemIds(part: AssessmentPart): string[] {
-  if (part.kind === "definition_match") {
-    return part.activity.pairs.map((pair) => pair.id);
+  const normalized = normalizeAssessmentPart(part);
+  if (normalized.kind === "definition_match") {
+    return normalized.activity.pairs.map((pair) => pair.id);
   }
-  if (part.kind === "read_and_answer") {
-    return part.activity.questions.map((question) => question.id);
+  if (normalized.kind === "read_and_answer") {
+    return normalized.activity.questions.map((question) => question.id);
   }
-  if (part.kind === "short_answer_reading") {
-    return part.activity.questions.map((question) => question.id);
+  if (normalized.kind === "short_answer_reading") {
+    return normalized.activity.questions.map((question) => question.id);
   }
-  if (part.kind === "picture_yes_no") {
-    return part.activity.statements.map((statement) => statement.id);
+  if (normalized.kind === "picture_yes_no") {
+    return normalized.activity.statements.map((statement) => statement.id);
   }
-  if (part.kind === "dialogue_bank") {
-    return part.activity.exchanges.map((exchange) => exchange.id);
+  if (normalized.kind === "dialogue_bank") {
+    return normalized.activity.exchanges.map((exchange) => exchange.id);
   }
-  if (part.kind === "story_bank_title") {
+  if (normalized.kind === "story_bank_title") {
     return [
-      ...part.activity.segments
+      ...normalized.activity.segments
         .filter((segment) => segment.type === "gap")
         .map((segment) => segment.id),
-      part.activity.titleQuestionId,
+      normalized.activity.titleQuestionId,
     ];
   }
-  if (part.kind === "listening_character_match") {
-    return part.activity.characters.map((character) => character.id);
+  if (normalized.kind === "listening_character_match") {
+    return normalized.activity.targets.map((target) => target.id);
   }
-  if (part.kind === "listening_information") {
-    return part.activity.fields.map((field) => field.id);
+  if (normalized.kind === "listening_information") {
+    return normalized.activity.fields.map((field) => field.id);
   }
-  if (part.kind === "listening_item_match") {
-    return part.activity.prompts.map((prompt) => prompt.id);
+  if (normalized.kind === "listening_item_match") {
+    return normalized.activity.prompts.map((prompt) => prompt.id);
   }
-  if (part.kind === "listening_picture_choice") {
-    return part.activity.items.map((item) => item.id);
+  if (normalized.kind === "listening_picture_choice") {
+    return normalized.activity.items.map((item) => item.id);
   }
-  if (part.kind === "listening_colour_picture") {
-    return part.activity.targets.map((target) => target.id);
+  if (normalized.kind === "listening_colour_picture") {
+    return normalized.activity.targets.map((target) => target.id);
   }
   if (
-    part.kind === "speaking_picture_differences" ||
-    part.kind === "speaking_question_exchange" ||
-    part.kind === "speaking_picture_story"
+    normalized.kind === "speaking_picture_differences" ||
+    normalized.kind === "speaking_question_exchange" ||
+    normalized.kind === "speaking_picture_story"
   ) {
-    return [part.activity.responseId];
+    return [normalized.activity.responseId];
   }
-  if (part.kind === "cloze_choice") {
-    return listClozeChoiceGaps(part.activity.segments).map((gap) => gap.id);
+  if (normalized.kind === "cloze_choice") {
+    return listClozeChoiceGaps(normalized.activity.segments).map((gap) => gap.id);
   }
-  return listClozeOpenGaps(part.activity.segments).map((gap) => gap.id);
+  return listClozeOpenGaps(normalized.activity.segments).map((gap) => gap.id);
 }
 
 export function scoreAssessmentPart(
   part: AssessmentPart,
   responses: Record<string, string> = {},
 ): AssessmentPartProgress {
-  const ids = assessmentPartItemIds(part);
+  const normalized = normalizeAssessmentPart(part);
+  const ids = assessmentPartItemIds(normalized);
   const answered = ids.filter((id) => Boolean((responses[id] ?? "").trim())).length;
   if (
-    part.kind === "speaking_picture_differences" ||
-    part.kind === "speaking_question_exchange" ||
-    part.kind === "speaking_picture_story"
+    normalized.kind === "speaking_picture_differences" ||
+    normalized.kind === "speaking_question_exchange" ||
+    normalized.kind === "speaking_picture_story"
   ) {
     return { answered, total: 1, correct: 0, objectiveTotal: 0 };
   }
   let score: { correct: number; total: number };
-  if (part.kind === "definition_match") {
-    score = scoreDefinitionMatchPlayable(part.activity, responses);
-  } else if (part.kind === "read_and_answer") {
-    score = scoreReadAndAnswerPlayable(part.activity, responses);
-  } else if (part.kind === "short_answer_reading") {
-    const correct = part.activity.questions.filter((question) => {
+  if (normalized.kind === "definition_match") {
+    score = scoreDefinitionMatchPlayable(normalized.activity, responses);
+  } else if (normalized.kind === "read_and_answer") {
+    score = scoreReadAndAnswerPlayable(normalized.activity, responses);
+  } else if (normalized.kind === "short_answer_reading") {
+    const correct = normalized.activity.questions.filter((question) => {
       const answer = (responses[question.id] ?? "")
         .trim()
         .replace(/[.,!?;:'"()[\]{}]/g, "")
@@ -99,70 +102,89 @@ export function scoreAssessmentPart(
             .toLocaleLowerCase() === answer,
       );
     }).length;
-    score = { correct, total: part.activity.questions.length };
-  } else if (part.kind === "picture_yes_no") {
+    score = { correct, total: normalized.activity.questions.length };
+  } else if (normalized.kind === "picture_yes_no") {
     score = {
-      correct: part.activity.statements.filter(
+      correct: normalized.activity.statements.filter(
         (statement) => responses[statement.id] === statement.correctAnswer,
       ).length,
-      total: part.activity.statements.length,
+      total: normalized.activity.statements.length,
     };
-  } else if (part.kind === "dialogue_bank") {
+  } else if (normalized.kind === "dialogue_bank") {
     score = {
-      correct: part.activity.exchanges.filter(
+      correct: normalized.activity.exchanges.filter(
         (exchange) => responses[exchange.id] === exchange.correctResponseId,
       ).length,
-      total: part.activity.exchanges.length,
+      total: normalized.activity.exchanges.length,
     };
-  } else if (part.kind === "story_bank_title") {
-    const gaps = part.activity.segments.filter((segment) => segment.type === "gap");
+  } else if (normalized.kind === "story_bank_title") {
+    const gaps = normalized.activity.segments.filter(
+      (segment) => segment.type === "gap",
+    );
     score = {
       correct:
         gaps.filter((gap) => responses[gap.id] === gap.correctWordId).length +
-        (responses[part.activity.titleQuestionId] === part.activity.correctTitleId ? 1 : 0),
+        (responses[normalized.activity.titleQuestionId] ===
+        normalized.activity.correctTitleId
+          ? 1
+          : 0),
       total: gaps.length + 1,
     };
-  } else if (part.kind === "listening_character_match") {
+  } else if (normalized.kind === "listening_character_match") {
     score = {
-      correct: part.activity.characters.filter(
-        (character) => responses[character.id] === character.correctNameId,
+      correct: normalized.activity.targets.filter(
+        (target) => responses[target.id] === target.correctNameId,
       ).length,
-      total: part.activity.characters.length,
+      total: normalized.activity.targets.length,
     };
-  } else if (part.kind === "listening_information") {
-    const normalize = (value: string) => value.trim().replace(/[.,!?;:'"()[\]{}]/g, "").replace(/\s+/g, " ").toLocaleLowerCase();
+  } else if (normalized.kind === "listening_information") {
+    const normalizeAnswer = (value: string) =>
+      value
+        .trim()
+        .replace(/[.,!?;:'"()[\]{}]/g, "")
+        .replace(/\s+/g, " ")
+        .toLocaleLowerCase();
     score = {
-      correct: part.activity.fields.filter((field) => {
-        const answer = normalize(responses[field.id] ?? "");
-        return field.acceptedAnswers.some((accepted) => normalize(accepted) === answer);
+      correct: normalized.activity.fields.filter((field) => {
+        const answer = normalizeAnswer(responses[field.id] ?? "");
+        return field.acceptedAnswers.some(
+          (accepted) => normalizeAnswer(accepted) === answer,
+        );
       }).length,
-      total: part.activity.fields.length,
+      total: normalized.activity.fields.length,
     };
-  } else if (part.kind === "listening_item_match") {
+  } else if (normalized.kind === "listening_item_match") {
     score = {
-      correct: part.activity.prompts.filter(
+      correct: normalized.activity.prompts.filter(
         (prompt) => responses[prompt.id] === prompt.correctChoiceId,
       ).length,
-      total: part.activity.prompts.length,
+      total: normalized.activity.prompts.length,
     };
-  } else if (part.kind === "listening_picture_choice") {
+  } else if (normalized.kind === "listening_picture_choice") {
     score = {
-      correct: part.activity.items.filter((item) => responses[item.id] === item.correctChoiceId).length,
-      total: part.activity.items.length,
+      correct: normalized.activity.items.filter(
+        (item) => responses[item.id] === item.correctChoiceId,
+      ).length,
+      total: normalized.activity.items.length,
     };
-  } else if (part.kind === "listening_colour_picture") {
+  } else if (normalized.kind === "listening_colour_picture") {
     score = {
-      correct: part.activity.targets.filter(
+      correct: normalized.activity.targets.filter(
         (target) => responses[target.id] === target.correctColourId,
       ).length,
-      total: part.activity.targets.length,
+      total: normalized.activity.targets.length,
     };
-  } else if (part.kind === "cloze_choice") {
-    score = scoreClozeChoicePlayable(part.activity, responses);
+  } else if (normalized.kind === "cloze_choice") {
+    score = scoreClozeChoicePlayable(normalized.activity, responses);
   } else {
-    score = scoreClozeOpenPlayable(part.activity, responses);
+    score = scoreClozeOpenPlayable(normalized.activity, responses);
   }
-  return { answered, total: score.total, correct: score.correct, objectiveTotal: score.total };
+  return {
+    answered,
+    total: score.total,
+    correct: score.correct,
+    objectiveTotal: score.total,
+  };
 }
 
 export function assessmentProgress(
@@ -202,7 +224,9 @@ export function sanitizeAssessmentResponses(
     if (!partRaw || typeof partRaw !== "object" || Array.isArray(partRaw)) continue;
     const allowed = new Set(assessmentPartItemIds(part));
     const answers: Record<string, string> = {};
-    for (const [itemId, value] of Object.entries(partRaw as Record<string, unknown>)) {
+    for (const [itemId, value] of Object.entries(
+      partRaw as Record<string, unknown>,
+    )) {
       if (allowed.has(itemId) && typeof value === "string") {
         answers[itemId] = value.slice(0, 240);
       }

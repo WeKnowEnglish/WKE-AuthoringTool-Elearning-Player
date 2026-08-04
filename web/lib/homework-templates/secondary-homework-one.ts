@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const SECONDARY_HOMEWORK_ONE_ID = "secondary-homework-template-one" as const;
 
 export const COMMUNITY_SPEAKING_RESPONSE_ID = "favorite-community-response";
@@ -97,18 +99,256 @@ export function sequenceAnswers(order: readonly string[]): Record<string, string
   return Object.fromEntries(order.map((eventId, index) => [eventId, String(index + 1)]));
 }
 
-export function sequenceFromAnswers(answers: Record<string, string>): string[] {
-  const ids = SECONDARY_HOMEWORK_ONE.reading.events.map((event) => event.id);
+export type SecondaryReadingSection = {
+  partId?: string;
+  title: string;
+  instructions: string;
+  paragraphs: string[];
+  events: Array<{ id: string; text: string }>;
+  correctOrder: string[];
+};
+
+export type SecondaryCorrectionsSection = {
+  partId?: string;
+  instructions: string;
+  questions: Array<{ id: string; sentence: string; answer: string }>;
+};
+
+export type SecondaryDialogueSection = {
+  partId?: string;
+  instructions: string;
+  lines: Array<{
+    speaker: string;
+    before: string;
+    after: string;
+    clue: string;
+    id: string;
+    answer: string;
+    accepted?: string[];
+  }>;
+};
+
+export type SecondaryQuestionsSection = {
+  partId?: string;
+  instructions: string;
+  items: Array<{
+    id: string;
+    before: string;
+    choices: string[];
+    after: string;
+    answer: string;
+  }>;
+};
+
+export type SecondarySpeakingSection = {
+  partId?: string;
+  instructions: string;
+  planningPrompts: string[];
+  responseId: string;
+  maxDurationSeconds: number;
+  teacherScoreTotal: number;
+};
+
+function zodIssues(
+  parsed:
+    | { success: true }
+    | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } },
+): string[] {
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue) => {
+    const path = issue.path.length ? `${issue.path.join(".")}: ` : "";
+    return `${path}${issue.message}`;
+  });
+}
+
+const secondarySequenceSectionSchema = z
+  .object({
+    partId: z.string().optional(),
+    title: z.string().min(1),
+    instructions: z.string(),
+    paragraphs: z.array(z.string().min(1)).min(1).max(12),
+    events: z
+      .array(z.object({ id: z.string().min(1), text: z.string().min(1) }))
+      .min(2)
+      .max(12),
+    correctOrder: z.array(z.string().min(1)).min(2).max(12),
+  })
+  .superRefine((data, ctx) => {
+    const ids = data.events.map((event) => event.id);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Event ids must be unique",
+        path: ["events"],
+      });
+    }
+    if (data.correctOrder.length !== data.events.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "correctOrder must list every event once",
+        path: ["correctOrder"],
+      });
+    }
+    const idSet = new Set(ids);
+    for (const [index, eventId] of data.correctOrder.entries()) {
+      if (!idSet.has(eventId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Unknown event id “${eventId}”`,
+          path: ["correctOrder", index],
+        });
+      }
+    }
+  });
+
+const secondaryCorrectionsSectionSchema = z.object({
+  partId: z.string().optional(),
+  instructions: z.string(),
+  questions: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        sentence: z.string().min(1),
+        answer: z.string().min(1),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+const secondaryDialogueSectionSchema = z.object({
+  partId: z.string().optional(),
+  instructions: z.string(),
+  lines: z
+    .array(
+      z.object({
+        speaker: z.string().min(1),
+        before: z.string(),
+        after: z.string(),
+        clue: z.string().min(1),
+        id: z.string().min(1),
+        answer: z.string().min(1),
+        accepted: z.array(z.string().min(1)).optional(),
+      }),
+    )
+    .min(1)
+    .max(30),
+});
+
+const secondaryQuestionsSectionSchema = z.object({
+  partId: z.string().optional(),
+  instructions: z.string(),
+  items: z
+    .array(
+      z
+        .object({
+          id: z.string().min(1),
+          before: z.string(),
+          choices: z.array(z.string().min(1)).min(2).max(4),
+          after: z.string().min(1),
+          answer: z.string().min(1),
+        })
+        .superRefine((item, ctx) => {
+          if (!item.choices.includes(item.answer)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "answer must be one of the choices",
+              path: ["answer"],
+            });
+          }
+        }),
+    )
+    .min(1)
+    .max(20),
+});
+
+const secondarySpeakingSectionSchema = z.object({
+  partId: z.string().optional(),
+  instructions: z.string().min(1),
+  planningPrompts: z.array(z.string().min(1)).min(1).max(8),
+  responseId: z.string().min(1),
+  maxDurationSeconds: z.number().int().min(15).max(600),
+  teacherScoreTotal: z.number().int().min(1).max(20),
+});
+
+export function parseSecondarySequenceSection(
+  raw: unknown,
+): SecondaryReadingSection | null {
+  const parsed = secondarySequenceSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function secondarySequenceSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(secondarySequenceSectionSchema.safeParse(raw));
+}
+
+export function parseSecondaryCorrectionsSection(
+  raw: unknown,
+): SecondaryCorrectionsSection | null {
+  const parsed = secondaryCorrectionsSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function secondaryCorrectionsSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(secondaryCorrectionsSectionSchema.safeParse(raw));
+}
+
+export function parseSecondaryDialogueSection(
+  raw: unknown,
+): SecondaryDialogueSection | null {
+  const parsed = secondaryDialogueSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function secondaryDialogueSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(secondaryDialogueSectionSchema.safeParse(raw));
+}
+
+export function parseSecondaryQuestionsSection(
+  raw: unknown,
+): SecondaryQuestionsSection | null {
+  const parsed = secondaryQuestionsSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function secondaryQuestionsSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(secondaryQuestionsSectionSchema.safeParse(raw));
+}
+
+export function parseSecondarySpeakingSection(
+  raw: unknown,
+): SecondarySpeakingSection | null {
+  const parsed = secondarySpeakingSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function secondarySpeakingSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(secondarySpeakingSectionSchema.safeParse(raw));
+}
+
+type SequenceReading = {
+  events: readonly { id: string }[];
+  correctOrder: readonly string[];
+};
+
+export function sequenceFromAnswers(
+  answers: Record<string, string>,
+  reading: SequenceReading = SECONDARY_HOMEWORK_ONE.reading,
+): string[] {
+  const ids = reading.events.map((event) => event.id);
   const ranked = ids
     .map((id) => ({ id, rank: Number(answers[id]) }))
     .filter((item) => Number.isInteger(item.rank) && item.rank >= 1 && item.rank <= ids.length)
     .sort((a, b) => a.rank - b.rank)
     .map((item) => item.id);
-  return new Set(ranked).size === ids.length ? ranked : ids;
+  return new Set(ranked).size === ids.length ? ranked : [...ids];
 }
 
-export function scoreSequence(order: readonly string[]): number {
-  return SECONDARY_HOMEWORK_ONE.reading.correctOrder.reduce(
+export function scoreSequence(
+  order: readonly string[],
+  correctOrder: readonly string[] = SECONDARY_HOMEWORK_ONE.reading.correctOrder,
+): number {
+  return correctOrder.reduce(
     (score, eventId, index) => score + (order[index] === eventId ? 1 : 0),
     0,
   );

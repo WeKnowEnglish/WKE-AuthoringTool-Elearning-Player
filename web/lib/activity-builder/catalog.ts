@@ -311,19 +311,29 @@ export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
   },
   {
     id: "compiler",
-    label: "4 · Learning Track Compiler",
+    label: "4 · Track builders",
     toneClass: "text-fuchsia-800",
     cards: [
+      {
+        id: "track-builder",
+        title: "Track builder",
+        description:
+          "Practice = Learning Track compiler. Graded = clone Primary homework templates with full inline part editors; freeze on assign.",
+        badge: "Compiler",
+        lpPath: "/tracks",
+        status: "authoring_ready",
+        bankFormats: ["learning_track"],
+      },
       {
         id: "learning-tracks",
         title: "Learning Track Compiler",
         description:
-          "Assemble vocab quizzes + scene activities into a timed self-study track.",
-        badge: "Compiler",
+          "Moved into Track builder → Practice. This card redirects to /tracks.",
+        badge: "Redirect",
         lpPath: "/learning-tracks",
-        studioPath: "/activity-builder/learning-tracks",
         status: "authoring_ready",
         bankFormats: ["learning_track"],
+        adminOnly: true,
       },
     ],
   },

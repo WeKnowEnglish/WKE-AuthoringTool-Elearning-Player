@@ -27,6 +27,9 @@ export async function createTeacherClass(formData: FormData): Promise<void> {
     redirect("/teacher/classes/new?error=missing_title");
   }
 
+  const classKindRaw = String(formData.get("class_kind") ?? "regular").trim();
+  const class_kind = classKindRaw === "trial" ? "trial" : "regular";
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -35,6 +38,7 @@ export async function createTeacherClass(formData: FormData): Promise<void> {
       teacher_id: teacherId,
       title,
       course_id: null,
+      class_kind,
     })
     .select("id")
     .single();

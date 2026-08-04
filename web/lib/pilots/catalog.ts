@@ -165,9 +165,10 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/primary-a2-assessment",
     title: "Primary A2 assessment",
     description:
-      "Versioned test runner pilot with autosave, review, submission, and Reading & Writing Parts 1, 5, 6, and 7.",
+      "Flyers-shaped Primary A2 English Check. Author as Track builder → Assessment (seeded clone); student pilot still at this route.",
     group: "experiments",
     status: "review",
+    studioHref: "/teacher/activity-builder/tracks",
   },
   // ── Active · Quizzes ──────────────────────────────────────────────
   {
@@ -403,22 +404,31 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/teacher/activity-builder/tracks",
+    title: "Track builder",
+    description:
+      "Practice = LTC. Graded = homework templates with freeze/review. Assessment = Primary A2 English Check (free nav, end summary).",
+    group: "authoring",
+    status: "review",
+    studioHref: "/teacher/activity-builder/tracks",
+  },
+  {
     href: "/pilots/learning-track",
     title: "Learning track",
     description:
-      "Compiled self-study sessions (hobbies Day 1) with timeline authoring and live preview.",
+      "Compiled self-study sessions (hobbies Day 1). Author in Track builder → Practice (old /learning-tracks redirects).",
     group: "activities",
     status: "active",
-    studioHref: "/teacher/activity-builder/learning-tracks",
+    studioHref: "/teacher/activity-builder/tracks",
   },
   {
     href: "/pilots/learning-track",
     title: "Post-quiz report bridge",
     description:
-      "Replaces StoryBook for track transitions: results, encouragement, and next-activity cue from the Learning Track Compiler.",
+      "Replaces StoryBook for track transitions: results, encouragement, and next-activity cue from Practice track compiles.",
     group: "activities",
     status: "active",
-    studioHref: "/teacher/activity-builder/learning-tracks",
+    studioHref: "/teacher/activity-builder/tracks",
     subtype: "post_quiz_report",
   },
   {
@@ -741,7 +751,47 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     title: "Private Classroom (student)",
     description:
-      "Enrollment-gated async classroom at /primary/class/[classId] and /secondary/class/[classId] — teacher posts (announcements/photos), Live-now shell. Distinct from public /wke and live VC join.",
+      "Enrollment-gated async classroom at /primary/class/[classId] and /secondary/class/[classId] — teacher posts (announcements/photos), Live-now shell, weekly schedule / next lesson. Distinct from public /wke and live VC join.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/parent/login",
+    title: "Parent next lesson",
+    description:
+      "Guardians see confirmed weekly class times and next lesson on the child stream (class_meeting_slots + guardian RLS). Slice A of scheduling.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/teacher/classes",
+    title: "Forming class preferences",
+    description:
+      "Teacher offers 2–6 weekly time windows; linked parents rank availability; teacher locks a time into class_meeting_slots. Slice B grouping board on Class Hub → Students.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/teacher/availability",
+    title: "Trial availability + booking",
+    description:
+      "Teacher publishes open trial slots; parent books via /parent/book-trial (linked child or prospect); confirm creates student+guardian link for prospects, then trial class enrollment.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/parents",
+    title: "Parents landing",
+    description:
+      "Public /parents explains process and methods; CTAs to create account and /parents/teachers directory for trial discovery.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/parents/teachers",
+    title: "Teachers accepting trials",
+    description:
+      "Directory of published Classroom Wall spaces with trials_enabled. Book via /parent/book-trial/wke/[handle].",
     group: "classroom",
     status: "review",
   },

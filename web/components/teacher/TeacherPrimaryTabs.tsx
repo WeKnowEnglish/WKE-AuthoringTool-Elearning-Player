@@ -20,7 +20,8 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
   const isLight = teacherTier === "light";
   const onWallTab = searchParams.get("space") === "1";
 
-  const onClassroom = pathname.startsWith("/teacher/classes");
+  const onClassroom =
+    pathname.startsWith("/teacher/classes") || pathname.startsWith("/teacher/availability");
   const onActivityBuilder = pathname.startsWith("/teacher/activity-builder");
   const onMedia =
     pathname.startsWith("/teacher/media") ||
@@ -38,14 +39,23 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
       aria-label="Teacher primary"
     >
       <TeacherNavDropdown label="Classroom" active={onClassroom}>
-        <TeacherNavMenuLink href="/teacher/classes" active={onClassroom && !onWallTab}>
+        <TeacherNavMenuLink
+          href="/teacher/classes"
+          active={pathname.startsWith("/teacher/classes") && !onWallTab}
+        >
           Private classes
         </TeacherNavMenuLink>
         <TeacherNavMenuLink
           href="/teacher/classes?space=1"
-          active={onClassroom && onWallTab}
+          active={pathname.startsWith("/teacher/classes") && onWallTab}
         >
           Classroom Wall
+        </TeacherNavMenuLink>
+        <TeacherNavMenuLink
+          href="/teacher/availability"
+          active={pathname.startsWith("/teacher/availability")}
+        >
+          Trial availability
         </TeacherNavMenuLink>
       </TeacherNavDropdown>
 
@@ -57,10 +67,13 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
           WKE Library
         </TeacherNavMenuLink>
         <TeacherNavMenuLink
-          href="/teacher/activity-builder/learning-tracks"
-          active={pathname.startsWith("/teacher/activity-builder/learning-tracks")}
+          href="/teacher/activity-builder/tracks"
+          active={
+            pathname.startsWith("/teacher/activity-builder/tracks") ||
+            pathname.startsWith("/teacher/activity-builder/learning-tracks")
+          }
         >
-          Learning track
+          Track builder
         </TeacherNavMenuLink>
         <TeacherNavMenuLink
           href="/teacher/activity-builder/vocabulary-lists"
@@ -84,6 +97,7 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
           href="/teacher/activity-builder"
           active={
             onActivityBuilder &&
+            !pathname.startsWith("/teacher/activity-builder/tracks") &&
             !pathname.startsWith("/teacher/activity-builder/learning-tracks") &&
             !pathname.startsWith("/teacher/activity-builder/vocabulary-lists") &&
             !pathname.startsWith("/teacher/activity-builder/quizzes") &&

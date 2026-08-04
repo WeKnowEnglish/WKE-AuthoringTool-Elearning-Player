@@ -486,7 +486,16 @@ export function TeacherClassesHome({
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
-                              <p className="font-semibold text-stone-900">{teacherClass.title}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-stone-900">
+                                  {teacherClass.title}
+                                </p>
+                                <span className="rounded-full border border-stone-300 bg-stone-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stone-600">
+                                  {teacherClass.class_kind === "trial"
+                                    ? "Trial"
+                                    : "Regular"}
+                                </span>
+                              </div>
                               <p className="text-sm text-stone-600">
                                 {teacherClass.enrollmentCount} student
                                 {teacherClass.enrollmentCount === 1 ? "" : "s"}

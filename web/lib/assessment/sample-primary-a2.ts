@@ -5,7 +5,7 @@ export const PRIMARY_A2_ASSESSMENT_ID = "primary-a2-exit-pilot" as const;
 export const PRIMARY_A2_ASSESSMENT_PILOT: AssessmentDefinition = {
   schemaVersion: 1,
   id: PRIMARY_A2_ASSESSMENT_ID,
-  contentVersion: "2026.08-pilot.5",
+  contentVersion: "2026.08-pilot.6",
   title: "Primary A2 English Check",
   level: "A2",
   audience: "Students finishing Primary",
@@ -21,9 +21,15 @@ export const PRIMARY_A2_ASSESSMENT_PILOT: AssessmentDefinition = {
           partNumber: 1,
           kind: "listening_character_match",
           title: "Names and people",
-          instructions: "Listen and choose the correct name for each person. There are two extra names.",
+          instructions:
+            "Listen and draw a line from each name to the correct person in the picture. There are two extra names.",
           activity: {
-            audioText: "Look at the children at the school fair. The boy wearing the blue hoodie is Oliver. The girl in the light blue dress is Lucy. The boy with the blue winter hat is called Harry. The girl with two buns and a heart on her pink shirt is Daisy. The boy wearing the green sports shirt and a cap is Jack.",
+            audioText:
+              "Look at the children at the school open day. The girl singing on the stage is Lucy. The boy dancing in the green hoodie is Oliver. The girl dancing in the pink hoodie is Daisy. The girl at the snack table with the red hoodie is Sally. The boy carrying the blue books is Jack.",
+            image: {
+              src: "/assessment/primary-a2/listening-part-1/welcome-back-school-scene-v3.png",
+              alt: "A school open day with children singing, dancing, eating snacks, painting, and carrying books",
+            },
             names: [
               { id: "lp1-name-oliver", name: "Oliver" },
               { id: "lp1-name-lucy", name: "Lucy" },
@@ -33,12 +39,52 @@ export const PRIMARY_A2_ASSESSMENT_PILOT: AssessmentDefinition = {
               { id: "lp1-name-sally", name: "Sally" },
               { id: "lp1-name-tom", name: "Tom" },
             ],
-            characters: [
-              { id: "lp1-c1", imageSrc: "/assets/Characters Live Games/boy 1.png", imageAlt: "A boy wearing a blue hoodie", clueLabel: "A", correctNameId: "lp1-name-oliver" },
-              { id: "lp1-c2", imageSrc: "/assets/Characters Live Games/girl 1.png", imageAlt: "A girl wearing a light blue dress", clueLabel: "B", correctNameId: "lp1-name-lucy" },
-              { id: "lp1-c3", imageSrc: "/assets/Characters Live Games/boy 2.png", imageAlt: "A boy wearing a blue winter hat and black shirt", clueLabel: "C", correctNameId: "lp1-name-harry" },
-              { id: "lp1-c4", imageSrc: "/assets/Characters Live Games/girl 2.png", imageAlt: "A girl with two buns wearing a pink heart shirt", clueLabel: "D", correctNameId: "lp1-name-daisy" },
-              { id: "lp1-c5", imageSrc: "/assets/Characters Live Games/boy 3.png", imageAlt: "A boy wearing a green sports shirt and backwards cap", clueLabel: "E", correctNameId: "lp1-name-jack" },
+            targets: [
+              {
+                id: "lp1-c1",
+                label: "A",
+                xPercent: 11,
+                yPercent: 26,
+                widthPercent: 11,
+                heightPercent: 28,
+                correctNameId: "lp1-name-lucy",
+              },
+              {
+                id: "lp1-c2",
+                label: "B",
+                xPercent: 20,
+                yPercent: 46,
+                widthPercent: 11,
+                heightPercent: 28,
+                correctNameId: "lp1-name-oliver",
+              },
+              {
+                id: "lp1-c3",
+                label: "C",
+                xPercent: 30,
+                yPercent: 46,
+                widthPercent: 11,
+                heightPercent: 28,
+                correctNameId: "lp1-name-daisy",
+              },
+              {
+                id: "lp1-c4",
+                label: "D",
+                xPercent: 6,
+                yPercent: 58,
+                widthPercent: 14,
+                heightPercent: 32,
+                correctNameId: "lp1-name-sally",
+              },
+              {
+                id: "lp1-c5",
+                label: "E",
+                xPercent: 48,
+                yPercent: 48,
+                widthPercent: 13,
+                heightPercent: 36,
+                correctNameId: "lp1-name-jack",
+              },
             ],
           },
         },
@@ -170,7 +216,7 @@ export const PRIMARY_A2_ASSESSMENT_PILOT: AssessmentDefinition = {
           activity: {
             title: "Words and definitions",
             instructions: "Choose the word that matches each definition.",
-            shuffleWords: false,
+            shuffleWords: true,
             pairs: [
               { id: "p1-bridge", word: "bridge", definition: "You use this to cross over a river or road." },
               { id: "p1-diary", word: "diary", definition: "A book where you write what happens each day." },
@@ -316,7 +362,7 @@ export const PRIMARY_A2_ASSESSMENT_PILOT: AssessmentDefinition = {
             title: "A visit to the library",
             instructions: "Choose the best word for each gap.",
             passageTitle: "My new library card",
-            shuffleOptions: false,
+            shuffleOptions: true,
             segments: [
               { type: "text", id: "p6-t1", text: "Yesterday, my sister and I " },
               { type: "gap", id: "p6-g1", options: ["go", "went", "going"], correctAnswer: "went" },

@@ -46,7 +46,7 @@ const pictureClozeItemSchema = z.object({
 
 const readySectionSchema = z.object({
   id: z.string().min(1),
-  order: z.number().int().min(1).max(6),
+  order: z.number().int().min(1).max(12),
   title: z.string().min(1),
   skill: z.enum(["reading", "grammar", "vocabulary", "writing"]),
   kind: z.literal("picture_cloze"),
@@ -59,7 +59,7 @@ const readySectionSchema = z.object({
 export const WORD_ANNOTATION_ROLES = ["adjective", "adverb"] as const;
 const wordAnnotationSectionSchema = z.object({
   id: z.string().min(1),
-  order: z.literal(2),
+  order: z.number().int().min(1).max(12),
   title: z.string().min(1),
   skill: z.literal("grammar"),
   kind: z.literal("word_annotation"),
@@ -79,7 +79,7 @@ const wordAnnotationSectionSchema = z.object({
 export const SENTENCE_COLUMN_IDS = ["subject", "action", "extra"] as const;
 const sentenceColumnsSectionSchema = z.object({
   id: z.string().min(1),
-  order: z.literal(3),
+  order: z.number().int().min(1).max(12),
   title: z.string().min(1),
   skill: z.literal("grammar"),
   kind: z.literal("sentence_columns"),
@@ -95,7 +95,7 @@ const sentenceColumnsSectionSchema = z.object({
 export const VERB_FORM_COLUMNS = ["base", "past", "participle"] as const;
 const verbTableSectionSchema = z.object({
   id: z.string().min(1),
-  order: z.literal(4),
+  order: z.number().int().min(1).max(12),
   title: z.string().min(1),
   skill: z.literal("grammar"),
   kind: z.literal("verb_table"),
@@ -111,7 +111,7 @@ const verbTableSectionSchema = z.object({
 
 const pictureWritingSectionSchema = z.object({
   id: z.string().min(1),
-  order: z.literal(5),
+  order: z.number().int().min(1).max(12),
   title: z.string().min(1),
   skill: z.literal("writing"),
   kind: z.literal("picture_writing"),
@@ -125,7 +125,7 @@ const pictureWritingSectionSchema = z.object({
 });
 
 const questionWritingSectionSchema = z.object({
-  id: z.string().min(1), order: z.literal(6), title: z.string().min(1), skill: z.literal("writing"),
+  id: z.string().min(1), order: z.number().int().min(1).max(12), title: z.string().min(1), skill: z.literal("writing"),
   kind: z.literal("question_writing"), status: z.literal("ready"), instructions: z.string().min(1),
   workedExample: z.object({ prompt: z.string().min(1), question: z.string().min(1), answer: z.string().min(1) }),
   prompts: z.array(z.object({
@@ -137,7 +137,7 @@ const questionWritingSectionSchema = z.object({
 
 const plannedSectionSchema = z.object({
   id: z.string().min(1),
-  order: z.number().int().min(1).max(6),
+  order: z.number().int().min(1).max(12),
   title: z.string().min(1),
   skill: z.enum(["reading", "grammar", "vocabulary", "writing"]),
   kind: z.literal("question_writing"),
@@ -151,11 +151,41 @@ export const homeworkTemplateOneSchema = z.object({
   title: z.string().min(1),
   subtitle: z.string().min(1),
   estimatedMinutes: z.number().int().min(1),
-  sections: z.array(z.union([readySectionSchema, wordAnnotationSectionSchema, sentenceColumnsSectionSchema, verbTableSectionSchema, pictureWritingSectionSchema, questionWritingSectionSchema, plannedSectionSchema])).length(6),
+  sections: z
+    .array(
+      z.union([
+        readySectionSchema,
+        wordAnnotationSectionSchema,
+        sentenceColumnsSectionSchema,
+        verbTableSectionSchema,
+        pictureWritingSectionSchema,
+        questionWritingSectionSchema,
+        plannedSectionSchema,
+      ]),
+    )
+    .min(1)
+    .max(12),
 }).superRefine((template, context) => {
   const orders = template.sections.map((section) => section.order);
-  if (new Set(orders).size !== 6 || ![1, 2, 3, 4, 5, 6].every((order) => orders.includes(order))) {
-    context.addIssue({ code: "custom", path: ["sections"], message: "Homework Template One needs sections 1–6 in order." });
+  const n = template.sections.length;
+  const expected = Array.from({ length: n }, (_, index) => index + 1);
+  if (
+    new Set(orders).size !== n ||
+    !expected.every((order) => orders.includes(order))
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["sections"],
+      message: `Homework sections need unique orders 1–${n}.`,
+    });
+  }
+  const ids = template.sections.map((section) => section.id);
+  if (new Set(ids).size !== ids.length) {
+    context.addIssue({
+      code: "custom",
+      path: ["sections"],
+      message: "Homework section ids must be unique.",
+    });
   }
 });
 
@@ -166,9 +196,75 @@ export type WordAnnotationRole = (typeof WORD_ANNOTATION_ROLES)[number];
 export type SentenceColumnsSection = Extract<HomeworkTemplateOne["sections"][number], { kind: "sentence_columns" }>;
 export type SentenceColumnId = (typeof SENTENCE_COLUMN_IDS)[number];
 export type VerbTableSection = Extract<HomeworkTemplateOne["sections"][number], { kind: "verb_table" }>;
+
+function zodIssues(
+  parsed:
+    | { success: true }
+    | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } },
+): string[] {
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue) => {
+    const path = issue.path.length ? `${issue.path.join(".")}: ` : "";
+    return `${path}${issue.message}`;
+  });
+}
+
+export function parsePictureClozeSection(raw: unknown): PictureClozeSection | null {
+  const parsed = readySectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as PictureClozeSection) : null;
+}
+
+export function pictureClozeSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(readySectionSchema.safeParse(raw));
+}
+
+export function parseWordAnnotationSection(raw: unknown): WordAnnotationSection | null {
+  const parsed = wordAnnotationSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as WordAnnotationSection) : null;
+}
+
+export function wordAnnotationSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(wordAnnotationSectionSchema.safeParse(raw));
+}
+
+export function parseSentenceColumnsSection(raw: unknown): SentenceColumnsSection | null {
+  const parsed = sentenceColumnsSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as SentenceColumnsSection) : null;
+}
+
+export function sentenceColumnsSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(sentenceColumnsSectionSchema.safeParse(raw));
+}
+
+export function parseVerbTableSection(raw: unknown): VerbTableSection | null {
+  const parsed = verbTableSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as VerbTableSection) : null;
+}
+
+export function verbTableSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(verbTableSectionSchema.safeParse(raw));
+}
 export type VerbFormColumn = (typeof VERB_FORM_COLUMNS)[number];
 export type PictureWritingSection = Extract<HomeworkTemplateOne["sections"][number], { kind: "picture_writing" }>;
 export type QuestionWritingSection = Extract<HomeworkTemplateOne["sections"][number], { kind: "question_writing"; status: "ready" }>;
+
+export function parsePictureWritingSection(raw: unknown): PictureWritingSection | null {
+  const parsed = pictureWritingSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as PictureWritingSection) : null;
+}
+
+export function pictureWritingSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(pictureWritingSectionSchema.safeParse(raw));
+}
+
+export function parseQuestionWritingSection(raw: unknown): QuestionWritingSection | null {
+  const parsed = questionWritingSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as QuestionWritingSection) : null;
+}
+
+export function questionWritingSectionValidationIssues(raw: unknown): string[] {
+  return zodIssues(questionWritingSectionSchema.safeParse(raw));
+}
 
 export const HOMEWORK_TEMPLATE_ONE: HomeworkTemplateOne = {
   schemaVersion: 1,

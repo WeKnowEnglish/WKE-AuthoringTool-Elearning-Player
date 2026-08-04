@@ -220,6 +220,7 @@ export function ClassHomeworkPanel({
               (item.payload.type === "pack_quiz" ||
                 item.payload.type === "pack_flashcards" ||
                 item.payload.type === "homework_template" ||
+                item.payload.type === "graded_track" ||
                 item.payload.type === "picture_cloze" ||
                 item.payload.type === "verb_table" ||
                 item.payload.type === "sentence_columns" ||
@@ -691,6 +692,7 @@ function HomeworkEditor({
       {(homework.payload.type === "pack_quiz" ||
         homework.payload.type === "pack_flashcards" ||
         homework.payload.type === "homework_template" ||
+        homework.payload.type === "graded_track" ||
         homework.payload.type === "primary_a2_assessment") &&
       (homework.status === "assigned" || homework.status === "closed") ? (
         isLight ? (
@@ -737,7 +739,8 @@ function HomeworkEditor({
         </Link>
       ) : null}
 
-      {homework.payload.type === "homework_template" ? (
+      {homework.payload.type === "homework_template" ||
+      homework.payload.type === "graded_track" ? (
         <Link
           href={`/teacher/classes/${classId}/homework-template-results/${homework.id}`}
           className="inline-flex min-h-11 items-center rounded-lg border border-teal-700 px-3 text-sm font-semibold text-teal-800"

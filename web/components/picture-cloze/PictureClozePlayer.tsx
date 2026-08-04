@@ -6,6 +6,7 @@ import { BookOpenCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { HomeworkHelpHintCard, HomeworkHelpMascot, HomeworkHelpTrigger } from "@/components/homework-help/HomeworkHelpCoach";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { StudentItemProgressNav } from "@/components/kid-ui/StudentItemProgressNav";
 import {
   advancePictureClozeHelp,
   emptyHelpStruggle,
@@ -258,36 +259,31 @@ export function PictureClozePlayer({
           </div>
         </KidPanel>
 
-        <div
-          className="flex items-center justify-center gap-2"
-          role="tablist"
-          aria-label="Question progress"
-        >
-          {activity.items.map((dotItem, index) => {
-            const isCurrent = index === currentIndex;
-            const isAnswered = Boolean((answers[dotItem.id] ?? "").trim());
-            return (
-              <button
-                key={dotItem.id}
-                type="button"
-                role="tab"
-                aria-selected={isCurrent}
-                aria-label={`Picture ${index + 1}${isAnswered ? ", answered" : ""}`}
-                onClick={() => {
-                  setCurrentIndex(index);
-                  setHelpOpen(false);
-                }}
-                className={`rounded-full transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 ${
-                  isCurrent
-                    ? "h-2.5 w-8 bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]"
-                    : isAnswered
-                      ? "h-2.5 w-2.5 bg-emerald-300 hover:scale-110"
-                      : "h-2.5 w-2.5 bg-slate-300 hover:scale-110 hover:bg-slate-400"
-                }`}
-              />
-            );
+        <StudentItemProgressNav
+          ariaLabel="Question progress"
+          currentIndex={currentIndex}
+          onSelect={(index) => {
+            setCurrentIndex(index);
+            setHelpOpen(false);
+          }}
+          items={activity.items.map((dotItem, index) => {
+            const filled = Boolean((answers[dotItem.id] ?? "").trim());
+            const result = checked
+              ? isPictureClozeAnswerCorrect(
+                  answers[dotItem.id] ?? "",
+                  dotItem.acceptedAnswers,
+                )
+                ? ("correct" as const)
+                : ("incorrect" as const)
+              : ("none" as const);
+            return {
+              id: dotItem.id,
+              label: `Picture ${index + 1}`,
+              filled,
+              result,
+            };
           })}
-        </div>
+        />
 
         <div className="grid items-start gap-4 md:grid-cols-[11rem_minmax(0,1fr)] lg:grid-cols-[12.5rem_minmax(0,1fr)]">
           <aside className="rounded-2xl border-2 border-sky-100 bg-white p-3 shadow-sm md:sticky md:top-4">

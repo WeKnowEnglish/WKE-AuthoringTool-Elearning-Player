@@ -14,9 +14,26 @@ describe("Secondary Homework One", () => {
     expect(scoreSequence(["A", "B", "C", "D", "E"])).toBe(1);
   });
 
+  it("scores against an edited correctOrder when provided", () => {
+    expect(scoreSequence(["A", "B", "C", "D", "E"], ["A", "B", "C", "D", "E"])).toBe(5);
+    expect(scoreSequence(["C", "D", "A", "B", "E"], ["A", "B", "C", "D", "E"])).toBe(1);
+  });
+
   it("round-trips a saved sequence", () => {
     const order = ["C", "D", "A", "B", "E"];
     expect(sequenceFromAnswers(sequenceAnswers(order))).toEqual(order);
+  });
+
+  it("rebuilds sequence from answers using edited event ids", () => {
+    const reading = {
+      events: [{ id: "X" }, { id: "Y" }, { id: "Z" }],
+      correctOrder: ["Z", "X", "Y"],
+    };
+    expect(sequenceFromAnswers({ X: "2", Y: "3", Z: "1" }, reading)).toEqual([
+      "Z",
+      "X",
+      "Y",
+    ]);
   });
 
   it("normalizes case, whitespace, and curly apostrophes", () => {

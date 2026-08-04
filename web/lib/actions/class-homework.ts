@@ -26,6 +26,8 @@ import { freezeClozeChoiceHomeworkPayload } from "@/lib/class-homework/freeze-cl
 import { freezeClozeOpenHomeworkPayload } from "@/lib/class-homework/freeze-cloze-open";
 import { freezeReadAndAnswerHomeworkPayload } from "@/lib/class-homework/freeze-read-and-answer";
 import { freezePictureStoryHomeworkPayload } from "@/lib/class-homework/freeze-picture-story";
+import { freezeGradedTrackHomeworkPayload } from "@/lib/class-homework/freeze-graded-track";
+import { freezeAssessmentTrackHomeworkPayload } from "@/lib/class-homework/freeze-assessment-track";
 import {
   ASSIGNABLE_DOCUMENT_HOMEWORK_ERROR,
   isAssignableStudioHomeworkFormat,
@@ -34,6 +36,7 @@ import {
   type ClassHomework,
   type ClassHomeworkStatus,
 } from "@/lib/class-homework/types";
+import type { ActivityTrackDocument } from "@/lib/activity-tracks/types";
 import { getClassHomework } from "@/lib/data/class-homework";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -737,6 +740,164 @@ export async function assignHomeworkTemplate(input: {
   }
 }
 
+/**
+ * Assign a Track Builder Graded draft with a true content freeze
+ * (cloned template sections embedded in payload.document).
+ */
+export async function assignGradedTrackAsHomework(input: {
+  document: ActivityTrackDocument;
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const classId = input.classId.trim();
+    if (!classId) return { ok: false, error: "Choose a class." };
+    const supabase = await createClient();
+    const { data: ownedClass, error: classError } = await supabase
+      .from("teacher_classes")
+      .select("id, archived_at")
+      .eq("id", classId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+    if (classError) return { ok: false, error: classError.message };
+    if (!ownedClass || ownedClass.archived_at) {
+      return { ok: false, error: "Class not found." };
+    }
+
+    let payload;
+    try {
+      payload = freezeGradedTrackHomeworkPayload({ document: input.document });
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Could not freeze graded track.",
+      };
+    }
+
+    const normalized = normalizeHomeworkPayload(payload);
+    if (!normalized || normalized.type !== "graded_track") {
+      return { ok: false, error: "Graded track payload failed validation." };
+    }
+
+    const status: ClassHomeworkStatus =
+      input.status === "assigned" ? "assigned" : "draft";
+    const now = new Date().toISOString();
+    const { data: inserted, error: insertError } = await supabase
+      .from("class_homework")
+      .insert({
+        class_id: classId,
+        teacher_id: teacherId,
+        title: normalizeHomeworkTitle(input.title, normalized.title),
+        instructions: normalizeHomeworkInstructions(
+          input.instructions ?? input.document.instructions,
+        ),
+        due_at: normalizeDueAt(input.dueAt),
+        status,
+        payload: normalized,
+        assigned_at: status === "assigned" ? now : null,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+    if (insertError || !inserted?.id) {
+      return { ok: false, error: insertError?.message ?? "Could not create homework." };
+    }
+    const homework = await getClassHomework(inserted.id);
+    if (!homework) return { ok: false, error: "Homework was created but could not be loaded." };
+    revalidateClass(classId);
+    revalidatePath("/teacher/activity-builder/tracks");
+    return { ok: true, homework };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not assign the graded track.",
+    };
+  }
+}
+
+/**
+ * Assign a Track Builder Assessment draft with a true content freeze
+ * (AssessmentDefinition embedded in primary_a2_assessment.payload.document).
+ */
+export async function assignAssessmentTrackAsHomework(input: {
+  document: ActivityTrackDocument;
+  classId: string;
+  title?: string;
+  instructions?: string;
+  dueAt?: string | null;
+  status: "draft" | "assigned";
+}): Promise<ClassHomeworkActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const classId = input.classId.trim();
+    if (!classId) return { ok: false, error: "Choose a class." };
+    const supabase = await createClient();
+    const { data: ownedClass, error: classError } = await supabase
+      .from("teacher_classes")
+      .select("id, archived_at")
+      .eq("id", classId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+    if (classError) return { ok: false, error: classError.message };
+    if (!ownedClass || ownedClass.archived_at) {
+      return { ok: false, error: "Class not found." };
+    }
+
+    let payload;
+    try {
+      payload = freezeAssessmentTrackHomeworkPayload({ document: input.document });
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Could not freeze assessment track.",
+      };
+    }
+
+    const normalized = normalizeHomeworkPayload(payload);
+    if (!normalized || normalized.type !== "primary_a2_assessment") {
+      return { ok: false, error: "Assessment track payload failed validation." };
+    }
+
+    const status: ClassHomeworkStatus =
+      input.status === "assigned" ? "assigned" : "draft";
+    const now = new Date().toISOString();
+    const { data: inserted, error: insertError } = await supabase
+      .from("class_homework")
+      .insert({
+        class_id: classId,
+        teacher_id: teacherId,
+        title: normalizeHomeworkTitle(input.title, normalized.title),
+        instructions: normalizeHomeworkInstructions(
+          input.instructions ?? input.document.instructions,
+        ),
+        due_at: normalizeDueAt(input.dueAt),
+        status,
+        payload: normalized,
+        assigned_at: status === "assigned" ? now : null,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+    if (insertError || !inserted?.id) {
+      return { ok: false, error: insertError?.message ?? "Could not create homework." };
+    }
+    const homework = await getClassHomework(inserted.id);
+    if (!homework) return { ok: false, error: "Homework was created but could not be loaded." };
+    revalidateClass(classId);
+    revalidatePath("/teacher/activity-builder/tracks");
+    return { ok: true, homework };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not assign the assessment track.",
+    };
+  }
+}
+
 /** Backwards-compatible Primary template assignment action. */
 export async function assignHomeworkTemplateOne(input: {
   classId: string;
@@ -770,6 +931,7 @@ async function recordCatalogHomeworkCompletion(input: {
     | "pack_flashcards"
     | "studio_activity"
     | "homework_template"
+    | "graded_track"
     | "picture_cloze"
     | "verb_table"
     | "sentence_columns"
@@ -819,6 +981,7 @@ async function recordCatalogHomeworkCompletion(input: {
         payload.type !== "pack_flashcards" &&
         payload.type !== "studio_activity" &&
         payload.type !== "homework_template" &&
+        payload.type !== "graded_track" &&
         payload.type !== "picture_cloze" &&
         payload.type !== "verb_table" &&
         payload.type !== "sentence_columns" &&
@@ -974,7 +1137,7 @@ export async function recordHomeworkTemplateCompletion(input: {
 }): Promise<RecordHomeworkCompletionResult> {
   return recordCatalogHomeworkCompletion({
     homeworkId: input.homeworkId,
-    allowedTypes: ["homework_template"],
+    allowedTypes: ["homework_template", "graded_track"],
   });
 }
 

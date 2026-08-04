@@ -12,12 +12,12 @@
 };
 
 /**
- * Real, shippable free activities only ΓÇö no coming-soon stubs.
+ * Real, shippable free activities only — no coming-soon stubs.
  * Prefer indexable grammar landings; pilots are playable but noindex.
  */
 export const FREE_ACTIVITY_CARDS: FreeActivityCard[] = [
   {
-    title: "There is / There are ΓÇö Questions",
+    title: "There is / There are — Questions",
     description: "Interactive grammar poster for asking about what exists.",
     href: "/grammar/there-is-there-are-questions-a1",
     topic: "there-is-there-are",

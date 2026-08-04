@@ -10,7 +10,9 @@ import { SecondaryHomeworkOneShell } from "@/components/secondary/SecondaryHomew
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
+import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
+import { SECONDARY_HOMEWORK_ONE } from "@/lib/homework-templates/secondary-homework-one";
 import {
   getMyHomeworkTemplateSpeakingRecordings,
   getMyHomeworkTemplateSubmission,
@@ -67,13 +69,16 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
-  const [templateSubmission, templateRecordings] =
-    payload.type === "homework_template" && payload.templateId === "secondary-homework-template-one"
-      ? await Promise.all([
-          getMyHomeworkTemplateSubmission(homework.id),
-          getMyHomeworkTemplateSpeakingRecordings(homework.id),
-        ])
-      : [null, []];
+  const needsTemplateSubmission =
+    (payload.type === "homework_template" &&
+      payload.templateId === "secondary-homework-template-one") ||
+    (payload.type === "graded_track" && payload.level === "secondary");
+  const [templateSubmission, templateRecordings] = needsTemplateSubmission
+    ? await Promise.all([
+        getMyHomeworkTemplateSubmission(homework.id),
+        getMyHomeworkTemplateSpeakingRecordings(homework.id),
+      ])
+    : [null, []];
   const flashcardCards =
     payload.type === "pack_flashcards"
       ? parseStoredPackFlashcardCards(payload.cards ?? [])
@@ -179,6 +184,39 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
           initialSubmission={templateSubmission}
           initialRecording={templateRecordings[0]}
         />
+      ) : null}
+
+      {payload.type === "graded_track" && payload.level === "secondary" ? (
+        (() => {
+          const freeze = parseGradedTrackFreezeDocument(payload.document);
+          const content = freeze?.secondaryDocument as
+            | typeof SECONDARY_HOMEWORK_ONE
+            | undefined;
+          return content ? (
+            <SecondaryHomeworkOneShell
+              homeworkId={homework.id}
+              alreadyCompleted={Boolean(homework.completedAt)}
+              homeHref="/secondary"
+              initialSubmission={templateSubmission}
+              initialRecording={templateRecordings[0]}
+              content={content}
+              visiblePartIds={freeze?.parts.map((part) => part.sectionId)}
+              partLabels={
+                freeze
+                  ? Object.fromEntries(
+                      freeze.parts.map((part) => [part.sectionId, part.label]),
+                    )
+                  : undefined
+              }
+              title={freeze?.title}
+              subtitle={freeze?.instructions || undefined}
+            />
+          ) : (
+            <p className="rounded-xl border-2 border-dashed border-neutral-400 bg-white px-4 py-5 text-sm font-semibold text-neutral-600">
+              Graded track content is missing. Ask your teacher to re-assign this homework.
+            </p>
+          );
+        })()
       ) : null}
       </HomeworkStartGate>
     </HomeworkPlayChrome>

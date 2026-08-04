@@ -152,12 +152,48 @@ export async function getPublishedTeacherSpaceByHandle(
 ): Promise<PublicTeacherSpacePage | null> {
   const { data: space, error } = await supabase
     .from("teacher_spaces")
-    .select("id, handle, title, bio, is_published, hero_image_url, theme_id")
+    .select("id, handle, title, bio, is_published, hero_image_url, theme_id, trials_enabled")
     .eq("handle", handle)
     .eq("is_published", true)
     .maybeSingle();
 
   if (error) {
+    // Pre-migration 115: column missing — fall back without trials flag.
+    if (/trials_enabled/i.test(error.message)) {
+      const { data: legacy, error: legacyError } = await supabase
+        .from("teacher_spaces")
+        .select("id, handle, title, bio, is_published, hero_image_url, theme_id")
+        .eq("handle", handle)
+        .eq("is_published", true)
+        .maybeSingle();
+      if (legacyError) {
+        throw new Error(`${legacyError.message}${migrationHint(legacyError.message)}`);
+      }
+      if (!legacy) return null;
+      const theme = resolveClassroomTheme(legacy.theme_id);
+      const { data: items, error: itemsErr } = await supabase
+        .from("teacher_space_items")
+        .select(ITEM_SELECT)
+        .eq("space_id", legacy.id)
+        .order("sort_order", { ascending: true })
+        .order("published_at", { ascending: false });
+      if (itemsErr) {
+        throw new Error(`${itemsErr.message}${migrationHint(itemsErr.message)}`);
+      }
+      return {
+        space: {
+          handle: legacy.handle,
+          title: legacy.title,
+          bio: legacy.bio ?? "",
+          hero_image_url: legacy.hero_image_url ?? null,
+          theme_id: theme.id,
+          trials_enabled: false,
+        },
+        items: (items ?? []).map((row) =>
+          mapItemSummary(row as Parameters<typeof mapItemSummary>[0], legacy.handle),
+        ),
+      };
+    }
     throw new Error(`${error.message}${migrationHint(error.message)}`);
   }
   if (!space) return null;
@@ -182,6 +218,9 @@ export async function getPublishedTeacherSpaceByHandle(
       bio: space.bio ?? "",
       hero_image_url: space.hero_image_url ?? null,
       theme_id: theme.id,
+      trials_enabled: Boolean(
+        (space as { trials_enabled?: boolean }).trials_enabled,
+      ),
     },
     items: (items ?? []).map((row) =>
       mapItemSummary(row as Parameters<typeof mapItemSummary>[0], space.handle),

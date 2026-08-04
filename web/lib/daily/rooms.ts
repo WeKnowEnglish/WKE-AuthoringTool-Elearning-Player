@@ -36,6 +36,7 @@ export async function createPrivateDailyRoom(input: {
           exp: expUnix,
           enable_chat: false,
           enable_recording: false,
+          enable_transcription_storage: true,
           start_video_off: false,
           start_audio_off: false,
           eject_at_room_exp: true,

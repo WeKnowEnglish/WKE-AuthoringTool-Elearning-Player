@@ -62,3 +62,49 @@ export function unixSecondsToIso(seconds: number | undefined, fallback = new Dat
   }
   return new Date(seconds * 1000).toISOString();
 }
+
+export type DailyTranscriptWebhookPayload = {
+  transcriptId: string;
+  roomName: string;
+  duration?: number;
+  status?: string;
+  error?: string;
+};
+
+export function parseTranscriptPayload(
+  payload: Record<string, unknown> | undefined,
+): DailyTranscriptWebhookPayload | null {
+  if (!payload) return null;
+  const transcriptId =
+    typeof payload.id === "string"
+      ? payload.id.trim()
+      : typeof payload.transcriptId === "string"
+        ? payload.transcriptId.trim()
+        : "";
+  const roomName =
+    typeof payload.room_name === "string"
+      ? payload.room_name.trim()
+      : typeof payload.roomName === "string"
+        ? payload.roomName.trim()
+        : "";
+  if (!transcriptId || !roomName) return null;
+  return {
+    transcriptId,
+    roomName,
+    duration: typeof payload.duration === "number" ? payload.duration : undefined,
+    status: typeof payload.status === "string" ? payload.status : undefined,
+    error:
+      typeof payload.error === "string"
+        ? payload.error
+        : typeof payload.message === "string"
+          ? payload.message
+          : undefined,
+  };
+}
+
+export const DAILY_TRANSCRIPT_WEBHOOK_TYPES = new Set([
+  "transcript.started",
+  "transcript.ready-to-download",
+  "transcript.error",
+]);
+

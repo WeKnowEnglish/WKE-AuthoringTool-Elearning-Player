@@ -7,9 +7,16 @@ import {
 } from "@/lib/daily/attendance";
 import { logDaily } from "@/lib/daily/log";
 import {
+  createProcessingTranscriptRow,
+  markLatestProcessingFailed,
+  persistReadyTranscript,
+} from "@/lib/daily/transcription";
+import {
   dailyRoleFromWebhook,
+  DAILY_TRANSCRIPT_WEBHOOK_TYPES,
   parseDailyWebhookEnvelope,
   parseParticipantPayload,
+  parseTranscriptPayload,
 } from "@/lib/daily/webhook-events";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
@@ -86,9 +93,92 @@ async function finalizeWebhookEvent(input: {
     .eq("event_id", input.eventId);
 }
 
+async function processTranscriptWebhook(input: {
+  eventType: string;
+  eventId: string | null;
+  payload: Record<string, unknown> | undefined;
+}): Promise<ProcessDailyWebhookResult> {
+  const transcript = parseTranscriptPayload(input.payload);
+  if (!transcript) {
+    logDaily("webhook_bad_transcript_payload", {
+      eventType: input.eventType,
+      eventId: input.eventId,
+    });
+    return { ok: true, status: "ignored", eventType: input.eventType };
+  }
+
+  if (input.eventId) {
+    const claim = await claimWebhookEvent({
+      eventId: input.eventId,
+      eventType: input.eventType,
+      roomName: transcript.roomName,
+    });
+    if (claim === "duplicate") {
+      return { ok: true, status: "duplicate", eventType: input.eventType };
+    }
+  }
+
+  const sessionId = await findSessionIdByDailyRoomName(transcript.roomName);
+  if (!sessionId) {
+    if (input.eventId) {
+      await finalizeWebhookEvent({
+        eventId: input.eventId,
+        status: "ignored",
+        errorMessage: "No class_sessions row for transcript room",
+      });
+    }
+    return { ok: true, status: "ignored", eventType: input.eventType, sessionId: null };
+  }
+
+  try {
+    if (input.eventType === "transcript.started") {
+      await createProcessingTranscriptRow({
+        sessionId,
+        roomName: transcript.roomName,
+      });
+    } else if (input.eventType === "transcript.ready-to-download") {
+      await persistReadyTranscript({
+        sessionId,
+        dailyTranscriptId: transcript.transcriptId,
+        roomName: transcript.roomName,
+        durationSeconds: transcript.duration ?? null,
+      });
+    } else if (input.eventType === "transcript.error") {
+      await markLatestProcessingFailed(
+        sessionId,
+        transcript.error ?? "Daily transcript error",
+      );
+    }
+
+    if (input.eventId) {
+      await finalizeWebhookEvent({
+        eventId: input.eventId,
+        sessionId,
+        status: "processed",
+      });
+    }
+    return { ok: true, status: "processed", eventType: input.eventType, sessionId };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "transcript process failed";
+    logDaily("webhook_transcript_error", {
+      eventType: input.eventType,
+      eventId: input.eventId,
+      message,
+    });
+    if (input.eventId) {
+      await finalizeWebhookEvent({
+        eventId: input.eventId,
+        sessionId,
+        status: "error",
+        errorMessage: message,
+      });
+    }
+    return { ok: true, status: "ignored", eventType: input.eventType, sessionId };
+  }
+}
+
 /**
  * Handle a verified Daily webhook body (signature already checked).
- * Responds quickly path: claim idempotency key then process join/leave.
  */
 export async function processDailyWebhookBody(
   rawJson: unknown,
@@ -104,10 +194,15 @@ export async function processDailyWebhookBody(
       ? envelope.id.trim()
       : null;
 
-  if (
-    eventType !== "participant.joined" &&
-    eventType !== "participant.left"
-  ) {
+  if (DAILY_TRANSCRIPT_WEBHOOK_TYPES.has(eventType)) {
+    return processTranscriptWebhook({
+      eventType,
+      eventId,
+      payload: envelope.payload,
+    });
+  }
+
+  if (eventType !== "participant.joined" && eventType !== "participant.left") {
     if (eventId) {
       await claimWebhookEvent({
         eventId,
@@ -204,8 +299,6 @@ export async function processDailyWebhookBody(
         errorMessage: message,
       });
     }
-    // Still 200 to Daily so circuit breaker doesn't trip on transient DB issues —
-    // we logged + marked error; duplicates won't re-claim if claim succeeded.
     return { ok: true, status: "ignored", eventType, sessionId };
   }
 }

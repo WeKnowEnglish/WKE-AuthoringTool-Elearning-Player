@@ -806,9 +806,17 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/virtual-classroom/join",
     title: "Virtual classroom",
     description:
-      "Live VC with Daily Prebuilt video (schedule-aware join window, host dock UX). Provisional + webhook-verified attendance when DAILY_WEBHOOK_HMAC is set.",
+      "Live VC with Daily Prebuilt video (schedule-aware join, host dock). Opt-in transcription → private WebVTT review at /teacher/virtual-classroom/[sessionId]/transcript. Webhook-verified attendance when DAILY_WEBHOOK_HMAC is set.",
     group: "classroom",
     status: "active",
+  },
+  {
+    href: "/teacher/virtual-classroom/host",
+    title: "VC class transcript review",
+    description:
+      "Phase 3a: host Transcribe toggle saves Daily WebVTT to private Storage; teacher review page under /teacher/virtual-classroom/[sessionId]/transcript.",
+    group: "classroom",
+    status: "review",
   },
   {
     href: "/teacher/word-packs",

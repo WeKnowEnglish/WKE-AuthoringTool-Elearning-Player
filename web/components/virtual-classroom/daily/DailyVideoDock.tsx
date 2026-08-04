@@ -38,6 +38,9 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
   const [pendingConnect, setPendingConnect] = useState(false);
   const [disabledDismissed, setDisabledDismissed] = useState(false);
   const [hostAutoPrompted, setHostAutoPrompted] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcriptBusy, setTranscriptBusy] = useState(false);
+  const [transcriptNote, setTranscriptNote] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -93,6 +96,41 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
   const requestConnect = () => {
     setExpanded(true);
     setPendingConnect(true);
+  };
+
+  const toggleTranscription = async () => {
+    if (!isHost || transcriptBusy) return;
+    setTranscriptBusy(true);
+    setTranscriptNote(null);
+    try {
+      const action = transcribing ? "stop" : "start";
+      const res = await fetch(
+        `/api/virtual-classroom/${sessionId}/daily/transcription`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      );
+      const payload = (await res.json()) as {
+        error?: string;
+        transcriptionEnabled?: boolean;
+      };
+      if (!res.ok) {
+        setTranscriptNote(payload.error ?? "Transcription request failed.");
+        return;
+      }
+      setTranscribing(Boolean(payload.transcriptionEnabled));
+      setTranscriptNote(
+        action === "start"
+          ? "Transcribing… Stop when the class ends to save the transcript."
+          : "Stopping… transcript will appear for review when ready.",
+      );
+    } catch {
+      setTranscriptNote("Transcription request failed.");
+    } finally {
+      setTranscriptBusy(false);
+    }
   };
 
   const dismissDisabled = () => {
@@ -163,6 +201,24 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
                 Class video
               </p>
               <div className="flex items-center gap-2">
+                {joined && isHost ? (
+                  <button
+                    type="button"
+                    disabled={transcriptBusy}
+                    onClick={() => void toggleTranscription()}
+                    className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
+                      transcribing
+                        ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                        : "border border-slate-600 text-slate-100 hover:bg-slate-800"
+                    }`}
+                  >
+                    {transcriptBusy
+                      ? "…"
+                      : transcribing
+                        ? "Stop transcript"
+                        : "Transcribe"}
+                  </button>
+                ) : null}
                 {joined ? (
                   <button
                     type="button"
@@ -181,6 +237,17 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
                 </button>
               </div>
             </div>
+          ) : null}
+          {expanded && isHost && transcriptNote ? (
+            <p className="border-b border-slate-700 px-3 py-1.5 text-[11px] text-slate-300">
+              {transcriptNote}{" "}
+              <a
+                href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/transcript`}
+                className="font-bold text-teal-300 underline"
+              >
+                Review
+              </a>
+            </p>
           ) : null}
           <div
             ref={containerRef}

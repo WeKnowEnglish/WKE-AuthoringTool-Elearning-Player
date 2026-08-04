@@ -171,11 +171,16 @@ describe("createPrivateDailyRoom", () => {
     const body = JSON.parse(String(init?.body)) as {
       privacy: string;
       name: string;
-      properties: { enable_recording: boolean; exp: number };
+      properties: {
+        enable_recording: boolean;
+        enable_transcription_storage?: boolean;
+        exp: number;
+      };
     };
     expect(body.privacy).toBe("private");
     expect(body.name).toBe(opaqueDailyRoomName("vcs_AB34CD"));
     expect(body.properties.enable_recording).toBe(false);
+    expect(body.properties.enable_transcription_storage).toBe(true);
     expect(body.properties.exp).toBe(
       Math.floor(Date.parse("2026-07-30T16:00:00.000Z") / 1000),
     );

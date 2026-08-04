@@ -5,6 +5,7 @@ Phase 2a: Daily webhooks upgrade attendance rows to `source = verified`.
 Phase 2b: schedule-aware room TTL and role-based early-join windows.
 Phase 2c: disabled banner, mobile dock clearance, host auto-prompt, token refresh.
 Phase 2d: rate limits, staging/prod env checklist, pilots card active.
+Phase 3a: opt-in Daily transcription → private WebVTT + teacher review page.
 
 ## Env
 
@@ -96,3 +97,15 @@ The endpoint returns `200` for Daily’s `{"test":"test"}` probe used when regis
 | `POST .../daily/room` | 20 / min / host / session |
 
 Use Redis/Upstash later if you run multiple serverless instances and need a shared limiter.
+
+## Transcripts (Phase 3a)
+
+1. Apply migration `119_daily_session_transcripts.sql` (table + private `vc_transcripts` bucket).
+2. Extend Daily webhook `eventTypes` to include:
+   `participant.joined`, `participant.left`, `transcript.started`, `transcript.ready-to-download`, `transcript.error`.
+3. Ensure the Daily domain/plan supports transcription storage (paid feature).
+4. In a live session, host clicks **Transcribe** in the video dock (after joining video), then **Stop transcript**.
+5. Open `/teacher/virtual-classroom/[sessionId]/transcript` to review plain text + download WebVTT.
+
+Transcription is **opt-in per session** (`transcription_enabled`); rooms are created with `enable_transcription_storage: true` so files can persist when used.
+

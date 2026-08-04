@@ -31,6 +31,26 @@ type CharacterMatchActivityRaw = {
   characters?: LegacyCharacter[];
 };
 
+type SpeakingPart = Extract<
+  AssessmentPart,
+  | { kind: "speaking_picture_differences" }
+  | { kind: "speaking_question_exchange" }
+  | { kind: "speaking_picture_story" }
+>;
+
+function withDefaultSpeakingResponseId<T extends SpeakingPart>(part: T): T {
+  const responseId = part.activity.responseId?.trim();
+  if (responseId) return part;
+  // Spread collapses the correlated activity union; cast restores the inbound kind.
+  return {
+    ...part,
+    activity: {
+      ...part.activity,
+      responseId: `${part.id}-recording`,
+    },
+  } as T;
+}
+
 /**
  * Migrate older AssessmentDefinition shapes in local drafts / frozen payloads.
  * - listening_character_match: per-portrait `characters` → scene `image` + `targets`
@@ -42,15 +62,7 @@ export function normalizeAssessmentPart(part: AssessmentPart): AssessmentPart {
     part.kind === "speaking_question_exchange" ||
     part.kind === "speaking_picture_story"
   ) {
-    const responseId = part.activity.responseId?.trim();
-    if (responseId) return part;
-    return {
-      ...part,
-      activity: {
-        ...part.activity,
-        responseId: `${part.id}-recording`,
-      },
-    };
+    return withDefaultSpeakingResponseId(part);
   }
 
   if (part.kind !== "listening_character_match") return part;

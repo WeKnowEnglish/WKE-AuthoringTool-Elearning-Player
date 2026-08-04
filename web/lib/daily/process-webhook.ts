@@ -24,7 +24,7 @@ async function claimWebhookEvent(input: {
   eventId: string;
   eventType: string;
   roomName?: string | null;
-}): Promise<"claimed" | "duplicate" | "skipped"> {
+}): Promise<"claimed" | "duplicate" | "reclaimed" | "skipped"> {
   const supabase = createServiceRoleSupabase();
   if (!supabase) return "skipped";
 
@@ -36,16 +36,35 @@ async function claimWebhookEvent(input: {
     received_at: new Date().toISOString(),
   });
 
-  if (error) {
-    // Unique violation → already processed
-    if (error.code === "23505") return "duplicate";
-    logDaily("webhook_claim_failed", {
-      eventId: input.eventId,
-      message: error.message,
-    });
-    return "skipped";
+  if (!error) return "claimed";
+
+  if (error.code === "23505") {
+    const { data: existing } = await supabase
+      .from("daily_webhook_events")
+      .select("status")
+      .eq("event_id", input.eventId)
+      .maybeSingle();
+    if (existing?.status === "error") {
+      await supabase
+        .from("daily_webhook_events")
+        .update({
+          status: "processed",
+          error_message: null,
+          room_name: input.roomName ?? null,
+          received_at: new Date().toISOString(),
+        })
+        .eq("event_id", input.eventId)
+        .eq("status", "error");
+      return "reclaimed";
+    }
+    return "duplicate";
   }
-  return "claimed";
+
+  logDaily("webhook_claim_failed", {
+    eventId: input.eventId,
+    message: error.message,
+  });
+  return "skipped";
 }
 
 async function finalizeWebhookEvent(input: {

@@ -1,4 +1,4 @@
-/** Join / token lifetime rules for Daily ↔ Virtual Classroom (Phase 2b). */
+/** Join / token lifetime rules for Daily ↔ Virtual Classroom (Phase 2 hardened). */
 
 /** Default private room lifetime from creation when no nearby schedule bind exists. */
 export const DAILY_ROOM_TTL_MS = 4 * 60 * 60 * 1000;
@@ -24,6 +24,10 @@ export const POST_CLASS_ROOM_GRACE_MS = 15 * 60 * 1000;
 /** Only bind schedule rules when a live slot is within this lookahead. */
 export const SCHEDULE_LOOKAHEAD_MS = 24 * 60 * 60 * 1000;
 
+/** Absolute ceiling for schedule-bound room life from "now" (lookahead + class + buffer). */
+export const SCHEDULE_ROOM_HARD_CAP_MS =
+  SCHEDULE_LOOKAHEAD_MS + 4 * 60 * 60 * 1000 + POST_CLASS_ROOM_GRACE_MS;
+
 export type DailyJoinRole = "teacher" | "student" | "guest";
 
 export type SessionJoinability =
@@ -43,24 +47,35 @@ export function computeDailyRoomExpiresAt(createdAt: Date = new Date()): Date {
 }
 
 /**
- * Schedule-bound room end: class end + post grace, never longer than ad-hoc max
- * from creation, and never shorter than 1h from creation (host setup buffer).
+ * Schedule-bound room end: class end + post grace.
+ * Does NOT cap at create+4h (that killed rooms opened early for afternoon classes).
+ * Floors at create+1h; ceilings at now + hard cap.
  */
 export function computeScheduledDailyRoomExpiresAt(input: {
   createdAt?: Date;
   scheduledEndsAt: Date;
   nowMs?: number;
 }): Date {
-  const createdAt = input.createdAt ?? new Date(input.nowMs ?? Date.now());
-  const scheduleEnd = new Date(
-    input.scheduledEndsAt.getTime() + POST_CLASS_ROOM_GRACE_MS,
-  );
-  const adHocCap = new Date(createdAt.getTime() + DAILY_ROOM_TTL_MS);
-  const minLife = new Date(createdAt.getTime() + 60 * 60 * 1000);
-  const chosen = new Date(
-    Math.max(scheduleEnd.getTime(), minLife.getTime()),
-  );
-  return new Date(Math.min(chosen.getTime(), adHocCap.getTime()));
+  const now = input.nowMs ?? Date.now();
+  const createdAt = input.createdAt ?? new Date(now);
+  const scheduleEnd =
+    input.scheduledEndsAt.getTime() + POST_CLASS_ROOM_GRACE_MS;
+  const minLife = createdAt.getTime() + 60 * 60 * 1000;
+  const hardCap = now + SCHEDULE_ROOM_HARD_CAP_MS;
+  return new Date(Math.min(Math.max(scheduleEnd, minLife), hardCap));
+}
+
+export function isDailyRoomPastExpiry(
+  roomExpiresAt: Date | string | null | undefined,
+  nowMs = Date.now(),
+  graceMs = DAILY_TOKEN_GRACE_MS,
+): boolean {
+  if (!roomExpiresAt) return false;
+  const expires =
+    typeof roomExpiresAt === "string"
+      ? new Date(roomExpiresAt).getTime()
+      : roomExpiresAt.getTime();
+  return Number.isFinite(expires) && nowMs > expires + graceMs;
 }
 
 export function computeMeetingTokenExpUnix(input: {
@@ -99,6 +114,10 @@ export function evaluateSessionJoinability(input: {
   scheduledStartsAt?: Date | string | null;
   role?: DailyJoinRole;
   nowMs?: number;
+  /** When true, skip room_expired (e.g. provisional leave while still in call). */
+  ignoreRoomExpiry?: boolean;
+  /** When true, skip too_early (e.g. room metadata probe). */
+  ignoreEarlyJoin?: boolean;
 }): SessionJoinability {
   const now = input.nowMs ?? Date.now();
 
@@ -117,18 +136,18 @@ export function evaluateSessionJoinability(input: {
     };
   }
 
-  if (input.roomExpiresAt) {
-    const expires = new Date(input.roomExpiresAt).getTime();
-    if (Number.isFinite(expires) && now > expires + DAILY_TOKEN_GRACE_MS) {
-      return {
-        ok: false,
-        code: "room_expired",
-        message: "The video room for this session has expired.",
-      };
-    }
+  if (
+    !input.ignoreRoomExpiry &&
+    isDailyRoomPastExpiry(input.roomExpiresAt, now)
+  ) {
+    return {
+      ok: false,
+      code: "room_expired",
+      message: "The video room for this session has expired.",
+    };
   }
 
-  if (input.scheduledStartsAt) {
+  if (!input.ignoreEarlyJoin && input.scheduledStartsAt) {
     const start =
       typeof input.scheduledStartsAt === "string"
         ? new Date(input.scheduledStartsAt).getTime()

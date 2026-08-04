@@ -2,6 +2,7 @@ import "server-only";
 
 import { createPrivateDailyRoom, deleteDailyRoom } from "@/lib/daily/rooms";
 import { logDaily } from "@/lib/daily/log";
+import { DAILY_TOKEN_GRACE_MS, isDailyRoomPastExpiry } from "@/lib/daily/join-window";
 import {
   adHocDailyRoomExpiresAt,
   resolveDailyScheduleBind,
@@ -70,27 +71,59 @@ export async function getVirtualClassroomSessionWithDaily(
   };
 }
 
+async function clearPersistedDailyRoom(
+  sessionId: string,
+  roomName: string | null,
+): Promise<void> {
+  if (roomName) {
+    await deleteDailyRoom(roomName);
+  }
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return;
+  await supabase
+    .from("class_sessions")
+    .update({
+      daily_room_name: null,
+      daily_room_url: null,
+      daily_room_created_at: null,
+      daily_room_expires_at: null,
+    })
+    .eq("id", sessionId);
+}
+
 /**
  * Idempotent: reuse existing Daily room on the session row, or create once.
- * Concurrent hosts: unique room name + re-read after create race.
+ * Recreates when the persisted room is past expiry + grace.
  */
 export async function getOrCreateDailyRoomForSession(
   sessionId: string,
 ): Promise<DailyRoomRecord | null> {
   if (!isDailyEnabled()) return null;
 
-  const existing = await getVirtualClassroomSessionWithDaily(sessionId);
+  let existing = await getVirtualClassroomSessionWithDaily(sessionId);
   if (!existing) return null;
+
   if (existing.dailyRoomName && existing.dailyRoomUrl) {
-    logDaily("room_reused", { sessionId, roomName: existing.dailyRoomName });
-    return {
-      name: existing.dailyRoomName,
-      url: existing.dailyRoomUrl,
-      createdAt: existing.dailyRoomCreatedAt ?? new Date().toISOString(),
-      expiresAt:
-        existing.dailyRoomExpiresAt ??
-        new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-    };
+    if (!isDailyRoomPastExpiry(existing.dailyRoomExpiresAt)) {
+      logDaily("room_reused", { sessionId, roomName: existing.dailyRoomName });
+      return {
+        name: existing.dailyRoomName,
+        url: existing.dailyRoomUrl,
+        createdAt: existing.dailyRoomCreatedAt ?? new Date().toISOString(),
+        expiresAt:
+          existing.dailyRoomExpiresAt ??
+          new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+      };
+    }
+
+    logDaily("room_expired_recreate", {
+      sessionId,
+      roomName: existing.dailyRoomName,
+      graceMs: DAILY_TOKEN_GRACE_MS,
+    });
+    await clearPersistedDailyRoom(sessionId, existing.dailyRoomName);
+    existing = await getVirtualClassroomSessionWithDaily(sessionId);
+    if (!existing) return null;
   }
 
   const bind = await resolveDailyScheduleBind({
@@ -106,7 +139,6 @@ export async function getOrCreateDailyRoomForSession(
     throw new Error("Supabase service role required to persist Daily room.");
   }
 
-  // Only write if still empty — first writer wins.
   const { data: updated, error } = await supabase
     .from("class_sessions")
     .update({
@@ -131,10 +163,12 @@ export async function getOrCreateDailyRoomForSession(
   }
 
   if (!updated) {
-    // Lost race — another request persisted first; drop orphan room.
     await deleteDailyRoom(room.name);
     const again = await getVirtualClassroomSessionWithDaily(sessionId);
     if (again?.dailyRoomName && again.dailyRoomUrl) {
+      if (isDailyRoomPastExpiry(again.dailyRoomExpiresAt)) {
+        throw new Error("Could not attach a fresh Daily room to session.");
+      }
       logDaily("room_reused_after_race", {
         sessionId,
         roomName: again.dailyRoomName,
@@ -161,6 +195,9 @@ export async function clearDailyRoomOnSessionEnd(sessionId: string): Promise<voi
   await supabase
     .from("class_sessions")
     .update({
+      daily_room_name: null,
+      daily_room_url: null,
+      daily_room_created_at: null,
       daily_room_expires_at: new Date().toISOString(),
     })
     .eq("id", sessionId);

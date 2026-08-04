@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+export const DAILY_WEBHOOK_MAX_SKEW_MS = 5 * 60 * 1000;
+
 /**
  * Daily webhook HMAC verification.
  * Docs: timestamp + "." + raw JSON body, HMAC-SHA256 with base64-decoded secret,
@@ -15,13 +17,30 @@ export function computeDailyWebhookSignature(input: {
   return createHmac("sha256", secret).update(payload).digest("base64");
 }
 
+export function isDailyWebhookTimestampFresh(
+  timestamp: string | null,
+  nowMs = Date.now(),
+  maxSkewMs = DAILY_WEBHOOK_MAX_SKEW_MS,
+): boolean {
+  if (!timestamp?.trim()) return false;
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts)) return false;
+  // Daily sends unix seconds (possibly fractional).
+  const tsMs = ts > 1e12 ? ts : ts * 1000;
+  return Math.abs(nowMs - tsMs) <= maxSkewMs;
+}
+
 export function verifyDailyWebhookSignature(input: {
   timestamp: string | null;
   signature: string | null;
   rawBody: string;
   hmacSecretBase64: string;
+  nowMs?: number;
 }): boolean {
   if (!input.timestamp || !input.signature || !input.hmacSecretBase64.trim()) {
+    return false;
+  }
+  if (!isDailyWebhookTimestampFresh(input.timestamp, input.nowMs)) {
     return false;
   }
   let expected: string;

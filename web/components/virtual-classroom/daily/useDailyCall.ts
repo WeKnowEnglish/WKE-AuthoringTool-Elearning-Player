@@ -125,9 +125,17 @@ export function useDailyCall(input: {
         return;
       }
       if (res.status === 401 || res.status === 403) {
+        const code = payload.code ?? "not_authorized";
+        // too_early should not happen on room GET anymore; treat soft if it does.
+        if (code === "too_early") {
+          setPhase("ready");
+          setError(payload.error ?? null);
+          setErrorCode(code);
+          return;
+        }
         setPhase("error");
         setError(payload.error ?? "Not authorized for video.");
-        setErrorCode(payload.code ?? "not_authorized");
+        setErrorCode(code);
         return;
       }
       setPhase("ready");
@@ -200,6 +208,7 @@ export function useDailyCall(input: {
         setPhase("joined");
         setError(null);
         setErrorCode(null);
+        if (refreshingRef.current) return;
         const local = call.participants()?.local;
         void postAttendance(sessionId, "join", local?.session_id ?? null);
       });

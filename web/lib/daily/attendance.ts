@@ -71,10 +71,13 @@ export async function recordProvisionalAttendanceJoin(input: {
 
   if (existing?.id) {
     const keepVerified = existing.source === "verified";
+    const rejoin = Boolean(existing.last_left_at);
     await supabase
       .from("class_session_attendance")
       .update({
-        join_count: (existing.join_count ?? 0) + 1,
+        join_count: rejoin
+          ? (existing.join_count ?? 0) + 1
+          : Math.max(1, existing.join_count ?? 1),
         last_left_at: null,
         daily_participant_id:
           input.dailyParticipantId ?? existing.daily_participant_id ?? null,
@@ -242,12 +245,16 @@ export async function recordVerifiedAttendanceLeave(input: {
 
   if (existing?.id) {
     let totalSeconds = existing.total_seconds ?? 0;
+    const openSegment = existing.last_left_at == null;
     if (duration != null) {
-      // Prefer Daily's segment duration as authoritative for this visit.
-      totalSeconds = Math.max(totalSeconds, duration);
-    } else {
+      // Daily duration is this visit only — add onto completed time when segment was open.
+      totalSeconds = openSegment
+        ? totalSeconds + duration
+        : Math.max(totalSeconds, duration);
+    } else if (openSegment) {
       const joined = new Date(
-        (existing.first_joined_at as string) ?? unixSecondsToIso(input.joinedAtUnix),
+        (existing.first_joined_at as string) ??
+          unixSecondsToIso(input.joinedAtUnix),
       ).getTime();
       const lastLeft = existing.last_left_at
         ? new Date(existing.last_left_at as string).getTime()

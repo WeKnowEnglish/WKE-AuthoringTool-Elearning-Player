@@ -37,12 +37,16 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
   } = useDailyCall({ sessionId, isHost, sessionEnded });
   const [pendingConnect, setPendingConnect] = useState(false);
   const [disabledDismissed, setDisabledDismissed] = useState(false);
+  const [hostAutoPrompted, setHostAutoPrompted] = useState(false);
 
   useEffect(() => {
     try {
       setDisabledDismissed(
         sessionStorage.getItem(disabledDismissKey(sessionId)) === "1",
       );
+      if (sessionStorage.getItem(autoPromptStorageKey(sessionId)) === "joined") {
+        setHostAutoPrompted(true);
+      }
     } catch {
       setDisabledDismissed(false);
     }
@@ -60,19 +64,31 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
     void connect();
   }, [pendingConnect, showFrameShell, containerRef, connect]);
 
-  // Host-only: auto-open Video once per session when Daily is ready.
+  // Host-only: auto-open Video once when Daily is ready (persist only after joined).
   useEffect(() => {
-    if (!isHost || sessionEnded) return;
+    if (!isHost || sessionEnded || hostAutoPrompted) return;
     if (phase !== "ready") return;
-    try {
-      if (sessionStorage.getItem(autoPromptStorageKey(sessionId)) === "1") return;
-      sessionStorage.setItem(autoPromptStorageKey(sessionId), "1");
-    } catch {
-      // private mode — still prompt once this mount
-    }
+    setHostAutoPrompted(true);
     setExpanded(true);
     setPendingConnect(true);
-  }, [isHost, sessionEnded, phase, sessionId, setExpanded]);
+  }, [isHost, sessionEnded, phase, hostAutoPrompted, setExpanded]);
+
+  useEffect(() => {
+    if (!isHost || phase !== "joined") return;
+    try {
+      sessionStorage.setItem(autoPromptStorageKey(sessionId), "joined");
+    } catch {
+      // ignore
+    }
+  }, [isHost, phase, sessionId]);
+
+  // Allow another auto-attempt if the first connect was too early for schedule.
+  useEffect(() => {
+    if (!isHost) return;
+    if (phase !== "error") return;
+    if (!error?.toLowerCase().includes("before class")) return;
+    setHostAutoPrompted(false);
+  }, [isHost, phase, error]);
 
   const requestConnect = () => {
     setExpanded(true);

@@ -121,15 +121,27 @@ describe("computeMeetingTokenExpUnix Phase 2b", () => {
 });
 
 describe("computeScheduledDailyRoomExpiresAt", () => {
-  it("uses scheduled end + grace within ad-hoc cap", () => {
+  it("uses scheduled end + grace", () => {
     const createdAt = new Date("2026-07-30T10:00:00.000Z");
     const scheduledEndsAt = new Date("2026-07-30T11:00:00.000Z");
     const exp = computeScheduledDailyRoomExpiresAt({
       createdAt,
       scheduledEndsAt,
+      nowMs: createdAt.getTime(),
     });
-    // 11:00 + 15m grace
     expect(exp.toISOString()).toBe("2026-07-30T11:15:00.000Z");
+  });
+
+  it("keeps afternoon classes alive when the room is created in the morning", () => {
+    const createdAt = new Date("2026-07-30T10:00:00.000Z");
+    const scheduledEndsAt = new Date("2026-07-30T16:00:00.000Z");
+    const exp = computeScheduledDailyRoomExpiresAt({
+      createdAt,
+      scheduledEndsAt,
+      nowMs: createdAt.getTime(),
+    });
+    // Must reach class end + 15m, not die at create+4h (14:00).
+    expect(exp.toISOString()).toBe("2026-07-30T16:15:00.000Z");
   });
 });
 

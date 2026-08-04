@@ -20,7 +20,8 @@ describe("Daily webhook signature", () => {
       id: "evt-1",
       payload: { room: "wke-d-abc", user_id: "u1", session_id: "s1" },
     });
-    const timestamp = "1708972279";
+    const nowMs = Date.parse("2026-07-30T12:00:00.000Z");
+    const timestamp = String(Math.floor(nowMs / 1000));
     const signature = computeDailyWebhookSignature({
       timestamp,
       rawBody,
@@ -33,6 +34,7 @@ describe("Daily webhook signature", () => {
         signature,
         rawBody,
         hmacSecretBase64,
+        nowMs,
       }),
     ).toBe(true);
 
@@ -42,6 +44,7 @@ describe("Daily webhook signature", () => {
         signature: "tampered",
         rawBody,
         hmacSecretBase64,
+        nowMs,
       }),
     ).toBe(false);
 
@@ -51,6 +54,17 @@ describe("Daily webhook signature", () => {
         signature,
         rawBody: rawBody.replace("u1", "u2"),
         hmacSecretBase64,
+        nowMs,
+      }),
+    ).toBe(false);
+
+    expect(
+      verifyDailyWebhookSignature({
+        timestamp,
+        signature,
+        rawBody,
+        hmacSecretBase64,
+        nowMs: nowMs + 10 * 60 * 1000,
       }),
     ).toBe(false);
   });

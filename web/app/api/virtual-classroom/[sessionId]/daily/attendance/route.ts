@@ -33,7 +33,11 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const auth = await authorizeDailyMeetingToken(session);
+  const auth = await authorizeDailyMeetingToken(session, {
+    // Allow leave after soft room expiry while still connected.
+    ignoreRoomExpiry: true,
+    ignoreEarlyJoin: true,
+  });
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.message, code: auth.code },

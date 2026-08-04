@@ -6,7 +6,6 @@ import { evaluateSessionJoinability } from "@/lib/daily/join-window";
 import { resolveDailyScheduleBind } from "@/lib/daily/schedule-bind";
 import type { VirtualClassroomSessionWithDaily } from "@/lib/daily/session-room";
 import type { DailyCallRole } from "@/lib/daily/types";
-import { callRoleFromVcRole } from "@/lib/daily/tokens";
 import { createClient } from "@/lib/supabase/server";
 import {
   decodeVcMemberToken,
@@ -35,7 +34,11 @@ export type DailyTokenAuthResult = DailyTokenAuthSuccess | DailyTokenAuthFailure
 
 type IdentityResult = DailyTokenAuthSuccess | DailyTokenAuthFailure;
 
-async function resolveDailyIdentity(
+/**
+ * Session membership → Daily identity.
+ * Teacher/owner requires a valid host cookie (never trust unsigned member.role).
+ */
+export async function resolveDailyIdentity(
   session: VirtualClassroomSessionWithDaily,
 ): Promise<IdentityResult> {
   const cookieStore = await cookies();
@@ -60,79 +63,86 @@ async function resolveDailyIdentity(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user?.id) {
-    if (hostOk) {
-      try {
-        const host = await requireVirtualClassroomSessionHost(session);
-        if (host.userId !== user.id) {
-          return {
-            ok: false,
-            status: 403,
-            code: "not_host",
-            message: "Only the session host can join video as teacher.",
-          };
-        }
-        return {
-          ok: true,
-          userId: host.userId,
-          displayName: host.displayName,
-          role: "teacher",
-        };
-      } catch (error) {
+  if (hostOk && user?.id) {
+    try {
+      const host = await requireVirtualClassroomSessionHost(session);
+      if (host.userId !== user.id) {
         return {
           ok: false,
           status: 403,
           code: "not_host",
-          message: error instanceof Error ? error.message : "Not authorized.",
+          message: "Only the session host can join video as teacher.",
         };
       }
+      return {
+        ok: true,
+        userId: host.userId,
+        displayName: host.displayName,
+        role: "teacher",
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        status: 403,
+        code: "not_host",
+        message: error instanceof Error ? error.message : "Not authorized.",
+      };
     }
+  }
 
-    if (session.classId) {
-      try {
-        await requireWhiteboardStudent(session.classId);
-      } catch (error) {
-        return {
-          ok: false,
-          status: 403,
-          code: "not_enrolled",
-          message: error instanceof Error ? error.message : "Not enrolled.",
-        };
-      }
-      if (!isStudent(user) && !isTeacher(user)) {
-        return {
-          ok: false,
-          status: 403,
-          code: "invalid_role",
-          message: "Sign in as a student to join class video.",
-        };
-      }
-      const displayName =
+  // Host cookie without signed-in user: refuse teacher tokens (host bootstrap always signs in).
+  if (hostOk && !user?.id) {
+    return {
+      ok: false,
+      status: 401,
+      code: "auth_required",
+      message: "Sign in as the host to connect video as teacher.",
+    };
+  }
+
+  if (user?.id && session.classId && memberOk) {
+    try {
+      await requireWhiteboardStudent(session.classId);
+    } catch (error) {
+      return {
+        ok: false,
+        status: 403,
+        code: "not_enrolled",
+        message: error instanceof Error ? error.message : "Not enrolled.",
+      };
+    }
+    if (!isStudent(user) && !isTeacher(user)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "invalid_role",
+        message: "Sign in as a student to join class video.",
+      };
+    }
+    const displayName =
+      (user.user_metadata?.display_name as string | undefined)?.trim() ||
+      member?.displayName ||
+      "Student";
+    // Enrolled participants are never Daily owners without host cookie.
+    return {
+      ok: true,
+      userId: user.id,
+      displayName,
+      role: "student",
+    };
+  }
+
+  if (user?.id && !session.classId && memberOk && member) {
+    return {
+      ok: true,
+      userId: user.id,
+      displayName:
         (user.user_metadata?.display_name as string | undefined)?.trim() ||
-        member?.displayName ||
-        "Student";
-      return {
-        ok: true,
-        userId: user.id,
-        displayName,
-        role: callRoleFromVcRole(
-          member?.role === "host" ? "host" : "member",
-          isTeacher(user),
-        ),
-      };
-    }
-
-    if (memberOk && member) {
-      return {
-        ok: true,
-        userId: user.id,
-        displayName:
-          (user.user_metadata?.display_name as string | undefined)?.trim() ||
-          member.displayName ||
-          "Participant",
-        role: callRoleFromVcRole(member.role, isTeacher(user)),
-      };
-    }
+        member.displayName ||
+        "Participant",
+      // Unsigned member cookie must not mint owner tokens.
+      role: "guest",
+    };
   }
 
   if (!session.classId && memberOk && member) {
@@ -140,7 +150,7 @@ async function resolveDailyIdentity(
       ok: true,
       userId: member.userId,
       displayName: member.displayName || "Guest",
-      role: member.role === "host" ? "teacher" : "guest",
+      role: "guest",
     };
   }
 
@@ -152,15 +162,28 @@ async function resolveDailyIdentity(
   };
 }
 
+export type DailyAuthorizeOptions = {
+  /** Skip schedule early-join (room metadata probe). */
+  ignoreEarlyJoin?: boolean;
+  /** Skip room expiry (provisional leave while still connected). */
+  ignoreRoomExpiry?: boolean;
+  /** Skip schedule bind lookup + join window entirely (identity only). */
+  identityOnly?: boolean;
+};
+
 /**
- * Authorize a short-lived Daily meeting token for an active VC session.
- * Identity first, then schedule-aware join window (Phase 2b).
+ * Authorize a Daily participant. Default: full token join gate.
  */
 export async function authorizeDailyMeetingToken(
   session: VirtualClassroomSessionWithDaily,
+  options: DailyAuthorizeOptions = {},
 ): Promise<DailyTokenAuthResult> {
   const identity = await resolveDailyIdentity(session);
   if (!identity.ok) return identity;
+
+  if (options.identityOnly) {
+    return identity;
+  }
 
   const bind = await resolveDailyScheduleBind({
     classId: session.classId,
@@ -173,6 +196,8 @@ export async function authorizeDailyMeetingToken(
     roomExpiresAt: session.dailyRoomExpiresAt,
     scheduledStartsAt: bind?.live.startsAt ?? null,
     role: identity.role,
+    ignoreEarlyJoin: options.ignoreEarlyJoin,
+    ignoreRoomExpiry: options.ignoreRoomExpiry,
   });
 
   if (!joinability.ok) {

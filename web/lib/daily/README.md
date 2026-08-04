@@ -32,12 +32,20 @@ Browser join/leave posts are **provisional**. Verified attendance needs webhooks
 
 When a class-linked session has a weekly `class_meeting_slots` occurrence **in progress** or starting within **24 hours**:
 
-- Room TTL ends at **scheduled end + 15 minutes** (capped at the 4h ad-hoc max).
+- Room TTL ends at **scheduled end + 15 minutes** (not capped at create+4h — morning hosts keep afternoon classes alive).
+- Expired rooms are **deleted and recreated** on the next host ensure.
 - Teachers may connect **30 minutes** before start; students/guests **10 minutes** before.
 - Tokens refuse immediately when the VC session has `ended` / `endedAt`.
 - Soft grace after room expiry is **5 minutes** (while session still active).
+- Room metadata GET skips early-join so the Video dock can probe before the window opens.
 
 One-off sessions and classes with no nearby slot keep the ad-hoc 4h room rules (no early-join gate).
+
+## Hardening notes
+
+- Daily `teacher` / owner tokens require the **host cookie** (unsigned member cookies cannot forge owner).
+- Token refresh leave/join does not inflate provisional attendance.
+- Webhook HMAC rejects timestamps outside ±5 minutes; failed event claims can be reclaimed on retry.
 
 ## UX polish (Phase 2c)
 

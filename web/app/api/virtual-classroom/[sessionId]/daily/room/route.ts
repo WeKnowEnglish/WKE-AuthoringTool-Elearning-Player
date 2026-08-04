@@ -29,7 +29,9 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const auth = await authorizeDailyMeetingToken(session);
+  const auth = await authorizeDailyMeetingToken(session, {
+    ignoreEarlyJoin: true,
+  });
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.message, code: auth.code },
@@ -66,6 +68,13 @@ export async function POST(_request: Request, context: RouteContext) {
   const session = await getVirtualClassroomSessionWithDaily(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
+  if (session.status === "ended" || session.endedAt) {
+    return NextResponse.json(
+      { error: "Session has ended.", code: "session_ended" },
+      { status: 403 },
+    );
   }
 
   let hostUserId: string;

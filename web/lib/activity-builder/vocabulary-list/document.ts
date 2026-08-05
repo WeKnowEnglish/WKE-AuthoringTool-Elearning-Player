@@ -17,7 +17,8 @@ function assertString(value: unknown, label: string): string {
 function assertEntry(value: unknown, index: number): VocabListEntry {
   if (!isRecord(value)) throw new Error(`Entry ${index + 1} must be an object.`);
   const id = assertString(value.id, `Entry ${index + 1} id`);
-  const word = assertString(value.word, `Entry "${id}" word`);
+  // Empty word allowed while authoring a new row; list save requires ≥1 filled lemma.
+  const word = typeof value.word === "string" ? value.word.trim() : "";
   const entry: VocabListEntry = { id, word };
   if (typeof value.definitionEn === "string" && value.definitionEn.trim()) {
     entry.definitionEn = value.definitionEn.trim();
@@ -52,7 +53,7 @@ export function createBlankVocabularyListDocument(): VocabularyListDocument {
     entries: [
       {
         id: "v1",
-        word: "word",
+        word: "",
       },
     ],
   };
@@ -114,6 +115,9 @@ export function validateVocabularyListDocument(value: unknown): VocabularyListDo
   for (const entry of entries) {
     if (entryIds.has(entry.id)) throw new Error(`Duplicate entry id "${entry.id}".`);
     entryIds.add(entry.id);
+  }
+  if (!entries.some((entry) => entry.word.trim())) {
+    throw new Error("At least one word is required.");
   }
 
   const document: VocabularyListDocument = {

@@ -100,7 +100,7 @@ export async function getStudioVocabularyList(
 export async function saveVocabularyListToStudio(input: {
   activityId: string | null;
   document: VocabularyListDocument;
-}): Promise<StudioVocabularyListRef> {
+}): Promise<StudioVocabularyListRef & { document: VocabularyListDocument }> {
   let document = validateVocabularyListDocument(input.document);
 
   const localBefore = countLocalVocabMedia(document);
@@ -153,6 +153,7 @@ export async function saveVocabularyListToStudio(input: {
     id: payload.id,
     name: payload.title ?? document.name,
     updatedAt: payload.created_at ?? new Date().toISOString(),
+    document,
   };
 }
 

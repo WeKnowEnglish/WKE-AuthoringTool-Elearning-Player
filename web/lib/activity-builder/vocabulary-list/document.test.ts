@@ -8,12 +8,28 @@ import { addVocabEntry, removeVocabEntry } from "@/lib/activity-builder/vocabula
 
 describe("vocabulary list document", () => {
   it("validates blank and bakery starters", () => {
-    expect(validateVocabularyListDocument(createBlankVocabularyListDocument()).entries).toHaveLength(
-      1,
-    );
+    // Blank starts with an empty row for typing; not saveable until a lemma is entered.
+    expect(() =>
+      validateVocabularyListDocument(createBlankVocabularyListDocument()),
+    ).toThrow(/at least one word/i);
     expect(validateVocabularyListDocument(createBakeryVocabularyListDocument()).entries).toHaveLength(
       4,
     );
+  });
+
+  it("allows empty draft rows when another word is filled", () => {
+    const doc = validateVocabularyListDocument({
+      version: 1,
+      kind: "vocabulary-list",
+      id: "x",
+      name: "X",
+      entries: [
+        { id: "v1", word: "bread" },
+        { id: "v2", word: "" },
+      ],
+    });
+    expect(doc.entries).toHaveLength(2);
+    expect(doc.entries[1]?.word).toBe("");
   });
 
   it("rejects empty entries", () => {

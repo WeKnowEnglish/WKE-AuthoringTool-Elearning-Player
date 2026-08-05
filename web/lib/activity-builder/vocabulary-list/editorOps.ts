@@ -16,7 +16,7 @@ function uniqueEntryId(entries: VocabListEntry[]): string {
 export function addVocabEntry(document: VocabularyListDocument): VocabularyListDocument {
   const entry: VocabListEntry = {
     id: uniqueEntryId(document.entries),
-    word: "new word",
+    word: "",
   };
   return {
     ...document,

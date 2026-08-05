@@ -1,5 +1,4 @@
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import type { ClassVocabularyListSummary } from "@/components/teacher/class-hub/ClassVocabularyListsPanel";
 import { TeacherClassHubClient } from "@/components/teacher/class-hub/TeacherClassHubClient";
 import { listAssignableActivitiesForClass } from "@/lib/assignable-activities/registry";
 import { getTeacherTier } from "@/lib/auth/roles";
@@ -20,10 +19,13 @@ import { listTeacherWordPacksForClass } from "@/lib/data/teacher-word-packs";
 import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
 import { listMyTeacherSpaceItems } from "@/lib/data/teacher-space";
 import { listPublishedQuestionSetsForHost } from "@/lib/live-game/server/question-set-list";
+import { playPathForStudioActivity } from "@/lib/studio-activities/paths";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
 import { listVirtualClassroomSessionHistoryForClass } from "@/lib/virtual-classroom/server/session-history";
 import { listClassWhiteboardHistory } from "@/lib/whiteboard/server/history";
+import { Suspense } from "react";
+import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ classId: string }>;
@@ -116,6 +118,27 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     questionCount: set.questionCount,
   }));
 
+  const studioActivityOptions = studioActivities.map((activity) => ({
+    id: activity.id,
+    title: activity.title,
+    format: activity.format,
+    playPath: activity.playPath,
+  }));
+
+  const vocabularyLists: ClassVocabularyListSummary[] = studioActivities
+    .filter((activity) => activity.format === "vocabulary_list")
+    .map((activity) => {
+      const entryCount = activity.source?.entryCount;
+      return {
+        id: activity.id,
+        title: activity.title,
+        entryCount: typeof entryCount === "number" ? entryCount : null,
+        href:
+          activity.playPath ||
+          playPathForStudioActivity("vocabulary_list", activity.id),
+      };
+    });
+
   const archived = Boolean(teacherClass.archived_at);
 
   return (
@@ -153,7 +176,8 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         whiteboardHistory={whiteboardHistory}
         vcSessionHistory={vcSessionHistory}
         lessons={lessons}
-        studioActivities={studioActivities}
+        studioActivities={studioActivityOptions}
+        vocabularyLists={vocabularyLists}
         liveGameSets={liveGameSets}
         homework={homework}
         homeworkCompletions={homeworkCompletions}

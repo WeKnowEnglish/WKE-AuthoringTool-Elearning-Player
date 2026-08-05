@@ -1,20 +1,10 @@
-import { ClassJoinCodePanel } from "@/components/teacher/ClassJoinCodePanel";
 import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
-import { SentenceStripClassPanel } from "@/components/teacher/SentenceStripClassPanel";
 import { ClassHomeworkPanel } from "@/components/teacher/class-hub/ClassHomeworkPanel";
-import { ClassPostsPanel } from "@/components/teacher/class-hub/ClassPostsPanel";
-import { ClassMeetingSchedulePanel } from "@/components/teacher/class-hub/ClassMeetingSchedulePanel";
-import { ClassScheduleGroupingPanel } from "@/components/teacher/class-hub/ClassScheduleGroupingPanel";
-import { ClassWordPacksPanel } from "@/components/teacher/word-packs/ClassWordPacksPanel";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
-import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
-import type { ClassScheduleGroupingBoard } from "@/lib/class-schedule/preference-types";
-import type { ClassPost } from "@/lib/class-posts/types";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
 import type { TeacherClassStudentMasteryPreview } from "@/lib/mastery/teacher-mastery-summary";
-import type { TeacherSpaceItemSummary } from "@/lib/teacher-space/types";
 
 type QuizOption = {
   id: string;
@@ -32,7 +22,6 @@ type FlashcardSetOption = {
 
 type Props = {
   classId: string;
-  joinCode: string;
   archived: boolean;
   teacherTier: TeacherTier;
   roster: ClassRosterStudent[];
@@ -41,18 +30,13 @@ type Props = {
   pendingSentenceTotal: number;
   wordPacks: TeacherWordPackSummary[];
   homework: ClassHomework[];
-  classPosts: ClassPost[];
-  meetingSlots: ClassMeetingSlot[];
-  scheduleGroupingBoard: ClassScheduleGroupingBoard;
   packQuizzes: QuizOption[];
   packFlashcardSets: FlashcardSetOption[];
   homeworkCompletions: HomeworkCompletionSummary[];
-  spaceItems: TeacherSpaceItemSummary[];
 };
 
 export function StudentsHomeworkTab({
   classId,
-  joinCode,
   archived,
   teacherTier,
   roster,
@@ -61,13 +45,9 @@ export function StudentsHomeworkTab({
   pendingSentenceTotal,
   wordPacks,
   homework,
-  classPosts,
-  meetingSlots,
-  scheduleGroupingBoard,
   packQuizzes,
   packFlashcardSets,
   homeworkCompletions,
-  spaceItems,
 }: Props) {
   const isLight = teacherTier === "light";
 
@@ -82,33 +62,10 @@ export function StudentsHomeworkTab({
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
           {isLight
-            ? "Share the join code, review mastery at a glance, attach word packs, and assign quizzes, flashcards, or practice."
-            : "Share the join code, review the roster, manage word packs, and assign offline work."}
+            ? "Review mastery at a glance and assign quizzes, flashcards, or practice."
+            : "Review the roster and assign offline work."}
         </p>
       </section>
-
-      <ClassJoinCodePanel classId={classId} joinCode={joinCode} archived={archived} />
-
-      <ClassPostsPanel
-        classId={classId}
-        archived={archived}
-        initialPosts={classPosts}
-        homework={homework}
-        spaceItems={spaceItems}
-      />
-
-      <ClassScheduleGroupingPanel
-        classId={classId}
-        archived={archived}
-        roster={roster}
-        initialBoard={scheduleGroupingBoard}
-      />
-
-      <ClassMeetingSchedulePanel
-        classId={classId}
-        archived={archived}
-        initialSlots={meetingSlots}
-      />
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -128,8 +85,6 @@ export function StudentsHomeworkTab({
         />
       </section>
 
-      <ClassWordPacksPanel classId={classId} archived={archived} packs={wordPacks} />
-
       <ClassHomeworkPanel
         classId={classId}
         archived={archived}
@@ -145,13 +100,6 @@ export function StudentsHomeworkTab({
         }))}
         completions={homeworkCompletions}
       />
-
-      {!isLight ? (
-        <section className="space-y-2">
-          <h3 className="text-lg font-semibold text-neutral-900">Production &amp; review tools</h3>
-          <SentenceStripClassPanel classId={classId} archived={archived} />
-        </section>
-      ) : null}
     </div>
   );
 }

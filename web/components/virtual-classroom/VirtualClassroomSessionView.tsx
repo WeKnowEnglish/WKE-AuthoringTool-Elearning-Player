@@ -28,6 +28,10 @@ import {
 } from "@/lib/virtual-classroom/client-context";
 import { resolveVirtualClassroomExitHref } from "@/lib/virtual-classroom/exit-href";
 import {
+  normalizeVirtualClassroomUiMode,
+  type VirtualClassroomUiMode,
+} from "@/lib/virtual-classroom/liveblocks/initial-storage";
+import {
   DocumentLaunchPanel,
   type DocumentLaunchPayload,
 } from "@/components/document-activity/DocumentLaunchPanel";
@@ -85,6 +89,9 @@ export function VirtualClassroomSessionView({
 
   const status = useStorage((root) => readRuntimeField<string>(root, "status") ?? "active");
   const title = useStorage((root) => readRuntimeField<string>(root, "title") ?? "Virtual Classroom");
+  const uiMode = useStorage((root) =>
+    normalizeVirtualClassroomUiMode(readRuntimeField<string>(root, "uiMode")),
+  );
   const announcement = useStorage(
     (root) => readRuntimeField<string | null>(root, "announcement"),
   );
@@ -541,6 +548,15 @@ export function VirtualClassroomSessionView({
     [sessionId],
   );
 
+  const setUiMode = useCallback(
+    (mode: VirtualClassroomUiMode) => {
+      void runToolCommand({ type: "SET_UI_MODE", mode });
+    },
+    [runToolCommand],
+  );
+
+  const isMeeting = uiMode === "meeting";
+
   if (ended || status === "ended") {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
@@ -585,11 +601,14 @@ export function VirtualClassroomSessionView({
 
   return (
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-slate-50 to-teal-50">
-      <header className="border-b border-slate-200 bg-white/95 px-4 py-3">
+      <header className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-3">
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">
               Virtual Classroom
+              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-700">
+                {isMeeting ? "Meeting" : "Learn"}
+              </span>
             </p>
             <h1 className="text-xl font-bold text-slate-900">{title}</h1>
             <p className="text-sm text-slate-600">
@@ -600,27 +619,71 @@ export function VirtualClassroomSessionView({
               · {displayName} ({role === "host" ? "Teacher" : "Student"})
             </p>
           </div>
-          {role === "host" ? (
-            <button
-              type="button"
-              disabled={busy === "end"}
-              onClick={() => void endSession()}
-              className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-            >
-              {busy === "end" ? "Ending…" : "End session for all"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={leaveSession}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50"
-            >
-              Leave classroom
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {role === "host" ? (
+              <div
+                className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5"
+                role="group"
+                aria-label="Classroom mode"
+              >
+                <button
+                  type="button"
+                  disabled={Boolean(busy) || isMeeting}
+                  onClick={() => setUiMode("meeting")}
+                  className={`rounded-md px-3 py-1.5 text-xs font-bold transition disabled:opacity-100 ${
+                    isMeeting
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Meeting
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(busy) || !isMeeting}
+                  onClick={() => setUiMode("learn")}
+                  className={`rounded-md px-3 py-1.5 text-xs font-bold transition disabled:opacity-100 ${
+                    !isMeeting
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Learn
+                </button>
+              </div>
+            ) : null}
+            {role === "host" ? (
+              <button
+                type="button"
+                disabled={busy === "end"}
+                onClick={() => void endSession()}
+                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {busy === "end" ? "Ending…" : "End session for all"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={leaveSession}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50"
+              >
+                Leave classroom
+              </button>
+            )}
+          </div>
         </div>
+        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </header>
 
+      {isMeeting ? (
+        <DailyVideoDock
+          sessionId={sessionId}
+          isHost={role === "host"}
+          sessionEnded={ended || status === "ended"}
+          layout="stage"
+        />
+      ) : (
+      <>
       <div className="flex min-h-0 flex-1">
         {role === "host" && (
           <VirtualClassroomToolbar
@@ -964,7 +1027,10 @@ export function VirtualClassroomSessionView({
         sessionId={sessionId}
         isHost={role === "host"}
         sessionEnded={ended || status === "ended"}
+        layout="dock"
       />
+      </>
+      )}
     </div>
   );
 }

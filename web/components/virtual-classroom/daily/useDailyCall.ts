@@ -57,8 +57,15 @@ export function useDailyCall(input: {
   sessionId: string;
   isHost: boolean;
   sessionEnded: boolean;
+  /**
+   * Meeting mode: after a successful join, try Daily Prebuilt fullscreen
+   * (browser fullscreen on the iframe). May fail without a user gesture
+   * or on iOS — callers should expose a Fullscreen control as fallback.
+   */
+  preferFullscreenOnJoin?: boolean;
 }) {
-  const { sessionId, isHost, sessionEnded } = input;
+  const { sessionId, isHost, sessionEnded, preferFullscreenOnJoin = false } =
+    input;
   const frameRef = useRef<DailyCall | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const joinedRef = useRef(false);
@@ -66,10 +73,13 @@ export function useDailyCall(input: {
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshingRef = useRef(false);
   const connectInFlight = useRef(false);
+  const preferFullscreenRef = useRef(preferFullscreenOnJoin);
+  preferFullscreenRef.current = preferFullscreenOnJoin;
   const [phase, setPhase] = useState<DailyCallPhase>("probing");
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [tokenExp, setTokenExp] = useState<number | null>(null);
 
   const clearRefreshTimer = useCallback(() => {
@@ -153,6 +163,7 @@ export function useDailyCall(input: {
     void destroyCall(true).then(() => {
       setPhase((p) => (p === "disabled" ? p : "ready"));
       setExpanded(false);
+      setIsFullscreen(false);
     });
   }, [sessionEnded, destroyCall]);
 
@@ -201,6 +212,27 @@ export function useDailyCall(input: {
     [clearRefreshTimer, sessionId],
   );
 
+  const tryRequestFullscreen = useCallback(async () => {
+    const call = frameRef.current;
+    if (!call) return false;
+    try {
+      await call.requestFullscreen();
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    const call = frameRef.current;
+    if (!call) return;
+    try {
+      call.exitFullscreen();
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const attachCallHandlers = useCallback(
     (call: DailyCall) => {
       call.on("joined-meeting", () => {
@@ -223,7 +255,18 @@ export function useDailyCall(input: {
           clearRefreshTimer();
           setPhase("ready");
           setExpanded(false);
+          setIsFullscreen(false);
         }
+      });
+
+      call.on("fullscreen", () => {
+        setIsFullscreen(true);
+        setExpanded(true);
+      });
+
+      call.on("exited-fullscreen", () => {
+        setIsFullscreen(false);
+        // Meeting stays on the in-page stage layout; Learn never drives this path.
       });
 
       call.on("error", (event) => {
@@ -315,6 +358,10 @@ export function useDailyCall(input: {
         token: tokenPayload.token,
       });
       scheduleTokenRefresh(tokenPayload.exp);
+      if (preferFullscreenRef.current) {
+        // Best-effort; may be blocked without a user gesture (e.g. host auto-open).
+        await tryRequestFullscreen();
+      }
     } catch (err) {
       setPhase("error");
       setError(err instanceof Error ? err.message : "Could not connect video.");
@@ -330,15 +377,18 @@ export function useDailyCall(input: {
     destroyCall,
     attachCallHandlers,
     scheduleTokenRefresh,
+    tryRequestFullscreen,
   ]);
 
   const leave = useCallback(async () => {
+    exitFullscreen();
     await destroyCall(true);
     setPhase("ready");
     setExpanded(false);
+    setIsFullscreen(false);
     setError(null);
     setErrorCode(null);
-  }, [destroyCall]);
+  }, [destroyCall, exitFullscreen]);
 
   return {
     phase,
@@ -346,9 +396,12 @@ export function useDailyCall(input: {
     errorCode,
     expanded,
     setExpanded,
+    isFullscreen,
     containerRef,
     connect,
     leave,
+    requestFullscreen: tryRequestFullscreen,
+    exitFullscreen,
     retryProbe: probe,
     tokenExp,
   };

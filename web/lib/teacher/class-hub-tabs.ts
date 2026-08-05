@@ -1,12 +1,25 @@
 import type { TeacherTier } from "@/lib/auth/roles";
 
-export const CLASS_HUB_TABS = ["teach", "lesson", "students", "settings"] as const;
+export const CLASS_HUB_TABS = [
+  "teach",
+  "lesson",
+  "stream",
+  "schedule",
+  "students",
+  "settings",
+] as const;
 
 export type ClassHubTab = (typeof CLASS_HUB_TABS)[number];
 
-const LIGHT_CLASS_HUB_TABS: readonly ClassHubTab[] = ["lesson", "students", "settings"];
+const LIGHT_CLASS_HUB_TABS: readonly ClassHubTab[] = [
+  "lesson",
+  "stream",
+  "schedule",
+  "students",
+  "settings",
+];
 
-/** Tabs visible for a teacher tier. Light teachers get Students & Settings. */
+/** Tabs visible for a teacher tier. Light teachers skip Teach. */
 export function classHubTabsForTier(tier: TeacherTier): readonly ClassHubTab[] {
   return tier === "light" ? LIGHT_CLASS_HUB_TABS : CLASS_HUB_TABS;
 }
@@ -24,6 +37,8 @@ export function parseClassHubTab(
     value === "lesson" ||
     value === "students" ||
     value === "teach" ||
+    value === "stream" ||
+    value === "schedule" ||
     value === "settings"
   ) {
     if (allowed.includes(value)) return value;

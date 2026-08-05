@@ -173,7 +173,8 @@ export type VcToolCommand =
   | { type: "SET_OWN_STATUS"; status: ClassroomStatusKind; studentId: string }
   | { type: "CLEAR_STATUSES" }
   | { type: "SET_FREEZE"; frozen: boolean }
-  | { type: "SET_ANNOUNCEMENT"; message: string | null };
+  | { type: "SET_ANNOUNCEMENT"; message: string | null }
+  | { type: "SET_UI_MODE"; mode: "meeting" | "learn" };
 
 /** Commands students may issue for themselves. */
 export const VC_MEMBER_TOOL_TYPES = new Set<VcToolCommand["type"]>(["SET_OWN_STATUS"]);
@@ -460,6 +461,11 @@ export async function applyVcToolCommand(input: {
         case "SET_ANNOUNCEMENT": {
           const message = input.command.message?.trim().slice(0, 280) || null;
           runtime.set("announcement", message);
+          break;
+        }
+        case "SET_UI_MODE": {
+          const mode = input.command.mode === "meeting" ? "meeting" : "learn";
+          runtime.set("uiMode", mode);
           break;
         }
         default:

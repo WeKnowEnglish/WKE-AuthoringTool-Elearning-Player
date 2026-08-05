@@ -8,6 +8,7 @@ export type DailyCallPhase =
   | "probing"
   | "ready"
   | "connecting"
+  | "prejoin"
   | "joined"
   | "disabled"
   | "error";
@@ -244,7 +245,8 @@ export function useDailyCall(input: {
         }
         if (frameRef.current === call) {
           clearRefreshTimer();
-          setPhase("ready");
+          // Stay on prejoin if the Prebuilt lobby is still up; otherwise ready.
+          setPhase((current) => (current === "prejoin" ? current : "ready"));
           setExpanded(false);
           setIsFullscreen(false);
         }
@@ -273,7 +275,7 @@ export function useDailyCall(input: {
   );
 
   const connect = useCallback(async () => {
-    if (phase === "disabled" || phase === "joined") return;
+    if (phase === "disabled" || phase === "joined" || phase === "prejoin") return;
     if (connectInFlight.current) return;
     connectInFlight.current = true;
     setPhase("connecting");
@@ -343,6 +345,9 @@ export function useDailyCall(input: {
       }
 
       roomUrlRef.current = tokenPayload.roomUrl;
+      // Unlock the entry gate before join settles — Prebuilt may show a
+      // camera/mic lobby; covering it blocks Daily's Join button forever.
+      setPhase("prejoin");
       await call.join({
         url: tokenPayload.roomUrl,
         token: tokenPayload.token,

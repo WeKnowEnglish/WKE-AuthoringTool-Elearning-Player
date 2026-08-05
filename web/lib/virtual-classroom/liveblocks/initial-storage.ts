@@ -18,7 +18,7 @@ export type VirtualClassroomUiMode = "meeting" | "learn";
 export function normalizeVirtualClassroomUiMode(
   value: unknown,
 ): VirtualClassroomUiMode {
-  return value === "meeting" ? "meeting" : "learn";
+  return value === "learn" ? "learn" : "meeting";
 }
 
 export type VirtualClassroomRuntimeFields = {
@@ -28,7 +28,7 @@ export type VirtualClassroomRuntimeFields = {
   hostUserId: string;
   title: string;
   status: "active" | "ended";
-  /** Layout mode for everyone in the session (defaults to learn when missing). */
+  /** Layout mode for everyone in the session (defaults to meeting when missing). */
   uiMode: VirtualClassroomUiMode;
   activeActivity: {
     kind: "whiteboard" | "document" | null;
@@ -67,7 +67,7 @@ export function createVirtualClassroomInitialStorage(input: {
     hostUserId: input.hostUserId,
     title: input.title,
     status: "active",
-    uiMode: "learn",
+    uiMode: "meeting",
     activeActivity: {
       kind: null,
       joinCode: null,

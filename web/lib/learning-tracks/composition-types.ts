@@ -61,6 +61,8 @@ export type LearningTrackBeatSource =
       /** `hobbies-default` or an Activity Library vocabulary_list entry id. */
       listId: string;
       format: LearningTrackVocabCompileFormat;
+      /** When set, only these vocab entry ids are compiled (Quiz Builder → practice track). */
+      selectedEntryIds?: string[];
     }
   | {
       type: "library";

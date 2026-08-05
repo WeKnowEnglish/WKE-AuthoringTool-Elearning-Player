@@ -18,17 +18,18 @@ type Props = {
   onLeaveClassroom?: () => void;
 };
 
-function autoPromptStorageKey(sessionId: string) {
-  return `wke-daily-host-prompt:${sessionId}`;
-}
-
 function disabledDismissKey(sessionId: string) {
   return `wke-daily-disabled-dismiss:${sessionId}`;
 }
 
+function entrySkipKey(sessionId: string) {
+  return `wke-daily-entry-skip:${sessionId}`;
+}
+
 /**
- * Learn: collapsible Daily Prebuilt corner dock.
- * Meeting: viewport-filling stage (CSS fullscreen). Browser Fullscreen API is opt-in.
+ * One Daily Prebuilt instance for the session.
+ * Layout CSS switches Meeting ↔ Learn without leave/join.
+ * First visit: entry gate probes + connects, then the call stays live.
  */
 export function DailyVideoDock({
   sessionId,
@@ -58,7 +59,9 @@ export function DailyVideoDock({
   });
   const [pendingConnect, setPendingConnect] = useState(false);
   const [disabledDismissed, setDisabledDismissed] = useState(false);
-  const [hostAutoPrompted, setHostAutoPrompted] = useState(false);
+  const [entrySkipped, setEntrySkipped] = useState(false);
+  const [entryStarted, setEntryStarted] = useState(false);
+  const [hasCompletedEntry, setHasCompletedEntry] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -73,69 +76,65 @@ export function DailyVideoDock({
       setDisabledDismissed(
         sessionStorage.getItem(disabledDismissKey(sessionId)) === "1",
       );
-      if (sessionStorage.getItem(autoPromptStorageKey(sessionId)) === "joined") {
-        setHostAutoPrompted(true);
-      }
+      const skipped = sessionStorage.getItem(entrySkipKey(sessionId)) === "1";
+      setEntrySkipped(skipped);
+      if (skipped) setHasCompletedEntry(true);
     } catch {
       setDisabledDismissed(false);
+      setEntrySkipped(false);
     }
   }, [sessionId]);
 
   const busy = phase === "connecting" || phase === "probing";
   const joined = phase === "joined";
-  const showFrameShell =
-    isStage ||
-    expanded ||
-    joined ||
-    phase === "connecting" ||
-    pendingConnect;
-  const showChrome = expanded || isStage;
+  const prejoinReady = phase === "prejoin";
+  useEffect(() => {
+    // Unlock as soon as Daily Prebuilt is up (prejoin lobby or joined).
+    // Waiting only for joined-meeting deadlocks under our overlay.
+    if (joined || prejoinReady) setHasCompletedEntry(true);
+  }, [joined, prejoinReady]);
+  const entryComplete = hasCompletedEntry || entrySkipped;
+  const showEntryGate = !sessionEnded && !entryComplete;
+  const showDockChrome = entryComplete && (expanded || isStage);
+  const showMinimizedFab = entryComplete && !isStage && !expanded;
 
   useEffect(() => {
-    if (!pendingConnect || !showFrameShell) return;
+    if (!pendingConnect) return;
     if (!containerRef.current) return;
     setPendingConnect(false);
     void connect();
-  }, [pendingConnect, showFrameShell, containerRef, connect]);
+  }, [pendingConnect, containerRef, connect]);
 
-  // Meeting: expand + connect into the viewport stage immediately.
+  // Meeting keeps the frame expanded; Learn may minimize after join.
   useEffect(() => {
-    if (!isStage || sessionEnded) return;
-    setExpanded(true);
-    if (phase === "ready" || phase === "error") {
-      setPendingConnect(true);
+    if (isStage) setExpanded(true);
+  }, [isStage, setExpanded]);
+
+  // Everyone: probe then connect once on entry (layout switches stay joined).
+  useEffect(() => {
+    if (sessionEnded || entrySkipped || entryStarted) return;
+    if (phase === "joined") {
+      setEntryStarted(true);
+      return;
     }
-  }, [isStage, sessionEnded, phase, setExpanded]);
-
-  // Host-only Learn: auto-open docked Video once when Daily is ready.
-  useEffect(() => {
-    if (isStage) return;
-    if (!isHost || sessionEnded || hostAutoPrompted) return;
     if (phase !== "ready") return;
-    setHostAutoPrompted(true);
+    setEntryStarted(true);
     setExpanded(true);
     setPendingConnect(true);
-  }, [isStage, isHost, sessionEnded, phase, hostAutoPrompted, setExpanded]);
-
-  useEffect(() => {
-    if (!isHost || phase !== "joined") return;
-    try {
-      sessionStorage.setItem(autoPromptStorageKey(sessionId), "joined");
-    } catch {
-      // ignore
-    }
-  }, [isHost, phase, sessionId]);
-
-  useEffect(() => {
-    if (!isHost) return;
-    if (phase !== "error") return;
-    if (!error?.toLowerCase().includes("before class")) return;
-    setHostAutoPrompted(false);
-  }, [isHost, phase, error]);
+  }, [sessionEnded, entrySkipped, entryStarted, phase, setExpanded]);
 
   const requestConnect = () => {
     setExpanded(true);
     setPendingConnect(true);
+  };
+
+  const skipEntry = () => {
+    setEntrySkipped(true);
+    try {
+      sessionStorage.setItem(entrySkipKey(sessionId), "1");
+    } catch {
+      // ignore
+    }
   };
 
   const goBrowserFullscreen = () => {
@@ -199,18 +198,18 @@ export function DailyVideoDock({
       );
       const payload = (await res.json()) as {
         error?: string;
-        recordingEnabled?: boolean;
+        recording?: boolean;
       };
       if (!res.ok) {
         setHostNote(payload.error ?? "Recording request failed.");
         setHostNoteKind("recording");
         return;
       }
-      setRecording(Boolean(payload.recordingEnabled));
+      setRecording(Boolean(payload.recording));
       setHostNoteKind("recording");
       setHostNote(
         action === "start"
-          ? "Recording… Stop when finished; playback appears on the review page."
+          ? "Recording… Stop when the class ends to save the video."
           : "Stopping… recording will appear for review when ready.",
       );
     } catch {
@@ -223,6 +222,7 @@ export function DailyVideoDock({
 
   const dismissDisabled = () => {
     setDisabledDismissed(true);
+    skipEntry();
     try {
       sessionStorage.setItem(disabledDismissKey(sessionId), "1");
     } catch {
@@ -234,56 +234,33 @@ export function DailyVideoDock({
     ? "bottom-20 right-3 md:bottom-4 md:right-4"
     : "bottom-3 right-3 md:bottom-4 md:right-4";
 
-  if (phase === "disabled") {
-    if (disabledDismissed && !isStage) return null;
-    return (
-      <div
-        className={
-          isStage
-            ? "fixed inset-0 z-40 flex items-center justify-center bg-slate-950 p-6"
-            : `pointer-events-auto fixed z-40 max-w-[min(100vw-1.5rem,360px)] ${dockOffsetClass}`
-        }
-      >
-        <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 shadow-lg">
-          <p className="text-xs font-bold text-amber-950">Class video unavailable</p>
-          <p className="mt-0.5 text-[11px] leading-snug text-amber-900">
-            {error ??
-              "Daily video is not configured on this server (missing API key or disabled)."}
-            {isHost
-              ? " Students will not see a Video control until this is fixed."
-              : null}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void retryProbe()}
-              className="rounded-md border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-950 hover:bg-amber-100"
-            >
-              Recheck
-            </button>
-            {isStage && onExitToLearn ? (
-              <button
-                type="button"
-                onClick={onExitToLearn}
-                className="rounded-md border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-950 hover:bg-amber-100"
-              >
-                Back to Learn
-              </button>
-            ) : null}
-            {!isStage ? (
-              <button
-                type="button"
-                onClick={dismissDisabled}
-                className="rounded-md px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:underline"
-              >
-                Dismiss
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const entryStepLabel =
+    phase === "probing"
+      ? "Checking class video…"
+      : phase === "connecting" || pendingConnect
+        ? "Connecting to the call…"
+        : phase === "prejoin"
+          ? "Almost ready…"
+          : phase === "error"
+            ? "Couldn’t connect yet"
+            : phase === "disabled"
+              ? "Class video unavailable"
+              : "Preparing video…";
+
+  const entryProgress =
+    phase === "joined"
+      ? 100
+      : phase === "prejoin"
+        ? 90
+        : phase === "connecting" || pendingConnect
+          ? 70
+          : phase === "ready"
+            ? 45
+            : phase === "probing"
+              ? 20
+              : phase === "error" || phase === "disabled"
+                ? 100
+                : 10;
 
   const controlButtons = (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -378,101 +355,213 @@ export function DailyVideoDock({
     </div>
   );
 
-  const frameShell = showFrameShell ? (
-    <div
-      className={
-        isStage
-          ? "pointer-events-auto flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-950"
-          : expanded
-            ? "pointer-events-auto flex w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden rounded-xl border border-slate-300 bg-slate-950 shadow-xl"
-            : `pointer-events-none fixed z-0 flex w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden opacity-0 ${dockOffsetClass}`
-      }
-      aria-hidden={!isStage && !expanded}
-    >
-      {showChrome ? (
-        <div className="flex items-center justify-between gap-2 border-b border-slate-700 px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
-            {isStage ? "Meeting" : "Class video"}
-          </p>
-          {controlButtons}
-        </div>
-      ) : null}
-      {showChrome && isHost && hostNote ? (
-        <p className="border-b border-slate-700 px-3 py-1.5 text-[11px] text-slate-300">
-          {hostNote}{" "}
-          {hostNoteKind === "transcript" ? (
-            <a
-              href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/transcript`}
-              className="font-bold text-teal-300 underline"
-            >
-              Review transcript
-            </a>
-          ) : null}
-          {hostNoteKind === "recording" ? (
-            <a
-              href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/recording`}
-              className="font-bold text-teal-300 underline"
-            >
-              Review recording
-            </a>
-          ) : null}
-        </p>
-      ) : null}
-      <div
-        ref={containerRef}
-        className={
-          isStage
-            ? "min-h-0 w-full flex-1 bg-slate-900"
-            : "h-[min(36vh,260px)] w-[min(100vw-1.5rem,420px)] bg-slate-900 md:h-[min(42vh,320px)]"
-        }
-      />
-      {showChrome && error ? (
-        <p className="border-t border-slate-700 px-3 py-2 text-xs text-red-300">{error}</p>
-      ) : null}
-      {showChrome && !joined && phase !== "connecting" ? (
-        <div className="flex flex-wrap gap-2 border-t border-slate-700 px-3 py-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={requestConnect}
-            className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-500 disabled:opacity-50"
-          >
-            {phase === "error" ? "Retry connect" : "Connect"}
-          </button>
-          {phase === "error" ? (
-            <button
-              type="button"
-              onClick={() => void retryProbe()}
-              className="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-bold text-slate-100 hover:bg-slate-800"
-            >
-              Recheck
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-      {showChrome && phase === "connecting" ? (
-        <p className="border-t border-slate-700 px-3 py-2 text-xs text-slate-300">
-          Connecting to video…
-        </p>
-      ) : null}
-    </div>
-  ) : null;
+  // Single shell + containerRef for the whole session — CSS only for Meeting ↔ Learn.
+  const shellClass = isStage
+    ? "pointer-events-auto fixed inset-0 z-40 flex flex-col overflow-hidden bg-slate-950"
+    : showDockChrome
+      ? `pointer-events-auto fixed z-40 flex max-w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden rounded-xl border border-slate-300 bg-slate-950 shadow-xl ${dockOffsetClass}`
+      : `pointer-events-none fixed z-0 flex max-w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden opacity-0 ${dockOffsetClass}`;
 
-  if (isStage) {
-    // CSS fullscreen: fill the viewport immediately (browsers block auto requestFullscreen after async join).
-    return (
-      <div className="fixed inset-0 z-40 flex flex-col bg-slate-950">{frameShell}</div>
-    );
-  }
+  const frameHeightClass = isStage
+    ? "min-h-0 w-full flex-1 bg-slate-900"
+    : "h-[min(36vh,260px)] w-[min(100vw-1.5rem,420px)] bg-slate-900 md:h-[min(42vh,320px)]";
 
   return (
-    <div
-      className={`pointer-events-none fixed z-40 flex max-w-[min(100vw-1.5rem,420px)] flex-col items-end gap-2 ${dockOffsetClass}`}
-    >
-      {frameShell}
+    <>
+      {showEntryGate ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-6">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 px-6 py-8 text-center shadow-2xl">
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-300">
+              Live class
+            </p>
+            <h2 className="mt-2 text-xl font-bold text-white">{entryStepLabel}</h2>
+            <p className="mt-2 text-sm text-slate-300">
+              {phase === "disabled"
+                ? error ??
+                  "Video isn’t configured on this server. You can continue without it."
+                : phase === "error"
+                  ? error ?? "Check your camera/mic permissions, then try again."
+                  : "We’ll keep this connection when you switch Meeting and Learn."}
+            </p>
+            <div className="mt-6 h-2 overflow-hidden rounded-full bg-slate-800">
+              <div
+                className="h-full rounded-full bg-teal-500 transition-all duration-500 ease-out"
+                style={{ width: `${entryProgress}%` }}
+              />
+            </div>
+            {phase === "probing" ||
+            phase === "connecting" ||
+            phase === "ready" ||
+            pendingConnect ? (
+              <p className="mt-4 text-xs text-slate-400">Please wait…</p>
+            ) : null}
+            {phase === "error" || phase === "disabled" ? (
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {phase === "error" ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setEntryStarted(false);
+                        requestConnect();
+                      }}
+                      className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-500 disabled:opacity-50"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void retryProbe()}
+                      className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-slate-800"
+                    >
+                      Recheck
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void retryProbe()}
+                    className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-slate-800"
+                  >
+                    Recheck
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={phase === "disabled" ? dismissDisabled : skipEntry}
+                  className="rounded-lg px-4 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800"
+                >
+                  Continue without video
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
-      <div className="pointer-events-auto flex items-center gap-2">
-        {!expanded ? (
+      {entryComplete && phase === "disabled" && !disabledDismissed ? (
+        <div
+          className={
+            isStage
+              ? "fixed inset-0 z-40 flex items-center justify-center bg-slate-950 p-6"
+              : `pointer-events-auto fixed z-40 max-w-[min(100vw-1.5rem,360px)] ${dockOffsetClass}`
+          }
+        >
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 shadow-lg">
+            <p className="text-xs font-bold text-amber-950">Class video unavailable</p>
+            <p className="mt-0.5 text-[11px] leading-snug text-amber-900">
+              {error ??
+                "Daily video is not configured on this server (missing API key or disabled)."}
+              {isHost
+                ? " Students will not see a Video control until this is fixed."
+                : null}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void retryProbe()}
+                className="rounded-md border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-950 hover:bg-amber-100"
+              >
+                Recheck
+              </button>
+              {isStage && onExitToLearn ? (
+                <button
+                  type="button"
+                  onClick={onExitToLearn}
+                  className="rounded-md border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-950 hover:bg-amber-100"
+                >
+                  Back to Learn
+                </button>
+              ) : null}
+              {!isStage ? (
+                <button
+                  type="button"
+                  onClick={dismissDisabled}
+                  className="rounded-md px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:underline"
+                >
+                  Dismiss
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div
+        className={shellClass}
+        aria-hidden={showEntryGate || (!isStage && !expanded)}
+      >
+        {showDockChrome ? (
+          <div className="flex items-center justify-between gap-2 border-b border-slate-700 px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+              {isStage ? "Meeting" : "Class video"}
+            </p>
+            {controlButtons}
+          </div>
+        ) : null}
+        {showDockChrome && isHost && hostNote ? (
+          <p className="border-b border-slate-700 px-3 py-1.5 text-[11px] text-slate-300">
+            {hostNote}{" "}
+            {hostNoteKind === "transcript" ? (
+              <a
+                href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/transcript`}
+                className="font-bold text-teal-300 underline"
+              >
+                Review transcript
+              </a>
+            ) : null}
+            {hostNoteKind === "recording" ? (
+              <a
+                href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/recording`}
+                className="font-bold text-teal-300 underline"
+              >
+                Review recording
+              </a>
+            ) : null}
+          </p>
+        ) : null}
+        <div ref={containerRef} className={frameHeightClass} />
+        {showDockChrome && error ? (
+          <p className="border-t border-slate-700 px-3 py-2 text-xs text-red-300">{error}</p>
+        ) : null}
+        {showDockChrome && !joined && phase !== "connecting" && phase !== "prejoin" ? (
+          <div className="flex flex-wrap gap-2 border-t border-slate-700 px-3 py-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={requestConnect}
+              className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-500 disabled:opacity-50"
+            >
+              {phase === "error" ? "Retry connect" : "Connect"}
+            </button>
+            {phase === "error" ? (
+              <button
+                type="button"
+                onClick={() => void retryProbe()}
+                className="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-bold text-slate-100 hover:bg-slate-800"
+              >
+                Recheck
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {showDockChrome && phase === "prejoin" ? (
+          <p className="border-t border-slate-700 px-3 py-2 text-xs text-slate-300">
+            Check camera and mic, then click Join in the video panel.
+          </p>
+        ) : null}
+        {showDockChrome && phase === "connecting" ? (
+          <p className="border-t border-slate-700 px-3 py-2 text-xs text-slate-300">
+            Connecting to video…
+          </p>
+        ) : null}
+      </div>
+
+      {showMinimizedFab ? (
+        <div
+          className={`pointer-events-auto fixed z-40 flex items-center gap-2 ${dockOffsetClass}`}
+        >
           <button
             type="button"
             onClick={() => {
@@ -490,13 +579,13 @@ export function DailyVideoDock({
           >
             {joined ? "Show video" : busy ? "Video…" : "Video"}
           </button>
-        ) : null}
-        {joined && !expanded ? (
-          <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
-            Live
-          </span>
-        ) : null}
-      </div>
-    </div>
+          {joined ? (
+            <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
+              Live
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 }

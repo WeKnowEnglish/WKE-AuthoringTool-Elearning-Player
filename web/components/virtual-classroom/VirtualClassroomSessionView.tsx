@@ -675,20 +675,7 @@ export function VirtualClassroomSessionView({
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </header>
 
-      {isMeeting ? (
-        <DailyVideoDock
-          sessionId={sessionId}
-          isHost={role === "host"}
-          sessionEnded={ended || status === "ended"}
-          layout="stage"
-          onExitToLearn={
-            role === "host" ? () => setUiMode("learn") : undefined
-          }
-          onEndSession={role === "host" ? () => void endSession() : undefined}
-          endSessionBusy={busy === "end"}
-          onLeaveClassroom={role === "member" ? leaveSession : undefined}
-        />
-      ) : (
+      {!isMeeting ? (
       <>
       <div className="flex min-h-0 flex-1">
         {role === "host" && (
@@ -1029,14 +1016,21 @@ export function VirtualClassroomSessionView({
         </aside>
       </div>
 
+      </>
+      ) : null}
+
       <DailyVideoDock
         sessionId={sessionId}
         isHost={role === "host"}
         sessionEnded={ended || status === "ended"}
-        layout="dock"
+        layout={isMeeting ? "stage" : "dock"}
+        onExitToLearn={
+          role === "host" ? () => setUiMode("learn") : undefined
+        }
+        onEndSession={role === "host" ? () => void endSession() : undefined}
+        endSessionBusy={busy === "end"}
+        onLeaveClassroom={role === "member" ? leaveSession : undefined}
       />
-      </>
-      )}
     </div>
   );
 }

@@ -413,8 +413,16 @@ function exportVocabCompileScreens(
     ? listenAndChooseSettingsForBeat(beat)
     : defaultListenAndChooseSettings();
 
+  const selectedEntryIds =
+    beat?.source.type === "vocab_compile" &&
+    Array.isArray(beat.source.selectedEntryIds) &&
+    beat.source.selectedEntryIds.length > 0
+      ? beat.source.selectedEntryIds
+      : undefined;
+
   const compiled = compileQuizzesFromVocabList({
     list,
+    selectedEntryIds,
     formats: [format],
     mcMasterQuestion: multipleChoice.masterQuestion,
     mcOptionCount: multipleChoice.optionCount,

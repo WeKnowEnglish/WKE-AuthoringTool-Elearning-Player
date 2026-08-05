@@ -16,7 +16,10 @@ import {
 import type { TeacherSpaceSummary } from "@/lib/teacher-space/types";
 
 function migrationHint(message: string): string {
-  if (/teacher_spaces|teacher_space_items|schema cache|does not exist/i.test(message)) {
+  if (/teacher_space.*format_check|format_check/i.test(message)) {
+    return " Apply migration 124_teacher_space_items_formats.sql (wall formats must match Activity Bank).";
+  }
+  if (/schema cache|does not exist/i.test(message) && /teacher_spaces|teacher_space_items/i.test(message)) {
     return " Apply migrations 072_teacher_spaces.sql and 073_teacher_space_branding.sql.";
   }
   return "";

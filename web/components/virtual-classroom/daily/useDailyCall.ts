@@ -70,6 +70,7 @@ export function useDailyCall(input: {
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [tokenExp, setTokenExp] = useState<number | null>(null);
 
   const clearRefreshTimer = useCallback(() => {
@@ -153,6 +154,7 @@ export function useDailyCall(input: {
     void destroyCall(true).then(() => {
       setPhase((p) => (p === "disabled" ? p : "ready"));
       setExpanded(false);
+      setIsFullscreen(false);
     });
   }, [sessionEnded, destroyCall]);
 
@@ -201,6 +203,27 @@ export function useDailyCall(input: {
     [clearRefreshTimer, sessionId],
   );
 
+  const tryRequestFullscreen = useCallback(async () => {
+    const call = frameRef.current;
+    if (!call) return false;
+    try {
+      await call.requestFullscreen();
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    const call = frameRef.current;
+    if (!call) return;
+    try {
+      call.exitFullscreen();
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const attachCallHandlers = useCallback(
     (call: DailyCall) => {
       call.on("joined-meeting", () => {
@@ -223,7 +246,17 @@ export function useDailyCall(input: {
           clearRefreshTimer();
           setPhase("ready");
           setExpanded(false);
+          setIsFullscreen(false);
         }
+      });
+
+      call.on("fullscreen", () => {
+        setIsFullscreen(true);
+        setExpanded(true);
+      });
+
+      call.on("exited-fullscreen", () => {
+        setIsFullscreen(false);
       });
 
       call.on("error", (event) => {
@@ -333,12 +366,14 @@ export function useDailyCall(input: {
   ]);
 
   const leave = useCallback(async () => {
+    exitFullscreen();
     await destroyCall(true);
     setPhase("ready");
     setExpanded(false);
+    setIsFullscreen(false);
     setError(null);
     setErrorCode(null);
-  }, [destroyCall]);
+  }, [destroyCall, exitFullscreen]);
 
   return {
     phase,
@@ -346,9 +381,12 @@ export function useDailyCall(input: {
     errorCode,
     expanded,
     setExpanded,
+    isFullscreen,
     containerRef,
     connect,
     leave,
+    requestFullscreen: tryRequestFullscreen,
+    exitFullscreen,
     retryProbe: probe,
     tokenExp,
   };

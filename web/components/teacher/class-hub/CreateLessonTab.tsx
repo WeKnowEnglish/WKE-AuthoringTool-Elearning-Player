@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ClassLessonEditor } from "@/components/teacher/class-hub/ClassLessonEditor";
+import {
+  ClassVocabularyListsPanel,
+  type ClassVocabularyListSummary,
+} from "@/components/teacher/class-hub/ClassVocabularyListsPanel";
 import { createClassLesson } from "@/lib/actions/class-lessons";
 import {
   CLASS_LESSON_TEMPLATES,
@@ -12,7 +17,6 @@ import type {
   LiveGameQuestionSetOption,
   StudioActivityOption,
 } from "@/lib/class-lessons/types";
-import { ClassLessonEditor } from "@/components/teacher/class-hub/ClassLessonEditor";
 
 type Props = {
   classId: string;
@@ -20,6 +24,7 @@ type Props = {
   lessons: ClassLesson[];
   studioActivities: StudioActivityOption[];
   liveGameSets: LiveGameQuestionSetOption[];
+  vocabularyLists: ClassVocabularyListSummary[];
   initialLessonId?: string | null;
 };
 
@@ -36,6 +41,7 @@ export function CreateLessonTab({
   lessons: initialLessons,
   studioActivities,
   liveGameSets,
+  vocabularyLists,
   initialLessonId = null,
 }: Props) {
   const router = useRouter();
@@ -141,6 +147,8 @@ export function CreateLessonTab({
         )}
         {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </section>
+
+      <ClassVocabularyListsPanel archived={archived} lists={vocabularyLists} />
 
       {showTemplates && !archived ? (
         <section className="rounded-xl border border-teal-200 bg-teal-50/50 p-4 shadow-sm">

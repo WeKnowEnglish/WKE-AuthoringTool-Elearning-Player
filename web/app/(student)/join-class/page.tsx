@@ -10,14 +10,24 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function JoinClassPage() {
+type Props = {
+  searchParams?: Promise<{ code?: string }>;
+};
+
+export default async function JoinClassPage({ searchParams }: Props) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/join-class");
+    const params = (await searchParams) ?? {};
+    const code = typeof params.code === "string" ? params.code.trim() : "";
+    const next =
+      code.length > 0
+        ? `/join-class?code=${encodeURIComponent(code)}`
+        : "/join-class";
+    redirect(`/login?next=${encodeURIComponent(next)}`);
   }
 
   if (isTeacher(user)) {
@@ -27,6 +37,9 @@ export default async function JoinClassPage() {
   if (!isStudent(user)) {
     redirect("/login?error=unknown_role");
   }
+
+  const params = (await searchParams) ?? {};
+  const initialCode = typeof params.code === "string" ? params.code.trim() : "";
 
   const homeHref = resolveStudentHomePath(learningBandFromUser(user));
   const classroomBasePath = homeHref === "/secondary" ? "/secondary/class" : "/primary/class";
@@ -44,7 +57,11 @@ export default async function JoinClassPage() {
             progress in their class roster.
           </p>
         </div>
-        <JoinClassForm homeHref={homeHref} classroomBasePath={classroomBasePath} />
+        <JoinClassForm
+          homeHref={homeHref}
+          classroomBasePath={classroomBasePath}
+          initialCode={initialCode}
+        />
       </div>
     </div>
   );

@@ -10,15 +10,20 @@ export function JoinClassForm({
   onJoined,
   homeHref,
   classroomBasePath,
+  initialCode = "",
 }: {
   onJoined?: (result: { classId: string; title: string }) => void;
   /** After a successful join from the standalone page, return here. */
   homeHref?: string;
   /** After joining, open the newly joined classroom directly. */
   classroomBasePath?: "/primary/class" | "/secondary/class";
+  /** Prefill from a shared join link (`/join-class?code=…`). */
+  initialCode?: string;
 } = {}) {
   const router = useRouter();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() =>
+    normalizeJoinCode(initialCode).slice(0, JOIN_CODE_LENGTH),
+  );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

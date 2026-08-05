@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArchiveClassButton } from "@/components/teacher/ArchiveClassButton";
+import { ClassHubHistoryOverlay } from "@/components/teacher/class-hub/ClassHubHistoryOverlay";
+import { ClassScheduleTab } from "@/components/teacher/class-hub/ClassScheduleTab";
 import { ClassSettingsTab } from "@/components/teacher/class-hub/ClassSettingsTab";
+import { ClassStreamTab } from "@/components/teacher/class-hub/ClassStreamTab";
+import type { ClassVocabularyListSummary } from "@/components/teacher/class-hub/ClassVocabularyListsPanel";
 import { CreateLessonTab } from "@/components/teacher/class-hub/CreateLessonTab";
 import { StudentsHomeworkTab } from "@/components/teacher/class-hub/StudentsHomeworkTab";
 import { TeachTab } from "@/components/teacher/class-hub/TeachTab";
@@ -35,6 +40,8 @@ import type { WhiteboardRoundHistoryItem } from "@/lib/whiteboard/server/history
 const TAB_LABELS: Record<ClassHubTab, string> = {
   teach: "Teach",
   lesson: "Plan Lesson",
+  stream: "Stream",
+  schedule: "Schedule",
   students: "Students & Homework",
   settings: "Settings",
 };
@@ -61,6 +68,7 @@ export type TeacherClassHubClientProps = {
   vcSessionHistory: VirtualClassroomSessionHistoryItem[];
   lessons: ClassLesson[];
   studioActivities: StudioActivityOption[];
+  vocabularyLists: ClassVocabularyListSummary[];
   liveGameSets: LiveGameQuestionSetOption[];
   homework: ClassHomework[];
   homeworkCompletions: HomeworkCompletionSummary[];
@@ -102,6 +110,7 @@ export function TeacherClassHubClient({
   vcSessionHistory,
   lessons,
   studioActivities,
+  vocabularyLists,
   liveGameSets,
   homework,
   homeworkCompletions,
@@ -124,58 +133,121 @@ export function TeacherClassHubClient({
   const setTab = (tab: ClassHubTab) => {
     router.replace(classHubTabHref(classId, tab, teacherTier), { scroll: false });
   };
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const closeHistory = useCallback(() => setHistoryOpen(false), []);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const copyResetTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimer.current != null) window.clearTimeout(copyResetTimer.current);
+    };
+  }, []);
+
+  const copyJoinLink = useCallback(async () => {
+    const origin = window.location.origin;
+    const link = `${origin}/join-class?code=${encodeURIComponent(joinCode)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCodeCopied(true);
+      if (copyResetTimer.current != null) window.clearTimeout(copyResetTimer.current);
+      copyResetTimer.current = window.setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      // Fallback: leave badge as-is if clipboard is blocked.
+    }
+  }, [joinCode]);
 
   return (
     <div className="space-y-5">
-      <Link href="/teacher/classes" className="text-sm text-blue-700 underline">
-        ← Classes
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
-            <span className="rounded-full border border-neutral-300 bg-neutral-50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-neutral-700">
-              {classKind === "trial" ? "Trial" : "Regular"}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-neutral-600">
-            {studentCount} student{studentCount === 1 ? "" : "s"}
-            {archived ? " · Archived" : ""}
-            {!isLight && pendingSentenceTotal > 0 ? (
-              <>
-                {" "}
-                ·{" "}
-                <button
-                  type="button"
-                  onClick={() => setTab("students")}
-                  className="font-medium text-amber-800 underline decoration-amber-300 underline-offset-2"
-                >
-                  {pendingSentenceTotal} sentence{pendingSentenceTotal === 1 ? "" : "s"} waiting
-                  for review
-                </button>
-              </>
-            ) : null}
-            {!isLight && activeSession ? (
-              <>
-                {" "}
-                ·{" "}
-                <Link
-                  href={`/teacher/virtual-classroom/${activeSession.sessionId}`}
-                  className="font-medium text-teal-800 underline-offset-2 hover:underline"
-                >
-                  Classroom live
-                </Link>
-              </>
-            ) : null}
-          </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Link
+          href="/teacher/classes"
+          className="shrink-0 text-sm font-medium text-blue-700 underline underline-offset-2"
+        >
+          ← Classes
+        </Link>
+        <span className="hidden h-4 w-px shrink-0 bg-neutral-200 sm:block" aria-hidden />
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
+          <span className="rounded-full border border-neutral-300 bg-neutral-50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-neutral-700">
+            {classKind === "trial" ? "Trial" : "Regular"}
+          </span>
+          <button
+            type="button"
+            onClick={() => void copyJoinLink()}
+            title="Copy join link"
+            aria-label={
+              codeCopied
+                ? "Join link copied"
+                : `Copy join link for class code ${joinCode}`
+            }
+            className={`rounded-full border px-2.5 py-0.5 font-mono text-xs font-bold tracking-widest transition ${
+              codeCopied
+                ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                : "border-teal-300 bg-teal-50 text-teal-900 hover:bg-teal-100"
+            }`}
+          >
+            {codeCopied ? "Copied!" : joinCode}
+          </button>
         </div>
-        <ArchiveClassButton classId={classId} archived={archived} />
+        <p className="min-w-0 text-sm text-neutral-600">
+          <span className="hidden text-neutral-300 sm:inline" aria-hidden>
+            ·{" "}
+          </span>
+          {studentCount} student{studentCount === 1 ? "" : "s"}
+          {archived ? " · Archived" : ""}
+          {!isLight && pendingSentenceTotal > 0 ? (
+            <>
+              {" "}
+              ·{" "}
+              <button
+                type="button"
+                onClick={() => setTab("students")}
+                className="font-medium text-amber-800 underline decoration-amber-300 underline-offset-2"
+              >
+                {pendingSentenceTotal} sentence{pendingSentenceTotal === 1 ? "" : "s"} waiting for
+                review
+              </button>
+            </>
+          ) : null}
+          {!isLight && activeSession ? (
+            <>
+              {" "}
+              ·{" "}
+              <Link
+                href={`/teacher/virtual-classroom/${activeSession.sessionId}`}
+                className="font-medium text-teal-800 underline-offset-2 hover:underline"
+              >
+                Classroom live
+              </Link>
+            </>
+          ) : null}
+        </p>
+        <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-50"
+          >
+            History
+          </button>
+          <ArchiveClassButton classId={classId} archived={archived} />
+        </div>
       </div>
+
+      <ClassHubHistoryOverlay
+        classId={classId}
+        archived={archived}
+        liveGameProject={liveGameProject}
+        whiteboardHistory={whiteboardHistory}
+        vcSessionHistory={vcSessionHistory}
+        open={historyOpen}
+        onClose={closeHistory}
+      />
 
       {tabs.length > 1 ? (
         <nav
-          className="flex flex-wrap gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 p-1.5"
+          className="mx-auto flex w-fit max-w-full flex-wrap justify-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 p-1"
           aria-label="Class sections"
         >
           {tabs.map((tab) => {
@@ -185,7 +257,7 @@ export function TeacherClassHubClient({
                 key={tab}
                 href={classHubTabHref(classId, tab, teacherTier)}
                 scroll={false}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition ${
                   selected
                     ? "bg-white text-neutral-900 shadow-sm ring-1 ring-neutral-200"
                     : "text-neutral-600 hover:bg-white/70 hover:text-neutral-900"
@@ -205,9 +277,6 @@ export function TeacherClassHubClient({
           archived={archived}
           activeSession={activeSession}
           readyLessons={lessons.filter((lesson) => lesson.status === "ready")}
-          liveGameProject={liveGameProject}
-          whiteboardHistory={whiteboardHistory}
-          vcSessionHistory={vcSessionHistory}
         />
       ) : null}
 
@@ -218,14 +287,34 @@ export function TeacherClassHubClient({
           lessons={lessons}
           studioActivities={studioActivities}
           liveGameSets={liveGameSets}
+          vocabularyLists={vocabularyLists}
           initialLessonId={lessonId}
+        />
+      ) : null}
+
+      {activeTab === "stream" ? (
+        <ClassStreamTab
+          classId={classId}
+          archived={archived}
+          classPosts={classPosts}
+          homework={homework}
+          spaceItems={spaceItems}
+        />
+      ) : null}
+
+      {activeTab === "schedule" ? (
+        <ClassScheduleTab
+          classId={classId}
+          archived={archived}
+          roster={roster}
+          meetingSlots={meetingSlots}
+          scheduleGroupingBoard={scheduleGroupingBoard}
         />
       ) : null}
 
       {activeTab === "students" ? (
         <StudentsHomeworkTab
           classId={classId}
-          joinCode={joinCode}
           archived={archived}
           teacherTier={teacherTier}
           roster={roster}
@@ -235,12 +324,8 @@ export function TeacherClassHubClient({
           wordPacks={wordPacks}
           homework={homework}
           homeworkCompletions={homeworkCompletions}
-          classPosts={classPosts}
-          meetingSlots={meetingSlots}
-          scheduleGroupingBoard={scheduleGroupingBoard}
           packQuizzes={packQuizzes}
           packFlashcardSets={packFlashcardSets}
-          spaceItems={spaceItems}
         />
       ) : null}
 

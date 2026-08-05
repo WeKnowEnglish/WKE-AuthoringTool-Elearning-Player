@@ -50,6 +50,7 @@ async function resolveClassTeacher(
  * - Promotes waiting/prep → live at T−5
  * - Teacher early open uses mode "early" → prep/waiting without forcing live
  * - mode "live" forces class_phase live (Start now)
+ * - mode "extra" starts an unscheduled live session (no meeting slot required)
  */
 export async function ensureClassSessionForClock(input: {
   classId: string;
@@ -61,19 +62,9 @@ export async function ensureClassSessionForClock(input: {
 }): Promise<EnsureClassSessionResult> {
   const nowMs = input.nowMs ?? Date.now();
   const mode = input.mode ?? "auto";
-  const slots = await listMeetingSlotsForClassServiceRole(input.classId);
-  const meeting = resolveLiveClassMeeting(slots, new Date(nowMs));
   let active = await getActiveVirtualClassroomForClass(input.classId);
 
-  if (!meeting) {
-    return {
-      session: active,
-      created: false,
-      promoted: false,
-      phase: active?.classPhase ?? null,
-    };
-  }
-
+  // Unscheduled / temporary sessions do not need a meeting window.
   if (mode === "extra") {
     const teacher =
       input.teacher ?? (await resolveClassTeacher(input.classId));
@@ -99,6 +90,18 @@ export async function ensureClassSessionForClock(input: {
       created: true,
       promoted: false,
       phase: "live",
+    };
+  }
+
+  const slots = await listMeetingSlotsForClassServiceRole(input.classId);
+  const meeting = resolveLiveClassMeeting(slots, new Date(nowMs));
+
+  if (!meeting) {
+    return {
+      session: active,
+      created: false,
+      promoted: false,
+      phase: active?.classPhase ?? null,
     };
   }
 

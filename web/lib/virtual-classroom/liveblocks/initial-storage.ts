@@ -12,6 +12,15 @@ import { createEmptyClassroomStatus } from "@/lib/virtual-classroom/tools/status
 import type { GlobalTimerState } from "@/lib/virtual-classroom/tools/timer";
 import { createIdleGlobalTimer } from "@/lib/virtual-classroom/tools/timer";
 
+/** Shared in-session layout: meeting = viewport-filling cameras; learn = materials + docked video. */
+export type VirtualClassroomUiMode = "meeting" | "learn";
+
+export function normalizeVirtualClassroomUiMode(
+  value: unknown,
+): VirtualClassroomUiMode {
+  return value === "meeting" ? "meeting" : "learn";
+}
+
 export type VirtualClassroomRuntimeFields = {
   sessionId: string;
   joinCode: string;
@@ -19,6 +28,8 @@ export type VirtualClassroomRuntimeFields = {
   hostUserId: string;
   title: string;
   status: "active" | "ended";
+  /** Layout mode for everyone in the session (defaults to learn when missing). */
+  uiMode: VirtualClassroomUiMode;
   activeActivity: {
     kind: "whiteboard" | "document" | null;
     joinCode: string | null;
@@ -56,6 +67,7 @@ export function createVirtualClassroomInitialStorage(input: {
     hostUserId: input.hostUserId,
     title: input.title,
     status: "active",
+    uiMode: "learn",
     activeActivity: {
       kind: null,
       joinCode: null,

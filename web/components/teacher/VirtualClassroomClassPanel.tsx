@@ -178,7 +178,7 @@ export function VirtualClassroomClassPanel({
       ? "Waiting room open"
       : liveState?.phase === "live"
         ? liveState.kind === "extra"
-          ? "Extra session live"
+          ? "Temporary class live"
           : "Class live"
         : liveState?.phase === "idle"
           ? "Scheduled — not open yet"
@@ -208,7 +208,7 @@ export function VirtualClassroomClassPanel({
             ) : null}
             {liveState.kind === "extra" ? (
               <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-900">
-                Extra session
+                Temporary
               </span>
             ) : null}
             {liveState.kind === "scheduled" ? (
@@ -250,6 +250,22 @@ export function VirtualClassroomClassPanel({
               ))}
             </select>
           </label>
+
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-3">
+            <p className="text-sm font-bold text-amber-950">Temporary one-off class</p>
+            <p className="mt-0.5 text-xs text-amber-900">
+              Starts a live session for this class right away — no schedule slot required. Use
+              while iterating; enrolled students join with the session code.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void host("extra")}
+              className="mt-2 rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50"
+            >
+              {busy ? "Starting…" : "Start temporary class"}
+            </button>
+          </div>
 
           {joinCode ? (
             <p className="text-sm text-slate-700">
@@ -293,15 +309,11 @@ export function VirtualClassroomClassPanel({
             >
               {busy ? "…" : "Start class now"}
             </button>
-            <button
-              type="button"
-              disabled={busy || archived}
-              onClick={() => void host("extra")}
-              className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-bold text-slate-800 disabled:opacity-50"
-            >
-              {busy ? "…" : "Start extra session"}
-            </button>
           </div>
+          <p className="text-xs text-slate-500">
+            Early / Start now follow the class schedule window. For unscheduled teaching, use{" "}
+            <span className="font-semibold text-slate-700">Start temporary class</span> above.
+          </p>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
         </>
       )}

@@ -28,6 +28,7 @@ export const CLASS_HOMEWORK_PAYLOAD_TYPES = [
   "pack_flashcards",
   "word_pack_practice",
   "external_note",
+  "writing_prompt",
   "studio_activity",
   "homework_template",
   "graded_track",
@@ -79,6 +80,13 @@ export type ClassHomeworkPayload =
   | {
       type: "external_note";
       body: string;
+    }
+  | {
+      type: "writing_prompt";
+      prompt: string;
+      /** Optional extra guidance frozen at assign time. */
+      instructions?: string;
+      minWords?: number;
     }
   | {
       type: "studio_activity";
@@ -268,6 +276,7 @@ export const CLASS_HOMEWORK_PAYLOAD_LABELS: Record<ClassHomeworkPayloadType, str
   pack_flashcards: "Flashcards",
   word_pack_practice: "Word pack practice",
   external_note: "Note / reminder",
+  writing_prompt: "Writing homework",
   studio_activity: "Activity Bank activity",
   homework_template: "Homework template",
   graded_track: "Graded track",

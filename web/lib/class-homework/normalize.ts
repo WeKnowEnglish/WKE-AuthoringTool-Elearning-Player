@@ -51,6 +51,8 @@ import { parseAssessmentDefinition } from "@/lib/assessment/parse-definition";
 const TITLE_MAX = 120;
 const INSTRUCTIONS_MAX = 2000;
 const NOTE_MAX = 2000;
+const WRITING_PROMPT_MAX = 2000;
+const WRITING_TEXT_MAX = 10_000;
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -265,6 +267,9 @@ export function defaultHomeworkPayload(
       itemCount: assessmentProgress(PRIMARY_A2_ASSESSMENT_PILOT, {}).total,
       frozenAt: new Date(0).toISOString(),
     };
+  }
+  if (type === "writing_prompt") {
+    return { type: "writing_prompt", prompt: "" };
   }
   return { type: "external_note", body: "" };
 }
@@ -712,9 +717,39 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
     };
   }
 
-  const body = asString(input.body).trim().slice(0, NOTE_MAX);
-  if (!body) return null;
-  return { type: "external_note", body };
+  if (input.type === "writing_prompt") {
+    const prompt = asString(input.prompt).trim().slice(0, WRITING_PROMPT_MAX);
+    if (!prompt) return null;
+    const instructions = asString(input.instructions).trim().slice(0, NOTE_MAX);
+    const minWordsRaw = input.minWords;
+    const minWords =
+      typeof minWordsRaw === "number" && Number.isFinite(minWordsRaw)
+        ? Math.max(0, Math.round(minWordsRaw))
+        : undefined;
+    return {
+      type: "writing_prompt",
+      prompt,
+      ...(instructions ? { instructions } : {}),
+      ...(minWords && minWords > 0 ? { minWords } : {}),
+    };
+  }
+
+  if (input.type === "external_note") {
+    const body = asString(input.body).trim().slice(0, NOTE_MAX);
+    if (!body) return null;
+    return { type: "external_note", body };
+  }
+
+  return null;
+}
+
+export function countWritingWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+export function normalizeWritingSubmissionText(raw: unknown): string | null {
+  const text = asString(raw).trim().slice(0, WRITING_TEXT_MAX);
+  return text.length > 0 ? text : null;
 }
 
 export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
@@ -802,5 +837,14 @@ export function homeworkPayloadSummary(payload: ClassHomeworkPayload): string {
       payload.questionCount === 1 ? "" : "s"
     } · ${payload.frameCount} frame${payload.frameCount === 1 ? "" : "s"}`;
   }
-  return payload.body.length > 80 ? `${payload.body.slice(0, 77)}…` : payload.body;
+  if (payload.type === "writing_prompt") {
+    const min = payload.minWords ? ` · min ${payload.minWords} words` : "";
+    const preview =
+      payload.prompt.length > 60 ? `${payload.prompt.slice(0, 57)}…` : payload.prompt;
+    return `${preview}${min}`;
+  }
+  if (payload.type === "external_note") {
+    return payload.body.length > 80 ? `${payload.body.slice(0, 77)}…` : payload.body;
+  }
+  return "Homework";
 }

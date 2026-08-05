@@ -232,6 +232,7 @@ export function ClassHomeworkPanel({
                 item.payload.type === "cloze_open" ||
                 item.payload.type === "read_and_answer" ||
                 item.payload.type === "picture_story" ||
+                item.payload.type === "writing_prompt" ||
                 item.payload.type === "studio_activity") &&
               (item.status === "assigned" || item.status === "closed");
             return (
@@ -345,6 +346,7 @@ function HomeworkEditor({
           ["pack_quiz", ACTIVITY_LABEL],
           ["pack_flashcards", FLASHCARDS_LABEL],
           ["word_pack_practice", "Word pack practice"],
+          ["writing_prompt", "Writing homework"],
           ["homework_template", "Homework template"],
           ["primary_a2_assessment", "Primary A2 assessment"],
         ] as const)
@@ -353,6 +355,7 @@ function HomeworkEditor({
           ["pack_flashcards", FLASHCARDS_LABEL],
           ["word_pack_practice", "Word pack practice"],
           ["external_note", "Note / reminder"],
+          ["writing_prompt", "Writing homework"],
           ["homework_template", "Homework template"],
           ["primary_a2_assessment", "Primary A2 assessment"],
         ] as const)
@@ -377,6 +380,14 @@ function HomeworkEditor({
   );
   const [noteBody, setNoteBody] = useState(
     homework.payload.type === "external_note" ? homework.payload.body : "",
+  );
+  const [writingPrompt, setWritingPrompt] = useState(
+    homework.payload.type === "writing_prompt" ? homework.payload.prompt : "",
+  );
+  const [writingMinWords, setWritingMinWords] = useState(
+    homework.payload.type === "writing_prompt" && homework.payload.minWords
+      ? String(homework.payload.minWords)
+      : "",
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -426,6 +437,16 @@ function HomeworkEditor({
         packId: pack.id,
         packTitle: pack.title,
         wordCount: pack.wordCount,
+      };
+    }
+    if (payloadType === "writing_prompt") {
+      const prompt = writingPrompt.trim();
+      if (!prompt) return null;
+      const minWords = Number.parseInt(writingMinWords, 10);
+      return {
+        type: "writing_prompt",
+        prompt,
+        ...(Number.isFinite(minWords) && minWords > 0 ? { minWords } : {}),
       };
     }
     const body = noteBody.trim();
@@ -643,6 +664,37 @@ function HomeworkEditor({
         </label>
       ) : null}
 
+      {payloadType === "writing_prompt" ? (
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold">
+            Writing prompt
+            <textarea
+              value={writingPrompt}
+              disabled={archived || pending}
+              onChange={(event) => setWritingPrompt(event.target.value)}
+              rows={4}
+              placeholder="What should students write about?"
+              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <label className="block text-sm font-semibold">
+            Minimum words (optional)
+            <input
+              type="number"
+              min={0}
+              value={writingMinWords}
+              disabled={archived || pending}
+              onChange={(event) => setWritingMinWords(event.target.value)}
+              className="mt-1 w-full max-w-[12rem] rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <p className="text-xs font-normal text-neutral-500">
+            Students write and submit on Primary or Secondary homework. Use assignment instructions
+            above for extra guidance.
+          </p>
+        </div>
+      ) : null}
+
       <fieldset className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
         <legend className="px-1 text-sm font-semibold">Assign to</legend>
         <label className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md bg-white px-3 py-2 text-sm font-semibold text-neutral-900">
@@ -693,6 +745,7 @@ function HomeworkEditor({
         homework.payload.type === "pack_flashcards" ||
         homework.payload.type === "homework_template" ||
         homework.payload.type === "graded_track" ||
+        homework.payload.type === "writing_prompt" ||
         homework.payload.type === "primary_a2_assessment") &&
       (homework.status === "assigned" || homework.status === "closed") ? (
         isLight ? (
@@ -746,6 +799,15 @@ function HomeworkEditor({
           className="inline-flex min-h-11 items-center rounded-lg border border-teal-700 px-3 text-sm font-semibold text-teal-800"
         >
           Review student work
+        </Link>
+      ) : null}
+
+      {homework.payload.type === "writing_prompt" ? (
+        <Link
+          href={`/teacher/classes/${classId}/homework-writing-results/${homework.id}`}
+          className="inline-flex min-h-11 items-center rounded-lg border border-teal-700 px-3 text-sm font-semibold text-teal-800"
+        >
+          Read student writing
         </Link>
       ) : null}
 

@@ -103,6 +103,21 @@ describe("class-homework/normalize", () => {
     expect(note).toEqual({ type: "external_note", body: "Finish page 12" });
   });
 
+  it("normalizes writing_prompt homework", () => {
+    expect(normalizeHomeworkPayload({ type: "writing_prompt", prompt: "  " })).toBeNull();
+    const payload = normalizeHomeworkPayload({
+      type: "writing_prompt",
+      prompt: "Describe your weekend.",
+      minWords: 40,
+    });
+    expect(payload).toEqual({
+      type: "writing_prompt",
+      prompt: "Describe your weekend.",
+      minWords: 40,
+    });
+    expect(homeworkPayloadSummary(payload!)).toContain("Describe your weekend");
+  });
+
   it("normalizes studio_activity and rejects incomplete packs", () => {
     expect(
       normalizeHomeworkPayload({

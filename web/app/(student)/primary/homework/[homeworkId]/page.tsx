@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { HomeworkWritingPromptPlayer } from "@/components/homework/HomeworkWritingPromptPlayer";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
@@ -27,6 +28,7 @@ import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolv
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import type { HomeworkTemplateOne } from "@/lib/homework-templates/homework-template-one";
 import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessmentSpeakingReview } from "@/lib/data/assessment-attempts";
+import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -60,6 +62,7 @@ function homeworkFrame(
     case "pack_flashcards":
     case "word_pack_practice":
     case "external_note":
+    case "writing_prompt":
       return "standard";
     default:
       return "wide";
@@ -105,6 +108,10 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
     payload.type === "pack_flashcards"
       ? parseStoredPackFlashcardCards(payload.cards ?? [])
       : [];
+  const writingSubmission =
+    payload.type === "writing_prompt"
+      ? await getMyHomeworkWritingSubmission(homework.id)
+      : null;
   const typeLabel = CLASS_HOMEWORK_PAYLOAD_LABELS[payload.type];
   const eyebrow = `${homework.classTitle} · ${typeLabel}`;
 
@@ -137,6 +144,17 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
             Back to Home
           </Link>
         </div>
+      ) : null}
+
+      {payload.type === "writing_prompt" ? (
+        <HomeworkWritingPromptPlayer
+          homeworkId={homework.id}
+          prompt={payload.prompt}
+          payloadInstructions={payload.instructions}
+          minWords={payload.minWords}
+          alreadyCompleted={Boolean(homework.completedAt)}
+          initialSubmission={writingSubmission}
+        />
       ) : null}
 
       {payload.type === "word_pack_practice" ? (

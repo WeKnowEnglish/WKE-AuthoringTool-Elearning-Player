@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { HomeworkWritingPromptPlayer } from "@/components/homework/HomeworkWritingPromptPlayer";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
@@ -17,6 +18,7 @@ import {
   getMyHomeworkTemplateSpeakingRecordings,
   getMyHomeworkTemplateSubmission,
 } from "@/lib/data/homework-template-submissions";
+import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { createClient } from "@/lib/supabase/server";
 import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
 
@@ -45,6 +47,7 @@ function homeworkFrame(
     case "pack_flashcards":
     case "word_pack_practice":
     case "external_note":
+    case "writing_prompt":
       return "standard";
     default:
       return "wide";
@@ -73,12 +76,12 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
     (payload.type === "homework_template" &&
       payload.templateId === "secondary-homework-template-one") ||
     (payload.type === "graded_track" && payload.level === "secondary");
-  const [templateSubmission, templateRecordings] = needsTemplateSubmission
-    ? await Promise.all([
-        getMyHomeworkTemplateSubmission(homework.id),
-        getMyHomeworkTemplateSpeakingRecordings(homework.id),
-      ])
-    : [null, []];
+  const needsWritingSubmission = payload.type === "writing_prompt";
+  const [templateSubmission, templateRecordings, writingSubmission] = await Promise.all([
+    needsTemplateSubmission ? getMyHomeworkTemplateSubmission(homework.id) : Promise.resolve(null),
+    needsTemplateSubmission ? getMyHomeworkTemplateSpeakingRecordings(homework.id) : Promise.resolve([]),
+    needsWritingSubmission ? getMyHomeworkWritingSubmission(homework.id) : Promise.resolve(null),
+  ]);
   const flashcardCards =
     payload.type === "pack_flashcards"
       ? parseStoredPackFlashcardCards(payload.cards ?? [])
@@ -115,6 +118,19 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
             Back to Secondary home
           </Link>
         </div>
+      ) : null}
+
+      {payload.type === "writing_prompt" ? (
+        <HomeworkWritingPromptPlayer
+          homeworkId={homework.id}
+          prompt={payload.prompt}
+          payloadInstructions={payload.instructions}
+          minWords={payload.minWords}
+          alreadyCompleted={Boolean(homework.completedAt)}
+          initialSubmission={writingSubmission}
+          homeHref="/secondary"
+          homeLabel="Back to Secondary home"
+        />
       ) : null}
 
       {payload.type === "word_pack_practice" ? (

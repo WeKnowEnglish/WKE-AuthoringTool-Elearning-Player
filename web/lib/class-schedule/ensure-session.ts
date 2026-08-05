@@ -11,11 +11,14 @@ import {
 import { getClassLiveState } from "@/lib/class-schedule/live-state";
 import { resolveLiveClassMeeting } from "@/lib/class-schedule/next-meeting";
 import { listMeetingSlotsForClassServiceRole } from "@/lib/daily/schedule-bind";
+import { occurrenceStartsMatch } from "@/lib/class-schedule/occurrence-match";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import { bootstrapVirtualClassroomHost } from "@/lib/virtual-classroom/server/host-bootstrap";
+import { finalizeVirtualClassroomSessionClose } from "@/lib/virtual-classroom/server/close-session";
 import type { VirtualClassroomSessionRecord } from "@/lib/virtual-classroom/domain";
 import {
   getActiveVirtualClassroomForClass,
+  hasEndedSessionForOccurrence,
   updateVirtualClassroomSessionPhase,
 } from "@/lib/virtual-classroom/server/session";
 
@@ -103,15 +106,16 @@ export async function ensureClassSessionForClock(input: {
   });
 
   if (mode === "auto") {
+    if (clock === "past" && active) {
+      await finalizeVirtualClassroomSessionClose(active);
+      active = null;
+    }
     if (clock === "idle" || clock === "past") {
-      if (active && clock === "past" && active.classPhase !== "ended") {
-        // Soft: leave active until teacher ends; do not auto-end here.
-      }
       return {
         session: active,
         created: false,
         promoted: false,
-        phase: active?.classPhase ?? null,
+        phase: active?.classPhase ?? (clock === "past" ? "ended" : null),
       };
     }
   }
@@ -135,9 +139,7 @@ export async function ensureClassSessionForClock(input: {
     active &&
     active.sessionKind === "scheduled" &&
     active.occurrenceStartsAt &&
-    Math.abs(
-      new Date(active.occurrenceStartsAt).getTime() - meeting.startsAt.getTime(),
-    ) < 60_000
+    occurrenceStartsMatch(active.occurrenceStartsAt, meeting.startsAt)
   ) {
     let promoted = false;
     if (
@@ -183,6 +185,22 @@ export async function ensureClassSessionForClock(input: {
     input.teacher ?? (await resolveClassTeacher(input.classId));
   if (!teacher) {
     return { session: active, created: false, promoted: false, phase: null };
+  }
+
+  if (
+    mode === "auto" &&
+    (await hasEndedSessionForOccurrence({
+      classId: input.classId,
+      meetingSlotId: meeting.slot.id,
+      occurrenceStartsAt: meeting.startsAt,
+    }))
+  ) {
+    return {
+      session: null,
+      created: false,
+      promoted: false,
+      phase: null,
+    };
   }
 
   await bootstrapVirtualClassroomHost({

@@ -15,7 +15,10 @@ import {
 } from "@/lib/class-schedule/next-meeting";
 import { listMeetingSlotsForClassServiceRole } from "@/lib/daily/schedule-bind";
 import type { VirtualClassroomSessionRecord } from "@/lib/virtual-classroom/domain";
-import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
+import {
+  getActiveVirtualClassroomForClass,
+  hasEndedSessionForOccurrence,
+} from "@/lib/virtual-classroom/server/session";
 
 export type { ClassLiveState } from "@/lib/class-schedule/live-state-types";
 
@@ -72,9 +75,18 @@ export async function getClassLiveState(
 
   if (activeSession?.sessionKind === "extra" || (activeSession && !liveMeeting)) {
     if (activeSession && activeSession.status === "active") {
-      const extraLive = activeSession.classPhase === "live" || activeSession.classPhase === "waiting";
+      const phase =
+        activeSession.classPhase === "ended"
+          ? "ended"
+          : activeSession.classPhase === "prep"
+            ? "waiting"
+            : activeSession.classPhase === "waiting"
+              ? "waiting"
+              : "live";
+      const extraLive =
+        activeSession.classPhase === "live" || activeSession.classPhase === "waiting";
       return emptyState({
-        phase: activeSession.classPhase === "ended" ? "ended" : "live",
+        phase,
         kind: "extra",
         sessionId: activeSession.id,
         joinCode: activeSession.joinCode,
@@ -107,13 +119,23 @@ export async function getClassLiveState(
     });
   }
 
-  return buildScheduledState(liveMeeting!, activeSession, nowMs);
+  return buildScheduledState(
+    liveMeeting!,
+    activeSession,
+    nowMs,
+    await hasEndedSessionForOccurrence({
+      classId,
+      meetingSlotId: liveMeeting!.slot.id,
+      occurrenceStartsAt: liveMeeting!.startsAt,
+    }),
+  );
 }
 
 function buildScheduledState(
   meeting: LiveClassMeetingWindow,
   activeSession: VirtualClassroomSessionRecord | null,
   nowMs: number,
+  occurrenceDismissed: boolean,
 ): ClassLiveState {
   const startMs = meeting.startsAt.getTime();
   const clock = deriveScheduledClockPhase({
@@ -126,24 +148,6 @@ function buildScheduledState(
   const autoLiveAt = new Date(startMs - CLASS_LIVE_OPEN_MS).toISOString();
 
   if (clock === "past") {
-    if (activeSession?.status === "active") {
-      return emptyState({
-        phase: "live",
-        kind: "scheduled",
-        occurrenceStartsAt: meeting.startsAt.toISOString(),
-        occurrenceEndsAt: meeting.endsAt.toISOString(),
-        occurrenceLabel: meeting.label,
-        meetingSlotId: meeting.slot.id,
-        sessionId: activeSession.id,
-        joinCode: activeSession.joinCode,
-        sessionTitle: activeSession.title,
-        classPhase: activeSession.classPhase,
-        canStudentEnterLive: true,
-        canTeacherJoinVideo: true,
-        waitingOpensAt,
-        autoLiveAt,
-      });
-    }
     return emptyState({
       phase: "ended",
       kind: "scheduled",
@@ -156,7 +160,8 @@ function buildScheduledState(
     });
   }
 
-  const phase: ClassLivePhase = clock;
+  const phase: ClassLivePhase =
+    occurrenceDismissed && !activeSession ? "idle" : clock;
   const sessionOk = sessionAllowsStudentEntry(activeSession);
   const teacherForcedLive = activeSession?.classPhase === "live";
 

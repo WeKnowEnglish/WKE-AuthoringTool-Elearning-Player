@@ -4,6 +4,7 @@ import type {
   ClassSessionKind,
   ClassSessionPhase,
 } from "@/lib/class-schedule/class-clock";
+import { occurrenceStartsMatch } from "@/lib/class-schedule/occurrence-match";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import type {
   VirtualClassroomSessionRecord,
@@ -193,6 +194,43 @@ export async function getActiveVirtualClassroomForClass(
     .maybeSingle();
   if (!data) return null;
   return mapRow(data as Record<string, unknown>);
+}
+
+/**
+ * Teacher ended a session for this occurrence — block auto clock from reopening.
+ */
+export async function hasEndedSessionForOccurrence(input: {
+  classId: string;
+  meetingSlotId: string;
+  occurrenceStartsAt: string | Date;
+}): Promise<boolean> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return false;
+
+  const occurrenceMs =
+    typeof input.occurrenceStartsAt === "string"
+      ? new Date(input.occurrenceStartsAt).getTime()
+      : input.occurrenceStartsAt.getTime();
+  if (!Number.isFinite(occurrenceMs)) return false;
+
+  const windowStart = new Date(occurrenceMs - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("class_sessions")
+    .select("occurrence_starts_at")
+    .eq("class_id", input.classId)
+    .eq("status", "ended")
+    .eq("meeting_slot_id", input.meetingSlotId)
+    .gte("ended_at", windowStart);
+
+  if (error) throw error;
+
+  return (data ?? []).some((row) =>
+    occurrenceStartsMatch(
+      row.occurrence_starts_at as string | null,
+      input.occurrenceStartsAt,
+    ),
+  );
 }
 
 export async function endVirtualClassroomSession(

@@ -56,6 +56,11 @@ function isLearningTrackCompilerPath(pathname: string): boolean {
   );
 }
 
+/** Live class session — no teacher global header (immersive Meeting/Learn). */
+function isVirtualClassroomLivePath(pathname: string): boolean {
+  return /^\/teacher\/virtual-classroom\/[^/]+$/.test(pathname);
+}
+
 function SettingsGearIcon() {
   return (
     <svg
@@ -304,8 +309,11 @@ export function TeacherSecureShell({
   children,
 }: Props) {
   const pathname = usePathname();
+  const immersiveLiveClass = isVirtualClassroomLivePath(pathname);
   const lockToViewport =
-    isWordPackEditorPath(pathname) || isActivityBuilderWorkspacePath(pathname);
+    immersiveLiveClass ||
+    isWordPackEditorPath(pathname) ||
+    isActivityBuilderWorkspacePath(pathname);
   const autoHideChrome = isLearningTrackCompilerPath(pathname);
   const theme = useSyncExternalStore(
     teacherThemeStore.subscribe,
@@ -333,7 +341,7 @@ export function TeacherSecureShell({
       className={lockToViewport ? "flex h-dvh flex-col overflow-hidden" : "min-h-screen"}
       style={themeVars}
     >
-      {autoHideChrome ? (
+      {immersiveLiveClass ? null : autoHideChrome ? (
         <TeacherChromeHeaderDrawer
           userEmail={userEmail}
           teacherTier={effectiveTier}
@@ -350,11 +358,13 @@ export function TeacherSecureShell({
       )}
       <div
         className={
-          lockToViewport
-            ? isActivityBuilderWorkspacePath(pathname)
-              ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
-              : "flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3 sm:px-6 lg:px-8"
-            : "w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
+          immersiveLiveClass
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+            : lockToViewport
+              ? isActivityBuilderWorkspacePath(pathname)
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+                : "flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3 sm:px-6 lg:px-8"
+              : "w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
         }
         style={{
           backgroundColor: "var(--teacher-bg)",

@@ -84,6 +84,44 @@ export async function listStudioActivitiesForTeacher(
   return (data ?? []).map((row) => mapSummary(asStudioActivityRow(row)));
 }
 
+/** Load any Activity Bank row by id (service role / trusted server callers only). */
+export async function getStudioActivityById(
+  supabase: SupabaseClient,
+  id: string,
+  options?: { includePack?: boolean },
+): Promise<StudioActivityDetail | null> {
+  const includePack = options?.includePack !== false;
+  const { data, error } = await supabase
+    .from("studio_activities")
+    .select(
+      includePack
+        ? "id, title, format, pack, authoring, source, created_at, updated_at"
+        : "id, title, format, authoring, source, created_at, updated_at",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    const hint =
+      /studio_activities|schema cache|does not exist/i.test(error.message)
+        ? " Apply migration web/supabase/migrations/070_studio_activities.sql."
+        : "";
+    throw new Error(`${error.message}${hint}`);
+  }
+  if (!data) return null;
+
+  const row = asStudioActivityRow(data);
+  const summary = mapSummary(row);
+  return {
+    ...summary,
+    pack: includePack ? row.pack : null,
+    authoring:
+      row.authoring && typeof row.authoring === "object" && !Array.isArray(row.authoring)
+        ? (row.authoring as Record<string, unknown>)
+        : null,
+  };
+}
+
 export async function getStudioActivityForTeacher(
   supabase: SupabaseClient,
   teacherId: string,

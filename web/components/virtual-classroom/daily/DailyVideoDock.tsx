@@ -1,16 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useDailyCall } from "@/components/virtual-classroom/daily/useDailyCall";
+import { dailyThemeFromTeacherTheme } from "@/lib/daily/theme-from-teacher";
+import {
+  resolveTeacherThemeCssVars,
+  teacherThemeStore,
+} from "@/lib/teacher-theme";
 
 type Props = {
   sessionId: string;
   isHost: boolean;
   sessionEnded: boolean;
-  /** dock = Learn (materials + corner Prebuilt); stage = Meeting (viewport-filling video). */
+  /** dock = Learn (full-height left video rail); stage = Meeting (viewport-filling video). */
   layout?: "dock" | "stage";
   /** Host: leave Meeting layout for Learn (materials + dock). */
   onExitToLearn?: () => void;
+  /** Host: enter Meeting layout from Learn. */
+  onEnterMeeting?: () => void;
   /** Host: end the VC for everyone. */
   onEndSession?: () => void;
   endSessionBusy?: boolean;
@@ -28,7 +35,8 @@ function entrySkipKey(sessionId: string) {
 
 /**
  * One Daily Prebuilt instance for the session.
- * Layout CSS switches Meeting ↔ Learn without leave/join.
+ * Learn: full-height left rail. Meeting: viewport stage.
+ * Layout CSS switches without leave/join.
  * First visit: entry gate probes + connects, then the call stays live.
  */
 export function DailyVideoDock({
@@ -37,11 +45,25 @@ export function DailyVideoDock({
   sessionEnded,
   layout = "dock",
   onExitToLearn,
+  onEnterMeeting,
   onEndSession,
   endSessionBusy = false,
   onLeaveClassroom,
 }: Props) {
   const isStage = layout === "stage";
+  const teacherTheme = useSyncExternalStore(
+    teacherThemeStore.subscribe,
+    teacherThemeStore.getSnapshot,
+    teacherThemeStore.getServerSnapshot,
+  );
+  const dailyTheme = useMemo(
+    () => dailyThemeFromTeacherTheme(teacherTheme),
+    [teacherTheme],
+  );
+  const themeVars = useMemo(
+    () => resolveTeacherThemeCssVars(teacherTheme) as CSSProperties,
+    [teacherTheme],
+  );
   const {
     phase,
     error,
@@ -56,6 +78,7 @@ export function DailyVideoDock({
     sessionId,
     isHost,
     sessionEnded,
+    theme: dailyTheme,
   });
   const [pendingConnect, setPendingConnect] = useState(false);
   const [disabledDismissed, setDisabledDismissed] = useState(false);
@@ -95,8 +118,8 @@ export function DailyVideoDock({
   }, [joined, prejoinReady]);
   const entryComplete = hasCompletedEntry || entrySkipped;
   const showEntryGate = !sessionEnded && !entryComplete;
-  const showDockChrome = entryComplete && (expanded || isStage);
-  const showMinimizedFab = entryComplete && !isStage && !expanded;
+  // Learn rail is a permanent fixture — always show chrome once entry is done.
+  const showDockChrome = entryComplete;
 
   useEffect(() => {
     if (!pendingConnect) return;
@@ -105,9 +128,9 @@ export function DailyVideoDock({
     void connect();
   }, [pendingConnect, containerRef, connect]);
 
-  // Meeting keeps the frame expanded; Learn may minimize after join.
+  // Both layouts keep the frame expanded (no minimize on the left rail).
   useEffect(() => {
-    if (isStage) setExpanded(true);
+    setExpanded(true);
   }, [isStage, setExpanded]);
 
   // Everyone: probe then connect once on entry (layout switches stay joined).
@@ -230,10 +253,6 @@ export function DailyVideoDock({
     }
   };
 
-  const dockOffsetClass = isHost
-    ? "bottom-20 right-3 md:bottom-4 md:right-4"
-    : "bottom-3 right-3 md:bottom-4 md:right-4";
-
   const entryStepLabel =
     phase === "probing"
       ? "Checking class video…"
@@ -270,11 +289,18 @@ export function DailyVideoDock({
             type="button"
             disabled={transcriptBusy}
             onClick={() => void toggleTranscription()}
-            className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
+            className="rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50"
+            style={
               transcribing
-                ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                : "border border-slate-600 text-slate-100 hover:bg-slate-800"
-            }`}
+                ? {
+                    backgroundColor: "var(--teacher-accent)",
+                    color: "var(--teacher-accent-fg)",
+                  }
+                : {
+                    border: "1px solid var(--teacher-border)",
+                    color: "var(--teacher-fg)",
+                  }
+            }
           >
             {transcriptBusy
               ? "…"
@@ -286,11 +312,18 @@ export function DailyVideoDock({
             type="button"
             disabled={recordBusy}
             onClick={() => void toggleRecording()}
-            className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
+            className="rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50"
+            style={
               recording
-                ? "bg-rose-500 text-white hover:bg-rose-400"
-                : "border border-slate-600 text-slate-100 hover:bg-slate-800"
-            }`}
+                ? {
+                    backgroundColor: "var(--teacher-danger)",
+                    color: "#fff",
+                  }
+                : {
+                    border: "1px solid var(--teacher-border)",
+                    color: "var(--teacher-fg)",
+                  }
+            }
           >
             {recordBusy ? "…" : recording ? "Stop record" : "Record"}
           </button>
@@ -300,36 +333,65 @@ export function DailyVideoDock({
         <button
           type="button"
           onClick={goBrowserFullscreen}
-          className="rounded-md border border-slate-600 px-2.5 py-1 text-xs font-bold text-slate-100 hover:bg-slate-800"
+          className="rounded-md border px-2.5 py-1 text-xs font-bold"
+          style={{
+            borderColor: "var(--teacher-border)",
+            color: "var(--teacher-fg)",
+          }}
           title="Browser fullscreen (Esc to exit)"
         >
           Browser fullscreen
+        </button>
+      ) : null}
+      {!isStage && onEnterMeeting ? (
+        <button
+          type="button"
+          onClick={onEnterMeeting}
+          className="rounded-md border px-2.5 py-1 text-xs font-bold"
+          style={{
+            borderColor: "var(--teacher-accent-border)",
+            color: "var(--teacher-accent)",
+          }}
+        >
+          Meeting
         </button>
       ) : null}
       {isStage && onExitToLearn ? (
         <button
           type="button"
           onClick={onExitToLearn}
-          className="rounded-md border border-teal-500 px-2.5 py-1 text-xs font-bold text-teal-200 hover:bg-slate-800"
+          className="rounded-md border px-2.5 py-1 text-xs font-bold"
+          style={{
+            borderColor: "var(--teacher-accent-border)",
+            color: "var(--teacher-accent)",
+          }}
         >
           Learn
         </button>
       ) : null}
-      {isStage && onEndSession ? (
+      {onEndSession ? (
         <button
           type="button"
           disabled={endSessionBusy}
           onClick={onEndSession}
-          className="rounded-md bg-red-800 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+          className="rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50"
+          style={{
+            backgroundColor: "var(--teacher-danger)",
+            color: "#fff",
+          }}
         >
           {endSessionBusy ? "Ending…" : "End session"}
         </button>
       ) : null}
-      {isStage && onLeaveClassroom ? (
+      {onLeaveClassroom ? (
         <button
           type="button"
           onClick={onLeaveClassroom}
-          className="rounded-md border border-slate-500 px-2.5 py-1 text-xs font-bold text-slate-100 hover:bg-slate-800"
+          className="rounded-md border px-2.5 py-1 text-xs font-bold"
+          style={{
+            borderColor: "var(--teacher-border)",
+            color: "var(--teacher-fg)",
+          }}
         >
           Leave classroom
         </button>
@@ -338,44 +400,58 @@ export function DailyVideoDock({
         <button
           type="button"
           onClick={() => void leave()}
-          className="rounded-md bg-red-700 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-600"
+          className="rounded-md px-2.5 py-1 text-xs font-bold"
+          style={{
+            backgroundColor: "var(--teacher-danger)",
+            color: "#fff",
+          }}
         >
           Leave video
-        </button>
-      ) : null}
-      {!isStage ? (
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="rounded-md border border-slate-600 px-2.5 py-1 text-xs font-bold text-slate-100 hover:bg-slate-800"
-        >
-          Minimize
         </button>
       ) : null}
     </div>
   );
 
-  // Single shell + containerRef for the whole session — CSS only for Meeting ↔ Learn.
+  // Single shell + containerRef — Learn = in-flow full-height left rail; Meeting = fixed stage.
   const shellClass = isStage
-    ? "pointer-events-auto fixed inset-0 z-40 flex flex-col overflow-hidden bg-slate-950"
-    : showDockChrome
-      ? `pointer-events-auto fixed z-40 flex max-w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden rounded-xl border border-slate-300 bg-slate-950 shadow-xl ${dockOffsetClass}`
-      : `pointer-events-none fixed z-0 flex max-w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden opacity-0 ${dockOffsetClass}`;
+    ? "pointer-events-auto fixed inset-0 z-40 flex flex-col overflow-hidden"
+    : "pointer-events-auto relative z-20 flex h-dvh w-[min(42vw,400px)] min-w-[240px] max-w-[420px] shrink-0 flex-col overflow-hidden border-r";
 
-  const frameHeightClass = isStage
-    ? "min-h-0 w-full flex-1 bg-slate-900"
-    : "h-[min(36vh,260px)] w-[min(100vw-1.5rem,420px)] bg-slate-900 md:h-[min(42vh,320px)]";
+  const frameHeightClass = "min-h-0 w-full flex-1";
+
+  const shellStyle = {
+    ...themeVars,
+    backgroundColor: "var(--teacher-bg)",
+    color: "var(--teacher-fg)",
+    borderColor: "var(--teacher-border)",
+  } as CSSProperties;
 
   return (
     <>
       {showEntryGate ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-6">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 px-6 py-8 text-center shadow-2xl">
-            <p className="text-xs font-semibold uppercase tracking-wide text-teal-300">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{
+            ...themeVars,
+            backgroundColor: "color-mix(in srgb, var(--teacher-bg) 92%, transparent)",
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border px-6 py-8 text-center shadow-2xl"
+            style={{
+              borderColor: "var(--teacher-border)",
+              backgroundColor: "var(--teacher-elevated)",
+              color: "var(--teacher-fg)",
+            }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--teacher-accent)" }}
+            >
               Live class
             </p>
-            <h2 className="mt-2 text-xl font-bold text-white">{entryStepLabel}</h2>
-            <p className="mt-2 text-sm text-slate-300">
+            <h2 className="mt-2 text-xl font-bold">{entryStepLabel}</h2>
+            <p className="mt-2 text-sm" style={{ color: "var(--teacher-muted)" }}>
               {phase === "disabled"
                 ? error ??
                   "Video isn’t configured on this server. You can continue without it."
@@ -383,17 +459,25 @@ export function DailyVideoDock({
                   ? error ?? "Check your camera/mic permissions, then try again."
                   : "We’ll keep this connection when you switch Meeting and Learn."}
             </p>
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="mt-6 h-2 overflow-hidden rounded-full"
+              style={{ backgroundColor: "var(--teacher-border)" }}
+            >
               <div
-                className="h-full rounded-full bg-teal-500 transition-all duration-500 ease-out"
-                style={{ width: `${entryProgress}%` }}
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${entryProgress}%`,
+                  backgroundColor: "var(--teacher-primary-btn)",
+                }}
               />
             </div>
             {phase === "probing" ||
             phase === "connecting" ||
             phase === "ready" ||
             pendingConnect ? (
-              <p className="mt-4 text-xs text-slate-400">Please wait…</p>
+              <p className="mt-4 text-xs" style={{ color: "var(--teacher-subtle)" }}>
+                Please wait…
+              </p>
             ) : null}
             {phase === "error" || phase === "disabled" ? (
               <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -406,14 +490,22 @@ export function DailyVideoDock({
                         setEntryStarted(false);
                         requestConnect();
                       }}
-                      className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-500 disabled:opacity-50"
+                      className="rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+                      style={{
+                        backgroundColor: "var(--teacher-primary-btn)",
+                        color: "var(--teacher-primary-btn-fg)",
+                      }}
                     >
                       Retry
                     </button>
                     <button
                       type="button"
                       onClick={() => void retryProbe()}
-                      className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-slate-800"
+                      className="rounded-lg border px-4 py-2 text-sm font-bold"
+                      style={{
+                        borderColor: "var(--teacher-border)",
+                        color: "var(--teacher-fg)",
+                      }}
                     >
                       Recheck
                     </button>
@@ -422,7 +514,11 @@ export function DailyVideoDock({
                   <button
                     type="button"
                     onClick={() => void retryProbe()}
-                    className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-slate-800"
+                    className="rounded-lg border px-4 py-2 text-sm font-bold"
+                    style={{
+                      borderColor: "var(--teacher-border)",
+                      color: "var(--teacher-fg)",
+                    }}
                   >
                     Recheck
                   </button>
@@ -430,7 +526,8 @@ export function DailyVideoDock({
                 <button
                   type="button"
                   onClick={phase === "disabled" ? dismissDisabled : skipEntry}
-                  className="rounded-lg px-4 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800"
+                  className="rounded-lg px-4 py-2 text-sm font-bold"
+                  style={{ color: "var(--teacher-muted)" }}
                 >
                   Continue without video
                 </button>
@@ -445,7 +542,7 @@ export function DailyVideoDock({
           className={
             isStage
               ? "fixed inset-0 z-40 flex items-center justify-center bg-slate-950 p-6"
-              : `pointer-events-auto fixed z-40 max-w-[min(100vw-1.5rem,360px)] ${dockOffsetClass}`
+              : "pointer-events-auto absolute inset-0 z-30 flex items-center justify-center bg-slate-950/95 p-4"
           }
         >
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 shadow-lg">
@@ -454,7 +551,7 @@ export function DailyVideoDock({
               {error ??
                 "Daily video is not configured on this server (missing API key or disabled)."}
               {isHost
-                ? " Students will not see a Video control until this is fixed."
+                ? " Students will not see class video until this is fixed."
                 : null}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -490,23 +587,41 @@ export function DailyVideoDock({
 
       <div
         className={shellClass}
-        aria-hidden={showEntryGate || (!isStage && !expanded)}
+        style={shellStyle}
+        aria-hidden={showEntryGate}
       >
         {showDockChrome ? (
-          <div className="flex items-center justify-between gap-2 border-b border-slate-700 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+          <div
+            className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2"
+            style={{
+              borderColor: "var(--teacher-border)",
+              backgroundColor: "var(--teacher-elevated)",
+            }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--teacher-muted)" }}
+            >
               {isStage ? "Meeting" : "Class video"}
             </p>
             {controlButtons}
           </div>
         ) : null}
         {showDockChrome && isHost && hostNote ? (
-          <p className="border-b border-slate-700 px-3 py-1.5 text-[11px] text-slate-300">
+          <p
+            className="shrink-0 border-b px-3 py-1.5 text-[11px]"
+            style={{
+              borderColor: "var(--teacher-border)",
+              color: "var(--teacher-muted)",
+              backgroundColor: "var(--teacher-panel)",
+            }}
+          >
             {hostNote}{" "}
             {hostNoteKind === "transcript" ? (
               <a
                 href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/transcript`}
-                className="font-bold text-teal-300 underline"
+                className="font-bold underline"
+                style={{ color: "var(--teacher-accent)" }}
               >
                 Review transcript
               </a>
@@ -514,24 +629,48 @@ export function DailyVideoDock({
             {hostNoteKind === "recording" ? (
               <a
                 href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/recording`}
-                className="font-bold text-teal-300 underline"
+                className="font-bold underline"
+                style={{ color: "var(--teacher-accent)" }}
               >
                 Review recording
               </a>
             ) : null}
           </p>
         ) : null}
-        <div ref={containerRef} className={frameHeightClass} />
+        <div
+          ref={containerRef}
+          className={frameHeightClass}
+          style={{ backgroundColor: "var(--teacher-bg)" }}
+        />
         {showDockChrome && error ? (
-          <p className="border-t border-slate-700 px-3 py-2 text-xs text-red-300">{error}</p>
+          <p
+            className="shrink-0 border-t px-3 py-2 text-xs"
+            style={{
+              borderColor: "var(--teacher-error-border)",
+              backgroundColor: "var(--teacher-error-bg)",
+              color: "var(--teacher-error-fg)",
+            }}
+          >
+            {error}
+          </p>
         ) : null}
         {showDockChrome && !joined && phase !== "connecting" && phase !== "prejoin" ? (
-          <div className="flex flex-wrap gap-2 border-t border-slate-700 px-3 py-2">
+          <div
+            className="flex shrink-0 flex-wrap gap-2 border-t px-3 py-2"
+            style={{
+              borderColor: "var(--teacher-border)",
+              backgroundColor: "var(--teacher-elevated)",
+            }}
+          >
             <button
               type="button"
               disabled={busy}
               onClick={requestConnect}
-              className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-500 disabled:opacity-50"
+              className="rounded-md px-3 py-1.5 text-xs font-bold disabled:opacity-50"
+              style={{
+                backgroundColor: "var(--teacher-primary-btn)",
+                color: "var(--teacher-primary-btn-fg)",
+              }}
             >
               {phase === "error" ? "Retry connect" : "Connect"}
             </button>
@@ -539,7 +678,11 @@ export function DailyVideoDock({
               <button
                 type="button"
                 onClick={() => void retryProbe()}
-                className="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-bold text-slate-100 hover:bg-slate-800"
+                className="rounded-md border px-3 py-1.5 text-xs font-bold"
+                style={{
+                  borderColor: "var(--teacher-border)",
+                  color: "var(--teacher-fg)",
+                }}
               >
                 Recheck
               </button>
@@ -547,45 +690,30 @@ export function DailyVideoDock({
           </div>
         ) : null}
         {showDockChrome && phase === "prejoin" ? (
-          <p className="border-t border-slate-700 px-3 py-2 text-xs text-slate-300">
+          <p
+            className="shrink-0 border-t px-3 py-2 text-xs"
+            style={{
+              borderColor: "var(--teacher-border)",
+              color: "var(--teacher-muted)",
+              backgroundColor: "var(--teacher-elevated)",
+            }}
+          >
             Check camera and mic, then click Join in the video panel.
           </p>
         ) : null}
         {showDockChrome && phase === "connecting" ? (
-          <p className="border-t border-slate-700 px-3 py-2 text-xs text-slate-300">
+          <p
+            className="shrink-0 border-t px-3 py-2 text-xs"
+            style={{
+              borderColor: "var(--teacher-border)",
+              color: "var(--teacher-muted)",
+              backgroundColor: "var(--teacher-elevated)",
+            }}
+          >
             Connecting to video…
           </p>
         ) : null}
       </div>
-
-      {showMinimizedFab ? (
-        <div
-          className={`pointer-events-auto fixed z-40 flex items-center gap-2 ${dockOffsetClass}`}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              if (joined) {
-                setExpanded(true);
-                return;
-              }
-              requestConnect();
-            }}
-            className={`rounded-full px-4 py-2 text-sm font-bold shadow-lg ${
-              joined
-                ? "bg-teal-700 text-white hover:bg-teal-600"
-                : "bg-slate-900 text-white hover:bg-slate-800"
-            }`}
-          >
-            {joined ? "Show video" : busy ? "Video…" : "Video"}
-          </button>
-          {joined ? (
-            <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
-              Live
-            </span>
-          ) : null}
-        </div>
-      ) : null}
     </>
   );
 }

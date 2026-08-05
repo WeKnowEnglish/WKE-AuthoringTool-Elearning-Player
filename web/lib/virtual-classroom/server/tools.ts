@@ -174,7 +174,18 @@ export type VcToolCommand =
   | { type: "CLEAR_STATUSES" }
   | { type: "SET_FREEZE"; frozen: boolean }
   | { type: "SET_ANNOUNCEMENT"; message: string | null }
-  | { type: "SET_UI_MODE"; mode: "meeting" | "learn" };
+  | { type: "SET_UI_MODE"; mode: "meeting" | "learn" }
+  | { type: "SET_LEARN_STAGE"; stage: "whiteboard" | "activity" }
+  | {
+      type: "SET_LEARN_ACTIVITY";
+      activity: {
+        activityId: string;
+        format: string;
+        title: string;
+        playPath: string;
+      } | null;
+    }
+  | { type: "SET_LEARN_STUDENT_PENS"; enabled: boolean };
 
 /** Commands students may issue for themselves. */
 export const VC_MEMBER_TOOL_TYPES = new Set<VcToolCommand["type"]>(["SET_OWN_STATUS"]);
@@ -466,6 +477,36 @@ export async function applyVcToolCommand(input: {
         case "SET_UI_MODE": {
           const mode = input.command.mode === "meeting" ? "meeting" : "learn";
           runtime.set("uiMode", mode);
+          break;
+        }
+        case "SET_LEARN_STAGE": {
+          const stage =
+            input.command.stage === "activity" ? "activity" : "whiteboard";
+          runtime.set("learnStage", stage);
+          break;
+        }
+        case "SET_LEARN_ACTIVITY": {
+          const next = input.command.activity;
+          if (!next) {
+            runtime.set("learnActivity", null);
+            break;
+          }
+          const activityId = next.activityId?.trim() ?? "";
+          const playPath = next.playPath?.trim() ?? "";
+          if (!activityId || !playPath) {
+            throw new Error("Activity id and play path are required.");
+          }
+          runtime.set("learnActivity", {
+            activityId,
+            format: (next.format?.trim() || "learning_track").slice(0, 64),
+            title: (next.title?.trim() || "Activity").slice(0, 160),
+            playPath: playPath.slice(0, 500),
+          });
+          runtime.set("learnStage", "activity");
+          break;
+        }
+        case "SET_LEARN_STUDENT_PENS": {
+          runtime.set("learnStudentPensEnabled", input.command.enabled !== false);
           break;
         }
         default:

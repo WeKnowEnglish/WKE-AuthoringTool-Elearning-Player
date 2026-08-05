@@ -35,6 +35,8 @@ type Props = {
   role: WhiteboardAuthRole;
   userId: string;
   displayName: string;
+  /** When embed, fill the Learn stage instead of a full-page route. */
+  layout?: "page" | "embed";
 };
 
 async function sendCommand(sessionId: string, command: Record<string, unknown>) {
@@ -59,7 +61,14 @@ async function sendCommand(sessionId: string, command: Record<string, unknown>) 
   if (!response.ok) throw new Error(payload?.error ?? "Command failed.");
 }
 
-export function WhiteboardActivityShell({ sessionId, role, userId, displayName }: Props) {
+export function WhiteboardActivityShell({
+  sessionId,
+  role,
+  userId,
+  displayName,
+  layout = "page",
+}: Props) {
+  const embedded = layout === "embed";
   const phase = useStorage((root) => {
     const runtime = (root as unknown as { runtime?: { get?: (k: string) => unknown } }).runtime;
     if (runtime && typeof runtime.get === "function") return runtime.get("phase") as string;
@@ -232,15 +241,15 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
     );
   };
 
-  // Teacher Complete → ENDED; send host + students back to the classroom.
+  // Teacher Complete → ENDED; on full-page routes, return to the classroom.
   useEffect(() => {
-    if (phase !== "ENDED" || !vcSessionId) return;
+    if (embedded || phase !== "ENDED" || !vcSessionId) return;
     router.push(
       role === "host"
         ? `/teacher/virtual-classroom/${vcSessionId}`
         : `/virtual-classroom/${vcSessionId}`,
     );
-  }, [phase, vcSessionId, role, router]);
+  }, [embedded, phase, vcSessionId, role, router]);
 
   const run = async (label: string, command: Record<string, unknown>) => {
     setBusy(label);
@@ -309,9 +318,13 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
 
   if (role === "host") {
     return (
-      <div className="flex min-h-dvh flex-col bg-gradient-to-b from-slate-100 to-teal-50">
+      <div
+        className={`flex flex-col bg-gradient-to-b from-slate-100 to-teal-50 ${
+          embedded ? "h-full min-h-0" : "min-h-dvh"
+        }`}
+      >
         <WhiteboardRewardListener userId={userId} />
-        <header className="border-b border-slate-200 bg-white/90 px-4 py-3">
+        <header className="shrink-0 border-b border-slate-200 bg-white/90 px-4 py-3">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">
@@ -369,7 +382,9 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
                 onClick={() => {
                   if (
                     !window.confirm(
-                      "Complete this whiteboard round? Students return to the classroom.",
+                      embedded
+                        ? "Complete this whiteboard round?"
+                        : "Complete this whiteboard round? Students return to the classroom.",
                     )
                   ) {
                     return;
@@ -377,7 +392,7 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
                   void run("Complete", { type: "COMPLETE" });
                 }}
               />
-              {vcSessionId && (
+              {vcSessionId && !embedded && (
                 <button
                   type="button"
                   onClick={backToClassroom}
@@ -478,7 +493,11 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
 
         {reviewPanel}
 
-        <main className="mx-auto grid w-full max-w-7xl flex-1 gap-4 p-4 lg:grid-cols-[1fr_320px]">
+        <main
+          className={`mx-auto grid w-full max-w-7xl flex-1 gap-4 p-4 lg:grid-cols-[1fr_320px] ${
+            embedded ? "min-h-0 overflow-hidden" : ""
+          }`}
+        >
           <section className="min-h-0">
             {inspectBoardId ? (
               <div className="flex h-[70vh] flex-col gap-2">
@@ -810,10 +829,14 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-b from-sky-50 to-teal-50">
+    <div
+      className={`flex flex-col bg-gradient-to-b from-sky-50 to-teal-50 ${
+        embedded ? "h-full min-h-0" : "min-h-dvh"
+      }`}
+    >
       <WhiteboardRewardListener userId={userId} />
       {reviewPanel}
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-3 p-3 sm:p-4">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-3 overflow-hidden p-3 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/80 px-3 py-2 text-sm text-slate-700 shadow-sm">
           <div>
             <span className="font-semibold">{displayName}</span>
@@ -826,7 +849,7 @@ export function WhiteboardActivityShell({ sessionId, role, userId, displayName }
               </>
             )}
           </div>
-          {vcSessionId && (
+          {vcSessionId && !embedded && (
             <button
               type="button"
               onClick={backToClassroom}

@@ -64,6 +64,13 @@ type Props = {
   userId: string;
   showPrompt?: boolean;
   annotationMode?: boolean;
+  /**
+   * Learn / class board: everyone (teacher + students) can draw on this board.
+   * Skips activity phase, ownership, and timer gates.
+   */
+  sharedEdit?: boolean;
+  /** When true, drawing is disabled (view-only). Used to lock student pens. */
+  readOnly?: boolean;
 };
 
 type BoardView = {
@@ -168,6 +175,8 @@ export function WhiteboardCanvas({
   userId,
   showPrompt = true,
   annotationMode = false,
+  sharedEdit = false,
+  readOnly = false,
 }: Props) {
   const phase = useStorage((root) => readRuntimeField<string>(root, "phase"));
   const timer = useStorage((root) => readRuntimeField<TimerState>(root, "timer"));
@@ -272,19 +281,21 @@ export function WhiteboardCanvas({
     mode === "edit" &&
     isActiveTab &&
     !!board &&
-    !!timer &&
-    sharedEditOk &&
-    canEditBoard({
-      phase: phase as WhiteboardRoundPhase,
-      boardStatus: board.status,
-      timer,
-      nowMs,
-      userId,
-      role,
-      boardOwnerType: board.ownerType,
-      boardOwnerId: board.ownerId,
-      boardMemberIds: memberIds,
-    });
+    !readOnly &&
+    (sharedEdit ||
+      (!!timer &&
+        sharedEditOk &&
+        canEditBoard({
+          phase: phase as WhiteboardRoundPhase,
+          boardStatus: board.status,
+          timer,
+          nowMs,
+          userId,
+          role,
+          boardOwnerType: board.ownerType,
+          boardOwnerId: board.ownerId,
+          boardMemberIds: memberIds,
+        })));
 
   const canAnnotate =
     annotateAllowed &&
@@ -680,19 +691,20 @@ export function WhiteboardCanvas({
   const timeLeft = timer ? remainingMs(timer, nowMs) : 0;
   const locked =
     (!canEdit &&
-    mode === "edit" &&
-    (phase === "WAITING" ||
-      board?.status === "SUBMITTED" ||
-      board?.status === "AUTO_SUBMITTED" ||
-      board?.status === "LOCKED" ||
-      phase === "PAUSED" ||
-      phase === "COLLECTED" ||
-      phase === "COLLECTING" ||
-      phase === "ENDED" ||
-      (phase !== "REVISION" &&
-        timer != null &&
-        timer.status !== "idle" &&
-        timeLeft <= 0))) ||
+      !sharedEdit &&
+      mode === "edit" &&
+      (phase === "WAITING" ||
+        board?.status === "SUBMITTED" ||
+        board?.status === "AUTO_SUBMITTED" ||
+        board?.status === "LOCKED" ||
+        phase === "PAUSED" ||
+        phase === "COLLECTED" ||
+        phase === "COLLECTING" ||
+        phase === "ENDED" ||
+        (phase !== "REVISION" &&
+          timer != null &&
+          timer.status !== "idle" &&
+          timeLeft <= 0))) ||
     (mode === "edit" && !isActiveTab && otherTabCount > 0);
 
   const showChrome = mode === "edit" || (mode === "inspect" && canAnnotate) || annotationMode;
@@ -982,7 +994,7 @@ export function WhiteboardCanvas({
             <ToolButton onClick={handleClear} disabled={!interactive}>
               Clear
             </ToolButton>
-            {mode === "edit" && (
+            {mode === "edit" && !sharedEdit && (
               <>
                 <div className="flex-1" />
                 <ToolButton

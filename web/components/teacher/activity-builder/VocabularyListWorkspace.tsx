@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   addVocabEntry,
@@ -34,6 +34,7 @@ import {
   linkLexiconMediaByPublicUrl,
 } from "@/lib/actions/lexicon-media";
 import { LexiconLinkedMediaStrip } from "@/components/teacher/activity-builder/LexiconLinkedMediaStrip";
+import { AuthoringItemPager } from "@/components/teacher/activity-builder/AuthoringItemPager";
 import { VocabEntryAudioControls } from "@/components/teacher/activity-builder/VocabEntryAudioControls";
 import { VocabularyListLexiconPicker } from "@/components/teacher/activity-builder/VocabularyListLexiconPicker";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
@@ -41,8 +42,19 @@ import type { PrimaryVocabularySearchIndexEntry } from "@/lib/vocabulary/primary
 import type { TeacherLexiconEntry } from "@/lib/vocabulary/teacher-lexicon";
 import type { LexiconMediaRole } from "@/lib/vocabulary/lexicon-media";
 
+/** Placeholder lemmas used for empty / starter rows — clear on focus so authors can type. */
+const PLACEHOLDER_WORDS = new Set(["", "word", "new word"]);
+
+function isPlaceholderWord(word: string): boolean {
+  return PLACEHOLDER_WORDS.has(word.trim().toLowerCase());
+}
+
 /** Match Explore Hotspots status banners — auto-clear after a short beat. */
 const BANNER_DISMISS_MS = 3000;
+/** Debounce Activity Bank writes while typing / editing media. */
+const AUTOSAVE_MS = 1200;
+
+type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
 const STARTERS = [
   {
@@ -74,7 +86,14 @@ function cloneDocument(document: VocabularyListDocument): VocabularyListDocument
 }
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900";
+  "mt-1 w-full rounded-lg border border-stone-400/70 bg-white px-2.5 py-2 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200";
+
+/** Word-details form surface: darker card so white fields read clearly. */
+const detailsCardClass =
+  "space-y-4 rounded-xl border border-stone-300 bg-stone-200/90 p-4 shadow-sm";
+const detailsNestClass =
+  "space-y-2 rounded-lg border border-stone-300/80 bg-stone-300/50 p-3";
+const detailsLabelClass = "block text-sm font-medium text-stone-800";
 
 type MobileWorkspaceTab = "list" | "details" | "dictionary";
 
@@ -170,10 +189,41 @@ export function VocabularyListWorkspace({
   const [showValidationBanner, setShowValidationBanner] = useState(true);
   const [lexiconMediaRefreshKey, setLexiconMediaRefreshKey] = useState(0);
   const [overlayBooting, setOverlayBooting] = useState(isOverlay);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const openRef = useRef<HTMLInputElement>(null);
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const documentRef = useRef(document);
   documentRef.current = document;
+  const libraryIdRef = useRef(libraryId);
+  libraryIdRef.current = libraryId;
+  const autosaveTimerRef = useRef<number | null>(null);
+  const dirtySeqRef = useRef(0);
+  const lastSavedJsonRef = useRef<string | null>(null);
+  const saveInFlightRef = useRef(false);
+  const pendingResaveRef = useRef(false);
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
+
+  const clearAutosaveTimer = useCallback(() => {
+    if (autosaveTimerRef.current != null) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  }, []);
+
+  const beginCleanEditorSession = useCallback(
+    (nextLibraryId: string | null, nextDocument: VocabularyListDocument) => {
+      clearAutosaveTimer();
+      dirtySeqRef.current = 0;
+      pendingResaveRef.current = false;
+      saveInFlightRef.current = false;
+      lastSavedJsonRef.current = JSON.stringify(nextDocument);
+      setSaveError(null);
+      setSaveStatus(nextLibraryId ? "saved" : "idle");
+    },
+    [clearAutosaveTimer],
+  );
 
   const studioCompileHref = studioOrigin
     ? `${studioOrigin}/activity-builder/vocabulary-lists`
@@ -240,7 +290,9 @@ export function VocabularyListWorkspace({
           setSelectedEntryId(loaded.document.entries[0]?.id ?? "");
           setMobileWorkspaceTab("list");
           setLibraryId(loaded.id);
+          libraryIdRef.current = loaded.id;
           setScreen("editor");
+          beginCleanEditorSession(loaded.id, loaded.document);
           setNotice(`Editing “${loaded.document.name}”.`);
         } else if (startBlank) {
           const blank = createBlankVocabularyListDocument();
@@ -248,8 +300,10 @@ export function VocabularyListWorkspace({
           setSelectedEntryId(blank.entries[0]?.id ?? "");
           setMobileWorkspaceTab("list");
           setLibraryId(null);
+          libraryIdRef.current = null;
           setScreen("editor");
-          setNotice("New vocabulary list — add words, then Save.");
+          beginCleanEditorSession(null, blank);
+          setNotice("New vocabulary list — edits autosave to Activity Bank.");
         }
       } catch (error) {
         if (!cancelled) {
@@ -273,6 +327,16 @@ export function VocabularyListWorkspace({
     document.entries[0] ??
     null;
 
+  const selectedEntryIndex = Math.max(
+    0,
+    document.entries.findIndex((entry) => entry.id === selectedEntry?.id),
+  );
+
+  const wordPagerLabels = useMemo(
+    () => document.entries.map((entry) => entry.word.trim() || "New"),
+    [document.entries],
+  );
+
   const completeness = useMemo(() => {
     const total = document.entries.length;
     let withDefinition = 0;
@@ -293,7 +357,7 @@ export function VocabularyListWorkspace({
   const validation = useMemo(() => {
     try {
       validateVocabularyListDocument(document);
-      return { ok: true as const, message: "Ready to save to Activity Bank." };
+      return { ok: true as const, message: "Autosaves to Activity Bank." };
     } catch (error) {
       return {
         ok: false as const,
@@ -316,14 +380,17 @@ export function VocabularyListWorkspace({
     label: string,
     options?: { handle?: FileSystemFileHandle | null; libraryId?: string | null },
   ) => {
+    const nextLibraryId = options?.libraryId ?? null;
     setDocument(cloneDocument(next));
     setSelectedEntryId(next.entries[0]?.id ?? "");
     setMobileWorkspaceTab("list");
-    setLibraryId(options?.libraryId ?? null);
+    setLibraryId(nextLibraryId);
+    libraryIdRef.current = nextLibraryId;
     setScreen("editor");
     setNotice(label);
     fileHandleRef.current = options?.handle ?? null;
     setFileLabel(options?.handle?.name ?? null);
+    beginCleanEditorSession(nextLibraryId, next);
   };
 
   const patchDocument = (
@@ -331,6 +398,97 @@ export function VocabularyListWorkspace({
   ) => {
     setDocument((current) => updater(current));
   };
+
+  const runAutosave = useCallback(
+    async (seq: number) => {
+      if (screen !== "editor" || overlayBooting) return;
+
+      let snapshot: VocabularyListDocument;
+      try {
+        snapshot = validateVocabularyListDocument(documentRef.current);
+      } catch {
+        setSaveStatus("dirty");
+        return;
+      }
+
+      if (saveInFlightRef.current) {
+        pendingResaveRef.current = true;
+        return;
+      }
+
+      saveInFlightRef.current = true;
+      setSaveStatus("saving");
+      setSaveError(null);
+      try {
+        const entry = await saveVocabularyListToStudio({
+          activityId: libraryIdRef.current,
+          document: snapshot,
+        });
+        libraryIdRef.current = entry.id;
+        setLibraryId(entry.id);
+        onSavedRef.current?.(entry);
+
+        if (dirtySeqRef.current === seq) {
+          setDocument(cloneDocument(entry.document));
+          dirtySeqRef.current = 0;
+          lastSavedJsonRef.current = JSON.stringify(entry.document);
+          setSaveStatus("saved");
+        } else {
+          setSaveStatus("dirty");
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Autosave failed.";
+        setSaveError(message);
+        setSaveStatus("error");
+      } finally {
+        saveInFlightRef.current = false;
+        if (pendingResaveRef.current) {
+          pendingResaveRef.current = false;
+          dirtySeqRef.current += 1;
+          const nextSeq = dirtySeqRef.current;
+          setSaveStatus("dirty");
+          clearAutosaveTimer();
+          autosaveTimerRef.current = window.setTimeout(() => {
+            void runAutosave(nextSeq);
+          }, AUTOSAVE_MS);
+        }
+      }
+    },
+    [screen, overlayBooting, clearAutosaveTimer],
+  );
+
+  useEffect(() => {
+    if (screen !== "editor" || overlayBooting) return;
+    const json = JSON.stringify(document);
+    if (json === lastSavedJsonRef.current) return;
+
+    dirtySeqRef.current += 1;
+    const seq = dirtySeqRef.current;
+    setSaveStatus((current) => (current === "saving" ? current : "dirty"));
+    clearAutosaveTimer();
+    autosaveTimerRef.current = window.setTimeout(() => {
+      void runAutosave(seq);
+    }, AUTOSAVE_MS);
+
+    return () => {
+      clearAutosaveTimer();
+    };
+  }, [document, screen, overlayBooting, clearAutosaveTimer, runAutosave]);
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (saveStatus === "dirty" || saveStatus === "saving") {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      clearAutosaveTimer();
+    };
+  }, [saveStatus, clearAutosaveTimer]);
 
   const addEntryAndFocusWord = () => {
     const next = addVocabEntry(documentRef.current);
@@ -398,19 +556,35 @@ export function VocabularyListWorkspace({
   };
 
   const saveToLibrary = async (andUse = false) => {
+    clearAutosaveTimer();
+    const seqAtStart = dirtySeqRef.current;
     setLibraryBusy(true);
+    setSaveStatus("saving");
+    setSaveError(null);
     try {
       const entry = await saveVocabularyListToStudio({
-        activityId: libraryId,
-        document,
+        activityId: libraryIdRef.current,
+        document: documentRef.current,
       });
+      libraryIdRef.current = entry.id;
       setLibraryId(entry.id);
+      if (dirtySeqRef.current === seqAtStart) {
+        setDocument(cloneDocument(entry.document));
+        dirtySeqRef.current = 0;
+        lastSavedJsonRef.current = JSON.stringify(entry.document);
+        setSaveStatus("saved");
+      } else {
+        setSaveStatus("dirty");
+      }
       setNotice(`Saved “${entry.name}” to Activity Bank.`);
       await refreshLibrary();
-      onSaved?.(entry);
+      onSavedRef.current?.(entry);
       if (andUse) onClose?.();
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Save failed.");
+      const message = error instanceof Error ? error.message : "Save failed.";
+      setSaveError(message);
+      setSaveStatus("error");
+      setNotice(message);
     } finally {
       setLibraryBusy(false);
     }
@@ -433,24 +607,32 @@ export function VocabularyListWorkspace({
     setCompiling(true);
     setPublishedQuizzes([]);
     try {
-      let vocabListId = libraryId;
+      let vocabListId = libraryIdRef.current;
       if (!vocabListId) {
         const entry = await saveVocabularyListToStudio({
           activityId: null,
-          document,
+          document: documentRef.current,
         });
         vocabListId = entry.id;
+        libraryIdRef.current = entry.id;
         setLibraryId(entry.id);
+        setDocument(cloneDocument(entry.document));
+        dirtySeqRef.current = 0;
+        lastSavedJsonRef.current = JSON.stringify(entry.document);
+        setSaveStatus("saved");
         await refreshLibrary();
-        onSaved?.(entry);
+        onSavedRef.current?.(entry);
       }
 
       const result = await compileAndPublishQuizzesFromVocabList({
-        list: document,
+        list: documentRef.current,
         formats: compileFormats,
         vocabListId,
       });
       setDocument(cloneDocument(result.list));
+      dirtySeqRef.current = 0;
+      lastSavedJsonRef.current = JSON.stringify(result.list);
+      setSaveStatus("saved");
       setPublishedQuizzes(result.published);
 
       const labels = result.published
@@ -601,13 +783,14 @@ export function VocabularyListWorkspace({
             Activity Bank
           </h2>
           <p className="mt-1 text-sm text-stone-500">
-            Saved on the server for your teacher account. Lists survive browser clears and
-            are available to the Learning Track Compiler on this same site.
+            Saved on the server for your teacher account. Lists autosave while you
+            edit, survive browser clears, and are available to the Learning Track
+            Compiler on this same site.
           </p>
           {libraryEntries.length === 0 ? (
             <p className="mt-3 rounded-xl border border-dashed border-stone-300 px-4 py-6 text-sm text-stone-500">
-              No vocabulary lists saved yet. Start one below or import a .wkevocab.json file,
-              then press Save.
+              No vocabulary lists saved yet. Start one below or import a
+              .wkevocab.json file — edits autosave to the Activity Bank.
             </p>
           ) : (
             <ul className="mt-3 space-y-2">
@@ -817,13 +1000,37 @@ export function VocabularyListWorkspace({
               Compile
             </button>
           ) : null}
+          <span
+            className={`hidden text-[11px] font-medium sm:inline ${
+              saveStatus === "error"
+                ? "text-rose-700"
+                : saveStatus === "saving" || saveStatus === "dirty"
+                  ? "text-amber-800"
+                  : saveStatus === "saved"
+                    ? "text-emerald-800"
+                    : "text-stone-500"
+            }`}
+            title={saveError ?? undefined}
+          >
+            {saveStatus === "saving"
+              ? "Saving…"
+              : saveStatus === "dirty"
+                ? validation.ok
+                  ? "Unsaved…"
+                  : "Fix list to autosave"
+                : saveStatus === "saved"
+                  ? "Saved"
+                  : saveStatus === "error"
+                    ? "Autosave failed"
+                    : "Autosave on"}
+          </span>
           <button
             type="button"
             className="rounded-lg bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-40"
-            disabled={!validation.ok || libraryBusy}
+            disabled={!validation.ok || libraryBusy || saveStatus === "saving"}
             onClick={() => void saveToLibrary(false)}
           >
-            Save
+            {saveStatus === "saving" || libraryBusy ? "Saving…" : "Save now"}
           </button>
           {isOverlay ? (
             <button
@@ -1081,10 +1288,18 @@ export function VocabularyListWorkspace({
                           data-vocab-word-id={entry.id}
                           enterKeyHint="next"
                           value={entry.word}
-                          placeholder="Word"
+                          placeholder="New word"
                           onFocus={() => {
                             setSelectedEntryId(entry.id);
                             setEditorTab("details");
+                            if (
+                              entry.word.trim() !== "" &&
+                              isPlaceholderWord(entry.word)
+                            ) {
+                              patchDocument((current) =>
+                                patchVocabEntry(current, entry.id, { word: "" }),
+                              );
+                            }
                           }}
                           onChange={(event) =>
                             patchDocument((current) =>
@@ -1239,7 +1454,9 @@ export function VocabularyListWorkspace({
           ) : (
             <div
               id="vocab-word-details-panel"
-              className="min-h-0 flex-1 overflow-y-auto p-4"
+              className={`min-h-0 flex-1 overflow-y-auto p-4 ${
+                singlePanelLayout ? "bg-stone-100" : "bg-stone-50"
+              }`}
               role="tabpanel"
               aria-labelledby={
                 singlePanelLayout
@@ -1248,15 +1465,61 @@ export function VocabularyListWorkspace({
               }
             >
           <div className="mx-auto w-full max-w-5xl space-y-4">
+            {singlePanelLayout ? (
+              <AuthoringItemPager
+                navOnly
+                stickyNav
+                count={document.entries.length}
+                index={selectedEntryIndex}
+                onIndexChange={(next) => {
+                  const entry = document.entries[next];
+                  if (entry) setSelectedEntryId(entry.id);
+                }}
+                label="Word"
+                itemLabels={wordPagerLabels}
+                minCount={1}
+                onAdd={() => {
+                  patchDocument((current) => {
+                    const next = addVocabEntry(current);
+                    setSelectedEntryId(next.entries.at(-1)?.id ?? "");
+                    return next;
+                  });
+                }}
+                onRemove={
+                  selectedEntry && document.entries.length > 1
+                    ? () => {
+                        try {
+                          const removeId = selectedEntry.id;
+                          patchDocument((current) => {
+                            const next = removeVocabEntry(current, removeId);
+                            setSelectedEntryId(next.entries[0]?.id ?? "");
+                            return next;
+                          });
+                        } catch (error) {
+                          setNotice(
+                            error instanceof Error
+                              ? error.message
+                              : "Could not remove word.",
+                          );
+                        }
+                      }
+                    : undefined
+                }
+              />
+            ) : null}
             {selectedEntry ? (
-              <section className="space-y-4 rounded-xl border border-stone-200 bg-white/80 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+              <section className={detailsCardClass}>
+                <div
+                  className={`flex flex-wrap items-center justify-between gap-2 ${
+                    singlePanelLayout ? "hidden" : ""
+                  }`}
+                >
+                  <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-900">
                     Selected word
                   </h2>
                   <button
                     type="button"
-                    className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-800 disabled:opacity-40"
+                    className="rounded-lg border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-40"
                     disabled={document.entries.length <= 1}
                     onClick={() => {
                       try {
@@ -1281,11 +1544,24 @@ export function VocabularyListWorkspace({
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="min-w-0 space-y-3">
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Word
                       <input
                         className={inputClass}
                         value={selectedEntry.word}
+                        placeholder="New word"
+                        onFocus={() => {
+                          if (
+                            selectedEntry.word.trim() !== "" &&
+                            isPlaceholderWord(selectedEntry.word)
+                          ) {
+                            patchDocument((current) =>
+                              patchVocabEntry(current, selectedEntry.id, {
+                                word: "",
+                              }),
+                            );
+                          }
+                        }}
                         onChange={(event) =>
                           patchDocument((current) =>
                             patchVocabEntry(current, selectedEntry.id, {
@@ -1297,9 +1573,9 @@ export function VocabularyListWorkspace({
                     </label>
                     {selectedEntry.sourceWordId ? (
                       <div className="space-y-2">
-                        <p className="text-xs text-stone-500">
+                        <p className="text-xs text-stone-600">
                           Linked to dictionary{" "}
-                          <span className="font-mono text-stone-700">
+                          <span className="font-mono text-stone-800">
                             {selectedEntry.sourceWordId}
                           </span>
                           . Edits here stay on this list only; media library picks
@@ -1311,12 +1587,12 @@ export function VocabularyListWorkspace({
                         />
                       </div>
                     ) : (
-                      <p className="text-xs text-stone-500">
+                      <p className="text-xs text-stone-600">
                         Add this word from the Dictionary tab to link media to the
                         shared dictionary (many images/audio per word allowed).
                       </p>
                     )}
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Definition (English)
                       <textarea
                         className={inputClass}
@@ -1331,7 +1607,7 @@ export function VocabularyListWorkspace({
                         }
                       />
                     </label>
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Example sentence
                       <textarea
                         className={inputClass}
@@ -1346,7 +1622,7 @@ export function VocabularyListWorkspace({
                         }
                       />
                     </label>
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Notes (optional)
                       <textarea
                         className={inputClass}
@@ -1364,7 +1640,7 @@ export function VocabularyListWorkspace({
                   </div>
 
                   <div className="min-w-0 space-y-3">
-                    <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50/80 p-3">
+                    <div className={detailsNestClass}>
                   <MediaUrlControls
                     label="Picture (optional)"
                     compact
@@ -1402,7 +1678,7 @@ export function VocabularyListWorkspace({
                           selectedEntry.imageUrl ? (
                             <button
                               type="button"
-                              className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
+                              className="rounded border border-stone-400 bg-white px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-stone-50"
                               onClick={() =>
                                 patchDocument((current) =>
                                   patchVocabEntry(current, selectedEntry.id, {
@@ -1423,19 +1699,19 @@ export function VocabularyListWorkspace({
                           <img
                             src={selectedEntry.imageUrl}
                             alt=""
-                            className="h-24 w-24 rounded-lg border border-stone-200 object-contain"
+                            className="h-24 w-24 rounded-lg border border-stone-300 bg-white object-contain"
                           />
-                          <p className="text-xs text-amber-800">
+                          <p className="text-xs text-amber-900">
                             Local image still on this list — use Upload above to put it
                             in the shared media library.
                           </p>
                         </div>
                       ) : null}
                       {selectedEntry.imageUrl?.trim() ? (
-                        <label className="flex items-center gap-2 text-sm text-stone-800">
+                        <label className={`flex items-center gap-2 ${detailsLabelClass}`}>
                           Image fit
                           <select
-                            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm"
+                            className="rounded-lg border border-stone-400/70 bg-white px-2 py-1 text-sm shadow-sm"
                             value={selectedEntry.imageFit ?? "contain"}
                             onChange={(event) =>
                               patchDocument((current) =>
@@ -1480,7 +1756,7 @@ export function VocabularyListWorkspace({
                 </div>
               </section>
             ) : (
-              <p className="rounded-xl border border-dashed border-stone-300 bg-white/60 px-4 py-8 text-center text-sm text-stone-500">
+              <p className="rounded-xl border border-dashed border-stone-400 bg-stone-200/60 px-4 py-8 text-center text-sm text-stone-600">
                 Select a word in the list, or switch to Dictionary to add words.
               </p>
             )}

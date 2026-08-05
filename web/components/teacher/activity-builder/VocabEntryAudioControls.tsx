@@ -19,7 +19,7 @@ export function VocabEntryAudioControls({
   lexiconId,
 }: Props) {
   return (
-    <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50/80 p-3">
+    <div className="space-y-2 rounded-lg border border-stone-300/80 bg-stone-300/50 p-3">
       <AudioUrlControls
         label="Word audio"
         compact
@@ -32,7 +32,7 @@ export function VocabEntryAudioControls({
       {value ? (
         <button
           type="button"
-          className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs text-stone-700 hover:bg-stone-100"
+          className="rounded-lg border border-stone-400 bg-white px-3 py-1.5 text-xs font-medium text-stone-800 shadow-sm hover:bg-stone-50"
           onClick={() => onChange(undefined)}
         >
           Clear audio

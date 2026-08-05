@@ -167,7 +167,7 @@ export function MediaUrlControls({
           <input
             id={inputId}
             type="url"
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            className="mt-1 w-full rounded border border-neutral-300 bg-white px-2 py-1.5 text-sm text-neutral-900 shadow-sm"
             placeholder={urlPlaceholder}
             value={value}
             disabled={disabled}

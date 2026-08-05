@@ -13,7 +13,7 @@ export type AuthoringItemPagerProps = {
   label?: string;
   /**
    * Optional short labels per item. When provided (same length as `count`),
-   * shows scannable chips instead of bare dots.
+   * inactive items are numbered circles and the active item expands to a pill.
    */
   itemLabels?: string[];
   minCount?: number;
@@ -28,7 +28,12 @@ export type AuthoringItemPagerProps = {
    * ancestor without overflow:hidden between this and the scroller).
    */
   stickyNav?: boolean;
-  children: ReactNode;
+  /**
+   * Render only the index chrome (no framed children). Useful when the
+   * editor body already lives in a scroll panel below sticky tabs.
+   */
+  navOnly?: boolean;
+  children?: ReactNode;
 };
 
 function truncateChip(text: string, max = 14): string {
@@ -103,6 +108,7 @@ export function AuthoringItemPager({
   removeDisabled,
   tone = "stone",
   stickyNav = false,
+  navOnly = false,
   children,
 }: AuthoringItemPagerProps) {
   const classes = toneClasses[tone];
@@ -139,13 +145,7 @@ export function AuthoringItemPager({
     );
   }
 
-  const frame =
-    tone === "ltc"
-      ? "rounded-lg border border-[var(--ltc-border)] p-2.5"
-      : "rounded-xl border border-stone-200 bg-stone-50/80 p-2.5";
-
-  return (
-    <div className="space-y-2">
+  const nav = (
       <div
         className={`rounded-lg border px-2 py-1.5 ${navBarClass}${
           stickyNav ? " sticky top-0 z-10" : ""
@@ -180,17 +180,25 @@ export function AuthoringItemPager({
                     }`}
                     title={itemLabels![itemIndex] || `${label} ${itemIndex + 1}`}
                     onClick={() => onIndexChange(itemIndex)}
-                    className={`max-w-[7.5rem] truncate rounded-md border px-1.5 py-0.5 text-[10px] font-bold tabular-nums transition ${
-                      active ? classes.chipActive : classes.chip
+                    className={`inline-flex shrink-0 items-center justify-center border text-[10px] font-bold tabular-nums transition-all ${
+                      active
+                        ? `max-w-[7.5rem] gap-0.5 truncate rounded-full px-2.5 py-1 ${classes.chipActive}`
+                        : `h-7 w-7 rounded-full ${classes.chip}`
                     }`}
                   >
-                    <span className="opacity-70">{itemIndex + 1}</span>
-                    {chipText ? (
+                    {active ? (
                       <>
-                        <span className="opacity-50"> · </span>
-                        {chipText}
+                        <span className="opacity-70">{itemIndex + 1}</span>
+                        {chipText ? (
+                          <>
+                            <span className="opacity-50">·</span>
+                            <span className="truncate">{chipText}</span>
+                          </>
+                        ) : null}
                       </>
-                    ) : null}
+                    ) : (
+                      itemIndex + 1
+                    )}
                   </button>
                 );
               }
@@ -240,6 +248,20 @@ export function AuthoringItemPager({
           ) : null}
         </div>
       </div>
+  );
+
+  if (navOnly) {
+    return nav;
+  }
+
+  const frame =
+    tone === "ltc"
+      ? "rounded-lg border border-[var(--ltc-border)] p-2.5"
+      : "rounded-xl border border-stone-200 bg-stone-50/80 p-2.5";
+
+  return (
+    <div className="space-y-2">
+      {nav}
       <div className={frame}>{children}</div>
     </div>
   );

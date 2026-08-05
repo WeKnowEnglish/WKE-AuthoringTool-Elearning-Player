@@ -86,7 +86,14 @@ function cloneDocument(document: VocabularyListDocument): VocabularyListDocument
 }
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900";
+  "mt-1 w-full rounded-lg border border-stone-400/70 bg-white px-2.5 py-2 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200";
+
+/** Word-details form surface: darker card so white fields read clearly. */
+const detailsCardClass =
+  "space-y-4 rounded-xl border border-stone-300 bg-stone-200/90 p-4 shadow-sm";
+const detailsNestClass =
+  "space-y-2 rounded-lg border border-stone-300/80 bg-stone-300/50 p-3";
+const detailsLabelClass = "block text-sm font-medium text-stone-800";
 
 type MobileWorkspaceTab = "list" | "details" | "dictionary";
 
@@ -1443,7 +1450,9 @@ export function VocabularyListWorkspace({
           ) : (
             <div
               id="vocab-word-details-panel"
-              className="min-h-0 flex-1 overflow-y-auto p-4"
+              className={`min-h-0 flex-1 overflow-y-auto p-4 ${
+                singlePanelLayout ? "bg-stone-100" : "bg-stone-50"
+              }`}
               role="tabpanel"
               aria-labelledby={
                 singlePanelLayout
@@ -1495,18 +1504,18 @@ export function VocabularyListWorkspace({
               />
             ) : null}
             {selectedEntry ? (
-              <section className="space-y-4 rounded-xl border border-stone-200 bg-white/80 p-4">
+              <section className={detailsCardClass}>
                 <div
                   className={`flex flex-wrap items-center justify-between gap-2 ${
                     singlePanelLayout ? "hidden" : ""
                   }`}
                 >
-                  <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+                  <h2 className="text-[10px] font-semibold uppercase tracking-wide text-sky-900">
                     Selected word
                   </h2>
                   <button
                     type="button"
-                    className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-800 disabled:opacity-40"
+                    className="rounded-lg border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-40"
                     disabled={document.entries.length <= 1}
                     onClick={() => {
                       try {
@@ -1531,7 +1540,7 @@ export function VocabularyListWorkspace({
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="min-w-0 space-y-3">
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Word
                       <input
                         className={inputClass}
@@ -1560,9 +1569,9 @@ export function VocabularyListWorkspace({
                     </label>
                     {selectedEntry.sourceWordId ? (
                       <div className="space-y-2">
-                        <p className="text-xs text-stone-500">
+                        <p className="text-xs text-stone-600">
                           Linked to dictionary{" "}
-                          <span className="font-mono text-stone-700">
+                          <span className="font-mono text-stone-800">
                             {selectedEntry.sourceWordId}
                           </span>
                           . Edits here stay on this list only; media library picks
@@ -1574,12 +1583,12 @@ export function VocabularyListWorkspace({
                         />
                       </div>
                     ) : (
-                      <p className="text-xs text-stone-500">
+                      <p className="text-xs text-stone-600">
                         Add this word from the Dictionary tab to link media to the
                         shared dictionary (many images/audio per word allowed).
                       </p>
                     )}
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Definition (English)
                       <textarea
                         className={inputClass}
@@ -1594,7 +1603,7 @@ export function VocabularyListWorkspace({
                         }
                       />
                     </label>
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Example sentence
                       <textarea
                         className={inputClass}
@@ -1609,7 +1618,7 @@ export function VocabularyListWorkspace({
                         }
                       />
                     </label>
-                    <label className="block text-sm text-stone-800">
+                    <label className={detailsLabelClass}>
                       Notes (optional)
                       <textarea
                         className={inputClass}
@@ -1627,7 +1636,7 @@ export function VocabularyListWorkspace({
                   </div>
 
                   <div className="min-w-0 space-y-3">
-                    <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50/80 p-3">
+                    <div className={detailsNestClass}>
                   <MediaUrlControls
                     label="Picture (optional)"
                     compact
@@ -1665,7 +1674,7 @@ export function VocabularyListWorkspace({
                           selectedEntry.imageUrl ? (
                             <button
                               type="button"
-                              className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-50"
+                              className="rounded border border-stone-400 bg-white px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-stone-50"
                               onClick={() =>
                                 patchDocument((current) =>
                                   patchVocabEntry(current, selectedEntry.id, {
@@ -1686,19 +1695,19 @@ export function VocabularyListWorkspace({
                           <img
                             src={selectedEntry.imageUrl}
                             alt=""
-                            className="h-24 w-24 rounded-lg border border-stone-200 object-contain"
+                            className="h-24 w-24 rounded-lg border border-stone-300 bg-white object-contain"
                           />
-                          <p className="text-xs text-amber-800">
+                          <p className="text-xs text-amber-900">
                             Local image still on this list — use Upload above to put it
                             in the shared media library.
                           </p>
                         </div>
                       ) : null}
                       {selectedEntry.imageUrl?.trim() ? (
-                        <label className="flex items-center gap-2 text-sm text-stone-800">
+                        <label className={`flex items-center gap-2 ${detailsLabelClass}`}>
                           Image fit
                           <select
-                            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm"
+                            className="rounded-lg border border-stone-400/70 bg-white px-2 py-1 text-sm shadow-sm"
                             value={selectedEntry.imageFit ?? "contain"}
                             onChange={(event) =>
                               patchDocument((current) =>
@@ -1743,7 +1752,7 @@ export function VocabularyListWorkspace({
                 </div>
               </section>
             ) : (
-              <p className="rounded-xl border border-dashed border-stone-300 bg-white/60 px-4 py-8 text-center text-sm text-stone-500">
+              <p className="rounded-xl border border-dashed border-stone-400 bg-stone-200/60 px-4 py-8 text-center text-sm text-stone-600">
                 Select a word in the list, or switch to Dictionary to add words.
               </p>
             )}

@@ -806,7 +806,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/virtual-classroom/join",
     title: "Virtual classroom",
     description:
-      "Live VC with Daily Prebuilt. Host Meeting/Learn layout modes (cameras + Daily fullscreen vs materials + docked video). Schedule clock: waiting T−15, live T−5; teacher early open + extra sessions.",
+      "Live VC with Daily Prebuilt. Host Meeting/Learn layout modes (viewport-filling cameras vs materials + docked video). Schedule clock: waiting T−15, live T−5; teacher early open + extra sessions.",
     group: "classroom",
     status: "active",
   },

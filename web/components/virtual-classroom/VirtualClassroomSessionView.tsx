@@ -681,6 +681,12 @@ export function VirtualClassroomSessionView({
           isHost={role === "host"}
           sessionEnded={ended || status === "ended"}
           layout="stage"
+          onExitToLearn={
+            role === "host" ? () => setUiMode("learn") : undefined
+          }
+          onEndSession={role === "host" ? () => void endSession() : undefined}
+          endSessionBusy={busy === "end"}
+          onLeaveClassroom={role === "member" ? leaveSession : undefined}
         />
       ) : (
       <>

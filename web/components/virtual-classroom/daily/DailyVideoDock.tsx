@@ -7,8 +7,15 @@ type Props = {
   sessionId: string;
   isHost: boolean;
   sessionEnded: boolean;
-  /** dock = Learn (materials + corner Prebuilt); stage = Meeting (cameras + Daily fullscreen). */
+  /** dock = Learn (materials + corner Prebuilt); stage = Meeting (viewport-filling video). */
   layout?: "dock" | "stage";
+  /** Host: leave Meeting layout for Learn (materials + dock). */
+  onExitToLearn?: () => void;
+  /** Host: end the VC for everyone. */
+  onEndSession?: () => void;
+  endSessionBusy?: boolean;
+  /** Student: leave the classroom entirely. */
+  onLeaveClassroom?: () => void;
 };
 
 function autoPromptStorageKey(sessionId: string) {
@@ -21,13 +28,17 @@ function disabledDismissKey(sessionId: string) {
 
 /**
  * Learn: collapsible Daily Prebuilt corner dock.
- * Meeting: full-stage Prebuilt that prefers Daily requestFullscreen().
+ * Meeting: viewport-filling stage (CSS fullscreen). Browser Fullscreen API is opt-in.
  */
 export function DailyVideoDock({
   sessionId,
   isHost,
   sessionEnded,
   layout = "dock",
+  onExitToLearn,
+  onEndSession,
+  endSessionBusy = false,
+  onLeaveClassroom,
 }: Props) {
   const isStage = layout === "stage";
   const {
@@ -35,7 +46,6 @@ export function DailyVideoDock({
     error,
     expanded,
     setExpanded,
-    isFullscreen,
     containerRef,
     connect,
     leave,
@@ -45,7 +55,6 @@ export function DailyVideoDock({
     sessionId,
     isHost,
     sessionEnded,
-    preferFullscreenOnJoin: isStage,
   });
   const [pendingConnect, setPendingConnect] = useState(false);
   const [disabledDismissed, setDisabledDismissed] = useState(false);
@@ -77,12 +86,10 @@ export function DailyVideoDock({
   const showFrameShell =
     isStage ||
     expanded ||
-    isFullscreen ||
     joined ||
     phase === "connecting" ||
     pendingConnect;
-  // Hide our chrome while Daily owns the browser fullscreen surface (Meeting).
-  const showChrome = (expanded || isStage) && !isFullscreen;
+  const showChrome = expanded || isStage;
 
   useEffect(() => {
     if (!pendingConnect || !showFrameShell) return;
@@ -91,7 +98,7 @@ export function DailyVideoDock({
     void connect();
   }, [pendingConnect, showFrameShell, containerRef, connect]);
 
-  // Meeting: keep Prebuilt expanded, connect, then prefer Daily fullscreen.
+  // Meeting: expand + connect into the viewport stage immediately.
   useEffect(() => {
     if (!isStage || sessionEnded) return;
     setExpanded(true);
@@ -131,15 +138,9 @@ export function DailyVideoDock({
     setPendingConnect(true);
   };
 
-  const goFullscreen = () => {
-    void (async () => {
-      if (!joined) {
-        requestConnect();
-        return;
-      }
-      setExpanded(true);
-      await requestFullscreen();
-    })();
+  const goBrowserFullscreen = () => {
+    if (!joined) return;
+    void requestFullscreen();
   };
 
   const toggleTranscription = async () => {
@@ -239,7 +240,7 @@ export function DailyVideoDock({
       <div
         className={
           isStage
-            ? "flex min-h-[40vh] flex-1 items-center justify-center p-6"
+            ? "fixed inset-0 z-40 flex items-center justify-center bg-slate-950 p-6"
             : `pointer-events-auto fixed z-40 max-w-[min(100vw-1.5rem,360px)] ${dockOffsetClass}`
         }
       >
@@ -260,6 +261,15 @@ export function DailyVideoDock({
             >
               Recheck
             </button>
+            {isStage && onExitToLearn ? (
+              <button
+                type="button"
+                onClick={onExitToLearn}
+                className="rounded-md border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-950 hover:bg-amber-100"
+              >
+                Back to Learn
+              </button>
+            ) : null}
             {!isStage ? (
               <button
                 type="button"
@@ -275,13 +285,104 @@ export function DailyVideoDock({
     );
   }
 
+  const controlButtons = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {joined && isHost ? (
+        <>
+          <button
+            type="button"
+            disabled={transcriptBusy}
+            onClick={() => void toggleTranscription()}
+            className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
+              transcribing
+                ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                : "border border-slate-600 text-slate-100 hover:bg-slate-800"
+            }`}
+          >
+            {transcriptBusy
+              ? "…"
+              : transcribing
+                ? "Stop transcript"
+                : "Transcribe"}
+          </button>
+          <button
+            type="button"
+            disabled={recordBusy}
+            onClick={() => void toggleRecording()}
+            className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
+              recording
+                ? "bg-rose-500 text-white hover:bg-rose-400"
+                : "border border-slate-600 text-slate-100 hover:bg-slate-800"
+            }`}
+          >
+            {recordBusy ? "…" : recording ? "Stop record" : "Record"}
+          </button>
+        </>
+      ) : null}
+      {joined && isStage ? (
+        <button
+          type="button"
+          onClick={goBrowserFullscreen}
+          className="rounded-md border border-slate-600 px-2.5 py-1 text-xs font-bold text-slate-100 hover:bg-slate-800"
+          title="Browser fullscreen (Esc to exit)"
+        >
+          Browser fullscreen
+        </button>
+      ) : null}
+      {isStage && onExitToLearn ? (
+        <button
+          type="button"
+          onClick={onExitToLearn}
+          className="rounded-md border border-teal-500 px-2.5 py-1 text-xs font-bold text-teal-200 hover:bg-slate-800"
+        >
+          Learn
+        </button>
+      ) : null}
+      {isStage && onEndSession ? (
+        <button
+          type="button"
+          disabled={endSessionBusy}
+          onClick={onEndSession}
+          className="rounded-md bg-red-800 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+        >
+          {endSessionBusy ? "Ending…" : "End session"}
+        </button>
+      ) : null}
+      {isStage && onLeaveClassroom ? (
+        <button
+          type="button"
+          onClick={onLeaveClassroom}
+          className="rounded-md border border-slate-500 px-2.5 py-1 text-xs font-bold text-slate-100 hover:bg-slate-800"
+        >
+          Leave classroom
+        </button>
+      ) : null}
+      {joined ? (
+        <button
+          type="button"
+          onClick={() => void leave()}
+          className="rounded-md bg-red-700 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-600"
+        >
+          Leave video
+        </button>
+      ) : null}
+      {!isStage ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="rounded-md border border-slate-600 px-2.5 py-1 text-xs font-bold text-slate-100 hover:bg-slate-800"
+        >
+          Minimize
+        </button>
+      ) : null}
+    </div>
+  );
+
   const frameShell = showFrameShell ? (
     <div
       className={
         isStage
-          ? isFullscreen
-            ? "pointer-events-none fixed z-0 flex h-px w-px flex-col overflow-hidden opacity-0"
-            : "pointer-events-auto flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-slate-300 bg-slate-950 shadow-xl"
+          ? "pointer-events-auto flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-950"
           : expanded
             ? "pointer-events-auto flex w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden rounded-xl border border-slate-300 bg-slate-950 shadow-xl"
             : `pointer-events-none fixed z-0 flex w-[min(100vw-1.5rem,420px)] flex-col overflow-hidden opacity-0 ${dockOffsetClass}`
@@ -293,67 +394,7 @@ export function DailyVideoDock({
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
             {isStage ? "Meeting" : "Class video"}
           </p>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {joined && isHost ? (
-              <>
-                <button
-                  type="button"
-                  disabled={transcriptBusy}
-                  onClick={() => void toggleTranscription()}
-                  className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
-                    transcribing
-                      ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                      : "border border-slate-600 text-slate-100 hover:bg-slate-800"
-                  }`}
-                >
-                  {transcriptBusy
-                    ? "…"
-                    : transcribing
-                      ? "Stop transcript"
-                      : "Transcribe"}
-                </button>
-                <button
-                  type="button"
-                  disabled={recordBusy}
-                  onClick={() => void toggleRecording()}
-                  className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
-                    recording
-                      ? "bg-rose-500 text-white hover:bg-rose-400"
-                      : "border border-slate-600 text-slate-100 hover:bg-slate-800"
-                  }`}
-                >
-                  {recordBusy ? "…" : recording ? "Stop record" : "Record"}
-                </button>
-              </>
-            ) : null}
-            {joined && isStage ? (
-              <button
-                type="button"
-                onClick={goFullscreen}
-                className="rounded-md bg-teal-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-teal-500"
-              >
-                Fullscreen
-              </button>
-            ) : null}
-            {joined ? (
-              <button
-                type="button"
-                onClick={() => void leave()}
-                className="rounded-md bg-red-700 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-600"
-              >
-                Leave video
-              </button>
-            ) : null}
-            {!isStage ? (
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                className="rounded-md border border-slate-600 px-2.5 py-1 text-xs font-bold text-slate-100 hover:bg-slate-800"
-              >
-                Minimize
-              </button>
-            ) : null}
-          </div>
+          {controlButtons}
         </div>
       ) : null}
       {showChrome && isHost && hostNote ? (
@@ -381,9 +422,7 @@ export function DailyVideoDock({
         ref={containerRef}
         className={
           isStage
-            ? isFullscreen
-              ? "h-px w-px bg-slate-900"
-              : "min-h-0 w-full flex-1 bg-slate-900"
+            ? "min-h-0 w-full flex-1 bg-slate-900"
             : "h-[min(36vh,260px)] w-[min(100vw-1.5rem,420px)] bg-slate-900 md:h-[min(42vh,320px)]"
         }
       />
@@ -395,14 +434,10 @@ export function DailyVideoDock({
           <button
             type="button"
             disabled={busy}
-            onClick={isStage ? goFullscreen : requestConnect}
+            onClick={requestConnect}
             className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-500 disabled:opacity-50"
           >
-            {phase === "error"
-              ? "Retry connect"
-              : isStage
-                ? "Connect fullscreen"
-                : "Connect"}
+            {phase === "error" ? "Retry connect" : "Connect"}
           </button>
           {phase === "error" ? (
             <button
@@ -424,13 +459,9 @@ export function DailyVideoDock({
   ) : null;
 
   if (isStage) {
-    if (isFullscreen) {
-      return <>{frameShell}</>;
-    }
+    // CSS fullscreen: fill the viewport immediately (browsers block auto requestFullscreen after async join).
     return (
-      <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
-        {frameShell}
-      </div>
+      <div className="fixed inset-0 z-40 flex flex-col bg-slate-950">{frameShell}</div>
     );
   }
 

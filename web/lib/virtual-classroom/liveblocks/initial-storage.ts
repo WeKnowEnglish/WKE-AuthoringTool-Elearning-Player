@@ -12,7 +12,7 @@ import { createEmptyClassroomStatus } from "@/lib/virtual-classroom/tools/status
 import type { GlobalTimerState } from "@/lib/virtual-classroom/tools/timer";
 import { createIdleGlobalTimer } from "@/lib/virtual-classroom/tools/timer";
 
-/** Shared in-session layout: meeting = cameras + Daily fullscreen; learn = materials + docked video. */
+/** Shared in-session layout: meeting = viewport-filling cameras; learn = materials + docked video. */
 export type VirtualClassroomUiMode = "meeting" | "learn";
 
 export function normalizeVirtualClassroomUiMode(

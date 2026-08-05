@@ -57,15 +57,8 @@ export function useDailyCall(input: {
   sessionId: string;
   isHost: boolean;
   sessionEnded: boolean;
-  /**
-   * Meeting mode: after a successful join, try Daily Prebuilt fullscreen
-   * (browser fullscreen on the iframe). May fail without a user gesture
-   * or on iOS — callers should expose a Fullscreen control as fallback.
-   */
-  preferFullscreenOnJoin?: boolean;
 }) {
-  const { sessionId, isHost, sessionEnded, preferFullscreenOnJoin = false } =
-    input;
+  const { sessionId, isHost, sessionEnded } = input;
   const frameRef = useRef<DailyCall | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const joinedRef = useRef(false);
@@ -73,8 +66,6 @@ export function useDailyCall(input: {
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshingRef = useRef(false);
   const connectInFlight = useRef(false);
-  const preferFullscreenRef = useRef(preferFullscreenOnJoin);
-  preferFullscreenRef.current = preferFullscreenOnJoin;
   const [phase, setPhase] = useState<DailyCallPhase>("probing");
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -266,7 +257,6 @@ export function useDailyCall(input: {
 
       call.on("exited-fullscreen", () => {
         setIsFullscreen(false);
-        // Meeting stays on the in-page stage layout; Learn never drives this path.
       });
 
       call.on("error", (event) => {
@@ -358,10 +348,6 @@ export function useDailyCall(input: {
         token: tokenPayload.token,
       });
       scheduleTokenRefresh(tokenPayload.exp);
-      if (preferFullscreenRef.current) {
-        // Best-effort; may be blocked without a user gesture (e.g. host auto-open).
-        await tryRequestFullscreen();
-      }
     } catch (err) {
       setPhase("error");
       setError(err instanceof Error ? err.message : "Could not connect video.");
@@ -377,7 +363,6 @@ export function useDailyCall(input: {
     destroyCall,
     attachCallHandlers,
     scheduleTokenRefresh,
-    tryRequestFullscreen,
   ]);
 
   const leave = useCallback(async () => {

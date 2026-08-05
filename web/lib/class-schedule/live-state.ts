@@ -17,7 +17,7 @@ import { listMeetingSlotsForClassServiceRole } from "@/lib/daily/schedule-bind";
 import type { VirtualClassroomSessionRecord } from "@/lib/virtual-classroom/domain";
 import {
   getActiveVirtualClassroomForClass,
-  hasEndedSessionForOccurrence,
+  hasTeacherDismissedOccurrence,
 } from "@/lib/virtual-classroom/server/session";
 
 export type { ClassLiveState } from "@/lib/class-schedule/live-state-types";
@@ -123,10 +123,11 @@ export async function getClassLiveState(
     liveMeeting!,
     activeSession,
     nowMs,
-    await hasEndedSessionForOccurrence({
+    await hasTeacherDismissedOccurrence({
       classId,
       meetingSlotId: liveMeeting!.slot.id,
       occurrenceStartsAt: liveMeeting!.startsAt,
+      occurrenceEndsAt: liveMeeting!.endsAt,
     }),
   );
 }

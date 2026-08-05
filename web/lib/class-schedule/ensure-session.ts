@@ -18,7 +18,7 @@ import { finalizeVirtualClassroomSessionClose } from "@/lib/virtual-classroom/se
 import type { VirtualClassroomSessionRecord } from "@/lib/virtual-classroom/domain";
 import {
   getActiveVirtualClassroomForClass,
-  hasEndedSessionForOccurrence,
+  hasTeacherDismissedOccurrence,
   updateVirtualClassroomSessionPhase,
 } from "@/lib/virtual-classroom/server/session";
 
@@ -189,10 +189,11 @@ export async function ensureClassSessionForClock(input: {
 
   if (
     mode === "auto" &&
-    (await hasEndedSessionForOccurrence({
+    (await hasTeacherDismissedOccurrence({
       classId: input.classId,
       meetingSlotId: meeting.slot.id,
       occurrenceStartsAt: meeting.startsAt,
+      occurrenceEndsAt: meeting.endsAt,
     }))
   ) {
     return {

@@ -4,7 +4,10 @@ import type {
   ClassSessionKind,
   ClassSessionPhase,
 } from "@/lib/class-schedule/class-clock";
-import { occurrenceStartsMatch } from "@/lib/class-schedule/occurrence-match";
+import {
+  endedSessionDismissesOccurrence,
+  occurrenceDismissWindowBounds,
+} from "@/lib/class-schedule/dismissed-occurrence";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import type {
   VirtualClassroomSessionRecord,
@@ -198,39 +201,72 @@ export async function getActiveVirtualClassroomForClass(
 
 /**
  * Teacher ended a session for this occurrence — block auto clock from reopening.
+ * Covers scheduled (bound/unbound), extra, and early-ended sessions.
  */
-export async function hasEndedSessionForOccurrence(input: {
+export async function hasTeacherDismissedOccurrence(input: {
   classId: string;
   meetingSlotId: string;
   occurrenceStartsAt: string | Date;
+  occurrenceEndsAt: string | Date;
 }): Promise<boolean> {
   const supabase = createServiceRoleSupabase();
   if (!supabase) return false;
 
-  const occurrenceMs =
-    typeof input.occurrenceStartsAt === "string"
-      ? new Date(input.occurrenceStartsAt).getTime()
-      : input.occurrenceStartsAt.getTime();
-  if (!Number.isFinite(occurrenceMs)) return false;
+  const bounds = occurrenceDismissWindowBounds(input);
+  if (!bounds) return false;
 
-  const windowStart = new Date(occurrenceMs - 24 * 60 * 60 * 1000).toISOString();
+  const queryStart = new Date(
+    bounds.windowStartMs - 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   const { data, error } = await supabase
     .from("class_sessions")
-    .select("occurrence_starts_at")
+    .select(
+      "occurrence_starts_at, meeting_slot_id, session_kind, ended_at, created_at",
+    )
     .eq("class_id", input.classId)
     .eq("status", "ended")
-    .eq("meeting_slot_id", input.meetingSlotId)
-    .gte("ended_at", windowStart);
+    .gte("ended_at", queryStart)
+    .order("ended_at", { ascending: false })
+    .limit(25);
 
   if (error) throw error;
 
   return (data ?? []).some((row) =>
-    occurrenceStartsMatch(
-      row.occurrence_starts_at as string | null,
-      input.occurrenceStartsAt,
+    endedSessionDismissesOccurrence(
+      {
+        occurrence_starts_at: row.occurrence_starts_at as string | null,
+        meeting_slot_id: row.meeting_slot_id as string | null,
+        session_kind: row.session_kind as string | null,
+        ended_at: row.ended_at as string | null,
+        created_at: row.created_at as string | null,
+      },
+      input,
     ),
   );
+}
+
+/** @deprecated Prefer hasTeacherDismissedOccurrence (requires occurrenceEndsAt). */
+export async function hasEndedSessionForOccurrence(input: {
+  classId: string;
+  meetingSlotId: string;
+  occurrenceStartsAt: string | Date;
+  occurrenceEndsAt?: string | Date;
+}): Promise<boolean> {
+  const occurrenceEndsAt =
+    input.occurrenceEndsAt ??
+    (typeof input.occurrenceStartsAt === "string"
+      ? new Date(
+          new Date(input.occurrenceStartsAt).getTime() + 60 * 60 * 1000,
+        ).toISOString()
+      : new Date(input.occurrenceStartsAt.getTime() + 60 * 60 * 1000));
+
+  return hasTeacherDismissedOccurrence({
+    classId: input.classId,
+    meetingSlotId: input.meetingSlotId,
+    occurrenceStartsAt: input.occurrenceStartsAt,
+    occurrenceEndsAt,
+  });
 }
 
 export async function endVirtualClassroomSession(

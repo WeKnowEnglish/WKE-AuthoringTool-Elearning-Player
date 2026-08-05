@@ -65,24 +65,27 @@ export async function ensureClassSessionForClock(input: {
   const meeting = resolveLiveClassMeeting(slots, new Date(nowMs));
   let active = await getActiveVirtualClassroomForClass(input.classId);
 
-  if (mode === "extra" || !meeting) {
-    if (active && mode !== "extra") {
+  if (!meeting) {
+    return {
+      session: active,
+      created: false,
+      promoted: false,
+      phase: active?.classPhase ?? null,
+    };
+  }
+
+  if (mode === "extra") {
+    const teacher =
+      input.teacher ?? (await resolveClassTeacher(input.classId));
+    if (!teacher) {
       return {
         session: active,
         created: false,
         promoted: false,
-        phase: active.classPhase,
+        phase: active?.classPhase ?? null,
       };
     }
-    const teacher =
-      input.teacher ?? (await resolveClassTeacher(input.classId));
-    if (!teacher) {
-      return { session: active, created: false, promoted: false, phase: active?.classPhase ?? null };
-    }
-    if (active && mode === "extra") {
-      // Start a fresh extra — bootstrap ends prior actives.
-    }
-    const hosted = await bootstrapVirtualClassroomHost({
+    await bootstrapVirtualClassroomHost({
       teacher,
       classId: input.classId,
       classLessonId: input.classLessonId,
@@ -93,7 +96,7 @@ export async function ensureClassSessionForClock(input: {
     active = await getActiveVirtualClassroomForClass(input.classId);
     return {
       session: active,
-      created: Boolean(hosted.sessionId),
+      created: true,
       promoted: false,
       phase: "live",
     };

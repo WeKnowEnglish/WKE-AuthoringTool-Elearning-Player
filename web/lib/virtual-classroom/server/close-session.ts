@@ -21,7 +21,12 @@ export async function finalizeVirtualClassroomSessionClose(
   if (session.status === "ended") return;
 
   await markVcSessionEndedInStorage(session.liveblocksRoomId);
-  await endVirtualClassroomSession(session.id);
+  const ended = await endVirtualClassroomSession(session.id);
+  if (!ended) {
+    throw new Error(
+      "Could not persist session end (is SUPABASE_SERVICE_ROLE_KEY configured?).",
+    );
+  }
   try {
     await clearDailyRoomOnSessionEnd(session.id);
   } catch {

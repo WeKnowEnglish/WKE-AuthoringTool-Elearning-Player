@@ -77,7 +77,13 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true, alreadyEnded: true });
   }
 
-  await finalizeVirtualClassroomSessionClose(session);
+  try {
+    await finalizeVirtualClassroomSessionClose(session);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not end session.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   const response = NextResponse.json({ ok: true, ended: true });
   response.cookies.set(VC_HOST_COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });

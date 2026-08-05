@@ -5,6 +5,8 @@ import {
   AuthoringItemPager,
   useAuthoringItemIndex,
 } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { AssessmentListeningAudioFields } from "@/components/teacher/activity-builder/AssessmentListeningAudioFields";
 import type { AssessmentPart } from "@/lib/assessment/types";
 
@@ -54,94 +56,7 @@ export function AssessmentListeningItemMatchPartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Listening · item match
-      </p>
-
-      <AssessmentListeningAudioFields
-        audioText={audioText}
-        audioUrl={audioUrl}
-        onChange={(next) =>
-          patchActivity((activity) => ({
-            ...activity,
-            audioText: next.audioText,
-            ...(next.audioUrl ? { audioUrl: next.audioUrl } : { audioUrl: undefined }),
-          }))
-        }
-      />
-
-      <AuthoringItemPager
-        count={choices.length}
-        index={choiceIndex}
-        onIndexChange={setChoiceIndex}
-        label="Choice"
-        itemLabels={choices.map((row) => row.label.trim() || "Choice")}
-        minCount={2}
-        maxCount={12}
-        onAdd={() => {
-          patchActivity((activity) => ({
-            ...activity,
-            choices: [...activity.choices, emptyChoice()],
-          }));
-          setChoiceIndex(choices.length);
-        }}
-        onRemove={() => {
-          if (choices.length <= 2 || !choice) return;
-          patchActivity((activity) => ({
-            ...activity,
-            choices: activity.choices.filter((row) => row.id !== choice.id),
-            prompts: activity.prompts.map((row) =>
-              row.correctChoiceId === choice.id
-                ? {
-                    ...row,
-                    correctChoiceId:
-                      activity.choices.find((item) => item.id !== choice.id)
-                        ?.id ?? "",
-                  }
-                : row,
-            ),
-          }));
-          setChoiceIndex(Math.max(0, choiceIndex - 1));
-        }}
-      >
-        {choice ? (
-          <div className="space-y-2">
-            <label className="block text-[11px] font-bold text-stone-700">
-              Label
-              <input
-                value={choice.label}
-                onChange={(event) => {
-                  const label = event.target.value;
-                  patchActivity((activity) => ({
-                    ...activity,
-                    choices: activity.choices.map((row) =>
-                      row.id === choice.id ? { ...row, label } : row,
-                    ),
-                  }));
-                }}
-                className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-              />
-            </label>
-            <MediaUrlControls
-              label="Optional image"
-              value={choice.imageSrc ?? ""}
-              compact
-              onChange={(url) =>
-                patchActivity((activity) => ({
-                  ...activity,
-                  choices: activity.choices.map((row) =>
-                    row.id === choice.id
-                      ? { ...row, imageSrc: url || undefined }
-                      : row,
-                  ),
-                }))
-              }
-            />
-          </div>
-        ) : null}
-      </AuthoringItemPager>
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={prompts.length}
         index={promptIndex}
         onIndexChange={setPromptIndex}
@@ -210,7 +125,96 @@ export function AssessmentListeningItemMatchPartEditor({
             </label>
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
+
+      <AssessmentInspectorSection title="Listening setup" defaultOpen={false}>
+        <AssessmentListeningAudioFields
+          audioText={audioText}
+          audioUrl={audioUrl}
+          onChange={(next) =>
+            patchActivity((activity) => ({
+              ...activity,
+              audioText: next.audioText,
+              ...(next.audioUrl
+                ? { audioUrl: next.audioUrl }
+                : { audioUrl: undefined }),
+            }))
+          }
+        />
+      </AssessmentInspectorSection>
+
+      <AssessmentInspectorSection title="Choice bank" defaultOpen={false}>
+        <AuthoringItemPager
+          count={choices.length}
+          index={choiceIndex}
+          onIndexChange={setChoiceIndex}
+          label="Choice"
+          itemLabels={choices.map((row) => row.label.trim() || "Choice")}
+          minCount={2}
+          maxCount={12}
+          onAdd={() => {
+            patchActivity((activity) => ({
+              ...activity,
+              choices: [...activity.choices, emptyChoice()],
+            }));
+            setChoiceIndex(choices.length);
+          }}
+          onRemove={() => {
+            if (choices.length <= 2 || !choice) return;
+            patchActivity((activity) => ({
+              ...activity,
+              choices: activity.choices.filter((row) => row.id !== choice.id),
+              prompts: activity.prompts.map((row) =>
+                row.correctChoiceId === choice.id
+                  ? {
+                      ...row,
+                      correctChoiceId:
+                        activity.choices.find((item) => item.id !== choice.id)
+                          ?.id ?? "",
+                    }
+                  : row,
+              ),
+            }));
+            setChoiceIndex(Math.max(0, choiceIndex - 1));
+          }}
+        >
+          {choice ? (
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-stone-700">
+                Label
+                <input
+                  value={choice.label}
+                  onChange={(event) => {
+                    const label = event.target.value;
+                    patchActivity((activity) => ({
+                      ...activity,
+                      choices: activity.choices.map((row) =>
+                        row.id === choice.id ? { ...row, label } : row,
+                      ),
+                    }));
+                  }}
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+                />
+              </label>
+              <MediaUrlControls
+                label="Optional image"
+                value={choice.imageSrc ?? ""}
+                compact
+                onChange={(url) =>
+                  patchActivity((activity) => ({
+                    ...activity,
+                    choices: activity.choices.map((row) =>
+                      row.id === choice.id
+                        ? { ...row, imageSrc: url || undefined }
+                        : row,
+                    ),
+                  }))
+                }
+              />
+            </div>
+          ) : null}
+        </AuthoringItemPager>
+      </AssessmentInspectorSection>
     </div>
   );
 }

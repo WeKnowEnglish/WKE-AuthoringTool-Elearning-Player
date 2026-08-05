@@ -1,9 +1,8 @@
 "use client";
 
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { AssessmentListeningAudioFields } from "@/components/teacher/activity-builder/AssessmentListeningAudioFields";
 import { splitAssessmentCsv } from "@/lib/activity-tracks/patch-assessment-part";
 import type { AssessmentPart } from "@/lib/assessment/types";
@@ -42,37 +41,7 @@ export function AssessmentListeningInformationPartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Listening · information
-      </p>
-
-      <label className="block text-[11px] font-bold text-stone-700">
-        Organizer title
-        <input
-          value={organizerTitle}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              organizerTitle: event.target.value,
-            }))
-          }
-          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-        />
-      </label>
-
-      <AssessmentListeningAudioFields
-        audioText={audioText}
-        audioUrl={audioUrl}
-        onChange={(next) =>
-          patchActivity((activity) => ({
-            ...activity,
-            audioText: next.audioText,
-            ...(next.audioUrl ? { audioUrl: next.audioUrl } : { audioUrl: undefined }),
-          }))
-        }
-      />
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={fields.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -141,7 +110,37 @@ export function AssessmentListeningInformationPartEditor({
             </label>
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
+
+      <AssessmentInspectorSection title="Listening setup" defaultOpen={false}>
+        <label className="block text-[11px] font-bold text-stone-700">
+          Organizer title
+          <input
+            value={organizerTitle}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                organizerTitle: event.target.value,
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+          />
+        </label>
+
+        <AssessmentListeningAudioFields
+          audioText={audioText}
+          audioUrl={audioUrl}
+          onChange={(next) =>
+            patchActivity((activity) => ({
+              ...activity,
+              audioText: next.audioText,
+              ...(next.audioUrl
+                ? { audioUrl: next.audioUrl }
+                : { audioUrl: undefined }),
+            }))
+          }
+        />
+      </AssessmentInspectorSection>
     </div>
   );
 }

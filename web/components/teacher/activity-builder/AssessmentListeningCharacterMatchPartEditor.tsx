@@ -1,10 +1,9 @@
 "use client";
 
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { AssessmentListeningAudioFields } from "@/components/teacher/activity-builder/AssessmentListeningAudioFields";
 import {
   AssessmentHitboxStage,
@@ -69,145 +68,7 @@ export function AssessmentListeningCharacterMatchPartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Listening · names on scene
-      </p>
-      <p className="text-[11px] font-semibold text-stone-500">
-        One scene picture, hitboxes on people, and a name bank. Students draw
-        lines from names to hitboxes.
-      </p>
-
-      <AssessmentListeningAudioFields
-        audioText={audioText}
-        audioUrl={audioUrl}
-        onChange={(next) =>
-          patchActivity((activity) => ({
-            ...activity,
-            audioText: next.audioText,
-            ...(next.audioUrl ? { audioUrl: next.audioUrl } : { audioUrl: undefined }),
-          }))
-        }
-      />
-
-      <MediaUrlControls
-        label="Scene picture"
-        value={image.src}
-        compact
-        onChange={(url) =>
-          patchActivity((activity) => ({
-            ...activity,
-            image: { ...activity.image, src: url },
-          }))
-        }
-      />
-      <label className="block text-[11px] font-bold text-stone-700">
-        Image alt text
-        <input
-          value={image.alt}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              image: { ...activity.image, alt: event.target.value },
-            }))
-          }
-          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-        />
-      </label>
-
-      <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold text-stone-700">Name bank</p>
-          <button
-            type="button"
-            onClick={() =>
-              patchActivity((activity) => ({
-                ...activity,
-                names: [...activity.names, emptyName()],
-              }))
-            }
-            className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
-          >
-            Add
-          </button>
-        </div>
-        <ul className="space-y-1.5">
-          {names.map((name) => (
-            <li key={name.id} className="flex items-center gap-1.5">
-              <input
-                value={name.name}
-                onChange={(event) => {
-                  const nextName = event.target.value;
-                  patchActivity((activity) => ({
-                    ...activity,
-                    names: activity.names.map((row) =>
-                      row.id === name.id ? { ...row, name: nextName } : row,
-                    ),
-                  }));
-                }}
-                className="min-w-0 flex-1 rounded-md border border-stone-300 px-2 py-1 text-xs font-semibold"
-                aria-label="Name"
-              />
-              <button
-                type="button"
-                disabled={names.length <= 2}
-                onClick={() =>
-                  patchActivity((activity) => ({
-                    ...activity,
-                    names: activity.names.filter((row) => row.id !== name.id),
-                    targets: activity.targets.map((row) =>
-                      row.correctNameId === name.id
-                        ? {
-                            ...row,
-                            correctNameId:
-                              activity.names.find((item) => item.id !== name.id)
-                                ?.id ?? "",
-                          }
-                        : row,
-                    ),
-                  }))
-                }
-                className="shrink-0 rounded-md border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-35"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-        <p className="text-[10px] font-semibold text-stone-500">
-          Include extra names students should not use.
-        </p>
-      </div>
-
-      <AssessmentHitboxStage
-        imageSrc={image.src}
-        imageAlt={image.alt}
-        emptyHint="Add a scene picture to place people hitboxes"
-        selectedId={target?.id ?? null}
-        onSelect={(id) => {
-          const index = targets.findIndex((row) => row.id === id);
-          if (index >= 0) setItemIndex(index);
-        }}
-        onPatchGeometry={(id, next) => {
-          const row = targets.find((item) => item.id === id);
-          if (!row) return;
-          updateTarget(id, { ...row, ...next });
-        }}
-        targets={targets.map((row) => {
-          const correctName = names.find((name) => name.id === row.correctNameId);
-          return {
-            id: row.id,
-            label: row.label,
-            detail: correctName?.name,
-            xPercent: row.xPercent,
-            yPercent: row.yPercent,
-            widthPercent: row.widthPercent,
-            heightPercent: row.heightPercent,
-          };
-        })}
-        hint="Select a hitbox, drag to move, corner handle to resize. Expand for precise placement."
-      />
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={targets.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -299,9 +160,150 @@ export function AssessmentListeningCharacterMatchPartEditor({
                 </label>
               ))}
             </div>
+            <AssessmentHitboxStage
+              imageSrc={image.src}
+              imageAlt={image.alt}
+              emptyHint="Add a scene picture to place people hitboxes"
+              selectedId={target.id}
+              onSelect={(id) => {
+                const index = targets.findIndex((row) => row.id === id);
+                if (index >= 0) setItemIndex(index);
+              }}
+              onPatchGeometry={(id, next) => {
+                const row = targets.find((item) => item.id === id);
+                if (!row) return;
+                updateTarget(id, { ...row, ...next });
+              }}
+              targets={targets.map((row) => {
+                const correctName = names.find(
+                  (name) => name.id === row.correctNameId,
+                );
+                return {
+                  id: row.id,
+                  label: row.label,
+                  detail: correctName?.name,
+                  xPercent: row.xPercent,
+                  yPercent: row.yPercent,
+                  widthPercent: row.widthPercent,
+                  heightPercent: row.heightPercent,
+                };
+              })}
+              hint="Select a hitbox, drag to move, corner handle to resize. Expand for precise placement."
+            />
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
+
+      <AssessmentInspectorSection title="Scene setup" defaultOpen={false}>
+        <p className="text-[11px] font-semibold text-stone-500">
+          One scene picture, hitboxes on people, and a name bank. Students draw
+          lines from names to hitboxes.
+        </p>
+
+        <AssessmentListeningAudioFields
+          audioText={audioText}
+          audioUrl={audioUrl}
+          onChange={(next) =>
+            patchActivity((activity) => ({
+              ...activity,
+              audioText: next.audioText,
+              ...(next.audioUrl
+                ? { audioUrl: next.audioUrl }
+                : { audioUrl: undefined }),
+            }))
+          }
+        />
+
+        <MediaUrlControls
+          label="Scene picture"
+          value={image.src}
+          compact
+          onChange={(url) =>
+            patchActivity((activity) => ({
+              ...activity,
+              image: { ...activity.image, src: url },
+            }))
+          }
+        />
+        <label className="block text-[11px] font-bold text-stone-700">
+          Image alt text
+          <input
+            value={image.alt}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                image: { ...activity.image, alt: event.target.value },
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+          />
+        </label>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold text-stone-700">Name bank</p>
+            <button
+              type="button"
+              onClick={() =>
+                patchActivity((activity) => ({
+                  ...activity,
+                  names: [...activity.names, emptyName()],
+                }))
+              }
+              className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
+            >
+              Add
+            </button>
+          </div>
+          <ul className="space-y-1.5">
+            {names.map((name) => (
+              <li key={name.id} className="flex items-center gap-1.5">
+                <input
+                  value={name.name}
+                  onChange={(event) => {
+                    const nextName = event.target.value;
+                    patchActivity((activity) => ({
+                      ...activity,
+                      names: activity.names.map((row) =>
+                        row.id === name.id ? { ...row, name: nextName } : row,
+                      ),
+                    }));
+                  }}
+                  className="min-w-0 flex-1 rounded-md border border-stone-300 px-2 py-1 text-xs font-semibold"
+                  aria-label="Name"
+                />
+                <button
+                  type="button"
+                  disabled={names.length <= 2}
+                  onClick={() =>
+                    patchActivity((activity) => ({
+                      ...activity,
+                      names: activity.names.filter((row) => row.id !== name.id),
+                      targets: activity.targets.map((row) =>
+                        row.correctNameId === name.id
+                          ? {
+                              ...row,
+                              correctNameId:
+                                activity.names.find(
+                                  (item) => item.id !== name.id,
+                                )?.id ?? "",
+                            }
+                          : row,
+                      ),
+                    }))
+                  }
+                  className="shrink-0 rounded-md border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-35"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[10px] font-semibold text-stone-500">
+            Include extra names students should not use.
+          </p>
+        </div>
+      </AssessmentInspectorSection>
     </div>
   );
 }

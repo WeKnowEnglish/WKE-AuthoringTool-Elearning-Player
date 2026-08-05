@@ -46,6 +46,7 @@ export function VirtualClassroomJoinClient() {
         displayName?: string;
         role?: "host" | "member";
         oneOff?: boolean;
+        landing?: "waiting" | "live";
       };
       if (
         !response.ok ||
@@ -64,8 +65,15 @@ export function VirtualClassroomJoinClient() {
         role: "member",
         userId: payload.userId,
         displayName: payload.displayName ?? "Student",
+        returnHref: payload.classId
+          ? `/primary/class/${encodeURIComponent(payload.classId)}`
+          : "/virtual-classroom/join",
       });
-      router.push(`/virtual-classroom/${payload.sessionId}`);
+      const path =
+        payload.landing === "waiting"
+          ? `/virtual-classroom/${payload.sessionId}/waiting`
+          : `/virtual-classroom/${payload.sessionId}`;
+      router.push(path);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Join failed.");
     } finally {

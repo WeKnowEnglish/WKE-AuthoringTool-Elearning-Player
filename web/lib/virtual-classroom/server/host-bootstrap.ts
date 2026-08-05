@@ -4,6 +4,9 @@ import { randomBytes } from "node:crypto";
 import { LiveObject, toPlainLson, type PlainLsonObject } from "@liveblocks/client";
 import { Liveblocks } from "@liveblocks/node";
 import { generateJoinCode } from "@/lib/board-game/liveblocks/join-code";
+import { logDaily } from "@/lib/daily/log";
+import { getOrCreateDailyRoomForSession } from "@/lib/daily/session-room";
+import { isDailyEnabled } from "@/lib/env/daily-server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
 import { createVirtualClassroomInitialStorage } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import {
@@ -29,6 +32,8 @@ export type HostVirtualClassroomResult = {
   role: "host";
   hostCookie: string;
   memberToken: string;
+  /** Present when Daily is enabled and room attach succeeded. */
+  dailyRoomUrl: string | null;
 };
 
 /** Shared bootstrap for class-linked and one-off Virtual Classroom hosts. */
@@ -37,6 +42,13 @@ export async function bootstrapVirtualClassroomHost(input: {
   classId: string | null;
   classLessonId?: string | null;
   title?: string;
+  meetingSlotId?: string | null;
+  occurrenceStartsAt?: string | null;
+  occurrenceEndsAt?: string | null;
+  sessionKind?: "scheduled" | "extra";
+  classPhase?: "prep" | "waiting" | "live" | "ended";
+  /** When true, do not end other active sessions for the class (reuse path handles that). */
+  skipEndOthers?: boolean;
 }): Promise<HostVirtualClassroomResult> {
   const secret = assertLiveblocksSecret();
   const joinCode = generateJoinCode();
@@ -47,6 +59,10 @@ export async function bootstrapVirtualClassroomHost(input: {
     input.title?.trim() ||
     (input.classId ? "Virtual Classroom" : "One-off Virtual Classroom");
   const classLessonId = input.classId ? (input.classLessonId ?? null) : null;
+  const sessionKind =
+    input.sessionKind ??
+    (input.classId && input.meetingSlotId ? "scheduled" : "extra");
+  const classPhase = input.classPhase ?? "live";
 
   await createVirtualClassroomSession({
     id: sessionId,
@@ -56,6 +72,11 @@ export async function bootstrapVirtualClassroomHost(input: {
     liveblocksRoomId: roomId,
     title,
     createdBy: input.teacher.userId,
+    meetingSlotId: input.meetingSlotId ?? null,
+    occurrenceStartsAt: input.occurrenceStartsAt ?? null,
+    occurrenceEndsAt: input.occurrenceEndsAt ?? null,
+    sessionKind,
+    classPhase,
   });
 
   const liveblocks = new Liveblocks({ secret });
@@ -83,6 +104,20 @@ export async function bootstrapVirtualClassroomHost(input: {
     role: "host",
   });
 
+  // Daily room is best-effort: Liveblocks session must still start if Daily fails.
+  let dailyRoomUrl: string | null = null;
+  if (isDailyEnabled()) {
+    try {
+      const room = await getOrCreateDailyRoomForSession(sessionId);
+      dailyRoomUrl = room?.url ?? null;
+    } catch (error) {
+      logDaily("host_bootstrap_daily_failed", {
+        sessionId,
+        message: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
+
   const memberToken = encodeVcMemberToken({
     sessionId,
     joinCode,
@@ -104,5 +139,6 @@ export async function bootstrapVirtualClassroomHost(input: {
     role: "host",
     hostCookie: formatVcHostCookie(joinCode, hostSecret),
     memberToken,
+    dailyRoomUrl,
   };
 }

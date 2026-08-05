@@ -1,9 +1,8 @@
 "use client";
 
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { splitAssessmentCsv } from "@/lib/activity-tracks/patch-assessment-part";
 import type { AssessmentPart } from "@/lib/assessment/types";
 
@@ -46,42 +45,7 @@ export function AssessmentShortAnswerReadingPartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Short answer reading
-      </p>
-
-      <label className="block text-[11px] font-bold text-stone-700">
-        Passage title
-        <input
-          value={part.activity.passage.title ?? ""}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              passage: {
-                ...activity.passage,
-                title: event.target.value || undefined,
-              },
-            }))
-          }
-          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-        />
-      </label>
-      <label className="block text-[11px] font-bold text-stone-700">
-        Passage text
-        <textarea
-          value={part.activity.passage.text}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              passage: { ...activity.passage, text: event.target.value },
-            }))
-          }
-          rows={6}
-          className="mt-1 w-full resize-y rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold leading-5"
-        />
-      </label>
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={questions.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -153,7 +117,40 @@ export function AssessmentShortAnswerReadingPartEditor({
             </label>
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
+
+      <AssessmentInspectorSection title="Reading passage" defaultOpen={false}>
+        <label className="block text-[11px] font-bold text-stone-700">
+          Passage title
+          <input
+            value={part.activity.passage.title ?? ""}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                passage: {
+                  ...activity.passage,
+                  title: event.target.value || undefined,
+                },
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+          />
+        </label>
+        <label className="block text-[11px] font-bold text-stone-700">
+          Passage text
+          <textarea
+            value={part.activity.passage.text}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                passage: { ...activity.passage, text: event.target.value },
+              }))
+            }
+            rows={6}
+            className="mt-1 w-full resize-y rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold leading-5"
+          />
+        </label>
+      </AssessmentInspectorSection>
     </div>
   );
 }

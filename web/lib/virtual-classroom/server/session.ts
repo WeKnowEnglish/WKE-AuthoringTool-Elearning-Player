@@ -1,5 +1,13 @@
 import "server-only";
 
+import type {
+  ClassSessionKind,
+  ClassSessionPhase,
+} from "@/lib/class-schedule/class-clock";
+import {
+  endedSessionDismissesOccurrence,
+  occurrenceDismissWindowBounds,
+} from "@/lib/class-schedule/dismissed-occurrence";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import type {
   VirtualClassroomSessionRecord,
@@ -7,6 +15,11 @@ import type {
 } from "@/lib/virtual-classroom/domain";
 
 function mapRow(row: Record<string, unknown>): VirtualClassroomSessionRecord {
+  const status = row.status as VirtualClassroomSessionStatus;
+  const kind = (row.session_kind as ClassSessionKind | null) ?? "extra";
+  const phase =
+    (row.class_phase as ClassSessionPhase | null) ??
+    (status === "ended" ? "ended" : "live");
   return {
     id: row.id as string,
     classId: (row.class_id as string | null) ?? null,
@@ -14,10 +27,15 @@ function mapRow(row: Record<string, unknown>): VirtualClassroomSessionRecord {
     joinCode: (row.join_code as string) ?? "",
     liveblocksRoomId: (row.liveblocks_room_id as string) ?? "",
     title: row.title as string,
-    status: row.status as VirtualClassroomSessionStatus,
+    status,
     createdBy: row.created_by as string,
     createdAt: row.created_at as string,
     endedAt: (row.ended_at as string | null) ?? null,
+    meetingSlotId: (row.meeting_slot_id as string | null) ?? null,
+    occurrenceStartsAt: (row.occurrence_starts_at as string | null) ?? null,
+    occurrenceEndsAt: (row.occurrence_ends_at as string | null) ?? null,
+    sessionKind: kind === "scheduled" ? "scheduled" : "extra",
+    classPhase: phase,
   };
 }
 
@@ -29,6 +47,7 @@ export async function endActiveSessionsForClass(classId: string): Promise<void> 
     .update({
       status: "ended",
       ended_at: new Date().toISOString(),
+      class_phase: "ended",
     })
     .eq("class_id", classId)
     .eq("status", "active");
@@ -43,13 +62,14 @@ export async function endActiveOneOffSessionsForTeacher(teacherId: string): Prom
     .update({
       status: "ended",
       ended_at: new Date().toISOString(),
+      class_phase: "ended",
     })
     .eq("created_by", teacherId)
     .is("class_id", null)
     .eq("status", "active");
 }
 
-export async function createVirtualClassroomSession(input: {
+export type CreateVirtualClassroomSessionInput = {
   id: string;
   classId: string | null;
   classLessonId?: string | null;
@@ -57,7 +77,16 @@ export async function createVirtualClassroomSession(input: {
   liveblocksRoomId: string;
   title: string;
   createdBy: string;
-}): Promise<void> {
+  meetingSlotId?: string | null;
+  occurrenceStartsAt?: string | null;
+  occurrenceEndsAt?: string | null;
+  sessionKind?: ClassSessionKind;
+  classPhase?: ClassSessionPhase;
+};
+
+export async function createVirtualClassroomSession(
+  input: CreateVirtualClassroomSessionInput,
+): Promise<void> {
   const supabase = createServiceRoleSupabase();
   if (!supabase) return;
 
@@ -77,7 +106,35 @@ export async function createVirtualClassroomSession(input: {
     status: "active",
     created_by: input.createdBy,
     ended_at: null,
+    meeting_slot_id: input.meetingSlotId ?? null,
+    occurrence_starts_at: input.occurrenceStartsAt ?? null,
+    occurrence_ends_at: input.occurrenceEndsAt ?? null,
+    session_kind: input.sessionKind ?? "extra",
+    class_phase: input.classPhase ?? "live",
   });
+}
+
+export async function updateVirtualClassroomSessionPhase(
+  sessionId: string,
+  classPhase: ClassSessionPhase,
+): Promise<VirtualClassroomSessionRecord | null> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return null;
+  const patch: Record<string, unknown> = {
+    class_phase: classPhase,
+  };
+  if (classPhase === "ended") {
+    patch.status = "ended";
+    patch.ended_at = new Date().toISOString();
+  }
+  const { data } = await supabase
+    .from("class_sessions")
+    .update(patch)
+    .eq("id", sessionId)
+    .select("*")
+    .maybeSingle();
+  if (!data) return null;
+  return mapRow(data as Record<string, unknown>);
 }
 
 export async function setVirtualClassroomSessionLesson(input: {
@@ -142,6 +199,76 @@ export async function getActiveVirtualClassroomForClass(
   return mapRow(data as Record<string, unknown>);
 }
 
+/**
+ * Teacher ended a session for this occurrence — block auto clock from reopening.
+ * Covers scheduled (bound/unbound), extra, and early-ended sessions.
+ */
+export async function hasTeacherDismissedOccurrence(input: {
+  classId: string;
+  meetingSlotId: string;
+  occurrenceStartsAt: string | Date;
+  occurrenceEndsAt: string | Date;
+}): Promise<boolean> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return false;
+
+  const bounds = occurrenceDismissWindowBounds(input);
+  if (!bounds) return false;
+
+  const queryStart = new Date(
+    bounds.windowStartMs - 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  const { data, error } = await supabase
+    .from("class_sessions")
+    .select(
+      "occurrence_starts_at, meeting_slot_id, session_kind, ended_at, created_at",
+    )
+    .eq("class_id", input.classId)
+    .eq("status", "ended")
+    .gte("ended_at", queryStart)
+    .order("ended_at", { ascending: false })
+    .limit(25);
+
+  if (error) throw error;
+
+  return (data ?? []).some((row) =>
+    endedSessionDismissesOccurrence(
+      {
+        occurrence_starts_at: row.occurrence_starts_at as string | null,
+        meeting_slot_id: row.meeting_slot_id as string | null,
+        session_kind: row.session_kind as string | null,
+        ended_at: row.ended_at as string | null,
+        created_at: row.created_at as string | null,
+      },
+      input,
+    ),
+  );
+}
+
+/** @deprecated Prefer hasTeacherDismissedOccurrence (requires occurrenceEndsAt). */
+export async function hasEndedSessionForOccurrence(input: {
+  classId: string;
+  meetingSlotId: string;
+  occurrenceStartsAt: string | Date;
+  occurrenceEndsAt?: string | Date;
+}): Promise<boolean> {
+  const occurrenceEndsAt =
+    input.occurrenceEndsAt ??
+    (typeof input.occurrenceStartsAt === "string"
+      ? new Date(
+          new Date(input.occurrenceStartsAt).getTime() + 60 * 60 * 1000,
+        ).toISOString()
+      : new Date(input.occurrenceStartsAt.getTime() + 60 * 60 * 1000));
+
+  return hasTeacherDismissedOccurrence({
+    classId: input.classId,
+    meetingSlotId: input.meetingSlotId,
+    occurrenceStartsAt: input.occurrenceStartsAt,
+    occurrenceEndsAt,
+  });
+}
+
 export async function endVirtualClassroomSession(
   sessionId: string,
 ): Promise<VirtualClassroomSessionRecord | null> {
@@ -153,6 +280,7 @@ export async function endVirtualClassroomSession(
     .update({
       status: "ended",
       ended_at: endedAt,
+      class_phase: "ended",
     })
     .eq("id", sessionId)
     .select("*")

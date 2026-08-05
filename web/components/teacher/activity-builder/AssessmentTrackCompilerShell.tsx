@@ -22,6 +22,7 @@ import {
 } from "@/lib/activity-tracks";
 import { patchAssessmentDefinitionPart } from "@/lib/activity-tracks/patch-assessment-part";
 import { AssessmentPartChrome } from "@/components/teacher/activity-builder/AssessmentPartChrome";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
 import { AssessmentPictureYesNoPartEditor } from "@/components/teacher/activity-builder/AssessmentPictureYesNoPartEditor";
 import { AssessmentDefinitionMatchPartEditor } from "@/components/teacher/activity-builder/AssessmentDefinitionMatchPartEditor";
 import { AssessmentShortAnswerReadingPartEditor } from "@/components/teacher/activity-builder/AssessmentShortAnswerReadingPartEditor";
@@ -587,7 +588,7 @@ export function AssessmentTrackCompilerShell({
           </div>
         </section>
 
-        <aside className="relative min-h-0 overflow-y-auto border-t border-stone-200 bg-white p-4 lg:border-t-0 lg:border-l">
+        <aside className="relative flex min-h-0 flex-col border-t border-stone-200 bg-white lg:border-t-0 lg:border-l">
           <div
             role="separator"
             aria-orientation="vertical"
@@ -611,77 +612,72 @@ export function AssessmentTrackCompilerShell({
               }`}
             />
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-            Parts
-          </p>
-          {!definition ? (
-            <p className="mt-3 text-xs font-semibold text-stone-500">
-              No assessment definition loaded.
-            </p>
-          ) : (
-            <div className="mt-3 space-y-3">
-              {definition.sections.map((section) => (
-                <div key={section.id}>
-                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-violet-700">
-                    {section.title}
-                  </p>
-                  <ol className="space-y-1">
-                    {section.parts.map((part) => {
-                      const active =
-                        selection.type === "part" &&
-                        selection.partId === part.id;
-                      return (
-                        <li key={part.id}>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSelection({ type: "part", partId: part.id })
-                            }
-                            className={`w-full rounded-lg border px-2.5 py-2 text-left ${
-                              active
-                                ? "border-violet-700 bg-violet-700 text-white"
-                                : "border-stone-200 bg-stone-50 text-stone-800 hover:border-stone-400"
-                            }`}
-                          >
-                            <p className="text-[10px] font-bold uppercase tracking-wide opacity-70">
-                              Part {part.partNumber}
-                            </p>
-                            <p className="mt-0.5 text-xs font-extrabold">
-                              {part.title}
-                            </p>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                </div>
-              ))}
-            </div>
-          )}
 
-          <div className="mt-5 border-t border-stone-200 pt-4">
+          <div className="max-h-[min(40vh,280px)] shrink-0 overflow-y-auto border-b border-stone-200 px-4 pb-3 pt-4">
             <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-              Inspector
+              Parts
             </p>
+            {!definition ? (
+              <p className="mt-3 text-xs font-semibold text-stone-500">
+                No assessment definition loaded.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {definition.sections.map((section) => (
+                  <div key={section.id}>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-violet-700">
+                      {section.title}
+                    </p>
+                    <ol className="space-y-1">
+                      {section.parts.map((part) => {
+                        const active =
+                          selection.type === "part" &&
+                          selection.partId === part.id;
+                        return (
+                          <li key={part.id}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelection({ type: "part", partId: part.id })
+                              }
+                              className={`w-full rounded-lg border px-2.5 py-2 text-left ${
+                                active
+                                  ? "border-violet-700 bg-violet-700 text-white"
+                                  : "border-stone-200 bg-stone-50 text-stone-800 hover:border-stone-400"
+                              }`}
+                            >
+                              <p className="text-[10px] font-bold uppercase tracking-wide opacity-70">
+                                Part {part.partNumber}
+                              </p>
+                              <p className="mt-0.5 text-xs font-extrabold">
+                                {part.title}
+                              </p>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
             {selection.type === "track" ? (
-              <div className="mt-3 space-y-2 text-xs font-semibold leading-5 text-stone-600">
+              <div className="space-y-2 text-xs font-semibold leading-5 text-stone-600">
                 <p>
                   {definition
                     ? `${definition.sections.length} sections · ${parts.length} parts · ~${definition.estimatedMinutes} min`
                     : "Seed a template to inspect parts."}
                 </p>
                 <p className="rounded-lg bg-violet-50 px-2.5 py-2 text-[11px] text-violet-950">
-                  Select a part to edit its content. Every Primary A2 part kind
-                  has an editor; changes update the live preview.
+                  Select a part above to edit questions. Title and instructions
+                  live under Part setup when a part is open.
                 </p>
               </div>
             ) : selectedPart ? (
-              <div className="mt-3 space-y-4">
-                <AssessmentPartChrome
-                  part={selectedPart}
-                  sectionTitle={selectedSectionTitle}
-                  onChange={updateSelectedPart}
-                />
+              <div className="space-y-3">
                 {selectedPart.kind === "picture_yes_no" ? (
                   <AssessmentPictureYesNoPartEditor
                     part={selectedPart}
@@ -763,13 +759,21 @@ export function AssessmentTrackCompilerShell({
                     <span className="font-extrabold capitalize">
                       {partKindLabel(selectedPart.kind)}
                     </span>{" "}
-                    yet. Title and instructions above still save.
+                    yet.
                   </p>
                 )}
+
+                <AssessmentInspectorSection title="Part setup" defaultOpen={false}>
+                  <AssessmentPartChrome
+                    part={selectedPart}
+                    sectionTitle={selectedSectionTitle}
+                    onChange={updateSelectedPart}
+                  />
+                </AssessmentInspectorSection>
               </div>
             ) : (
-              <p className="mt-3 text-xs font-semibold text-stone-500">
-                Select a part from the timeline.
+              <p className="text-xs font-semibold text-stone-500">
+                Select a part from the list above.
               </p>
             )}
           </div>

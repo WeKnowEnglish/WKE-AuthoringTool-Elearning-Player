@@ -943,6 +943,7 @@ async function recordCatalogHomeworkCompletion(input: {
     | "cloze_open"
     | "read_and_answer"
     | "picture_story"
+    | "writing_prompt"
   >;
 }): Promise<RecordHomeworkCompletionResult> {
   try {
@@ -992,7 +993,8 @@ async function recordCatalogHomeworkCompletion(input: {
         payload.type !== "cloze_choice" &&
         payload.type !== "cloze_open" &&
         payload.type !== "read_and_answer" &&
-        payload.type !== "picture_story") ||
+        payload.type !== "picture_story" &&
+        payload.type !== "writing_prompt") ||
       !input.allowedTypes.includes(
         payload.type as (typeof input.allowedTypes)[number],
       )
@@ -1037,6 +1039,8 @@ async function recordCatalogHomeworkCompletion(input: {
       questionsTotal = Math.max(0, payload.questionCount);
     } else if (payload.type === "picture_story") {
       questionsTotal = Math.max(0, payload.questionCount);
+    } else if (payload.type === "writing_prompt") {
+      questionsTotal = 1;
     }
     const { data: memberships, error: membershipError } = await supabase.rpc(
       "student_class_memberships",
@@ -1248,6 +1252,16 @@ export async function recordPictureStoryHomeworkCompletion(input: {
   return recordCatalogHomeworkCompletion({
     homeworkId: input.homeworkId,
     allowedTypes: ["picture_story"],
+  });
+}
+
+/** Student marks writing_prompt homework finished after submitting text. */
+export async function recordWritingPromptHomeworkCompletion(input: {
+  homeworkId: string;
+}): Promise<RecordHomeworkCompletionResult> {
+  return recordCatalogHomeworkCompletion({
+    homeworkId: input.homeworkId,
+    allowedTypes: ["writing_prompt"],
   });
 }
 

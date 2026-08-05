@@ -1,22 +1,37 @@
 import { unstable_noStore as noStore } from "next/cache";
+import { getClassLiveState } from "@/lib/class-schedule/live-state";
 import { getStudentClassMembership, getStudentClassMemberships } from "@/lib/data/student-classes";
-import type { StudentClassLiveSession } from "@/lib/student-live/types";
-import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
+import {
+  studentLandingPath,
+  type StudentClassLiveSession,
+} from "@/lib/student-live/types";
 
-function mapSession(
+function mapFromLiveState(
   membership: { classId: string; title: string },
-  session: { id: string; joinCode: string; title: string },
-): StudentClassLiveSession {
+  state: Awaited<ReturnType<typeof getClassLiveState>>,
+): StudentClassLiveSession | null {
+  if (!state.sessionId || !state.joinCode) return null;
+  if (state.phase !== "waiting" && state.phase !== "live") return null;
+  if (!state.canStudentEnterWaiting && !state.canStudentEnterLive) return null;
+
   return {
     classId: membership.classId,
     classTitle: membership.title,
-    sessionId: session.id,
-    joinCode: session.joinCode,
-    sessionTitle: session.title,
+    sessionId: state.sessionId,
+    joinCode: state.joinCode,
+    sessionTitle: state.sessionTitle ?? "Virtual Classroom",
+    phase: state.phase,
+    kind: state.kind,
+    classPhase: state.classPhase,
+    occurrenceLabel: state.occurrenceLabel,
+    meetingSlotId: state.meetingSlotId,
+    canEnterWaiting: state.canStudentEnterWaiting,
+    canEnterLive: state.canStudentEnterLive,
+    landingPath: studentLandingPath(state.sessionId, state.phase),
   };
 }
 
-/** Active Virtual Classroom for one enrolled class (null if not live or not enrolled). */
+/** Waiting or live VC for one enrolled class (null if idle / none). */
 export async function getActiveLiveSessionForStudentClass(
   classId: string,
 ): Promise<StudentClassLiveSession | null> {
@@ -24,22 +39,20 @@ export async function getActiveLiveSessionForStudentClass(
   const membership = await getStudentClassMembership(classId);
   if (!membership) return null;
 
-  const session = await getActiveVirtualClassroomForClass(classId);
-  if (!session) return null;
-
-  return mapSession(membership, session);
+  const state = await getClassLiveState(classId);
+  return mapFromLiveState(membership, state);
 }
 
-/** All active Virtual Classroom sessions for the signed-in student's enrolled classes. */
+/** All waiting/live VC sessions for the signed-in student's enrolled classes. */
 export async function listActiveLiveSessionsForStudent(): Promise<StudentClassLiveSession[]> {
   noStore();
   const memberships = await getStudentClassMemberships();
   const live: StudentClassLiveSession[] = [];
 
   for (const membership of memberships) {
-    const session = await getActiveVirtualClassroomForClass(membership.classId);
-    if (!session) continue;
-    live.push(mapSession(membership, session));
+    const state = await getClassLiveState(membership.classId);
+    const mapped = mapFromLiveState(membership, state);
+    if (mapped) live.push(mapped);
   }
 
   return live;

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
+import { ensureClassSessionForClock } from "@/lib/class-schedule/ensure-session";
 import { getReadyClassLessonForClass } from "@/lib/data/class-lessons";
 import { requireWhiteboardTeacher } from "@/lib/whiteboard/product/access";
-import { bootstrapVirtualClassroomHost } from "@/lib/virtual-classroom/server/host-bootstrap";
+import { mintHostCookiesForSession } from "@/lib/virtual-classroom/server/mint-host-cookies";
 import {
   VC_HOST_COOKIE,
   VC_MEMBER_COOKIE,
@@ -10,9 +11,14 @@ import {
 
 type RouteContext = { params: Promise<{ classId: string }> };
 
-type Body = { title?: string; classLessonId?: string | null };
+type Body = {
+  title?: string;
+  classLessonId?: string | null;
+  /** auto = clock; early = teacher prep; live = start now; extra = unscheduled */
+  mode?: "auto" | "early" | "live" | "extra";
+};
 
-/** Class-linked host (same as POST /api/virtual-classroom/host with classId). */
+/** Class-linked host / early-open / start-now / extra session. */
 export async function POST(request: Request, context: RouteContext) {
   return withCollabServerTiming("vc.class_host", async (timer) => {
     const { classId } = await context.params;
@@ -37,6 +43,7 @@ export async function POST(request: Request, context: RouteContext) {
     } catch {
       body = {};
     }
+    const mode = body.mode ?? "live";
 
     let classLessonId: string | null = null;
     const requestedLessonId =
@@ -55,27 +62,46 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     try {
-      const hosted = await timer.measure("bootstrap", () =>
-        bootstrapVirtualClassroomHost({
-          teacher,
+      const ensured = await timer.measure("bootstrap", () =>
+        ensureClassSessionForClock({
           classId,
+          mode,
           classLessonId,
           title: body.title,
+          teacher,
         }),
       );
-      timer.setContext({ sessionId: hosted.sessionId, roomId: hosted.roomId });
+      if (!ensured.session) {
+        return NextResponse.json(
+          { error: "No class session available yet for this schedule window." },
+          { status: 409 },
+        );
+      }
+
+      const cookies = await mintHostCookiesForSession({
+        session: ensured.session,
+        teacher,
+      });
+      timer.setContext({
+        sessionId: ensured.session.id,
+        roomId: ensured.session.liveblocksRoomId,
+      });
 
       const response = NextResponse.json({
-        sessionId: hosted.sessionId,
-        joinCode: hosted.joinCode,
-        roomId: hosted.roomId,
-        classId: hosted.classId,
-        classLessonId: hosted.classLessonId,
-        title: hosted.title,
-        userId: hosted.userId,
-        displayName: hosted.displayName,
-        role: hosted.role,
+        sessionId: ensured.session.id,
+        joinCode: ensured.session.joinCode,
+        roomId: ensured.session.liveblocksRoomId,
+        classId: ensured.session.classId,
+        classLessonId: ensured.session.classLessonId,
+        title: ensured.session.title,
+        userId: teacher.userId,
+        displayName: teacher.displayName,
+        role: "host" as const,
         oneOff: false,
+        sessionKind: ensured.session.sessionKind,
+        classPhase: ensured.session.classPhase,
+        created: ensured.created,
+        promoted: ensured.promoted,
       });
 
       const cookieOpts = {
@@ -85,12 +111,13 @@ export async function POST(request: Request, context: RouteContext) {
         path: "/",
         maxAge: 60 * 60 * 8,
       };
-      response.cookies.set(VC_HOST_COOKIE, hosted.hostCookie, cookieOpts);
-      response.cookies.set(VC_MEMBER_COOKIE, hosted.memberToken, cookieOpts);
+      response.cookies.set(VC_HOST_COOKIE, cookies.hostCookie, cookieOpts);
+      response.cookies.set(VC_MEMBER_COOKIE, cookies.memberToken, cookieOpts);
       return response;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not start session.";
-      return NextResponse.json({ error: message }, { status: 500 });
+      const status = message.includes("Too early") ? 403 : 500;
+      return NextResponse.json({ error: message }, { status });
     }
   });
 }

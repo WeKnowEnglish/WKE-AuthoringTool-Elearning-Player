@@ -1,17 +1,21 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import type { StudentNextClassMeeting } from "@/lib/class-schedule/types";
+import type { StudentClassLiveSession } from "@/lib/student-live/types";
+import { ClassroomLiveNowJoin } from "@/components/classroom/ClassroomLiveNowJoin";
 
 type Props = {
   nextMeeting: StudentNextClassMeeting | null;
   scheduleHref?: string;
   tone?: "primary" | "secondary";
+  liveSession?: StudentClassLiveSession | null;
 };
 
 export function ClassroomNextClassCard({
   nextMeeting,
   scheduleHref,
   tone = "primary",
+  liveSession = null,
 }: Props) {
   const isSecondary = tone === "secondary";
   const shell = isSecondary
@@ -20,6 +24,10 @@ export function ClassroomNextClassCard({
   const ink = isSecondary ? "text-sec-ink" : "text-[var(--pl-ink)]";
   const muted = isSecondary ? "text-sec-muted" : "text-[var(--pl-muted)]";
   const accent = isSecondary ? "text-sec-accent" : "text-[var(--pl-purple)]";
+
+  if (liveSession) {
+    return <ClassroomLiveNowJoin session={liveSession} tone={tone} />;
+  }
 
   return (
     <section className={`${shell} p-3.5 sm:p-4`} aria-label="Next class">

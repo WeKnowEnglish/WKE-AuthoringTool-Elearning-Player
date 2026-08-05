@@ -7,8 +7,11 @@ import {
 } from "@liveblocks/react/suspense";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { DailyVideoDock } from "@/components/virtual-classroom/daily/DailyVideoDock";
 import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPanel";
+import { SessionAttendancePanel } from "@/components/virtual-classroom/SessionAttendancePanel";
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
+import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
 import { TodaysLessonPlaylist } from "@/components/virtual-classroom/TodaysLessonPlaylist";
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
 import { VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
@@ -23,6 +26,7 @@ import {
   clearVirtualClassroomContext,
   getVirtualClassroomContext,
 } from "@/lib/virtual-classroom/client-context";
+import { resolveVirtualClassroomExitHref } from "@/lib/virtual-classroom/exit-href";
 import {
   DocumentLaunchPanel,
   type DocumentLaunchPayload,
@@ -136,18 +140,18 @@ export function VirtualClassroomSessionView({
   });
   const statusCounts = countByStatus(classroomStatus);
 
+  useLobbyPresence(sessionId, role === "host" && !ended && status !== "ended");
+
   useEventListener(({ event }) => {
     const type = (event as { type?: string }).type;
     if (type === "SESSION_ENDED") {
       setEnded(true);
-      clearVirtualClassroomContext();
     }
   });
 
   useEffect(() => {
     if (status === "ended") {
       setEnded(true);
-      clearVirtualClassroomContext();
     }
   }, [status]);
 
@@ -184,7 +188,7 @@ export function VirtualClassroomSessionView({
       const payload = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(payload.error ?? "Could not end session.");
       broadcast({ type: "SESSION_ENDED" } as never);
-      clearVirtualClassroomContext();
+      // Keep client context until "Back to class" so returnHref + export mid-step work.
       setEnded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed.");
@@ -193,13 +197,23 @@ export function VirtualClassroomSessionView({
     }
   }, [broadcast, sessionId]);
 
+  const exitHref = useCallback(() => {
+    const ctx = getVirtualClassroomContext();
+    return resolveVirtualClassroomExitHref({
+      role,
+      classId: classId || ctx?.classId || null,
+      returnHref: ctx?.returnHref,
+    });
+  }, [role, classId]);
+
   const leaveSession = useCallback(() => {
-    if (!window.confirm("Leave this classroom? You can rejoin with the join code.")) {
+    if (!window.confirm("Leave this classroom? You can rejoin from your class page.")) {
       return;
     }
+    const href = exitHref();
     clearVirtualClassroomContext();
-    router.push("/virtual-classroom/join");
-  }, [router]);
+    router.push(href);
+  }, [exitHref, router]);
 
   const launchWhiteboard = useCallback(
     async (launch?: WhiteboardLaunchPayload) => {
@@ -536,17 +550,17 @@ export function VirtualClassroomSessionView({
           <button
             type="button"
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"
-            onClick={() =>
-              router.push(
-                role === "host"
-                  ? classId
-                    ? `/teacher/classes/${classId}`
-                    : "/teacher/virtual-classroom/host"
-                  : "/virtual-classroom/join",
-              )
-            }
+            onClick={() => {
+              const href = exitHref();
+              clearVirtualClassroomContext();
+              router.push(href);
+            }}
           >
-            {role === "host" ? (classId ? "Back to class" : "Host again") : "Leave"}
+            {role === "host"
+              ? classId
+                ? "Back to class"
+                : "Back to host"
+              : "Back to class"}
           </button>
           {role === "host" && collabDiagnosticExportEnabled() && (
             <button
@@ -901,7 +915,15 @@ export function VirtualClassroomSessionView({
           {error && <p className="text-sm text-red-600">{error}</p>}
         </main>
 
-        <aside className="hidden w-64 shrink-0 border-l border-slate-200 bg-white p-4 lg:block">
+        <aside className="hidden w-72 shrink-0 space-y-6 border-l border-slate-200 bg-white p-4 lg:block">
+          {role === "host" ? (
+            <SessionAttendancePanel
+              sessionId={sessionId}
+              classId={classId}
+              liveMembers={memberEntries.filter((m) => m.role !== "host")}
+            />
+          ) : null}
+          <div>
           <h2 className="text-sm font-semibold text-slate-900">
             In session ({memberEntries.length})
           </h2>
@@ -934,8 +956,15 @@ export function VirtualClassroomSessionView({
               );
             })}
           </ul>
+          </div>
         </aside>
       </div>
+
+      <DailyVideoDock
+        sessionId={sessionId}
+        isHost={role === "host"}
+        sessionEnded={ended || status === "ended"}
+      />
     </div>
   );
 }
@@ -958,19 +987,6 @@ export function VirtualClassroomSessionGate() {
     }
     setBootstrapped(true);
   }, []);
-
-  useEffect(() => {
-    if (!bootstrapped || !ctx) return;
-    void fetch(`/api/virtual-classroom/${ctx.sessionId}`)
-      .then((r) => r.json())
-      .then((payload: { status?: string }) => {
-        if (payload.status === "ended") {
-          clearVirtualClassroomContext();
-          setCtx(null);
-        }
-      })
-      .catch(() => undefined);
-  }, [bootstrapped, ctx]);
 
   if (!bootstrapped) {
     return (

@@ -805,7 +805,40 @@ export const PILOT_CATALOG: PilotEntry[] = [
   {
     href: "/virtual-classroom/join",
     title: "Virtual classroom",
-    description: "Live virtual classroom join / session surface.",
+    description:
+      "Live VC with Daily Prebuilt. Schedule clock: waiting T−15, live T−5; teacher early open + extra sessions. HMAC cookies; optional Upstash; cron class-clock + daily-cleanup.",
+    group: "classroom",
+    status: "active",
+  },
+  {
+    href: "/teacher/virtual-classroom/host",
+    title: "VC class transcript review",
+    description:
+      "Phase 3a: host Transcribe toggle saves Daily WebVTT to private Storage; teacher review page under /teacher/virtual-classroom/[sessionId]/transcript.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/teacher/virtual-classroom/host",
+    title: "VC class recording review",
+    description:
+      "Phase 3b: host Record toggle saves Daily cloud recording to private Storage; teacher playback under /teacher/virtual-classroom/[sessionId]/recording.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/teacher/virtual-classroom/host",
+    title: "VC Daily hardening (cookies / cleanup)",
+    description:
+      "Phase 3c: HMAC-signed host/member cookies, optional Upstash rate limits, cron cleanup at /api/cron/daily-cleanup.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/virtual-classroom/join",
+    title: "VC schedule join loop",
+    description:
+      "Schedule join loop Wave 1–2: waiting T−15, live T−5, teacher CTAs, student Live Now, attendance roster, class hub session history, waiting-room presence.",
     group: "classroom",
     status: "review",
   },

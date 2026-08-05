@@ -6,14 +6,9 @@ import {
   VC_HOST_COOKIE,
   VC_MEMBER_COOKIE,
 } from "@/lib/virtual-classroom/session-cookie";
+import { finalizeVirtualClassroomSessionClose } from "@/lib/virtual-classroom/server/close-session";
 import {
-  deleteLiveblocksRooms,
-  markVcSessionEndedInStorage,
-} from "@/lib/virtual-classroom/server/liveblocks-session";
-import {
-  endVirtualClassroomSession,
   getVirtualClassroomSessionById,
-  listWhiteboardRoomsForClassSession,
 } from "@/lib/virtual-classroom/server/session";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
 
@@ -82,11 +77,13 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true, alreadyEnded: true });
   }
 
-  await markVcSessionEndedInStorage(session.liveblocksRoomId);
-  await endVirtualClassroomSession(session.id);
-
-  const whiteboardRooms = await listWhiteboardRoomsForClassSession(session.id);
-  await deleteLiveblocksRooms([session.liveblocksRoomId, ...whiteboardRooms]);
+  try {
+    await finalizeVirtualClassroomSessionClose(session);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not end session.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   const response = NextResponse.json({ ok: true, ended: true });
   response.cookies.set(VC_HOST_COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });

@@ -1,9 +1,8 @@
 "use client";
 
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import type { AssessmentPart } from "@/lib/assessment/types";
 
 type StoryBankTitlePart = Extract<AssessmentPart, { kind: "story_bank_title" }>;
@@ -44,88 +43,7 @@ export function AssessmentStoryBankTitlePartEditor({ part, onChange }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Story + title
-      </p>
-
-      <label className="block text-[11px] font-bold text-stone-700">
-        Story heading
-        <input
-          value={storyTitle}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              storyTitle: event.target.value,
-            }))
-          }
-          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-        />
-      </label>
-
-      <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold text-stone-700">Word bank</p>
-          <button
-            type="button"
-            onClick={() =>
-              patchActivity((activity) => ({
-                ...activity,
-                words: [...activity.words, emptyWord()],
-              }))
-            }
-            className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
-          >
-            Add
-          </button>
-        </div>
-        <ul className="space-y-2">
-          {words.map((word) => (
-            <li key={word.id} className="flex items-center gap-1.5">
-              <input
-                value={word.word}
-                onChange={(event) => {
-                  const nextWord = event.target.value;
-                  patchActivity((activity) => ({
-                    ...activity,
-                    words: activity.words.map((row) =>
-                      row.id === word.id ? { ...row, word: nextWord } : row,
-                    ),
-                  }));
-                }}
-                className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-                aria-label="Bank word"
-              />
-              <button
-                type="button"
-                disabled={words.length <= 2}
-                onClick={() =>
-                  patchActivity((activity) => {
-                    const nextWords = activity.words.filter(
-                      (row) => row.id !== word.id,
-                    );
-                    const fallbackId = nextWords[0]?.id ?? "";
-                    return {
-                      ...activity,
-                      words: nextWords,
-                      segments: activity.segments.map((segment) =>
-                        segment.type === "gap" &&
-                        segment.correctWordId === word.id
-                          ? { ...segment, correctWordId: fallbackId }
-                          : segment,
-                      ),
-                    };
-                  })
-                }
-                className="shrink-0 rounded-md border border-red-200 px-2 py-1.5 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-35"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={segments.length}
         index={segmentIndex}
         onIndexChange={setSegmentIndex}
@@ -190,9 +108,88 @@ export function AssessmentStoryBankTitlePartEditor({ part, onChange }: Props) {
             )}
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
 
-      <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
+      <AssessmentInspectorSection title="Story setup" defaultOpen={false}>
+        <label className="block text-[11px] font-bold text-stone-700">
+          Story heading
+          <input
+            value={storyTitle}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                storyTitle: event.target.value,
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+          />
+        </label>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold text-stone-700">Word bank</p>
+            <button
+              type="button"
+              onClick={() =>
+                patchActivity((activity) => ({
+                  ...activity,
+                  words: [...activity.words, emptyWord()],
+                }))
+              }
+              className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
+            >
+              Add
+            </button>
+          </div>
+          <ul className="space-y-2">
+            {words.map((word) => (
+              <li key={word.id} className="flex items-center gap-1.5">
+                <input
+                  value={word.word}
+                  onChange={(event) => {
+                    const nextWord = event.target.value;
+                    patchActivity((activity) => ({
+                      ...activity,
+                      words: activity.words.map((row) =>
+                        row.id === word.id ? { ...row, word: nextWord } : row,
+                      ),
+                    }));
+                  }}
+                  className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+                  aria-label="Bank word"
+                />
+                <button
+                  type="button"
+                  disabled={words.length <= 2}
+                  onClick={() =>
+                    patchActivity((activity) => {
+                      const nextWords = activity.words.filter(
+                        (row) => row.id !== word.id,
+                      );
+                      const fallbackId = nextWords[0]?.id ?? "";
+                      return {
+                        ...activity,
+                        words: nextWords,
+                        segments: activity.segments.map((segment) =>
+                          segment.type === "gap" &&
+                          segment.correctWordId === word.id
+                            ? { ...segment, correctWordId: fallbackId }
+                            : segment,
+                        ),
+                      };
+                    })
+                  }
+                  className="shrink-0 rounded-md border border-red-200 px-2 py-1.5 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-35"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </AssessmentInspectorSection>
+
+      <AssessmentInspectorSection title="Title options" defaultOpen={false}>
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] font-bold text-stone-700">Title options</p>
           <button
@@ -264,7 +261,7 @@ export function AssessmentStoryBankTitlePartEditor({ part, onChange }: Props) {
         <p className="text-[10px] font-semibold text-stone-500">
           Selected radio = correct title for scoring.
         </p>
-      </div>
+      </AssessmentInspectorSection>
     </div>
   );
 }

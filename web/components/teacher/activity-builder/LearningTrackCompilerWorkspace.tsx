@@ -2,7 +2,15 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import {
   compileAndSaveLearningTrackToLibrary,
   listActivityLibraryEntries,
@@ -84,6 +92,22 @@ import "./ltc-workspace.css";
 
 /** Debounce before recompiling after beat/source edits. */
 const COMPILE_DEBOUNCE_MS = 450;
+
+const LTC_INSPECTOR_WIDTH_DEFAULT = 280;
+const LTC_INSPECTOR_WIDTH_MIN = 240;
+const LTC_INSPECTOR_WIDTH_MAX = 640;
+const LTC_INSPECTOR_WIDTH_STORAGE_KEY = "ltc-inspector-width-px";
+const LTC_LEFT_SETTINGS_WIDTH = 240;
+const LTC_CENTER_MIN = 280;
+
+function clampLtcInspectorWidth(width: number, layoutWidth: number) {
+  const layoutMax = Math.max(
+    LTC_INSPECTOR_WIDTH_MIN,
+    layoutWidth - LTC_LEFT_SETTINGS_WIDTH - LTC_CENTER_MIN,
+  );
+  const max = Math.min(LTC_INSPECTOR_WIDTH_MAX, layoutMax);
+  return Math.min(max, Math.max(LTC_INSPECTOR_WIDTH_MIN, Math.round(width)));
+}
 
 const FLASHCARD_FACE_LABELS: Record<GamesFlashcardFace, string> = {
   word: "Word",
@@ -190,7 +214,7 @@ function CollapsibleSettingsPanel({
 }) {
   const open = openSectionId === sectionId;
   return (
-    <div className="ltc-panel overflow-hidden rounded-lg border">
+    <div className="ltc-panel rounded-lg border">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors hover:bg-black/[0.03]"
@@ -308,6 +332,83 @@ export function LearningTrackCompilerWorkspace({
   useEffect(() => {
     onDraftSyncRef.current = onDraftSync;
   }, [onDraftSync]);
+
+  const [inspectorWidth, setInspectorWidth] = useState(LTC_INSPECTOR_WIDTH_DEFAULT);
+  const [inspectorResizing, setInspectorResizing] = useState(false);
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const inspectorDragRef = useRef<{ startX: number; startWidth: number } | null>(
+    null,
+  );
+  const inspectorWidthRef = useRef(inspectorWidth);
+  inspectorWidthRef.current = inspectorWidth;
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(LTC_INSPECTOR_WIDTH_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed)) return;
+      setInspectorWidth(clampLtcInspectorWidth(parsed, window.innerWidth));
+    } catch {
+      // Ignore storage failures (private mode, quota, etc.).
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!inspectorResizing) return;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [inspectorResizing]);
+
+  const persistInspectorWidth = useCallback((width: number) => {
+    try {
+      window.localStorage.setItem(LTC_INSPECTOR_WIDTH_STORAGE_KEY, String(width));
+    } catch {
+      // Ignore storage failures.
+    }
+  }, []);
+
+  const onInspectorResizePointerDown = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    inspectorDragRef.current = {
+      startX: event.clientX,
+      startWidth: inspectorWidth,
+    };
+    setInspectorResizing(true);
+  };
+
+  const onInspectorResizePointerMove = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    const drag = inspectorDragRef.current;
+    if (!drag) return;
+    const layoutWidth = layoutRef.current?.clientWidth ?? window.innerWidth;
+    const next = clampLtcInspectorWidth(
+      drag.startWidth + (drag.startX - event.clientX),
+      layoutWidth,
+    );
+    setInspectorWidth(next);
+  };
+
+  const endInspectorResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!inspectorDragRef.current) return;
+    inspectorDragRef.current = null;
+    setInspectorResizing(false);
+    persistInspectorWidth(inspectorWidthRef.current);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
   // Keep Track Builder localStorage draft aligned with LTC composition + bank refs.
   useEffect(() => {
@@ -647,6 +748,22 @@ export function LearningTrackCompilerWorkspace({
     selectedLifExamples.length,
     selectedBeat?.id ?? "lif",
   );
+
+  // Prefer the Questions / Examples inspector when switching to multi-item beats.
+  useEffect(() => {
+    const kind = selectedCompositionBeat?.kind;
+    if (kind === "multiple_choice") {
+      setRightOpenSectionId("mc-questions");
+      return;
+    }
+    if (kind === "listen_and_choose") {
+      setRightOpenSectionId("listen-questions");
+      return;
+    }
+    if (kind === "language_in_focus") {
+      setRightOpenSectionId("lif-questions");
+    }
+  }, [selectedCompositionBeat?.id, selectedCompositionBeat?.kind]);
 
   const updateHotspotsSettings = (
     next: LearningTrackExploreHotspotsSettings,
@@ -1138,7 +1255,13 @@ export function LearningTrackCompilerWorkspace({
         </button>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_240px]">
+      <div
+        ref={layoutRef}
+        style={{ ["--inspector-w" as string]: `${inspectorWidth}px` }}
+        className={`grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_var(--inspector-w)] ${
+          inspectorResizing ? "select-none" : ""
+        }`}
+      >
         {/* Left: track settings */}
         <aside className="min-h-0 space-y-3 overflow-y-auto border-b border-[var(--ltc-border)] p-3 lg:border-b-0 lg:border-r">
           <CollapsibleSettingsPanel
@@ -1300,7 +1423,30 @@ export function LearningTrackCompilerWorkspace({
         </section>
 
         {/* Right settings */}
-        <aside className="min-h-0 space-y-3 overflow-y-auto border-t border-[var(--ltc-border)] p-3 lg:border-l lg:border-t-0">
+        <aside className="relative min-h-0 space-y-3 overflow-y-auto border-t border-[var(--ltc-border)] p-3 lg:border-l lg:border-t-0">
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize settings panel"
+            aria-valuemin={LTC_INSPECTOR_WIDTH_MIN}
+            aria-valuemax={LTC_INSPECTOR_WIDTH_MAX}
+            aria-valuenow={inspectorWidth}
+            title="Drag to resize"
+            onPointerDown={onInspectorResizePointerDown}
+            onPointerMove={onInspectorResizePointerMove}
+            onPointerUp={endInspectorResize}
+            onPointerCancel={endInspectorResize}
+            className={`absolute top-0 bottom-0 left-0 z-20 hidden w-3 -translate-x-1/2 cursor-col-resize touch-none lg:block ${
+              inspectorResizing ? "bg-sky-400/25" : "hover:bg-sky-400/20"
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`absolute top-1/2 left-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full ${
+                inspectorResizing ? "bg-sky-500" : "bg-[var(--ltc-border)]"
+              }`}
+            />
+          </div>
           <div>
             <h2 className="text-[10px] font-semibold uppercase tracking-wide ltc-label">
               Selected activity
@@ -1535,6 +1681,7 @@ export function LearningTrackCompilerWorkspace({
           ) : null}
 
           {selectedMcSettings ? (
+            <>
             <CollapsibleSettingsPanel
               sectionId="mc-settings"
               title="Multiple choice settings"
@@ -1637,19 +1784,24 @@ export function LearningTrackCompilerWorkspace({
                   }
                 />
               </div>
+            </CollapsibleSettingsPanel>
+
+              <CollapsibleSettingsPanel
+                sectionId="mc-questions"
+                title="Questions"
+                openSectionId={rightOpenSectionId}
+                onOpenSection={setRightOpenSectionId}
+              >
+                <p className="text-[11px] leading-snug ltc-subtle">
+                  Override question text, option labels, correct answer, or prompt
+                  audio for individual items. Leave a field alone to keep the
+                  compiled value.
+                </p>
               {selectedMcItems.length > 0 ? (
-                <div className="mt-3 border-t border-stone-200/80 pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide ltc-label">
-                    Per-question polish
-                  </p>
-                  <p className="mt-1 text-[11px] leading-snug ltc-subtle">
-                    Override question text, option labels, correct answer, or
-                    prompt audio for individual items. Leave a field alone to
-                    keep the compiled value.
-                  </p>
-                  <div className="mt-3">
+                <div className="mt-3">
                     <AuthoringItemPager
                       tone="ltc"
+                      stickyNav
                       count={selectedMcItems.length}
                       index={mcItemIndex}
                       onIndexChange={setMcItemIndex}
@@ -1752,13 +1904,18 @@ export function LearningTrackCompilerWorkspace({
                       })()}
                     </AuthoringItemPager>
                   </div>
-                </div>
-              ) : selectedCompositionBeat?.source.type === "vocab_compile" ? (
-                <p className="mt-3 text-[11px] leading-snug ltc-subtle">
-                  Per-question editors appear after the preview compiles.
-                </p>
-              ) : null}
-            </CollapsibleSettingsPanel>
+                ) : selectedCompositionBeat?.source.type === "vocab_compile" ? (
+                  <p className="mt-3 text-[11px] leading-snug ltc-subtle">
+                    Per-question editors appear after the preview compiles.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-[11px] leading-snug ltc-subtle">
+                    Switch source mode to Vocabulary list, then wait for the
+                    preview to compile.
+                  </p>
+                )}
+              </CollapsibleSettingsPanel>
+            </>
           ) : null}
 
           {selectedLetterSettings ? (
@@ -1864,8 +2021,8 @@ export function LearningTrackCompilerWorkspace({
 
           {selectedListenSettings ? (
             <CollapsibleSettingsPanel
-              sectionId="listen-settings"
-              title="Listen & choose"
+              sectionId="listen-questions"
+              title="Questions"
               openSectionId={rightOpenSectionId}
               onOpenSection={setRightOpenSectionId}
             >
@@ -1878,6 +2035,7 @@ export function LearningTrackCompilerWorkspace({
                 <div className="mt-3">
                   <AuthoringItemPager
                     tone="ltc"
+                    stickyNav
                     count={selectedListenItems.length}
                     index={listenItemIndex}
                     onIndexChange={setListenItemIndex}
@@ -2141,8 +2299,8 @@ export function LearningTrackCompilerWorkspace({
 
           {selectedLifSettings ? (
             <CollapsibleSettingsPanel
-              sectionId="lif-settings"
-              title="Language in Focus listen audio"
+              sectionId="lif-questions"
+              title="Listen examples"
               openSectionId={rightOpenSectionId}
               onOpenSection={setRightOpenSectionId}
             >
@@ -2154,6 +2312,7 @@ export function LearningTrackCompilerWorkspace({
                 <div className="mt-3">
                   <AuthoringItemPager
                     tone="ltc"
+                    stickyNav
                     count={selectedLifExamples.length}
                     index={lifExampleIndex}
                     onIndexChange={setLifExampleIndex}

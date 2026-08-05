@@ -5,6 +5,8 @@ import {
   AuthoringItemPager,
   useAuthoringItemIndex,
 } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { AssessmentListeningAudioFields } from "@/components/teacher/activity-builder/AssessmentListeningAudioFields";
 import type { AssessmentPart } from "@/lib/assessment/types";
 
@@ -76,11 +78,7 @@ export function AssessmentListeningPictureChoicePartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Listening · picture choice
-      </p>
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={items.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -234,7 +232,7 @@ export function AssessmentListeningPictureChoicePartEditor({
             </AuthoringItemPager>
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
     </div>
   );
 }

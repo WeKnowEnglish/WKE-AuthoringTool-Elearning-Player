@@ -2,6 +2,7 @@ import { VirtualClassroomClassPanel } from "@/components/teacher/VirtualClassroo
 import { ClassHubHistoryAccordion } from "@/components/teacher/class-hub/ClassHubHistoryAccordion";
 import type { ClassLesson } from "@/lib/class-lessons/types";
 import type { LiveGameClassProjectOverview } from "@/lib/data/live-game-class-projects";
+import type { VirtualClassroomSessionHistoryItem } from "@/lib/virtual-classroom/session-history-types";
 import type { WhiteboardRoundHistoryItem } from "@/lib/whiteboard/server/history";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   readyLessons: ClassLesson[];
   liveGameProject: LiveGameClassProjectOverview;
   whiteboardHistory: WhiteboardRoundHistoryItem[];
+  vcSessionHistory: VirtualClassroomSessionHistoryItem[];
 };
 
 export function TeachTab({
@@ -24,6 +26,7 @@ export function TeachTab({
   readyLessons,
   liveGameProject,
   whiteboardHistory,
+  vcSessionHistory,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -48,6 +51,7 @@ export function TeachTab({
         archived={archived}
         liveGameProject={liveGameProject}
         whiteboardHistory={whiteboardHistory}
+        vcSessionHistory={vcSessionHistory}
       />
     </div>
   );

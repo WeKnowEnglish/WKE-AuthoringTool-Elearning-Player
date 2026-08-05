@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   encodeVcMemberToken,
   formatVcHostCookie,
-  vcHostMatchesJoinCode,
+  parseVcHostCookie,
   VC_HOST_COOKIE,
   VC_MEMBER_COOKIE,
 } from "@/lib/virtual-classroom/session-cookie";
@@ -47,9 +47,11 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const cookieStore = await cookies();
   const existingHost = cookieStore.get(VC_HOST_COOKIE)?.value;
-  const hostSecret = vcHostMatchesJoinCode(existingHost, session.joinCode)
-    ? existingHost!.slice(existingHost!.indexOf(".") + 1)
-    : randomBytes(24).toString("hex");
+  const parsedHost = parseVcHostCookie(existingHost);
+  const hostSecret =
+    parsedHost?.joinCode === session.joinCode.toUpperCase()
+      ? parsedHost.hostSecret
+      : randomBytes(24).toString("hex");
 
   const memberToken = encodeVcMemberToken({
     sessionId: session.id,

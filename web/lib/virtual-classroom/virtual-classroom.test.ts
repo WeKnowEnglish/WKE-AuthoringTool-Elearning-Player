@@ -27,7 +27,7 @@ describe("virtual classroom room ids", () => {
 });
 
 describe("virtual classroom cookies", () => {
-  it("round-trips member token and host cookie", () => {
+  it("round-trips signed member token and host cookie", () => {
     const token = encodeVcMemberToken({
       sessionId: "vcs_AB34CD",
       joinCode: "AB34CD",
@@ -36,8 +36,45 @@ describe("virtual classroom cookies", () => {
       displayName: "Sam",
       role: "member",
     });
+    expect(token.includes(".")).toBe(true);
     expect(decodeVcMemberToken(token)?.userId).toBe("u1");
-    expect(vcHostMatchesJoinCode(formatVcHostCookie("AB34CD", "secret"), "AB34CD")).toBe(true);
+    expect(vcHostMatchesJoinCode(formatVcHostCookie("AB34CD", "secret"), "AB34CD")).toBe(
+      true,
+    );
+  });
+
+  it("rejects unsigned or forged host cookies", () => {
+    expect(vcHostMatchesJoinCode("AB34CD.forged-secret", "AB34CD")).toBe(false);
+    expect(vcHostMatchesJoinCode(formatVcHostCookie("AB34CD", "secret") + "x", "AB34CD")).toBe(
+      false,
+    );
+  });
+
+  it("rejects unsigned member tokens and tampering", () => {
+    const unsigned = Buffer.from(
+      JSON.stringify({
+        sessionId: "vcs_AB34CD",
+        joinCode: "AB34CD",
+        roomId: "wke-vc-session-AB34CD",
+        userId: "u1",
+        displayName: "Sam",
+        role: "member",
+        expiresAt: Date.now() + 60_000,
+      }),
+      "utf8",
+    ).toString("base64url");
+    expect(decodeVcMemberToken(unsigned)).toBeNull();
+
+    const token = encodeVcMemberToken({
+      sessionId: "vcs_AB34CD",
+      joinCode: "AB34CD",
+      roomId: "wke-vc-session-AB34CD",
+      userId: "u1",
+      displayName: "Sam",
+      role: "member",
+    });
+    const [payload] = token.split(".");
+    expect(decodeVcMemberToken(`${payload}.tampered`)).toBeNull();
   });
 
   it("allows guest-style member tokens for one-off stress sessions", () => {

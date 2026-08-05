@@ -49,6 +49,8 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [todayStatus, setTodayStatus] = useState<string | null>(null);
+  const [todaySessionId, setTodaySessionId] = useState<string | null>(null);
 
   useEffect(() => {
     const detected = detectBrowserTimeZone();
@@ -59,6 +61,44 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
       );
     }
   }, [initialSlots.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/virtual-classroom/class/${encodeURIComponent(classId)}/live-state`,
+        );
+        if (!res.ok || cancelled) return;
+        const state = (await res.json()) as {
+          phase?: string;
+          occurrenceLabel?: string | null;
+          sessionId?: string | null;
+          kind?: string | null;
+        };
+        if (cancelled) return;
+        if (state.phase === "waiting" || state.phase === "live") {
+          setTodayStatus(
+            `${state.phase === "waiting" ? "Waiting room" : "Live"}${
+              state.occurrenceLabel ? ` · ${state.occurrenceLabel}` : ""
+            }${state.kind === "extra" ? " · Extra session" : ""}`,
+          );
+          setTodaySessionId(state.sessionId ?? null);
+        } else if (state.phase === "idle" && state.occurrenceLabel) {
+          setTodayStatus(`Upcoming · ${state.occurrenceLabel}`);
+          setTodaySessionId(null);
+        } else {
+          setTodayStatus(null);
+          setTodaySessionId(null);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [classId]);
 
   const timezoneOptions = useMemo(
     () => classScheduleTimezoneOptions(detectedZone),
@@ -112,6 +152,20 @@ export function ClassMeetingSchedulePanel({ classId, archived, initialSlots }: P
         Students see the weekly pattern and next lesson in Classroom. Linked parents
         see the same next lesson on the parent portal.
       </p>
+
+      {todayStatus ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-950">
+          <span className="font-semibold">{todayStatus}</span>
+          {todaySessionId ? (
+            <a
+              href={`/teacher/virtual-classroom/${todaySessionId}`}
+              className="font-bold text-teal-800 underline"
+            >
+              Open today’s class
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-semibold text-neutral-800">

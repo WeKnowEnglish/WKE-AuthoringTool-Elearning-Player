@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
 import type { StudentClassSchedule } from "@/lib/class-schedule/types";
+import type { StudentClassLiveSession } from "@/lib/student-live/types";
 import { ClassPostFeed } from "@/components/classroom/ClassPostFeed";
 import { ClassroomHomeworkSideCard } from "@/components/classroom/ClassroomHomeworkSideCard";
 import { ClassroomNextClassCard } from "@/components/classroom/ClassroomNextClassCard";
@@ -15,6 +16,7 @@ type Props = {
   /** Link to full noticeboard tab when feed is truncated. */
   noticeboardHref?: string;
   scheduleHref?: string;
+  liveSession?: StudentClassLiveSession | null;
 };
 
 const STREAM_POST_LIMIT = 8;
@@ -27,6 +29,7 @@ export function ClassroomStream({
   tone = "primary",
   noticeboardHref,
   scheduleHref,
+  liveSession = null,
 }: Props) {
   const isSecondary = tone === "secondary";
   const muted = isSecondary ? "text-sec-muted" : "text-[var(--pl-muted)]";
@@ -96,6 +99,7 @@ export function ClassroomStream({
           nextMeeting={schedule.nextMeeting}
           scheduleHref={scheduleHref}
           tone={tone}
+          liveSession={liveSession}
         />
       </aside>
     </div>

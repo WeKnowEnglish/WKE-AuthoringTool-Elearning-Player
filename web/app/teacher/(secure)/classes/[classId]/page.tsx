@@ -22,6 +22,7 @@ import { listMyTeacherSpaceItems } from "@/lib/data/teacher-space";
 import { listPublishedQuestionSetsForHost } from "@/lib/live-game/server/question-set-list";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveVirtualClassroomForClass } from "@/lib/virtual-classroom/server/session";
+import { listVirtualClassroomSessionHistoryForClass } from "@/lib/virtual-classroom/server/session-history";
 import { listClassWhiteboardHistory } from "@/lib/whiteboard/server/history";
 
 type Props = {
@@ -46,6 +47,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     liveGameProject,
     whiteboardHistory,
     activeVc,
+    vcSessionHistory,
     wordPacks,
     lessons,
     studioActivities,
@@ -64,6 +66,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     getLiveGameClassProjectOverview(classId),
     listClassWhiteboardHistory(classId),
     getActiveVirtualClassroomForClass(classId),
+    listVirtualClassroomSessionHistoryForClass(classId).catch(() => []),
     listTeacherWordPacksForClass(classId),
     listClassLessonsWithStepsForClass(classId),
     listMyStudioActivities(),
@@ -148,6 +151,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         wordPacks={wordPacks}
         liveGameProject={liveGameProject}
         whiteboardHistory={whiteboardHistory}
+        vcSessionHistory={vcSessionHistory}
         lessons={lessons}
         studioActivities={studioActivities}
         liveGameSets={liveGameSets}

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { VirtualClassroomWaitingClient } from "@/components/virtual-classroom/VirtualClassroomWaitingClient";
 import { getClassLiveState } from "@/lib/class-schedule/live-state";
-import { ensureClassSessionForClock } from "@/lib/class-schedule/ensure-session";
 import { createClient } from "@/lib/supabase/server";
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
 import { getWaitingRoomState } from "@/lib/virtual-classroom/server/waiting-room-state";
@@ -37,10 +36,6 @@ export default async function VirtualClassroomWaitingPage({ params }: PageProps)
     } catch {
       redirect("/virtual-classroom/join");
     }
-    await ensureClassSessionForClock({
-      classId: session.classId,
-      mode: "auto",
-    }).catch(() => undefined);
     const state = await getClassLiveState(session.classId);
     if (state.phase === "live" && state.canStudentEnterLive) {
       redirect(`/virtual-classroom/${encodeURIComponent(sessionId)}`);

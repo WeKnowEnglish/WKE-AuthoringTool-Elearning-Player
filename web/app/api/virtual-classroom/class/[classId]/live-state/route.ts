@@ -6,22 +6,26 @@ import { requireWhiteboardStudent } from "@/lib/whiteboard/product/access";
 
 type RouteContext = { params: Promise<{ classId: string }> };
 
-/** Public-ish live state for a class (auth: enrolled student or owning teacher). */
+/** Live state for a class (auth: enrolled student or owning teacher). */
 export async function GET(_request: Request, context: RouteContext) {
   const { classId } = await context.params;
+  let isTeacher = false;
   try {
-    await requireWhiteboardStudent(classId);
+    await requireWhiteboardTeacher(classId);
+    isTeacher = true;
   } catch {
     try {
-      await requireWhiteboardTeacher(classId);
+      await requireWhiteboardStudent(classId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unauthorized";
       return NextResponse.json({ error: message }, { status: 403 });
     }
   }
 
-  // Lazy clock tick so waiting/live sessions appear without waiting for cron.
-  await ensureClassSessionForClock({ classId, mode: "auto" }).catch(() => undefined);
+  // Only teachers/cron bootstrap sessions — students read schedule + existing session.
+  if (isTeacher) {
+    await ensureClassSessionForClock({ classId, mode: "auto" }).catch(() => undefined);
+  }
   const state = await getClassLiveState(classId);
   return NextResponse.json(state);
 }

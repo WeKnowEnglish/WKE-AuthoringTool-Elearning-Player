@@ -138,7 +138,7 @@ curl -X POST "https://YOUR_APP/api/cron/class-clock" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Ensures waiting sessions from T−15 and promotes to live at T−5. Lazy ensure also runs when students/teachers hit live-state.
+Ensures waiting sessions from T−15 and promotes to live at T−5. Lazy ensure runs when teachers hit live-state or host; students only read live-state.
 
 ## Transcripts (Phase 3a)
 

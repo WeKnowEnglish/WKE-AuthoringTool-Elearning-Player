@@ -1,5 +1,4 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { ensureClassSessionForClock } from "@/lib/class-schedule/ensure-session";
 import { getClassLiveState } from "@/lib/class-schedule/live-state";
 import { getStudentClassMembership, getStudentClassMemberships } from "@/lib/data/student-classes";
 import {
@@ -40,7 +39,6 @@ export async function getActiveLiveSessionForStudentClass(
   const membership = await getStudentClassMembership(classId);
   if (!membership) return null;
 
-  await ensureClassSessionForClock({ classId, mode: "auto" }).catch(() => undefined);
   const state = await getClassLiveState(classId);
   return mapFromLiveState(membership, state);
 }
@@ -52,10 +50,6 @@ export async function listActiveLiveSessionsForStudent(): Promise<StudentClassLi
   const live: StudentClassLiveSession[] = [];
 
   for (const membership of memberships) {
-    await ensureClassSessionForClock({
-      classId: membership.classId,
-      mode: "auto",
-    }).catch(() => undefined);
     const state = await getClassLiveState(membership.classId);
     const mapped = mapFromLiveState(membership, state);
     if (mapped) live.push(mapped);

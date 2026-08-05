@@ -225,6 +225,10 @@ export function VocabularyListWorkspace({
     [clearAutosaveTimer],
   );
 
+  const studioCompileHref = studioOrigin
+    ? `${studioOrigin}/activity-builder/vocabulary-lists`
+    : null;
+
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(null), BANNER_DISMISS_MS);

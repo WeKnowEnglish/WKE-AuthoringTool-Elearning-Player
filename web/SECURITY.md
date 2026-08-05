@@ -42,4 +42,8 @@ If this key leaks, revoke it in Google AI Studio and create a new one.
 
 ## Rate limits
 
-Teacher AI generation is limited per teacher user in-memory (see `lib/rate-limit/memory.ts`). For multiple server instances, replace with Redis/Upstash or similar.
+Teacher AI generation is limited per teacher user in-memory (see `lib/rate-limit/memory.ts`).
+
+Daily video routes use `lib/rate-limit` — **Upstash Redis** when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, otherwise in-memory per instance.
+
+Virtual Classroom host/member cookies are HMAC-signed (`VIRTUAL_CLASSROOM_COOKIE_SECRET` or `LIVEBLOCKS_SECRET_KEY`).

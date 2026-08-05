@@ -108,3 +108,48 @@ export const DAILY_TRANSCRIPT_WEBHOOK_TYPES = new Set([
   "transcript.error",
 ]);
 
+export type DailyRecordingWebhookPayload = {
+  recordingId: string;
+  roomName: string;
+  duration?: number;
+  status?: string;
+  error?: string;
+};
+
+export function parseRecordingPayload(
+  payload: Record<string, unknown> | undefined,
+): DailyRecordingWebhookPayload | null {
+  if (!payload) return null;
+  const recordingId =
+    typeof payload.recording_id === "string"
+      ? payload.recording_id.trim()
+      : typeof payload.id === "string"
+        ? payload.id.trim()
+        : "";
+  const roomName =
+    typeof payload.room_name === "string"
+      ? payload.room_name.trim()
+      : typeof payload.roomName === "string"
+        ? payload.roomName.trim()
+        : "";
+  if (!recordingId || !roomName) return null;
+  return {
+    recordingId,
+    roomName,
+    duration: typeof payload.duration === "number" ? payload.duration : undefined,
+    status: typeof payload.status === "string" ? payload.status : undefined,
+    error:
+      typeof payload.error === "string"
+        ? payload.error
+        : typeof payload.message === "string"
+          ? payload.message
+          : undefined,
+  };
+}
+
+export const DAILY_RECORDING_WEBHOOK_TYPES = new Set([
+  "recording.started",
+  "recording.ready-to-download",
+  "recording.error",
+]);
+

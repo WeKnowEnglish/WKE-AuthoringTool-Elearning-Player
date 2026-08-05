@@ -2,27 +2,24 @@ import { NextResponse } from "next/server";
 import { authorizeDailyMeetingToken } from "@/lib/daily/authorize-token";
 import { allowDailyTokenRequest } from "@/lib/daily/rate-limit";
 import {
+  createProcessingRecordingRow,
+  createRecordingSignedUrl,
+  getLatestRecordingForSession,
+  listRecordingsForSession,
+  markSessionRecordingEnabled,
+  startDailyRoomRecording,
+  stopDailyRoomRecording,
+} from "@/lib/daily/recording";
+import {
   getOrCreateDailyRoomForSession,
   getVirtualClassroomSessionWithDaily,
 } from "@/lib/daily/session-room";
-import {
-  createProcessingTranscriptRow,
-  createTranscriptSignedUrl,
-  getLatestTranscriptForSession,
-  listTranscriptsForSession,
-  markSessionTranscriptionEnabled,
-  startDailyRoomTranscription,
-  stopDailyRoomTranscription,
-  vttToPlainText,
-} from "@/lib/daily/transcription";
 import { DailyApiError, DailyConfigError } from "@/lib/daily/types";
 import { isDailyEnabled } from "@/lib/env/daily-server";
-import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
-/** Teacher/host: latest transcript status (+ signed URL / plain text when ready). */
 export async function GET(_request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
   if (!isDailyEnabled()) {
@@ -44,37 +41,24 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: message, code: "not_host" }, { status: 403 });
   }
 
-  const latest = await getLatestTranscriptForSession(sessionId);
-  const all = await listTranscriptsForSession(sessionId);
-
+  const latest = await getLatestRecordingForSession(sessionId);
+  const all = await listRecordingsForSession(sessionId);
   let signedUrl: string | null = null;
-  let plainText: string | null = null;
   if (latest?.status === "ready" && latest.storagePath) {
-    signedUrl = await createTranscriptSignedUrl(latest.storagePath);
-    const supabase = createServiceRoleSupabase();
-    if (supabase) {
-      const { data } = await supabase.storage
-        .from(latest.storageBucket ?? "vc_transcripts")
-        .download(latest.storagePath);
-      if (data) {
-        plainText = vttToPlainText(await data.text());
-      }
-    }
+    signedUrl = await createRecordingSignedUrl(latest.storagePath);
   }
 
   return NextResponse.json({
     sessionId,
-    transcriptionEnabled: session.transcriptionEnabled,
+    recordingEnabled: session.recordingEnabled,
     latest,
-    transcripts: all,
+    recordings: all,
     signedUrl,
-    plainText,
   });
 }
 
 type Body = { action?: "start" | "stop" };
 
-/** Host-only start/stop Daily real-time transcription (opt-in). */
 export async function POST(request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
   if (!isDailyEnabled()) {
@@ -107,7 +91,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!(await allowDailyTokenRequest(hostUserId, sessionId))) {
     return NextResponse.json(
-      { error: "Too many transcription requests.", code: "rate_limited" },
+      { error: "Too many recording requests.", code: "rate_limited" },
       { status: 429 },
     );
   }
@@ -128,10 +112,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const room =
       session.dailyRoomName && session.dailyRoomUrl
-        ? {
-            name: session.dailyRoomName,
-            url: session.dailyRoomUrl,
-          }
+        ? { name: session.dailyRoomName, url: session.dailyRoomUrl }
         : await getOrCreateDailyRoomForSession(sessionId);
 
     if (!room?.name) {
@@ -141,7 +122,6 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    // Ensure caller is still an authorized host in the call sense.
     const auth = await authorizeDailyMeetingToken(session, {
       ignoreEarlyJoin: true,
     });
@@ -153,26 +133,26 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     if (body.action === "start") {
-      await startDailyRoomTranscription({ roomName: room.name });
-      await markSessionTranscriptionEnabled(sessionId, true);
-      const row = await createProcessingTranscriptRow({
+      await startDailyRoomRecording({ roomName: room.name });
+      await markSessionRecordingEnabled(sessionId, true);
+      const row = await createProcessingRecordingRow({
         sessionId,
         roomName: room.name,
       });
       return NextResponse.json({
         ok: true,
         action: "start",
-        transcriptionEnabled: true,
-        transcript: row,
+        recordingEnabled: true,
+        recording: row,
       });
     }
 
-    await stopDailyRoomTranscription({ roomName: room.name });
-    await markSessionTranscriptionEnabled(sessionId, false);
+    await stopDailyRoomRecording({ roomName: room.name });
+    await markSessionRecordingEnabled(sessionId, false);
     return NextResponse.json({
       ok: true,
       action: "stop",
-      transcriptionEnabled: false,
+      recordingEnabled: false,
     });
   } catch (error) {
     if (error instanceof DailyConfigError) {
@@ -188,7 +168,7 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
     const message =
-      error instanceof Error ? error.message : "Transcription command failed.";
+      error instanceof Error ? error.message : "Recording command failed.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

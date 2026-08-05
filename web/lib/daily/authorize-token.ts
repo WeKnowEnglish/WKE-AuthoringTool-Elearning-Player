@@ -36,7 +36,7 @@ type IdentityResult = DailyTokenAuthSuccess | DailyTokenAuthFailure;
 
 /**
  * Session membership → Daily identity.
- * Teacher/owner requires a valid host cookie (never trust unsigned member.role).
+ * Teacher/owner requires a valid **signed** host cookie (never trust member.role).
  */
 export async function resolveDailyIdentity(
   session: VirtualClassroomSessionWithDaily,
@@ -140,7 +140,7 @@ export async function resolveDailyIdentity(
         (user.user_metadata?.display_name as string | undefined)?.trim() ||
         member.displayName ||
         "Participant",
-      // Unsigned member cookie must not mint owner tokens.
+      // Signed member cookie still must not mint owner tokens without host cookie.
       role: "guest",
     };
   }

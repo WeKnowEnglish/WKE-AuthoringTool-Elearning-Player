@@ -1,9 +1,12 @@
 import "server-only";
 
-import { rateLimitAllow } from "@/lib/rate-limit/memory";
+import { rateLimitAllow } from "@/lib/rate-limit";
 
 /** Token minting: generous enough for refresh + reconnect, tight against abuse. */
-export function allowDailyTokenRequest(participantKey: string, sessionId: string): boolean {
+export async function allowDailyTokenRequest(
+  participantKey: string,
+  sessionId: string,
+): Promise<boolean> {
   return rateLimitAllow(
     `daily-token:${sessionId}:${participantKey}`,
     30,
@@ -12,10 +15,10 @@ export function allowDailyTokenRequest(participantKey: string, sessionId: string
 }
 
 /** Provisional attendance join/leave spam guard. */
-export function allowDailyAttendanceRequest(
+export async function allowDailyAttendanceRequest(
   participantKey: string,
   sessionId: string,
-): boolean {
+): Promise<boolean> {
   return rateLimitAllow(
     `daily-attendance:${sessionId}:${participantKey}`,
     60,
@@ -24,6 +27,9 @@ export function allowDailyAttendanceRequest(
 }
 
 /** Host room create/ensure. */
-export function allowDailyRoomCreate(hostUserId: string, sessionId: string): boolean {
+export async function allowDailyRoomCreate(
+  hostUserId: string,
+  sessionId: string,
+): Promise<boolean> {
   return rateLimitAllow(`daily-room:${sessionId}:${hostUserId}`, 20, 60 * 1000);
 }

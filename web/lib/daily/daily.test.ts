@@ -150,7 +150,7 @@ describe("createPrivateDailyRoom", () => {
     delete process.env.DAILY_API_KEY;
   });
 
-  it("creates a private room with exp and recording off", async () => {
+  it("creates a private room with cloud recording allowed (no auto-start)", async () => {
     const fetchImpl = vi.fn(async () =>
       Response.json({
         name: "wke-d-test",
@@ -172,14 +172,14 @@ describe("createPrivateDailyRoom", () => {
       privacy: string;
       name: string;
       properties: {
-        enable_recording: boolean;
+        enable_recording: boolean | string;
         enable_transcription_storage?: boolean;
         exp: number;
       };
     };
     expect(body.privacy).toBe("private");
     expect(body.name).toBe(opaqueDailyRoomName("vcs_AB34CD"));
-    expect(body.properties.enable_recording).toBe(false);
+    expect(body.properties.enable_recording).toBe("cloud");
     expect(body.properties.enable_transcription_storage).toBe(true);
     expect(body.properties.exp).toBe(
       Math.floor(Date.parse("2026-07-30T16:00:00.000Z") / 1000),

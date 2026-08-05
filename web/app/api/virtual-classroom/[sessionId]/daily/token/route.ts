@@ -35,7 +35,7 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  if (!allowDailyTokenRequest(auth.userId, sessionId)) {
+  if (!(await allowDailyTokenRequest(auth.userId, sessionId))) {
     return NextResponse.json(
       {
         error: "Too many video token requests. Try again shortly.",

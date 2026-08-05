@@ -7,15 +7,22 @@ import {
 } from "@/lib/daily/attendance";
 import { logDaily } from "@/lib/daily/log";
 import {
+  createProcessingRecordingRow,
+  markLatestRecordingFailed,
+  persistReadyRecording,
+} from "@/lib/daily/recording";
+import {
   createProcessingTranscriptRow,
   markLatestProcessingFailed,
   persistReadyTranscript,
 } from "@/lib/daily/transcription";
 import {
   dailyRoleFromWebhook,
+  DAILY_RECORDING_WEBHOOK_TYPES,
   DAILY_TRANSCRIPT_WEBHOOK_TYPES,
   parseDailyWebhookEnvelope,
   parseParticipantPayload,
+  parseRecordingPayload,
   parseTranscriptPayload,
 } from "@/lib/daily/webhook-events";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
@@ -177,6 +184,91 @@ async function processTranscriptWebhook(input: {
   }
 }
 
+async function processRecordingWebhook(input: {
+  eventType: string;
+  eventId: string | null;
+  payload: Record<string, unknown> | undefined;
+}): Promise<ProcessDailyWebhookResult> {
+  const recording = parseRecordingPayload(input.payload);
+  if (!recording) {
+    logDaily("webhook_bad_recording_payload", {
+      eventType: input.eventType,
+      eventId: input.eventId,
+    });
+    return { ok: true, status: "ignored", eventType: input.eventType };
+  }
+
+  if (input.eventId) {
+    const claim = await claimWebhookEvent({
+      eventId: input.eventId,
+      eventType: input.eventType,
+      roomName: recording.roomName,
+    });
+    if (claim === "duplicate") {
+      return { ok: true, status: "duplicate", eventType: input.eventType };
+    }
+  }
+
+  const sessionId = await findSessionIdByDailyRoomName(recording.roomName);
+  if (!sessionId) {
+    if (input.eventId) {
+      await finalizeWebhookEvent({
+        eventId: input.eventId,
+        status: "ignored",
+        errorMessage: "No class_sessions row for recording room",
+      });
+    }
+    return { ok: true, status: "ignored", eventType: input.eventType, sessionId: null };
+  }
+
+  try {
+    if (input.eventType === "recording.started") {
+      await createProcessingRecordingRow({
+        sessionId,
+        roomName: recording.roomName,
+      });
+    } else if (input.eventType === "recording.ready-to-download") {
+      await persistReadyRecording({
+        sessionId,
+        dailyRecordingId: recording.recordingId,
+        roomName: recording.roomName,
+        durationSeconds: recording.duration ?? null,
+      });
+    } else if (input.eventType === "recording.error") {
+      await markLatestRecordingFailed(
+        sessionId,
+        recording.error ?? "Daily recording error",
+      );
+    }
+
+    if (input.eventId) {
+      await finalizeWebhookEvent({
+        eventId: input.eventId,
+        sessionId,
+        status: "processed",
+      });
+    }
+    return { ok: true, status: "processed", eventType: input.eventType, sessionId };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "recording process failed";
+    logDaily("webhook_recording_error", {
+      eventType: input.eventType,
+      eventId: input.eventId,
+      message,
+    });
+    if (input.eventId) {
+      await finalizeWebhookEvent({
+        eventId: input.eventId,
+        sessionId,
+        status: "error",
+        errorMessage: message,
+      });
+    }
+    return { ok: true, status: "ignored", eventType: input.eventType, sessionId };
+  }
+}
+
 /**
  * Handle a verified Daily webhook body (signature already checked).
  */
@@ -196,6 +288,14 @@ export async function processDailyWebhookBody(
 
   if (DAILY_TRANSCRIPT_WEBHOOK_TYPES.has(eventType)) {
     return processTranscriptWebhook({
+      eventType,
+      eventId,
+      payload: envelope.payload,
+    });
+  }
+
+  if (DAILY_RECORDING_WEBHOOK_TYPES.has(eventType)) {
+    return processRecordingWebhook({
       eventType,
       eventId,
       payload: envelope.payload,

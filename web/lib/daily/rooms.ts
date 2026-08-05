@@ -35,7 +35,9 @@ export async function createPrivateDailyRoom(input: {
         properties: {
           exp: expUnix,
           enable_chat: false,
-          enable_recording: false,
+          // Cloud allowed for host REST start/stop; tokens keep enable_recording
+          // false + start_cloud_recording false so Prebuilt never auto-records.
+          enable_recording: "cloud",
           enable_transcription_storage: true,
           start_video_off: false,
           start_audio_off: false,

@@ -45,7 +45,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  if (!allowDailyAttendanceRequest(auth.userId, sessionId)) {
+  if (!(await allowDailyAttendanceRequest(auth.userId, sessionId))) {
     return NextResponse.json(
       {
         error: "Too many attendance events. Try again shortly.",

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { vttToPlainText } from "@/lib/daily/transcription";
-import { parseTranscriptPayload } from "@/lib/daily/webhook-events";
+import {
+  parseRecordingPayload,
+  parseTranscriptPayload,
+} from "@/lib/daily/webhook-events";
 
 describe("vttToPlainText", () => {
   it("strips cues and keeps spoken lines", () => {
@@ -33,5 +36,28 @@ describe("parseTranscriptPayload", () => {
       status: "t_finished",
       error: undefined,
     });
+  });
+});
+
+describe("parseRecordingPayload", () => {
+  it("reads ready-to-download shape", () => {
+    const parsed = parseRecordingPayload({
+      recording_id: "rec-abc-123",
+      room_name: "wke-d-abc",
+      duration: 90.5,
+      status: "finished",
+    });
+    expect(parsed).toEqual({
+      recordingId: "rec-abc-123",
+      roomName: "wke-d-abc",
+      duration: 90.5,
+      status: "finished",
+      error: undefined,
+    });
+  });
+
+  it("rejects incomplete payloads", () => {
+    expect(parseRecordingPayload({ recording_id: "x" })).toBeNull();
+    expect(parseRecordingPayload({ room_name: "wke-d-abc" })).toBeNull();
   });
 });

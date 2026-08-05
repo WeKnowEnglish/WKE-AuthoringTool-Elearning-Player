@@ -86,7 +86,7 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: message, code: "not_host" }, { status: 403 });
   }
 
-  if (!allowDailyRoomCreate(hostUserId, sessionId)) {
+  if (!(await allowDailyRoomCreate(hostUserId, sessionId))) {
     return NextResponse.json(
       { error: "Too many room create requests. Try again shortly.", code: "rate_limited" },
       { status: 429 },

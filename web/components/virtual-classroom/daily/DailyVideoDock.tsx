@@ -40,7 +40,12 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
   const [hostAutoPrompted, setHostAutoPrompted] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
-  const [transcriptNote, setTranscriptNote] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recordBusy, setRecordBusy] = useState(false);
+  const [hostNote, setHostNote] = useState<string | null>(null);
+  const [hostNoteKind, setHostNoteKind] = useState<"transcript" | "recording" | null>(
+    null,
+  );
 
   useEffect(() => {
     try {
@@ -101,7 +106,8 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
   const toggleTranscription = async () => {
     if (!isHost || transcriptBusy) return;
     setTranscriptBusy(true);
-    setTranscriptNote(null);
+    setHostNote(null);
+    setHostNoteKind(null);
     try {
       const action = transcribing ? "stop" : "start";
       const res = await fetch(
@@ -117,19 +123,61 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
         transcriptionEnabled?: boolean;
       };
       if (!res.ok) {
-        setTranscriptNote(payload.error ?? "Transcription request failed.");
+        setHostNote(payload.error ?? "Transcription request failed.");
+        setHostNoteKind("transcript");
         return;
       }
       setTranscribing(Boolean(payload.transcriptionEnabled));
-      setTranscriptNote(
+      setHostNoteKind("transcript");
+      setHostNote(
         action === "start"
           ? "Transcribing… Stop when the class ends to save the transcript."
           : "Stopping… transcript will appear for review when ready.",
       );
     } catch {
-      setTranscriptNote("Transcription request failed.");
+      setHostNote("Transcription request failed.");
+      setHostNoteKind("transcript");
     } finally {
       setTranscriptBusy(false);
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (!isHost || recordBusy) return;
+    setRecordBusy(true);
+    setHostNote(null);
+    setHostNoteKind(null);
+    try {
+      const action = recording ? "stop" : "start";
+      const res = await fetch(
+        `/api/virtual-classroom/${sessionId}/daily/recording`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      );
+      const payload = (await res.json()) as {
+        error?: string;
+        recordingEnabled?: boolean;
+      };
+      if (!res.ok) {
+        setHostNote(payload.error ?? "Recording request failed.");
+        setHostNoteKind("recording");
+        return;
+      }
+      setRecording(Boolean(payload.recordingEnabled));
+      setHostNoteKind("recording");
+      setHostNote(
+        action === "start"
+          ? "Recording… Stop when finished; playback appears on the review page."
+          : "Stopping… recording will appear for review when ready.",
+      );
+    } catch {
+      setHostNote("Recording request failed.");
+      setHostNoteKind("recording");
+    } finally {
+      setRecordBusy(false);
     }
   };
 
@@ -200,24 +248,42 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
                 Class video
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {joined && isHost ? (
-                  <button
-                    type="button"
-                    disabled={transcriptBusy}
-                    onClick={() => void toggleTranscription()}
-                    className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
-                      transcribing
-                        ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                        : "border border-slate-600 text-slate-100 hover:bg-slate-800"
-                    }`}
-                  >
-                    {transcriptBusy
-                      ? "…"
-                      : transcribing
-                        ? "Stop transcript"
-                        : "Transcribe"}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={transcriptBusy}
+                      onClick={() => void toggleTranscription()}
+                      className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
+                        transcribing
+                          ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                          : "border border-slate-600 text-slate-100 hover:bg-slate-800"
+                      }`}
+                    >
+                      {transcriptBusy
+                        ? "…"
+                        : transcribing
+                          ? "Stop transcript"
+                          : "Transcribe"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={recordBusy}
+                      onClick={() => void toggleRecording()}
+                      className={`rounded-md px-2.5 py-1 text-xs font-bold disabled:opacity-50 ${
+                        recording
+                          ? "bg-rose-500 text-white hover:bg-rose-400"
+                          : "border border-slate-600 text-slate-100 hover:bg-slate-800"
+                      }`}
+                    >
+                      {recordBusy
+                        ? "…"
+                        : recording
+                          ? "Stop record"
+                          : "Record"}
+                    </button>
+                  </>
                 ) : null}
                 {joined ? (
                   <button
@@ -238,15 +304,25 @@ export function DailyVideoDock({ sessionId, isHost, sessionEnded }: Props) {
               </div>
             </div>
           ) : null}
-          {expanded && isHost && transcriptNote ? (
+          {expanded && isHost && hostNote ? (
             <p className="border-b border-slate-700 px-3 py-1.5 text-[11px] text-slate-300">
-              {transcriptNote}{" "}
-              <a
-                href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/transcript`}
-                className="font-bold text-teal-300 underline"
-              >
-                Review
-              </a>
+              {hostNote}{" "}
+              {hostNoteKind === "transcript" ? (
+                <a
+                  href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/transcript`}
+                  className="font-bold text-teal-300 underline"
+                >
+                  Review transcript
+                </a>
+              ) : null}
+              {hostNoteKind === "recording" ? (
+                <a
+                  href={`/teacher/virtual-classroom/${encodeURIComponent(sessionId)}/recording`}
+                  className="font-bold text-teal-300 underline"
+                >
+                  Review recording
+                </a>
+              ) : null}
             </p>
           ) : null}
           <div

@@ -6,7 +6,7 @@ const buckets = new Map<string, Bucket>();
  * Fixed-window rate limit. Returns true if the request is allowed.
  * In-memory only — resets on server restart; use Redis/Upstash for multi-instance.
  */
-export function rateLimitAllow(
+export function rateLimitAllowMemory(
   key: string,
   max: number,
   windowMs: number,
@@ -20,4 +20,13 @@ export function rateLimitAllow(
   if (b.count >= max) return false;
   b.count += 1;
   return true;
+}
+
+/** @deprecated Prefer rateLimitAllow from `@/lib/rate-limit` (Upstash-aware). */
+export function rateLimitAllow(
+  key: string,
+  max: number,
+  windowMs: number,
+): boolean {
+  return rateLimitAllowMemory(key, max, windowMs);
 }

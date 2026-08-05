@@ -58,6 +58,7 @@ export function VirtualClassroomHostClient() {
         role: "host",
         userId: payload.userId,
         displayName: payload.displayName ?? "Teacher",
+        returnHref: "/teacher/virtual-classroom/host",
       });
       router.push(`/teacher/virtual-classroom/${payload.sessionId}`);
     } catch (err) {

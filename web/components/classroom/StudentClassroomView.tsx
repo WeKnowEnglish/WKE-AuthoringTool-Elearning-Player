@@ -90,7 +90,12 @@ export function StudentClassroomView({
           if (tab === "schedule" && tabSettings.schedule) {
             return (
               <div className="mx-auto w-full max-w-3xl">
-                <ClassMeetingSchedule schedule={schedule} tone={tone} />
+                <ClassMeetingSchedule
+                  schedule={schedule}
+                  tone={tone}
+                  livePhase={liveSession?.phase ?? null}
+                  liveMeetingSlotId={liveSession?.meetingSlotId ?? null}
+                />
               </div>
             );
           }
@@ -117,6 +122,7 @@ export function StudentClassroomView({
               tone={tone}
               noticeboardHref={noticeboardHref}
               scheduleHref={scheduleHref}
+              liveSession={liveSession}
             />
           );
         }}

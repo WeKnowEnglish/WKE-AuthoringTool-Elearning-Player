@@ -38,6 +38,7 @@ describe("evaluateSessionJoinability Phase 2b", () => {
   it("enforces role-based early join against schedule", () => {
     const startsAt = new Date(now + 20 * 60 * 1000).toISOString(); // 20 min out
 
+    // Teachers may join video up to 60m early.
     expect(
       evaluateSessionJoinability({
         status: "active",
@@ -47,6 +48,7 @@ describe("evaluateSessionJoinability Phase 2b", () => {
       }),
     ).toEqual({ ok: true });
 
+    // Students only from T−5 (live open).
     expect(
       evaluateSessionJoinability({
         status: "active",

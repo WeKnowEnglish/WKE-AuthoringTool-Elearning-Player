@@ -1,5 +1,9 @@
 import "server-only";
 
+import type {
+  ClassSessionKind,
+  ClassSessionPhase,
+} from "@/lib/class-schedule/class-clock";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import type {
   VirtualClassroomSessionRecord,
@@ -7,6 +11,11 @@ import type {
 } from "@/lib/virtual-classroom/domain";
 
 function mapRow(row: Record<string, unknown>): VirtualClassroomSessionRecord {
+  const status = row.status as VirtualClassroomSessionStatus;
+  const kind = (row.session_kind as ClassSessionKind | null) ?? "extra";
+  const phase =
+    (row.class_phase as ClassSessionPhase | null) ??
+    (status === "ended" ? "ended" : "live");
   return {
     id: row.id as string,
     classId: (row.class_id as string | null) ?? null,
@@ -14,10 +23,15 @@ function mapRow(row: Record<string, unknown>): VirtualClassroomSessionRecord {
     joinCode: (row.join_code as string) ?? "",
     liveblocksRoomId: (row.liveblocks_room_id as string) ?? "",
     title: row.title as string,
-    status: row.status as VirtualClassroomSessionStatus,
+    status,
     createdBy: row.created_by as string,
     createdAt: row.created_at as string,
     endedAt: (row.ended_at as string | null) ?? null,
+    meetingSlotId: (row.meeting_slot_id as string | null) ?? null,
+    occurrenceStartsAt: (row.occurrence_starts_at as string | null) ?? null,
+    occurrenceEndsAt: (row.occurrence_ends_at as string | null) ?? null,
+    sessionKind: kind === "scheduled" ? "scheduled" : "extra",
+    classPhase: phase,
   };
 }
 
@@ -29,6 +43,7 @@ export async function endActiveSessionsForClass(classId: string): Promise<void> 
     .update({
       status: "ended",
       ended_at: new Date().toISOString(),
+      class_phase: "ended",
     })
     .eq("class_id", classId)
     .eq("status", "active");
@@ -43,13 +58,14 @@ export async function endActiveOneOffSessionsForTeacher(teacherId: string): Prom
     .update({
       status: "ended",
       ended_at: new Date().toISOString(),
+      class_phase: "ended",
     })
     .eq("created_by", teacherId)
     .is("class_id", null)
     .eq("status", "active");
 }
 
-export async function createVirtualClassroomSession(input: {
+export type CreateVirtualClassroomSessionInput = {
   id: string;
   classId: string | null;
   classLessonId?: string | null;
@@ -57,7 +73,16 @@ export async function createVirtualClassroomSession(input: {
   liveblocksRoomId: string;
   title: string;
   createdBy: string;
-}): Promise<void> {
+  meetingSlotId?: string | null;
+  occurrenceStartsAt?: string | null;
+  occurrenceEndsAt?: string | null;
+  sessionKind?: ClassSessionKind;
+  classPhase?: ClassSessionPhase;
+};
+
+export async function createVirtualClassroomSession(
+  input: CreateVirtualClassroomSessionInput,
+): Promise<void> {
   const supabase = createServiceRoleSupabase();
   if (!supabase) return;
 
@@ -77,7 +102,35 @@ export async function createVirtualClassroomSession(input: {
     status: "active",
     created_by: input.createdBy,
     ended_at: null,
+    meeting_slot_id: input.meetingSlotId ?? null,
+    occurrence_starts_at: input.occurrenceStartsAt ?? null,
+    occurrence_ends_at: input.occurrenceEndsAt ?? null,
+    session_kind: input.sessionKind ?? "extra",
+    class_phase: input.classPhase ?? "live",
   });
+}
+
+export async function updateVirtualClassroomSessionPhase(
+  sessionId: string,
+  classPhase: ClassSessionPhase,
+): Promise<VirtualClassroomSessionRecord | null> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return null;
+  const patch: Record<string, unknown> = {
+    class_phase: classPhase,
+  };
+  if (classPhase === "ended") {
+    patch.status = "ended";
+    patch.ended_at = new Date().toISOString();
+  }
+  const { data } = await supabase
+    .from("class_sessions")
+    .update(patch)
+    .eq("id", sessionId)
+    .select("*")
+    .maybeSingle();
+  if (!data) return null;
+  return mapRow(data as Record<string, unknown>);
 }
 
 export async function setVirtualClassroomSessionLesson(input: {
@@ -153,6 +206,7 @@ export async function endVirtualClassroomSession(
     .update({
       status: "ended",
       ended_at: endedAt,
+      class_phase: "ended",
     })
     .eq("id", sessionId)
     .select("*")

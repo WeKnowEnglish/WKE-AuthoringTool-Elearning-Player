@@ -1,10 +1,9 @@
 "use client";
 
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { AssessmentListeningAudioFields } from "@/components/teacher/activity-builder/AssessmentListeningAudioFields";
 import {
   AssessmentHitboxStage,
@@ -68,157 +67,7 @@ export function AssessmentListeningColourPicturePartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Listening · colour picture
-      </p>
-
-      <AssessmentListeningAudioFields
-        audioText={audioText}
-        audioUrl={audioUrl}
-        onChange={(next) =>
-          patchActivity((activity) => ({
-            ...activity,
-            audioText: next.audioText,
-            ...(next.audioUrl ? { audioUrl: next.audioUrl } : { audioUrl: undefined }),
-          }))
-        }
-      />
-
-      <MediaUrlControls
-        label="Scene image"
-        value={image.src}
-        compact
-        onChange={(url) =>
-          patchActivity((activity) => ({
-            ...activity,
-            image: { ...activity.image, src: url },
-          }))
-        }
-      />
-      <label className="block text-[11px] font-bold text-stone-700">
-        Image alt text
-        <input
-          value={image.alt}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              image: { ...activity.image, alt: event.target.value },
-            }))
-          }
-          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-        />
-      </label>
-
-      <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold text-stone-700">Colour palette</p>
-          <button
-            type="button"
-            onClick={() =>
-              patchActivity((activity) => ({
-                ...activity,
-                palette: [...activity.palette, emptyColour()],
-              }))
-            }
-            className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
-          >
-            Add
-          </button>
-        </div>
-        <ul className="space-y-1.5">
-          {palette.map((colour) => (
-            <li key={colour.id} className="flex items-center gap-1.5">
-              <input
-                type="color"
-                value={colour.hex}
-                onChange={(event) => {
-                  const hex = event.target.value;
-                  patchActivity((activity) => ({
-                    ...activity,
-                    palette: activity.palette.map((row) =>
-                      row.id === colour.id ? { ...row, hex } : row,
-                    ),
-                  }));
-                }}
-                className="h-7 w-7 shrink-0 cursor-pointer rounded border border-stone-300 bg-white p-0.5"
-                aria-label={`${colour.label} colour`}
-              />
-              <input
-                value={colour.label}
-                onChange={(event) => {
-                  const label = event.target.value;
-                  patchActivity((activity) => ({
-                    ...activity,
-                    palette: activity.palette.map((row) =>
-                      row.id === colour.id ? { ...row, label } : row,
-                    ),
-                  }));
-                }}
-                className="min-w-0 flex-1 rounded-md border border-stone-300 px-2 py-1 text-xs font-semibold"
-                aria-label="Colour label"
-              />
-              <button
-                type="button"
-                disabled={palette.length <= 2}
-                onClick={() =>
-                  patchActivity((activity) => ({
-                    ...activity,
-                    palette: activity.palette.filter(
-                      (row) => row.id !== colour.id,
-                    ),
-                    targets: activity.targets.map((row) =>
-                      row.correctColourId === colour.id
-                        ? {
-                            ...row,
-                            correctColourId:
-                              activity.palette.find(
-                                (item) => item.id !== colour.id,
-                              )?.id ?? "",
-                          }
-                        : row,
-                    ),
-                  }))
-                }
-                className="shrink-0 rounded-md border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-35"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <AssessmentHitboxStage
-        imageSrc={image.src}
-        imageAlt={image.alt}
-        emptyHint="Add a scene image to place hitboxes"
-        aspectClassName="aspect-video"
-        selectedId={target?.id ?? null}
-        onSelect={(id) => {
-          const index = targets.findIndex((row) => row.id === id);
-          if (index >= 0) setItemIndex(index);
-        }}
-        onPatchGeometry={(id, next) => {
-          const row = targets.find((item) => item.id === id);
-          if (!row) return;
-          updateTarget(id, { ...row, ...next });
-        }}
-        targets={targets.map((row) => {
-          const colour = palette.find((item) => item.id === row.correctColourId);
-          return {
-            id: row.id,
-            label: row.label,
-            xPercent: row.xPercent,
-            yPercent: row.yPercent,
-            widthPercent: row.widthPercent,
-            heightPercent: row.heightPercent,
-            accentHex: colour?.hex,
-          };
-        })}
-        hint="Select a hitbox, drag to move, use the corner handle to resize. Expand for precise placement."
-      />
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={targets.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -306,9 +155,160 @@ export function AssessmentListeningColourPicturePartEditor({
                 </label>
               ))}
             </div>
+            <AssessmentHitboxStage
+              imageSrc={image.src}
+              imageAlt={image.alt}
+              emptyHint="Add a scene image to place hitboxes"
+              aspectClassName="aspect-video"
+              selectedId={target.id}
+              onSelect={(id) => {
+                const index = targets.findIndex((row) => row.id === id);
+                if (index >= 0) setItemIndex(index);
+              }}
+              onPatchGeometry={(id, next) => {
+                const row = targets.find((item) => item.id === id);
+                if (!row) return;
+                updateTarget(id, { ...row, ...next });
+              }}
+              targets={targets.map((row) => {
+                const colour = palette.find(
+                  (item) => item.id === row.correctColourId,
+                );
+                return {
+                  id: row.id,
+                  label: row.label,
+                  xPercent: row.xPercent,
+                  yPercent: row.yPercent,
+                  widthPercent: row.widthPercent,
+                  heightPercent: row.heightPercent,
+                  accentHex: colour?.hex,
+                };
+              })}
+              hint="Select a hitbox, drag to move, use the corner handle to resize. Expand for precise placement."
+            />
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
+
+      <AssessmentInspectorSection title="Scene setup" defaultOpen={false}>
+        <AssessmentListeningAudioFields
+          audioText={audioText}
+          audioUrl={audioUrl}
+          onChange={(next) =>
+            patchActivity((activity) => ({
+              ...activity,
+              audioText: next.audioText,
+              ...(next.audioUrl
+                ? { audioUrl: next.audioUrl }
+                : { audioUrl: undefined }),
+            }))
+          }
+        />
+
+        <MediaUrlControls
+          label="Scene image"
+          value={image.src}
+          compact
+          onChange={(url) =>
+            patchActivity((activity) => ({
+              ...activity,
+              image: { ...activity.image, src: url },
+            }))
+          }
+        />
+        <label className="block text-[11px] font-bold text-stone-700">
+          Image alt text
+          <input
+            value={image.alt}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                image: { ...activity.image, alt: event.target.value },
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+          />
+        </label>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold text-stone-700">Colour palette</p>
+            <button
+              type="button"
+              onClick={() =>
+                patchActivity((activity) => ({
+                  ...activity,
+                  palette: [...activity.palette, emptyColour()],
+                }))
+              }
+              className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
+            >
+              Add
+            </button>
+          </div>
+          <ul className="space-y-1.5">
+            {palette.map((colour) => (
+              <li key={colour.id} className="flex items-center gap-1.5">
+                <input
+                  type="color"
+                  value={colour.hex}
+                  onChange={(event) => {
+                    const hex = event.target.value;
+                    patchActivity((activity) => ({
+                      ...activity,
+                      palette: activity.palette.map((row) =>
+                        row.id === colour.id ? { ...row, hex } : row,
+                      ),
+                    }));
+                  }}
+                  className="h-7 w-7 shrink-0 cursor-pointer rounded border border-stone-300 bg-white p-0.5"
+                  aria-label={`${colour.label} colour`}
+                />
+                <input
+                  value={colour.label}
+                  onChange={(event) => {
+                    const label = event.target.value;
+                    patchActivity((activity) => ({
+                      ...activity,
+                      palette: activity.palette.map((row) =>
+                        row.id === colour.id ? { ...row, label } : row,
+                      ),
+                    }));
+                  }}
+                  className="min-w-0 flex-1 rounded-md border border-stone-300 px-2 py-1 text-xs font-semibold"
+                  aria-label="Colour label"
+                />
+                <button
+                  type="button"
+                  disabled={palette.length <= 2}
+                  onClick={() =>
+                    patchActivity((activity) => ({
+                      ...activity,
+                      palette: activity.palette.filter(
+                        (row) => row.id !== colour.id,
+                      ),
+                      targets: activity.targets.map((row) =>
+                        row.correctColourId === colour.id
+                          ? {
+                              ...row,
+                              correctColourId:
+                                activity.palette.find(
+                                  (item) => item.id !== colour.id,
+                                )?.id ?? "",
+                            }
+                          : row,
+                      ),
+                    }))
+                  }
+                  className="shrink-0 rounded-md border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-35"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </AssessmentInspectorSection>
     </div>
   );
 }

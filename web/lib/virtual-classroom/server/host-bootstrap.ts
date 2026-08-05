@@ -42,6 +42,13 @@ export async function bootstrapVirtualClassroomHost(input: {
   classId: string | null;
   classLessonId?: string | null;
   title?: string;
+  meetingSlotId?: string | null;
+  occurrenceStartsAt?: string | null;
+  occurrenceEndsAt?: string | null;
+  sessionKind?: "scheduled" | "extra";
+  classPhase?: "prep" | "waiting" | "live" | "ended";
+  /** When true, do not end other active sessions for the class (reuse path handles that). */
+  skipEndOthers?: boolean;
 }): Promise<HostVirtualClassroomResult> {
   const secret = assertLiveblocksSecret();
   const joinCode = generateJoinCode();
@@ -52,6 +59,10 @@ export async function bootstrapVirtualClassroomHost(input: {
     input.title?.trim() ||
     (input.classId ? "Virtual Classroom" : "One-off Virtual Classroom");
   const classLessonId = input.classId ? (input.classLessonId ?? null) : null;
+  const sessionKind =
+    input.sessionKind ??
+    (input.classId && input.meetingSlotId ? "scheduled" : "extra");
+  const classPhase = input.classPhase ?? "live";
 
   await createVirtualClassroomSession({
     id: sessionId,
@@ -61,6 +72,11 @@ export async function bootstrapVirtualClassroomHost(input: {
     liveblocksRoomId: roomId,
     title,
     createdBy: input.teacher.userId,
+    meetingSlotId: input.meetingSlotId ?? null,
+    occurrenceStartsAt: input.occurrenceStartsAt ?? null,
+    occurrenceEndsAt: input.occurrenceEndsAt ?? null,
+    sessionKind,
+    classPhase,
   });
 
   const liveblocks = new Liveblocks({ secret });

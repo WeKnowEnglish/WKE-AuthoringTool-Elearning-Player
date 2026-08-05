@@ -1,5 +1,10 @@
 /** Join / token lifetime rules for Daily ↔ Virtual Classroom (Phase 2 hardened). */
 
+import {
+  CLASS_LIVE_OPEN_MS,
+  CLASS_TEACHER_EARLY_MS,
+} from "@/lib/class-schedule/class-clock";
+
 /** Default private room lifetime from creation when no nearby schedule bind exists. */
 export const DAILY_ROOM_TTL_MS = 4 * 60 * 60 * 1000;
 
@@ -12,11 +17,11 @@ export const DAILY_TOKEN_TTL_MS = 2 * 60 * 60 * 1000;
  */
 export const DAILY_TOKEN_GRACE_MS = 5 * 60 * 1000;
 
-/** Teachers may connect this early relative to the scheduled start. */
-export const TEACHER_EARLY_JOIN_MS = 30 * 60 * 1000;
+/** Teachers may connect video this early relative to the scheduled start (prep / waiting). */
+export const TEACHER_EARLY_JOIN_MS = CLASS_TEACHER_EARLY_MS;
 
-/** Students/guests may connect this early relative to the scheduled start. */
-export const STUDENT_EARLY_JOIN_MS = 10 * 60 * 1000;
+/** Students/guests may connect video from live open (T−5), not waiting lobby. */
+export const STUDENT_EARLY_JOIN_MS = CLASS_LIVE_OPEN_MS;
 
 /** Keep the Daily room alive after scheduled class end. */
 export const POST_CLASS_ROOM_GRACE_MS = 15 * 60 * 1000;

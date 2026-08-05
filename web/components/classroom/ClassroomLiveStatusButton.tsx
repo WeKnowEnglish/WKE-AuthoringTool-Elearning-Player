@@ -7,11 +7,19 @@ import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
 import { setVirtualClassroomContext } from "@/lib/virtual-classroom/client-context";
 import type { StudentClassLiveSession } from "@/lib/student-live/types";
 
+type Tone = "primary" | "secondary";
+
 type Props = {
   session?: StudentClassLiveSession | null;
+  tone?: Tone;
 };
 
-async function joinLiveSession(session: StudentClassLiveSession) {
+function classReturnHref(session: StudentClassLiveSession, tone: Tone): string {
+  const base = tone === "secondary" ? "/secondary/class" : "/primary/class";
+  return `${base}/${encodeURIComponent(session.classId)}`;
+}
+
+async function joinLiveSession(session: StudentClassLiveSession, returnHref: string) {
   const response = await diagnosticFetch(
     "/api/virtual-classroom/join",
     {
@@ -39,6 +47,7 @@ async function joinLiveSession(session: StudentClassLiveSession) {
     classId?: string | null;
     userId?: string;
     displayName?: string;
+    landing?: "waiting" | "live";
   };
 
   if (
@@ -59,19 +68,21 @@ async function joinLiveSession(session: StudentClassLiveSession) {
     role: "member",
     userId: payload.userId,
     displayName: payload.displayName ?? "Student",
+    returnHref,
   });
 
-  return payload.sessionId;
+  return session.landingPath;
 }
 
-/** Compact header control: pulsing Live Now (join) or soft Not Live. */
-export function ClassroomLiveStatusButton({ session = null }: Props) {
+/** Compact header control: Waiting / Live Now / Not Live. */
+export function ClassroomLiveStatusButton({ session = null, tone = "primary" }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isLive = Boolean(session);
+  const isOpen = Boolean(session);
+  const isWaiting = session?.phase === "waiting";
 
-  if (!isLive || !session) {
+  if (!isOpen || !session) {
     return (
       <span
         className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-rose-700 sm:text-xs"
@@ -93,8 +104,8 @@ export function ClassroomLiveStatusButton({ session = null }: Props) {
             setBusy(true);
             setError(null);
             try {
-              const sessionId = await joinLiveSession(session);
-              router.push(`/virtual-classroom/${sessionId}`);
+              const path = await joinLiveSession(session, classReturnHref(session, tone));
+              router.push(path);
             } catch (err) {
               setError(err instanceof Error ? err.message : "Join failed.");
             } finally {
@@ -102,11 +113,19 @@ export function ClassroomLiveStatusButton({ session = null }: Props) {
             }
           })();
         }}
-        className="group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border border-emerald-400 bg-emerald-500 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-70 sm:px-3.5 sm:text-xs"
-        aria-label="Class is live — join now"
+        className={`group relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-sm transition disabled:opacity-70 sm:px-3.5 sm:text-xs ${
+          isWaiting
+            ? "border-amber-400 bg-amber-500 hover:bg-amber-600"
+            : "border-emerald-400 bg-emerald-500 hover:bg-emerald-600"
+        }`}
+        aria-label={
+          isWaiting ? "Waiting room open — enter now" : "Class is live — join now"
+        }
       >
         <span
-          className="pointer-events-none absolute inset-0 animate-pulse bg-emerald-300/40"
+          className={`pointer-events-none absolute inset-0 animate-pulse ${
+            isWaiting ? "bg-amber-300/40" : "bg-emerald-300/40"
+          }`}
           aria-hidden
         />
         <span className="relative flex h-2.5 w-2.5 items-center justify-center" aria-hidden>
@@ -114,7 +133,9 @@ export function ClassroomLiveStatusButton({ session = null }: Props) {
           <span className="relative h-2 w-2 rounded-full bg-white" />
         </span>
         <Radio className="relative h-3.5 w-3.5" aria-hidden />
-        <span className="relative">{busy ? "Joining…" : "Live Now"}</span>
+        <span className="relative">
+          {busy ? "Joining…" : isWaiting ? "Waiting" : "Live Now"}
+        </span>
       </button>
       {error ? (
         <p

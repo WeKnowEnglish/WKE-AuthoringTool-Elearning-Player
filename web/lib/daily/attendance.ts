@@ -23,7 +23,7 @@ async function findAttendanceRow(input: {
   const { data: byKey } = await supabase
     .from("class_session_attendance")
     .select(
-      "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id",
+      "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id, role, user_id, participant_key, lobby_first_joined_at, lobby_last_left_at, lobby_join_count",
     )
     .eq("session_id", input.sessionId)
     .eq("participant_key", input.participantKey)
@@ -35,7 +35,7 @@ async function findAttendanceRow(input: {
     const { data: byDaily } = await supabase
       .from("class_session_attendance")
       .select(
-        "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id",
+        "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id, role, user_id, participant_key, lobby_first_joined_at, lobby_last_left_at, lobby_join_count",
       )
       .eq("session_id", input.sessionId)
       .eq("daily_participant_id", input.dailyParticipantId)
@@ -72,12 +72,14 @@ export async function recordProvisionalAttendanceJoin(input: {
   if (existing?.id) {
     const keepVerified = existing.source === "verified";
     const rejoin = Boolean(existing.last_left_at);
+    const firstVideoJoin = (existing.join_count ?? 0) === 0;
     await supabase
       .from("class_session_attendance")
       .update({
         join_count: rejoin
           ? (existing.join_count ?? 0) + 1
           : Math.max(1, existing.join_count ?? 1),
+        ...(firstVideoJoin ? { first_joined_at: now } : {}),
         last_left_at: null,
         daily_participant_id:
           input.dailyParticipantId ?? existing.daily_participant_id ?? null,
@@ -299,6 +301,138 @@ export async function recordVerifiedAttendanceLeave(input: {
     participantKey,
     durationSeconds: duration ?? -1,
   });
+}
+
+export async function recordLobbyAttendanceJoin(input: {
+  sessionId: string;
+  participantKey: string;
+  role: DailyCallRole;
+}): Promise<void> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return;
+
+  const participantKey = input.participantKey.trim().slice(0, 80);
+  if (!participantKey) return;
+
+  const now = new Date().toISOString();
+  const existing = await findAttendanceRow({
+    sessionId: input.sessionId,
+    participantKey,
+  });
+
+  if (existing?.id) {
+    const rejoin = Boolean(existing.lobby_last_left_at);
+    await supabase
+      .from("class_session_attendance")
+      .update({
+        lobby_first_joined_at: existing.lobby_first_joined_at ?? now,
+        lobby_last_left_at: null,
+        lobby_join_count: rejoin
+          ? (existing.lobby_join_count ?? 0) + 1
+          : Math.max(1, existing.lobby_join_count ?? 1),
+        role: input.role,
+        updated_at: now,
+      })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("class_session_attendance").insert({
+      session_id: input.sessionId,
+      user_id: authUserIdOrNull(participantKey),
+      participant_key: participantKey,
+      role: input.role,
+      lobby_first_joined_at: now,
+      lobby_join_count: 1,
+      join_count: 0,
+      total_seconds: 0,
+      source: "provisional",
+      updated_at: now,
+    });
+  }
+
+  logDaily("attendance_lobby_join", {
+    sessionId: input.sessionId,
+    participantKey,
+    role: input.role,
+  });
+}
+
+export async function recordLobbyAttendanceLeave(input: {
+  sessionId: string;
+  participantKey: string;
+}): Promise<void> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return;
+
+  const participantKey = input.participantKey.trim().slice(0, 80);
+  if (!participantKey) return;
+
+  const existing = await findAttendanceRow({
+    sessionId: input.sessionId,
+    participantKey,
+  });
+  if (!existing?.id || existing.lobby_last_left_at) return;
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("class_session_attendance")
+    .update({
+      lobby_last_left_at: now,
+      updated_at: now,
+    })
+    .eq("id", existing.id);
+
+  logDaily("attendance_lobby_leave", {
+    sessionId: input.sessionId,
+    participantKey,
+  });
+}
+
+export type SessionAttendanceRecord = {
+  participantKey: string;
+  userId: string | null;
+  role: DailyCallRole;
+  lobbyFirstJoinedAt: string | null;
+  lobbyLastLeftAt: string | null;
+  lobbyJoinCount: number;
+  videoFirstJoinedAt: string | null;
+  videoLastLeftAt: string | null;
+  videoTotalSeconds: number;
+  videoJoinCount: number;
+  source: "provisional" | "verified";
+};
+
+export async function listSessionAttendanceRecords(
+  sessionId: string,
+): Promise<SessionAttendanceRecord[]> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("class_session_attendance")
+    .select(
+      "participant_key, user_id, role, lobby_first_joined_at, lobby_last_left_at, lobby_join_count, first_joined_at, last_left_at, total_seconds, join_count, source",
+    )
+    .eq("session_id", sessionId)
+    .order("lobby_first_joined_at", { ascending: true, nullsFirst: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    participantKey: row.participant_key as string,
+    userId: (row.user_id as string | null) ?? null,
+    role: row.role as DailyCallRole,
+    lobbyFirstJoinedAt: (row.lobby_first_joined_at as string | null) ?? null,
+    lobbyLastLeftAt: (row.lobby_last_left_at as string | null) ?? null,
+    lobbyJoinCount: (row.lobby_join_count as number) ?? 0,
+    videoFirstJoinedAt:
+      (row.join_count as number) > 0
+        ? ((row.first_joined_at as string | null) ?? null)
+        : null,
+    videoLastLeftAt: (row.last_left_at as string | null) ?? null,
+    videoTotalSeconds: (row.total_seconds as number) ?? 0,
+    videoJoinCount: (row.join_count as number) ?? 0,
+    source: (row.source as "provisional" | "verified") ?? "provisional",
+  }));
 }
 
 export async function findSessionIdByDailyRoomName(

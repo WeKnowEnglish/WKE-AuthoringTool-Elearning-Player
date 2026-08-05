@@ -53,6 +53,26 @@ export async function POST(request: Request) {
         { status: 410 },
       );
     }
+    // Students may enter waiting or live; prep is teacher-only.
+    if (
+      session.classId &&
+      session.classPhase === "prep"
+    ) {
+      return NextResponse.json(
+        { error: "Class is not open for students yet. Waiting room opens 15 minutes before start." },
+        { status: 403 },
+      );
+    }
+    if (
+      session.classId &&
+      session.classPhase !== "waiting" &&
+      session.classPhase !== "live"
+    ) {
+      return NextResponse.json(
+        { error: "This class session is not open to join yet." },
+        { status: 403 },
+      );
+    }
     timer.setContext({
       sessionId: session.id,
       roomId: session.liveblocksRoomId,
@@ -133,6 +153,10 @@ export async function POST(request: Request) {
       displayName,
       role: "member" as const,
       oneOff: session.classId == null,
+      classPhase: session.classPhase,
+      sessionKind: session.sessionKind,
+      landing:
+        session.classPhase === "waiting" ? ("waiting" as const) : ("live" as const),
     });
 
     response.cookies.set(VC_MEMBER_COOKIE, memberToken, {

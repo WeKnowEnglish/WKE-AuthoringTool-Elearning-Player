@@ -23,6 +23,11 @@ export type AuthoringItemPagerProps = {
   addDisabled?: boolean;
   removeDisabled?: boolean;
   tone?: PagerTone;
+  /**
+   * Pin the nav chrome while the item editor scrolls (requires a scroll
+   * ancestor without overflow:hidden between this and the scroller).
+   */
+  stickyNav?: boolean;
   children: ReactNode;
 };
 
@@ -36,6 +41,7 @@ const toneClasses: Record<
   PagerTone,
   {
     bar: string;
+    stickyBar: string;
     button: string;
     label: string;
     danger: string;
@@ -47,6 +53,7 @@ const toneClasses: Record<
 > = {
   stone: {
     bar: "border-stone-200 bg-stone-50",
+    stickyBar: "border-stone-200 bg-stone-50/95 backdrop-blur-sm",
     button:
       "border-stone-300 bg-white text-stone-800 hover:bg-stone-100 disabled:opacity-35",
     label: "text-stone-700",
@@ -60,7 +67,9 @@ const toneClasses: Record<
       "border-stone-900 bg-stone-900 text-white",
   },
   ltc: {
-    bar: "border-[var(--ltc-border)] bg-[var(--ltc-panel,transparent)]",
+    bar: "border-[var(--ltc-border)] bg-[var(--ltc-elevated,white)]",
+    stickyBar:
+      "border-[var(--ltc-border)] bg-[color-mix(in_srgb,var(--ltc-elevated,white)_94%,transparent)] backdrop-blur-sm",
     button:
       "border-[var(--ltc-border)] bg-[var(--ltc-elevated,white)] text-[var(--ltc-fg)] hover:opacity-90 disabled:opacity-35",
     label: "ltc-muted",
@@ -93,6 +102,7 @@ export function AuthoringItemPager({
   addDisabled,
   removeDisabled,
   tone = "stone",
+  stickyNav = false,
   children,
 }: AuthoringItemPagerProps) {
   const classes = toneClasses[tone];
@@ -101,12 +111,13 @@ export function AuthoringItemPager({
   const atMax = typeof maxCount === "number" ? safeCount >= maxCount : false;
   const useChips =
     Array.isArray(itemLabels) && itemLabels.length === safeCount && safeCount > 0;
+  const navBarClass = stickyNav ? classes.stickyBar : classes.bar;
 
   if (safeCount < 1) {
     return (
       <div className="space-y-2">
         <div
-          className={`flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${classes.bar}`}
+          className={`flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${navBarClass}`}
         >
           <p className={`text-[11px] font-bold ${classes.label}`}>
             No {label.toLowerCase()}s yet
@@ -135,7 +146,11 @@ export function AuthoringItemPager({
 
   return (
     <div className="space-y-2">
-      <div className={`rounded-lg border px-2 py-1.5 ${classes.bar}`}>
+      <div
+        className={`rounded-lg border px-2 py-1.5 ${navBarClass}${
+          stickyNav ? " sticky top-0 z-10" : ""
+        }`}
+      >
         <div className="flex items-center gap-2">
           <p
             className={`shrink-0 text-[11px] font-extrabold tabular-nums ${classes.label}`}

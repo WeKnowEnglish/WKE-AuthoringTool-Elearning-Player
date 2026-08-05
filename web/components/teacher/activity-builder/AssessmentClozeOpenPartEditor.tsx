@@ -1,9 +1,8 @@
 "use client";
 
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { splitAssessmentCsv } from "@/lib/activity-tracks/patch-assessment-part";
 import type { AssessmentPart } from "@/lib/assessment/types";
 import type { ClozeOpenSegment } from "@/lib/cloze-open";
@@ -47,83 +46,7 @@ export function AssessmentClozeOpenPartEditor({ part, onChange }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Cloze open
-      </p>
-
-      <label className="block text-[11px] font-bold text-stone-700">
-        Passage title
-        <input
-          value={passageTitle ?? ""}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              passageTitle: event.target.value || undefined,
-            }))
-          }
-          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-        />
-      </label>
-
-      <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
-        <input
-          type="checkbox"
-          checked={caseSensitive}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              caseSensitive: event.target.checked,
-            }))
-          }
-          className="h-4 w-4 accent-violet-700"
-        />
-        Case sensitive
-      </label>
-      <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
-        <input
-          type="checkbox"
-          checked={punctuationSensitive}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              punctuationSensitive: event.target.checked,
-            }))
-          }
-          className="h-4 w-4 accent-violet-700"
-        />
-        Punctuation sensitive
-      </label>
-
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => {
-            patchActivity((activity) => ({
-              ...activity,
-              segments: [...activity.segments, emptyTextSegment()],
-            }));
-            setItemIndex(segments.length);
-          }}
-          className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
-        >
-          Add text
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            patchActivity((activity) => ({
-              ...activity,
-              segments: [...activity.segments, emptyGapSegment()],
-            }));
-            setItemIndex(segments.length);
-          }}
-          className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
-        >
-          Add gap
-        </button>
-      </div>
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={segments.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -217,7 +140,81 @@ export function AssessmentClozeOpenPartEditor({ part, onChange }: Props) {
             )}
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
+
+      <AssessmentInspectorSection title="Passage options" defaultOpen={false}>
+        <label className="block text-[11px] font-bold text-stone-700">
+          Passage title
+          <input
+            value={passageTitle ?? ""}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                passageTitle: event.target.value || undefined,
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+          />
+        </label>
+
+        <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
+          <input
+            type="checkbox"
+            checked={caseSensitive}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                caseSensitive: event.target.checked,
+              }))
+            }
+            className="h-4 w-4 accent-violet-700"
+          />
+          Case sensitive
+        </label>
+        <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
+          <input
+            type="checkbox"
+            checked={punctuationSensitive}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                punctuationSensitive: event.target.checked,
+              }))
+            }
+            className="h-4 w-4 accent-violet-700"
+          />
+          Punctuation sensitive
+        </label>
+
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              patchActivity((activity) => ({
+                ...activity,
+                segments: [...activity.segments, emptyTextSegment()],
+              }));
+              setItemIndex(segments.length);
+            }}
+            className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
+          >
+            Add text
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              patchActivity((activity) => ({
+                ...activity,
+                segments: [...activity.segments, emptyGapSegment()],
+              }));
+              setItemIndex(segments.length);
+            }}
+            className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
+          >
+            Add gap
+          </button>
+        </div>
+      </AssessmentInspectorSection>
     </div>
   );
 }

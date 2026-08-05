@@ -8,6 +8,7 @@ Phase 2d: rate limits, staging/prod env checklist, pilots card active.
 Phase 3a: opt-in Daily transcription → private WebVTT + teacher review page.
 Phase 3b: opt-in Daily cloud recording → private video + teacher playback page.
 Phase 3c: HMAC-signed VC cookies, optional Upstash rate limits, Daily room cleanup cron.
+Phase 4a: schedule join loop — waiting T−15, live T−5, teacher early/extra, student landing.
 
 ## Env
 
@@ -40,7 +41,7 @@ When a class-linked session has a weekly `class_meeting_slots` occurrence **in p
 
 - Room TTL ends at **scheduled end + 15 minutes** (not capped at create+4h — morning hosts keep afternoon classes alive).
 - Expired rooms are **deleted and recreated** on the next host ensure.
-- Teachers may connect **30 minutes** before start; students/guests **10 minutes** before.
+- Teachers may connect **60 minutes** before start (prep / waiting); students **5 minutes** before (live open). App waiting room opens **15 minutes** before.
 - Tokens refuse immediately when the VC session has `ended` / `endedAt`.
 - Soft grace after room expiry is **5 minutes** (while session still active).
 - Room metadata GET skips early-join so the Video dock can probe before the window opens.
@@ -126,6 +127,18 @@ curl -X POST "https://YOUR_APP/api/cron/daily-cleanup" \
 ```
 
 Optional JSON body: `{ "roomLimit": 25, "webhookRetentionDays": 14 }`.
+
+## Class clock cron (schedule join loop)
+
+1. Apply migration `121_class_session_schedule_phase.sql`.
+2. With `CRON_SECRET` set, schedule every few minutes:
+
+```bash
+curl -X POST "https://YOUR_APP/api/cron/class-clock" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Ensures waiting sessions from T−15 and promotes to live at T−5. Lazy ensure also runs when students/teachers hit live-state.
 
 ## Transcripts (Phase 3a)
 

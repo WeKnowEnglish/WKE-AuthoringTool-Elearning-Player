@@ -180,7 +180,7 @@ export function ClassroomShell({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <ClassroomLiveStatusButton session={liveSession} />
+            <ClassroomLiveStatusButton session={liveSession} tone={tone} />
             <ClassroomClassSwitcher
               currentClass={currentClass}
               memberships={memberships}

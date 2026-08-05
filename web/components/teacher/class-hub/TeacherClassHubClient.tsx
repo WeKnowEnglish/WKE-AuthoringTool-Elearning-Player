@@ -29,6 +29,7 @@ import {
   type ClassHubTab,
 } from "@/lib/teacher/class-hub-tabs";
 import type { TeacherSpaceItemSummary } from "@/lib/teacher-space/types";
+import type { VirtualClassroomSessionHistoryItem } from "@/lib/virtual-classroom/session-history-types";
 import type { WhiteboardRoundHistoryItem } from "@/lib/whiteboard/server/history";
 
 const TAB_LABELS: Record<ClassHubTab, string> = {
@@ -57,6 +58,7 @@ export type TeacherClassHubClientProps = {
   wordPacks: TeacherWordPackSummary[];
   liveGameProject: LiveGameClassProjectOverview;
   whiteboardHistory: WhiteboardRoundHistoryItem[];
+  vcSessionHistory: VirtualClassroomSessionHistoryItem[];
   lessons: ClassLesson[];
   studioActivities: StudioActivityOption[];
   liveGameSets: LiveGameQuestionSetOption[];
@@ -97,6 +99,7 @@ export function TeacherClassHubClient({
   wordPacks,
   liveGameProject,
   whiteboardHistory,
+  vcSessionHistory,
   lessons,
   studioActivities,
   liveGameSets,
@@ -157,7 +160,12 @@ export function TeacherClassHubClient({
               <>
                 {" "}
                 ·{" "}
-                <span className="font-medium text-teal-800">Classroom live</span>
+                <Link
+                  href={`/teacher/virtual-classroom/${activeSession.sessionId}`}
+                  className="font-medium text-teal-800 underline-offset-2 hover:underline"
+                >
+                  Classroom live
+                </Link>
               </>
             ) : null}
           </p>
@@ -199,6 +207,7 @@ export function TeacherClassHubClient({
           readyLessons={lessons.filter((lesson) => lesson.status === "ready")}
           liveGameProject={liveGameProject}
           whiteboardHistory={whiteboardHistory}
+          vcSessionHistory={vcSessionHistory}
         />
       ) : null}
 

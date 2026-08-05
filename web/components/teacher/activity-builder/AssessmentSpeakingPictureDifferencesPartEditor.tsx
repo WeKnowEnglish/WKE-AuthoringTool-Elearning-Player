@@ -1,10 +1,9 @@
 "use client";
 
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import type { AssessmentPart } from "@/lib/assessment/types";
 
 type DifferencesPart = Extract<
@@ -41,45 +40,7 @@ export function AssessmentSpeakingPictureDifferencesPartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Speaking · picture differences
-      </p>
-
-      <label className="block text-[11px] font-bold text-stone-700">
-        Student prompt
-        <textarea
-          value={prompt}
-          onChange={(event) =>
-            patchActivity((activity) => ({
-              ...activity,
-              prompt: event.target.value,
-            }))
-          }
-          rows={3}
-          className="mt-1 w-full resize-y rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold leading-5"
-        />
-      </label>
-
-      <label className="block text-[11px] font-bold text-stone-700">
-        Max seconds
-        <input
-          type="number"
-          min={15}
-          max={600}
-          value={maxDurationSeconds}
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            if (!Number.isFinite(next)) return;
-            patchActivity((activity) => ({
-              ...activity,
-              maxDurationSeconds: Math.round(next),
-            }));
-          }}
-          className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-        />
-      </label>
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={images.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -153,7 +114,43 @@ export function AssessmentSpeakingPictureDifferencesPartEditor({
             </label>
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
+
+      <AssessmentInspectorSection title="Speaking setup" defaultOpen={false}>
+        <label className="block text-[11px] font-bold text-stone-700">
+          Student prompt
+          <textarea
+            value={prompt}
+            onChange={(event) =>
+              patchActivity((activity) => ({
+                ...activity,
+                prompt: event.target.value,
+              }))
+            }
+            rows={3}
+            className="mt-1 w-full resize-y rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold leading-5"
+          />
+        </label>
+
+        <label className="block text-[11px] font-bold text-stone-700">
+          Max seconds
+          <input
+            type="number"
+            min={15}
+            max={600}
+            value={maxDurationSeconds}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (!Number.isFinite(next)) return;
+              patchActivity((activity) => ({
+                ...activity,
+                maxDurationSeconds: Math.round(next),
+              }));
+            }}
+            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+          />
+        </label>
+      </AssessmentInspectorSection>
     </div>
   );
 }

@@ -1,9 +1,8 @@
 "use client";
 
-import {
-  AuthoringItemPager,
-  useAuthoringItemIndex,
-} from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { useAuthoringItemIndex } from "@/components/teacher/activity-builder/AuthoringItemPager";
+import { AssessmentInspectorSection } from "@/components/teacher/activity-builder/AssessmentInspectorSection";
+import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import type { AssessmentPart } from "@/lib/assessment/types";
 
 type DefinitionMatchPart = Extract<AssessmentPart, { kind: "definition_match" }>;
@@ -41,11 +40,7 @@ export function AssessmentDefinitionMatchPartEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        Words and definitions
-      </p>
-
-      <AuthoringItemPager
+      <AssessmentQuestionEditor
         count={pairs.length}
         index={itemIndex}
         onIndexChange={setItemIndex}
@@ -118,81 +113,83 @@ export function AssessmentDefinitionMatchPartEditor({
             </label>
           </div>
         ) : null}
-      </AuthoringItemPager>
+      </AssessmentQuestionEditor>
 
-      <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold text-stone-700">Extra words</p>
-          <button
-            type="button"
-            onClick={() =>
+      <AssessmentInspectorSection title="Word bank options" defaultOpen={false}>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold text-stone-700">Extra words</p>
+            <button
+              type="button"
+              onClick={() =>
+                patch({
+                  ...part,
+                  extraWords: [...extras, emptyExtra()],
+                })
+              }
+              className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
+            >
+              Add
+            </button>
+          </div>
+          {extras.length === 0 ? (
+            <p className="text-[11px] font-semibold text-stone-500">
+              No distractors yet.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {extras.map((extra) => (
+                <li key={extra.id} className="flex items-center gap-1.5">
+                  <input
+                    value={extra.word}
+                    onChange={(event) => {
+                      const word = event.target.value;
+                      patch({
+                        ...part,
+                        extraWords: extras.map((row) =>
+                          row.id === extra.id ? { ...row, word } : row,
+                        ),
+                      });
+                    }}
+                    className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
+                    aria-label="Extra word"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      patch({
+                        ...part,
+                        extraWords: extras.filter((row) => row.id !== extra.id),
+                      })
+                    }
+                    className="shrink-0 rounded-md border border-red-200 px-2 py-1.5 text-[10px] font-bold text-red-700 hover:bg-red-50"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
+          <input
+            type="checkbox"
+            checked={part.activity.shuffleWords}
+            onChange={(event) =>
               patch({
                 ...part,
-                extraWords: [...extras, emptyExtra()],
+                activity: {
+                  ...part.activity,
+                  shuffleWords: event.target.checked,
+                },
               })
             }
-            className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-100"
-          >
-            Add
-          </button>
-        </div>
-        {extras.length === 0 ? (
-          <p className="text-[11px] font-semibold text-stone-500">
-            No distractors yet.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {extras.map((extra) => (
-              <li key={extra.id} className="flex items-center gap-1.5">
-                <input
-                  value={extra.word}
-                  onChange={(event) => {
-                    const word = event.target.value;
-                    patch({
-                      ...part,
-                      extraWords: extras.map((row) =>
-                        row.id === extra.id ? { ...row, word } : row,
-                      ),
-                    });
-                  }}
-                  className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
-                  aria-label="Extra word"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    patch({
-                      ...part,
-                      extraWords: extras.filter((row) => row.id !== extra.id),
-                    })
-                  }
-                  className="shrink-0 rounded-md border border-red-200 px-2 py-1.5 text-[10px] font-bold text-red-700 hover:bg-red-50"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <label className="flex items-center gap-2 text-[11px] font-bold text-stone-700">
-        <input
-          type="checkbox"
-          checked={part.activity.shuffleWords}
-          onChange={(event) =>
-            patch({
-              ...part,
-              activity: {
-                ...part.activity,
-                shuffleWords: event.target.checked,
-              },
-            })
-          }
-          className="h-4 w-4 accent-violet-700"
-        />
-        Shuffle word bank for students
-      </label>
+            className="h-4 w-4 accent-violet-700"
+          />
+          Shuffle word bank for students
+        </label>
+      </AssessmentInspectorSection>
     </div>
   );
 }

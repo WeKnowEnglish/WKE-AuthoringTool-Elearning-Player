@@ -11,6 +11,11 @@ export type VirtualClassroomClientContext = {
   role: "host" | "member";
   userId: string;
   displayName: string;
+  /**
+   * Hub URL to return to on leave / after session end.
+   * Teacher class hub or student primary/secondary class tab.
+   */
+  returnHref?: string | null;
 };
 
 const CONTEXT_KEY = "wke-vc-session-context";
@@ -40,7 +45,13 @@ export function getVirtualClassroomContext(): VirtualClassroomClientContext | nu
     return {
       ...parsed,
       classLessonId:
-        typeof parsed.classLessonId === "string" ? parsed.classLessonId : parsed.classLessonId ?? null,
+        typeof parsed.classLessonId === "string"
+          ? parsed.classLessonId
+          : (parsed.classLessonId ?? null),
+      returnHref:
+        typeof parsed.returnHref === "string" && parsed.returnHref.trim()
+          ? parsed.returnHref.trim()
+          : null,
     };
   } catch {
     return null;

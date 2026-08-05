@@ -94,6 +94,8 @@ export async function POST(request: Request) {
           classId,
           classLessonId,
           title: body.title,
+          sessionKind: classId ? "extra" : "extra",
+          classPhase: "live",
         }),
       );
       timer.setContext({ sessionId: hosted.sessionId, roomId: hosted.roomId });

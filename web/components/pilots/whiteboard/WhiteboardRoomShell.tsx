@@ -18,7 +18,7 @@ type Props = {
 
 function RoomLoading() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-slate-100 text-lg font-semibold text-slate-700">
+    <div className="flex h-full min-h-[12rem] items-center justify-center bg-slate-100 text-lg font-semibold text-slate-700">
       Connecting to whiteboard…
     </div>
   );

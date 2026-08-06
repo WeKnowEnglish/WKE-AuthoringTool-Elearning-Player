@@ -83,7 +83,15 @@ export function VirtualClassroomSessionHistory({ sessions }: Props) {
                 </span>
               </div>
             </div>
-            <p className="shrink-0 font-mono text-xs text-slate-500">{session.joinCode}</p>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <p className="font-mono text-xs text-slate-500">{session.joinCode}</p>
+              <a
+                href={`/teacher/virtual-classroom/${encodeURIComponent(session.sessionId)}/transcript`}
+                className="rounded-lg border border-teal-300 bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-900 hover:bg-teal-100"
+              >
+                Transcript / report
+              </a>
+            </div>
           </li>
         ))}
       </ul>

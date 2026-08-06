@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DailyCall } from "@daily-co/daily-js";
+import type { DailyCall, DailyThemeConfig } from "@daily-co/daily-js";
+import { dailyThemeColorsKey } from "@/lib/daily/theme-from-teacher";
 
 export type DailyCallPhase =
   | "idle"
   | "probing"
   | "ready"
   | "connecting"
+  | "prejoin"
   | "joined"
   | "disabled"
   | "error";
@@ -57,8 +59,10 @@ export function useDailyCall(input: {
   sessionId: string;
   isHost: boolean;
   sessionEnded: boolean;
+  /** Daily Prebuilt theme (from teacher chrome selection). */
+  theme?: DailyThemeConfig | null;
 }) {
-  const { sessionId, isHost, sessionEnded } = input;
+  const { sessionId, isHost, sessionEnded, theme = null } = input;
   const frameRef = useRef<DailyCall | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const joinedRef = useRef(false);
@@ -66,12 +70,15 @@ export function useDailyCall(input: {
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshingRef = useRef(false);
   const connectInFlight = useRef(false);
+  const themeRef = useRef<DailyThemeConfig | null>(theme);
   const [phase, setPhase] = useState<DailyCallPhase>("probing");
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [tokenExp, setTokenExp] = useState<number | null>(null);
+
+  themeRef.current = theme;
 
   const clearRefreshTimer = useCallback(() => {
     if (refreshTimerRef.current) {
@@ -127,7 +134,6 @@ export function useDailyCall(input: {
       }
       if (res.status === 401 || res.status === 403) {
         const code = payload.code ?? "not_authorized";
-        // too_early should not happen on room GET anymore; treat soft if it does.
         if (code === "too_early") {
           setPhase("ready");
           setError(payload.error ?? null);
@@ -164,6 +170,15 @@ export function useDailyCall(input: {
     };
   }, [destroyCall]);
 
+  // Keep Prebuilt colors in sync when the teacher changes chrome theme.
+  useEffect(() => {
+    const call = frameRef.current;
+    if (!call || !theme) return;
+    void call.setTheme(theme).catch(() => {
+      // Theme is cosmetic — never block the call.
+    });
+  }, [theme]);
+
   const scheduleTokenRefresh = useCallback(
     (expUnix: number | undefined) => {
       clearRefreshTimer();
@@ -187,9 +202,16 @@ export function useDailyCall(input: {
               setErrorCode(tokenPayload.code ?? "token_refresh_failed");
               return;
             }
-            // Same Prebuilt frame — leave/join refreshes the meeting session without remounting the dock.
             await call.leave();
             await call.join({ url: roomUrl, token: tokenPayload.token });
+            const activeTheme = themeRef.current;
+            if (activeTheme) {
+              try {
+                await call.setTheme(activeTheme);
+              } catch {
+                // ignore
+              }
+            }
             scheduleTokenRefresh(tokenPayload.exp);
           } catch {
             setError("Video token refresh failed. Try Leave video, then Connect.");
@@ -244,7 +266,7 @@ export function useDailyCall(input: {
         }
         if (frameRef.current === call) {
           clearRefreshTimer();
-          setPhase("ready");
+          setPhase((current) => (current === "prejoin" ? current : "ready"));
           setExpanded(false);
           setIsFullscreen(false);
         }
@@ -273,7 +295,7 @@ export function useDailyCall(input: {
   );
 
   const connect = useCallback(async () => {
-    if (phase === "disabled" || phase === "joined") return;
+    if (phase === "disabled" || phase === "joined" || phase === "prejoin") return;
     if (connectInFlight.current) return;
     connectInFlight.current = true;
     setPhase("connecting");
@@ -317,7 +339,6 @@ export function useDailyCall(input: {
         return;
       }
 
-      // Reuse existing frame when reconnecting after error.
       let call = frameRef.current;
       if (call) {
         try {
@@ -328,25 +349,36 @@ export function useDailyCall(input: {
       } else {
         await destroyCall(false);
         const Daily = (await import("@daily-co/daily-js")).default;
+        const activeTheme = themeRef.current;
         call = Daily.createFrame(parent, {
           iframeStyle: {
             width: "100%",
             height: "100%",
             border: "0",
-            borderRadius: "0.75rem",
+            borderRadius: "0",
           },
           showLeaveButton: true,
           showFullscreenButton: true,
+          ...(activeTheme ? { theme: activeTheme } : {}),
         });
         frameRef.current = call;
         attachCallHandlers(call);
       }
 
       roomUrlRef.current = tokenPayload.roomUrl;
+      setPhase("prejoin");
       await call.join({
         url: tokenPayload.roomUrl,
         token: tokenPayload.token,
       });
+      const activeTheme = themeRef.current;
+      if (activeTheme) {
+        try {
+          await call.setTheme(activeTheme);
+        } catch {
+          // ignore
+        }
+      }
       scheduleTokenRefresh(tokenPayload.exp);
     } catch (err) {
       setPhase("error");
@@ -389,5 +421,6 @@ export function useDailyCall(input: {
     exitFullscreen,
     retryProbe: probe,
     tokenExp,
+    themeKey: theme ? dailyThemeColorsKey(theme) : "",
   };
 }

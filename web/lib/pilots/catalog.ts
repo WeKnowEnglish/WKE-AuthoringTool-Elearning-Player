@@ -820,6 +820,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
   },
   {
     href: "/teacher/virtual-classroom/host",
+    title: "VC speaking report approval",
+    description:
+      "Procedural speaking report from session transcript: auto/heuristic draft (optional OpenAI), teacher edit + approve on the transcript review page. Teacher-only for now.",
+    group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/teacher/virtual-classroom/host",
     title: "VC class recording review",
     description:
       "Phase 3b: host Record toggle saves Daily cloud recording to private Storage; teacher playback under /teacher/virtual-classroom/[sessionId]/recording.",

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { VocabEntryAudioControls } from "@/components/teacher/activity-builder/VocabEntryAudioControls";
@@ -40,6 +41,8 @@ import {
 } from "@/components/teacher/activity-builder/QuizBuilderCoreFormatEditors";
 import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
+import { createPracticeTrackFromQuizCards } from "@/lib/activity-builder/games/quiz-builder-practice-track";
+import { saveActivityTrackDraft } from "@/lib/activity-tracks/draft-storage";
 import {
   QUIZ_FORMATS,
   appendBlankItem,
@@ -124,6 +127,7 @@ function isCardReady(card: StagedQuizCard): boolean {
 }
 
 export function QuizBuilderWorkspace() {
+  const router = useRouter();
   const [screen, setScreen] = useState<Screen>("landing");
   const [landingPanel, setLandingPanel] = useState<LandingPanel>("home");
   const [session, setSession] = useState<QuizSession>(() =>
@@ -151,11 +155,17 @@ export function QuizBuilderWorkspace() {
     () => setupCards.filter((card) => isCardReady(card)),
     [setupCards],
   );
+  const canRunOneQuiz = readyCards.length >= 2;
   const canMergeOneQuiz = useMemo(() => {
-    if (readyCards.length < 2) return false;
+    if (!canRunOneQuiz) return false;
     const formats = new Set(readyCards.map((card) => card.format));
     return formats.size === 1;
-  }, [readyCards]);
+  }, [canRunOneQuiz, readyCards]);
+  const canBuildPracticeTrack = useMemo(() => {
+    if (!canRunOneQuiz) return false;
+    const formats = new Set(readyCards.map((card) => card.format));
+    return formats.size > 1;
+  }, [canRunOneQuiz, readyCards]);
 
   useEffect(() => {
     if (!notice) return;
@@ -317,9 +327,23 @@ export function QuizBuilderWorkspace() {
     if (mode === "combined") {
       const formats = new Set(readyCards.map((card) => card.format));
       if (formats.size > 1) {
-        setNotice(
-          "One quiz needs every card to be the same format (e.g. all MCQ). Mixed formats → use separate quizzes.",
-        );
+        setBusy(true);
+        try {
+          const track = createPracticeTrackFromQuizCards(readyCards);
+          saveActivityTrackDraft(track);
+          setNotice(
+            `Opened practice track with ${track.practiceComposition?.beats.length ?? 0} quizzes.`,
+          );
+          router.push(`/teacher/activity-builder/tracks/${track.id}`);
+        } catch (error) {
+          setNotice(
+            error instanceof Error
+              ? error.message
+              : "Could not create practice track.",
+          );
+        } finally {
+          setBusy(false);
+        }
         return;
       }
     }
@@ -559,13 +583,13 @@ export function QuizBuilderWorkspace() {
             <button
               type="button"
               className="rounded-full bg-stone-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-stone-800 disabled:opacity-40"
-              disabled={busy || !canMergeOneQuiz}
+              disabled={busy || !canRunOneQuiz}
               title={
                 canMergeOneQuiz
                   ? "Merge every card into one quiz activity"
-                  : readyCards.length < 2
-                    ? "Add 2+ cards of the same format to merge"
-                    : "One quiz needs every card to be the same format"
+                  : canBuildPracticeTrack
+                    ? "Create a practice track with one beat per format"
+                    : "Add 2+ ready cards to merge or build a practice track"
               }
               onClick={() => void generateBatch("combined")}
             >
@@ -648,8 +672,8 @@ export function QuizBuilderWorkspace() {
                   {readyCards.length} ready
                   {canMergeOneQuiz
                     ? " · Separate = one activity each · One quiz = merge into a single activity"
-                    : readyCards.length > 1
-                      ? " · mixed formats → use Separate (One quiz needs the same format on every card)"
+                    : canBuildPracticeTrack
+                      ? " · mixed formats → One quiz opens a practice track (one beat per card)"
                       : " · each card keeps its own list and settings"}
                 </p>
               ) : null}

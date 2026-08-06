@@ -9,17 +9,15 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DailyVideoDock } from "@/components/virtual-classroom/daily/DailyVideoDock";
 import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPanel";
-import { SessionAttendancePanel } from "@/components/virtual-classroom/SessionAttendancePanel";
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
-import { TodaysLessonPlaylist } from "@/components/virtual-classroom/TodaysLessonPlaylist";
+import { VirtualClassroomLearnControls } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
+import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
 import { VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
-import { VirtualClassroomToolbar } from "@/components/virtual-classroom/VirtualClassroomToolbar";
-import { CollabDiagnosticsPanel } from "@/components/collab-diagnostics/CollabDiagnosticsPanel";
+import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
 import {
   collabDiagnosticExportEnabled,
-  diagnosticFetch,
   exportCollabDiagnosticEvents,
 } from "@/lib/collab-diagnostics/client";
 import {
@@ -28,30 +26,16 @@ import {
 } from "@/lib/virtual-classroom/client-context";
 import { resolveVirtualClassroomExitHref } from "@/lib/virtual-classroom/exit-href";
 import {
+  normalizeVirtualClassroomLearnActivity,
+  normalizeVirtualClassroomLearnStage,
+  normalizeLearnStudentPensEnabled,
   normalizeVirtualClassroomUiMode,
+  type VirtualClassroomLearnActivity,
+  type VirtualClassroomLearnStage as LearnStageId,
   type VirtualClassroomUiMode,
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
-import {
-  DocumentLaunchPanel,
-  type DocumentLaunchPayload,
-} from "@/components/document-activity/DocumentLaunchPanel";
-import {
-  WhiteboardLaunchPanel,
-  type WhiteboardLaunchPayload,
-} from "@/components/pilots/whiteboard/WhiteboardLaunchPanel";
-import {
-  WordCardsLaunchPanel,
-  type WordCardsLaunchPayload,
-} from "@/components/word-cards/WordCardsLaunchPanel";
-import { setDocumentSessionContext } from "@/lib/document-activity/client-context";
-import { setWhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
-import { setWordCardsSessionContext } from "@/lib/word-cards/client-context";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
-import {
-  countByStatus,
-  createEmptyClassroomStatus,
-  type ClassroomStatusState,
-} from "@/lib/virtual-classroom/tools/status";
+import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
 
 type Props = {
   sessionId: string;
@@ -82,15 +66,20 @@ export function VirtualClassroomSessionView({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
-  const [launchOverlay, setLaunchOverlay] = useState<
-    "whiteboard" | "document" | "word_cards" | null
-  >(null);
   const broadcast = useBroadcastEvent();
 
   const status = useStorage((root) => readRuntimeField<string>(root, "status") ?? "active");
-  const title = useStorage((root) => readRuntimeField<string>(root, "title") ?? "Virtual Classroom");
   const uiMode = useStorage((root) =>
     normalizeVirtualClassroomUiMode(readRuntimeField<string>(root, "uiMode")),
+  );
+  const learnStage = useStorage((root) =>
+    normalizeVirtualClassroomLearnStage(readRuntimeField(root, "learnStage")),
+  );
+  const learnActivity = useStorage((root) =>
+    normalizeVirtualClassroomLearnActivity(readRuntimeField(root, "learnActivity")),
+  );
+  const learnStudentPensEnabled = useStorage((root) =>
+    normalizeLearnStudentPensEnabled(readRuntimeField(root, "learnStudentPensEnabled")),
   );
   const announcement = useStorage(
     (root) => readRuntimeField<string | null>(root, "announcement"),
@@ -137,16 +126,6 @@ export function VirtualClassroomSessionView({
     return picker?.currentStudentIds ?? [];
   });
 
-  const classroomStatus = useStorage((root) => {
-    return (
-      readLiveObjectField<ClassroomStatusState>(
-        (root as { runtime?: unknown }).runtime,
-        "classroomStatus",
-      ) ?? createEmptyClassroomStatus()
-    );
-  });
-  const statusCounts = countByStatus(classroomStatus);
-
   useLobbyPresence(sessionId, role === "host" && !ended && status !== "ended");
 
   useEventListener(({ event }) => {
@@ -170,15 +149,6 @@ export function VirtualClassroomSessionView({
       body: JSON.stringify({ type: "SYNC_ROSTER" }),
     }).catch(() => undefined);
   }, [ended, role, sessionId, status]);
-
-  useEffect(() => {
-    if (!launchOverlay) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setLaunchOverlay(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [launchOverlay]);
 
   const endSession = useCallback(async () => {
     if (!window.confirm("End Virtual Classroom for everyone? Students will be disconnected.")) {
@@ -222,310 +192,27 @@ export function VirtualClassroomSessionView({
     router.push(href);
   }, [exitHref, router]);
 
-  const launchWhiteboard = useCallback(
-    async (launch?: WhiteboardLaunchPayload) => {
-      setBusy("whiteboard");
-      setError(null);
-      try {
-        const res = await diagnosticFetch(
-          `/api/virtual-classroom/${sessionId}/whiteboard`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(
-              launch ?? {
-                title: "Whiteboard activity",
-                instructions: "Use the tools. Submit when you are done.",
-                timerMinutes: 4,
-                worksheetPresetId: null,
-                mode: "individual",
-              },
-            ),
-          },
-          {
-            phase: "launch",
-            name: "vc.launch_whiteboard",
-            detail: {
-              activity: "classroom",
-              sessionId,
-              commandType: launch ? "LAUNCH_WHITEBOARD" : "REENTER_WHITEBOARD",
-            },
-          },
-        );
-        const payload = (await res.json()) as {
-          error?: string;
-          sessionId?: string;
-          roomId?: string;
-          userId?: string;
-          displayName?: string;
-          joinCode?: string;
-          mode?: string;
-        };
-        if (!res.ok || !payload.sessionId || !payload.roomId || !payload.userId) {
-          throw new Error(payload.error ?? "Could not start whiteboard.");
-        }
-        setWhiteboardSessionContext({
-          sessionId: payload.sessionId,
-          roomId: payload.roomId,
-          role: "host",
-          displayName: payload.displayName ?? displayName,
-          color: "#0f172a",
-          userId: payload.userId,
-        });
-        router.push(`/teacher/whiteboard/${payload.sessionId}`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed.");
-      } finally {
-        setBusy(null);
-      }
-    },
-    [displayName, router, sessionId],
-  );
-
-  const enterWhiteboardAsStudent = useCallback(async () => {
-    const code = activeActivity?.joinCode;
-    if (!code) return;
-    setBusy("enter-wb");
+  const launchWhiteboard = useCallback(async (): Promise<WhiteboardSessionContext | null> => {
+    setBusy("whiteboard");
     setError(null);
     try {
-      const oneOff = !classId;
-      const res = await fetch(
-        oneOff ? "/api/whiteboard/join" : "/api/whiteboard/product-join",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            oneOff
-              ? { joinCode: code, displayName, userId }
-              : { joinCode: code },
-          ),
-        },
-      );
-      const payload = (await res.json()) as {
-        error?: string;
-        sessionId?: string;
-        roomId?: string;
-        userId?: string;
-        displayName?: string;
-      };
-      if (!res.ok || !payload.sessionId || !payload.roomId || !payload.userId) {
-        throw new Error(payload.error ?? "Could not enter whiteboard.");
-      }
-      setWhiteboardSessionContext({
-        sessionId: payload.sessionId,
-        roomId: payload.roomId,
-        role: "player",
-        displayName: payload.displayName ?? displayName,
-        color: "#0f766e",
-        userId: payload.userId,
+      const next = await launchWhiteboardInLearn({
+        sessionId,
+        displayName,
       });
-      router.push(`/whiteboard/${payload.sessionId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed.");
-    } finally {
-      setBusy(null);
-    }
-  }, [activeActivity?.joinCode, classId, displayName, router, userId]);
-
-  const launchDocument = useCallback(
-    async (launch?: DocumentLaunchPayload) => {
-      setBusy("document");
-      setError(null);
-      try {
-        const res = await fetch(`/api/virtual-classroom/${sessionId}/document`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            launch ?? {
-              templateType: "paragraph",
-              participationMode: "individual",
-              groupSubmitPolicy: "any_member",
-              timerMinutes: 5,
-            },
-          ),
-        });
-        const payload = (await res.json()) as {
-          error?: string;
-          roundId?: string;
-          roomId?: string;
-          userId?: string;
-          displayName?: string;
-          vcSessionId?: string;
-          groupsAssigned?: number;
-          reused?: boolean;
-        };
-        if (!res.ok || !payload.roundId || !payload.roomId || !payload.userId) {
-          throw new Error(payload.error ?? "Could not start document.");
-        }
-        if (
-          !payload.reused &&
-          launch?.participationMode === "group" &&
-          (payload.groupsAssigned ?? 0) === 0
-        ) {
-          setError(
-            "Group document started — use Group maker → Send to document after you generate groups.",
-          );
-        }
-        setDocumentSessionContext({
-          roundId: payload.roundId,
-          roomId: payload.roomId,
-          vcSessionId: payload.vcSessionId ?? sessionId,
-          role: "host",
-          displayName: payload.displayName ?? displayName,
-          color: "#0f172a",
-          userId: payload.userId,
-        });
-        router.push(`/teacher/document/${payload.roundId}`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed.");
-      } finally {
-        setBusy(null);
-      }
-    },
-    [displayName, router, sessionId],
-  );
-
-  const enterDocumentAsStudent = useCallback(async () => {
-    const roundId = activeActivity?.roundId ?? activeActivity?.joinCode;
-    if (!roundId) return;
-    setBusy("enter-doc");
-    setError(null);
-    try {
-      const res = await fetch(`/api/document/${roundId}/enter`, {
+      await fetch(`/api/virtual-classroom/${sessionId}/tools`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName, userId }),
-      });
-      const payload = (await res.json()) as {
-        error?: string;
-        roundId?: string;
-        roomId?: string;
-        vcSessionId?: string;
-        userId?: string;
-        displayName?: string;
-        role?: "host" | "player";
-      };
-      if (!res.ok || !payload.roundId || !payload.roomId || !payload.userId) {
-        throw new Error(payload.error ?? "Could not enter document.");
-      }
-      setDocumentSessionContext({
-        roundId: payload.roundId,
-        roomId: payload.roomId,
-        vcSessionId: payload.vcSessionId ?? sessionId,
-        role: payload.role ?? "player",
-        displayName: payload.displayName ?? displayName,
-        color: "#0f766e",
-        userId: payload.userId,
-      });
-      router.push(`/document/${payload.roundId}`);
+        body: JSON.stringify({ type: "SET_LEARN_STAGE", stage: "whiteboard" }),
+      }).catch(() => undefined);
+      return next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed.");
+      return null;
     } finally {
       setBusy(null);
     }
-  }, [activeActivity?.joinCode, activeActivity?.roundId, displayName, router, sessionId, userId]);
-
-  const launchWordCards = useCallback(
-    async (launch?: WordCardsLaunchPayload) => {
-      setBusy("word_cards");
-      setError(null);
-      try {
-        const res = await fetch(`/api/virtual-classroom/${sessionId}/word-cards`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            launch ?? {
-              title: "Create a word card",
-              instructions: "Create a card for your assigned vocabulary word.",
-              wordList: ["apple", "banana", "chair", "desk"],
-              participationMode: "individual",
-              timerMinutes: 4,
-            },
-          ),
-        });
-        const payload = (await res.json()) as {
-          error?: string;
-          joinCode?: string;
-          roundId?: string;
-          roomId?: string;
-          vcSessionId?: string;
-          userId?: string;
-          displayName?: string;
-          participationMode?: string;
-          groupsAssigned?: number;
-        };
-        if (!res.ok || !payload.joinCode || !payload.roomId || !payload.userId || !payload.roundId) {
-          throw new Error(payload.error ?? "Could not start word cards.");
-        }
-        setWordCardsSessionContext({
-          joinCode: payload.joinCode,
-          roundId: payload.roundId,
-          roomId: payload.roomId,
-          vcSessionId: payload.vcSessionId ?? sessionId,
-          role: "host",
-          displayName: payload.displayName ?? displayName,
-          color: "#0f172a",
-          userId: payload.userId,
-        });
-        if (
-          payload.participationMode === "group" &&
-          (payload.groupsAssigned ?? 0) === 0
-        ) {
-          setError(
-            "Group word cards started — use Group maker → Send to word cards after you generate groups.",
-          );
-        }
-        router.push(`/teacher/word-cards/${payload.joinCode}`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed.");
-      } finally {
-        setBusy(null);
-      }
-    },
-    [displayName, router, sessionId],
-  );
-
-  const enterWordCardsAsStudent = useCallback(async () => {
-    const code = activeActivity?.joinCode;
-    if (!code) return;
-    setBusy("enter-wc");
-    setError(null);
-    try {
-      const res = await fetch(`/api/word-cards/${code}/enter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName, userId }),
-      });
-      const payload = (await res.json()) as {
-        error?: string;
-        joinCode?: string;
-        roundId?: string;
-        roomId?: string;
-        vcSessionId?: string;
-        userId?: string;
-        displayName?: string;
-        role?: "host" | "player";
-      };
-      if (!res.ok || !payload.joinCode || !payload.roomId || !payload.userId || !payload.roundId) {
-        throw new Error(payload.error ?? "Could not enter word cards.");
-      }
-      setWordCardsSessionContext({
-        joinCode: payload.joinCode,
-        roundId: payload.roundId,
-        roomId: payload.roomId,
-        vcSessionId: payload.vcSessionId ?? sessionId,
-        role: payload.role ?? "player",
-        displayName: payload.displayName ?? displayName,
-        color: "#0f766e",
-        userId: payload.userId,
-      });
-      router.push(`/word-cards/${payload.joinCode}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed.");
-    } finally {
-      setBusy(null);
-    }
-  }, [activeActivity?.joinCode, displayName, router, sessionId, userId]);
+  }, [displayName, sessionId]);
 
   const runToolCommand = useCallback(
     async (command: Record<string, unknown>) => {
@@ -551,6 +238,27 @@ export function VirtualClassroomSessionView({
   const setUiMode = useCallback(
     (mode: VirtualClassroomUiMode) => {
       void runToolCommand({ type: "SET_UI_MODE", mode });
+    },
+    [runToolCommand],
+  );
+
+  const setLearnStage = useCallback(
+    (stage: LearnStageId) => {
+      void runToolCommand({ type: "SET_LEARN_STAGE", stage });
+    },
+    [runToolCommand],
+  );
+
+  const setLearnActivity = useCallback(
+    (activity: VirtualClassroomLearnActivity | null) => {
+      void runToolCommand({ type: "SET_LEARN_ACTIVITY", activity });
+    },
+    [runToolCommand],
+  );
+
+  const setLearnStudentPens = useCallback(
+    (enabled: boolean) => {
+      void runToolCommand({ type: "SET_LEARN_STUDENT_PENS", enabled });
     },
     [runToolCommand],
   );
@@ -600,367 +308,43 @@ export function VirtualClassroomSessionView({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-b from-slate-50 to-teal-50">
-      <header className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-3">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">
-              Virtual Classroom
-              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-700">
-                {isMeeting ? "Meeting" : "Learn"}
-              </span>
-            </p>
-            <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-            <p className="text-sm text-slate-600">
-              Join code{" "}
-              <span className="rounded bg-slate-900 px-2 py-0.5 font-mono text-sm text-white">
-                {joinCode}
-              </span>{" "}
-              · {displayName} ({role === "host" ? "Teacher" : "Student"})
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {role === "host" ? (
-              <div
-                className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5"
-                role="group"
-                aria-label="Classroom mode"
-              >
-                <button
-                  type="button"
-                  disabled={Boolean(busy) || isMeeting}
-                  onClick={() => setUiMode("meeting")}
-                  className={`rounded-md px-3 py-1.5 text-xs font-bold transition disabled:opacity-100 ${
-                    isMeeting
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Meeting
-                </button>
-                <button
-                  type="button"
-                  disabled={Boolean(busy) || !isMeeting}
-                  onClick={() => setUiMode("learn")}
-                  className={`rounded-md px-3 py-1.5 text-xs font-bold transition disabled:opacity-100 ${
-                    !isMeeting
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Learn
-                </button>
-              </div>
-            ) : null}
-            {role === "host" ? (
-              <button
-                type="button"
-                disabled={busy === "end"}
-                onClick={() => void endSession()}
-                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-              >
-                {busy === "end" ? "Ending…" : "End session for all"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={leaveSession}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50"
-              >
-                Leave classroom
-              </button>
-            )}
-          </div>
-        </div>
-        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
-      </header>
+    <div className="flex h-dvh min-h-0 flex-row overflow-hidden bg-gradient-to-b from-slate-50 to-teal-50">
+      {error ? (
+        <p className="pointer-events-auto fixed left-1/2 top-3 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700 shadow-lg">
+          {error}
+        </p>
+      ) : null}
 
-      {isMeeting ? (
-        <DailyVideoDock
-          sessionId={sessionId}
-          isHost={role === "host"}
-          sessionEnded={ended || status === "ended"}
-          layout="stage"
-          onExitToLearn={
-            role === "host" ? () => setUiMode("learn") : undefined
-          }
-          onEndSession={role === "host" ? () => void endSession() : undefined}
-          endSessionBusy={busy === "end"}
-          onLeaveClassroom={role === "member" ? leaveSession : undefined}
-        />
-      ) : (
-      <>
-      <div className="flex min-h-0 flex-1">
-        {role === "host" && (
-          <VirtualClassroomToolbar
-            sessionId={sessionId}
-            members={memberEntries}
-            userId={userId}
-            busy={Boolean(busy)}
-            hasWhiteboardActivity={activeActivity?.kind === "whiteboard"}
-            hasDocumentActivity={activeActivity?.kind === "document"}
-            hasWordCardsActivity={activeActivity?.kind === "word_cards"}
-            onCommand={runToolCommand}
-          />
-        )}
+      <DailyVideoDock
+        sessionId={sessionId}
+        isHost={role === "host"}
+        sessionEnded={ended || status === "ended"}
+        layout={isMeeting ? "stage" : "dock"}
+        onExitToLearn={
+          role === "host" ? () => setUiMode("learn") : undefined
+        }
+        onEnterMeeting={
+          role === "host" ? () => setUiMode("meeting") : undefined
+        }
+        onEndSession={role === "host" ? () => void endSession() : undefined}
+        endSessionBusy={busy === "end"}
+        onLeaveClassroom={role === "member" ? leaveSession : undefined}
+      />
 
-        <main
-          className={`min-w-0 flex-1 space-y-4 p-4 ${
-            role === "host" ? "pb-24 md:pb-4" : ""
-          }`}
-        >
+      {!isMeeting ? (
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden p-3 pb-24 sm:p-4">
           {announcement && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <div className="shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
               <span className="font-bold">Announcement: </span>
               {announcement}
             </div>
           )}
 
-          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            {role === "host" ? (
-              <>
-                <h2 className="text-lg font-semibold text-slate-900">Activities</h2>
-                <p className="text-sm text-slate-600">
-                  Launch a staged lesson step, or pick an activity to configure. Ending an
-                  activity does not end the Virtual Classroom.
-                </p>
-                {classId ? (
-                  <TodaysLessonPlaylist
-                    sessionId={sessionId}
-                    classId={classId}
-                    busy={Boolean(busy)}
-                    onLaunchWhiteboard={(payload) => void launchWhiteboard(payload)}
-                    onLaunchDocument={(payload) => void launchDocument(payload)}
-                    onLaunchWordCards={(payload) => void launchWordCards(payload)}
-                  />
-                ) : null}
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => setLaunchOverlay("whiteboard")}
-                    className={`relative flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border-2 text-center transition disabled:opacity-50 ${
-                      activeActivity?.kind === "whiteboard"
-                        ? "border-teal-600 bg-teal-50 text-teal-950"
-                        : "border-teal-200 bg-teal-50/70 text-teal-900 hover:border-teal-400"
-                    }`}
-                  >
-                    <span className="text-lg font-black leading-none">WB</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">
-                      Board
-                    </span>
-                    {activeActivity?.kind === "whiteboard" && (
-                      <span className="absolute -right-1 -top-1 rounded-full bg-teal-700 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
-                        Live
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => setLaunchOverlay("document")}
-                    className={`relative flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border-2 text-center transition disabled:opacity-50 ${
-                      activeActivity?.kind === "document"
-                        ? "border-sky-600 bg-sky-50 text-sky-950"
-                        : "border-sky-200 bg-sky-50/70 text-sky-900 hover:border-sky-400"
-                    }`}
-                  >
-                    <span className="text-lg font-black leading-none">Doc</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">
-                      Write
-                    </span>
-                    {activeActivity?.kind === "document" && (
-                      <span className="absolute -right-1 -top-1 rounded-full bg-sky-700 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
-                        Live
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => setLaunchOverlay("word_cards")}
-                    className={`relative flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border-2 text-center transition disabled:opacity-50 ${
-                      activeActivity?.kind === "word_cards"
-                        ? "border-violet-600 bg-violet-50 text-violet-950"
-                        : "border-violet-200 bg-violet-50/70 text-violet-900 hover:border-violet-400"
-                    }`}
-                  >
-                    <span className="text-lg font-black leading-none">WC</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">
-                      Cards
-                    </span>
-                    {activeActivity?.kind === "word_cards" && (
-                      <span className="absolute -right-1 -top-1 rounded-full bg-violet-700 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
-                        Live
-                      </span>
-                    )}
-                  </button>
-                </div>
-
-                {launchOverlay && (
-                  <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4"
-                    role="presentation"
-                    onClick={() => setLaunchOverlay(null)}
-                  >
-                    <div
-                      role="dialog"
-                      aria-modal="true"
-                      aria-label={
-                        launchOverlay === "whiteboard"
-                          ? "Whiteboard activity setup"
-                          : launchOverlay === "document"
-                            ? "Document activity setup"
-                            : "Word cards activity setup"
-                      }
-                      className="max-h-[min(85dvh,720px)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Activity setup
-                          </p>
-                          <h3 className="text-lg font-bold text-slate-900">
-                            {launchOverlay === "whiteboard"
-                              ? "Whiteboard"
-                              : launchOverlay === "document"
-                                ? "Document"
-                                : "Word cards"}
-                          </h3>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setLaunchOverlay(null)}
-                          className="rounded-lg border border-slate-200 px-2.5 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          Close
-                        </button>
-                      </div>
-
-                      {launchOverlay === "whiteboard" &&
-                        activeActivity?.kind === "whiteboard" &&
-                        activeActivity.joinCode && (
-                          <button
-                            type="button"
-                            disabled={Boolean(busy)}
-                            onClick={() => {
-                              setLaunchOverlay(null);
-                              void launchWhiteboard();
-                            }}
-                            className="mb-3 w-full rounded-lg border border-teal-300 bg-teal-50 px-4 py-2 text-sm font-bold text-teal-900 disabled:opacity-50"
-                          >
-                            {busy === "whiteboard" ? "Opening…" : "Re-enter whiteboard"}
-                          </button>
-                        )}
-
-                      {launchOverlay === "document" &&
-                        activeActivity?.kind === "document" &&
-                        (activeActivity.roundId || activeActivity.joinCode) && (
-                          <button
-                            type="button"
-                            disabled={Boolean(busy)}
-                            onClick={() => {
-                              setLaunchOverlay(null);
-                              void launchDocument();
-                            }}
-                            className="mb-3 w-full rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-900 disabled:opacity-50"
-                          >
-                            {busy === "document" ? "Opening…" : "Re-enter document"}
-                          </button>
-                        )}
-
-                      {launchOverlay === "word_cards" &&
-                        activeActivity?.kind === "word_cards" &&
-                        activeActivity.joinCode && (
-                          <button
-                            type="button"
-                            disabled={Boolean(busy)}
-                            onClick={() => {
-                              setLaunchOverlay(null);
-                              void launchWordCards();
-                            }}
-                            className="mb-3 w-full rounded-lg border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-bold text-violet-900 disabled:opacity-50"
-                          >
-                            {busy === "word_cards" ? "Opening…" : "Re-enter word cards"}
-                          </button>
-                        )}
-
-                      {launchOverlay === "whiteboard" ? (
-                        <WhiteboardLaunchPanel
-                          busy={busy === "whiteboard"}
-                          onLaunch={(payload) => {
-                            setLaunchOverlay(null);
-                            void launchWhiteboard(payload);
-                          }}
-                        />
-                      ) : launchOverlay === "document" ? (
-                        <DocumentLaunchPanel
-                          busy={busy === "document"}
-                          onLaunch={(payload) => {
-                            setLaunchOverlay(null);
-                            void launchDocument(payload);
-                          }}
-                        />
-                      ) : (
-                        <WordCardsLaunchPanel
-                          busy={busy === "word_cards"}
-                          onLaunch={(payload) => {
-                            setLaunchOverlay(null);
-                            void launchWordCards(payload);
-                          }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                <h2 className="text-lg font-semibold text-slate-900">Waiting for activity</h2>
-                <p className="text-sm text-slate-600">
-                  You are in the live classroom. When your teacher starts an activity, it will
-                  appear here.
-                </p>
-                {activeActivity?.kind === "whiteboard" && activeActivity.joinCode && (
-                  <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => void enterWhiteboardAsStudent()}
-                    className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-                  >
-                    {busy === "enter-wb" ? "Entering…" : "Enter whiteboard"}
-                  </button>
-                )}
-                {activeActivity?.kind === "document" &&
-                  (activeActivity.roundId || activeActivity.joinCode) && (
-                    <button
-                      type="button"
-                      disabled={Boolean(busy)}
-                      onClick={() => void enterDocumentAsStudent()}
-                      className="rounded-lg bg-sky-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-                    >
-                      {busy === "enter-doc" ? "Entering…" : "Enter document"}
-                    </button>
-                  )}
-                {activeActivity?.kind === "word_cards" && activeActivity.joinCode && (
-                  <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => void enterWordCardsAsStudent()}
-                    className="rounded-lg bg-violet-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-                  >
-                    {busy === "enter-wc" ? "Entering…" : "Enter word cards"}
-                  </button>
-                )}
-              </>
-            )}
-          </section>
-
           <GlobalTimerBanner role={role} />
 
           {currentPickIds.length > 0 && (
-            <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-3 text-center">
+            <div className="shrink-0 rounded-lg border border-teal-200 bg-teal-50 px-3 py-3 text-center">
               <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">
                 Selected
               </p>
@@ -972,71 +356,62 @@ export function VirtualClassroomSessionView({
             </div>
           )}
 
-          {role === "member" && (
-            <StudentSessionChrome
-              userId={userId}
-              members={memberEntries}
-              busy={Boolean(busy)}
-              onCommand={runToolCommand}
-            />
-          )}
+          <VirtualClassroomLearnStage
+            sessionId={sessionId}
+            classId={classId}
+            role={role}
+            userId={userId}
+            displayName={displayName}
+            busy={Boolean(busy)}
+            learnStage={learnStage}
+            learnActivity={learnActivity}
+            whiteboardLive={activeActivity?.kind === "whiteboard"}
+            whiteboardJoinCode={
+              activeActivity?.kind === "whiteboard" ? activeActivity.joinCode : null
+            }
+            onSetStage={setLearnStage}
+            onSetActivity={setLearnActivity}
+            onLaunchWhiteboard={launchWhiteboard}
+            studentPensEnabled={learnStudentPensEnabled}
+            onToggleStudentPens={setLearnStudentPens}
+            pensBusy={busy === "tools"}
+          />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {role === "member" && (
+            <div className="shrink-0">
+              <StudentSessionChrome
+                userId={userId}
+                members={memberEntries}
+                busy={Boolean(busy)}
+                onCommand={runToolCommand}
+              />
+            </div>
+          )}
         </main>
 
-        <aside className="hidden w-72 shrink-0 space-y-6 border-l border-slate-200 bg-white p-4 lg:block">
-          {role === "host" ? (
-            <SessionAttendancePanel
-              sessionId={sessionId}
-              classId={classId}
-              liveMembers={memberEntries.filter((m) => m.role !== "host")}
-            />
-          ) : null}
-          <div>
-          <h2 className="text-sm font-semibold text-slate-900">
-            In session ({memberEntries.length})
-          </h2>
-          {role === "host" && (
-            <p className="mt-1 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
-              <span>Ready {statusCounts.ready}</span>
-              <span>Help {statusCounts.help}</span>
-              <span>Hand {statusCounts.hand}</span>
-              <span>Done {statusCounts.finished}</span>
-            </p>
-          )}
-          <ul className="mt-2 space-y-1 text-sm text-slate-700">
-            {memberEntries.map((m) => {
-              const st = classroomStatus.byStudentId[m.id];
-              return (
-                <li key={m.id} className="flex justify-between gap-2">
-                  <span className="truncate">
-                    {m.name}
-                    {st && st !== "none" ? (
-                      <span className="ml-1 text-[10px] font-bold uppercase text-teal-700">
-                        {st}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    {m.role === "host" ? "Teacher" : "Student"}
-                    {m.id === userId ? " · you" : ""}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          </div>
-        </aside>
+        <VirtualClassroomLearnControls
+          sessionId={sessionId}
+          classId={classId}
+          members={memberEntries}
+          userId={userId}
+          role={role}
+          busy={Boolean(busy)}
+          hasWhiteboardActivity={activeActivity?.kind === "whiteboard"}
+          hasDocumentActivity={activeActivity?.kind === "document"}
+          hasWordCardsActivity={activeActivity?.kind === "word_cards"}
+          whiteboardLive={activeActivity?.kind === "whiteboard"}
+          onCommand={runToolCommand}
+          onOpenPen={() => {
+            if (role === "host") {
+              void runToolCommand({ type: "SET_LEARN_STAGE", stage: "whiteboard" });
+              if (activeActivity?.kind !== "whiteboard") {
+                void launchWhiteboard();
+              }
+            }
+          }}
+        />
       </div>
-
-      <DailyVideoDock
-        sessionId={sessionId}
-        isHost={role === "host"}
-        sessionEnded={ended || status === "ended"}
-        layout="dock"
-      />
-      </>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1104,7 +479,6 @@ export function VirtualClassroomSessionGate() {
           joinCode={ctx.joinCode}
         />
       </VirtualClassroomRoomShell>
-      {ctx.role === "host" && <CollabDiagnosticsPanel activity="classroom" />}
     </VirtualClassroomLiveProvider>
   );
 }

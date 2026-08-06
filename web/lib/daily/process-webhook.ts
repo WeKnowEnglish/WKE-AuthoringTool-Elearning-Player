@@ -150,6 +150,10 @@ async function processTranscriptWebhook(input: {
         roomName: transcript.roomName,
         durationSeconds: transcript.duration ?? null,
       });
+      const { tryAutoGenerateSpeakingReport } = await import(
+        "@/lib/speaking-reports/store"
+      );
+      await tryAutoGenerateSpeakingReport(sessionId);
     } else if (input.eventType === "transcript.error") {
       await markLatestProcessingFailed(
         sessionId,

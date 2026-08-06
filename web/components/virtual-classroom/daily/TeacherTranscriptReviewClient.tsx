@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { TeacherSpeakingReportPanel } from "@/components/virtual-classroom/daily/TeacherSpeakingReportPanel";
 
 type TranscriptRow = {
   id: string;
@@ -135,6 +136,11 @@ export function TeacherTranscriptReviewClient({ sessionId }: { sessionId: string
               </p>
             )}
           </section>
+
+          <TeacherSpeakingReportPanel
+            sessionId={sessionId}
+            transcriptReady={Boolean(data.plainText) || data.latest?.status === "ready"}
+          />
 
           {(data.transcripts?.length ?? 0) > 1 ? (
             <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

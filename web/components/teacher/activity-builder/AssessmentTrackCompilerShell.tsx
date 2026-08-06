@@ -14,7 +14,7 @@ import { listAssessmentParts, assessmentDefinitionNeedsNormalize, normalizeAsses
 import {
   ACTIVITY_TRACK_MODE_COPY,
   resetAssessmentFromOrigin,
-  saveActivityTrackDraft,
+  persistActivityTrackDraft,
   seedGradedFromTemplate,
   seedPracticeComposition,
   type ActivityTrackDocument,
@@ -100,9 +100,9 @@ export function AssessmentTrackCompilerShell({
   const [assignNotice, setAssignNotice] = useState<string | null>(null);
   const [inspectorWidth, setInspectorWidth] = useState(INSPECTOR_WIDTH_DEFAULT);
   const [inspectorResizing, setInspectorResizing] = useState(false);
-  const [draftStatus, setDraftStatus] = useState<"saved" | "dirty" | "saving">(
-    "saved",
-  );
+  const [draftStatus, setDraftStatus] = useState<
+    "saved" | "dirty" | "saving" | "local_only"
+  >("saved");
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const inspectorDragRef = useRef<{ startX: number; startWidth: number } | null>(
     null,
@@ -131,8 +131,9 @@ export function AssessmentTrackCompilerShell({
     };
     onDocumentChange(next);
     pendingDraftRef.current = next;
-    saveActivityTrackDraft(next);
-    setDraftStatus("saved");
+    void persistActivityTrackDraft(next).then(({ cloudSaved }) => {
+      setDraftStatus(cloudSaved ? "saved" : "local_only");
+    });
     // Migrate legacy drafts once; avoid depending on commitDoc identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc.assessmentDefinition]);
@@ -226,21 +227,22 @@ export function AssessmentTrackCompilerShell({
 
   const commitDoc = useCallback(
     (next: ActivityTrackDocument) => {
-      onDocumentChange(next);
-      pendingDraftRef.current = next;
-      setDraftStatus("dirty");
-      if (autosaveTimerRef.current != null) {
-        window.clearTimeout(autosaveTimerRef.current);
-      }
-      autosaveTimerRef.current = window.setTimeout(() => {
-        const pending = pendingDraftRef.current;
-        if (!pending) return;
-        setDraftStatus("saving");
-        saveActivityTrackDraft(pending);
+    onDocumentChange(next);
+    pendingDraftRef.current = next;
+    setDraftStatus("dirty");
+    if (autosaveTimerRef.current != null) {
+      window.clearTimeout(autosaveTimerRef.current);
+    }
+    autosaveTimerRef.current = window.setTimeout(() => {
+      const pending = pendingDraftRef.current;
+      if (!pending) return;
+      setDraftStatus("saving");
+      void persistActivityTrackDraft(pending).then(({ cloudSaved }) => {
         pendingDraftRef.current = null;
-        setDraftStatus("saved");
+        setDraftStatus(cloudSaved ? "saved" : "local_only");
         autosaveTimerRef.current = null;
-      }, 600);
+      });
+    }, 600);
     },
     [onDocumentChange],
   );
@@ -248,7 +250,7 @@ export function AssessmentTrackCompilerShell({
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (pendingDraftRef.current) {
-        saveActivityTrackDraft(pendingDraftRef.current);
+        void persistActivityTrackDraft(pendingDraftRef.current);
         pendingDraftRef.current = null;
       }
       if (draftStatus === "dirty" || draftStatus === "saving") {
@@ -264,7 +266,7 @@ export function AssessmentTrackCompilerShell({
         autosaveTimerRef.current = null;
       }
       if (pendingDraftRef.current) {
-        saveActivityTrackDraft(pendingDraftRef.current);
+        void persistActivityTrackDraft(pendingDraftRef.current);
         pendingDraftRef.current = null;
       }
     };
@@ -277,10 +279,12 @@ export function AssessmentTrackCompilerShell({
         autosaveTimerRef.current = null;
       }
       pendingDraftRef.current = null;
-      const saved = saveActivityTrackDraft(next);
-      onDocumentChange(saved);
-      setDraftStatus("saved");
-      return saved;
+      setDraftStatus("saving");
+      void persistActivityTrackDraft(next).then(({ doc: saved, cloudSaved }) => {
+        onDocumentChange(saved);
+        setDraftStatus(cloudSaved ? "saved" : "local_only");
+      });
+      return next;
     },
     [onDocumentChange],
   );
@@ -416,10 +420,12 @@ export function AssessmentTrackCompilerShell({
             <span className="text-xs font-bold text-amber-700">Unsaved…</span>
           ) : draftStatus === "saving" ? (
             <span className="text-xs font-bold text-stone-500">Saving…</span>
+          ) : draftStatus === "local_only" ? (
+            <span className="text-xs font-bold text-amber-700">Saved locally only</span>
           ) : saveFlash ? (
             <span className="text-xs font-bold text-emerald-700">Saved</span>
           ) : (
-            <span className="text-xs font-bold text-stone-400">Autosaved</span>
+            <span className="text-xs font-bold text-stone-400">Saved to account</span>
           )}
           <button
             type="button"

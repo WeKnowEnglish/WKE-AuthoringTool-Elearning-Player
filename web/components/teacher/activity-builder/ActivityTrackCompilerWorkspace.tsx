@@ -23,14 +23,14 @@ import {
   ACTIVITY_TRACK_MODE_COPY,
   ACTIVITY_TRACK_PART_CATALOG,
   createEmptyPart,
-  getActivityTrackDraft,
   gradedPartKindsForOrigin,
   gradedSecondarySlotTaken,
   isPartKindAllowedForMode,
+  loadActivityTrackDraft,
   partHasTemplateContent,
+  persistActivityTrackDraft,
   renumberParts,
   resetGradedPartsFromOrigin,
-  saveActivityTrackDraft,
   seedGradedFromTemplate,
   seedGradedPartFromKind,
   seedPracticeComposition,
@@ -103,6 +103,7 @@ export function ActivityTrackCompilerWorkspace({
 }: Props) {
   const [doc, setDoc] = useState<ActivityTrackDocument | null>(null);
   const [missing, setMissing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selection, setSelection] = useState<Selection>({ type: "track" });
   const [saveFlash, setSaveFlash] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -191,57 +192,70 @@ export function ActivityTrackCompilerWorkspace({
   };
 
   useEffect(() => {
-    const loaded = getActivityTrackDraft(trackId);
-    if (!loaded) {
-      setMissing(true);
-      return;
-    }
-    let next = loaded;
-    if (loaded.mode === "practice" && !loaded.practiceComposition) {
-      next = {
-        ...loaded,
-        practiceComposition: seedPracticeComposition({
-          trackId: loaded.id,
-          title: loaded.title,
-        }),
-      };
-      saveActivityTrackDraft(next);
-    }
-    if (loaded.mode === "assessment" && !loaded.assessmentDefinition) {
-      next = {
-        ...seedAssessmentFromTemplate({
-          trackId: loaded.id,
-          title: loaded.title,
-        }),
-        createdAt: loaded.createdAt,
-        libraryId: loaded.libraryId,
-        bankActivityId: loaded.bankActivityId,
-      };
-      saveActivityTrackDraft(next);
-    }
-    if (
-      next.mode === "assessment" &&
-      next.assessmentDefinition &&
-      assessmentDefinitionNeedsNormalize(next.assessmentDefinition)
-    ) {
-      next = {
-        ...next,
-        assessmentDefinition: normalizeAssessmentDefinition(
-          next.assessmentDefinition,
-        ),
-      };
-      saveActivityTrackDraft(next);
-    }
-    setDoc(next);
-    docRef.current = next;
-    setMissing(false);
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      const loaded = await loadActivityTrackDraft(trackId);
+      if (cancelled) return;
+      if (!loaded) {
+        setMissing(true);
+        setLoading(false);
+        return;
+      }
+      let next = loaded;
+      if (loaded.mode === "practice" && !loaded.practiceComposition) {
+        next = {
+          ...loaded,
+          practiceComposition: seedPracticeComposition({
+            trackId: loaded.id,
+            title: loaded.title,
+          }),
+        };
+        void persistActivityTrackDraft(next);
+      }
+      if (loaded.mode === "assessment" && !loaded.assessmentDefinition) {
+        next = {
+          ...seedAssessmentFromTemplate({
+            trackId: loaded.id,
+            title: loaded.title,
+          }),
+          createdAt: loaded.createdAt,
+          libraryId: loaded.libraryId,
+          bankActivityId: loaded.bankActivityId,
+        };
+        void persistActivityTrackDraft(next);
+      }
+      if (
+        next.mode === "assessment" &&
+        next.assessmentDefinition &&
+        assessmentDefinitionNeedsNormalize(next.assessmentDefinition)
+      ) {
+        next = {
+          ...next,
+          assessmentDefinition: normalizeAssessmentDefinition(
+            next.assessmentDefinition,
+          ),
+        };
+        void persistActivityTrackDraft(next);
+      }
+      setDoc(next);
+      docRef.current = next;
+      setMissing(false);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [trackId]);
 
   const persistDoc = useCallback((next: ActivityTrackDocument) => {
-    const saved = saveActivityTrackDraft(next);
-    setDoc(saved);
-    docRef.current = saved;
-    return saved;
+    setDoc(next);
+    docRef.current = next;
+    void persistActivityTrackDraft(next).then(({ doc: saved }) => {
+      setDoc(saved);
+      docRef.current = saved;
+    });
+    return next;
   }, []);
 
   const gradedAutosaveTimerRef = useRef<number | null>(null);
@@ -254,7 +268,7 @@ export function ActivityTrackCompilerWorkspace({
         gradedAutosaveTimerRef.current = null;
       }
       if (gradedPendingRef.current) {
-        saveActivityTrackDraft(gradedPendingRef.current);
+        void persistActivityTrackDraft(gradedPendingRef.current);
         gradedPendingRef.current = null;
       }
     };
@@ -290,13 +304,19 @@ export function ActivityTrackCompilerWorkspace({
     [persistDoc],
   );
 
+  if (loading || !doc) {
+    return (
+      <p className="px-6 py-10 text-sm font-semibold text-stone-500">Loading track…</p>
+    );
+  }
+
   if (missing) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <p className="text-lg font-extrabold text-stone-900">Track not found</p>
         <p className="max-w-md text-sm text-stone-600">
-          This draft is missing from this browser. Create a new track or open one from
-          the list.
+          This draft is not in your account. Create a new track or open one from the
+          list.
         </p>
         <Link
           href="/teacher/activity-builder/tracks"
@@ -305,12 +325,6 @@ export function ActivityTrackCompilerWorkspace({
           Back to tracks
         </Link>
       </div>
-    );
-  }
-
-  if (!doc) {
-    return (
-      <p className="px-6 py-10 text-sm font-semibold text-stone-500">Loading track…</p>
     );
   }
 
@@ -375,7 +389,7 @@ export function ActivityTrackCompilerWorkspace({
       gradedAutosaveTimerRef.current = window.setTimeout(() => {
         const pending = gradedPendingRef.current;
         if (!pending) return;
-        saveActivityTrackDraft(pending);
+        void persistActivityTrackDraft(pending);
         gradedPendingRef.current = null;
         gradedAutosaveTimerRef.current = null;
       }, 600);

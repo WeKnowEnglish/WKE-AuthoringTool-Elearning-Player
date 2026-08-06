@@ -5,7 +5,7 @@ import { useState } from "react";
 import {
   ACTIVITY_TRACK_MODE_COPY,
   createEmptyActivityTrack,
-  saveActivityTrackDraft,
+  persistActivityTrackDraft,
   seedAssessmentFromTemplate,
   seedGradedFromTemplate,
   type ActivityTrackMode,
@@ -30,6 +30,7 @@ export function ActivityTrackCreateForm() {
   const [templateId, setTemplateId] = useState<GradedTemplateChoice | null>(null);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -137,6 +138,7 @@ export function ActivityTrackCreateForm() {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
+          disabled={creating}
           onClick={() => {
             if (!mode) {
               setError("Pick Practice, Graded, or Assessment first.");
@@ -146,35 +148,46 @@ export function ActivityTrackCreateForm() {
               setError("Add a title.");
               return;
             }
-            if (mode === "graded") {
-              if (!templateId) {
-                setError("Pick a homework template to clone.");
-                return;
+            if (mode === "graded" && !templateId) {
+              setError("Pick a homework template to clone.");
+              return;
+            }
+            setCreating(true);
+            setError(null);
+            void (async () => {
+              try {
+                let doc;
+                if (mode === "graded") {
+                  const trackId = crypto.randomUUID();
+                  doc = seedGradedFromTemplate({
+                    trackId,
+                    title,
+                    templateId: templateId!,
+                  });
+                } else if (mode === "assessment") {
+                  const trackId = crypto.randomUUID();
+                  doc = seedAssessmentFromTemplate({ trackId, title });
+                } else {
+                  doc = createEmptyActivityTrack({ mode, title });
+                }
+                const { cloudSaved } = await persistActivityTrackDraft(doc);
+                if (!cloudSaved) {
+                  setError(
+                    "Track saved locally but could not reach your account. Check your connection and try again.",
+                  );
+                  setCreating(false);
+                  return;
+                }
+                router.push(`/teacher/activity-builder/tracks/${doc.id}`);
+              } catch {
+                setError("Could not create track. Try again.");
+                setCreating(false);
               }
-              const trackId = crypto.randomUUID();
-              const doc = seedGradedFromTemplate({
-                trackId,
-                title,
-                templateId,
-              });
-              saveActivityTrackDraft(doc);
-              router.push(`/teacher/activity-builder/tracks/${doc.id}`);
-              return;
-            }
-            if (mode === "assessment") {
-              const trackId = crypto.randomUUID();
-              const doc = seedAssessmentFromTemplate({ trackId, title });
-              saveActivityTrackDraft(doc);
-              router.push(`/teacher/activity-builder/tracks/${doc.id}`);
-              return;
-            }
-            const doc = createEmptyActivityTrack({ mode, title });
-            saveActivityTrackDraft(doc);
-            router.push(`/teacher/activity-builder/tracks/${doc.id}`);
+            })();
           }}
-          className="inline-flex min-h-11 items-center rounded-xl bg-stone-900 px-5 text-sm font-bold text-white hover:bg-stone-800"
+          className="inline-flex min-h-11 items-center rounded-xl bg-stone-900 px-5 text-sm font-bold text-white hover:bg-stone-800 disabled:opacity-60"
         >
-          Create track
+          {creating ? "Creating…" : "Create track"}
         </button>
         <button
           type="button"

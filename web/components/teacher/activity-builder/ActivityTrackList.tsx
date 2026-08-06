@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import {
   ACTIVITY_TRACK_MODE_COPY,
-  deleteActivityTrackDraft,
-  listActivityTrackDrafts,
+  listActivityTrackDraftsWithSync,
+  removeActivityTrackDraft,
   type ActivityTrackDocument,
 } from "@/lib/activity-tracks";
 
@@ -25,11 +25,15 @@ export function ActivityTrackList() {
   const [drafts, setDrafts] = useState<ActivityTrackDocument[]>([]);
   const [ready, setReady] = useState(false);
 
-  const refresh = () => setDrafts(listActivityTrackDrafts());
+  const refresh = () => {
+    void listActivityTrackDraftsWithSync().then((items) => {
+      setDrafts(items);
+      setReady(true);
+    });
+  };
 
   useEffect(() => {
     refresh();
-    setReady(true);
   }, []);
 
   if (!ready) {
@@ -49,7 +53,7 @@ export function ActivityTrackList() {
           <p className="mt-1 max-w-2xl text-sm text-stone-600">
             Practice = Learning Track compiler. Graded = homework templates with freeze
             and review. Assessment = Primary A2 English Check (free navigation, results
-            after submit).
+            after submit). Drafts autosave to your teacher account.
           </p>
         </div>
         <Link
@@ -134,8 +138,7 @@ export function ActivityTrackList() {
                   aria-label={`Delete ${draft.title}`}
                   onClick={() => {
                     if (!window.confirm(`Delete “${draft.title}”?`)) return;
-                    deleteActivityTrackDraft(draft.id);
-                    refresh();
+                    void removeActivityTrackDraft(draft.id).then(() => refresh());
                   }}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-300 text-stone-600 hover:border-red-300 hover:text-red-700"
                 >

@@ -44,3 +44,10 @@ export {
   listActivityTrackDrafts,
   saveActivityTrackDraft,
 } from "@/lib/activity-tracks/draft-storage";
+export {
+  loadActivityTrackDraft,
+  listActivityTrackDraftsWithSync,
+  persistActivityTrackDraft,
+  removeActivityTrackDraft,
+  type ActivityTrackDraftSaveResult,
+} from "@/lib/activity-tracks/draft-sync";

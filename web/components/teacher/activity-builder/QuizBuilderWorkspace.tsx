@@ -42,7 +42,7 @@ import {
 import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 import { createPracticeTrackFromQuizCards } from "@/lib/activity-builder/games/quiz-builder-practice-track";
-import { saveActivityTrackDraft } from "@/lib/activity-tracks/draft-storage";
+import { persistActivityTrackDraft } from "@/lib/activity-tracks";
 import {
   QUIZ_FORMATS,
   appendBlankItem,
@@ -330,7 +330,7 @@ export function QuizBuilderWorkspace() {
         setBusy(true);
         try {
           const track = createPracticeTrackFromQuizCards(readyCards);
-          saveActivityTrackDraft(track);
+          await persistActivityTrackDraft(track);
           setNotice(
             `Opened practice track with ${track.practiceComposition?.beats.length ?? 0} quizzes.`,
           );

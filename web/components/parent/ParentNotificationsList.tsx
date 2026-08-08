@@ -3,29 +3,32 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, BookOpenCheck, ShieldAlert } from "lucide-react";
+import { useParentI18n } from "@/components/parent/ParentI18nProvider";
 import {
   markAllParentNotificationsRead,
   markParentNotificationRead,
 } from "@/lib/actions/parent-notifications";
+import { parentDateLocale } from "@/lib/parent/i18n";
 import type { ParentNotification } from "@/lib/parent/parent-notifications";
 
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "Recent";
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
-
 export function ParentNotificationsList(props: { notifications: ParentNotification[] }) {
+  const { t, locale } = useParentI18n();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const unread = props.notifications.filter((item) => !item.readAt).length;
+
+  function formatDate(value: string): string {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return t("alerts.recent");
+    return new Intl.DateTimeFormat(parentDateLocale(locale), {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }
 
   async function openNotification(notification: ParentNotification) {
     setBusy(notification.id);
@@ -49,10 +52,8 @@ export function ParentNotificationsList(props: { notifications: ParentNotificati
     return (
       <section className="rounded-3xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
         <Bell className="mx-auto h-9 w-9 text-slate-400" aria-hidden />
-        <h2 className="mt-4 text-xl font-black">No notifications yet</h2>
-        <p className="mt-2 text-slate-600">
-          Important report and family-access updates will appear here.
-        </p>
+        <h2 className="mt-4 text-xl font-black">{t("alerts.emptyTitle")}</h2>
+        <p className="mt-2 text-slate-600">{t("alerts.emptyBody")}</p>
       </section>
     );
   }
@@ -61,7 +62,9 @@ export function ParentNotificationsList(props: { notifications: ParentNotificati
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-bold text-slate-600">
-          {unread} unread notification{unread === 1 ? "" : "s"}
+          {t(unread === 1 ? "alerts.unreadCount" : "alerts.unreadCountPlural", {
+            count: unread,
+          })}
         </p>
         {unread > 0 ? (
           <button
@@ -78,7 +81,7 @@ export function ParentNotificationsList(props: { notifications: ParentNotificati
             }}
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 disabled:opacity-50"
           >
-            {busy === "all" ? "Updating..." : "Mark all as read"}
+            {busy === "all" ? t("alerts.updating") : t("alerts.markAll")}
           </button>
         ) : null}
       </div>
@@ -106,14 +109,17 @@ export function ParentNotificationsList(props: { notifications: ParentNotificati
                   <span className="font-black text-slate-950">{notification.title}</span>
                   {!notification.readAt ? (
                     <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
-                      New
+                      {t("alerts.new")}
                     </span>
                   ) : null}
                 </span>
                 <span className="mt-1 block text-sm leading-relaxed text-slate-600">
                   {notification.body}
                 </span>
-                <time dateTime={notification.createdAt} className="mt-2 block text-xs font-bold text-slate-500">
+                <time
+                  dateTime={notification.createdAt}
+                  className="mt-2 block text-xs font-bold text-slate-500"
+                >
                   {formatDate(notification.createdAt)}
                 </time>
               </span>

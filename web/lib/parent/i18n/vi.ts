@@ -1,6 +1,6 @@
 import type { ParentMessageKey } from "@/lib/parent/i18n/en";
 
-/** Vietnamese parent-portal UI copy (Phase 1: shell, login, settings). */
+/** Vietnamese parent-portal UI copy (Phase 1–2). */
 export const parentMessagesVi = {
   "brand.parentPortal": "Cổng phụ huynh",
   "brand.tagline": "We Know English",
@@ -63,4 +63,86 @@ export const parentMessagesVi = {
   "settings.saving": "Đang lưu...",
   "settings.errorName": "Nhập tên của bạn.",
   "settings.saved": "Đã lưu cài đặt.",
+
+  "home.welcomeTitle": "Chào mừng phụ huynh",
+  "home.welcomeBody":
+    "Bạn có thể đặt buổi học thử trước khi con có tài khoản học sinh. Nếu giáo viên đã mời bạn, hãy dùng lời mời trong email để liên kết với học sinh đã ghi danh.",
+  "home.findTeacher": "Tìm giáo viên & đặt học thử",
+  "home.howItWorks": "Cách hoạt động",
+  "home.inviteTitle": "Đã nhận lời mời lớp học?",
+  "home.inviteBody":
+    "Quay lại email đó và dùng liên kết lời mời riêng với địa chỉ đã xác minh này.",
+  "home.viewChildren": "Xem danh sách con",
+  "home.yourChild": "Con của bạn",
+
+  "children.eyebrow": "Quyền truy cập gia đình",
+  "children.title": "Con đã liên kết",
+  "children.subtitle":
+    "Đây là các con đã được giáo viên phê duyệt quyền truy cập cho tài khoản này.",
+  "children.activeConnection": "Kết nối gia đình đang hoạt động",
+  "children.activeAccess": "Đang có quyền truy cập",
+  "children.viewUpdates": "Xem cập nhật",
+  "children.emptyTitle": "Chưa có kết nối",
+  "children.emptyBody": "Cần lời mời từ giáo viên để liên kết với con.",
+  "children.changeTitle": "Cần thay đổi hoặc gỡ quyền truy cập?",
+  "children.changeBody":
+    "Liên hệ giáo viên của con. Vì lý do bảo mật học sinh, không thể thêm hoặc chuyển quan hệ gia đình từ trang này.",
+
+  "alerts.eyebrow": "Cập nhật",
+  "alerts.title": "Thông báo",
+  "alerts.subtitle":
+    "Thông báo quan trọng về báo cáo và quyền truy cập gia đình. Chi tiết học tập chỉ nằm trong cổng an toàn.",
+  "alerts.emptyTitle": "Chưa có thông báo",
+  "alerts.emptyBody": "Các cập nhật quan trọng về báo cáo và quyền truy cập sẽ hiện ở đây.",
+  "alerts.unreadCount": "{count} thông báo chưa đọc",
+  "alerts.unreadCountPlural": "{count} thông báo chưa đọc",
+  "alerts.markAll": "Đánh dấu tất cả đã đọc",
+  "alerts.updating": "Đang cập nhật...",
+  "alerts.new": "Mới",
+  "alerts.recent": "Gần đây",
+
+  "stream.emptyTitle": "Cập nhật sẽ hiện ở đây",
+  "stream.emptyBody":
+    "Giáo viên của {name} chưa chia sẻ cập nhật dành cho phụ huynh. Chỉ thông tin được chọn dành cho gia đình mới xuất hiện trên dòng này.",
+  "stream.openResource": "Mở tài nguyên đã chia sẻ",
+  "stream.type.teacher_update": "Cập nhật từ giáo viên",
+  "stream.type.teacher_link": "Tài nguyên được chia sẻ",
+  "stream.type.homework_update": "Cập nhật bài tập",
+  "stream.type.learning_activity": "Hoạt động học tập",
+  "stream.type.student_highlight": "Điểm nổi bật học tập",
+  "stream.type.milestone": "Cột mốc",
+  "stream.type.progress_report": "Báo cáo tiến bộ",
+
+  "schedule.eyebrow": "Lịch lớp học",
+  "schedule.nextLesson": "Buổi học tiếp theo",
+  "schedule.nextLessonLabel": "Buổi học tiếp theo: {label}",
+  "schedule.classTimezone": "Múi giờ lớp: {zone}",
+  "schedule.yourTime": "Giờ của bạn: {time} ({zone})",
+  "schedule.noWeekly":
+    "Chưa có lịch học hàng tuần. Hãy hỏi giáo viên nếu bạn chưa rõ giờ học.",
+  "schedule.notLinked": "Con chưa được liên kết với lịch lớp đang hoạt động.",
+  "schedule.minutes": "{count} phút",
+
+  "trial.eyebrow": "Buổi học thử",
+  "trial.confirmedTitle": "Học thử đã xác nhận",
+  "trial.classroomReady":
+    "Quyền vào lớp sẽ sẵn sàng khi con có tài khoản học sinh và được ghi danh.",
+  "trial.pendingTitle": "Yêu cầu đang chờ",
+  "trial.pendingTitlePlural": "Các yêu cầu đang chờ",
+  "trial.awaiting": "Đang chờ phản hồi từ giáo viên",
+  "trial.cancel": "Hủy",
+
+  "pref.eyebrow": "Chọn khung giờ phù hợp",
+  "pref.titleWithClass": "{classTitle} · khung giờ ưu tiên",
+  "pref.title": "Khung giờ lớp ưu tiên",
+  "pref.body":
+    "Chạm các khung giờ phù hợp với gia đình, rồi dùng lên/xuống để xếp thứ tự. Lựa chọn đầu giúp giáo viên xếp lớp.",
+  "pref.timezoneNote": " Giờ hiển thị theo múi giờ lớp ({zone}).",
+  "pref.minutes": "{count} phút",
+  "pref.up": "Lên",
+  "pref.down": "Xuống",
+  "pref.tapToAdd": "Chạm để thêm",
+  "pref.save": "Lưu lựa chọn",
+  "pref.saving": "Đang lưu…",
+  "pref.saved": "Đã lưu lựa chọn. Giáo viên sẽ chọn giờ học cho lớp.",
 } as const satisfies Record<ParentMessageKey, string>;

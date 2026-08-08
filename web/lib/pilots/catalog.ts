@@ -759,7 +759,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/parent/login",
     title: "Parent portal EN/VI (Phase 1)",
     description:
-      "Parent chrome, login, and settings use preferred_language / wke-parent-lang cookie for English or Vietnamese. Students stay English-only. Stream/progress copy still Phase 2+.",
+      "Parent chrome, login, settings, stream, notifications, manage-children, and empty home use preferred_language / wke-parent-lang for English or Vietnamese. Students stay English-only. Progress report narrative copy still Phase 3.",
     group: "classroom",
     status: "review",
   },

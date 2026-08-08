@@ -15,6 +15,11 @@ export function parentMessages(locale: ParentLocale): Record<ParentMessageKey, s
   return catalogs[locale] ?? catalogs.en;
 }
 
+/** BCP 47 tag for formatting dates in the parent portal. */
+export function parentDateLocale(locale: ParentLocale): string {
+  return locale === "vi" ? "vi-VN" : "en";
+}
+
 /** Translate a parent UI string. Missing keys fall back to English, then the key. */
 export function translateParent(
   locale: ParentLocale,

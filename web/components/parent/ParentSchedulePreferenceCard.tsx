@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useParentI18n } from "@/components/parent/ParentI18nProvider";
 import { submitClassSchedulePreference } from "@/lib/actions/class-schedule-preferences";
 import { formatWeeklySlotLabel } from "@/lib/class-schedule/next-meeting";
 import type { ClassScheduleWindow } from "@/lib/class-schedule/preference-types";
 import { detectBrowserTimeZone } from "@/lib/class-schedule/timezone";
+import { translateParent } from "@/lib/parent/i18n";
 
 type Props = {
   classId: string;
@@ -33,6 +35,7 @@ export function ParentSchedulePreferenceCard({
   windows,
   initialRankedWindowIds,
 }: Props) {
+  const { t, locale } = useParentI18n();
   const [ranked, setRanked] = useState<string[]>(initialRankedWindowIds);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -78,7 +81,7 @@ export function ParentSchedulePreferenceCard({
         setError(result.error);
         return;
       }
-      setMessage("Preferences saved. The teacher will choose the class time.");
+      setMessage(translateParent(locale, "pref.saved"));
     });
   };
 
@@ -87,15 +90,18 @@ export function ParentSchedulePreferenceCard({
   return (
     <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm">
       <p className="text-xs font-extrabold uppercase tracking-wide text-amber-900">
-        Choose availability
+        {t("pref.eyebrow")}
       </p>
       <h2 className="mt-1 text-lg font-black tracking-tight text-slate-950">
-        {classTitle ? `${classTitle} · preferred times` : "Preferred class times"}
+        {classTitle
+          ? t("pref.titleWithClass", { classTitle })
+          : t("pref.title")}
       </h2>
       <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
-        Tap the times that work for your family, then use up/down to rank them.
-        First choice helps the teacher group the class.
-        {viewerZone ? ` Times shown in class timezone (${windows[0]?.timezone}).` : null}
+        {t("pref.body")}
+        {viewerZone
+          ? t("pref.timezoneNote", { zone: windows[0]?.timezone ?? "" })
+          : null}
       </p>
 
       <ul className="mt-4 space-y-2">
@@ -120,7 +126,7 @@ export function ParentSchedulePreferenceCard({
                     {windowLabel(window)}
                   </span>
                   <span className="text-xs font-semibold text-slate-500">
-                    {window.durationMinutes} minutes
+                    {t("pref.minutes", { count: window.durationMinutes })}
                   </span>
                 </button>
                 {selected ? (
@@ -130,18 +136,18 @@ export function ParentSchedulePreferenceCard({
                       onClick={() => move(window.id, -1)}
                       className="rounded-md border border-slate-300 px-2 py-1 text-xs font-bold"
                     >
-                      Up
+                      {t("pref.up")}
                     </button>
                     <button
                       type="button"
                       onClick={() => move(window.id, 1)}
                       className="rounded-md border border-slate-300 px-2 py-1 text-xs font-bold"
                     >
-                      Down
+                      {t("pref.down")}
                     </button>
                   </div>
                 ) : (
-                  <span className="text-xs font-bold text-slate-500">Tap to add</span>
+                  <span className="text-xs font-bold text-slate-500">{t("pref.tapToAdd")}</span>
                 )}
               </div>
             </li>
@@ -155,7 +161,7 @@ export function ParentSchedulePreferenceCard({
         onClick={submit}
         className="mt-4 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-extrabold text-white disabled:opacity-40"
       >
-        {isPending ? "Saving…" : "Save preferences"}
+        {isPending ? t("pref.saving") : t("pref.save")}
       </button>
       {error ? <p className="mt-2 text-sm font-semibold text-red-700">{error}</p> : null}
       {message ? (

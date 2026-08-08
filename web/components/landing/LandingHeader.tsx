@@ -31,9 +31,6 @@ export function LandingHeader() {
             <LandingIcon name="user" size={16} />
             Student sign in
           </Link>
-          <Link href="/join-class" className={`${solidClass} justify-center sm:border-0 sm:bg-transparent sm:px-2.5`}>
-            Join class
-          </Link>
           <span className="hidden sm:inline-flex">
             <Link href="/login?portal=teacher" className={solidClass}>
               <LandingIcon name="graduation" size={16} />

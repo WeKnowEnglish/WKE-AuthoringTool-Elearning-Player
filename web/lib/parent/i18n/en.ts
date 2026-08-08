@@ -8,6 +8,7 @@ export const parentMessagesEn = {
   "nav.progress": "Progress",
   "nav.children": "Children",
   "nav.alerts": "Alerts",
+  "nav.home": "Parent home",
   "nav.settings": "Parent settings",
   "nav.signOut": "Sign out",
   "nav.notifications": "Notifications",

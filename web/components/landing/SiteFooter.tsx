@@ -18,8 +18,8 @@ const GUIDE_LINKS = [
 ] as const;
 
 const ACCESS_LINKS = [
+  { href: "/parents", label: "Parents" },
   { href: "/students", label: "Student sign in" },
-  { href: "/join-class", label: "Join a class" },
   { href: "/login?portal=teacher", label: "Teacher sign in" },
 ] as const;
 

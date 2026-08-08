@@ -10,6 +10,7 @@ export const parentMessagesVi = {
   "nav.progress": "Tiến bộ",
   "nav.children": "Con em",
   "nav.alerts": "Thông báo",
+  "nav.home": "Trang chủ phụ huynh",
   "nav.settings": "Cài đặt phụ huynh",
   "nav.signOut": "Đăng xuất",
   "nav.notifications": "Thông báo",

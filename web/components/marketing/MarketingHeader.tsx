@@ -17,9 +17,6 @@ export function MarketingHeader() {
           <Link href="/students" className={linkClass}>
             Student sign in
           </Link>
-          <Link href="/join-class" className={linkClass}>
-            Join class
-          </Link>
           <Link href="/login?portal=teacher" className={linkClass}>
             Teacher sign in
           </Link>

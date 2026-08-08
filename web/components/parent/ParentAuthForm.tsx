@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authCallbackRedirectUrl } from "@/lib/auth/auth-email-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { safeParentPath } from "@/lib/parent/parent-routes";
 
@@ -54,8 +55,10 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
         setError("Enter your name.");
         return;
       }
-      const origin = window.location.origin;
-      const callback = `${origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+      const callback = authCallbackRedirectUrl(
+        destination,
+        typeof window !== "undefined" ? window.location.origin : null,
+      );
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,

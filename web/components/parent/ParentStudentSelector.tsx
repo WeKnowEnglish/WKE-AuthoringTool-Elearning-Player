@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useParentI18n } from "@/components/parent/ParentI18nProvider";
 import type { ParentLinkedStudent } from "@/lib/parent/guardian-data";
 
 function currentSection(pathname: string): "stream" | "progress" {
@@ -11,6 +12,7 @@ export function ParentStudentSelector(props: {
   students: ParentLinkedStudent[];
   selectedStudentId: string | null;
 }) {
+  const { t } = useParentI18n();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -18,9 +20,9 @@ export function ParentStudentSelector(props: {
 
   return (
     <label className="block min-w-0 text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500">
-      Child
+      {t("nav.child")}
       <select
-        aria-label="Choose a child"
+        aria-label={t("nav.chooseChild")}
         value={props.selectedStudentId ?? props.students[0]?.studentId ?? ""}
         onChange={(event) => {
           const studentId = event.target.value;

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { authCallbackRedirectUrl } from "@/lib/auth/auth-email-redirect";
 import { isTeacher } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
 
@@ -80,12 +81,13 @@ export function LoginForm({ nextPath, initialError, initialMessage }: Props) {
     setResetLoading(true);
     try {
       const supabase = createClient();
-      const origin =
-        typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/teacher/reset-password")}`,
+          redirectTo: authCallbackRedirectUrl(
+            "/teacher/reset-password",
+            typeof window !== "undefined" ? window.location.origin : null,
+          ),
         },
       );
       if (error) {

@@ -1,7 +1,12 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import type { ParentNotificationPreferences } from "@/lib/parent/parent-notifications";
+import {
+  PARENT_LANG_COOKIE,
+  PARENT_LANG_COOKIE_MAX_AGE_SEC,
+} from "@/lib/parent/i18n/cookie";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { ok: true; message: string } | { ok: false; error: string };
@@ -54,6 +59,13 @@ export async function updateParentAccountSettings(input: {
     updated_at: new Date().toISOString(),
   });
   if (error) return { ok: false, error: error.message };
+  const cookieStore = await cookies();
+  cookieStore.set(PARENT_LANG_COOKIE, preferredLanguage, {
+    path: "/",
+    maxAge: PARENT_LANG_COOKIE_MAX_AGE_SEC,
+    sameSite: "lax",
+  });
+  revalidatePath("/parent", "layout");
   revalidatePath("/parent/settings");
   return { ok: true, message: "Settings saved." };
 }

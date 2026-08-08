@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { registerStudentAccount, updateStudentLearningBand } from "@/lib/actions/student-auth";
+import { authCallbackRedirectUrl } from "@/lib/auth/auth-email-redirect";
 import { migrateLocalStorageToStudentStorageId } from "@/lib/auth/student-storage-migrate";
 import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 import { getAppRole, mustChangePassword } from "@/lib/auth/roles";
@@ -296,9 +297,11 @@ export function PortalLoginPanel({
     setResetLoading(true);
     try {
       const supabase = createClient();
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.resetPasswordForEmail(teacherEmail.trim(), {
-        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/teacher/reset-password")}`,
+        redirectTo: authCallbackRedirectUrl(
+          "/teacher/reset-password",
+          typeof window !== "undefined" ? window.location.origin : null,
+        ),
       });
       if (error) {
         setMessage(error.message);

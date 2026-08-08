@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useParentI18n } from "@/components/parent/ParentI18nProvider";
+import { authCallbackRedirectUrl } from "@/lib/auth/auth-email-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { safeParentPath } from "@/lib/parent/parent-routes";
 
@@ -10,6 +12,7 @@ type Props = {
 };
 
 export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
+  const { t } = useParentI18n();
   const [mode, setMode] = useState<"sign_in" | "create">("sign_in");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,11 +31,11 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       if (!normalizedEmail || !normalizedEmail.includes("@")) {
-        setError("Enter a valid email address.");
+        setError(t("login.errorEmail"));
         return;
       }
       if (password.length < 8) {
-        setError("Password must contain at least 8 characters.");
+        setError(t("login.errorPassword"));
         return;
       }
 
@@ -43,7 +46,7 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
           password,
         });
         if (signInError) {
-          setError("Email or password is incorrect.");
+          setError(t("login.errorCredentials"));
           return;
         }
         window.location.assign(destination);
@@ -51,11 +54,13 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
       }
 
       if (displayName.trim().length < 2) {
-        setError("Enter your name.");
+        setError(t("login.errorName"));
         return;
       }
-      const origin = window.location.origin;
-      const callback = `${origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+      const callback = authCallbackRedirectUrl(
+        destination,
+        typeof window !== "undefined" ? window.location.origin : null,
+      );
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
@@ -72,11 +77,9 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
         window.location.assign(destination);
         return;
       }
-      setMessage(
-        "Check your email to verify your account, then return to this invitation and sign in.",
-      );
+      setMessage(t("login.checkEmail"));
     } catch {
-      setError("We could not connect to the sign-in service. Please try again.");
+      setError(t("login.errorGeneric"));
     } finally {
       setBusy(false);
     }
@@ -96,7 +99,7 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
             mode === "sign_in" ? "bg-white text-slate-950 shadow-sm" : "text-slate-600"
           }`}
         >
-          Sign in
+          {t("login.modeSignIn")}
         </button>
         <button
           type="button"
@@ -109,14 +112,14 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
             mode === "create" ? "bg-white text-slate-950 shadow-sm" : "text-slate-600"
           }`}
         >
-          Create account
+          {t("login.modeCreate")}
         </button>
       </div>
 
       <form onSubmit={onSubmit} className="mt-5 space-y-4">
         {mode === "create" ? (
           <label className="block text-sm font-bold text-slate-800">
-            Your name
+            {t("login.name")}
             <input
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
@@ -127,7 +130,7 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
           </label>
         ) : null}
         <label className="block text-sm font-bold text-slate-800">
-          Email address
+          {t("login.email")}
           <input
             type="email"
             value={email}
@@ -138,7 +141,7 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
           />
         </label>
         <label className="block text-sm font-bold text-slate-800">
-          Password
+          {t("login.password")}
           <input
             type="password"
             value={password}
@@ -161,22 +164,19 @@ export function ParentAuthForm({ nextPath, invitationMode = false }: Props) {
           className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60"
         >
           {busy
-            ? "Please wait…"
+            ? t("login.busy")
             : mode === "create"
               ? invitationMode
-                ? "Create account and continue"
-                : "Create parent account"
+                ? t("login.submitCreateInvite")
+                : t("login.submitCreate")
               : invitationMode
-                ? "Sign in and continue"
-                : "Sign in to parent portal"}
+                ? t("login.submitSignInInvite")
+                : t("login.submitSignIn")}
         </button>
       </form>
 
       {invitationMode ? (
-        <p className="mt-4 text-xs leading-relaxed text-slate-500">
-          Use the exact email address that received the invitation. Your email must be verified
-          before student access can be activated.
-        </p>
+        <p className="mt-4 text-xs leading-relaxed text-slate-500">{t("login.inviteHint")}</p>
       ) : null}
     </div>
   );

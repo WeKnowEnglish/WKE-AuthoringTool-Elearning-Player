@@ -47,13 +47,14 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
 
    **Grammar posters:** Teachers edit at `/teacher/grammar`. Run migration `034_grammar_modules.sql`, then use **Save** (draft) or **Publish** (live for students). Until published, students keep seeing the bundled JSON files in `content/grammar/`.
 
-4. **Supabase Auth URLs** (required for password reset and magic links):
+4. **Supabase Auth URLs** (required for password reset, parent signup confirm, and magic links):
    - Dashboard → **Authentication** → **URL Configuration**
-   - **Site URL**: the canonical origin students/teachers use (e.g. `http://localhost:3000` in dev, or your production `https://…`).
+   - **Site URL**: production only — `https://weknowenglish.online` (never a Vercel preview `*.vercel.app` URL; those expire into `DEPLOYMENT_NOT_FOUND`).
    - **Redirect URLs**: must include your callback route, for example:
      - `http://localhost:3000/auth/callback`
-     - `https://your-production-domain.com/auth/callback`
+     - `https://weknowenglish.online/auth/callback`
      - You can use a wildcard such as `http://localhost:3000/**` if the dashboard allows it.
+   - The app builds email links via `authCallbackRedirectUrl` (`lib/auth/auth-email-redirect.ts`): localhost stays local; otherwise it uses `NEXT_PUBLIC_APP_ORIGIN` / `APP_ORIGIN`, then `https://weknowenglish.online`. Parent confirm and teacher reset both go through `/auth/callback`.
    - Reset links from **Forgot password** on `/teacher/login` send users to `/auth/callback?next=/teacher/reset-password`. If that URL is not allowed, the link will fail or bounce without a session.
 
 5. Local dev: `npm run dev` → [http://localhost:3000](http://localhost:3000)

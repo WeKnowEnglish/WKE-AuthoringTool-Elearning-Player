@@ -18,5 +18,9 @@ export default async function TeacherAdminLayout({
     redirect("/teacher/classes");
   }
 
-  return <div className="space-y-5 py-2">{children}</div>;
+  return (
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-hidden py-2">
+      {children}
+    </div>
+  );
 }

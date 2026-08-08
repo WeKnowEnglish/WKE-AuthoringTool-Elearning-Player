@@ -44,7 +44,7 @@ export default async function ParentStudentStreamPage(props: {
         slots={schedule.slots}
       />
       <ParentStreamFeed
-        studentName={student?.displayName ?? "Your child"}
+        studentName={student?.displayName ?? null}
         items={items}
       />
     </div>

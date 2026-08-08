@@ -69,3 +69,53 @@ export async function updateParentAccountSettings(input: {
   revalidatePath("/parent/settings");
   return { ok: true, message: "Settings saved." };
 }
+
+/** Persist language only (header / quick toggle). Keeps other profile fields. */
+export async function updateParentPreferredLanguage(
+  preferredLanguageInput: string,
+): Promise<Result> {
+  const preferredLanguage = preferredLanguageInput === "vi" ? "vi" : "en";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) return { ok: false, error: "Sign in again to save language." };
+
+  const { data: existing } = await supabase
+    .from("parent_profiles")
+    .select("display_name, notification_preferences")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const metadataName =
+    typeof user.user_metadata?.display_name === "string"
+      ? user.user_metadata.display_name
+      : "";
+  const displayName = String(existing?.display_name || metadataName || "Parent").slice(
+    0,
+    120,
+  );
+
+  const { error } = await supabase.from("parent_profiles").upsert({
+    user_id: user.id,
+    display_name: displayName.length >= 2 ? displayName : "Parent",
+    preferred_language: preferredLanguage,
+    notification_preferences: existing?.notification_preferences ?? {
+      inApp: true,
+      importantEmail: true,
+      weeklyEmail: false,
+    },
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+
+  const cookieStore = await cookies();
+  cookieStore.set(PARENT_LANG_COOKIE, preferredLanguage, {
+    path: "/",
+    maxAge: PARENT_LANG_COOKIE_MAX_AGE_SEC,
+    sameSite: "lax",
+  });
+  revalidatePath("/parent", "layout");
+  revalidatePath("/parent/settings");
+  return { ok: true, message: "Language saved." };
+}

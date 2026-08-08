@@ -32,7 +32,9 @@ export function StudentLayoutClient({
     pathname === "/teach-english-online" ||
     pathname === "/english-learning-for-kids-at-home" ||
     pathname === "/resources" ||
-    pathname.startsWith("/resources/");
+    pathname.startsWith("/resources/") ||
+    pathname === "/parents" ||
+    pathname.startsWith("/parents/");
   const onSecondaryPortal =
     (pathname === "/secondary" || pathname.startsWith("/secondary/")) &&
     pathname !== "/secondary/login" &&

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useParentI18n } from "@/components/parent/ParentI18nProvider";
 import { cancelTrialBooking } from "@/lib/actions/trial-availability";
 import { formatTrialSlotLabel } from "@/lib/class-schedule/trial-format";
 import type {
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
+  const { t } = useParentI18n();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -40,18 +42,20 @@ export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
   return (
     <section className="rounded-2xl border border-teal-200 bg-teal-50/70 p-5 shadow-sm">
       <p className="text-xs font-extrabold uppercase tracking-wide text-teal-900">
-        Trial lesson
+        {t("trial.eyebrow")}
       </p>
 
       {nextOccurrence ? (
         <div className="mt-2">
-          <h2 className="text-lg font-black tracking-tight text-slate-950">Confirmed trial</h2>
+          <h2 className="text-lg font-black tracking-tight text-slate-950">
+            {t("trial.confirmedTitle")}
+          </h2>
           <p className="mt-1 text-sm font-semibold text-slate-700">
             {formatTrialSlotLabel(nextOccurrence)}
           </p>
           {confirmedBooking?.classId ? (
             <p className="mt-1 text-xs font-semibold text-slate-600">
-              Classroom access is ready once your child has a student login and enrollment.
+              {t("trial.classroomReady")}
             </p>
           ) : null}
         </div>
@@ -60,7 +64,7 @@ export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
       {pending.length > 0 ? (
         <div className={nextOccurrence ? "mt-4 border-t border-teal-100 pt-3" : "mt-2"}>
           <h2 className="text-base font-black tracking-tight text-slate-950">
-            Pending request{pending.length > 1 ? "s" : ""}
+            {t(pending.length > 1 ? "trial.pendingTitlePlural" : "trial.pendingTitle")}
           </h2>
           <ul className="mt-2 space-y-2">
             {pending.map((booking) => (
@@ -75,7 +79,7 @@ export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
                         durationMinutes: booking.durationMinutes,
                         timezone: booking.timezone,
                       })
-                    : "Awaiting teacher response"}
+                    : t("trial.awaiting")}
                 </span>
                 <button
                   type="button"
@@ -83,7 +87,7 @@ export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
                   onClick={() => cancel(booking.id)}
                   className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                 >
-                  Cancel
+                  {t("trial.cancel")}
                 </button>
               </li>
             ))}

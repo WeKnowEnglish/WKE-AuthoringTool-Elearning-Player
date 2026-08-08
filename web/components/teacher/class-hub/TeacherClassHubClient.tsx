@@ -158,7 +158,7 @@ export function TeacherClassHubClient({
   }, [joinCode]);
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-hidden">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Link
           href="/teacher/classes"

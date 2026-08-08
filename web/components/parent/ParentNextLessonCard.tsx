@@ -2,12 +2,14 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import { CalendarDays } from "lucide-react";
+import { useParentI18n } from "@/components/parent/ParentI18nProvider";
 import { formatWeeklySlotLabel } from "@/lib/class-schedule/next-meeting";
 import { detectBrowserTimeZone } from "@/lib/class-schedule/timezone";
 import type {
   ClassMeetingSlot,
   StudentNextClassMeeting,
 } from "@/lib/class-schedule/types";
+import { parentDateLocale } from "@/lib/parent/i18n";
 
 type Props = {
   classTitle: string | null;
@@ -23,20 +25,8 @@ function viewerTimeZoneSnapshot(): string | null {
   return detectBrowserTimeZone();
 }
 
-function formatInZone(iso: string, timeZone: string): string {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "";
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
-
 export function ParentNextLessonCard({ classTitle, nextMeeting, slots }: Props) {
+  const { t, locale } = useParentI18n();
   const viewerTimeZone = useSyncExternalStore(
     subscribe,
     viewerTimeZoneSnapshot,
@@ -46,8 +36,17 @@ export function ParentNextLessonCard({ classTitle, nextMeeting, slots }: Props) 
   const viewerLabel = useMemo(() => {
     if (!nextMeeting || !viewerTimeZone) return null;
     if (viewerTimeZone === nextMeeting.timezone) return null;
-    return formatInZone(nextMeeting.startsAt, viewerTimeZone);
-  }, [nextMeeting, viewerTimeZone]);
+    const date = new Date(nextMeeting.startsAt);
+    if (!Number.isFinite(date.getTime())) return null;
+    return new Intl.DateTimeFormat(parentDateLocale(locale), {
+      timeZone: viewerTimeZone,
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }, [locale, nextMeeting, viewerTimeZone]);
 
   return (
     <section className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 shadow-sm">
@@ -57,32 +56,30 @@ export function ParentNextLessonCard({ classTitle, nextMeeting, slots }: Props) 
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-extrabold uppercase tracking-wide text-indigo-800">
-            Class schedule
+            {t("schedule.eyebrow")}
           </p>
           <h2 className="mt-1 text-lg font-black tracking-tight text-slate-950">
-            {classTitle ? classTitle : "Next lesson"}
+            {classTitle ? classTitle : t("schedule.nextLesson")}
           </h2>
 
           {nextMeeting ? (
             <div className="mt-3 space-y-1">
               <p className="text-sm font-extrabold text-slate-900">
-                Next lesson: {nextMeeting.label}
+                {t("schedule.nextLessonLabel", { label: nextMeeting.label })}
               </p>
               <p className="text-xs font-semibold text-slate-600">
-                Class timezone: {nextMeeting.timezone}
-                {viewerLabel ? (
+                {t("schedule.classTimezone", { zone: nextMeeting.timezone })}
+                {viewerLabel && viewerTimeZone ? (
                   <>
                     {" "}
-                    · Your time: {viewerLabel} ({viewerTimeZone})
+                    · {t("schedule.yourTime", { time: viewerLabel, zone: viewerTimeZone })}
                   </>
                 ) : null}
               </p>
             </div>
           ) : (
             <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-              {classTitle
-                ? "No weekly class time is set yet. Ask the teacher if you are unsure when lessons meet."
-                : "This child is not linked to an active class schedule yet."}
+              {classTitle ? t("schedule.noWeekly") : t("schedule.notLinked")}
             </p>
           )}
 
@@ -92,7 +89,7 @@ export function ParentNextLessonCard({ classTitle, nextMeeting, slots }: Props) 
                 <li key={slot.id} className="text-sm font-semibold text-slate-800">
                   {formatWeeklySlotLabel(slot)}
                   <span className="ml-2 text-xs font-medium text-slate-500">
-                    ({slot.durationMinutes} min)
+                    ({t("schedule.minutes", { count: slot.durationMinutes })})
                   </span>
                 </li>
               ))}

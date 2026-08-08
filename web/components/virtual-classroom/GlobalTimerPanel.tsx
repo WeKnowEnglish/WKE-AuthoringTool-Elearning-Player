@@ -3,13 +3,13 @@
 import { useStorage } from "@liveblocks/react/suspense";
 import { useEffect, useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
-import type { GlobalTimerState } from "@/lib/virtual-classroom/tools/timer";
+import type { GlobalTimerState } from "@/lib/classroom-tools/timer";
 import {
   createIdleGlobalTimer,
   elapsedMs,
   formatTimerMs,
   remainingMs,
-} from "@/lib/virtual-classroom/tools/timer";
+} from "@/lib/classroom-tools/timer";
 
 type Props = {
   busy: boolean;

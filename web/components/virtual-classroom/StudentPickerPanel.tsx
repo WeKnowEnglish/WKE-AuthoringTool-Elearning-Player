@@ -3,8 +3,8 @@
 import { useStorage } from "@liveblocks/react/suspense";
 import { useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
-import type { PickerMode } from "@/lib/virtual-classroom/tools/picker";
-import { pickerPool } from "@/lib/virtual-classroom/tools/picker";
+import type { PickerMode } from "@/lib/classroom-tools/picker";
+import { pickerPool } from "@/lib/classroom-tools/picker";
 
 type Member = { id: string; name: string; role: string };
 

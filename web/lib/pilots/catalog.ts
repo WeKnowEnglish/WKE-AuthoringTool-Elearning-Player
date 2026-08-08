@@ -804,6 +804,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/teacher/classes",
+    title: "Teacher toolkit (timer + picker)",
+    description:
+      "Shared classroom tools lib (timer, name picker, dice) used by the sticky Teacher tools floater on /teacher/classes and by Virtual Classroom. Local sticky panel is movable/minimizable; VC keeps Liveblocks adapters.",
+    group: "classroom",
+    status: "review",
+  },
+  {
     href: "/whiteboard/join",
     title: "Whiteboard (production join)",
     description: "Student/guest join for collaborative whiteboard sessions.",

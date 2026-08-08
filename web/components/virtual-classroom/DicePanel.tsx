@@ -3,8 +3,8 @@
 import { useStorage } from "@liveblocks/react/suspense";
 import { useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
-import type { DicePreset, RandomiserState } from "@/lib/virtual-classroom/tools/dice";
-import { createEmptyRandomiser } from "@/lib/virtual-classroom/tools/dice";
+import type { DicePreset, RandomiserState } from "@/lib/classroom-tools/dice";
+import { createEmptyRandomiser } from "@/lib/classroom-tools/dice";
 
 type Props = {
   busy: boolean;

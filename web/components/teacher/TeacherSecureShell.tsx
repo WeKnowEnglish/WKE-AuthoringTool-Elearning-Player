@@ -11,6 +11,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
+import { TeacherToolkitFloat } from "@/components/classroom-tools/TeacherToolkitFloat";
 import { TeacherPrimaryTabs } from "@/components/teacher/TeacherPrimaryTabs";
 import {
   TeacherNavDropdown,
@@ -377,6 +378,7 @@ export function TeacherSecureShell({
       >
         {children}
       </div>
+      {immersiveLiveClass ? null : <TeacherToolkitFloat />}
     </div>
   );
 }

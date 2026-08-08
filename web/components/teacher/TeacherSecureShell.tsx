@@ -340,8 +340,8 @@ export function TeacherSecureShell({
       data-teacher-chrome-autohide={autoHideChrome ? "true" : undefined}
       className={
         lockToViewport
-          ? "flex h-dvh max-w-[100vw] flex-col overflow-hidden"
-          : "min-h-screen w-full max-w-[100vw] overflow-x-hidden"
+          ? "flex h-dvh max-w-full flex-col overflow-hidden"
+          : "min-h-screen w-full max-w-full overflow-x-hidden"
       }
       style={themeVars}
     >

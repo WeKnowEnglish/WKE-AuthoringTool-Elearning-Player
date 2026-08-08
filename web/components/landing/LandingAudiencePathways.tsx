@@ -38,8 +38,7 @@ export function LandingAudiencePathways() {
           <article className="rounded-xl border-2 border-kid-ink/20 bg-white p-4 sm:p-5">
             <h3 className="text-lg font-extrabold text-kid-ink">Students</h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-kid-ink/75">
-              Choose Primary or Secondary, sign in, join your class, or try a free practice
-              activity.
+              Choose Primary or Secondary, sign in, and open your class practice.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-col">
               <TrackedMarketingLink
@@ -51,18 +50,10 @@ export function LandingAudiencePathways() {
                 Sign in
               </TrackedMarketingLink>
               <TrackedMarketingLink
-                href="/join-class"
-                event="audience_student_click"
-                eventProps={{ cta: "student_pathway_join" }}
-                className={linkClass}
-              >
-                Join a class
-              </TrackedMarketingLink>
-              <TrackedMarketingLink
                 href="#free-activities"
                 event="audience_student_click"
                 eventProps={{ cta: "student_pathway_practice" }}
-                className={linkClass}
+                className={`col-span-2 ${linkClass}`}
               >
                 Try free practice
               </TrackedMarketingLink>

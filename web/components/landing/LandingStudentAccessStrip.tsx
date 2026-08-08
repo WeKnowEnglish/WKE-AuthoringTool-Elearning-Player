@@ -16,25 +16,17 @@ export function LandingStudentAccessStrip() {
             Already learning with We Know English?
           </p>
           <p className="mt-1 text-sm font-semibold text-[var(--landing-body-muted)]">
-            Sign in to your account or enter the class code your teacher shared.
+            Sign in to your Primary or Secondary account to continue learning.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <TrackedMarketingLink
-            href="/login"
+            href="/students"
             event="student_signin_click"
             eventProps={{ cta: "student_sign_in", userRole: "student", authState: "anonymous" }}
             className={btnClass}
           >
             Student Sign In
-          </TrackedMarketingLink>
-          <TrackedMarketingLink
-            href="/join-class"
-            event="join_class_click"
-            eventProps={{ cta: "enter_class_code", userRole: "student", authState: "anonymous" }}
-            className={btnClass}
-          >
-            Enter Class Code
           </TrackedMarketingLink>
         </div>
       </div>

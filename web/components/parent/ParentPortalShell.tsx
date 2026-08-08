@@ -99,6 +99,14 @@ export function ParentPortalShell(props: {
               {props.userEmail}
             </span>
             <Link
+              href="/parent"
+              aria-label={t("nav.home")}
+              aria-current={pathname === "/parent" ? "page" : undefined}
+              className="rounded-xl border border-slate-300 p-2 text-slate-700 hover:bg-slate-50"
+            >
+              <House className="h-5 w-5" aria-hidden />
+            </Link>
+            <Link
               href="/parent/notifications"
               aria-label={notificationsLabel}
               className="relative rounded-xl border border-slate-300 p-2 text-slate-700 hover:bg-slate-50"

@@ -172,7 +172,7 @@ function TeacherChromeHeader({
   );
 
   return (
-    <header className="teacher-chrome-header w-full min-w-0 shrink-0 overflow-x-hidden border-b px-2 py-1 sm:px-3">
+    <header className="teacher-chrome-header relative z-40 w-full min-w-0 shrink-0 overflow-visible border-b px-2 py-1 sm:px-3">
       {realIsAdmin && previewAsTeacherLight ? (
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-950">
           <span>Previewing Teacher Light</span>
@@ -196,7 +196,7 @@ function TeacherChromeHeader({
             Teacher
           </Link>
         </div>
-        <div className="flex min-w-0 max-w-full justify-center justify-self-center overflow-x-auto sm:col-start-2 sm:row-start-1">
+        <div className="flex min-w-0 max-w-full justify-center justify-self-center overflow-visible sm:col-start-2 sm:row-start-1">
           <Suspense
             fallback={
               <nav className="flex gap-1" aria-hidden>

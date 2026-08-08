@@ -35,7 +35,7 @@ export function TeacherPrimaryTabs({ teacherTier = "plus", isAdmin = false }: Pr
 
   return (
     <nav
-      className="flex max-w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:gap-1.5"
+      className="flex max-w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:flex-nowrap sm:gap-1.5"
       aria-label="Teacher primary"
     >
       <TeacherNavDropdown label="Classroom" active={onClassroom}>

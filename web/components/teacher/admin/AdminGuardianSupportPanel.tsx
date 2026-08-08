@@ -44,21 +44,21 @@ export function AdminGuardianSupportPanel(props: { data: AdminGuardianSupportDat
   );
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-3">
+    <div className="min-w-0 max-w-full space-y-5">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-3">
         <SummaryCard label="Active connections" value={props.data.connections.filter((item) => item.status === "active").length} />
         <SummaryCard label="Pending invitations" value={props.data.invitations.filter((item) => item.status === "pending").length} />
         <SummaryCard label="Recent audit events" value={props.data.auditEvents.length} />
       </div>
 
-      <label className="relative block max-w-xl">
+      <label className="relative block max-w-full sm:max-w-xl">
         <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-neutral-400" aria-hidden />
         <span className="sr-only">Search guardian support records</span>
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by student or guardian email"
-          className="w-full rounded-lg border border-neutral-300 bg-white py-2.5 pl-10 pr-3 text-sm"
+          className="w-full min-w-0 rounded-lg border border-neutral-300 bg-white py-2.5 pl-10 pr-3 text-sm"
         />
       </label>
 
@@ -67,15 +67,15 @@ export function AdminGuardianSupportPanel(props: { data: AdminGuardianSupportDat
         {!error && message ? <span className="text-emerald-700">{message}</span> : null}
       </p>
 
-      <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-neutral-200 bg-white">
         <div className="border-b border-neutral-200 p-4">
           <h2 className="font-bold text-neutral-950">Guardian connections</h2>
           <p className="mt-1 text-sm text-neutral-600">
             Revocation takes effect immediately across every parent route and data function.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-neutral-200 text-sm">
+        <div className="min-w-0 overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[40rem] divide-y divide-neutral-200 text-sm">
             <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
               <tr>
                 <th className="px-4 py-3">Student</th>
@@ -88,13 +88,21 @@ export function AdminGuardianSupportPanel(props: { data: AdminGuardianSupportDat
             <tbody className="divide-y divide-neutral-100">
               {connections.map((item) => (
                 <tr key={item.id}>
-                  <td className="px-4 py-3 font-semibold">{item.studentName}</td>
-                  <td className="px-4 py-3">
-                    <p>{item.guardianEmail ?? "Email unavailable"}</p>
-                    <p className="text-xs capitalize text-neutral-500">{item.relationshipType}</p>
+                  <td className="max-w-[10rem] px-4 py-3 font-semibold break-words">
+                    {item.studentName}
+                  </td>
+                  <td className="max-w-[14rem] px-4 py-3">
+                    <p className="break-all">
+                      {item.guardianEmail ?? "Email unavailable"}
+                    </p>
+                    <p className="text-xs capitalize text-neutral-500">
+                      {item.relationshipType}
+                    </p>
                   </td>
                   <td className="px-4 py-3 capitalize">{item.status}</td>
-                  <td className="px-4 py-3 text-neutral-600">{formatDate(item.activatedAt)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-neutral-600">
+                    {formatDate(item.activatedAt)}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     {item.status === "active" ? (
                       <button
@@ -128,17 +136,17 @@ export function AdminGuardianSupportPanel(props: { data: AdminGuardianSupportDat
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-2">
+        <section className="min-w-0 rounded-xl border border-neutral-200 bg-white p-4">
           <h2 className="font-bold text-neutral-950">Recent invitations</h2>
           <div className="mt-3 space-y-2">
             {invitations.slice(0, 80).map((item) => (
-              <div key={item.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
+              <div key={item.id} className="min-w-0 rounded-lg border border-neutral-200 p-3 text-sm">
                 <div className="flex flex-wrap justify-between gap-2">
-                  <p className="font-semibold">{item.studentName}</p>
+                  <p className="min-w-0 font-semibold break-words">{item.studentName}</p>
                   <span className="capitalize text-neutral-500">{item.status}</span>
                 </div>
-                <p className="mt-1 text-neutral-700">{item.invitedEmail}</p>
+                <p className="mt-1 break-all text-neutral-700">{item.invitedEmail}</p>
                 <p className="mt-1 text-xs text-neutral-500">
                   Email {item.emailStatus} · {formatDate(item.createdAt)}
                 </p>
@@ -147,14 +155,14 @@ export function AdminGuardianSupportPanel(props: { data: AdminGuardianSupportDat
           </div>
         </section>
 
-        <section className="rounded-xl border border-neutral-200 bg-white p-4">
+        <section className="min-w-0 rounded-xl border border-neutral-200 bg-white p-4">
           <h2 className="font-bold text-neutral-950">Audit timeline</h2>
           <p className="mt-1 text-sm text-neutral-600">Lifecycle actions only; report narratives and student answers are excluded.</p>
-          <div className="mt-3 max-h-[36rem] space-y-2 overflow-y-auto">
+          <div className="mt-3 max-h-[36rem] space-y-2 overflow-y-auto overflow-x-hidden">
             {props.data.auditEvents.map((event) => (
-              <div key={event.id} className="rounded-lg bg-neutral-50 p-3 text-sm">
+              <div key={event.id} className="min-w-0 rounded-lg bg-neutral-50 p-3 text-sm">
                 <p className="font-semibold capitalize">{actionLabel(event.action)}</p>
-                <p className="mt-1 text-neutral-600">
+                <p className="mt-1 break-all text-neutral-600">
                   {[event.studentName, event.guardianEmail, event.actorEmail].filter(Boolean).join(" · ")}
                 </p>
                 <time dateTime={event.createdAt} className="mt-1 block text-xs text-neutral-500">
@@ -171,7 +179,7 @@ export function AdminGuardianSupportPanel(props: { data: AdminGuardianSupportDat
 
 function SummaryCard(props: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{props.label}</p>
       <p className="mt-2 text-3xl font-bold text-neutral-950">{props.value}</p>
     </div>

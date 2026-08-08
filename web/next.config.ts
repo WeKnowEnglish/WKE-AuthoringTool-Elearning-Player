@@ -105,9 +105,14 @@ const nextConfig: NextConfig = {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
           },
+          // Daily Prebuilt runs in a cross-origin iframe (c.daily.co / *.daily.co).
+          // camera=() blocked Chromium students from ever prompting/using A/V;
+          // microphone=(self) also blocked mic in that iframe. Allow camera/mic/
+          // display-capture broadly so VC works; keep geolocation locked down.
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(self), geolocation=()",
+            value:
+              "camera=*, microphone=*, display-capture=*, geolocation=()",
           },
         ],
       },

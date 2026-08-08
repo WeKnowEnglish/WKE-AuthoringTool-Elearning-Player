@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { GuardianInvitationAcceptCard } from "@/components/parent/GuardianInvitationAcceptCard";
 import { ParentAccountSwitchButton } from "@/components/parent/ParentAccountSwitchButton";
 import { ParentAuthForm } from "@/components/parent/ParentAuthForm";
+import { ParentI18nBoundary } from "@/components/parent/ParentI18nBoundary";
+import { ParentLanguageToggle } from "@/components/parent/ParentLanguageToggle";
+import { PARENT_LANG_COOKIE, readParentLangCookie } from "@/lib/parent/i18n/cookie";
 import { getGuardianInvitationPreview } from "@/lib/parent/guardian-data";
 import { isPlausibleGuardianInvitationToken } from "@/lib/parent/guardian-domain";
 import { createClient } from "@/lib/supabase/server";
@@ -48,22 +52,31 @@ export default async function GuardianInvitationPage(props: {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    const cookieStore = await cookies();
+    const locale = readParentLangCookie(cookieStore.get(PARENT_LANG_COOKIE)?.value) ?? "en";
     return (
-      <main className="min-h-dvh bg-slate-50 px-4 py-10 text-slate-950">
-        <div className="mx-auto max-w-md">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-indigo-600">
-            Secure family invitation
-          </p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight">Sign in to continue</h1>
-          <p className="mt-3 leading-relaxed text-slate-600">
-            Use the email address that received this invitation. Student details remain hidden until
-            the email is verified.
-          </p>
-          <div className="mt-7">
-            <ParentAuthForm nextPath={invitationPath} invitationMode />
+      <ParentI18nBoundary locale={locale}>
+        <main className="min-h-dvh bg-slate-50 px-4 py-10 text-slate-950" lang={locale}>
+          <div className="mx-auto max-w-md">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.18em] text-indigo-600">
+                  Secure family invitation
+                </p>
+                <h1 className="mt-3 text-3xl font-black tracking-tight">Sign in to continue</h1>
+              </div>
+              <ParentLanguageToggle />
+            </div>
+            <p className="mt-3 leading-relaxed text-slate-600">
+              Use the email address that received this invitation. Student details remain hidden until
+              the email is verified.
+            </p>
+            <div className="mt-7">
+              <ParentAuthForm nextPath={invitationPath} invitationMode />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </ParentI18nBoundary>
     );
   }
 

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ParentAuthForm } from "@/components/parent/ParentAuthForm";
+import { ParentI18nBoundary } from "@/components/parent/ParentI18nBoundary";
+import { ParentLoginPageView } from "@/components/parent/ParentLoginPageView";
+import { PARENT_LANG_COOKIE, readParentLangCookie } from "@/lib/parent/i18n/cookie";
 import { safeParentPath } from "@/lib/parent/parent-routes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,20 +25,12 @@ export default async function ParentLoginPage(props: {
   } = await supabase.auth.getUser();
   if (user) redirect(destination);
 
+  const cookieStore = await cookies();
+  const locale = readParentLangCookie(cookieStore.get(PARENT_LANG_COOKIE)?.value) ?? "en";
+
   return (
-    <main className="min-h-dvh bg-slate-50 px-4 py-10 text-slate-950">
-      <div className="mx-auto max-w-md">
-        <p className="text-sm font-bold uppercase tracking-[0.18em] text-indigo-600">
-          We Know English
-        </p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight">Parent portal</h1>
-        <p className="mt-3 leading-relaxed text-slate-600">
-          See teacher-approved class updates and a clear story of your child&apos;s learning.
-        </p>
-        <div className="mt-7">
-          <ParentAuthForm nextPath={destination} />
-        </div>
-      </div>
-    </main>
+    <ParentI18nBoundary locale={locale}>
+      <ParentLoginPageView nextPath={destination} />
+    </ParentI18nBoundary>
   );
 }

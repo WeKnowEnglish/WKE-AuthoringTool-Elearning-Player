@@ -247,7 +247,7 @@ export function TeacherClassesHome({
     ].join(" ");
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden">
       {liveRequiresPlus ? (
         <p
           className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"

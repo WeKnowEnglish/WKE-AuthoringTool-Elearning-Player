@@ -172,7 +172,7 @@ function TeacherChromeHeader({
   );
 
   return (
-    <header className="teacher-chrome-header shrink-0 border-b px-2 py-1 sm:px-3">
+    <header className="teacher-chrome-header w-full min-w-0 shrink-0 overflow-x-hidden border-b px-2 py-1 sm:px-3">
       {realIsAdmin && previewAsTeacherLight ? (
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-950">
           <span>Previewing Teacher Light</span>
@@ -187,7 +187,7 @@ function TeacherChromeHeader({
           </button>
         </div>
       ) : null}
-      <div className="grid w-full grid-cols-1 items-center gap-y-2 gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-x-1 sm:gap-y-1">
+      <div className="grid w-full min-w-0 grid-cols-1 items-center gap-x-2 gap-y-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] sm:gap-x-1 sm:gap-y-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:justify-self-start">
           <Link
             href="/teacher/classes"
@@ -196,7 +196,7 @@ function TeacherChromeHeader({
             Teacher
           </Link>
         </div>
-        <div className="flex justify-center justify-self-center sm:col-start-2 sm:row-start-1">
+        <div className="flex min-w-0 max-w-full justify-center justify-self-center overflow-x-auto sm:col-start-2 sm:row-start-1">
           <Suspense
             fallback={
               <nav className="flex gap-1" aria-hidden>
@@ -209,7 +209,7 @@ function TeacherChromeHeader({
             <TeacherPrimaryTabs teacherTier={teacherTier} isAdmin={isAdmin} />
           </Suspense>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs sm:justify-self-end sm:text-sm">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs sm:justify-self-end sm:text-sm">
           <TeacherSettingsMenu userEmail={userEmail} isAdmin={realIsAdmin} />
         </div>
       </div>
@@ -338,7 +338,11 @@ export function TeacherSecureShell({
       data-teacher-root
       data-teacher-themed="true"
       data-teacher-chrome-autohide={autoHideChrome ? "true" : undefined}
-      className={lockToViewport ? "flex h-dvh flex-col overflow-hidden" : "min-h-screen"}
+      className={
+        lockToViewport
+          ? "flex h-dvh max-w-[100vw] flex-col overflow-hidden"
+          : "min-h-screen w-full max-w-[100vw] overflow-x-hidden"
+      }
       style={themeVars}
     >
       {immersiveLiveClass ? null : autoHideChrome ? (
@@ -359,12 +363,12 @@ export function TeacherSecureShell({
       <div
         className={
           immersiveLiveClass
-            ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+            ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0"
             : lockToViewport
               ? isActivityBuilderWorkspacePath(pathname)
-                ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
-                : "flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3 sm:px-6 lg:px-8"
-              : "w-full max-w-none px-4 pt-0 pb-8 sm:px-6 lg:px-8"
+                ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0"
+                : "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-4 pt-2 pb-3 sm:px-6 lg:px-8"
+              : "w-full min-w-0 max-w-full overflow-x-hidden px-4 pt-0 pb-8 sm:px-6 lg:px-8"
         }
         style={{
           backgroundColor: "var(--teacher-bg)",

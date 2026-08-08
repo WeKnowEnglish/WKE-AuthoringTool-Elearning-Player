@@ -858,9 +858,12 @@ body:has([data-student-shell]) {
 }
 
 /* Keep teacher workspace backgrounds fully neutral even when route content
-   is shorter than viewport and body background would otherwise show through. */
+   is shorter than viewport and body background would otherwise show through.
+   Also clip sideways overflow so theme bg (#020617 fallback) cannot appear as
+   an empty horizontal “black bar” beside the page. */
 body:has([data-teacher-root]) {
   background: var(--teacher-bg, #020617);
+  overflow-x: hidden;
 }
 
 /* Teacher editor: global keyframes so Tailwind layer order cannot drop the animation name. */

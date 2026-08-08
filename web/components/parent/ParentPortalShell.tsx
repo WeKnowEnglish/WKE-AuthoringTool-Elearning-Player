@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
 import { useParentI18n } from "@/components/parent/ParentI18nProvider";
+import { ParentLanguageTipBanner } from "@/components/parent/ParentLanguageTipBanner";
+import { ParentLanguageToggle } from "@/components/parent/ParentLanguageToggle";
 import { ParentStudentSelector } from "@/components/parent/ParentStudentSelector";
 import type { ParentLinkedStudent } from "@/lib/parent/guardian-data";
 import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
@@ -91,7 +93,8 @@ export function ParentPortalShell(props: {
               {t("brand.parentPortal")}
             </p>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <ParentLanguageToggle variant="compact" persistAccount />
             <span className="hidden max-w-56 truncate text-xs text-slate-500 sm:block">
               {props.userEmail}
             </span>
@@ -121,6 +124,8 @@ export function ParentPortalShell(props: {
           </div>
         </div>
       </header>
+
+      <ParentLanguageTipBanner />
 
       <div className="mx-auto max-w-6xl px-4 py-5 pb-24 sm:px-6 sm:pb-8">
         {props.students.length > 0 ? (

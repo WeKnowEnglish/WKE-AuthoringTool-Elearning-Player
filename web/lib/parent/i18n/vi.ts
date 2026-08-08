@@ -145,4 +145,8 @@ export const parentMessagesVi = {
   "pref.save": "Lưu lựa chọn",
   "pref.saving": "Đang lưu…",
   "pref.saved": "Đã lưu lựa chọn. Giáo viên sẽ chọn giờ học cho lớp.",
+
+  "langTip.message": "Xem cổng phụ huynh bằng tiếng Việt? · View in Vietnamese?",
+  "langTip.chooseVi": "Tiếng Việt",
+  "langTip.dismiss": "Để sau",
 } as const satisfies Record<ParentMessageKey, string>;

@@ -143,6 +143,10 @@ export const parentMessagesEn = {
   "pref.save": "Save preferences",
   "pref.saving": "Saving…",
   "pref.saved": "Preferences saved. The teacher will choose the class time.",
+
+  "langTip.message": "Xem cổng phụ huynh bằng tiếng Việt? · View in Vietnamese?",
+  "langTip.chooseVi": "Tiếng Việt",
+  "langTip.dismiss": "Not now",
 } as const;
 
 export type ParentMessageKey = keyof typeof parentMessagesEn;

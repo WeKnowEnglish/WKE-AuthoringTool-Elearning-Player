@@ -387,7 +387,7 @@ export function TeacherClassesHome({
                 <div>
                   <p className="text-sm font-semibold text-stone-800">Teacher tools</p>
                   <p className="mt-0.5 text-[11px] text-stone-500">
-                    Sticky timer and name picker for live and in-person class.
+                    Sticky timer, name picker, and local scratch board for screen share.
                   </p>
                 </div>
               </div>
@@ -418,14 +418,19 @@ export function TeacherClassesHome({
                   </div>
                   <p className="text-[10px] font-semibold text-stone-700">Name picker</p>
                 </button>
-                <div className="rounded-xl border border-stone-200/80 bg-stone-50/90 px-2 py-2.5 text-center">
+                <button
+                  type="button"
+                  className="rounded-xl border border-stone-200 bg-white px-2 py-2.5 text-center shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+                  onClick={() => teacherToolkitStore.openTool("board")}
+                >
                   <div
-                    className="mx-auto mb-1.5 h-7 w-7 rounded-lg bg-stone-200/80"
+                    className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-[10px] font-bold text-violet-800"
                     aria-hidden
-                  />
-                  <p className="text-[10px] font-medium text-stone-500">Whiteboard</p>
-                  <p className="text-[9px] text-stone-400">Soon</p>
-                </div>
+                  >
+                    B
+                  </div>
+                  <p className="text-[10px] font-semibold text-stone-700">Scratch board</p>
+                </button>
                 <Link
                   href="/live-game/host"
                   className="rounded-xl border border-stone-200 bg-white px-2 py-2.5 text-center no-underline shadow-sm transition hover:border-stone-300 hover:bg-stone-50"

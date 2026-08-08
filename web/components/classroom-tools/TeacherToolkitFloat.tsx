@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { NamePickerToolPanel } from "@/components/classroom-tools/NamePickerToolPanel";
+import { ScratchBoardToolPanel } from "@/components/classroom-tools/ScratchBoardToolPanel";
 import { TimerToolPanel } from "@/components/classroom-tools/TimerToolPanel";
 import {
   formatTimerMs,
@@ -18,9 +19,19 @@ import {
 } from "@/lib/classroom-tools/timer";
 import { teacherToolkitStore } from "@/lib/classroom-tools/toolkit-store";
 
+function toolFabLabel(
+  activeTool: "timer" | "picker" | "board",
+  displayMs: number,
+): string {
+  if (activeTool === "timer") return formatTimerMs(displayMs);
+  if (activeTool === "picker") return "Picker";
+  return "Board";
+}
+
 /**
  * Sticky, draggable teacher toolkit floater.
  * Mount once under TeacherSecureShell so it survives route changes.
+ * Persists via localStorage (sticky FAB until dismissed).
  */
 export function TeacherToolkitFloat() {
   const state = useSyncExternalStore(
@@ -29,6 +40,7 @@ export function TeacherToolkitFloat() {
     teacherToolkitStore.getServerSnapshot,
   );
   const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -41,7 +53,18 @@ export function TeacherToolkitFloat() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!state.sticky || state.timer.status !== "running") return;
+    const id = window.setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      teacherToolkitStore.tickTimer(t);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [state.sticky, state.timer.status]);
+
   const onTick = useCallback((nowMs: number) => {
+    setNow(nowMs);
     teacherToolkitStore.tickTimer(nowMs);
   }, []);
 
@@ -74,31 +97,50 @@ export function TeacherToolkitFloat() {
     }
   };
 
-  if (!mounted || !state.open) return null;
+  if (!mounted || !state.sticky) return null;
 
   const portalTarget =
     document.querySelector<HTMLElement>("[data-teacher-root]") ?? document.body;
 
   const displayMs =
     state.timer.mode === "stopwatch"
-      ? elapsedMs(state.timer, Date.now())
-      : remainingMs(state.timer, Date.now());
+      ? elapsedMs(state.timer, now)
+      : remainingMs(state.timer, now);
 
-  if (state.minimized) {
+  if (!state.expanded) {
     return createPortal(
       <button
         type="button"
-        className="fixed z-[220] flex items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-bold text-stone-900 shadow-lg"
+        className="fixed z-[220] flex cursor-grab items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-bold text-stone-900 shadow-lg active:cursor-grabbing"
         style={{ left: state.x, top: state.y }}
-        onClick={() => teacherToolkitStore.setMinimized(false)}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          dragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            originX: state.x,
+            originY: state.y,
+          };
+        }}
+        onPointerMove={onPointerMove}
+        onPointerUp={(event) => {
+          const drag = dragRef.current;
+          const moved =
+            drag != null &&
+            (Math.abs(event.clientX - drag.startX) > 4 ||
+              Math.abs(event.clientY - drag.startY) > 4);
+          onPointerUp(event);
+          if (!moved) teacherToolkitStore.expand();
+        }}
+        onPointerCancel={onPointerUp}
         aria-label="Expand teacher toolkit"
       >
         <span className="text-stone-500" aria-hidden>
           Tools
         </span>
-        {state.activeTool === "timer"
-          ? formatTimerMs(displayMs)
-          : "Name picker"}
+        {toolFabLabel(state.activeTool, displayMs)}
       </button>,
       portalTarget,
     );
@@ -106,7 +148,7 @@ export function TeacherToolkitFloat() {
 
   return createPortal(
     <div
-      className="fixed z-[220] w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-stone-300 bg-white shadow-2xl"
+      className="fixed z-[220] w-[min(24rem,calc(100vw-1.5rem))] rounded-xl border border-stone-300 bg-white shadow-2xl"
       style={{ left: state.x, top: state.y }}
       role="dialog"
       aria-label="Teacher toolkit"
@@ -121,46 +163,46 @@ export function TeacherToolkitFloat() {
         <p className="min-w-0 flex-1 truncate text-xs font-bold text-stone-800">
           Teacher tools
         </p>
-        <button
-          type="button"
-          className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
-            state.activeTool === "timer"
-              ? "bg-stone-900 text-white"
-              : "text-stone-600 hover:bg-stone-200"
-          }`}
-          onClick={() => teacherToolkitStore.setActiveTool("timer")}
-        >
-          Timer
-        </button>
-        <button
-          type="button"
-          className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
-            state.activeTool === "picker"
-              ? "bg-stone-900 text-white"
-              : "text-stone-600 hover:bg-stone-200"
-          }`}
-          onClick={() => teacherToolkitStore.setActiveTool("picker")}
-        >
-          Picker
-        </button>
+        {(
+          [
+            ["timer", "Timer"],
+            ["picker", "Picker"],
+            ["board", "Board"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+              state.activeTool === id
+                ? "bg-stone-900 text-white"
+                : "text-stone-600 hover:bg-stone-200"
+            }`}
+            onClick={() => teacherToolkitStore.setActiveTool(id)}
+          >
+            {label}
+          </button>
+        ))}
         <button
           type="button"
           className="rounded px-1.5 py-0.5 text-[11px] font-semibold text-stone-600 hover:bg-stone-200"
-          onClick={() => teacherToolkitStore.setMinimized(true)}
+          onClick={() => teacherToolkitStore.minimize()}
           aria-label="Minimize toolkit"
+          title="Minimize (stays sticky)"
         >
           –
         </button>
         <button
           type="button"
           className="rounded px-1.5 py-0.5 text-[11px] font-semibold text-stone-600 hover:bg-stone-200"
-          onClick={() => teacherToolkitStore.close()}
-          aria-label="Close toolkit"
+          onClick={() => teacherToolkitStore.dismiss()}
+          aria-label="Dismiss toolkit"
+          title="Dismiss until you open tools again"
         >
           ×
         </button>
       </div>
-      <div className="max-h-[min(70vh,32rem)] overflow-y-auto p-3">
+      <div className="max-h-[min(70vh,36rem)] overflow-y-auto p-3">
         {state.activeTool === "timer" ? (
           <TimerToolPanel
             compact
@@ -174,7 +216,8 @@ export function TeacherToolkitFloat() {
             onReset={teacherToolkitStore.resetTimer}
             onTick={onTick}
           />
-        ) : (
+        ) : null}
+        {state.activeTool === "picker" ? (
           <NamePickerToolPanel
             picker={state.picker}
             draft={state.pickerDraft}
@@ -183,7 +226,8 @@ export function TeacherToolkitFloat() {
             onDraw={teacherToolkitStore.drawPicker}
             onResetCycle={teacherToolkitStore.resetPicker}
           />
-        )}
+        ) : null}
+        {state.activeTool === "board" ? <ScratchBoardToolPanel /> : null}
       </div>
     </div>,
     portalTarget,

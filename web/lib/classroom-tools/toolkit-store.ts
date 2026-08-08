@@ -1,6 +1,6 @@
 /**
- * Local sticky teacher toolkit state (non-live). Survives route changes inside /teacher.
- * Timer + name picker share pure logic from `@/lib/classroom-tools`.
+ * Sticky teacher toolkit state (non-live).
+ * Persists in localStorage so it survives refresh, new tabs, and browser minimize.
  */
 
 import {
@@ -22,28 +22,29 @@ import {
   type GlobalTimerState,
 } from "@/lib/classroom-tools/timer";
 
-export type ToolkitToolId = "timer" | "picker";
+export type ToolkitToolId = "timer" | "picker" | "board";
 
 export type TeacherToolkitState = {
-  open: boolean;
-  minimized: boolean;
+  /** Toolkit stays available (FAB or panel) until dismissed. */
+  sticky: boolean;
+  /** Full panel vs compact FAB. */
+  expanded: boolean;
   activeTool: ToolkitToolId;
   /** Panel top-left in viewport px. */
   x: number;
   y: number;
   timer: GlobalTimerState;
-  /** Draft minutes for countdown start/reset. */
   timerMinutes: number;
   picker: StudentPickerState;
-  /** Raw bank editor text (one label per line). */
   pickerDraft: string;
 };
 
-const STORAGE_KEY = "wke.teacher.toolkit.v1";
+const STORAGE_KEY = "wke.teacher.toolkit.v2";
+const LEGACY_SESSION_KEY = "wke.teacher.toolkit.v1";
 
 const DEFAULT_STATE: TeacherToolkitState = {
-  open: false,
-  minimized: false,
+  sticky: false,
+  expanded: false,
   activeTool: "timer",
   x: 24,
   y: 88,
@@ -74,12 +75,25 @@ function parseLabels(draft: string): string[] {
   ].slice(0, 200);
 }
 
+function parseTool(value: unknown): ToolkitToolId {
+  if (value === "picker" || value === "board") return value;
+  // Legacy toolkit id from collaborative whiteboard experiment
+  if (value === "whiteboard") return "board";
+  return "timer";
+}
+
 function readStored(): Partial<TeacherToolkitState> | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.sessionStorage.getItem(LEGACY_SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as Partial<TeacherToolkitState>;
+    return JSON.parse(raw) as Partial<TeacherToolkitState> & {
+      open?: boolean;
+      minimized?: boolean;
+      activeTool?: string;
+    };
   } catch {
     return null;
   }
@@ -88,11 +102,11 @@ function readStored(): Partial<TeacherToolkitState> | null {
 function persist(state: TeacherToolkitState) {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        open: state.open,
-        minimized: state.minimized,
+        sticky: state.sticky,
+        expanded: state.expanded,
         activeTool: state.activeTool,
         x: state.x,
         y: state.y,
@@ -102,6 +116,7 @@ function persist(state: TeacherToolkitState) {
         pickerDraft: state.pickerDraft,
       }),
     );
+    window.sessionStorage.removeItem(LEGACY_SESSION_KEY);
   } catch {
     /* ignore quota */
   }
@@ -112,8 +127,9 @@ type TeacherToolkitStore = {
   getSnapshot: () => TeacherToolkitState;
   getServerSnapshot: () => TeacherToolkitState;
   openTool: (tool: ToolkitToolId) => void;
-  close: () => void;
-  setMinimized: (minimized: boolean) => void;
+  minimize: () => void;
+  expand: () => void;
+  dismiss: () => void;
   setActiveTool: (tool: ToolkitToolId) => void;
   setPosition: (x: number, y: number) => void;
   setTimerMinutes: (minutes: number) => void;
@@ -131,32 +147,55 @@ type TeacherToolkitStore = {
 
 function createTeacherToolkitStore(): TeacherToolkitStore {
   const listeners = new Set<() => void>();
-  let state: TeacherToolkitState = { ...DEFAULT_STATE };
+  let state: TeacherToolkitState = {
+    ...DEFAULT_STATE,
+    timer: createIdleGlobalTimer(60_000),
+    picker: createEmptyPickerState([]),
+  };
   let hydrated = false;
+
+  function notify() {
+    for (const listener of listeners) listener();
+  }
 
   function ensureHydrated() {
     if (hydrated || typeof window === "undefined") return;
     hydrated = true;
     const stored = readStored();
     if (!stored) return;
+
+    const legacy = stored as Partial<TeacherToolkitState> & {
+      open?: boolean;
+      minimized?: boolean;
+    };
+    const sticky =
+      typeof legacy.sticky === "boolean" ? legacy.sticky : Boolean(legacy.open);
+    const expanded =
+      typeof legacy.expanded === "boolean"
+        ? legacy.expanded
+        : Boolean(legacy.open) && !legacy.minimized;
+
     const pos = clampPosition(stored.x ?? state.x, stored.y ?? state.y);
     state = {
       ...state,
-      ...stored,
+      sticky,
+      expanded: sticky ? expanded : false,
       x: pos.x,
       y: pos.y,
       timer: stored.timer ?? state.timer,
       picker: stored.picker ?? state.picker,
       pickerDraft: stored.pickerDraft ?? state.pickerDraft,
       timerMinutes: stored.timerMinutes ?? state.timerMinutes,
-      activeTool: stored.activeTool === "picker" ? "picker" : "timer",
+      activeTool: parseTool(stored.activeTool),
     };
+    persist(state);
+    notify();
   }
 
   function emit(next: TeacherToolkitState) {
     state = next;
     persist(state);
-    for (const listener of listeners) listener();
+    notify();
   }
 
   function patch(partial: Partial<TeacherToolkitState>) {
@@ -168,8 +207,19 @@ function createTeacherToolkitStore(): TeacherToolkitStore {
     subscribe(listener) {
       ensureHydrated();
       listeners.add(listener);
+      const onStorage = (event: StorageEvent) => {
+        if (event.key !== STORAGE_KEY && event.key !== null) return;
+        hydrated = false;
+        ensureHydrated();
+      };
+      if (typeof window !== "undefined") {
+        window.addEventListener("storage", onStorage);
+      }
       return () => {
         listeners.delete(listener);
+        if (typeof window !== "undefined") {
+          window.removeEventListener("storage", onStorage);
+        }
       };
     },
     getSnapshot() {
@@ -181,23 +231,33 @@ function createTeacherToolkitStore(): TeacherToolkitStore {
     },
     openTool(tool) {
       ensureHydrated();
-      emit({ ...state, open: true, minimized: false, activeTool: tool });
+      emit({
+        ...state,
+        sticky: true,
+        expanded: true,
+        activeTool: tool,
+      });
     },
-    close() {
-      patch({ open: false });
+    minimize() {
+      patch({ sticky: true, expanded: false });
     },
-    setMinimized(minimized) {
-      patch({ minimized });
+    expand() {
+      patch({ sticky: true, expanded: true });
+    },
+    dismiss() {
+      patch({ sticky: false, expanded: false });
     },
     setActiveTool(tool) {
-      patch({ activeTool: tool, minimized: false, open: true });
+      patch({ activeTool: tool, sticky: true, expanded: true });
     },
     setPosition(x, y) {
       const pos = clampPosition(x, y);
       patch({ x: pos.x, y: pos.y });
     },
     setTimerMinutes(minutes) {
-      patch({ timerMinutes: Math.max(1, Math.min(120, Math.round(minutes) || 1)) });
+      patch({
+        timerMinutes: Math.max(1, Math.min(120, Math.round(minutes) || 1)),
+      });
     },
     setTimerMode(mode) {
       ensureHydrated();

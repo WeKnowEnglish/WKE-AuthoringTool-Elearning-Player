@@ -805,9 +805,9 @@ export const PILOT_CATALOG: PilotEntry[] = [
   },
   {
     href: "/teacher/classes",
-    title: "Teacher toolkit (timer + picker)",
+    title: "Teacher toolkit (timer + picker + scratch board)",
     description:
-      "Shared classroom tools lib (timer, name picker, dice) used by the sticky Teacher tools floater on /teacher/classes and by Virtual Classroom. Local sticky panel is movable/minimizable; VC keeps Liveblocks adapters.",
+      "Sticky localStorage-backed Teacher tools floater: timer, name picker, and a local-only scratch board for screen share (no Liveblocks/websockets). Collaborative whiteboard stays on VC /whiteboard/join. FAB until dismissed.",
     group: "classroom",
     status: "review",
   },

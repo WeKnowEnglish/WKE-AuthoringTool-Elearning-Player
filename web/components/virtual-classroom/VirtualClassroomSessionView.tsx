@@ -37,6 +37,7 @@ import {
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
+import { classroomRealtimeAnnouncementPilotEnabled } from "@/lib/classroom-realtime/shadow-mode";
 
 type Props = {
   sessionId: string;
@@ -67,6 +68,7 @@ export function VirtualClassroomSessionView({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
+  const [snapshotCheck, setSnapshotCheck] = useState<string | null>(null);
   const rosterSyncAttempted = useRef(false);
   const broadcast = useBroadcastEvent();
 
@@ -83,7 +85,7 @@ export function VirtualClassroomSessionView({
   const learnStudentPensEnabled = useStorage((root) =>
     normalizeLearnStudentPensEnabled(readRuntimeField(root, "learnStudentPensEnabled")),
   );
-  const announcement = useStorage(
+  const liveblocksAnnouncement = useStorage(
     (root) => readRuntimeField<string | null>(root, "announcement"),
   );
   const activeActivity = useStorage((root) =>
@@ -135,6 +137,10 @@ export function VirtualClassroomSessionView({
     displayName,
     role,
   });
+  const announcement =
+    classroomRealtimeAnnouncementPilotEnabled() && shadowHealth.runtimeSnapshot
+      ? shadowHealth.runtimeSnapshot.announcement
+      : liveblocksAnnouncement;
 
   useLobbyPresence(sessionId, role === "host" && !ended && status !== "ended");
 
@@ -275,6 +281,31 @@ export function VirtualClassroomSessionView({
     [runToolCommand],
   );
 
+  const verifySnapshot = useCallback(async () => {
+    setSnapshotCheck("Checking saved classroom state…");
+    try {
+      const response = await fetch(
+        `/api/virtual-classroom/${encodeURIComponent(sessionId)}/runtime/verify`,
+        { cache: "no-store" },
+      );
+      const payload = (await response.json()) as {
+        error?: string;
+        stateVersion?: number;
+        driftedFields?: string[];
+      };
+      if (!response.ok) throw new Error(payload.error ?? "Could not verify the snapshot.");
+      setSnapshotCheck(
+        payload.driftedFields?.length
+          ? `Needs review: ${payload.driftedFields.join(", ")}`
+          : `Saved state matches live classroom (v${payload.stateVersion ?? "?"})`,
+      );
+    } catch (verifyError) {
+      setSnapshotCheck(
+        verifyError instanceof Error ? verifyError.message : "Could not verify the snapshot.",
+      );
+    }
+  }, [sessionId]);
+
   const isMeeting = uiMode === "meeting";
 
   if (ended || status === "ended") {
@@ -328,7 +359,7 @@ export function VirtualClassroomSessionView({
       ) : null}
 
       {shadowHealth.enabled ? (
-        <div className="pointer-events-none fixed bottom-3 left-3 z-50 rounded-lg border border-slate-300 bg-white/95 px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm">
+        <div className="fixed bottom-3 left-3 z-50 rounded-lg border border-slate-300 bg-white/95 px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm">
           <p>Realtime pilot</p>
           <p className={shadowHealth.snapshot === "loaded" ? "text-emerald-700" : "text-rose-700"}>
             Snapshot: {shadowHealth.snapshot}{shadowHealth.snapshotVersion !== null ? ` (v${shadowHealth.snapshotVersion})` : ""}
@@ -336,6 +367,16 @@ export function VirtualClassroomSessionView({
           <p className={shadowHealth.channel === "connected" ? "text-emerald-700" : shadowHealth.channel === "failed" ? "text-rose-700" : "text-amber-700"}>
             Private channel: {shadowHealth.channel}
           </p>
+          {role === "host" ? (
+            <button
+              type="button"
+              className="mt-1 rounded border border-slate-300 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
+              onClick={() => void verifySnapshot()}
+            >
+              Check saved state
+            </button>
+          ) : null}
+          {snapshotCheck ? <p className="mt-1 max-w-52 text-slate-600">{snapshotCheck}</p> : null}
         </div>
       ) : null}
 

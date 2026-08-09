@@ -165,6 +165,67 @@ export function mergeLiveblocksRuntimeIntoSnapshot(input: {
   };
 }
 
+const RUNTIME_COMPARISON_KEYS = [
+  "status",
+  "uiMode",
+  "learnStage",
+  "learnStudentPensEnabled",
+  "announcement",
+  "activeActivity",
+  "tools",
+] as const;
+
+function valuesMatch(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/**
+ * Returns the durable control-plane fields that differ from a completed
+ * Liveblocks runtime. Metadata and participant presence are intentionally
+ * excluded: neither belongs in the recovery state.
+ */
+export function findClassroomRuntimeSnapshotDrift(input: {
+  snapshot: ClassroomRuntimeSnapshot;
+  runtime: Record<string, unknown>;
+}): string[] {
+  const projected = mergeLiveblocksRuntimeIntoSnapshot({
+    current: input.snapshot,
+    runtime: input.runtime,
+    actorUserId: input.snapshot.updatedBy,
+    now: new Date(input.snapshot.updatedAt),
+  });
+  return RUNTIME_COMPARISON_KEYS.filter(
+    (key) => !valuesMatch(input.snapshot[key], projected[key]),
+  );
+}
+
+/**
+ * Host-only pilot diagnostic. It does not mutate either transport and is used
+ * to prove that the recovery snapshot remains suitable for a later cutover.
+ */
+export async function verifyClassroomRuntimeSnapshot(input: {
+  sessionId: string;
+  roomId: string;
+}): Promise<
+  | { ok: true; stateVersion: number; driftedFields: string[] }
+  | { ok: false; error: string }
+> {
+  const snapshot = await getClassroomRuntimeSnapshot(input.sessionId);
+  if (!snapshot) return { ok: false, error: "Runtime snapshot is not available yet." };
+  try {
+    const storage = await getLiveblocksServerClient().getStorageDocument(input.roomId, "json");
+    const runtime = readRuntimeFromStorage(storage);
+    if (!runtime) return { ok: false, error: "Live classroom runtime is unavailable." };
+    return {
+      ok: true,
+      stateVersion: snapshot.stateVersion,
+      driftedFields: findClassroomRuntimeSnapshotDrift({ snapshot, runtime }),
+    };
+  } catch {
+    return { ok: false, error: "Could not verify the live classroom runtime." };
+  }
+}
+
 async function advanceClassroomRuntimeSnapshot(input: {
   expectedVersion: number;
   snapshot: ClassroomRuntimeSnapshot;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialClassroomRuntimeSnapshot,
+  findClassroomRuntimeSnapshotDrift,
   mergeLiveblocksRuntimeIntoSnapshot,
 } from "@/lib/virtual-classroom/server/runtime-snapshot";
 
@@ -58,5 +59,18 @@ describe("initial classroom runtime snapshot", () => {
       tools: { points: { totalsByStudentId: { "student-1": 4 } } },
     });
     expect(next.tools).not.toHaveProperty("members");
+  });
+
+  it("detects only durable control-plane drift", () => {
+    const snapshot = createInitialClassroomRuntimeSnapshot({
+      sessionId: "session-1",
+      actorUserId: "teacher-1",
+      now: new Date("2026-08-09T00:00:00.000Z"),
+    });
+
+    expect(findClassroomRuntimeSnapshotDrift({
+      snapshot,
+      runtime: { uiMode: "learn", members: { "student-1": { name: "Mia" } } },
+    })).toEqual(["uiMode"]);
   });
 });

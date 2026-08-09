@@ -6,3 +6,14 @@
 export function classroomRealtimeShadowModeEnabled(): boolean {
   return process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE === "true";
 }
+
+/**
+ * First visible Supabase cutover. This deliberately remains narrower than the
+ * shadow connection and is safe to disable independently.
+ */
+export function classroomRealtimeAnnouncementPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT === "true"
+  );
+}

@@ -117,6 +117,14 @@ behavior does not create duplicate writes. Initial connection work and extra
 development logging remain expected; production performance still needs a
 separate measurement before transport cutover.
 
+## First visible cutover: announcement only
+
+After the two-browser shadow pilot is stable, enable
+`NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT=true` alongside the shadow
+flag in a pilot environment. This switches only the rendered classroom
+announcement to the authenticated Supabase recovery snapshot. It remains
+independently reversible and falls back to Liveblocks until a snapshot loads.
+
 ## Migration boundaries
 
 1. Do not change Daily in this project.

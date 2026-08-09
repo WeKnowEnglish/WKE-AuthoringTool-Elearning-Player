@@ -7,6 +7,7 @@ import {
 } from "@/lib/classroom-realtime/channel";
 import { classroomRealtimeShadowModeEnabled } from "@/lib/classroom-realtime/shadow-mode";
 import { createClient } from "@/lib/supabase/client";
+import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
 
 type Input = {
   sessionId: string;
@@ -21,6 +22,7 @@ export type ClassroomRealtimeShadowHealth = {
   snapshot: "idle" | "loading" | "loaded" | "failed";
   channel: "idle" | "connecting" | "connected" | "failed";
   snapshotVersion: number | null;
+  runtimeSnapshot: ClassroomRuntimeSnapshot | null;
 };
 
 /**
@@ -37,11 +39,12 @@ export function useClassroomRealtimeShadowPresence(
     snapshot: enabled ? "loading" : "idle",
     channel: enabled ? "connecting" : "idle",
     snapshotVersion: null,
+    runtimeSnapshot: null,
   });
 
   useEffect(() => {
     if (!enabled) {
-      setHealth({ enabled: false, snapshot: "idle", channel: "idle", snapshotVersion: null });
+      setHealth({ enabled: false, snapshot: "idle", channel: "idle", snapshotVersion: null, runtimeSnapshot: null });
       return;
     }
 
@@ -52,7 +55,7 @@ export function useClassroomRealtimeShadowPresence(
     const controller = new AbortController();
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     let snapshotVersion: number | null = null;
-    setHealth({ enabled: true, snapshot: "loading", channel: "connecting", snapshotVersion: null });
+    setHealth({ enabled: true, snapshot: "loading", channel: "connecting", snapshotVersion: null, runtimeSnapshot: null });
 
     const loadSnapshot = async () => {
       try {
@@ -61,15 +64,17 @@ export function useClassroomRealtimeShadowPresence(
           signal: controller.signal,
         });
         const payload = (await response.json().catch(() => null)) as {
-          snapshot?: { stateVersion?: unknown };
+          snapshot?: ClassroomRuntimeSnapshot;
         } | null;
-        const nextVersion = payload?.snapshot?.stateVersion;
+        const nextSnapshot = payload?.snapshot;
+        const nextVersion = nextSnapshot?.stateVersion;
         if (typeof nextVersion === "number") snapshotVersion = nextVersion;
         if (!disposed) {
           setHealth((current) => ({
             ...current,
             snapshot: response.ok ? "loaded" : "failed",
             snapshotVersion,
+            runtimeSnapshot: response.ok && nextSnapshot ? nextSnapshot : current.runtimeSnapshot,
           }));
         }
       } catch (error) {

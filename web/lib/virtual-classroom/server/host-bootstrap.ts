@@ -18,6 +18,10 @@ import {
   formatVcHostCookie,
 } from "@/lib/virtual-classroom/session-cookie";
 import { ensureVcMember } from "@/lib/virtual-classroom/server/liveblocks-session";
+import {
+  createInitialClassroomRuntimeSnapshot,
+  seedClassroomRuntimeSnapshot,
+} from "@/lib/virtual-classroom/server/runtime-snapshot";
 import { createVirtualClassroomSession } from "@/lib/virtual-classroom/server/session";
 
 export type HostVirtualClassroomResult = {
@@ -78,6 +82,16 @@ export async function bootstrapVirtualClassroomHost(input: {
     sessionKind,
     classPhase,
   });
+
+  // Phase-one Supabase migration: seed recovery state without changing the
+  // current Liveblocks runtime transport.  A missing local migration must not
+  // prevent a teacher from starting an existing classroom.
+  await seedClassroomRuntimeSnapshot(
+    createInitialClassroomRuntimeSnapshot({
+      sessionId,
+      actorUserId: input.teacher.userId,
+    }),
+  );
 
   const liveblocks = new Liveblocks({ secret });
   await liveblocks.createRoom(roomId, { defaultAccesses: [] });

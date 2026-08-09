@@ -67,6 +67,7 @@ import {
 } from "@/lib/virtual-classroom/tools/timer";
 import { applyTeacherCommand } from "@/lib/whiteboard/server/commands";
 import { toWhiteboardRoomId } from "@/lib/whiteboard/liveblocks/room-id";
+import { syncClassroomRuntimeSnapshotFromLiveblocks } from "@/lib/virtual-classroom/server/runtime-snapshot";
 
 type RuntimeNode = {
   get: (key: string) => unknown;
@@ -192,6 +193,8 @@ export const VC_MEMBER_TOOL_TYPES = new Set<VcToolCommand["type"]>(["SET_OWN_STA
 
 export async function applyVcToolCommand(input: {
   roomId: string;
+  /** Enables best-effort Supabase dual-write after a teacher command. */
+  sessionId?: string;
   command: VcToolCommand;
   actorUserId?: string;
 }): Promise<{ ok: true; detail?: string } | { ok: false; error: string }> {
@@ -537,6 +540,13 @@ export async function applyVcToolCommand(input: {
         roomId: toWhiteboardRoomId(whiteboardJoinCode),
         command: { type: "SET_MODE", mode: "group" },
       });
+      if (input.sessionId) {
+        await syncClassroomRuntimeSnapshotFromLiveblocks({
+          sessionId: input.sessionId,
+          roomId: input.roomId,
+          actorUserId: input.actorUserId ?? "system",
+        });
+      }
       return { ok: true, detail: "Groups sent to whiteboard." };
     }
 
@@ -558,6 +568,13 @@ export async function applyVcToolCommand(input: {
             })),
           },
         });
+        if (input.sessionId) {
+          await syncClassroomRuntimeSnapshotFromLiveblocks({
+            sessionId: input.sessionId,
+            roomId: input.roomId,
+            actorUserId: input.actorUserId ?? "system",
+          });
+        }
         return { ok: true, detail: "Groups sent to document." };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not assign groups.";
@@ -583,11 +600,28 @@ export async function applyVcToolCommand(input: {
             })),
           },
         });
+        if (input.sessionId) {
+          await syncClassroomRuntimeSnapshotFromLiveblocks({
+            sessionId: input.sessionId,
+            roomId: input.roomId,
+            actorUserId: input.actorUserId ?? "system",
+          });
+        }
         return { ok: true, detail: "Groups sent to word cards." };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not assign groups.";
         return { ok: false, error: message };
       }
+    }
+
+    // Student status is transient for this first migration. Every other
+    // teacher command is mirrored after Liveblocks has accepted the mutation.
+    if (input.sessionId && input.command.type !== "SET_OWN_STATUS") {
+      await syncClassroomRuntimeSnapshotFromLiveblocks({
+        sessionId: input.sessionId,
+        roomId: input.roomId,
+        actorUserId: input.actorUserId ?? "system",
+      });
     }
 
     try {

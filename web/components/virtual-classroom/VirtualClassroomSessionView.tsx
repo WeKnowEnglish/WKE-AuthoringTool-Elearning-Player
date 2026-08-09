@@ -6,11 +6,12 @@ import {
   useStorage,
 } from "@liveblocks/react/suspense";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DailyVideoDock } from "@/components/virtual-classroom/daily/DailyVideoDock";
 import { GlobalTimerBanner } from "@/components/virtual-classroom/GlobalTimerPanel";
 import { StudentSessionChrome } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresence";
+import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
 import { VirtualClassroomLearnControls } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
 import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
@@ -66,6 +67,7 @@ export function VirtualClassroomSessionView({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
+  const rosterSyncAttempted = useRef(false);
   const broadcast = useBroadcastEvent();
 
   const status = useStorage((root) => readRuntimeField<string>(root, "status") ?? "active");
@@ -126,6 +128,14 @@ export function VirtualClassroomSessionView({
     return picker?.currentStudentIds ?? [];
   });
 
+  const shadowHealth = useClassroomRealtimeShadowPresence({
+    sessionId,
+    classId,
+    userId,
+    displayName,
+    role,
+  });
+
   useLobbyPresence(sessionId, role === "host" && !ended && status !== "ended");
 
   useEventListener(({ event }) => {
@@ -143,6 +153,8 @@ export function VirtualClassroomSessionView({
 
   useEffect(() => {
     if (role !== "host" || ended || status === "ended") return;
+    if (rosterSyncAttempted.current) return;
+    rosterSyncAttempted.current = true;
     void fetch(`/api/virtual-classroom/${sessionId}/tools`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -313,6 +325,18 @@ export function VirtualClassroomSessionView({
         <p className="pointer-events-auto fixed left-1/2 top-3 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700 shadow-lg">
           {error}
         </p>
+      ) : null}
+
+      {shadowHealth.enabled ? (
+        <div className="pointer-events-none fixed bottom-3 left-3 z-50 rounded-lg border border-slate-300 bg-white/95 px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm">
+          <p>Realtime pilot</p>
+          <p className={shadowHealth.snapshot === "loaded" ? "text-emerald-700" : "text-rose-700"}>
+            Snapshot: {shadowHealth.snapshot}{shadowHealth.snapshotVersion !== null ? ` (v${shadowHealth.snapshotVersion})` : ""}
+          </p>
+          <p className={shadowHealth.channel === "connected" ? "text-emerald-700" : shadowHealth.channel === "failed" ? "text-rose-700" : "text-amber-700"}>
+            Private channel: {shadowHealth.channel}
+          </p>
+        </div>
       ) : null}
 
       <DailyVideoDock

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 async function postLobbyPresence(
   sessionId: string,
@@ -18,11 +18,28 @@ async function postLobbyPresence(
 }
 
 export function useLobbyPresence(sessionId: string, enabled = true): void {
+  const joinedSessionId = useRef<string | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!enabled || !sessionId.trim()) return;
-    void postLobbyPresence(sessionId, "join");
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+    if (joinedSessionId.current !== sessionId) {
+      joinedSessionId.current = sessionId;
+      void postLobbyPresence(sessionId, "join");
+    }
     return () => {
-      void postLobbyPresence(sessionId, "leave");
+      // React development mode deliberately remounts effects. Deferring the
+      // leave lets that probe reuse the same attendance record, while a real
+      // exit still records a leave promptly.
+      leaveTimer.current = setTimeout(() => {
+        void postLobbyPresence(sessionId, "leave");
+        if (joinedSessionId.current === sessionId) joinedSessionId.current = null;
+        leaveTimer.current = null;
+      }, 250);
     };
   }, [sessionId, enabled]);
 }

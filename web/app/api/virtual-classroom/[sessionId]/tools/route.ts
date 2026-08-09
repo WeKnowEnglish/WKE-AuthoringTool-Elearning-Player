@@ -47,6 +47,7 @@ export async function POST(request: Request, context: RouteContext) {
   const isMemberOfSession =
     member?.sessionId === sessionId || member?.joinCode === session.joinCode;
 
+  let actorUserId: string | undefined;
   if (VC_MEMBER_TOOL_TYPES.has(command.type)) {
     if (!isHost && !isMemberOfSession) {
       return NextResponse.json({ error: "Join the session first." }, { status: 403 });
@@ -58,25 +59,25 @@ export async function POST(request: Request, context: RouteContext) {
       }
       command = { ...command, studentId: member.userId };
     }
+    actorUserId = member?.userId;
   } else {
     if (!isHost) {
       return NextResponse.json({ error: "Host only." }, { status: 403 });
     }
     try {
-      await requireVirtualClassroomSessionHost(session);
+      const host = await requireVirtualClassroomSessionHost(session);
+      actorUserId = host.userId;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unauthorized";
       return NextResponse.json({ error: message }, { status: 403 });
     }
   }
 
-  const actorUserId =
-    member?.userId ?? (isHost ? undefined : undefined);
-
   const result = await applyVcToolCommand({
     roomId: session.liveblocksRoomId,
+    sessionId: session.id,
     command,
-    actorUserId: command.type === "SET_OWN_STATUS" ? (member?.userId ?? actorUserId) : undefined,
+    actorUserId,
   });
 
   if (!result.ok) {

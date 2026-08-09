@@ -4,6 +4,10 @@
 
 ## Scope
 
+**Current pilot status:** Liveblocks remains the visible classroom transport.
+For class-linked sessions, Supabase now supplies a versioned recovery snapshot
+and private-channel presence in shadow mode.
+
 This document covers the Virtual Classroom control plane: the shared classroom
 session, teacher tools, lesson navigation, participant state, and recovery.
 It does **not** authorize an application-wide removal of Liveblocks.  The
@@ -71,12 +75,47 @@ this session-specific access rule.  "Authenticated" alone is insufficient.
 Teacher control messages must remain server-authoritative: clients must never
 be trusted merely because a Broadcast payload declares `role: "teacher"`.
 
+### Private-channel prerequisite
+
+Class-linked students already have Supabase identities. One-off sessions also
+allow unsigned guests, so they cannot join a Supabase private channel without
+an additional scoped authentication mechanism. The first Supabase channel pilot
+will therefore be restricted to class-linked sessions until we explicitly decide
+whether one-off guests should sign in, receive a scoped Supabase JWT, or keep a
+separate transport.
+
+For class-linked pilot channels, the topic is `classroom:{class_sessions.id}`.
+Migration 128 grants only the session creator, the class teacher, and enrolled
+students access to Broadcast and Presence. Realtime Dashboard public access
+must be disabled before any client subscribes to these private channels.
+
+## Shadow presence pilot
+
+With migration 128 applied and Supabase Realtime public access disabled, set
+`NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE=true` only in the pilot deployment.
+Class-linked sessions will load the recovery snapshot and track a private
+Supabase Presence record, but the UI will continue to read Liveblocks. One-off
+guest sessions are excluded. Remove the flag immediately if connection errors
+appear; it is not required for the current classroom to function.
+
 ## Recovery finding
 
 The database can identify an active session, but it does not yet persist a
 complete runtime snapshot.  Broadcast is therefore not safe as the sole
 recovery mechanism.  The first database migration must add a versioned,
 authoritative control-plane snapshot before any live control is switched.
+
+Migration 129 adds compare-and-swap updates for that snapshot. After
+Liveblocks accepts a teacher control action, the server mirrors the completed
+state and sends only a `runtime:updated` version signal on the private channel.
+Shadow clients coalesce nearby notices into one authenticated recovery request;
+the full classroom state is never broadcast.
+
+In Next development mode, React intentionally repeats effect setup. The lobby
+attendance hook and initial roster sync are guarded so that this diagnostic
+behavior does not create duplicate writes. Initial connection work and extra
+development logging remain expected; production performance still needs a
+separate measurement before transport cutover.
 
 ## Migration boundaries
 
@@ -96,4 +135,3 @@ authoritative control-plane snapshot before any live control is switched.
 - Database writes per active classroom minute.
 - 45–60 minute teacher-and-students session without stale controls.
 - Teacher refresh, student late join, and a sleeping-laptop reconnection.
-

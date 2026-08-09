@@ -48,13 +48,15 @@ export function shouldApplyRealtimeEvent(
   return currentSnapshotVersion === null || event.stateVersion > currentSnapshotVersion;
 }
 
-export function snapshotEvent(snapshot: ClassroomRuntimeSnapshot, changed: readonly string[]): ClassroomRealtimeEvent {
+export function snapshotEvent(
+  snapshot: ClassroomRuntimeSnapshot,
+  changed: readonly string[],
+): Extract<ClassroomRealtimeEvent, { stateVersion: number }> {
   return {
     type: snapshot.status === "ended" ? "classroom:ended" : "runtime:updated",
     sessionId: snapshot.sessionId,
     stateVersion: snapshot.stateVersion,
     ...(snapshot.status === "ended" ? {} : { changed }),
     sentAt: Date.now(),
-  } as ClassroomRealtimeEvent;
+  } as Extract<ClassroomRealtimeEvent, { stateVersion: number }>;
 }
-

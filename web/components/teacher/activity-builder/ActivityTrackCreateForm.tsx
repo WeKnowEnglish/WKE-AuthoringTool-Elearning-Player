@@ -41,7 +41,8 @@ export function ActivityTrackCreateForm() {
         <h1 className="mt-1 text-2xl font-extrabold text-stone-900">New track</h1>
         <p className="mt-1 text-sm text-stone-600">
           Practice uses the Learning Track compiler. Graded clones homework templates.
-          Assessment clones the Primary A2 English Check (free nav, results after submit).
+          Assessment clones the Primary A2 Reading & Writing paper (Flyers-shaped;
+          Listening/Speaking skipped for now).
         </p>
       </div>
 
@@ -57,7 +58,7 @@ export function ActivityTrackCreateForm() {
                 setMode(option);
                 if (option !== "graded") setTemplateId(null);
                 if (option === "assessment" && !title.trim()) {
-                  setTitle("Primary A2 English Check");
+                  setTitle("Primary A2 Reading & Writing");
                 }
               }}
               className={`rounded-2xl border-2 p-4 text-left transition ${
@@ -114,8 +115,10 @@ export function ActivityTrackCreateForm() {
 
       {mode === "assessment" ? (
         <p className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold leading-5 text-violet-950">
-          Starts from the Primary A2 English Check (Listening, Reading & Writing,
-          Speaking). You can edit every part, preview live, then freeze on Assign.
+          Starts from Reading & Writing only (7 Flyers-shaped parts, ~45 min). Edit
+          content in the compiler, preview live, then Assign to freeze for a class.
+          Prefer this over the Class Hub “Primary A2 assessment” shortcut, which still
+          points at the full Listening + Speaking fixture.
         </p>
       ) : null}
 

@@ -438,7 +438,7 @@ export function ActivityTrackCompilerWorkspace({
     }
     if (nextMode === "assessment") {
       const ok = window.confirm(
-        "Switch to Assessment? This clones the Primary A2 English Check. Current track content will be cleared.",
+        "Switch to Assessment? This clones the Primary A2 Reading & Writing paper. Current track content will be cleared.",
       );
       if (!ok) return;
       const assessment = seedAssessmentFromTemplate({

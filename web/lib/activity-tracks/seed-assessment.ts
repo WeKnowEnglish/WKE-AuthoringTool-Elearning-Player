@@ -1,18 +1,41 @@
 import {
   PRIMARY_A2_ASSESSMENT_ID,
   PRIMARY_A2_ASSESSMENT_PILOT,
+  buildPrimaryA2ReadingWritingOnly,
 } from "@/lib/assessment/sample-primary-a2";
 import {
   ACTIVITY_TRACK_DOCUMENT_VERSION,
   type ActivityTrackDocument,
 } from "@/lib/activity-tracks/types";
 
-/** Clone the Primary A2 (Flyers-shaped) assessment into an Assessment track draft. */
+export type AssessmentSeedPaper = "full" | "reading-writing";
+
+function definitionForPaper(
+  paper: AssessmentSeedPaper,
+  title: string,
+): ReturnType<typeof buildPrimaryA2ReadingWritingOnly> {
+  if (paper === "full") {
+    const definition = structuredClone(PRIMARY_A2_ASSESSMENT_PILOT);
+    definition.title = title.trim() || definition.title;
+    return definition;
+  }
+  return buildPrimaryA2ReadingWritingOnly({
+    title: title.trim() || undefined,
+  });
+}
+
+/**
+ * Clone the Primary A2 (Flyers-shaped) assessment into an Assessment track draft.
+ * Defaults to Reading & Writing only so class tests can ship without Listening/Speaking.
+ */
 export function seedAssessmentFromTemplate(input: {
   trackId: string;
   title: string;
+  /** @default "reading-writing" */
+  paper?: AssessmentSeedPaper;
 }): ActivityTrackDocument {
-  const definition = structuredClone(PRIMARY_A2_ASSESSMENT_PILOT);
+  const paper = input.paper ?? "reading-writing";
+  const definition = definitionForPaper(paper, input.title);
   const title = input.title.trim() || definition.title;
   definition.title = title;
   const now = new Date().toISOString();
@@ -32,7 +55,8 @@ export function seedAssessmentFromTemplate(input: {
     assessmentDefinition: definition,
     assessmentOrigin: {
       definitionId: PRIMARY_A2_ASSESSMENT_ID,
-      contentVersion: PRIMARY_A2_ASSESSMENT_PILOT.contentVersion,
+      contentVersion: definition.contentVersion,
+      paper,
     },
     libraryId: null,
     bankActivityId: null,
@@ -46,9 +70,11 @@ export function resetAssessmentFromOrigin(
   doc: ActivityTrackDocument,
 ): ActivityTrackDocument {
   if (doc.mode !== "assessment" || !doc.assessmentOrigin) return doc;
+  const paper = doc.assessmentOrigin.paper ?? "reading-writing";
   const seeded = seedAssessmentFromTemplate({
     trackId: doc.id,
     title: doc.title,
+    paper,
   });
   return {
     ...doc,

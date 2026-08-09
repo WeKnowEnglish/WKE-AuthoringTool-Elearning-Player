@@ -59,6 +59,12 @@ export type ActivityTrackGradedOrigin = {
 export type ActivityTrackAssessmentOrigin = {
   definitionId: string;
   contentVersion: string;
+  /**
+   * Which seeded paper was cloned.
+   * `reading-writing` = Flyers-shaped R&W only (default for new tracks).
+   * `full` = Listening + R&W + Speaking.
+   */
+  paper?: "full" | "reading-writing";
 };
 
 export type ActivityTrackDocument = {
@@ -232,9 +238,9 @@ export const ACTIVITY_TRACK_MODE_COPY: Record<
   assessment: {
     title: "Assessment",
     blurb:
-      "Free navigation, no answer gating. Students finish the form, then see a results summary.",
+      "Primary A2 Reading & Writing paper (Flyers-shaped). Free nav, results after submit. Listening/Speaking stay on the full fixture for later.",
     previewHint:
-      "Live student preview from the cloned definition — Assign freezes content for the class.",
+      "Live student preview from the cloned R&W definition — Assign freezes content for the class.",
   },
 };
 

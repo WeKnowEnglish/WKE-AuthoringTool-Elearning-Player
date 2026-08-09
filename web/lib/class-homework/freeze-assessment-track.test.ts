@@ -14,6 +14,7 @@ describe("freezeAssessmentTrackHomeworkPayload", () => {
     const draft = seedAssessmentFromTemplate({
       trackId: "track-assess-1",
       title: "Class A2 Check",
+      paper: "full",
     });
     if (draft.assessmentDefinition) {
       draft.assessmentDefinition.sections[0]!.title = "Edited Listening";

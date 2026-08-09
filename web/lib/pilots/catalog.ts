@@ -165,7 +165,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/primary-a2-assessment",
     title: "Primary A2 assessment",
     description:
-      "Flyers-shaped Primary A2 English Check. Author as Track builder → Assessment (seeded clone); student pilot still at this route.",
+      "Flyers-shaped Primary A2 English Check. New Assessment tracks seed Reading & Writing only (~45 min); assign via track freeze. Student pilot still at this route; Class Hub pointer still resolves the full L+R&W+Speaking fixture.",
     group: "experiments",
     status: "review",
     studioHref: "/teacher/activity-builder/tracks",
@@ -407,7 +407,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/teacher/activity-builder/tracks",
     title: "Track builder",
     description:
-      "Practice = LTC. Graded = homework templates with freeze/review. Assessment = Primary A2 English Check (free nav, end summary).",
+      "Practice = LTC. Graded = homework templates with freeze/review. Assessment = Primary A2 Reading & Writing by default (free nav, end summary).",
     group: "authoring",
     status: "review",
     studioHref: "/teacher/activity-builder/tracks",

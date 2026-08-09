@@ -467,3 +467,28 @@ export const PRIMARY_A2_ASSESSMENT_PILOT: AssessmentDefinition = {
     },
   ],
 };
+
+/** Estimated minutes for the Reading & Writing paper alone. */
+export const PRIMARY_A2_READING_WRITING_MINUTES = 45;
+
+/**
+ * Flyers-shaped Reading & Writing only (no Listening / Speaking).
+ * Used when seeding Assessment tracks for R&W-first class tests.
+ */
+export function buildPrimaryA2ReadingWritingOnly(
+  options?: { title?: string; contentVersion?: string },
+): AssessmentDefinition {
+  const full = structuredClone(PRIMARY_A2_ASSESSMENT_PILOT);
+  const readingWriting = full.sections.find((section) => section.id === "reading-writing");
+  if (!readingWriting) {
+    throw new Error("Primary A2 fixture is missing the reading-writing section.");
+  }
+  return {
+    ...full,
+    contentVersion: options?.contentVersion ?? "2026.08-rw.1",
+    title: options?.title?.trim() || "Primary A2 Reading & Writing",
+    audience: "Students finishing Primary — Reading & Writing paper",
+    estimatedMinutes: PRIMARY_A2_READING_WRITING_MINUTES,
+    sections: [readingWriting],
+  };
+}

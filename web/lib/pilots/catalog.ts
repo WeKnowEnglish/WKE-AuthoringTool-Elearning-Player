@@ -804,6 +804,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/teacher/classes",
+    title: "Teacher toolkit (timer + picker + scratch board)",
+    description:
+      "Sticky localStorage-backed Teacher tools floater: timer, name picker, and a local-only scratch board for screen share (no Liveblocks/websockets). Collaborative whiteboard stays on VC /whiteboard/join. FAB until dismissed.",
+    group: "classroom",
+    status: "review",
+  },
+  {
     href: "/whiteboard/join",
     title: "Whiteboard (production join)",
     description: "Student/guest join for collaborative whiteboard sessions.",

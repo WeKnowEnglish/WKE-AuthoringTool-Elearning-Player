@@ -23,6 +23,7 @@ import type {
 } from "@/lib/teacher-space/types";
 import { AssignStudioActivityHomeworkOverlay } from "@/components/teacher/AssignStudioActivityHomeworkOverlay";
 import { TeacherSpacePanel } from "@/components/teacher/TeacherSpacePanel";
+import { teacherToolkitStore } from "@/lib/classroom-tools/toolkit-store";
 import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
 
 const FORMAT_LABEL: Record<StudioActivityFormat, string> = {
@@ -386,26 +387,62 @@ export function TeacherClassesHome({
                 <div>
                   <p className="text-sm font-semibold text-stone-800">Teacher tools</p>
                   <p className="mt-0.5 text-[11px] text-stone-500">
-                    Timers, name pickers, and live helpers.
+                    Sticky timer, name picker, and local scratch board for screen share.
                   </p>
                 </div>
-                <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-                  Soon
-                </span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-1.5">
-                {["Timer", "Name picker", "Whiteboard", "Live game"].map((label) => (
+                <button
+                  type="button"
+                  className="rounded-xl border border-stone-200 bg-white px-2 py-2.5 text-center shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+                  onClick={() => teacherToolkitStore.openTool("timer")}
+                >
                   <div
-                    key={label}
-                    className="rounded-xl border border-stone-200/80 bg-stone-50/90 px-2 py-2.5 text-center"
+                    className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-[10px] font-bold text-teal-800"
+                    aria-hidden
                   >
-                    <div
-                      className="mx-auto mb-1.5 h-7 w-7 rounded-lg bg-stone-200/80"
-                      aria-hidden
-                    />
-                    <p className="text-[10px] font-medium text-stone-500">{label}</p>
+                    T
                   </div>
-                ))}
+                  <p className="text-[10px] font-semibold text-stone-700">Timer</p>
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl border border-stone-200 bg-white px-2 py-2.5 text-center shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+                  onClick={() => teacherToolkitStore.openTool("picker")}
+                >
+                  <div
+                    className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-[10px] font-bold text-sky-800"
+                    aria-hidden
+                  >
+                    ?
+                  </div>
+                  <p className="text-[10px] font-semibold text-stone-700">Name picker</p>
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl border border-stone-200 bg-white px-2 py-2.5 text-center shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+                  onClick={() => teacherToolkitStore.openTool("board")}
+                >
+                  <div
+                    className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-[10px] font-bold text-violet-800"
+                    aria-hidden
+                  >
+                    B
+                  </div>
+                  <p className="text-[10px] font-semibold text-stone-700">Scratch board</p>
+                </button>
+                <Link
+                  href="/live-game/host"
+                  className="rounded-xl border border-stone-200 bg-white px-2 py-2.5 text-center no-underline shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+                >
+                  <div
+                    className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-[10px] font-bold text-amber-900"
+                    aria-hidden
+                  >
+                    L
+                  </div>
+                  <p className="text-[10px] font-semibold text-stone-700">Live game</p>
+                </Link>
               </div>
             </div>
           </div>

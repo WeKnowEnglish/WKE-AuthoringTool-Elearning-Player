@@ -17,7 +17,7 @@ import {
   resetPickerCycle,
   setPickerExcluded,
   syncPickerRoster,
-} from "@/lib/virtual-classroom/tools/picker";
+} from "@/lib/classroom-tools/picker";
 
 describe("student picker", () => {
   it("picks without repeat until cycle resets", () => {

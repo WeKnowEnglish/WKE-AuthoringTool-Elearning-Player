@@ -11,6 +11,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
+import { TeacherToolkitFloat } from "@/components/classroom-tools/TeacherToolkitFloat";
 import { TeacherPrimaryTabs } from "@/components/teacher/TeacherPrimaryTabs";
 import {
   TeacherNavDropdown,
@@ -340,8 +341,8 @@ export function TeacherSecureShell({
       data-teacher-chrome-autohide={autoHideChrome ? "true" : undefined}
       className={
         lockToViewport
-          ? "flex h-dvh max-w-[100vw] flex-col overflow-hidden"
-          : "min-h-screen w-full max-w-[100vw] overflow-x-hidden"
+          ? "flex h-dvh max-w-full flex-col overflow-hidden"
+          : "min-h-screen w-full max-w-full overflow-x-hidden"
       }
       style={themeVars}
     >
@@ -377,6 +378,7 @@ export function TeacherSecureShell({
       >
         {children}
       </div>
+      {immersiveLiveClass ? null : <TeacherToolkitFloat />}
     </div>
   );
 }

@@ -74,66 +74,65 @@ export function AdminGuardianSupportPanel(props: { data: AdminGuardianSupportDat
             Revocation takes effect immediately across every parent route and data function.
           </p>
         </div>
-        <div className="min-w-0 overflow-x-auto overscroll-x-contain">
-          <table className="w-full min-w-[40rem] divide-y divide-neutral-200 text-sm">
-            <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-4 py-3">Student</th>
-                <th className="px-4 py-3">Guardian</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Activated</th>
-                <th className="px-4 py-3"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {connections.map((item) => (
-                <tr key={item.id}>
-                  <td className="max-w-[10rem] px-4 py-3 font-semibold break-words">
-                    {item.studentName}
-                  </td>
-                  <td className="max-w-[14rem] px-4 py-3">
-                    <p className="break-all">
+        {connections.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-neutral-500">No connections match this search.</p>
+        ) : (
+          <ul className="divide-y divide-neutral-100">
+            {connections.map((item) => (
+              <li key={item.id} className="min-w-0 px-4 py-3 text-sm">
+                <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-semibold break-words text-neutral-950">
+                      {item.studentName}
+                    </p>
+                    <p className="break-all text-neutral-700">
                       {item.guardianEmail ?? "Email unavailable"}
                     </p>
-                    <p className="text-xs capitalize text-neutral-500">
-                      {item.relationshipType}
+                    <p className="text-xs text-neutral-500">
+                      <span className="capitalize">{item.relationshipType}</span>
+                      {" · "}
+                      <span className="capitalize">{item.status}</span>
+                      {" · "}
+                      {formatDate(item.activatedAt)}
                     </p>
-                  </td>
-                  <td className="px-4 py-3 capitalize">{item.status}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-neutral-600">
-                    {formatDate(item.activatedAt)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {item.status === "active" ? (
-                      <button
-                        type="button"
-                        disabled={busyId !== null}
-                        onClick={() => {
-                          if (!window.confirm(`Revoke ${item.guardianEmail ?? "this guardian"}'s access to ${item.studentName}?`)) return;
-                          setBusyId(item.id);
-                          setError("");
-                          setMessage("");
-                          void adminRevokeGuardianRelationship({ relationshipId: item.id }).then((result) => {
-                            setBusyId(null);
-                            if (!result.ok) setError(result.error);
-                            else {
-                              setMessage(result.message);
-                              router.refresh();
-                            }
-                          });
-                        }}
-                        className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-700 disabled:opacity-50"
-                      >
-                        <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
-                        {busyId === item.id ? "Revoking..." : "Revoke"}
-                      </button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                  {item.status === "active" ? (
+                    <button
+                      type="button"
+                      disabled={busyId !== null}
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `Revoke ${item.guardianEmail ?? "this guardian"}'s access to ${item.studentName}?`,
+                          )
+                        ) {
+                          return;
+                        }
+                        setBusyId(item.id);
+                        setError("");
+                        setMessage("");
+                        void adminRevokeGuardianRelationship({
+                          relationshipId: item.id,
+                        }).then((result) => {
+                          setBusyId(null);
+                          if (!result.ok) setError(result.error);
+                          else {
+                            setMessage(result.message);
+                            router.refresh();
+                          }
+                        });
+                      }}
+                      className="inline-flex shrink-0 items-center gap-1 self-start rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-700 disabled:opacity-50"
+                    >
+                      <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
+                      {busyId === item.id ? "Revoking..." : "Revoke"}
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="grid min-w-0 gap-5 xl:grid-cols-2">

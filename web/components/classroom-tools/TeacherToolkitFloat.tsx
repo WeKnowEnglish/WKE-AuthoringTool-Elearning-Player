@@ -68,7 +68,7 @@ export function TeacherToolkitFloat() {
     teacherToolkitStore.tickTimer(nowMs);
   }, []);
 
-  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0) return;
     const target = event.target as HTMLElement;
     if (target.closest("button, input, textarea, a, select")) return;
@@ -82,7 +82,7 @@ export function TeacherToolkitFloat() {
     };
   };
 
-  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     teacherToolkitStore.setPosition(
@@ -91,7 +91,7 @@ export function TeacherToolkitFloat() {
     );
   };
 
-  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
     if (dragRef.current?.pointerId === event.pointerId) {
       dragRef.current = null;
     }

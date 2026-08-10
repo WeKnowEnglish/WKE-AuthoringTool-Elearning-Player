@@ -11,6 +11,7 @@ import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { snapshotEvent } from "@/lib/classroom-realtime/events";
 import { broadcastClassroomRuntimeUpdate } from "@/lib/classroom-realtime/server/broadcast";
+import { createLatestOnlyWorkQueue } from "@/lib/classroom-realtime/server/latest-only-queue";
 
 type RuntimeSnapshotRow = {
   session_id: string;
@@ -27,6 +28,9 @@ function mapRow(row: RuntimeSnapshotRow): ClassroomRuntimeSnapshot {
     stateVersion: row.state_version,
     updatedAt: row.updated_at,
     updatedBy: row.updated_by,
+    // Snapshots created before learnActivity entered the recovery contract
+    // remain readable; the next teacher control write fills it in.
+    learnActivity: normaliseLearnActivity(row.snapshot_json.learnActivity),
   };
 }
 
@@ -46,6 +50,7 @@ export function createInitialClassroomRuntimeSnapshot(input: {
     status: "active",
     uiMode: "meeting",
     learnStage: "whiteboard",
+    learnActivity: null,
     learnStudentPensEnabled: true,
     announcement: null,
     activeActivity: {
@@ -123,6 +128,20 @@ function objectOrNull(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+function normaliseLearnActivity(value: unknown): ClassroomRuntimeSnapshot["learnActivity"] {
+  const row = objectOrNull(value);
+  if (!row) return null;
+  const activityId = typeof row.activityId === "string" ? row.activityId.trim() : "";
+  const playPath = typeof row.playPath === "string" ? row.playPath.trim() : "";
+  if (!activityId || !playPath) return null;
+  return {
+    activityId,
+    playPath,
+    format: typeof row.format === "string" && row.format.trim() ? row.format.trim() : "learning_track",
+    title: typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Activity",
+  };
+}
+
 function readRuntimeFromStorage(storage: unknown): Record<string, unknown> | null {
   const root = objectOrNull(storage);
   const nested = objectOrNull(root?.data);
@@ -147,6 +166,7 @@ export function mergeLiveblocksRuntimeIntoSnapshot(input: {
     status: input.runtime.status === "ended" ? "ended" : "active",
     uiMode: input.runtime.uiMode === "learn" ? "learn" : "meeting",
     learnStage: input.runtime.learnStage === "activity" ? "activity" : "whiteboard",
+    learnActivity: normaliseLearnActivity(input.runtime.learnActivity),
     learnStudentPensEnabled: input.runtime.learnStudentPensEnabled !== false,
     announcement: typeof input.runtime.announcement === "string" ? input.runtime.announcement : null,
     activeActivity: {
@@ -169,6 +189,7 @@ const RUNTIME_COMPARISON_KEYS = [
   "status",
   "uiMode",
   "learnStage",
+  "learnActivity",
   "learnStudentPensEnabled",
   "announcement",
   "activeActivity",
@@ -285,4 +306,24 @@ export async function syncClassroomRuntimeSnapshotFromLiveblocks(input: {
     }
   }
   return null;
+}
+
+const classroomRuntimeSnapshotQueue = createLatestOnlyWorkQueue<
+  string,
+  Parameters<typeof syncClassroomRuntimeSnapshotFromLiveblocks>[0]
+>({
+  delayMs: 120,
+  work: async (input) => {
+    await syncClassroomRuntimeSnapshotFromLiveblocks(input);
+  },
+});
+
+/**
+ * Process-local write coalescing for rapid teacher actions. The durable
+ * compare-and-swap remains the concurrency guard across server instances.
+ */
+export function queueClassroomRuntimeSnapshotSync(
+  input: Parameters<typeof syncClassroomRuntimeSnapshotFromLiveblocks>[0],
+): Promise<void> {
+  return classroomRuntimeSnapshotQueue.enqueue(input.sessionId, input);
 }

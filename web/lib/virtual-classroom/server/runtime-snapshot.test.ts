@@ -19,6 +19,7 @@ describe("initial classroom runtime snapshot", () => {
       status: "active",
       uiMode: "meeting",
       learnStage: "whiteboard",
+      learnActivity: null,
       learnStudentPensEnabled: true,
       updatedBy: "teacher-1",
     });
@@ -43,6 +44,12 @@ describe("initial classroom runtime snapshot", () => {
       runtime: {
         uiMode: "learn",
         learnStage: "activity",
+        learnActivity: {
+          activityId: "animals-1",
+          format: "quiz",
+          title: "Animal quiz",
+          playPath: "/play/animals-1",
+        },
         announcement: "Try question two.",
         activeActivity: { kind: "word_cards", joinCode: "ABC123", label: "Animals" },
         points: { totalsByStudentId: { "student-1": 4 } },
@@ -53,6 +60,7 @@ describe("initial classroom runtime snapshot", () => {
     expect(next).toMatchObject({
       uiMode: "learn",
       learnStage: "activity",
+      learnActivity: { activityId: "animals-1", playPath: "/play/animals-1" },
       announcement: "Try question two.",
       activeActivity: { kind: "word_cards", joinCode: "ABC123", label: "Animals" },
       updatedBy: "teacher-2",

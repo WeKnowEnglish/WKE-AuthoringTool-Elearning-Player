@@ -1,4 +1,7 @@
-import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
+import type {
+  ClassroomRuntimePatch,
+  ClassroomRuntimeSnapshot,
+} from "@/lib/classroom-realtime/types";
 
 /**
  * Events are ordered by the durable runtime snapshot version when they change
@@ -6,6 +9,12 @@ import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
  * snapshot after reconnect rather than replaying an event history.
  */
 export type ClassroomRealtimeEvent =
+  | {
+      type: "runtime:patch";
+      sessionId: string;
+      patch: ClassroomRuntimePatch;
+      sentAt: number;
+    }
   | {
       type: "runtime:updated";
       sessionId: string;
@@ -44,7 +53,7 @@ export function shouldApplyRealtimeEvent(
   event: ClassroomRealtimeEvent,
   currentSnapshotVersion: number | null,
 ): boolean {
-  if (event.type === "presence:hand") return true;
+  if (event.type === "presence:hand" || event.type === "runtime:patch") return true;
   return currentSnapshotVersion === null || event.stateVersion > currentSnapshotVersion;
 }
 

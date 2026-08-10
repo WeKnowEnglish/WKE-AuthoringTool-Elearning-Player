@@ -34,6 +34,13 @@ export type ClassroomRuntimeSnapshot = {
   status: "active" | "ended";
   uiMode: "meeting" | "learn";
   learnStage: "whiteboard" | "activity";
+  /** Studio / track activity displayed when the shared Learn stage is activity. */
+  learnActivity: {
+    activityId: string;
+    format: string;
+    title: string;
+    playPath: string;
+  } | null;
   learnStudentPensEnabled: boolean;
   announcement: string | null;
   activeActivity: {
@@ -48,6 +55,18 @@ export type ClassroomRuntimeSnapshot = {
   updatedAt: string;
   updatedBy: string;
 };
+
+/** Small, server-validated live update. Full state always recovers from the snapshot. */
+export type ClassroomRuntimePatch = Partial<
+  Pick<
+    ClassroomRuntimeSnapshot,
+    | "uiMode"
+    | "learnStage"
+    | "learnActivity"
+    | "learnStudentPensEnabled"
+    | "announcement"
+  >
+>;
 
 export type ClassroomRealtimeHealth = {
   connection: ClassroomRealtimeConnectionState;

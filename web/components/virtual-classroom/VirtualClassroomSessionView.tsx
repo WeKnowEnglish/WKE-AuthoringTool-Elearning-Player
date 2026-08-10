@@ -37,7 +37,11 @@ import {
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
-import { classroomRealtimeAnnouncementPilotEnabled } from "@/lib/classroom-realtime/shadow-mode";
+import {
+  classroomRealtimeAnnouncementPilotEnabled,
+  classroomRealtimeLearnNavigationPilotEnabled,
+  classroomRealtimeLearnPensPilotEnabled,
+} from "@/lib/classroom-realtime/shadow-mode";
 
 type Props = {
   sessionId: string;
@@ -73,16 +77,16 @@ export function VirtualClassroomSessionView({
   const broadcast = useBroadcastEvent();
 
   const status = useStorage((root) => readRuntimeField<string>(root, "status") ?? "active");
-  const uiMode = useStorage((root) =>
+  const liveblocksUiMode = useStorage((root) =>
     normalizeVirtualClassroomUiMode(readRuntimeField<string>(root, "uiMode")),
   );
-  const learnStage = useStorage((root) =>
+  const liveblocksLearnStage = useStorage((root) =>
     normalizeVirtualClassroomLearnStage(readRuntimeField(root, "learnStage")),
   );
-  const learnActivity = useStorage((root) =>
+  const liveblocksLearnActivity = useStorage((root) =>
     normalizeVirtualClassroomLearnActivity(readRuntimeField(root, "learnActivity")),
   );
-  const learnStudentPensEnabled = useStorage((root) =>
+  const liveblocksLearnStudentPensEnabled = useStorage((root) =>
     normalizeLearnStudentPensEnabled(readRuntimeField(root, "learnStudentPensEnabled")),
   );
   const liveblocksAnnouncement = useStorage(
@@ -141,6 +145,23 @@ export function VirtualClassroomSessionView({
     classroomRealtimeAnnouncementPilotEnabled() && shadowHealth.runtimeSnapshot
       ? shadowHealth.runtimeSnapshot.announcement
       : liveblocksAnnouncement;
+  const snapshotLearnNavigation = classroomRealtimeLearnNavigationPilotEnabled()
+    ? shadowHealth.runtimeSnapshot
+    : null;
+  const liveNavigationPatch = classroomRealtimeLearnNavigationPilotEnabled()
+    ? shadowHealth.runtimePatch
+    : null;
+  const uiMode = liveNavigationPatch?.uiMode ?? snapshotLearnNavigation?.uiMode ?? liveblocksUiMode;
+  const learnStage =
+    liveNavigationPatch?.learnStage ?? snapshotLearnNavigation?.learnStage ?? liveblocksLearnStage;
+  const learnActivity =
+    liveNavigationPatch && Object.hasOwn(liveNavigationPatch, "learnActivity")
+      ? liveNavigationPatch.learnActivity ?? null
+      : snapshotLearnNavigation?.learnActivity ?? liveblocksLearnActivity;
+  const learnStudentPensEnabled =
+    classroomRealtimeLearnPensPilotEnabled() && shadowHealth.runtimeSnapshot
+      ? shadowHealth.runtimeSnapshot.learnStudentPensEnabled
+      : liveblocksLearnStudentPensEnabled;
 
   useLobbyPresence(sessionId, role === "host" && !ended && status !== "ended");
 
@@ -214,15 +235,13 @@ export function VirtualClassroomSessionView({
     setBusy("whiteboard");
     setError(null);
     try {
-      const next = await launchWhiteboardInLearn({
-        sessionId,
-        displayName,
-      });
-      await fetch(`/api/virtual-classroom/${sessionId}/tools`, {
+      const stageRequest = fetch(`/api/virtual-classroom/${sessionId}/tools`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "SET_LEARN_STAGE", stage: "whiteboard" }),
       }).catch(() => undefined);
+      const next = await launchWhiteboardInLearn({ sessionId, displayName });
+      await stageRequest;
       return next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed.");

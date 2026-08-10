@@ -11,6 +11,13 @@ import { classroomRealtimeTopic } from "@/lib/classroom-realtime/channel";
 export async function broadcastClassroomRuntimeUpdate(
   event: Extract<ClassroomRealtimeEvent, { type: "runtime:updated" | "classroom:ended" }>,
 ): Promise<boolean> {
+  return broadcastClassroomRealtimeEvent(event);
+}
+
+/** Sends a server-validated low-latency control patch or a snapshot version. */
+export async function broadcastClassroomRealtimeEvent(
+  event: Exclude<ClassroomRealtimeEvent, { type: "presence:hand" }>,
+): Promise<boolean> {
   const url =
     process.env.SUPABASE_URL?.trim() || process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";

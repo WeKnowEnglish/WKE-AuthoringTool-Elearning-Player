@@ -105,6 +105,11 @@ complete runtime snapshot.  Broadcast is therefore not safe as the sole
 recovery mechanism.  The first database migration must add a versioned,
 authoritative control-plane snapshot before any live control is switched.
 
+The recovery snapshot includes the selected Learn activity as well as its
+stage. This prevents a refresh or reconnect from recovering an activity-stage
+shell without the lesson the teacher selected. Older JSON snapshots are read as
+having no selected activity and are repaired on the next teacher control write.
+
 Migration 129 adds compare-and-swap updates for that snapshot. After
 Liveblocks accepts a teacher control action, the server mirrors the completed
 state and sends only a `runtime:updated` version signal on the private channel.
@@ -117,6 +122,15 @@ behavior does not create duplicate writes. Initial connection work and extra
 development logging remain expected; production performance still needs a
 separate measurement before transport cutover.
 
+## Fast control lane
+
+Durable snapshots are optimized for recovery, not instant interaction. For
+latency-sensitive teacher actions, the validated command route now sends a
+small private `runtime:patch` Broadcast message immediately after Liveblocks
+accepts the command. Clients apply that patch at once, then clear it when the
+new durable snapshot arrives. The background snapshot remains the source used
+after refresh or reconnect.
+
 ## First visible cutover: announcement only
 
 After the two-browser shadow pilot is stable, enable
@@ -124,6 +138,35 @@ After the two-browser shadow pilot is stable, enable
 flag in a pilot environment. This switches only the rendered classroom
 announcement to the authenticated Supabase recovery snapshot. It remains
 independently reversible and falls back to Liveblocks until a snapshot loads.
+
+## Second visible cutover: student pens only
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT=true` switches only the
+teacher-controlled learner pen permission in Learn mode. It has the same
+class-linked, shadow-mode prerequisite and Liveblocks fallback as the
+announcement pilot. Keep it independent so a classroom can disable this single
+surface immediately if a real lesson exposes a mismatch.
+
+## Third visible cutover: Learn navigation as one unit
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT=true` switches the
+shared meeting/learn mode, Learn stage, and selected Learn activity together
+from the same snapshot version. Do not split these fields into separate pilots:
+teachers and students need the selected lesson to travel with the stage that
+displays it. The flag retains the Liveblocks fallback until a snapshot loads.
+
+## Response-path performance
+
+Teacher controls continue to mutate Liveblocks first. Their best-effort
+Supabase snapshot mirror now runs with Next's post-response work, so the
+teacher is not blocked on the snapshot read, compare-and-swap write, or
+version notification. This preserves recovery while keeping the interactive
+control path on its existing fast transport.
+
+Rapid teacher actions are additionally coalesced within a server process for a
+brief window. The snapshot worker receives the latest completed state for that
+session, reducing duplicate storage reads and database writes. The durable
+compare-and-swap remains the cross-instance correctness guard.
 
 ## Migration boundaries
 

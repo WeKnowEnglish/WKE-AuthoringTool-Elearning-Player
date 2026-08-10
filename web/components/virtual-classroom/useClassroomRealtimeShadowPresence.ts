@@ -7,7 +7,10 @@ import {
 } from "@/lib/classroom-realtime/channel";
 import { classroomRealtimeShadowModeEnabled } from "@/lib/classroom-realtime/shadow-mode";
 import { createClient } from "@/lib/supabase/client";
-import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
+import type {
+  ClassroomRuntimePatch,
+  ClassroomRuntimeSnapshot,
+} from "@/lib/classroom-realtime/types";
 
 type Input = {
   sessionId: string;
@@ -23,6 +26,7 @@ export type ClassroomRealtimeShadowHealth = {
   channel: "idle" | "connecting" | "connected" | "failed";
   snapshotVersion: number | null;
   runtimeSnapshot: ClassroomRuntimeSnapshot | null;
+  runtimePatch: ClassroomRuntimePatch | null;
 };
 
 /**
@@ -40,11 +44,12 @@ export function useClassroomRealtimeShadowPresence(
     channel: enabled ? "connecting" : "idle",
     snapshotVersion: null,
     runtimeSnapshot: null,
+    runtimePatch: null,
   });
 
   useEffect(() => {
     if (!enabled) {
-      setHealth({ enabled: false, snapshot: "idle", channel: "idle", snapshotVersion: null, runtimeSnapshot: null });
+      setHealth({ enabled: false, snapshot: "idle", channel: "idle", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null });
       return;
     }
 
@@ -55,9 +60,9 @@ export function useClassroomRealtimeShadowPresence(
     const controller = new AbortController();
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     let snapshotVersion: number | null = null;
-    setHealth({ enabled: true, snapshot: "loading", channel: "connecting", snapshotVersion: null, runtimeSnapshot: null });
+    setHealth({ enabled: true, snapshot: "loading", channel: "connecting", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null });
 
-    const loadSnapshot = async () => {
+    const loadSnapshot = async (clearLivePatch = false) => {
       try {
         const response = await fetch(`/api/virtual-classroom/${encodeURIComponent(input.sessionId)}/runtime`, {
           cache: "no-store",
@@ -75,6 +80,7 @@ export function useClassroomRealtimeShadowPresence(
             snapshot: response.ok ? "loaded" : "failed",
             snapshotVersion,
             runtimeSnapshot: response.ok && nextSnapshot ? nextSnapshot : current.runtimeSnapshot,
+            runtimePatch: clearLivePatch && response.ok ? null : current.runtimePatch,
           }));
         }
       } catch (error) {
@@ -88,7 +94,7 @@ export function useClassroomRealtimeShadowPresence(
       if (refreshTimer) clearTimeout(refreshTimer);
       refreshTimer = setTimeout(() => {
         refreshTimer = null;
-        void loadSnapshot();
+        void loadSnapshot(true);
       }, 150);
     };
 
@@ -106,6 +112,18 @@ export function useClassroomRealtimeShadowPresence(
       ) {
         scheduleSnapshotRefresh();
       }
+    });
+
+    channel.on("broadcast", { event: "runtime:patch" }, ({ payload }) => {
+      const event = payload as {
+        sessionId?: unknown;
+        patch?: ClassroomRuntimePatch;
+      };
+      if (event.sessionId !== input.sessionId || !event.patch) return;
+      setHealth((current) => ({
+        ...current,
+        runtimePatch: { ...current.runtimePatch, ...event.patch },
+      }));
     });
 
     channel.subscribe((status) => {

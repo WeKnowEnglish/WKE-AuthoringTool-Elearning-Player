@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import {
   decodeVcMemberToken,
@@ -13,8 +14,28 @@ import {
   type VcToolCommand,
 } from "@/lib/virtual-classroom/server/tools";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
+import { queueClassroomRuntimeSnapshotSync } from "@/lib/virtual-classroom/server/runtime-snapshot";
+import { broadcastClassroomRealtimeEvent } from "@/lib/classroom-realtime/server/broadcast";
+import type { ClassroomRuntimePatch } from "@/lib/classroom-realtime/types";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
+
+function livePatchForCommand(command: VcToolCommand): ClassroomRuntimePatch | null {
+  switch (command.type) {
+    case "SET_UI_MODE":
+      return { uiMode: command.mode === "meeting" ? "meeting" : "learn" };
+    case "SET_LEARN_STAGE":
+      return { learnStage: command.stage === "activity" ? "activity" : "whiteboard" };
+    case "SET_LEARN_ACTIVITY":
+      return { learnActivity: command.activity };
+    case "SET_LEARN_STUDENT_PENS":
+      return { learnStudentPensEnabled: command.enabled !== false };
+    case "SET_ANNOUNCEMENT":
+      return { announcement: command.message?.trim().slice(0, 280) || null };
+    default:
+      return null;
+  }
+}
 
 export async function POST(request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
@@ -82,6 +103,30 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+  // The visible Liveblocks mutation has already completed. Mirror it after the
+  // response so the teacher is never kept waiting on a second provider during
+  // the shadow pilot. Student status is intentionally transient for now.
+  if (command.type !== "SET_OWN_STATUS") {
+    const mirrorActorId = actorUserId ?? "system";
+    const livePatch = livePatchForCommand(command);
+    after(async () => {
+      await Promise.all([
+        livePatch
+          ? broadcastClassroomRealtimeEvent({
+              type: "runtime:patch",
+              sessionId: session.id,
+              patch: livePatch,
+              sentAt: Date.now(),
+            })
+          : Promise.resolve(false),
+        queueClassroomRuntimeSnapshotSync({
+          sessionId: session.id,
+          roomId: session.liveblocksRoomId,
+          actorUserId: mirrorActorId,
+        }),
+      ]);
+    });
   }
   return NextResponse.json({ ok: true, detail: result.detail });
 }

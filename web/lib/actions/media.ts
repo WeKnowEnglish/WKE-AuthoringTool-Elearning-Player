@@ -27,7 +27,8 @@ const VIDEO_ALLOWED = new Set([
   "video/ogg",
   "video/quicktime",
 ]);
-export type MediaKind = "image" | "audio" | "video";
+const DOCUMENT_ALLOWED = new Set(["application/pdf"]);
+export type MediaKind = "image" | "audio" | "video" | "document";
 type MediaKindFilter = MediaKind | "all";
 type Countability = "countable" | "uncountable" | "both" | "na";
 
@@ -232,6 +233,7 @@ export async function uploadTeacherMedia(
   const allowed =
     kind === "audio" ? AUDIO_ALLOWED
     : kind === "video" ? VIDEO_ALLOWED
+    : kind === "document" ? DOCUMENT_ALLOWED
     : IMAGE_ALLOWED;
   if (!allowed.has(contentType)) {
     if (kind === "audio") {
@@ -239,6 +241,9 @@ export async function uploadTeacherMedia(
     }
     if (kind === "video") {
       throw new Error("Only MP4, WebM, OGG, or MOV video is allowed");
+    }
+    if (kind === "document") {
+      throw new Error("Only PDF documents are allowed");
     }
     throw new Error("Only JPEG, PNG, WebP, or GIF images are allowed");
   }
@@ -325,17 +330,19 @@ export async function uploadTeacherMedia(
     .single();
   if (insErr) throw new Error(insErr.message);
 
-  // Auto-link high-confidence dictionary matches; otherwise enqueue review.
-  try {
-    const { processMediaLexiconMatch } = await import("@/lib/actions/media-lexicon-match");
-    await processMediaLexiconMatch({
-      mediaAssetId: row.id as string,
-      itemName,
-      originalFilename: f.name,
-      contentType,
-    });
-  } catch {
-    // Non-fatal: upload already succeeded
+  // Vocabulary matching applies to instructional media, not classroom PDFs.
+  if (kind !== "document") {
+    try {
+      const { processMediaLexiconMatch } = await import("@/lib/actions/media-lexicon-match");
+      await processMediaLexiconMatch({
+        mediaAssetId: row.id as string,
+        itemName,
+        originalFilename: f.name,
+        contentType,
+      });
+    } catch {
+      // Non-fatal: upload already succeeded
+    }
   }
 
   revalidatePath("/teacher/media");
@@ -458,6 +465,7 @@ export async function inspectTeacherMediaBulkDuplicates(
     const contentLike =
       kind === "audio" ? "audio/%"
       : kind === "video" ? "video/%"
+      : kind === "document" ? "application/pdf"
       : "image/%";
 
     const { data: exact, error: exactErr } = await supabase
@@ -550,6 +558,23 @@ export async function searchTeacherMedia(
   const offset = Math.max(params.offset ?? 0, 0);
   const lexiconId = params.lexiconId?.trim();
   const scope: MediaLibraryScope = params.scope === "mine" ? "mine" : "school";
+
+  if (kind === "document") {
+    let query = supabase
+      .from("media_assets")
+      .select(
+        "id,storage_path,public_url,original_filename,content_type,uploaded_by,created_at,sha256_hash,phash,meta_categories,meta_tags,meta_alternative_names,meta_plural,meta_countability,meta_level,meta_word_type,meta_skills,meta_past_tense,meta_notes,meta_item_name",
+        { count: "exact" },
+      )
+      .eq("content_type", "application/pdf")
+      .order("created_at", { ascending: false });
+    if (scope === "mine") query = query.eq("uploaded_by", user.id);
+    const q = params.q?.trim();
+    if (q) query = query.ilike("original_filename", `%${q}%`);
+    const { data, error, count } = await query.range(offset, offset + limit - 1);
+    if (error) throw new Error(error.message);
+    return { rows: (data ?? []) as MediaAssetRow[], total: count ?? 0 };
+  }
 
   if (lexiconId) {
     const linked = await searchTeacherMediaForLexicon(supabase, {

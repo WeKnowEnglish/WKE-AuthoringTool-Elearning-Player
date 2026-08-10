@@ -10,9 +10,14 @@ import {
   useUndo,
   useUpdateMyPresence,
 } from "@liveblocks/react/suspense";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { BoardElementLayer } from "@/components/pilots/whiteboard/BoardElementLayer";
 import { useWhiteboardActiveTab } from "@/components/pilots/whiteboard/useWhiteboardActiveTab";
+import { TeacherMediaLibraryModal } from "@/components/teacher/media/TeacherMediaLibraryModal";
+import {
+  openTeacherMediaLibrary,
+  type MediaUrlChangeDetail,
+} from "@/components/teacher/media/teacherMediaLibraryShared";
 import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
 import { uploadTeacherMedia } from "@/lib/actions/media";
 import { recordWhiteboardSubmitEvidence } from "@/lib/whiteboard/evidence";
@@ -158,6 +163,30 @@ async function readImageDimensions(file: File): Promise<{ width: number; height:
   }
 }
 
+async function readImageUrlDimensions(url: string): Promise<{ width: number; height: number }> {
+  return await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () =>
+      resolve({
+        width: image.naturalWidth || image.width,
+        height: image.naturalHeight || image.height,
+      });
+    image.onerror = () => reject(new Error("Could not load the selected image."));
+    image.src = url;
+  });
+}
+
+function fitImageDimensions(sourceWidth: number, sourceHeight: number) {
+  const ratio = sourceWidth > 0 && sourceHeight > 0 ? sourceWidth / sourceHeight : 1;
+  let width = Math.min(720, Math.max(240, sourceWidth));
+  let height = width / ratio;
+  if (height > 560) {
+    height = 560;
+    width = height * ratio;
+  }
+  return { width, height };
+}
+
 function readBoardView(raw: unknown): BoardView | null {
   if (!raw || typeof raw !== "object") return null;
   if (typeof (raw as { get?: unknown }).get === "function") {
@@ -276,6 +305,7 @@ export function WhiteboardCanvas({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mediaLibraryOwnerId = useId();
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const drawingRef = useRef(false);
@@ -397,6 +427,35 @@ export function WhiteboardCanvas({
     [boardId],
   );
 
+  const insertBoardImage = useCallback(
+    (input: {
+      url: string;
+      mediaAssetId?: string | null;
+      alt: string;
+      sourceWidth: number;
+      sourceHeight: number;
+    }) => {
+      const { width, height } = fitImageDimensions(input.sourceWidth, input.sourceHeight);
+      const image: ImageElement = {
+        id: `image_${crypto.randomUUID()}`,
+        type: "image",
+        url: input.url,
+        mediaAssetId: input.mediaAssetId ?? null,
+        x: Math.round((BOARD_WIDTH - width) / 2),
+        y: Math.round((BOARD_HEIGHT - height) / 2),
+        width: Math.round(width),
+        height: Math.round(height),
+        alt: input.alt,
+        createdBy: userId,
+        createdAt: Date.now(),
+      };
+      addElement(image, "elements");
+      setSelectedImageId(image.id);
+      setTool("select");
+    },
+    [addElement, userId],
+  );
+
   const updateImageElement = useMutation(
     ({ storage }, image: ImageElement) => {
       const liveBoard = getLiveBoard(storage, boardId);
@@ -493,34 +552,18 @@ export function WhiteboardCanvas({
       void (async () => {
         try {
           const { width: sourceWidth, height: sourceHeight } = await readImageDimensions(file);
-          const ratio = sourceWidth > 0 && sourceHeight > 0 ? sourceWidth / sourceHeight : 1;
-          let width = Math.min(720, Math.max(240, sourceWidth));
-          let height = width / ratio;
-          if (height > 560) {
-            height = 560;
-            width = height * ratio;
-          }
           const formData = new FormData();
           formData.set("file", file, file.name || `whiteboard-paste-${Date.now()}.png`);
           formData.set("meta_item_name", "Whiteboard paste");
           formData.set("skip_near_duplicate", "1");
           const uploaded = await uploadTeacherMedia(formData, "image");
-          const image: ImageElement = {
-            id: `image_${crypto.randomUUID()}`,
-            type: "image",
+          insertBoardImage({
             url: uploaded.url,
             mediaAssetId: uploaded.id,
-            x: Math.round((BOARD_WIDTH - width) / 2),
-            y: Math.round((BOARD_HEIGHT - height) / 2),
-            width: Math.round(width),
-            height: Math.round(height),
             alt: file.name || "Pasted image",
-            createdBy: userId,
-            createdAt: Date.now(),
-          };
-          addElement(image, "elements");
-          setSelectedImageId(image.id);
-          setTool("select");
+            sourceWidth,
+            sourceHeight,
+          });
         } catch (pasteError) {
           setError(
             pasteError instanceof Error ? pasteError.message : "Could not paste this image.",
@@ -532,7 +575,39 @@ export function WhiteboardCanvas({
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addElement, canEdit, role, userId]);
+  }, [canEdit, insertBoardImage, role]);
+
+  const insertMediaLibraryImage = async (
+    url: string,
+    detail?: MediaUrlChangeDetail,
+  ) => {
+    setImageUploading(true);
+    setError(null);
+    try {
+      const dimensions = await readImageUrlDimensions(url);
+      insertBoardImage({
+        url,
+        mediaAssetId: detail?.mediaAssetId ?? null,
+        alt: "Media library image",
+        sourceWidth: dimensions.width,
+        sourceHeight: dimensions.height,
+      });
+    } catch (mediaError) {
+      setError(
+        mediaError instanceof Error ? mediaError.message : "Could not add this image.",
+      );
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const openMediaLibrary = () => {
+    openTeacherMediaLibrary(
+      mediaLibraryOwnerId,
+      "image",
+      (url, detail) => void insertMediaLibraryImage(url, detail),
+    );
+  };
 
   useEffect(() => {
     if (!canEdit || role !== "host" || !selectedImageId) return;
@@ -1154,13 +1229,18 @@ export function WhiteboardCanvas({
             {canEdit && (
               <>
                 {role === "host" ? (
-                  <ToolButton
-                    active={tool === "select"}
-                    onClick={() => selectTool("select")}
-                    disabled={!canEdit}
-                  >
-                    Move image
-                  </ToolButton>
+                  <>
+                    <ToolButton
+                      active={tool === "select"}
+                      onClick={() => selectTool("select")}
+                      disabled={!canEdit}
+                    >
+                      Move image
+                    </ToolButton>
+                    <ToolButton onClick={openMediaLibrary} disabled={!canEdit || imageUploading}>
+                      Add image
+                    </ToolButton>
+                  </>
                 ) : null}
                 <ToolButton active={tool === "pen"} onClick={() => selectTool("pen")} disabled={!canEdit}>
                   Pen
@@ -1344,14 +1424,15 @@ export function WhiteboardCanvas({
           {canEdit && role === "host" ? (
             <p className="border-t border-slate-100 pt-2 text-xs text-slate-500">
               {imageUploading
-                ? "Uploading pasted imageâ€¦"
+                ? "Adding image…"
                 : tool === "select"
                   ? "Drag an image to move it. Drag the green corner to resize. Delete removes it."
-                  : "Copy an image, then press Ctrl+V to add it as a movable object."}
+                  : "Use Add image or press Ctrl+V to place a movable image on the board."}
             </p>
           ) : null}
         </div>
       )}
+      <TeacherMediaLibraryModal ownerId={mediaLibraryOwnerId} />
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );

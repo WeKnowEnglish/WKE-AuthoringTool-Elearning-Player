@@ -16,6 +16,7 @@ export type MediaUrlChangeDetail = {
 /** Folder rows on the home screen / drill-in targets. */
 export type TeacherMediaFolderId =
   | "school_images"
+  | "school_documents"
   | "my_uploads"
   | "school_audio"
   | "linked";
@@ -122,7 +123,26 @@ function cacheKey(parts: Record<string, string | number | null | undefined>) {
     .join("|");
 }
 
-export function folderDefsForPicker(lexiconId: string | null): TeacherMediaFolderDef[] {
+export function folderDefsForPicker(
+  lexiconId: string | null,
+  fieldKind: MediaKind = "image",
+): TeacherMediaFolderDef[] {
+  if (fieldKind === "document") {
+    return [
+      {
+        id: "school_documents",
+        label: "School PDFs",
+        kind: "document",
+        scope: "school",
+      },
+      {
+        id: "my_uploads",
+        label: "My PDFs",
+        kind: "document",
+        scope: "mine",
+      },
+    ];
+  }
   const rows: TeacherMediaFolderDef[] = [
     {
       id: "school_images",
@@ -155,7 +175,8 @@ export function folderDefsForPicker(lexiconId: string | null): TeacherMediaFolde
   return rows;
 }
 
-function searchKind(def: TeacherMediaFolderDef, _fieldKind: MediaKind): MediaKind | "all" {
+function searchKind(def: TeacherMediaFolderDef, fieldKind: MediaKind): MediaKind | "all" {
+  if (fieldKind === "document") return "document";
   if (def.id === "my_uploads" || def.id === "linked") return "all";
   return def.kind;
 }
@@ -209,10 +230,10 @@ export async function loadTeacherMediaLibraryHome(opts?: { debounced?: boolean }
   const run = async () => {
     if (!sharedLibraryState.open || sharedLibraryState.view !== "home") return;
     const requestId = ++homeRequestSeq;
-    const defs = folderDefsForPicker(sharedLibraryState.lexiconId);
-    const q = sharedLibraryState.homeQuery.trim();
     const fieldKind = sharedLibraryState.fieldKind;
     const lexiconId = sharedLibraryState.lexiconId;
+    const defs = folderDefsForPicker(lexiconId, fieldKind);
+    const q = sharedLibraryState.homeQuery.trim();
 
     setTeacherMediaLibraryState({
       homeLoading: true,
@@ -334,7 +355,10 @@ export function setTeacherMediaLibraryHomeQuery(query: string) {
 }
 
 export function openTeacherMediaFolder(folderId: TeacherMediaFolderId) {
-  const def = folderDefsForPicker(sharedLibraryState.lexiconId).find((d) => d.id === folderId);
+  const def = folderDefsForPicker(
+    sharedLibraryState.lexiconId,
+    sharedLibraryState.fieldKind,
+  ).find((d) => d.id === folderId);
   if (!def) return;
   setTeacherMediaLibraryState({
     view: "folder",
@@ -382,7 +406,10 @@ async function runFolderSearch(opts: { reset: boolean; debounced: boolean }) {
   const kickoff = async () => {
     if (!sharedLibraryState.open || sharedLibraryState.view !== "folder") return;
     const folderId = sharedLibraryState.folderId;
-    const def = folderDefsForPicker(sharedLibraryState.lexiconId).find((d) => d.id === folderId);
+    const def = folderDefsForPicker(
+      sharedLibraryState.lexiconId,
+      sharedLibraryState.fieldKind,
+    ).find((d) => d.id === folderId);
     if (!def) return;
 
     const requestId = ++folderRequestSeq;
@@ -483,6 +510,7 @@ export function getTeacherMediaLibraryRecent(kind: MediaKind): MediaAssetRow[] {
 
 const FOLDER_LABELS: Record<TeacherMediaFolderId, string> = {
   school_images: "School images",
+  school_documents: "School PDFs",
   my_uploads: "My uploads",
   school_audio: "School audio",
   linked: "Linked to this word",
@@ -499,5 +527,6 @@ export function assetDisplayKind(contentType: string, fallback: MediaKind): Medi
   if (c.startsWith("audio/")) return "audio";
   if (c.startsWith("video/")) return "video";
   if (c.startsWith("image/")) return "image";
+  if (c === "application/pdf") return "document";
   return fallback;
 }

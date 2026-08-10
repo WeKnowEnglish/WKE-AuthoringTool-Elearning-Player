@@ -237,11 +237,16 @@ the legacy room, so refresh and reconnect cannot restore a stale active class.
 
 The Learn stage now includes a shared Present surface without migrating the
 collaborative activity rooms. Teachers can choose or upload an image through
-the existing media library, or paste a public PDF URL. The selected resource,
-title, and stage are stored in the same recoverable runtime snapshot and sent
-through the fast control lane, so students and late joiners see the same
-material. This first slice intentionally does not add slide annotation or PDF
-uploads; those belong with the upcoming whiteboard media/background bridge.
+the existing media library, upload or reuse a PDF, or paste a public resource
+URL. The selected resource, title, media asset id, and stage are stored in the
+same recoverable runtime snapshot and sent through the fast control lane, so
+students and late joiners see the same material. PDFs use the existing teacher
+media bucket and permissions; this does not require another database migration.
+The teacher's PDF page is part of that same normalized presentation state.
+Previous, next, and direct page changes therefore travel through the existing
+authenticated command and fast-patch path, while refreshes and late joiners
+recover the current page from the durable snapshot. Browser PDF controls remain
+available locally, but the classroom header shows the teacher-directed page.
 
 The first bridge is now active for images: **Open on whiteboard** launches or
 reuses the shared class board, applies the presented media-library image as a
@@ -256,6 +261,11 @@ The image file is uploaded once through the teacher media pipeline; Liveblocks
 only synchronizes the resulting URL and lightweight geometry. Students may
 still draw over the image when student pens are enabled, but cannot reposition
 the teacher's media object.
+
+Teachers can also choose **Add image** directly from the whiteboard toolbar.
+This reuses an existing media-library asset without uploading a duplicate and
+creates the same movable, proportionally resizable board object. Background
+images remain a separate intentional presentation mode.
 
 - Time from join to usable classroom state.
 - Time to recover after browser refresh and network interruption.

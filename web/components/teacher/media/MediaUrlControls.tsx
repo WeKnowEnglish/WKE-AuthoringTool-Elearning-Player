@@ -22,7 +22,7 @@ type Props = {
   value: string;
   onChange: (url: string, detail?: MediaUrlChangeDetail) => void;
   disabled?: boolean;
-  /** Image (default) or video uploads + library */
+  /** Image (default), audio, video, or PDF uploads + library. */
   mediaKind?: MediaKind;
   /** Shorter preview height in compact forms */
   compact?: boolean;
@@ -105,10 +105,20 @@ export function MediaUrlControls({
   const previewH = compact ? "h-28" : "h-40";
   const fileAccept =
     mediaKind === "video" ? "video/mp4,video/webm,video/ogg,video/quicktime" : (
-      "image/jpeg,image/png,image/webp,image/gif"
+      mediaKind === "audio" ? "audio/*"
+      : mediaKind === "document" ? "application/pdf,.pdf"
+      : "image/jpeg,image/png,image/webp,image/gif"
     );
   const urlPlaceholder =
-    mediaKind === "video" ? "Or paste video URL" : "Or paste image URL";
+    mediaKind === "video" ? "Or paste video URL"
+    : mediaKind === "audio" ? "Or paste audio URL"
+    : mediaKind === "document" ? "Or paste PDF URL"
+    : "Or paste image URL";
+  const mediaLabel =
+    mediaKind === "video" ? "Video URL"
+    : mediaKind === "audio" ? "Audio URL"
+    : mediaKind === "document" ? "PDF URL"
+    : "Image URL";
 
   return (
     <div className="space-y-2">
@@ -162,7 +172,7 @@ export function MediaUrlControls({
       {!hideUrlInput ? (
         <>
           <label htmlFor={inputId} className="sr-only">
-            {mediaKind === "video" ? "Video URL" : "Image URL"}
+            {mediaLabel}
           </label>
           <input
             id={inputId}
@@ -181,6 +191,12 @@ export function MediaUrlControls({
         >
           {mediaKind === "video" ? (
             <video src={value} className="h-full w-full object-contain" controls muted playsInline />
+          ) : mediaKind === "audio" ? (
+            <audio src={value} className="w-full" controls />
+          ) : mediaKind === "document" ? (
+            <div className="flex h-full items-center justify-center bg-red-50 text-sm font-bold text-red-800">
+              PDF selected
+            </div>
           ) : (
             /* eslint-disable-next-line @next/next/no-img-element -- arbitrary teacher URLs may not be optimizable */
             <img src={value} alt="" className="h-full w-full object-contain" />

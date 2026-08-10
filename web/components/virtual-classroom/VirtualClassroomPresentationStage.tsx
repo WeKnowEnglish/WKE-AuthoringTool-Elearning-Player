@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
-import type { VirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
+import {
+  classroomPdfPageUrl,
+  normalizePresentationPage,
+  type VirtualClassroomPresentation,
+} from "@/lib/virtual-classroom/presentation";
 
 type Props = {
   role: "host" | "member";
@@ -27,13 +31,21 @@ export function VirtualClassroomPresentationStage({
   );
 
   const isHost = role === "host";
+  const presentedPdfPage =
+    presentation?.kind === "pdf" ? normalizePresentationPage(presentation.page) : 1;
   const submit = () => {
     onPresent({
       kind,
       url,
       title: title.trim() || (kind === "pdf" ? "Class PDF" : "Class image"),
       mediaAssetId,
+      ...(kind === "pdf" ? { page: 1 } : {}),
     });
+  };
+
+  const setPresentedPdfPage = (page: number) => {
+    if (!presentation || presentation.kind !== "pdf") return;
+    onPresent({ ...presentation, page: normalizePresentationPage(page) });
   };
 
   return (
@@ -86,20 +98,19 @@ export function VirtualClassroomPresentationStage({
                 }}
               />
             ) : (
-              <label className="block text-xs font-semibold text-slate-700">
-                PDF URL
-                <input
-                  type="url"
-                  value={url}
-                  disabled={busy}
-                  onChange={(event) => {
-                    setUrl(event.target.value);
-                    setMediaAssetId(null);
-                  }}
-                  placeholder="Paste a public PDF link"
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-              </label>
+              <MediaUrlControls
+                label="PDF to show"
+                value={url}
+                mediaKind="document"
+                disabled={busy}
+                compact
+                hidePreview
+                uploadItemName={title.trim() || "Class PDF"}
+                onChange={(nextUrl, detail) => {
+                  setUrl(nextUrl);
+                  setMediaAssetId(detail?.mediaAssetId ?? null);
+                }}
+              />
             )}
           </div>
 
@@ -140,17 +151,72 @@ export function VirtualClassroomPresentationStage({
         {!presentation ? (
           <div className="flex h-full min-h-[18rem] items-center justify-center px-5 text-center text-sm text-slate-500">
             {isHost
-              ? "Choose an image from the media library or paste a PDF link."
+              ? "Choose or upload an image or PDF for the class."
               : "Waiting for the teacher to share a presentation."}
           </div>
         ) : presentation.kind === "pdf" ? (
           <div className="flex h-full min-h-[24rem] flex-col">
-            <div className="shrink-0 border-b border-slate-200 bg-white px-3 py-2 text-center text-sm font-bold text-slate-800">
-              {presentation.title}
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-800">
+                {presentation.title}
+              </span>
+              {isHost ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={busy || presentedPdfPage <= 1}
+                    onClick={() => setPresentedPdfPage(presentedPdfPage - 1)}
+                    className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <form
+                    key={presentedPdfPage}
+                    className="flex items-center gap-1 text-xs font-semibold text-slate-600"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const data = new FormData(event.currentTarget);
+                      setPresentedPdfPage(Number(data.get("page")));
+                    }}
+                  >
+                    <label htmlFor="class-pdf-page">Page</label>
+                    <input
+                      id="class-pdf-page"
+                      name="page"
+                      type="number"
+                      min={1}
+                      max={9_999}
+                      defaultValue={presentedPdfPage}
+                      disabled={busy}
+                      className="w-16 rounded-md border border-slate-300 px-2 py-1 text-center text-xs text-slate-900"
+                    />
+                    <button
+                      type="submit"
+                      disabled={busy}
+                      className="rounded-md border border-slate-300 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700 disabled:opacity-40"
+                    >
+                      Go
+                    </button>
+                  </form>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setPresentedPdfPage(presentedPdfPage + 1)}
+                    className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : (
+                <span className="shrink-0 rounded-md bg-violet-50 px-2 py-1 text-xs font-bold text-violet-900">
+                  Page {presentedPdfPage}
+                </span>
+              )}
             </div>
             <iframe
+              key={`${presentation.url}:${presentedPdfPage}`}
               title={presentation.title}
-              src={`${presentation.url}#view=FitH`}
+              src={classroomPdfPageUrl(presentation.url, presentedPdfPage)}
               className="min-h-0 w-full flex-1 border-0"
             />
           </div>

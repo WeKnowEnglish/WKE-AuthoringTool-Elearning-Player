@@ -73,6 +73,10 @@ import {
   normalizeClassroomStatusState,
   type ClassroomStatusState,
 } from "@/lib/virtual-classroom/tools/status";
+import {
+  normalizeVirtualClassroomPresentation,
+  type VirtualClassroomPresentation,
+} from "@/lib/virtual-classroom/presentation";
 
 type Props = {
   sessionId: string;
@@ -116,6 +120,9 @@ export function VirtualClassroomSessionView({
   );
   const liveblocksLearnActivity = useStorage((root) =>
     normalizeVirtualClassroomLearnActivity(readRuntimeField(root, "learnActivity")),
+  );
+  const liveblocksLearnPresentation = useStorage((root) =>
+    normalizeVirtualClassroomPresentation(readRuntimeField(root, "learnPresentation")),
   );
   const liveblocksLearnStudentPensEnabled = useStorage((root) =>
     normalizeLearnStudentPensEnabled(readRuntimeField(root, "learnStudentPensEnabled")),
@@ -205,6 +212,10 @@ export function VirtualClassroomSessionView({
     liveNavigationPatch && Object.hasOwn(liveNavigationPatch, "learnActivity")
       ? liveNavigationPatch.learnActivity ?? null
       : snapshotLearnNavigation?.learnActivity ?? liveblocksLearnActivity;
+  const learnPresentation =
+    liveNavigationPatch && Object.hasOwn(liveNavigationPatch, "learnPresentation")
+      ? liveNavigationPatch.learnPresentation ?? null
+      : snapshotLearnNavigation?.learnPresentation ?? liveblocksLearnPresentation;
   const learnStudentPensEnabled =
     classroomRealtimeLearnPensPilotEnabled() && shadowHealth.runtimeSnapshot
       ? shadowHealth.runtimeSnapshot.learnStudentPensEnabled
@@ -303,7 +314,11 @@ export function VirtualClassroomSessionView({
     router.push(href);
   }, [exitHref, router]);
 
-  const launchWhiteboard = useCallback(async (): Promise<WhiteboardSessionContext | null> => {
+  const launchWhiteboard = useCallback(async (background?: {
+    url: string;
+    assetId?: string | null;
+    title?: string;
+  }): Promise<WhiteboardSessionContext | null> => {
     setBusy("whiteboard");
     setError(null);
     try {
@@ -312,7 +327,7 @@ export function VirtualClassroomSessionView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "SET_LEARN_STAGE", stage: "whiteboard" }),
       }).catch(() => undefined);
-      const next = await launchWhiteboardInLearn({ sessionId, displayName });
+      const next = await launchWhiteboardInLearn({ sessionId, displayName, background });
       await stageRequest;
       return next;
     } catch (err) {
@@ -322,6 +337,15 @@ export function VirtualClassroomSessionView({
       setBusy(null);
     }
   }, [displayName, sessionId]);
+
+  const annotatePresentation = useCallback(() => {
+    if (!learnPresentation || learnPresentation.kind !== "image") return;
+    void launchWhiteboard({
+      url: learnPresentation.url,
+      assetId: learnPresentation.mediaAssetId ?? null,
+      title: learnPresentation.title,
+    });
+  }, [launchWhiteboard, learnPresentation]);
 
   const runToolCommand = useCallback(
     async (command: Record<string, unknown>) => {
@@ -368,6 +392,13 @@ export function VirtualClassroomSessionView({
   const setLearnStudentPens = useCallback(
     (enabled: boolean) => {
       void runToolCommand({ type: "SET_LEARN_STUDENT_PENS", enabled });
+    },
+    [runToolCommand],
+  );
+
+  const setLearnPresentation = useCallback(
+    (presentation: VirtualClassroomPresentation | null) => {
+      void runToolCommand({ type: "SET_LEARN_PRESENTATION", presentation });
     },
     [runToolCommand],
   );
@@ -524,12 +555,15 @@ export function VirtualClassroomSessionView({
             busy={Boolean(busy)}
             learnStage={learnStage}
             learnActivity={learnActivity}
+            learnPresentation={learnPresentation}
             whiteboardLive={activeActivity?.kind === "whiteboard"}
             whiteboardJoinCode={
               activeActivity?.kind === "whiteboard" ? activeActivity.joinCode : null
             }
             onSetStage={setLearnStage}
             onSetActivity={setLearnActivity}
+            onSetPresentation={setLearnPresentation}
+            onAnnotatePresentation={annotatePresentation}
             onLaunchWhiteboard={launchWhiteboard}
             studentPensEnabled={learnStudentPensEnabled}
             onToggleStudentPens={setLearnStudentPens}

@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BoardElementLayer } from "@/components/pilots/whiteboard/BoardElementLayer";
 import { useWhiteboardActiveTab } from "@/components/pilots/whiteboard/useWhiteboardActiveTab";
 import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
+import { uploadTeacherMedia } from "@/lib/actions/media";
 import { recordWhiteboardSubmitEvidence } from "@/lib/whiteboard/evidence";
 import {
   BOARD_HEIGHT,
@@ -25,6 +26,7 @@ import {
   type BoardBackground,
   type BoardOwnerType,
   type BoardStatus,
+  type ImageElement,
   type Point,
   type ShapeElement,
   type ShapeKind,
@@ -94,6 +96,13 @@ type ShapePreview = {
   height: number;
 };
 
+type ImageDrag = {
+  id: string;
+  mode: "move" | "resize";
+  start: Point;
+  initial: ImageElement;
+};
+
 type LiveBoard = {
   get: (k: string) => unknown;
 };
@@ -122,6 +131,31 @@ function orderedElements(
     if (el) list.push(el);
   }
   return list;
+}
+
+async function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  if (typeof createImageBitmap === "function") {
+    const bitmap = await createImageBitmap(file);
+    const dimensions = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return dimensions;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    return await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () =>
+        resolve({
+          width: image.naturalWidth || image.width,
+          height: image.naturalHeight || image.height,
+        });
+      image.onerror = () => reject(new Error("Could not read the pasted image."));
+      image.src = objectUrl;
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 function readBoardView(raw: unknown): BoardView | null {
@@ -236,6 +270,9 @@ export function WhiteboardCanvas({
   const [stampId, setStampId] = useState<string>(WHITEBOARD_STAMP_PACK[0]?.id ?? "star");
   const [localStroke, setLocalStroke] = useState<Point[] | null>(null);
   const [shapePreview, setShapePreview] = useState<ShapePreview | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<ImageElement | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -247,6 +284,8 @@ export function WhiteboardCanvas({
   const pointsRef = useRef<Point[]>([]);
   const rafRef = useRef<number | null>(null);
   const strokeTargetRef = useRef<"elements" | "annotations">("elements");
+  const imageDragRef = useRef<ImageDrag | null>(null);
+  const imagePreviewRef = useRef<ImageElement | null>(null);
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 250);
@@ -310,6 +349,11 @@ export function WhiteboardCanvas({
 
   const selectTool = (next: WhiteboardToolId) => {
     setTool(next);
+    if (next !== "select") {
+      setSelectedImageId(null);
+      setImagePreview(null);
+      imagePreviewRef.current = null;
+    }
     if (next === "highlighter") {
       if (!(HIGHLIGHT_COLORS as readonly string[]).includes(color)) {
         setColor(HIGHLIGHT_COLORS[0]);
@@ -349,6 +393,34 @@ export function WhiteboardCanvas({
       const zOrder = liveBoard.get("zOrder") as { push: (id: string) => void };
       elements.set(el.id, el);
       zOrder.push(el.id);
+    },
+    [boardId],
+  );
+
+  const updateImageElement = useMutation(
+    ({ storage }, image: ImageElement) => {
+      const liveBoard = getLiveBoard(storage, boardId);
+      if (!liveBoard) return;
+      const elements = liveBoard.get("elements") as {
+        set: (id: string, value: WhiteboardElement) => void;
+      };
+      elements.set(image.id, image);
+    },
+    [boardId],
+  );
+
+  const deleteImageElement = useMutation(
+    ({ storage }, imageId: string) => {
+      const liveBoard = getLiveBoard(storage, boardId);
+      if (!liveBoard) return;
+      const elements = liveBoard.get("elements") as { delete: (id: string) => void };
+      const zOrder = liveBoard.get("zOrder") as {
+        indexOf: (id: string) => number;
+        delete: (index: number) => void;
+      };
+      elements.delete(imageId);
+      const index = zOrder.indexOf(imageId);
+      if (index >= 0) zOrder.delete(index);
     },
     [boardId],
   );
@@ -399,6 +471,91 @@ export function WhiteboardCanvas({
     [boardId],
   );
 
+  useEffect(() => {
+    if (!canEdit || role !== "host") return;
+    const onPaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      const item = Array.from(event.clipboardData?.items ?? []).find((entry) =>
+        entry.type.startsWith("image/"),
+      );
+      const file = item?.getAsFile();
+      if (!file) return;
+      event.preventDefault();
+      setImageUploading(true);
+      setError(null);
+      void (async () => {
+        try {
+          const { width: sourceWidth, height: sourceHeight } = await readImageDimensions(file);
+          const ratio = sourceWidth > 0 && sourceHeight > 0 ? sourceWidth / sourceHeight : 1;
+          let width = Math.min(720, Math.max(240, sourceWidth));
+          let height = width / ratio;
+          if (height > 560) {
+            height = 560;
+            width = height * ratio;
+          }
+          const formData = new FormData();
+          formData.set("file", file, file.name || `whiteboard-paste-${Date.now()}.png`);
+          formData.set("meta_item_name", "Whiteboard paste");
+          formData.set("skip_near_duplicate", "1");
+          const uploaded = await uploadTeacherMedia(formData, "image");
+          const image: ImageElement = {
+            id: `image_${crypto.randomUUID()}`,
+            type: "image",
+            url: uploaded.url,
+            mediaAssetId: uploaded.id,
+            x: Math.round((BOARD_WIDTH - width) / 2),
+            y: Math.round((BOARD_HEIGHT - height) / 2),
+            width: Math.round(width),
+            height: Math.round(height),
+            alt: file.name || "Pasted image",
+            createdBy: userId,
+            createdAt: Date.now(),
+          };
+          addElement(image, "elements");
+          setSelectedImageId(image.id);
+          setTool("select");
+        } catch (pasteError) {
+          setError(
+            pasteError instanceof Error ? pasteError.message : "Could not paste this image.",
+          );
+        } finally {
+          setImageUploading(false);
+        }
+      })();
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [addElement, canEdit, role, userId]);
+
+  useEffect(() => {
+    if (!canEdit || role !== "host" || !selectedImageId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      event.preventDefault();
+      deleteImageElement(selectedImageId);
+      setSelectedImageId(null);
+      setImagePreview(null);
+      imagePreviewRef.current = null;
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [canEdit, deleteImageElement, role, selectedImageId]);
+
   const [readyBusy, setReadyBusy] = useState(false);
 
   const flushLocalPreview = useCallback(() => {
@@ -415,6 +572,34 @@ export function WhiteboardCanvas({
       event.clientY,
       svgRef.current.getBoundingClientRect(),
     );
+
+    if (tool === "select" && canEdit && role === "host") {
+      const image = [...elements]
+        .reverse()
+        .find((element): element is ImageElement =>
+          element.type === "image" && elementIntersectsPoint(element, point),
+        );
+      if (!image) {
+        setSelectedImageId(null);
+        setImagePreview(null);
+        imagePreviewRef.current = null;
+        imageDragRef.current = null;
+        return;
+      }
+      const resize =
+        Math.abs(point.x - (image.x + image.width)) <= 32 &&
+        Math.abs(point.y - (image.y + image.height)) <= 32;
+      setSelectedImageId(image.id);
+      setImagePreview(image);
+      imagePreviewRef.current = image;
+      imageDragRef.current = {
+        id: image.id,
+        mode: resize ? "resize" : "move",
+        start: point,
+        initial: image,
+      };
+      return;
+    }
 
     if (tool === "eraser") {
       const eraseAnnotations = canAnnotate && (annotationMode || !canEdit);
@@ -499,6 +684,37 @@ export function WhiteboardCanvas({
       svgRef.current.getBoundingClientRect(),
     );
 
+    const imageDrag = imageDragRef.current;
+    if (imageDrag) {
+      const dx = point.x - imageDrag.start.x;
+      const dy = point.y - imageDrag.start.y;
+      if (imageDrag.mode === "move") {
+        const nextImage = {
+          ...imageDrag.initial,
+          x: Math.max(0, Math.min(BOARD_WIDTH - imageDrag.initial.width, imageDrag.initial.x + dx)),
+          y: Math.max(0, Math.min(BOARD_HEIGHT - imageDrag.initial.height, imageDrag.initial.y + dy)),
+        };
+        imagePreviewRef.current = nextImage;
+        setImagePreview(nextImage);
+      } else {
+        const ratio = imageDrag.initial.width / Math.max(1, imageDrag.initial.height);
+        const requestedWidth = Math.max(80, imageDrag.initial.width + dx);
+        const maxWidth = Math.min(
+          BOARD_WIDTH - imageDrag.initial.x,
+          (BOARD_HEIGHT - imageDrag.initial.y) * ratio,
+        );
+        const nextWidth = Math.min(requestedWidth, maxWidth);
+        const nextImage = {
+          ...imageDrag.initial,
+          width: nextWidth,
+          height: nextWidth / ratio,
+        };
+        imagePreviewRef.current = nextImage;
+        setImagePreview(nextImage);
+      }
+      return;
+    }
+
     if (shapeDraggingRef.current && shapeStartRef.current) {
       const start = shapeStartRef.current;
       setShapePreview((prev) =>
@@ -558,6 +774,13 @@ export function WhiteboardCanvas({
   };
 
   const finishStroke = () => {
+    if (imageDragRef.current) {
+      imageDragRef.current = null;
+      if (imagePreviewRef.current) updateImageElement(imagePreviewRef.current);
+      imagePreviewRef.current = null;
+      setImagePreview(null);
+      return;
+    }
     if (shapeDraggingRef.current) {
       finishShape();
       return;
@@ -596,6 +819,9 @@ export function WhiteboardCanvas({
     pointsRef.current = [];
     setLocalStroke(null);
     setShapePreview(null);
+    imageDragRef.current = null;
+    imagePreviewRef.current = null;
+    setImagePreview(null);
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
@@ -611,6 +837,18 @@ export function WhiteboardCanvas({
     if (!canEdit) return;
     if (!window.confirm("Clear your entire board?")) return;
     clearLayer("elements");
+    setSelectedImageId(null);
+    setImagePreview(null);
+    imagePreviewRef.current = null;
+    imageDragRef.current = null;
+  };
+
+  const handleDeleteSelectedImage = () => {
+    if (!selectedImageId || !canEdit || role !== "host") return;
+    deleteImageElement(selectedImageId);
+    setSelectedImageId(null);
+    setImagePreview(null);
+    imagePreviewRef.current = null;
   };
 
   const handleSubmit = async () => {
@@ -683,6 +921,23 @@ export function WhiteboardCanvas({
     () => orderedElements(board?.elements, board?.zOrder),
     [board],
   );
+  const displayedElements = useMemo(
+    () =>
+      imagePreview
+        ? elements.map((element) =>
+            element.id === imagePreview.id ? imagePreview : element,
+          )
+        : elements,
+    [elements, imagePreview],
+  );
+  const selectedImage =
+    imagePreview ??
+    (selectedImageId
+      ? elements.find(
+          (element): element is ImageElement =>
+            element.type === "image" && element.id === selectedImageId,
+        ) ?? null
+      : null);
   const annotations = useMemo(
     () => orderedElements(board?.annotations, board?.annotationZOrder),
     [board],
@@ -716,7 +971,7 @@ export function WhiteboardCanvas({
     <svg
       ref={pointerEvents ? svgRef : undefined}
       viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
-      className={`h-full w-full ${pointerEvents ? "touch-none" : "pointer-events-none"}`}
+      className={`h-full w-full ${pointerEvents ? `touch-none ${tool === "select" ? "cursor-move" : ""}` : "pointer-events-none"}`}
       style={{ aspectRatio: `${BOARD_WIDTH} / ${BOARD_HEIGHT}` }}
       onPointerDown={pointerEvents ? onPointerDown : undefined}
       onPointerMove={pointerEvents ? onPointerMove : undefined}
@@ -737,8 +992,32 @@ export function WhiteboardCanvas({
           opacity={background.opacity ?? 1}
         />
       )}
-      <BoardElementLayer elements={elements} />
+      <BoardElementLayer elements={displayedElements} />
       <BoardElementLayer elements={annotations} annotationTone />
+      {tool === "select" && selectedImage ? (
+        <g pointerEvents="none">
+          <rect
+            x={selectedImage.x}
+            y={selectedImage.y}
+            width={selectedImage.width}
+            height={selectedImage.height}
+            fill="none"
+            stroke="#0f766e"
+            strokeWidth={5}
+            strokeDasharray="14 10"
+          />
+          <rect
+            x={selectedImage.x + selectedImage.width - 15}
+            y={selectedImage.y + selectedImage.height - 15}
+            width={30}
+            height={30}
+            rx={5}
+            fill="#0f766e"
+            stroke="white"
+            strokeWidth={4}
+          />
+        </g>
+      ) : null}
       {localStroke && localStroke.length > 0 && (
         <path
           d={pointsToPath(localStroke)}
@@ -874,6 +1153,15 @@ export function WhiteboardCanvas({
           <div className="flex flex-wrap items-center gap-2">
             {canEdit && (
               <>
+                {role === "host" ? (
+                  <ToolButton
+                    active={tool === "select"}
+                    onClick={() => selectTool("select")}
+                    disabled={!canEdit}
+                  >
+                    Move image
+                  </ToolButton>
+                ) : null}
                 <ToolButton active={tool === "pen"} onClick={() => selectTool("pen")} disabled={!canEdit}>
                   Pen
                 </ToolButton>
@@ -994,6 +1282,11 @@ export function WhiteboardCanvas({
             <ToolButton onClick={handleClear} disabled={!interactive}>
               Clear
             </ToolButton>
+            {tool === "select" && selectedImage ? (
+              <ToolButton onClick={handleDeleteSelectedImage} disabled={!canEdit}>
+                Delete image
+              </ToolButton>
+            ) : null}
             {mode === "edit" && !sharedEdit && (
               <>
                 <div className="flex-1" />
@@ -1048,6 +1341,15 @@ export function WhiteboardCanvas({
               ))}
             </div>
           )}
+          {canEdit && role === "host" ? (
+            <p className="border-t border-slate-100 pt-2 text-xs text-slate-500">
+              {imageUploading
+                ? "Uploading pasted imageâ€¦"
+                : tool === "select"
+                  ? "Drag an image to move it. Drag the green corner to resize. Delete removes it."
+                  : "Copy an image, then press Ctrl+V to add it as a movable object."}
+            </p>
+          ) : null}
         </div>
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}

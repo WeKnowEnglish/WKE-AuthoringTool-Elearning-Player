@@ -12,6 +12,7 @@ import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-cli
 import { snapshotEvent } from "@/lib/classroom-realtime/events";
 import { broadcastClassroomRuntimeUpdate } from "@/lib/classroom-realtime/server/broadcast";
 import { createLatestOnlyWorkQueue } from "@/lib/classroom-realtime/server/latest-only-queue";
+import { normalizeVirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
 
 type RuntimeSnapshotRow = {
   session_id: string;
@@ -31,6 +32,9 @@ function mapRow(row: RuntimeSnapshotRow): ClassroomRuntimeSnapshot {
     // Snapshots created before learnActivity entered the recovery contract
     // remain readable; the next teacher control write fills it in.
     learnActivity: normaliseLearnActivity(row.snapshot_json.learnActivity),
+    learnPresentation: normalizeVirtualClassroomPresentation(
+      row.snapshot_json.learnPresentation,
+    ),
   };
 }
 
@@ -51,6 +55,7 @@ export function createInitialClassroomRuntimeSnapshot(input: {
     uiMode: "meeting",
     learnStage: "whiteboard",
     learnActivity: null,
+    learnPresentation: null,
     learnStudentPensEnabled: true,
     announcement: null,
     activeActivity: {
@@ -165,8 +170,14 @@ export function mergeLiveblocksRuntimeIntoSnapshot(input: {
     ...input.current,
     status: input.runtime.status === "ended" ? "ended" : "active",
     uiMode: input.runtime.uiMode === "learn" ? "learn" : "meeting",
-    learnStage: input.runtime.learnStage === "activity" ? "activity" : "whiteboard",
+    learnStage:
+      input.runtime.learnStage === "activity" || input.runtime.learnStage === "presentation"
+        ? input.runtime.learnStage
+        : "whiteboard",
     learnActivity: normaliseLearnActivity(input.runtime.learnActivity),
+    learnPresentation: normalizeVirtualClassroomPresentation(
+      input.runtime.learnPresentation,
+    ),
     learnStudentPensEnabled: input.runtime.learnStudentPensEnabled !== false,
     announcement: typeof input.runtime.announcement === "string" ? input.runtime.announcement : null,
     activeActivity: {
@@ -190,6 +201,7 @@ const RUNTIME_COMPARISON_KEYS = [
   "uiMode",
   "learnStage",
   "learnActivity",
+  "learnPresentation",
   "learnStudentPensEnabled",
   "announcement",
   "activeActivity",

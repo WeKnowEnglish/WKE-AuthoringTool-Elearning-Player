@@ -1,0 +1,41 @@
+export type VirtualClassroomPresentation = {
+  kind: "image" | "pdf";
+  url: string;
+  title: string;
+  mediaAssetId?: string | null;
+};
+
+function safePresentationUrl(value: string): string | null {
+  const trimmed = value.trim().slice(0, 2_000);
+  if (!trimmed) return null;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? trimmed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function normalizeVirtualClassroomPresentation(
+  value: unknown,
+): VirtualClassroomPresentation | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const url = safePresentationUrl(typeof row.url === "string" ? row.url : "");
+  if (!url) return null;
+  return {
+    kind: row.kind === "pdf" ? "pdf" : "image",
+    url,
+    title:
+      typeof row.title === "string" && row.title.trim()
+        ? row.title.trim().slice(0, 160)
+        : row.kind === "pdf"
+          ? "Class PDF"
+          : "Class image",
+    mediaAssetId:
+      typeof row.mediaAssetId === "string" && row.mediaAssetId.trim()
+        ? row.mediaAssetId.trim().slice(0, 160)
+        : null,
+  };
+}

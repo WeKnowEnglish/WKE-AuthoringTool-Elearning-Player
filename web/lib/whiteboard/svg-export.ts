@@ -20,6 +20,9 @@ export function renderElementToSvgMarkup(el: WhiteboardElement): string {
     }
     return `<line x1="${el.x}" y1="${el.y}" x2="${el.x + el.width}" y2="${el.y + el.height}" stroke="${escapeAttr(el.stroke)}" stroke-width="${el.strokeWidth}" opacity="${el.opacity}" stroke-linecap="round"/>`;
   }
+  if (el.type === "image") {
+    return `<image href="${escapeAttr(el.url)}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" preserveAspectRatio="none"/>`;
+  }
   const stamp = getStamp(el.stampId);
   const href = stamp
     ? `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${stamp.svg.replace(/currentColor/g, "#0f172a")}</svg>`)}`

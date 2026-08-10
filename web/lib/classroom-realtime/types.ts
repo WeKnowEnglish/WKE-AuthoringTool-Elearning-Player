@@ -33,13 +33,19 @@ export type ClassroomRuntimeSnapshot = {
   stateVersion: number;
   status: "active" | "ended";
   uiMode: "meeting" | "learn";
-  learnStage: "whiteboard" | "activity";
+  learnStage: "whiteboard" | "activity" | "presentation";
   /** Studio / track activity displayed when the shared Learn stage is activity. */
   learnActivity: {
     activityId: string;
     format: string;
     title: string;
     playPath: string;
+  } | null;
+  learnPresentation: {
+    kind: "image" | "pdf";
+    url: string;
+    title: string;
+    mediaAssetId?: string | null;
   } | null;
   learnStudentPensEnabled: boolean;
   announcement: string | null;
@@ -63,6 +69,7 @@ export type ClassroomRuntimePatch = Partial<
     | "uiMode"
     | "learnStage"
     | "learnActivity"
+    | "learnPresentation"
     | "learnStudentPensEnabled"
     | "announcement"
     | "status"

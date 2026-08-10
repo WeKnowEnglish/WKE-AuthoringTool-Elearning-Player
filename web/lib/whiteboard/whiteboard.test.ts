@@ -120,6 +120,23 @@ describe("stroke simplification", () => {
       ),
     ).toBe(true);
   });
+
+  it("hit-tests movable image bounds", () => {
+    const image = {
+      id: "image-1",
+      type: "image" as const,
+      url: "https://cdn.example.com/cat.png",
+      x: 200,
+      y: 100,
+      width: 400,
+      height: 240,
+      alt: "Cat",
+      createdBy: "teacher",
+      createdAt: 1,
+    };
+    expect(elementIntersectsPoint(image, { x: 300, y: 200 })).toBe(true);
+    expect(elementIntersectsPoint(image, { x: 700, y: 200 })).toBe(false);
+  });
 });
 
 describe("coordinates", () => {

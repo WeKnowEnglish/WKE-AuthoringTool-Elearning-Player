@@ -67,6 +67,10 @@ import {
 } from "@/lib/virtual-classroom/tools/timer";
 import { applyTeacherCommand } from "@/lib/whiteboard/server/commands";
 import { toWhiteboardRoomId } from "@/lib/whiteboard/liveblocks/room-id";
+import {
+  normalizeVirtualClassroomPresentation,
+  type VirtualClassroomPresentation,
+} from "@/lib/virtual-classroom/presentation";
 
 type RuntimeNode = {
   get: (key: string) => unknown;
@@ -175,7 +179,7 @@ export type VcToolCommand =
   | { type: "SET_FREEZE"; frozen: boolean }
   | { type: "SET_ANNOUNCEMENT"; message: string | null }
   | { type: "SET_UI_MODE"; mode: "meeting" | "learn" }
-  | { type: "SET_LEARN_STAGE"; stage: "whiteboard" | "activity" }
+  | { type: "SET_LEARN_STAGE"; stage: "whiteboard" | "activity" | "presentation" }
   | {
       type: "SET_LEARN_ACTIVITY";
       activity: {
@@ -185,6 +189,7 @@ export type VcToolCommand =
         playPath: string;
       } | null;
     }
+  | { type: "SET_LEARN_PRESENTATION"; presentation: VirtualClassroomPresentation | null }
   | { type: "SET_LEARN_STUDENT_PENS"; enabled: boolean };
 
 /** Commands students may issue for themselves. */
@@ -541,7 +546,9 @@ export async function applyVcToolCommand(input: {
         }
         case "SET_LEARN_STAGE": {
           const stage =
-            input.command.stage === "activity" ? "activity" : "whiteboard";
+            input.command.stage === "activity" || input.command.stage === "presentation"
+              ? input.command.stage
+              : "whiteboard";
           runtime.set("learnStage", stage);
           break;
         }
@@ -563,6 +570,21 @@ export async function applyVcToolCommand(input: {
             playPath: playPath.slice(0, 500),
           });
           runtime.set("learnStage", "activity");
+          break;
+        }
+        case "SET_LEARN_PRESENTATION": {
+          if (!input.command.presentation) {
+            runtime.set("learnPresentation", null);
+            break;
+          }
+          const presentation = normalizeVirtualClassroomPresentation(
+            input.command.presentation,
+          );
+          if (!presentation) {
+            throw new Error("Add a valid image or PDF URL before presenting.");
+          }
+          runtime.set("learnPresentation", presentation);
+          runtime.set("learnStage", "presentation");
           break;
         }
         case "SET_LEARN_STUDENT_PENS": {

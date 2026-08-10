@@ -233,6 +233,30 @@ the Supabase snapshot and Broadcast lane. Launch and completion still update
 Liveblocks first. Ending a class persists the terminal snapshot before deleting
 the legacy room, so refresh and reconnect cannot restore a stale active class.
 
+## Classroom-native presentation surface
+
+The Learn stage now includes a shared Present surface without migrating the
+collaborative activity rooms. Teachers can choose or upload an image through
+the existing media library, or paste a public PDF URL. The selected resource,
+title, and stage are stored in the same recoverable runtime snapshot and sent
+through the fast control lane, so students and late joiners see the same
+material. This first slice intentionally does not add slide annotation or PDF
+uploads; those belong with the upcoming whiteboard media/background bridge.
+
+The first bridge is now active for images: **Open on whiteboard** launches or
+reuses the shared class board, applies the presented media-library image as a
+contained background, and moves the class to the whiteboard stage. Existing
+student-pen permissions remain in force, so teachers can choose watch-only or
+collaborative annotation without creating a separate breakout activity.
+
+Clipboard images are a separate movable whiteboard element rather than a
+background. A teacher can copy an image, press Ctrl+V on an editable board,
+then drag it, resize it proportionally from its corner handle, or delete it.
+The image file is uploaded once through the teacher media pipeline; Liveblocks
+only synchronizes the resulting URL and lightweight geometry. Students may
+still draw over the image when student pens are enabled, but cannot reposition
+the teacher's media object.
+
 - Time from join to usable classroom state.
 - Time to recover after browser refresh and network interruption.
 - Realtime messages sent/received per participant per minute.

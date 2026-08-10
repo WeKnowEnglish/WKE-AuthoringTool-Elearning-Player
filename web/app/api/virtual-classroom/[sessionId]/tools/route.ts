@@ -30,9 +30,19 @@ function livePatchForCommand(command: VcToolCommand): ClassroomRuntimePatch | nu
     case "SET_UI_MODE":
       return { uiMode: command.mode === "meeting" ? "meeting" : "learn" };
     case "SET_LEARN_STAGE":
-      return { learnStage: command.stage === "activity" ? "activity" : "whiteboard" };
+      return {
+        learnStage:
+          command.stage === "activity" || command.stage === "presentation"
+            ? command.stage
+            : "whiteboard",
+      };
     case "SET_LEARN_ACTIVITY":
       return { learnActivity: command.activity };
+    case "SET_LEARN_PRESENTATION":
+      return {
+        learnPresentation: command.presentation,
+        ...(command.presentation ? { learnStage: "presentation" as const } : {}),
+      };
     case "SET_LEARN_STUDENT_PENS":
       return { learnStudentPensEnabled: command.enabled !== false };
     case "SET_ANNOUNCEMENT":

@@ -191,6 +191,11 @@ export function VirtualClassroomWhiteboardEmbed({
 export async function launchWhiteboardInLearn(input: {
   sessionId: string;
   displayName: string;
+  background?: {
+    url: string;
+    assetId?: string | null;
+    title?: string;
+  };
 }): Promise<WhiteboardSessionContext> {
   const res = await diagnosticFetch(
     `/api/virtual-classroom/${input.sessionId}/whiteboard`,
@@ -198,8 +203,10 @@ export async function launchWhiteboardInLearn(input: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: "Class board",
-        instructions: "Draw and share ideas together.",
+        title: input.background?.title?.trim() || "Class board",
+        instructions: input.background
+          ? "Look closely and annotate the picture together."
+          : "Draw and share ideas together.",
         timerMinutes: 60,
         worksheetPresetId: null,
         mode: "individual",
@@ -234,5 +241,39 @@ export async function launchWhiteboardInLearn(input: {
     userId: payload.userId,
   };
   setWhiteboardSessionContext(next);
+  if (input.background) {
+    const backgroundResponse = await diagnosticFetch(
+      `/api/whiteboard/${encodeURIComponent(payload.sessionId)}/command`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "SET_BACKGROUND",
+          assetId: input.background.assetId ?? null,
+          url: input.background.url,
+          fit: "contain",
+          opacity: 1,
+        }),
+      },
+      {
+        phase: "launch",
+        name: "vc.set_class_board_background",
+        detail: {
+          activity: "whiteboard",
+          sessionId: input.sessionId,
+          roomId: payload.roomId,
+          commandType: "SET_BACKGROUND",
+        },
+      },
+    );
+    if (!backgroundResponse.ok) {
+      const backgroundPayload = (await backgroundResponse.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      throw new Error(
+        backgroundPayload?.error ?? "The board opened, but the picture could not be added.",
+      );
+    }
+  }
   return next;
 }

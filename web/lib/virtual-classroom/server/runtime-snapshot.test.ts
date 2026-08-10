@@ -20,6 +20,7 @@ describe("initial classroom runtime snapshot", () => {
       uiMode: "meeting",
       learnStage: "whiteboard",
       learnActivity: null,
+      learnPresentation: null,
       learnStudentPensEnabled: true,
       updatedBy: "teacher-1",
     });
@@ -50,6 +51,11 @@ describe("initial classroom runtime snapshot", () => {
           title: "Animal quiz",
           playPath: "/play/animals-1",
         },
+        learnPresentation: {
+          kind: "pdf",
+          url: "https://cdn.example.com/unit-1.pdf",
+          title: "Unit 1",
+        },
         announcement: "Try question two.",
         activeActivity: { kind: "word_cards", joinCode: "ABC123", label: "Animals" },
         points: { totalsByStudentId: { "student-1": 4 } },
@@ -61,6 +67,7 @@ describe("initial classroom runtime snapshot", () => {
       uiMode: "learn",
       learnStage: "activity",
       learnActivity: { activityId: "animals-1", playPath: "/play/animals-1" },
+      learnPresentation: { kind: "pdf", title: "Unit 1" },
       announcement: "Try question two.",
       activeActivity: { kind: "word_cards", joinCode: "ABC123", label: "Animals" },
       updatedBy: "teacher-2",

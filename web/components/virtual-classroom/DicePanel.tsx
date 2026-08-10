@@ -10,6 +10,8 @@ type Props = {
   busy: boolean;
   role: "host" | "member";
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  /** Supabase randomiser pilot state; omit to retain Liveblocks. */
+  randomiser?: RandomiserState | null;
 };
 
 function readRandomiser(root: unknown): RandomiserState {
@@ -28,8 +30,9 @@ const PRESETS: { id: DicePreset; label: string }[] = [
   { id: "labels", label: "Labels" },
 ];
 
-export function DicePanel({ busy, role, onCommand }: Props) {
-  const randomiser = useStorage((root) => readRandomiser(root));
+export function DicePanel({ busy, role, onCommand, randomiser: pilotRandomiser }: Props) {
+  const liveblocksRandomiser = useStorage((root) => readRandomiser(root));
+  const randomiser = pilotRandomiser ?? liveblocksRandomiser;
   const [sides, setSides] = useState(8);
   const [labelText, setLabelText] = useState("cat, dog, bird, fish");
 

@@ -21,6 +21,66 @@ export type RandomiserState = {
   history: DiceRoll[];
 };
 
+function normalizeDiceRoll(value: unknown): DiceRoll | null {
+  if (!value || typeof value !== "object") return null;
+  const roll = value as Partial<DiceRoll>;
+  if (
+    typeof roll.at !== "number" ||
+    !Number.isFinite(roll.at) ||
+    !Array.isArray(roll.values) ||
+    !roll.values.every((item) => typeof item === "number" && Number.isFinite(item)) ||
+    !Array.isArray(roll.labels) ||
+    !roll.labels.every((item) => typeof item === "string") ||
+    typeof roll.total !== "number" ||
+    !Number.isFinite(roll.total) ||
+    (roll.visibility !== "class" && roll.visibility !== "teacher")
+  ) {
+    return null;
+  }
+  return {
+    at: roll.at,
+    values: roll.values,
+    labels: roll.labels,
+    total: roll.total,
+    visibility: roll.visibility,
+  };
+}
+
+export function normalizeRandomiserState(value: unknown): RandomiserState | null {
+  if (!value || typeof value !== "object") return null;
+  const state = value as Partial<RandomiserState>;
+  const validPresets: DicePreset[] = ["d6", "2d6", "d10", "d20", "custom", "labels"];
+  if (
+    !state.preset ||
+    !validPresets.includes(state.preset) ||
+    typeof state.sides !== "number" ||
+    !Number.isFinite(state.sides) ||
+    typeof state.diceCount !== "number" ||
+    !Number.isFinite(state.diceCount) ||
+    !Array.isArray(state.labels) ||
+    !state.labels.every((item) => typeof item === "string") ||
+    (state.visibility !== "class" && state.visibility !== "teacher") ||
+    typeof state.locked !== "boolean" ||
+    !Array.isArray(state.history)
+  ) {
+    return null;
+  }
+  const lastRoll = state.lastRoll === null ? null : normalizeDiceRoll(state.lastRoll);
+  if (state.lastRoll !== null && !lastRoll) return null;
+  const history = state.history.map(normalizeDiceRoll);
+  if (history.some((roll) => !roll)) return null;
+  return {
+    preset: state.preset,
+    sides: state.sides,
+    diceCount: state.diceCount,
+    labels: state.labels,
+    visibility: state.visibility,
+    locked: state.locked,
+    lastRoll,
+    history: history as DiceRoll[],
+  };
+}
+
 export function createEmptyRandomiser(): RandomiserState {
   return {
     preset: "d6",

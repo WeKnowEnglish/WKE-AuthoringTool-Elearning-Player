@@ -83,21 +83,23 @@ export async function launchWhiteboardRound(input: {
       existingActivity.roomId ?? toWhiteboardRoomId(existingActivity.joinCode);
     const phase = await whiteboardRoomPhase(roomId);
     if (phase && phase !== "ENDED") {
-      await ensureParticipantAndBoard({
-        roomId,
-        userId: input.teacher.userId,
-        displayName: input.teacher.displayName,
-        color: "#0f172a",
-        role: "host",
-      }).catch(() => undefined);
-      await setVcActiveActivity({
-        roomId: input.session.liveblocksRoomId,
-        kind: "whiteboard",
-        joinCode: existingActivity.joinCode,
-        label: existingActivity.label ?? title,
-        roundId: existingActivity.roundId ?? null,
-        activityRoomId: roomId,
-      }).catch(() => undefined);
+      await Promise.all([
+        ensureParticipantAndBoard({
+          roomId,
+          userId: input.teacher.userId,
+          displayName: input.teacher.displayName,
+          color: "#0f172a",
+          role: "host",
+        }).catch(() => undefined),
+        setVcActiveActivity({
+          roomId: input.session.liveblocksRoomId,
+          kind: "whiteboard",
+          joinCode: existingActivity.joinCode,
+          label: existingActivity.label ?? title,
+          roundId: existingActivity.roundId ?? null,
+          activityRoomId: roomId,
+        }).catch(() => undefined),
+      ]);
       return {
         joinCode: existingActivity.joinCode,
         roomId,
@@ -114,21 +116,23 @@ export async function launchWhiteboardRound(input: {
 
   const fromDb = await getActiveWhiteboardRoundForSession(input.session.id);
   if (fromDb) {
-    await ensureParticipantAndBoard({
-      roomId: fromDb.liveblocksRoomId,
-      userId: input.teacher.userId,
-      displayName: input.teacher.displayName,
-      color: "#0f172a",
-      role: "host",
-    }).catch(() => undefined);
-    await setVcActiveActivity({
-      roomId: input.session.liveblocksRoomId,
-      kind: "whiteboard",
-      joinCode: fromDb.joinCode,
-      label: title,
-      roundId: fromDb.id,
-      activityRoomId: fromDb.liveblocksRoomId,
-    }).catch(() => undefined);
+    await Promise.all([
+      ensureParticipantAndBoard({
+        roomId: fromDb.liveblocksRoomId,
+        userId: input.teacher.userId,
+        displayName: input.teacher.displayName,
+        color: "#0f172a",
+        role: "host",
+      }).catch(() => undefined),
+      setVcActiveActivity({
+        roomId: input.session.liveblocksRoomId,
+        kind: "whiteboard",
+        joinCode: fromDb.joinCode,
+        label: title,
+        roundId: fromDb.id,
+        activityRoomId: fromDb.liveblocksRoomId,
+      }).catch(() => undefined),
+    ]);
     return {
       joinCode: fromDb.joinCode,
       roomId: fromDb.liveblocksRoomId,
@@ -186,27 +190,32 @@ export async function launchWhiteboardRound(input: {
     // client may initialize
   }
 
-  await ensureParticipantAndBoard({
-    roomId,
-    userId: input.teacher.userId,
-    displayName: input.teacher.displayName,
-    color: "#0f172a",
-    role: "host",
-  });
-
-  await upsertRoundMeta({
-    roundId,
-    liveblocksRoomId: roomId,
-    joinCode,
-    hostUserId: input.teacher.userId,
-    phase: "WAITING",
-    mode,
-    prompt: { title, instructions },
-    settings: { defaultTimerMs: Math.max(30, timerMinutes) * 60 * 1000 },
-    background,
-    classId: input.session.classId ?? undefined,
-    sessionId: input.session.id,
-  }).catch(() => undefined);
+  // The host board membership and durable round record do not depend on one
+  // another, so establish them together. We still publish the activity only
+  // after metadata is available, preventing students from joining a route
+  // whose lookup record has not been created yet.
+  await Promise.all([
+    ensureParticipantAndBoard({
+      roomId,
+      userId: input.teacher.userId,
+      displayName: input.teacher.displayName,
+      color: "#0f172a",
+      role: "host",
+    }),
+    upsertRoundMeta({
+      roundId,
+      liveblocksRoomId: roomId,
+      joinCode,
+      hostUserId: input.teacher.userId,
+      phase: "WAITING",
+      mode,
+      prompt: { title, instructions },
+      settings: { defaultTimerMs: Math.max(30, timerMinutes) * 60 * 1000 },
+      background,
+      classId: input.session.classId ?? undefined,
+      sessionId: input.session.id,
+    }).catch(() => undefined),
+  ]);
 
   await setVcActiveActivity({
     roomId: input.session.liveblocksRoomId,

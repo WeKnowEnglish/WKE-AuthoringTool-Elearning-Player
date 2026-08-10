@@ -66,7 +66,10 @@ export type ClassroomRuntimePatch = Partial<
     | "learnStudentPensEnabled"
     | "announcement"
   >
->;
+> & {
+  /** Individually changed low-frequency classroom tools. */
+  tools?: Record<string, unknown>;
+};
 
 export type ClassroomRealtimeHealth = {
   connection: ClassroomRealtimeConnectionState;

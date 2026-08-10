@@ -19,6 +19,7 @@ import {
   type GlobalTimerState,
 } from "@/lib/virtual-classroom/tools/timer";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
+import type { RandomiserState } from "@/lib/classroom-tools/dice";
 
 export type VcToolId = "picker" | "groups" | "timer" | "dice" | "points" | "status";
 
@@ -30,6 +31,11 @@ type Props = {
   sessionId: string;
   classId: string;
   members: Member[];
+  /** Shadow-pilot Supabase Presence roster, used only by Attendance UI. */
+  attendanceMembers?: Member[] | null;
+  /** Snapshot/Broadcast timer during the reversible Supabase pilot. */
+  realtimeTimer?: GlobalTimerState | null;
+  realtimeRandomiser?: RandomiserState | null;
   userId: string;
   role: "host" | "member";
   busy: boolean;
@@ -96,6 +102,9 @@ export function VirtualClassroomLearnControls({
   sessionId,
   classId,
   members,
+  attendanceMembers,
+  realtimeTimer,
+  realtimeRandomiser,
   userId,
   role,
   busy,
@@ -107,9 +116,11 @@ export function VirtualClassroomLearnControls({
   onOpenPen,
 }: Props) {
   const isHost = role === "host";
+  const membersForAttendance = attendanceMembers?.length ? attendanceMembers : members;
   const [panel, setPanel] = useState<LearnPanel>(null);
   const [activeTool, setActiveTool] = useState<VcToolId | null>(null);
-  const timer = useStorage((root) => readTimer(root));
+  const liveblocksTimer = useStorage((root) => readTimer(root));
+  const timer = realtimeTimer ?? liveblocksTimer;
   const status = useStorage((root) => readStatus(root));
   const helpCount = countByStatus(status).help + countByStatus(status).hand;
   const timerRunning = timer.status === "running";
@@ -166,9 +177,16 @@ export function VirtualClassroomLearnControls({
           />
         );
       case "timer":
-        return <GlobalTimerPanel busy={busy} onCommand={onCommand} />;
+        return <GlobalTimerPanel busy={busy} onCommand={onCommand} timer={realtimeTimer} />;
       case "dice":
-        return <DicePanel role="host" busy={busy} onCommand={onCommand} />;
+        return (
+          <DicePanel
+            role="host"
+            busy={busy}
+            onCommand={onCommand}
+            randomiser={realtimeRandomiser}
+          />
+        );
       case "points":
         return (
           <SessionPointsPanel
@@ -295,12 +313,12 @@ export function VirtualClassroomLearnControls({
             <SessionAttendancePanel
               sessionId={sessionId}
               classId={classId}
-              liveMembers={members.filter((m) => m.role !== "host")}
+              liveMembers={membersForAttendance.filter((m) => m.role !== "host")}
             />
           ) : null}
           <div className={isHost ? "mt-4 border-t border-slate-200 pt-4" : undefined}>
             <h3 className="text-sm font-semibold text-slate-900">
-              In session ({members.length})
+              In session ({membersForAttendance.length})
             </h3>
             {isHost ? (
               <p className="mt-1 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
@@ -311,7 +329,7 @@ export function VirtualClassroomLearnControls({
               </p>
             ) : null}
             <ul className="mt-2 space-y-1 text-sm text-slate-700">
-              {members.map((m) => {
+              {membersForAttendance.map((m) => {
                 const st = status.byStudentId[m.id];
                 return (
                   <li key={m.id} className="flex justify-between gap-2">

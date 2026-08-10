@@ -36,3 +36,35 @@ export function classroomRealtimeLearnNavigationPilotEnabled(): boolean {
     process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT === "true"
   );
 }
+
+/** First visible participant-roster cutover: the Attendance panel only. */
+export function classroomRealtimePresenceRosterPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PRESENCE_ROSTER_PILOT === "true"
+  );
+}
+
+/** Server-side teacher-tool roster pilot, backed by durable attendance. */
+export function classroomRealtimeParticipantRegistryPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PARTICIPANT_REGISTRY_PILOT === "true"
+  );
+}
+
+/** Shared countdown/stopwatch display sourced from snapshot + Broadcast. */
+export function classroomRealtimeTimerPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_TIMER_PILOT === "true"
+  );
+}
+
+/** Shared dice/randomiser state sourced from snapshot + Broadcast. */
+export function classroomRealtimeRandomiserPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT === "true"
+  );
+}

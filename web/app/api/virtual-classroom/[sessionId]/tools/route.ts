@@ -17,6 +17,8 @@ import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/serv
 import { queueClassroomRuntimeSnapshotSync } from "@/lib/virtual-classroom/server/runtime-snapshot";
 import { broadcastClassroomRealtimeEvent } from "@/lib/classroom-realtime/server/broadcast";
 import type { ClassroomRuntimePatch } from "@/lib/classroom-realtime/types";
+import { classroomRealtimeParticipantRegistryPilotEnabled } from "@/lib/classroom-realtime/shadow-mode";
+import { listActiveClassroomStudentIds } from "@/lib/virtual-classroom/server/participant-registry";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
@@ -94,11 +96,24 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
+  let activeStudentIds: string[] | undefined;
+  if (classroomRealtimeParticipantRegistryPilotEnabled() && session.classId && !VC_MEMBER_TOOL_TYPES.has(command.type)) {
+    try {
+      const ids = await listActiveClassroomStudentIds(session.id);
+      // Empty can mean a just-joined participant has not written attendance yet;
+      // retain Liveblocks as the safe fallback until the registry is populated.
+      if (ids.length) activeStudentIds = ids;
+    } catch {
+      // Retain Liveblocks fallback.
+    }
+  }
+
   const result = await applyVcToolCommand({
     roomId: session.liveblocksRoomId,
     sessionId: session.id,
     command,
     actorUserId,
+    activeStudentIds,
   });
 
   if (!result.ok) {
@@ -109,7 +124,10 @@ export async function POST(request: Request, context: RouteContext) {
   // the shadow pilot. Student status is intentionally transient for now.
   if (command.type !== "SET_OWN_STATUS") {
     const mirrorActorId = actorUserId ?? "system";
-    const livePatch = livePatchForCommand(command);
+    const commandPatch = livePatchForCommand(command);
+    const livePatch: ClassroomRuntimePatch | null = result.changedTools
+      ? { ...(commandPatch ?? {}), tools: result.changedTools }
+      : commandPatch;
     after(async () => {
       await Promise.all([
         livePatch

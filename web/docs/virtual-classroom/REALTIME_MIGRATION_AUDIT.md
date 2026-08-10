@@ -180,6 +180,37 @@ compare-and-swap remains the cross-instance correctness guard.
 
 ## Acceptance baseline to capture before cutover
 
+## Presence validation
+
+The shadow pilot exposes the private Supabase Presence roster count beside the
+existing Liveblocks room-member count. This is diagnostic only: no teacher tool
+or student list reads Supabase presence yet. A stable match in real two-browser
+and multi-student lessons is the prerequisite for moving the classroom
+participant map away from Liveblocks.
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_PRESENCE_ROSTER_PILOT=true` moves only the
+Attendance panel's in-classroom list to Supabase Presence. Picker, groups,
+points, and teacher command inputs remain on the Liveblocks member map until
+their server-side roster source migrates as a separate slice.
+
+Migration 130 adds a durable lobby heartbeat for that next slice. With
+`NEXT_PUBLIC_CLASSROOM_REALTIME_PARTICIPANT_REGISTRY_PILOT=true`, picker and
+groups use authenticated active student attendance when it is available, then
+fall back to the Liveblocks member map during joins or an empty registry. A
+30-second heartbeat expires after 90 seconds, so a closed browser cannot leave
+a stale learner in a generated group.
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_TIMER_PILOT=true` moves the shared timer display
+to the Supabase runtime snapshot and immediate `runtime:patch` Broadcast. Only
+start, pause, resume, reset, duration, and visibility changes cross the network;
+each browser calculates the visible ticking time locally. Liveblocks remains the
+write path and automatic fallback while this pilot is measured.
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT=true` moves dice configuration,
+visibility, roll results, and the short roll history to the same snapshot and
+small tool-state Broadcast path. This remains independently reversible and
+continues to use Liveblocks for writes during the pilot.
+
 - Time from join to usable classroom state.
 - Time to recover after browser refresh and network interruption.
 - Realtime messages sent/received per participant per minute.

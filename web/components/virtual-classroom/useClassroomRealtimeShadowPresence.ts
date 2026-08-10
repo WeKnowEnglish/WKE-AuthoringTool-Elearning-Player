@@ -8,6 +8,7 @@ import {
 import { classroomRealtimeShadowModeEnabled } from "@/lib/classroom-realtime/shadow-mode";
 import { createClient } from "@/lib/supabase/client";
 import type {
+  ClassroomParticipantPresence,
   ClassroomRuntimePatch,
   ClassroomRuntimeSnapshot,
 } from "@/lib/classroom-realtime/types";
@@ -27,6 +28,7 @@ export type ClassroomRealtimeShadowHealth = {
   snapshotVersion: number | null;
   runtimeSnapshot: ClassroomRuntimeSnapshot | null;
   runtimePatch: ClassroomRuntimePatch | null;
+  participants: ClassroomParticipantPresence[];
 };
 
 /**
@@ -45,11 +47,12 @@ export function useClassroomRealtimeShadowPresence(
     snapshotVersion: null,
     runtimeSnapshot: null,
     runtimePatch: null,
+    participants: [],
   });
 
   useEffect(() => {
     if (!enabled) {
-      setHealth({ enabled: false, snapshot: "idle", channel: "idle", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null });
+      setHealth({ enabled: false, snapshot: "idle", channel: "idle", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null, participants: [] });
       return;
     }
 
@@ -60,7 +63,20 @@ export function useClassroomRealtimeShadowPresence(
     const controller = new AbortController();
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     let snapshotVersion: number | null = null;
-    setHealth({ enabled: true, snapshot: "loading", channel: "connecting", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null });
+    setHealth({ enabled: true, snapshot: "loading", channel: "connecting", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null, participants: [] });
+
+    const readParticipants = (): ClassroomParticipantPresence[] => {
+      const state = channel.presenceState<ClassroomParticipantPresence>();
+      return Object.values(state)
+        .flat()
+        .flatMap(({ presence_ref: _presenceRef, ...value }) =>
+          typeof value.userId === "string" &&
+          typeof value.displayName === "string" &&
+          (value.role === "teacher" || value.role === "student")
+            ? [value]
+            : [],
+        );
+    };
 
     const loadSnapshot = async (clearLivePatch = false) => {
       try {
@@ -120,10 +136,28 @@ export function useClassroomRealtimeShadowPresence(
         patch?: ClassroomRuntimePatch;
       };
       if (event.sessionId !== input.sessionId || !event.patch) return;
+      const patch = event.patch;
       setHealth((current) => ({
         ...current,
-        runtimePatch: { ...current.runtimePatch, ...event.patch },
+        runtimePatch: {
+          ...current.runtimePatch,
+          ...patch,
+          ...(patch.tools
+            ? {
+                tools: {
+                  ...current.runtimePatch?.tools,
+                  ...patch.tools,
+                },
+              }
+            : {}),
+        },
       }));
+    });
+
+    channel.on("presence", { event: "sync" }, () => {
+      if (!disposed) {
+        setHealth((current) => ({ ...current, participants: readParticipants() }));
+      }
     });
 
     channel.subscribe((status) => {

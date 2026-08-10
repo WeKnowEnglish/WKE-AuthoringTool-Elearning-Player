@@ -41,7 +41,18 @@ import {
   classroomRealtimeAnnouncementPilotEnabled,
   classroomRealtimeLearnNavigationPilotEnabled,
   classroomRealtimeLearnPensPilotEnabled,
+  classroomRealtimePresenceRosterPilotEnabled,
+  classroomRealtimeRandomiserPilotEnabled,
+  classroomRealtimeTimerPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
+import {
+  normalizeGlobalTimerState,
+  type GlobalTimerState,
+} from "@/lib/classroom-tools/timer";
+import {
+  normalizeRandomiserState,
+  type RandomiserState,
+} from "@/lib/classroom-tools/dice";
 
 type Props = {
   sessionId: string;
@@ -141,6 +152,13 @@ export function VirtualClassroomSessionView({
     displayName,
     role,
   });
+  const presenceAttendanceMembers = classroomRealtimePresenceRosterPilotEnabled()
+    ? shadowHealth.participants.map((participant) => ({
+        id: participant.userId,
+        name: participant.displayName,
+        role: participant.role === "teacher" ? "host" : "member",
+      }))
+    : null;
   const announcement =
     classroomRealtimeAnnouncementPilotEnabled() && shadowHealth.runtimeSnapshot
       ? shadowHealth.runtimeSnapshot.announcement
@@ -162,8 +180,16 @@ export function VirtualClassroomSessionView({
     classroomRealtimeLearnPensPilotEnabled() && shadowHealth.runtimeSnapshot
       ? shadowHealth.runtimeSnapshot.learnStudentPensEnabled
       : liveblocksLearnStudentPensEnabled;
+  const realtimeTimer: GlobalTimerState | null = classroomRealtimeTimerPilotEnabled()
+    ? normalizeGlobalTimerState(shadowHealth.runtimePatch?.tools?.timer) ??
+      normalizeGlobalTimerState(shadowHealth.runtimeSnapshot?.tools?.timer)
+    : null;
+  const realtimeRandomiser: RandomiserState | null = classroomRealtimeRandomiserPilotEnabled()
+    ? normalizeRandomiserState(shadowHealth.runtimePatch?.tools?.randomiser) ??
+      normalizeRandomiserState(shadowHealth.runtimeSnapshot?.tools?.randomiser)
+    : null;
 
-  useLobbyPresence(sessionId, role === "host" && !ended && status !== "ended");
+  useLobbyPresence(sessionId, !ended && status !== "ended");
 
   useEventListener(({ event }) => {
     const type = (event as { type?: string }).type;
@@ -386,6 +412,9 @@ export function VirtualClassroomSessionView({
           <p className={shadowHealth.channel === "connected" ? "text-emerald-700" : shadowHealth.channel === "failed" ? "text-rose-700" : "text-amber-700"}>
             Private channel: {shadowHealth.channel}
           </p>
+          <p className="text-slate-600">
+            Presence: {shadowHealth.participants.length} · Live room: {memberEntries.length}
+          </p>
           {role === "host" ? (
             <button
               type="button"
@@ -425,7 +454,7 @@ export function VirtualClassroomSessionView({
             </div>
           )}
 
-          <GlobalTimerBanner role={role} />
+          <GlobalTimerBanner role={role} timer={realtimeTimer} />
 
           {currentPickIds.length > 0 && (
             <div className="shrink-0 rounded-lg border border-teal-200 bg-teal-50 px-3 py-3 text-center">
@@ -468,6 +497,7 @@ export function VirtualClassroomSessionView({
                 members={memberEntries}
                 busy={Boolean(busy)}
                 onCommand={runToolCommand}
+                realtimeRandomiser={realtimeRandomiser}
               />
             </div>
           )}
@@ -477,6 +507,9 @@ export function VirtualClassroomSessionView({
           sessionId={sessionId}
           classId={classId}
           members={memberEntries}
+          attendanceMembers={presenceAttendanceMembers}
+          realtimeTimer={realtimeTimer}
+          realtimeRandomiser={realtimeRandomiser}
           userId={userId}
           role={role}
           busy={Boolean(busy)}

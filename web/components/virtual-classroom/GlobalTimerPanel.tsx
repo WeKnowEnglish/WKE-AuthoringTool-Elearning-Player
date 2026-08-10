@@ -14,6 +14,8 @@ import {
 type Props = {
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  /** Supabase timer pilot state; omit to retain the Liveblocks source. */
+  timer?: GlobalTimerState | null;
 };
 
 function readTimer(root: unknown): GlobalTimerState {
@@ -23,8 +25,9 @@ function readTimer(root: unknown): GlobalTimerState {
   );
 }
 
-export function GlobalTimerPanel({ busy, onCommand }: Props) {
-  const timer = useStorage((root) => readTimer(root));
+export function GlobalTimerPanel({ busy, onCommand, timer: pilotTimer }: Props) {
+  const liveblocksTimer = useStorage((root) => readTimer(root));
+  const timer = pilotTimer ?? liveblocksTimer;
   const [now, setNow] = useState(() => Date.now());
   const [minutes, setMinutes] = useState(1);
 
@@ -159,8 +162,15 @@ export function GlobalTimerPanel({ busy, onCommand }: Props) {
 }
 
 /** Compact timer display for students (and host header). */
-export function GlobalTimerBanner({ role }: { role: "host" | "member" }) {
-  const timer = useStorage((root) => readTimer(root));
+export function GlobalTimerBanner({
+  role,
+  timer: pilotTimer,
+}: {
+  role: "host" | "member";
+  timer?: GlobalTimerState | null;
+}) {
+  const liveblocksTimer = useStorage((root) => readTimer(root));
+  const timer = pilotTimer ?? liveblocksTimer;
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {

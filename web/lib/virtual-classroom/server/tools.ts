@@ -190,13 +190,34 @@ export type VcToolCommand =
 /** Commands students may issue for themselves. */
 export const VC_MEMBER_TOOL_TYPES = new Set<VcToolCommand["type"]>(["SET_OWN_STATUS"]);
 
+const VC_TIMER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "SET_TIMER_MODE",
+  "START_TIMER",
+  "PAUSE_TIMER",
+  "RESUME_TIMER",
+  "ADD_TIMER_MS",
+  "RESET_TIMER",
+  "SET_TIMER_VISIBLE",
+]);
+
+const VC_RANDOMISER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "CONFIGURE_DICE",
+  "ROLL_DICE",
+  "CLEAR_DICE",
+]);
+
 export async function applyVcToolCommand(input: {
   roomId: string;
   /** Enables best-effort Supabase dual-write after a teacher command. */
   sessionId?: string;
   command: VcToolCommand;
   actorUserId?: string;
-}): Promise<{ ok: true; detail?: string } | { ok: false; error: string }> {
+  /** Optional server-readable active student roster during the migration pilot. */
+  activeStudentIds?: string[];
+}): Promise<
+  | { ok: true; detail?: string; changedTools?: Record<string, unknown> }
+  | { ok: false; error: string }
+> {
   const liveblocks = getLiveblocksServerClient();
 
   try {
@@ -206,6 +227,7 @@ export async function applyVcToolCommand(input: {
     let groupsForDocument: ReturnType<typeof toWhiteboardAssignPayload> = [];
     let wordCardsJoinCode: string | null = null;
     let groupsForWordCards: ReturnType<typeof toWhiteboardAssignPayload> = [];
+    let changedTools: Record<string, unknown> | undefined;
 
     await liveblocks.mutateStorage(input.roomId, ({ root }) => {
       const runtime = runtimeOf(root);
@@ -216,11 +238,15 @@ export async function applyVcToolCommand(input: {
       const points = readPoints(runtime);
       const classroomStatus = readStatus(runtime);
       const nowMs = Date.now();
+      const rosterIds = (includeTeacher: boolean) =>
+        input.activeStudentIds?.length
+          ? [...(includeTeacher && input.actorUserId ? [input.actorUserId] : []), ...input.activeStudentIds]
+          : memberStudentIds(root, includeTeacher);
 
       switch (input.command.type) {
         case "SYNC_ROSTER": {
           const includeTeacher = input.command.includeTeacher ?? picker.includeTeacher;
-          const ids = memberStudentIds(root, includeTeacher);
+          const ids = rosterIds(includeTeacher);
           runtime.set("picker", {
             ...syncPickerRoster(picker, ids),
             includeTeacher,
@@ -233,7 +259,7 @@ export async function applyVcToolCommand(input: {
         }
         case "PICK": {
           const includeTeacher = picker.includeTeacher;
-          const ids = memberStudentIds(root, includeTeacher);
+          const ids = rosterIds(includeTeacher);
           const synced = syncPickerRoster(picker, ids);
           runtime.set(
             "picker",
@@ -255,7 +281,7 @@ export async function applyVcToolCommand(input: {
           break;
         }
         case "GENERATE_GROUPS": {
-          const ids = memberStudentIds(root, false);
+          const ids = rosterIds(false);
           const previous = groupSet.groups.length ? groupSet.groups : groupSet.previousGroups;
           const next = generateRandomGroups({
             studentIds: ids,
@@ -269,7 +295,7 @@ export async function applyVcToolCommand(input: {
           break;
         }
         case "SHUFFLE_GROUPS": {
-          const ids = memberStudentIds(root, false);
+          const ids = rosterIds(false);
           runtime.set("groupSet", shuffleUnlockedGroups(groupSet, ids));
           break;
         }
@@ -524,6 +550,12 @@ export async function applyVcToolCommand(input: {
         const t = readTimer(runtime);
         runtime.set("timer", maybeExpireCountdown(t, nowMs));
       }
+
+      if (VC_TIMER_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { timer: readTimer(runtime) };
+      } else if (VC_RANDOMISER_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { randomiser: readRandomiser(runtime) };
+      }
     });
 
     if (input.command.type === "SEND_GROUPS_TO_WHITEBOARD" && whiteboardJoinCode) {
@@ -601,7 +633,7 @@ export async function applyVcToolCommand(input: {
       // best-effort
     }
 
-    return { ok: true };
+    return { ok: true, changedTools };
   } catch (error) {
     return {
       ok: false,

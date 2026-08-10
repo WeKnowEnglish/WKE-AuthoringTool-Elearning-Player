@@ -17,6 +17,7 @@ type Props = {
   members: { id: string; name: string }[];
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  realtimeRandomiser?: RandomiserState | null;
 };
 
 const QUICK: { id: ClassroomStatusKind; label: string }[] = [
@@ -26,14 +27,21 @@ const QUICK: { id: ClassroomStatusKind; label: string }[] = [
   { id: "finished", label: "Done" },
 ];
 
-export function StudentSessionChrome({ userId, members, busy, onCommand }: Props) {
+export function StudentSessionChrome({
+  userId,
+  members,
+  busy,
+  onCommand,
+  realtimeRandomiser,
+}: Props) {
   const [mine, setMine] = useState<ClassroomStatusKind>("none");
-  const randomiser = useStorage((root) => {
+  const liveblocksRandomiser = useStorage((root) => {
     const runtime = (root as { runtime?: unknown }).runtime;
     return (
       readLiveObjectField<RandomiserState>(runtime, "randomiser") ?? createEmptyRandomiser()
     );
   });
+  const randomiser = realtimeRandomiser ?? liveblocksRandomiser;
   const points = useStorage((root) => {
     const runtime = (root as { runtime?: unknown }).runtime;
     return (

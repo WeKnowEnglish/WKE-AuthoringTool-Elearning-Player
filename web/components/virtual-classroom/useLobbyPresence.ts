@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 async function postLobbyPresence(
   sessionId: string,
-  event: "join" | "leave",
+  event: "join" | "heartbeat" | "leave",
 ): Promise<void> {
   try {
     await fetch(`/api/virtual-classroom/${encodeURIComponent(sessionId)}/attendance`, {
@@ -31,7 +31,11 @@ export function useLobbyPresence(sessionId: string, enabled = true): void {
       joinedSessionId.current = sessionId;
       void postLobbyPresence(sessionId, "join");
     }
+    const heartbeat = setInterval(() => {
+      void postLobbyPresence(sessionId, "heartbeat");
+    }, 30_000);
     return () => {
+      clearInterval(heartbeat);
       // React development mode deliberately remounts effects. Deferring the
       // leave lets that probe reuse the same attendance record, while a real
       // exit still records a leave promptly.

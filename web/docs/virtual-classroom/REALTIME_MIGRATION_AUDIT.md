@@ -1,12 +1,30 @@
 # Virtual Classroom Realtime Migration Audit
 
-**Status:** Phase 0 complete — inventory only.  No runtime transport has changed.
+**Status:** Supabase control-plane pilot implemented and production-safe behind
+independent feature flags. Liveblocks remains the authoritative write path and
+automatic fallback until the final cutover is deliberately enabled and proven.
 
 ## Scope
 
 **Current pilot status:** Liveblocks remains the visible classroom transport.
 For class-linked sessions, Supabase now supplies a versioned recovery snapshot
-and private-channel presence in shadow mode.
+and private-channel presence in shadow mode. Individual read surfaces can be
+switched to Supabase with reversible flags; one-off guest sessions continue on
+the established Liveblocks path.
+
+## Merge and deployment readiness
+
+Migrations 127–130 must exist in the target Supabase project before enabling
+any classroom realtime pilot flag. They are additive and safe to apply while
+all flags remain false. The first production deployment after merge should keep
+every `NEXT_PUBLIC_CLASSROOM_REALTIME_*` flag false; this preserves the current
+classroom behavior while shipping the dormant recovery infrastructure.
+
+Enable shadow mode first in a pilot deployment, then enable visible read pilots
+individually after a two-browser teacher/student check. Disabling any pilot
+restores its Liveblocks read fallback without a rollback migration. One-off
+guest classes do not join the private Supabase channel and retain their existing
+transport during this phase.
 
 This document covers the Virtual Classroom control plane: the shared classroom
 session, teacher tools, lesson navigation, participant state, and recovery.

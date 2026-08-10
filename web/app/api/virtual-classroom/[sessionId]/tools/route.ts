@@ -14,10 +14,18 @@ import {
   type VcToolCommand,
 } from "@/lib/virtual-classroom/server/tools";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
-import { queueClassroomRuntimeSnapshotSync } from "@/lib/virtual-classroom/server/runtime-snapshot";
-import { broadcastClassroomRealtimeEvent } from "@/lib/classroom-realtime/server/broadcast";
+import {
+  applyClassroomRuntimeCommand,
+  queueClassroomRuntimeSnapshotSync,
+} from "@/lib/virtual-classroom/server/runtime-snapshot";
+import {
+  broadcastClassroomRealtimeEvent,
+  broadcastClassroomRuntimeUpdate,
+} from "@/lib/classroom-realtime/server/broadcast";
+import { snapshotEvent } from "@/lib/classroom-realtime/events";
 import type { ClassroomRuntimePatch } from "@/lib/classroom-realtime/types";
 import {
+  classroomRealtimeAuthorityPilotEnabled,
   classroomRealtimeParticipantRegistryPilotEnabled,
   classroomRealtimeStatusPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
@@ -121,6 +129,49 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
+  const authorityResult = classroomRealtimeAuthorityPilotEnabled()
+    ? await applyClassroomRuntimeCommand({
+        sessionId: session.id,
+        command,
+        actorUserId: actorUserId ?? "system",
+      })
+    : { handled: false as const };
+  if (authorityResult.handled && !authorityResult.ok) {
+    return NextResponse.json({ error: authorityResult.error }, { status: 503 });
+  }
+
+  if (authorityResult.handled) {
+    after(async () => {
+      await Promise.all([
+        applyVcToolCommand({
+          roomId: session.liveblocksRoomId,
+          sessionId: session.id,
+          command,
+          actorUserId,
+          activeStudentIds,
+        }),
+        authorityResult.changed.length
+          ? broadcastClassroomRealtimeEvent({
+              type: "runtime:patch",
+              sessionId: session.id,
+              patch: authorityResult.patch,
+              sentAt: Date.now(),
+            })
+          : Promise.resolve(false),
+        authorityResult.changed.length
+          ? broadcastClassroomRuntimeUpdate(
+              snapshotEvent(authorityResult.snapshot, authorityResult.changed),
+            )
+          : Promise.resolve(false),
+      ]);
+    });
+    return NextResponse.json({
+      ok: true,
+      authority: "supabase",
+      compatibilityMirror: "scheduled",
+    });
+  }
+
   const result = await applyVcToolCommand({
     roomId: session.liveblocksRoomId,
     sessionId: session.id,
@@ -160,5 +211,9 @@ export async function POST(request: Request, context: RouteContext) {
       ]);
     });
   }
-  return NextResponse.json({ ok: true, detail: result.detail });
+  return NextResponse.json({
+    ok: true,
+    detail: result.detail,
+    authority: "liveblocks",
+  });
 }

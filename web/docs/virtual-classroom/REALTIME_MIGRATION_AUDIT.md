@@ -1,12 +1,13 @@
 # Virtual Classroom Realtime Migration Audit
 
 **Status:** Supabase control-plane pilot implemented and production-safe behind
-independent feature flags. Liveblocks remains the authoritative write path and
-automatic fallback until the final cutover is deliberately enabled and proven.
+independent feature flags. Liveblocks remains authoritative by default. A
+server-only, disabled authority pilot can commit the first low-risk shared
+controls to Supabase while Liveblocks remains a compatibility mirror.
 
 ## Scope
 
-**Current pilot status:** Liveblocks remains the visible classroom transport.
+**Current default status:** Liveblocks remains the visible classroom transport.
 For class-linked sessions, Supabase now supplies a versioned recovery snapshot
 and private-channel presence in shadow mode. Individual read surfaces can be
 switched to Supabase with reversible flags; one-off guest sessions continue on
@@ -19,6 +20,13 @@ any classroom realtime pilot flag. They are additive and safe to apply while
 all flags remain false. The first production deployment after merge should keep
 every `NEXT_PUBLIC_CLASSROOM_REALTIME_*` flag false; this preserves the current
 classroom behavior while shipping the dormant recovery infrastructure.
+
+The server-only `CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT` must also remain
+false for the first deployment. It cannot activate unless shadow mode plus the
+announcement, Learn navigation, and Learn pens read pilots are all enabled.
+When deliberately enabled, only those matching shared controls commit to
+Supabase first; other teacher tools and collaborative activity rooms continue
+to use Liveblocks.
 
 Enable shadow mode first in a pilot deployment, then enable visible read pilots
 individually after a two-browser teacher/student check. Disabling any pilot
@@ -77,7 +85,12 @@ source of truth is the `runtime` Liveblocks object created in
 
 ## Current command inventory
 
-`applyVcToolCommand` is the authoritative server seam for the classroom tools.
+`applyVcToolCommand` is the default authoritative server seam for classroom
+tools. The first Supabase authority adapter now handles announcement, shared
+meeting/Learn navigation, selected activity or presentation, and the shared
+student-pen permission behind the disabled server-only authority flag. It uses
+the versioned snapshot compare-and-swap function, broadcasts only after a
+durable commit, and mirrors the command to Liveblocks for the current shell.
 It handles roster sync, picker, groups, timer, dice, points, student status,
 freeze/announcement, shared UI mode/stage/activity, and student pens.  It
 currently mutates Liveblocks storage and emits a best-effort `TOOLS_UPDATED`

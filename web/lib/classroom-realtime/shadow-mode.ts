@@ -8,6 +8,20 @@ export function classroomRealtimeShadowModeEnabled(): boolean {
 }
 
 /**
+ * Server-side authority pilot for shared controls that already have Supabase
+ * read pilots. Liveblocks remains a compatibility mirror during this phase.
+ */
+export function classroomRealtimeAuthorityPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT === "true"
+  );
+}
+
+/**
  * First visible Supabase cutover. This deliberately remains narrower than the
  * shadow connection and is safe to disable independently.
  */

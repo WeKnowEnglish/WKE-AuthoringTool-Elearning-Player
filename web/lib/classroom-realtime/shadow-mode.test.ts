@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  classroomRealtimeAuthorityPilotEnabled,
   classroomRealtimeAnnouncementPilotEnabled,
   classroomRealtimeLearnPensPilotEnabled,
   classroomRealtimeLearnNavigationPilotEnabled,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/classroom-realtime/shadow-mode";
 
 const original = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE;
+const originalAuthority = process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT;
 const originalAnnouncement = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT;
 const originalLearnPens = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT;
 const originalLearnNavigation = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT;
@@ -30,6 +32,8 @@ const originalLifecycle = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_P
 afterEach(() => {
   if (original === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE;
   else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = original;
+  if (originalAuthority === undefined) delete process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT;
+  else process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT = originalAuthority;
   if (originalAnnouncement === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT;
   else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT = originalAnnouncement;
   if (originalLearnPens === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT;
@@ -60,6 +64,27 @@ describe("classroom realtime shadow-mode flag", () => {
 
     process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
     expect(classroomRealtimeShadowModeEnabled()).toBe(true);
+  });
+
+  it("keeps Supabase command authority server-side and dependent on shadow mode", () => {
+    process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT = "true";
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT = "true";
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT = "true";
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT = "true";
+    delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE;
+    expect(classroomRealtimeAuthorityPilotEnabled()).toBe(false);
+
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    expect(classroomRealtimeAuthorityPilotEnabled()).toBe(true);
+  });
+
+  it("does not enable authority until every matching Supabase read pilot is active", () => {
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT = "true";
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT = "true";
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT = "true";
+    delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT;
+    expect(classroomRealtimeAuthorityPilotEnabled()).toBe(false);
   });
 
   it("requires shadow mode before enabling the visible announcement pilot", () => {

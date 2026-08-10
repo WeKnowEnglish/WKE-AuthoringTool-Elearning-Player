@@ -1,6 +1,9 @@
 import "server-only";
 
-import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
+import type {
+  ClassroomRuntimePatch,
+  ClassroomRuntimeSnapshot,
+} from "@/lib/classroom-realtime/types";
 import { createEmptyRandomiser } from "@/lib/virtual-classroom/tools/dice";
 import { createEmptyGroupSet } from "@/lib/virtual-classroom/tools/groups";
 import { createEmptyPickerState } from "@/lib/virtual-classroom/tools/picker";
@@ -13,6 +16,7 @@ import { snapshotEvent } from "@/lib/classroom-realtime/events";
 import { broadcastClassroomRuntimeUpdate } from "@/lib/classroom-realtime/server/broadcast";
 import { createLatestOnlyWorkQueue } from "@/lib/classroom-realtime/server/latest-only-queue";
 import { normalizeVirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
+import type { VcToolCommand } from "@/lib/virtual-classroom/server/tools";
 
 type RuntimeSnapshotRow = {
   session_id: string;
@@ -276,6 +280,166 @@ async function advanceClassroomRuntimeSnapshot(input: {
     .maybeSingle();
   if (error || !data) return null;
   return mapRow(data as RuntimeSnapshotRow);
+}
+
+const SUPABASE_AUTHORITY_COMMANDS = new Set<VcToolCommand["type"]>([
+  "SET_UI_MODE",
+  "SET_LEARN_STAGE",
+  "SET_LEARN_ACTIVITY",
+  "SET_LEARN_PRESENTATION",
+  "SET_LEARN_STUDENT_PENS",
+  "SET_ANNOUNCEMENT",
+]);
+
+export function classroomRuntimeCommandSupportsSupabaseAuthority(
+  command: VcToolCommand,
+): boolean {
+  return SUPABASE_AUTHORITY_COMMANDS.has(command.type);
+}
+
+/** Pure command projection shared by the authority writer and contract tests. */
+export function projectClassroomRuntimeCommand(input: {
+  current: ClassroomRuntimeSnapshot;
+  command: VcToolCommand;
+  actorUserId: string;
+  now?: Date;
+}): { snapshot: ClassroomRuntimeSnapshot; patch: ClassroomRuntimePatch; changed: string[] } | null {
+  if (!classroomRuntimeCommandSupportsSupabaseAuthority(input.command)) return null;
+
+  let patch: ClassroomRuntimePatch;
+  switch (input.command.type) {
+    case "SET_UI_MODE":
+      patch = { uiMode: input.command.mode === "meeting" ? "meeting" : "learn" };
+      break;
+    case "SET_LEARN_STAGE":
+      patch = {
+        learnStage:
+          input.command.stage === "activity" || input.command.stage === "presentation"
+            ? input.command.stage
+            : "whiteboard",
+      };
+      break;
+    case "SET_LEARN_ACTIVITY": {
+      if (!input.command.activity) {
+        patch = { learnActivity: null };
+        break;
+      }
+      const activityId = input.command.activity.activityId?.trim() ?? "";
+      const playPath = input.command.activity.playPath?.trim() ?? "";
+      if (!activityId || !playPath) throw new Error("Activity id and play path are required.");
+      patch = {
+        learnActivity: {
+          activityId,
+          format: (input.command.activity.format?.trim() || "learning_track").slice(0, 64),
+          title: (input.command.activity.title?.trim() || "Activity").slice(0, 160),
+          playPath: playPath.slice(0, 500),
+        },
+        learnStage: "activity",
+      };
+      break;
+    }
+    case "SET_LEARN_PRESENTATION": {
+      if (!input.command.presentation) {
+        patch = { learnPresentation: null };
+        break;
+      }
+      const presentation = normalizeVirtualClassroomPresentation(input.command.presentation);
+      if (!presentation) throw new Error("Add a valid image or PDF URL before presenting.");
+      patch = { learnPresentation: presentation, learnStage: "presentation" };
+      break;
+    }
+    case "SET_LEARN_STUDENT_PENS":
+      patch = { learnStudentPensEnabled: input.command.enabled !== false };
+      break;
+    case "SET_ANNOUNCEMENT":
+      patch = { announcement: input.command.message?.trim().slice(0, 280) || null };
+      break;
+    default:
+      return null;
+  }
+
+  const changed = Object.keys(patch).filter(
+    (key) =>
+      !valuesMatch(
+        input.current[key as keyof ClassroomRuntimeSnapshot],
+        patch[key as keyof ClassroomRuntimePatch],
+      ),
+  );
+  const now = input.now ?? new Date();
+  return {
+    snapshot: {
+      ...input.current,
+      ...patch,
+      updatedAt: now.toISOString(),
+      updatedBy: input.actorUserId,
+    },
+    patch,
+    changed,
+  };
+}
+
+/** Commit a supported classroom control to the durable Supabase authority. */
+export async function applyClassroomRuntimeCommand(input: {
+  sessionId: string;
+  command: VcToolCommand;
+  actorUserId: string;
+}): Promise<
+  | { handled: false }
+  | {
+      handled: true;
+      ok: true;
+      snapshot: ClassroomRuntimeSnapshot;
+      patch: ClassroomRuntimePatch;
+      changed: string[];
+    }
+  | { handled: true; ok: false; error: string }
+> {
+  if (!classroomRuntimeCommandSupportsSupabaseAuthority(input.command)) {
+    return { handled: false };
+  }
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await getClassroomRuntimeSnapshot(input.sessionId);
+    if (!current) {
+      return { handled: true, ok: false, error: "Classroom runtime snapshot is unavailable." };
+    }
+    let projected: NonNullable<ReturnType<typeof projectClassroomRuntimeCommand>>;
+    try {
+      projected = projectClassroomRuntimeCommand({
+        current,
+        command: input.command,
+        actorUserId: input.actorUserId,
+      })!;
+    } catch (error) {
+      return {
+        handled: true,
+        ok: false,
+        error: error instanceof Error ? error.message : "Classroom command is invalid.",
+      };
+    }
+    if (projected.changed.length === 0) {
+      return {
+        handled: true,
+        ok: true,
+        snapshot: current,
+        patch: projected.patch,
+        changed: [],
+      };
+    }
+    const saved = await advanceClassroomRuntimeSnapshot({
+      expectedVersion: current.stateVersion,
+      snapshot: projected.snapshot,
+      actorUserId: input.actorUserId,
+    });
+    if (!saved) continue;
+    return {
+      handled: true,
+      ok: true,
+      snapshot: saved,
+      patch: projected.patch,
+      changed: projected.changed,
+    };
+  }
+  return { handled: true, ok: false, error: "Classroom state changed; please try again." };
 }
 
 /** Persists the terminal lifecycle state without depending on a legacy room read. */

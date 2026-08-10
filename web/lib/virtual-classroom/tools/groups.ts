@@ -18,6 +18,48 @@ export type GroupSetState = {
   previousGroups: SessionGroup[] | null;
 };
 
+function normalizeSessionGroup(value: unknown): SessionGroup | null {
+  if (!value || typeof value !== "object") return null;
+  const group = value as Partial<SessionGroup>;
+  if (
+    typeof group.id !== "string" ||
+    typeof group.name !== "string" ||
+    !Array.isArray(group.memberIds) ||
+    !group.memberIds.every((id) => typeof id === "string") ||
+    (group.leaderId !== null && typeof group.leaderId !== "string") ||
+    typeof group.locked !== "boolean" ||
+    typeof group.color !== "string"
+  ) {
+    return null;
+  }
+  return group as SessionGroup;
+}
+
+export function normalizeGroupSetState(value: unknown): GroupSetState | null {
+  if (!value || typeof value !== "object") return null;
+  const state = value as Partial<GroupSetState>;
+  const modes: GroupSizeMode[] = ["pairs", "3", "4", "5", "n_groups"];
+  if (
+    !state.sizeMode ||
+    !modes.includes(state.sizeMode) ||
+    (state.targetGroupCount !== null &&
+      (typeof state.targetGroupCount !== "number" || !Number.isInteger(state.targetGroupCount))) ||
+    !Array.isArray(state.groups) ||
+    (state.previousGroups !== null && !Array.isArray(state.previousGroups))
+  ) {
+    return null;
+  }
+  const groups = state.groups.map(normalizeSessionGroup);
+  const previousGroups = state.previousGroups?.map(normalizeSessionGroup) ?? null;
+  if (groups.some((group) => !group) || previousGroups?.some((group) => !group)) return null;
+  return {
+    sizeMode: state.sizeMode,
+    targetGroupCount: state.targetGroupCount,
+    groups: groups as SessionGroup[],
+    previousGroups: previousGroups as SessionGroup[] | null,
+  };
+}
+
 const GROUP_COLORS = ["#0f766e", "#1d4ed8", "#b45309", "#be123c", "#7c3aed", "#047857"];
 
 export function createEmptyGroupSet(): GroupSetState {

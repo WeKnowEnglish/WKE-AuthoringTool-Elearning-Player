@@ -211,6 +211,28 @@ visibility, roll results, and the short roll history to the same snapshot and
 small tool-state Broadcast path. This remains independently reversible and
 continues to use Liveblocks for writes during the pilot.
 
+`NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT=true` moves session totals, the
+short award/undo history, and leaderboard visibility to the same recovery and
+Broadcast path. These remain class-session teaching signals rather than
+long-term student rewards, and Liveblocks remains the write/fallback path.
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT=true` moves picker cycles,
+selection history, exclusions, generated groups, locks, leaders, and group edits
+together. The server builds their roster from durable active attendance when
+available. Sending a completed group set into whiteboard, document, or word
+cards still delegates to that collaborative room's existing transport.
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT=true` moves authenticated student
+ready/help/hand/finished signals and the teacher's interaction-freeze state to
+the shared tool snapshot and Broadcast lane. The server continues to replace a
+student-supplied id with the id from that student's signed session cookie.
+
+`NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT=true` moves the currently
+launched whiteboard/document/word-cards reference and terminal session state to
+the Supabase snapshot and Broadcast lane. Launch and completion still update
+Liveblocks first. Ending a class persists the terminal snapshot before deleting
+the legacy room, so refresh and reconnect cannot restore a stale active class.
+
 - Time from join to usable classroom state.
 - Time to recover after browser refresh and network interruption.
 - Realtime messages sent/received per participant per minute.

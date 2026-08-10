@@ -17,7 +17,10 @@ import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/serv
 import { queueClassroomRuntimeSnapshotSync } from "@/lib/virtual-classroom/server/runtime-snapshot";
 import { broadcastClassroomRealtimeEvent } from "@/lib/classroom-realtime/server/broadcast";
 import type { ClassroomRuntimePatch } from "@/lib/classroom-realtime/types";
-import { classroomRealtimeParticipantRegistryPilotEnabled } from "@/lib/classroom-realtime/shadow-mode";
+import {
+  classroomRealtimeParticipantRegistryPilotEnabled,
+  classroomRealtimeStatusPilotEnabled,
+} from "@/lib/classroom-realtime/shadow-mode";
 import { listActiveClassroomStudentIds } from "@/lib/virtual-classroom/server/participant-registry";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
@@ -121,8 +124,9 @@ export async function POST(request: Request, context: RouteContext) {
   }
   // The visible Liveblocks mutation has already completed. Mirror it after the
   // response so the teacher is never kept waiting on a second provider during
-  // the shadow pilot. Student status is intentionally transient for now.
-  if (command.type !== "SET_OWN_STATUS") {
+  // the shadow pilot. Student status joins the durable path only when its
+  // independently reversible pilot is enabled.
+  if (command.type !== "SET_OWN_STATUS" || classroomRealtimeStatusPilotEnabled()) {
     const mirrorActorId = actorUserId ?? "system";
     const commandPatch = livePatchForCommand(command);
     const livePatch: ClassroomRuntimePatch | null = result.changedTools

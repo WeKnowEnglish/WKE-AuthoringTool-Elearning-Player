@@ -10,6 +10,7 @@ import {
   endVirtualClassroomSession,
   listWhiteboardRoomsForClassSession,
 } from "@/lib/virtual-classroom/server/session";
+import { endClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
 
 /** Full server-side teardown for a Virtual Classroom session (DB + Liveblocks + Daily). */
 export async function finalizeVirtualClassroomSessionClose(
@@ -17,10 +18,17 @@ export async function finalizeVirtualClassroomSessionClose(
     VirtualClassroomSessionRecord,
     "id" | "status" | "liveblocksRoomId"
   >,
+  actorUserId: string,
 ): Promise<void> {
   if (session.status === "ended") return;
 
   await markVcSessionEndedInStorage(session.liveblocksRoomId);
+  // Persist the terminal state before deleting the legacy realtime room. This
+  // makes reconnect recovery deterministic during and after the migration.
+  await endClassroomRuntimeSnapshot({
+    sessionId: session.id,
+    actorUserId,
+  }).catch(() => null);
   const ended = await endVirtualClassroomSession(session.id);
   if (!ended) {
     throw new Error(

@@ -68,3 +68,35 @@ export function classroomRealtimeRandomiserPilotEnabled(): boolean {
     process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT === "true"
   );
 }
+
+/** Session points and leaderboard sourced from snapshot + Broadcast. */
+export function classroomRealtimePointsPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT === "true"
+  );
+}
+
+/** Picker and group-maker state sourced together from snapshot + Broadcast. */
+export function classroomRealtimePickerGroupsPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT === "true"
+  );
+}
+
+/** Student help/hand/status signals and teacher freeze state. */
+export function classroomRealtimeStatusPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT === "true"
+  );
+}
+
+/** Session lifecycle and the currently launched shared activity. */
+export function classroomRealtimeLifecyclePilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT === "true"
+  );
+}

@@ -40,9 +40,13 @@ import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/ident
 import {
   classroomRealtimeAnnouncementPilotEnabled,
   classroomRealtimeLearnNavigationPilotEnabled,
+  classroomRealtimeLifecyclePilotEnabled,
   classroomRealtimeLearnPensPilotEnabled,
+  classroomRealtimePointsPilotEnabled,
+  classroomRealtimePickerGroupsPilotEnabled,
   classroomRealtimePresenceRosterPilotEnabled,
   classroomRealtimeRandomiserPilotEnabled,
+  classroomRealtimeStatusPilotEnabled,
   classroomRealtimeTimerPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
 import {
@@ -53,6 +57,22 @@ import {
   normalizeRandomiserState,
   type RandomiserState,
 } from "@/lib/classroom-tools/dice";
+import {
+  normalizeSessionPointsState,
+  type SessionPointsState,
+} from "@/lib/virtual-classroom/tools/points";
+import {
+  normalizeStudentPickerState,
+  type StudentPickerState,
+} from "@/lib/classroom-tools/picker";
+import {
+  normalizeGroupSetState,
+  type GroupSetState,
+} from "@/lib/virtual-classroom/tools/groups";
+import {
+  normalizeClassroomStatusState,
+  type ClassroomStatusState,
+} from "@/lib/virtual-classroom/tools/status";
 
 type Props = {
   sessionId: string;
@@ -87,7 +107,7 @@ export function VirtualClassroomSessionView({
   const rosterSyncAttempted = useRef(false);
   const broadcast = useBroadcastEvent();
 
-  const status = useStorage((root) => readRuntimeField<string>(root, "status") ?? "active");
+  const liveblocksStatus = useStorage((root) => readRuntimeField<string>(root, "status") ?? "active");
   const liveblocksUiMode = useStorage((root) =>
     normalizeVirtualClassroomUiMode(readRuntimeField<string>(root, "uiMode")),
   );
@@ -103,7 +123,7 @@ export function VirtualClassroomSessionView({
   const liveblocksAnnouncement = useStorage(
     (root) => readRuntimeField<string | null>(root, "announcement"),
   );
-  const activeActivity = useStorage((root) =>
+  const liveblocksActiveActivity = useStorage((root) =>
     readRuntimeField<{
       kind: "whiteboard" | "document" | "word_cards" | null;
       joinCode: string | null;
@@ -137,7 +157,7 @@ export function VirtualClassroomSessionView({
     );
   });
 
-  const currentPickIds = useStorage((root) => {
+  const liveblocksCurrentPickIds = useStorage((root) => {
     const picker = readLiveObjectField<{ currentStudentIds?: string[] }>(
       (root as { runtime?: unknown }).runtime,
       "picker",
@@ -152,6 +172,15 @@ export function VirtualClassroomSessionView({
     displayName,
     role,
   });
+  const lifecyclePilot = classroomRealtimeLifecyclePilotEnabled();
+  const status = lifecyclePilot
+    ? shadowHealth.runtimePatch?.status ?? shadowHealth.runtimeSnapshot?.status ?? liveblocksStatus
+    : liveblocksStatus;
+  const activeActivity = lifecyclePilot
+    ? shadowHealth.runtimePatch && Object.hasOwn(shadowHealth.runtimePatch, "activeActivity")
+      ? shadowHealth.runtimePatch.activeActivity ?? null
+      : shadowHealth.runtimeSnapshot?.activeActivity ?? liveblocksActiveActivity
+    : liveblocksActiveActivity;
   const presenceAttendanceMembers = classroomRealtimePresenceRosterPilotEnabled()
     ? shadowHealth.participants.map((participant) => ({
         id: participant.userId,
@@ -188,6 +217,23 @@ export function VirtualClassroomSessionView({
     ? normalizeRandomiserState(shadowHealth.runtimePatch?.tools?.randomiser) ??
       normalizeRandomiserState(shadowHealth.runtimeSnapshot?.tools?.randomiser)
     : null;
+  const realtimePoints: SessionPointsState | null = classroomRealtimePointsPilotEnabled()
+    ? normalizeSessionPointsState(shadowHealth.runtimePatch?.tools?.points) ??
+      normalizeSessionPointsState(shadowHealth.runtimeSnapshot?.tools?.points)
+    : null;
+  const realtimePicker: StudentPickerState | null = classroomRealtimePickerGroupsPilotEnabled()
+    ? normalizeStudentPickerState(shadowHealth.runtimePatch?.tools?.picker) ??
+      normalizeStudentPickerState(shadowHealth.runtimeSnapshot?.tools?.picker)
+    : null;
+  const realtimeGroupSet: GroupSetState | null = classroomRealtimePickerGroupsPilotEnabled()
+    ? normalizeGroupSetState(shadowHealth.runtimePatch?.tools?.groupSet) ??
+      normalizeGroupSetState(shadowHealth.runtimeSnapshot?.tools?.groupSet)
+    : null;
+  const realtimeStatus: ClassroomStatusState | null = classroomRealtimeStatusPilotEnabled()
+    ? normalizeClassroomStatusState(shadowHealth.runtimePatch?.tools?.classroomStatus) ??
+      normalizeClassroomStatusState(shadowHealth.runtimeSnapshot?.tools?.classroomStatus)
+    : null;
+  const currentPickIds = realtimePicker?.currentStudentIds ?? liveblocksCurrentPickIds;
 
   useLobbyPresence(sessionId, !ended && status !== "ended");
 
@@ -498,6 +544,8 @@ export function VirtualClassroomSessionView({
                 busy={Boolean(busy)}
                 onCommand={runToolCommand}
                 realtimeRandomiser={realtimeRandomiser}
+                realtimePoints={realtimePoints}
+                realtimeStatus={realtimeStatus}
               />
             </div>
           )}
@@ -510,6 +558,10 @@ export function VirtualClassroomSessionView({
           attendanceMembers={presenceAttendanceMembers}
           realtimeTimer={realtimeTimer}
           realtimeRandomiser={realtimeRandomiser}
+          realtimePoints={realtimePoints}
+          realtimePicker={realtimePicker}
+          realtimeGroupSet={realtimeGroupSet}
+          realtimeStatus={realtimeStatus}
           userId={userId}
           role={role}
           busy={Boolean(busy)}

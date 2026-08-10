@@ -16,6 +16,39 @@ export type StudentPickerState = {
   history: { at: number; studentIds: string[]; mode: PickerMode }[];
 };
 
+export function normalizeStudentPickerState(value: unknown): StudentPickerState | null {
+  if (!value || typeof value !== "object") return null;
+  const state = value as Partial<StudentPickerState>;
+  const modes: PickerMode[] = ["one", "two", "presenter"];
+  const stringArray = (item: unknown): item is string[] =>
+    Array.isArray(item) && item.every((entry) => typeof entry === "string");
+  if (
+    !stringArray(state.availableStudentIds) ||
+    !stringArray(state.pickedStudentIds) ||
+    !stringArray(state.excludedStudentIds) ||
+    !stringArray(state.currentStudentIds) ||
+    typeof state.cycleNumber !== "number" ||
+    !Number.isInteger(state.cycleNumber) ||
+    state.cycleNumber < 1 ||
+    typeof state.includeTeacher !== "boolean" ||
+    !state.mode ||
+    !modes.includes(state.mode) ||
+    !Array.isArray(state.history)
+  ) {
+    return null;
+  }
+  const historyValid = state.history.every(
+    (entry) =>
+      entry &&
+      typeof entry.at === "number" &&
+      Number.isFinite(entry.at) &&
+      stringArray(entry.studentIds) &&
+      modes.includes(entry.mode),
+  );
+  if (!historyValid) return null;
+  return state as StudentPickerState;
+}
+
 export function createEmptyPickerState(
   studentIds: string[],
   options?: { includeTeacher?: boolean; mode?: PickerMode },

@@ -3,10 +3,14 @@ import {
   classroomRealtimeAnnouncementPilotEnabled,
   classroomRealtimeLearnPensPilotEnabled,
   classroomRealtimeLearnNavigationPilotEnabled,
+  classroomRealtimeLifecyclePilotEnabled,
   classroomRealtimeParticipantRegistryPilotEnabled,
+  classroomRealtimePointsPilotEnabled,
+  classroomRealtimePickerGroupsPilotEnabled,
   classroomRealtimePresenceRosterPilotEnabled,
   classroomRealtimeRandomiserPilotEnabled,
   classroomRealtimeShadowModeEnabled,
+  classroomRealtimeStatusPilotEnabled,
   classroomRealtimeTimerPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
 
@@ -18,6 +22,10 @@ const originalPresenceRoster = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PRESEN
 const originalParticipantRegistry = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PARTICIPANT_REGISTRY_PILOT;
 const originalTimer = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_TIMER_PILOT;
 const originalRandomiser = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT;
+const originalPoints = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT;
+const originalPickerGroups = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT;
+const originalStatus = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT;
+const originalLifecycle = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT;
 
 afterEach(() => {
   if (original === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE;
@@ -36,6 +44,14 @@ afterEach(() => {
   else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_TIMER_PILOT = originalTimer;
   if (originalRandomiser === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT;
   else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT = originalRandomiser;
+  if (originalPoints === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT;
+  else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT = originalPoints;
+  if (originalPickerGroups === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT;
+  else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT = originalPickerGroups;
+  if (originalStatus === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT;
+  else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT = originalStatus;
+  if (originalLifecycle === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT;
+  else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT = originalLifecycle;
 });
 describe("classroom realtime shadow-mode flag", () => {
   it("is disabled unless explicitly enabled", () => {
@@ -107,5 +123,41 @@ describe("classroom realtime shadow-mode flag", () => {
 
     process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT = "true";
     expect(classroomRealtimeRandomiserPilotEnabled()).toBe(true);
+  });
+
+  it("keeps session points behind an independent rollback flag", () => {
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT;
+    expect(classroomRealtimePointsPilotEnabled()).toBe(false);
+
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT = "true";
+    expect(classroomRealtimePointsPilotEnabled()).toBe(true);
+  });
+
+  it("moves picker and groups only through their shared rollback flag", () => {
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT;
+    expect(classroomRealtimePickerGroupsPilotEnabled()).toBe(false);
+
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT = "true";
+    expect(classroomRealtimePickerGroupsPilotEnabled()).toBe(true);
+  });
+
+  it("keeps classroom-management status behind its own rollback flag", () => {
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT;
+    expect(classroomRealtimeStatusPilotEnabled()).toBe(false);
+
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT = "true";
+    expect(classroomRealtimeStatusPilotEnabled()).toBe(true);
+  });
+
+  it("keeps session lifecycle behind its own rollback flag", () => {
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT;
+    expect(classroomRealtimeLifecyclePilotEnabled()).toBe(false);
+
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT = "true";
+    expect(classroomRealtimeLifecyclePilotEnabled()).toBe(true);
   });
 });

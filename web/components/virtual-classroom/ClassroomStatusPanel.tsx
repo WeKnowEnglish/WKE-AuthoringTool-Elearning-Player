@@ -20,6 +20,7 @@ type Props = {
   role: "host" | "member";
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  status?: ClassroomStatusState | null;
 };
 
 const STATUS_OPTIONS: { id: ClassroomStatusKind; label: string }[] = [
@@ -45,8 +46,10 @@ export function ClassroomStatusPanel({
   role,
   busy,
   onCommand,
+  status: pilotStatus,
 }: Props) {
-  const status = useStorage((root) => readStatus(root));
+  const liveblocksStatus = useStorage((root) => readStatus(root));
+  const status = pilotStatus ?? liveblocksStatus;
   const [announce, setAnnounce] = useState("");
   const counts = countByStatus(status);
   const mine = status.byStudentId[userId] ?? "none";

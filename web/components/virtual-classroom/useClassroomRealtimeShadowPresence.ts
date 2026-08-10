@@ -130,6 +130,28 @@ export function useClassroomRealtimeShadowPresence(
       }
     });
 
+    channel.on("broadcast", { event: "classroom:ended" }, ({ payload }) => {
+      const event = payload as { sessionId?: unknown; stateVersion?: unknown };
+      if (event.sessionId !== input.sessionId || typeof event.stateVersion !== "number") return;
+      if (!disposed) {
+        setHealth((current) => ({
+          ...current,
+          runtimePatch: {
+            ...current.runtimePatch,
+            status: "ended",
+            activeActivity: {
+              kind: null,
+              joinCode: null,
+              label: null,
+              roundId: null,
+              roomId: null,
+            },
+          },
+        }));
+      }
+      scheduleSnapshotRefresh();
+    });
+
     channel.on("broadcast", { event: "runtime:patch" }, ({ payload }) => {
       const event = payload as {
         sessionId?: unknown;

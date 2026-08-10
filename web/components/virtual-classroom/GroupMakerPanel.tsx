@@ -3,7 +3,7 @@
 import { useStorage } from "@liveblocks/react/suspense";
 import { useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
-import type { GroupSizeMode } from "@/lib/virtual-classroom/tools/groups";
+import type { GroupSetState, GroupSizeMode } from "@/lib/virtual-classroom/tools/groups";
 
 type Member = { id: string; name: string; role: string };
 
@@ -15,25 +15,12 @@ type Props = {
   hasDocumentActivity: boolean;
   hasWordCardsActivity: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  groupSet?: GroupSetState | null;
 };
 
-type GroupSetView = {
-  sizeMode: GroupSizeMode;
-  targetGroupCount: number | null;
-  groups: {
-    id: string;
-    name: string;
-    memberIds: string[];
-    leaderId: string | null;
-    locked: boolean;
-    color: string;
-  }[];
-  previousGroups: unknown[] | null;
-};
-
-function readGroupSet(root: unknown): GroupSetView | null {
+function readGroupSet(root: unknown): GroupSetState | null {
   const runtime = (root as { runtime?: unknown }).runtime;
-  return readLiveObjectField<GroupSetView>(runtime, "groupSet") ?? null;
+  return readLiveObjectField<GroupSetState>(runtime, "groupSet") ?? null;
 }
 
 export function GroupMakerPanel({
@@ -44,8 +31,10 @@ export function GroupMakerPanel({
   hasDocumentActivity,
   hasWordCardsActivity,
   onCommand,
+  groupSet: pilotGroupSet,
 }: Props) {
-  const groupSet = useStorage((root) => readGroupSet(root));
+  const liveblocksGroupSet = useStorage((root) => readGroupSet(root));
+  const groupSet = pilotGroupSet ?? liveblocksGroupSet;
   const [sizeMode, setSizeMode] = useState<GroupSizeMode>("pairs");
   const [targetCount, setTargetCount] = useState(3);
   const [moveStudentId, setMoveStudentId] = useState("");

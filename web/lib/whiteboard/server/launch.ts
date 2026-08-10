@@ -93,6 +93,8 @@ export async function launchWhiteboardRound(input: {
         }).catch(() => undefined),
         setVcActiveActivity({
           roomId: input.session.liveblocksRoomId,
+          sessionId: input.session.id,
+          actorUserId: input.teacher.userId,
           kind: "whiteboard",
           joinCode: existingActivity.joinCode,
           label: existingActivity.label ?? title,
@@ -126,6 +128,8 @@ export async function launchWhiteboardRound(input: {
       }).catch(() => undefined),
       setVcActiveActivity({
         roomId: input.session.liveblocksRoomId,
+        sessionId: input.session.id,
+        actorUserId: input.teacher.userId,
         kind: "whiteboard",
         joinCode: fromDb.joinCode,
         label: title,
@@ -219,6 +223,8 @@ export async function launchWhiteboardRound(input: {
 
   await setVcActiveActivity({
     roomId: input.session.liveblocksRoomId,
+    sessionId: input.session.id,
+    actorUserId: input.teacher.userId,
     kind: "whiteboard",
     joinCode,
     label: title,

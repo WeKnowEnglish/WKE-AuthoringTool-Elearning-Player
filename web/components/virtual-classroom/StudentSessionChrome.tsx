@@ -4,6 +4,7 @@ import { useStorage } from "@liveblocks/react/suspense";
 import { useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import type { ClassroomStatusKind } from "@/lib/virtual-classroom/tools/status";
+import type { ClassroomStatusState } from "@/lib/virtual-classroom/tools/status";
 import type { RandomiserState } from "@/lib/virtual-classroom/tools/dice";
 import { createEmptyRandomiser } from "@/lib/virtual-classroom/tools/dice";
 import {
@@ -18,6 +19,8 @@ type Props = {
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
   realtimeRandomiser?: RandomiserState | null;
+  realtimePoints?: SessionPointsState | null;
+  realtimeStatus?: ClassroomStatusState | null;
 };
 
 const QUICK: { id: ClassroomStatusKind; label: string }[] = [
@@ -33,6 +36,8 @@ export function StudentSessionChrome({
   busy,
   onCommand,
   realtimeRandomiser,
+  realtimePoints,
+  realtimeStatus,
 }: Props) {
   const [mine, setMine] = useState<ClassroomStatusKind>("none");
   const liveblocksRandomiser = useStorage((root) => {
@@ -42,13 +47,14 @@ export function StudentSessionChrome({
     );
   });
   const randomiser = realtimeRandomiser ?? liveblocksRandomiser;
-  const points = useStorage((root) => {
+  const liveblocksPoints = useStorage((root) => {
     const runtime = (root as { runtime?: unknown }).runtime;
     return (
       readLiveObjectField<SessionPointsState>(runtime, "points") ?? createEmptySessionPoints()
     );
   });
-  const myStatus = useStorage((root) => {
+  const points = realtimePoints ?? liveblocksPoints;
+  const liveblocksMyStatus = useStorage((root) => {
     const runtime = (root as { runtime?: unknown }).runtime;
     const status = readLiveObjectField<{ byStudentId?: Record<string, ClassroomStatusKind> }>(
       runtime,
@@ -56,6 +62,7 @@ export function StudentSessionChrome({
     );
     return status?.byStudentId?.[userId] ?? "none";
   });
+  const myStatus = realtimeStatus?.byStudentId[userId] ?? liveblocksMyStatus;
 
   const current = myStatus !== "none" ? myStatus : mine;
   const board = points.showLeaderboard ? leaderboard(points).slice(0, 3) : [];

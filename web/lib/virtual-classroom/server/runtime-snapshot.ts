@@ -266,6 +266,40 @@ async function advanceClassroomRuntimeSnapshot(input: {
   return mapRow(data as RuntimeSnapshotRow);
 }
 
+/** Persists the terminal lifecycle state without depending on a legacy room read. */
+export async function endClassroomRuntimeSnapshot(input: {
+  sessionId: string;
+  actorUserId: string;
+}): Promise<ClassroomRuntimeSnapshot | null> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const current = await getClassroomRuntimeSnapshot(input.sessionId);
+    if (!current) return null;
+    if (current.status === "ended") return current;
+    const saved = await advanceClassroomRuntimeSnapshot({
+      expectedVersion: current.stateVersion,
+      actorUserId: input.actorUserId,
+      snapshot: {
+        ...current,
+        status: "ended",
+        activeActivity: {
+          kind: null,
+          joinCode: null,
+          label: null,
+          roundId: null,
+          roomId: null,
+        },
+        updatedAt: new Date().toISOString(),
+        updatedBy: input.actorUserId,
+      },
+    });
+    if (saved) {
+      void broadcastClassroomRuntimeUpdate(snapshotEvent(saved, ["status", "activeActivity"]));
+      return saved;
+    }
+  }
+  return null;
+}
+
 /**
  * Shadow-mode dual write. Reads the completed Liveblocks mutation, then stores
  * the same control-plane state with optimistic versioning. It must never make

@@ -3,7 +3,7 @@
 import { useStorage } from "@liveblocks/react/suspense";
 import { useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
-import type { PickerMode } from "@/lib/classroom-tools/picker";
+import type { PickerMode, StudentPickerState } from "@/lib/classroom-tools/picker";
 import { pickerPool } from "@/lib/classroom-tools/picker";
 
 type Member = { id: string; name: string; role: string };
@@ -13,9 +13,10 @@ type Props = {
   members: Member[];
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  picker?: StudentPickerState | null;
 };
 
-function readPicker(root: unknown) {
+function readPicker(root: unknown): StudentPickerState | null {
   const runtime = (root as { runtime?: unknown }).runtime;
   return readLiveObjectField<{
     availableStudentIds: string[];
@@ -26,11 +27,12 @@ function readPicker(root: unknown) {
     includeTeacher: boolean;
     mode: PickerMode;
     history: { at: number; studentIds: string[]; mode: PickerMode }[];
-  }>(runtime, "picker");
+  }>(runtime, "picker") ?? null;
 }
 
-export function StudentPickerPanel({ sessionId, members, busy, onCommand }: Props) {
-  const picker = useStorage((root) => readPicker(root));
+export function StudentPickerPanel({ sessionId, members, busy, onCommand, picker: pilotPicker }: Props) {
+  const liveblocksPicker = useStorage((root) => readPicker(root));
+  const picker = pilotPicker ?? liveblocksPicker;
   const [mode, setMode] = useState<PickerMode>("one");
 
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? id.slice(0, 8);

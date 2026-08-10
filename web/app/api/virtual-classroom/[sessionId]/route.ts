@@ -61,8 +61,9 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unknown command." }, { status: 400 });
   }
 
+  let teacher: { userId: string; displayName: string };
   try {
-    await requireVirtualClassroomSessionHost(session);
+    teacher = await requireVirtualClassroomSessionHost(session);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unauthorized";
     return NextResponse.json({ error: message }, { status: 403 });
@@ -78,7 +79,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    await finalizeVirtualClassroomSessionClose(session);
+    await finalizeVirtualClassroomSessionClose(session, teacher.userId);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Could not end session.";

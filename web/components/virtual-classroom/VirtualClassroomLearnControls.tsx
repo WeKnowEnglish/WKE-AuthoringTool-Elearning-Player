@@ -20,6 +20,9 @@ import {
 } from "@/lib/virtual-classroom/tools/timer";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import type { RandomiserState } from "@/lib/classroom-tools/dice";
+import type { SessionPointsState } from "@/lib/virtual-classroom/tools/points";
+import type { StudentPickerState } from "@/lib/classroom-tools/picker";
+import type { GroupSetState } from "@/lib/virtual-classroom/tools/groups";
 
 export type VcToolId = "picker" | "groups" | "timer" | "dice" | "points" | "status";
 
@@ -36,6 +39,10 @@ type Props = {
   /** Snapshot/Broadcast timer during the reversible Supabase pilot. */
   realtimeTimer?: GlobalTimerState | null;
   realtimeRandomiser?: RandomiserState | null;
+  realtimePoints?: SessionPointsState | null;
+  realtimePicker?: StudentPickerState | null;
+  realtimeGroupSet?: GroupSetState | null;
+  realtimeStatus?: ClassroomStatusState | null;
   userId: string;
   role: "host" | "member";
   busy: boolean;
@@ -105,6 +112,10 @@ export function VirtualClassroomLearnControls({
   attendanceMembers,
   realtimeTimer,
   realtimeRandomiser,
+  realtimePoints,
+  realtimePicker,
+  realtimeGroupSet,
+  realtimeStatus,
   userId,
   role,
   busy,
@@ -121,7 +132,8 @@ export function VirtualClassroomLearnControls({
   const [activeTool, setActiveTool] = useState<VcToolId | null>(null);
   const liveblocksTimer = useStorage((root) => readTimer(root));
   const timer = realtimeTimer ?? liveblocksTimer;
-  const status = useStorage((root) => readStatus(root));
+  const liveblocksStatus = useStorage((root) => readStatus(root));
+  const status = realtimeStatus ?? liveblocksStatus;
   const helpCount = countByStatus(status).help + countByStatus(status).hand;
   const timerRunning = timer.status === "running";
   const statusCounts = countByStatus(status);
@@ -162,6 +174,7 @@ export function VirtualClassroomLearnControls({
             members={members}
             busy={busy}
             onCommand={onCommand}
+            picker={realtimePicker}
           />
         );
       case "groups":
@@ -174,6 +187,7 @@ export function VirtualClassroomLearnControls({
             hasDocumentActivity={hasDocumentActivity}
             hasWordCardsActivity={hasWordCardsActivity}
             onCommand={onCommand}
+            groupSet={realtimeGroupSet}
           />
         );
       case "timer":
@@ -194,6 +208,7 @@ export function VirtualClassroomLearnControls({
             role="host"
             busy={busy}
             onCommand={onCommand}
+            points={realtimePoints}
           />
         );
       case "status":
@@ -204,6 +219,7 @@ export function VirtualClassroomLearnControls({
             role="host"
             busy={busy}
             onCommand={onCommand}
+            status={realtimeStatus}
           />
         );
       default:

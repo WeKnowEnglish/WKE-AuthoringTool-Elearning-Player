@@ -166,9 +166,13 @@ export async function POST(request: Request, context: RouteContext) {
   if (vcRoomId) {
     await setVcActiveActivity({
       roomId: vcRoomId,
+      sessionId: classSessionId,
+      actorUserId: teacher.userId,
       kind: "whiteboard",
       joinCode: sessionId,
       label: title,
+      roundId,
+      activityRoomId: roomId,
     }).catch(() => undefined);
   }
 

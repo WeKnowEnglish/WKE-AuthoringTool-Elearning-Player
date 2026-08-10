@@ -12,6 +12,7 @@ type Props = {
   busy: boolean;
   role: "host" | "member";
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  points?: SessionPointsState | null;
 };
 
 function readPoints(root: unknown): SessionPointsState {
@@ -21,8 +22,9 @@ function readPoints(root: unknown): SessionPointsState {
   );
 }
 
-export function SessionPointsPanel({ members, busy, role, onCommand }: Props) {
-  const points = useStorage((root) => readPoints(root));
+export function SessionPointsPanel({ members, busy, role, onCommand, points: pilotPoints }: Props) {
+  const liveblocksPoints = useStorage((root) => readPoints(root));
+  const points = pilotPoints ?? liveblocksPoints;
   const board = leaderboard(points);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? id.slice(0, 8);
   const students = members.filter((m) => m.role !== "host");

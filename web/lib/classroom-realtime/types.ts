@@ -65,6 +65,8 @@ export type ClassroomRuntimePatch = Partial<
     | "learnActivity"
     | "learnStudentPensEnabled"
     | "announcement"
+    | "status"
+    | "activeActivity"
   >
 > & {
   /** Individually changed low-frequency classroom tools. */

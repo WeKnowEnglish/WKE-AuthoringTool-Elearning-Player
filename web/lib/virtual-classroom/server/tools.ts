@@ -206,6 +206,38 @@ const VC_RANDOMISER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
   "CLEAR_DICE",
 ]);
 
+const VC_POINTS_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "AWARD_POINTS",
+  "UNDO_AWARD",
+  "RESET_POINTS",
+  "SET_LEADERBOARD_VISIBLE",
+]);
+
+const VC_PICKER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "SYNC_ROSTER",
+  "SET_PICKER_MODE",
+  "PICK",
+  "RESET_PICKER_CYCLE",
+  "SET_PICKER_EXCLUDED",
+]);
+
+const VC_GROUP_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "GENERATE_GROUPS",
+  "SHUFFLE_GROUPS",
+  "SAVE_GROUPS",
+  "RESTORE_GROUPS",
+  "MOVE_STUDENT",
+  "RENAME_GROUP",
+  "SET_GROUP_LEADER",
+  "TOGGLE_GROUP_LOCK",
+]);
+
+const VC_STATUS_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "SET_OWN_STATUS",
+  "CLEAR_STATUSES",
+  "SET_FREEZE",
+]);
+
 export async function applyVcToolCommand(input: {
   roomId: string;
   /** Enables best-effort Supabase dual-write after a teacher command. */
@@ -555,6 +587,14 @@ export async function applyVcToolCommand(input: {
         changedTools = { timer: readTimer(runtime) };
       } else if (VC_RANDOMISER_TOOL_TYPES.has(input.command.type)) {
         changedTools = { randomiser: readRandomiser(runtime) };
+      } else if (VC_POINTS_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { points: readPoints(runtime) };
+      } else if (VC_PICKER_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { picker: readPicker(runtime) };
+      } else if (VC_GROUP_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { groupSet: readGroups(runtime) };
+      } else if (VC_STATUS_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { classroomStatus: readStatus(runtime) };
       }
     });
 

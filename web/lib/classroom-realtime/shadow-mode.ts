@@ -35,6 +35,15 @@ export function classroomRealtimeToolAuthorityPilotEnabled(): boolean {
   );
 }
 
+/** Supabase authority for activity launch references and terminal class state. */
+export function classroomRealtimeLifecycleAuthorityPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT === "true"
+  );
+}
+
 /**
  * First visible Supabase cutover. This deliberately remains narrower than the
  * shadow connection and is safe to disable independently.

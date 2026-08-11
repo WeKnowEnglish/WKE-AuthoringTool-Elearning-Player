@@ -4,6 +4,7 @@ import {
   classroomRealtimeAnnouncementPilotEnabled,
   classroomRealtimeLearnPensPilotEnabled,
   classroomRealtimeLearnNavigationPilotEnabled,
+  classroomRealtimeLifecycleAuthorityPilotEnabled,
   classroomRealtimeLifecyclePilotEnabled,
   classroomRealtimeParticipantRegistryPilotEnabled,
   classroomRealtimePointsPilotEnabled,
@@ -19,6 +20,7 @@ import {
 const original = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE;
 const originalAuthority = process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT;
 const originalToolAuthority = process.env.CLASSROOM_REALTIME_SUPABASE_TOOL_AUTHORITY_PILOT;
+const originalLifecycleAuthority = process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT;
 const originalAnnouncement = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT;
 const originalLearnPens = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT;
 const originalLearnNavigation = process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT;
@@ -38,6 +40,8 @@ afterEach(() => {
   else process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT = originalAuthority;
   if (originalToolAuthority === undefined) delete process.env.CLASSROOM_REALTIME_SUPABASE_TOOL_AUTHORITY_PILOT;
   else process.env.CLASSROOM_REALTIME_SUPABASE_TOOL_AUTHORITY_PILOT = originalToolAuthority;
+  if (originalLifecycleAuthority === undefined) delete process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT;
+  else process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT = originalLifecycleAuthority;
   if (originalAnnouncement === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT;
   else process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT = originalAnnouncement;
   if (originalLearnPens === undefined) delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT;
@@ -104,6 +108,16 @@ describe("classroom realtime shadow-mode flag", () => {
 
     process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT = "true";
     expect(classroomRealtimeToolAuthorityPilotEnabled()).toBe(true);
+  });
+
+  it("keeps lifecycle authority behind its matching read pilot", () => {
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT = "true";
+    delete process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT;
+    expect(classroomRealtimeLifecycleAuthorityPilotEnabled()).toBe(false);
+
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT = "true";
+    expect(classroomRealtimeLifecycleAuthorityPilotEnabled()).toBe(true);
   });
 
   it("requires shadow mode before enabling the visible announcement pilot", () => {

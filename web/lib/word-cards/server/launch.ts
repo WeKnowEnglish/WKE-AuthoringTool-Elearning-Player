@@ -86,6 +86,7 @@ export async function launchWordCardsRound(input: {
     await setVcActiveActivity({
       roomId: input.session.liveblocksRoomId,
       sessionId: input.session.id,
+      classId: input.session.classId,
       actorUserId: input.teacher.userId,
       kind: "word_cards",
       joinCode: existingActivity.joinCode,
@@ -117,6 +118,7 @@ export async function launchWordCardsRound(input: {
     await setVcActiveActivity({
       roomId: input.session.liveblocksRoomId,
       sessionId: input.session.id,
+      classId: input.session.classId,
       actorUserId: input.teacher.userId,
       kind: "word_cards",
       joinCode: fromDb.joinCode,
@@ -218,6 +220,7 @@ export async function launchWordCardsRound(input: {
   await setVcActiveActivity({
     roomId: input.session.liveblocksRoomId,
     sessionId: input.session.id,
+    classId: input.session.classId,
     actorUserId: input.teacher.userId,
     kind: "word_cards",
     joinCode,

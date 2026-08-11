@@ -84,6 +84,7 @@ export async function launchDocumentRound(input: {
     await setVcActiveActivity({
       roomId: input.session.liveblocksRoomId,
       sessionId: input.session.id,
+      classId: input.session.classId,
       actorUserId: input.teacher.userId,
       kind: "document",
       joinCode: existingActivity.joinCode,
@@ -108,6 +109,7 @@ export async function launchDocumentRound(input: {
     await setVcActiveActivity({
       roomId: input.session.liveblocksRoomId,
       sessionId: input.session.id,
+      classId: input.session.classId,
       actorUserId: input.teacher.userId,
       kind: "document",
       joinCode: fromDb.id,
@@ -212,6 +214,7 @@ export async function launchDocumentRound(input: {
   await setVcActiveActivity({
     roomId: input.session.liveblocksRoomId,
     sessionId: input.session.id,
+    classId: input.session.classId,
     actorUserId: input.teacher.userId,
     kind: "document",
     joinCode: roundId,

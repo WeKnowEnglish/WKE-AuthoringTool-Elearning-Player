@@ -10,10 +10,10 @@ import {
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
 import {
   applyVcToolCommand,
-  mirrorVcRuntimePatchToLiveblocks,
   VC_MEMBER_TOOL_TYPES,
   type VcToolCommand,
 } from "@/lib/virtual-classroom/server/tools";
+import { mirrorVcRuntimePatchToLiveblocks } from "@/lib/virtual-classroom/server/runtime-mirror";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
 import {
   applyClassroomRuntimeCommand,

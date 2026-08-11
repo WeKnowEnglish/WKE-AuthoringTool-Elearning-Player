@@ -692,6 +692,43 @@ export async function endClassroomRuntimeSnapshot(input: {
   return null;
 }
 
+/** Persists only the reference to a nested collaborative activity room. */
+export async function setClassroomRuntimeActiveActivity(input: {
+  sessionId: string;
+  actorUserId: string;
+  activeActivity: ClassroomRuntimeSnapshot["activeActivity"];
+}): Promise<
+  | { ok: true; snapshot: ClassroomRuntimeSnapshot; patch: ClassroomRuntimePatch; changed: string[] }
+  | { ok: false; error: string }
+> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await getClassroomRuntimeSnapshot(input.sessionId);
+    if (!current) return { ok: false, error: "Classroom runtime snapshot is unavailable." };
+    if (valuesMatch(current.activeActivity, input.activeActivity)) {
+      return { ok: true, snapshot: current, patch: { activeActivity: input.activeActivity }, changed: [] };
+    }
+    const saved = await advanceClassroomRuntimeSnapshot({
+      expectedVersion: current.stateVersion,
+      actorUserId: input.actorUserId,
+      snapshot: {
+        ...current,
+        activeActivity: input.activeActivity,
+        updatedAt: new Date().toISOString(),
+        updatedBy: input.actorUserId,
+      },
+    });
+    if (saved) {
+      return {
+        ok: true,
+        snapshot: saved,
+        patch: { activeActivity: input.activeActivity },
+        changed: ["activeActivity"],
+      };
+    }
+  }
+  return { ok: false, error: "Classroom state changed; please try again." };
+}
+
 /**
  * Shadow-mode dual write. Reads the completed Liveblocks mutation, then stores
  * the same control-plane state with optimistic versioning. It must never make

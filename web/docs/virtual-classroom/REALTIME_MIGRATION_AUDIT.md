@@ -273,9 +273,12 @@ student-supplied id with the id from that student's signed session cookie.
 
 `NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT=true` moves the currently
 launched whiteboard/document/word-cards reference and terminal session state to
-the Supabase snapshot and Broadcast lane. Launch and completion still update
-Liveblocks first. Ending a class persists the terminal snapshot before deleting
-the legacy room, so refresh and reconnect cannot restore a stale active class.
+the Supabase snapshot and Broadcast lane. With the independent server-only
+`CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT=true`, class-linked
+launch references commit to Supabase first and are copied to the legacy shell;
+the nested collaborative room remains on Liveblocks. Ending a class persists
+the terminal snapshot before marking and deleting the legacy room. One-off
+guest sessions retain the established Liveblocks-first lifecycle path.
 
 ## Classroom-native presentation surface
 

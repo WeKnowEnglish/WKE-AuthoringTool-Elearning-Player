@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DailyVideoDock } from "@/components/virtual-classroom/daily/DailyVideoDock";
+import { ClassroomDiagnosticsExportButton } from "@/components/virtual-classroom/ClassroomDiagnosticsExportButton";
 import { GlobalTimerBannerContent } from "@/components/virtual-classroom/GlobalTimerPanel";
 import { StudentSessionChromeContent } from "@/components/virtual-classroom/StudentSessionChrome";
 import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classroom/useClassroomRealtimeShadowPresence";
@@ -11,7 +12,24 @@ import { VirtualClassroomLearnControlsContent } from "@/components/virtual-class
 import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
 import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
 import { resolveClassroomRuntimeViewState } from "@/lib/classroom-realtime/runtime-view-state";
-import { diagnosticFetch } from "@/lib/app-diagnostics/client";
+import {
+  diagnosticFetch,
+  recordAppDiagnostic,
+} from "@/lib/app-diagnostics/client";
+import {
+  clearLastRoll,
+  configureRandomiser,
+  createSeededDiceRandom,
+  rollDice,
+} from "@/lib/classroom-tools/dice";
+import {
+  addGlobalTime,
+  pauseGlobalTimer,
+  resetGlobalTimer,
+  resumeGlobalTimer,
+  setGlobalTimerMode,
+  startGlobalTimer,
+} from "@/lib/classroom-tools/timer";
 import type {
   ClassroomRuntimePatch,
   ClassroomRuntimeSnapshot,
@@ -39,6 +57,8 @@ type Props = {
   initialSnapshot?: ClassroomRuntimeSnapshot | null;
 };
 
+type RuntimeViewState = ReturnType<typeof resolveClassroomRuntimeViewState>;
+
 function mergeRuntimePatches(
   current: ClassroomRuntimePatch | null,
   next: ClassroomRuntimePatch | null,
@@ -56,6 +76,7 @@ function mergeRuntimePatches(
 
 function optimisticPatchForCommand(
   command: Record<string, unknown>,
+  runtime: RuntimeViewState | null,
 ): ClassroomRuntimePatch | null {
   switch (command.type) {
     case "SET_UI_MODE":
@@ -85,6 +106,89 @@ function optimisticPatchForCommand(
             ? command.message.trim().slice(0, 280) || null
             : null,
       };
+    case "SET_TIMER_MODE":
+      return runtime && (command.mode === "countdown" || command.mode === "stopwatch")
+        ? { tools: { timer: setGlobalTimerMode(runtime.timer, command.mode) } }
+        : null;
+    case "START_TIMER":
+      return runtime
+        ? {
+            tools: {
+              timer: startGlobalTimer(
+                runtime.timer,
+                typeof command.requestedAt === "number" ? command.requestedAt : Date.now(),
+                typeof command.durationMs === "number" ? command.durationMs : undefined,
+              ),
+            },
+          }
+        : null;
+    case "PAUSE_TIMER":
+      return runtime
+        ? {
+            tools: {
+              timer: pauseGlobalTimer(
+                runtime.timer,
+                typeof command.requestedAt === "number" ? command.requestedAt : Date.now(),
+              ),
+            },
+          }
+        : null;
+    case "RESUME_TIMER":
+      return runtime
+        ? {
+            tools: {
+              timer: resumeGlobalTimer(
+                runtime.timer,
+                typeof command.requestedAt === "number" ? command.requestedAt : Date.now(),
+              ),
+            },
+          }
+        : null;
+    case "ADD_TIMER_MS":
+      return runtime && typeof command.milliseconds === "number"
+        ? { tools: { timer: addGlobalTime(runtime.timer, command.milliseconds) } }
+        : null;
+    case "RESET_TIMER":
+      return runtime
+        ? {
+            tools: {
+              timer: resetGlobalTimer(
+                runtime.timer,
+                typeof command.durationMs === "number" ? command.durationMs : undefined,
+              ),
+            },
+          }
+        : null;
+    case "SET_TIMER_VISIBLE":
+      return runtime
+        ? {
+            tools: {
+              timer: {
+                ...runtime.timer,
+                visibleToStudents: command.visibleToStudents === true,
+              },
+            },
+          }
+        : null;
+    case "CONFIGURE_DICE":
+      return runtime
+        ? { tools: { randomiser: configureRandomiser(runtime.randomiser, command) } }
+        : null;
+    case "ROLL_DICE":
+      return runtime && typeof command.seed === "number"
+        ? {
+            tools: {
+              randomiser: rollDice(runtime.randomiser, {
+                random: createSeededDiceRandom(command.seed),
+                nowMs: Date.now(),
+              }),
+            },
+          }
+        : null;
+    case "CLEAR_DICE":
+      return runtime
+        ? { tools: { randomiser: clearLastRoll(runtime.randomiser) } }
+        : null;
     default:
       return null;
   }
@@ -146,9 +250,37 @@ export function VirtualClassroomNativeSessionView(props: Props) {
   }, [ended, role, runtime?.status, sessionId]);
 
   const runToolCommand = useCallback(async (command: Record<string, unknown>) => {
-    const nextOptimisticPatch = optimisticPatchForCommand(command);
+    const clickedAt = performance.now();
+    const preparedCommand =
+      command.type === "ROLL_DICE" && typeof command.seed !== "number"
+        ? { ...command, seed: crypto.getRandomValues(new Uint32Array(1))[0] }
+        : (command.type === "START_TIMER" ||
+              command.type === "PAUSE_TIMER" ||
+              command.type === "RESUME_TIMER") &&
+            typeof command.requestedAt !== "number"
+          ? { ...command, requestedAt: Date.now() }
+          : command;
+    const nextOptimisticPatch = optimisticPatchForCommand(preparedCommand, runtime);
     if (nextOptimisticPatch) {
       setOptimisticPatch((current) => mergeRuntimePatches(current, nextOptimisticPatch));
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          recordAppDiagnostic(
+            role === "host" ? "teacher" : "student",
+            "virtual-classroom",
+            "classroom_optimistic_paint",
+            {
+              sessionId,
+              commandType:
+                typeof preparedCommand.type === "string" ? preparedCommand.type : "unknown",
+            },
+            {
+              kind: "span",
+              durationMs: Math.max(0, performance.now() - clickedAt),
+            },
+          );
+        });
+      });
     }
     setBusy("tools");
     setError(null);
@@ -158,7 +290,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(command),
+          body: JSON.stringify(preparedCommand),
         },
         {
           surface: role === "host" ? "teacher" : "student",
@@ -166,7 +298,8 @@ export function VirtualClassroomNativeSessionView(props: Props) {
           name: "classroom_tool_command",
           detail: {
             sessionId,
-            commandType: typeof command.type === "string" ? command.type : "unknown",
+            commandType:
+              typeof preparedCommand.type === "string" ? preparedCommand.type : "unknown",
           },
         },
       );
@@ -178,7 +311,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
     } finally {
       setBusy(null);
     }
-  }, [role, sessionId]);
+  }, [role, runtime, sessionId]);
 
   const exitHref = useCallback(() => {
     const context = getVirtualClassroomContext();
@@ -260,6 +393,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
         <h1 className="text-2xl font-bold text-slate-900">Session ended</h1>
         <p className="text-slate-600">This Virtual Classroom has been closed by the teacher.</p>
+        {role === "host" ? <ClassroomDiagnosticsExportButton sessionId={sessionId} /> : null}
         <button
           type="button"
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"

@@ -69,7 +69,9 @@ export async function POST(request: Request, context: RouteContext) {
   return withCollabServerTiming("vc.tools", async (timer) => {
   const { sessionId } = await context.params;
   timer.setContext({ activity: "classroom", sessionId });
-  const session = await getVirtualClassroomSessionById(sessionId);
+  const session = await timer.measure("session_lookup", () =>
+    getVirtualClassroomSessionById(sessionId),
+  );
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
@@ -125,7 +127,9 @@ export async function POST(request: Request, context: RouteContext) {
       actorUserId = member.userId;
     } else {
       try {
-        const host = await requireVirtualClassroomSessionHost(session);
+        const host = await timer.measure("host_authorization", () =>
+          requireVirtualClassroomSessionHost(session),
+        );
         actorUserId = host.userId;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unauthorized";
@@ -142,7 +146,9 @@ export async function POST(request: Request, context: RouteContext) {
     classroomRuntimeCommandRequiresRoster(command)
   ) {
     try {
-      const ids = await listActiveClassroomStudentIds(session.id);
+      const ids = await timer.measure("participant_roster", () =>
+        listActiveClassroomStudentIds(session.id),
+      );
       // Empty can mean a just-joined participant has not written attendance yet;
       // retain Liveblocks as the safe fallback until the registry is populated.
       if (ids.length) activeStudentIds = ids;
@@ -157,12 +163,14 @@ export async function POST(request: Request, context: RouteContext) {
     (authorityKind === "tool" && classroomRealtimeToolAuthorityPilotEnabled())
   ) && (!classroomRuntimeCommandRequiresRoster(command) || activeStudentIds !== undefined);
   const authorityResult = authorityEnabled
-    ? await applyClassroomRuntimeCommand({
-        sessionId: session.id,
-        command,
-        actorUserId: actorUserId ?? "system",
-        activeStudentIds,
-      })
+    ? await timer.measure("runtime_write", () =>
+        applyClassroomRuntimeCommand({
+          sessionId: session.id,
+          command,
+          actorUserId: actorUserId ?? "system",
+          activeStudentIds,
+        }),
+      )
     : { handled: false as const };
   if (authorityResult.handled && !authorityResult.ok) {
     return NextResponse.json({ error: authorityResult.error }, { status: 503 });
@@ -197,13 +205,15 @@ export async function POST(request: Request, context: RouteContext) {
     });
   }
 
-  const result = await applyVcToolCommand({
-    roomId: session.liveblocksRoomId,
-    sessionId: session.id,
-    command,
-    actorUserId,
-    activeStudentIds,
-  });
+  const result = await timer.measure("liveblocks_command", () =>
+    applyVcToolCommand({
+      roomId: session.liveblocksRoomId,
+      sessionId: session.id,
+      command,
+      actorUserId,
+      activeStudentIds,
+    }),
+  );
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });

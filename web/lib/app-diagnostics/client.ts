@@ -164,6 +164,10 @@ export function recordAppDiagnostic(
   options?: AppDiagnosticRecordOptions,
 ) {
   if (!appDiagnosticsEnabled() || typeof window === "undefined") return null;
+  const route = options?.route ?? currentRoute();
+  const classroomSessionId =
+    options?.classroomSessionId ??
+    (route ?? "").match(/^\/(?:teacher\/)?virtual-classroom\/([^/?#]+)/)?.[1];
   const event: AppDiagnosticEvent = {
     id: randomId("event"),
     sessionId: getAppDiagnosticSessionId(),
@@ -174,9 +178,10 @@ export function recordAppDiagnostic(
     name,
     kind: options?.kind ?? "mark",
     durationMs: options?.durationMs,
-    route: options?.route ?? currentRoute(),
+    route,
     detail,
     classId: options?.classId,
+    classroomSessionId,
     activityId: options?.activityId,
     homeworkId: options?.homeworkId,
     status: options?.status,

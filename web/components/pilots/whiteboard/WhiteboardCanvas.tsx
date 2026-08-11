@@ -19,6 +19,7 @@ import {
   type MediaUrlChangeDetail,
 } from "@/components/teacher/media/teacherMediaLibraryShared";
 import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
+import { startAppDiagnosticSpan } from "@/lib/app-diagnostics/client";
 import { uploadTeacherMedia } from "@/lib/actions/media";
 import { recordWhiteboardSubmitEvidence } from "@/lib/whiteboard/evidence";
 import {
@@ -452,6 +453,7 @@ export function WhiteboardCanvas({
       addElement(image, "elements");
       setSelectedImageId(image.id);
       setTool("select");
+      return image;
     },
     [addElement, userId],
   );
@@ -581,23 +583,37 @@ export function WhiteboardCanvas({
     url: string,
     detail?: MediaUrlChangeDetail,
   ) => {
-    setImageUploading(true);
+    const finish = startAppDiagnosticSpan(
+      role === "host" ? "teacher" : "student",
+      "virtual-classroom",
+      "classroom_media_selection_to_board",
+      { sessionId },
+    );
     setError(null);
+    const inserted = insertBoardImage({
+      url,
+      mediaAssetId: detail?.mediaAssetId ?? null,
+      alt: "Media library image",
+      // Show the selection immediately. The real aspect ratio is applied once
+      // the browser has decoded the asset in the background.
+      sourceWidth: 640,
+      sourceHeight: 400,
+    });
+    requestAnimationFrame(() => finish({ insertedImmediately: true }));
     try {
       const dimensions = await readImageUrlDimensions(url);
-      insertBoardImage({
-        url,
-        mediaAssetId: detail?.mediaAssetId ?? null,
-        alt: "Media library image",
-        sourceWidth: dimensions.width,
-        sourceHeight: dimensions.height,
+      const fitted = fitImageDimensions(dimensions.width, dimensions.height);
+      updateImageElement({
+        ...inserted,
+        x: Math.round((BOARD_WIDTH - fitted.width) / 2),
+        y: Math.round((BOARD_HEIGHT - fitted.height) / 2),
+        width: Math.round(fitted.width),
+        height: Math.round(fitted.height),
       });
     } catch (mediaError) {
       setError(
         mediaError instanceof Error ? mediaError.message : "Could not add this image.",
       );
-    } finally {
-      setImageUploading(false);
     }
   };
 

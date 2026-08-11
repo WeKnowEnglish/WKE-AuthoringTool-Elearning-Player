@@ -7,7 +7,10 @@ import {
 } from "@/lib/classroom-realtime/channel";
 import { classroomRealtimeShadowModeEnabled } from "@/lib/classroom-realtime/shadow-mode";
 import { createClient } from "@/lib/supabase/client";
-import { diagnosticFetch } from "@/lib/app-diagnostics/client";
+import {
+  diagnosticFetch,
+  recordAppDiagnostic,
+} from "@/lib/app-diagnostics/client";
 import type {
   ClassroomParticipantPresence,
   ClassroomRuntimePatch,
@@ -177,9 +180,25 @@ export function useClassroomRealtimeShadowPresence(
       const event = payload as {
         sessionId?: unknown;
         patch?: ClassroomRuntimePatch;
+        sentAt?: unknown;
       };
       if (event.sessionId !== input.sessionId || !event.patch) return;
       const patch = event.patch;
+      if (typeof event.sentAt === "number") {
+        recordAppDiagnostic(
+          input.role === "host" ? "teacher" : "student",
+          "virtual-classroom",
+          "classroom_realtime_patch_delivery",
+          {
+            sessionId: input.sessionId,
+            patchKeys: Object.keys(patch).sort().join(","),
+          },
+          {
+            kind: "span",
+            durationMs: Math.max(0, Date.now() - event.sentAt),
+          },
+        );
+      }
       lastPatchAt = Date.now();
       setHealth((current) => ({
         ...current,

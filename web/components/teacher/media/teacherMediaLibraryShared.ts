@@ -143,6 +143,48 @@ export function folderDefsForPicker(
       },
     ];
   }
+  if (fieldKind === "image") {
+    const rows: TeacherMediaFolderDef[] = [
+      {
+        id: "school_images",
+        label: "School images",
+        kind: "image",
+        scope: "school",
+      },
+      {
+        id: "my_uploads",
+        label: "My uploads",
+        kind: "image",
+        scope: "mine",
+      },
+    ];
+    if (lexiconId) {
+      rows.push({
+        id: "linked",
+        label: "Linked to this word",
+        kind: "image",
+        scope: "school",
+        linked: true,
+      });
+    }
+    return rows;
+  }
+  if (fieldKind === "audio") {
+    return [
+      {
+        id: "school_audio",
+        label: "School audio",
+        kind: "audio",
+        scope: "school",
+      },
+      {
+        id: "my_uploads",
+        label: "My uploads",
+        kind: "audio",
+        scope: "mine",
+      },
+    ];
+  }
   const rows: TeacherMediaFolderDef[] = [
     {
       id: "school_images",

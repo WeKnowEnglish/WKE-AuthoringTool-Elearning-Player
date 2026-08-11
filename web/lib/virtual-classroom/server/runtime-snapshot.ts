@@ -7,6 +7,7 @@ import type {
 import {
   clearLastRoll,
   configureRandomiser,
+  createSeededDiceRandom,
   createEmptyRandomiser,
   normalizeRandomiserState,
   rollDice,
@@ -52,6 +53,7 @@ import {
   normalizeGlobalTimerState,
   pauseGlobalTimer,
   resetGlobalTimer,
+  resolveTimerActionTime,
   resumeGlobalTimer,
   setGlobalTimerMode,
   startGlobalTimer,
@@ -407,6 +409,10 @@ export function projectClassroomRuntimeCommand(input: {
 
   let patch: ClassroomRuntimePatch;
   const nowMs = (input.now ?? new Date()).getTime();
+  const actionNowMs = resolveTimerActionTime(
+    "requestedAt" in input.command ? input.command.requestedAt : undefined,
+    nowMs,
+  );
   const picker = normalizeStudentPickerState(input.current.tools.picker) ?? createEmptyPickerState([]);
   const groups = normalizeGroupSetState(input.current.tools.groupSet) ?? createEmptyGroupSet();
   const timer = normalizeGlobalTimerState(input.current.tools.timer) ?? createIdleGlobalTimer();
@@ -516,13 +522,13 @@ export function projectClassroomRuntimeCommand(input: {
       patch = { tools: { timer: setGlobalTimerMode(timer, input.command.mode) } };
       break;
     case "START_TIMER":
-      patch = { tools: { timer: maybeExpireCountdown(startGlobalTimer(timer, nowMs, input.command.durationMs), nowMs) } };
+      patch = { tools: { timer: maybeExpireCountdown(startGlobalTimer(timer, actionNowMs, input.command.durationMs), nowMs) } };
       break;
     case "PAUSE_TIMER":
-      patch = { tools: { timer: pauseGlobalTimer(timer, nowMs) } };
+      patch = { tools: { timer: pauseGlobalTimer(timer, actionNowMs) } };
       break;
     case "RESUME_TIMER":
-      patch = { tools: { timer: maybeExpireCountdown(resumeGlobalTimer(timer, nowMs), nowMs) } };
+      patch = { tools: { timer: maybeExpireCountdown(resumeGlobalTimer(timer, actionNowMs), nowMs) } };
       break;
     case "ADD_TIMER_MS":
       patch = { tools: { timer: maybeExpireCountdown(addGlobalTime(timer, input.command.milliseconds), nowMs) } };
@@ -537,7 +543,12 @@ export function projectClassroomRuntimeCommand(input: {
       patch = { tools: { randomiser: configureRandomiser(randomiser, input.command) } };
       break;
     case "ROLL_DICE":
-      patch = { tools: { randomiser: rollDice(randomiser, { nowMs }) } };
+      patch = { tools: { randomiser: rollDice(randomiser, {
+        nowMs,
+        ...(typeof input.command.seed === "number"
+          ? { random: createSeededDiceRandom(input.command.seed) }
+          : {}),
+      }) } };
       break;
     case "CLEAR_DICE":
       patch = { tools: { randomiser: clearLastRoll(randomiser) } };

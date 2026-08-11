@@ -9,6 +9,7 @@ import { getWordCardRoundByJoinCode } from "@/lib/word-cards/server/persistence"
 import {
   clearLastRoll,
   configureRandomiser,
+  createSeededDiceRandom,
   createEmptyRandomiser,
   rollDice,
   type DicePreset,
@@ -60,6 +61,7 @@ import {
   pauseGlobalTimer,
   resetGlobalTimer,
   resumeGlobalTimer,
+  resolveTimerActionTime,
   setGlobalTimerMode,
   startGlobalTimer,
   type GlobalTimerMode,
@@ -148,9 +150,9 @@ export type VcToolCommand =
   | { type: "SEND_GROUPS_TO_DOCUMENT" }
   | { type: "SEND_GROUPS_TO_WORD_CARDS" }
   | { type: "SET_TIMER_MODE"; mode: GlobalTimerMode }
-  | { type: "START_TIMER"; durationMs?: number }
-  | { type: "PAUSE_TIMER" }
-  | { type: "RESUME_TIMER" }
+  | { type: "START_TIMER"; durationMs?: number; requestedAt?: number }
+  | { type: "PAUSE_TIMER"; requestedAt?: number }
+  | { type: "RESUME_TIMER"; requestedAt?: number }
   | { type: "ADD_TIMER_MS"; milliseconds: number }
   | { type: "RESET_TIMER"; durationMs?: number }
   | { type: "SET_TIMER_VISIBLE"; visibleToStudents: boolean }
@@ -163,7 +165,7 @@ export type VcToolCommand =
       visibility?: "class" | "teacher";
       locked?: boolean;
     }
-  | { type: "ROLL_DICE" }
+  | { type: "ROLL_DICE"; seed?: number }
   | { type: "CLEAR_DICE" }
   | {
       type: "AWARD_POINTS";
@@ -275,6 +277,10 @@ export async function applyVcToolCommand(input: {
       const points = readPoints(runtime);
       const classroomStatus = readStatus(runtime);
       const nowMs = Date.now();
+      const actionNowMs = resolveTimerActionTime(
+        "requestedAt" in input.command ? input.command.requestedAt : undefined,
+        nowMs,
+      );
       const rosterIds = (includeTeacher: boolean) =>
         input.activeStudentIds?.length
           ? [...(includeTeacher && input.actorUserId ? [input.actorUserId] : []), ...input.activeStudentIds]
@@ -430,16 +436,16 @@ export async function applyVcToolCommand(input: {
         case "START_TIMER": {
           runtime.set(
             "timer",
-            startGlobalTimer(timer, nowMs, input.command.durationMs),
+            startGlobalTimer(timer, actionNowMs, input.command.durationMs),
           );
           break;
         }
         case "PAUSE_TIMER": {
-          runtime.set("timer", pauseGlobalTimer(timer, nowMs));
+          runtime.set("timer", pauseGlobalTimer(timer, actionNowMs));
           break;
         }
         case "RESUME_TIMER": {
-          runtime.set("timer", resumeGlobalTimer(timer, nowMs));
+          runtime.set("timer", resumeGlobalTimer(timer, actionNowMs));
           break;
         }
         case "ADD_TIMER_MS": {
@@ -472,7 +478,12 @@ export async function applyVcToolCommand(input: {
           break;
         }
         case "ROLL_DICE": {
-          runtime.set("randomiser", rollDice(randomiser, { nowMs }));
+          runtime.set("randomiser", rollDice(randomiser, {
+            nowMs,
+            ...(typeof input.command.seed === "number"
+              ? { random: createSeededDiceRandom(input.command.seed) }
+              : {}),
+          }));
           break;
         }
         case "CLEAR_DICE": {

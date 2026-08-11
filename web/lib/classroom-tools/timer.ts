@@ -58,6 +58,21 @@ export function createIdleGlobalTimer(
   };
 }
 
+/** Accept recent client click time while rejecting stale or forged timestamps. */
+export function resolveTimerActionTime(
+  requestedAt: unknown,
+  serverNowMs: number,
+): number {
+  if (
+    typeof requestedAt === "number" &&
+    Number.isFinite(requestedAt) &&
+    Math.abs(serverNowMs - requestedAt) <= 30_000
+  ) {
+    return requestedAt;
+  }
+  return serverNowMs;
+}
+
 export function remainingMs(timer: GlobalTimerState, nowMs: number): number {
   if (timer.mode === "stopwatch") return 0;
   if (timer.status === "idle") return timer.durationMs;

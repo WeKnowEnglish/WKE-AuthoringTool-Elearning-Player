@@ -152,6 +152,18 @@ function rollDie(sides: number, random: () => number): number {
   return Math.floor(random() * sides) + 1;
 }
 
+/** Small deterministic generator so optimistic and authoritative rolls match. */
+export function createSeededDiceRandom(seed: number): () => number {
+  let state = (Number.isFinite(seed) ? Math.floor(seed) : 0) >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
+
 export function rollDice(
   state: RandomiserState,
   options?: { random?: () => number; nowMs?: number },

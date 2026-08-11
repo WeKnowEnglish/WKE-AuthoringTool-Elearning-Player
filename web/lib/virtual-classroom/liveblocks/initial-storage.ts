@@ -11,12 +11,13 @@ import type { ClassroomStatusState } from "@/lib/virtual-classroom/tools/status"
 import { createEmptyClassroomStatus } from "@/lib/virtual-classroom/tools/status";
 import type { GlobalTimerState } from "@/lib/virtual-classroom/tools/timer";
 import { createIdleGlobalTimer } from "@/lib/virtual-classroom/tools/timer";
+import type { VirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
 
 /** Shared in-session layout: meeting = viewport-filling cameras; learn = materials + docked video. */
 export type VirtualClassroomUiMode = "meeting" | "learn";
 
 /** Shared Learn stage: everyone sees the same surface. */
-export type VirtualClassroomLearnStage = "whiteboard" | "activity";
+export type VirtualClassroomLearnStage = "whiteboard" | "activity" | "presentation";
 
 export type VirtualClassroomLearnActivity = {
   activityId: string;
@@ -34,7 +35,7 @@ export function normalizeVirtualClassroomUiMode(
 export function normalizeVirtualClassroomLearnStage(
   value: unknown,
 ): VirtualClassroomLearnStage {
-  return value === "activity" ? "activity" : "whiteboard";
+  return value === "activity" || value === "presentation" ? value : "whiteboard";
 }
 
 export function normalizeVirtualClassroomLearnActivity(
@@ -73,6 +74,8 @@ export type VirtualClassroomRuntimeFields = {
   learnStage: VirtualClassroomLearnStage;
   /** Studio / track activity shown on the Activity stage. */
   learnActivity: VirtualClassroomLearnActivity | null;
+  /** Image or PDF currently shared on the Presentation stage. */
+  learnPresentation: VirtualClassroomPresentation | null;
   /** Learn class board: when false, only the teacher can draw. */
   learnStudentPensEnabled: boolean;
   activeActivity: {
@@ -115,6 +118,7 @@ export function createVirtualClassroomInitialStorage(input: {
     uiMode: "meeting",
     learnStage: "whiteboard",
     learnActivity: null,
+    learnPresentation: null,
     learnStudentPensEnabled: true,
     activeActivity: {
       kind: null,

@@ -20,6 +20,7 @@ type Props = {
   role: "host" | "member";
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  status?: ClassroomStatusState | null;
 };
 
 const STATUS_OPTIONS: { id: ClassroomStatusKind; label: string }[] = [
@@ -39,14 +40,19 @@ function readStatus(root: unknown): ClassroomStatusState {
   );
 }
 
-export function ClassroomStatusPanel({
+export function ClassroomStatusPanel(props: Props) {
+  const liveblocksStatus = useStorage((root) => readStatus(root));
+  return <ClassroomStatusPanelContent {...props} status={props.status ?? liveblocksStatus} />;
+}
+
+export function ClassroomStatusPanelContent({
   members,
   userId,
   role,
   busy,
   onCommand,
-}: Props) {
-  const status = useStorage((root) => readStatus(root));
+  status,
+}: Omit<Props, "status"> & { status: ClassroomStatusState }) {
   const [announce, setAnnounce] = useState("");
   const counts = countByStatus(status);
   const mine = status.byStudentId[userId] ?? "none";

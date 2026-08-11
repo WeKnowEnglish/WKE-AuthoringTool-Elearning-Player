@@ -94,6 +94,7 @@ export async function buildSessionAttendanceSummary(input: {
             role: "student",
             lobbyFirstJoinedAt: null,
             lobbyLastLeftAt: null,
+            lobbyLastSeenAt: null,
             lobbyJoinCount: 0,
             videoFirstJoinedAt: null,
             videoLastLeftAt: null,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useStorage } from "@liveblocks/react/suspense";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import type { DicePreset, RandomiserState } from "@/lib/classroom-tools/dice";
 import { createEmptyRandomiser } from "@/lib/classroom-tools/dice";
@@ -10,6 +10,8 @@ type Props = {
   busy: boolean;
   role: "host" | "member";
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  /** Supabase randomiser pilot state; omit to retain Liveblocks. */
+  randomiser?: RandomiserState | null;
 };
 
 function readRandomiser(root: unknown): RandomiserState {
@@ -28,10 +30,32 @@ const PRESETS: { id: DicePreset; label: string }[] = [
   { id: "labels", label: "Labels" },
 ];
 
-export function DicePanel({ busy, role, onCommand }: Props) {
-  const randomiser = useStorage((root) => readRandomiser(root));
+export function DicePanel(props: Props) {
+  const liveblocksRandomiser = useStorage((root) => readRandomiser(root));
+  return <DicePanelContent {...props} randomiser={props.randomiser ?? liveblocksRandomiser} />;
+}
+
+/** Provider-neutral randomiser UI for the Supabase-native classroom shell. */
+export function DicePanelContent({
+  busy,
+  role,
+  onCommand,
+  randomiser,
+}: Omit<Props, "randomiser"> & { randomiser: RandomiserState }) {
   const [sides, setSides] = useState(8);
   const [labelText, setLabelText] = useState("cat, dog, bird, fish");
+  const configurationQueue = useRef<Promise<void>>(Promise.resolve());
+  const queueConfiguration = (command: Record<string, unknown>) => {
+    const next = configurationQueue.current
+      .catch(() => undefined)
+      .then(() => onCommand(command));
+    configurationQueue.current = next;
+    return next;
+  };
+  const rollAfterConfiguration = async () => {
+    await configurationQueue.current.catch(() => undefined);
+    await onCommand({ type: "ROLL_DICE" });
+  };
 
   const canSeeRoll =
     role === "host" ||
@@ -53,21 +77,20 @@ export function DicePanel({ busy, role, onCommand }: Props) {
               <button
                 key={p.id}
                 type="button"
-                disabled={busy}
                 className={`rounded px-2 py-1 text-xs font-bold ${
                   randomiser.preset === p.id ? "bg-sky-800 text-white" : "bg-slate-100"
                 }`}
                 onClick={() => {
                   if (p.id === "custom") {
-                    void onCommand({ type: "CONFIGURE_DICE", preset: "custom", sides });
+                    void queueConfiguration({ type: "CONFIGURE_DICE", preset: "custom", sides });
                   } else if (p.id === "labels") {
-                    void onCommand({
+                    void queueConfiguration({
                       type: "CONFIGURE_DICE",
                       preset: "labels",
                       labels: labelText.split(",").map((s) => s.trim()),
                     });
                   } else {
-                    void onCommand({ type: "CONFIGURE_DICE", preset: p.id });
+                    void queueConfiguration({ type: "CONFIGURE_DICE", preset: p.id });
                   }
                 }}
               >
@@ -86,7 +109,7 @@ export function DicePanel({ busy, role, onCommand }: Props) {
                 value={sides}
                 onChange={(e) => setSides(Number(e.target.value) || 2)}
                 onBlur={() =>
-                  void onCommand({ type: "CONFIGURE_DICE", preset: "custom", sides })
+                  void queueConfiguration({ type: "CONFIGURE_DICE", preset: "custom", sides })
                 }
                 className="mt-1 w-20 rounded border border-slate-300 px-2 py-1"
               />
@@ -100,7 +123,7 @@ export function DicePanel({ busy, role, onCommand }: Props) {
                 value={labelText}
                 onChange={(e) => setLabelText(e.target.value)}
                 onBlur={() =>
-                  void onCommand({
+                  void queueConfiguration({
                     type: "CONFIGURE_DICE",
                     preset: "labels",
                     labels: labelText.split(",").map((s) => s.trim()),
@@ -114,9 +137,8 @@ export function DicePanel({ busy, role, onCommand }: Props) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={busy}
               className="rounded-lg bg-sky-800 px-3 py-2 text-sm font-bold text-white"
-              onClick={() => void onCommand({ type: "ROLL_DICE" })}
+              onClick={() => void rollAfterConfiguration()}
             >
               Roll
             </button>

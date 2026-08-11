@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 async function postLobbyPresence(
   sessionId: string,
-  event: "join" | "leave",
+  event: "join" | "heartbeat" | "leave",
 ): Promise<void> {
   try {
     await fetch(`/api/virtual-classroom/${encodeURIComponent(sessionId)}/attendance`, {
@@ -18,11 +18,32 @@ async function postLobbyPresence(
 }
 
 export function useLobbyPresence(sessionId: string, enabled = true): void {
+  const joinedSessionId = useRef<string | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!enabled || !sessionId.trim()) return;
-    void postLobbyPresence(sessionId, "join");
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+    if (joinedSessionId.current !== sessionId) {
+      joinedSessionId.current = sessionId;
+      void postLobbyPresence(sessionId, "join");
+    }
+    const heartbeat = setInterval(() => {
+      void postLobbyPresence(sessionId, "heartbeat");
+    }, 30_000);
     return () => {
-      void postLobbyPresence(sessionId, "leave");
+      clearInterval(heartbeat);
+      // React development mode deliberately remounts effects. Deferring the
+      // leave lets that probe reuse the same attendance record, while a real
+      // exit still records a leave promptly.
+      leaveTimer.current = setTimeout(() => {
+        void postLobbyPresence(sessionId, "leave");
+        if (joinedSessionId.current === sessionId) joinedSessionId.current = null;
+        leaveTimer.current = null;
+      }, 250);
     };
   }, [sessionId, enabled]);
 }

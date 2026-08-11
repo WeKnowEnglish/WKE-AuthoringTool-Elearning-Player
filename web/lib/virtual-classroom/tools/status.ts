@@ -13,6 +13,25 @@ export type ClassroomStatusState = {
   interactionFrozen: boolean;
 };
 
+export function normalizeClassroomStatusState(value: unknown): ClassroomStatusState | null {
+  if (!value || typeof value !== "object") return null;
+  const state = value as Partial<ClassroomStatusState>;
+  const valid: ClassroomStatusKind[] = ["none", "ready", "help", "hand", "finished", "away"];
+  if (
+    !state.byStudentId ||
+    typeof state.byStudentId !== "object" ||
+    Array.isArray(state.byStudentId) ||
+    !Object.values(state.byStudentId).every((status) => valid.includes(status)) ||
+    typeof state.interactionFrozen !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    byStudentId: state.byStudentId,
+    interactionFrozen: state.interactionFrozen,
+  };
+}
+
 export function createEmptyClassroomStatus(): ClassroomStatusState {
   return {
     byStudentId: {},

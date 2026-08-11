@@ -28,6 +28,7 @@ import {
   listStudioVocabularyLists,
   type StudioVocabularyListRef,
 } from "@/lib/activity-library/vocabulary-list-studio";
+import { vocabActivityGenerationRecipe } from "@/lib/activity-library/compile-quizzes-from-vocab-studio";
 import {
   QuizBuilderSetupCards,
   type StagedQuizCard,
@@ -75,6 +76,11 @@ type BankQuizRef = {
   title: string;
   format: StudioActivityFormat;
   updatedAt: string;
+};
+
+type GeneratedQuizDraft = {
+  session: QuizSession;
+  source: Record<string, unknown>;
 };
 
 const BANNER_MS = 4000;
@@ -126,7 +132,7 @@ function isCardReady(card: StagedQuizCard): boolean {
   return Boolean(card.listId) && card.selectedEntryIds.length > 0;
 }
 
-export function QuizBuilderWorkspace() {
+export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActivityId?: string | null }) {
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>("landing");
   const [landingPanel, setLandingPanel] = useState<LandingPanel>("home");
@@ -137,12 +143,13 @@ export function QuizBuilderWorkspace() {
     sessionItemIds(createBlankSession("multiple_choice"))[0] ?? "",
   );
   const [setupCards, setSetupCards] = useState<StagedQuizCard[]>([]);
-  const [batchDrafts, setBatchDrafts] = useState<QuizSession[]>([]);
+  const [batchDrafts, setBatchDrafts] = useState<GeneratedQuizDraft[]>([]);
   const [masterPrompt, setMasterPrompt] = useState("What is this?");
   const [letterPrompt, setLetterPrompt] = useState(
     "Unscramble the letters to spell the word.",
   );
   const [bankId, setBankId] = useState<string | null>(null);
+  const [activitySource, setActivitySource] = useState<Record<string, unknown>>({ via: "quiz_builder" });
   const [notice, setNotice] = useState<string | null>(null);
   const [skipped, setSkipped] = useState<VocabCompileSkipped[]>([]);
   const [busy, setBusy] = useState(false);
@@ -225,10 +232,15 @@ export function QuizBuilderWorkspace() {
     }
   };
 
-  const openEditor = (next: QuizSession, nextBankId: string | null) => {
+  const openEditor = (
+    next: QuizSession,
+    nextBankId: string | null,
+    nextSource: Record<string, unknown> = { via: "quiz_builder" },
+  ) => {
     setSession(cloneSession(next));
     setSelectedItemId(sessionItemIds(next)[0] ?? "");
     setBankId(nextBankId);
+    setActivitySource(nextSource);
     if (next.format === "multiple_choice") {
       setMasterPrompt(next.document.interaction.items[0]?.question ?? "What is this?");
     }
@@ -349,7 +361,7 @@ export function QuizBuilderWorkspace() {
     }
     setBusy(true);
     try {
-      const generated: QuizSession[] = [];
+      const generated: GeneratedQuizDraft[] = [];
       const allSkipped: VocabCompileSkipped[] = [];
       const listCache = new Map<
         string,
@@ -373,7 +385,7 @@ export function QuizBuilderWorkspace() {
                 backFaces: [...card.flashcardsBackFaces],
               }));
           }
-          generated.push(blank);
+          generated.push({ session: blank, source: { via: "quiz_builder" } });
           continue;
         }
         if (!card.listId) continue;
@@ -409,7 +421,34 @@ export function QuizBuilderWorkspace() {
           sessionNext.document.name = name;
           sessionNext.document.interaction.quizGroupTitle = name;
         }
-        generated.push(sessionNext);
+        generated.push({
+          session: sessionNext,
+          source: {
+            via: "quiz_builder",
+            vocabListId: card.listId,
+            generation: vocabActivityGenerationRecipe({
+              vocabListId: card.listId,
+              format: card.format,
+              selectedEntryIds:
+                card.selectedEntryIds.length === card.entries.length &&
+                card.entries.every((entry) => card.selectedEntryIds.includes(entry.id))
+                  ? undefined
+                  : card.selectedEntryIds,
+              settings: {
+                mcMasterQuestion: card.masterPrompt || undefined,
+                mcOptionCount: card.mcOptionCount,
+                mcShuffleOptions: card.mcShuffleOptions,
+                mcStableItems: true,
+                letterPrompt: card.masterPrompt || undefined,
+                letterShuffleLetters: card.letterShuffleLetters,
+                letterCaseSensitive: card.letterCaseSensitive,
+                flashcardsShuffleCards: card.flashcardsShuffleCards,
+                flashcardsFrontFaces: card.flashcardsFrontFaces,
+                flashcardsBackFaces: card.flashcardsBackFaces,
+              },
+            }),
+          },
+        });
       }
 
       if (generated.length === 0) {
@@ -421,9 +460,9 @@ export function QuizBuilderWorkspace() {
         allSkipped.length > 0 ? ` · ${allSkipped.length} skipped` : "";
 
       if (mode === "combined") {
-        const combined = mergeQuizSessions(generated);
+        const combined = mergeQuizSessions(generated.map((draft) => draft.session));
         setBatchDrafts([]);
-        openEditor(combined, null);
+        openEditor(combined, null, { via: "quiz_builder", generationMode: "combined" });
         setNotice(
           `Generated 1 combined ${formatLabel(combined.format).toLowerCase()} quiz · ${sessionItemCount(combined)} item${sessionItemCount(combined) === 1 ? "" : "s"}.${skipNote}`,
         );
@@ -432,12 +471,12 @@ export function QuizBuilderWorkspace() {
 
       const [first, ...rest] = generated;
       setBatchDrafts(rest);
-      openEditor(first!, null);
-      const labels = generated.map((item) => formatLabel(item.format)).join(", ");
+      openEditor(first!.session, null, first!.source);
+      const labels = generated.map((item) => formatLabel(item.session.format)).join(", ");
       setNotice(
         rest.length > 0
-          ? `Generated ${generated.length} quizzes (${labels}). Editing ${formatLabel(first!.format)}; others wait on Home.${skipNote}`
-          : `Generated ${sessionItemCount(first!)} ${formatLabel(first!.format).toLowerCase()} item(s).${skipNote}`,
+          ? `Generated ${generated.length} quizzes (${labels}). Editing ${formatLabel(first!.session.format)}; others wait on Home.${skipNote}`
+          : `Generated ${sessionItemCount(first!.session)} ${formatLabel(first!.session.format).toLowerCase()} item(s).${skipNote}`,
       );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not generate quiz.");
@@ -446,7 +485,7 @@ export function QuizBuilderWorkspace() {
     }
   };
 
-  const openFromBank = async (activityId: string, format: StudioActivityFormat) => {
+  const openFromBank = async (activityId: string, format?: StudioActivityFormat) => {
     setBusy(true);
     try {
       const response = await fetch(
@@ -455,21 +494,24 @@ export function QuizBuilderWorkspace() {
       );
       const payload = (await response.json().catch(() => null)) as {
         ok?: boolean;
-        activity?: { id: string; format: string; authoring?: unknown };
+        id?: string;
+        format?: string;
+        authoring?: unknown;
+        source?: Record<string, unknown>;
         error?: string;
       } | null;
-      if (!response.ok || !payload?.ok || !payload.activity) {
+      if (!response.ok || !payload?.ok || !payload.id || !payload.format) {
         throw new Error(payload?.error || "Could not open quiz.");
       }
 
-      const bankFormat = format as VocabCompileFormat;
+      const bankFormat = (format ?? payload.format) as VocabCompileFormat;
       if (!QUIZ_FORMATS.some((row) => row.format === bankFormat)) {
         throw new Error("Unsupported quiz format.");
       }
-      const next = sessionFromAuthoring(bankFormat, payload.activity.authoring);
+      const next = sessionFromAuthoring(bankFormat, payload.authoring);
 
       setSkipped([]);
-      openEditor(next, payload.activity.id);
+      openEditor(next, payload.id, payload.source ?? { via: "quiz_builder" });
       setNotice(`Opened “${sessionName(next)}” from Activity Bank.`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not open quiz.");
@@ -477,6 +519,13 @@ export function QuizBuilderWorkspace() {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialActivityId) return;
+    void openFromBank(initialActivityId);
+    // Open the requested bank item once on entry; subsequent editing is local state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialActivityId]);
 
   const saveToBank = async () => {
     setBusy(true);
@@ -494,7 +543,10 @@ export function QuizBuilderWorkspace() {
           authoring,
           title,
           filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "quiz"}.lessonplayer.json`,
-          source: { via: "quiz_builder" },
+          source: {
+            ...activitySource,
+            editedVia: "quiz_builder",
+          },
         }),
       });
       const payload = (await response.json().catch(() => null)) as {
@@ -686,25 +738,25 @@ export function QuizBuilderWorkspace() {
                   <div className="flex flex-col gap-2">
                     {batchDrafts.map((draft) => (
                       <button
-                        key={`${draft.format}-${draft.document.id}`}
+                        key={`${draft.session.format}-${draft.session.document.id}`}
                         type="button"
                         className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-amber-300"
                         onClick={() => {
                           setBatchDrafts((current) =>
                             current.filter(
-                              (item) => item.document.id !== draft.document.id,
+                              (item) => item.session.document.id !== draft.session.document.id,
                             ),
                           );
-                          openEditor(draft, null);
+                          openEditor(draft.session, null, draft.source);
                         }}
                       >
                         <span>
                           <span className="font-semibold text-stone-900">
-                            {formatLabel(draft.format)}
+                            {formatLabel(draft.session.format)}
                           </span>
                           <span className="ml-2 text-xs text-stone-500">
-                            {sessionItemCount(draft)} item
-                            {sessionItemCount(draft) === 1 ? "" : "s"}
+                            {sessionItemCount(draft.session)} item
+                            {sessionItemCount(draft.session) === 1 ? "" : "s"}
                           </span>
                         </span>
                         <span className="text-xs font-semibold text-sky-800">Edit →</span>

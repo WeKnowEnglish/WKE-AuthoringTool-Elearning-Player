@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createBakeryVocabularyListDocument } from "@/lib/activity-builder/vocabulary-list/document";
-import { buildQuizPacksFromVocabList } from "@/lib/activity-library/compile-quizzes-from-vocab-studio";
+import {
+  buildQuizPacksFromVocabList,
+  vocabActivityGenerationRecipe,
+} from "@/lib/activity-library/compile-quizzes-from-vocab-studio";
 import { parseGamesMcQuizLessonPlayerPack } from "@/lib/games-mc-quiz/parse-games-pack";
 import { parseGamesLetterMixupLessonPlayerPack } from "@/lib/games-letter-mixup/parse-games-pack";
 import { parseGamesFlashcardsLessonPlayerPack } from "@/lib/games-flashcards/parse-games-pack";
@@ -32,5 +35,33 @@ describe("buildQuizPacksFromVocabList", () => {
     expect(
       parseGamesFlashcardsLessonPlayerPack(cards!.pack).screens.length,
     ).toBeGreaterThan(0);
+  });
+
+  it("records the source words and settings needed for a safe refresh", () => {
+    const recipe = vocabActivityGenerationRecipe({
+      vocabListId: "list-1",
+      format: "multiple_choice",
+      selectedEntryIds: ["word-1", "word-2"],
+      settings: {
+        mcMasterQuestion: "Which animal is this?",
+        mcOptionCount: 3,
+        mcShuffleOptions: false,
+        mcStableItems: true,
+      },
+    });
+
+    expect(recipe).toEqual({
+      kind: "vocabulary_list",
+      version: 1,
+      vocabListId: "list-1",
+      format: "multiple_choice",
+      selectedEntryIds: ["word-1", "word-2"],
+      settings: {
+        mcMasterQuestion: "Which animal is this?",
+        mcOptionCount: 3,
+        mcShuffleOptions: false,
+        mcStableItems: true,
+      },
+    });
   });
 });

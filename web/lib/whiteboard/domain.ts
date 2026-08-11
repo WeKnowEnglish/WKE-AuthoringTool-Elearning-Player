@@ -90,11 +90,26 @@ export type StampElement = {
   createdAt: number;
 };
 
+export type ImageElement = {
+  id: string;
+  type: "image";
+  url: string;
+  mediaAssetId?: string | null;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  alt: string;
+  createdBy: string;
+  createdAt: number;
+};
+
 export type WhiteboardElement =
   | StrokeElement
   | TextElement
   | ShapeElement
-  | StampElement;
+  | StampElement
+  | ImageElement;
 
 export type BoardBackground = {
   assetId: string | null;
@@ -163,6 +178,7 @@ export type WhiteboardToolId =
   | "shape-ellipse"
   | "shape-line"
   | "stamp"
+  | "select"
   | "annotate";
 
 export type WhiteboardTemplateConfig = {

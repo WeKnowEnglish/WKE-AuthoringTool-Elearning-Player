@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DailyCall, DailyThemeConfig } from "@daily-co/daily-js";
 import { dailyThemeColorsKey } from "@/lib/daily/theme-from-teacher";
+import {
+  diagnosticFetch,
+  startAppDiagnosticSpan,
+} from "@/lib/app-diagnostics/client";
 
 export type DailyCallPhase =
   | "idle"
@@ -47,10 +51,21 @@ async function postAttendance(
   }
 }
 
-async function fetchMeetingToken(sessionId: string): Promise<TokenResponse & { ok: boolean; status: number }> {
-  const tokenRes = await fetch(`/api/virtual-classroom/${sessionId}/daily/token`, {
-    method: "POST",
-  });
+async function fetchMeetingToken(
+  sessionId: string,
+  surface: "teacher" | "student",
+  name = "daily_token",
+): Promise<TokenResponse & { ok: boolean; status: number }> {
+  const tokenRes = await diagnosticFetch(
+    `/api/virtual-classroom/${sessionId}/daily/token`,
+    { method: "POST" },
+    {
+      surface,
+      phase: "virtual-classroom-video",
+      name,
+      detail: { sessionId },
+    },
+  );
   const tokenPayload = (await tokenRes.json()) as TokenResponse;
   return { ...tokenPayload, ok: tokenRes.ok, status: tokenRes.status };
 }
@@ -63,6 +78,7 @@ export function useDailyCall(input: {
   theme?: DailyThemeConfig | null;
 }) {
   const { sessionId, isHost, sessionEnded, theme = null } = input;
+  const diagnosticSurface = isHost ? "teacher" : "student";
   const frameRef = useRef<DailyCall | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const joinedRef = useRef(false);
@@ -71,7 +87,10 @@ export function useDailyCall(input: {
   const refreshingRef = useRef(false);
   const connectInFlight = useRef(false);
   const themeRef = useRef<DailyThemeConfig | null>(theme);
-  const [phase, setPhase] = useState<DailyCallPhase>("probing");
+  // The token endpoint already verifies access and creates a missing room for
+  // teachers. Start ready so entry does not serialize a room probe, a room
+  // ensure request, and then the token request before Daily can initialize.
+  const [phase, setPhase] = useState<DailyCallPhase>("ready");
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -120,7 +139,16 @@ export function useDailyCall(input: {
     setError(null);
     setErrorCode(null);
     try {
-      const res = await fetch(`/api/virtual-classroom/${sessionId}/daily/room`);
+      const res = await diagnosticFetch(
+        `/api/virtual-classroom/${sessionId}/daily/room`,
+        undefined,
+        {
+          surface: diagnosticSurface,
+          phase: "virtual-classroom-video",
+          name: "daily_room_probe",
+          detail: { sessionId },
+        },
+      );
       const payload = (await res.json()) as RoomResponse;
       if (res.status === 503 && payload.code === "daily_disabled") {
         setPhase("disabled");
@@ -149,11 +177,7 @@ export function useDailyCall(input: {
     } catch {
       setPhase("ready");
     }
-  }, [sessionId]);
-
-  useEffect(() => {
-    void probe();
-  }, [probe]);
+  }, [diagnosticSurface, sessionId]);
 
   useEffect(() => {
     if (!sessionEnded) return;
@@ -193,7 +217,11 @@ export function useDailyCall(input: {
           if (!call || !roomUrl || !joinedRef.current) return;
           refreshingRef.current = true;
           try {
-            const tokenPayload = await fetchMeetingToken(sessionId);
+            const tokenPayload = await fetchMeetingToken(
+              sessionId,
+              diagnosticSurface,
+              "daily_token_refresh",
+            );
             if (!tokenPayload.ok || !tokenPayload.token) {
               setError(
                 tokenPayload.error ??
@@ -214,7 +242,7 @@ export function useDailyCall(input: {
             }
             scheduleTokenRefresh(tokenPayload.exp);
           } catch {
-            setError("Video token refresh failed. Try Leave video, then Connect.");
+            setError("Video token refresh failed. Leave the classroom and rejoin if video drops.");
             setErrorCode("token_refresh_failed");
           } finally {
             refreshingRef.current = false;
@@ -222,7 +250,7 @@ export function useDailyCall(input: {
         })();
       }, delay);
     },
-    [clearRefreshTimer, sessionId],
+    [clearRefreshTimer, diagnosticSurface, sessionId],
   );
 
   const tryRequestFullscreen = useCallback(async () => {
@@ -304,20 +332,26 @@ export function useDailyCall(input: {
     setExpanded(true);
 
     try {
-      if (isHost) {
-        const ensure = await fetch(`/api/virtual-classroom/${sessionId}/daily/room`, {
-          method: "POST",
-        });
-        if (ensure.status === 503) {
-          const payload = (await ensure.json()) as RoomResponse;
-          setPhase("disabled");
-          setError(payload.error ?? "Daily video is not enabled.");
-          setErrorCode("daily_disabled");
-          return;
-        }
-      }
-
-      const tokenPayload = await fetchMeetingToken(sessionId);
+      const existingCall = frameRef.current;
+      const sdkPromise = existingCall
+        ? null
+        : (async () => {
+            const finishSdkLoad = startAppDiagnosticSpan(
+              diagnosticSurface,
+              "virtual-classroom-video",
+              "daily_sdk_load",
+              { sessionId },
+            );
+            try {
+              const module = await import("@daily-co/daily-js");
+              finishSdkLoad();
+              return module.default;
+            } catch (sdkError) {
+              finishSdkLoad(undefined, sdkError);
+              throw sdkError;
+            }
+          })();
+      const tokenPayload = await fetchMeetingToken(sessionId, diagnosticSurface);
       if (!tokenPayload.ok || !tokenPayload.token || !tokenPayload.roomUrl) {
         if (tokenPayload.code === "daily_disabled") {
           setPhase("disabled");
@@ -339,7 +373,7 @@ export function useDailyCall(input: {
         return;
       }
 
-      let call = frameRef.current;
+      let call = existingCall;
       if (call) {
         try {
           await call.leave();
@@ -348,7 +382,7 @@ export function useDailyCall(input: {
         }
       } else {
         await destroyCall(false);
-        const Daily = (await import("@daily-co/daily-js")).default;
+        const Daily = await sdkPromise!;
         const activeTheme = themeRef.current;
         call = Daily.createFrame(parent, {
           iframeStyle: {
@@ -357,7 +391,7 @@ export function useDailyCall(input: {
             border: "0",
             borderRadius: "0",
           },
-          showLeaveButton: true,
+          showLeaveButton: false,
           showFullscreenButton: true,
           ...(activeTheme ? { theme: activeTheme } : {}),
         });
@@ -367,10 +401,22 @@ export function useDailyCall(input: {
 
       roomUrlRef.current = tokenPayload.roomUrl;
       setPhase("prejoin");
-      await call.join({
-        url: tokenPayload.roomUrl,
-        token: tokenPayload.token,
-      });
+      const finishJoin = startAppDiagnosticSpan(
+        diagnosticSurface,
+        "virtual-classroom-video",
+        "daily_join",
+        { sessionId },
+      );
+      try {
+        await call.join({
+          url: tokenPayload.roomUrl,
+          token: tokenPayload.token,
+        });
+        finishJoin();
+      } catch (joinError) {
+        finishJoin(undefined, joinError);
+        throw joinError;
+      }
       const activeTheme = themeRef.current;
       if (activeTheme) {
         try {
@@ -391,6 +437,7 @@ export function useDailyCall(input: {
   }, [
     phase,
     isHost,
+    diagnosticSurface,
     sessionId,
     destroyCall,
     attachCallHandlers,

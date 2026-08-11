@@ -53,3 +53,60 @@ Apply migration `088_platform_usage_events.sql` before expecting central events 
 - Browser offline/online transitions and privacy-safe runtime error codes
 
 The next instrumentation pass should add Secondary activity lifecycle events, homework starts/completions, explicit activity-load success/failure boundaries, and global client error capture.
+
+## Application-wide interaction coverage plan
+
+The next version should measure a complete interaction lifecycle, not every raw click. A useful
+interaction begins with a learner or teacher intent and ends when the interface is usable again:
+
+`intent -> immediate feedback -> request/compile/upload -> visible result`
+
+This lets us distinguish three different problems: a control that gives no feedback, a slow server
+operation, and a fast operation followed by expensive rendering.
+
+### Phase 1 — shared interaction helper
+
+- Add one `startDiagnosticInteraction()` helper with an interaction id, surface, action name, safe
+  entity ids, and timestamps for `intent`, `feedback`, `response`, and `settled`.
+- Instrument shared navigation, form-submit, modal, upload, media-playback, and activity-player
+  boundaries. Do not install a global raw-click recorder; it produces noise and can capture sensitive
+  form context.
+- Read `Server-Timing` on instrumented requests so client wait and server work can be compared.
+- Capture safe browser capability fields for media failures: selected MIME family, recorder MIME
+  family, playback error code, device category, and browser engine family. Never send the recording,
+  URL query, vocabulary text, student answer, or file name.
+
+### Phase 2 — priority educational journeys
+
+Instrument the journeys that most directly affect teaching and learning:
+
+1. Teacher creates a class, sees it in the class list, and copies the join code.
+2. Teacher creates/edits an activity, changes its cover, publishes, and assigns it.
+3. Student opens assigned homework, starts each activity, submits it, and sees feedback.
+4. Teacher opens the submission/report and records feedback.
+5. Parent opens a progress view.
+6. Teacher/student joins a virtual classroom and uses each classroom tool.
+
+Each journey should have a success event, a privacy-safe failure code, abandonment detection, and
+P50/P75/P95 duration dashboards. Duplicate submissions should emit a `duplicate_prevented` result so
+we can verify idempotency instead of silently counting it as success.
+
+### Phase 3 — automatic reliability signals
+
+- Capture uncaught browser errors and unhandled promise rejections as stable error fingerprints.
+- Capture media element `error`, stalled playback, upload duration, file byte band, and recording
+  capability without storing media content or signed URLs.
+- Capture route transitions, offline/online changes, long tasks, and memory pressure where supported.
+- Add release SHA, feature-flag snapshot id, and anonymous session correlation to every event.
+- Alert only on actionable thresholds, such as a journey failure-rate increase or P95 regression,
+  rather than individual errors.
+
+### Data quality and rollout guardrails
+
+- Keep learning evidence in its existing authoritative tables; diagnostics only explain product
+  behavior.
+- Sample high-volume successful events, but retain all safe failures and unusually slow spans.
+- Publish an event-name registry with owners and required fields to prevent inconsistent naming.
+- Add automated schema/privacy tests for every new metadata field.
+- Roll out one journey at a time and validate event completeness in the administrator timeline before
+  expanding coverage.

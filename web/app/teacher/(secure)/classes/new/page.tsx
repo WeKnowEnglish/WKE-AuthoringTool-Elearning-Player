@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createTeacherClass } from "@/lib/actions/teacher-classes";
 import { TEACHER_CLASS_KIND_LABELS } from "@/lib/class-schedule/class-kind";
+import { CreateClassSubmitButton } from "@/components/teacher/classes/CreateClassSubmitButton";
 
 type Props = {
   searchParams?: Promise<{ error?: string }>;
@@ -35,6 +36,7 @@ export default async function NewTeacherClassPage({ searchParams }: Props) {
       </div>
       {error ? <p className="text-sm font-semibold text-red-700">{error}</p> : null}
       <form action={createTeacherClass} className="max-w-md space-y-4 rounded border bg-white p-6">
+        <input type="hidden" name="creation_key" value={crypto.randomUUID()} />
         <div>
           <label className="block text-sm font-medium" htmlFor="title">
             Class title
@@ -79,9 +81,7 @@ export default async function NewTeacherClassPage({ searchParams }: Props) {
             </span>
           </label>
         </fieldset>
-        <button type="submit" className="rounded bg-neutral-900 px-4 py-2 font-semibold text-white">
-          Create class
-        </button>
+        <CreateClassSubmitButton />
       </form>
     </div>
   );

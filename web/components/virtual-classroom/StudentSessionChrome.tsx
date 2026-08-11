@@ -4,6 +4,7 @@ import { useStorage } from "@liveblocks/react/suspense";
 import { useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import type { ClassroomStatusKind } from "@/lib/virtual-classroom/tools/status";
+import type { ClassroomStatusState } from "@/lib/virtual-classroom/tools/status";
 import type { RandomiserState } from "@/lib/virtual-classroom/tools/dice";
 import { createEmptyRandomiser } from "@/lib/virtual-classroom/tools/dice";
 import {
@@ -17,6 +18,9 @@ type Props = {
   members: { id: string; name: string }[];
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  realtimeRandomiser?: RandomiserState | null;
+  realtimePoints?: SessionPointsState | null;
+  realtimeStatus?: ClassroomStatusState | null;
 };
 
 const QUICK: { id: ClassroomStatusKind; label: string }[] = [
@@ -26,28 +30,52 @@ const QUICK: { id: ClassroomStatusKind; label: string }[] = [
   { id: "finished", label: "Done" },
 ];
 
-export function StudentSessionChrome({ userId, members, busy, onCommand }: Props) {
-  const [mine, setMine] = useState<ClassroomStatusKind>("none");
-  const randomiser = useStorage((root) => {
+export function StudentSessionChrome(props: Props) {
+  const liveblocksRandomiser = useStorage((root) => {
     const runtime = (root as { runtime?: unknown }).runtime;
-    return (
-      readLiveObjectField<RandomiserState>(runtime, "randomiser") ?? createEmptyRandomiser()
-    );
+    return readLiveObjectField<RandomiserState>(runtime, "randomiser") ?? createEmptyRandomiser();
   });
-  const points = useStorage((root) => {
+  const liveblocksPoints = useStorage((root) => {
     const runtime = (root as { runtime?: unknown }).runtime;
-    return (
-      readLiveObjectField<SessionPointsState>(runtime, "points") ?? createEmptySessionPoints()
-    );
+    return readLiveObjectField<SessionPointsState>(runtime, "points") ?? createEmptySessionPoints();
   });
-  const myStatus = useStorage((root) => {
+  const liveblocksMyStatus = useStorage((root) => {
     const runtime = (root as { runtime?: unknown }).runtime;
     const status = readLiveObjectField<{ byStudentId?: Record<string, ClassroomStatusKind> }>(
       runtime,
       "classroomStatus",
     );
-    return status?.byStudentId?.[userId] ?? "none";
+    return status?.byStudentId?.[props.userId] ?? "none";
   });
+  const status = props.realtimeStatus ?? {
+    byStudentId: { [props.userId]: liveblocksMyStatus },
+    interactionFrozen: false,
+  };
+  return (
+    <StudentSessionChromeContent
+      {...props}
+      randomiser={props.realtimeRandomiser ?? liveblocksRandomiser}
+      points={props.realtimePoints ?? liveblocksPoints}
+      status={status}
+    />
+  );
+}
+
+export function StudentSessionChromeContent({
+  userId,
+  members,
+  busy,
+  onCommand,
+  randomiser,
+  points,
+  status,
+}: Omit<Props, "realtimeRandomiser" | "realtimePoints" | "realtimeStatus"> & {
+  randomiser: RandomiserState;
+  points: SessionPointsState;
+  status: ClassroomStatusState;
+}) {
+  const [mine, setMine] = useState<ClassroomStatusKind>("none");
+  const myStatus = status.byStudentId[userId] ?? "none";
 
   const current = myStatus !== "none" ? myStatus : mine;
   const board = points.showLeaderboard ? leaderboard(points).slice(0, 3) : [];

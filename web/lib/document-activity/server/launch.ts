@@ -81,6 +81,17 @@ export async function launchDocumentRound(input: {
 }): Promise<LaunchDocumentResult> {
   const existingActivity = await getVcActiveActivity(input.session.liveblocksRoomId);
   if (existingActivity?.kind === "document" && existingActivity.roundId && existingActivity.roomId) {
+    await setVcActiveActivity({
+      roomId: input.session.liveblocksRoomId,
+      sessionId: input.session.id,
+      classId: input.session.classId,
+      actorUserId: input.teacher.userId,
+      kind: "document",
+      joinCode: existingActivity.joinCode,
+      label: existingActivity.label,
+      roundId: existingActivity.roundId,
+      activityRoomId: existingActivity.roomId,
+    }).catch(() => undefined);
     return {
       roundId: existingActivity.roundId,
       roomId: existingActivity.roomId,
@@ -97,6 +108,9 @@ export async function launchDocumentRound(input: {
   if (fromDb) {
     await setVcActiveActivity({
       roomId: input.session.liveblocksRoomId,
+      sessionId: input.session.id,
+      classId: input.session.classId,
+      actorUserId: input.teacher.userId,
       kind: "document",
       joinCode: fromDb.id,
       label: "Document activity",
@@ -199,6 +213,9 @@ export async function launchDocumentRound(input: {
 
   await setVcActiveActivity({
     roomId: input.session.liveblocksRoomId,
+    sessionId: input.session.id,
+    classId: input.session.classId,
+    actorUserId: input.teacher.userId,
     kind: "document",
     joinCode: roundId,
     label: prompt.title,

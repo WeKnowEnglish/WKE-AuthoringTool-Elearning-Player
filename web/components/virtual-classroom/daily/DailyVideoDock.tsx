@@ -71,7 +71,6 @@ export function DailyVideoDock({
     setExpanded,
     containerRef,
     connect,
-    leave,
     requestFullscreen,
     retryProbe,
   } = useDailyCall({
@@ -394,19 +393,6 @@ export function DailyVideoDock({
           }}
         >
           Leave classroom
-        </button>
-      ) : null}
-      {joined ? (
-        <button
-          type="button"
-          onClick={() => void leave()}
-          className="rounded-md px-2.5 py-1 text-xs font-bold"
-          style={{
-            backgroundColor: "var(--teacher-danger)",
-            color: "#fff",
-          }}
-        >
-          Leave video
         </button>
       ) : null}
     </div>

@@ -7,16 +7,17 @@ import type { TeacherSpaceItemSummary } from "@/lib/teacher-space/types";
 
 type Props = {
   item: TeacherSpaceItemSummary;
+  compact?: boolean;
 };
 
-export function ClassroomActivityTile({ item }: Props) {
+export function ClassroomActivityTile({ item, compact = false }: Props) {
   return (
     <Link
       href={item.playPath}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-black/5 bg-[var(--classroom-panel)] shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      className={`group overflow-hidden rounded-2xl border border-black/5 bg-[var(--classroom-panel)] shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${compact ? "flex min-h-24 flex-row" : "flex flex-col"}`}
     >
       <div
-        className="relative aspect-[4/3] overflow-hidden"
+        className={`relative overflow-hidden ${compact ? "w-28 shrink-0 sm:w-36" : "aspect-[4/3]"}`}
         style={{ background: "var(--classroom-tile)" }}
       >
         {item.cover_image_url ? (

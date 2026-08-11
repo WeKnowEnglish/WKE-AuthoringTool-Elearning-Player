@@ -113,7 +113,7 @@ export async function ensureClassSessionForClock(input: {
 
   if (mode === "auto") {
     if (clock === "past" && active) {
-      await finalizeVirtualClassroomSessionClose(active);
+      await finalizeVirtualClassroomSessionClose(active, active.createdBy);
       active = null;
     }
     if (clock === "idle" || clock === "past") {

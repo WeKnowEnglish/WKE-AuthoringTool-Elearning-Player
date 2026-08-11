@@ -46,6 +46,7 @@ export default async function TeacherClassesPage({ searchParams }: Props) {
       spaceItemByActivityId={spaceItemByActivityId}
       origin={appOrigin()}
       liveRequiresPlus={liveRequiresPlus}
+      initialNotice={sp.notice === "class_created" ? "Class created. Choose it below to continue setup." : null}
       initialTab={initialTab}
       initialShowBank={initialShowBank}
       initialActivityId={initialActivityId}

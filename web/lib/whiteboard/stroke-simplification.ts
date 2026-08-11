@@ -80,6 +80,14 @@ export function elementIntersectsPoint(el: WhiteboardElement, point: Point): boo
   if (el.type === "stamp") {
     return distance(point, { x: el.x, y: el.y }) <= el.size / 2 + 8;
   }
+  if (el.type === "image") {
+    return (
+      point.x >= el.x &&
+      point.x <= el.x + el.width &&
+      point.y >= el.y &&
+      point.y <= el.y + el.height
+    );
+  }
   return shapeIntersectsPoint(el, point);
 }
 

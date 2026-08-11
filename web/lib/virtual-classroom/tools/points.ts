@@ -22,6 +22,51 @@ export type SessionPointsState = {
   showLeaderboard: boolean;
 };
 
+const AWARD_LABELS: AwardLabel[] = [
+  "point",
+  "participation",
+  "explanation",
+  "teamwork",
+  "improvement",
+  "creativity",
+  "target_language",
+];
+
+export function normalizeSessionPointsState(value: unknown): SessionPointsState | null {
+  if (!value || typeof value !== "object") return null;
+  const state = value as Partial<SessionPointsState>;
+  if (
+    !state.totalsByStudentId ||
+    typeof state.totalsByStudentId !== "object" ||
+    Array.isArray(state.totalsByStudentId) ||
+    !Object.values(state.totalsByStudentId).every(
+      (points) => typeof points === "number" && Number.isFinite(points) && points >= 0,
+    ) ||
+    !Array.isArray(state.history) ||
+    typeof state.showLeaderboard !== "boolean"
+  ) {
+    return null;
+  }
+  const history = state.history.filter((event): event is SessionAwardEvent =>
+    Boolean(
+      event &&
+        typeof event === "object" &&
+        typeof event.at === "number" &&
+        Number.isFinite(event.at) &&
+        typeof event.studentId === "string" &&
+        typeof event.delta === "number" &&
+        Number.isFinite(event.delta) &&
+        AWARD_LABELS.includes(event.label),
+    ),
+  );
+  if (history.length !== state.history.length) return null;
+  return {
+    totalsByStudentId: state.totalsByStudentId,
+    history,
+    showLeaderboard: state.showLeaderboard,
+  };
+}
+
 export function createEmptySessionPoints(): SessionPointsState {
   return {
     totalsByStudentId: {},

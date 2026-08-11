@@ -23,7 +23,7 @@ async function findAttendanceRow(input: {
   const { data: byKey } = await supabase
     .from("class_session_attendance")
     .select(
-      "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id, role, user_id, participant_key, lobby_first_joined_at, lobby_last_left_at, lobby_join_count",
+      "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id, role, user_id, participant_key, lobby_first_joined_at, lobby_last_left_at, lobby_last_seen_at, lobby_join_count",
     )
     .eq("session_id", input.sessionId)
     .eq("participant_key", input.participantKey)
@@ -35,7 +35,7 @@ async function findAttendanceRow(input: {
     const { data: byDaily } = await supabase
       .from("class_session_attendance")
       .select(
-        "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id, role, user_id, participant_key, lobby_first_joined_at, lobby_last_left_at, lobby_join_count",
+        "id, join_count, first_joined_at, last_left_at, total_seconds, source, daily_participant_id, role, user_id, participant_key, lobby_first_joined_at, lobby_last_left_at, lobby_last_seen_at, lobby_join_count",
       )
       .eq("session_id", input.sessionId)
       .eq("daily_participant_id", input.dailyParticipantId)
@@ -327,6 +327,7 @@ export async function recordLobbyAttendanceJoin(input: {
       .update({
         lobby_first_joined_at: existing.lobby_first_joined_at ?? now,
         lobby_last_left_at: null,
+        lobby_last_seen_at: now,
         lobby_join_count: rejoin
           ? (existing.lobby_join_count ?? 0) + 1
           : Math.max(1, existing.lobby_join_count ?? 1),
@@ -341,6 +342,7 @@ export async function recordLobbyAttendanceJoin(input: {
       participant_key: participantKey,
       role: input.role,
       lobby_first_joined_at: now,
+      lobby_last_seen_at: now,
       lobby_join_count: 1,
       join_count: 0,
       total_seconds: 0,
@@ -387,12 +389,33 @@ export async function recordLobbyAttendanceLeave(input: {
   });
 }
 
+/** Keeps the durable app-presence registry fresh without changing join counts. */
+export async function recordLobbyAttendanceHeartbeat(input: {
+  sessionId: string;
+  participantKey: string;
+}): Promise<void> {
+  const supabase = createServiceRoleSupabase();
+  if (!supabase) return;
+
+  const participantKey = input.participantKey.trim().slice(0, 80);
+  if (!participantKey) return;
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("class_session_attendance")
+    .update({ lobby_last_seen_at: now, updated_at: now })
+    .eq("session_id", input.sessionId)
+    .eq("participant_key", participantKey)
+    .is("lobby_last_left_at", null);
+}
+
 export type SessionAttendanceRecord = {
   participantKey: string;
   userId: string | null;
   role: DailyCallRole;
   lobbyFirstJoinedAt: string | null;
   lobbyLastLeftAt: string | null;
+  lobbyLastSeenAt: string | null;
   lobbyJoinCount: number;
   videoFirstJoinedAt: string | null;
   videoLastLeftAt: string | null;
@@ -410,7 +433,7 @@ export async function listSessionAttendanceRecords(
   const { data, error } = await supabase
     .from("class_session_attendance")
     .select(
-      "participant_key, user_id, role, lobby_first_joined_at, lobby_last_left_at, lobby_join_count, first_joined_at, last_left_at, total_seconds, join_count, source",
+      "participant_key, user_id, role, lobby_first_joined_at, lobby_last_left_at, lobby_last_seen_at, lobby_join_count, first_joined_at, last_left_at, total_seconds, join_count, source",
     )
     .eq("session_id", sessionId)
     .order("lobby_first_joined_at", { ascending: true, nullsFirst: false });
@@ -423,6 +446,7 @@ export async function listSessionAttendanceRecords(
     role: row.role as DailyCallRole,
     lobbyFirstJoinedAt: (row.lobby_first_joined_at as string | null) ?? null,
     lobbyLastLeftAt: (row.lobby_last_left_at as string | null) ?? null,
+    lobbyLastSeenAt: (row.lobby_last_seen_at as string | null) ?? null,
     lobbyJoinCount: (row.lobby_join_count as number) ?? 0,
     videoFirstJoinedAt:
       (row.join_count as number) > 0

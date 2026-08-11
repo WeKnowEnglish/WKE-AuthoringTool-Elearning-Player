@@ -36,6 +36,7 @@ export type AppDiagnosticEvent = {
   route?: string;
   detail?: AppDiagnosticDetail;
   classId?: string;
+  classroomSessionId?: string;
   activityId?: string;
   homeworkId?: string;
   status?: string;
@@ -49,6 +50,7 @@ export type AppDiagnosticRecordOptions = {
   durationMs?: number;
   route?: string;
   classId?: string;
+  classroomSessionId?: string;
   activityId?: string;
   homeworkId?: string;
   status?: string;

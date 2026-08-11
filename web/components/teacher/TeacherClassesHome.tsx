@@ -61,6 +61,7 @@ type Props = {
   spaceItemByActivityId: Record<string, string>;
   origin: string;
   liveRequiresPlus?: boolean;
+  initialNotice?: string | null;
   initialTab?: MainTab;
   initialShowBank?: boolean;
   initialActivityId?: string | null;
@@ -74,6 +75,7 @@ export function TeacherClassesHome({
   spaceItemByActivityId: initialSpaceMap,
   origin,
   liveRequiresPlus = false,
+  initialNotice = null,
   initialTab = "classes",
   initialShowBank = false,
   initialActivityId = null,
@@ -89,13 +91,17 @@ export function TeacherClassesHome({
   const [formatFilter, setFormatFilter] = useState<StudioActivityFormat | "all">(
     "all",
   );
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(initialNotice);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [showArchivedClasses, setShowArchivedClasses] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  const activeClasses = useMemo(() => classes.filter((row) => !row.archived_at), [classes]);
+  const archivedClasses = useMemo(() => classes.filter((row) => row.archived_at), [classes]);
+  const visibleClasses = showArchivedClasses ? classes : activeClasses;
   const classOptions = useMemo(
-    () => classes.map((row) => ({ id: row.id, title: row.title })),
-    [classes],
+    () => activeClasses.map((row) => ({ id: row.id, title: row.title })),
+    [activeClasses],
   );
 
   useEffect(() => {
@@ -509,13 +515,29 @@ export function TeacherClassesHome({
                   </Link>
                 </div>
 
-                {classes.length === 0 ? (
+                {archivedClasses.length > 0 ? (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowArchivedClasses((current) => !current)}
+                      className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+                    >
+                      {showArchivedClasses
+                        ? "Hide archived"
+                        : `Show archived (${archivedClasses.length})`}
+                    </button>
+                  </div>
+                ) : null}
+
+                {visibleClasses.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-stone-300 bg-white/70 px-4 py-8 text-sm text-stone-600">
-                    No classes yet. Create one to get a join code for students.
+                    {classes.length > 0
+                      ? "No active classes. Use Show archived to view your archived class history."
+                      : "No classes yet. Create one to get a join code for students."}
                   </p>
                 ) : (
                   <ul className="space-y-2">
-                    {classes.map((teacherClass) => (
+                    {visibleClasses.map((teacherClass) => (
                       <li key={teacherClass.id}>
                         <Link
                           href={`/teacher/classes/${teacherClass.id}`}

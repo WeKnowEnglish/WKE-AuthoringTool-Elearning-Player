@@ -164,7 +164,14 @@ async function mergeDuplicateMetadata(supabase, existing, asset) {
   const tags = mergeUnique(existing.meta_tags ?? [], asset.metadata.meta_tags);
   const extraNote = existing.original_filename !== asset.filename ? ` Also provided as source file: ${asset.filename}.` : "";
   const notes = `${existing.meta_notes ?? ""}${extraNote}`.trim().slice(0, 500) || null;
+  const importerOwnedMetadata = (existing.meta_notes ?? "").includes(
+    "AI-generated illustration imported from the WKE Image Library.",
+  );
+  const itemName = importerOwnedMetadata
+    ? asset.metadata.meta_item_name
+    : existing.meta_item_name;
   const changed =
+    itemName !== existing.meta_item_name ||
     JSON.stringify(alternativeNames) !== JSON.stringify([...(existing.meta_alternative_names ?? [])].sort()) ||
     JSON.stringify(categories) !== JSON.stringify([...(existing.meta_categories ?? [])].sort()) ||
     JSON.stringify(tags) !== JSON.stringify([...(existing.meta_tags ?? [])].sort()) ||
@@ -174,6 +181,7 @@ async function mergeDuplicateMetadata(supabase, existing, asset) {
   const { error } = await supabase
     .from("media_assets")
     .update({
+      meta_item_name: itemName,
       meta_alternative_names: alternativeNames,
       meta_categories: categories,
       meta_tags: tags,

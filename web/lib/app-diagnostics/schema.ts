@@ -26,6 +26,7 @@ export const appDiagnosticEventSchema = z.object({
   route: z.string().max(500).optional(),
   detail: z.record(z.string().max(80), detailValueSchema).optional(),
   classId: z.string().uuid().optional(),
+  classroomSessionId: z.string().min(3).max(160).optional(),
   activityId: z.string().max(160).optional(),
   homeworkId: z.string().uuid().optional(),
   status: z.string().max(40).optional(),

@@ -1,0 +1,69 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import {
+  VC_HOST_COOKIE,
+  VC_MEMBER_COOKIE,
+} from "@/lib/virtual-classroom/session-cookie";
+import { resolveVirtualClassroomRuntimeReader } from "@/lib/virtual-classroom/server/runtime-access";
+import { getClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
+import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
+import { classroomRealtimeNativeShellAuthorityReady } from "@/lib/classroom-realtime/shadow-mode";
+import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
+
+/**
+ * Recovery-only endpoint for the versioned Supabase runtime snapshot.
+ * It is not yet called by the classroom UI; Liveblocks remains the live
+ * transport until the channel migration is complete.
+ */
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ sessionId: string }> },
+) {
+  return withCollabServerTiming("vc.runtime", async (timer) => {
+  const { sessionId } = await context.params;
+  timer.setContext({ activity: "classroom", sessionId });
+  const session = await getVirtualClassroomSessionById(sessionId);
+  if (!session) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+  timer.setContext({ classId: session.classId });
+
+  const cookieStore = await cookies();
+  const reader = resolveVirtualClassroomRuntimeReader({
+    session,
+    hostCookie: cookieStore.get(VC_HOST_COOKIE)?.value,
+    memberCookie: cookieStore.get(VC_MEMBER_COOKIE)?.value,
+  });
+  if (!reader) return NextResponse.json({ error: "Not authorized for this classroom." }, { status: 403 });
+
+  const nativeAuthorityReady = classroomRealtimeNativeShellAuthorityReady();
+  const readinessOnly = new URL(request.url).searchParams.get("readiness") === "1";
+
+  if (readinessOnly && !nativeAuthorityReady) {
+    return NextResponse.json(
+      { nativeShellReady: false },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
+  const snapshot = await getClassroomRuntimeSnapshot(session.id);
+  if (readinessOnly) {
+    return NextResponse.json(
+      {
+        nativeShellReady: nativeAuthorityReady && Boolean(snapshot),
+        ...(nativeAuthorityReady && snapshot ? { snapshot } : {}),
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+  if (!snapshot) {
+    return NextResponse.json(
+      { error: "Classroom runtime snapshot is not available yet." },
+      { status: 503 },
+    );
+  }
+
+  return NextResponse.json(
+    { snapshot, role: reader.role, nativeShellReady: nativeAuthorityReady },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
+  });
+}

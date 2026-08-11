@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 import { searchTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/lib/actions/media";
+import { createAudioMediaRecorder, recordedAudioFile } from "@/lib/media/recorded-audio";
 
 type Props = {
   label: string;
@@ -42,6 +43,7 @@ export function AudioUrlControls({
   const [libErr, setLibErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [preparingMic, setPreparingMic] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordCountdown, setRecordCountdown] = useState<number | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -49,6 +51,7 @@ export function AudioUrlControls({
   const recordStreamRef = useRef<MediaStream | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
   const countdownStartTimeoutRef = useRef<number | null>(null);
+  const recordingFlowActiveRef = useRef(false);
 
   useEffect(() => {
     if (!libraryOpen) return;
@@ -105,7 +108,8 @@ export function AudioUrlControls({
 
   useEffect(() => {
     return () => {
-      recorderRef.current?.stop();
+      recordingFlowActiveRef.current = false;
+      if (recorderRef.current?.state !== "inactive") recorderRef.current?.stop();
       if (recordStreamRef.current) {
         for (const t of recordStreamRef.current.getTracks()) t.stop();
         recordStreamRef.current = null;
@@ -166,12 +170,50 @@ export function AudioUrlControls({
     }
   }
 
-  async function startRecordingNow() {
-    if (recording || disabled || uploading) return;
-    setUploadErr(null);
+  function releaseRecordingStream() {
+    if (!recordStreamRef.current) return;
+    for (const track of recordStreamRef.current.getTracks()) track.stop();
+    recordStreamRef.current = null;
+  }
+
+  function startPreparedRecording() {
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.state !== "inactive") {
+      recordingFlowActiveRef.current = false;
+      releaseRecordingStream();
+      setUploadErr("The microphone could not start. Please try again.");
+      return;
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      recorder.start();
+      setRecording(true);
+    } catch (err) {
+      recordingFlowActiveRef.current = false;
+      recorderRef.current = null;
+      releaseRecordingStream();
+      setUploadErr(err instanceof Error ? err.message : "Could not start recording");
+    }
+  }
+
+  async function startRecordingWithCountdown() {
+    if (
+      recordingFlowActiveRef.current ||
+      recording ||
+      recordCountdown != null ||
+      disabled ||
+      uploading
+    ) return;
+    recordingFlowActiveRef.current = true;
+    setPreparingMic(true);
+    setUploadErr(null);
+    let stream: MediaStream | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!recordingFlowActiveRef.current) {
+        for (const track of stream.getTracks()) track.stop();
+        return;
+      }
+      const recorder = createAudioMediaRecorder(stream);
       recordStreamRef.current = stream;
       recorderRef.current = recorder;
       recordChunksRef.current = [];
@@ -179,20 +221,18 @@ export function AudioUrlControls({
         if (ev.data.size > 0) recordChunksRef.current.push(ev.data);
       };
       recorder.onstop = async () => {
+        recordingFlowActiveRef.current = false;
+        recorderRef.current = null;
         const parts = recordChunksRef.current;
         recordChunksRef.current = [];
-        if (recordStreamRef.current) {
-          for (const t of recordStreamRef.current.getTracks()) t.stop();
-          recordStreamRef.current = null;
-        }
+        releaseRecordingStream();
         if (!parts.length) return;
         setUploading(true);
         try {
-          const blob = new Blob(parts, { type: "audio/webm" });
-          const file = new File(
-            [blob],
-            `recorded-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`,
-            { type: "audio/webm" },
+          const file = recordedAudioFile(
+            parts,
+            recorder.mimeType,
+            `recorded-${new Date().toISOString().replace(/[:.]/g, "-")}`,
           );
           const fd = new FormData();
           fd.set("file", file);
@@ -207,34 +247,36 @@ export function AudioUrlControls({
           setUploading(false);
         }
       };
-      recorder.start();
-      setRecording(true);
-    } catch (err) {
-      setUploadErr(err instanceof Error ? err.message : "Could not start recording");
-    }
-  }
-
-  function startRecordingWithCountdown() {
-    if (recording || recordCountdown != null || disabled || uploading) return;
-    setUploadErr(null);
-    setRecordCountdown(3);
-    countdownIntervalRef.current = window.setInterval(() => {
-      setRecordCountdown((prev) => {
-        if (prev == null) return prev;
-        if (prev <= 1) {
-          if (countdownIntervalRef.current != null) {
-            window.clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
+      setPreparingMic(false);
+      setRecordCountdown(3);
+      countdownIntervalRef.current = window.setInterval(() => {
+        setRecordCountdown((prev) => {
+          if (prev == null) return prev;
+          if (prev <= 1) {
+            if (countdownIntervalRef.current != null) {
+              window.clearInterval(countdownIntervalRef.current);
+              countdownIntervalRef.current = null;
+            }
+            return null;
           }
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    countdownStartTimeoutRef.current = window.setTimeout(() => {
-      countdownStartTimeoutRef.current = null;
-      void startRecordingNow();
-    }, 3000);
+          return prev - 1;
+        });
+      }, 1000);
+      countdownStartTimeoutRef.current = window.setTimeout(() => {
+        countdownStartTimeoutRef.current = null;
+        startPreparedRecording();
+      }, 3000);
+    } catch (err) {
+      recordingFlowActiveRef.current = false;
+      if (stream) {
+        for (const track of stream.getTracks()) track.stop();
+      }
+      recordStreamRef.current = null;
+      recorderRef.current = null;
+      setUploadErr(err instanceof Error ? err.message : "Could not start recording");
+    } finally {
+      setPreparingMic(false);
+    }
   }
 
   function stopRecording() {
@@ -256,7 +298,7 @@ export function AudioUrlControls({
           type="file"
           accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/webm,audio/mp4,audio/x-m4a,audio/aac"
           className="hidden"
-          disabled={disabled || uploading}
+          disabled={disabled || uploading || preparingMic || recordCountdown != null}
           onChange={(e) => void onFileChange(e)}
         />
         <button
@@ -277,7 +319,7 @@ export function AudioUrlControls({
         </button>
         <button
           type="button"
-          disabled={disabled || uploading}
+          disabled={disabled || uploading || preparingMic || recordCountdown != null}
           onClick={() =>
             recording ? stopRecording() : startRecordingWithCountdown()
           }
@@ -289,6 +331,8 @@ export function AudioUrlControls({
         >
           {recording ?
             "Stop recording"
+          : preparingMic ?
+            "Preparing microphone..."
           : recordCountdown != null ?
             `Starting in ${recordCountdown}...`
           : "Record"}
@@ -297,6 +341,11 @@ export function AudioUrlControls({
       {recordCountdown != null ? (
         <p className="text-xs font-semibold text-amber-700">
           Recording starts in {recordCountdown} second{recordCountdown === 1 ? "" : "s"}...
+        </p>
+      ) : null}
+      {preparingMic ? (
+        <p className="text-xs font-semibold text-blue-700" role="status">
+          Preparing your microphone...
         </p>
       ) : null}
       {uploadErr ? <p className="text-sm text-red-700">{uploadErr}</p> : null}

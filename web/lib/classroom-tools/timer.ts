@@ -13,6 +13,36 @@ export type GlobalTimerState = {
   visibleToStudents: boolean;
 };
 
+export function normalizeGlobalTimerState(value: unknown): GlobalTimerState | null {
+  if (!value || typeof value !== "object") return null;
+  const timer = value as Partial<GlobalTimerState>;
+  if (
+    (timer.mode !== "countdown" && timer.mode !== "stopwatch") ||
+    (timer.status !== "idle" &&
+      timer.status !== "running" &&
+      timer.status !== "paused" &&
+      timer.status !== "expired") ||
+    typeof timer.durationMs !== "number" ||
+    !Number.isFinite(timer.durationMs) ||
+    typeof timer.accumulatedPausedMs !== "number" ||
+    !Number.isFinite(timer.accumulatedPausedMs) ||
+    typeof timer.visibleToStudents !== "boolean" ||
+    (timer.startedAt !== null && typeof timer.startedAt !== "number") ||
+    (timer.pausedAt !== null && typeof timer.pausedAt !== "number")
+  ) {
+    return null;
+  }
+  return {
+    mode: timer.mode,
+    status: timer.status,
+    durationMs: Math.max(0, timer.durationMs),
+    startedAt: timer.startedAt,
+    pausedAt: timer.pausedAt,
+    accumulatedPausedMs: Math.max(0, timer.accumulatedPausedMs),
+    visibleToStudents: timer.visibleToStudents,
+  };
+}
+
 export function createIdleGlobalTimer(
   durationMs = 60_000,
   mode: GlobalTimerMode = "countdown",
@@ -26,6 +56,21 @@ export function createIdleGlobalTimer(
     accumulatedPausedMs: 0,
     visibleToStudents: true,
   };
+}
+
+/** Accept recent client click time while rejecting stale or forged timestamps. */
+export function resolveTimerActionTime(
+  requestedAt: unknown,
+  serverNowMs: number,
+): number {
+  if (
+    typeof requestedAt === "number" &&
+    Number.isFinite(requestedAt) &&
+    Math.abs(serverNowMs - requestedAt) <= 30_000
+  ) {
+    return requestedAt;
+  }
+  return serverNowMs;
 }
 
 export function remainingMs(timer: GlobalTimerState, nowMs: number): number {

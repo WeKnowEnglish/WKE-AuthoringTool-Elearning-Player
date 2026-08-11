@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { VirtualClassroomActivityEmbed } from "@/components/virtual-classroom/VirtualClassroomActivityEmbed";
 import { VirtualClassroomWhiteboardEmbed } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
+import { VirtualClassroomPresentationStage } from "@/components/virtual-classroom/VirtualClassroomPresentationStage";
 import type { ClassLesson } from "@/lib/class-lessons/types";
 import { playPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
@@ -11,6 +12,7 @@ import type {
   VirtualClassroomLearnStage,
 } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import type { WhiteboardSessionContext } from "@/lib/whiteboard/liveblocks/identity";
+import type { VirtualClassroomPresentation } from "@/lib/virtual-classroom/presentation";
 
 type BankItem = {
   id: string;
@@ -28,14 +30,18 @@ type Props = {
   busy: boolean;
   learnStage: VirtualClassroomLearnStage;
   learnActivity: VirtualClassroomLearnActivity | null;
+  learnPresentation: VirtualClassroomPresentation | null;
   whiteboardLive: boolean;
   whiteboardJoinCode: string | null;
   onSetStage: (stage: VirtualClassroomLearnStage) => void;
   onSetActivity: (activity: VirtualClassroomLearnActivity | null) => void;
+  onSetPresentation: (presentation: VirtualClassroomPresentation | null) => void;
+  onAnnotatePresentation: () => void;
   onLaunchWhiteboard: () => Promise<WhiteboardSessionContext | null>;
   studentPensEnabled: boolean;
   onToggleStudentPens: (enabled: boolean) => void;
   pensBusy?: boolean;
+  isolatedWhiteboardProvider?: boolean;
 };
 
 export function VirtualClassroomLearnStage({
@@ -47,14 +53,18 @@ export function VirtualClassroomLearnStage({
   busy,
   learnStage,
   learnActivity,
+  learnPresentation,
   whiteboardLive,
   whiteboardJoinCode,
   onSetStage,
   onSetActivity,
+  onSetPresentation,
+  onAnnotatePresentation,
   onLaunchWhiteboard,
   studentPensEnabled,
   onToggleStudentPens,
   pensBusy = false,
+  isolatedWhiteboardProvider = false,
 }: Props) {
   const isHost = role === "host";
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -145,6 +155,7 @@ export function VirtualClassroomLearnStage({
             [
               { id: "whiteboard" as const, label: "Whiteboard" },
               { id: "activity" as const, label: "Activity" },
+              { id: "presentation" as const, label: "Present" },
             ] as const
           ).map((tab) => {
             const active = learnStage === tab.id;
@@ -279,6 +290,16 @@ export function VirtualClassroomLearnStage({
             studentPensEnabled={studentPensEnabled}
             onToggleStudentPens={onToggleStudentPens}
             pensBusy={pensBusy}
+            isolatedLiveblocksProvider={isolatedWhiteboardProvider}
+          />
+        ) : learnStage === "presentation" ? (
+          <VirtualClassroomPresentationStage
+            key={learnPresentation ? `${learnPresentation.kind}:${learnPresentation.url}` : "empty"}
+            role={role}
+            presentation={learnPresentation}
+            busy={busy}
+            onPresent={onSetPresentation}
+            onAnnotateImage={onAnnotatePresentation}
           />
         ) : learnActivity ? (
           <VirtualClassroomActivityEmbed

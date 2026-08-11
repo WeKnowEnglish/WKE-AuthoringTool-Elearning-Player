@@ -65,6 +65,16 @@ function Thumb({
       </div>
     );
   }
+  if (kind === "document") {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-red-50 px-1 text-red-800">
+        <span className="text-2xl font-black" aria-hidden>
+          PDF
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide">Document</span>
+      </div>
+    );
+  }
   return (
     <Image
       src={url}
@@ -73,7 +83,6 @@ function Thumb({
       sizes="120px"
       className={className}
       loading="lazy"
-      unoptimized={url.includes("supabase.co")}
     />
   );
 }
@@ -203,7 +212,11 @@ export function TeacherMediaLibraryBrowser({ ownerId, compact, className }: Prop
               type="text"
               value={library.homeQuery}
               onChange={(e) => setTeacherMediaLibraryHomeQuery(e.target.value)}
-              placeholder="Search images, characters, scenes, audio…"
+              placeholder={
+                library.fieldKind === "document"
+                  ? "Search PDF filenames…"
+                  : "Search images, characters, scenes, audio…"
+              }
               className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm"
             />
           </label>

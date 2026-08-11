@@ -81,6 +81,8 @@ export async function POST(request: Request, context: RouteContext) {
         if (session) {
           await setVcActiveActivity({
             roomId: session.liveblocksRoomId,
+            sessionId: session.id,
+            actorUserId: actorId ?? session.createdBy,
             kind: null,
             joinCode: null,
             label: null,

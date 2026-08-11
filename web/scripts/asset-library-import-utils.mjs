@@ -82,6 +82,16 @@ const FOOD_RE = /\b(cabbage|carrot|chicken|cucumber|curry|dim sum|eggplant|food|
 const VEGETABLE_RE = /\b(cabbage|carrot|cucumber|eggplant|lettuce|onion|potato|pumpkin|squash|sweet potato|vegetable|vegetables)\b/;
 const SUPPLY_RE = /\b(colored pencils|crayons|eraser|markers|notebook|pen|pencil case|pencil sharpener|pencil|ruler)\b/;
 const CLASSROOM_RE = /\b(classroom|cubbies|cupboard|desk|door|pin board|table|water filter|whiteboard|window)\b/;
+const ANIMAL_COLLECTION_RE = /(?:^|-)(?:pet|animal|animals)(?:-|$)/;
+
+const SPRITE_COLLECTION_METADATA = [
+  { match: /(?:^|-)color-sprites(?:-|$)/, categories: ["colors"], tags: ["vocabulary", "color"] },
+  { match: /(?:^|-)emotion-sprites(?:-|$)/, categories: ["emotions"], tags: ["vocabulary", "emotion"] },
+  { match: /(?:^|-)family-sprites(?:-|$)/, categories: ["family", "people"], tags: ["vocabulary", "character"] },
+  { match: /(?:^|-)instruction-sprites(?:-|$)/, categories: ["instructions"], tags: ["classroom-instruction"] },
+  { match: /(?:^|-)learning-tool-sprites(?:-|$)/, categories: ["school"], tags: ["vocabulary", "school-supplies"] },
+  { match: /(?:^|-)weather-sprites(?:-|$)/, categories: ["weather"], tags: ["vocabulary", "weather"] },
+];
 
 function titleCase(value) {
   return value
@@ -101,7 +111,12 @@ export function collectionSlug(value) {
 }
 
 export function sourceStem(filename) {
-  return path.basename(filename, path.extname(filename)).trim().toLowerCase().replace(/\s+/g, " ");
+  return path
+    .basename(filename, path.extname(filename))
+    .trim()
+    .toLowerCase()
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 export function correctedStem(filename) {
@@ -137,6 +152,8 @@ export function buildAssetMetadata({
   const base = corrected.replace(/\s+\(\d+\)$/, "").trim();
   const displayName = displayNameForFile(filename);
   const collectionTag = collectionSlug(collection);
+  const animalCollection = ANIMAL_COLLECTION_RE.test(collectionTag);
+  const spriteCollectionMetadata = SPRITE_COLLECTION_METADATA.find((entry) => entry.match.test(collectionTag));
   const people = includesAny(base, PEOPLE_RE);
   const action = includesAny(base, ACTION_RE);
   const noun = CLEAR_NOUNS.get(base) ?? null;
@@ -160,6 +177,14 @@ export function buildAssetMetadata({
   if (includesAny(base, VEGETABLE_RE)) categories.add("vegetables");
   if (includesAny(base, SUPPLY_RE)) tags.add("school-supplies");
   if (includesAny(base, CLASSROOM_RE)) tags.add("classroom");
+  if (animalCollection) {
+    categories.add("animals");
+    tags.add("animal");
+    tags.add("vocabulary");
+    tags.add("vocabulary-object");
+  }
+  for (const category of spriteCollectionMetadata?.categories ?? []) categories.add(category);
+  for (const tag of spriteCollectionMetadata?.tags ?? []) tags.add(tag);
   if (!isOpaque) tags.add("transparent-cutout");
   if (likelyScene) tags.add("story-scene");
   if (likelyScene && isOpaque && width > height) tags.add("background");

@@ -72,6 +72,8 @@ export type ActivityTrackDocument = {
   id: string;
   mode: ActivityTrackMode;
   title: string;
+  /** Teacher-selected card image. Falls back to activity content only when unset. */
+  coverImageUrl?: string | null;
   instructions: string;
   level: ActivityTrackLevel;
   estimatedMinutes: number | null;
@@ -277,6 +279,7 @@ export function createEmptyActivityTrack(input: {
     id,
     mode: input.mode,
     title,
+    coverImageUrl: null,
     instructions: practiceComposition?.aim ?? "",
     level: "either",
     estimatedMinutes: practiceComposition?.durationTargetMin ?? null,

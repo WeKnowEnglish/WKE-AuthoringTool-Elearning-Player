@@ -11,6 +11,9 @@ packages/**/package-lock.json
 *.xlsx
 ~$*
 
+# Generated image working files (publish final assets from web/public instead)
+web/work/
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

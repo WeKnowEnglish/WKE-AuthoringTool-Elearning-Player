@@ -14,6 +14,7 @@ describe("AI asset library import metadata", () => {
     expect(correctedStem("school councelor.png")).toBe("school counselor");
     expect(displayNameForFile("two girls making a psoter.png")).toBe("Two Girls Making A Poster");
     expect(storageFilename("pencile sharpener.png")).toBe("pencil-sharpener.webp");
+    expect(displayNameForFile("leopard-gecko.png")).toBe("Leopard Gecko");
   });
 
   it("classifies a transparent vocabulary object conservatively", () => {
@@ -57,6 +58,38 @@ describe("AI asset library import metadata", () => {
     });
     expect(metadata.meta_item_name).toBe("School cafeteria worker");
     expect(metadata.meta_alternative_names).toContain("school lunch lady");
+  });
+
+  it("classifies recent sprite collections by their teaching purpose", () => {
+    const animal = buildAssetMetadata({
+      filename: "giraffe.png",
+      collection: "primary-jungle-animal-sprites-2026-08",
+      width: 1254,
+      height: 1254,
+      isOpaque: false,
+      importedOn: "2026-08-12",
+    });
+    const weather = buildAssetMetadata({
+      filename: "rain.png",
+      collection: "primary-weather-sprites-2026-08",
+      width: 1254,
+      height: 1254,
+      isOpaque: false,
+      importedOn: "2026-08-12",
+    });
+    const family = buildAssetMetadata({
+      filename: "grandmother.png",
+      collection: "primary-family-sprites-2026-08",
+      width: 1254,
+      height: 1254,
+      isOpaque: false,
+      importedOn: "2026-08-12",
+    });
+
+    expect(animal.meta_categories).toContain("animals");
+    expect(animal.meta_tags).toEqual(expect.arrayContaining(["animal", "vocabulary-object"]));
+    expect(weather.meta_categories).toContain("weather");
+    expect(family.meta_categories).toEqual(expect.arrayContaining(["family", "people"]));
   });
 });
 

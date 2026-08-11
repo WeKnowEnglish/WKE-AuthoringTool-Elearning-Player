@@ -142,6 +142,7 @@ export function parseActivityTrackDocument(raw: unknown): ActivityTrackDocument 
     id: row.id,
     mode,
     title: row.title,
+    coverImageUrl: typeof row.coverImageUrl === "string" ? row.coverImageUrl.trim() || null : null,
     instructions: typeof row.instructions === "string" ? row.instructions : "",
     level,
     estimatedMinutes:

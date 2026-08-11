@@ -20,9 +20,14 @@ export {
 export {
   buildQuizPacksFromVocabList,
   compileAndPublishQuizzesFromVocabList,
+  listActivitiesGeneratedFromVocabList,
+  refreshActivitiesFromVocabList,
+  vocabActivityGenerationRecipe,
   VOCAB_COMPILE_FORMAT_OPTIONS,
   type BuiltVocabQuizPack,
+  type LinkedVocabActivity,
   type PublishedVocabQuiz,
+  type VocabActivityGenerationRecipe,
 } from "@/lib/activity-library/compile-quizzes-from-vocab-studio";
 export type { VocabCompileFormat } from "@/lib/activity-builder/games/compile-from-vocab-list";
 export { lessonPlayerOrigin } from "@/lib/activity-library/lesson-player-origin";

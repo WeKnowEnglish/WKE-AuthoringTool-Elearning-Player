@@ -9,12 +9,15 @@ import {
 import { createDailyMeetingToken } from "@/lib/daily/tokens";
 import { DailyApiError, DailyConfigError } from "@/lib/daily/types";
 import { isDailyEnabled } from "@/lib/env/daily-server";
+import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
 /** Issue a short-lived Daily meeting token for an authorized VC participant. */
 export async function POST(_request: Request, context: RouteContext) {
+  return withCollabServerTiming("vc.daily_token", async (timer) => {
   const { sessionId } = await context.params;
+  timer.setContext({ activity: "classroom", sessionId });
   if (!isDailyEnabled()) {
     return NextResponse.json(
       { error: "Daily video is not enabled.", code: "daily_disabled" },
@@ -22,12 +25,16 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  const session = await getVirtualClassroomSessionWithDaily(sessionId);
+  const session = await timer.measure("session_lookup", () =>
+    getVirtualClassroomSessionWithDaily(sessionId),
+  );
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const auth = await authorizeDailyMeetingToken(session);
+  const auth = await timer.measure("participant_authorization", () =>
+    authorizeDailyMeetingToken(session),
+  );
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.message, code: auth.code },
@@ -35,7 +42,7 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  if (!(await allowDailyTokenRequest(auth.userId, sessionId))) {
+  if (!(await timer.measure("rate_limit", () => allowDailyTokenRequest(auth.userId, sessionId)))) {
     return NextResponse.json(
       {
         error: "Too many video token requests. Try again shortly.",
@@ -57,7 +64,9 @@ export async function POST(_request: Request, context: RouteContext) {
           { status: 404 },
         );
       }
-      const room = await getOrCreateDailyRoomForSession(sessionId);
+      const room = await timer.measure("room_ensure", () =>
+        getOrCreateDailyRoomForSession(sessionId),
+      );
       if (!room) {
         return NextResponse.json(
           {
@@ -76,14 +85,16 @@ export async function POST(_request: Request, context: RouteContext) {
       roomExpiresAt,
       sessionEnded: session.status === "ended" || Boolean(session.endedAt),
     });
-    const token = await createDailyMeetingToken({
-      roomName,
-      roomUrl,
-      userId: auth.userId,
-      userName: auth.displayName,
-      role: auth.role,
-      exp,
-    });
+    const token = await timer.measure("daily_api_token", () =>
+      createDailyMeetingToken({
+        roomName,
+        roomUrl,
+        userId: auth.userId,
+        userName: auth.displayName,
+        role: auth.role,
+        exp,
+      }),
+    );
 
     return NextResponse.json({
       token: token.token,
@@ -109,4 +120,5 @@ export async function POST(_request: Request, context: RouteContext) {
       error instanceof Error ? error.message : "Could not issue token.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+  });
 }

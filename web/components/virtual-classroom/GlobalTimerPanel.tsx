@@ -14,6 +14,8 @@ import {
 type Props = {
   busy: boolean;
   onCommand: (command: Record<string, unknown>) => Promise<void>;
+  /** Supabase timer pilot state; omit to retain the Liveblocks source. */
+  timer?: GlobalTimerState | null;
 };
 
 function readTimer(root: unknown): GlobalTimerState {
@@ -23,8 +25,17 @@ function readTimer(root: unknown): GlobalTimerState {
   );
 }
 
-export function GlobalTimerPanel({ busy, onCommand }: Props) {
-  const timer = useStorage((root) => readTimer(root));
+export function GlobalTimerPanel(props: Props) {
+  const liveblocksTimer = useStorage((root) => readTimer(root));
+  return <GlobalTimerPanelContent {...props} timer={props.timer ?? liveblocksTimer} />;
+}
+
+/** Provider-neutral timer UI for the Supabase-native classroom shell. */
+export function GlobalTimerPanelContent({
+  busy,
+  onCommand,
+  timer,
+}: Omit<Props, "timer"> & { timer: GlobalTimerState }) {
   const [now, setNow] = useState(() => Date.now());
   const [minutes, setMinutes] = useState(1);
 
@@ -159,8 +170,25 @@ export function GlobalTimerPanel({ busy, onCommand }: Props) {
 }
 
 /** Compact timer display for students (and host header). */
-export function GlobalTimerBanner({ role }: { role: "host" | "member" }) {
-  const timer = useStorage((root) => readTimer(root));
+export function GlobalTimerBanner({
+  role,
+  timer: pilotTimer,
+}: {
+  role: "host" | "member";
+  timer?: GlobalTimerState | null;
+}) {
+  const liveblocksTimer = useStorage((root) => readTimer(root));
+  return <GlobalTimerBannerContent role={role} timer={pilotTimer ?? liveblocksTimer} />;
+}
+
+/** Provider-neutral compact timer display for the native classroom shell. */
+export function GlobalTimerBannerContent({
+  role,
+  timer,
+}: {
+  role: "host" | "member";
+  timer: GlobalTimerState;
+}) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {

@@ -9,6 +9,7 @@ import { getWordCardRoundByJoinCode } from "@/lib/word-cards/server/persistence"
 import {
   clearLastRoll,
   configureRandomiser,
+  createSeededDiceRandom,
   createEmptyRandomiser,
   rollDice,
   type DicePreset,
@@ -60,6 +61,7 @@ import {
   pauseGlobalTimer,
   resetGlobalTimer,
   resumeGlobalTimer,
+  resolveTimerActionTime,
   setGlobalTimerMode,
   startGlobalTimer,
   type GlobalTimerMode,
@@ -67,6 +69,10 @@ import {
 } from "@/lib/virtual-classroom/tools/timer";
 import { applyTeacherCommand } from "@/lib/whiteboard/server/commands";
 import { toWhiteboardRoomId } from "@/lib/whiteboard/liveblocks/room-id";
+import {
+  normalizeVirtualClassroomPresentation,
+  type VirtualClassroomPresentation,
+} from "@/lib/virtual-classroom/presentation";
 
 type RuntimeNode = {
   get: (key: string) => unknown;
@@ -144,9 +150,9 @@ export type VcToolCommand =
   | { type: "SEND_GROUPS_TO_DOCUMENT" }
   | { type: "SEND_GROUPS_TO_WORD_CARDS" }
   | { type: "SET_TIMER_MODE"; mode: GlobalTimerMode }
-  | { type: "START_TIMER"; durationMs?: number }
-  | { type: "PAUSE_TIMER" }
-  | { type: "RESUME_TIMER" }
+  | { type: "START_TIMER"; durationMs?: number; requestedAt?: number }
+  | { type: "PAUSE_TIMER"; requestedAt?: number }
+  | { type: "RESUME_TIMER"; requestedAt?: number }
   | { type: "ADD_TIMER_MS"; milliseconds: number }
   | { type: "RESET_TIMER"; durationMs?: number }
   | { type: "SET_TIMER_VISIBLE"; visibleToStudents: boolean }
@@ -159,7 +165,7 @@ export type VcToolCommand =
       visibility?: "class" | "teacher";
       locked?: boolean;
     }
-  | { type: "ROLL_DICE" }
+  | { type: "ROLL_DICE"; seed?: number }
   | { type: "CLEAR_DICE" }
   | {
       type: "AWARD_POINTS";
@@ -175,7 +181,7 @@ export type VcToolCommand =
   | { type: "SET_FREEZE"; frozen: boolean }
   | { type: "SET_ANNOUNCEMENT"; message: string | null }
   | { type: "SET_UI_MODE"; mode: "meeting" | "learn" }
-  | { type: "SET_LEARN_STAGE"; stage: "whiteboard" | "activity" }
+  | { type: "SET_LEARN_STAGE"; stage: "whiteboard" | "activity" | "presentation" }
   | {
       type: "SET_LEARN_ACTIVITY";
       activity: {
@@ -185,16 +191,72 @@ export type VcToolCommand =
         playPath: string;
       } | null;
     }
+  | { type: "SET_LEARN_PRESENTATION"; presentation: VirtualClassroomPresentation | null }
   | { type: "SET_LEARN_STUDENT_PENS"; enabled: boolean };
 
 /** Commands students may issue for themselves. */
 export const VC_MEMBER_TOOL_TYPES = new Set<VcToolCommand["type"]>(["SET_OWN_STATUS"]);
 
+const VC_TIMER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "SET_TIMER_MODE",
+  "START_TIMER",
+  "PAUSE_TIMER",
+  "RESUME_TIMER",
+  "ADD_TIMER_MS",
+  "RESET_TIMER",
+  "SET_TIMER_VISIBLE",
+]);
+
+const VC_RANDOMISER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "CONFIGURE_DICE",
+  "ROLL_DICE",
+  "CLEAR_DICE",
+]);
+
+const VC_POINTS_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "AWARD_POINTS",
+  "UNDO_AWARD",
+  "RESET_POINTS",
+  "SET_LEADERBOARD_VISIBLE",
+]);
+
+const VC_PICKER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "SYNC_ROSTER",
+  "SET_PICKER_MODE",
+  "PICK",
+  "RESET_PICKER_CYCLE",
+  "SET_PICKER_EXCLUDED",
+]);
+
+const VC_GROUP_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "GENERATE_GROUPS",
+  "SHUFFLE_GROUPS",
+  "SAVE_GROUPS",
+  "RESTORE_GROUPS",
+  "MOVE_STUDENT",
+  "RENAME_GROUP",
+  "SET_GROUP_LEADER",
+  "TOGGLE_GROUP_LOCK",
+]);
+
+const VC_STATUS_TOOL_TYPES = new Set<VcToolCommand["type"]>([
+  "SET_OWN_STATUS",
+  "CLEAR_STATUSES",
+  "SET_FREEZE",
+]);
+
 export async function applyVcToolCommand(input: {
   roomId: string;
+  /** Enables best-effort Supabase dual-write after a teacher command. */
+  sessionId?: string;
   command: VcToolCommand;
   actorUserId?: string;
-}): Promise<{ ok: true; detail?: string } | { ok: false; error: string }> {
+  /** Optional server-readable active student roster during the migration pilot. */
+  activeStudentIds?: string[];
+}): Promise<
+  | { ok: true; detail?: string; changedTools?: Record<string, unknown> }
+  | { ok: false; error: string }
+> {
   const liveblocks = getLiveblocksServerClient();
 
   try {
@@ -204,6 +266,7 @@ export async function applyVcToolCommand(input: {
     let groupsForDocument: ReturnType<typeof toWhiteboardAssignPayload> = [];
     let wordCardsJoinCode: string | null = null;
     let groupsForWordCards: ReturnType<typeof toWhiteboardAssignPayload> = [];
+    let changedTools: Record<string, unknown> | undefined;
 
     await liveblocks.mutateStorage(input.roomId, ({ root }) => {
       const runtime = runtimeOf(root);
@@ -214,11 +277,19 @@ export async function applyVcToolCommand(input: {
       const points = readPoints(runtime);
       const classroomStatus = readStatus(runtime);
       const nowMs = Date.now();
+      const actionNowMs = resolveTimerActionTime(
+        "requestedAt" in input.command ? input.command.requestedAt : undefined,
+        nowMs,
+      );
+      const rosterIds = (includeTeacher: boolean) =>
+        input.activeStudentIds?.length
+          ? [...(includeTeacher && input.actorUserId ? [input.actorUserId] : []), ...input.activeStudentIds]
+          : memberStudentIds(root, includeTeacher);
 
       switch (input.command.type) {
         case "SYNC_ROSTER": {
           const includeTeacher = input.command.includeTeacher ?? picker.includeTeacher;
-          const ids = memberStudentIds(root, includeTeacher);
+          const ids = rosterIds(includeTeacher);
           runtime.set("picker", {
             ...syncPickerRoster(picker, ids),
             includeTeacher,
@@ -231,7 +302,7 @@ export async function applyVcToolCommand(input: {
         }
         case "PICK": {
           const includeTeacher = picker.includeTeacher;
-          const ids = memberStudentIds(root, includeTeacher);
+          const ids = rosterIds(includeTeacher);
           const synced = syncPickerRoster(picker, ids);
           runtime.set(
             "picker",
@@ -253,7 +324,7 @@ export async function applyVcToolCommand(input: {
           break;
         }
         case "GENERATE_GROUPS": {
-          const ids = memberStudentIds(root, false);
+          const ids = rosterIds(false);
           const previous = groupSet.groups.length ? groupSet.groups : groupSet.previousGroups;
           const next = generateRandomGroups({
             studentIds: ids,
@@ -267,7 +338,7 @@ export async function applyVcToolCommand(input: {
           break;
         }
         case "SHUFFLE_GROUPS": {
-          const ids = memberStudentIds(root, false);
+          const ids = rosterIds(false);
           runtime.set("groupSet", shuffleUnlockedGroups(groupSet, ids));
           break;
         }
@@ -365,16 +436,16 @@ export async function applyVcToolCommand(input: {
         case "START_TIMER": {
           runtime.set(
             "timer",
-            startGlobalTimer(timer, nowMs, input.command.durationMs),
+            startGlobalTimer(timer, actionNowMs, input.command.durationMs),
           );
           break;
         }
         case "PAUSE_TIMER": {
-          runtime.set("timer", pauseGlobalTimer(timer, nowMs));
+          runtime.set("timer", pauseGlobalTimer(timer, actionNowMs));
           break;
         }
         case "RESUME_TIMER": {
-          runtime.set("timer", resumeGlobalTimer(timer, nowMs));
+          runtime.set("timer", resumeGlobalTimer(timer, actionNowMs));
           break;
         }
         case "ADD_TIMER_MS": {
@@ -407,7 +478,12 @@ export async function applyVcToolCommand(input: {
           break;
         }
         case "ROLL_DICE": {
-          runtime.set("randomiser", rollDice(randomiser, { nowMs }));
+          runtime.set("randomiser", rollDice(randomiser, {
+            nowMs,
+            ...(typeof input.command.seed === "number"
+              ? { random: createSeededDiceRandom(input.command.seed) }
+              : {}),
+          }));
           break;
         }
         case "CLEAR_DICE": {
@@ -481,7 +557,9 @@ export async function applyVcToolCommand(input: {
         }
         case "SET_LEARN_STAGE": {
           const stage =
-            input.command.stage === "activity" ? "activity" : "whiteboard";
+            input.command.stage === "activity" || input.command.stage === "presentation"
+              ? input.command.stage
+              : "whiteboard";
           runtime.set("learnStage", stage);
           break;
         }
@@ -505,6 +583,21 @@ export async function applyVcToolCommand(input: {
           runtime.set("learnStage", "activity");
           break;
         }
+        case "SET_LEARN_PRESENTATION": {
+          if (!input.command.presentation) {
+            runtime.set("learnPresentation", null);
+            break;
+          }
+          const presentation = normalizeVirtualClassroomPresentation(
+            input.command.presentation,
+          );
+          if (!presentation) {
+            throw new Error("Add a valid image or PDF URL before presenting.");
+          }
+          runtime.set("learnPresentation", presentation);
+          runtime.set("learnStage", "presentation");
+          break;
+        }
         case "SET_LEARN_STUDENT_PENS": {
           runtime.set("learnStudentPensEnabled", input.command.enabled !== false);
           break;
@@ -521,6 +614,20 @@ export async function applyVcToolCommand(input: {
       ) {
         const t = readTimer(runtime);
         runtime.set("timer", maybeExpireCountdown(t, nowMs));
+      }
+
+      if (VC_TIMER_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { timer: readTimer(runtime) };
+      } else if (VC_RANDOMISER_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { randomiser: readRandomiser(runtime) };
+      } else if (VC_POINTS_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { points: readPoints(runtime) };
+      } else if (VC_PICKER_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { picker: readPicker(runtime) };
+      } else if (VC_GROUP_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { groupSet: readGroups(runtime) };
+      } else if (VC_STATUS_TOOL_TYPES.has(input.command.type)) {
+        changedTools = { classroomStatus: readStatus(runtime) };
       }
     });
 
@@ -599,7 +706,7 @@ export async function applyVcToolCommand(input: {
       // best-effort
     }
 
-    return { ok: true };
+    return { ok: true, changedTools };
   } catch (error) {
     return {
       ok: false,

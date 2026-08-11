@@ -265,6 +265,7 @@ export type LearningTrackCompilerWorkspaceProps = {
   initialComposition?: LearningTrackComposition;
   initialLibraryId?: string | null;
   initialBankActivityId?: string | null;
+  coverImageUrl?: string | null;
   /** Persist composition + bank refs onto the Track Builder draft. */
   onDraftSync?: (patch: LearningTrackCompilerDraftSync) => void;
 };
@@ -280,6 +281,7 @@ export function LearningTrackCompilerWorkspace({
   initialComposition,
   initialLibraryId = null,
   initialBankActivityId = null,
+  coverImageUrl = null,
   onDraftSync,
 }: LearningTrackCompilerWorkspaceProps = {}) {
   const embedded = chrome === "embedded";
@@ -1063,6 +1065,7 @@ export function LearningTrackCompilerWorkspace({
           source: {
             libraryId: entry.id,
             via: embedded ? "track_builder_practice" : "learning_track_compiler",
+            coverImageUrl,
           },
         }),
       });

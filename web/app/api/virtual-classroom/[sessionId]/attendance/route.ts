@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorizeDailyMeetingToken } from "@/lib/daily/authorize-token";
 import {
+  recordLobbyAttendanceHeartbeat,
   recordLobbyAttendanceJoin,
   recordLobbyAttendanceLeave,
 } from "@/lib/daily/attendance";
@@ -13,7 +14,7 @@ import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/s
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
 type PostBody = {
-  event?: "join" | "leave";
+  event?: "join" | "heartbeat" | "leave";
 };
 
 /**
@@ -51,9 +52,9 @@ export async function POST(request: Request, context: RouteContext) {
     body = {};
   }
 
-  if (body.event !== "join" && body.event !== "leave") {
+  if (body.event !== "join" && body.event !== "heartbeat" && body.event !== "leave") {
     return NextResponse.json(
-      { error: "event must be join or leave.", code: "invalid_event" },
+      { error: "event must be join, heartbeat, or leave.", code: "invalid_event" },
       { status: 400 },
     );
   }
@@ -65,6 +66,8 @@ export async function POST(request: Request, context: RouteContext) {
         participantKey: auth.userId,
         role: auth.role,
       });
+    } else if (body.event === "heartbeat") {
+      await recordLobbyAttendanceHeartbeat({ sessionId, participantKey: auth.userId });
     } else {
       await recordLobbyAttendanceLeave({
         sessionId,

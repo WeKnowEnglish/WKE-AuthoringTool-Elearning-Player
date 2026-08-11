@@ -10,17 +10,37 @@ import {
   endVirtualClassroomSession,
   listWhiteboardRoomsForClassSession,
 } from "@/lib/virtual-classroom/server/session";
+import { endClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
+import { classroomRealtimeLifecycleAuthorityPilotEnabled } from "@/lib/classroom-realtime/shadow-mode";
 
 /** Full server-side teardown for a Virtual Classroom session (DB + Liveblocks + Daily). */
 export async function finalizeVirtualClassroomSessionClose(
   session: Pick<
     VirtualClassroomSessionRecord,
-    "id" | "status" | "liveblocksRoomId"
+    "id" | "status" | "liveblocksRoomId" | "classId"
   >,
+  actorUserId: string,
 ): Promise<void> {
   if (session.status === "ended") return;
 
-  await markVcSessionEndedInStorage(session.liveblocksRoomId);
+  const lifecycleAuthority = Boolean(session.classId) &&
+    classroomRealtimeLifecycleAuthorityPilotEnabled();
+  if (lifecycleAuthority) {
+    const endedSnapshot = await endClassroomRuntimeSnapshot({
+      sessionId: session.id,
+      actorUserId,
+    }).catch(() => null);
+    if (!endedSnapshot) {
+      throw new Error("Could not persist the classroom's final realtime state.");
+    }
+    await markVcSessionEndedInStorage(session.liveblocksRoomId);
+  } else {
+    await markVcSessionEndedInStorage(session.liveblocksRoomId);
+    await endClassroomRuntimeSnapshot({
+      sessionId: session.id,
+      actorUserId,
+    }).catch(() => null);
+  }
   const ended = await endVirtualClassroomSession(session.id);
   if (!ended) {
     throw new Error(

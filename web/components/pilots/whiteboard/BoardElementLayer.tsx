@@ -89,6 +89,19 @@ export function BoardElementLayer({ elements, annotationTone = false }: Props) {
             />
           );
         }
+        if (el.type === "image") {
+          return (
+            <image
+              key={el.id}
+              href={el.url}
+              x={el.x}
+              y={el.y}
+              width={el.width}
+              height={el.height}
+              preserveAspectRatio="none"
+            />
+          );
+        }
         const stamp = getStamp(el.stampId);
         const href = stampDataUrl(el.stampId);
         return (

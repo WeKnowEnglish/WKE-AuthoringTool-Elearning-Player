@@ -83,6 +83,17 @@ export async function launchWordCardsRound(input: {
       color: "#0f172a",
       role: "host",
     }).catch(() => undefined);
+    await setVcActiveActivity({
+      roomId: input.session.liveblocksRoomId,
+      sessionId: input.session.id,
+      classId: input.session.classId,
+      actorUserId: input.teacher.userId,
+      kind: "word_cards",
+      joinCode: existingActivity.joinCode,
+      label: existingActivity.label,
+      roundId: existingActivity.roundId,
+      activityRoomId: existingActivity.roomId,
+    }).catch(() => undefined);
     return {
       roundId: existingActivity.roundId ?? `round_${existingActivity.joinCode}`,
       roomId: existingActivity.roomId,
@@ -106,6 +117,9 @@ export async function launchWordCardsRound(input: {
     }).catch(() => undefined);
     await setVcActiveActivity({
       roomId: input.session.liveblocksRoomId,
+      sessionId: input.session.id,
+      classId: input.session.classId,
+      actorUserId: input.teacher.userId,
       kind: "word_cards",
       joinCode: fromDb.joinCode,
       label: "Word cards",
@@ -205,6 +219,9 @@ export async function launchWordCardsRound(input: {
 
   await setVcActiveActivity({
     roomId: input.session.liveblocksRoomId,
+    sessionId: input.session.id,
+    classId: input.session.classId,
+    actorUserId: input.teacher.userId,
     kind: "word_cards",
     joinCode,
     label: prompt.title,

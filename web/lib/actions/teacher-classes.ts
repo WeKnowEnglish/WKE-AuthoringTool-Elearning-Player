@@ -29,6 +29,10 @@ export async function createTeacherClass(formData: FormData): Promise<void> {
 
   const classKindRaw = String(formData.get("class_kind") ?? "regular").trim();
   const class_kind = classKindRaw === "trial" ? "trial" : "regular";
+  const creationKey = String(formData.get("creation_key") ?? "").trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(creationKey)) {
+    redirect("/teacher/classes/new?error=create_failed");
+  }
 
   const supabase = await createClient();
 
@@ -39,16 +43,30 @@ export async function createTeacherClass(formData: FormData): Promise<void> {
       title,
       course_id: null,
       class_kind,
+      creation_key: creationKey,
     })
     .select("id")
     .single();
+
+  if (error?.code === "23505") {
+    const { data: existing } = await supabase
+      .from("teacher_classes")
+      .select("id")
+      .eq("teacher_id", teacherId)
+      .eq("creation_key", creationKey)
+      .maybeSingle();
+    if (existing?.id) {
+      revalidatePath("/teacher/classes");
+      redirect("/teacher/classes?notice=class_created");
+    }
+  }
 
   if (error || !data?.id) {
     redirect("/teacher/classes/new?error=create_failed");
   }
 
   revalidatePath("/teacher/classes");
-  redirect(`/teacher/classes/${data.id}`);
+  redirect("/teacher/classes?notice=class_created");
 }
 
 export async function regenerateClassJoinCode(classId: string): Promise<TeacherClassActionResult> {

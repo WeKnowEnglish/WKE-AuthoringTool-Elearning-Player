@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 import { searchTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/lib/actions/media";
+import { createAudioMediaRecorder, recordedAudioFile } from "@/lib/media/recorded-audio";
 
 type Props = {
   label: string;
@@ -171,7 +172,7 @@ export function AudioUrlControls({
     setUploadErr(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const recorder = createAudioMediaRecorder(stream);
       recordStreamRef.current = stream;
       recorderRef.current = recorder;
       recordChunksRef.current = [];
@@ -188,11 +189,10 @@ export function AudioUrlControls({
         if (!parts.length) return;
         setUploading(true);
         try {
-          const blob = new Blob(parts, { type: "audio/webm" });
-          const file = new File(
-            [blob],
-            `recorded-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`,
-            { type: "audio/webm" },
+          const file = recordedAudioFile(
+            parts,
+            recorder.mimeType,
+            `recorded-${new Date().toISOString().replace(/[:.]/g, "-")}`,
           );
           const fd = new FormData();
           fd.set("file", file);

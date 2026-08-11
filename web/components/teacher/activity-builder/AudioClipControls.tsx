@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { MEDIA_PICKER_PAGE_SIZE } from "@/components/teacher/media/mediaPickerConstants";
 import { normalizeAudioClipUrl } from "@/lib/activity-builder/audio-clip";
 import { searchTeacherMedia, uploadTeacherMedia, type MediaAssetRow } from "@/lib/actions/media";
+import { createAudioMediaRecorder, recordedAudioFile } from "@/lib/media/recorded-audio";
 
 export type AudioClipChangeDetail = {
   mediaAssetId?: string;
@@ -188,7 +189,7 @@ export function AudioClipControls({
     setUploadErr(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const recorder = createAudioMediaRecorder(stream);
       recordStreamRef.current = stream;
       recorderRef.current = recorder;
       recordChunksRef.current = [];
@@ -203,11 +204,10 @@ export function AudioClipControls({
           recordStreamRef.current = null;
         }
         if (!parts.length) return;
-        const blob = new Blob(parts, { type: "audio/webm" });
-        const file = new File(
-          [blob],
-          `ltc-clip-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`,
-          { type: "audio/webm" },
+        const file = recordedAudioFile(
+          parts,
+          recorder.mimeType,
+          `ltc-clip-${new Date().toISOString().replace(/[:.]/g, "-")}`,
         );
         void uploadAudioFile(file);
       };

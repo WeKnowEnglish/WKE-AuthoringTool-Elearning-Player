@@ -239,7 +239,7 @@ export async function publishActivityToTeacherSpace(
 
   const { data: activity, error: actErr } = await supabase
     .from("studio_activities")
-    .select("id, format, title, pack")
+    .select("id, format, title, pack, source")
     .eq("id", activityId)
     .eq("teacher_id", teacherId)
     .maybeSingle();
@@ -256,7 +256,11 @@ export async function publishActivityToTeacherSpace(
     activity.pack,
     activity.title,
   );
-  const coverImageUrl = extractCoverImageUrlFromPack(frozen.pack);
+  const source = activity.source && typeof activity.source === "object" && !Array.isArray(activity.source)
+    ? activity.source as Record<string, unknown>
+    : {};
+  const customCover = typeof source.coverImageUrl === "string" ? source.coverImageUrl.trim() : "";
+  const coverImageUrl = customCover || extractCoverImageUrlFromPack(frozen.pack);
 
   const { data: existing } = await supabase
     .from("teacher_space_items")

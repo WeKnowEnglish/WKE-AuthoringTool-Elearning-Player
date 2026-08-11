@@ -63,6 +63,7 @@ import { SecondarySpeakingSectionEditor } from "@/components/teacher/activity-bu
 import { SentenceColumnsSectionEditor } from "@/components/teacher/activity-builder/SentenceColumnsSectionEditor";
 import { VerbTableSectionEditor } from "@/components/teacher/activity-builder/VerbTableSectionEditor";
 import { WordAnnotationSectionEditor } from "@/components/teacher/activity-builder/WordAnnotationSectionEditor";
+import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
 
 type Props = {
   trackId: string;
@@ -220,6 +221,7 @@ export function ActivityTrackCompilerWorkspace({
             title: loaded.title,
           }),
           createdAt: loaded.createdAt,
+          coverImageUrl: loaded.coverImageUrl ?? null,
           libraryId: loaded.libraryId,
           bankActivityId: loaded.bankActivityId,
         };
@@ -331,30 +333,45 @@ export function ActivityTrackCompilerWorkspace({
   // Practice = full LTC host (live preview, publish, assign).
   if (doc.mode === "practice" && doc.practiceComposition) {
     return (
-      <LearningTrackCompilerWorkspace
-        chrome="embedded"
-        classes={classes}
-        classLoadError={classLoadError}
-        initialComposition={doc.practiceComposition}
-        initialLibraryId={doc.libraryId}
-        initialBankActivityId={doc.bankActivityId}
-        onDraftSync={handlePracticeDraftSync}
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <TrackCoverImageEditor
+          value={doc.coverImageUrl ?? ""}
+          title={doc.title}
+          onChange={(coverImageUrl) => persistDoc({ ...doc, coverImageUrl: coverImageUrl || null })}
+        />
+        <LearningTrackCompilerWorkspace
+          chrome="embedded"
+          classes={classes}
+          classLoadError={classLoadError}
+          initialComposition={doc.practiceComposition}
+          initialLibraryId={doc.libraryId}
+          initialBankActivityId={doc.bankActivityId}
+          coverImageUrl={doc.coverImageUrl ?? null}
+          onDraftSync={handlePracticeDraftSync}
+        />
+      </div>
     );
   }
 
   // Assessment = Phase 0 shell (seeded Primary A2 definition; editors later).
   if (doc.mode === "assessment") {
     return (
-      <AssessmentTrackCompilerShell
-        document={doc}
-        classes={classes}
-        classLoadError={classLoadError}
-        onDocumentChange={(next) => {
-          setDoc(next);
-          docRef.current = next;
-        }}
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <TrackCoverImageEditor
+          value={doc.coverImageUrl ?? ""}
+          title={doc.title}
+          onChange={(coverImageUrl) => persistDoc({ ...doc, coverImageUrl: coverImageUrl || null })}
+        />
+        <AssessmentTrackCompilerShell
+          document={doc}
+          classes={classes}
+          classLoadError={classLoadError}
+          onDocumentChange={(next) => {
+            setDoc(next);
+            docRef.current = next;
+          }}
+        />
+      </div>
     );
   }
 
@@ -448,6 +465,7 @@ export function ActivityTrackCompilerWorkspace({
       persistDoc({
         ...assessment,
         createdAt: doc.createdAt,
+        coverImageUrl: doc.coverImageUrl ?? null,
       });
       setSelection({ type: "track" });
       return;
@@ -464,6 +482,7 @@ export function ActivityTrackCompilerWorkspace({
     persistDoc({
       ...graded,
       createdAt: doc.createdAt,
+      coverImageUrl: doc.coverImageUrl ?? null,
     });
     setSelection({ type: "track" });
   };
@@ -520,6 +539,11 @@ export function ActivityTrackCompilerWorkspace({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-stone-100">
+      <TrackCoverImageEditor
+        value={doc.coverImageUrl ?? ""}
+        title={doc.title}
+        onChange={(coverImageUrl) => patchDoc((current) => ({ ...current, coverImageUrl: coverImageUrl || null }))}
+      />
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Link

@@ -83,7 +83,6 @@ function Thumb({
       sizes="120px"
       className={className}
       loading="lazy"
-      unoptimized={url.includes("supabase.co")}
     />
   );
 }

@@ -242,7 +242,7 @@ export function useDailyCall(input: {
             }
             scheduleTokenRefresh(tokenPayload.exp);
           } catch {
-            setError("Video token refresh failed. Try Leave video, then Connect.");
+            setError("Video token refresh failed. Leave the classroom and rejoin if video drops.");
             setErrorCode("token_refresh_failed");
           } finally {
             refreshingRef.current = false;
@@ -332,6 +332,25 @@ export function useDailyCall(input: {
     setExpanded(true);
 
     try {
+      const existingCall = frameRef.current;
+      const sdkPromise = existingCall
+        ? null
+        : (async () => {
+            const finishSdkLoad = startAppDiagnosticSpan(
+              diagnosticSurface,
+              "virtual-classroom-video",
+              "daily_sdk_load",
+              { sessionId },
+            );
+            try {
+              const module = await import("@daily-co/daily-js");
+              finishSdkLoad();
+              return module.default;
+            } catch (sdkError) {
+              finishSdkLoad(undefined, sdkError);
+              throw sdkError;
+            }
+          })();
       const tokenPayload = await fetchMeetingToken(sessionId, diagnosticSurface);
       if (!tokenPayload.ok || !tokenPayload.token || !tokenPayload.roomUrl) {
         if (tokenPayload.code === "daily_disabled") {
@@ -354,7 +373,7 @@ export function useDailyCall(input: {
         return;
       }
 
-      let call = frameRef.current;
+      let call = existingCall;
       if (call) {
         try {
           await call.leave();
@@ -363,20 +382,7 @@ export function useDailyCall(input: {
         }
       } else {
         await destroyCall(false);
-        const finishSdkLoad = startAppDiagnosticSpan(
-          diagnosticSurface,
-          "virtual-classroom-video",
-          "daily_sdk_load",
-          { sessionId },
-        );
-        let Daily: typeof import("@daily-co/daily-js").default;
-        try {
-          Daily = (await import("@daily-co/daily-js")).default;
-          finishSdkLoad();
-        } catch (sdkError) {
-          finishSdkLoad(undefined, sdkError);
-          throw sdkError;
-        }
+        const Daily = await sdkPromise!;
         const activeTheme = themeRef.current;
         call = Daily.createFrame(parent, {
           iframeStyle: {
@@ -385,7 +391,7 @@ export function useDailyCall(input: {
             border: "0",
             borderRadius: "0",
           },
-          showLeaveButton: true,
+          showLeaveButton: false,
           showFullscreenButton: true,
           ...(activeTheme ? { theme: activeTheme } : {}),
         });

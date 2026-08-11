@@ -1,7 +1,7 @@
 "use client";
 
 import { useStorage } from "@liveblocks/react/suspense";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { readLiveObjectField } from "@/lib/whiteboard/liveblocks/storage-read";
 import type { DicePreset, RandomiserState } from "@/lib/classroom-tools/dice";
 import { createEmptyRandomiser } from "@/lib/classroom-tools/dice";
@@ -44,6 +44,18 @@ export function DicePanelContent({
 }: Omit<Props, "randomiser"> & { randomiser: RandomiserState }) {
   const [sides, setSides] = useState(8);
   const [labelText, setLabelText] = useState("cat, dog, bird, fish");
+  const configurationQueue = useRef<Promise<void>>(Promise.resolve());
+  const queueConfiguration = (command: Record<string, unknown>) => {
+    const next = configurationQueue.current
+      .catch(() => undefined)
+      .then(() => onCommand(command));
+    configurationQueue.current = next;
+    return next;
+  };
+  const rollAfterConfiguration = async () => {
+    await configurationQueue.current.catch(() => undefined);
+    await onCommand({ type: "ROLL_DICE" });
+  };
 
   const canSeeRoll =
     role === "host" ||
@@ -65,21 +77,20 @@ export function DicePanelContent({
               <button
                 key={p.id}
                 type="button"
-                disabled={busy}
                 className={`rounded px-2 py-1 text-xs font-bold ${
                   randomiser.preset === p.id ? "bg-sky-800 text-white" : "bg-slate-100"
                 }`}
                 onClick={() => {
                   if (p.id === "custom") {
-                    void onCommand({ type: "CONFIGURE_DICE", preset: "custom", sides });
+                    void queueConfiguration({ type: "CONFIGURE_DICE", preset: "custom", sides });
                   } else if (p.id === "labels") {
-                    void onCommand({
+                    void queueConfiguration({
                       type: "CONFIGURE_DICE",
                       preset: "labels",
                       labels: labelText.split(",").map((s) => s.trim()),
                     });
                   } else {
-                    void onCommand({ type: "CONFIGURE_DICE", preset: p.id });
+                    void queueConfiguration({ type: "CONFIGURE_DICE", preset: p.id });
                   }
                 }}
               >
@@ -98,7 +109,7 @@ export function DicePanelContent({
                 value={sides}
                 onChange={(e) => setSides(Number(e.target.value) || 2)}
                 onBlur={() =>
-                  void onCommand({ type: "CONFIGURE_DICE", preset: "custom", sides })
+                  void queueConfiguration({ type: "CONFIGURE_DICE", preset: "custom", sides })
                 }
                 className="mt-1 w-20 rounded border border-slate-300 px-2 py-1"
               />
@@ -112,7 +123,7 @@ export function DicePanelContent({
                 value={labelText}
                 onChange={(e) => setLabelText(e.target.value)}
                 onBlur={() =>
-                  void onCommand({
+                  void queueConfiguration({
                     type: "CONFIGURE_DICE",
                     preset: "labels",
                     labels: labelText.split(",").map((s) => s.trim()),
@@ -126,9 +137,8 @@ export function DicePanelContent({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={busy}
               className="rounded-lg bg-sky-800 px-3 py-2 text-sm font-bold text-white"
-              onClick={() => void onCommand({ type: "ROLL_DICE" })}
+              onClick={() => void rollAfterConfiguration()}
             >
               Roll
             </button>

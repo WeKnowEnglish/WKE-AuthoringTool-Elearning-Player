@@ -11,6 +11,10 @@ import {
 import { ensureVcMember } from "@/lib/virtual-classroom/server/liveblocks-session";
 import { getVirtualClassroomSessionByJoinCode } from "@/lib/virtual-classroom/server/session";
 import { requireWhiteboardStudent } from "@/lib/whiteboard/product/access";
+import {
+  classroomRealtimeNativeShellAuthorityReady,
+  classroomRealtimeNativeShellPilotEnabled,
+} from "@/lib/classroom-realtime/shadow-mode";
 
 type Body = {
   joinCode?: string;
@@ -21,13 +25,6 @@ type Body = {
 export async function POST(request: Request) {
   return withCollabServerTiming("vc.join", async (timer) => {
     timer.setContext({ activity: "classroom", role: "member", commandType: "JOIN" });
-
-    try {
-      assertLiveblocksSecret();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Liveblocks is not configured.";
-      return NextResponse.json({ error: message }, { status: 500 });
-    }
 
     let body: Body = {};
     try {
@@ -78,6 +75,18 @@ export async function POST(request: Request) {
       roomId: session.liveblocksRoomId,
       classId: session.classId,
     });
+    const nativeSupabaseShell =
+      Boolean(session.classId) &&
+      classroomRealtimeNativeShellPilotEnabled() &&
+      classroomRealtimeNativeShellAuthorityReady();
+    if (!nativeSupabaseShell) {
+      try {
+        assertLiveblocksSecret();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Liveblocks is not configured.";
+        return NextResponse.json({ error: message }, { status: 500 });
+      }
+    }
 
     let userId: string;
     let displayName: string;
@@ -121,14 +130,16 @@ export async function POST(request: Request) {
     }
 
     try {
-      await timer.measure("ensureMember", () =>
-        ensureVcMember({
-          roomId: session.liveblocksRoomId,
-          userId,
-          displayName,
-          role: "member",
-        }),
-      );
+      if (!nativeSupabaseShell) {
+        await timer.measure("ensureMember", () =>
+          ensureVcMember({
+            roomId: session.liveblocksRoomId,
+            userId,
+            displayName,
+            role: "member",
+          }),
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not join session.";
       return NextResponse.json({ error: message }, { status: 404 });

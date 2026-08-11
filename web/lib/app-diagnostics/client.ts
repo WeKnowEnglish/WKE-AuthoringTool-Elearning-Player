@@ -87,7 +87,13 @@ export async function flushAppDiagnosticQueue(): Promise<number> {
   if (flushPromise) return flushPromise;
 
   flushPromise = (async () => {
-    const batch = readQueuedEvents().slice(0, BATCH_SIZE);
+    const queued = readQueuedEvents();
+    const firstClassroomSessionId = queued[0]?.classroomSessionId ?? null;
+    // A browser can retain events from several classes. Send one classroom at
+    // a time so each batch can be authorized by its own session cookie.
+    const batch = queued
+      .filter((event) => (event.classroomSessionId ?? null) === firstClassroomSessionId)
+      .slice(0, BATCH_SIZE);
     if (batch.length === 0) return 0;
     try {
       const response = await fetch("/api/diagnostics/events", {
@@ -167,7 +173,7 @@ export function recordAppDiagnostic(
   const route = options?.route ?? currentRoute();
   const classroomSessionId =
     options?.classroomSessionId ??
-    (route ?? "").match(/^\/(?:teacher\/)?virtual-classroom\/([^/?#]+)/)?.[1];
+    (route ?? "").match(/^\/(?:teacher\/)?virtual-classroom\/(vcs_[A-Za-z0-9_-]+)/)?.[1];
   const event: AppDiagnosticEvent = {
     id: randomId("event"),
     sessionId: getAppDiagnosticSessionId(),

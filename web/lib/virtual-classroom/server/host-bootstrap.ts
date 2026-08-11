@@ -4,10 +4,11 @@ import { randomBytes } from "node:crypto";
 import { LiveObject, toPlainLson, type PlainLsonObject } from "@liveblocks/client";
 import { Liveblocks } from "@liveblocks/node";
 import { generateJoinCode } from "@/lib/board-game/liveblocks/join-code";
-import { logDaily } from "@/lib/daily/log";
-import { getOrCreateDailyRoomForSession } from "@/lib/daily/session-room";
-import { isDailyEnabled } from "@/lib/env/daily-server";
 import { assertLiveblocksSecret } from "@/lib/env/liveblocks-server";
+import {
+  classroomRealtimeNativeShellAuthorityReady,
+  classroomRealtimeNativeShellPilotEnabled,
+} from "@/lib/classroom-realtime/shadow-mode";
 import { createVirtualClassroomInitialStorage } from "@/lib/virtual-classroom/liveblocks/initial-storage";
 import {
   classSessionIdFromJoinCode,
@@ -54,7 +55,11 @@ export async function bootstrapVirtualClassroomHost(input: {
   /** When true, do not end other active sessions for the class (reuse path handles that). */
   skipEndOthers?: boolean;
 }): Promise<HostVirtualClassroomResult> {
-  const secret = assertLiveblocksSecret();
+  const nativeSupabaseShell =
+    Boolean(input.classId) &&
+    classroomRealtimeNativeShellPilotEnabled() &&
+    classroomRealtimeNativeShellAuthorityReady();
+  const secret = nativeSupabaseShell ? null : assertLiveblocksSecret();
   const joinCode = generateJoinCode();
   const sessionId = classSessionIdFromJoinCode(joinCode);
   const roomId = toVirtualClassroomRoomId(joinCode);
@@ -93,44 +98,36 @@ export async function bootstrapVirtualClassroomHost(input: {
     }),
   );
 
-  const liveblocks = new Liveblocks({ secret });
-  await liveblocks.createRoom(roomId, { defaultAccesses: [] });
+  if (!nativeSupabaseShell && secret) {
+    const liveblocks = new Liveblocks({ secret });
+    await liveblocks.createRoom(roomId, { defaultAccesses: [] });
 
-  const initial = createVirtualClassroomInitialStorage({
-    sessionId,
-    joinCode,
-    classId: input.classId ?? "",
-    hostUserId: input.teacher.userId,
-    title,
-  });
-  const root = new LiveObject(initial);
-  const plain = toPlainLson(root) as PlainLsonObject;
-  try {
-    await liveblocks.initializeStorageDocument(roomId, plain);
-  } catch {
-    // client initialStorage fallback
-  }
-
-  await ensureVcMember({
-    roomId,
-    userId: input.teacher.userId,
-    displayName: input.teacher.displayName,
-    role: "host",
-  });
-
-  // Daily room is best-effort: Liveblocks session must still start if Daily fails.
-  let dailyRoomUrl: string | null = null;
-  if (isDailyEnabled()) {
+    const initial = createVirtualClassroomInitialStorage({
+      sessionId,
+      joinCode,
+      classId: input.classId ?? "",
+      hostUserId: input.teacher.userId,
+      title,
+    });
+    const root = new LiveObject(initial);
+    const plain = toPlainLson(root) as PlainLsonObject;
     try {
-      const room = await getOrCreateDailyRoomForSession(sessionId);
-      dailyRoomUrl = room?.url ?? null;
-    } catch (error) {
-      logDaily("host_bootstrap_daily_failed", {
-        sessionId,
-        message: error instanceof Error ? error.message : "unknown",
-      });
+      await liveblocks.initializeStorageDocument(roomId, plain);
+    } catch {
+      // client initialStorage fallback
     }
+
+    await ensureVcMember({
+      roomId,
+      userId: input.teacher.userId,
+      displayName: input.teacher.displayName,
+      role: "host",
+    });
   }
+
+  // Daily room creation is intentionally deferred to the token request. It no
+  // longer blocks navigation into the classroom, and the SDK loads in parallel.
+  const dailyRoomUrl: string | null = null;
 
   const memberToken = encodeVcMemberToken({
     sessionId,

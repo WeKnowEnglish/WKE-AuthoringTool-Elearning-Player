@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     ...new Set(
       parsed.data.events
         .map((event) => event.classroomSessionId)
-        .filter((value): value is string => Boolean(value)),
+        .filter((value): value is string => Boolean(value && /^vcs_[A-Za-z0-9_-]+$/.test(value))),
     ),
   ];
   if (classroomSessionIds.length > 1) {
@@ -77,7 +77,10 @@ export async function POST(request: Request) {
     duration_ms: event.durationMs ?? null,
     route: sanitizeDiagnosticRoute(event.route),
     class_id: event.classId ?? null,
-    classroom_session_id: event.classroomSessionId ?? null,
+    classroom_session_id:
+      event.classroomSessionId && /^vcs_[A-Za-z0-9_-]+$/.test(event.classroomSessionId)
+        ? event.classroomSessionId
+        : null,
     participant_id: participantId,
     participant_display_name: participantDisplayName,
     activity_id: event.activityId ?? null,

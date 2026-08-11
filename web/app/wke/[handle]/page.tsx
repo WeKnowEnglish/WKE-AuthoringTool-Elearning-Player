@@ -30,6 +30,11 @@ export default async function PublicTeacherSpacePage({ params }: Props) {
   const bio =
     page.space.bio.trim() ||
     `Practice English with ${page.space.title}.`;
+  const configuredSectionIds = new Set(page.space.wall_sections.map((section) => section.id));
+  const orphanedItems = page.items.filter((item) => !configuredSectionIds.has(item.section_id));
+  const visibleSections = orphanedItems.length
+    ? [...page.space.wall_sections, { id: "more-activities", label: "More activities" }]
+    : page.space.wall_sections;
 
   return (
     <main
@@ -73,6 +78,14 @@ export default async function PublicTeacherSpacePage({ params }: Props) {
         </div>
 
         <div className="relative z-10 mx-auto flex min-h-[min(88dvh,720px)] max-w-5xl flex-col justify-end px-5 pb-12 pt-20 sm:px-8">
+          {page.space.profile_image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={page.space.profile_image_url}
+              alt=""
+              className="mb-5 h-28 w-28 rounded-full border-4 border-white object-cover shadow-xl sm:h-32 sm:w-32"
+            />
+          ) : null}
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/80">
             @{page.space.handle}
           </p>
@@ -109,10 +122,10 @@ export default async function PublicTeacherSpacePage({ params }: Props) {
         id="activities"
         className="mx-auto max-w-5xl scroll-mt-6 px-5 py-12 sm:px-8"
       >
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="text-2xl font-extrabold text-[var(--classroom-ink)]">
-              Activities
+              Explore the classroom
             </h2>
             <p className="mt-1 text-sm font-medium text-[var(--classroom-muted)]">
               Open any activity to practice. Progress is not tracked.
@@ -131,13 +144,23 @@ export default async function PublicTeacherSpacePage({ params }: Props) {
             No activities published yet. Check back soon.
           </p>
         ) : (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {page.items.map((item) => (
-              <li key={item.id}>
-                <ClassroomActivityTile item={item} />
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-10">
+            {visibleSections.map((section) => {
+              const sectionItems = section.id === "more-activities"
+                ? orphanedItems
+                : page.items.filter((item) => item.section_id === section.id);
+              if (!sectionItems.length) return null;
+              const compact = page.space.activity_layout === "compact";
+              return (
+                <section key={section.id} aria-labelledby={`section-${section.id}`}>
+                  <h3 id={`section-${section.id}`} className="mb-4 text-xl font-extrabold text-[var(--classroom-ink)]">{section.label}</h3>
+                  <ul className={`grid grid-cols-1 gap-4 ${compact ? "lg:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+                    {sectionItems.map((item) => <li key={item.id}><ClassroomActivityTile item={item} compact={compact} /></li>)}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
         )}
       </section>
     </main>

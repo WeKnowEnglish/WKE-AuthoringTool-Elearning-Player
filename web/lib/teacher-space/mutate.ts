@@ -16,6 +16,9 @@ import {
 import type { TeacherSpaceSummary } from "@/lib/teacher-space/types";
 
 function migrationHint(message: string): string {
+  if (/profile_image_url|profile_asset_id|activity_layout|wall_sections|section_id/i.test(message)) {
+    return " Apply migration 132_teacher_space_sections_and_profile.sql.";
+  }
   if (/teacher_space.*format_check|format_check/i.test(message)) {
     return " Apply migration 124_teacher_space_items_formats.sql (wall formats must match Activity Bank).";
   }
@@ -111,6 +114,9 @@ export async function ensureTeacherSpace(
     bio: data.bio ?? "",
     is_published: Boolean(data.is_published),
     hero_image_url: null,
+    profile_image_url: null,
+    activity_layout: "cards",
+    wall_sections: [{ id: "activities", label: "Activities" }],
     theme_id: "sky_day",
     publicPath: teacherSpacePublicPath(data.handle),
     updated_at: data.updated_at,
@@ -128,6 +134,11 @@ export async function updateTeacherSpaceSettings(
     theme_id?: string;
     hero_image_url?: string | null;
     hero_asset_id?: string | null;
+    profile_image_url?: string | null;
+    profile_asset_id?: string | null;
+    activity_layout?: "cards" | "compact";
+    wall_sections?: Array<{ id: string; label: string }>;
+    item_sections?: Record<string, string>;
     email?: string | null;
   },
 ): Promise<TeacherSpaceSummary> {
@@ -158,6 +169,23 @@ export async function updateTeacherSpaceSettings(
     input.hero_asset_id === undefined
       ? undefined
       : input.hero_asset_id?.trim() || null;
+  const profileImageUrl =
+    input.profile_image_url === undefined
+      ? space.profile_image_url
+      : assertHttpsUrlOrNull(input.profile_image_url, "Profile image");
+  const profileAssetId =
+    input.profile_asset_id === undefined ? undefined : input.profile_asset_id?.trim() || null;
+  const activityLayout = input.activity_layout === "compact" ? "compact" : "cards";
+  const sections = (input.wall_sections ?? space.wall_sections)
+    .map((section) => ({
+      id: section.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-").slice(0, 48),
+      label: section.label.trim().slice(0, 60),
+    }))
+    .filter((section, index, all) =>
+      Boolean(section.id && section.label && all.findIndex((row) => row.id === section.id) === index),
+    )
+    .slice(0, 8);
+  if (!sections.length) throw new Error("Keep at least one Classroom Wall section.");
 
   const patch: Record<string, unknown> = {
     title,
@@ -165,11 +193,15 @@ export async function updateTeacherSpaceSettings(
     is_published: Boolean(input.is_published),
     theme_id: themeId,
     hero_image_url: heroImageUrl,
+    profile_image_url: profileImageUrl,
+    activity_layout: activityLayout,
+    wall_sections: sections,
     updated_at: new Date().toISOString(),
   };
   if (heroAssetId !== undefined) {
     patch.hero_asset_id = heroAssetId;
   }
+  if (profileAssetId !== undefined) patch.profile_asset_id = profileAssetId;
 
   const { error } = await supabase
     .from("teacher_spaces")
@@ -179,6 +211,17 @@ export async function updateTeacherSpaceSettings(
 
   if (error) {
     throw new Error(`${error.message}${migrationHint(error.message)}`);
+  }
+
+  const validSectionIds = new Set(sections.map((section) => section.id));
+  for (const [itemId, requestedSectionId] of Object.entries(input.item_sections ?? {})) {
+    const sectionId = validSectionIds.has(requestedSectionId) ? requestedSectionId : sections[0]!.id;
+    const { error: itemError } = await supabase
+      .from("teacher_space_items")
+      .update({ section_id: sectionId, updated_at: new Date().toISOString() })
+      .eq("id", itemId)
+      .eq("space_id", space.id);
+    if (itemError) throw new Error(itemError.message);
   }
 
   const next = await getTeacherSpaceForOwner(supabase, teacherId);

@@ -43,6 +43,11 @@ export async function saveTeacherSpaceSettings(input: {
   theme_id?: string;
   hero_image_url?: string | null;
   hero_asset_id?: string | null;
+  profile_image_url?: string | null;
+  profile_asset_id?: string | null;
+  activity_layout?: "cards" | "compact";
+  wall_sections?: Array<{ id: string; label: string }>;
+  item_sections?: Record<string, string>;
 }): Promise<TeacherSpaceActionResult> {
   try {
     const { supabase, user } = await requireTeacher();

@@ -32,8 +32,10 @@ type Props = {
 export function TeacherSpacePanel({ space, items: initialItems, origin }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const profileFileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [uploadingHero, setUploadingHero] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [items, setItems] = useState(initialItems);
 
@@ -48,6 +50,11 @@ export function TeacherSpacePanel({ space, items: initialItems, origin }: Props)
   );
   const [heroAssetId, setHeroAssetId] = useState<string | null>(null);
   const [heroDirty, setHeroDirty] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(space?.profile_image_url ?? null);
+  const [profileAssetId, setProfileAssetId] = useState<string | null>(null);
+  const [profileDirty, setProfileDirty] = useState(false);
+  const [activityLayout, setActivityLayout] = useState<"cards" | "compact">(space?.activity_layout ?? "cards");
+  const [sections, setSections] = useState(space?.wall_sections ?? [{ id: "activities", label: "Activities" }]);
   const [showSettings, setShowSettings] = useState(!space);
 
   const [clientOrigin, setClientOrigin] = useState(origin);
@@ -70,6 +77,11 @@ export function TeacherSpacePanel({ space, items: initialItems, origin }: Props)
     setHeroImageUrl(space.hero_image_url);
     setHeroDirty(false);
     setHeroAssetId(null);
+    setProfileImageUrl(space.profile_image_url);
+    setProfileDirty(false);
+    setProfileAssetId(null);
+    setActivityLayout(space.activity_layout);
+    setSections(space.wall_sections);
   }, [space]);
 
   const publicUrl = useMemo(() => {
@@ -88,6 +100,11 @@ export function TeacherSpacePanel({ space, items: initialItems, origin }: Props)
         theme_id: themeId,
         hero_image_url: heroImageUrl,
         ...(heroDirty ? { hero_asset_id: heroAssetId } : {}),
+        profile_image_url: profileImageUrl,
+        ...(profileDirty ? { profile_asset_id: profileAssetId } : {}),
+        activity_layout: activityLayout,
+        wall_sections: sections,
+        item_sections: Object.fromEntries(items.map((item) => [item.id, item.section_id])),
       });
       if (!result.ok) {
         setNotice(result.error);
@@ -139,6 +156,53 @@ export function TeacherSpacePanel({ space, items: initialItems, origin }: Props)
     } finally {
       setUploadingHero(false);
     }
+  }
+
+  async function uploadProfile(file: File) {
+    setNotice(null);
+    setUploadingProfile(true);
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      form.append("kind", "image");
+      form.append("meta", JSON.stringify({ source: "classroom_profile", field: "profile_image_url" }));
+      const response = await fetch("/api/studio/assets", { method: "POST", body: form, credentials: "include" });
+      const payload = (await response.json()) as { error?: string; public_url?: string; id?: string };
+      if (!response.ok || !payload.public_url) throw new Error(payload.error || "Profile upload failed.");
+      setProfileImageUrl(payload.public_url);
+      setProfileAssetId(payload.id ?? null);
+      setProfileDirty(true);
+      setNotice("Profile image uploaded — click Save settings to keep it.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Profile upload failed.");
+    } finally {
+      setUploadingProfile(false);
+    }
+  }
+
+  function addSection() {
+    if (sections.length >= 8) return;
+    const id = `section-${crypto.randomUUID().slice(0, 8)}`;
+    setSections((current) => [...current, { id, label: `Section ${current.length + 1}` }]);
+  }
+
+  function removeSection(id: string) {
+    if (sections.length <= 1) return;
+    const fallback = sections.find((section) => section.id !== id)?.id ?? "activities";
+    setSections((current) => current.filter((section) => section.id !== id));
+    setItems((current) => current.map((item) => item.section_id === id ? { ...item, section_id: fallback } : item));
+  }
+
+  function moveSection(id: string, direction: -1 | 1) {
+    setSections((current) => {
+      const index = current.findIndex((section) => section.id === id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      const [section] = next.splice(index, 1);
+      next.splice(nextIndex, 0, section!);
+      return next;
+    });
   }
 
   function moveItem(id: string, direction: -1 | 1) {
@@ -371,6 +435,63 @@ export function TeacherSpacePanel({ space, items: initialItems, origin }: Props)
           />
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <p className="text-sm font-medium">Profile image</p>
+            <p className="mt-0.5 text-xs text-neutral-500">Appears over the bottom of your hero banner.</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-neutral-100 shadow">
+                {profileImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profileImageUrl} alt="" className="h-full w-full object-cover" />
+                ) : <span className="text-2xl font-bold text-neutral-400">{title.trim().charAt(0) || "T"}</span>}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="rounded border px-3 py-1.5 text-sm" disabled={uploadingProfile || pending} onClick={() => profileFileRef.current?.click()}>
+                  {uploadingProfile ? "Uploading…" : profileImageUrl ? "Replace" : "Upload"}
+                </button>
+                {profileImageUrl ? <button type="button" className="rounded border px-3 py-1.5 text-sm text-red-800" onClick={() => { setProfileImageUrl(null); setProfileAssetId(null); setProfileDirty(true); }}>Remove</button> : null}
+              </div>
+              <input ref={profileFileRef} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProfile(file); event.target.value = ""; }} />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium">Activity layout</p>
+            <p className="mt-0.5 text-xs text-neutral-500">Cards emphasize artwork; compact fits more activities on screen.</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {(["cards", "compact"] as const).map((layout) => (
+                <button key={layout} type="button" onClick={() => setActivityLayout(layout)} className={`rounded-lg border px-3 py-3 text-left text-sm font-semibold ${activityLayout === layout ? "border-sky-500 bg-sky-50 ring-2 ring-sky-100" : "border-neutral-200"}`}>
+                  {layout === "cards" ? "Visual cards" : "Compact rows"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium">Activity sections</p>
+              <p className="mt-0.5 text-xs text-neutral-500">Use labels such as A1 Beginners, Grade 5, Homework, or Speaking.</p>
+            </div>
+            <button type="button" disabled={sections.length >= 8} onClick={addSection} className="rounded border px-2.5 py-1.5 text-xs font-semibold disabled:opacity-40">Add section</button>
+          </div>
+          <div className="mt-2 space-y-2">
+            {sections.map((section, index) => (
+              <div key={section.id} className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
+                <span className="w-6 text-center text-xs font-bold text-neutral-400">{index + 1}</span>
+                <input value={section.label} maxLength={60} onChange={(event) => setSections((current) => current.map((row) => row.id === section.id ? { ...row, label: event.target.value } : row))} className="min-w-0 flex-1 rounded border px-2 py-1.5 text-sm" aria-label={`Section ${index + 1} label`} />
+                <div className="flex" aria-label={`Reorder ${section.label}`}>
+                  <button type="button" disabled={index === 0} onClick={() => moveSection(section.id, -1)} className="rounded px-1.5 py-1 text-xs font-bold disabled:opacity-25" aria-label={`Move ${section.label} up`}>↑</button>
+                  <button type="button" disabled={index === sections.length - 1} onClick={() => moveSection(section.id, 1)} className="rounded px-1.5 py-1 text-xs font-bold disabled:opacity-25" aria-label={`Move ${section.label} down`}>↓</button>
+                </div>
+                <button type="button" disabled={sections.length === 1} onClick={() => removeSection(section.id)} className="rounded px-2 py-1 text-xs font-semibold text-red-700 disabled:opacity-30">Remove</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -455,6 +576,14 @@ export function TeacherSpacePanel({ space, items: initialItems, origin }: Props)
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
+                  <select
+                    value={item.section_id}
+                    onChange={(event) => setItems((current) => current.map((row) => row.id === item.id ? { ...row, section_id: event.target.value } : row))}
+                    className="rounded border px-2 py-1 text-xs"
+                    aria-label={`Section for ${item.title}`}
+                  >
+                    {sections.map((section) => <option key={section.id} value={section.id}>{section.label}</option>)}
+                  </select>
                   <button
                     type="button"
                     className="rounded border px-2 py-1 text-xs disabled:opacity-40"

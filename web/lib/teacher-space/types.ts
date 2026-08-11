@@ -2,6 +2,8 @@ import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 import type { ClassroomThemeId } from "@/lib/teacher-space/themes";
 
 export type TeacherSpaceFormat = StudioActivityFormat;
+export type TeacherSpaceActivityLayout = "cards" | "compact";
+export type TeacherSpaceSection = { id: string; label: string };
 
 export type TeacherSpaceRow = {
   id: string;
@@ -12,6 +14,10 @@ export type TeacherSpaceRow = {
   is_published: boolean;
   hero_image_url: string | null;
   hero_asset_id: string | null;
+  profile_image_url: string | null;
+  profile_asset_id: string | null;
+  activity_layout: TeacherSpaceActivityLayout;
+  wall_sections: TeacherSpaceSection[];
   theme_id: ClassroomThemeId;
   created_at: string;
   updated_at: string;
@@ -24,6 +30,9 @@ export type TeacherSpaceSummary = {
   bio: string;
   is_published: boolean;
   hero_image_url: string | null;
+  profile_image_url: string | null;
+  activity_layout: TeacherSpaceActivityLayout;
+  wall_sections: TeacherSpaceSection[];
   theme_id: ClassroomThemeId;
   publicPath: string;
   updated_at: string;
@@ -39,6 +48,7 @@ export type TeacherSpaceItemSummary = {
   caption: string;
   cover_image_url: string | null;
   sort_order: number;
+  section_id: string;
   published_at: string;
   playPath: string;
 };
@@ -53,6 +63,9 @@ export type PublicTeacherSpacePage = {
     title: string;
     bio: string;
     hero_image_url: string | null;
+    profile_image_url: string | null;
+    activity_layout: TeacherSpaceActivityLayout;
+    wall_sections: TeacherSpaceSection[];
     theme_id: ClassroomThemeId;
     trials_enabled?: boolean;
   };

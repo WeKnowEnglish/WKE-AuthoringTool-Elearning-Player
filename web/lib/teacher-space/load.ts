@@ -11,10 +11,14 @@ import type {
   PublicTeacherSpacePage,
   TeacherSpaceItemDetail,
   TeacherSpaceItemSummary,
+  TeacherSpaceSection,
   TeacherSpaceSummary,
 } from "@/lib/teacher-space/types";
 
 function migrationHint(message: string): string {
+  if (/profile_image_url|profile_asset_id|activity_layout|wall_sections|section_id/i.test(message)) {
+    return " Apply migration 132_teacher_space_sections_and_profile.sql.";
+  }
   if (/teacher_space.*format_check|format_check/i.test(message)) {
     return " Apply migration 124_teacher_space_items_formats.sql (wall formats must match Activity Bank).";
   }
@@ -34,6 +38,7 @@ function mapItemSummary(
     caption: string;
     cover_image_url?: string | null;
     sort_order: number;
+    section_id?: string | null;
     published_at: string;
   },
   handle: string,
@@ -47,6 +52,7 @@ function mapItemSummary(
     caption: row.caption ?? "",
     cover_image_url: row.cover_image_url ?? null,
     sort_order: row.sort_order,
+    section_id: row.section_id ?? "activities",
     published_at: row.published_at,
     playPath: teacherSpacePlayPath(handle, row.id),
   };
@@ -60,6 +66,9 @@ function mapSpaceSummary(
     bio: string | null;
     is_published: boolean;
     hero_image_url?: string | null;
+    profile_image_url?: string | null;
+    activity_layout?: string | null;
+    wall_sections?: unknown;
     theme_id?: string | null;
     updated_at: string;
   },
@@ -73,6 +82,9 @@ function mapSpaceSummary(
     bio: data.bio ?? "",
     is_published: Boolean(data.is_published),
     hero_image_url: data.hero_image_url ?? null,
+    profile_image_url: data.profile_image_url ?? null,
+    activity_layout: data.activity_layout === "compact" ? "compact" : "cards",
+    wall_sections: normalizeSections(data.wall_sections),
     theme_id: theme.id,
     publicPath: teacherSpacePublicPath(data.handle),
     updated_at: data.updated_at,
@@ -80,10 +92,21 @@ function mapSpaceSummary(
   };
 }
 
+function normalizeSections(raw: unknown): TeacherSpaceSection[] {
+  if (!Array.isArray(raw)) return [{ id: "activities", label: "Activities" }];
+  const rows = raw.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const id = String((entry as { id?: unknown }).id ?? "").trim();
+    const label = String((entry as { label?: unknown }).label ?? "").trim();
+    return id && label ? [{ id, label }] : [];
+  }).slice(0, 8);
+  return rows.length ? rows : [{ id: "activities", label: "Activities" }];
+}
+
 const SPACE_SELECT =
-  "id, handle, title, bio, is_published, hero_image_url, theme_id, updated_at";
+  "id, handle, title, bio, is_published, hero_image_url, profile_image_url, activity_layout, wall_sections, theme_id, updated_at";
 const ITEM_SELECT =
-  "id, space_id, studio_activity_id, format, title, caption, cover_image_url, sort_order, published_at";
+  "id, space_id, studio_activity_id, format, title, caption, cover_image_url, section_id, sort_order, published_at";
 
 export async function getTeacherSpaceForOwner(
   supabase: SupabaseClient,
@@ -155,7 +178,7 @@ export async function getPublishedTeacherSpaceByHandle(
 ): Promise<PublicTeacherSpacePage | null> {
   const { data: space, error } = await supabase
     .from("teacher_spaces")
-    .select("id, handle, title, bio, is_published, hero_image_url, theme_id, trials_enabled")
+    .select("id, handle, title, bio, is_published, hero_image_url, profile_image_url, activity_layout, wall_sections, theme_id, trials_enabled")
     .eq("handle", handle)
     .eq("is_published", true)
     .maybeSingle();
@@ -189,6 +212,9 @@ export async function getPublishedTeacherSpaceByHandle(
           title: legacy.title,
           bio: legacy.bio ?? "",
           hero_image_url: legacy.hero_image_url ?? null,
+          profile_image_url: null,
+          activity_layout: "cards",
+          wall_sections: [{ id: "activities", label: "Activities" }],
           theme_id: theme.id,
           trials_enabled: false,
         },
@@ -220,6 +246,9 @@ export async function getPublishedTeacherSpaceByHandle(
       title: space.title,
       bio: space.bio ?? "",
       hero_image_url: space.hero_image_url ?? null,
+      profile_image_url: space.profile_image_url ?? null,
+      activity_layout: space.activity_layout === "compact" ? "compact" : "cards",
+      wall_sections: normalizeSections(space.wall_sections),
       theme_id: theme.id,
       trials_enabled: Boolean(
         (space as { trials_enabled?: boolean }).trials_enabled,

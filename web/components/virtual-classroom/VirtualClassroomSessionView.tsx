@@ -475,7 +475,10 @@ export function VirtualClassroomSessionView({
   }
 
   return (
-    <div className="flex h-dvh min-h-0 flex-row overflow-hidden bg-gradient-to-b from-slate-50 to-teal-50">
+    <div
+      data-classroom-shell="liveblocks-compat"
+      className="flex h-dvh min-h-0 flex-row overflow-hidden bg-gradient-to-b from-slate-50 to-teal-50"
+    >
       {error ? (
         <p className="pointer-events-auto fixed left-1/2 top-3 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700 shadow-lg">
           {error}

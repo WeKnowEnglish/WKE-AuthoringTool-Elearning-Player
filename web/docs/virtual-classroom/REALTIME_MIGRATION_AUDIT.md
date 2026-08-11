@@ -302,6 +302,19 @@ server-only authority flags before this shell gate; those server settings are
 intentionally not exposed to browser code. One-off guest sessions are excluded
 from this cutover even when the flag is enabled.
 
+### Native-shell rollout check
+
+1. Start a rostered class as a signed-in teacher and join as a signed-in student.
+2. Confirm the classroom root has `data-classroom-shell="supabase-native"`.
+3. Switch Meeting → Learn → Meeting and verify both browsers follow promptly.
+4. Exercise timer, dice, points, picker, groups, status, and announcement once.
+5. Refresh the student, then join late in another browser; both must recover the
+   current stage, activity, tools, and presentation from the saved snapshot.
+6. Open the shared whiteboard and confirm its isolated Liveblocks connection
+   appears only while that collaborative surface is mounted.
+7. Join a one-off guest class and confirm its root has
+   `data-classroom-shell="liveblocks-compat"`, then end both test sessions.
+
 ## Classroom-native presentation surface
 
 The Learn stage now includes a shared Present surface without migrating the

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { WhiteboardRoomShell } from "@/components/pilots/whiteboard/WhiteboardRoomShell";
 import { VirtualClassroomSharedBoard } from "@/components/virtual-classroom/VirtualClassroomSharedBoard";
+import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
 import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
 import {
   getOrCreateWhiteboardUserId,
@@ -25,6 +26,8 @@ type Props = {
   studentPensEnabled: boolean;
   onToggleStudentPens: (enabled: boolean) => void;
   pensBusy?: boolean;
+  /** Native Supabase shell supplies a provider only around the nested board. */
+  isolatedLiveblocksProvider?: boolean;
 };
 
 function createClientInstanceId(): string {
@@ -48,6 +51,7 @@ export function VirtualClassroomWhiteboardEmbed({
   studentPensEnabled,
   onToggleStudentPens,
   pensBusy = false,
+  isolatedLiveblocksProvider = false,
 }: Props) {
   const [context, setContext] = useState<WhiteboardSessionContext | null>(null);
   const [clientInstanceId, setClientInstanceId] = useState<string | null>(null);
@@ -121,7 +125,7 @@ export function VirtualClassroomWhiteboardEmbed({
   if (context && clientInstanceId) {
     const roomId = context.roomId || toWhiteboardRoomId(context.sessionId);
     const wbUserId = context.userId || getOrCreateWhiteboardUserId();
-    return (
+    const board = (
       <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
         <WhiteboardRoomShell
           roomId={roomId}
@@ -142,6 +146,9 @@ export function VirtualClassroomWhiteboardEmbed({
         </WhiteboardRoomShell>
       </div>
     );
+    return isolatedLiveblocksProvider ? (
+      <VirtualClassroomLiveProvider>{board}</VirtualClassroomLiveProvider>
+    ) : board;
   }
 
   if (role === "host") {

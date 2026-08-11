@@ -30,9 +30,18 @@ const PRESETS: { id: DicePreset; label: string }[] = [
   { id: "labels", label: "Labels" },
 ];
 
-export function DicePanel({ busy, role, onCommand, randomiser: pilotRandomiser }: Props) {
+export function DicePanel(props: Props) {
   const liveblocksRandomiser = useStorage((root) => readRandomiser(root));
-  const randomiser = pilotRandomiser ?? liveblocksRandomiser;
+  return <DicePanelContent {...props} randomiser={props.randomiser ?? liveblocksRandomiser} />;
+}
+
+/** Provider-neutral randomiser UI for the Supabase-native classroom shell. */
+export function DicePanelContent({
+  busy,
+  role,
+  onCommand,
+  randomiser,
+}: Omit<Props, "randomiser"> & { randomiser: RandomiserState }) {
   const [sides, setSides] = useState(8);
   const [labelText, setLabelText] = useState("cat, dog, bird, fish");
 

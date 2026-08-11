@@ -40,16 +40,19 @@ function readStatus(root: unknown): ClassroomStatusState {
   );
 }
 
-export function ClassroomStatusPanel({
+export function ClassroomStatusPanel(props: Props) {
+  const liveblocksStatus = useStorage((root) => readStatus(root));
+  return <ClassroomStatusPanelContent {...props} status={props.status ?? liveblocksStatus} />;
+}
+
+export function ClassroomStatusPanelContent({
   members,
   userId,
   role,
   busy,
   onCommand,
-  status: pilotStatus,
-}: Props) {
-  const liveblocksStatus = useStorage((root) => readStatus(root));
-  const status = pilotStatus ?? liveblocksStatus;
+  status,
+}: Omit<Props, "status"> & { status: ClassroomStatusState }) {
   const [announce, setAnnounce] = useState("");
   const counts = countByStatus(status);
   const mine = status.byStudentId[userId] ?? "none";

@@ -22,9 +22,18 @@ function readPoints(root: unknown): SessionPointsState {
   );
 }
 
-export function SessionPointsPanel({ members, busy, role, onCommand, points: pilotPoints }: Props) {
+export function SessionPointsPanel(props: Props) {
   const liveblocksPoints = useStorage((root) => readPoints(root));
-  const points = pilotPoints ?? liveblocksPoints;
+  return <SessionPointsPanelContent {...props} points={props.points ?? liveblocksPoints} />;
+}
+
+export function SessionPointsPanelContent({
+  members,
+  busy,
+  role,
+  onCommand,
+  points,
+}: Omit<Props, "points"> & { points: SessionPointsState }) {
   const board = leaderboard(points);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? id.slice(0, 8);
   const students = members.filter((m) => m.role !== "host");

@@ -44,6 +44,24 @@ export function classroomRealtimeLifecycleAuthorityPilotEnabled(): boolean {
   );
 }
 
+/** Removes the outer Liveblocks room only after every visible read is native. */
+export function classroomRealtimeNativeShellPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PRESENCE_ROSTER_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_TIMER_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT === "true"
+  );
+}
+
 /**
  * First visible Supabase cutover. This deliberately remains narrower than the
  * shadow connection and is safe to disable independently.

@@ -25,9 +25,17 @@ function readTimer(root: unknown): GlobalTimerState {
   );
 }
 
-export function GlobalTimerPanel({ busy, onCommand, timer: pilotTimer }: Props) {
+export function GlobalTimerPanel(props: Props) {
   const liveblocksTimer = useStorage((root) => readTimer(root));
-  const timer = pilotTimer ?? liveblocksTimer;
+  return <GlobalTimerPanelContent {...props} timer={props.timer ?? liveblocksTimer} />;
+}
+
+/** Provider-neutral timer UI for the Supabase-native classroom shell. */
+export function GlobalTimerPanelContent({
+  busy,
+  onCommand,
+  timer,
+}: Omit<Props, "timer"> & { timer: GlobalTimerState }) {
   const [now, setNow] = useState(() => Date.now());
   const [minutes, setMinutes] = useState(1);
 

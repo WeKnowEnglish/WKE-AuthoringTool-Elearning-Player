@@ -30,9 +30,18 @@ function readPicker(root: unknown): StudentPickerState | null {
   }>(runtime, "picker") ?? null;
 }
 
-export function StudentPickerPanel({ sessionId, members, busy, onCommand, picker: pilotPicker }: Props) {
+export function StudentPickerPanel(props: Props) {
   const liveblocksPicker = useStorage((root) => readPicker(root));
-  const picker = pilotPicker ?? liveblocksPicker;
+  return <StudentPickerPanelContent {...props} picker={props.picker ?? liveblocksPicker} />;
+}
+
+export function StudentPickerPanelContent({
+  sessionId,
+  members,
+  busy,
+  onCommand,
+  picker,
+}: Omit<Props, "picker"> & { picker: StudentPickerState | null }) {
   const [mode, setMode] = useState<PickerMode>("one");
 
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? id.slice(0, 8);

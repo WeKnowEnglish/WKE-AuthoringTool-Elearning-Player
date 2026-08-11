@@ -41,6 +41,7 @@ type Props = {
   studentPensEnabled: boolean;
   onToggleStudentPens: (enabled: boolean) => void;
   pensBusy?: boolean;
+  isolatedWhiteboardProvider?: boolean;
 };
 
 export function VirtualClassroomLearnStage({
@@ -63,6 +64,7 @@ export function VirtualClassroomLearnStage({
   studentPensEnabled,
   onToggleStudentPens,
   pensBusy = false,
+  isolatedWhiteboardProvider = false,
 }: Props) {
   const isHost = role === "host";
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -288,6 +290,7 @@ export function VirtualClassroomLearnStage({
             studentPensEnabled={studentPensEnabled}
             onToggleStudentPens={onToggleStudentPens}
             pensBusy={pensBusy}
+            isolatedLiveblocksProvider={isolatedWhiteboardProvider}
           />
         ) : learnStage === "presentation" ? (
           <VirtualClassroomPresentationStage

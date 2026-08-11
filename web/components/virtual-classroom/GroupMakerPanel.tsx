@@ -23,7 +23,12 @@ function readGroupSet(root: unknown): GroupSetState | null {
   return readLiveObjectField<GroupSetState>(runtime, "groupSet") ?? null;
 }
 
-export function GroupMakerPanel({
+export function GroupMakerPanel(props: Props) {
+  const liveblocksGroupSet = useStorage((root) => readGroupSet(root));
+  return <GroupMakerPanelContent {...props} groupSet={props.groupSet ?? liveblocksGroupSet} />;
+}
+
+export function GroupMakerPanelContent({
   sessionId,
   members,
   busy,
@@ -31,10 +36,8 @@ export function GroupMakerPanel({
   hasDocumentActivity,
   hasWordCardsActivity,
   onCommand,
-  groupSet: pilotGroupSet,
-}: Props) {
-  const liveblocksGroupSet = useStorage((root) => readGroupSet(root));
-  const groupSet = pilotGroupSet ?? liveblocksGroupSet;
+  groupSet,
+}: Omit<Props, "groupSet"> & { groupSet: GroupSetState | null }) {
   const [sizeMode, setSizeMode] = useState<GroupSizeMode>("pairs");
   const [targetCount, setTargetCount] = useState(3);
   const [moveStudentId, setMoveStudentId] = useState("");

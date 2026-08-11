@@ -116,17 +116,31 @@ export async function POST(request: Request, context: RouteContext) {
     if (!isHost) {
       return NextResponse.json({ error: "Host only." }, { status: 403 });
     }
-    try {
-      const host = await requireVirtualClassroomSessionHost(session);
-      actorUserId = host.userId;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unauthorized";
-      return NextResponse.json({ error: message }, { status: 403 });
+    const signedSessionHost =
+      hostOk &&
+      member?.role === "host" &&
+      member.sessionId === session.id &&
+      member.joinCode === session.joinCode;
+    if (signedSessionHost) {
+      actorUserId = member.userId;
+    } else {
+      try {
+        const host = await requireVirtualClassroomSessionHost(session);
+        actorUserId = host.userId;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unauthorized";
+        return NextResponse.json({ error: message }, { status: 403 });
+      }
     }
   }
 
   let activeStudentIds: string[] | undefined;
-  if (classroomRealtimeParticipantRegistryPilotEnabled() && session.classId && !VC_MEMBER_TOOL_TYPES.has(command.type)) {
+  if (
+    classroomRealtimeParticipantRegistryPilotEnabled() &&
+    session.classId &&
+    !VC_MEMBER_TOOL_TYPES.has(command.type) &&
+    classroomRuntimeCommandRequiresRoster(command)
+  ) {
     try {
       const ids = await listActiveClassroomStudentIds(session.id);
       // Empty can mean a just-joined participant has not written attendance yet;

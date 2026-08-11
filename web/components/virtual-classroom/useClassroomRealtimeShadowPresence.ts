@@ -66,6 +66,7 @@ export function useClassroomRealtimeShadowPresence(
     const controller = new AbortController();
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     let snapshotVersion: number | null = initialSnapshot?.stateVersion ?? null;
+    let lastPatchAt = 0;
     setHealth({
       enabled: true,
       snapshot: initialSnapshot ? "loaded" : "loading",
@@ -126,12 +127,12 @@ export function useClassroomRealtimeShadowPresence(
       }
     };
 
-    const scheduleSnapshotRefresh = () => {
+    const scheduleSnapshotRefresh = (delayMs = 1_200) => {
       if (refreshTimer) clearTimeout(refreshTimer);
       refreshTimer = setTimeout(() => {
         refreshTimer = null;
         void loadSnapshot(true);
-      }, 150);
+      }, delayMs);
     };
 
     // Verify reconnect recovery against the session-scoped cookie before the
@@ -146,7 +147,7 @@ export function useClassroomRealtimeShadowPresence(
         typeof event.stateVersion === "number" &&
         (snapshotVersion === null || event.stateVersion > snapshotVersion)
       ) {
-        scheduleSnapshotRefresh();
+        scheduleSnapshotRefresh(Date.now() - lastPatchAt < 1_500 ? 10_000 : 1_200);
       }
     });
 
@@ -179,6 +180,7 @@ export function useClassroomRealtimeShadowPresence(
       };
       if (event.sessionId !== input.sessionId || !event.patch) return;
       const patch = event.patch;
+      lastPatchAt = Date.now();
       setHealth((current) => ({
         ...current,
         runtimePatch: {
@@ -194,6 +196,10 @@ export function useClassroomRealtimeShadowPresence(
             : {}),
         },
       }));
+      // Broadcast patches already contain the visible state. Rebase from the
+      // durable snapshot once the teacher pauses instead of issuing a second
+      // recovery request after every click.
+      scheduleSnapshotRefresh(10_000);
     });
 
     channel.on("presence", { event: "sync" }, () => {

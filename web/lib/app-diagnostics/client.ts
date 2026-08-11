@@ -268,6 +268,8 @@ export async function diagnosticFetch(
       });
     }
     const roundedServerMs = serverMs == null ? null : Math.round(serverMs);
+    const vercelRequestId = response.headers.get("x-vercel-id");
+    const serverRegion = vercelRequestId?.split("::")[0]?.trim() || null;
     finish({
       status: response.status,
       ok: response.ok,
@@ -275,6 +277,7 @@ export async function diagnosticFetch(
       serverMs: roundedServerMs,
       networkOrQueueMs:
         roundedServerMs == null ? null : Math.max(0, timeToHeadersMs - roundedServerMs),
+      serverRegion,
       serverTiming:
         metrics.length > 0
           ? metrics.map((metric) => ({

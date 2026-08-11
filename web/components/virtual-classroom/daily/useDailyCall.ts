@@ -87,7 +87,10 @@ export function useDailyCall(input: {
   const refreshingRef = useRef(false);
   const connectInFlight = useRef(false);
   const themeRef = useRef<DailyThemeConfig | null>(theme);
-  const [phase, setPhase] = useState<DailyCallPhase>("probing");
+  // The token endpoint already verifies access and creates a missing room for
+  // teachers. Start ready so entry does not serialize a room probe, a room
+  // ensure request, and then the token request before Daily can initialize.
+  const [phase, setPhase] = useState<DailyCallPhase>("ready");
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -175,10 +178,6 @@ export function useDailyCall(input: {
       setPhase("ready");
     }
   }, [diagnosticSurface, sessionId]);
-
-  useEffect(() => {
-    void probe();
-  }, [probe]);
 
   useEffect(() => {
     if (!sessionEnded) return;
@@ -333,26 +332,6 @@ export function useDailyCall(input: {
     setExpanded(true);
 
     try {
-      if (isHost) {
-        const ensure = await diagnosticFetch(
-          `/api/virtual-classroom/${sessionId}/daily/room`,
-          { method: "POST" },
-          {
-            surface: diagnosticSurface,
-            phase: "virtual-classroom-video",
-            name: "daily_room_ensure",
-            detail: { sessionId },
-          },
-        );
-        if (ensure.status === 503) {
-          const payload = (await ensure.json()) as RoomResponse;
-          setPhase("disabled");
-          setError(payload.error ?? "Daily video is not enabled.");
-          setErrorCode("daily_disabled");
-          return;
-        }
-      }
-
       const tokenPayload = await fetchMeetingToken(sessionId, diagnosticSurface);
       if (!tokenPayload.ok || !tokenPayload.token || !tokenPayload.roomUrl) {
         if (tokenPayload.code === "daily_disabled") {

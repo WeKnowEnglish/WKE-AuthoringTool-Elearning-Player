@@ -12,7 +12,10 @@ import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/Virtu
 import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
 import { resolveClassroomRuntimeViewState } from "@/lib/classroom-realtime/runtime-view-state";
 import { diagnosticFetch } from "@/lib/app-diagnostics/client";
-import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
+import type {
+  ClassroomRuntimePatch,
+  ClassroomRuntimeSnapshot,
+} from "@/lib/classroom-realtime/types";
 import {
   clearVirtualClassroomContext,
   getVirtualClassroomContext,
@@ -36,6 +39,57 @@ type Props = {
   initialSnapshot?: ClassroomRuntimeSnapshot | null;
 };
 
+function mergeRuntimePatches(
+  current: ClassroomRuntimePatch | null,
+  next: ClassroomRuntimePatch | null,
+): ClassroomRuntimePatch | null {
+  if (!current) return next;
+  if (!next) return current;
+  return {
+    ...current,
+    ...next,
+    ...(current.tools || next.tools
+      ? { tools: { ...current.tools, ...next.tools } }
+      : {}),
+  };
+}
+
+function optimisticPatchForCommand(
+  command: Record<string, unknown>,
+): ClassroomRuntimePatch | null {
+  switch (command.type) {
+    case "SET_UI_MODE":
+      return { uiMode: command.mode === "meeting" ? "meeting" : "learn" };
+    case "SET_LEARN_STAGE":
+      return {
+        learnStage:
+          command.stage === "activity" || command.stage === "presentation"
+            ? command.stage
+            : "whiteboard",
+      };
+    case "SET_LEARN_ACTIVITY":
+      return { learnActivity: command.activity as VirtualClassroomLearnActivity | null };
+    case "SET_LEARN_PRESENTATION": {
+      const presentation = command.presentation as VirtualClassroomPresentation | null;
+      return {
+        learnPresentation: presentation,
+        ...(presentation ? { learnStage: "presentation" as const } : {}),
+      };
+    }
+    case "SET_LEARN_STUDENT_PENS":
+      return { learnStudentPensEnabled: command.enabled !== false };
+    case "SET_ANNOUNCEMENT":
+      return {
+        announcement:
+          typeof command.message === "string"
+            ? command.message.trim().slice(0, 280) || null
+            : null,
+      };
+    default:
+      return null;
+  }
+}
+
 /**
  * Class-linked classroom shell backed by the durable Supabase snapshot,
  * Broadcast patches, and Presence. The collaborative whiteboard receives its
@@ -47,6 +101,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
+  const [optimisticPatch, setOptimisticPatch] = useState<ClassroomRuntimePatch | null>(null);
   const rosterSyncAttempted = useRef(false);
   const realtime = useClassroomRealtimeShadowPresence({
     sessionId,
@@ -60,7 +115,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
   const runtime = realtime.runtimeSnapshot
     ? resolveClassroomRuntimeViewState({
         snapshot: realtime.runtimeSnapshot,
-        patch: realtime.runtimePatch,
+        patch: mergeRuntimePatches(realtime.runtimePatch, optimisticPatch),
       })
     : null;
   const members = realtime.participants.map((participant) => ({
@@ -76,6 +131,10 @@ export function VirtualClassroomNativeSessionView(props: Props) {
   }, [runtime?.status]);
 
   useEffect(() => {
+    setOptimisticPatch(null);
+  }, [realtime.runtimePatch]);
+
+  useEffect(() => {
     if (role !== "host" || ended || runtime?.status === "ended") return;
     if (rosterSyncAttempted.current) return;
     rosterSyncAttempted.current = true;
@@ -87,6 +146,10 @@ export function VirtualClassroomNativeSessionView(props: Props) {
   }, [ended, role, runtime?.status, sessionId]);
 
   const runToolCommand = useCallback(async (command: Record<string, unknown>) => {
+    const nextOptimisticPatch = optimisticPatchForCommand(command);
+    if (nextOptimisticPatch) {
+      setOptimisticPatch((current) => mergeRuntimePatches(current, nextOptimisticPatch));
+    }
     setBusy("tools");
     setError(null);
     try {
@@ -110,6 +173,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Tool command failed.");
     } catch (commandError) {
+      if (nextOptimisticPatch) setOptimisticPatch(null);
       setError(commandError instanceof Error ? commandError.message : "Command failed.");
     } finally {
       setBusy(null);
@@ -239,6 +303,15 @@ export function VirtualClassroomNativeSessionView(props: Props) {
       {error ? (
         <p className="fixed left-1/2 top-3 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700 shadow-lg">
           {error}
+        </p>
+      ) : null}
+      {busy === "tools" ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed left-1/2 top-3 z-40 -translate-x-1/2 rounded-full border border-teal-200 bg-white/95 px-3 py-1.5 text-xs font-bold text-teal-900 shadow-lg"
+        >
+          Updating classroom…
         </p>
       ) : null}
 

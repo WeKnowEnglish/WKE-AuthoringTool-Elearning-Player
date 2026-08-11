@@ -15,6 +15,10 @@ the established Liveblocks path.
 
 ## Merge and deployment readiness
 
+The concise operator checklist, SQL verification, complete environment list,
+and rollback order are maintained in
+`docs/virtual-classroom/SUPABASE_NATIVE_ROLLOUT.md`.
+
 Migrations 127–130 must exist in the target Supabase project before enabling
 any classroom realtime pilot flag. They are additive and safe to apply while
 all flags remain false. The first production deployment after merge should keep

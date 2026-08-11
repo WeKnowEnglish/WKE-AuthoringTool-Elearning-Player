@@ -63,6 +63,20 @@ export function classroomRealtimeNativeShellPilotEnabled(): boolean {
 }
 
 /**
+ * Server-confirmed write readiness for the native shell. Client code cannot
+ * inspect these server-only authority switches, so the session gate verifies
+ * this value through the authenticated runtime endpoint before removing the
+ * compatibility room.
+ */
+export function classroomRealtimeNativeShellAuthorityReady(): boolean {
+  return (
+    classroomRealtimeAuthorityPilotEnabled() &&
+    classroomRealtimeToolAuthorityPilotEnabled() &&
+    classroomRealtimeLifecycleAuthorityPilotEnabled()
+  );
+}
+
+/**
  * First visible Supabase cutover. This deliberately remains narrower than the
  * shadow connection and is safe to disable independently.
  */

@@ -13,7 +13,7 @@
     "postinstall": "node ./scripts/ensure-explore-hotspots-react.mjs",
     "build": "next build",
     "build:live-game-ground": "node scripts/build-english-craft-ground.mjs",
-    "prebuild": "node ./scripts/ensure-explore-hotspots-react.mjs && npm run validate:grammar",
+    "prebuild": "node ./scripts/check-classroom-realtime-rollout.mjs && node ./scripts/ensure-explore-hotspots-react.mjs && npm run validate:grammar",
     "analyze": "cross-env ANALYZE=true next build",
     "start": "next start",
     "lint": "eslint",

@@ -5,6 +5,7 @@ import {
   classroomRealtimeLearnPensPilotEnabled,
   classroomRealtimeLearnNavigationPilotEnabled,
   classroomRealtimeLifecycleAuthorityPilotEnabled,
+  classroomRealtimeNativeShellAuthorityReady,
   classroomRealtimeNativeShellPilotEnabled,
   classroomRealtimeLifecyclePilotEnabled,
   classroomRealtimeParticipantRegistryPilotEnabled,
@@ -144,6 +145,31 @@ describe("classroom realtime shadow-mode flag", () => {
 
     process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT = "true";
     expect(classroomRealtimeNativeShellPilotEnabled()).toBe(true);
+  });
+
+  it("requires all three server authority lanes before confirming native-shell readiness", () => {
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_SHADOW_MODE = "true";
+    process.env.CLASSROOM_REALTIME_SUPABASE_AUTHORITY_PILOT = "true";
+    process.env.CLASSROOM_REALTIME_SUPABASE_TOOL_AUTHORITY_PILOT = "true";
+    process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT = "true";
+    for (const key of [
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_ANNOUNCEMENT_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_PENS_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_LEARN_NAVIGATION_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_PARTICIPANT_REGISTRY_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_TIMER_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT",
+      "NEXT_PUBLIC_CLASSROOM_REALTIME_LIFECYCLE_PILOT",
+    ]) process.env[key] = "true";
+
+    delete process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT;
+    expect(classroomRealtimeNativeShellAuthorityReady()).toBe(false);
+
+    process.env.CLASSROOM_REALTIME_SUPABASE_LIFECYCLE_AUTHORITY_PILOT = "true";
+    expect(classroomRealtimeNativeShellAuthorityReady()).toBe(true);
   });
 
   it("requires shadow mode before enabling the visible announcement pilot", () => {

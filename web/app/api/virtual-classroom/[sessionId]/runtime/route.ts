@@ -7,6 +7,7 @@ import {
 import { resolveVirtualClassroomRuntimeReader } from "@/lib/virtual-classroom/server/runtime-access";
 import { getClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
+import { classroomRealtimeNativeShellAuthorityReady } from "@/lib/classroom-realtime/shadow-mode";
 
 /**
  * Recovery-only endpoint for the versioned Supabase runtime snapshot.
@@ -14,7 +15,7 @@ import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/s
  * transport until the channel migration is complete.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await context.params;
@@ -29,7 +30,23 @@ export async function GET(
   });
   if (!reader) return NextResponse.json({ error: "Not authorized for this classroom." }, { status: 403 });
 
+  const nativeAuthorityReady = classroomRealtimeNativeShellAuthorityReady();
+  const readinessOnly = new URL(request.url).searchParams.get("readiness") === "1";
+
+  if (readinessOnly && !nativeAuthorityReady) {
+    return NextResponse.json(
+      { nativeShellReady: false },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
   const snapshot = await getClassroomRuntimeSnapshot(session.id);
+  if (readinessOnly) {
+    return NextResponse.json(
+      { nativeShellReady: nativeAuthorityReady && Boolean(snapshot) },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
   if (!snapshot) {
     return NextResponse.json(
       { error: "Classroom runtime snapshot is not available yet." },
@@ -38,7 +55,7 @@ export async function GET(
   }
 
   return NextResponse.json(
-    { snapshot, role: reader.role },
+    { snapshot, role: reader.role, nativeShellReady: nativeAuthorityReady },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

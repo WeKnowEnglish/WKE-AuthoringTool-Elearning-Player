@@ -89,6 +89,8 @@ type Props = {
   joinCode: string;
 };
 
+type ClientContext = NonNullable<ReturnType<typeof getVirtualClassroomContext>>;
+
 function readRuntimeField<T>(root: unknown, key: string): T | null {
   const runtime = (root as { runtime?: { get?: (k: string) => unknown } & Record<string, unknown> })
     .runtime;
@@ -624,7 +626,84 @@ export function VirtualClassroomSessionView({
   );
 }
 
-/** Ensures context still matches before rendering Liveblocks room. */
+function VirtualClassroomCompatibilityShell({ ctx }: { ctx: ClientContext }) {
+  return (
+    <VirtualClassroomLiveProvider>
+      <VirtualClassroomRoomShell
+        roomId={ctx.roomId}
+        sessionId={ctx.sessionId}
+        joinCode={ctx.joinCode}
+        classId={ctx.classId}
+        hostUserId={ctx.role === "host" ? ctx.userId : "host"}
+        title="Virtual Classroom"
+        displayName={ctx.displayName}
+        role={ctx.role}
+      >
+        <VirtualClassroomSessionView
+          sessionId={ctx.sessionId}
+          role={ctx.role}
+          userId={ctx.userId}
+          displayName={ctx.displayName}
+          classId={ctx.classId}
+          joinCode={ctx.joinCode}
+        />
+      </VirtualClassroomRoomShell>
+    </VirtualClassroomLiveProvider>
+  );
+}
+
+function VirtualClassroomResolvedSessionShell({ ctx }: { ctx: ClientContext }) {
+  const nativeRequested = Boolean(ctx.classId) && classroomRealtimeNativeShellPilotEnabled();
+  const [nativeServerReady, setNativeServerReady] = useState<boolean | null>(
+    nativeRequested ? null : false,
+  );
+
+  useEffect(() => {
+    if (!nativeRequested) return;
+    const controller = new AbortController();
+    void fetch(
+      `/api/virtual-classroom/${encodeURIComponent(ctx.sessionId)}/runtime?readiness=1`,
+      { cache: "no-store", signal: controller.signal },
+    )
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as {
+          nativeShellReady?: boolean;
+        } | null;
+        setNativeServerReady(response.ok && payload?.nativeShellReady === true);
+      })
+      .catch((readinessError) => {
+        if (!(readinessError instanceof DOMException && readinessError.name === "AbortError")) {
+          setNativeServerReady(false);
+        }
+      });
+    return () => controller.abort();
+  }, [ctx.sessionId, nativeRequested]);
+
+  if (nativeRequested && nativeServerReady === null) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-slate-100 text-slate-700">
+        Checking classroom connection…
+      </div>
+    );
+  }
+
+  if (nativeRequested && nativeServerReady) {
+    return (
+      <VirtualClassroomNativeSessionView
+        sessionId={ctx.sessionId}
+        role={ctx.role}
+        userId={ctx.userId}
+        displayName={ctx.displayName}
+        classId={ctx.classId}
+        joinCode={ctx.joinCode}
+      />
+    );
+  }
+
+  return <VirtualClassroomCompatibilityShell ctx={ctx} />;
+}
+
+/** Ensures context still matches before rendering the selected classroom shell. */
 export function VirtualClassroomSessionGate() {
   const router = useRouter();
   const [bootstrapped, setBootstrapped] = useState(false);
@@ -666,40 +745,5 @@ export function VirtualClassroomSessionGate() {
     );
   }
 
-  if (ctx.classId && classroomRealtimeNativeShellPilotEnabled()) {
-    return (
-      <VirtualClassroomNativeSessionView
-        sessionId={ctx.sessionId}
-        role={ctx.role}
-        userId={ctx.userId}
-        displayName={ctx.displayName}
-        classId={ctx.classId}
-        joinCode={ctx.joinCode}
-      />
-    );
-  }
-
-  return (
-    <VirtualClassroomLiveProvider>
-      <VirtualClassroomRoomShell
-        roomId={ctx.roomId}
-        sessionId={ctx.sessionId}
-        joinCode={ctx.joinCode}
-        classId={ctx.classId}
-        hostUserId={ctx.role === "host" ? ctx.userId : "host"}
-        title="Virtual Classroom"
-        displayName={ctx.displayName}
-        role={ctx.role}
-      >
-        <VirtualClassroomSessionView
-          sessionId={ctx.sessionId}
-          role={ctx.role}
-          userId={ctx.userId}
-          displayName={ctx.displayName}
-          classId={ctx.classId}
-          joinCode={ctx.joinCode}
-        />
-      </VirtualClassroomRoomShell>
-    </VirtualClassroomLiveProvider>
-  );
+  return <VirtualClassroomResolvedSessionShell ctx={ctx} />;
 }

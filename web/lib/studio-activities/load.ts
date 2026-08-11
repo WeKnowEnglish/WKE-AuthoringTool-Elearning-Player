@@ -58,7 +58,7 @@ function mapSummary(row: StudioActivityRow): StudioActivitySummary {
 export async function listStudioActivitiesForTeacher(
   supabase: SupabaseClient,
   teacherId: string,
-  options?: { format?: StudioActivityFormat; limit?: number },
+  options?: { format?: StudioActivityFormat; limit?: number; vocabListId?: string },
 ): Promise<StudioActivitySummary[]> {
   let query = supabase
     .from("studio_activities")
@@ -68,6 +68,9 @@ export async function listStudioActivitiesForTeacher(
 
   if (options?.format) {
     query = query.eq("format", options.format);
+  }
+  if (options?.vocabListId) {
+    query = query.contains("source", { vocabListId: options.vocabListId });
   }
   if (options?.limit && options.limit > 0) {
     query = query.limit(options.limit);

@@ -44,6 +44,64 @@ export type PublishedVocabQuiz = {
   bankPath: string;
 };
 
+export type VocabActivityGenerationRecipe = {
+  kind: "vocabulary_list";
+  version: 1;
+  vocabListId: string;
+  format: VocabCompileFormat;
+  selectedEntryIds?: string[];
+  settings?: {
+    mcMasterQuestion?: string;
+    mcOptionCount?: number;
+    mcShuffleOptions?: boolean;
+    mcStableItems?: boolean;
+    letterPrompt?: string;
+    letterShuffleLetters?: boolean;
+    letterCaseSensitive?: boolean;
+    flashcardsShuffleCards?: boolean;
+    flashcardsFrontFaces?: CompileQuizzesFromVocabListInput["flashcardsFrontFaces"];
+    flashcardsBackFaces?: CompileQuizzesFromVocabListInput["flashcardsBackFaces"];
+  };
+};
+
+export type LinkedVocabActivity = PublishedVocabQuiz & {
+  updatedAt: string;
+  source: Record<string, unknown>;
+  recipe: VocabActivityGenerationRecipe | null;
+};
+
+export function vocabActivityGenerationRecipe(input: {
+  vocabListId: string;
+  format: VocabCompileFormat;
+  selectedEntryIds?: string[];
+  settings?: VocabActivityGenerationRecipe["settings"];
+}): VocabActivityGenerationRecipe {
+  return {
+    kind: "vocabulary_list",
+    version: 1,
+    vocabListId: input.vocabListId,
+    format: input.format,
+    ...(input.selectedEntryIds?.length
+      ? { selectedEntryIds: [...input.selectedEntryIds] }
+      : {}),
+    ...(input.settings ? { settings: input.settings } : {}),
+  };
+}
+
+function readGenerationRecipe(
+  source: Record<string, unknown>,
+  fallbackFormat: VocabCompileFormat,
+): VocabActivityGenerationRecipe | null {
+  const raw = source.generation;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  if (row.kind !== "vocabulary_list" || row.version !== 1) return null;
+  if (typeof row.vocabListId !== "string" || !row.vocabListId.trim()) return null;
+  const format = typeof row.format === "string" ? row.format : fallbackFormat;
+  if (!VOCAB_COMPILE_FORMAT_OPTIONS.some((option) => option.format === format)) return null;
+  return row as unknown as VocabActivityGenerationRecipe;
+}
+
 function slugify(value: string): string {
   return (
     value
@@ -88,20 +146,29 @@ async function publishOneQuizPack(input: {
   built: BuiltVocabQuizPack;
   vocabListId?: string | null;
   skippedCount: number;
+  activityId?: string | null;
+  title?: string | null;
+  existingSource?: Record<string, unknown>;
+  recipe?: VocabActivityGenerationRecipe;
 }): Promise<PublishedVocabQuiz> {
   const response = await fetch("/api/studio/activities", {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      ...(input.activityId ? { id: input.activityId } : {}),
       format: input.built.format as StudioActivityFormat,
       pack: input.built.pack,
       authoring: input.built.authoring,
-      title: input.built.title,
+      title: input.title?.trim() || input.built.title,
       filename: input.built.filename,
       source: {
-        via: "vocabulary_list_compile",
+        ...(input.existingSource ?? {}),
+        via: input.activityId
+          ? "vocabulary_list_refresh"
+          : "vocabulary_list_compile",
         ...(input.vocabListId ? { vocabListId: input.vocabListId } : {}),
+        ...(input.recipe ? { generation: input.recipe } : {}),
         itemCount: input.built.itemCount,
         skippedCount: input.skippedCount,
       },
@@ -192,17 +259,131 @@ export async function compileAndPublishQuizzesFromVocabList(input: {
 
   const published: PublishedVocabQuiz[] = [];
   for (const pack of built.packs) {
+    const recipe = input.vocabListId
+      ? vocabActivityGenerationRecipe({
+          vocabListId: input.vocabListId,
+          format: pack.format,
+          selectedEntryIds: input.selectedEntryIds,
+          settings: {
+            mcMasterQuestion: input.mcMasterQuestion,
+            mcOptionCount: input.mcOptionCount,
+            letterPrompt: input.letterPrompt,
+          },
+        })
+      : undefined;
     published.push(
       await publishOneQuizPack({
         built: pack,
         vocabListId: input.vocabListId,
         skippedCount: built.skipped.filter((row) => row.format === pack.format)
           .length,
+        recipe,
       }),
     );
   }
 
   return { list, published, skipped: built.skipped };
+}
+
+export async function listActivitiesGeneratedFromVocabList(
+  vocabListId: string,
+): Promise<LinkedVocabActivity[]> {
+  const response = await fetch(
+    `/api/studio/activities?source_vocab_list_id=${encodeURIComponent(vocabListId)}&limit=100`,
+    {
+    method: "GET",
+    credentials: "same-origin",
+    },
+  );
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    activities?: Array<{
+      id: string;
+      title: string;
+      format: StudioActivityFormat;
+      updated_at: string;
+      source?: Record<string, unknown>;
+    }>;
+    error?: string;
+  } | null;
+  if (!response.ok || !payload?.ok || !Array.isArray(payload.activities)) {
+    throw new Error(payload?.error || "Could not load linked activities.");
+  }
+
+  return payload.activities.flatMap((activity) => {
+    const format = activity.format as VocabCompileFormat;
+    if (!VOCAB_COMPILE_FORMAT_OPTIONS.some((option) => option.format === format)) return [];
+    const source = activity.source && typeof activity.source === "object"
+      ? activity.source
+      : {};
+    const recipe = readGenerationRecipe(source, format);
+    const sourceListId = recipe?.vocabListId ??
+      (typeof source.vocabListId === "string" ? source.vocabListId : null);
+    if (sourceListId !== vocabListId) return [];
+    const itemCount = typeof source.itemCount === "number" ? source.itemCount : 0;
+    return [{
+      id: activity.id,
+      title: activity.title,
+      format,
+      label: VOCAB_COMPILE_FORMAT_OPTIONS.find((option) => option.format === format)?.label ?? format,
+      itemCount,
+      playPath: playPathForStudioActivity(activity.format, activity.id),
+      bankPath: bankPathForStudioActivity(activity.id),
+      updatedAt: activity.updated_at,
+      source,
+      recipe,
+    }];
+  });
+}
+
+export async function refreshActivitiesFromVocabList(input: {
+  list: VocabularyListDocument;
+  vocabListId: string;
+  activities: LinkedVocabActivity[];
+}): Promise<{
+  list: VocabularyListDocument;
+  refreshed: PublishedVocabQuiz[];
+  skipped: VocabCompileSkipped[];
+}> {
+  let list = validateVocabularyListDocument(input.list);
+  const local = countLocalVocabMedia(list);
+  if (local.total > 0) {
+    const publishedMedia = await publishLocalVocabMedia(list);
+    list = validateVocabularyListDocument(publishedMedia.document);
+    const stillLocal = countLocalVocabMedia(list);
+    if (stillLocal.total > 0) {
+      throw new Error(`Could not upload all media (${stillLocal.total} still local).`);
+    }
+  }
+  list = validateVocabularyListDocument(await enrichVocabListMediaFromLexicon(list));
+
+  const refreshed: PublishedVocabQuiz[] = [];
+  const skipped: VocabCompileSkipped[] = [];
+  for (const activity of input.activities) {
+    const recipe = activity.recipe ?? vocabActivityGenerationRecipe({
+      vocabListId: input.vocabListId,
+      format: activity.format,
+    });
+    const built = buildQuizPacksFromVocabList({
+      list,
+      formats: [activity.format],
+      selectedEntryIds: recipe.selectedEntryIds,
+      ...(recipe.settings ?? {}),
+    });
+    const pack = built.packs[0];
+    if (!pack) throw new Error(`Could not rebuild ${activity.title}.`);
+    skipped.push(...built.skipped);
+    refreshed.push(await publishOneQuizPack({
+      built: pack,
+      activityId: activity.id,
+      title: activity.title,
+      vocabListId: input.vocabListId,
+      skippedCount: built.skipped.length,
+      existingSource: activity.source,
+      recipe,
+    }));
+  }
+  return { list, refreshed, skipped };
 }
 
 export const VOCAB_COMPILE_FORMAT_OPTIONS: Array<{

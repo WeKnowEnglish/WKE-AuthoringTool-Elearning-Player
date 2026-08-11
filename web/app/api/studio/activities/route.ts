@@ -25,7 +25,7 @@ export async function OPTIONS(request: Request) {
 
 /**
  * List the signed-in teacher's Activity Bank items.
- * Query: `?format=multiple_choice` (optional), `?limit=40` (optional).
+ * Query: `?format=multiple_choice`, `?source_vocab_list_id=<uuid>`, `?limit=40` (optional).
  */
 export async function GET(request: Request) {
   let teacher: Awaited<ReturnType<typeof resolveStudioTeacherClient>>;
@@ -48,12 +48,19 @@ export async function GET(request: Request) {
     formatRaw && isStudioActivityFormat(formatRaw) ? formatRaw : undefined;
   const limitRaw = Number(url.searchParams.get("limit") || 40);
   const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 40;
+  const sourceVocabListId = url.searchParams.get("source_vocab_list_id")?.trim() || "";
+  if (
+    sourceVocabListId &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceVocabListId)
+  ) {
+    return json(request, { error: "Invalid source vocabulary list id." }, 400);
+  }
 
   try {
     const activities = await listStudioActivitiesForTeacher(
       teacher.supabase,
       teacher.user.id,
-      { format, limit },
+      { format, limit, vocabListId: sourceVocabListId || undefined },
     );
     return json(request, { ok: true, activities });
   } catch (error) {

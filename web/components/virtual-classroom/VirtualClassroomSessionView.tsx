@@ -22,6 +22,8 @@ import {
   collabDiagnosticExportEnabled,
   exportCollabDiagnosticEvents,
 } from "@/lib/collab-diagnostics/client";
+import { diagnosticFetch } from "@/lib/app-diagnostics/client";
+import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
 import {
   clearVirtualClassroomContext,
   getVirtualClassroomContext,
@@ -654,32 +656,45 @@ function VirtualClassroomCompatibilityShell({ ctx }: { ctx: ClientContext }) {
 
 function VirtualClassroomResolvedSessionShell({ ctx }: { ctx: ClientContext }) {
   const nativeRequested = Boolean(ctx.classId) && classroomRealtimeNativeShellPilotEnabled();
-  const [nativeServerReady, setNativeServerReady] = useState<boolean | null>(
-    nativeRequested ? null : false,
+  const [nativeBootstrap, setNativeBootstrap] = useState<{
+    ready: boolean;
+    snapshot: ClassroomRuntimeSnapshot | null;
+  } | null>(
+    nativeRequested ? null : { ready: false, snapshot: null },
   );
 
   useEffect(() => {
     if (!nativeRequested) return;
     const controller = new AbortController();
-    void fetch(
+    void diagnosticFetch(
       `/api/virtual-classroom/${encodeURIComponent(ctx.sessionId)}/runtime?readiness=1`,
       { cache: "no-store", signal: controller.signal },
+      {
+        surface: ctx.role === "host" ? "teacher" : "student",
+        phase: "virtual-classroom",
+        name: "classroom_bootstrap",
+        detail: { sessionId: ctx.sessionId },
+      },
     )
       .then(async (response) => {
         const payload = (await response.json().catch(() => null)) as {
           nativeShellReady?: boolean;
+          snapshot?: ClassroomRuntimeSnapshot;
         } | null;
-        setNativeServerReady(response.ok && payload?.nativeShellReady === true);
+        setNativeBootstrap({
+          ready: response.ok && payload?.nativeShellReady === true,
+          snapshot: response.ok ? payload?.snapshot ?? null : null,
+        });
       })
       .catch((readinessError) => {
         if (!(readinessError instanceof DOMException && readinessError.name === "AbortError")) {
-          setNativeServerReady(false);
+          setNativeBootstrap({ ready: false, snapshot: null });
         }
       });
     return () => controller.abort();
   }, [ctx.sessionId, nativeRequested]);
 
-  if (nativeRequested && nativeServerReady === null) {
+  if (nativeRequested && nativeBootstrap === null) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-slate-100 text-slate-700">
         Checking classroom connection…
@@ -687,7 +702,7 @@ function VirtualClassroomResolvedSessionShell({ ctx }: { ctx: ClientContext }) {
     );
   }
 
-  if (nativeRequested && nativeServerReady) {
+  if (nativeRequested && nativeBootstrap?.ready) {
     return (
       <VirtualClassroomNativeSessionView
         sessionId={ctx.sessionId}
@@ -696,6 +711,7 @@ function VirtualClassroomResolvedSessionShell({ ctx }: { ctx: ClientContext }) {
         displayName={ctx.displayName}
         classId={ctx.classId}
         joinCode={ctx.joinCode}
+        initialSnapshot={nativeBootstrap.snapshot}
       />
     );
   }

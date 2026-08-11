@@ -11,6 +11,8 @@ import { VirtualClassroomLearnControlsContent } from "@/components/virtual-class
 import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
 import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
 import { resolveClassroomRuntimeViewState } from "@/lib/classroom-realtime/runtime-view-state";
+import { diagnosticFetch } from "@/lib/app-diagnostics/client";
+import type { ClassroomRuntimeSnapshot } from "@/lib/classroom-realtime/types";
 import {
   clearVirtualClassroomContext,
   getVirtualClassroomContext,
@@ -31,6 +33,7 @@ type Props = {
   displayName: string;
   classId: string;
   joinCode: string;
+  initialSnapshot?: ClassroomRuntimeSnapshot | null;
 };
 
 /**
@@ -39,7 +42,7 @@ type Props = {
  * own isolated Liveblocks provider only while that surface is mounted.
  */
 export function VirtualClassroomNativeSessionView(props: Props) {
-  const { sessionId, role, userId, displayName, classId } = props;
+  const { sessionId, role, userId, displayName, classId, initialSnapshot } = props;
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
     userId,
     displayName,
     role,
+    initialSnapshot,
   });
 
   const runtime = realtime.runtimeSnapshot
@@ -86,11 +90,23 @@ export function VirtualClassroomNativeSessionView(props: Props) {
     setBusy("tools");
     setError(null);
     try {
-      const response = await fetch(`/api/virtual-classroom/${sessionId}/tools`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(command),
-      });
+      const response = await diagnosticFetch(
+        `/api/virtual-classroom/${sessionId}/tools`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(command),
+        },
+        {
+          surface: role === "host" ? "teacher" : "student",
+          phase: "virtual-classroom",
+          name: "classroom_tool_command",
+          detail: {
+            sessionId,
+            commandType: typeof command.type === "string" ? command.type : "unknown",
+          },
+        },
+      );
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Tool command failed.");
     } catch (commandError) {
@@ -98,7 +114,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
     } finally {
       setBusy(null);
     }
-  }, [sessionId]);
+  }, [role, sessionId]);
 
   const exitHref = useCallback(() => {
     const context = getVirtualClassroomContext();

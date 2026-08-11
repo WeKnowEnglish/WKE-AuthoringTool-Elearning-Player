@@ -8,6 +8,7 @@ import { resolveVirtualClassroomRuntimeReader } from "@/lib/virtual-classroom/se
 import { getClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
 import { classroomRealtimeNativeShellAuthorityReady } from "@/lib/classroom-realtime/shadow-mode";
+import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
 
 /**
  * Recovery-only endpoint for the versioned Supabase runtime snapshot.
@@ -18,9 +19,12 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ sessionId: string }> },
 ) {
+  return withCollabServerTiming("vc.runtime", async (timer) => {
   const { sessionId } = await context.params;
+  timer.setContext({ activity: "classroom", sessionId });
   const session = await getVirtualClassroomSessionById(sessionId);
   if (!session) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+  timer.setContext({ classId: session.classId });
 
   const cookieStore = await cookies();
   const reader = resolveVirtualClassroomRuntimeReader({
@@ -43,7 +47,10 @@ export async function GET(
   const snapshot = await getClassroomRuntimeSnapshot(session.id);
   if (readinessOnly) {
     return NextResponse.json(
-      { nativeShellReady: nativeAuthorityReady && Boolean(snapshot) },
+      {
+        nativeShellReady: nativeAuthorityReady && Boolean(snapshot),
+        ...(nativeAuthorityReady && snapshot ? { snapshot } : {}),
+      },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   }
@@ -58,4 +65,5 @@ export async function GET(
     { snapshot, role: reader.role, nativeShellReady: nativeAuthorityReady },
     { headers: { "Cache-Control": "private, no-store" } },
   );
+  });
 }

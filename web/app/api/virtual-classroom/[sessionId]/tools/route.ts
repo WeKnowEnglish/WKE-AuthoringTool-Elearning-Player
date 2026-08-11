@@ -34,6 +34,7 @@ import {
   classroomRealtimeToolAuthorityPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
 import { listActiveClassroomStudentIds } from "@/lib/virtual-classroom/server/participant-registry";
+import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
 
 type RouteContext = { params: Promise<{ sessionId: string }> };
 
@@ -65,7 +66,9 @@ function livePatchForCommand(command: VcToolCommand): ClassroomRuntimePatch | nu
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  return withCollabServerTiming("vc.tools", async (timer) => {
   const { sessionId } = await context.params;
+  timer.setContext({ activity: "classroom", sessionId });
   const session = await getVirtualClassroomSessionById(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -84,6 +87,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (!command?.type) {
     return NextResponse.json({ error: "Command type required." }, { status: 400 });
   }
+  timer.setContext({ commandType: command.type, classId: session.classId });
 
   const cookieStore = await cookies();
   const hostOk = vcHostMatchesJoinCode(
@@ -222,5 +226,6 @@ export async function POST(request: Request, context: RouteContext) {
     ok: true,
     detail: result.detail,
     authority: "liveblocks",
+  });
   });
 }

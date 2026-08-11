@@ -5,6 +5,7 @@ import { WhiteboardRoomShell } from "@/components/pilots/whiteboard/WhiteboardRo
 import { VirtualClassroomSharedBoard } from "@/components/virtual-classroom/VirtualClassroomSharedBoard";
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
 import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
+import { startAppDiagnosticSpan } from "@/lib/app-diagnostics/client";
 import {
   getOrCreateWhiteboardUserId,
   getWhiteboardSessionContext,
@@ -204,6 +205,13 @@ export async function launchWhiteboardInLearn(input: {
     title?: string;
   };
 }): Promise<WhiteboardSessionContext> {
+  const finishJourney = startAppDiagnosticSpan(
+    "teacher",
+    "virtual-classroom",
+    input.background ? "classroom_picture_add" : "classroom_board_launch",
+    { sessionId: input.sessionId },
+  );
+  try {
   const res = await diagnosticFetch(
     `/api/virtual-classroom/${input.sessionId}/whiteboard`,
     {
@@ -282,5 +290,10 @@ export async function launchWhiteboardInLearn(input: {
       );
     }
   }
+  finishJourney({ hasBackground: Boolean(input.background) });
   return next;
+  } catch (journeyError) {
+    finishJourney(undefined, journeyError);
+    throw journeyError;
+  }
 }

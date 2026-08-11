@@ -7,6 +7,7 @@ import {
 } from "@/lib/classroom-realtime/channel";
 import { classroomRealtimeShadowModeEnabled } from "@/lib/classroom-realtime/shadow-mode";
 import { createClient } from "@/lib/supabase/client";
+import { diagnosticFetch } from "@/lib/app-diagnostics/client";
 import type {
   ClassroomParticipantPresence,
   ClassroomRuntimePatch,
@@ -19,6 +20,7 @@ type Input = {
   userId: string;
   displayName: string;
   role: "host" | "member";
+  initialSnapshot?: ClassroomRuntimeSnapshot | null;
 };
 
 export type ClassroomRealtimeShadowHealth = {
@@ -40,12 +42,13 @@ export function useClassroomRealtimeShadowPresence(
   input: Input,
 ): ClassroomRealtimeShadowHealth {
   const enabled = classroomRealtimeShadowModeEnabled() && Boolean(input.classId.trim());
+  const initialSnapshot = input.initialSnapshot ?? null;
   const [health, setHealth] = useState<ClassroomRealtimeShadowHealth>({
     enabled,
-    snapshot: enabled ? "loading" : "idle",
+    snapshot: enabled ? (initialSnapshot ? "loaded" : "loading") : "idle",
     channel: enabled ? "connecting" : "idle",
-    snapshotVersion: null,
-    runtimeSnapshot: null,
+    snapshotVersion: initialSnapshot?.stateVersion ?? null,
+    runtimeSnapshot: initialSnapshot,
     runtimePatch: null,
     participants: [],
   });
@@ -62,8 +65,16 @@ export function useClassroomRealtimeShadowPresence(
     let disposed = false;
     const controller = new AbortController();
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    let snapshotVersion: number | null = null;
-    setHealth({ enabled: true, snapshot: "loading", channel: "connecting", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null, participants: [] });
+    let snapshotVersion: number | null = initialSnapshot?.stateVersion ?? null;
+    setHealth({
+      enabled: true,
+      snapshot: initialSnapshot ? "loaded" : "loading",
+      channel: "connecting",
+      snapshotVersion,
+      runtimeSnapshot: initialSnapshot,
+      runtimePatch: null,
+      participants: [],
+    });
 
     const readParticipants = (): ClassroomParticipantPresence[] => {
       const state = channel.presenceState<ClassroomParticipantPresence>();
@@ -80,10 +91,19 @@ export function useClassroomRealtimeShadowPresence(
 
     const loadSnapshot = async (clearLivePatch = false) => {
       try {
-        const response = await fetch(`/api/virtual-classroom/${encodeURIComponent(input.sessionId)}/runtime`, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
+        const response = await diagnosticFetch(
+          `/api/virtual-classroom/${encodeURIComponent(input.sessionId)}/runtime`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+          {
+            surface: input.role === "host" ? "teacher" : "student",
+            phase: "virtual-classroom",
+            name: clearLivePatch ? "classroom_runtime_refresh" : "classroom_runtime_restore",
+            detail: { sessionId: input.sessionId },
+          },
+        );
         const payload = (await response.json().catch(() => null)) as {
           snapshot?: ClassroomRuntimeSnapshot;
         } | null;
@@ -117,7 +137,7 @@ export function useClassroomRealtimeShadowPresence(
     // Verify reconnect recovery against the session-scoped cookie before the
     // channel becomes a source of UI state. The response is intentionally not
     // rendered in shadow mode.
-    void loadSnapshot();
+    if (!initialSnapshot) void loadSnapshot();
 
     channel.on("broadcast", { event: "runtime:updated" }, ({ payload }) => {
       const event = payload as { sessionId?: unknown; stateVersion?: unknown };
@@ -206,7 +226,7 @@ export function useClassroomRealtimeShadowPresence(
       if (refreshTimer) clearTimeout(refreshTimer);
       void supabase.removeChannel(channel);
     };
-  }, [enabled, input.displayName, input.role, input.sessionId, input.userId]);
+  }, [enabled, initialSnapshot, input.displayName, input.role, input.sessionId, input.userId]);
 
   return health;
 }

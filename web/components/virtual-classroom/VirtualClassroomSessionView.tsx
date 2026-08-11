@@ -15,6 +15,7 @@ import { useClassroomRealtimeShadowPresence } from "@/components/virtual-classro
 import { VirtualClassroomLearnControls } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
 import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
 import { VirtualClassroomLiveProvider } from "@/components/virtual-classroom/VirtualClassroomLiveProvider";
+import { VirtualClassroomNativeSessionView } from "@/components/virtual-classroom/VirtualClassroomNativeSessionView";
 import { VirtualClassroomRoomShell } from "@/components/virtual-classroom/VirtualClassroomRoomShell";
 import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
 import {
@@ -42,6 +43,7 @@ import {
   classroomRealtimeLearnNavigationPilotEnabled,
   classroomRealtimeLifecyclePilotEnabled,
   classroomRealtimeLearnPensPilotEnabled,
+  classroomRealtimeNativeShellPilotEnabled,
   classroomRealtimePointsPilotEnabled,
   classroomRealtimePickerGroupsPilotEnabled,
   classroomRealtimePresenceRosterPilotEnabled,
@@ -658,6 +660,19 @@ export function VirtualClassroomSessionGate() {
           Go to join
         </button>
       </div>
+    );
+  }
+
+  if (ctx.classId && classroomRealtimeNativeShellPilotEnabled()) {
+    return (
+      <VirtualClassroomNativeSessionView
+        sessionId={ctx.sessionId}
+        role={ctx.role}
+        userId={ctx.userId}
+        displayName={ctx.displayName}
+        classId={ctx.classId}
+        joinCode={ctx.joinCode}
+      />
     );
   }
 

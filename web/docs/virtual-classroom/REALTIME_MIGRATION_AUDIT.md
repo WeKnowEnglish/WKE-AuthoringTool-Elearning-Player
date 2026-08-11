@@ -280,14 +280,20 @@ the nested collaborative room remains on Liveblocks. Ending a class persists
 the terminal snapshot before marking and deleting the legacy room. One-off
 guest sessions retain the established Liveblocks-first lifecycle path.
 
-## Native shell preparation
+## Native class shell
 
-The teacher tool panels and student session chrome now expose provider-neutral
+The teacher tool panels and student session chrome expose provider-neutral
 content components. Their legacy exports remain thin Liveblocks readers for
-the guest shell, while the native shell can render the same UI directly from a
-normalized Supabase snapshot and Broadcast patch. The shared whiteboard embed
-can also opt into its own isolated Liveblocks provider, so removing the outer
-classroom provider does not migrate or duplicate the collaborative board.
+the guest shell. The class-linked native shell now renders the same controls
+directly from a normalized Supabase snapshot, Broadcast patches, and Presence
+roster. Daily video and durable lobby attendance remain independent of either
+realtime provider.
+
+When the native shell is selected, the outer classroom Liveblocks room is not
+mounted. The shared whiteboard opts into its own isolated Liveblocks provider
+only while that collaborative surface is mounted. This preserves the proven
+board implementation without keeping Liveblocks around meeting mode, lesson
+navigation, teacher tools, student status, or the main classroom lifecycle.
 
 `NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT` is the final visible shell
 gate and remains false by default. It cannot activate unless every Supabase

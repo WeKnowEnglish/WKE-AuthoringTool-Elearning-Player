@@ -178,7 +178,17 @@ export function GlobalTimerBanner({
   timer?: GlobalTimerState | null;
 }) {
   const liveblocksTimer = useStorage((root) => readTimer(root));
-  const timer = pilotTimer ?? liveblocksTimer;
+  return <GlobalTimerBannerContent role={role} timer={pilotTimer ?? liveblocksTimer} />;
+}
+
+/** Provider-neutral compact timer display for the native classroom shell. */
+export function GlobalTimerBannerContent({
+  role,
+  timer,
+}: {
+  role: "host" | "member";
+  timer: GlobalTimerState;
+}) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {

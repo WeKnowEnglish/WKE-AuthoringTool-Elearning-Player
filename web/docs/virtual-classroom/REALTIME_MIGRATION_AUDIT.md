@@ -28,6 +28,15 @@ When deliberately enabled, only those matching shared controls commit to
 Supabase first; other teacher tools and collaborative activity rooms continue
 to use Liveblocks.
 
+The independent server-only
+`CLASSROOM_REALTIME_SUPABASE_TOOL_AUTHORITY_PILOT` moves timer, randomiser,
+points, picker/groups, and classroom status writes only after every matching
+read pilot and the durable participant registry are enabled. Random results
+are generated once in the provider-neutral reducer and the exact committed
+patch is copied to Liveblocks; commands are never replayed across providers.
+Roster-dependent commands retain the Liveblocks path during the brief join
+window before durable attendance contains at least one active learner.
+
 Enable shadow mode first in a pilot deployment, then enable visible read pilots
 individually after a two-browser teacher/student check. Disabling any pilot
 restores its Liveblocks read fallback without a rollback migration. One-off
@@ -91,6 +100,10 @@ meeting/Learn navigation, selected activity or presentation, and the shared
 student-pen permission behind the disabled server-only authority flag. It uses
 the versioned snapshot compare-and-swap function, broadcasts only after a
 durable commit, and mirrors the command to Liveblocks for the current shell.
+The second adapter scope covers the ordinary classroom tools. Sending groups
+to whiteboard, document, or word-card rooms remains explicitly outside both
+authority adapters because those collaborative rooms retain their own
+Liveblocks state during this migration phase.
 It handles roster sync, picker, groups, timer, dice, points, student status,
 freeze/announcement, shared UI mode/stage/activity, and student pens.  It
 currently mutates Liveblocks storage and emits a best-effort `TOOLS_UPDATED`

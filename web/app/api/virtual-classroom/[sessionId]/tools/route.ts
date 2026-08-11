@@ -10,12 +10,15 @@ import {
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
 import {
   applyVcToolCommand,
+  mirrorVcRuntimePatchToLiveblocks,
   VC_MEMBER_TOOL_TYPES,
   type VcToolCommand,
 } from "@/lib/virtual-classroom/server/tools";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
 import {
   applyClassroomRuntimeCommand,
+  classroomRuntimeCommandAuthorityKind,
+  classroomRuntimeCommandRequiresRoster,
   queueClassroomRuntimeSnapshotSync,
 } from "@/lib/virtual-classroom/server/runtime-snapshot";
 import {
@@ -28,6 +31,7 @@ import {
   classroomRealtimeAuthorityPilotEnabled,
   classroomRealtimeParticipantRegistryPilotEnabled,
   classroomRealtimeStatusPilotEnabled,
+  classroomRealtimeToolAuthorityPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
 import { listActiveClassroomStudentIds } from "@/lib/virtual-classroom/server/participant-registry";
 
@@ -129,11 +133,17 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  const authorityResult = classroomRealtimeAuthorityPilotEnabled()
+  const authorityKind = classroomRuntimeCommandAuthorityKind(command);
+  const authorityEnabled = Boolean(session.classId) && (
+    (authorityKind === "control" && classroomRealtimeAuthorityPilotEnabled()) ||
+    (authorityKind === "tool" && classroomRealtimeToolAuthorityPilotEnabled())
+  ) && (!classroomRuntimeCommandRequiresRoster(command) || activeStudentIds !== undefined);
+  const authorityResult = authorityEnabled
     ? await applyClassroomRuntimeCommand({
         sessionId: session.id,
         command,
         actorUserId: actorUserId ?? "system",
+        activeStudentIds,
       })
     : { handled: false as const };
   if (authorityResult.handled && !authorityResult.ok) {
@@ -143,12 +153,9 @@ export async function POST(request: Request, context: RouteContext) {
   if (authorityResult.handled) {
     after(async () => {
       await Promise.all([
-        applyVcToolCommand({
+        mirrorVcRuntimePatchToLiveblocks({
           roomId: session.liveblocksRoomId,
-          sessionId: session.id,
-          command,
-          actorUserId,
-          activeStudentIds,
+          patch: authorityResult.patch,
         }),
         authorityResult.changed.length
           ? broadcastClassroomRealtimeEvent({

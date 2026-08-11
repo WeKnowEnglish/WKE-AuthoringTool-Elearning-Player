@@ -132,4 +132,69 @@ describe("initial classroom runtime snapshot", () => {
       command: { type: "SEND_GROUPS_TO_WHITEBOARD" },
     })).toBeNull();
   });
+
+  it("projects timer state with a stable authoritative timestamp", () => {
+    const current = createInitialClassroomRuntimeSnapshot({
+      sessionId: "session-1",
+      actorUserId: "teacher-1",
+    });
+    const projected = projectClassroomRuntimeCommand({
+      current,
+      actorUserId: "teacher-1",
+      now: new Date("2026-08-10T01:02:03.000Z"),
+      command: { type: "START_TIMER", durationMs: 90_000 },
+    });
+
+    expect(projected).toMatchObject({
+      changed: ["tools"],
+      patch: {
+        tools: {
+          timer: {
+            status: "running",
+            durationMs: 90_000,
+            startedAt: Date.parse("2026-08-10T01:02:03.000Z"),
+          },
+        },
+      },
+    });
+    expect(projected?.snapshot.tools.timer).toEqual(projected?.patch.tools?.timer);
+  });
+
+  it("uses the durable participant roster for picker and groups", () => {
+    const current = createInitialClassroomRuntimeSnapshot({
+      sessionId: "session-1",
+      actorUserId: "teacher-1",
+    });
+    const picker = projectClassroomRuntimeCommand({
+      current,
+      actorUserId: "teacher-1",
+      activeStudentIds: ["student-1", "student-2"],
+      command: { type: "SYNC_ROSTER" },
+    });
+    const groups = projectClassroomRuntimeCommand({
+      current,
+      actorUserId: "teacher-1",
+      activeStudentIds: ["student-1", "student-2"],
+      command: { type: "GENERATE_GROUPS", sizeMode: "pairs" },
+    });
+
+    expect(picker?.patch.tools?.picker).toMatchObject({
+      availableStudentIds: ["student-1", "student-2"],
+    });
+    expect(groups?.patch.tools?.groupSet).toMatchObject({
+      groups: [{ memberIds: expect.arrayContaining(["student-1", "student-2"]) }],
+    });
+  });
+
+  it("enforces student identity before projecting own status", () => {
+    const current = createInitialClassroomRuntimeSnapshot({
+      sessionId: "session-1",
+      actorUserId: "teacher-1",
+    });
+    expect(() => projectClassroomRuntimeCommand({
+      current,
+      actorUserId: "student-1",
+      command: { type: "SET_OWN_STATUS", studentId: "student-2", status: "help" },
+    })).toThrow("You can only set your own status.");
+  });
 });

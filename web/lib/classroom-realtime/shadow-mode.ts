@@ -21,6 +21,20 @@ export function classroomRealtimeAuthorityPilotEnabled(): boolean {
   );
 }
 
+/** Supabase authority for ordinary classroom tools, independently reversible. */
+export function classroomRealtimeToolAuthorityPilotEnabled(): boolean {
+  return (
+    classroomRealtimeShadowModeEnabled() &&
+    process.env.CLASSROOM_REALTIME_SUPABASE_TOOL_AUTHORITY_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PARTICIPANT_REGISTRY_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_TIMER_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_RANDOMISER_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_POINTS_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_PICKER_GROUPS_PILOT === "true" &&
+    process.env.NEXT_PUBLIC_CLASSROOM_REALTIME_STATUS_PILOT === "true"
+  );
+}
+
 /**
  * First visible Supabase cutover. This deliberately remains narrower than the
  * shadow connection and is safe to disable independently.

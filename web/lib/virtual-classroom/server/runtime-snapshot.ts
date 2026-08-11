@@ -4,12 +4,58 @@ import type {
   ClassroomRuntimePatch,
   ClassroomRuntimeSnapshot,
 } from "@/lib/classroom-realtime/types";
-import { createEmptyRandomiser } from "@/lib/virtual-classroom/tools/dice";
-import { createEmptyGroupSet } from "@/lib/virtual-classroom/tools/groups";
-import { createEmptyPickerState } from "@/lib/virtual-classroom/tools/picker";
-import { createEmptySessionPoints } from "@/lib/virtual-classroom/tools/points";
-import { createEmptyClassroomStatus } from "@/lib/virtual-classroom/tools/status";
-import { createIdleGlobalTimer } from "@/lib/virtual-classroom/tools/timer";
+import {
+  clearLastRoll,
+  configureRandomiser,
+  createEmptyRandomiser,
+  normalizeRandomiserState,
+  rollDice,
+} from "@/lib/virtual-classroom/tools/dice";
+import {
+  createEmptyGroupSet,
+  generateRandomGroups,
+  moveStudentBetweenGroups,
+  normalizeGroupSetState,
+  renameGroup,
+  restorePreviousGroups,
+  saveCurrentAsPrevious,
+  setGroupLeader,
+  shuffleUnlockedGroups,
+  toggleGroupLock,
+} from "@/lib/virtual-classroom/tools/groups";
+import {
+  createEmptyPickerState,
+  normalizeStudentPickerState,
+  pickStudents,
+  resetPickerCycle,
+  setPickerExcluded,
+  syncPickerRoster,
+} from "@/lib/virtual-classroom/tools/picker";
+import {
+  awardPoints,
+  createEmptySessionPoints,
+  normalizeSessionPointsState,
+  resetSessionPoints,
+  undoLastAward,
+} from "@/lib/virtual-classroom/tools/points";
+import {
+  clearAllStatuses,
+  createEmptyClassroomStatus,
+  normalizeClassroomStatusState,
+  setInteractionFrozen,
+  setStudentStatus,
+} from "@/lib/virtual-classroom/tools/status";
+import {
+  addGlobalTime,
+  createIdleGlobalTimer,
+  maybeExpireCountdown,
+  normalizeGlobalTimerState,
+  pauseGlobalTimer,
+  resetGlobalTimer,
+  resumeGlobalTimer,
+  setGlobalTimerMode,
+  startGlobalTimer,
+} from "@/lib/virtual-classroom/tools/timer";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import { getLiveblocksServerClient } from "@/lib/live-game/server/liveblocks-client";
 import { snapshotEvent } from "@/lib/classroom-realtime/events";
@@ -291,10 +337,62 @@ const SUPABASE_AUTHORITY_COMMANDS = new Set<VcToolCommand["type"]>([
   "SET_ANNOUNCEMENT",
 ]);
 
+const SUPABASE_TOOL_AUTHORITY_COMMANDS = new Set<VcToolCommand["type"]>([
+  "SYNC_ROSTER",
+  "SET_PICKER_MODE",
+  "PICK",
+  "RESET_PICKER_CYCLE",
+  "SET_PICKER_EXCLUDED",
+  "GENERATE_GROUPS",
+  "SHUFFLE_GROUPS",
+  "SAVE_GROUPS",
+  "RESTORE_GROUPS",
+  "MOVE_STUDENT",
+  "RENAME_GROUP",
+  "SET_GROUP_LEADER",
+  "TOGGLE_GROUP_LOCK",
+  "SET_TIMER_MODE",
+  "START_TIMER",
+  "PAUSE_TIMER",
+  "RESUME_TIMER",
+  "ADD_TIMER_MS",
+  "RESET_TIMER",
+  "SET_TIMER_VISIBLE",
+  "CONFIGURE_DICE",
+  "ROLL_DICE",
+  "CLEAR_DICE",
+  "AWARD_POINTS",
+  "UNDO_AWARD",
+  "RESET_POINTS",
+  "SET_LEADERBOARD_VISIBLE",
+  "SET_OWN_STATUS",
+  "CLEAR_STATUSES",
+  "SET_FREEZE",
+]);
+
+const ROSTER_REQUIRED_AUTHORITY_COMMANDS = new Set<VcToolCommand["type"]>([
+  "SYNC_ROSTER",
+  "PICK",
+  "GENERATE_GROUPS",
+  "SHUFFLE_GROUPS",
+]);
+
+export function classroomRuntimeCommandRequiresRoster(command: VcToolCommand): boolean {
+  return ROSTER_REQUIRED_AUTHORITY_COMMANDS.has(command.type);
+}
+
+export function classroomRuntimeCommandAuthorityKind(
+  command: VcToolCommand,
+): "control" | "tool" | null {
+  if (SUPABASE_AUTHORITY_COMMANDS.has(command.type)) return "control";
+  if (SUPABASE_TOOL_AUTHORITY_COMMANDS.has(command.type)) return "tool";
+  return null;
+}
+
 export function classroomRuntimeCommandSupportsSupabaseAuthority(
   command: VcToolCommand,
 ): boolean {
-  return SUPABASE_AUTHORITY_COMMANDS.has(command.type);
+  return classroomRuntimeCommandAuthorityKind(command) !== null;
 }
 
 /** Pure command projection shared by the authority writer and contract tests. */
@@ -302,11 +400,23 @@ export function projectClassroomRuntimeCommand(input: {
   current: ClassroomRuntimeSnapshot;
   command: VcToolCommand;
   actorUserId: string;
+  activeStudentIds?: string[];
   now?: Date;
 }): { snapshot: ClassroomRuntimeSnapshot; patch: ClassroomRuntimePatch; changed: string[] } | null {
   if (!classroomRuntimeCommandSupportsSupabaseAuthority(input.command)) return null;
 
   let patch: ClassroomRuntimePatch;
+  const nowMs = (input.now ?? new Date()).getTime();
+  const picker = normalizeStudentPickerState(input.current.tools.picker) ?? createEmptyPickerState([]);
+  const groups = normalizeGroupSetState(input.current.tools.groupSet) ?? createEmptyGroupSet();
+  const timer = normalizeGlobalTimerState(input.current.tools.timer) ?? createIdleGlobalTimer();
+  const randomiser = normalizeRandomiserState(input.current.tools.randomiser) ?? createEmptyRandomiser();
+  const points = normalizeSessionPointsState(input.current.tools.points) ?? createEmptySessionPoints();
+  const status = normalizeClassroomStatusState(input.current.tools.classroomStatus) ?? createEmptyClassroomStatus();
+  const rosterIds = (includeTeacher: boolean) => [
+    ...(includeTeacher ? [input.actorUserId] : []),
+    ...(input.activeStudentIds ?? []),
+  ];
   switch (input.command.type) {
     case "SET_UI_MODE":
       patch = { uiMode: input.command.mode === "meeting" ? "meeting" : "learn" };
@@ -354,22 +464,126 @@ export function projectClassroomRuntimeCommand(input: {
     case "SET_ANNOUNCEMENT":
       patch = { announcement: input.command.message?.trim().slice(0, 280) || null };
       break;
+    case "SYNC_ROSTER": {
+      const includeTeacher = input.command.includeTeacher ?? picker.includeTeacher;
+      patch = { tools: { picker: { ...syncPickerRoster(picker, rosterIds(includeTeacher)), includeTeacher } } };
+      break;
+    }
+    case "SET_PICKER_MODE":
+      patch = { tools: { picker: { ...picker, mode: input.command.mode } } };
+      break;
+    case "PICK": {
+      const synced = syncPickerRoster(picker, rosterIds(picker.includeTeacher));
+      patch = { tools: { picker: pickStudents(synced, { count: input.command.count ?? (synced.mode === "two" ? 2 : 1) }) } };
+      break;
+    }
+    case "RESET_PICKER_CYCLE":
+      patch = { tools: { picker: resetPickerCycle(picker) } };
+      break;
+    case "SET_PICKER_EXCLUDED":
+      patch = { tools: { picker: setPickerExcluded(picker, input.command.excludedStudentIds) } };
+      break;
+    case "GENERATE_GROUPS": {
+      const previous = groups.groups.length ? groups.groups : groups.previousGroups;
+      patch = { tools: { groupSet: {
+        ...generateRandomGroups({ studentIds: rosterIds(false), sizeMode: input.command.sizeMode, targetGroupCount: input.command.targetGroupCount ?? null }),
+        previousGroups: previous,
+      } } };
+      break;
+    }
+    case "SHUFFLE_GROUPS":
+      patch = { tools: { groupSet: shuffleUnlockedGroups(groups, rosterIds(false)) } };
+      break;
+    case "SAVE_GROUPS":
+      patch = { tools: { groupSet: saveCurrentAsPrevious(groups) } };
+      break;
+    case "RESTORE_GROUPS":
+      patch = { tools: { groupSet: restorePreviousGroups(groups) } };
+      break;
+    case "MOVE_STUDENT":
+      patch = { tools: { groupSet: moveStudentBetweenGroups(groups, input.command.studentId, input.command.toGroupId) } };
+      break;
+    case "RENAME_GROUP":
+      patch = { tools: { groupSet: renameGroup(groups, input.command.groupId, input.command.name) } };
+      break;
+    case "SET_GROUP_LEADER":
+      patch = { tools: { groupSet: setGroupLeader(groups, input.command.groupId, input.command.leaderId) } };
+      break;
+    case "TOGGLE_GROUP_LOCK":
+      patch = { tools: { groupSet: toggleGroupLock(groups, input.command.groupId) } };
+      break;
+    case "SET_TIMER_MODE":
+      patch = { tools: { timer: setGlobalTimerMode(timer, input.command.mode) } };
+      break;
+    case "START_TIMER":
+      patch = { tools: { timer: maybeExpireCountdown(startGlobalTimer(timer, nowMs, input.command.durationMs), nowMs) } };
+      break;
+    case "PAUSE_TIMER":
+      patch = { tools: { timer: pauseGlobalTimer(timer, nowMs) } };
+      break;
+    case "RESUME_TIMER":
+      patch = { tools: { timer: maybeExpireCountdown(resumeGlobalTimer(timer, nowMs), nowMs) } };
+      break;
+    case "ADD_TIMER_MS":
+      patch = { tools: { timer: maybeExpireCountdown(addGlobalTime(timer, input.command.milliseconds), nowMs) } };
+      break;
+    case "RESET_TIMER":
+      patch = { tools: { timer: resetGlobalTimer(timer, input.command.durationMs) } };
+      break;
+    case "SET_TIMER_VISIBLE":
+      patch = { tools: { timer: { ...timer, visibleToStudents: input.command.visibleToStudents } } };
+      break;
+    case "CONFIGURE_DICE":
+      patch = { tools: { randomiser: configureRandomiser(randomiser, input.command) } };
+      break;
+    case "ROLL_DICE":
+      patch = { tools: { randomiser: rollDice(randomiser, { nowMs }) } };
+      break;
+    case "CLEAR_DICE":
+      patch = { tools: { randomiser: clearLastRoll(randomiser) } };
+      break;
+    case "AWARD_POINTS":
+      patch = { tools: { points: awardPoints(points, { ...input.command, nowMs }) } };
+      break;
+    case "UNDO_AWARD":
+      patch = { tools: { points: undoLastAward(points) } };
+      break;
+    case "RESET_POINTS":
+      patch = { tools: { points: resetSessionPoints(points) } };
+      break;
+    case "SET_LEADERBOARD_VISIBLE":
+      patch = { tools: { points: { ...points, showLeaderboard: input.command.showLeaderboard } } };
+      break;
+    case "SET_OWN_STATUS":
+      if (input.command.studentId !== input.actorUserId) throw new Error("You can only set your own status.");
+      patch = { tools: { classroomStatus: setStudentStatus(status, input.command.studentId, input.command.status) } };
+      break;
+    case "CLEAR_STATUSES":
+      patch = { tools: { classroomStatus: clearAllStatuses(status) } };
+      break;
+    case "SET_FREEZE":
+      patch = { tools: { classroomStatus: setInteractionFrozen(status, input.command.frozen) } };
+      break;
     default:
       return null;
   }
 
+  const nextState = {
+    ...input.current,
+    ...patch,
+    tools: patch.tools ? { ...input.current.tools, ...patch.tools } : input.current.tools,
+  };
   const changed = Object.keys(patch).filter(
     (key) =>
       !valuesMatch(
         input.current[key as keyof ClassroomRuntimeSnapshot],
-        patch[key as keyof ClassroomRuntimePatch],
+        nextState[key as keyof ClassroomRuntimeSnapshot],
       ),
   );
-  const now = input.now ?? new Date();
+  const now = input.now ?? new Date(nowMs);
   return {
     snapshot: {
-      ...input.current,
-      ...patch,
+      ...nextState,
       updatedAt: now.toISOString(),
       updatedBy: input.actorUserId,
     },
@@ -383,6 +597,7 @@ export async function applyClassroomRuntimeCommand(input: {
   sessionId: string;
   command: VcToolCommand;
   actorUserId: string;
+  activeStudentIds?: string[];
 }): Promise<
   | { handled: false }
   | {
@@ -408,6 +623,7 @@ export async function applyClassroomRuntimeCommand(input: {
         current,
         command: input.command,
         actorUserId: input.actorUserId,
+        activeStudentIds: input.activeStudentIds,
       })!;
     } catch (error) {
       return {

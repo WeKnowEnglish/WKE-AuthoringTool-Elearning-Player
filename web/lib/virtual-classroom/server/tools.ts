@@ -71,6 +71,7 @@ import {
   normalizeVirtualClassroomPresentation,
   type VirtualClassroomPresentation,
 } from "@/lib/virtual-classroom/presentation";
+import type { ClassroomRuntimePatch } from "@/lib/classroom-realtime/types";
 
 type RuntimeNode = {
   get: (key: string) => unknown;
@@ -194,6 +195,41 @@ export type VcToolCommand =
 
 /** Commands students may issue for themselves. */
 export const VC_MEMBER_TOOL_TYPES = new Set<VcToolCommand["type"]>(["SET_OWN_STATUS"]);
+
+/**
+ * Copies an already committed provider-neutral patch into the legacy room.
+ * This must copy values rather than replay commands: random tools would
+ * otherwise generate a different result in each transport.
+ */
+export async function mirrorVcRuntimePatchToLiveblocks(input: {
+  roomId: string;
+  patch: ClassroomRuntimePatch;
+}): Promise<boolean> {
+  try {
+    const liveblocks = getLiveblocksServerClient();
+    await liveblocks.mutateStorage(input.roomId, ({ root }) => {
+      const runtime = runtimeOf(root);
+      for (const [key, value] of Object.entries(input.patch)) {
+        if (key === "tools") continue;
+        runtime.set(key, value);
+      }
+      for (const [key, value] of Object.entries(input.patch.tools ?? {})) {
+        runtime.set(key, value);
+      }
+    });
+    try {
+      await liveblocks.broadcastEvent(input.roomId, {
+        type: "TOOLS_UPDATED",
+        command: "SUPABASE_AUTHORITY_MIRROR",
+      });
+    } catch {
+      // Storage is the compatibility source; the wake-up event is best-effort.
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const VC_TIMER_TOOL_TYPES = new Set<VcToolCommand["type"]>([
   "SET_TIMER_MODE",

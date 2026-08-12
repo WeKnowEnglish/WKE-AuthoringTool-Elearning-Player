@@ -84,4 +84,26 @@ describe("compileQuizzesFromVocabList", () => {
     const mc = output.results[0]?.document as GamesAuthoringDocument;
     expect(mc.interaction.items[0]?.id).toBe("q1");
   });
+
+  it("prefers example audio for listen dialog when an example is present", () => {
+    const list = createBakeryVocabularyListDocument();
+    list.entries[0] = {
+      ...list.entries[0]!,
+      audioUrl: "https://cdn.example/bread-word.m4a",
+      exampleAudioUrl: "https://cdn.example/bread-example.m4a",
+    };
+    const output = compileQuizzesFromVocabList({
+      list,
+      formats: ["listen_and_choose"],
+    });
+    const listen = output.results[0]?.document as {
+      interaction: {
+        items: Array<{ dialogText?: string; promptAudioUrl?: string }>;
+      };
+    };
+    const item = listen.interaction.items.find((row) =>
+      row.dialogText?.includes("bread"),
+    );
+    expect(item?.promptAudioUrl).toBe("https://cdn.example/bread-example.m4a");
+  });
 });

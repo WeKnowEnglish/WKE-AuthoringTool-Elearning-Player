@@ -369,7 +369,13 @@ export function VocabularyListWorkspace({
       if (entry.definitionEn?.trim()) withDefinition += 1;
       if (entry.example?.trim()) withExample += 1;
       if (entry.imageUrl?.trim()) withImage += 1;
-      if (entry.audioUrl?.trim()) withAudio += 1;
+      if (
+        entry.audioUrl?.trim() ||
+        entry.exampleAudioUrl?.trim() ||
+        entry.definitionAudioUrl?.trim()
+      ) {
+        withAudio += 1;
+      }
     }
     return { total, withDefinition, withExample, withImage, withAudio };
   }, [document.entries]);
@@ -1843,28 +1849,69 @@ export function VocabularyListWorkspace({
                       ) : null}
                     </div>
 
-                <VocabEntryAudioControls
-                  value={selectedEntry.audioUrl}
-                  libraryQueryHint={selectedEntry.word}
-                  uploadItemName={selectedEntry.word.trim() || undefined}
-                  lexiconId={selectedEntry.sourceWordId}
-                  onChange={(next, detail) => {
-                        patchDocument((current) =>
-                          patchVocabEntry(current, selectedEntry.id, {
-                            audioUrl: next,
-                          }),
-                        );
-                        if (next) {
-                          void attachMediaToLexicon({
-                            lexiconId: selectedEntry.sourceWordId,
-                            surface: selectedEntry.word,
-                            role: "pronunciation",
-                            mediaAssetId: detail?.mediaAssetId,
-                            publicUrl: next,
-                          });
-                        }
-                      }}
-                    />
+                <div className="space-y-3">
+                  <VocabEntryAudioControls
+                    label="Word audio"
+                    value={selectedEntry.audioUrl}
+                    libraryQueryHint={selectedEntry.word}
+                    uploadItemName={selectedEntry.word.trim() || undefined}
+                    lexiconId={selectedEntry.sourceWordId}
+                    onChange={(next, detail) => {
+                      patchDocument((current) =>
+                        patchVocabEntry(current, selectedEntry.id, {
+                          audioUrl: next,
+                        }),
+                      );
+                      if (next) {
+                        void attachMediaToLexicon({
+                          lexiconId: selectedEntry.sourceWordId,
+                          surface: selectedEntry.word,
+                          role: "pronunciation",
+                          mediaAssetId: detail?.mediaAssetId,
+                          publicUrl: next,
+                        });
+                      }
+                    }}
+                  />
+                  <VocabEntryAudioControls
+                    label="Example audio"
+                    value={selectedEntry.exampleAudioUrl}
+                    libraryQueryHint={
+                      selectedEntry.example?.trim() || selectedEntry.word
+                    }
+                    uploadItemName={
+                      selectedEntry.example?.trim() ||
+                      selectedEntry.word.trim() ||
+                      undefined
+                    }
+                    onChange={(next) => {
+                      patchDocument((current) =>
+                        patchVocabEntry(current, selectedEntry.id, {
+                          exampleAudioUrl: next,
+                        }),
+                      );
+                    }}
+                  />
+                  <VocabEntryAudioControls
+                    label="Definition audio"
+                    value={selectedEntry.definitionAudioUrl}
+                    libraryQueryHint={
+                      selectedEntry.definitionEn?.trim() || selectedEntry.word
+                    }
+                    uploadItemName={
+                      selectedEntry.definitionEn?.trim() ||
+                      selectedEntry.word.trim() ||
+                      undefined
+                    }
+                    onChange={(next) => {
+                      patchDocument((current) =>
+                        patchVocabEntry(current, selectedEntry.id, {
+                          definitionAudioUrl: next,
+                        }),
+                      );
+                    }}
+                  />
+                </div>
                   </div>
                 </div>
               </section>

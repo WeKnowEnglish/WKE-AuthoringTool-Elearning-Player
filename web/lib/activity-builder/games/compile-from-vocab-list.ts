@@ -466,10 +466,17 @@ export function compileListenAndChooseModule(
         const correct = choices.find(
           (choice) => choice.label.toLowerCase() === word.toLowerCase(),
         );
+        const dialogText = entry.example?.trim() || word;
+        const exampleClip = entry.exampleAudioUrl?.trim();
+        const wordClip = entry.audioUrl?.trim();
+        const promptAudioUrl =
+          entry.example?.trim() && exampleClip
+            ? exampleClip
+            : wordClip || exampleClip || undefined;
         return {
           id: `listen-${entry.id}`,
-          dialogText: entry.example?.trim() || word,
-          ...(entry.audioUrl?.trim() ? { promptAudioUrl: entry.audioUrl.trim() } : {}),
+          dialogText,
+          ...(promptAudioUrl ? { promptAudioUrl } : {}),
           imageFit: "contain" as const,
           choices,
           correctChoiceId: correct?.id ?? "a",

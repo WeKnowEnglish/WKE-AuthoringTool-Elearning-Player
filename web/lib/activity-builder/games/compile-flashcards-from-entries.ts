@@ -173,6 +173,12 @@ export function compileFlashcardsFromEntries(
     if (entry.audioUrl?.trim()) {
       card.promptAudioUrl = entry.audioUrl.trim();
     }
+    if (entry.exampleAudioUrl?.trim()) {
+      card.exampleAudioUrl = entry.exampleAudioUrl.trim();
+    }
+    if (entry.definitionAudioUrl?.trim()) {
+      card.definitionAudioUrl = entry.definitionAudioUrl.trim();
+    }
     cards.push(card);
   }
 

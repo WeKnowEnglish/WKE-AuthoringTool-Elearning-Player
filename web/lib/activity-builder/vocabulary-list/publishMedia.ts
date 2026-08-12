@@ -14,6 +14,14 @@ export type PublishLocalVocabMediaResult = {
   errors: string[];
 };
 
+type VocabAudioField = "audioUrl" | "exampleAudioUrl" | "definitionAudioUrl";
+
+const VOCAB_AUDIO_FIELDS: VocabAudioField[] = [
+  "audioUrl",
+  "exampleAudioUrl",
+  "definitionAudioUrl",
+];
+
 function isDataUrl(value: string | undefined): value is string {
   return Boolean(value?.trim().startsWith("data:"));
 }
@@ -42,7 +50,9 @@ export function countLocalVocabMedia(document: VocabularyListDocument): LocalVoc
   let audio = 0;
   for (const entry of document.entries) {
     if (isDataUrl(entry.imageUrl)) images += 1;
-    if (isDataUrl(entry.audioUrl)) audio += 1;
+    for (const field of VOCAB_AUDIO_FIELDS) {
+      if (isDataUrl(entry[field])) audio += 1;
+    }
   }
   return { images, audio, total: images + audio };
 }
@@ -84,6 +94,12 @@ export async function publishVocabStudioAsset(input: {
   };
 }
 
+function audioFieldLabel(field: VocabAudioField): string {
+  if (field === "exampleAudioUrl") return "example audio";
+  if (field === "definitionAudioUrl") return "definition audio";
+  return "audio";
+}
+
 /**
  * Upload every `data:` picture/audio on the list to studio_assets.
  * Already-cloud http(s) URLs are left unchanged.
@@ -114,7 +130,11 @@ export async function publishLocalVocabMedia(
 
   for (const entry of document.entries) {
     let imageUrl = entry.imageUrl;
-    let audioUrl = entry.audioUrl;
+    const nextAudio: Partial<Record<VocabAudioField, string | undefined>> = {
+      audioUrl: entry.audioUrl,
+      exampleAudioUrl: entry.exampleAudioUrl,
+      definitionAudioUrl: entry.definitionAudioUrl,
+    };
 
     if (isDataUrl(imageUrl)) {
       const word = entry.word.trim() || entry.id;
@@ -147,38 +167,47 @@ export async function publishLocalVocabMedia(
       done += 1;
     }
 
-    if (isDataUrl(audioUrl)) {
+    for (const field of VOCAB_AUDIO_FIELDS) {
+      const current = nextAudio[field];
+      if (!isDataUrl(current)) continue;
       const word = entry.word.trim() || entry.id;
-      options?.onProgress?.(done, counts.total, `audio · ${word}`);
+      const label = audioFieldLabel(field);
+      options?.onProgress?.(done, counts.total, `${label} · ${word}`);
       try {
-        const blob = await dataUrlToBlob(audioUrl);
-        const ext = extensionFromDataUrl(audioUrl, "webm");
+        const blob = await dataUrlToBlob(current);
+        const ext = extensionFromDataUrl(current, "webm");
         const published = await publishVocabStudioAsset({
           file: blob,
-          filename: `vocab-${entry.id}.${ext}`,
+          filename: `vocab-${entry.id}-${field}.${ext}`,
           kind: "audio",
           meta: {
             source: "vocabulary_list",
             listId: document.id,
             entryId: entry.id,
-            field: "audioUrl",
+            field,
             batch: true,
             ...(entry.sourceWordId ? { sourceWordId: entry.sourceWordId } : {}),
             ...(entry.word.trim() ? { word: entry.word.trim() } : {}),
           },
         });
-        audioUrl = published.public_url;
+        nextAudio[field] = published.public_url;
         uploadedAudio += 1;
       } catch (error) {
         failed += 1;
         errors.push(
-          `${word} audio: ${error instanceof Error ? error.message : "upload failed"}`,
+          `${word} ${label}: ${error instanceof Error ? error.message : "upload failed"}`,
         );
       }
       done += 1;
     }
 
-    entries.push({ ...entry, imageUrl, audioUrl });
+    entries.push({
+      ...entry,
+      imageUrl,
+      audioUrl: nextAudio.audioUrl,
+      exampleAudioUrl: nextAudio.exampleAudioUrl,
+      definitionAudioUrl: nextAudio.definitionAudioUrl,
+    });
   }
 
   return {

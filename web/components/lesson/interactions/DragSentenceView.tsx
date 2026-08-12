@@ -244,7 +244,7 @@ export function DragSentenceView({
     const kickIndices = [...result.kickIndices];
     const toReturn: DragSentenceTile[] = kickIndices
       .map((i) => slots[i])
-      .filter((cell): cell is DragSentenceSlotCell => Boolean(cell) && !cell.locked)
+      .filter((cell): cell is DragSentenceSlotCell => cell != null && !cell.locked)
       .map((cell) => ({ id: cell.id, text: cell.text }));
 
     kickTimerRef.current = setTimeout(() => {

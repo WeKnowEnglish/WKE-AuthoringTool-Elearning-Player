@@ -32,6 +32,29 @@ describe("vocabulary list document", () => {
     expect(doc.entries[1]?.word).toBe("");
   });
 
+  it("parses example and definition audio urls", () => {
+    const doc = validateVocabularyListDocument({
+      version: 1,
+      kind: "vocabulary-list",
+      id: "x",
+      name: "X",
+      entries: [
+        {
+          id: "v1",
+          word: "bread",
+          audioUrl: "https://cdn.example/word.m4a",
+          exampleAudioUrl: "https://cdn.example/example.m4a",
+          definitionAudioUrl: "https://cdn.example/definition.m4a",
+        },
+      ],
+    });
+    expect(doc.entries[0]?.audioUrl).toBe("https://cdn.example/word.m4a");
+    expect(doc.entries[0]?.exampleAudioUrl).toBe("https://cdn.example/example.m4a");
+    expect(doc.entries[0]?.definitionAudioUrl).toBe(
+      "https://cdn.example/definition.m4a",
+    );
+  });
+
   it("rejects empty entries", () => {
     expect(() =>
       validateVocabularyListDocument({

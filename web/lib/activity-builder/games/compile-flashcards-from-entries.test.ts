@@ -59,4 +59,19 @@ describe("compileFlashcardsFromEntries", () => {
     expect(document.interaction.cards[0]?.frontFaces).toEqual(["definition"]);
     expect(document.interaction.cards[0]?.backFaces).toEqual(["word", "example"]);
   });
+
+  it("maps word, example, and definition audio onto cards", () => {
+    const list = createBakeryVocabularyListDocument();
+    list.entries[0] = {
+      ...list.entries[0]!,
+      audioUrl: "https://cdn.example/bread.m4a",
+      exampleAudioUrl: "https://cdn.example/bread-example.m4a",
+      definitionAudioUrl: "https://cdn.example/bread-def.m4a",
+    };
+    const { document } = compileFlashcardsFromEntries(list, list.entries);
+    const card = document.interaction.cards[0];
+    expect(card?.promptAudioUrl).toBe("https://cdn.example/bread.m4a");
+    expect(card?.exampleAudioUrl).toBe("https://cdn.example/bread-example.m4a");
+    expect(card?.definitionAudioUrl).toBe("https://cdn.example/bread-def.m4a");
+  });
 });

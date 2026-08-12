@@ -38,6 +38,17 @@
       "quiz_group_id": "bakery-sentence-scramble",
       "quiz_group_title": "Bakery sentence scramble",
       "quiz_group_order": 2
+    },
+    {
+      "type": "interaction",
+      "subtype": "drag_sentence",
+      "body_text": "Put the words in order. (Long sentence — phrase tiles)",
+      "sentence_slots": ["", "", "", "", "", "", ""],
+      "word_bank": ["every day", "at the", "We", "bakery", "buy", "fresh bread", "after school."],
+      "correct_order": ["We", "buy", "fresh bread", "at the", "bakery", "every day", "after school."],
+      "quiz_group_id": "bakery-sentence-scramble",
+      "quiz_group_title": "Bakery sentence scramble",
+      "quiz_group_order": 3
     }
   ]
 }

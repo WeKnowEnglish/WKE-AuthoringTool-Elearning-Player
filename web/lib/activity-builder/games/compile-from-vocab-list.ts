@@ -38,6 +38,7 @@ import {
 } from "@/lib/vocabulary-templates/lemma-statement";
 import {
   packSentenceScrambleStarter,
+  scrambleTilesFromSentence,
   tokenizeSentenceForScramble,
 } from "@/lib/vocabulary/pack-quiz/compile-pack-sentence-scramble-quiz";
 import { randomWithSeed, shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
@@ -466,10 +467,17 @@ export function compileListenAndChooseModule(
         const correct = choices.find(
           (choice) => choice.label.toLowerCase() === word.toLowerCase(),
         );
+        const dialogText = entry.example?.trim() || word;
+        const exampleClip = entry.exampleAudioUrl?.trim();
+        const wordClip = entry.audioUrl?.trim();
+        const promptAudioUrl =
+          entry.example?.trim() && exampleClip
+            ? exampleClip
+            : wordClip || exampleClip || undefined;
         return {
           id: `listen-${entry.id}`,
-          dialogText: entry.example?.trim() || word,
-          ...(entry.audioUrl?.trim() ? { promptAudioUrl: entry.audioUrl.trim() } : {}),
+          dialogText,
+          ...(promptAudioUrl ? { promptAudioUrl } : {}),
           imageFit: "contain" as const,
           choices,
           correctChoiceId: correct?.id ?? "a",
@@ -709,7 +717,7 @@ export function compileSentenceScrambleModule(
       curated && tokenizeSentenceForScramble(curated).length >= 2
         ? curated
         : packSentenceScrambleStarter(entry.word, `${quizGroupId}:${entry.id}`);
-    const correctOrder = tokenizeSentenceForScramble(sentence);
+    const correctOrder = scrambleTilesFromSentence(sentence);
     return {
       id: `ss-${entry.id}`,
       correctOrder,

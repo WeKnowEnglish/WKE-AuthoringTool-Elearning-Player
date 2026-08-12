@@ -74,6 +74,12 @@ export function addVocabEntryFromFields(
       ? { imageFit: fields.imageFit }
       : {}),
     ...(fields.audioUrl?.trim() ? { audioUrl: fields.audioUrl.trim() } : {}),
+    ...(fields.exampleAudioUrl?.trim()
+      ? { exampleAudioUrl: fields.exampleAudioUrl.trim() }
+      : {}),
+    ...(fields.definitionAudioUrl?.trim()
+      ? { definitionAudioUrl: fields.definitionAudioUrl.trim() }
+      : {}),
     ...(sourceWordId ? { sourceWordId } : {}),
   };
 

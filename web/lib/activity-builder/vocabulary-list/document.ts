@@ -38,6 +38,15 @@ function assertEntry(value: unknown, index: number): VocabListEntry {
   if (typeof value.audioUrl === "string" && value.audioUrl.trim()) {
     entry.audioUrl = value.audioUrl.trim();
   }
+  if (typeof value.exampleAudioUrl === "string" && value.exampleAudioUrl.trim()) {
+    entry.exampleAudioUrl = value.exampleAudioUrl.trim();
+  }
+  if (
+    typeof value.definitionAudioUrl === "string" &&
+    value.definitionAudioUrl.trim()
+  ) {
+    entry.definitionAudioUrl = value.definitionAudioUrl.trim();
+  }
   if (typeof value.sourceWordId === "string" && value.sourceWordId.trim()) {
     entry.sourceWordId = value.sourceWordId.trim();
   }

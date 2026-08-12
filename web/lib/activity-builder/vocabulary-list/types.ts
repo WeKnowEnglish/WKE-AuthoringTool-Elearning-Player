@@ -11,6 +11,10 @@ export type VocabListEntry = {
   imageFit?: "cover" | "contain";
   /** Recorded or uploaded word / prompt audio (URL or data URL). */
   audioUrl?: string;
+  /** Recorded or uploaded example-sentence audio (URL or data URL). */
+  exampleAudioUrl?: string;
+  /** Recorded or uploaded definition audio (URL or data URL). */
+  definitionAudioUrl?: string;
   /**
    * Optional lexicon provenance (`pv_*` / `tw_*` / primary candidate id).
    * Free-text fields remain the compile source of truth; this id supports

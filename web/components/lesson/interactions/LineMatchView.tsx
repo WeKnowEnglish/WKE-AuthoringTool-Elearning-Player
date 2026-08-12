@@ -2,10 +2,26 @@
 
 import Image from "next/image";
 import { clsx } from "clsx";
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  HomeworkHelpHintCard,
+  HomeworkHelpTrigger,
+} from "@/components/homework-help/HomeworkHelpCoach";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
+import {
+  advanceMatchPairsHelp,
+  applyMatchPairsKick,
+  applyMatchPairsReveal,
+  applyMatchPairsScaffold,
+  emptyHelpStruggle,
+  evaluateMatchPairsCheck,
+  getMatchPairsHelpStep,
+  recordMatchPairsWrongCheck,
+  type HelpAction,
+  type HelpStruggle,
+} from "@/lib/homework-help";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
 import {
   GuideBlock,
@@ -34,6 +50,8 @@ type LineMatchParsed = Extract<
 >;
 
 type LineGeom = { x1: number; y1: number; x2: number; y2: number };
+
+const KICK_MS = 480;
 
 function measureLineGeom(
   board: HTMLDivElement,
@@ -91,19 +109,58 @@ export function LineMatchView({
   const panelClass = stageFooter
     ? "flex min-h-0 flex-1 flex-col overflow-hidden gap-2 !p-3 sm:!p-4"
     : undefined;
+
+  const puzzleKey = useMemo(
+    () =>
+      `${parsed.tokens.map((t) => t.id).join(",")}::${Object.entries(parsed.correct_map)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(",")}`,
+    [parsed.tokens, parsed.correct_map],
+  );
+
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   /** tokenId -> zoneId */
   const [links, setLinks] = useState<Record<string, string>>({});
+  const [lockedTokenIds, setLockedTokenIds] = useState<Set<string>>(() => new Set());
+  const [kickingTokenIds, setKickingTokenIds] = useState<Set<string>>(() => new Set());
   const [lineGeom, setLineGeom] = useState<Record<string, LineGeom>>({});
   const [wrongHint, setWrongHint] = useState<string | null>(null);
+  const [struggle, setStruggle] = useState<HelpStruggle>(emptyHelpStruggle);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helped, setHelped] = useState(false);
+  const kickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const tokenRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const zoneRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const parsedRef = useRef(parsed);
+  parsedRef.current = parsed;
 
   const zones = parsed.zones;
   const tokens = parsed.tokens;
   const imageZones = zones.some((z) => z.image_url?.trim());
+  const tokenIds = tokens.map((t) => t.id);
+
+  useEffect(() => {
+    if (kickTimerRef.current) {
+      clearTimeout(kickTimerRef.current);
+      kickTimerRef.current = null;
+    }
+    setSelectedToken(null);
+    setLinks({});
+    setLockedTokenIds(new Set());
+    setKickingTokenIds(new Set());
+    setWrongHint(null);
+    setStruggle(emptyHelpStruggle());
+    setHelpOpen(false);
+    setHelped(false);
+  }, [puzzleKey]);
+
+  useEffect(() => {
+    return () => {
+      if (kickTimerRef.current) clearTimeout(kickTimerRef.current);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const board = boardRef.current;
@@ -125,21 +182,48 @@ export function LineMatchView({
     };
   }, [imageZones, links, tokens, zones]);
 
+  const helpStep = getMatchPairsHelpStep({
+    tokens,
+    zones,
+    correctMap: parsed.correct_map,
+    links,
+    lockedTokenIds,
+    struggle,
+    instructions: parsed.body_text,
+    imageZones,
+  });
+
+  function clearKickTimer() {
+    if (kickTimerRef.current) {
+      clearTimeout(kickTimerRef.current);
+      kickTimerRef.current = null;
+    }
+  }
+
   function selectToken(id: string) {
-    if (passed) return;
+    if (passed || kickingTokenIds.size > 0 || lockedTokenIds.has(id)) return;
     playSfx("tap", muted);
     setWrongHint(null);
+    setHelpOpen(false);
     setSelectedToken((s) => (s === id ? null : id));
   }
 
   function connectZone(zoneId: string) {
-    if (passed || !selectedToken) return;
+    if (passed || kickingTokenIds.size > 0 || !selectedToken) return;
+    if (lockedTokenIds.has(selectedToken)) return;
+    // Don't steal a locked token's zone.
+    const lockedOnZone = Object.entries(links).find(
+      ([tid, zid]) => zid === zoneId && lockedTokenIds.has(tid),
+    );
+    if (lockedOnZone) return;
+
     playSfx("tap", muted);
     setWrongHint(null);
+    setHelpOpen(false);
     setLinks((prev) => {
       const next = { ...prev };
       for (const tid of Object.keys(next)) {
-        if (next[tid] === zoneId) delete next[tid];
+        if (next[tid] === zoneId && !lockedTokenIds.has(tid)) delete next[tid];
       }
       next[selectedToken] = zoneId;
       return next;
@@ -147,19 +231,134 @@ export function LineMatchView({
     setSelectedToken(null);
   }
 
-  function check() {
-    playSfx("tap", muted);
-    for (const tok of tokens) {
-      const zid = links[tok.id];
-      if (!zid || parsed.correct_map[tok.id] !== zid) {
-        setWrongHint("Not quite yet. Connect every pair, then tap Check again.");
-        onWrong();
-        return;
-      }
-    }
+  function finishPass() {
     setWrongHint(null);
+    setHelpOpen(false);
     onPass();
   }
+
+  function check() {
+    if (passed || kickingTokenIds.size > 0) return;
+    playSfx("tap", muted);
+    clearKickTimer();
+
+    const result = evaluateMatchPairsCheck({
+      tokenIds,
+      correctMap: parsed.correct_map,
+      links,
+      lockedTokenIds,
+    });
+
+    if (result.allCorrect) {
+      setLockedTokenIds(new Set(tokenIds));
+      finishPass();
+      return;
+    }
+
+    setStruggle(recordMatchPairsWrongCheck(struggle));
+    onWrong();
+    setHelpOpen(true);
+
+    if (result.kickTokenIds.length === 0) {
+      if (result.lockTokenIds.length > 0) {
+        setLockedTokenIds((prev) => {
+          const next = new Set(prev);
+          for (const id of result.lockTokenIds) next.add(id);
+          return next;
+        });
+      }
+      setWrongHint("Not quite yet. Connect every pair, then tap Check again.");
+      return;
+    }
+
+    setKickingTokenIds(new Set(result.kickTokenIds));
+    setWrongHint(
+      result.lockTokenIds.length > 0 || lockedTokenIds.size > 0
+        ? "Green pairs stay. Red pairs clear — try again."
+        : "Not quite yet. Red pairs clear — try again.",
+    );
+
+    const kickIds = [...result.kickTokenIds];
+    const lockIds = [...result.lockTokenIds];
+    kickTimerRef.current = setTimeout(() => {
+      kickTimerRef.current = null;
+      const next = applyMatchPairsKick({
+        links,
+        lockedTokenIds,
+        lockTokenIds: lockIds,
+        kickTokenIds: kickIds,
+      });
+      setLinks(next.links);
+      setLockedTokenIds(new Set(next.lockedTokenIds));
+      setKickingTokenIds(new Set());
+      setSelectedToken(null);
+    }, KICK_MS);
+  }
+
+  function clearUnlocked() {
+    if (passed || kickingTokenIds.size > 0) return;
+    playSfx("tap", muted);
+    setWrongHint(null);
+    setHelpOpen(false);
+    setSelectedToken(null);
+    setLinks((prev) => {
+      const next: Record<string, string> = {};
+      for (const [tid, zid] of Object.entries(prev)) {
+        if (lockedTokenIds.has(tid)) next[tid] = zid;
+      }
+      return next;
+    });
+  }
+
+  function onHelpAction(action: HelpAction) {
+    if (action === "got_it") {
+      setHelpOpen(false);
+      return;
+    }
+    if (action === "need_more_help") {
+      setStruggle((prev) => advanceMatchPairsHelp(prev));
+      return;
+    }
+    if (action === "show_answer") {
+      clearKickTimer();
+      setKickingTokenIds(new Set());
+      const revealed = applyMatchPairsReveal({
+        tokenIds,
+        correctMap: parsedRef.current.correct_map,
+      });
+      setLinks(revealed.links);
+      setLockedTokenIds(new Set(revealed.lockedTokenIds));
+      setHelped(true);
+      setWrongHint(null);
+      setHelpOpen(false);
+      setSelectedToken(null);
+      finishPass();
+    }
+  }
+
+  function applyScaffoldFromHelp() {
+    if (passed || kickingTokenIds.size > 0) return;
+    const applied = applyMatchPairsScaffold({
+      tokenIds,
+      correctMap: parsed.correct_map,
+      links,
+      lockedTokenIds,
+    });
+    if (!applied) return;
+    playSfx("tap", muted);
+    setLinks(applied.links);
+    setLockedTokenIds(new Set(applied.lockedTokenIds));
+    setHelped(true);
+    setSelectedToken(null);
+    setWrongHint("I locked that pair in green. Keep going!");
+  }
+
+  const canPlaceScaffoldHint =
+    !passed &&
+    kickingTokenIds.size === 0 &&
+    helpOpen &&
+    helpStep.level === "scaffold" &&
+    helpStep.tip;
 
   const linkedZoneIds = new Set(Object.values(links));
   const itemCount = tokens.length;
@@ -179,6 +378,12 @@ export function LineMatchView({
     ? "Tap a word, then tap its picture"
     : "Tap a word on the left, then tap its match on the right";
 
+  function lineStroke(tokenId: string): string {
+    if (passed || lockedTokenIds.has(tokenId)) return "#15803d";
+    if (kickingTokenIds.has(tokenId)) return "#be123c";
+    return "#152668";
+  }
+
   const lineSvg = (
     <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
       {Object.entries(lineGeom).map(([tokenId, geom]) => (
@@ -188,8 +393,8 @@ export function LineMatchView({
           y1={geom.y1}
           x2={geom.x2}
           y2={geom.y2}
-          stroke={passed ? "#15803d" : "#152668"}
-          strokeWidth={imageZones ? 4 : 4}
+          stroke={lineStroke(tokenId)}
+          strokeWidth={4}
           strokeLinecap="round"
         />
       ))}
@@ -199,6 +404,8 @@ export function LineMatchView({
   const wordButton = (t: (typeof tokens)[number]) => {
     const isLinked = Boolean(links[t.id]);
     const selected = selectedToken === t.id;
+    const locked = lockedTokenIds.has(t.id);
+    const kicking = kickingTokenIds.has(t.id);
     return (
       <button
         key={t.id}
@@ -206,7 +413,7 @@ export function LineMatchView({
           tokenRefs.current[t.id] = el;
         }}
         type="button"
-        disabled={passed}
+        disabled={passed || locked || kickingTokenIds.size > 0}
         onClick={() => selectToken(t.id)}
         className={clsx(
           imageZones
@@ -216,15 +423,23 @@ export function LineMatchView({
                 "text-[clamp(0.7rem,2.6cqw,1.35rem)] leading-tight",
                 selected
                   ? "!border-kid-ink !bg-kid-cta"
-                  : isLinked
-                    ? "!border-emerald-700 !bg-emerald-50 !text-emerald-950"
-                    : "!bg-white",
+                  : locked
+                    ? "!border-emerald-700 !bg-emerald-100 !text-emerald-950 kid-feedback-glow-correct"
+                    : kicking
+                      ? "kid-animate-shake !border-rose-700 !bg-rose-100 !text-rose-950"
+                      : isLinked
+                        ? "!border-emerald-700 !bg-emerald-50 !text-emerald-950"
+                        : "!bg-white",
               )
             : selected
               ? gamesMatchTileSelectedClass
-              : isLinked
-                ? gamesMatchTileLinkedClass
-                : gamesMatchTileClass,
+              : locked
+                ? clsx(gamesMatchTileLinkedClass, "kid-feedback-glow-correct")
+                : kicking
+                  ? "kid-animate-shake rounded-xl border-4 border-rose-700 bg-rose-100 px-3 py-3 text-left text-lg font-extrabold text-rose-950"
+                  : isLinked
+                    ? gamesMatchTileLinkedClass
+                    : gamesMatchTileClass,
         )}
       >
         {t.label}
@@ -233,8 +448,16 @@ export function LineMatchView({
   };
 
   const zoneButton = (z: (typeof zones)[number]) => {
-    const isLinked = linkedZoneIds.has(z.id);
+    const linkedTokenId = Object.entries(links).find(([, zid]) => zid === z.id)?.[0];
+    const isLinked = Boolean(linkedTokenId);
+    const locked = linkedTokenId ? lockedTokenIds.has(linkedTokenId) : false;
+    const kicking = linkedTokenId ? kickingTokenIds.has(linkedTokenId) : false;
     const zoneImageUrl = z.image_url?.trim();
+    const zoneLockedByOther =
+      selectedToken != null &&
+      Object.entries(links).some(
+        ([tid, zid]) => zid === z.id && lockedTokenIds.has(tid),
+      );
     return (
       <button
         key={z.id}
@@ -242,7 +465,12 @@ export function LineMatchView({
           zoneRefs.current[z.id] = el;
         }}
         type="button"
-        disabled={passed || !selectedToken}
+        disabled={
+          passed ||
+          !selectedToken ||
+          kickingTokenIds.size > 0 ||
+          zoneLockedByOther
+        }
         onClick={() => connectZone(z.id)}
         aria-label={
           zoneImageUrl
@@ -256,11 +484,19 @@ export function LineMatchView({
             ? clsx(
                 "relative mx-auto aspect-square w-full max-w-[var(--match-cell)] overflow-hidden rounded-xl border-4 border-dashed border-kid-ink bg-kid-panel transition",
                 "hover:bg-kid-surface-muted active:bg-kid-surface disabled:opacity-60",
-                isLinked && "border-solid border-emerald-700 ring-2 ring-emerald-300",
+                locked && "border-solid border-emerald-700 ring-2 ring-emerald-300",
+                kicking && "kid-animate-shake border-solid border-rose-700 ring-2 ring-rose-300",
+                isLinked && !locked && !kicking && "border-solid border-emerald-700 ring-2 ring-emerald-300",
               )
             : clsx(
                 gamesMatchZoneClass,
-                isLinked && "border-solid border-emerald-700 bg-emerald-50 text-emerald-950",
+                locked && "border-solid border-emerald-700 bg-emerald-100 text-emerald-950",
+                kicking &&
+                  "kid-animate-shake border-solid border-rose-700 bg-rose-100 text-rose-950",
+                isLinked &&
+                  !locked &&
+                  !kicking &&
+                  "border-solid border-emerald-700 bg-emerald-50 text-emerald-950",
               ),
         )}
       >
@@ -343,21 +579,52 @@ export function LineMatchView({
         </div>
 
         {wrongHint ? <p className={gamesWrongHintClass}>{wrongHint}</p> : null}
-        <div className={clsx(gamesCheckActionRowClass, stageFooter && "shrink-0")}>
+        {helped && !wrongHint ? (
+          <p className="mt-2 text-sm font-bold text-emerald-800">
+            Helper locked a pair for you — keep matching.
+          </p>
+        ) : null}
+
+        {helpOpen ? (
+          <div className={clsx("mt-2", stageFooter && "shrink-0")}>
+            <HomeworkHelpHintCard
+              step={helpStep}
+              onClose={() => setHelpOpen(false)}
+              onAction={onHelpAction}
+            />
+            {canPlaceScaffoldHint ? (
+              <div className="mt-2">
+                <KidButton
+                  type="button"
+                  variant="secondary"
+                  className="!min-h-11 !min-w-0 !px-4 !text-sm"
+                  onClick={applyScaffoldFromHelp}
+                >
+                  Place the hint pair
+                </KidButton>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className={clsx(gamesCheckActionRowClass, "flex-wrap", stageFooter && "shrink-0")}>
           <KidButton
             type="button"
             variant="secondary"
-            disabled={passed}
-            onClick={() => {
-              playSfx("tap", muted);
-              setLinks({});
-              setSelectedToken(null);
-              setWrongHint(null);
-            }}
+            disabled={passed || kickingTokenIds.size > 0}
+            onClick={clearUnlocked}
           >
             Clear
           </KidButton>
-          <KidButton type="button" disabled={passed} onClick={check}>
+          <HomeworkHelpTrigger
+            onOpen={() => setHelpOpen(true)}
+            className={passed ? "pointer-events-none opacity-40" : undefined}
+          />
+          <KidButton
+            type="button"
+            disabled={passed || kickingTokenIds.size > 0}
+            onClick={check}
+          >
             Check
           </KidButton>
         </div>

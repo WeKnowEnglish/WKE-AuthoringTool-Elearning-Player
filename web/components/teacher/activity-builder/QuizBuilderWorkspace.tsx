@@ -1574,12 +1574,47 @@ function FlashcardsEditor({
                   }
                 />
               </div>
-              <VocabEntryAudioControls
-                value={selected.promptAudioUrl}
-                libraryQueryHint={selected.faces.word}
-                uploadItemName={selected.faces.word?.trim() || undefined}
-                onChange={(next) => patchCard(selected.id, { promptAudioUrl: next })}
-              />
+              <div className="space-y-3">
+                <VocabEntryAudioControls
+                  label="Word audio"
+                  value={selected.promptAudioUrl}
+                  libraryQueryHint={selected.faces.word}
+                  uploadItemName={selected.faces.word?.trim() || undefined}
+                  onChange={(next) =>
+                    patchCard(selected.id, { promptAudioUrl: next })
+                  }
+                />
+                <VocabEntryAudioControls
+                  label="Example audio"
+                  value={selected.exampleAudioUrl}
+                  libraryQueryHint={
+                    selected.faces.example?.trim() || selected.faces.word
+                  }
+                  uploadItemName={
+                    selected.faces.example?.trim() ||
+                    selected.faces.word?.trim() ||
+                    undefined
+                  }
+                  onChange={(next) =>
+                    patchCard(selected.id, { exampleAudioUrl: next })
+                  }
+                />
+                <VocabEntryAudioControls
+                  label="Definition audio"
+                  value={selected.definitionAudioUrl}
+                  libraryQueryHint={
+                    selected.faces.definition?.trim() || selected.faces.word
+                  }
+                  uploadItemName={
+                    selected.faces.definition?.trim() ||
+                    selected.faces.word?.trim() ||
+                    undefined
+                  }
+                  onChange={(next) =>
+                    patchCard(selected.id, { definitionAudioUrl: next })
+                  }
+                />
+              </div>
             </div>
           </div>
         </section>

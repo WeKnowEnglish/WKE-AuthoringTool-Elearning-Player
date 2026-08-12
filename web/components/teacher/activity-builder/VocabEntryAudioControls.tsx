@@ -5,15 +5,17 @@ import { AudioUrlControls } from "@/components/teacher/media/AudioUrlControls";
 type Props = {
   value: string | undefined;
   onChange: (next: string | undefined, detail?: { mediaAssetId?: string }) => void;
+  label?: string;
   libraryQueryHint?: string;
   uploadItemName?: string;
   lexiconId?: string;
 };
 
-/** Word audio via the shared teacher media library (upload / pick / record). */
+/** Entry audio via the shared teacher media library (upload / pick / record). */
 export function VocabEntryAudioControls({
   value,
   onChange,
+  label = "Word audio",
   libraryQueryHint,
   uploadItemName,
   lexiconId,
@@ -21,7 +23,7 @@ export function VocabEntryAudioControls({
   return (
     <div className="space-y-2 rounded-lg border border-stone-300/80 bg-stone-300/50 p-3">
       <AudioUrlControls
-        label="Word audio"
+        label={label}
         compact
         value={value ?? ""}
         libraryQueryHint={libraryQueryHint}

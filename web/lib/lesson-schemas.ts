@@ -2271,17 +2271,31 @@ export const clickTargetsPayloadSchema = z
     }
   });
 
-export const dragSentencePayloadSchema = z.object({
-  type: z.literal("interaction"),
-  subtype: z.literal("drag_sentence"),
-  image_url: z.string().optional(),
-  image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
-  body_text: z.string().optional(),
-  sentence_slots: z.array(z.string()),
-  word_bank: z.array(z.string()),
-  correct_order: z.array(z.string()),
-  guide: guideSchema,
-});
+export const dragSentencePayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("drag_sentence"),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+    body_text: z.string().optional(),
+    sentence_slots: z.array(z.string()),
+    word_bank: z.array(z.string()),
+    correct_order: z.array(z.string()).min(2),
+    guide: guideSchema,
+  })
+  .transform((data) => {
+    const correct_order = data.correct_order.map((t) => t.trim()).filter(Boolean);
+    const bankRaw = data.word_bank.map((t) => t.trim()).filter(Boolean);
+    const word_bank =
+      bankRaw.length === correct_order.length ? bankRaw : [...correct_order];
+    return {
+      ...data,
+      correct_order,
+      word_bank,
+      // Always derive slots from order so long sentences never lose trailing gaps.
+      sentence_slots: correct_order.map(() => ""),
+    };
+  });
 
 export const trueFalsePayloadSchema = z.object({
   type: z.literal("interaction"),

@@ -469,7 +469,6 @@ export function LessonPlayer({
   );
   const [done, setDone] = useState(false);
   const [interactionPass, setInteractionPass] = useState(false);
-  const [dragFilled, setDragFilled] = useState<string[]>([]);
   const [interactionFeedback, setInteractionFeedback] =
     useState<InteractionFeedbackKind>("none");
   const [trackScreenOutcomes, setTrackScreenOutcomes] = useState<
@@ -751,7 +750,6 @@ export function LessonPlayer({
       autoAdvanceTimerRef.current = null;
     }
     autoAdvanceCompletedForScreenRef.current = null;
-    setDragFilled([]);
     setInteractionFeedback("none");
   }, []);
 
@@ -2003,8 +2001,6 @@ export function LessonPlayer({
             <LazyDragSentence
               parsed={parsed}
               muted={muted}
-              filled={dragFilled}
-              setFilled={setDragFilled}
               passed={interactionPass}
               {...passHandlers}
               onNext={goNext}

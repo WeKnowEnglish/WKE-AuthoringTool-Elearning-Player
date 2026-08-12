@@ -7,6 +7,7 @@ import type {
   GamesSentenceScrambleAuthoringDocument,
   GamesSentenceScrambleItem,
 } from "@/lib/activity-builder/games/types-sentence-scramble";
+import { chunkTokensForSentenceScramble } from "@/lib/games-sentence-scramble/scramble-tiles";
 import { shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
 
 export type GamesSentenceScrambleLessonPlayerScreen = {
@@ -107,13 +108,15 @@ export function exportGamesSentenceScrambleForLessonPlayer(
     quiz_group_title: quizGroupTitle,
     activity_name: valid.name,
     screens: items.map((item, index) => {
+      // Chunk very long authored lines so the player stays usable.
+      const tiles = chunkTokensForSentenceScramble(item.correctOrder);
       const screen: GamesSentenceScrambleLessonPlayerScreen = {
         type: "interaction",
         subtype: "drag_sentence",
         body_text: item.bodyText ?? bodyTextDefault,
-        sentence_slots: item.correctOrder.map(() => ""),
-        word_bank: shuffleWithSeed(item.correctOrder, `${quizGroupId}:${item.id}:bank`),
-        correct_order: [...item.correctOrder],
+        sentence_slots: tiles.map(() => ""),
+        word_bank: shuffleWithSeed(tiles, `${quizGroupId}:${item.id}:bank`),
+        correct_order: tiles,
         quiz_group_id: quizGroupId,
         quiz_group_title: quizGroupTitle,
         quiz_group_order: index,

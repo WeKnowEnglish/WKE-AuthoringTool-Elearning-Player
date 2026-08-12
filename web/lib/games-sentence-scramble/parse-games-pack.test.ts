@@ -9,7 +9,7 @@ describe("parseGamesSentenceScrambleLessonPlayerPack", () => {
     const pack = parseGamesSentenceScrambleLessonPlayerPack(bakerySentenceScramble);
     expect(pack.activity_name).toBe("Bakery sentence scramble");
     expect(pack.format).toBe("sentence_scramble");
-    expect(pack.screens).toHaveLength(3);
+    expect(pack.screens).toHaveLength(4);
     expect(pack.screens[0]?.subtype).toBe("drag_sentence");
     expect(pack.screens[0]?.correct_order).toEqual([
       "We",

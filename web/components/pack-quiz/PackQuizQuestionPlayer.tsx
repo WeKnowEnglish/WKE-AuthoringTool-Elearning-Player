@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { DragSentenceView } from "@/components/lesson/interactions/DragSentenceView";
 import { LetterMixupView } from "@/components/lesson/interactions/LetterMixupView";
 import { McQuizView } from "@/components/lesson/interactions/McQuizView";
@@ -35,12 +34,6 @@ export function PackQuizQuestionPlayer({
   onNext,
   snappyCorrect = true,
 }: Props) {
-  const [sentenceFilled, setSentenceFilled] = useState<string[]>([]);
-
-  useEffect(() => {
-    setSentenceFilled([]);
-  }, [question.id]);
-
   if (question.format === "multiple_choice") {
     return (
       <McQuizView
@@ -96,8 +89,6 @@ export function PackQuizQuestionPlayer({
       key={question.id}
       parsed={question.payload}
       muted={muted}
-      filled={sentenceFilled}
-      setFilled={setSentenceFilled}
       passed={passed}
       showBack={showBack}
       onBack={onBack}

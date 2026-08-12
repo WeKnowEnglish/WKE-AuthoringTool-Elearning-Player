@@ -38,6 +38,7 @@ import {
 } from "@/lib/vocabulary-templates/lemma-statement";
 import {
   packSentenceScrambleStarter,
+  scrambleTilesFromSentence,
   tokenizeSentenceForScramble,
 } from "@/lib/vocabulary/pack-quiz/compile-pack-sentence-scramble-quiz";
 import { randomWithSeed, shuffleWithSeed } from "@/lib/vocabulary-templates/shuffle";
@@ -716,7 +717,7 @@ export function compileSentenceScrambleModule(
       curated && tokenizeSentenceForScramble(curated).length >= 2
         ? curated
         : packSentenceScrambleStarter(entry.word, `${quizGroupId}:${entry.id}`);
-    const correctOrder = tokenizeSentenceForScramble(sentence);
+    const correctOrder = scrambleTilesFromSentence(sentence);
     return {
       id: `ss-${entry.id}`,
       correctOrder,

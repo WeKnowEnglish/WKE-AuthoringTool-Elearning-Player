@@ -1,3 +1,7 @@
+import {
+  scrambleTilesFromSentence,
+  tokenizeSentenceForScramble,
+} from "@/lib/games-sentence-scramble/scramble-tiles";
 import { dragSentencePayloadSchema } from "@/lib/lesson-schemas";
 import {
   inferLemmaGrammar,
@@ -12,22 +16,12 @@ import type { PackQuizDraft } from "./types";
 
 export const PACK_SENTENCE_SCRAMBLE_BODY = "Put the words in order.";
 
+export { tokenizeSentenceForScramble, scrambleTilesFromSentence };
+
 function isUsable(row: PackLexemeResolution): boolean {
   if (row.source === "missing") return false;
   if (row.archived) return false;
   return Boolean(row.lemma.trim());
-}
-
-/**
- * Split a sentence into drag tiles (whitespace).
- * Punctuation stays attached to the adjacent token (e.g. "cat.").
- */
-export function tokenizeSentenceForScramble(sentence: string): string[] {
-  return sentence
-    .trim()
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter(Boolean);
 }
 
 /** Starter line when the lexeme has no curated example sentence. */
@@ -51,7 +45,7 @@ export function buildDragSentencePayloadFromText(input: {
   bodyText?: string;
   imageUrl?: string;
 }): ReturnType<typeof dragSentencePayloadSchema.parse> | null {
-  const tokens = tokenizeSentenceForScramble(input.sentence);
+  const tokens = scrambleTilesFromSentence(input.sentence);
   if (tokens.length < 2) return null;
 
   const body = input.bodyText?.trim() || PACK_SENTENCE_SCRAMBLE_BODY;

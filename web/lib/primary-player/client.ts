@@ -4,25 +4,10 @@ import { createClient } from "@/lib/supabase/client";
 import { getRewards, replaceRewardsFromPrimaryProfile } from "@/lib/progress/rewards";
 import { dispatchLevelUp } from "@/lib/progress/level-up-events";
 import type { PrimaryPlayerProfile, PrimaryRewardKind, PrimaryRewardReceipt, PrimarySkillId } from "./types";
+import { normalizePrimaryPlayerProfile, normalizePrimaryRewardReceipt } from "./contract";
 
 export const PRIMARY_REWARD_RECEIPT_EVENT = "wke-primary-reward-receipt";
 export const PRIMARY_PLAYER_UPDATED_EVENT = "wke-primary-player-updated";
-
-function profile(raw: any): PrimaryPlayerProfile {
-  return {
-    studentId: String(raw.studentId ?? raw.student_id ?? ""),
-    totalXp: Number(raw.totalXp ?? raw.total_xp ?? 0),
-    level: Number(raw.level ?? 1),
-    goldBalance: Number(raw.goldBalance ?? raw.gold_balance ?? 0),
-    unspentSkillPoints: Number(raw.unspentSkillPoints ?? raw.unspent_skill_points ?? 0),
-    skillRanks: {
-      activity_xp: Number(raw.skillRanks?.activity_xp ?? raw.skill_ranks?.activity_xp ?? 0),
-      activity_gold: Number(raw.skillRanks?.activity_gold ?? raw.skill_ranks?.activity_gold ?? 0),
-    },
-    economyVersion: Number(raw.economyVersion ?? raw.economy_version ?? 2),
-    importedLocalRewardsAt: raw.importedLocalRewardsAt ?? raw.imported_local_rewards_at ?? null,
-  };
-}
 
 function acceptProfile(value: PrimaryPlayerProfile) {
   replaceRewardsFromPrimaryProfile(value);
@@ -30,16 +15,7 @@ function acceptProfile(value: PrimaryPlayerProfile) {
 }
 
 export function acceptPrimaryRewardReceipt(raw: any): PrimaryRewardReceipt {
-  const receipt: PrimaryRewardReceipt = {
-    eventId: String(raw.eventId ?? raw.event_id), duplicate: Boolean(raw.duplicate),
-    rewardKind: (raw.rewardKind ?? raw.reward_kind) as PrimaryRewardKind,
-    baseXp: Number(raw.baseXp ?? raw.base_xp ?? 0), baseGold: Number(raw.baseGold ?? raw.base_gold ?? 0),
-    bonusXp: Number(raw.bonusXp ?? raw.xpBonus ?? raw.bonus_xp ?? 0), bonusGold: Number(raw.bonusGold ?? raw.goldBonus ?? raw.bonus_gold ?? 0),
-    awardedXp: Number(raw.awardedXp ?? raw.xpDelta ?? raw.awarded_xp ?? 0), awardedGold: Number(raw.awardedGold ?? raw.activityGoldDelta ?? raw.awarded_gold ?? 0),
-    levelBefore: Number(raw.levelBefore ?? raw.level_before ?? 1), levelAfter: Number(raw.levelAfter ?? raw.level_after ?? 1),
-    levelsGained: raw.levelsGained ?? raw.levels_gained ?? [], levelGold: Number(raw.levelGold ?? raw.levelGoldDelta ?? raw.level_gold ?? 0),
-    levelSkillPoints: Number(raw.levelSkillPoints ?? raw.skillPointsDelta ?? raw.level_skill_points ?? 0), profile: profile(raw.profile),
-  };
+  const receipt = normalizePrimaryRewardReceipt(raw);
   acceptProfile(receipt.profile);
   if (!receipt.duplicate) {
     window.dispatchEvent(new CustomEvent(PRIMARY_REWARD_RECEIPT_EVENT, { detail: receipt }));
@@ -62,7 +38,7 @@ export async function syncPrimaryPlayer(): Promise<PrimaryPlayerProfile> {
     p_skill_ranks: local.skillRanks ?? {},
   });
   if (error) throw error;
-  const next = profile((data as any)?.profile ?? data);
+  const next = normalizePrimaryPlayerProfile(data);
   acceptProfile(next);
   return next;
 }
@@ -88,7 +64,7 @@ export async function awardPrimaryReward(input: {
 export async function purchasePrimarySkill(skillId: PrimarySkillId): Promise<PrimaryPlayerProfile> {
   const { data, error } = await createClient().rpc("purchase_primary_skill", { p_skill_id: skillId });
   if (error) throw error;
-  const next = profile((data as any)?.profile ?? data);
+  const next = normalizePrimaryPlayerProfile(data);
   acceptProfile(next);
   return next;
 }

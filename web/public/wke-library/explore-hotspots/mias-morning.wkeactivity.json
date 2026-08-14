@@ -1,26 +1,28 @@
 {
   "version": 2,
   "kind": "activity-authoring",
-  "id": "hobbies-listening-hotspots",
+  "id": "mias-morning",
   "name": "Mia's Morning!",
   "educationalIntent": {
-    "objective": "Connect four hobby phrases with visual contexts and understand I like + -ing in short dialogues.",
-    "successCriteria": "Listen to all four children and identify drawing, reading comics, cycling, and taking photos.",
+    "objective": "Follow Mia's morning routine and understand the sequence of actions she takes before school.",
+    "successCriteria": "Listen to Mia, explore each room, and identify the actions she completes before leaving for school.",
     "cefr": "A1",
     "vocabulary": [
-      "drawing pictures",
-      "reading comics",
-      "riding a bike",
-      "taking photos"
+      "wake up",
+      "get out of bed",
+      "take a shower",
+      "get dressed",
+      "pack a backpack"
     ],
     "languageFrames": [
-      "What do you like doing?",
-      "I like + -ing."
+      "First, I...",
+      "Then, I...",
+      "I need to... before..."
     ]
   },
   "content": {
     "instruction": "Help Mia get ready for her school day!",
-    "completionMessage": "Great listening! You heard all four children talk about their hobbies."
+    "completionMessage": "Great work! You helped Mia complete her morning routine and get ready for school."
   },
   "assets": [
     {
@@ -32,7 +34,7 @@
         "width": 1672,
         "height": 941
       },
-      "alt": "Four children drawing, reading a comic, preparing to ride a bicycle, and taking a photograph in a bright classroom."
+      "alt": "Mia waking up in her purple bedroom before school."
     },
     {
       "id": "phase-image-2",
@@ -43,7 +45,7 @@
         "width": 1672,
         "height": 941
       },
-      "alt": "Four children drawing, reading a comic, preparing to ride a bicycle, and taking a photograph in a bright classroom."
+      "alt": "Mia continuing her morning routine in her bedroom."
     },
     {
       "id": "phase-image-3",
@@ -54,7 +56,7 @@
         "width": 1672,
         "height": 941
       },
-      "alt": "Four children drawing, reading a comic, preparing to ride a bicycle, and taking a photograph in a bright classroom."
+      "alt": "Mia choosing what to do next in her bedroom."
     },
     {
       "id": "sprite-asset-3",
@@ -76,7 +78,7 @@
         "width": 1672,
         "height": 941
       },
-      "alt": "Four children drawing, reading a comic, preparing to ride a bicycle, and taking a photograph in a bright classroom."
+      "alt": "Mia getting ready in the bathroom."
     },
     {
       "id": "sprite-asset-10",
@@ -98,7 +100,7 @@
         "width": 1672,
         "height": 941
       },
-      "alt": "Four children drawing, reading a comic, preparing to ride a bicycle, and taking a photograph in a bright classroom."
+      "alt": "The illustrated cover for Mia's Morning."
     },
     {
       "id": "sprite-asset-12",
@@ -151,7 +153,7 @@
         "kind": "hotspot",
         "regionId": "main-media",
         "name": "Mia",
-        "accessibleLabel": "Mia drawing a picture at the table",
+        "accessibleLabel": "Mia waking up in bed",
         "geometry": {
           "shape": "polygon",
           "points": [
@@ -1583,7 +1585,7 @@
         "id": "hobby-dialogue-panel",
         "kind": "dialogue-panel",
         "regionId": "dialogue-side-panel",
-        "emptyStateText": "Choose a child to hear about their hobby.",
+        "emptyStateText": "Choose Mia or an object to hear what happens next in her morning.",
         "showTranscript": true,
         "showReplay": true,
         "showProgress": true
@@ -11470,7 +11472,7 @@
       {
         "id": "dialogue-mia-drawing",
         "hotspotId": "mia-drawing",
-        "title": "Mia likes drawing",
+        "title": "Mia wakes up",
         "turns": [
           {
             "speaker": "Mom",
@@ -11641,7 +11643,7 @@
       },
       {
         "id": "phase-1",
-        "title": "Beroom 1",
+        "title": "Bedroom 1",
         "imageAssetId": "hobbies-classroom-image",
         "hotspotIds": [
           "mia-drawing"

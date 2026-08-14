@@ -1,13 +1,13 @@
 /** XP required to advance from `level` to `level + 1` (level 1 is the starting tier). */
-export const XP_CURVE_BASE = 100;
-export const XP_CURVE_RATIO = 1.4;
+export const XP_CURVE_BASE = 40;
 
 /** Player level stops increasing after this (XP can still accumulate). */
-export const MAX_PLAYER_LEVEL = 50;
+export const MAX_PLAYER_LEVEL = 100;
 
 export function xpRequiredForLevel(level: number): number {
   if (level < 1) return 0;
-  return Math.floor(XP_CURVE_BASE * XP_CURVE_RATIO ** (level - 1));
+  if (level >= MAX_PLAYER_LEVEL) return 0;
+  return XP_CURVE_BASE + level * 10;
 }
 
 /** Total XP accumulated to reach `level` (level 1 requires 0 XP). */

@@ -22,6 +22,7 @@ type Props = {
   snapshot: GardenSnapshotV1;
   onSnapshotChange: (snapshot: GardenSnapshotV1) => void;
   onSuccess: (message: string) => void;
+  onWordSpelled?: (word: string) => void;
   onClose: () => void;
   onConfirmRecycle: (selection: LetterInventory) => RecycleLettersResult;
 };
@@ -45,6 +46,7 @@ export function GardenSpellOverlay({
   snapshot,
   onSnapshotChange,
   onSuccess,
+  onWordSpelled,
   onClose,
   onConfirmRecycle,
 }: Props) {
@@ -244,7 +246,8 @@ export function GardenSpellOverlay({
     }
     setSuccessMessage(message);
     onSuccess(message);
-  }, [stagingWord, snapshot, muted, onSnapshotChange, onSuccess]);
+    onWordSpelled?.(result.word);
+  }, [stagingWord, snapshot, muted, onSnapshotChange, onSuccess, onWordSpelled]);
 
   if (!open) return null;
 

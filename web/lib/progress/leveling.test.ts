@@ -12,21 +12,21 @@ describe("leveling curve", () => {
   it("level 1 starts at 0 xp", () => {
     expect(levelFromXp(0)).toBe(1);
     expect(totalXpForLevel(1)).toBe(0);
-    expect(xpRequiredForLevel(1)).toBe(100);
+    expect(xpRequiredForLevel(1)).toBe(50);
   });
 
-  it("reaches level 2 at 100 xp", () => {
-    expect(levelFromXp(99)).toBe(1);
-    expect(levelFromXp(100)).toBe(2);
-    const p = xpProgressInLevel(150);
+  it("reaches level 2 at 50 xp", () => {
+    expect(levelFromXp(49)).toBe(1);
+    expect(levelFromXp(50)).toBe(2);
+    const p = xpProgressInLevel(75);
     expect(p.level).toBe(2);
-    expect(p.current).toBe(50);
+    expect(p.current).toBe(25);
   });
 
   it("reports levels gained between xp totals", () => {
-    expect(levelsGainedBetween(0, 99)).toEqual([]);
-    expect(levelsGainedBetween(0, 100)).toEqual([2]);
-    expect(levelsGainedBetween(50, 250)).toEqual([2, 3]);
+    expect(levelsGainedBetween(0, 49)).toEqual([]);
+    expect(levelsGainedBetween(0, 50)).toEqual([2]);
+    expect(levelsGainedBetween(25, 180)).toEqual([2, 3, 4]);
   });
 
   it("caps level at MAX_PLAYER_LEVEL", () => {

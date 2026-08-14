@@ -1,5 +1,7 @@
 "use client";
 
+import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+
 import { useEffect, useRef, useState } from "react";
 import {
   HomeworkFinishPanel,
@@ -51,6 +53,7 @@ export function HomeworkPackQuizPlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     });
   }, [finished, homeworkId]);
 

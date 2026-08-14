@@ -1,5 +1,7 @@
 "use client";
 
+import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PictureClozePlayer } from "@/components/picture-cloze/PictureClozePlayer";
@@ -63,6 +65,7 @@ export function HomeworkPictureClozePlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
       router.push(homeHref);
     });
   }, [finished, homeworkId, homeHref, router]);

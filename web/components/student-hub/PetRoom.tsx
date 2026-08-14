@@ -37,6 +37,7 @@ import { PetMemoryOverlay } from "@/components/pet-memory";
 import { PetScrabbleOverlay } from "@/components/pet-scrabble";
 import { PetSandwichOverlay } from "@/components/pet-sandwich/PetSandwichOverlay";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
+import { awardPrimaryReward } from "@/lib/primary-player/client";
 import {
   canClaimPetGold,
   claimPetGold,
@@ -169,6 +170,12 @@ export function PetRoom({
     setSnapshot(applyScrabblePlayResult(outcome));
     if (outcome === "completed") {
       bumpMood("playful", PET_MOOD_DURATION_MS.playful);
+      void awardPrimaryReward({
+        eventId: `primary:pet:scrabble:${new Date().toISOString().slice(0, 10)}`,
+        rewardKind: "game_learning",
+        activityId: "pet-scrabble",
+        source: "pet_learning_game",
+      }).then(() => onEconomyChange?.()).catch(() => undefined);
     } else {
       bumpMood("normal", PET_MOOD_DURATION_MS.normal);
     }
@@ -179,6 +186,12 @@ export function PetRoom({
     setSnapshot(applyMemoryPlayResult(outcome));
     if (outcome === "completed") {
       bumpMood("playful", PET_MOOD_DURATION_MS.playful);
+      void awardPrimaryReward({
+        eventId: `primary:pet:memory:${new Date().toISOString().slice(0, 10)}`,
+        rewardKind: "game_learning",
+        activityId: "pet-memory",
+        source: "pet_learning_game",
+      }).then(() => onEconomyChange?.()).catch(() => undefined);
     } else {
       bumpMood("normal", PET_MOOD_DURATION_MS.normal);
     }

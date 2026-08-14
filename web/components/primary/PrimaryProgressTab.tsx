@@ -10,6 +10,7 @@ import {
   Trophy,
 } from "lucide-react";
 import type { PrimaryProgressModel } from "@/lib/primary/build-primary-progress-model";
+import { PrimaryPlayerUpgrades } from "@/components/primary/PrimaryPlayerUpgrades";
 
 type Props = {
   model: PrimaryProgressModel;
@@ -159,6 +160,8 @@ export function PrimaryProgressTab({
           icon={Library}
         />
       </div>
+
+      <PrimaryPlayerUpgrades />
 
       <section className="rounded-[1.75rem] border border-[var(--pl-border)] bg-white p-4 shadow-sm sm:p-6">
         <h2 className="text-lg font-extrabold tracking-tight">Learning meters</h2>

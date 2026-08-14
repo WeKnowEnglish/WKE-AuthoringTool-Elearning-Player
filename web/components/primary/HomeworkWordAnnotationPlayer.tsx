@@ -1,5 +1,7 @@
 "use client";
 
+import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { WordAnnotationPlayer } from "@/components/word-annotation/WordAnnotationPlayer";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
@@ -64,6 +66,7 @@ export function HomeworkWordAnnotationPlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     });
   }, [finished, homeworkId]);
 

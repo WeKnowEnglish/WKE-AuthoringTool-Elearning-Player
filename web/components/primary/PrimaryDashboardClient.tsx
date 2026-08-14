@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { LevelUpModal } from "@/components/progress/LevelUpModal";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StudentHomeLanding } from "@/components/primary/StudentHomeLanding";
 import { StudentClassMenu } from "@/components/student-hub/StudentClassMenu";
 import { StudentClassSelectorOverlay } from "@/components/student-hub/StudentClassSelectorOverlay";
@@ -31,6 +30,7 @@ import { newSessionSeed } from "@/lib/student-hub/session-seed";
 import { isVocabSetId, type VocabSetId } from "@/lib/vocabulary-templates";
 import { markExplorationNode } from "@/lib/worlds/exploration";
 import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
+import { awardPrimaryReward } from "@/lib/primary-player/client";
 
 type Props = {
   studentKey: string;
@@ -72,6 +72,7 @@ export function PrimaryDashboardClient({
   const [vocabResumeIndex, setVocabResumeIndex] = useState(0);
   const [initialSetConsumed, setInitialSetConsumed] = useState(false);
   const [grammarPosterSlug, setGrammarPosterSlug] = useState<string | null>(null);
+  const vocabRewardContextRef = useRef<"learn" | "review">("learn");
 
   const refreshHomeModel = useCallback(() => {
     const rewards = getRewards();
@@ -135,8 +136,6 @@ export function PrimaryDashboardClient({
 
   return (
     <>
-      <LevelUpModal muted={muted} />
-
       {showSecondaryNotice ? (
         <div
           className="fixed left-1/2 top-3 z-50 w-[min(92vw,32rem)] -translate-x-1/2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-bold text-amber-950 shadow-lg"
@@ -170,7 +169,8 @@ export function PrimaryDashboardClient({
         onOpenClassSelector={() => setClassSelectorOpen(true)}
         initialNav={initialSetId ? "vocabulary" : initialNav}
         onEconomyChange={refreshHomeModel}
-        onOpenVocabularySet={(id) => {
+        onOpenVocabularySet={(id, context = "learn") => {
+          vocabRewardContextRef.current = context;
           const resume =
             id === homeModel.continueSetId
               ? (homeModel.resumeScreenIndex ?? resumeScreenIndexForSet(id))
@@ -211,7 +211,14 @@ export function PrimaryDashboardClient({
             if (completeStudyCareIfPending()) {
               playSfx("correct", muted);
             }
-            refreshHomeModel();
+            const rewardSeed = vocabSessionSeed;
+            const reviewRun = vocabRewardContextRef.current === "review";
+            void awardPrimaryReward({
+              eventId: `primary:vocabulary:${activeVocabSetId}:${rewardSeed}`,
+              rewardKind: reviewRun ? "review_completion" : "standard_activity",
+              activityId: activeVocabSetId,
+              source: reviewRun ? "scheduled_review" : "primary_vocabulary",
+            }).then(refreshHomeModel).catch(() => refreshHomeModel());
           }}
           onClose={() => {
             playSfx("tap", muted);
@@ -219,6 +226,7 @@ export function PrimaryDashboardClient({
             setActiveVocabSetId(null);
             setVocabSessionSeed(null);
             setVocabResumeIndex(0);
+            vocabRewardContextRef.current = "learn";
             refreshHomeModel();
           }}
         />

@@ -109,6 +109,7 @@ import {
   startPracticeSession,
   type StudentResponseKind,
 } from "@/lib/student-session";
+import { awardPrimaryReward } from "@/lib/primary-player/client";
 import { recordVocabularyEvidence } from "@/lib/mastery/vocabulary";
 import {
   grammarPosterActivityId,
@@ -427,6 +428,8 @@ type Props = {
    * (e.g. homework freeze play that records completion outside LessonPlayer).
    */
   onPreviewComplete?: () => void;
+  /** Fired once after a real student run reaches completion. */
+  onStudentComplete?: () => void;
 };
 
 export function LessonPlayer({
@@ -460,6 +463,7 @@ export function LessonPlayer({
   onPracticeSessionBind,
   onScreenIndexChange,
   onPreviewComplete,
+  onStudentComplete,
 }: Props) {
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -853,6 +857,15 @@ export function LessonPlayer({
       studentPracticeSessionCompletedRef.current = true;
       setGold(snapshot.gold);
       setExperience(snapshot.experience);
+      if (stats.quizGradedCount > 0) {
+        void awardPrimaryReward({
+          eventId: `primary:grammar:${completionRewardEventId}`,
+          rewardKind: "standard_activity",
+          activityId: lessonId,
+          source: "grammar_assessed_practice",
+          metadata: { graded: stats.quizGradedCount, correct: stats.quizCorrectCount },
+        }).then(() => onEconomyChange?.()).catch(() => undefined);
+      }
       onEconomyChange?.();
     }
     setGrammarComplete({ stats, breakdown });
@@ -946,6 +959,8 @@ export function LessonPlayer({
       });
       if (isPreview) {
         onPreviewComplete?.();
+      } else {
+        onStudentComplete?.();
       }
     }
   }, [
@@ -960,6 +975,7 @@ export function LessonPlayer({
     completeVocabLesson,
     completeGrammarLesson,
     onPreviewComplete,
+    onStudentComplete,
     mode,
   ]);
 

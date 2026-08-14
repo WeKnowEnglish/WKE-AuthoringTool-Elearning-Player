@@ -13,6 +13,7 @@ import { awardRewardsWithMeta } from "@/lib/progress/rewards";
 import { bumpDailyQuestProgress } from "@/lib/teststartpage/daily-quests";
 import { getWordDisplayInfo } from "@/lib/word-collection";
 import { markExplorationNode } from "@/lib/worlds/exploration";
+import { awardPrimaryReward } from "@/lib/primary-player/client";
 
 const RUN_COMPLETE_XP = 5;
 
@@ -56,6 +57,13 @@ export function recordExploreRunComplete(
     experienceDelta: RUN_COMPLETE_XP,
   });
   const xpGranted = meta.skippedDuplicate ? 0 : RUN_COMPLETE_XP;
+  void awardPrimaryReward({
+    eventId: `primary:${completeEventId}`,
+    rewardKind: "standard_activity",
+    activityId: input.areaId,
+    source: "explore_activity",
+    metadata: { encounterTier: input.encounterTier ?? null },
+  }).catch(() => undefined);
 
   bumpDailyQuestProgress("explore_completions", 1);
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { VerbTablePlayer } from "@/components/verb-table/VerbTablePlayer";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
@@ -56,6 +58,7 @@ export function HomeworkVerbTablePlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     });
   }, [finished, homeworkId]);
 

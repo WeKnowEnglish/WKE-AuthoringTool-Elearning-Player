@@ -31,6 +31,7 @@ import {
 import { vocabActivityGenerationRecipe } from "@/lib/activity-library/compile-quizzes-from-vocab-studio";
 import {
   QuizBuilderSetupCards,
+  isStagedQuizCardReady,
   type StagedQuizCard,
 } from "@/components/teacher/activity-builder/QuizBuilderSetupCards";
 import {
@@ -45,6 +46,7 @@ import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 import { createPracticeTrackFromQuizCards } from "@/lib/activity-builder/games/quiz-builder-practice-track";
 import { persistActivityTrackDraft } from "@/lib/activity-tracks";
+import { enrichVocabListMediaFromLexicon } from "@/lib/actions/lexicon-media";
 import { tokenizeSentenceForScramble } from "@/lib/games-sentence-scramble/scramble-tiles";
 import {
   QUIZ_FORMATS,
@@ -137,11 +139,6 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
   };
 }
 
-function isCardReady(card: StagedQuizCard): boolean {
-  if (card.source === "blank") return true;
-  return Boolean(card.listId) && card.selectedEntryIds.length > 0;
-}
-
 export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActivityId?: string | null }) {
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>("landing");
@@ -169,7 +166,7 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
   const [bankBusy, setBankBusy] = useState(false);
 
   const readyCards = useMemo(
-    () => setupCards.filter((card) => isCardReady(card)),
+    () => setupCards.filter((card) => isStagedQuizCardReady(card)),
     [setupCards],
   );
   const canRunOneQuiz = readyCards.length >= 2;
@@ -226,10 +223,16 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
     });
     try {
       const loaded = await getStudioVocabularyList(listId);
-      const entries = loaded.document.entries;
+      let document = loaded.document;
+      try {
+        document = await enrichVocabListMediaFromLexicon(document);
+      } catch {
+        // Linked-media enrichment is additive; directly authored list media still works.
+      }
+      const entries = document.entries;
       patchCard(cardId, {
         listId: loaded.id,
-        listName: loaded.document.name,
+        listName: document.name,
         entries,
         selectedEntryIds: entries.map((entry) => entry.id),
         entriesBusy: false,
@@ -430,6 +433,14 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
         let loaded = listCache.get(card.listId);
         if (!loaded) {
           loaded = await getStudioVocabularyList(card.listId);
+          try {
+            loaded = {
+              ...loaded,
+              document: await enrichVocabListMediaFromLexicon(loaded.document),
+            };
+          } catch {
+            // Fall back to media stored directly on the vocabulary-list entries.
+          }
           listCache.set(card.listId, loaded);
         }
         const compiled = compileQuizzesFromVocabList({

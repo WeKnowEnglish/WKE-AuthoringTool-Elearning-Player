@@ -57,8 +57,31 @@ function formatLabel(formats: FormatMeta[], format: VocabCompileFormat): string 
   return formats.find((row) => row.format === format)?.label ?? format;
 }
 
-function isCardReady(card: StagedQuizCard): boolean {
+function memoryTextIsReady(
+  entry: VocabListEntry,
+  mode: GamesMemoryTextMode,
+): boolean {
+  if (mode === "definition") return Boolean(entry.definitionEn?.trim());
+  if (mode === "example") return Boolean(entry.example?.trim());
+  return Boolean(entry.word.trim());
+}
+
+export function countReadyMemoryPairs(card: StagedQuizCard): number {
+  if (card.format !== "memory") return 0;
+  const selectedIds = new Set(card.selectedEntryIds);
+  return card.entries.filter(
+    (entry) =>
+      selectedIds.has(entry.id) &&
+      Boolean(entry.imageUrl?.trim()) &&
+      memoryTextIsReady(entry, card.memoryTextMode),
+  ).length;
+}
+
+export function isStagedQuizCardReady(card: StagedQuizCard): boolean {
   if (card.source === "blank") return true;
+  if (card.format === "memory") {
+    return Boolean(card.listId) && countReadyMemoryPairs(card) >= 2;
+  }
   return Boolean(card.listId) && card.selectedEntryIds.length > 0;
 }
 
@@ -153,10 +176,11 @@ export function QuizBuilderSetupCards({
         <div className="w-full overflow-x-auto pb-2">
           <div className="flex min-w-min items-stretch gap-4 px-1">
             {cards.map((card) => {
-              const ready = isCardReady(card);
+              const ready = isStagedQuizCardReady(card);
               const pictureCount = card.entries.filter((entry) =>
                 Boolean(entry.imageUrl?.trim()),
               ).length;
+              const readyMemoryPairs = countReadyMemoryPairs(card);
               return (
                 <article
                   key={card.id}
@@ -255,9 +279,11 @@ export function QuizBuilderSetupCards({
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-[11px] text-stone-500">
                               {card.selectedEntryIds.length}/{card.entries.length}
-                              {pictureCount > 0
-                                ? ` · ${pictureCount} pics`
-                                : " · no pics"}
+                              {card.format === "memory"
+                                ? ` · ${readyMemoryPairs} pairs ready`
+                                : pictureCount > 0
+                                  ? ` · ${pictureCount} pics`
+                                  : " · no pics"}
                             </p>
                             <div className="flex gap-2 text-[11px] font-semibold">
                               <button
@@ -327,6 +353,12 @@ export function QuizBuilderSetupCards({
                               );
                             })}
                           </ul>
+                          {card.format === "memory" && readyMemoryPairs < 2 ? (
+                            <p className="mt-1.5 rounded-lg bg-amber-50 px-2 py-1.5 text-[10px] leading-snug text-amber-950">
+                              Memory needs at least two selected words with a picture and
+                              the selected text type.
+                            </p>
+                          ) : null}
                         </div>
                       ) : vocabLists.length === 0 && !listsBusy ? (
                         <p className="mt-2 text-xs text-stone-500">

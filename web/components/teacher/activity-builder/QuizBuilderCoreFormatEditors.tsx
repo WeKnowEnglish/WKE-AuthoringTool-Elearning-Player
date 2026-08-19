@@ -591,6 +591,19 @@ export function WordGameEditor({
   const item = document.interaction.items.find((row) => row.id === selectedItemId) ?? null;
   if (!item) return <p className="text-sm text-stone-500">Select a word.</p>;
   const format = document.interaction.format;
+  const memoryTextMode = document.interaction.memoryTextMode ?? "word";
+  const memoryText =
+    memoryTextMode === "definition"
+      ? item.definition?.trim() ?? ""
+      : memoryTextMode === "example"
+        ? item.example?.trim() ?? ""
+        : item.word.trim();
+  const memoryTextLabel =
+    memoryTextMode === "definition"
+      ? "Definition"
+      : memoryTextMode === "example"
+        ? "Example sentence"
+        : "Word";
   const crosswordClueMode =
     document.interaction.crosswordClueMode ?? "definition_or_example";
   const generatedCrosswordClue =
@@ -638,7 +651,7 @@ export function WordGameEditor({
             Text paired with the picture
             <select
               className={inputClass}
-              value={document.interaction.memoryTextMode ?? "word"}
+              value={memoryTextMode}
               onChange={(event) =>
                 patchInteraction({
                   memoryTextMode: event.target.value as NonNullable<
@@ -717,7 +730,33 @@ export function WordGameEditor({
           </>
         ) : null}
         {format === "memory" ? (
-          <MediaUrlControls label="Matching picture (required)" value={item.imageUrl ?? ""} onChange={(imageUrl) => patchItem({ imageUrl: imageUrl.trim() || undefined, imageFit: "contain" })} />
+          <>
+            <MediaUrlControls label="Matching picture (required)" value={item.imageUrl ?? ""} onChange={(imageUrl) => patchItem({ imageUrl: imageUrl.trim() || undefined, imageFit: "contain" })} />
+            <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-800">
+                Student pair preview
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="flex min-h-28 items-center justify-center rounded-xl border border-violet-200 bg-white p-3 text-center text-sm font-semibold text-stone-900 shadow-sm">
+                  {memoryText || `${memoryTextLabel} missing`}
+                </div>
+                <div className="flex min-h-28 items-center justify-center overflow-hidden rounded-xl border border-violet-200 bg-white p-2 shadow-sm">
+                  {item.imageUrl?.trim() ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.imageUrl}
+                      alt={`Memory match for ${item.word || "this word"}`}
+                      className="max-h-28 w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-center text-xs font-medium text-amber-800">
+                      Picture missing
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
         ) : null}
       </section>
     </div>

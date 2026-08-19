@@ -101,6 +101,9 @@ function presentationForCard(
       },
     };
   }
+  if (format === "wordsearch" || format === "crossword" || format === "memory") {
+    return { afterBridge: "auto" };
+  }
   return {
     afterBridge: "auto",
     fillBlanks: {

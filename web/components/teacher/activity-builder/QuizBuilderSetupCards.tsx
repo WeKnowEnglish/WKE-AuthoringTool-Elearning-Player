@@ -140,8 +140,8 @@ export function QuizBuilderSetupCards({
 
       {cards.length === 0 ? (
         <p className="max-w-md text-center text-sm text-stone-500">
-          Add MCQ, letter scramble, or flashcards. Each card can use a different
-          vocabulary list — e.g. fruit MCQ next to morning-routine flashcards.
+          Add a quiz or game, then choose the vocabulary list and words it should use.
+          Each card can use a different list.
         </p>
       ) : (
         <div className="w-full overflow-x-auto pb-2">
@@ -337,8 +337,8 @@ export function QuizBuilderSetupCards({
                     </>
                   ) : (
                     <p className="mt-3 rounded-xl border border-dashed border-stone-200 bg-stone-50 px-2.5 py-2 text-xs text-stone-600">
-                      One empty {formatLabel(formats, card.format).toLowerCase()} item
-                      after generate.
+                      A starter {formatLabel(formats, card.format).toLowerCase()} activity
+                      will open after generate.
                     </p>
                   )}
 

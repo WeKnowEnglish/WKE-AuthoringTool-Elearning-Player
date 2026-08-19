@@ -3,6 +3,7 @@
 import type { AssessmentDefinition } from "@/lib/assessment/types";
 import type { LearningTrackComposition } from "@/lib/learning-tracks/composition-types";
 import type { HomeworkTemplateId } from "@/lib/homework-templates/registry";
+import type { HomeworkCollectionPart } from "@/lib/homework-collections";
 import { seedPracticeComposition } from "@/lib/activity-tracks/seed-practice";
 
 export const ACTIVITY_TRACK_DOCUMENT_VERSION = 1 as const;
@@ -28,6 +29,7 @@ export type ActivityTrackPartKind =
   | "picture_writing"
   | "question_writing"
   | "writing_prompt"
+  | "free_response"
   | "speaking_prompt"
   | "secondary_sequence"
   | "secondary_corrections"
@@ -36,6 +38,11 @@ export type ActivityTrackPartKind =
 
 export type ActivityTrackPartSource =
   | { type: "empty" }
+  | {
+      type: "homework_part";
+      /** Template-independent, versioned content for a reusable homework collection. */
+      part: HomeworkCollectionPart;
+    }
   | {
       type: "template_section";
       sectionId: string;
@@ -54,6 +61,8 @@ export type ActivityTrackPart = {
 export type ActivityTrackGradedOrigin = {
   templateId: HomeworkTemplateId;
   level: "primary" | "secondary";
+  /** Blank collections keep a level-compatible template id for legacy routing. */
+  preset?: "template" | "blank";
 };
 
 export type ActivityTrackAssessmentOrigin = {
@@ -192,6 +201,12 @@ export const ACTIVITY_TRACK_PART_CATALOG: ActivityTrackPartCatalogEntry[] = [
     gradedOnly: true,
   },
   {
+    kind: "free_response",
+    label: "Free response",
+    description: "Short or extended writing for teacher review.",
+    gradedOnly: true,
+  },
+  {
     kind: "speaking_prompt",
     label: "Speaking prompt",
     description: "Student recording for teacher review.",
@@ -233,9 +248,9 @@ export const ACTIVITY_TRACK_MODE_COPY: Record<
     previewHint: "Live Lesson Player preview from the Learning Track compiler.",
   },
   graded: {
-    title: "Graded homework",
-    blurb: "Clone a homework template, freeze content on assign, and review submissions.",
-    previewHint: "Cloned template parts — assign freezes the full pack for students.",
+    title: "Homework collection",
+    blurb: "Combine auto-graded and teacher-reviewed activities, then freeze them on assign.",
+    previewHint: "Build from a blank collection or preset and preview the student experience.",
   },
   assessment: {
     title: "Assessment",
@@ -315,4 +330,8 @@ export function renumberParts(parts: ActivityTrackPart[]): ActivityTrackPart[] {
 
 export function partHasTemplateContent(part: ActivityTrackPart): boolean {
   return part.source.type === "template_section";
+}
+
+export function partHasHomeworkContent(part: ActivityTrackPart): boolean {
+  return part.source.type === "template_section" || part.source.type === "homework_part";
 }

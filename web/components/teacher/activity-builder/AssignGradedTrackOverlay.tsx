@@ -58,10 +58,10 @@ export function AssignGradedTrackOverlay({
         aria-label="Assign graded track"
         className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-5 shadow-xl"
       >
-        <h2 className="text-lg font-extrabold text-stone-900">Assign graded track</h2>
+        <h2 className="text-lg font-extrabold text-stone-900">Assign homework collection</h2>
         <p className="mt-1 text-xs font-semibold text-stone-600">
-          Freezes the cloned template content into class homework. Later template code
-          changes will not affect this assignment.
+          Freezes every activity and answer key into class homework. Later edits will
+          not change this assignment.
         </p>
 
         <label className="mt-4 block text-xs font-bold text-stone-800">

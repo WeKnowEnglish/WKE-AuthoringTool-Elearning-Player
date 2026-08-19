@@ -39,6 +39,7 @@ import {
   ListenEditor,
   SentenceScrambleEditor,
   TrueFalseEditor,
+  WordGameEditor,
 } from "@/components/teacher/activity-builder/QuizBuilderCoreFormatEditors";
 import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
@@ -116,6 +117,12 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
                   ? "Choose the missing word."
                   : format === "true_false"
                     ? "Is this true or false?"
+                    : format === "wordsearch"
+                      ? "Find every word in the grid."
+                      : format === "crossword"
+                        ? "Use the clues to complete the crossword."
+                        : format === "memory"
+                          ? "Match each word to its picture or meaning."
                     : "What is this?",
     mcOptionCount: 4,
     mcShuffleOptions: true,
@@ -261,6 +268,13 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
     }
     if (next.format === "true_false") {
       setMasterPrompt("Is this true or false?");
+    }
+    if (
+      next.format === "wordsearch" ||
+      next.format === "crossword" ||
+      next.format === "memory"
+    ) {
+      setMasterPrompt(next.document.interaction.promptDefault);
     }
     setScreen("editor");
     setLandingPanel("home");
@@ -881,7 +895,11 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
         <aside className="flex min-h-0 flex-col border-r border-stone-200 bg-stone-50/50">
           <div className="flex items-center justify-between border-b border-stone-200 px-3 py-2">
             <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-              {session.format === "flashcards" ? "Cards" : "Questions"}
+              {session.format === "flashcards"
+                ? "Cards"
+                : session.format === "wordsearch" || session.format === "crossword" || session.format === "memory"
+                  ? "Words"
+                  : "Questions"}
             </h2>
             <button
               type="button"
@@ -1002,6 +1020,15 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
                 }
                 onRemove={removeSelected}
                 canRemove={session.document.interaction.items.length > 1}
+              />
+            ) : null}
+            {session.format === "wordsearch" || session.format === "crossword" || session.format === "memory" ? (
+              <WordGameEditor
+                document={session.document}
+                selectedItemId={selectedItemId}
+                onPatch={(next) => setSession({ format: session.format, document: next } as QuizSession)}
+                onRemove={removeSelected}
+                canRemove={session.document.interaction.items.length > 2}
               />
             ) : null}
           </div>

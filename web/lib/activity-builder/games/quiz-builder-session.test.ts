@@ -12,7 +12,7 @@ import {
 import { CORE_MODULE_IDS } from "@/lib/activity-builder/core-modules/types";
 
 describe("quiz-builder-session", () => {
-  it("lists all eight core formats", () => {
+  it("lists every core format", () => {
     expect(QUIZ_FORMATS.map((row) => row.format)).toEqual([...CORE_MODULE_IDS]);
   });
 
@@ -30,7 +30,7 @@ describe("quiz-builder-session", () => {
       list,
       formats: [...CORE_MODULE_IDS],
     });
-    expect(compiled.results).toHaveLength(8);
+    expect(compiled.results).toHaveLength(CORE_MODULE_IDS.length);
 
     for (const row of compiled.results) {
       const session = sessionFromCompileRow(row);

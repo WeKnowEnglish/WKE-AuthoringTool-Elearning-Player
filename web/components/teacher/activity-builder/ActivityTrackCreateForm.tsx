@@ -7,6 +7,7 @@ import {
   createEmptyActivityTrack,
   persistActivityTrackDraft,
   seedAssessmentFromTemplate,
+  seedBlankGradedCollection,
   seedGradedFromTemplate,
   type ActivityTrackMode,
   type GradedTemplateChoice,
@@ -28,6 +29,7 @@ export function ActivityTrackCreateForm() {
   const router = useRouter();
   const [mode, setMode] = useState<ActivityTrackMode | null>(null);
   const [templateId, setTemplateId] = useState<GradedTemplateChoice | null>(null);
+  const [blankLevel, setBlankLevel] = useState<"primary" | "secondary" | null>(null);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -40,7 +42,7 @@ export function ActivityTrackCreateForm() {
         </p>
         <h1 className="mt-1 text-2xl font-extrabold text-stone-900">New track</h1>
         <p className="mt-1 text-sm text-stone-600">
-          Practice uses the Learning Track compiler. Graded clones homework templates.
+          Practice uses the Learning Track compiler. Graded builds reusable homework collections.
           Assessment clones the Primary A2 Reading & Writing paper (Flyers-shaped;
           Listening/Speaking skipped for now).
         </p>
@@ -56,7 +58,10 @@ export function ActivityTrackCreateForm() {
               type="button"
               onClick={() => {
                 setMode(option);
-                if (option !== "graded") setTemplateId(null);
+                if (option !== "graded") {
+                  setTemplateId(null);
+                  setBlankLevel(null);
+                }
                 if (option === "assessment" && !title.trim()) {
                   setTitle("Primary A2 Reading & Writing");
                 }
@@ -78,7 +83,38 @@ export function ActivityTrackCreateForm() {
 
       {mode === "graded" ? (
         <div className="space-y-2">
-          <p className="text-sm font-bold text-stone-800">Start from template</p>
+          <p className="text-sm font-bold text-stone-800">Choose a starting point</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(["primary", "secondary"] as const).map((level) => (
+              <button
+                key={`blank-${level}`}
+                type="button"
+                onClick={() => {
+                  setBlankLevel(level);
+                  setTemplateId(null);
+                  if (!title.trim()) setTitle(`${level === "primary" ? "Primary" : "Secondary"} homework collection`);
+                }}
+                className={`rounded-xl border-2 p-3 text-left ${
+                  blankLevel === level
+                    ? "border-teal-600 bg-teal-50"
+                    : "border-stone-200 bg-white hover:border-stone-400"
+                }`}
+              >
+                <p className="text-xs font-bold uppercase tracking-wide text-teal-700">
+                  {level} · blank
+                </p>
+                <p className="mt-0.5 text-sm font-extrabold text-stone-900">
+                  Homework collection
+                </p>
+                <p className="mt-1 text-[11px] font-semibold text-stone-600">
+                  Add any supported homework type in the order you want.
+                </p>
+              </button>
+            ))}
+          </div>
+          <p className="pt-2 text-xs font-bold uppercase tracking-wide text-stone-500">
+            Or use a preset
+          </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {HOMEWORK_TEMPLATE_IDS.map((id) => {
               const definition = getHomeworkTemplateDefinition(id)!;
@@ -89,6 +125,7 @@ export function ActivityTrackCreateForm() {
                   type="button"
                   onClick={() => {
                     setTemplateId(id);
+                    setBlankLevel(null);
                     if (!title.trim()) setTitle(definition.title);
                   }}
                   className={`rounded-xl border-2 p-3 text-left ${
@@ -151,8 +188,8 @@ export function ActivityTrackCreateForm() {
               setError("Add a title.");
               return;
             }
-            if (mode === "graded" && !templateId) {
-              setError("Pick a homework template to clone.");
+            if (mode === "graded" && !templateId && !blankLevel) {
+              setError("Choose a blank collection or a homework preset.");
               return;
             }
             setCreating(true);
@@ -162,11 +199,9 @@ export function ActivityTrackCreateForm() {
                 let doc;
                 if (mode === "graded") {
                   const trackId = crypto.randomUUID();
-                  doc = seedGradedFromTemplate({
-                    trackId,
-                    title,
-                    templateId: templateId!,
-                  });
+                  doc = templateId
+                    ? seedGradedFromTemplate({ trackId, title, templateId })
+                    : seedBlankGradedCollection({ trackId, title, level: blankLevel! });
                 } else if (mode === "assessment") {
                   const trackId = crypto.randomUUID();
                   doc = seedAssessmentFromTemplate({ trackId, title });

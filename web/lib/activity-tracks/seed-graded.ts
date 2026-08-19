@@ -18,8 +18,48 @@ import {
   type ActivityTrackPart,
   type ActivityTrackPartKind,
 } from "@/lib/activity-tracks/types";
+import {
+  createHomeworkCollectionPart,
+  isHomeworkCollectionPartKind,
+} from "@/lib/homework-collections";
 
 export type GradedTemplateChoice = HomeworkTemplateId;
+
+/** Start a template-independent graded collection while retaining level routing. */
+export function seedBlankGradedCollection(input: {
+  trackId: string;
+  title: string;
+  level: "primary" | "secondary";
+}): ActivityTrackDocument {
+  const now = new Date().toISOString();
+  return {
+    version: ACTIVITY_TRACK_DOCUMENT_VERSION,
+    id: input.trackId,
+    mode: "graded",
+    title: input.title.trim() || "Homework collection",
+    coverImageUrl: null,
+    instructions: "Complete each activity, then submit your homework.",
+    level: input.level,
+    estimatedMinutes: 20,
+    vocabListId: null,
+    parts: [],
+    practiceComposition: null,
+    libraryId: null,
+    bankActivityId: null,
+    gradedOrigin: {
+      templateId:
+        input.level === "primary"
+          ? "homework-template-one"
+          : "secondary-homework-template-one",
+      level: input.level,
+      preset: "blank",
+    },
+    assessmentDefinition: null,
+    assessmentOrigin: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 const PRIMARY_GRADED_KINDS = [
   "picture_cloze",
@@ -133,7 +173,17 @@ export function gradedPartKindsForOrigin(
   origin: ActivityTrackGradedOrigin | null | undefined,
 ): readonly ActivityTrackPartKind[] {
   if (!origin) return [];
-  return origin.level === "primary" ? PRIMARY_GRADED_KINDS : SECONDARY_GRADED_KINDS;
+  const reusable = [
+    "multiple_choice",
+    "letter_mixup",
+    "line_match",
+    "listen_and_choose",
+    "sentence_scramble",
+    "free_response",
+  ] as const satisfies readonly ActivityTrackPartKind[];
+  return origin.level === "primary"
+    ? [...PRIMARY_GRADED_KINDS, ...reusable]
+    : [...SECONDARY_GRADED_KINDS, ...reusable];
 }
 
 /** Whether this Secondary slot kind is already on the timeline. */
@@ -181,6 +231,16 @@ export function seedGradedPartFromKind(input: {
   level: "primary" | "secondary";
   existingParts?: readonly ActivityTrackPart[];
 }): ActivityTrackPart | null {
+  if (isHomeworkCollectionPartKind(input.kind)) {
+    const part = createHomeworkCollectionPart(input.kind);
+    return {
+      id: part.id,
+      order: input.order,
+      kind: input.kind,
+      label: part.title,
+      source: { type: "homework_part", part },
+    };
+  }
   if (input.level === "primary") {
     if (!(PRIMARY_GRADED_KINDS as readonly ActivityTrackPartKind[]).includes(input.kind)) {
       return null;
@@ -276,6 +336,7 @@ export function seedGradedFromTemplate(input: {
     gradedOrigin: {
       templateId: definition.id,
       level: definition.level,
+      preset: "template",
     },
     assessmentDefinition: null,
     assessmentOrigin: null,
@@ -289,6 +350,9 @@ export function resetGradedPartsFromOrigin(
   doc: ActivityTrackDocument,
 ): ActivityTrackDocument {
   if (!doc.gradedOrigin) return doc;
+  if (doc.gradedOrigin.preset === "blank") {
+    return { ...doc, parts: [] };
+  }
   const seeded = seedGradedFromTemplate({
     trackId: doc.id,
     title: doc.title,

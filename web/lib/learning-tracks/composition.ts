@@ -126,7 +126,10 @@ export function vocabFormatForKind(
     kind === "line_match" ||
     kind === "true_false" ||
     kind === "sentence_scramble" ||
-    kind === "fill_blanks"
+    kind === "fill_blanks" ||
+    kind === "wordsearch" ||
+    kind === "crossword" ||
+    kind === "memory"
   ) {
     return kind;
   }
@@ -190,6 +193,14 @@ export function defaultSourceForKind(
         type: "vocab_compile",
         listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
         format: "fill_blanks",
+      };
+    case "wordsearch":
+    case "crossword":
+    case "memory":
+      return {
+        type: "vocab_compile",
+        listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
+        format: kind,
       };
     default: {
       const _exhaustive: never = kind;

@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ArrowUp,
   ChevronRight,
+  Copy,
   PanelLeft,
   PanelLeftClose,
   Plus,
@@ -27,7 +28,7 @@ import {
   gradedSecondarySlotTaken,
   isPartKindAllowedForMode,
   loadActivityTrackDraft,
-  partHasTemplateContent,
+  partHasHomeworkContent,
   persistActivityTrackDraft,
   renumberParts,
   resetGradedPartsFromOrigin,
@@ -64,6 +65,7 @@ import { SentenceColumnsSectionEditor } from "@/components/teacher/activity-buil
 import { VerbTableSectionEditor } from "@/components/teacher/activity-builder/VerbTableSectionEditor";
 import { WordAnnotationSectionEditor } from "@/components/teacher/activity-builder/WordAnnotationSectionEditor";
 import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
+import { HomeworkCollectionPartEditor } from "@/components/teacher/activity-builder/HomeworkCollectionPartEditor";
 
 type Props = {
   trackId: string;
@@ -380,9 +382,9 @@ export function ActivityTrackCompilerWorkspace({
     selection.type === "part"
       ? doc.parts.find((part) => part.id === selection.partId) ?? null
       : null;
-  const templateParts = doc.parts.filter(partHasTemplateContent);
-  const canAssignGraded = doc.mode === "graded" && templateParts.length > 0;
-  const originDefinition = doc.gradedOrigin
+  const homeworkParts = doc.parts.filter(partHasHomeworkContent);
+  const canAssignGraded = doc.mode === "graded" && homeworkParts.length > 0;
+  const originDefinition = doc.gradedOrigin?.preset !== "blank" && doc.gradedOrigin
     ? getHomeworkTemplateDefinition(doc.gradedOrigin.templateId)
     : null;
   const selectedSection =
@@ -537,6 +539,26 @@ export function ActivityTrackCompilerWorkspace({
     setSelection({ type: "track" });
   };
 
+  const duplicateHomeworkPart = (partId: string) => {
+    const index = doc.parts.findIndex((part) => part.id === partId);
+    const original = index >= 0 ? doc.parts[index] : null;
+    if (!original || original.source.type !== "homework_part") return;
+    const nextId = crypto.randomUUID();
+    const clonedContent = structuredClone(original.source.part);
+    clonedContent.id = nextId;
+    clonedContent.title = `${clonedContent.title} copy`;
+    const clone = {
+      ...original,
+      id: nextId,
+      label: clonedContent.title,
+      source: { type: "homework_part" as const, part: clonedContent },
+    };
+    const next = [...doc.parts];
+    next.splice(index + 1, 0, clone);
+    patchDoc((prev) => ({ ...prev, parts: renumberParts(next) }));
+    setSelection({ type: "part", partId: nextId });
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-stone-100">
       <TrackCoverImageEditor
@@ -681,7 +703,9 @@ export function ActivityTrackCompilerWorkspace({
               onClick={() => {
                 if (
                   !window.confirm(
-                    "Reset all parts from the original template? Your label and instruction edits will be lost.",
+                    doc.gradedOrigin?.preset === "blank"
+                      ? "Clear every activity from this homework collection?"
+                      : "Reset all parts from the original template? Your label and instruction edits will be lost.",
                   )
                 ) {
                   return;
@@ -691,7 +715,7 @@ export function ActivityTrackCompilerWorkspace({
               }}
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50"
             >
-              Reset from template
+              {doc.gradedOrigin.preset === "blank" ? "Clear collection" : "Reset from template"}
             </button>
           ) : null}
 
@@ -846,7 +870,7 @@ export function ActivityTrackCompilerWorkspace({
 
             {doc.parts.length === 0 ? (
               <p className="rounded-xl border border-dashed border-stone-300 px-3 py-4 text-center text-xs font-semibold text-stone-500">
-                No parts yet — add a quiz, flashcards, or scene shell.
+                No activities yet — add a homework type to begin.
               </p>
             ) : (
               <ol className="flex gap-2 overflow-x-auto pb-1">
@@ -1076,8 +1100,28 @@ export function ActivityTrackCompilerWorkspace({
                         kind.
                       </p>
                     );
-                  })()
+                })()
                 : null}
+              {selectedPart.source.type === "homework_part" ? (
+                <HomeworkCollectionPartEditor
+                  part={selectedPart.source.part}
+                  onChange={(nextPart) => {
+                    const partId = selectedPart.id;
+                    patchDoc((prev) => ({
+                      ...prev,
+                      parts: prev.parts.map((part) =>
+                        part.id === partId && part.source.type === "homework_part"
+                          ? {
+                              ...part,
+                              label: nextPart.title,
+                              source: { type: "homework_part", part: nextPart },
+                            }
+                          : part,
+                      ),
+                    }));
+                  }}
+                />
+              ) : null}
               <p className="rounded-lg bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600">
                 Kind:{" "}
                 <span className="font-extrabold text-stone-900">
@@ -1087,7 +1131,9 @@ export function ActivityTrackCompilerWorkspace({
                 Source:{" "}
                 {selectedPart.source.type === "template_section"
                   ? "cloned template section (frozen on assign)"
-                  : "empty shell"}
+                  : selectedPart.source.type === "homework_part"
+                    ? "reusable homework activity (frozen on assign)"
+                    : "empty shell"}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 <button
@@ -1106,6 +1152,16 @@ export function ActivityTrackCompilerWorkspace({
                   <ArrowDown className="h-3.5 w-3.5" />
                   Down
                 </button>
+                {selectedPart.source.type === "homework_part" ? (
+                  <button
+                    type="button"
+                    onClick={() => duplicateHomeworkPart(selectedPart.id)}
+                    className="inline-flex h-9 items-center gap-1 rounded-lg border border-stone-300 px-2.5 text-xs font-bold"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Duplicate
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   disabled={doc.mode === "graded" && doc.parts.length <= 1}

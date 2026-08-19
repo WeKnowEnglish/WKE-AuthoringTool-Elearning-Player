@@ -6,6 +6,7 @@ import { parseGamesLineMatchLessonPlayerPack } from "@/lib/games-line-match/pars
 import { parseGamesSentenceScrambleLessonPlayerPack } from "@/lib/games-sentence-scramble/parse-games-pack";
 import { parseGamesFillBlanksLessonPlayerPack } from "@/lib/games-fill-blanks/parse-games-pack";
 import { parseGamesTrueFalseLessonPlayerPack } from "@/lib/games-true-false/parse-games-pack";
+import { parseGamesWordGameLessonPlayerPack } from "@/lib/games-word-games/parse-games-pack";
 import { parseLearningTrackLessonPlayerPack } from "@/lib/learning-tracks/parse-track-pack";
 import { validateVocabularyListDocument } from "@/lib/activity-builder/vocabulary-list/document";
 import type { VocabularyListDocument } from "@/lib/activity-builder/vocabulary-list/types";
@@ -370,6 +371,9 @@ export function validateStudioActivityPack(
   }
   if (format === "true_false") {
     return packResult(parseGamesTrueFalseLessonPlayerPack(pack), authoring);
+  }
+  if (format === "wordsearch" || format === "crossword" || format === "memory") {
+    return packResult(parseGamesWordGameLessonPlayerPack(pack, format), authoring);
   }
 
   const parsed = parseLearningTrackLessonPlayerPack(pack);

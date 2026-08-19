@@ -186,6 +186,15 @@ const LazyLetterMixup = lazyWithDiagnostics("interaction:LetterMixupView", () =>
 const LazyWordShapeHunt = lazyWithDiagnostics("interaction:WordShapeHuntView", () =>
   import("./interactions/WordShapeHuntView").then((m) => ({ default: m.WordShapeHuntView })),
 );
+const LazyWordSearch = lazyWithDiagnostics("interaction:WordSearchView", () =>
+  import("./interactions/WordSearchView").then((m) => ({ default: m.WordSearchView })),
+);
+const LazyCrossword = lazyWithDiagnostics("interaction:CrosswordView", () =>
+  import("./interactions/CrosswordView").then((m) => ({ default: m.CrosswordView })),
+);
+const LazyMemory = lazyWithDiagnostics("interaction:MemoryView", () =>
+  import("./interactions/MemoryView").then((m) => ({ default: m.MemoryView })),
+);
 const LazyTableComplete = lazyWithDiagnostics("interaction:TableCompleteView", () =>
   import("./interactions/TableCompleteView").then((m) => ({ default: m.TableCompleteView })),
 );
@@ -1968,6 +1977,27 @@ export function LessonPlayer({
         <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
             <LazyWordShapeHunt parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "wordsearch" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyWordSearch parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "crossword" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyCrossword parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "memory" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyMemory parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}

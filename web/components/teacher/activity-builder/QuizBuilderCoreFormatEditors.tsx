@@ -7,6 +7,7 @@ import type { GamesLineMatchAuthoringDocument } from "@/lib/activity-builder/gam
 import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/types-true-false";
 import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
 import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
+import type { GamesWordGameAuthoringDocument } from "@/lib/activity-builder/games/types-word-games";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900";
@@ -514,6 +515,84 @@ export function FillBlanksEditor({
           })
         }
       />
+    </div>
+  );
+}
+
+export function WordGameEditor({
+  document,
+  selectedItemId,
+  onPatch,
+  onRemove,
+  canRemove,
+}: {
+  document: GamesWordGameAuthoringDocument;
+  selectedItemId: string;
+  onPatch: (next: GamesWordGameAuthoringDocument) => void;
+} & RemoveProps) {
+  const item = document.interaction.items.find((row) => row.id === selectedItemId) ?? null;
+  if (!item) return <p className="text-sm text-stone-500">Select a word.</p>;
+  const format = document.interaction.format;
+  const patchInteraction = (patch: Partial<GamesWordGameAuthoringDocument["interaction"]>) => {
+    onPatch({ ...document, interaction: { ...document.interaction, ...patch } });
+  };
+  const patchItem = (patch: Partial<typeof item>) => {
+    patchInteraction({
+      items: document.interaction.items.map((row) =>
+        row.id === item.id ? { ...row, ...patch } : row,
+      ),
+    });
+  };
+  return (
+    <div className="space-y-4">
+      <section className="space-y-3 rounded-xl border border-stone-200 bg-white/80 p-4">
+        <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
+          {format === "wordsearch" ? "Word search" : format === "crossword" ? "Crossword" : "Memory"} settings
+        </h2>
+        <label className="block text-xs font-medium text-stone-600">
+          Student prompt
+          <input className={inputClass} value={document.interaction.promptDefault} onChange={(event) => patchInteraction({ promptDefault: event.target.value })} />
+        </label>
+        {format === "wordsearch" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-stone-600">
+              Grid size
+              <select className={inputClass} value={document.interaction.gridSize ?? 12} onChange={(event) => patchInteraction({ gridSize: Number(event.target.value) })}>
+                {[10, 12, 14, 16, 18].map((size) => <option key={size} value={size}>{size} × {size}</option>)}
+              </select>
+            </label>
+            <label className="flex items-end gap-2 pb-2 text-xs font-medium text-stone-700">
+              <input type="checkbox" checked={document.interaction.allowBackwards === true} onChange={(event) => patchInteraction({ allowBackwards: event.target.checked })} />
+              Allow backwards words
+            </label>
+          </div>
+        ) : null}
+        {format === "memory" ? (
+          <label className="flex items-center gap-2 text-xs font-medium text-stone-700">
+            <input type="checkbox" checked={document.interaction.memoryUsePictures !== false} onChange={(event) => patchInteraction({ memoryUsePictures: event.target.checked })} />
+            Use pictures when the word list has them
+          </label>
+        ) : null}
+      </section>
+      <section className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-stone-900">Vocabulary word</h2>
+          <button type="button" className="rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-800 disabled:opacity-40" disabled={!canRemove} onClick={onRemove}>Remove</button>
+        </div>
+        <label className="block text-xs font-medium text-stone-600">
+          Word
+          <input className={inputClass} value={item.word} onChange={(event) => patchItem({ word: event.target.value })} />
+        </label>
+        {format !== "wordsearch" ? (
+          <label className="block text-xs font-medium text-stone-600">
+            {format === "crossword" ? "Clue" : "Meaning / matching text"}
+            <textarea className={inputClass} rows={2} value={item.clue ?? ""} onChange={(event) => patchItem({ clue: event.target.value })} />
+          </label>
+        ) : null}
+        {format === "memory" ? (
+          <MediaUrlControls label="Matching picture (optional)" value={item.imageUrl ?? ""} onChange={(imageUrl) => patchItem({ imageUrl: imageUrl.trim() || undefined, imageFit: "contain" })} />
+        ) : null}
+      </section>
     </div>
   );
 }

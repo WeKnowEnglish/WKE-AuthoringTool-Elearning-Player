@@ -52,6 +52,15 @@ import type { GamesLineMatchAuthoringDocument } from "@/lib/activity-builder/gam
 import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/types-true-false";
 import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
 import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
+import type {
+  GamesWordGameAuthoringDocument,
+  GamesWordGameFormat,
+  GamesWordGameItem,
+} from "@/lib/activity-builder/games/types-word-games";
+import {
+  exportGamesWordGameForLessonPlayer,
+  validateGamesWordGameAuthoringDocument,
+} from "@/lib/activity-builder/games/word-games";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 
 export type QuizSession =
@@ -62,7 +71,10 @@ export type QuizSession =
   | { format: "line_match"; document: GamesLineMatchAuthoringDocument }
   | { format: "true_false"; document: GamesTrueFalseAuthoringDocument }
   | { format: "sentence_scramble"; document: GamesSentenceScrambleAuthoringDocument }
-  | { format: "fill_blanks"; document: GamesFillBlanksAuthoringDocument };
+  | { format: "fill_blanks"; document: GamesFillBlanksAuthoringDocument }
+  | { format: "wordsearch"; document: GamesWordGameAuthoringDocument }
+  | { format: "crossword"; document: GamesWordGameAuthoringDocument }
+  | { format: "memory"; document: GamesWordGameAuthoringDocument };
 
 export const QUIZ_FORMATS: Array<{
   format: VocabCompileFormat;
@@ -126,6 +138,27 @@ export const QUIZ_FORMATS: Array<{
     short: "Cloze",
     bankFormat: "fill_blanks",
     hint: "Choose the missing word",
+  },
+  {
+    format: "wordsearch",
+    label: "Word search",
+    short: "Search",
+    bankFormat: "wordsearch",
+    hint: "Find words in a letter grid",
+  },
+  {
+    format: "crossword",
+    label: "Crossword",
+    short: "Crossword",
+    bankFormat: "crossword",
+    hint: "Spell words from clues",
+  },
+  {
+    format: "memory",
+    label: "Memory",
+    short: "Pairs",
+    bankFormat: "memory",
+    hint: "Match words to pictures or meanings",
   },
 ];
 
@@ -214,7 +247,54 @@ function blankFillBlanksItem() {
   };
 }
 
+export function blankWordGameItem(index = 1): GamesWordGameItem {
+  return {
+    id: newQuizId("word"),
+    word: index === 1 ? "apple" : "banana",
+    clue: index === 1 ? "A round fruit." : "A long yellow fruit.",
+  };
+}
+
+function createBlankWordGameSession(format: GamesWordGameFormat): QuizSession {
+  const id = newQuizId("quiz");
+  const label = format === "wordsearch" ? "word search" : format;
+  const promptDefault =
+    format === "wordsearch"
+      ? "Find every word in the grid."
+      : format === "crossword"
+        ? "Use the clues to complete the crossword."
+        : "Match each word to its picture or meaning.";
+  return {
+    format,
+    document: {
+      version: 1,
+      kind: "activity-authoring",
+      id,
+      name: `New ${label}`,
+      educationalIntent: {
+        objective: "Practice target vocabulary.",
+        successCriteria: "Students complete the vocabulary activity.",
+      },
+      content: { instruction: promptDefault, completionMessage: "Great work!" },
+      interaction: {
+        type: "games",
+        format,
+        quizGroupId: id,
+        quizGroupTitle: `New ${label}`,
+        promptDefault,
+        gridSize: 12,
+        allowBackwards: false,
+        memoryUsePictures: true,
+        items: [blankWordGameItem(1), blankWordGameItem(2)],
+      },
+    },
+  } as QuizSession;
+}
+
 export function createBlankSession(format: VocabCompileFormat): QuizSession {
+  if (format === "wordsearch" || format === "crossword" || format === "memory") {
+    return createBlankWordGameSession(format);
+  }
   if (format === "letter_mixup") {
     const id = newQuizId("quiz");
     const item = blankLetterItem();
@@ -445,6 +525,16 @@ export function sessionName(session: QuizSession): string {
 }
 
 export function mediaCoverage(session: QuizSession): { withImage: number; total: number } {
+  if (session.format === "wordsearch" || session.format === "crossword") {
+    return { withImage: 0, total: 0 };
+  }
+  if (session.format === "memory") {
+    const items = session.document.interaction.items;
+    return {
+      total: items.length,
+      withImage: items.filter((item) => Boolean(item.imageUrl?.trim())).length,
+    };
+  }
   if (session.format === "flashcards") {
     const cards = session.document.interaction.cards;
     return {
@@ -524,6 +614,14 @@ export function listEntryLabel(session: QuizSession, id: string, index: number):
     const joined = item?.correctOrder.map((token) => token.trim()).filter(Boolean).join(" ") ?? "";
     return joined || `Sentence ${index + 1}`;
   }
+  if (
+    session.format === "wordsearch" ||
+    session.format === "crossword" ||
+    session.format === "memory"
+  ) {
+    const item = session.document.interaction.items.find((row) => row.id === id);
+    return item?.word.trim() || `Word ${index + 1}`;
+  }
   const item = session.document.interaction.items.find((row) => row.id === id);
   return item?.template.trim() || `Cloze ${index + 1}`;
 }
@@ -553,6 +651,11 @@ export function validateQuizSession(session: QuizSession): void {
       return;
     case "fill_blanks":
       validateGamesFillBlanksAuthoringDocument(session.document);
+      return;
+    case "wordsearch":
+    case "crossword":
+    case "memory":
+      validateGamesWordGameAuthoringDocument(session.document, session.format);
       return;
     default: {
       const _exhaustive: never = session;
@@ -641,6 +744,20 @@ export function exportQuizSession(session: QuizSession): {
         format,
       };
     }
+    case "wordsearch":
+    case "crossword":
+    case "memory": {
+      const valid = validateGamesWordGameAuthoringDocument(
+        session.document,
+        session.format,
+      );
+      return {
+        pack: exportGamesWordGameForLessonPlayer(valid),
+        authoring: valid,
+        title: valid.name.trim() || `Untitled ${formatLabel(session.format).toLowerCase()}`,
+        format,
+      };
+    }
     default: {
       const _exhaustive: never = session;
       throw new Error(`Unsupported quiz format: ${(_exhaustive as QuizSession).format}`);
@@ -692,6 +809,13 @@ export function sessionFromAuthoring(
       return {
         format,
         document: validateGamesFillBlanksAuthoringDocument(authoring),
+      };
+    case "wordsearch":
+    case "crossword":
+    case "memory":
+      return {
+        format,
+        document: validateGamesWordGameAuthoringDocument(authoring, format),
       };
     default: {
       const _exhaustive: never = format;
@@ -772,6 +896,16 @@ export function mergeQuizSessions(sessions: QuizSession[]): QuizSession {
     );
     return first;
   }
+  if (
+    first.format === "wordsearch" ||
+    first.format === "crossword" ||
+    first.format === "memory"
+  ) {
+    first.document.interaction.items = sessions.flatMap((session) =>
+      session.format === first.format ? session.document.interaction.items : [],
+    );
+    return first;
+  }
   first.document.interaction.items = sessions.flatMap((session) =>
     session.format === "fill_blanks" ? session.document.interaction.items : [],
   );
@@ -815,6 +949,19 @@ export function appendBlankItem(session: QuizSession, masterPrompt?: string): {
   }
   if (next.format === "sentence_scramble") {
     const item = blankSentenceItem();
+    next.document.interaction.items = [...next.document.interaction.items, item];
+    return { session: next, selectedItemId: item.id };
+  }
+  if (
+    next.format === "wordsearch" ||
+    next.format === "crossword" ||
+    next.format === "memory"
+  ) {
+    const item: GamesWordGameItem = {
+      id: newQuizId("word"),
+      word: "newword",
+      clue: "Add a clue or definition.",
+    };
     next.document.interaction.items = [...next.document.interaction.items, item];
     return { session: next, selectedItemId: item.id };
   }
@@ -862,6 +1009,13 @@ export function removeSessionItem(session: QuizSession, removeId: string): QuizS
       );
       return next;
     case "fill_blanks":
+      next.document.interaction.items = next.document.interaction.items.filter(
+        (item) => item.id !== removeId,
+      );
+      return next;
+    case "wordsearch":
+    case "crossword":
+    case "memory":
       next.document.interaction.items = next.document.interaction.items.filter(
         (item) => item.id !== removeId,
       );

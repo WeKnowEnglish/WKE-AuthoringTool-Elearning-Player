@@ -4,10 +4,11 @@ import { useMemo } from "react";
 import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
 import { SecondaryHomeworkOneShell } from "@/components/secondary/SecondaryHomeworkOneShell";
 import {
-  partHasTemplateContent,
+  partHasHomeworkContent,
   type ActivityTrackDocument,
 } from "@/lib/activity-tracks";
 import { buildGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
+import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
 
 type Props = {
   doc: ActivityTrackDocument;
@@ -29,10 +30,10 @@ export function GradedTrackStudentPreview({
   doc,
   focusPartId = null,
 }: Props) {
-  const templatePartCount = doc.parts.filter(partHasTemplateContent).length;
+  const homeworkPartCount = doc.parts.filter(partHasHomeworkContent).length;
 
   const preview = useMemo(() => {
-    if (doc.mode !== "graded" || !doc.gradedOrigin || templatePartCount < 1) {
+    if (doc.mode !== "graded" || !doc.gradedOrigin || homeworkPartCount < 1) {
       return { status: "empty" as const };
     }
     try {
@@ -41,7 +42,7 @@ export function GradedTrackStudentPreview({
     } catch (error) {
       return { status: "error" as const, message: previewErrorMessage(error) };
     }
-  }, [doc, templatePartCount]);
+  }, [doc, homeworkPartCount]);
 
   if (preview.status === "empty") {
     return (
@@ -51,11 +52,11 @@ export function GradedTrackStudentPreview({
             Student preview
           </p>
           <p className="mt-2 text-lg font-extrabold text-stone-900">
-            Clone a homework template
+            Add a homework activity
           </p>
           <p className="mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 text-stone-600">
-            Graded tracks need Primary or Secondary template parts before the
-            student homework view can load here.
+            Start with a reusable activity type or add parts from a Primary or
+            Secondary preset.
           </p>
         </div>
       </div>
@@ -88,6 +89,22 @@ export function GradedTrackStudentPreview({
   const partLabels = Object.fromEntries(
     freeze.parts.map((part) => [part.sectionId, part.label]),
   );
+
+  const focusedCollectionPart = focusPartId
+    ? freeze.collectionDocument?.parts.find((part) => part.id === focusPartId)
+    : null;
+  if (
+    freeze.collectionDocument &&
+    (focusedCollectionPart || (!freeze.primaryDocument && !freeze.secondaryDocument))
+  ) {
+    return (
+      <HomeworkCollectionPlayer
+        document={freeze.collectionDocument}
+        mode="authoring-preview"
+        focusPartId={focusedCollectionPart?.id ?? null}
+      />
+    );
+  }
 
   if (freeze.level === "primary" && freeze.primaryDocument) {
     return (

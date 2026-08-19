@@ -18,7 +18,10 @@ export type LearningTrackBeatKind =
   | "line_match"
   | "true_false"
   | "sentence_scramble"
-  | "fill_blanks";
+  | "fill_blanks"
+  | "wordsearch"
+  | "crossword"
+  | "memory";
 
 /** Beat kinds that should get a post-activity report bridge when `afterBridge` is auto. */
 export const QUIZ_REPORT_BEAT_KINDS: readonly LearningTrackBeatKind[] = [
@@ -29,6 +32,9 @@ export const QUIZ_REPORT_BEAT_KINDS: readonly LearningTrackBeatKind[] = [
   "true_false",
   "sentence_scramble",
   "fill_blanks",
+  "wordsearch",
+  "crossword",
+  "memory",
 ] as const;
 
 export type LearningTrackFixtureId =
@@ -52,6 +58,9 @@ export type LearningTrackLibraryFormat =
   | "true_false"
   | "sentence_scramble"
   | "fill_blanks"
+  | "wordsearch"
+  | "crossword"
+  | "memory"
   | "explore_hotspots";
 
 export type LearningTrackBeatSource =
@@ -356,6 +365,9 @@ export const LEARNING_TRACK_BEAT_LABELS: Record<LearningTrackBeatKind, string> =
   true_false: "True / false",
   sentence_scramble: "Sentence scramble",
   fill_blanks: "Fill in the blanks",
+  wordsearch: "Word search",
+  crossword: "Crossword",
+  memory: "Memory",
 };
 
 export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
@@ -369,4 +381,7 @@ export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
   "true_false",
   "sentence_scramble",
   "fill_blanks",
+  "wordsearch",
+  "crossword",
+  "memory",
 ];

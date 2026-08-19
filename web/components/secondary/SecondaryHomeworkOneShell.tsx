@@ -51,6 +51,8 @@ type Props = {
    * Defaults to the full five-part template.
    */
   visiblePartIds?: readonly string[];
+  /** Mixed collections submit globally after their generic activities. */
+  deferOverallCompletion?: boolean;
 };
 
 function firstIncompletePart(
@@ -82,6 +84,7 @@ export function SecondaryHomeworkOneShell({
   title,
   subtitle,
   visiblePartIds,
+  deferOverallCompletion = false,
 }: Props) {
   const router = useRouter();
   const authoringPreview = mode === "authoring-preview";
@@ -228,6 +231,11 @@ export function SecondaryHomeworkOneShell({
       });
       if (!submission.ok) {
         setNotice(submission.error);
+        return;
+      }
+      if (deferOverallCompletion) {
+        setSavedParts((current) => new Set(current).add("community-speaking"));
+        setNotice("Template activities saved. Continue to the collection activities below.");
         return;
       }
       const completion = await recordHomeworkTemplateCompletion({ homeworkId });

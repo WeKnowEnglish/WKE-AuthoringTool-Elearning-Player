@@ -6,6 +6,7 @@ import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import { normalizeHomeworkTemplateSubmissionContent } from "@/lib/homework-templates/homework-template-submission";
 import { normalizeHomeworkTemplateGrades } from "@/lib/homework-templates/homework-template-review";
 import { isHomeworkTemplatePartId } from "@/lib/homework-templates/registry";
+import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import { createClient } from "@/lib/supabase/server";
 
 export async function saveHomeworkTemplateReview(input: {
@@ -32,13 +33,33 @@ export async function saveHomeworkTemplateReview(input: {
     if (homeworkError) return { ok: false, error: homeworkError.message };
     if (submissionError) return { ok: false, error: submissionError.message };
     const payload = normalizeHomeworkPayload(homework?.payload);
-    if (!homework || !submission || payload?.type !== "homework_template") return { ok: false, error: "Homework submission not found." };
+    if (
+      !homework ||
+      !submission ||
+      (payload?.type !== "homework_template" && payload?.type !== "graded_track")
+    ) return { ok: false, error: "Homework submission not found." };
 
     const content = normalizeHomeworkTemplateSubmissionContent(submission.content);
     const requestedGrades = normalizeHomeworkTemplateGrades(input.grades);
+    const gradedFreeze = payload.type === "graded_track"
+      ? parseGradedTrackFreezeDocument(payload.document)
+      : null;
+    const collectionPartIds = new Set(
+      gradedFreeze?.collectionDocument?.parts.map((part) => part.id) ?? [],
+    );
+    const partAllowed = (partId: string) =>
+      payload.type === "homework_template"
+        ? isHomeworkTemplatePartId(payload.templateId, partId)
+        : Boolean(
+            gradedFreeze?.parts.some(
+              (part) =>
+                (part.id === partId || part.sectionId === partId) &&
+                !collectionPartIds.has(part.id),
+            ),
+          );
     const grades = Object.fromEntries(Object.entries(requestedGrades).filter(([partId, grade]) => {
       const part = content.parts[partId];
-      return Boolean(part && isHomeworkTemplatePartId(payload.templateId, partId) && grade.maxScore === part.total);
+      return Boolean(part && partAllowed(partId) && grade.maxScore === part.total);
     }));
     if (Object.keys(requestedGrades).length !== Object.keys(grades).length) return { ok: false, error: "One or more grades do not match this submission." };
 

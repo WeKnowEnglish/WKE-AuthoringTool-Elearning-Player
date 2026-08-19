@@ -128,6 +128,12 @@ export function libraryFormatForBeatKind(
       return "sentence_scramble";
     case "fill_blanks":
       return "fill_blanks";
+    case "wordsearch":
+      return "wordsearch";
+    case "crossword":
+      return "crossword";
+    case "memory":
+      return "memory";
     case "explore_hotspots":
       return "explore_hotspots";
     case "language_in_focus":

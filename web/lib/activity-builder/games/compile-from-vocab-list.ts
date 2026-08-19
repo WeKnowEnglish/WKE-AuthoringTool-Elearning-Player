@@ -13,6 +13,10 @@ import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/gam
 import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
 import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
 import type {
+  GamesWordGameAuthoringDocument,
+  GamesWordGameFormat,
+} from "@/lib/activity-builder/games/types-word-games";
+import type {
   VocabListEntry,
   VocabularyListDocument,
 } from "@/lib/activity-builder/vocabulary-list/types";
@@ -26,6 +30,7 @@ import { validateGamesLineMatchAuthoringDocument } from "@/lib/activity-builder/
 import { validateGamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/true-false";
 import { validateGamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/sentence-scramble";
 import { validateGamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/fill-blanks";
+import { validateGamesWordGameAuthoringDocument } from "@/lib/activity-builder/games/word-games";
 import { placeholderImageUrl, slugifyQuizId } from "@/lib/activity-builder/games/authoring-shell";
 import {
   CORE_MODULE_IDS,
@@ -77,7 +82,8 @@ export type VocabCompileAuthoringDocument =
   | GamesLineMatchAuthoringDocument
   | GamesTrueFalseAuthoringDocument
   | GamesSentenceScrambleAuthoringDocument
-  | GamesFillBlanksAuthoringDocument;
+  | GamesFillBlanksAuthoringDocument
+  | GamesWordGameAuthoringDocument;
 
 export type VocabCompileResult = {
   format: VocabCompileFormat;
@@ -843,6 +849,133 @@ export function compileFillBlanksModule(
   };
 }
 
+function wordGameLabel(format: GamesWordGameFormat): string {
+  if (format === "wordsearch") return "Word search";
+  if (format === "crossword") return "Crossword";
+  return "Memory";
+}
+
+function compileWordGameModule(
+  format: GamesWordGameFormat,
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  const skipped: VocabCompileSkipped[] = [];
+  const limit = format === "memory" ? 10 : format === "crossword" ? 16 : 18;
+  const seen = new Set<string>();
+  const usable: VocabListEntry[] = [];
+  for (const entry of entries) {
+    const word = entry.word.trim().replace(/\s+/g, " ");
+    const letters = word.match(/[A-Za-z]/g) ?? [];
+    let reason: string | null = null;
+    if (letters.length < 2) reason = "Puzzle words need at least two letters.";
+    else if (letters.length > 18) reason = "Puzzle words can have at most 18 letters.";
+    else if (seen.has(word.toLocaleLowerCase())) reason = "Duplicate word.";
+    else if (usable.length >= limit) reason = `${wordGameLabel(format)} uses up to ${limit} words per activity.`;
+    if (reason) {
+      skipped.push({ entryId: entry.id, word: entry.word, format, reason });
+      continue;
+    }
+    seen.add(word.toLocaleLowerCase());
+    usable.push({ ...entry, word });
+  }
+  if (usable.length < 2) {
+    throw new Error(`${wordGameLabel(format)} needs at least two usable words.`);
+  }
+
+  const vocabulary = usable.map((entry) => entry.word);
+  const label = wordGameLabel(format);
+  const name = `${list.name.trim() || "Vocabulary"} · ${label}`;
+  const quizGroupId = slugifyId(name);
+  const promptDefault =
+    input.letterPrompt?.trim() ||
+    (format === "wordsearch"
+      ? "Find every word in the grid."
+      : format === "crossword"
+        ? "Use the clues to complete the crossword."
+        : "Match each word to its picture or meaning.");
+  const document: GamesWordGameAuthoringDocument = {
+    version: 1,
+    kind: "activity-authoring",
+    id: quizGroupId,
+    name,
+    educationalIntent: {
+      objective:
+        format === "memory"
+          ? `Recall and match target vocabulary: ${vocabulary.join(", ")}.`
+          : `Recognize and spell target vocabulary: ${vocabulary.join(", ")}.`,
+      successCriteria:
+        format === "wordsearch"
+          ? "Students locate every target word."
+          : format === "crossword"
+            ? "Students spell every answer from its clue."
+            : "Students match every word to its picture or meaning.",
+      vocabulary,
+      ...(list.cefr ? { cefr: list.cefr } : {}),
+    },
+    content: {
+      instruction: promptDefault,
+      completionMessage:
+        format === "wordsearch"
+          ? "You found every word!"
+          : format === "crossword"
+            ? "Crossword complete!"
+            : "You found every pair!",
+    },
+    interaction: {
+      type: "games",
+      format,
+      quizGroupId,
+      quizGroupTitle: name,
+      promptDefault,
+      gridSize: Math.min(
+        18,
+        Math.max(10, ...usable.map((entry) => (entry.word.match(/[A-Za-z]/g) ?? []).length), usable.length > 12 ? 14 : 12),
+      ),
+      allowBackwards: false,
+      memoryUsePictures: true,
+      items: usable.map((entry) => ({
+        id: entry.id,
+        word: entry.word,
+        clue:
+          entry.definitionEn?.trim() ||
+          entry.example?.trim() ||
+          `A vocabulary word with ${(entry.word.match(/[A-Za-z]/g) ?? []).length} letters.`,
+        ...(entry.imageUrl?.trim()
+          ? { imageUrl: entry.imageUrl.trim(), imageFit: entry.imageFit ?? "contain" }
+          : {}),
+      })),
+    },
+  };
+  const validated = validateGamesWordGameAuthoringDocument(document, format);
+  return { document: validated, skipped, itemCount: validated.interaction.items.length };
+}
+
+export function compileWordSearchModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  return compileWordGameModule("wordsearch", list, entries, input);
+}
+
+export function compileCrosswordModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  return compileWordGameModule("crossword", list, entries, input);
+}
+
+export function compileMemoryModule(
+  list: VocabularyListDocument,
+  entries: VocabListEntry[],
+  input: CompileQuizzesFromVocabListInput,
+): VocabModuleCompileBundle {
+  return compileWordGameModule("memory", list, entries, input);
+}
+
 const MODULE_COMPILE: Record<
   CoreModuleId,
   (
@@ -859,6 +992,9 @@ const MODULE_COMPILE: Record<
   true_false: compileTrueFalseModule,
   sentence_scramble: compileSentenceScrambleModule,
   fill_blanks: compileFillBlanksModule,
+  wordsearch: compileWordSearchModule,
+  crossword: compileCrosswordModule,
+  memory: compileMemoryModule,
 };
 
 /** Compile selected vocab list entries into quiz authoring docs (via core modules). */

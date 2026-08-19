@@ -30,7 +30,7 @@ export function normalizeHomeworkTemplatePartGrade(value: unknown): HomeworkTemp
 export function normalizeHomeworkTemplateGrades(value: unknown): Record<string, HomeworkTemplatePartGrade> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const grades: Record<string, HomeworkTemplatePartGrade> = {};
-  for (const [partId, grade] of Object.entries(value as Record<string, unknown>).slice(0, 12)) {
+  for (const [partId, grade] of Object.entries(value as Record<string, unknown>).slice(0, 30)) {
     const normalized = normalizeHomeworkTemplatePartGrade(grade);
     if (normalized) grades[partId.slice(0, 100)] = normalized;
   }

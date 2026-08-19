@@ -50,7 +50,15 @@ function editPathForFormat(format: StudioActivityFormat, activityId: string): st
   if (
     format === "multiple_choice" ||
     format === "letter_mixup" ||
-    format === "flashcards"
+    format === "flashcards" ||
+    format === "listen_and_choose" ||
+    format === "line_match" ||
+    format === "true_false" ||
+    format === "sentence_scramble" ||
+    format === "fill_blanks" ||
+    format === "wordsearch" ||
+    format === "crossword" ||
+    format === "memory"
   ) {
     return `/teacher/activity-builder/quizzes?activity=${encodeURIComponent(activityId)}`;
   }

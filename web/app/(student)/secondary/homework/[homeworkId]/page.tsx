@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { HomeworkWritingPromptPlayer } from "@/components/homework/HomeworkWritingPromptPlayer";
+import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
@@ -19,6 +20,7 @@ import {
   getMyHomeworkTemplateSubmission,
 } from "@/lib/data/homework-template-submissions";
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
+import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { createClient } from "@/lib/supabase/server";
 import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
 
@@ -77,10 +79,14 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
       payload.templateId === "secondary-homework-template-one") ||
     (payload.type === "graded_track" && payload.level === "secondary");
   const needsWritingSubmission = payload.type === "writing_prompt";
-  const [templateSubmission, templateRecordings, writingSubmission] = await Promise.all([
+  const gradedFreeze = payload.type === "graded_track"
+    ? parseGradedTrackFreezeDocument(payload.document)
+    : null;
+  const [templateSubmission, templateRecordings, writingSubmission, collectionAttempt] = await Promise.all([
     needsTemplateSubmission ? getMyHomeworkTemplateSubmission(homework.id) : Promise.resolve(null),
     needsTemplateSubmission ? getMyHomeworkTemplateSpeakingRecordings(homework.id) : Promise.resolve([]),
     needsWritingSubmission ? getMyHomeworkWritingSubmission(homework.id) : Promise.resolve(null),
+    gradedFreeze?.collectionDocument ? getMyHomeworkCollectionAttempt(homework.id) : Promise.resolve(null),
   ]);
   const flashcardCards =
     payload.type === "pack_flashcards"
@@ -204,29 +210,49 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
 
       {payload.type === "graded_track" && payload.level === "secondary" ? (
         (() => {
-          const freeze = parseGradedTrackFreezeDocument(payload.document);
+          const freeze = gradedFreeze;
           const content = freeze?.secondaryDocument as
             | typeof SECONDARY_HOMEWORK_ONE
             | undefined;
-          return content ? (
-            <SecondaryHomeworkOneShell
-              homeworkId={homework.id}
-              alreadyCompleted={Boolean(homework.completedAt)}
-              homeHref="/secondary"
-              initialSubmission={templateSubmission}
-              initialRecording={templateRecordings[0]}
-              content={content}
-              visiblePartIds={freeze?.parts.map((part) => part.sectionId)}
-              partLabels={
-                freeze
-                  ? Object.fromEntries(
-                      freeze.parts.map((part) => [part.sectionId, part.label]),
-                    )
-                  : undefined
-              }
-              title={freeze?.title}
-              subtitle={freeze?.instructions || undefined}
-            />
+          return content || freeze?.collectionDocument ? (
+            <div className="space-y-6">
+              {content ? (
+                <SecondaryHomeworkOneShell
+                  homeworkId={homework.id}
+                  alreadyCompleted={Boolean(homework.completedAt)}
+                  homeHref="/secondary"
+                  initialSubmission={templateSubmission}
+                  initialRecording={templateRecordings[0]}
+                  content={content}
+                  visiblePartIds={freeze?.parts.map((part) => part.sectionId)}
+                  partLabels={
+                    freeze
+                      ? Object.fromEntries(
+                          freeze.parts.map((part) => [part.sectionId, part.label]),
+                        )
+                      : undefined
+                  }
+                  title={freeze?.title}
+                  subtitle={freeze?.instructions || undefined}
+                  deferOverallCompletion={Boolean(freeze?.collectionDocument)}
+                />
+              ) : null}
+              {freeze?.collectionDocument ? (
+                <div className={content ? "border-t-4 border-dashed border-teal-200 pt-6" : ""}>
+                  {content ? (
+                    <p className="mb-3 text-sm font-extrabold uppercase tracking-wide text-teal-800">
+                      Collection activities
+                    </p>
+                  ) : null}
+                  <HomeworkCollectionPlayer
+                    homeworkId={homework.id}
+                    document={freeze.collectionDocument}
+                    initialAttempt={collectionAttempt}
+                    alreadyCompleted={Boolean(homework.completedAt)}
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : (
             <p className="rounded-xl border-2 border-dashed border-neutral-400 bg-white px-4 py-5 text-sm font-semibold text-neutral-600">
               Graded track content is missing. Ask your teacher to re-assign this homework.

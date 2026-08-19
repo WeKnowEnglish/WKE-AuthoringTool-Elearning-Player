@@ -10,6 +10,11 @@ import {
   SECONDARY_HOMEWORK_ONE_ID,
 } from "@/lib/homework-templates/secondary-homework-one";
 import { getHomeworkTemplateDefinition } from "@/lib/homework-templates/registry";
+import {
+  HOMEWORK_COLLECTION_VERSION,
+  parseHomeworkCollectionDocument,
+  type HomeworkCollectionDocument,
+} from "@/lib/homework-collections";
 
 export type GradedTrackFreezeDocument = {
   version: 1;
@@ -28,11 +33,23 @@ export type GradedTrackFreezeDocument = {
   }>;
   primaryDocument?: HomeworkTemplateOne;
   secondaryDocument?: typeof SECONDARY_HOMEWORK_ONE;
+  /** Template-independent activities added to the graded timeline. */
+  collectionDocument?: HomeworkCollectionDocument;
 };
 
 function templateSectionsFromParts(doc: ActivityTrackDocument) {
   return doc.parts
     .filter((part) => part.source.type === "template_section")
+    .slice()
+    .sort((a, b) => a.order - b.order);
+}
+
+function homeworkContentParts(doc: ActivityTrackDocument) {
+  return doc.parts
+    .filter(
+      (part) =>
+        part.source.type === "template_section" || part.source.type === "homework_part",
+    )
     .slice()
     .sort((a, b) => a.order - b.order);
 }
@@ -81,7 +98,8 @@ function buildSecondaryDocument(
   for (const part of templateSectionsFromParts(doc)) {
     if (part.source.type !== "template_section") continue;
     const section = structuredClone(part.source.section);
-    const { partId: _partId, ...body } = section;
+    const body = { ...section };
+    delete body.partId;
     switch (part.source.sectionId) {
       case "community-sequence":
         base.reading = { ...base.reading, ...body };
@@ -115,7 +133,7 @@ export function buildGradedTrackFreezeDocument(
   if (doc.mode !== "graded" || !doc.gradedOrigin) {
     throw new Error("Only Graded tracks cloned from a template can be frozen.");
   }
-  const parts = templateSectionsFromParts(doc);
+  const parts = homeworkContentParts(doc);
   if (parts.length < 1) {
     throw new Error("Add at least one template part before assigning.");
   }
@@ -138,9 +156,22 @@ export function buildGradedTrackFreezeDocument(
     })),
   };
 
-  if (doc.gradedOrigin.level === "primary") {
+  const genericParts = parts.flatMap((part) =>
+    part.source.type === "homework_part" ? [part.source.part] : [],
+  );
+  const collectionDocument = parseHomeworkCollectionDocument({
+    version: HOMEWORK_COLLECTION_VERSION,
+    parts: genericParts,
+  });
+  if (genericParts.length > 0 && collectionDocument?.parts.length !== genericParts.length) {
+    throw new Error("Fix incomplete homework collection activities before assigning.");
+  }
+  if (collectionDocument) freeze.collectionDocument = collectionDocument;
+
+  const hasTemplateParts = parts.some((part) => part.source.type === "template_section");
+  if (doc.gradedOrigin.level === "primary" && hasTemplateParts) {
     freeze.primaryDocument = buildPrimaryDocument(doc);
-  } else {
+  } else if (doc.gradedOrigin.level === "secondary" && hasTemplateParts) {
     freeze.secondaryDocument = buildSecondaryDocument(doc);
   }
 
@@ -189,5 +220,11 @@ export function parseGradedTrackFreezeDocument(
   if (row.level !== "primary" && row.level !== "secondary") return null;
   if (typeof row.originTemplateId !== "string") return null;
   if (!Array.isArray(row.parts) || row.parts.length < 1) return null;
-  return raw as GradedTrackFreezeDocument;
+  const freeze = raw as GradedTrackFreezeDocument;
+  if (row.collectionDocument !== undefined) {
+    const collectionDocument = parseHomeworkCollectionDocument(row.collectionDocument);
+    if (!collectionDocument) return null;
+    freeze.collectionDocument = collectionDocument;
+  }
+  return freeze;
 }

@@ -6,6 +6,7 @@ import type { GamesLineMatchAuthoringDocument } from "@/lib/activity-builder/gam
 import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/types-true-false";
 import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
 import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
+import type { GamesWordGameAuthoringDocument } from "@/lib/activity-builder/games/types-word-games";
 import type {
   VocabListEntry,
   VocabularyListDocument,
@@ -24,6 +25,9 @@ import {
   compileMultipleChoiceModule,
   compileSentenceScrambleModule,
   compileTrueFalseModule,
+  compileWordSearchModule,
+  compileCrosswordModule,
+  compileMemoryModule,
   resolveVocabCompileEntries,
 } from "@/lib/activity-builder/games/compile-from-vocab-list";
 import { exportGamesFlashcardsForLessonPlayer } from "@/lib/activity-builder/games/flashcards";
@@ -34,6 +38,7 @@ import { exportGamesLineMatchForLessonPlayer } from "@/lib/activity-builder/game
 import { exportGamesTrueFalseForLessonPlayer } from "@/lib/activity-builder/games/true-false";
 import { exportGamesSentenceScrambleForLessonPlayer } from "@/lib/activity-builder/games/sentence-scramble";
 import { exportGamesFillBlanksForLessonPlayer } from "@/lib/activity-builder/games/fill-blanks";
+import { exportGamesWordGameForLessonPlayer } from "@/lib/activity-builder/games/word-games";
 import {
   CORE_MODULE_IDS,
   CORE_MODULE_META,
@@ -51,7 +56,8 @@ export type CoreModuleAuthoringDocument =
   | GamesLineMatchAuthoringDocument
   | GamesTrueFalseAuthoringDocument
   | GamesSentenceScrambleAuthoringDocument
-  | GamesFillBlanksAuthoringDocument;
+  | GamesFillBlanksAuthoringDocument
+  | GamesWordGameAuthoringDocument;
 
 export type CoreModuleCompileBundle = {
   document: CoreModuleAuthoringDocument;
@@ -131,6 +137,24 @@ const CORE_MODULES: Record<CoreModuleId, CoreModuleDefinition> = {
       exportGamesFillBlanksForLessonPlayer(
         document as GamesFillBlanksAuthoringDocument,
       ),
+  },
+  wordsearch: {
+    meta: CORE_MODULE_META.wordsearch,
+    compile: compileWordSearchModule,
+    exportToLessonPlayer: (document) =>
+      exportGamesWordGameForLessonPlayer(document as GamesWordGameAuthoringDocument),
+  },
+  crossword: {
+    meta: CORE_MODULE_META.crossword,
+    compile: compileCrosswordModule,
+    exportToLessonPlayer: (document) =>
+      exportGamesWordGameForLessonPlayer(document as GamesWordGameAuthoringDocument),
+  },
+  memory: {
+    meta: CORE_MODULE_META.memory,
+    compile: compileMemoryModule,
+    exportToLessonPlayer: (document) =>
+      exportGamesWordGameForLessonPlayer(document as GamesWordGameAuthoringDocument),
   },
 };
 

@@ -280,9 +280,16 @@ export function HomeworkCollectionPlayer({
             ? part.items.map((item, index) => {
                 const tokens = item.sentence.split(/\s+/).filter(Boolean);
                 const chosen = (currentAnswers[item.id] ?? "").split(/\s+/).filter(Boolean);
+                const promptMode =
+                  item.promptMode ??
+                  (item.prompt?.trim() ? "additional_prompt" : "scramble_only");
+                const displayPrompt =
+                  promptMode === "additional_prompt" && item.prompt?.trim()
+                    ? item.prompt
+                    : "Put the words in order.";
                 return (
                   <div key={item.id} className="rounded-xl border border-stone-200 p-4">
-                    <p className="text-sm font-extrabold text-stone-900">{index + 1}. {item.prompt}</p>
+                    <p className="text-sm font-extrabold text-stone-900">{index + 1}. {displayPrompt}</p>
                     <div className="mt-3 min-h-14 rounded-xl border-2 border-dashed border-teal-200 bg-teal-50 p-3 text-sm font-bold text-teal-950">{chosen.join(" ") || "Tap the words in order"}</div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {shuffled(tokens).map((token, tokenIndex) => (

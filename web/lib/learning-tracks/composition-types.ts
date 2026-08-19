@@ -1,4 +1,8 @@
 import type { GamesFlashcardFace } from "@/lib/activity-builder/games/types-flashcards";
+import type {
+  GamesCrosswordClueMode,
+  GamesMemoryTextMode,
+} from "@/lib/activity-builder/games/types-word-games";
 import type { CoreModuleId } from "@/lib/activity-builder/core-modules/types";
 
 /** Lesson Player interaction screen payload (snake_case). Opaque to Studio validators. */
@@ -236,6 +240,16 @@ export type LearningTrackFillBlanksSettings = {
   autoAdvanceOnPass: boolean;
 };
 
+/** Pack-wide Memory settings for vocabulary-list compilation. */
+export type LearningTrackMemorySettings = {
+  textMode: GamesMemoryTextMode;
+};
+
+/** Pack-wide Crossword settings for vocabulary-list compilation. */
+export type LearningTrackCrosswordSettings = {
+  clueMode: GamesCrosswordClueMode;
+};
+
 export type LearningTrackBeatPresentation = {
   afterBridge?: LearningTrackAfterBridge;
   introTemplateId?: string;
@@ -259,6 +273,10 @@ export type LearningTrackBeatPresentation = {
   sentenceScramble?: LearningTrackSentenceScrambleSettings;
   /** Fill in the blanks activity settings. */
   fillBlanks?: LearningTrackFillBlanksSettings;
+  /** Memory activity settings. */
+  memory?: LearningTrackMemorySettings;
+  /** Crossword activity settings. */
+  crossword?: LearningTrackCrosswordSettings;
 };
 
 export type LearningTrackBeatInstance = {

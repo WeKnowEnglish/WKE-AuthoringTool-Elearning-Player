@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parsePictureWritingSection,
+  parsePictureWritingAuthoringSection,
   pictureWritingSectionValidationIssues,
   type PictureWritingSection,
 } from "@/lib/homework-templates/homework-template-one";
@@ -37,7 +37,7 @@ function emptyPrompt(): PictureWritingSection["prompts"][number] {
 }
 
 export function PictureWritingSectionEditor({ section, onChange }: Props) {
-  const parsed = parsePictureWritingSection(section);
+  const parsed = parsePictureWritingAuthoringSection(section);
   const issues = pictureWritingSectionValidationIssues(section);
   const [promptIndex, setPromptIndex] = useAuthoringItemIndex(
     parsed?.prompts.length ?? 0,

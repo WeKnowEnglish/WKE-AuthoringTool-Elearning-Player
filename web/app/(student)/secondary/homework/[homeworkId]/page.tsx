@@ -223,7 +223,9 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
                   homeHref="/secondary"
                   initialSubmission={templateSubmission}
                   initialRecording={templateRecordings[0]}
+                  initialRecordings={templateRecordings}
                   content={content}
+                  partInstances={freeze?.secondaryParts}
                   visiblePartIds={freeze?.parts.map((part) => part.sectionId)}
                   partLabels={
                     freeze

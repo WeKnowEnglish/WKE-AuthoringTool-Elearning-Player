@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { checkPictureWriting, checkQuestionWriting, HOMEWORK_TEMPLATE_ONE, homeworkTemplateOneSchema, isPictureClozeAnswerCorrect, scoreSentenceColumns, scoreVerbTable, scoreWordAnnotations } from "@/lib/homework-templates/homework-template-one";
+import {
+  checkPictureWriting,
+  checkQuestionWriting,
+  HOMEWORK_TEMPLATE_ONE,
+  homeworkTemplateOneSchema,
+  isPictureClozeAnswerCorrect,
+  parsePictureClozeAuthoringSection,
+  parsePictureWritingAuthoringSection,
+  parseQuestionWritingAuthoringSection,
+  parseSentenceColumnsAuthoringSection,
+  parseVerbTableAuthoringSection,
+  parseWordAnnotationAuthoringSection,
+  scoreSentenceColumns,
+  scoreVerbTable,
+  scoreWordAnnotations,
+} from "@/lib/homework-templates/homework-template-one";
 
 describe("Homework Template One", () => {
   it("defines six ordered sections", () => {
@@ -43,5 +58,39 @@ describe("Homework Template One", () => {
     expect(sixth.kind).toBe("question_writing");
     if (sixth.kind !== "question_writing" || sixth.status !== "ready") return;
     expect(checkQuestionWriting("Have you ever swum in a river?", sixth.prompts[0]!)).toEqual({ capitalLetter: true, questionMark: true, minimumWords: true, requiredWords: true, questionWord: true, helpingVerb: true, wordCount: 7 });
+  });
+
+  it("keeps every Primary editor usable while required text is blank", () => {
+    const draft = structuredClone(HOMEWORK_TEMPLATE_ONE);
+    const [pictureCloze, wordAnnotation, sentenceColumns, verbTable, pictureWriting, questionWriting] =
+      draft.sections;
+
+    if (pictureCloze?.kind !== "picture_cloze") throw new Error("Expected picture cloze");
+    pictureCloze.items[0]!.acceptedAnswers[0] = "";
+    expect(parsePictureClozeAuthoringSection(pictureCloze)).not.toBeNull();
+
+    if (wordAnnotation?.kind !== "word_annotation") throw new Error("Expected word annotation");
+    wordAnnotation.sentences[0]!.tokens[0]!.text = "";
+    expect(parseWordAnnotationAuthoringSection(wordAnnotation)).not.toBeNull();
+
+    if (sentenceColumns?.kind !== "sentence_columns") throw new Error("Expected sentence columns");
+    sentenceColumns.challenges[0]!.pieces[0]!.text = "";
+    expect(parseSentenceColumnsAuthoringSection(sentenceColumns)).not.toBeNull();
+
+    if (verbTable?.kind !== "verb_table") throw new Error("Expected verb table");
+    verbTable.rows[0]!.forms.past = "";
+    expect(parseVerbTableAuthoringSection(verbTable)).not.toBeNull();
+
+    if (pictureWriting?.kind !== "picture_writing") throw new Error("Expected picture writing");
+    pictureWriting.prompts[0]!.question = "";
+    expect(parsePictureWritingAuthoringSection(pictureWriting)).not.toBeNull();
+
+    if (questionWriting?.kind !== "question_writing" || questionWriting.status !== "ready") {
+      throw new Error("Expected question writing");
+    }
+    questionWriting.prompts[0]!.modelQuestion = "";
+    expect(parseQuestionWritingAuthoringSection(questionWriting)).not.toBeNull();
+
+    expect(homeworkTemplateOneSchema.safeParse(draft).success).toBe(false);
   });
 });

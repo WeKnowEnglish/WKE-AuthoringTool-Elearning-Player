@@ -2,7 +2,10 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import type { HomeworkCollectionPart } from "@/lib/homework-collections";
-import { homeworkCollectionGradingMode } from "@/lib/homework-collections";
+import {
+  homeworkCollectionGradingMode,
+  homeworkCollectionPartValidationIssues,
+} from "@/lib/homework-collections";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 
@@ -48,6 +51,7 @@ function ItemCard({
 }
 
 export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
+  const issues = homeworkCollectionPartValidationIssues(part);
   const patchBase = (patch: Partial<Pick<HomeworkCollectionPart, "title" | "instructions" | "required">>) =>
     onChange({ ...part, ...patch } as HomeworkCollectionPart);
 
@@ -63,6 +67,12 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
           Answers and scoring rules are frozen when this collection is assigned.
         </p>
       </div>
+
+      {issues.length > 0 ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-4 text-amber-900">
+          Keep editing — {issues[0]}
+        </p>
+      ) : null}
 
       <label className="block text-xs font-bold text-stone-800">
         Activity title
@@ -316,13 +326,116 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
 
       {part.kind === "sentence_scramble" ? (
         <div className="space-y-3">
-          {part.items.map((item, index) => (
-            <ItemCard key={item.id} title={`Sentence ${index + 1}`} onDelete={() => onChange({ ...part, items: part.items.filter((row) => row.id !== item.id) })}>
-              <input value={item.prompt} onChange={(event) => onChange({ ...part, items: part.items.map((row) => row.id === item.id ? { ...row, prompt: event.target.value } : row) })} placeholder="Prompt" className={smallFieldClass} />
-              <textarea value={item.sentence} onChange={(event) => onChange({ ...part, items: part.items.map((row) => row.id === item.id ? { ...row, sentence: event.target.value } : row) })} placeholder="Correct sentence" rows={2} className={smallFieldClass} />
-            </ItemCard>
-          ))}
-          <button type="button" onClick={() => onChange({ ...part, items: [...part.items, { id: freshId(), prompt: "Put the words in order.", sentence: "" }] })} className="inline-flex items-center gap-1 rounded-lg border border-stone-300 px-3 py-2 text-xs font-bold"><Plus className="h-3.5 w-3.5" /> Add sentence</button>
+          {part.items.map((item, index) => {
+            const promptMode =
+              item.promptMode ??
+              (item.prompt?.trim() ? "additional_prompt" : "scramble_only");
+            const patchSentence = (patch: Partial<typeof item>) =>
+              onChange({
+                ...part,
+                items: part.items.map((row) =>
+                  row.id === item.id ? { ...row, ...patch } : row,
+                ),
+              });
+            return (
+              <ItemCard
+                key={item.id}
+                title={`Sentence ${index + 1}`}
+                onDelete={() =>
+                  onChange({
+                    ...part,
+                    items: part.items.filter((row) => row.id !== item.id),
+                  })
+                }
+              >
+                <label className="block text-[11px] font-bold text-stone-600">
+                  Correct sentence
+                  <textarea
+                    value={item.sentence}
+                    onChange={(event) =>
+                      patchSentence({ sentence: event.target.value })
+                    }
+                    placeholder="The complete sentence students should build"
+                    rows={2}
+                    className={smallFieldClass}
+                  />
+                  <span className="mt-1 block font-medium leading-snug text-stone-500">
+                    This sentence becomes the scrambled answer.
+                  </span>
+                </label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      patchSentence({
+                        promptMode: "scramble_only",
+                        prompt: undefined,
+                      })
+                    }
+                    className={`rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold ${
+                      promptMode === "scramble_only"
+                        ? "border-amber-500 bg-amber-50 text-amber-950"
+                        : "border-stone-200 bg-white text-stone-700"
+                    }`}
+                  >
+                    Scramble the sentence
+                    <span className="mt-0.5 block font-medium text-stone-500">
+                      Use the standard instruction.
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      patchSentence({
+                        promptMode: "additional_prompt",
+                        prompt: item.prompt ?? "",
+                      })
+                    }
+                    className={`rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold ${
+                      promptMode === "additional_prompt"
+                        ? "border-amber-500 bg-amber-50 text-amber-950"
+                        : "border-stone-200 bg-white text-stone-700"
+                    }`}
+                  >
+                    Add an additional prompt
+                    <span className="mt-0.5 block font-medium text-stone-500">
+                      Ask for an expanded answer.
+                    </span>
+                  </button>
+                </div>
+                {promptMode === "additional_prompt" ? (
+                  <textarea
+                    value={item.prompt ?? ""}
+                    onChange={(event) =>
+                      patchSentence({ prompt: event.target.value })
+                    }
+                    placeholder="Example: Expand this idea: She likes music."
+                    rows={2}
+                    className={smallFieldClass}
+                  />
+                ) : null}
+              </ItemCard>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                ...part,
+                items: [
+                  ...part.items,
+                  {
+                    id: freshId(),
+                    promptMode: "scramble_only",
+                    sentence: "",
+                  },
+                ],
+              })
+            }
+            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 px-3 py-2 text-xs font-bold"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add sentence
+          </button>
         </div>
       ) : null}
 

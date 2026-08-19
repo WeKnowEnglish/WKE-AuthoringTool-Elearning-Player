@@ -8,6 +8,10 @@ import {
 } from "@/lib/activity-builder/games/types-flashcards";
 import type { VocabListEntry } from "@/lib/activity-builder/vocabulary-list/types";
 import type { StudioVocabularyListRef } from "@/lib/activity-library/vocabulary-list-studio";
+import type {
+  GamesCrosswordClueMode,
+  GamesMemoryTextMode,
+} from "@/lib/activity-builder/games/types-word-games";
 
 export type FormatSource = "vocab_list" | "blank";
 
@@ -28,6 +32,8 @@ export type StagedQuizCard = {
   flashcardsShuffleCards: boolean;
   flashcardsFrontFaces: GamesFlashcardFace[];
   flashcardsBackFaces: GamesFlashcardFace[];
+  memoryTextMode: GamesMemoryTextMode;
+  crosswordClueMode: GamesCrosswordClueMode;
 };
 
 type FormatMeta = {
@@ -386,11 +392,17 @@ export function QuizBuilderSetupCards({
                     </div>
                   ) : null}
 
-                  {card.format !== "flashcards" ? (
+                  {card.format !== "flashcards" &&
+                  !(
+                    card.format === "sentence_scramble" &&
+                    card.source === "vocab_list"
+                  ) ? (
                     <label className="mt-3 block text-xs font-medium text-stone-700">
                       {card.format === "multiple_choice"
                         ? "Master question"
-                        : "Prompt"}
+                        : card.format === "sentence_scramble"
+                          ? "Correct sentence"
+                          : "Prompt"}
                       <input
                         className={inputClass}
                         value={card.masterPrompt}
@@ -398,7 +410,21 @@ export function QuizBuilderSetupCards({
                           onPatch(card.id, { masterPrompt: event.target.value })
                         }
                       />
+                      {card.format === "sentence_scramble" ? (
+                        <span className="mt-1 block text-[10px] leading-snug text-stone-500">
+                          This sentence becomes the scrambled answer. You can add a
+                          separate expansion prompt in the editor.
+                        </span>
+                      ) : null}
                     </label>
+                  ) : null}
+
+                  {card.format === "sentence_scramble" &&
+                  card.source === "vocab_list" ? (
+                    <p className="mt-3 rounded-lg bg-sky-50 px-2.5 py-2 text-[11px] leading-snug text-sky-950">
+                      Correct sentences come from each selected word’s example sentence.
+                      You can add separate expansion prompts after generating.
+                    </p>
                   ) : null}
 
                   <details className="mt-3 rounded-xl border border-stone-200 bg-stone-50/70">
@@ -484,6 +510,50 @@ export function QuizBuilderSetupCards({
                             }
                           />
                           Shuffle cards
+                        </label>
+                      ) : null}
+                      {card.format === "memory" ? (
+                        <label className="block text-xs text-stone-700">
+                          Text paired with each picture
+                          <select
+                            className={inputClass}
+                            value={card.memoryTextMode}
+                            onChange={(event) =>
+                              onPatch(card.id, {
+                                memoryTextMode: event.target.value as GamesMemoryTextMode,
+                              })
+                            }
+                          >
+                            <option value="word">Word</option>
+                            <option value="definition">Definition</option>
+                            <option value="example">Example sentence</option>
+                          </select>
+                          <span className="mt-1 block text-[10px] leading-snug text-stone-500">
+                            Every generated pair needs a picture and the selected text.
+                          </span>
+                        </label>
+                      ) : null}
+                      {card.format === "crossword" ? (
+                        <label className="block text-xs text-stone-700">
+                          Clue source
+                          <select
+                            className={inputClass}
+                            value={card.crosswordClueMode}
+                            onChange={(event) =>
+                              onPatch(card.id, {
+                                crosswordClueMode: event.target.value as GamesCrosswordClueMode,
+                              })
+                            }
+                          >
+                            <option value="definition_or_example">
+                              Definition, then example
+                            </option>
+                            <option value="definition">Definition only</option>
+                            <option value="example">Example sentence only</option>
+                          </select>
+                          <span className="mt-1 block text-[10px] leading-snug text-stone-500">
+                            You can still override individual clues in the editor.
+                          </span>
                         </label>
                       ) : null}
                     </div>

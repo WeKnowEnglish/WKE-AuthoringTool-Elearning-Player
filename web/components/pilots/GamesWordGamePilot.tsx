@@ -31,7 +31,7 @@ function samplePack(format: GamesWordGameFormat): GamesWordGameLessonPlayerPack 
         ? "Find every word in the grid."
         : format === "crossword"
           ? "Use the clues to complete the crossword."
-          : "Match each word to its meaning.",
+          : "Match each word to its picture.",
     quiz_group_id: `sample-${format}`,
     quiz_group_title: `Sample ${FORMAT_LABEL[format]}`,
     quiz_group_order: 0,
@@ -48,9 +48,9 @@ function samplePack(format: GamesWordGameFormat): GamesWordGameLessonPlayerPack 
             { id: "orange", answer: "orange", clue: "A citrus fruit and a color." },
           ] }
         : { ...common, subtype: "memory" as const, pairs: [
-            { id: "apple", word: "apple", clue: "A round fruit.", image_fit: "contain" as const },
-            { id: "banana", word: "banana", clue: "A long yellow fruit.", image_fit: "contain" as const },
-            { id: "orange", word: "orange", clue: "A citrus fruit.", image_fit: "contain" as const },
+            { id: "painting", word: "painting", text: "painting", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/01-painting.webp", image_fit: "contain" as const },
+            { id: "drawing", word: "drawing", text: "drawing", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/02-drawing.webp", image_fit: "contain" as const },
+            { id: "singing", word: "singing", text: "singing", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/03-singing.webp", image_fit: "contain" as const },
           ] };
   return parseGamesWordGameLessonPlayerPack({
     version: 1,

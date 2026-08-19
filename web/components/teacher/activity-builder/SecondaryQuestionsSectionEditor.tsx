@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseSecondaryQuestionsSection,
+  parseSecondaryQuestionsAuthoringSection,
   secondaryQuestionsSectionValidationIssues,
   type SecondaryQuestionsSection,
 } from "@/lib/homework-templates/secondary-homework-one";
@@ -33,7 +33,7 @@ function emptyItem(): SecondaryQuestionsSection["items"][number] {
 }
 
 export function SecondaryQuestionsSectionEditor({ section, onChange }: Props) {
-  const parsed = parseSecondaryQuestionsSection(section);
+  const parsed = parseSecondaryQuestionsAuthoringSection(section);
   const issues = secondaryQuestionsSectionValidationIssues(section);
   const [itemIndex, setItemIndex] = useAuthoringItemIndex(
     parsed?.items.length ?? 0,
@@ -117,14 +117,13 @@ export function SecondaryQuestionsSectionEditor({ section, onChange }: Props) {
                 value={item.choices.join(", ")}
                 onChange={(event) => {
                   const choices = splitChoices(event.target.value);
-                  if (choices.length < 2) return;
                   patch((prev) => ({
                     ...prev,
                     items: prev.items.map((row, index) => {
                       if (index !== itemIndex) return row;
                       const answer = choices.includes(row.answer)
                         ? row.answer
-                        : choices[0]!;
+                        : (choices[0] ?? "");
                       return { ...row, choices, answer };
                     }),
                   }));
@@ -163,6 +162,9 @@ export function SecondaryQuestionsSectionEditor({ section, onChange }: Props) {
                 }}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs font-semibold"
               >
+                {item.choices.length === 0 ? (
+                  <option value="">Add at least two choices</option>
+                ) : null}
                 {item.choices.map((choice) => (
                   <option key={choice} value={choice}>
                     {choice}
@@ -173,6 +175,12 @@ export function SecondaryQuestionsSectionEditor({ section, onChange }: Props) {
           </div>
         ) : null}
       </AuthoringItemPager>
+
+      {issues.length > 0 ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-800">
+          Keep editing — {issues[0]}
+        </p>
+      ) : null}
     </div>
   );
 }

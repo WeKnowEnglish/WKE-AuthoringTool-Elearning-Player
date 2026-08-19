@@ -3356,6 +3356,9 @@ const memoryPairSchema = z
   .object({
     id: z.string().min(1),
     word: z.string().min(1),
+    text: z.string().min(1).optional(),
+    text_kind: z.enum(["word", "definition", "example"]).optional().default("word"),
+    /** Legacy meaning-side text, retained for older saved activities. */
     clue: z.string().optional(),
     image_url: z.string().optional(),
     image_fit: z.enum(["cover", "contain"]).optional().default("contain"),

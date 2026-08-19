@@ -8,6 +8,12 @@ import {
 
 const MAX_PARTS = 30;
 const MAX_ITEMS = 50;
+const GENERIC_SENTENCE_SCRAMBLE_PROMPTS = new Set([
+  "put the words in order",
+  "put the words in order.",
+  "unscramble the sentence",
+  "unscramble the sentence.",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -55,6 +61,218 @@ export function homeworkCollectionGradingMode(
   kind: HomeworkCollectionPartKind,
 ): "automatic" | "teacher_review" {
   return kind === "free_response" ? "teacher_review" : "automatic";
+}
+
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && Boolean(value.trim());
+}
+
+function addIdIssues(
+  rows: unknown[],
+  label: string,
+  issues: string[],
+): void {
+  const ids: string[] = [];
+  rows.forEach((row, index) => {
+    if (!isRecord(row) || !hasText(row.id)) {
+      issues.push(`${label} ${index + 1} needs an id.`);
+      return;
+    }
+    ids.push(row.id.trim());
+  });
+  if (new Set(ids).size !== ids.length) {
+    issues.push(`${label} ids must be unique.`);
+  }
+}
+
+/**
+ * Completeness checks for teacher-authored collection activities. Draft editors
+ * may temporarily contain blanks, but assignment must never silently discard a
+ * question or turn another option into the correct answer.
+ */
+export function homeworkCollectionPartValidationIssues(raw: unknown): string[] {
+  if (!isRecord(raw) || !isHomeworkCollectionPartKind(raw.kind)) {
+    return ["Choose a supported homework activity type."];
+  }
+
+  const issues: string[] = [];
+  if (!hasText(raw.id)) issues.push("The activity needs an id.");
+  if (!hasText(raw.title)) issues.push("Add an activity title.");
+
+  if (raw.kind === "multiple_choice") {
+    const questions = Array.isArray(raw.questions) ? raw.questions : [];
+    if (questions.length < 1 || questions.length > MAX_ITEMS) {
+      issues.push(`Add between 1 and ${MAX_ITEMS} multiple-choice questions.`);
+    }
+    addIdIssues(questions, "Question", issues);
+    questions.forEach((question, questionIndex) => {
+      if (!isRecord(question)) return;
+      if (!hasText(question.prompt)) {
+        issues.push(`Question ${questionIndex + 1} needs a prompt.`);
+      }
+      const options = Array.isArray(question.options) ? question.options : [];
+      if (options.length < 2 || options.length > 8) {
+        issues.push(`Question ${questionIndex + 1} needs 2–8 options.`);
+      }
+      addIdIssues(options, `Question ${questionIndex + 1} option`, issues);
+      options.forEach((option, optionIndex) => {
+        if (isRecord(option) && !hasText(option.text)) {
+          issues.push(
+            `Question ${questionIndex + 1}, option ${optionIndex + 1} needs text.`,
+          );
+        }
+      });
+      if (
+        !hasText(question.correctOptionId) ||
+        !options.some(
+          (option) =>
+            isRecord(option) && option.id === question.correctOptionId,
+        )
+      ) {
+        issues.push(`Question ${questionIndex + 1} needs a valid correct option.`);
+      }
+    });
+    return issues;
+  }
+
+  if (raw.kind === "letter_mixup") {
+    const items = Array.isArray(raw.items) ? raw.items : [];
+    if (items.length < 1 || items.length > MAX_ITEMS) {
+      issues.push(`Add between 1 and ${MAX_ITEMS} scrambled words.`);
+    }
+    addIdIssues(items, "Word", issues);
+    items.forEach((item, index) => {
+      if (!isRecord(item)) return;
+      if (!hasText(item.targetWord)) {
+        issues.push(`Word ${index + 1} needs a correct word.`);
+      }
+      if (hasText(item.imageUrl) && !cleanUrl(item.imageUrl)) {
+        issues.push(`Word ${index + 1} has an invalid picture URL.`);
+      }
+    });
+    return issues;
+  }
+
+  if (raw.kind === "line_match") {
+    const pairs = Array.isArray(raw.pairs) ? raw.pairs : [];
+    if (pairs.length < 2 || pairs.length > MAX_ITEMS) {
+      issues.push(`Add between 2 and ${MAX_ITEMS} matching pairs.`);
+    }
+    addIdIssues(pairs, "Pair", issues);
+    pairs.forEach((pair, index) => {
+      if (!isRecord(pair)) return;
+      if (!hasText(pair.left)) {
+        issues.push(`Pair ${index + 1} needs a left-side prompt.`);
+      }
+      const imageUrl = cleanUrl(pair.imageUrl);
+      if (!hasText(pair.right) && !imageUrl) {
+        issues.push(`Pair ${index + 1} needs matching text or a picture.`);
+      }
+      if (hasText(pair.imageUrl) && !imageUrl) {
+        issues.push(`Pair ${index + 1} has an invalid picture URL.`);
+      }
+    });
+    return issues;
+  }
+
+  if (raw.kind === "listen_and_choose") {
+    const items = Array.isArray(raw.items) ? raw.items : [];
+    if (items.length < 1 || items.length > MAX_ITEMS) {
+      issues.push(`Add between 1 and ${MAX_ITEMS} listening questions.`);
+    }
+    addIdIssues(items, "Listening question", issues);
+    items.forEach((item, itemIndex) => {
+      if (!isRecord(item)) return;
+      const audioUrl = cleanUrl(item.audioUrl);
+      if (!audioUrl && !hasText(item.speakText)) {
+        issues.push(
+          `Listening question ${itemIndex + 1} needs audio or text to speak.`,
+        );
+      }
+      if (hasText(item.audioUrl) && !audioUrl) {
+        issues.push(`Listening question ${itemIndex + 1} has an invalid audio URL.`);
+      }
+      const choices = Array.isArray(item.choices) ? item.choices : [];
+      if (choices.length < 2 || choices.length > 6) {
+        issues.push(`Listening question ${itemIndex + 1} needs 2–6 choices.`);
+      }
+      addIdIssues(
+        choices,
+        `Listening question ${itemIndex + 1} choice`,
+        issues,
+      );
+      choices.forEach((choice, choiceIndex) => {
+        if (!isRecord(choice)) return;
+        const imageUrl = cleanUrl(choice.imageUrl);
+        if (!hasText(choice.label) && !imageUrl) {
+          issues.push(
+            `Listening question ${itemIndex + 1}, choice ${choiceIndex + 1} needs text or a picture.`,
+          );
+        }
+        if (hasText(choice.imageUrl) && !imageUrl) {
+          issues.push(
+            `Listening question ${itemIndex + 1}, choice ${choiceIndex + 1} has an invalid picture URL.`,
+          );
+        }
+      });
+      if (
+        !hasText(item.correctChoiceId) ||
+        !choices.some(
+          (choice) => isRecord(choice) && choice.id === item.correctChoiceId,
+        )
+      ) {
+        issues.push(
+          `Listening question ${itemIndex + 1} needs a valid correct choice.`,
+        );
+      }
+    });
+    return issues;
+  }
+
+  if (raw.kind === "sentence_scramble") {
+    const items = Array.isArray(raw.items) ? raw.items : [];
+    if (items.length < 1 || items.length > MAX_ITEMS) {
+      issues.push(`Add between 1 and ${MAX_ITEMS} scrambled sentences.`);
+    }
+    addIdIssues(items, "Sentence", issues);
+    items.forEach((item, index) => {
+      if (!isRecord(item)) return;
+      if (!hasText(item.sentence)) {
+        issues.push(`Sentence ${index + 1} needs a correct sentence.`);
+      }
+      if (item.promptMode === "additional_prompt" && !hasText(item.prompt)) {
+        issues.push(`Sentence ${index + 1} needs its additional prompt.`);
+      }
+    });
+    return issues;
+  }
+
+  const prompts = Array.isArray(raw.prompts) ? raw.prompts : [];
+  if (prompts.length < 1 || prompts.length > MAX_ITEMS) {
+    issues.push(`Add between 1 and ${MAX_ITEMS} free-response prompts.`);
+  }
+  addIdIssues(prompts, "Prompt", issues);
+  prompts.forEach((prompt, index) => {
+    if (!isRecord(prompt)) return;
+    if (!hasText(prompt.prompt)) {
+      issues.push(`Prompt ${index + 1} needs a question or writing prompt.`);
+    }
+    if (
+      !Number.isInteger(prompt.minWords) ||
+      Number(prompt.minWords) < 0 ||
+      Number(prompt.minWords) > 1000
+    ) {
+      issues.push(`Prompt ${index + 1} needs a minimum word count from 0–1000.`);
+    }
+    if (
+      !Number.isInteger(prompt.maxPoints) ||
+      Number(prompt.maxPoints) < 1 ||
+      Number(prompt.maxPoints) > 100
+    ) {
+      issues.push(`Prompt ${index + 1} needs a point value from 1–100.`);
+    }
+  });
+  return issues;
 }
 
 export function createHomeworkCollectionPart(
@@ -138,7 +356,7 @@ export function createHomeworkCollectionPart(
       items: [
         {
           id: crypto.randomUUID(),
-          prompt: "Put the words in order.",
+          promptMode: "scramble_only",
           sentence: "This is an example sentence.",
         },
       ],
@@ -289,9 +507,19 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
         if (!isRecord(value)) return [];
         const sentence = cleanText(value.sentence, 1000);
         if (!sentence) return [];
+        const prompt = cleanText(value.prompt, 500);
+        const promptMode: "scramble_only" | "additional_prompt" =
+          value.promptMode === "scramble_only" ||
+          value.promptMode === "additional_prompt"
+            ? value.promptMode
+            : prompt &&
+                !GENERIC_SENTENCE_SCRAMBLE_PROMPTS.has(prompt.toLowerCase())
+              ? "additional_prompt"
+              : "scramble_only";
         return [{
           id: cleanId(value.id, `sentence-${index + 1}`),
-          prompt: cleanText(value.prompt, 500, "Put the words in order."),
+          promptMode,
+          ...(promptMode === "additional_prompt" ? { prompt } : {}),
           sentence,
         }];
       });

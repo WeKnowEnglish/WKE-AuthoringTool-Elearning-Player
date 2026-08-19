@@ -56,6 +56,28 @@ describe("freezeGradedTrackHomeworkPayload", () => {
     expect(freeze?.secondaryDocument?.reading.title).toBeTruthy();
   });
 
+  it("blocks assignment when a Secondary correct answer is blank", () => {
+    const draft = seedGradedFromTemplate({
+      trackId: "track-invalid-secondary-answer",
+      title: "Secondary answer check",
+      templateId: "secondary-homework-template-one",
+    });
+    const corrections = draft.parts.find(
+      (part) => part.kind === "secondary_corrections",
+    );
+    if (corrections?.source.type !== "template_section") {
+      throw new Error("Expected corrections section");
+    }
+    const questions = corrections.source.section.questions as Array<
+      Record<string, unknown>
+    >;
+    questions[0]!.answer = "";
+
+    expect(() =>
+      freezeGradedTrackHomeworkPayload({ document: draft }),
+    ).toThrow(/Fix .* before assigning: questions\.0\.answer/i);
+  });
+
   it("preserves edited word annotation roles in the freeze", () => {
     const draft = seedGradedFromTemplate({
       trackId: "track-annot-edit",
@@ -482,6 +504,33 @@ describe("freezeGradedTrackHomeworkPayload", () => {
     );
   });
 
+  it("freezes repeated Secondary activity kinds as independent instances", () => {
+    const draft = seedGradedFromTemplate({
+      trackId: "track-repeat-secondary-questions",
+      title: "Repeated question practice",
+      templateId: "secondary-homework-template-one",
+    });
+    const extraQuestions = seedGradedPartFromKind({
+      kind: "secondary_questions",
+      order: draft.parts.length + 1,
+      level: "secondary",
+      existingParts: draft.parts,
+    });
+    expect(extraQuestions).toBeTruthy();
+    expect(extraQuestions?.id).not.toBe("past-question-choice");
+    draft.parts = renumberParts([...draft.parts, extraQuestions!]);
+
+    const freeze = parseGradedTrackFreezeDocument(
+      freezeGradedTrackHomeworkPayload({ document: draft }).document,
+    );
+    const questionParts = freeze?.secondaryParts?.filter(
+      (part) => part.templatePartId === "past-question-choice",
+    );
+    expect(freeze?.parts).toHaveLength(6);
+    expect(questionParts).toHaveLength(2);
+    expect(new Set(questionParts?.map((part) => part.id)).size).toBe(2);
+  });
+
   it("freezes repeatable collection activities alongside a legacy preset", () => {
     const draft = seedGradedFromTemplate({
       trackId: "track-mixed-collection",
@@ -530,5 +579,29 @@ describe("freezeGradedTrackHomeworkPayload", () => {
     expect(freeze?.secondaryDocument).toBeUndefined();
     expect(freeze?.collectionDocument?.parts[0]?.kind).toBe("listen_and_choose");
     expect(normalizeHomeworkPayload(payload)?.type).toBe("graded_track");
+  });
+
+  it("blocks assignment instead of dropping an incomplete collection question", () => {
+    const draft = seedBlankGradedCollection({
+      trackId: "track-invalid-collection",
+      title: "Incomplete collection",
+      level: "secondary",
+    });
+    const multipleChoice = seedGradedPartFromKind({
+      kind: "multiple_choice",
+      order: 1,
+      level: "secondary",
+    });
+    if (multipleChoice?.source.type !== "homework_part") {
+      throw new Error("Expected multiple-choice activity");
+    }
+    const part = multipleChoice.source.part;
+    if (part.kind !== "multiple_choice") throw new Error("Expected multiple choice");
+    part.questions[0]!.options[0]!.text = "";
+    draft.parts = [multipleChoice];
+
+    expect(() =>
+      freezeGradedTrackHomeworkPayload({ document: draft }),
+    ).toThrow(/option 1 needs text/i);
   });
 });

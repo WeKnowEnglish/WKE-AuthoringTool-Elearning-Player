@@ -2,6 +2,9 @@
 
 export type GamesSentenceScrambleItem = {
   id: string;
+  /** Whether students only unscramble the answer or first see a separate cue. */
+  promptMode?: "scramble_only" | "additional_prompt";
+  /** Optional cue shown above the scrambled expanded answer. */
   bodyText?: string;
   /** Correct word order (punctuation stays on tokens). */
   correctOrder: string[];

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseQuestionWritingSection,
+  parseQuestionWritingAuthoringSection,
   questionWritingSectionValidationIssues,
   type QuestionWritingSection,
 } from "@/lib/homework-templates/homework-template-one";
@@ -35,7 +35,7 @@ function emptyPrompt(): QuestionWritingSection["prompts"][number] {
 }
 
 export function QuestionWritingSectionEditor({ section, onChange }: Props) {
-  const parsed = parseQuestionWritingSection(section);
+  const parsed = parseQuestionWritingAuthoringSection(section);
   const issues = questionWritingSectionValidationIssues(section);
   const [promptIndex, setPromptIndex] = useAuthoringItemIndex(
     parsed?.prompts.length ?? 0,

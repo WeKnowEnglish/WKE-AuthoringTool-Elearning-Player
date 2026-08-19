@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseSecondarySequenceSection,
+  parseSecondarySequenceAuthoringSection,
   secondarySequenceSectionValidationIssues,
   type SecondaryReadingSection,
 } from "@/lib/homework-templates/secondary-homework-one";
@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function SecondarySequenceSectionEditor({ section, onChange }: Props) {
-  const parsed = parseSecondarySequenceSection(section);
+  const parsed = parseSecondarySequenceAuthoringSection(section);
   const issues = secondarySequenceSectionValidationIssues(section);
   const [paragraphIndex, setParagraphIndex] = useAuthoringItemIndex(
     parsed?.paragraphs.length ?? 0,
@@ -233,7 +233,9 @@ export function SecondarySequenceSectionEditor({ section, onChange }: Props) {
       </div>
 
       {issues.length > 0 ? (
-        <p className="text-[11px] font-semibold text-amber-800">{issues[0]}</p>
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-800">
+          Keep editing — {issues[0]}
+        </p>
       ) : null}
     </div>
   );

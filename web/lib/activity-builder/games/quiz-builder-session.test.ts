@@ -26,6 +26,10 @@ describe("quiz-builder-session", () => {
 
   it("compiles bakery list into editable sessions and exports packs", () => {
     const list = createBakeryVocabularyListDocument();
+    list.entries = list.entries.map((entry) => ({
+      ...entry,
+      imageUrl: `https://example.com/${entry.id}.png`,
+    }));
     const compiled = compileQuizzesFromVocabList({
       list,
       formats: [...CORE_MODULE_IDS],

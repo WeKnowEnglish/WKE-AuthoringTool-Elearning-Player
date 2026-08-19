@@ -13,6 +13,8 @@ import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/gam
 import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
 import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
 import type {
+  GamesCrosswordClueMode,
+  GamesMemoryTextMode,
   GamesWordGameAuthoringDocument,
   GamesWordGameFormat,
 } from "@/lib/activity-builder/games/types-word-games";
@@ -68,10 +70,16 @@ export type CompileQuizzesFromVocabListInput = {
   letterPrompt?: string;
   letterShuffleLetters?: boolean;
   letterCaseSensitive?: boolean;
+  /** Student instruction for Word search, Crossword, or Memory. */
+  wordGamePrompt?: string;
   /** Pack-wide flashcards face layout when compiling flashcards. */
   flashcardsFrontFaces?: GamesFlashcardFace[];
   flashcardsBackFaces?: GamesFlashcardFace[];
   flashcardsShuffleCards?: boolean;
+  /** Text shown opposite the picture in Memory. */
+  memoryTextMode?: GamesMemoryTextMode;
+  /** Vocabulary field used for Crossword clues. */
+  crosswordClueMode?: GamesCrosswordClueMode;
 };
 
 export type VocabCompileAuthoringDocument =
@@ -863,6 +871,8 @@ function compileWordGameModule(
 ): VocabModuleCompileBundle {
   const skipped: VocabCompileSkipped[] = [];
   const limit = format === "memory" ? 10 : format === "crossword" ? 16 : 18;
+  const memoryTextMode = input.memoryTextMode ?? "word";
+  const crosswordClueMode = input.crosswordClueMode ?? "definition_or_example";
   const seen = new Set<string>();
   const usable: VocabListEntry[] = [];
   for (const entry of entries) {
@@ -872,7 +882,42 @@ function compileWordGameModule(
     if (letters.length < 2) reason = "Puzzle words need at least two letters.";
     else if (letters.length > 18) reason = "Puzzle words can have at most 18 letters.";
     else if (seen.has(word.toLocaleLowerCase())) reason = "Duplicate word.";
-    else if (usable.length >= limit) reason = `${wordGameLabel(format)} uses up to ${limit} words per activity.`;
+    else if (format === "memory" && !entry.imageUrl?.trim()) {
+      reason = "Memory needs a picture for every pair.";
+    } else if (
+      format === "memory" &&
+      memoryTextMode === "definition" &&
+      !entry.definitionEn?.trim()
+    ) {
+      reason = "Definition vs picture needs a definition.";
+    } else if (
+      format === "memory" &&
+      memoryTextMode === "example" &&
+      !entry.example?.trim()
+    ) {
+      reason = "Example vs picture needs an example sentence.";
+    } else if (
+      format === "crossword" &&
+      crosswordClueMode === "definition" &&
+      !entry.definitionEn?.trim()
+    ) {
+      reason = "Definition clues need a definition.";
+    } else if (
+      format === "crossword" &&
+      crosswordClueMode === "example" &&
+      !entry.example?.trim()
+    ) {
+      reason = "Example-sentence clues need an example sentence.";
+    } else if (
+      format === "crossword" &&
+      crosswordClueMode === "definition_or_example" &&
+      !entry.definitionEn?.trim() &&
+      !entry.example?.trim()
+    ) {
+      reason = "Crossword needs a definition or example sentence for each clue.";
+    } else if (usable.length >= limit) {
+      reason = `${wordGameLabel(format)} uses up to ${limit} words per activity.`;
+    }
     if (reason) {
       skipped.push({ entryId: entry.id, word: entry.word, format, reason });
       continue;
@@ -881,7 +926,10 @@ function compileWordGameModule(
     usable.push({ ...entry, word });
   }
   if (usable.length < 2) {
-    throw new Error(`${wordGameLabel(format)} needs at least two usable words.`);
+    const detail = skipped[0]?.reason;
+    throw new Error(
+      `${wordGameLabel(format)} needs at least two usable words.${detail ? ` ${detail}` : ""}`,
+    );
   }
 
   const vocabulary = usable.map((entry) => entry.word);
@@ -889,12 +937,16 @@ function compileWordGameModule(
   const name = `${list.name.trim() || "Vocabulary"} · ${label}`;
   const quizGroupId = slugifyId(name);
   const promptDefault =
-    input.letterPrompt?.trim() ||
+    input.wordGamePrompt?.trim() ||
     (format === "wordsearch"
       ? "Find every word in the grid."
       : format === "crossword"
         ? "Use the clues to complete the crossword."
-        : "Match each word to its picture or meaning.");
+        : memoryTextMode === "word"
+          ? "Match each word to its picture."
+          : memoryTextMode === "definition"
+            ? "Match each definition to its picture."
+            : "Match each example sentence to its picture.");
   const document: GamesWordGameAuthoringDocument = {
     version: 1,
     kind: "activity-authoring",
@@ -910,7 +962,11 @@ function compileWordGameModule(
           ? "Students locate every target word."
           : format === "crossword"
             ? "Students spell every answer from its clue."
-            : "Students match every word to its picture or meaning.",
+            : memoryTextMode === "word"
+              ? "Students match every word to its picture."
+              : memoryTextMode === "definition"
+                ? "Students match every definition to its picture."
+                : "Students match every example sentence to its picture.",
       vocabulary,
       ...(list.cefr ? { cefr: list.cefr } : {}),
     },
@@ -935,13 +991,15 @@ function compileWordGameModule(
       ),
       allowBackwards: false,
       memoryUsePictures: true,
+      memoryTextMode,
+      crosswordClueMode,
       items: usable.map((entry) => ({
         id: entry.id,
         word: entry.word,
-        clue:
-          entry.definitionEn?.trim() ||
-          entry.example?.trim() ||
-          `A vocabulary word with ${(entry.word.match(/[A-Za-z]/g) ?? []).length} letters.`,
+        ...(entry.definitionEn?.trim()
+          ? { definition: entry.definitionEn.trim() }
+          : {}),
+        ...(entry.example?.trim() ? { example: entry.example.trim() } : {}),
         ...(entry.imageUrl?.trim()
           ? { imageUrl: entry.imageUrl.trim(), imageFit: entry.imageFit ?? "contain" }
           : {}),

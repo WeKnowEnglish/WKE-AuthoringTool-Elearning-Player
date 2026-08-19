@@ -133,10 +133,12 @@ export function WordSearchView({
                     type="button"
                     onClick={() => choose(cell)}
                     disabled={passed}
+                    aria-pressed={foundCells.has(key)}
                     aria-label={`Row ${rowIndex + 1}, column ${colIndex + 1}, ${letter}`}
                     className={clsx(
                       "flex aspect-square min-w-0 items-center justify-center rounded-[0.3rem] bg-white text-[clamp(0.55rem,2.2cqw,1.25rem)] font-black uppercase text-kid-ink transition",
-                      foundCells.has(key) && "bg-emerald-200 text-emerald-950",
+                      foundCells.has(key) &&
+                        "!bg-emerald-300 !text-emerald-950 ring-2 ring-inset ring-emerald-700",
                       selected && "bg-kid-cta ring-2 ring-white",
                     )}
                   >
@@ -152,7 +154,8 @@ export function WordSearchView({
                 key={placement.id}
                 className={clsx(
                   "rounded-lg bg-white px-3 py-1.5 text-kid-ink",
-                  foundIds.has(placement.id) && "bg-emerald-100 text-emerald-800 line-through",
+                  foundIds.has(placement.id) &&
+                    "!bg-emerald-200 text-emerald-900 ring-2 ring-inset ring-emerald-600 line-through",
                 )}
               >
                 {placement.word}

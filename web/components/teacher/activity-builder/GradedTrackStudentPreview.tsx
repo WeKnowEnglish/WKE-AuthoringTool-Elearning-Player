@@ -124,6 +124,7 @@ export function GradedTrackStudentPreview({
         mode="authoring-preview"
         content={freeze.secondaryDocument}
         focusPartId={focusSectionId}
+        partInstances={freeze.secondaryParts}
         partLabels={partLabels}
         title={freeze.title}
         subtitle={freeze.instructions || undefined}

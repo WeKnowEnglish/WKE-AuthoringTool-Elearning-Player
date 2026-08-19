@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseVerbTableSection,
+  parseVerbTableAuthoringSection,
   verbTableSectionValidationIssues,
   VERB_FORM_COLUMNS,
   type VerbTableSection,
@@ -39,7 +39,7 @@ function toggleMissing(
 }
 
 export function VerbTableSectionEditor({ section, onChange }: Props) {
-  const parsed = parseVerbTableSection(section);
+  const parsed = parseVerbTableAuthoringSection(section);
   const issues = verbTableSectionValidationIssues(section);
   const [rowIndex, setRowIndex] = useAuthoringItemIndex(
     parsed?.rows.length ?? 0,

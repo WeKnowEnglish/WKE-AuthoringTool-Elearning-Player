@@ -8,10 +8,23 @@ import {
 import {
   SECONDARY_HOMEWORK_ONE,
   SECONDARY_HOMEWORK_ONE_ID,
+  parseSecondaryCorrectionsSection,
+  parseSecondaryDialogueSection,
+  parseSecondaryQuestionsSection,
+  parseSecondarySequenceSection,
+  parseSecondarySpeakingSection,
+  secondaryCorrectionsSectionValidationIssues,
+  secondaryDialogueSectionValidationIssues,
+  secondaryQuestionsSectionValidationIssues,
+  secondarySequenceSectionValidationIssues,
+  secondarySpeakingSectionValidationIssues,
+  type SecondaryHomeworkPartInstance,
+  type SecondaryHomeworkTemplatePartId,
 } from "@/lib/homework-templates/secondary-homework-one";
 import { getHomeworkTemplateDefinition } from "@/lib/homework-templates/registry";
 import {
   HOMEWORK_COLLECTION_VERSION,
+  homeworkCollectionPartValidationIssues,
   parseHomeworkCollectionDocument,
   type HomeworkCollectionDocument,
 } from "@/lib/homework-collections";
@@ -33,6 +46,8 @@ export type GradedTrackFreezeDocument = {
   }>;
   primaryDocument?: HomeworkTemplateOne;
   secondaryDocument?: typeof SECONDARY_HOMEWORK_ONE;
+  /** Ordered, uniquely identified Secondary activities, including repeated kinds. */
+  secondaryParts?: SecondaryHomeworkPartInstance[];
   /** Template-independent activities added to the graded timeline. */
   collectionDocument?: HomeworkCollectionDocument;
 };
@@ -97,10 +112,14 @@ function buildSecondaryDocument(
 
   for (const part of templateSectionsFromParts(doc)) {
     if (part.source.type !== "template_section") continue;
-    const section = structuredClone(part.source.section);
+    const section = parseSecondaryTemplateSection(
+      part.kind,
+      part.source.section,
+      part.label,
+    );
     const body = { ...section };
     delete body.partId;
-    switch (part.source.sectionId) {
+    switch (secondaryTemplatePartId(part.kind)) {
       case "community-sequence":
         base.reading = { ...base.reading, ...body };
         if (typeof body.title !== "string") {
@@ -125,6 +144,88 @@ function buildSecondaryDocument(
   }
 
   return base as typeof SECONDARY_HOMEWORK_ONE;
+}
+
+function secondaryTemplatePartId(kind: string): SecondaryHomeworkTemplatePartId {
+  switch (kind) {
+    case "secondary_sequence":
+      return "community-sequence";
+    case "secondary_corrections":
+      return "past-corrections";
+    case "secondary_dialogue":
+      return "irregular-dialogue";
+    case "secondary_questions":
+      return "past-question-choice";
+    case "speaking_prompt":
+      return "community-speaking";
+    default:
+      throw new Error(`Unsupported Secondary homework part kind: ${kind}`);
+  }
+}
+
+function parseSecondaryTemplateSection(
+  kind: string,
+  raw: unknown,
+  label: string,
+): Record<string, unknown> {
+  const result = (() => {
+    switch (secondaryTemplatePartId(kind)) {
+      case "community-sequence":
+        return {
+          content: parseSecondarySequenceSection(raw),
+          issues: secondarySequenceSectionValidationIssues(raw),
+        };
+      case "past-corrections":
+        return {
+          content: parseSecondaryCorrectionsSection(raw),
+          issues: secondaryCorrectionsSectionValidationIssues(raw),
+        };
+      case "irregular-dialogue":
+        return {
+          content: parseSecondaryDialogueSection(raw),
+          issues: secondaryDialogueSectionValidationIssues(raw),
+        };
+      case "past-question-choice":
+        return {
+          content: parseSecondaryQuestionsSection(raw),
+          issues: secondaryQuestionsSectionValidationIssues(raw),
+        };
+      case "community-speaking":
+        return {
+          content: parseSecondarySpeakingSection(raw),
+          issues: secondarySpeakingSectionValidationIssues(raw),
+        };
+    }
+  })();
+  if (!result.content) {
+    throw new Error(
+      `Fix “${label}” before assigning: ${result.issues[0] ?? "the activity is incomplete."}`,
+    );
+  }
+  return structuredClone(result.content) as unknown as Record<string, unknown>;
+}
+
+function buildSecondaryParts(
+  doc: ActivityTrackDocument,
+): SecondaryHomeworkPartInstance[] {
+  return templateSectionsFromParts(doc).map((part, index) => {
+    if (part.source.type !== "template_section") {
+      throw new Error("Expected Secondary template section.");
+    }
+    const content = parseSecondaryTemplateSection(
+      part.kind,
+      part.source.section,
+      part.label,
+    );
+    delete content.partId;
+    return {
+      id: part.id,
+      templatePartId: secondaryTemplatePartId(part.kind),
+      label: part.label,
+      order: index + 1,
+      content,
+    } as SecondaryHomeworkPartInstance;
+  });
 }
 
 export function buildGradedTrackFreezeDocument(
@@ -159,6 +260,14 @@ export function buildGradedTrackFreezeDocument(
   const genericParts = parts.flatMap((part) =>
     part.source.type === "homework_part" ? [part.source.part] : [],
   );
+  for (const part of genericParts) {
+    const issues = homeworkCollectionPartValidationIssues(part);
+    if (issues.length > 0) {
+      throw new Error(
+        `Fix “${part.title || "Homework activity"}” before assigning: ${issues[0]}`,
+      );
+    }
+  }
   const collectionDocument = parseHomeworkCollectionDocument({
     version: HOMEWORK_COLLECTION_VERSION,
     parts: genericParts,
@@ -173,6 +282,7 @@ export function buildGradedTrackFreezeDocument(
     freeze.primaryDocument = buildPrimaryDocument(doc);
   } else if (doc.gradedOrigin.level === "secondary" && hasTemplateParts) {
     freeze.secondaryDocument = buildSecondaryDocument(doc);
+    freeze.secondaryParts = buildSecondaryParts(doc);
   }
 
   return freeze;
@@ -225,6 +335,9 @@ export function parseGradedTrackFreezeDocument(
     const collectionDocument = parseHomeworkCollectionDocument(row.collectionDocument);
     if (!collectionDocument) return null;
     freeze.collectionDocument = collectionDocument;
+  }
+  if (row.secondaryParts !== undefined && !Array.isArray(row.secondaryParts)) {
+    return null;
   }
   return freeze;
 }

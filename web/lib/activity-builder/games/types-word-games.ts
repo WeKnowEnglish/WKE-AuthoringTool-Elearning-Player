@@ -2,11 +2,22 @@
 
 export type GamesWordGameFormat = "wordsearch" | "crossword" | "memory";
 
+/** Text shown on the non-picture side of each memory pair. */
+export type GamesMemoryTextMode = "word" | "definition" | "example";
+
+/** Vocabulary field used to generate crossword clues. */
+export type GamesCrosswordClueMode =
+  | "definition"
+  | "example"
+  | "definition_or_example";
+
 export type GamesWordGameItem = {
   id: string;
   word: string;
-  /** Crossword clue, and the preferred text match for memory when no picture is present. */
+  /** Optional teacher-written crossword clue override. */
   clue?: string;
+  definition?: string;
+  example?: string;
   imageUrl?: string;
   imageFit?: "cover" | "contain";
 };
@@ -22,8 +33,12 @@ export type GamesWordGameInteraction = {
   gridSize?: number;
   /** Whether word-search words may run backwards. */
   allowBackwards?: boolean;
-  /** Memory cards use pictures when available, then clues, then a duplicate word card. */
+  /** @deprecated Kept only when reading older drafts. Memory now always uses pictures. */
   memoryUsePictures?: boolean;
+  /** Text paired with each picture in Memory. */
+  memoryTextMode?: GamesMemoryTextMode;
+  /** Vocabulary source used for generated Crossword clues. */
+  crosswordClueMode?: GamesCrosswordClueMode;
 };
 
 export type GamesWordGameAuthoringDocument = {

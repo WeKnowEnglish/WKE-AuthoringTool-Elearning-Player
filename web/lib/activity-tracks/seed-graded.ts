@@ -186,17 +186,6 @@ export function gradedPartKindsForOrigin(
     : [...SECONDARY_GRADED_KINDS, ...reusable];
 }
 
-/** Whether this Secondary slot kind is already on the timeline. */
-export function gradedSecondarySlotTaken(
-  parts: readonly ActivityTrackPart[],
-  kind: ActivityTrackPartKind,
-): boolean {
-  if (!(SECONDARY_GRADED_KINDS as readonly ActivityTrackPartKind[]).includes(kind)) {
-    return false;
-  }
-  return parts.some((part) => part.kind === kind);
-}
-
 function primarySectionTemplate(
   kind: ActivityTrackPartKind,
 ): HomeworkTemplateOne["sections"][number] | null {
@@ -223,7 +212,7 @@ function primarySectionTemplate(
 
 /**
  * Seed a Graded timeline part with real template section content.
- * Primary: duplicates get fresh ids. Secondary: unique slots only.
+ * Every added part gets a fresh id so activity kinds can be reused independently.
  */
 export function seedGradedPartFromKind(input: {
   kind: ActivityTrackPartKind;
@@ -271,9 +260,6 @@ export function seedGradedPartFromKind(input: {
   if (!(SECONDARY_GRADED_KINDS as readonly ActivityTrackPartKind[]).includes(input.kind)) {
     return null;
   }
-  if (gradedSecondarySlotTaken(input.existingParts ?? [], input.kind)) {
-    return null;
-  }
   const partId = SECONDARY_KIND_TO_PART_ID[input.kind as SecondaryGradedKind];
   const definition = getHomeworkTemplateDefinition(SECONDARY_HOMEWORK_ONE_ID)!;
   const registryPart = definition.parts.find((part) => part.id === partId);
@@ -288,17 +274,18 @@ export function seedGradedPartFromKind(input: {
   } as const;
   const body = byKey[partId as keyof typeof byKey];
   if (!body) return null;
+  const freshId = `${partId}-${crypto.randomUUID().slice(0, 8)}`;
 
   return {
-    id: partId,
+    id: freshId,
     order: input.order,
     kind: input.kind,
     label: registryPart.label,
     source: {
       type: "template_section",
-      sectionId: partId,
+      sectionId: freshId,
       section: {
-        partId,
+        partId: freshId,
         ...(body as Record<string, unknown>),
       },
     },

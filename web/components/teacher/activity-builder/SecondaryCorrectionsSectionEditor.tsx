@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseSecondaryCorrectionsSection,
+  parseSecondaryCorrectionsAuthoringSection,
   secondaryCorrectionsSectionValidationIssues,
   type SecondaryCorrectionsSection,
 } from "@/lib/homework-templates/secondary-homework-one";
@@ -24,7 +24,7 @@ function emptyQuestion(): SecondaryCorrectionsSection["questions"][number] {
 }
 
 export function SecondaryCorrectionsSectionEditor({ section, onChange }: Props) {
-  const parsed = parseSecondaryCorrectionsSection(section);
+  const parsed = parseSecondaryCorrectionsAuthoringSection(section);
   const issues = secondaryCorrectionsSectionValidationIssues(section);
   const [questionIndex, setQuestionIndex] = useAuthoringItemIndex(
     parsed?.questions.length ?? 0,
@@ -122,6 +122,12 @@ export function SecondaryCorrectionsSectionEditor({ section, onChange }: Props) 
           </div>
         ) : null}
       </AuthoringItemPager>
+
+      {issues.length > 0 ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-800">
+          Keep editing — {issues[0]}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -25,7 +25,6 @@ import {
   ACTIVITY_TRACK_PART_CATALOG,
   createEmptyPart,
   gradedPartKindsForOrigin,
-  gradedSecondarySlotTaken,
   isPartKindAllowedForMode,
   loadActivityTrackDraft,
   partHasHomeworkContent,
@@ -335,45 +334,34 @@ export function ActivityTrackCompilerWorkspace({
   // Practice = full LTC host (live preview, publish, assign).
   if (doc.mode === "practice" && doc.practiceComposition) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <TrackCoverImageEditor
-          value={doc.coverImageUrl ?? ""}
-          title={doc.title}
-          onChange={(coverImageUrl) => persistDoc({ ...doc, coverImageUrl: coverImageUrl || null })}
-        />
-        <LearningTrackCompilerWorkspace
-          chrome="embedded"
-          classes={classes}
-          classLoadError={classLoadError}
-          initialComposition={doc.practiceComposition}
-          initialLibraryId={doc.libraryId}
-          initialBankActivityId={doc.bankActivityId}
-          coverImageUrl={doc.coverImageUrl ?? null}
-          onDraftSync={handlePracticeDraftSync}
-        />
-      </div>
+      <LearningTrackCompilerWorkspace
+        chrome="embedded"
+        classes={classes}
+        classLoadError={classLoadError}
+        initialComposition={doc.practiceComposition}
+        initialLibraryId={doc.libraryId}
+        initialBankActivityId={doc.bankActivityId}
+        coverImageUrl={doc.coverImageUrl ?? null}
+        onCoverImageChange={(coverImageUrl) =>
+          persistDoc({ ...doc, coverImageUrl: coverImageUrl || null })
+        }
+        onDraftSync={handlePracticeDraftSync}
+      />
     );
   }
 
   // Assessment = Phase 0 shell (seeded Primary A2 definition; editors later).
   if (doc.mode === "assessment") {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <TrackCoverImageEditor
-          value={doc.coverImageUrl ?? ""}
-          title={doc.title}
-          onChange={(coverImageUrl) => persistDoc({ ...doc, coverImageUrl: coverImageUrl || null })}
-        />
-        <AssessmentTrackCompilerShell
-          document={doc}
-          classes={classes}
-          classLoadError={classLoadError}
-          onDocumentChange={(next) => {
-            setDoc(next);
-            docRef.current = next;
-          }}
-        />
-      </div>
+      <AssessmentTrackCompilerShell
+        document={doc}
+        classes={classes}
+        classLoadError={classLoadError}
+        onDocumentChange={(next) => {
+          setDoc(next);
+          docRef.current = next;
+        }}
+      />
     );
   }
 
@@ -542,17 +530,39 @@ export function ActivityTrackCompilerWorkspace({
   const duplicateHomeworkPart = (partId: string) => {
     const index = doc.parts.findIndex((part) => part.id === partId);
     const original = index >= 0 ? doc.parts[index] : null;
-    if (!original || original.source.type !== "homework_part") return;
+    if (!original) return;
     const nextId = crypto.randomUUID();
-    const clonedContent = structuredClone(original.source.part);
-    clonedContent.id = nextId;
-    clonedContent.title = `${clonedContent.title} copy`;
-    const clone = {
-      ...original,
-      id: nextId,
-      label: clonedContent.title,
-      source: { type: "homework_part" as const, part: clonedContent },
-    };
+    const clone = (() => {
+      if (original.source.type === "homework_part") {
+        const clonedContent = structuredClone(original.source.part);
+        clonedContent.id = nextId;
+        clonedContent.title = `${clonedContent.title} copy`;
+        return {
+          ...original,
+          id: nextId,
+          label: clonedContent.title,
+          source: { type: "homework_part" as const, part: clonedContent },
+        };
+      }
+      if (original.source.type === "template_section") {
+        const sectionId = `${original.source.sectionId}-${nextId.slice(0, 8)}`;
+        const section = structuredClone(original.source.section);
+        section.id = sectionId;
+        section.partId = sectionId;
+        return {
+          ...original,
+          id: sectionId,
+          label: `${original.label} copy`,
+          source: {
+            type: "template_section" as const,
+            sectionId,
+            section,
+          },
+        };
+      }
+      return null;
+    })();
+    if (!clone) return;
     const next = [...doc.parts];
     next.splice(index + 1, 0, clone);
     patchDoc((prev) => ({ ...prev, parts: renumberParts(next) }));
@@ -561,11 +571,6 @@ export function ActivityTrackCompilerWorkspace({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-stone-100">
-      <TrackCoverImageEditor
-        value={doc.coverImageUrl ?? ""}
-        title={doc.title}
-        onChange={(coverImageUrl) => patchDoc((current) => ({ ...current, coverImageUrl: coverImageUrl || null }))}
-      />
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Link
@@ -769,6 +774,19 @@ export function ActivityTrackCompilerWorkspace({
             />
           </label>
 
+          <div className="border-t border-stone-200 pt-4">
+            <TrackCoverImageEditor
+              value={doc.coverImageUrl ?? ""}
+              title={doc.title}
+              onChange={(coverImageUrl) =>
+                patchDoc((current) => ({
+                  ...current,
+                  coverImageUrl: coverImageUrl || null,
+                }))
+              }
+            />
+          </div>
+
           <button
             type="button"
             onClick={() => setSelection({ type: "track" })}
@@ -822,13 +840,9 @@ export function ActivityTrackCompilerWorkspace({
                         )
                       : ACTIVITY_TRACK_PART_CATALOG
                     ).map((entry) => {
-                      const slotTaken =
-                        doc.mode === "graded" &&
-                        doc.gradedOrigin?.level === "secondary" &&
-                        gradedSecondarySlotTaken(doc.parts, entry.kind);
                       const allowed =
                         doc.mode === "graded"
-                          ? !slotTaken
+                          ? true
                           : isPartKindAllowedForMode(entry.kind, doc.mode);
                       return (
                         <button
@@ -836,11 +850,9 @@ export function ActivityTrackCompilerWorkspace({
                           type="button"
                           disabled={!allowed}
                           title={
-                            slotTaken
-                              ? "This Secondary part is already on the track"
-                              : allowed
-                                ? entry.description
-                                : "Available in Graded homework mode only"
+                            allowed
+                              ? entry.description
+                              : "Available in Graded homework mode only"
                           }
                           onClick={() => addPart(entry.kind)}
                           className={`mb-1 w-full rounded-lg px-2.5 py-2 text-left last:mb-0 ${
@@ -858,7 +870,7 @@ export function ActivityTrackCompilerWorkspace({
                             ) : null}
                           </p>
                           <p className="text-[11px] font-semibold text-stone-500">
-                            {slotTaken ? "Already on this track" : entry.description}
+                            {entry.description}
                           </p>
                         </button>
                       );
@@ -1152,7 +1164,8 @@ export function ActivityTrackCompilerWorkspace({
                   <ArrowDown className="h-3.5 w-3.5" />
                   Down
                 </button>
-                {selectedPart.source.type === "homework_part" ? (
+                {selectedPart.source.type === "homework_part" ||
+                selectedPart.source.type === "template_section" ? (
                   <button
                     type="button"
                     onClick={() => duplicateHomeworkPart(selectedPart.id)}

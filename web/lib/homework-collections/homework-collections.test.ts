@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createHomeworkCollectionPart,
+  homeworkCollectionPartValidationIssues,
   parseHomeworkCollectionDocument,
   scoreHomeworkCollectionAttempt,
   homeworkCollectionAttemptTotals,
@@ -55,5 +56,63 @@ describe("homework collections", () => {
   it("rejects duplicate part ids", () => {
     const part = createHomeworkCollectionPart("free_response", "same");
     expect(parseHomeworkCollectionDocument({ version: 1, parts: [part, part] })).toBeNull();
+  });
+
+  it("keeps a separate expansion prompt without changing the correct sentence", () => {
+    const sentence = createHomeworkCollectionPart(
+      "sentence_scramble",
+      "expanded-sentence",
+    );
+    if (sentence.kind !== "sentence_scramble") {
+      throw new Error("Expected sentence scramble");
+    }
+    sentence.items[0] = {
+      ...sentence.items[0]!,
+      promptMode: "additional_prompt",
+      prompt: "Expand this idea: The cat sleeps.",
+      sentence: "The tired cat sleeps peacefully on the sofa.",
+    };
+
+    const parsed = parseHomeworkCollectionDocument({
+      version: 1,
+      parts: [sentence],
+    });
+    const parsedPart = parsed?.parts[0];
+    expect(parsedPart?.kind).toBe("sentence_scramble");
+    if (parsedPart?.kind !== "sentence_scramble") return;
+    expect(parsedPart.items[0]).toMatchObject({
+      promptMode: "additional_prompt",
+      prompt: "Expand this idea: The cat sleeps.",
+      sentence: "The tired cat sleeps peacefully on the sofa.",
+    });
+  });
+
+  it("reports blank required content for every collection activity without throwing", () => {
+    const multipleChoice = createHomeworkCollectionPart("multiple_choice", "mc-blank");
+    const letters = createHomeworkCollectionPart("letter_mixup", "letters-blank");
+    const matching = createHomeworkCollectionPart("line_match", "match-blank");
+    const listening = createHomeworkCollectionPart("listen_and_choose", "listen-blank");
+    const sentence = createHomeworkCollectionPart("sentence_scramble", "sentence-blank");
+    const response = createHomeworkCollectionPart("free_response", "response-blank");
+
+    if (multipleChoice.kind === "multiple_choice") {
+      multipleChoice.questions[0]!.options[0]!.text = "";
+    }
+    if (letters.kind === "letter_mixup") letters.items[0]!.targetWord = "";
+    if (matching.kind === "line_match") matching.pairs[0]!.right = "";
+    if (listening.kind === "listen_and_choose") listening.items[0]!.speakText = "";
+    if (sentence.kind === "sentence_scramble") sentence.items[0]!.sentence = "";
+    if (response.kind === "free_response") response.prompts[0]!.prompt = "";
+
+    for (const part of [
+      multipleChoice,
+      letters,
+      matching,
+      listening,
+      sentence,
+      response,
+    ]) {
+      expect(homeworkCollectionPartValidationIssues(part).length).toBeGreaterThan(0);
+    }
   });
 });

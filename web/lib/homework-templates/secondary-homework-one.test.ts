@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   normalizeSecondaryAnswer,
+  parseSecondaryCorrectionsAuthoringSection,
+  parseSecondaryCorrectionsSection,
+  parseSecondaryDialogueAuthoringSection,
+  parseSecondaryQuestionsAuthoringSection,
+  parseSecondarySequenceAuthoringSection,
+  parseSecondarySpeakingAuthoringSection,
   scoreSecondaryAnswers,
   scoreSequence,
   SECONDARY_HOMEWORK_ONE,
@@ -43,5 +49,41 @@ describe("Secondary Homework One", () => {
   it("accepts contracted and full negative forms", () => {
     const line = SECONDARY_HOMEWORK_ONE.dialogue.lines[7];
     expect(scoreSecondaryAnswers({ [line.id]: "was not" }, [line])).toBe(1);
+  });
+
+  it("keeps every Secondary editor usable while required text is blank", () => {
+    const sequence = structuredClone(SECONDARY_HOMEWORK_ONE.reading);
+    sequence.events[0]!.text = "";
+    expect(parseSecondarySequenceAuthoringSection(sequence)).not.toBeNull();
+
+    const corrections = structuredClone(SECONDARY_HOMEWORK_ONE.corrections);
+    corrections.questions[0]!.answer = "";
+    expect(parseSecondaryCorrectionsAuthoringSection(corrections)).not.toBeNull();
+    expect(parseSecondaryCorrectionsSection(corrections)).toBeNull();
+
+    const correctionsWithNull = structuredClone(
+      SECONDARY_HOMEWORK_ONE.corrections,
+    ) as unknown as Record<string, unknown>;
+    const correctionQuestions = correctionsWithNull.questions as Array<
+      Record<string, unknown>
+    >;
+    correctionQuestions[0]!.answer = null;
+    expect(
+      parseSecondaryCorrectionsAuthoringSection(correctionsWithNull)?.questions[0]
+        ?.answer,
+    ).toBe("");
+
+    const dialogue = structuredClone(SECONDARY_HOMEWORK_ONE.dialogue);
+    dialogue.lines[0]!.answer = "";
+    expect(parseSecondaryDialogueAuthoringSection(dialogue)).not.toBeNull();
+
+    const questions = structuredClone(SECONDARY_HOMEWORK_ONE.questions);
+    questions.items[0]!.choices = [];
+    questions.items[0]!.answer = "";
+    expect(parseSecondaryQuestionsAuthoringSection(questions)).not.toBeNull();
+
+    const speaking = structuredClone(SECONDARY_HOMEWORK_ONE.speaking);
+    speaking.planningPrompts[0] = "";
+    expect(parseSecondarySpeakingAuthoringSection(speaking)).not.toBeNull();
   });
 });

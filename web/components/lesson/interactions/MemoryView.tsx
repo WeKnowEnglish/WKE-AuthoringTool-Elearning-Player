@@ -18,8 +18,10 @@ type Parsed = Extract<ScreenPayload, { type: "interaction"; subtype: "memory" }>
 type Card = {
   id: string;
   pairId: string;
-  kind: "word" | "match";
+  kind: "text" | "picture";
   word: string;
+  text?: string;
+  textKind?: "word" | "definition" | "example";
   clue?: string;
   imageUrl?: string;
   imageFit: "cover" | "contain";
@@ -39,8 +41,24 @@ export function MemoryView({
   const stageFooter = isStageFooterNav(controlsPlacement);
   const cards = useMemo(() => deterministicShuffle(
     parsed.pairs.flatMap((pair): Card[] => [
-      { id: `${pair.id}:word`, pairId: pair.id, kind: "word", word: pair.word, imageFit: pair.image_fit },
-      { id: `${pair.id}:match`, pairId: pair.id, kind: "match", word: pair.word, clue: pair.clue, imageUrl: pair.image_url, imageFit: pair.image_fit },
+      {
+        id: `${pair.id}:text`,
+        pairId: pair.id,
+        kind: "text",
+        word: pair.word,
+        text: pair.text ?? pair.word,
+        textKind: pair.text_kind,
+        imageFit: pair.image_fit,
+      },
+      {
+        id: `${pair.id}:picture`,
+        pairId: pair.id,
+        kind: "picture",
+        word: pair.word,
+        clue: pair.clue,
+        imageUrl: pair.image_url,
+        imageFit: pair.image_fit,
+      },
     ]),
     parsed.quiz_group_id ?? parsed.pairs.map((pair) => pair.id).join("|"),
   ), [parsed.pairs, parsed.quiz_group_id]);
@@ -104,7 +122,7 @@ export function MemoryView({
                   type="button"
                   onClick={() => flip(card)}
                   disabled={passed || checking || matched.has(card.pairId)}
-                  aria-label={visible ? (card.kind === "word" ? card.word : card.clue ?? `Picture for ${card.word}`) : "Hidden memory card"}
+                  aria-label={visible ? (card.kind === "text" ? card.text ?? card.word : `Picture for ${card.word}`) : "Hidden memory card"}
                   className={clsx(
                     "relative aspect-[4/5] min-h-0 overflow-hidden rounded-xl border-4 border-kid-ink bg-kid-cta p-1.5 text-kid-ink shadow-md transition hover:-translate-y-0.5 disabled:hover:translate-y-0",
                     visible && "bg-white",
@@ -112,8 +130,17 @@ export function MemoryView({
                   )}
                 >
                   {visible ? (
-                    card.kind === "word" ? (
-                      <span className="flex h-full items-center justify-center break-words text-center text-[clamp(0.7rem,3cqw,1.5rem)] font-black">{card.word}</span>
+                    card.kind === "text" ? (
+                      <span className="flex h-full flex-col items-center justify-center gap-1 break-words text-center">
+                        {card.textKind !== "word" ? (
+                          <span className="text-[clamp(0.42rem,1.4cqw,0.7rem)] font-black uppercase tracking-wide text-kid-ink/45">
+                            {card.textKind === "definition" ? "Definition" : "Example"}
+                          </span>
+                        ) : null}
+                        <span className="text-[clamp(0.58rem,2.5cqw,1.35rem)] font-black">
+                          {card.text ?? card.word}
+                        </span>
+                      </span>
                     ) : card.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- activity media can be remote or a data URL
                       <img src={card.imageUrl} alt={card.word} className={clsx("h-full w-full rounded-lg", card.imageFit === "cover" ? "object-cover" : "object-contain")} />

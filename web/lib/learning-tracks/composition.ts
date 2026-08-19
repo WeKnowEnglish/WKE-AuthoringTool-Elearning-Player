@@ -19,6 +19,8 @@ import {
   type LearningTrackTrueFalseSettings,
   type LearningTrackSentenceScrambleSettings,
   type LearningTrackFillBlanksSettings,
+  type LearningTrackMemorySettings,
+  type LearningTrackCrosswordSettings,
   type LearningTrackPlannedBridge,
   type LearningTrackRecipe,
   type LearningTrackVocabCompileFormat,
@@ -100,6 +102,14 @@ export function defaultFillBlanksSettings(): LearningTrackFillBlanksSettings {
     bodyText: DEFAULT_FILL_BLANKS_BODY,
     autoAdvanceOnPass: true,
   };
+}
+
+export function defaultMemorySettings(): LearningTrackMemorySettings {
+  return { textMode: "word" };
+}
+
+export function defaultCrosswordSettings(): LearningTrackCrosswordSettings {
+  return { clueMode: "definition_or_example" };
 }
 
 export function clampMcOptionCount(value: number): number {
@@ -248,6 +258,12 @@ export function createBeatInstance(
   const fillBlanks =
     overrides?.presentation?.fillBlanks ??
     (kind === "fill_blanks" ? defaultFillBlanksSettings() : undefined);
+  const memory =
+    overrides?.presentation?.memory ??
+    (kind === "memory" ? defaultMemorySettings() : undefined);
+  const crossword =
+    overrides?.presentation?.crossword ??
+    (kind === "crossword" ? defaultCrosswordSettings() : undefined);
   return {
     id: overrides?.id ?? newBeatId(kind),
     kind,
@@ -269,6 +285,8 @@ export function createBeatInstance(
       ...(trueFalse ? { trueFalse } : {}),
       ...(sentenceScramble ? { sentenceScramble } : {}),
       ...(fillBlanks ? { fillBlanks } : {}),
+      ...(memory ? { memory } : {}),
+      ...(crossword ? { crossword } : {}),
     },
   };
 }

@@ -32,6 +32,8 @@ import {
   defaultTrueFalseSettings,
   defaultSentenceScrambleSettings,
   defaultFillBlanksSettings,
+  defaultMemorySettings,
+  defaultCrosswordSettings,
   vocabFormatForKind,
 } from "@/lib/learning-tracks/composition";
 import { createHobbiesVocabularyListDocument } from "@/lib/learning-tracks/create-hobbies-vocabulary-list";
@@ -50,6 +52,8 @@ import type {
   LearningTrackTrueFalseSettings,
   LearningTrackSentenceScrambleSettings,
   LearningTrackFillBlanksSettings,
+  LearningTrackMemorySettings,
+  LearningTrackCrosswordSettings,
   LearningTrackScreenPayload,
   LearningTrackVocabCompileFormat,
 } from "@/lib/learning-tracks/composition-types";
@@ -263,6 +267,34 @@ function fillBlanksSettingsForBeat(
   };
 }
 
+function memorySettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackMemorySettings {
+  const defaults = defaultMemorySettings();
+  const saved = beat.presentation?.memory;
+  if (!saved) return defaults;
+  return {
+    textMode:
+      saved.textMode === "definition" || saved.textMode === "example"
+        ? saved.textMode
+        : "word",
+  };
+}
+
+function crosswordSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackCrosswordSettings {
+  const defaults = defaultCrosswordSettings();
+  const saved = beat.presentation?.crossword;
+  if (!saved) return defaults;
+  return {
+    clueMode:
+      saved.clueMode === "definition" || saved.clueMode === "example"
+        ? saved.clueMode
+        : "definition_or_example",
+  };
+}
+
 function listenAndChooseSettingsForBeat(
   beat: LearningTrackBeatInstance,
 ): LearningTrackListenAndChooseSettings {
@@ -418,6 +450,10 @@ function exportVocabCompileScreens(
   const listenAndChoose = beat
     ? listenAndChooseSettingsForBeat(beat)
     : defaultListenAndChooseSettings();
+  const memory = beat ? memorySettingsForBeat(beat) : defaultMemorySettings();
+  const crossword = beat
+    ? crosswordSettingsForBeat(beat)
+    : defaultCrosswordSettings();
 
   const selectedEntryIds =
     beat?.source.type === "vocab_compile" &&
@@ -440,6 +476,8 @@ function exportVocabCompileScreens(
     flashcardsFrontFaces: flashcards.frontFaces,
     flashcardsBackFaces: flashcards.backFaces,
     flashcardsShuffleCards: flashcards.shuffleCards,
+    memoryTextMode: memory.textMode,
+    crosswordClueMode: crossword.clueMode,
   });
   const result = compiled.results[0];
   if (!result) throw new Error(`Could not compile ${format} from ${label}.`);

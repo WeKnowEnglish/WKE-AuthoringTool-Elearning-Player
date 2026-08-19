@@ -234,6 +234,7 @@ function blankTrueFalseItem() {
 function blankSentenceItem() {
   return {
     id: newQuizId("ss"),
+    promptMode: "scramble_only" as const,
     correctOrder: ["", ""],
   };
 }
@@ -251,7 +252,10 @@ export function blankWordGameItem(index = 1): GamesWordGameItem {
   return {
     id: newQuizId("word"),
     word: index === 1 ? "apple" : "banana",
-    clue: index === 1 ? "A round fruit." : "A long yellow fruit.",
+    definition: index === 1 ? "A round fruit." : "A long yellow fruit.",
+    example: index === 1 ? "I eat an apple." : "The banana is yellow.",
+    imageUrl: placeholderImageUrl(`Picture ${index}`),
+    imageFit: "contain",
   };
 }
 
@@ -263,7 +267,7 @@ function createBlankWordGameSession(format: GamesWordGameFormat): QuizSession {
       ? "Find every word in the grid."
       : format === "crossword"
         ? "Use the clues to complete the crossword."
-        : "Match each word to its picture or meaning.";
+        : "Match each word to its picture.";
   return {
     format,
     document: {
@@ -285,6 +289,8 @@ function createBlankWordGameSession(format: GamesWordGameFormat): QuizSession {
         gridSize: 12,
         allowBackwards: false,
         memoryUsePictures: true,
+        memoryTextMode: "word",
+        crosswordClueMode: "definition_or_example",
         items: [blankWordGameItem(1), blankWordGameItem(2)],
       },
     },
@@ -960,7 +966,14 @@ export function appendBlankItem(session: QuizSession, masterPrompt?: string): {
     const item: GamesWordGameItem = {
       id: newQuizId("word"),
       word: "newword",
-      clue: "Add a clue or definition.",
+      definition: "Add a definition.",
+      example: "Add an example sentence.",
+      ...(next.format === "memory"
+        ? {
+            imageUrl: placeholderImageUrl("Picture"),
+            imageFit: "contain" as const,
+          }
+        : {}),
     };
     next.document.interaction.items = [...next.document.interaction.items, item];
     return { session: next, selectedItemId: item.id };

@@ -45,6 +45,7 @@ import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 import { createPracticeTrackFromQuizCards } from "@/lib/activity-builder/games/quiz-builder-practice-track";
 import { persistActivityTrackDraft } from "@/lib/activity-tracks";
+import { tokenizeSentenceForScramble } from "@/lib/games-sentence-scramble/scramble-tiles";
 import {
   QUIZ_FORMATS,
   appendBlankItem,
@@ -112,7 +113,7 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
             : format === "line_match"
               ? "Draw a line from each word to its picture."
               : format === "sentence_scramble"
-                ? "Put the words in order."
+                ? "This is an example sentence."
                 : format === "fill_blanks"
                   ? "Choose the missing word."
                   : format === "true_false"
@@ -131,6 +132,8 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
     flashcardsShuffleCards: true,
     flashcardsFrontFaces: ["picture"],
     flashcardsBackFaces: ["word", "example"],
+    memoryTextMode: "word",
+    crosswordClueMode: "definition_or_example",
   };
 }
 
@@ -261,7 +264,9 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
       setMasterPrompt(next.document.interaction.bodyTextDefault);
     }
     if (next.format === "sentence_scramble") {
-      setMasterPrompt(next.document.interaction.bodyTextDefault);
+      setMasterPrompt(
+        next.document.interaction.items[0]?.correctOrder.join(" ") ?? "",
+      );
     }
     if (next.format === "fill_blanks") {
       setMasterPrompt(next.document.interaction.bodyTextDefault);
@@ -399,6 +404,25 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
                 backFaces: [...card.flashcardsBackFaces],
               }));
           }
+          if (blank.format === "memory") {
+            blank.document.interaction.memoryTextMode = card.memoryTextMode;
+          }
+          if (blank.format === "crossword") {
+            blank.document.interaction.crosswordClueMode = card.crosswordClueMode;
+          }
+          if (blank.format === "sentence_scramble") {
+            const authoredTokens = tokenizeSentenceForScramble(card.masterPrompt);
+            blank.document.interaction.items = [
+              {
+                ...blank.document.interaction.items[0]!,
+                promptMode: "scramble_only",
+                correctOrder:
+                  authoredTokens.length >= 2
+                    ? authoredTokens
+                    : ["Example", "sentence."],
+              },
+            ];
+          }
           generated.push({ session: blank, source: { via: "quiz_builder" } });
           continue;
         }
@@ -420,9 +444,12 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
             card.masterPrompt || "Unscramble the letters to spell the word.",
           letterShuffleLetters: card.letterShuffleLetters,
           letterCaseSensitive: card.letterCaseSensitive,
+          wordGamePrompt: card.masterPrompt || undefined,
           flashcardsShuffleCards: card.flashcardsShuffleCards,
           flashcardsFrontFaces: card.flashcardsFrontFaces,
           flashcardsBackFaces: card.flashcardsBackFaces,
+          memoryTextMode: card.memoryTextMode,
+          crosswordClueMode: card.crosswordClueMode,
         });
         allSkipped.push(...compiled.skipped);
         const result = compiled.results[0];
@@ -456,9 +483,12 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
                 letterPrompt: card.masterPrompt || undefined,
                 letterShuffleLetters: card.letterShuffleLetters,
                 letterCaseSensitive: card.letterCaseSensitive,
+                wordGamePrompt: card.masterPrompt || undefined,
                 flashcardsShuffleCards: card.flashcardsShuffleCards,
                 flashcardsFrontFaces: card.flashcardsFrontFaces,
                 flashcardsBackFaces: card.flashcardsBackFaces,
+                memoryTextMode: card.memoryTextMode,
+                crosswordClueMode: card.crosswordClueMode,
               },
             }),
           },

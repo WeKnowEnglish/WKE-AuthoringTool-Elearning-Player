@@ -24,6 +24,8 @@ function card(
     flashcardsShuffleCards: true,
     flashcardsFrontFaces: ["picture"],
     flashcardsBackFaces: ["word", "example"],
+    memoryTextMode: "word",
+    crosswordClueMode: "definition_or_example",
   };
 }
 
@@ -74,6 +76,26 @@ describe("quiz-builder-practice-track", () => {
     expect(track.mode).toBe("practice");
     expect(track.practiceComposition?.beats).toHaveLength(2);
     expect(track.title).toContain("Practice");
+  });
+
+  it("carries Memory and Crossword settings into practice beats", () => {
+    const memory = {
+      ...card("memory", "list-a"),
+      memoryTextMode: "example" as const,
+    };
+    const crossword = {
+      ...card("crossword", "list-a"),
+      crosswordClueMode: "definition" as const,
+    };
+    const composition = compositionFromQuizBuilderCards({
+      trackId: "track-games",
+      title: "Word games",
+      cards: [memory, crossword],
+    });
+    expect(composition.beats[0]?.presentation?.memory?.textMode).toBe("example");
+    expect(composition.beats[1]?.presentation?.crossword?.clueMode).toBe(
+      "definition",
+    );
   });
 
   it("rejects blank cards for mixed tracks", () => {

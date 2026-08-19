@@ -149,6 +149,27 @@ export type SecondarySpeakingSection = {
   teacherScoreTotal: number;
 };
 
+export type SecondaryHomeworkTemplatePartId =
+  | "community-sequence"
+  | "past-corrections"
+  | "irregular-dialogue"
+  | "past-question-choice"
+  | "community-speaking";
+
+/** A uniquely identified Secondary activity placed on a graded track timeline. */
+export type SecondaryHomeworkPartInstance = {
+  id: string;
+  templatePartId: SecondaryHomeworkTemplatePartId;
+  label: string;
+  order: number;
+  content:
+    | SecondaryReadingSection
+    | SecondaryCorrectionsSection
+    | SecondaryDialogueSection
+    | SecondaryQuestionsSection
+    | SecondarySpeakingSection;
+};
+
 function zodIssues(
   parsed:
     | { success: true }
@@ -271,10 +292,114 @@ const secondarySpeakingSectionSchema = z.object({
   teacherScoreTotal: z.number().int().min(1).max(20),
 });
 
+/*
+ * Authoring schemas deliberately validate shape, not completeness. A teacher must
+ * be able to clear a field before typing its replacement without the editor
+ * becoming unusable. The strict schemas above remain the source of truth for
+ * assignment readiness.
+ */
+const authoringString = z.preprocess(
+  (value) => (value === null || value === undefined ? "" : value),
+  z.string(),
+);
+const authoringOptionalString = z.preprocess(
+  (value) => (value === null || value === undefined ? undefined : value),
+  z.string().optional(),
+);
+const authoringNumber = z.preprocess(
+  (value) =>
+    typeof value === "number" && Number.isFinite(value) ? value : 0,
+  z.number(),
+);
+const arrayOrEmpty = (value: unknown) => (Array.isArray(value) ? value : []);
+
+const secondarySequenceAuthoringSchema = z.object({
+  partId: authoringOptionalString,
+  title: authoringString,
+  instructions: authoringString,
+  paragraphs: z.preprocess(arrayOrEmpty, z.array(authoringString)),
+  events: z.preprocess(
+    arrayOrEmpty,
+    z.array(z.object({ id: authoringString, text: authoringString })),
+  ),
+  correctOrder: z.preprocess(arrayOrEmpty, z.array(authoringString)),
+});
+
+const secondaryCorrectionsAuthoringSchema = z.object({
+  partId: authoringOptionalString,
+  instructions: authoringString,
+  questions: z.preprocess(
+    arrayOrEmpty,
+    z.array(
+      z.object({
+        id: authoringString,
+        sentence: authoringString,
+        answer: authoringString,
+      }),
+    ),
+  ),
+});
+
+const secondaryDialogueAuthoringSchema = z.object({
+  partId: authoringOptionalString,
+  instructions: authoringString,
+  lines: z.preprocess(
+    arrayOrEmpty,
+    z.array(
+      z.object({
+        speaker: authoringString,
+        before: authoringString,
+        after: authoringString,
+        clue: authoringString,
+        id: authoringString,
+        answer: authoringString,
+        accepted: z.preprocess(
+          (value) =>
+            value === null || value === undefined ? undefined : value,
+          z.array(authoringString).optional(),
+        ),
+      }),
+    ),
+  ),
+});
+
+const secondaryQuestionsAuthoringSchema = z.object({
+  partId: authoringOptionalString,
+  instructions: authoringString,
+  items: z.preprocess(
+    arrayOrEmpty,
+    z.array(
+      z.object({
+        id: authoringString,
+        before: authoringString,
+        choices: z.preprocess(arrayOrEmpty, z.array(authoringString)),
+        after: authoringString,
+        answer: authoringString,
+      }),
+    ),
+  ),
+});
+
+const secondarySpeakingAuthoringSchema = z.object({
+  partId: authoringOptionalString,
+  instructions: authoringString,
+  planningPrompts: z.preprocess(arrayOrEmpty, z.array(authoringString)),
+  responseId: authoringString,
+  maxDurationSeconds: authoringNumber,
+  teacherScoreTotal: authoringNumber,
+});
+
 export function parseSecondarySequenceSection(
   raw: unknown,
 ): SecondaryReadingSection | null {
   const parsed = secondarySequenceSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function parseSecondarySequenceAuthoringSection(
+  raw: unknown,
+): SecondaryReadingSection | null {
+  const parsed = secondarySequenceAuthoringSchema.safeParse(raw);
   return parsed.success ? parsed.data : null;
 }
 
@@ -289,6 +414,13 @@ export function parseSecondaryCorrectionsSection(
   return parsed.success ? parsed.data : null;
 }
 
+export function parseSecondaryCorrectionsAuthoringSection(
+  raw: unknown,
+): SecondaryCorrectionsSection | null {
+  const parsed = secondaryCorrectionsAuthoringSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
 export function secondaryCorrectionsSectionValidationIssues(raw: unknown): string[] {
   return zodIssues(secondaryCorrectionsSectionSchema.safeParse(raw));
 }
@@ -297,6 +429,13 @@ export function parseSecondaryDialogueSection(
   raw: unknown,
 ): SecondaryDialogueSection | null {
   const parsed = secondaryDialogueSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function parseSecondaryDialogueAuthoringSection(
+  raw: unknown,
+): SecondaryDialogueSection | null {
+  const parsed = secondaryDialogueAuthoringSchema.safeParse(raw);
   return parsed.success ? parsed.data : null;
 }
 
@@ -311,6 +450,13 @@ export function parseSecondaryQuestionsSection(
   return parsed.success ? parsed.data : null;
 }
 
+export function parseSecondaryQuestionsAuthoringSection(
+  raw: unknown,
+): SecondaryQuestionsSection | null {
+  const parsed = secondaryQuestionsAuthoringSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
 export function secondaryQuestionsSectionValidationIssues(raw: unknown): string[] {
   return zodIssues(secondaryQuestionsSectionSchema.safeParse(raw));
 }
@@ -319,6 +465,13 @@ export function parseSecondarySpeakingSection(
   raw: unknown,
 ): SecondarySpeakingSection | null {
   const parsed = secondarySpeakingSectionSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+export function parseSecondarySpeakingAuthoringSection(
+  raw: unknown,
+): SecondarySpeakingSection | null {
+  const parsed = secondarySpeakingAuthoringSchema.safeParse(raw);
   return parsed.success ? parsed.data : null;
 }
 

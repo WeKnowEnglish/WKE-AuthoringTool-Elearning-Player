@@ -24,7 +24,6 @@ export {
 export { seedPracticeComposition } from "@/lib/activity-tracks/seed-practice";
 export {
   gradedPartKindsForOrigin,
-  gradedSecondarySlotTaken,
   resetGradedPartsFromOrigin,
   seedBlankGradedCollection,
   seedGradedFromTemplate,

@@ -364,6 +364,9 @@ export function SentenceScrambleEditor({
   }
 
   const sentenceText = item.correctOrder.join(" ");
+  const promptMode =
+    item.promptMode ??
+    (item.bodyText?.trim() ? "additional_prompt" : "scramble_only");
 
   const patchItem = (patch: Partial<typeof item>) => {
     onPatch({
@@ -391,7 +394,7 @@ export function SentenceScrambleEditor({
         </button>
       </div>
       <label className="block text-xs font-medium text-stone-600">
-        Correct sentence (space-separated tiles)
+        Correct sentence
         <textarea
           className={inputClass}
           rows={2}
@@ -403,11 +406,66 @@ export function SentenceScrambleEditor({
               .map((token) => token.trim())
               .filter(Boolean);
             patchItem({
-              correctOrder: tokens.length >= 2 ? tokens : ["", ""],
+              correctOrder: tokens.length ? tokens : [""],
             });
           }}
         />
+        <span className="mt-1 block text-[11px] leading-snug text-stone-500">
+          This is the answer that will be broken into scrambled tiles.
+        </span>
       </label>
+      <fieldset>
+        <legend className="text-xs font-medium text-stone-600">Student prompt</legend>
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() =>
+              patchItem({ promptMode: "scramble_only", bodyText: undefined })
+            }
+            className={`rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+              promptMode === "scramble_only"
+                ? "border-amber-500 bg-amber-50 text-amber-950"
+                : "border-stone-200 bg-white text-stone-700"
+            }`}
+          >
+            Scramble the sentence
+            <span className="mt-0.5 block font-normal text-stone-500">
+              Show the standard “Put the words in order” instruction.
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              patchItem({
+                promptMode: "additional_prompt",
+                bodyText: item.bodyText ?? "",
+              })
+            }
+            className={`rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+              promptMode === "additional_prompt"
+                ? "border-amber-500 bg-amber-50 text-amber-950"
+                : "border-stone-200 bg-white text-stone-700"
+            }`}
+          >
+            Add an additional prompt
+            <span className="mt-0.5 block font-normal text-stone-500">
+              Cue students to build a fuller or expanded sentence.
+            </span>
+          </button>
+        </div>
+      </fieldset>
+      {promptMode === "additional_prompt" ? (
+        <label className="block text-xs font-medium text-stone-600">
+          Additional prompt
+          <textarea
+            className={inputClass}
+            rows={2}
+            value={item.bodyText ?? ""}
+            placeholder="Example: Expand this idea: She likes music."
+            onChange={(event) => patchItem({ bodyText: event.target.value })}
+          />
+        </label>
+      ) : null}
       <MediaUrlControls
         label="Picture"
         value={item.imageUrl ?? ""}
@@ -533,6 +591,14 @@ export function WordGameEditor({
   const item = document.interaction.items.find((row) => row.id === selectedItemId) ?? null;
   if (!item) return <p className="text-sm text-stone-500">Select a word.</p>;
   const format = document.interaction.format;
+  const crosswordClueMode =
+    document.interaction.crosswordClueMode ?? "definition_or_example";
+  const generatedCrosswordClue =
+    crosswordClueMode === "example"
+      ? item.example || ""
+      : crosswordClueMode === "definition"
+        ? item.definition || ""
+        : item.definition || item.example || "";
   const patchInteraction = (patch: Partial<GamesWordGameAuthoringDocument["interaction"]>) => {
     onPatch({ ...document, interaction: { ...document.interaction, ...patch } });
   };
@@ -568,9 +634,43 @@ export function WordGameEditor({
           </div>
         ) : null}
         {format === "memory" ? (
-          <label className="flex items-center gap-2 text-xs font-medium text-stone-700">
-            <input type="checkbox" checked={document.interaction.memoryUsePictures !== false} onChange={(event) => patchInteraction({ memoryUsePictures: event.target.checked })} />
-            Use pictures when the word list has them
+          <label className="block text-xs font-medium text-stone-600">
+            Text paired with the picture
+            <select
+              className={inputClass}
+              value={document.interaction.memoryTextMode ?? "word"}
+              onChange={(event) =>
+                patchInteraction({
+                  memoryTextMode: event.target.value as NonNullable<
+                    typeof document.interaction.memoryTextMode
+                  >,
+                })
+              }
+            >
+              <option value="word">Word</option>
+              <option value="definition">Definition</option>
+              <option value="example">Example sentence</option>
+            </select>
+          </label>
+        ) : null}
+        {format === "crossword" ? (
+          <label className="block text-xs font-medium text-stone-600">
+            Generated clue source
+            <select
+              className={inputClass}
+              value={crosswordClueMode}
+              onChange={(event) =>
+                patchInteraction({
+                  crosswordClueMode: event.target.value as NonNullable<
+                    typeof document.interaction.crosswordClueMode
+                  >,
+                })
+              }
+            >
+              <option value="definition_or_example">Definition, then example</option>
+              <option value="definition">Definition only</option>
+              <option value="example">Example sentence only</option>
+            </select>
           </label>
         ) : null}
       </section>
@@ -583,14 +683,41 @@ export function WordGameEditor({
           Word
           <input className={inputClass} value={item.word} onChange={(event) => patchItem({ word: event.target.value })} />
         </label>
-        {format !== "wordsearch" ? (
-          <label className="block text-xs font-medium text-stone-600">
-            {format === "crossword" ? "Clue" : "Meaning / matching text"}
-            <textarea className={inputClass} rows={2} value={item.clue ?? ""} onChange={(event) => patchItem({ clue: event.target.value })} />
-          </label>
+        {format === "crossword" ? (
+          <>
+            <label className="block text-xs font-medium text-stone-600">
+              Definition
+              <textarea className={inputClass} rows={2} value={item.definition ?? ""} onChange={(event) => patchItem({ definition: event.target.value })} />
+            </label>
+            <label className="block text-xs font-medium text-stone-600">
+              Example sentence
+              <textarea className={inputClass} rows={2} value={item.example ?? ""} onChange={(event) => patchItem({ example: event.target.value })} />
+            </label>
+            <label className="block text-xs font-medium text-stone-600">
+              Custom clue override (optional)
+              <textarea className={inputClass} rows={2} value={item.clue ?? ""} onChange={(event) => patchItem({ clue: event.target.value || undefined })} placeholder={generatedCrosswordClue || "Generated from the selected clue source"} />
+            </label>
+            {!item.clue && generatedCrosswordClue ? (
+              <p className="rounded-lg bg-stone-50 px-2.5 py-2 text-xs text-stone-600">
+                Student clue: {generatedCrosswordClue}
+              </p>
+            ) : null}
+          </>
         ) : null}
         {format === "memory" ? (
-          <MediaUrlControls label="Matching picture (optional)" value={item.imageUrl ?? ""} onChange={(imageUrl) => patchItem({ imageUrl: imageUrl.trim() || undefined, imageFit: "contain" })} />
+          <>
+            <label className="block text-xs font-medium text-stone-600">
+              Definition
+              <textarea className={inputClass} rows={2} value={item.definition ?? ""} onChange={(event) => patchItem({ definition: event.target.value })} />
+            </label>
+            <label className="block text-xs font-medium text-stone-600">
+              Example sentence
+              <textarea className={inputClass} rows={2} value={item.example ?? ""} onChange={(event) => patchItem({ example: event.target.value })} />
+            </label>
+          </>
+        ) : null}
+        {format === "memory" ? (
+          <MediaUrlControls label="Matching picture (required)" value={item.imageUrl ?? ""} onChange={(imageUrl) => patchItem({ imageUrl: imageUrl.trim() || undefined, imageFit: "contain" })} />
         ) : null}
       </section>
     </div>

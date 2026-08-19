@@ -1,4 +1,6 @@
 import type {
+  GamesCrosswordClueMode,
+  GamesMemoryTextMode,
   GamesWordGameAuthoringDocument,
   GamesWordGameFormat,
   GamesWordGameItem,
@@ -42,6 +44,12 @@ function validateItem(value: unknown, index: number): GamesWordGameItem {
   }
   const item: GamesWordGameItem = { id, word };
   if (typeof value.clue === "string" && value.clue.trim()) item.clue = value.clue.trim();
+  if (typeof value.definition === "string" && value.definition.trim()) {
+    item.definition = value.definition.trim();
+  }
+  if (typeof value.example === "string" && value.example.trim()) {
+    item.example = value.example.trim();
+  }
   if (typeof value.imageUrl === "string" && value.imageUrl.trim()) {
     item.imageUrl = value.imageUrl.trim();
   }
@@ -94,6 +102,16 @@ export function validateGamesWordGameAuthoringDocument(
     words.add(key);
   }
 
+  const memoryTextMode: GamesMemoryTextMode =
+    value.interaction.memoryTextMode === "definition" ||
+    value.interaction.memoryTextMode === "example"
+      ? value.interaction.memoryTextMode
+      : "word";
+  const crosswordClueMode: GamesCrosswordClueMode =
+    value.interaction.crosswordClueMode === "definition" ||
+    value.interaction.crosswordClueMode === "example"
+      ? value.interaction.crosswordClueMode
+      : "definition_or_example";
   const educationalIntent: GamesWordGameAuthoringDocument["educationalIntent"] = {
     objective,
     successCriteria,
@@ -134,8 +152,27 @@ export function validateGamesWordGameAuthoringDocument(
           : 12,
       allowBackwards: value.interaction.allowBackwards === true,
       memoryUsePictures: value.interaction.memoryUsePictures !== false,
+      memoryTextMode,
+      crosswordClueMode,
     },
   };
+}
+
+function crosswordClue(item: GamesWordGameItem, mode: GamesCrosswordClueMode): string {
+  if (item.clue) return item.clue;
+  if (mode === "definition") return item.definition || fallbackClue(item);
+  if (mode === "example") return item.example || fallbackClue(item);
+  return item.definition || item.example || fallbackClue(item);
+}
+
+function fallbackClue(item: GamesWordGameItem): string {
+  return `Vocabulary word: ${letterCount(item.word)} letters`;
+}
+
+function memoryText(item: GamesWordGameItem, mode: GamesMemoryTextMode): string {
+  if (mode === "definition") return item.definition || item.word;
+  if (mode === "example") return item.example || item.word;
+  return item.word;
 }
 
 export function exportGamesWordGameForLessonPlayer(
@@ -161,23 +198,25 @@ export function exportGamesWordGameForLessonPlayer(
       allow_backwards: valid.interaction.allowBackwards === true,
     };
   } else if (format === "crossword") {
+    const clueMode = valid.interaction.crosswordClueMode ?? "definition_or_example";
     screen = {
       ...common,
       entries: items.map((item) => ({
         id: item.id,
         answer: item.word,
-        clue: item.clue || `Vocabulary word: ${item.word.length} letters`,
+        clue: crosswordClue(item, clueMode),
       })),
     };
   } else {
+    const textMode = valid.interaction.memoryTextMode ?? "word";
     screen = {
       ...common,
       pairs: items.map((item) => ({
         id: item.id,
         word: item.word,
-        clue: item.clue,
-        image_url:
-          valid.interaction.memoryUsePictures !== false ? item.imageUrl : undefined,
+        text: memoryText(item, textMode),
+        text_kind: textMode,
+        image_url: item.imageUrl,
         image_fit: item.imageFit ?? "contain",
       })),
     };

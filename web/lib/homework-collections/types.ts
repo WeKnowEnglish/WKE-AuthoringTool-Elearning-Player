@@ -72,7 +72,8 @@ export type HomeworkCollectionSentenceScramblePart = HomeworkCollectionPartBase 
   kind: "sentence_scramble";
   items: Array<{
     id: string;
-    prompt: string;
+    promptMode?: "scramble_only" | "additional_prompt";
+    prompt?: string;
     sentence: string;
   }>;
 };

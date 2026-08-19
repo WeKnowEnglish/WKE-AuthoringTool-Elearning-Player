@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parsePictureClozeSection,
+  parsePictureClozeAuthoringSection,
   pictureClozeSectionValidationIssues,
   type PictureClozeSection,
 } from "@/lib/homework-templates/homework-template-one";
@@ -36,7 +36,7 @@ function emptyItem(): PictureClozeSection["items"][number] {
 }
 
 export function PictureClozeSectionEditor({ section, onChange }: Props) {
-  const parsed = parsePictureClozeSection(section);
+  const parsed = parsePictureClozeAuthoringSection(section);
   const issues = pictureClozeSectionValidationIssues(section);
   const [itemIndex, setItemIndex] = useAuthoringItemIndex(
     parsed?.items.length ?? 0,

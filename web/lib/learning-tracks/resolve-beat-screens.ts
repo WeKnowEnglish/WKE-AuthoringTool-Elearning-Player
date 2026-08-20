@@ -33,6 +33,7 @@ import {
   defaultSentenceScrambleSettings,
   defaultFillBlanksSettings,
   defaultMemorySettings,
+  defaultWordSearchSettings,
   defaultCrosswordSettings,
   vocabFormatForKind,
 } from "@/lib/learning-tracks/composition";
@@ -53,6 +54,7 @@ import type {
   LearningTrackSentenceScrambleSettings,
   LearningTrackFillBlanksSettings,
   LearningTrackMemorySettings,
+  LearningTrackWordSearchSettings,
   LearningTrackCrosswordSettings,
   LearningTrackScreenPayload,
   LearningTrackVocabCompileFormat,
@@ -281,6 +283,19 @@ function memorySettingsForBeat(
   };
 }
 
+function wordSearchSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackWordSearchSettings {
+  const defaults = defaultWordSearchSettings();
+  const saved = beat.presentation?.wordSearch;
+  if (!saved) return defaults;
+  return {
+    allowBackwards: saved.allowBackwards === true,
+    allowDiagonals: saved.allowDiagonals === true,
+    allowBackwardsDiagonals: saved.allowBackwardsDiagonals === true,
+  };
+}
+
 function crosswordSettingsForBeat(
   beat: LearningTrackBeatInstance,
 ): LearningTrackCrosswordSettings {
@@ -451,6 +466,9 @@ function exportVocabCompileScreens(
     ? listenAndChooseSettingsForBeat(beat)
     : defaultListenAndChooseSettings();
   const memory = beat ? memorySettingsForBeat(beat) : defaultMemorySettings();
+  const wordSearch = beat
+    ? wordSearchSettingsForBeat(beat)
+    : defaultWordSearchSettings();
   const crossword = beat
     ? crosswordSettingsForBeat(beat)
     : defaultCrosswordSettings();
@@ -477,6 +495,10 @@ function exportVocabCompileScreens(
     flashcardsBackFaces: flashcards.backFaces,
     flashcardsShuffleCards: flashcards.shuffleCards,
     memoryTextMode: memory.textMode,
+    wordSearchAllowBackwards: wordSearch.allowBackwards,
+    wordSearchAllowDiagonals: wordSearch.allowDiagonals,
+    wordSearchAllowBackwardsDiagonals:
+      wordSearch.allowBackwardsDiagonals,
     crosswordClueMode: crossword.clueMode,
   });
   const result = compiled.results[0];

@@ -38,7 +38,7 @@ function samplePack(format: GamesWordGameFormat): GamesWordGameLessonPlayerPack 
   };
   const screen =
     format === "wordsearch"
-      ? { ...common, subtype: "wordsearch" as const, grid_size: 10, allow_backwards: false, words: [
+      ? { ...common, subtype: "wordsearch" as const, grid_size: 10, allow_backwards: false, allow_diagonals: false, allow_backwards_diagonals: false, words: [
           { id: "apple", word: "apple" }, { id: "banana", word: "banana" }, { id: "orange", word: "orange" },
         ] }
       : format === "crossword"
@@ -51,6 +51,12 @@ function samplePack(format: GamesWordGameFormat): GamesWordGameLessonPlayerPack 
             { id: "painting", word: "painting", text: "painting", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/01-painting.webp", image_fit: "contain" as const },
             { id: "drawing", word: "drawing", text: "drawing", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/02-drawing.webp", image_fit: "contain" as const },
             { id: "singing", word: "singing", text: "singing", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/03-singing.webp", image_fit: "contain" as const },
+            { id: "dancing", word: "dancing", text: "dancing", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/04-dancing.webp", image_fit: "contain" as const },
+            { id: "music", word: "listening to music", text: "listening to music", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/05-listening-to-music.webp", image_fit: "contain" as const },
+            { id: "guitar", word: "playing the guitar", text: "playing the guitar", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/06-playing-the-guitar.webp", image_fit: "contain" as const },
+            { id: "bike", word: "riding a bike", text: "riding a bike", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/07-riding-a-bike.webp", image_fit: "contain" as const },
+            { id: "models", word: "building models", text: "building models", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/08-building-models.webp", image_fit: "contain" as const },
+            { id: "comics", word: "reading comics", text: "reading comics", text_kind: "word" as const, image_url: "/pilots/games-flashcards/hobbies/09-reading-comics.webp", image_fit: "contain" as const },
           ] };
   return parseGamesWordGameLessonPlayerPack({
     version: 1,

@@ -20,6 +20,7 @@ import {
   type LearningTrackSentenceScrambleSettings,
   type LearningTrackFillBlanksSettings,
   type LearningTrackMemorySettings,
+  type LearningTrackWordSearchSettings,
   type LearningTrackCrosswordSettings,
   type LearningTrackPlannedBridge,
   type LearningTrackRecipe,
@@ -106,6 +107,14 @@ export function defaultFillBlanksSettings(): LearningTrackFillBlanksSettings {
 
 export function defaultMemorySettings(): LearningTrackMemorySettings {
   return { textMode: "word" };
+}
+
+export function defaultWordSearchSettings(): LearningTrackWordSearchSettings {
+  return {
+    allowBackwards: false,
+    allowDiagonals: false,
+    allowBackwardsDiagonals: false,
+  };
 }
 
 export function defaultCrosswordSettings(): LearningTrackCrosswordSettings {
@@ -261,6 +270,9 @@ export function createBeatInstance(
   const memory =
     overrides?.presentation?.memory ??
     (kind === "memory" ? defaultMemorySettings() : undefined);
+  const wordSearch =
+    overrides?.presentation?.wordSearch ??
+    (kind === "wordsearch" ? defaultWordSearchSettings() : undefined);
   const crossword =
     overrides?.presentation?.crossword ??
     (kind === "crossword" ? defaultCrosswordSettings() : undefined);
@@ -286,6 +298,7 @@ export function createBeatInstance(
       ...(sentenceScramble ? { sentenceScramble } : {}),
       ...(fillBlanks ? { fillBlanks } : {}),
       ...(memory ? { memory } : {}),
+      ...(wordSearch ? { wordSearch } : {}),
       ...(crossword ? { crossword } : {}),
     },
   };

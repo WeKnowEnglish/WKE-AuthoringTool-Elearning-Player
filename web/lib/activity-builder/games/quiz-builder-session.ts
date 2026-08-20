@@ -288,6 +288,8 @@ function createBlankWordGameSession(format: GamesWordGameFormat): QuizSession {
         promptDefault,
         gridSize: 12,
         allowBackwards: false,
+        allowDiagonals: false,
+        allowBackwardsDiagonals: false,
         memoryUsePictures: true,
         memoryTextMode: "word",
         crosswordClueMode: "definition_or_example",

@@ -34,6 +34,9 @@ export type QuizBuilderTrackCard = {
   flashcardsShuffleCards: boolean;
   flashcardsFrontFaces: GamesFlashcardFace[];
   flashcardsBackFaces: GamesFlashcardFace[];
+  wordSearchAllowBackwards: boolean;
+  wordSearchAllowDiagonals: boolean;
+  wordSearchAllowBackwardsDiagonals: boolean;
   memoryTextMode: GamesMemoryTextMode;
   crosswordClueMode: GamesCrosswordClueMode;
 };
@@ -120,7 +123,14 @@ function presentationForCard(
     };
   }
   if (format === "wordsearch") {
-    return { afterBridge: "auto" };
+    return {
+      afterBridge: "auto",
+      wordSearch: {
+        allowBackwards: card.wordSearchAllowBackwards,
+        allowDiagonals: card.wordSearchAllowDiagonals,
+        allowBackwardsDiagonals: card.wordSearchAllowBackwardsDiagonals,
+      },
+    };
   }
   return {
     afterBridge: "auto",

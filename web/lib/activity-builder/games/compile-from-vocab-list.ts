@@ -72,6 +72,12 @@ export type CompileQuizzesFromVocabListInput = {
   letterCaseSensitive?: boolean;
   /** Student instruction for Word search, Crossword, or Memory. */
   wordGamePrompt?: string;
+  /** Allow straight right-to-left / bottom-to-top Word search placements. */
+  wordSearchAllowBackwards?: boolean;
+  /** Allow forward diagonal Word search placements. */
+  wordSearchAllowDiagonals?: boolean;
+  /** Allow backwards/upward diagonal Word search placements. */
+  wordSearchAllowBackwardsDiagonals?: boolean;
   /** Pack-wide flashcards face layout when compiling flashcards. */
   flashcardsFrontFaces?: GamesFlashcardFace[];
   flashcardsBackFaces?: GamesFlashcardFace[];
@@ -989,7 +995,13 @@ function compileWordGameModule(
         18,
         Math.max(10, ...usable.map((entry) => (entry.word.match(/[A-Za-z]/g) ?? []).length), usable.length > 12 ? 14 : 12),
       ),
-      allowBackwards: false,
+      allowBackwards:
+        format === "wordsearch" && input.wordSearchAllowBackwards === true,
+      allowDiagonals:
+        format === "wordsearch" && input.wordSearchAllowDiagonals === true,
+      allowBackwardsDiagonals:
+        format === "wordsearch" &&
+        input.wordSearchAllowBackwardsDiagonals === true,
       memoryUsePictures: true,
       memoryTextMode,
       crosswordClueMode,

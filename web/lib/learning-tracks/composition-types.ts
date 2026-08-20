@@ -240,6 +240,13 @@ export type LearningTrackFillBlanksSettings = {
   autoAdvanceOnPass: boolean;
 };
 
+/** Pack-wide Word search direction settings for vocabulary-list compilation. */
+export type LearningTrackWordSearchSettings = {
+  allowBackwards: boolean;
+  allowDiagonals: boolean;
+  allowBackwardsDiagonals: boolean;
+};
+
 /** Pack-wide Memory settings for vocabulary-list compilation. */
 export type LearningTrackMemorySettings = {
   textMode: GamesMemoryTextMode;
@@ -275,6 +282,8 @@ export type LearningTrackBeatPresentation = {
   fillBlanks?: LearningTrackFillBlanksSettings;
   /** Memory activity settings. */
   memory?: LearningTrackMemorySettings;
+  /** Word search direction settings. */
+  wordSearch?: LearningTrackWordSearchSettings;
   /** Crossword activity settings. */
   crossword?: LearningTrackCrosswordSettings;
 };

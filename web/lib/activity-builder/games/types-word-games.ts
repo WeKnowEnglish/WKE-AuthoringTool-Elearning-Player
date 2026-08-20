@@ -33,6 +33,10 @@ export type GamesWordGameInteraction = {
   gridSize?: number;
   /** Whether word-search words may run backwards. */
   allowBackwards?: boolean;
+  /** Whether word-search words may run diagonally down-left or down-right. */
+  allowDiagonals?: boolean;
+  /** Whether word-search words may run diagonally upwards (backwards diagonal). */
+  allowBackwardsDiagonals?: boolean;
   /** @deprecated Kept only when reading older drafts. Memory now always uses pictures. */
   memoryUsePictures?: boolean;
   /** Text paired with each picture in Memory. */

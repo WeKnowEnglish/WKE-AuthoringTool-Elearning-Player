@@ -112,6 +112,15 @@ export function validateGamesWordGameAuthoringDocument(
     value.interaction.crosswordClueMode === "example"
       ? value.interaction.crosswordClueMode
       : "definition_or_example";
+  const allowBackwards = value.interaction.allowBackwards === true;
+  const allowDiagonals =
+    typeof value.interaction.allowDiagonals === "boolean"
+      ? value.interaction.allowDiagonals
+      : true;
+  const allowBackwardsDiagonals =
+    typeof value.interaction.allowBackwardsDiagonals === "boolean"
+      ? value.interaction.allowBackwardsDiagonals
+      : allowBackwards;
   const educationalIntent: GamesWordGameAuthoringDocument["educationalIntent"] = {
     objective,
     successCriteria,
@@ -150,7 +159,9 @@ export function validateGamesWordGameAuthoringDocument(
         typeof value.interaction.gridSize === "number"
           ? Math.min(18, Math.max(8, Math.round(value.interaction.gridSize)))
           : 12,
-      allowBackwards: value.interaction.allowBackwards === true,
+      allowBackwards,
+      allowDiagonals,
+      allowBackwardsDiagonals,
       memoryUsePictures: value.interaction.memoryUsePictures !== false,
       memoryTextMode,
       crosswordClueMode,
@@ -196,6 +207,9 @@ export function exportGamesWordGameForLessonPlayer(
       words: items.map((item) => ({ id: item.id, word: item.word })),
       grid_size: Math.min(18, Math.max(valid.interaction.gridSize ?? 12, longest)),
       allow_backwards: valid.interaction.allowBackwards === true,
+      allow_diagonals: valid.interaction.allowDiagonals === true,
+      allow_backwards_diagonals:
+        valid.interaction.allowBackwardsDiagonals === true,
     };
   } else if (format === "crossword") {
     const clueMode = valid.interaction.crosswordClueMode ?? "definition_or_example";

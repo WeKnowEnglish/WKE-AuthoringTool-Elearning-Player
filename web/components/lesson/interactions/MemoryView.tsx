@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
 import { playSfx } from "@/lib/audio/sfx";
 import type { ScreenPayload } from "@/lib/lesson-schemas";
+import { chooseMemoryGridLayout } from "@/lib/word-games/memory-layout";
 import {
   deterministicShuffle,
   GuideBlock,
@@ -66,6 +67,45 @@ export function MemoryView({
   const [matched, setMatched] = useState<Set<string>>(() => new Set());
   const [checking, setChecking] = useState(false);
   const [moves, setMoves] = useState(0);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const gridHostRef = useRef<HTMLDivElement>(null);
+  const [gridHostSize, setGridHostSize] = useState({ width: 0, height: 0 });
+  const [standalonePanelHeight, setStandalonePanelHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (stageFooter) return;
+    const measure = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const available = window.innerHeight - Math.max(0, panel.getBoundingClientRect().top) - 12;
+      setStandalonePanelHeight(Math.min(704, Math.max(360, available)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure);
+    };
+  }, [stageFooter]);
+
+  useEffect(() => {
+    const host = gridHostRef.current;
+    if (!host) return;
+    const measure = () => {
+      const rect = host.getBoundingClientRect();
+      setGridHostSize((current) =>
+        Math.abs(current.width - rect.width) < 1 &&
+        Math.abs(current.height - rect.height) < 1
+          ? current
+          : { width: rect.width, height: rect.height },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (openIds.length !== 2) return;
@@ -99,20 +139,43 @@ export function MemoryView({
     setOpenIds((current) => [...current, card.id]);
   }
 
-  const columns = cards.length <= 8 ? 4 : cards.length <= 12 ? 4 : 6;
+  const gridLayout = useMemo(
+    () =>
+      chooseMemoryGridLayout(
+        cards.length,
+        gridHostSize.width,
+        gridHostSize.height,
+      ),
+    [cards.length, gridHostSize.height, gridHostSize.width],
+  );
   return (
     <div className={interactionLessonShellClass(controlsPlacement)}>
-      <KidPanel className={clsx(stageFooter && "flex min-h-0 flex-1 flex-col overflow-hidden !p-3 sm:!p-4")}>
+      <div
+        ref={panelRef}
+        className={clsx(
+          "min-h-0",
+          stageFooter ? "flex-1" : "h-[min(72dvh,44rem)]",
+        )}
+        style={
+          !stageFooter && standalonePanelHeight
+            ? { height: `${standalonePanelHeight}px` }
+            : undefined
+        }
+      >
+      <KidPanel className="flex h-full min-h-0 flex-col overflow-hidden !p-3 sm:!p-4">
         <div className="shrink-0 text-center">
           <h2 className="text-xl font-extrabold text-kid-ink sm:text-2xl">{parsed.prompt}</h2>
           <p className="mt-1 text-sm font-bold text-kid-ink/65">
             {passed ? `All pairs found in ${moves} moves!` : `${matched.size}/${parsed.pairs.length} pairs · ${moves} moves`}
           </p>
         </div>
-        <div className="mt-3 flex min-h-0 flex-1 items-center justify-center overflow-y-auto [container-type:size]">
+        <div ref={gridHostRef} className="mt-3 flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           <div
-            className="grid w-full max-w-5xl gap-2 sm:gap-3"
-            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+            className="grid h-full w-full max-w-5xl gap-2 sm:gap-3"
+            style={{
+              gridTemplateColumns: `repeat(${gridLayout.columns}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${gridLayout.rows}, minmax(0, 1fr))`,
+            }}
           >
             {cards.map((card) => {
               const visible = openIds.includes(card.id) || matched.has(card.pairId) || passed;
@@ -124,7 +187,7 @@ export function MemoryView({
                   disabled={passed || checking || matched.has(card.pairId)}
                   aria-label={visible ? (card.kind === "text" ? card.text ?? card.word : `Picture for ${card.word}`) : "Hidden memory card"}
                   className={clsx(
-                    "relative aspect-[4/5] min-h-0 overflow-hidden rounded-xl border-4 border-kid-ink bg-kid-cta p-1.5 text-kid-ink shadow-md transition hover:-translate-y-0.5 disabled:hover:translate-y-0",
+                    "relative h-full min-h-0 w-full overflow-hidden rounded-xl border-2 border-kid-ink bg-kid-cta p-1 text-kid-ink shadow-md transition [container-type:size] hover:-translate-y-0.5 disabled:hover:translate-y-0 sm:border-4 sm:p-1.5",
                     visible && "bg-white",
                     matched.has(card.pairId) && "border-emerald-700 bg-emerald-50 opacity-75",
                   )}
@@ -133,11 +196,11 @@ export function MemoryView({
                     card.kind === "text" ? (
                       <span className="flex h-full flex-col items-center justify-center gap-1 break-words text-center">
                         {card.textKind !== "word" ? (
-                          <span className="text-[clamp(0.42rem,1.4cqw,0.7rem)] font-black uppercase tracking-wide text-kid-ink/45">
+                          <span className="text-[clamp(0.4rem,8cqw,0.68rem)] font-black uppercase tracking-wide text-kid-ink/45">
                             {card.textKind === "definition" ? "Definition" : "Example"}
                           </span>
                         ) : null}
-                        <span className="text-[clamp(0.58rem,2.5cqw,1.35rem)] font-black">
+                        <span className="text-[clamp(0.52rem,13cqw,1.25rem)] font-black leading-tight">
                           {card.text ?? card.word}
                         </span>
                       </span>
@@ -145,10 +208,10 @@ export function MemoryView({
                       // eslint-disable-next-line @next/next/no-img-element -- activity media can be remote or a data URL
                       <img src={card.imageUrl} alt={card.word} className={clsx("h-full w-full rounded-lg", card.imageFit === "cover" ? "object-cover" : "object-contain")} />
                     ) : (
-                      <span className="flex h-full items-center justify-center break-words text-center text-[clamp(0.6rem,2.4cqw,1.15rem)] font-extrabold">{card.clue || card.word}</span>
+                      <span className="flex h-full items-center justify-center break-words text-center text-[clamp(0.52rem,12cqw,1.1rem)] font-extrabold leading-tight">{card.clue || card.word}</span>
                     )
                   ) : (
-                    <span className="flex h-full items-center justify-center text-[clamp(1.5rem,7cqw,4rem)] font-black text-kid-ink/70" aria-hidden>?</span>
+                    <span className="flex h-full items-center justify-center text-[clamp(1.2rem,28cqw,3.5rem)] font-black text-kid-ink/70" aria-hidden>?</span>
                   )}
                 </button>
               );
@@ -156,6 +219,7 @@ export function MemoryView({
           </div>
         </div>
       </KidPanel>
+      </div>
       <GuideBlock guide={parsed.guide} />
       <InteractionShellNav showBack={showBack} onBack={onBack} passed={passed} onNext={onNext} controlsPlacement={controlsPlacement} />
     </div>

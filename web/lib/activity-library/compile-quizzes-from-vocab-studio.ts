@@ -59,6 +59,9 @@ export type VocabActivityGenerationRecipe = {
     letterShuffleLetters?: boolean;
     letterCaseSensitive?: boolean;
     wordGamePrompt?: string;
+    wordSearchAllowBackwards?: boolean;
+    wordSearchAllowDiagonals?: boolean;
+    wordSearchAllowBackwardsDiagonals?: boolean;
     flashcardsShuffleCards?: boolean;
     flashcardsFrontFaces?: CompileQuizzesFromVocabListInput["flashcardsFrontFaces"];
     flashcardsBackFaces?: CompileQuizzesFromVocabListInput["flashcardsBackFaces"];

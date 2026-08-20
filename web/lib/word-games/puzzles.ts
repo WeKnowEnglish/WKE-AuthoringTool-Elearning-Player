@@ -72,6 +72,8 @@ export function buildWordSearch(input: {
   words: Array<{ id: string; word: string }>;
   size: number;
   allowBackwards?: boolean;
+  allowDiagonals?: boolean;
+  allowBackwardsDiagonals?: boolean;
   seed?: string;
 }): WordSearchPuzzle {
   const normalized = input.words
@@ -86,15 +88,28 @@ export function buildWordSearch(input: {
   const random = seededRandom(
     input.seed ?? normalized.map((item) => `${item.id}:${item.letters}`).join("|"),
   );
-  const forward = [
+  const forwardStraight = [
     [0, 1],
     [1, 0],
+  ] as const;
+  const forwardDiagonal = [
     [1, 1],
     [1, -1],
   ] as const;
-  const directions = input.allowBackwards
-    ? [...forward, ...forward.map(([dr, dc]) => [-dr, -dc] as const)]
-    : forward;
+  const backwardsStraight = [
+    [0, -1],
+    [-1, 0],
+  ] as const;
+  const backwardsDiagonal = [
+    [-1, -1],
+    [-1, 1],
+  ] as const;
+  const directions = [
+    ...forwardStraight,
+    ...(input.allowDiagonals ? forwardDiagonal : []),
+    ...(input.allowBackwards ? backwardsStraight : []),
+    ...(input.allowBackwardsDiagonals ? backwardsDiagonal : []),
+  ];
   const placements: WordSearchPlacement[] = [];
 
   for (const item of normalized) {

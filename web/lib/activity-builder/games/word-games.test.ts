@@ -30,6 +30,15 @@ describe("word-list games", () => {
           expect(screen.entries[0]?.clue).toMatch(/bakery|birthday|milk|seven/i);
         }
       }
+      if (row.format === "wordsearch") {
+        const screen = parsed.screens[0];
+        expect(screen?.subtype).toBe("wordsearch");
+        if (screen?.subtype === "wordsearch") {
+          expect(screen.allow_backwards).toBe(false);
+          expect(screen.allow_diagonals).toBe(false);
+          expect(screen.allow_backwards_diagonals).toBe(false);
+        }
+      }
       if (row.format === "memory") {
         const screen = parsed.screens[0];
         expect(screen?.subtype).toBe("memory");

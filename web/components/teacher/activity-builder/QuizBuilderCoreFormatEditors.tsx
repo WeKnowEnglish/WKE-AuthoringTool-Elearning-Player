@@ -640,10 +640,23 @@ export function WordGameEditor({
                 {[10, 12, 14, 16, 18].map((size) => <option key={size} value={size}>{size} × {size}</option>)}
               </select>
             </label>
-            <label className="flex items-end gap-2 pb-2 text-xs font-medium text-stone-700">
-              <input type="checkbox" checked={document.interaction.allowBackwards === true} onChange={(event) => patchInteraction({ allowBackwards: event.target.checked })} />
-              Allow backwards words
-            </label>
+            <fieldset className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-2.5">
+              <legend className="px-1 text-xs font-semibold text-stone-700">
+                Word directions
+              </legend>
+              <label className="flex items-start gap-2 text-xs font-medium text-stone-700">
+                <input type="checkbox" className="mt-0.5" checked={document.interaction.allowBackwards === true} onChange={(event) => patchInteraction({ allowBackwards: event.target.checked })} />
+                <span>Backwards <span className="block text-[10px] font-normal text-stone-500">Straight words can read left or up.</span></span>
+              </label>
+              <label className="flex items-start gap-2 text-xs font-medium text-stone-700">
+                <input type="checkbox" className="mt-0.5" checked={document.interaction.allowDiagonals === true} onChange={(event) => patchInteraction({ allowDiagonals: event.target.checked })} />
+                <span>Diagonal down <span className="block text-[10px] font-normal text-stone-500">Words can slope down-left or down-right.</span></span>
+              </label>
+              <label className="flex items-start gap-2 text-xs font-medium text-stone-700">
+                <input type="checkbox" className="mt-0.5" checked={document.interaction.allowBackwardsDiagonals === true} onChange={(event) => patchInteraction({ allowBackwardsDiagonals: event.target.checked })} />
+                <span>Backwards diagonal / up <span className="block text-[10px] font-normal text-stone-500">Words can slope upwards in either direction.</span></span>
+              </label>
+            </fieldset>
           </div>
         ) : null}
         {format === "memory" ? (

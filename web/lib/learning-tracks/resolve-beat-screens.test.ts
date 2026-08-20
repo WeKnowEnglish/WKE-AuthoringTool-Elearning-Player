@@ -120,7 +120,7 @@ describe("resolveBeatScreens library explore_hotspots", () => {
 });
 
 describe("resolveBeatScreens word-game settings", () => {
-  it("compiles Memory example cards and Crossword definition clues", async () => {
+  it("compiles Memory, Crossword, and Word search settings", async () => {
     const memoryBeat: LearningTrackBeatInstance = {
       id: "memory",
       kind: "memory",
@@ -141,9 +141,26 @@ describe("resolveBeatScreens word-game settings", () => {
       },
       presentation: { crossword: { clueMode: "definition" } },
     };
+    const wordSearchBeat: LearningTrackBeatInstance = {
+      id: "wordsearch",
+      kind: "wordsearch",
+      source: {
+        type: "vocab_compile",
+        listId: "hobbies-default",
+        format: "wordsearch",
+      },
+      presentation: {
+        wordSearch: {
+          allowBackwards: true,
+          allowDiagonals: false,
+          allowBackwardsDiagonals: true,
+        },
+      },
+    };
 
     const [memoryScreen] = await resolveBeatScreens(memoryBeat);
     const [crosswordScreen] = await resolveBeatScreens(crosswordBeat);
+    const [wordSearchScreen] = await resolveBeatScreens(wordSearchBeat);
     expect(memoryScreen?.subtype).toBe("memory");
     expect(
       (memoryScreen?.pairs as Array<{ text_kind?: string }> | undefined)?.[0]
@@ -154,5 +171,11 @@ describe("resolveBeatScreens word-game settings", () => {
       (crosswordScreen?.entries as Array<{ clue?: string }> | undefined)?.[0]
         ?.clue,
     ).toMatch(/making|moving|looking|riding/i);
+    expect(wordSearchScreen).toMatchObject({
+      subtype: "wordsearch",
+      allow_backwards: true,
+      allow_diagonals: false,
+      allow_backwards_diagonals: true,
+    });
   });
 });

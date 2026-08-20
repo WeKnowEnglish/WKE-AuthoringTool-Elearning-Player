@@ -32,6 +32,9 @@ export type StagedQuizCard = {
   flashcardsShuffleCards: boolean;
   flashcardsFrontFaces: GamesFlashcardFace[];
   flashcardsBackFaces: GamesFlashcardFace[];
+  wordSearchAllowBackwards: boolean;
+  wordSearchAllowDiagonals: boolean;
+  wordSearchAllowBackwardsDiagonals: boolean;
   memoryTextMode: GamesMemoryTextMode;
   crosswordClueMode: GamesCrosswordClueMode;
 };
@@ -543,6 +546,56 @@ export function QuizBuilderSetupCards({
                           />
                           Shuffle cards
                         </label>
+                      ) : null}
+                      {card.format === "wordsearch" ? (
+                        <fieldset className="space-y-2">
+                          <legend className="text-xs font-medium text-stone-700">
+                            Word directions
+                          </legend>
+                          <label className="flex items-center gap-2 text-xs text-stone-700">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 rounded border-stone-300"
+                              checked={card.wordSearchAllowBackwards}
+                              onChange={(event) =>
+                                onPatch(card.id, {
+                                  wordSearchAllowBackwards: event.target.checked,
+                                })
+                              }
+                            />
+                            Backwards straight
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-stone-700">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 rounded border-stone-300"
+                              checked={card.wordSearchAllowDiagonals}
+                              onChange={(event) =>
+                                onPatch(card.id, {
+                                  wordSearchAllowDiagonals: event.target.checked,
+                                })
+                              }
+                            />
+                            Diagonal down
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-stone-700">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 rounded border-stone-300"
+                              checked={card.wordSearchAllowBackwardsDiagonals}
+                              onChange={(event) =>
+                                onPatch(card.id, {
+                                  wordSearchAllowBackwardsDiagonals:
+                                    event.target.checked,
+                                })
+                              }
+                            />
+                            Backwards diagonal / up
+                          </label>
+                          <p className="text-[10px] leading-snug text-stone-500">
+                            Leave all off for an easier horizontal-and-vertical puzzle.
+                          </p>
+                        </fieldset>
                       ) : null}
                       {card.format === "memory" ? (
                         <label className="block text-xs text-stone-700">

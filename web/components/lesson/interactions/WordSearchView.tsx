@@ -62,9 +62,19 @@ export function WordSearchView({
         words: parsed.words,
         size: parsed.grid_size,
         allowBackwards: parsed.allow_backwards,
+        allowDiagonals: parsed.allow_diagonals,
+        allowBackwardsDiagonals:
+          parsed.allow_backwards_diagonals ?? parsed.allow_backwards,
         seed: parsed.quiz_group_id ?? parsed.words.map((word) => word.id).join("|"),
       }),
-    [parsed.allow_backwards, parsed.grid_size, parsed.quiz_group_id, parsed.words],
+    [
+      parsed.allow_backwards,
+      parsed.allow_backwards_diagonals,
+      parsed.allow_diagonals,
+      parsed.grid_size,
+      parsed.quiz_group_id,
+      parsed.words,
+    ],
   );
   const [start, setStart] = useState<Cell | null>(null);
   const [foundIds, setFoundIds] = useState<Set<string>>(() => new Set());

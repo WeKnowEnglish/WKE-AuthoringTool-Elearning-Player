@@ -134,6 +134,9 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
     flashcardsShuffleCards: true,
     flashcardsFrontFaces: ["picture"],
     flashcardsBackFaces: ["word", "example"],
+    wordSearchAllowBackwards: false,
+    wordSearchAllowDiagonals: false,
+    wordSearchAllowBackwardsDiagonals: false,
     memoryTextMode: "word",
     crosswordClueMode: "definition_or_example",
   };
@@ -413,6 +416,14 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
           if (blank.format === "crossword") {
             blank.document.interaction.crosswordClueMode = card.crosswordClueMode;
           }
+          if (blank.format === "wordsearch") {
+            blank.document.interaction.allowBackwards =
+              card.wordSearchAllowBackwards;
+            blank.document.interaction.allowDiagonals =
+              card.wordSearchAllowDiagonals;
+            blank.document.interaction.allowBackwardsDiagonals =
+              card.wordSearchAllowBackwardsDiagonals;
+          }
           if (blank.format === "sentence_scramble") {
             const authoredTokens = tokenizeSentenceForScramble(card.masterPrompt);
             blank.document.interaction.items = [
@@ -456,6 +467,10 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
           letterShuffleLetters: card.letterShuffleLetters,
           letterCaseSensitive: card.letterCaseSensitive,
           wordGamePrompt: card.masterPrompt || undefined,
+          wordSearchAllowBackwards: card.wordSearchAllowBackwards,
+          wordSearchAllowDiagonals: card.wordSearchAllowDiagonals,
+          wordSearchAllowBackwardsDiagonals:
+            card.wordSearchAllowBackwardsDiagonals,
           flashcardsShuffleCards: card.flashcardsShuffleCards,
           flashcardsFrontFaces: card.flashcardsFrontFaces,
           flashcardsBackFaces: card.flashcardsBackFaces,
@@ -495,6 +510,10 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
                 letterShuffleLetters: card.letterShuffleLetters,
                 letterCaseSensitive: card.letterCaseSensitive,
                 wordGamePrompt: card.masterPrompt || undefined,
+                wordSearchAllowBackwards: card.wordSearchAllowBackwards,
+                wordSearchAllowDiagonals: card.wordSearchAllowDiagonals,
+                wordSearchAllowBackwardsDiagonals:
+                  card.wordSearchAllowBackwardsDiagonals,
                 flashcardsShuffleCards: card.flashcardsShuffleCards,
                 flashcardsFrontFaces: card.flashcardsFrontFaces,
                 flashcardsBackFaces: card.flashcardsBackFaces,

@@ -19,7 +19,34 @@ describe("word-game puzzle generation", () => {
     for (const placement of first.placements) {
       const letters = placement.cells.map((cell) => first.grid[cell.row]![cell.col]).join("");
       expect(letters).toBe(puzzleLetters(placement.word));
+      const start = placement.cells[0]!;
+      const end = placement.cells.at(-1)!;
+      const direction = `${Math.sign(end.row - start.row)},${Math.sign(end.col - start.col)}`;
+      expect(["0,1", "1,0"]).toContain(direction);
     }
+  });
+
+  it("uses harder word-search directions only when teachers enable them", () => {
+    const puzzle = buildWordSearch({
+      words: Array.from({ length: 12 }, (_, index) => ({
+        id: `word-${index}`,
+        word: `word${String.fromCharCode(97 + index)}`,
+      })),
+      size: 14,
+      seed: "all-directions",
+      allowBackwards: true,
+      allowDiagonals: true,
+      allowBackwardsDiagonals: true,
+    });
+    const directions = new Set(
+      puzzle.placements.map((placement) => {
+        const start = placement.cells[0]!;
+        const end = placement.cells.at(-1)!;
+        return `${Math.sign(end.row - start.row)},${Math.sign(end.col - start.col)}`;
+      }),
+    );
+    expect([...directions].some((direction) => direction.startsWith("-1,"))).toBe(true);
+    expect([...directions].some((direction) => direction === "1,1" || direction === "1,-1")).toBe(true);
   });
 
   it("keeps entries without shared letters in the crossword", () => {

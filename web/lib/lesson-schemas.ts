@@ -3334,6 +3334,10 @@ export const wordSearchPayloadSchema = z.object({
   words: z.array(wordSearchWordSchema).min(2).max(24),
   grid_size: z.number().int().min(8).max(18).default(12),
   allow_backwards: z.boolean().optional().default(false),
+  /** Missing means a legacy pack, whose generator always allowed diagonals. */
+  allow_diagonals: z.boolean().optional().default(true),
+  /** Legacy packs infer this from allow_backwards in the player. */
+  allow_backwards_diagonals: z.boolean().optional(),
   guide: guideSchema,
 });
 

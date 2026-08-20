@@ -51,6 +51,7 @@ import {
   defaultSentenceScrambleSettings,
   defaultFillBlanksSettings,
   defaultMemorySettings,
+  defaultWordSearchSettings,
   defaultCrosswordSettings,
   fixtureIdForKind,
   libraryFormatForBeatKind,
@@ -84,6 +85,7 @@ import {
   type LearningTrackSentenceScrambleSettings,
   type LearningTrackFillBlanksSettings,
   type LearningTrackMemorySettings,
+  type LearningTrackWordSearchSettings,
   type LearningTrackCrosswordSettings,
   HOBBIES_DAY_1_COMPOSITION,
 } from "@/lib/learning-tracks/composer";
@@ -721,6 +723,14 @@ export function LearningTrackCompilerWorkspace({
       ? {
           ...defaultMemorySettings(),
           ...selectedCompositionBeat.presentation?.memory,
+        }
+      : null;
+
+  const selectedWordSearchSettings: LearningTrackWordSearchSettings | null =
+    selectedCompositionBeat?.kind === "wordsearch"
+      ? {
+          ...defaultWordSearchSettings(),
+          ...selectedCompositionBeat.presentation?.wordSearch,
         }
       : null;
 
@@ -2625,6 +2635,52 @@ export function LearningTrackCompilerWorkspace({
             </CollapsibleSettingsPanel>
           ) : null}
 
+          {selectedWordSearchSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="wordsearch-settings"
+              title="Word search settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Start with straight forward words, then add harder directions as
+                needed.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use these settings in
+                  the preview.
+                </p>
+              )}
+              <div className="mt-3 space-y-2">
+                {(
+                  [
+                    ["allowBackwards", "Backwards straight"],
+                    ["allowDiagonals", "Diagonal down"],
+                    ["allowBackwardsDiagonals", "Backwards diagonal / up"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key} className="flex cursor-pointer items-center gap-2 text-xs ltc-fg">
+                    <input
+                      type="checkbox"
+                      className="rounded border"
+                      checked={selectedWordSearchSettings[key]}
+                      onChange={(event) =>
+                        updateSelectedPresentation({
+                          wordSearch: {
+                            ...selectedWordSearchSettings,
+                            [key]: event.target.checked,
+                          },
+                        })
+                      }
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
           {selectedCrosswordSettings ? (
             <CollapsibleSettingsPanel
               sectionId="crossword-settings"
@@ -2675,6 +2731,7 @@ export function LearningTrackCompilerWorkspace({
           !selectedSentenceScrambleSettings &&
           !selectedFillBlanksSettings &&
           !selectedMemorySettings &&
+          !selectedWordSearchSettings &&
           !selectedCrosswordSettings &&
           selectedCompositionBeat ? (
             <CollapsibleSettingsPanel

@@ -24,6 +24,11 @@ function card(
     flashcardsShuffleCards: true,
     flashcardsFrontFaces: ["picture"],
     flashcardsBackFaces: ["word", "example"],
+    wordSearchAllowBackwards: false,
+    wordSearchAllowDiagonals: false,
+    wordSearchAllowBackwardsDiagonals: false,
+    memoryTextMode: "word",
+    crosswordClueMode: "definition_or_example",
   };
 }
 
@@ -74,6 +79,36 @@ describe("quiz-builder-practice-track", () => {
     expect(track.mode).toBe("practice");
     expect(track.practiceComposition?.beats).toHaveLength(2);
     expect(track.title).toContain("Practice");
+  });
+
+  it("carries word-game settings into practice beats", () => {
+    const memory = {
+      ...card("memory", "list-a"),
+      memoryTextMode: "example" as const,
+    };
+    const crossword = {
+      ...card("crossword", "list-a"),
+      crosswordClueMode: "definition" as const,
+    };
+    const wordSearch = {
+      ...card("wordsearch", "list-a"),
+      wordSearchAllowDiagonals: true,
+      wordSearchAllowBackwardsDiagonals: true,
+    };
+    const composition = compositionFromQuizBuilderCards({
+      trackId: "track-games",
+      title: "Word games",
+      cards: [memory, crossword, wordSearch],
+    });
+    expect(composition.beats[0]?.presentation?.memory?.textMode).toBe("example");
+    expect(composition.beats[1]?.presentation?.crossword?.clueMode).toBe(
+      "definition",
+    );
+    expect(composition.beats[2]?.presentation?.wordSearch).toMatchObject({
+      allowBackwards: false,
+      allowDiagonals: true,
+      allowBackwardsDiagonals: true,
+    });
   });
 
   it("rejects blank cards for mixed tracks", () => {

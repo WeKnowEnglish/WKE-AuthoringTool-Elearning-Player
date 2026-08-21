@@ -25,6 +25,7 @@ import {
 import { downloadTextFile } from "@/lib/activity-builder/games/mc-quiz";
 import { VocabularyListWorkspace } from "@/components/teacher/activity-builder/VocabularyListWorkspace";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
+import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
 import {
   AuthoringItemPager,
   useAuthoringItemIndex,
@@ -49,6 +50,9 @@ import {
   defaultTrueFalseSettings,
   defaultSentenceScrambleSettings,
   defaultFillBlanksSettings,
+  defaultMemorySettings,
+  defaultWordSearchSettings,
+  defaultCrosswordSettings,
   fixtureIdForKind,
   libraryFormatForBeatKind,
   listHotspotPanelsFromScreens,
@@ -80,6 +84,9 @@ import {
   type LearningTrackTrueFalseSettings,
   type LearningTrackSentenceScrambleSettings,
   type LearningTrackFillBlanksSettings,
+  type LearningTrackMemorySettings,
+  type LearningTrackWordSearchSettings,
+  type LearningTrackCrosswordSettings,
   HOBBIES_DAY_1_COMPOSITION,
 } from "@/lib/learning-tracks/composer";
 import {
@@ -266,6 +273,7 @@ export type LearningTrackCompilerWorkspaceProps = {
   initialLibraryId?: string | null;
   initialBankActivityId?: string | null;
   coverImageUrl?: string | null;
+  onCoverImageChange?: (url: string) => void;
   /** Persist composition + bank refs onto the Track Builder draft. */
   onDraftSync?: (patch: LearningTrackCompilerDraftSync) => void;
 };
@@ -282,6 +290,7 @@ export function LearningTrackCompilerWorkspace({
   initialLibraryId = null,
   initialBankActivityId = null,
   coverImageUrl = null,
+  onCoverImageChange,
   onDraftSync,
 }: LearningTrackCompilerWorkspaceProps = {}) {
   const embedded = chrome === "embedded";
@@ -706,6 +715,30 @@ export function LearningTrackCompilerWorkspace({
       ? {
           ...defaultFillBlanksSettings(),
           ...selectedCompositionBeat.presentation?.fillBlanks,
+        }
+      : null;
+
+  const selectedMemorySettings: LearningTrackMemorySettings | null =
+    selectedCompositionBeat?.kind === "memory"
+      ? {
+          ...defaultMemorySettings(),
+          ...selectedCompositionBeat.presentation?.memory,
+        }
+      : null;
+
+  const selectedWordSearchSettings: LearningTrackWordSearchSettings | null =
+    selectedCompositionBeat?.kind === "wordsearch"
+      ? {
+          ...defaultWordSearchSettings(),
+          ...selectedCompositionBeat.presentation?.wordSearch,
+        }
+      : null;
+
+  const selectedCrosswordSettings: LearningTrackCrosswordSettings | null =
+    selectedCompositionBeat?.kind === "crossword"
+      ? {
+          ...defaultCrosswordSettings(),
+          ...selectedCompositionBeat.presentation?.crossword,
         }
       : null;
 
@@ -1291,6 +1324,15 @@ export function LearningTrackCompilerWorkspace({
                 onChange={(event) => updateTrack({ aim: event.target.value })}
               />
             </label>
+            {onCoverImageChange ? (
+              <div className="mt-3 border-t border-[var(--ltc-border)] pt-3">
+                <TrackCoverImageEditor
+                  value={coverImageUrl ?? ""}
+                  title={composition.title}
+                  onChange={onCoverImageChange}
+                />
+              </div>
+            ) : null}
             <p className="mt-2 text-[11px] ltc-muted">
               Target {composition.durationTargetMin} min
               {composition.cefr ? ` · ${composition.cefr}` : ""}
@@ -2553,6 +2595,131 @@ export function LearningTrackCompilerWorkspace({
             </CollapsibleSettingsPanel>
           ) : null}
 
+          {selectedMemorySettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="memory-settings"
+              title="Memory settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Choose the text students match to each vocabulary picture.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use this setting in the
+                  preview.
+                </p>
+              )}
+              <label className="mt-3 block text-[11px] ltc-muted">
+                Text side
+                <select
+                  className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                  value={selectedMemorySettings.textMode}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      memory: {
+                        textMode: event.target.value as LearningTrackMemorySettings["textMode"],
+                      },
+                    })
+                  }
+                >
+                  <option value="word">Word vs picture</option>
+                  <option value="definition">Definition vs picture</option>
+                  <option value="example">Example sentence vs picture</option>
+                </select>
+              </label>
+              <p className="mt-2 text-[10px] leading-snug ltc-subtle">
+                Words without a picture or the selected text are skipped at compile.
+              </p>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
+          {selectedWordSearchSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="wordsearch-settings"
+              title="Word search settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Start with straight forward words, then add harder directions as
+                needed.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use these settings in
+                  the preview.
+                </p>
+              )}
+              <div className="mt-3 space-y-2">
+                {(
+                  [
+                    ["allowBackwards", "Backwards straight"],
+                    ["allowDiagonals", "Diagonal down"],
+                    ["allowBackwardsDiagonals", "Backwards diagonal / up"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key} className="flex cursor-pointer items-center gap-2 text-xs ltc-fg">
+                    <input
+                      type="checkbox"
+                      className="rounded border"
+                      checked={selectedWordSearchSettings[key]}
+                      onChange={(event) =>
+                        updateSelectedPresentation({
+                          wordSearch: {
+                            ...selectedWordSearchSettings,
+                            [key]: event.target.checked,
+                          },
+                        })
+                      }
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
+          {selectedCrosswordSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="crossword-settings"
+              title="Crossword settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Choose which vocabulary-list field becomes each clue.
+              </p>
+              {selectedCompositionBeat?.source.type !== "vocab_compile" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-notice-banner">
+                  Switch source mode to Vocabulary list to use this setting in the
+                  preview.
+                </p>
+              )}
+              <label className="mt-3 block text-[11px] ltc-muted">
+                Clue source
+                <select
+                  className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                  value={selectedCrosswordSettings.clueMode}
+                  onChange={(event) =>
+                    updateSelectedPresentation({
+                      crossword: {
+                        clueMode: event.target.value as LearningTrackCrosswordSettings["clueMode"],
+                      },
+                    })
+                  }
+                >
+                  <option value="definition_or_example">
+                    Definition, then example
+                  </option>
+                  <option value="definition">Definition only</option>
+                  <option value="example">Example sentence only</option>
+                </select>
+              </label>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
           {!selectedFlashcardsSettings &&
           !selectedMcSettings &&
           !selectedLetterSettings &&
@@ -2563,6 +2730,9 @@ export function LearningTrackCompilerWorkspace({
           !selectedTrueFalseSettings &&
           !selectedSentenceScrambleSettings &&
           !selectedFillBlanksSettings &&
+          !selectedMemorySettings &&
+          !selectedWordSearchSettings &&
+          !selectedCrosswordSettings &&
           selectedCompositionBeat ? (
             <CollapsibleSettingsPanel
               sectionId="activity-settings"

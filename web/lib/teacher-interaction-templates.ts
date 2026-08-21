@@ -460,6 +460,38 @@ export function rawInteractionTemplateForSubtype(subtype: string): Record<string
           { id: "w4", text: "window", is_vocab: false },
         ],
       };
+    case "wordsearch":
+      return {
+        type: "interaction",
+        subtype: "wordsearch",
+        prompt: "Find every word in the grid.",
+        grid_size: 10,
+        allow_backwards: false,
+        words: [
+          { id: "w1", word: "apple" },
+          { id: "w2", word: "banana" },
+        ],
+      };
+    case "crossword":
+      return {
+        type: "interaction",
+        subtype: "crossword",
+        prompt: "Use the clues to complete the crossword.",
+        entries: [
+          { id: "w1", answer: "apple", clue: "A round fruit." },
+          { id: "w2", answer: "banana", clue: "A long yellow fruit." },
+        ],
+      };
+    case "memory":
+      return {
+        type: "interaction",
+        subtype: "memory",
+        prompt: "Match each word to its meaning.",
+        pairs: [
+          { id: "w1", word: "apple", clue: "A round fruit." },
+          { id: "w2", word: "banana", clue: "A long yellow fruit." },
+        ],
+      };
     case "table_complete":
       return {
         type: "interaction",

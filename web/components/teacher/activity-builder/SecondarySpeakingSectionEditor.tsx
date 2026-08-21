@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseSecondarySpeakingSection,
+  parseSecondarySpeakingAuthoringSection,
   secondarySpeakingSectionValidationIssues,
   type SecondarySpeakingSection,
 } from "@/lib/homework-templates/secondary-homework-one";
@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function SecondarySpeakingSectionEditor({ section, onChange }: Props) {
-  const parsed = parseSecondarySpeakingSection(section);
+  const parsed = parseSecondarySpeakingAuthoringSection(section);
   const issues = secondarySpeakingSectionValidationIssues(section);
   const [promptIndex, setPromptIndex] = useAuthoringItemIndex(
     parsed?.planningPrompts.length ?? 0,
@@ -142,6 +142,12 @@ export function SecondarySpeakingSectionEditor({ section, onChange }: Props) {
           />
         </label>
       </div>
+
+      {issues.length > 0 ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-800">
+          Keep editing — {issues[0]}
+        </p>
+      ) : null}
     </div>
   );
 }

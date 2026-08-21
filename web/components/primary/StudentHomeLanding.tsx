@@ -101,7 +101,7 @@ type Props = {
   reviewModel?: PrimaryReviewModel;
   onNavigate?: (destination: PrimaryNavId | string) => void;
   /** Open a vocabulary set in the lesson overlay (Phase 1). */
-  onOpenVocabularySet?: (id: VocabSetId) => void;
+  onOpenVocabularySet?: (id: VocabSetId, context?: "learn" | "review") => void;
   /** Open a grammar poster in an overlay (stay on Primary). */
   onOpenGrammarPoster?: (slug: string) => void;
   /** Refresh economy / progress after games (Phase 5). */
@@ -478,7 +478,7 @@ export function StudentHomeLanding({
               model={reviewModel}
               onPracticeSet={(setId) => {
                 if (onOpenVocabularySet) {
-                  onOpenVocabularySet(setId);
+                  onOpenVocabularySet(setId, "review");
                   return;
                 }
                 go("learn");

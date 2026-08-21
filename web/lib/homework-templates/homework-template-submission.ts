@@ -40,7 +40,7 @@ export function normalizeHomeworkTemplateSubmissionContent(value: unknown): Home
   const row = value as Record<string, unknown>;
   const rawParts = row.parts && typeof row.parts === "object" ? row.parts as Record<string, unknown> : {};
   const parts: Record<string, HomeworkTemplatePartSnapshot> = {};
-  for (const [id, part] of Object.entries(rawParts).slice(0, 6)) {
+  for (const [id, part] of Object.entries(rawParts).slice(0, 30)) {
     const normalized = normalizeHomeworkTemplatePartSnapshot(part);
     if (normalized) parts[id.slice(0, 100)] = normalized;
   }

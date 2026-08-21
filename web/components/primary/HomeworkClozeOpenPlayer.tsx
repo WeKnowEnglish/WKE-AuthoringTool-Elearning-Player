@@ -1,5 +1,7 @@
 "use client";
 
+import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ClozeOpenPlayer } from "@/components/cloze-open/ClozeOpenPlayer";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
@@ -64,6 +66,7 @@ export function HomeworkClozeOpenPlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     });
   }, [finished, homeworkId]);
 

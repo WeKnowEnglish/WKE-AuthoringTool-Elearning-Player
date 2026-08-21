@@ -6,6 +6,7 @@ import { parseGamesLineMatchLessonPlayerPack } from "@/lib/games-line-match/pars
 import { parseGamesTrueFalseLessonPlayerPack } from "@/lib/games-true-false/parse-games-pack";
 import { parseGamesSentenceScrambleLessonPlayerPack } from "@/lib/games-sentence-scramble/parse-games-pack";
 import { parseGamesFillBlanksLessonPlayerPack } from "@/lib/games-fill-blanks/parse-games-pack";
+import { parseGamesWordGameLessonPlayerPack } from "@/lib/games-word-games/parse-games-pack";
 import { parseLearningTrackLessonPlayerPack } from "@/lib/learning-tracks/parse-track-pack";
 import { exploreHotspotsPayloadSchema } from "@/lib/lesson-schemas";
 import type { LessonScreenRow } from "@/lib/lesson/types";
@@ -79,6 +80,9 @@ export function spacePackToLessonScreens(
   }
   if (format === "fill_blanks") {
     return gamesPackView("fill", itemId, parseGamesFillBlanksLessonPlayerPack(pack));
+  }
+  if (format === "wordsearch" || format === "crossword" || format === "memory") {
+    return gamesPackView(format, itemId, parseGamesWordGameLessonPlayerPack(pack, format));
   }
   if (format === "explore_hotspots") {
     const payload = exploreHotspotsPayloadSchema.parse(pack);

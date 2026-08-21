@@ -58,9 +58,15 @@ export type VocabActivityGenerationRecipe = {
     letterPrompt?: string;
     letterShuffleLetters?: boolean;
     letterCaseSensitive?: boolean;
+    wordGamePrompt?: string;
+    wordSearchAllowBackwards?: boolean;
+    wordSearchAllowDiagonals?: boolean;
+    wordSearchAllowBackwardsDiagonals?: boolean;
     flashcardsShuffleCards?: boolean;
     flashcardsFrontFaces?: CompileQuizzesFromVocabListInput["flashcardsFrontFaces"];
     flashcardsBackFaces?: CompileQuizzesFromVocabListInput["flashcardsBackFaces"];
+    memoryTextMode?: CompileQuizzesFromVocabListInput["memoryTextMode"];
+    crosswordClueMode?: CompileQuizzesFromVocabListInput["crosswordClueMode"];
   };
 };
 

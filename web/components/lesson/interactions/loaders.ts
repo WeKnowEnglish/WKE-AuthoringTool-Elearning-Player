@@ -60,6 +60,15 @@ export function prefetchInteractionChunk(subtype: InteractionSubtype): void {
     case "word_shape_hunt":
       void import("./WordShapeHuntView");
       break;
+    case "wordsearch":
+      void import("./WordSearchView");
+      break;
+    case "crossword":
+      void import("./CrosswordView");
+      break;
+    case "memory":
+      void import("./MemoryView");
+      break;
     case "table_complete":
       void import("./TableCompleteView");
       break;

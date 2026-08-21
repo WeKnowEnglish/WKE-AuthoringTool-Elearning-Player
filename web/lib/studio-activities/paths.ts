@@ -14,6 +14,9 @@ export function playPathForStudioActivity(
   if (format === "sentence_scramble") return `/pilots/games-sentence-scramble?${q}`;
   if (format === "fill_blanks") return `/pilots/games-fill-blanks?${q}`;
   if (format === "true_false") return `/pilots/games-true-false?${q}`;
+  if (format === "wordsearch") return `/pilots/games-wordsearch?${q}`;
+  if (format === "crossword") return `/pilots/games-crossword?${q}`;
+  if (format === "memory") return `/pilots/games-memory?${q}`;
   if (format === "learning_track") return `/pilots/learning-track?${q}`;
   if (format === "vocabulary_list") {
     return `/teacher/activity-builder/vocabulary-lists?activity=${encodeURIComponent(id)}`;

@@ -118,3 +118,64 @@ describe("resolveBeatScreens library explore_hotspots", () => {
     expect(Array.isArray(screens[0]?.hotspots)).toBe(true);
   });
 });
+
+describe("resolveBeatScreens word-game settings", () => {
+  it("compiles Memory, Crossword, and Word search settings", async () => {
+    const memoryBeat: LearningTrackBeatInstance = {
+      id: "memory",
+      kind: "memory",
+      source: {
+        type: "vocab_compile",
+        listId: "hobbies-default",
+        format: "memory",
+      },
+      presentation: { memory: { textMode: "example" } },
+    };
+    const crosswordBeat: LearningTrackBeatInstance = {
+      id: "crossword",
+      kind: "crossword",
+      source: {
+        type: "vocab_compile",
+        listId: "hobbies-default",
+        format: "crossword",
+      },
+      presentation: { crossword: { clueMode: "definition" } },
+    };
+    const wordSearchBeat: LearningTrackBeatInstance = {
+      id: "wordsearch",
+      kind: "wordsearch",
+      source: {
+        type: "vocab_compile",
+        listId: "hobbies-default",
+        format: "wordsearch",
+      },
+      presentation: {
+        wordSearch: {
+          allowBackwards: true,
+          allowDiagonals: false,
+          allowBackwardsDiagonals: true,
+        },
+      },
+    };
+
+    const [memoryScreen] = await resolveBeatScreens(memoryBeat);
+    const [crosswordScreen] = await resolveBeatScreens(crosswordBeat);
+    const [wordSearchScreen] = await resolveBeatScreens(wordSearchBeat);
+    expect(memoryScreen?.subtype).toBe("memory");
+    expect(
+      (memoryScreen?.pairs as Array<{ text_kind?: string }> | undefined)?.[0]
+        ?.text_kind,
+    ).toBe("example");
+    expect(crosswordScreen?.subtype).toBe("crossword");
+    expect(
+      (crosswordScreen?.entries as Array<{ clue?: string }> | undefined)?.[0]
+        ?.clue,
+    ).toMatch(/making|moving|looking|riding/i);
+    expect(wordSearchScreen).toMatchObject({
+      subtype: "wordsearch",
+      allow_backwards: true,
+      allow_diagonals: false,
+      allow_backwards_diagonals: true,
+    });
+  });
+});

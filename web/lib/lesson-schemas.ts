@@ -3321,6 +3321,65 @@ export const wordShapeHuntPayloadSchema = z
     }
   });
 
+const wordSearchWordSchema = z.object({
+  id: z.string().min(1),
+  word: z.string().min(2),
+});
+
+/** Find every target word in a generated letter grid. */
+export const wordSearchPayloadSchema = z.object({
+  type: z.literal("interaction"),
+  subtype: z.literal("wordsearch"),
+  prompt: z.string().min(1),
+  words: z.array(wordSearchWordSchema).min(2).max(24),
+  grid_size: z.number().int().min(8).max(18).default(12),
+  allow_backwards: z.boolean().optional().default(false),
+  /** Missing means a legacy pack, whose generator always allowed diagonals. */
+  allow_diagonals: z.boolean().optional().default(true),
+  /** Legacy packs infer this from allow_backwards in the player. */
+  allow_backwards_diagonals: z.boolean().optional(),
+  guide: guideSchema,
+});
+
+const crosswordEntrySchema = z.object({
+  id: z.string().min(1),
+  answer: z.string().min(2),
+  clue: z.string().min(1),
+});
+
+/** Type vocabulary answers into an automatically arranged crossword. */
+export const crosswordPayloadSchema = z.object({
+  type: z.literal("interaction"),
+  subtype: z.literal("crossword"),
+  prompt: z.string().min(1),
+  entries: z.array(crosswordEntrySchema).min(2).max(20),
+  guide: guideSchema,
+});
+
+const memoryPairSchema = z
+  .object({
+    id: z.string().min(1),
+    word: z.string().min(1),
+    text: z.string().min(1).optional(),
+    text_kind: z.enum(["word", "definition", "example"]).optional().default("word"),
+    /** Legacy meaning-side text, retained for older saved activities. */
+    clue: z.string().optional(),
+    image_url: z.string().optional(),
+    image_fit: z.enum(["cover", "contain"]).optional().default("contain"),
+  })
+  .refine((pair) => Boolean(pair.image_url?.trim() || pair.clue?.trim() || pair.word.trim()), {
+    message: "Memory pairs need a word, clue, or picture",
+  });
+
+/** Flip two cards at a time and match each word to its picture or meaning. */
+export const memoryPayloadSchema = z.object({
+  type: z.literal("interaction"),
+  subtype: z.literal("memory"),
+  prompt: z.string().min(1),
+  pairs: z.array(memoryPairSchema).min(2).max(12),
+  guide: guideSchema,
+});
+
 const tableRowSchema = z.object({
   id: z.string(),
   prompt_text: z.string().min(1),
@@ -3790,6 +3849,9 @@ export const interactionPayloadSchema = z.intersection(
     listenColorWritePayloadSchema,
     letterMixupPayloadSchema,
     wordShapeHuntPayloadSchema,
+    wordSearchPayloadSchema,
+    crosswordPayloadSchema,
+    memoryPayloadSchema,
     tableCompletePayloadSchema,
     sortingGamePayloadSchema,
     dragMatchPayloadSchema,

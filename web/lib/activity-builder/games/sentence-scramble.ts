@@ -43,10 +43,24 @@ function assertItem(value: unknown, index: number): GamesSentenceScrambleItem {
   const correctOrder = value.correctOrder.map((token, tokenIndex) =>
     assertString(token, `Item "${id}" correctOrder[${tokenIndex}]`),
   );
-  const item: GamesSentenceScrambleItem = { id, correctOrder };
-  if (typeof value.bodyText === "string" && value.bodyText.trim()) {
-    item.bodyText = value.bodyText.trim();
+  const bodyText =
+    typeof value.bodyText === "string" ? value.bodyText.trim() : "";
+  const promptMode =
+    value.promptMode === "scramble_only" ||
+    value.promptMode === "additional_prompt"
+      ? value.promptMode
+      : bodyText
+        ? "additional_prompt"
+        : "scramble_only";
+  if (promptMode === "additional_prompt" && !bodyText) {
+    throw new Error(`Item "${id}" needs an additional prompt.`);
   }
+  const item: GamesSentenceScrambleItem = {
+    id,
+    promptMode,
+    correctOrder,
+    ...(promptMode === "additional_prompt" ? { bodyText } : {}),
+  };
   if (typeof value.imageUrl === "string" && value.imageUrl.trim()) {
     item.imageUrl = value.imageUrl.trim();
   }
@@ -113,7 +127,10 @@ export function exportGamesSentenceScrambleForLessonPlayer(
       const screen: GamesSentenceScrambleLessonPlayerScreen = {
         type: "interaction",
         subtype: "drag_sentence",
-        body_text: item.bodyText ?? bodyTextDefault,
+        body_text:
+          item.promptMode === "additional_prompt"
+            ? item.bodyText ?? bodyTextDefault
+            : bodyTextDefault,
         sentence_slots: tiles.map(() => ""),
         word_bank: shuffleWithSeed(tiles, `${quizGroupId}:${item.id}:bank`),
         correct_order: tiles,

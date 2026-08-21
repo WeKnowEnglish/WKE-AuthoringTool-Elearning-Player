@@ -177,6 +177,14 @@ export function PrimaryLearnTab({
         icon={<BookOpen className="h-5 w-5" aria-hidden />}
       >
         <Link
+          href="/primary/learn/mias-morning"
+          data-shelf-card
+          className="group flex w-[11.5rem] shrink-0 flex-col justify-between rounded-[1.5rem] border border-violet-200 bg-gradient-to-br from-violet-100 via-white to-amber-50 p-4 shadow-sm transition hover:shadow-md sm:w-[13rem]"
+        >
+          <span><span className="inline-flex rounded-full bg-violet-600 px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-white">Complete unit</span><span className="mt-8 block text-lg font-extrabold text-[var(--pl-ink)]">Mia&apos;s Morning</span><span className="mt-1 block text-xs font-semibold text-[var(--pl-muted)]">Explore Mia&apos;s routine, listen, and complete the story.</span></span>
+          <span className="mt-5 flex items-center justify-between text-xs font-extrabold text-violet-700">Start learning <ChevronRight className="h-4 w-4" /></span>
+        </Link>
+        <Link
           href="/wke/comic"
           data-shelf-card
           aria-label="Read Comic Adventures: A New Friend Arrives"

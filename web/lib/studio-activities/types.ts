@@ -7,6 +7,9 @@ export type StudioActivityFormat =
   | "true_false"
   | "sentence_scramble"
   | "fill_blanks"
+  | "wordsearch"
+  | "crossword"
+  | "memory"
   | "learning_track"
   | "vocabulary_list"
   | "explore_hotspots"
@@ -31,6 +34,9 @@ export const STUDIO_ACTIVITY_FORMATS: readonly StudioActivityFormat[] = [
   "true_false",
   "sentence_scramble",
   "fill_blanks",
+  "wordsearch",
+  "crossword",
+  "memory",
   "learning_track",
   "vocabulary_list",
   "explore_hotspots",

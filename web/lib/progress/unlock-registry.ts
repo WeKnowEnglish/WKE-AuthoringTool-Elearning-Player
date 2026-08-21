@@ -4,7 +4,7 @@ import type { VocabSetId } from "@/lib/vocabulary-templates/types";
  * Temporary: all Quick start activities stay unlocked regardless of player level.
  * Set to `false` before release to enforce {@link UNLOCK_REGISTRY} gates.
  */
-export const UNLOCK_ALL_ACTIVITIES_DURING_DEV = true;
+export const UNLOCK_ALL_ACTIVITIES_DURING_DEV = false;
 
 export type UnlockId =
   | "topic_quiz"
@@ -43,7 +43,7 @@ export const UNLOCK_REGISTRY: UnlockEntry[] = [
   { id: "vocab_set:food_meals", label: "Meals set", minLevel: 1 },
   { id: "vocab_set:food_snacks", label: "Snacks & Treats set", minLevel: 1 },
   { id: "word_bucket_catch", label: "Word bucket catch", minLevel: 2 },
-  { id: "language_garden", label: "Language Garden", minLevel: 2 },
+  { id: "language_garden", label: "Language Garden", minLevel: 1 },
   { id: "chase_game", label: "Chase game", minLevel: 3 },
   { id: "explore_run", label: "Explore run", minLevel: 3 },
   { id: "grammar_puppet", label: "Grammar puppet", minLevel: 5 },

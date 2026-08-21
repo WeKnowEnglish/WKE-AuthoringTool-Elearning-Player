@@ -666,7 +666,7 @@ export async function assignPackFlashcardSetAsHomework(input: {
 }
 
 export type RecordHomeworkCompletionResult =
-  | { ok: true; finishedAt: string }
+  | { ok: true; finishedAt: string; rewardReceipt?: Record<string, unknown> }
   | { ok: false; error: string };
 
 /** Create an assignment from a registered six-part homework template. */
@@ -1058,27 +1058,16 @@ async function recordCatalogHomeworkCompletion(input: {
     }
 
     const now = new Date().toISOString();
-    const { data: upserted, error: upsertError } = await supabase
-      .from("class_homework_completions")
-      .upsert(
-        {
-          homework_id: homeworkId,
-          student_id: user.id,
-          finished_at: now,
-          questions_total: questionsTotal,
-          correct_count: 0,
-          updated_at: now,
-        },
-        { onConflict: "homework_id,student_id" },
-      )
-      .select("finished_at")
-      .single();
+    const { data: completion, error: upsertError } = await supabase.rpc(
+      "complete_primary_homework",
+      { p_homework_id: homeworkId, p_questions_total: questionsTotal },
+    );
 
     if (upsertError) {
-      if (/class_homework_completions|schema cache|does not exist/i.test(upsertError.message)) {
+      if (/complete_primary_homework|class_homework_completions|schema cache|does not exist/i.test(upsertError.message)) {
         return {
           ok: false,
-          error: "Completions aren’t available yet — apply migration 065_class_homework_completions.",
+          error: "Completions aren’t available yet — apply migrations 134 and 135.",
         };
       }
       return { ok: false, error: upsertError.message };
@@ -1093,7 +1082,11 @@ async function recordCatalogHomeworkCompletion(input: {
     return {
       ok: true,
       finishedAt:
-        typeof upserted?.finished_at === "string" ? upserted.finished_at : now,
+        typeof (completion as any)?.finishedAt === "string" ? (completion as any).finishedAt : now,
+      rewardReceipt:
+        (completion as any)?.rewardReceipt && typeof (completion as any).rewardReceipt === "object"
+          ? (completion as any).rewardReceipt as Record<string, unknown>
+          : undefined,
     };
   } catch (err) {
     return {

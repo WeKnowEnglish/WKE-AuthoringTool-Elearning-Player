@@ -14,6 +14,9 @@ describe("studio-activities validate", () => {
     expect(isStudioActivityFormat("vocabulary_list")).toBe(true);
     expect(isStudioActivityFormat("explore_hotspots")).toBe(true);
     expect(isStudioActivityFormat("listen_and_choose")).toBe(true);
+    expect(isStudioActivityFormat("wordsearch")).toBe(true);
+    expect(isStudioActivityFormat("crossword")).toBe(true);
+    expect(isStudioActivityFormat("memory")).toBe(true);
   });
 
   it("validates explore_hotspots authoring into a play payload pack", () => {
@@ -70,6 +73,15 @@ describe("studio-activities paths", () => {
     );
     expect(playPathForStudioActivity("explore_hotspots", id)).toBe(
       `/teacher/activity-builder/hotspots?activity=${encodeURIComponent(id)}`,
+    );
+    expect(playPathForStudioActivity("wordsearch", id)).toContain(
+      "/pilots/games-wordsearch?",
+    );
+    expect(playPathForStudioActivity("crossword", id)).toContain(
+      "/pilots/games-crossword?",
+    );
+    expect(playPathForStudioActivity("memory", id)).toContain(
+      "/pilots/games-memory?",
     );
     expect(bankPathForStudioActivity(id)).toBe(
       `/teacher/classes?bank=1&activity=${encodeURIComponent(id)}`,

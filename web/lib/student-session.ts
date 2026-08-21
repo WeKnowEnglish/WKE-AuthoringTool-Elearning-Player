@@ -1,6 +1,8 @@
 "use client";
 
 import type { LearningLoopPhaseEvent } from "@/lib/learning-loop";
+import { scopedLocalStorageKey } from "@/lib/auth/scoped-local-storage";
+import { resolveStudentStorageIdSync } from "@/lib/auth/student-storage-id";
 import { markLessonComplete } from "@/lib/progress/local-storage";
 import {
   awardRewardsWithMeta,
@@ -103,6 +105,10 @@ export type StartStudentPracticeSessionInput = {
 
 const MAX_STORED_EVENTS = 500;
 
+function sessionEventsStorageKey(): string {
+  return scopedLocalStorageKey(STUDENT_SESSION_EVENTS_STORAGE_KEY, resolveStudentStorageIdSync());
+}
+
 function compactIdPart(value: string): string {
   return value
     .trim()
@@ -203,7 +209,7 @@ export function createSessionCompletedEvent(input: {
 export function readStudentPracticeSessionEvents(): StudentPracticeSessionEvent[] {
   if (typeof window === "undefined" || !window.localStorage) return [];
   try {
-    const raw = window.localStorage.getItem(STUDENT_SESSION_EVENTS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(sessionEventsStorageKey());
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) ? (parsed as StudentPracticeSessionEvent[]) : [];
@@ -260,7 +266,7 @@ export function recordStudentPracticeSessionEvent(
 ): StudentPracticeSessionEvent[] {
   if (typeof window === "undefined" || !window.localStorage) return [];
   const next = [...readStudentPracticeSessionEvents(), event].slice(-MAX_STORED_EVENTS);
-  window.localStorage.setItem(STUDENT_SESSION_EVENTS_STORAGE_KEY, JSON.stringify(next));
+  window.localStorage.setItem(sessionEventsStorageKey(), JSON.stringify(next));
   notifyPracticeEventListeners(event);
   return next;
 }

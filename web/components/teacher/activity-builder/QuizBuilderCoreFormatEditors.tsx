@@ -7,6 +7,7 @@ import type { GamesLineMatchAuthoringDocument } from "@/lib/activity-builder/gam
 import type { GamesTrueFalseAuthoringDocument } from "@/lib/activity-builder/games/types-true-false";
 import type { GamesSentenceScrambleAuthoringDocument } from "@/lib/activity-builder/games/types-sentence-scramble";
 import type { GamesFillBlanksAuthoringDocument } from "@/lib/activity-builder/games/types-fill-blanks";
+import type { GamesWordGameAuthoringDocument } from "@/lib/activity-builder/games/types-word-games";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900";
@@ -363,6 +364,9 @@ export function SentenceScrambleEditor({
   }
 
   const sentenceText = item.correctOrder.join(" ");
+  const promptMode =
+    item.promptMode ??
+    (item.bodyText?.trim() ? "additional_prompt" : "scramble_only");
 
   const patchItem = (patch: Partial<typeof item>) => {
     onPatch({
@@ -390,7 +394,7 @@ export function SentenceScrambleEditor({
         </button>
       </div>
       <label className="block text-xs font-medium text-stone-600">
-        Correct sentence (space-separated tiles)
+        Correct sentence
         <textarea
           className={inputClass}
           rows={2}
@@ -402,11 +406,66 @@ export function SentenceScrambleEditor({
               .map((token) => token.trim())
               .filter(Boolean);
             patchItem({
-              correctOrder: tokens.length >= 2 ? tokens : ["", ""],
+              correctOrder: tokens.length ? tokens : [""],
             });
           }}
         />
+        <span className="mt-1 block text-[11px] leading-snug text-stone-500">
+          This is the answer that will be broken into scrambled tiles.
+        </span>
       </label>
+      <fieldset>
+        <legend className="text-xs font-medium text-stone-600">Student prompt</legend>
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() =>
+              patchItem({ promptMode: "scramble_only", bodyText: undefined })
+            }
+            className={`rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+              promptMode === "scramble_only"
+                ? "border-amber-500 bg-amber-50 text-amber-950"
+                : "border-stone-200 bg-white text-stone-700"
+            }`}
+          >
+            Scramble the sentence
+            <span className="mt-0.5 block font-normal text-stone-500">
+              Show the standard “Put the words in order” instruction.
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              patchItem({
+                promptMode: "additional_prompt",
+                bodyText: item.bodyText ?? "",
+              })
+            }
+            className={`rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+              promptMode === "additional_prompt"
+                ? "border-amber-500 bg-amber-50 text-amber-950"
+                : "border-stone-200 bg-white text-stone-700"
+            }`}
+          >
+            Add an additional prompt
+            <span className="mt-0.5 block font-normal text-stone-500">
+              Cue students to build a fuller or expanded sentence.
+            </span>
+          </button>
+        </div>
+      </fieldset>
+      {promptMode === "additional_prompt" ? (
+        <label className="block text-xs font-medium text-stone-600">
+          Additional prompt
+          <textarea
+            className={inputClass}
+            rows={2}
+            value={item.bodyText ?? ""}
+            placeholder="Example: Expand this idea: She likes music."
+            onChange={(event) => patchItem({ bodyText: event.target.value })}
+          />
+        </label>
+      ) : null}
       <MediaUrlControls
         label="Picture"
         value={item.imageUrl ?? ""}
@@ -514,6 +573,205 @@ export function FillBlanksEditor({
           })
         }
       />
+    </div>
+  );
+}
+
+export function WordGameEditor({
+  document,
+  selectedItemId,
+  onPatch,
+  onRemove,
+  canRemove,
+}: {
+  document: GamesWordGameAuthoringDocument;
+  selectedItemId: string;
+  onPatch: (next: GamesWordGameAuthoringDocument) => void;
+} & RemoveProps) {
+  const item = document.interaction.items.find((row) => row.id === selectedItemId) ?? null;
+  if (!item) return <p className="text-sm text-stone-500">Select a word.</p>;
+  const format = document.interaction.format;
+  const memoryTextMode = document.interaction.memoryTextMode ?? "word";
+  const memoryText =
+    memoryTextMode === "definition"
+      ? item.definition?.trim() ?? ""
+      : memoryTextMode === "example"
+        ? item.example?.trim() ?? ""
+        : item.word.trim();
+  const memoryTextLabel =
+    memoryTextMode === "definition"
+      ? "Definition"
+      : memoryTextMode === "example"
+        ? "Example sentence"
+        : "Word";
+  const crosswordClueMode =
+    document.interaction.crosswordClueMode ?? "definition_or_example";
+  const generatedCrosswordClue =
+    crosswordClueMode === "example"
+      ? item.example || ""
+      : crosswordClueMode === "definition"
+        ? item.definition || ""
+        : item.definition || item.example || "";
+  const patchInteraction = (patch: Partial<GamesWordGameAuthoringDocument["interaction"]>) => {
+    onPatch({ ...document, interaction: { ...document.interaction, ...patch } });
+  };
+  const patchItem = (patch: Partial<typeof item>) => {
+    patchInteraction({
+      items: document.interaction.items.map((row) =>
+        row.id === item.id ? { ...row, ...patch } : row,
+      ),
+    });
+  };
+  return (
+    <div className="space-y-4">
+      <section className="space-y-3 rounded-xl border border-stone-200 bg-white/80 p-4">
+        <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
+          {format === "wordsearch" ? "Word search" : format === "crossword" ? "Crossword" : "Memory"} settings
+        </h2>
+        <label className="block text-xs font-medium text-stone-600">
+          Student prompt
+          <input className={inputClass} value={document.interaction.promptDefault} onChange={(event) => patchInteraction({ promptDefault: event.target.value })} />
+        </label>
+        {format === "wordsearch" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-stone-600">
+              Grid size
+              <select className={inputClass} value={document.interaction.gridSize ?? 12} onChange={(event) => patchInteraction({ gridSize: Number(event.target.value) })}>
+                {[10, 12, 14, 16, 18].map((size) => <option key={size} value={size}>{size} × {size}</option>)}
+              </select>
+            </label>
+            <fieldset className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-2.5">
+              <legend className="px-1 text-xs font-semibold text-stone-700">
+                Word directions
+              </legend>
+              <label className="flex items-start gap-2 text-xs font-medium text-stone-700">
+                <input type="checkbox" className="mt-0.5" checked={document.interaction.allowBackwards === true} onChange={(event) => patchInteraction({ allowBackwards: event.target.checked })} />
+                <span>Backwards <span className="block text-[10px] font-normal text-stone-500">Straight words can read left or up.</span></span>
+              </label>
+              <label className="flex items-start gap-2 text-xs font-medium text-stone-700">
+                <input type="checkbox" className="mt-0.5" checked={document.interaction.allowDiagonals === true} onChange={(event) => patchInteraction({ allowDiagonals: event.target.checked })} />
+                <span>Diagonal down <span className="block text-[10px] font-normal text-stone-500">Words can slope down-left or down-right.</span></span>
+              </label>
+              <label className="flex items-start gap-2 text-xs font-medium text-stone-700">
+                <input type="checkbox" className="mt-0.5" checked={document.interaction.allowBackwardsDiagonals === true} onChange={(event) => patchInteraction({ allowBackwardsDiagonals: event.target.checked })} />
+                <span>Backwards diagonal / up <span className="block text-[10px] font-normal text-stone-500">Words can slope upwards in either direction.</span></span>
+              </label>
+            </fieldset>
+          </div>
+        ) : null}
+        {format === "memory" ? (
+          <label className="block text-xs font-medium text-stone-600">
+            Text paired with the picture
+            <select
+              className={inputClass}
+              value={memoryTextMode}
+              onChange={(event) =>
+                patchInteraction({
+                  memoryTextMode: event.target.value as NonNullable<
+                    typeof document.interaction.memoryTextMode
+                  >,
+                })
+              }
+            >
+              <option value="word">Word</option>
+              <option value="definition">Definition</option>
+              <option value="example">Example sentence</option>
+            </select>
+          </label>
+        ) : null}
+        {format === "crossword" ? (
+          <label className="block text-xs font-medium text-stone-600">
+            Generated clue source
+            <select
+              className={inputClass}
+              value={crosswordClueMode}
+              onChange={(event) =>
+                patchInteraction({
+                  crosswordClueMode: event.target.value as NonNullable<
+                    typeof document.interaction.crosswordClueMode
+                  >,
+                })
+              }
+            >
+              <option value="definition_or_example">Definition, then example</option>
+              <option value="definition">Definition only</option>
+              <option value="example">Example sentence only</option>
+            </select>
+          </label>
+        ) : null}
+      </section>
+      <section className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-stone-900">Vocabulary word</h2>
+          <button type="button" className="rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-800 disabled:opacity-40" disabled={!canRemove} onClick={onRemove}>Remove</button>
+        </div>
+        <label className="block text-xs font-medium text-stone-600">
+          Word
+          <input className={inputClass} value={item.word} onChange={(event) => patchItem({ word: event.target.value })} />
+        </label>
+        {format === "crossword" ? (
+          <>
+            <label className="block text-xs font-medium text-stone-600">
+              Definition
+              <textarea className={inputClass} rows={2} value={item.definition ?? ""} onChange={(event) => patchItem({ definition: event.target.value })} />
+            </label>
+            <label className="block text-xs font-medium text-stone-600">
+              Example sentence
+              <textarea className={inputClass} rows={2} value={item.example ?? ""} onChange={(event) => patchItem({ example: event.target.value })} />
+            </label>
+            <label className="block text-xs font-medium text-stone-600">
+              Custom clue override (optional)
+              <textarea className={inputClass} rows={2} value={item.clue ?? ""} onChange={(event) => patchItem({ clue: event.target.value || undefined })} placeholder={generatedCrosswordClue || "Generated from the selected clue source"} />
+            </label>
+            {!item.clue && generatedCrosswordClue ? (
+              <p className="rounded-lg bg-stone-50 px-2.5 py-2 text-xs text-stone-600">
+                Student clue: {generatedCrosswordClue}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+        {format === "memory" ? (
+          <>
+            <label className="block text-xs font-medium text-stone-600">
+              Definition
+              <textarea className={inputClass} rows={2} value={item.definition ?? ""} onChange={(event) => patchItem({ definition: event.target.value })} />
+            </label>
+            <label className="block text-xs font-medium text-stone-600">
+              Example sentence
+              <textarea className={inputClass} rows={2} value={item.example ?? ""} onChange={(event) => patchItem({ example: event.target.value })} />
+            </label>
+          </>
+        ) : null}
+        {format === "memory" ? (
+          <>
+            <MediaUrlControls label="Matching picture (required)" value={item.imageUrl ?? ""} onChange={(imageUrl) => patchItem({ imageUrl: imageUrl.trim() || undefined, imageFit: "contain" })} />
+            <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-800">
+                Student pair preview
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="flex min-h-28 items-center justify-center rounded-xl border border-violet-200 bg-white p-3 text-center text-sm font-semibold text-stone-900 shadow-sm">
+                  {memoryText || `${memoryTextLabel} missing`}
+                </div>
+                <div className="flex min-h-28 items-center justify-center overflow-hidden rounded-xl border border-violet-200 bg-white p-2 shadow-sm">
+                  {item.imageUrl?.trim() ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.imageUrl}
+                      alt={`Memory match for ${item.word || "this word"}`}
+                      className="max-h-28 w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-center text-xs font-medium text-amber-800">
+                      Picture missing
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </section>
     </div>
   );
 }

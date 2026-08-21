@@ -19,6 +19,9 @@ export const HOMEWORK_STUDIO_FORMATS = [
   "true_false",
   "sentence_scramble",
   "fill_blanks",
+  "wordsearch",
+  "crossword",
+  "memory",
   "learning_track",
 ] as const;
 export type HomeworkStudioFormat = (typeof HOMEWORK_STUDIO_FORMATS)[number];
@@ -312,6 +315,9 @@ export function homeworkStudioFormatLabel(format: HomeworkStudioFormat): string 
   if (format === "true_false") return "True / false";
   if (format === "sentence_scramble") return "Sentence scramble";
   if (format === "fill_blanks") return "Fill in the blanks";
+  if (format === "wordsearch") return "Word search";
+  if (format === "crossword") return "Crossword";
+  if (format === "memory") return "Memory";
   return "Learning track";
 }
 

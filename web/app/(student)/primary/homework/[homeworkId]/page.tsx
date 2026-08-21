@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { HomeworkWritingPromptPlayer } from "@/components/homework/HomeworkWritingPromptPlayer";
+import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
@@ -29,6 +30,7 @@ import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import type { HomeworkTemplateOne } from "@/lib/homework-templates/homework-template-one";
 import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessmentSpeakingReview } from "@/lib/data/assessment-attempts";
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
+import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -112,6 +114,13 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
     payload.type === "writing_prompt"
       ? await getMyHomeworkWritingSubmission(homework.id)
       : null;
+  const gradedFreeze =
+    payload.type === "graded_track"
+      ? parseGradedTrackFreezeDocument(payload.document)
+      : null;
+  const collectionAttempt = gradedFreeze?.collectionDocument
+    ? await getMyHomeworkCollectionAttempt(homework.id)
+    : null;
   const typeLabel = CLASS_HOMEWORK_PAYLOAD_LABELS[payload.type];
   const eyebrow = `${homework.classTitle} · ${typeLabel}`;
 
@@ -330,14 +339,34 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
 
       {payload.type === "graded_track" && payload.level === "primary" ? (
         (() => {
-          const freeze = parseGradedTrackFreezeDocument(payload.document);
+          const freeze = gradedFreeze;
           const document = freeze?.primaryDocument as HomeworkTemplateOne | undefined;
-          return document ? (
-            <HomeworkTemplateOnePilot
-              homeworkId={homework.id}
-              alreadyCompleted={Boolean(homework.completedAt)}
-              document={document}
-            />
+          return document || freeze?.collectionDocument ? (
+            <div className="space-y-6">
+              {document ? (
+                <HomeworkTemplateOnePilot
+                  homeworkId={homework.id}
+                  alreadyCompleted={Boolean(homework.completedAt)}
+                  document={document}
+                  deferOverallCompletion={Boolean(freeze?.collectionDocument)}
+                />
+              ) : null}
+              {freeze?.collectionDocument ? (
+                <div className={document ? "border-t-4 border-dashed border-teal-200 pt-6" : ""}>
+                  {document ? (
+                    <p className="mb-3 text-sm font-extrabold uppercase tracking-wide text-teal-800">
+                      Collection activities
+                    </p>
+                  ) : null}
+                  <HomeworkCollectionPlayer
+                    homeworkId={homework.id}
+                    document={freeze.collectionDocument}
+                    initialAttempt={collectionAttempt}
+                    alreadyCompleted={Boolean(homework.completedAt)}
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : (
             <p className="rounded-xl border-2 border-dashed border-neutral-400 bg-white px-4 py-5 text-sm font-semibold text-neutral-600">
               Graded track content is missing. Ask your teacher to re-assign this homework.

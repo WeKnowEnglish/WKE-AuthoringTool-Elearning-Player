@@ -31,6 +31,7 @@ import {
 import { vocabActivityGenerationRecipe } from "@/lib/activity-library/compile-quizzes-from-vocab-studio";
 import {
   QuizBuilderSetupCards,
+  isStagedQuizCardReady,
   type StagedQuizCard,
 } from "@/components/teacher/activity-builder/QuizBuilderSetupCards";
 import {
@@ -39,11 +40,14 @@ import {
   ListenEditor,
   SentenceScrambleEditor,
   TrueFalseEditor,
+  WordGameEditor,
 } from "@/components/teacher/activity-builder/QuizBuilderCoreFormatEditors";
 import { bankPathForStudioActivity } from "@/lib/studio-activities/paths";
 import type { StudioActivityFormat } from "@/lib/studio-activities/types";
 import { createPracticeTrackFromQuizCards } from "@/lib/activity-builder/games/quiz-builder-practice-track";
 import { persistActivityTrackDraft } from "@/lib/activity-tracks";
+import { enrichVocabListMediaFromLexicon } from "@/lib/actions/lexicon-media";
+import { tokenizeSentenceForScramble } from "@/lib/games-sentence-scramble/scramble-tiles";
 import {
   QUIZ_FORMATS,
   appendBlankItem,
@@ -111,11 +115,17 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
             : format === "line_match"
               ? "Draw a line from each word to its picture."
               : format === "sentence_scramble"
-                ? "Put the words in order."
+                ? "This is an example sentence."
                 : format === "fill_blanks"
                   ? "Choose the missing word."
                   : format === "true_false"
                     ? "Is this true or false?"
+                    : format === "wordsearch"
+                      ? "Find every word in the grid."
+                      : format === "crossword"
+                        ? "Use the clues to complete the crossword."
+                        : format === "memory"
+                          ? "Match each word to its picture or meaning."
                     : "What is this?",
     mcOptionCount: 4,
     mcShuffleOptions: true,
@@ -124,12 +134,12 @@ function createQuizCard(format: VocabCompileFormat): StagedQuizCard {
     flashcardsShuffleCards: true,
     flashcardsFrontFaces: ["picture"],
     flashcardsBackFaces: ["word", "example"],
+    wordSearchAllowBackwards: false,
+    wordSearchAllowDiagonals: false,
+    wordSearchAllowBackwardsDiagonals: false,
+    memoryTextMode: "word",
+    crosswordClueMode: "definition_or_example",
   };
-}
-
-function isCardReady(card: StagedQuizCard): boolean {
-  if (card.source === "blank") return true;
-  return Boolean(card.listId) && card.selectedEntryIds.length > 0;
 }
 
 export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActivityId?: string | null }) {
@@ -159,7 +169,7 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
   const [bankBusy, setBankBusy] = useState(false);
 
   const readyCards = useMemo(
-    () => setupCards.filter((card) => isCardReady(card)),
+    () => setupCards.filter((card) => isStagedQuizCardReady(card)),
     [setupCards],
   );
   const canRunOneQuiz = readyCards.length >= 2;
@@ -216,10 +226,16 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
     });
     try {
       const loaded = await getStudioVocabularyList(listId);
-      const entries = loaded.document.entries;
+      let document = loaded.document;
+      try {
+        document = await enrichVocabListMediaFromLexicon(document);
+      } catch {
+        // Linked-media enrichment is additive; directly authored list media still works.
+      }
+      const entries = document.entries;
       patchCard(cardId, {
         listId: loaded.id,
-        listName: loaded.document.name,
+        listName: document.name,
         entries,
         selectedEntryIds: entries.map((entry) => entry.id),
         entriesBusy: false,
@@ -254,13 +270,22 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
       setMasterPrompt(next.document.interaction.bodyTextDefault);
     }
     if (next.format === "sentence_scramble") {
-      setMasterPrompt(next.document.interaction.bodyTextDefault);
+      setMasterPrompt(
+        next.document.interaction.items[0]?.correctOrder.join(" ") ?? "",
+      );
     }
     if (next.format === "fill_blanks") {
       setMasterPrompt(next.document.interaction.bodyTextDefault);
     }
     if (next.format === "true_false") {
       setMasterPrompt("Is this true or false?");
+    }
+    if (
+      next.format === "wordsearch" ||
+      next.format === "crossword" ||
+      next.format === "memory"
+    ) {
+      setMasterPrompt(next.document.interaction.promptDefault);
     }
     setScreen("editor");
     setLandingPanel("home");
@@ -385,6 +410,33 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
                 backFaces: [...card.flashcardsBackFaces],
               }));
           }
+          if (blank.format === "memory") {
+            blank.document.interaction.memoryTextMode = card.memoryTextMode;
+          }
+          if (blank.format === "crossword") {
+            blank.document.interaction.crosswordClueMode = card.crosswordClueMode;
+          }
+          if (blank.format === "wordsearch") {
+            blank.document.interaction.allowBackwards =
+              card.wordSearchAllowBackwards;
+            blank.document.interaction.allowDiagonals =
+              card.wordSearchAllowDiagonals;
+            blank.document.interaction.allowBackwardsDiagonals =
+              card.wordSearchAllowBackwardsDiagonals;
+          }
+          if (blank.format === "sentence_scramble") {
+            const authoredTokens = tokenizeSentenceForScramble(card.masterPrompt);
+            blank.document.interaction.items = [
+              {
+                ...blank.document.interaction.items[0]!,
+                promptMode: "scramble_only",
+                correctOrder:
+                  authoredTokens.length >= 2
+                    ? authoredTokens
+                    : ["Example", "sentence."],
+              },
+            ];
+          }
           generated.push({ session: blank, source: { via: "quiz_builder" } });
           continue;
         }
@@ -392,6 +444,14 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
         let loaded = listCache.get(card.listId);
         if (!loaded) {
           loaded = await getStudioVocabularyList(card.listId);
+          try {
+            loaded = {
+              ...loaded,
+              document: await enrichVocabListMediaFromLexicon(loaded.document),
+            };
+          } catch {
+            // Fall back to media stored directly on the vocabulary-list entries.
+          }
           listCache.set(card.listId, loaded);
         }
         const compiled = compileQuizzesFromVocabList({
@@ -406,9 +466,16 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
             card.masterPrompt || "Unscramble the letters to spell the word.",
           letterShuffleLetters: card.letterShuffleLetters,
           letterCaseSensitive: card.letterCaseSensitive,
+          wordGamePrompt: card.masterPrompt || undefined,
+          wordSearchAllowBackwards: card.wordSearchAllowBackwards,
+          wordSearchAllowDiagonals: card.wordSearchAllowDiagonals,
+          wordSearchAllowBackwardsDiagonals:
+            card.wordSearchAllowBackwardsDiagonals,
           flashcardsShuffleCards: card.flashcardsShuffleCards,
           flashcardsFrontFaces: card.flashcardsFrontFaces,
           flashcardsBackFaces: card.flashcardsBackFaces,
+          memoryTextMode: card.memoryTextMode,
+          crosswordClueMode: card.crosswordClueMode,
         });
         allSkipped.push(...compiled.skipped);
         const result = compiled.results[0];
@@ -442,9 +509,16 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
                 letterPrompt: card.masterPrompt || undefined,
                 letterShuffleLetters: card.letterShuffleLetters,
                 letterCaseSensitive: card.letterCaseSensitive,
+                wordGamePrompt: card.masterPrompt || undefined,
+                wordSearchAllowBackwards: card.wordSearchAllowBackwards,
+                wordSearchAllowDiagonals: card.wordSearchAllowDiagonals,
+                wordSearchAllowBackwardsDiagonals:
+                  card.wordSearchAllowBackwardsDiagonals,
                 flashcardsShuffleCards: card.flashcardsShuffleCards,
                 flashcardsFrontFaces: card.flashcardsFrontFaces,
                 flashcardsBackFaces: card.flashcardsBackFaces,
+                memoryTextMode: card.memoryTextMode,
+                crosswordClueMode: card.crosswordClueMode,
               },
             }),
           },
@@ -881,7 +955,11 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
         <aside className="flex min-h-0 flex-col border-r border-stone-200 bg-stone-50/50">
           <div className="flex items-center justify-between border-b border-stone-200 px-3 py-2">
             <h2 className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
-              {session.format === "flashcards" ? "Cards" : "Questions"}
+              {session.format === "flashcards"
+                ? "Cards"
+                : session.format === "wordsearch" || session.format === "crossword" || session.format === "memory"
+                  ? "Words"
+                  : "Questions"}
             </h2>
             <button
               type="button"
@@ -1002,6 +1080,15 @@ export function QuizBuilderWorkspace({ initialActivityId = null }: { initialActi
                 }
                 onRemove={removeSelected}
                 canRemove={session.document.interaction.items.length > 1}
+              />
+            ) : null}
+            {session.format === "wordsearch" || session.format === "crossword" || session.format === "memory" ? (
+              <WordGameEditor
+                document={session.document}
+                selectedItemId={selectedItemId}
+                onPatch={(next) => setSession({ format: session.format, document: next } as QuizSession)}
+                onRemove={removeSelected}
+                canRemove={session.document.interaction.items.length > 2}
               />
             ) : null}
           </div>

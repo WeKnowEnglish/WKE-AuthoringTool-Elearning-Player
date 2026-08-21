@@ -8,6 +8,10 @@ import {
 } from "@/lib/activity-builder/games/types-flashcards";
 import type { VocabListEntry } from "@/lib/activity-builder/vocabulary-list/types";
 import type { StudioVocabularyListRef } from "@/lib/activity-library/vocabulary-list-studio";
+import type {
+  GamesCrosswordClueMode,
+  GamesMemoryTextMode,
+} from "@/lib/activity-builder/games/types-word-games";
 
 export type FormatSource = "vocab_list" | "blank";
 
@@ -28,6 +32,11 @@ export type StagedQuizCard = {
   flashcardsShuffleCards: boolean;
   flashcardsFrontFaces: GamesFlashcardFace[];
   flashcardsBackFaces: GamesFlashcardFace[];
+  wordSearchAllowBackwards: boolean;
+  wordSearchAllowDiagonals: boolean;
+  wordSearchAllowBackwardsDiagonals: boolean;
+  memoryTextMode: GamesMemoryTextMode;
+  crosswordClueMode: GamesCrosswordClueMode;
 };
 
 type FormatMeta = {
@@ -51,8 +60,31 @@ function formatLabel(formats: FormatMeta[], format: VocabCompileFormat): string 
   return formats.find((row) => row.format === format)?.label ?? format;
 }
 
-function isCardReady(card: StagedQuizCard): boolean {
+function memoryTextIsReady(
+  entry: VocabListEntry,
+  mode: GamesMemoryTextMode,
+): boolean {
+  if (mode === "definition") return Boolean(entry.definitionEn?.trim());
+  if (mode === "example") return Boolean(entry.example?.trim());
+  return Boolean(entry.word.trim());
+}
+
+export function countReadyMemoryPairs(card: StagedQuizCard): number {
+  if (card.format !== "memory") return 0;
+  const selectedIds = new Set(card.selectedEntryIds);
+  return card.entries.filter(
+    (entry) =>
+      selectedIds.has(entry.id) &&
+      Boolean(entry.imageUrl?.trim()) &&
+      memoryTextIsReady(entry, card.memoryTextMode),
+  ).length;
+}
+
+export function isStagedQuizCardReady(card: StagedQuizCard): boolean {
   if (card.source === "blank") return true;
+  if (card.format === "memory") {
+    return Boolean(card.listId) && countReadyMemoryPairs(card) >= 2;
+  }
   return Boolean(card.listId) && card.selectedEntryIds.length > 0;
 }
 
@@ -140,17 +172,18 @@ export function QuizBuilderSetupCards({
 
       {cards.length === 0 ? (
         <p className="max-w-md text-center text-sm text-stone-500">
-          Add MCQ, letter scramble, or flashcards. Each card can use a different
-          vocabulary list — e.g. fruit MCQ next to morning-routine flashcards.
+          Add a quiz or game, then choose the vocabulary list and words it should use.
+          Each card can use a different list.
         </p>
       ) : (
         <div className="w-full overflow-x-auto pb-2">
           <div className="flex min-w-min items-stretch gap-4 px-1">
             {cards.map((card) => {
-              const ready = isCardReady(card);
+              const ready = isStagedQuizCardReady(card);
               const pictureCount = card.entries.filter((entry) =>
                 Boolean(entry.imageUrl?.trim()),
               ).length;
+              const readyMemoryPairs = countReadyMemoryPairs(card);
               return (
                 <article
                   key={card.id}
@@ -249,9 +282,11 @@ export function QuizBuilderSetupCards({
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-[11px] text-stone-500">
                               {card.selectedEntryIds.length}/{card.entries.length}
-                              {pictureCount > 0
-                                ? ` · ${pictureCount} pics`
-                                : " · no pics"}
+                              {card.format === "memory"
+                                ? ` · ${readyMemoryPairs} pairs ready`
+                                : pictureCount > 0
+                                  ? ` · ${pictureCount} pics`
+                                  : " · no pics"}
                             </p>
                             <div className="flex gap-2 text-[11px] font-semibold">
                               <button
@@ -321,6 +356,12 @@ export function QuizBuilderSetupCards({
                               );
                             })}
                           </ul>
+                          {card.format === "memory" && readyMemoryPairs < 2 ? (
+                            <p className="mt-1.5 rounded-lg bg-amber-50 px-2 py-1.5 text-[10px] leading-snug text-amber-950">
+                              Memory needs at least two selected words with a picture and
+                              the selected text type.
+                            </p>
+                          ) : null}
                         </div>
                       ) : vocabLists.length === 0 && !listsBusy ? (
                         <p className="mt-2 text-xs text-stone-500">
@@ -337,8 +378,8 @@ export function QuizBuilderSetupCards({
                     </>
                   ) : (
                     <p className="mt-3 rounded-xl border border-dashed border-stone-200 bg-stone-50 px-2.5 py-2 text-xs text-stone-600">
-                      One empty {formatLabel(formats, card.format).toLowerCase()} item
-                      after generate.
+                      A starter {formatLabel(formats, card.format).toLowerCase()} activity
+                      will open after generate.
                     </p>
                   )}
 
@@ -386,11 +427,17 @@ export function QuizBuilderSetupCards({
                     </div>
                   ) : null}
 
-                  {card.format !== "flashcards" ? (
+                  {card.format !== "flashcards" &&
+                  !(
+                    card.format === "sentence_scramble" &&
+                    card.source === "vocab_list"
+                  ) ? (
                     <label className="mt-3 block text-xs font-medium text-stone-700">
                       {card.format === "multiple_choice"
                         ? "Master question"
-                        : "Prompt"}
+                        : card.format === "sentence_scramble"
+                          ? "Correct sentence"
+                          : "Prompt"}
                       <input
                         className={inputClass}
                         value={card.masterPrompt}
@@ -398,7 +445,21 @@ export function QuizBuilderSetupCards({
                           onPatch(card.id, { masterPrompt: event.target.value })
                         }
                       />
+                      {card.format === "sentence_scramble" ? (
+                        <span className="mt-1 block text-[10px] leading-snug text-stone-500">
+                          This sentence becomes the scrambled answer. You can add a
+                          separate expansion prompt in the editor.
+                        </span>
+                      ) : null}
                     </label>
+                  ) : null}
+
+                  {card.format === "sentence_scramble" &&
+                  card.source === "vocab_list" ? (
+                    <p className="mt-3 rounded-lg bg-sky-50 px-2.5 py-2 text-[11px] leading-snug text-sky-950">
+                      Correct sentences come from each selected word’s example sentence.
+                      You can add separate expansion prompts after generating.
+                    </p>
                   ) : null}
 
                   <details className="mt-3 rounded-xl border border-stone-200 bg-stone-50/70">
@@ -484,6 +545,100 @@ export function QuizBuilderSetupCards({
                             }
                           />
                           Shuffle cards
+                        </label>
+                      ) : null}
+                      {card.format === "wordsearch" ? (
+                        <fieldset className="space-y-2">
+                          <legend className="text-xs font-medium text-stone-700">
+                            Word directions
+                          </legend>
+                          <label className="flex items-center gap-2 text-xs text-stone-700">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 rounded border-stone-300"
+                              checked={card.wordSearchAllowBackwards}
+                              onChange={(event) =>
+                                onPatch(card.id, {
+                                  wordSearchAllowBackwards: event.target.checked,
+                                })
+                              }
+                            />
+                            Backwards straight
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-stone-700">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 rounded border-stone-300"
+                              checked={card.wordSearchAllowDiagonals}
+                              onChange={(event) =>
+                                onPatch(card.id, {
+                                  wordSearchAllowDiagonals: event.target.checked,
+                                })
+                              }
+                            />
+                            Diagonal down
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-stone-700">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 rounded border-stone-300"
+                              checked={card.wordSearchAllowBackwardsDiagonals}
+                              onChange={(event) =>
+                                onPatch(card.id, {
+                                  wordSearchAllowBackwardsDiagonals:
+                                    event.target.checked,
+                                })
+                              }
+                            />
+                            Backwards diagonal / up
+                          </label>
+                          <p className="text-[10px] leading-snug text-stone-500">
+                            Leave all off for an easier horizontal-and-vertical puzzle.
+                          </p>
+                        </fieldset>
+                      ) : null}
+                      {card.format === "memory" ? (
+                        <label className="block text-xs text-stone-700">
+                          Text paired with each picture
+                          <select
+                            className={inputClass}
+                            value={card.memoryTextMode}
+                            onChange={(event) =>
+                              onPatch(card.id, {
+                                memoryTextMode: event.target.value as GamesMemoryTextMode,
+                              })
+                            }
+                          >
+                            <option value="word">Word</option>
+                            <option value="definition">Definition</option>
+                            <option value="example">Example sentence</option>
+                          </select>
+                          <span className="mt-1 block text-[10px] leading-snug text-stone-500">
+                            Every generated pair needs a picture and the selected text.
+                          </span>
+                        </label>
+                      ) : null}
+                      {card.format === "crossword" ? (
+                        <label className="block text-xs text-stone-700">
+                          Clue source
+                          <select
+                            className={inputClass}
+                            value={card.crosswordClueMode}
+                            onChange={(event) =>
+                              onPatch(card.id, {
+                                crosswordClueMode: event.target.value as GamesCrosswordClueMode,
+                              })
+                            }
+                          >
+                            <option value="definition_or_example">
+                              Definition, then example
+                            </option>
+                            <option value="definition">Definition only</option>
+                            <option value="example">Example sentence only</option>
+                          </select>
+                          <span className="mt-1 block text-[10px] leading-snug text-stone-500">
+                            You can still override individual clues in the editor.
+                          </span>
                         </label>
                       ) : null}
                     </div>

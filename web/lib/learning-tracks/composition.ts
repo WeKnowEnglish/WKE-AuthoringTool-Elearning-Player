@@ -19,6 +19,9 @@ import {
   type LearningTrackTrueFalseSettings,
   type LearningTrackSentenceScrambleSettings,
   type LearningTrackFillBlanksSettings,
+  type LearningTrackMemorySettings,
+  type LearningTrackWordSearchSettings,
+  type LearningTrackCrosswordSettings,
   type LearningTrackPlannedBridge,
   type LearningTrackRecipe,
   type LearningTrackVocabCompileFormat,
@@ -102,6 +105,22 @@ export function defaultFillBlanksSettings(): LearningTrackFillBlanksSettings {
   };
 }
 
+export function defaultMemorySettings(): LearningTrackMemorySettings {
+  return { textMode: "word" };
+}
+
+export function defaultWordSearchSettings(): LearningTrackWordSearchSettings {
+  return {
+    allowBackwards: false,
+    allowDiagonals: false,
+    allowBackwardsDiagonals: false,
+  };
+}
+
+export function defaultCrosswordSettings(): LearningTrackCrosswordSettings {
+  return { clueMode: "definition_or_example" };
+}
+
 export function clampMcOptionCount(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_MC_OPTION_COUNT;
   return Math.min(6, Math.max(2, Math.round(value)));
@@ -126,7 +145,10 @@ export function vocabFormatForKind(
     kind === "line_match" ||
     kind === "true_false" ||
     kind === "sentence_scramble" ||
-    kind === "fill_blanks"
+    kind === "fill_blanks" ||
+    kind === "wordsearch" ||
+    kind === "crossword" ||
+    kind === "memory"
   ) {
     return kind;
   }
@@ -191,6 +213,14 @@ export function defaultSourceForKind(
         listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
         format: "fill_blanks",
       };
+    case "wordsearch":
+    case "crossword":
+    case "memory":
+      return {
+        type: "vocab_compile",
+        listId: HOBBIES_DEFAULT_VOCAB_LIST_ID,
+        format: kind,
+      };
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unsupported beat kind: ${_exhaustive}`);
@@ -237,6 +267,15 @@ export function createBeatInstance(
   const fillBlanks =
     overrides?.presentation?.fillBlanks ??
     (kind === "fill_blanks" ? defaultFillBlanksSettings() : undefined);
+  const memory =
+    overrides?.presentation?.memory ??
+    (kind === "memory" ? defaultMemorySettings() : undefined);
+  const wordSearch =
+    overrides?.presentation?.wordSearch ??
+    (kind === "wordsearch" ? defaultWordSearchSettings() : undefined);
+  const crossword =
+    overrides?.presentation?.crossword ??
+    (kind === "crossword" ? defaultCrosswordSettings() : undefined);
   return {
     id: overrides?.id ?? newBeatId(kind),
     kind,
@@ -258,6 +297,9 @@ export function createBeatInstance(
       ...(trueFalse ? { trueFalse } : {}),
       ...(sentenceScramble ? { sentenceScramble } : {}),
       ...(fillBlanks ? { fillBlanks } : {}),
+      ...(memory ? { memory } : {}),
+      ...(wordSearch ? { wordSearch } : {}),
+      ...(crossword ? { crossword } : {}),
     },
   };
 }

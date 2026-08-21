@@ -109,6 +109,7 @@ import {
   startPracticeSession,
   type StudentResponseKind,
 } from "@/lib/student-session";
+import { awardPrimaryReward } from "@/lib/primary-player/client";
 import { recordVocabularyEvidence } from "@/lib/mastery/vocabulary";
 import {
   grammarPosterActivityId,
@@ -184,6 +185,15 @@ const LazyLetterMixup = lazyWithDiagnostics("interaction:LetterMixupView", () =>
 );
 const LazyWordShapeHunt = lazyWithDiagnostics("interaction:WordShapeHuntView", () =>
   import("./interactions/WordShapeHuntView").then((m) => ({ default: m.WordShapeHuntView })),
+);
+const LazyWordSearch = lazyWithDiagnostics("interaction:WordSearchView", () =>
+  import("./interactions/WordSearchView").then((m) => ({ default: m.WordSearchView })),
+);
+const LazyCrossword = lazyWithDiagnostics("interaction:CrosswordView", () =>
+  import("./interactions/CrosswordView").then((m) => ({ default: m.CrosswordView })),
+);
+const LazyMemory = lazyWithDiagnostics("interaction:MemoryView", () =>
+  import("./interactions/MemoryView").then((m) => ({ default: m.MemoryView })),
 );
 const LazyTableComplete = lazyWithDiagnostics("interaction:TableCompleteView", () =>
   import("./interactions/TableCompleteView").then((m) => ({ default: m.TableCompleteView })),
@@ -427,6 +437,8 @@ type Props = {
    * (e.g. homework freeze play that records completion outside LessonPlayer).
    */
   onPreviewComplete?: () => void;
+  /** Fired once after a real student run reaches completion. */
+  onStudentComplete?: () => void;
 };
 
 export function LessonPlayer({
@@ -460,6 +472,7 @@ export function LessonPlayer({
   onPracticeSessionBind,
   onScreenIndexChange,
   onPreviewComplete,
+  onStudentComplete,
 }: Props) {
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -853,6 +866,15 @@ export function LessonPlayer({
       studentPracticeSessionCompletedRef.current = true;
       setGold(snapshot.gold);
       setExperience(snapshot.experience);
+      if (stats.quizGradedCount > 0) {
+        void awardPrimaryReward({
+          eventId: `primary:grammar:${completionRewardEventId}`,
+          rewardKind: "standard_activity",
+          activityId: lessonId,
+          source: "grammar_assessed_practice",
+          metadata: { graded: stats.quizGradedCount, correct: stats.quizCorrectCount },
+        }).then(() => onEconomyChange?.()).catch(() => undefined);
+      }
       onEconomyChange?.();
     }
     setGrammarComplete({ stats, breakdown });
@@ -946,6 +968,8 @@ export function LessonPlayer({
       });
       if (isPreview) {
         onPreviewComplete?.();
+      } else {
+        onStudentComplete?.();
       }
     }
   }, [
@@ -960,6 +984,7 @@ export function LessonPlayer({
     completeVocabLesson,
     completeGrammarLesson,
     onPreviewComplete,
+    onStudentComplete,
     mode,
   ]);
 
@@ -1952,6 +1977,27 @@ export function LessonPlayer({
         <InteractionFeedbackShell kind={interactionFeedback}>
           <InteractionLazyShell>
             <LazyWordShapeHunt parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "wordsearch" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyWordSearch parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "crossword" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyCrossword parsed={parsed} {...nav} {...passHandlers} />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
+      {parsed.type === "interaction" && parsed.subtype === "memory" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyMemory parsed={parsed} {...nav} {...passHandlers} />
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}

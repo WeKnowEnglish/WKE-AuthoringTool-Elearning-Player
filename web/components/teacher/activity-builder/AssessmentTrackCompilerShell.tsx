@@ -40,6 +40,7 @@ import { AssessmentSpeakingQuestionExchangePartEditor } from "@/components/teach
 import { AssessmentSpeakingPictureStoryPartEditor } from "@/components/teacher/activity-builder/AssessmentSpeakingPictureStoryPartEditor";
 import { AssessmentTrackStudentPreview } from "@/components/teacher/activity-builder/AssessmentTrackStudentPreview";
 import { AssignAssessmentTrackOverlay } from "@/components/teacher/activity-builder/AssignAssessmentTrackOverlay";
+import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
 
 type Props = {
   document: ActivityTrackDocument;
@@ -386,6 +387,7 @@ export function AssessmentTrackCompilerShell({
       persist({
         ...graded,
         createdAt: doc.createdAt,
+        coverImageUrl: doc.coverImageUrl ?? null,
       });
     }
   };
@@ -563,6 +565,19 @@ export function AssessmentTrackCompilerShell({
                 className="mt-1.5 w-full resize-y rounded-lg border border-stone-300 bg-white px-2.5 py-2 text-sm font-semibold leading-5"
               />
             </label>
+
+            <div className="border-t border-stone-200 pt-4">
+              <TrackCoverImageEditor
+                value={doc.coverImageUrl ?? ""}
+                title={doc.title}
+                onChange={(coverImageUrl) =>
+                  commitDoc({
+                    ...doc,
+                    coverImageUrl: coverImageUrl || null,
+                  })
+                }
+              />
+            </div>
 
             <button
               type="button"

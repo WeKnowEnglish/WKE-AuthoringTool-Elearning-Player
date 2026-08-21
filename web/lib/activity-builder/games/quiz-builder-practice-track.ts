@@ -1,5 +1,9 @@
 import type { VocabCompileFormat } from "@/lib/activity-builder/games/compile-from-vocab-list";
 import type { GamesFlashcardFace } from "@/lib/activity-builder/games/types-flashcards";
+import type {
+  GamesCrosswordClueMode,
+  GamesMemoryTextMode,
+} from "@/lib/activity-builder/games/types-word-games";
 import { formatLabel } from "@/lib/activity-builder/games/quiz-builder-session";
 import {
   ACTIVITY_TRACK_DOCUMENT_VERSION,
@@ -30,6 +34,11 @@ export type QuizBuilderTrackCard = {
   flashcardsShuffleCards: boolean;
   flashcardsFrontFaces: GamesFlashcardFace[];
   flashcardsBackFaces: GamesFlashcardFace[];
+  wordSearchAllowBackwards: boolean;
+  wordSearchAllowDiagonals: boolean;
+  wordSearchAllowBackwardsDiagonals: boolean;
+  memoryTextMode: GamesMemoryTextMode;
+  crosswordClueMode: GamesCrosswordClueMode;
 };
 
 function estimatedMinutesForKind(kind: LearningTrackBeatKind): number {
@@ -98,6 +107,28 @@ function presentationForCard(
       sentenceScramble: {
         bodyText: card.masterPrompt.trim() || "Put the words in order.",
         autoAdvanceOnPass: true,
+      },
+    };
+  }
+  if (format === "memory") {
+    return {
+      afterBridge: "auto",
+      memory: { textMode: card.memoryTextMode },
+    };
+  }
+  if (format === "crossword") {
+    return {
+      afterBridge: "auto",
+      crossword: { clueMode: card.crosswordClueMode },
+    };
+  }
+  if (format === "wordsearch") {
+    return {
+      afterBridge: "auto",
+      wordSearch: {
+        allowBackwards: card.wordSearchAllowBackwards,
+        allowDiagonals: card.wordSearchAllowDiagonals,
+        allowBackwardsDiagonals: card.wordSearchAllowBackwardsDiagonals,
       },
     };
   }

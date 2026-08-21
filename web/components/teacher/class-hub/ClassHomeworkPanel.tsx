@@ -17,6 +17,7 @@ import {
 import { sourceLabelForAssignableKind } from "@/lib/assignable-activities/map";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, ClassHomeworkPayload, HomeworkCompletionSummary } from "@/lib/class-homework/types";
+import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
 import {
   assessmentProgress,
@@ -339,6 +340,13 @@ function HomeworkEditor({
   onDeleted: (id: string) => void;
 }) {
   const isLight = teacherTier === "light";
+  const gradedFreeze = homework.payload.type === "graded_track"
+    ? parseGradedTrackFreezeDocument(homework.payload.document)
+    : null;
+  const hasCollectionResults = Boolean(gradedFreeze?.collectionDocument);
+  const hasLegacyTemplateResults = Boolean(
+    gradedFreeze?.primaryDocument || gradedFreeze?.secondaryDocument,
+  );
   const rosterStudents = Array.from(nameByStudentId, ([studentId, displayName]) => ({ studentId, displayName }));
   const typeOptions = (
     isLight
@@ -792,13 +800,21 @@ function HomeworkEditor({
         </Link>
       ) : null}
 
-      {homework.payload.type === "homework_template" ||
-      homework.payload.type === "graded_track" ? (
+      {homework.payload.type === "homework_template" || hasLegacyTemplateResults ? (
         <Link
           href={`/teacher/classes/${classId}/homework-template-results/${homework.id}`}
           className="inline-flex min-h-11 items-center rounded-lg border border-teal-700 px-3 text-sm font-semibold text-teal-800"
         >
-          Review student work
+          Review template work
+        </Link>
+      ) : null}
+
+      {hasCollectionResults ? (
+        <Link
+          href={`/teacher/classes/${classId}/homework-collection-results/${homework.id}`}
+          className="inline-flex min-h-11 items-center rounded-lg border border-violet-700 px-3 text-sm font-semibold text-violet-800"
+        >
+          Review collection results
         </Link>
       ) : null}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseSecondaryDialogueSection,
+  parseSecondaryDialogueAuthoringSection,
   secondaryDialogueSectionValidationIssues,
   type SecondaryDialogueSection,
 } from "@/lib/homework-templates/secondary-homework-one";
@@ -35,7 +35,7 @@ function emptyLine(): SecondaryDialogueSection["lines"][number] {
 }
 
 export function SecondaryDialogueSectionEditor({ section, onChange }: Props) {
-  const parsed = parseSecondaryDialogueSection(section);
+  const parsed = parseSecondaryDialogueAuthoringSection(section);
   const issues = secondaryDialogueSectionValidationIssues(section);
   const [lineIndex, setLineIndex] = useAuthoringItemIndex(
     parsed?.lines.length ?? 0,
@@ -197,6 +197,12 @@ export function SecondaryDialogueSectionEditor({ section, onChange }: Props) {
           </div>
         ) : null}
       </AuthoringItemPager>
+
+      {issues.length > 0 ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-800">
+          Keep editing — {issues[0]}
+        </p>
+      ) : null}
     </div>
   );
 }

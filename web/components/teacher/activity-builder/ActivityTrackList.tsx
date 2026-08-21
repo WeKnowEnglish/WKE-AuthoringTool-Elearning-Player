@@ -51,7 +51,7 @@ export function ActivityTrackList() {
           </p>
           <h1 className="mt-1 text-2xl font-extrabold text-stone-900">Track builder</h1>
           <p className="mt-1 max-w-2xl text-sm text-stone-600">
-            Practice = Learning Track compiler. Graded = homework templates with freeze
+            Practice = Learning Track compiler. Graded = homework collections with frozen content
             and review. Assessment = Primary A2 English Check (free navigation, results
             after submit). Drafts autosave to your teacher account.
           </p>

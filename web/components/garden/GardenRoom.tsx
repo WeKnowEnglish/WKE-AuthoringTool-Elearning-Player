@@ -28,6 +28,7 @@ import {
   type RecycleLettersResult,
 } from "@/lib/garden";
 import { totalLetterCount } from "@/lib/garden/spelling";
+import { awardPrimaryReward } from "@/lib/primary-player/client";
 import { isGrassCell, isPlotUnlocked, nextGrassPlotCost } from "@/lib/garden/plot-unlock";
 import { getRewards } from "@/lib/progress/rewards";
 import {
@@ -503,6 +504,15 @@ export function GardenRoom({ muted, gardenUiKey, onEconomyChange }: Props) {
         snapshot={snapshot}
         onSnapshotChange={(snap) => applySnapshot(snap)}
         onSuccess={setStatusLine}
+        onWordSpelled={(word) => {
+          void awardPrimaryReward({
+            eventId: `primary:garden:spell:${word.toLowerCase()}:${new Date().toISOString().slice(0, 10)}`,
+            rewardKind: "game_learning",
+            activityId: "language-garden-spelling",
+            source: "garden_learning_game",
+            metadata: { word },
+          }).then(() => onEconomyChange?.()).catch(() => undefined);
+        }}
         onClose={closeSpell}
         onConfirmRecycle={handleRecycle}
       />

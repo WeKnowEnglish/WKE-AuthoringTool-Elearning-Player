@@ -11,6 +11,9 @@ export const CORE_MODULE_IDS = [
   "true_false",
   "sentence_scramble",
   "fill_blanks",
+  "wordsearch",
+  "crossword",
+  "memory",
 ] as const;
 
 export type CoreModuleId = (typeof CORE_MODULE_IDS)[number];
@@ -83,6 +86,27 @@ export const CORE_MODULE_META: Record<CoreModuleId, CoreModuleMeta> = {
     title: "Fill in the blanks",
     description: "Choose the missing word in a short sentence.",
     beatKind: "fill_blanks",
+    href: "/teacher/activity-builder/quizzes",
+  },
+  wordsearch: {
+    id: "wordsearch",
+    title: "Word search",
+    description: "Find vocabulary hidden across a letter grid.",
+    beatKind: "wordsearch",
+    href: "/teacher/activity-builder/quizzes",
+  },
+  crossword: {
+    id: "crossword",
+    title: "Crossword",
+    description: "Use definitions and examples to complete a vocabulary crossword.",
+    beatKind: "crossword",
+    href: "/teacher/activity-builder/quizzes",
+  },
+  memory: {
+    id: "memory",
+    title: "Memory",
+    description: "Match each word to its picture or meaning.",
+    beatKind: "memory",
     href: "/teacher/activity-builder/quizzes",
   },
 };

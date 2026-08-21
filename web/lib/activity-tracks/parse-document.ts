@@ -14,6 +14,7 @@ import {
 } from "@/lib/activity-tracks/types";
 import { seedPracticeComposition } from "@/lib/activity-tracks/seed-practice";
 import { seedAssessmentFromTemplate } from "@/lib/activity-tracks/seed-assessment";
+import { parseHomeworkCollectionPart } from "@/lib/homework-collections";
 
 function isPartKind(value: unknown): value is ActivityTrackPartKind {
   return (
@@ -35,6 +36,7 @@ function isPartKind(value: unknown): value is ActivityTrackPartKind {
       "picture_writing",
       "question_writing",
       "writing_prompt",
+      "free_response",
       "speaking_prompt",
       "secondary_sequence",
       "secondary_corrections",
@@ -47,6 +49,10 @@ function isPartKind(value: unknown): value is ActivityTrackPartKind {
 function parsePartSource(raw: unknown): ActivityTrackPartSource {
   if (!raw || typeof raw !== "object") return { type: "empty" };
   const row = raw as Record<string, unknown>;
+  if (row.type === "homework_part") {
+    const part = parseHomeworkCollectionPart(row.part);
+    if (part) return { type: "homework_part", part };
+  }
   if (
     row.type === "template_section" &&
     typeof row.sectionId === "string" &&
@@ -83,7 +89,11 @@ function parseGradedOrigin(raw: unknown): ActivityTrackGradedOrigin | null {
   const row = raw as Record<string, unknown>;
   if (!isHomeworkTemplateId(row.templateId)) return null;
   if (row.level !== "primary" && row.level !== "secondary") return null;
-  return { templateId: row.templateId, level: row.level };
+  return {
+    templateId: row.templateId,
+    level: row.level,
+    ...(row.preset === "blank" ? { preset: "blank" as const } : {}),
+  };
 }
 
 function parseAssessmentOrigin(raw: unknown): ActivityTrackAssessmentOrigin | null {

@@ -6,6 +6,7 @@ import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
 import { recordStudioActivityHomeworkCompletion } from "@/lib/actions/class-homework";
 import type { HomeworkStudioFormat } from "@/lib/class-homework/types";
 import { spacePackToLessonScreens } from "@/lib/teacher-space/pack-to-screens";
+import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
 
 const LessonPlayer = dynamic(
   () =>
@@ -75,6 +76,7 @@ export function HomeworkStudioActivityPlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     });
   }, [finished, homeworkId]);
 

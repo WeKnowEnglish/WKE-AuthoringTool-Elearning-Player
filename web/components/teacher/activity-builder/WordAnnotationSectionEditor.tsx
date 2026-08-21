@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseWordAnnotationSection,
+  parseWordAnnotationAuthoringSection,
   wordAnnotationSectionValidationIssues,
   WORD_ANNOTATION_ROLES,
   type WordAnnotationRole,
@@ -68,7 +68,7 @@ function retokenize(sentenceId: string, text: string): Token[] {
 }
 
 export function WordAnnotationSectionEditor({ section, onChange }: Props) {
-  const parsed = parseWordAnnotationSection(section);
+  const parsed = parseWordAnnotationAuthoringSection(section);
   const issues = wordAnnotationSectionValidationIssues(section);
   const [sentenceIndex, setSentenceIndex] = useAuthoringItemIndex(
     parsed?.sentences.length ?? 0,

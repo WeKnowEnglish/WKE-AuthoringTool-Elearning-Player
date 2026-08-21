@@ -11,6 +11,9 @@ export type ActivityLibraryFormat =
   | "drag_match"
   | "line_match"
   | "true_false"
+  | "wordsearch"
+  | "crossword"
+  | "memory"
   | "learning_track";
 
 export type ActivityLibraryExportSnapshot = {

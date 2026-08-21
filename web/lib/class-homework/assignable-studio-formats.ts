@@ -68,6 +68,9 @@ export function assignableStudioHomeworkFormatLabel(
     if (quiz === "true_false") return "True / false";
     if (quiz === "sentence_scramble") return "Sentence scramble";
     if (quiz === "fill_blanks") return "Fill in the blanks";
+    if (quiz === "wordsearch") return "Word search";
+    if (quiz === "crossword") return "Crossword";
+    if (quiz === "memory") return "Memory";
     return "Learning track";
   }
   if (isDocumentHomeworkStudioFormat(format)) {

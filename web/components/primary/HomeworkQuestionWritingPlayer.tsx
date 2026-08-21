@@ -1,5 +1,7 @@
 "use client";
 
+import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QuestionWritingPlayer } from "@/components/question-writing/QuestionWritingPlayer";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
@@ -63,6 +65,7 @@ export function HomeworkQuestionWritingPlayer({
         return;
       }
       setCompletedAt(result.finishedAt);
+      if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     });
   }, [finished, homeworkId]);
 

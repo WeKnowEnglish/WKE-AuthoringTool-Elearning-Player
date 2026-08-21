@@ -1,4 +1,8 @@
 import type { GamesFlashcardFace } from "@/lib/activity-builder/games/types-flashcards";
+import type {
+  GamesCrosswordClueMode,
+  GamesMemoryTextMode,
+} from "@/lib/activity-builder/games/types-word-games";
 import type { CoreModuleId } from "@/lib/activity-builder/core-modules/types";
 
 /** Lesson Player interaction screen payload (snake_case). Opaque to Studio validators. */
@@ -18,7 +22,10 @@ export type LearningTrackBeatKind =
   | "line_match"
   | "true_false"
   | "sentence_scramble"
-  | "fill_blanks";
+  | "fill_blanks"
+  | "wordsearch"
+  | "crossword"
+  | "memory";
 
 /** Beat kinds that should get a post-activity report bridge when `afterBridge` is auto. */
 export const QUIZ_REPORT_BEAT_KINDS: readonly LearningTrackBeatKind[] = [
@@ -29,6 +36,9 @@ export const QUIZ_REPORT_BEAT_KINDS: readonly LearningTrackBeatKind[] = [
   "true_false",
   "sentence_scramble",
   "fill_blanks",
+  "wordsearch",
+  "crossword",
+  "memory",
 ] as const;
 
 export type LearningTrackFixtureId =
@@ -52,6 +62,9 @@ export type LearningTrackLibraryFormat =
   | "true_false"
   | "sentence_scramble"
   | "fill_blanks"
+  | "wordsearch"
+  | "crossword"
+  | "memory"
   | "explore_hotspots";
 
 export type LearningTrackBeatSource =
@@ -227,6 +240,23 @@ export type LearningTrackFillBlanksSettings = {
   autoAdvanceOnPass: boolean;
 };
 
+/** Pack-wide Word search direction settings for vocabulary-list compilation. */
+export type LearningTrackWordSearchSettings = {
+  allowBackwards: boolean;
+  allowDiagonals: boolean;
+  allowBackwardsDiagonals: boolean;
+};
+
+/** Pack-wide Memory settings for vocabulary-list compilation. */
+export type LearningTrackMemorySettings = {
+  textMode: GamesMemoryTextMode;
+};
+
+/** Pack-wide Crossword settings for vocabulary-list compilation. */
+export type LearningTrackCrosswordSettings = {
+  clueMode: GamesCrosswordClueMode;
+};
+
 export type LearningTrackBeatPresentation = {
   afterBridge?: LearningTrackAfterBridge;
   introTemplateId?: string;
@@ -250,6 +280,12 @@ export type LearningTrackBeatPresentation = {
   sentenceScramble?: LearningTrackSentenceScrambleSettings;
   /** Fill in the blanks activity settings. */
   fillBlanks?: LearningTrackFillBlanksSettings;
+  /** Memory activity settings. */
+  memory?: LearningTrackMemorySettings;
+  /** Word search direction settings. */
+  wordSearch?: LearningTrackWordSearchSettings;
+  /** Crossword activity settings. */
+  crossword?: LearningTrackCrosswordSettings;
 };
 
 export type LearningTrackBeatInstance = {
@@ -356,6 +392,9 @@ export const LEARNING_TRACK_BEAT_LABELS: Record<LearningTrackBeatKind, string> =
   true_false: "True / false",
   sentence_scramble: "Sentence scramble",
   fill_blanks: "Fill in the blanks",
+  wordsearch: "Word search",
+  crossword: "Crossword",
+  memory: "Memory",
 };
 
 export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
@@ -369,4 +408,7 @@ export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
   "true_false",
   "sentence_scramble",
   "fill_blanks",
+  "wordsearch",
+  "crossword",
+  "memory",
 ];

@@ -5,6 +5,7 @@ import { isStudent } from "@/lib/auth/roles";
 import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import { emptyHomeworkTemplateSubmissionContent, normalizeHomeworkTemplatePartSnapshot, normalizeHomeworkTemplateSubmissionContent } from "@/lib/homework-templates/homework-template-submission";
 import { isHomeworkTemplatePartId } from "@/lib/homework-templates/registry";
+import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import { createClient } from "@/lib/supabase/server";
 
 export async function saveHomeworkTemplatePart(input: { homeworkId: string; partId: string; snapshot: unknown; submit?: boolean }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -32,7 +33,22 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
       : isGradedTrack
         ? payload.originTemplateId
         : null;
-    if (!templateId || !isHomeworkTemplatePartId(templateId, partId)) {
+    const gradedFreeze = isGradedTrack
+      ? parseGradedTrackFreezeDocument(payload.document)
+      : null;
+    const collectionPartIds = new Set(
+      gradedFreeze?.collectionDocument?.parts.map((part) => part.id) ?? [],
+    );
+    const validPart = isTemplate
+      ? Boolean(templateId && isHomeworkTemplatePartId(templateId, partId))
+      : Boolean(
+          gradedFreeze?.parts.some(
+            (part) =>
+              (part.id === partId || part.sectionId === partId) &&
+              !collectionPartIds.has(part.id),
+          ),
+        );
+    if (!validPart) {
       return { ok: false, error: "This homework response is invalid." };
     }
     const targets = Array.isArray(homework.target_student_ids)

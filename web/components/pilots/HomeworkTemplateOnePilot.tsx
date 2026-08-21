@@ -95,6 +95,7 @@ export function HomeworkTemplateOnePilot({
   document: documentProp,
   mode = "student",
   focusSectionId = null,
+  deferOverallCompletion = false,
 }: {
   homeworkId?: string;
   alreadyCompleted?: boolean;
@@ -106,6 +107,8 @@ export function HomeworkTemplateOnePilot({
   mode?: "student" | "authoring-preview";
   /** Section id (e.g. picture-cloze) to show while authoring. */
   focusSectionId?: string | null;
+  /** Mixed collections submit globally after their generic activities. */
+  deferOverallCompletion?: boolean;
 } = {}) {
   const router = useRouter();
   const authoringPreview = mode === "authoring-preview";
@@ -236,6 +239,11 @@ export function HomeworkTemplateOnePilot({
       }).then(async (submissionResult) => {
         if (!submissionResult.ok) {
           setCompletionNotice(submissionResult.error);
+          return;
+        }
+        if (deferOverallCompletion) {
+          setDoneSectionIds((current) => new Set(current).add(sectionId));
+          setCompletionNotice("Template activities saved. Continue to the collection activities below.");
           return;
         }
         const result = await recordHomeworkTemplateCompletion({ homeworkId });

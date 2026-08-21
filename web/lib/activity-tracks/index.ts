@@ -16,6 +16,7 @@ export {
   createEmptyActivityTrack,
   createEmptyPart,
   isPartKindAllowedForMode,
+  partHasHomeworkContent,
   partHasTemplateContent,
   partLabelForKind,
   renumberParts,
@@ -23,8 +24,8 @@ export {
 export { seedPracticeComposition } from "@/lib/activity-tracks/seed-practice";
 export {
   gradedPartKindsForOrigin,
-  gradedSecondarySlotTaken,
   resetGradedPartsFromOrigin,
+  seedBlankGradedCollection,
   seedGradedFromTemplate,
   seedGradedPartFromKind,
   summarizeTemplateSection,

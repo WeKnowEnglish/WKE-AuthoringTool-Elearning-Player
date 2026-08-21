@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  parseSentenceColumnsSection,
+  parseSentenceColumnsAuthoringSection,
   sentenceColumnsSectionValidationIssues,
   SENTENCE_COLUMN_IDS,
   type SentenceColumnId,
@@ -37,7 +37,7 @@ function pieceForColumn(
 }
 
 export function SentenceColumnsSectionEditor({ section, onChange }: Props) {
-  const parsed = parseSentenceColumnsSection(section);
+  const parsed = parseSentenceColumnsAuthoringSection(section);
   const issues = sentenceColumnsSectionValidationIssues(section);
   const [challengeIndex, setChallengeIndex] = useAuthoringItemIndex(
     parsed?.challenges.length ?? 0,

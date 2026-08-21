@@ -10,6 +10,7 @@ import { pickRandomSticker } from "./sticker-library";
 import { sanitizeSkillRanks } from "@/lib/skills/ranks";
 import type { SkillRanks } from "@/lib/skills/types";
 import { applyQuizGoldBonus } from "@/lib/skills/bonuses";
+import type { PrimaryPlayerProfile } from "@/lib/primary-player/types";
 
 export const REWARDS_STORAGE_KEY = "wke-rewards-v1";
 
@@ -158,6 +159,21 @@ function writeRewards(next: RewardsSnapshot) {
     scopedLocalStorageKey(REWARDS_STORAGE_KEY, resolveStudentStorageIdSync()),
     JSON.stringify(syncLevelFields(next)),
   );
+}
+
+/** Mirrors authoritative economy fields while preserving local-only collectibles. */
+export function replaceRewardsFromPrimaryProfile(profile: PrimaryPlayerProfile): RewardsSnapshot {
+  const current = getRewards();
+  const next = syncLevelFields({
+    ...current,
+    gold: profile.goldBalance,
+    experience: profile.totalXp,
+    level: profile.level,
+    skillPoints: profile.unspentSkillPoints,
+    skillRanks: { ...current.skillRanks, ...profile.skillRanks },
+  });
+  writeRewards(next);
+  return next;
 }
 
 /** Partial update without dropping other reward fields. */

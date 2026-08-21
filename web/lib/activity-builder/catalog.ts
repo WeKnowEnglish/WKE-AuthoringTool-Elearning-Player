@@ -82,7 +82,19 @@ export const ACTIVITY_BUILDER_SECTIONS: ActivityBuilderSection[] = [
         badge: "Quizzes",
         lpPath: "/quizzes",
         status: "authoring_ready",
-        bankFormats: ["multiple_choice", "letter_mixup", "flashcards"],
+        bankFormats: [
+          "multiple_choice",
+          "letter_mixup",
+          "flashcards",
+          "listen_and_choose",
+          "line_match",
+          "true_false",
+          "sentence_scramble",
+          "fill_blanks",
+          "wordsearch",
+          "crossword",
+          "memory",
+        ],
       },
       // Individual format workspaces — admin hub only; teachers use Quiz builder / deep hubs.
       {

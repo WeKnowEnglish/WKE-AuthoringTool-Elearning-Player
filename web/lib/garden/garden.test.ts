@@ -493,8 +493,8 @@ describe("garden spelling", () => {
 });
 
 describe("garden meta", () => {
-  it("registers language_garden at level 2", () => {
-    expect(minLevelForUnlock("language_garden")).toBe(2);
+  it("registers language_garden as a level 1 experience", () => {
+    expect(minLevelForUnlock("language_garden")).toBe(1);
   });
 });
 

@@ -135,6 +135,206 @@ const questionWritingSectionSchema = z.object({
   })).min(3).max(8),
 });
 
+/* Draft schemas preserve an editor while required text is temporarily blank. */
+const primaryAuthoringString = z.preprocess(
+  (value) => (value === null || value === undefined ? "" : value),
+  z.string(),
+);
+const primaryAuthoringOptionalString = z.preprocess(
+  (value) => (value === null || value === undefined ? undefined : value),
+  z.string().optional(),
+);
+const primaryAuthoringNumber = z.preprocess(
+  (value) =>
+    typeof value === "number" && Number.isFinite(value) ? value : 0,
+  z.number(),
+);
+const primaryArrayOrEmpty = (value: unknown) =>
+  Array.isArray(value) ? value : [];
+const primaryAuthoringBase = {
+  id: primaryAuthoringString,
+  order: primaryAuthoringNumber,
+  title: primaryAuthoringString,
+  status: z.literal("ready"),
+  instructions: primaryAuthoringString,
+};
+
+const pictureClozeAuthoringSchema = z.object({
+  ...primaryAuthoringBase,
+  skill: z.enum(["reading", "grammar", "vocabulary", "writing"]),
+  kind: z.literal("picture_cloze"),
+  wordBank: z.preprocess(primaryArrayOrEmpty, z.array(primaryAuthoringString)),
+  items: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: primaryAuthoringString,
+        imageUrl: primaryAuthoringString,
+        imageAlt: primaryAuthoringString,
+        prompt: primaryAuthoringString,
+        sentenceBefore: primaryAuthoringString,
+        sentenceAfter: primaryAuthoringString,
+        acceptedAnswers: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(primaryAuthoringString),
+        ),
+      }),
+    ),
+  ),
+});
+
+const wordAnnotationAuthoringSchema = z.object({
+  ...primaryAuthoringBase,
+  skill: z.literal("grammar"),
+  kind: z.literal("word_annotation"),
+  rememberText: primaryAuthoringString,
+  sentences: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: primaryAuthoringString,
+        tokens: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(
+            z.object({
+              id: primaryAuthoringString,
+              text: primaryAuthoringString,
+              role: z.enum(WORD_ANNOTATION_ROLES).nullable(),
+            }),
+          ),
+        ),
+      }),
+    ),
+  ),
+});
+
+const sentenceColumnsAuthoringSchema = z.object({
+  ...primaryAuthoringBase,
+  skill: z.literal("grammar"),
+  kind: z.literal("sentence_columns"),
+  columns: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: z.enum(SENTENCE_COLUMN_IDS),
+        label: primaryAuthoringString,
+        prompt: primaryAuthoringString,
+      }),
+    ),
+  ),
+  challenges: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: primaryAuthoringString,
+        pieces: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(
+            z.object({
+              id: primaryAuthoringString,
+              text: primaryAuthoringString,
+              columnId: z.enum(SENTENCE_COLUMN_IDS),
+            }),
+          ),
+        ),
+      }),
+    ),
+  ),
+});
+
+const verbTableAuthoringSchema = z.object({
+  ...primaryAuthoringBase,
+  skill: z.literal("grammar"),
+  kind: z.literal("verb_table"),
+  columns: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: z.enum(VERB_FORM_COLUMNS),
+        label: primaryAuthoringString,
+      }),
+    ),
+  ),
+  rows: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: primaryAuthoringString,
+        forms: z.object({
+          base: primaryAuthoringString,
+          past: primaryAuthoringString,
+          participle: primaryAuthoringString,
+        }),
+        missing: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(z.enum(VERB_FORM_COLUMNS)),
+        ),
+      }),
+    ),
+  ),
+});
+
+const pictureWritingAuthoringSchema = z.object({
+  ...primaryAuthoringBase,
+  skill: z.literal("writing"),
+  kind: z.literal("picture_writing"),
+  prompts: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: primaryAuthoringString,
+        imageUrl: primaryAuthoringString,
+        imageAlt: primaryAuthoringString,
+        question: primaryAuthoringString,
+        promptWords: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(primaryAuthoringString),
+        ),
+        requiredWords: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(primaryAuthoringString),
+        ),
+        sentenceStarter: primaryAuthoringOptionalString,
+        minWords: primaryAuthoringNumber,
+      }),
+    ),
+  ),
+});
+
+const questionWritingAuthoringSchema = z.object({
+  ...primaryAuthoringBase,
+  skill: z.literal("writing"),
+  kind: z.literal("question_writing"),
+  workedExample: z.object({
+    prompt: primaryAuthoringString,
+    question: primaryAuthoringString,
+    answer: primaryAuthoringString,
+  }),
+  prompts: z.preprocess(
+    primaryArrayOrEmpty,
+    z.array(
+      z.object({
+        id: primaryAuthoringString,
+        promptWords: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(primaryAuthoringString),
+        ),
+        requiredWords: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(primaryAuthoringString),
+        ),
+        questionWord: primaryAuthoringString,
+        helpingVerbs: z.preprocess(
+          primaryArrayOrEmpty,
+          z.array(primaryAuthoringString),
+        ),
+        minWords: primaryAuthoringNumber,
+        modelQuestion: primaryAuthoringString,
+      }),
+    ),
+  ),
+});
+
 const plannedSectionSchema = z.object({
   id: z.string().min(1),
   order: z.number().int().min(1).max(12),
@@ -214,12 +414,26 @@ export function parsePictureClozeSection(raw: unknown): PictureClozeSection | nu
   return parsed.success ? (parsed.data as PictureClozeSection) : null;
 }
 
+export function parsePictureClozeAuthoringSection(
+  raw: unknown,
+): PictureClozeSection | null {
+  const parsed = pictureClozeAuthoringSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as PictureClozeSection) : null;
+}
+
 export function pictureClozeSectionValidationIssues(raw: unknown): string[] {
   return zodIssues(readySectionSchema.safeParse(raw));
 }
 
 export function parseWordAnnotationSection(raw: unknown): WordAnnotationSection | null {
   const parsed = wordAnnotationSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as WordAnnotationSection) : null;
+}
+
+export function parseWordAnnotationAuthoringSection(
+  raw: unknown,
+): WordAnnotationSection | null {
+  const parsed = wordAnnotationAuthoringSchema.safeParse(raw);
   return parsed.success ? (parsed.data as WordAnnotationSection) : null;
 }
 
@@ -232,12 +446,26 @@ export function parseSentenceColumnsSection(raw: unknown): SentenceColumnsSectio
   return parsed.success ? (parsed.data as SentenceColumnsSection) : null;
 }
 
+export function parseSentenceColumnsAuthoringSection(
+  raw: unknown,
+): SentenceColumnsSection | null {
+  const parsed = sentenceColumnsAuthoringSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as SentenceColumnsSection) : null;
+}
+
 export function sentenceColumnsSectionValidationIssues(raw: unknown): string[] {
   return zodIssues(sentenceColumnsSectionSchema.safeParse(raw));
 }
 
 export function parseVerbTableSection(raw: unknown): VerbTableSection | null {
   const parsed = verbTableSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as VerbTableSection) : null;
+}
+
+export function parseVerbTableAuthoringSection(
+  raw: unknown,
+): VerbTableSection | null {
+  const parsed = verbTableAuthoringSchema.safeParse(raw);
   return parsed.success ? (parsed.data as VerbTableSection) : null;
 }
 
@@ -253,12 +481,26 @@ export function parsePictureWritingSection(raw: unknown): PictureWritingSection 
   return parsed.success ? (parsed.data as PictureWritingSection) : null;
 }
 
+export function parsePictureWritingAuthoringSection(
+  raw: unknown,
+): PictureWritingSection | null {
+  const parsed = pictureWritingAuthoringSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as PictureWritingSection) : null;
+}
+
 export function pictureWritingSectionValidationIssues(raw: unknown): string[] {
   return zodIssues(pictureWritingSectionSchema.safeParse(raw));
 }
 
 export function parseQuestionWritingSection(raw: unknown): QuestionWritingSection | null {
   const parsed = questionWritingSectionSchema.safeParse(raw);
+  return parsed.success ? (parsed.data as QuestionWritingSection) : null;
+}
+
+export function parseQuestionWritingAuthoringSection(
+  raw: unknown,
+): QuestionWritingSection | null {
+  const parsed = questionWritingAuthoringSchema.safeParse(raw);
   return parsed.success ? (parsed.data as QuestionWritingSection) : null;
 }
 

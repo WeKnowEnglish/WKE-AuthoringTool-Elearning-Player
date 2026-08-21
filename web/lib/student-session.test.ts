@@ -115,7 +115,10 @@ describe("student-session", () => {
       "reward_awarded",
       "session_completed",
     ]);
-    expect(localStorage.getItem(STUDENT_SESSION_EVENTS_STORAGE_KEY)).toContain("banana");
+    const scopedKey = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+      .find((key) => key?.startsWith(`${STUDENT_SESSION_EVENTS_STORAGE_KEY}:`));
+    expect(scopedKey).toBeTruthy();
+    expect(localStorage.getItem(scopedKey!)).toContain("banana");
   });
 
   it("notifies subscribePracticeEvents listeners after emit", () => {

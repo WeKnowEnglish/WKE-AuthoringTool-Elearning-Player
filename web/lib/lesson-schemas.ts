@@ -1946,9 +1946,12 @@ const presentationElementSchema = z.object({
   visible: z.boolean().optional().default(true),
   label: z.string().optional(),
   text: z.string().optional(),
+  text_color: z.string().optional(),
+  text_size_px: z.number().min(10).max(128).optional(),
   image_url: z.string().optional(),
   color_hex: z.string().optional(),
   line_width_px: z.number().min(1).max(24).optional(),
+  show_card: z.boolean().optional().default(true),
   // Draggable interaction modes for V1.
   draggable_mode: z.enum(["none", "free", "check_target"]).optional().default("none"),
   drop_target_id: z.string().optional(),
@@ -1959,6 +1962,8 @@ const presentationSlideSchema = z.object({
   id: z.string(),
   title: z.string().optional(),
   body_text: z.string().optional(),
+  read_aloud_text: z.string().optional(),
+  auto_play_page_text: z.boolean().optional(),
   background_image_url: z.string().optional(),
   background_color: z.string().optional(),
   video_url: z.string().optional(),
@@ -2114,8 +2119,11 @@ function presentationElementToStoryItem(
     show_on_start: el.visible !== false,
     image_url,
     text: el.text,
+    text_color: el.text_color,
+    text_size_px: el.text_size_px,
     color_hex: el.color_hex,
     line_width_px: el.line_width_px,
+    show_card: el.show_card,
     draggable_mode: el.draggable_mode ?? "none",
     drop_target_id: el.drop_target_id,
   };
@@ -2150,6 +2158,8 @@ function presentationSlideToStoryPage(
     video_url: slide.video_url,
     image_fit: slide.image_fit ?? "contain",
     body_text: slide.body_text ?? "",
+    read_aloud_text: slide.read_aloud_text,
+    auto_play_page_text: slide.auto_play_page_text,
     items: slide.elements.map(presentationElementToStoryItem),
   });
 }

@@ -35,6 +35,7 @@ import {
   defaultMemorySettings,
   defaultWordSearchSettings,
   defaultCrosswordSettings,
+  defaultPresentationSettings,
   vocabFormatForKind,
 } from "@/lib/learning-tracks/composition";
 import { createHobbiesVocabularyListDocument } from "@/lib/learning-tracks/create-hobbies-vocabulary-list";
@@ -56,6 +57,7 @@ import type {
   LearningTrackMemorySettings,
   LearningTrackWordSearchSettings,
   LearningTrackCrosswordSettings,
+  LearningTrackPresentationSettings,
   LearningTrackScreenPayload,
   LearningTrackVocabCompileFormat,
 } from "@/lib/learning-tracks/composition-types";
@@ -81,6 +83,93 @@ export function asScreen(value: unknown, label: string): LearningTrackScreenPayl
     throw new Error(`${label} fixture must be an interaction screen.`);
   }
   return record as LearningTrackScreenPayload;
+}
+
+function presentationSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackPresentationSettings {
+  const defaults = defaultPresentationSettings();
+  const saved = beat.presentation?.presentationDeck;
+  return {
+    ...defaults,
+    ...saved,
+    slides: saved?.slides?.length ? saved.slides : defaults.slides,
+  };
+}
+
+/** Compile an inline teaching deck through the existing presentation-to-story migration. */
+export function buildPresentationScreens(
+  beat: LearningTrackBeatInstance,
+): LearningTrackScreenPayload[] {
+  const settings = presentationSettingsForBeat(beat);
+  const slides = settings.slides.map((slide, index) => {
+    const title = slide.title.trim();
+    const bodyText = slide.bodyText.trim();
+    const backgroundImageUrl = slide.backgroundImageUrl?.trim();
+    if (!title && !bodyText && !backgroundImageUrl) {
+      throw new Error(`Presentation slide ${index + 1} needs text or an image.`);
+    }
+
+    const elements: Array<Record<string, unknown>> = [];
+    if (title) {
+      elements.push({
+        id: `${beat.id}-slide-${index + 1}-title`,
+        kind: "text",
+        label: "Slide heading",
+        text: title,
+        text_color: "#0f172a",
+        text_size_px: 40,
+        x_percent: 7,
+        y_percent: 7,
+        w_percent: 86,
+        h_percent: 15,
+        z_index: 2,
+        visible: true,
+        show_card: true,
+      });
+    }
+    if (bodyText) {
+      elements.push({
+        id: `${beat.id}-slide-${index + 1}-body`,
+        kind: "text",
+        label: "Teaching text",
+        text: bodyText,
+        text_color: "#1e293b",
+        text_size_px: 27,
+        x_percent: 9,
+        y_percent: title ? 28 : 12,
+        w_percent: 82,
+        h_percent: title ? 60 : 76,
+        z_index: 1,
+        visible: true,
+        show_card: true,
+      });
+    }
+
+    return {
+      id: `${beat.id}-slide-${index + 1}`,
+      title: title || `Slide ${index + 1}`,
+      body_text: "",
+      read_aloud_text: [title, bodyText].filter(Boolean).join(". "),
+      auto_play_page_text: settings.autoPlayNarration,
+      ...(backgroundImageUrl ? { background_image_url: backgroundImageUrl } : {}),
+      background_color: slide.backgroundColor.trim() || "#f8fafc",
+      image_fit: slide.imageFit,
+      elements,
+    };
+  });
+
+  return [
+    {
+      type: "interaction",
+      subtype: "presentation_interactive",
+      title: beat.label ?? "Presentation",
+      body_text: "",
+      slides,
+      pass_rule: "visit_all_slides",
+      auto_advance_on_pass: settings.autoAdvanceOnPass,
+    },
+  ];
 }
 
 export function screensFromGamesPack(
@@ -118,6 +207,8 @@ export function libraryFormatForBeatKind(
   kind: LearningTrackBeatKind,
 ): LearningTrackLibraryFormat | null {
   switch (kind) {
+    case "presentation":
+      return null;
     case "multiple_choice":
       return "multiple_choice";
     case "letter_mixup":
@@ -757,6 +848,7 @@ async function screensFromLibraryActivity(
 /** True when this beat can be resolved without IndexedDB. */
 export function beatSourceIsSync(beat: LearningTrackBeatInstance): boolean {
   const { source } = beat;
+  if (source.type === "inline") return beat.kind === "presentation";
   if (source.type === "fixture") return true;
   if (source.type === "vocab_compile") {
     return source.listId === HOBBIES_DEFAULT_VOCAB_LIST_ID;
@@ -769,6 +861,12 @@ export function resolveBeatScreensSync(
   beat: LearningTrackBeatInstance,
 ): LearningTrackScreenPayload[] {
   const { source } = beat;
+  if (source.type === "inline") {
+    if (beat.kind !== "presentation") {
+      throw new Error(`${beat.kind} cannot use an inline presentation source.`);
+    }
+    return buildPresentationScreens(beat);
+  }
   if (source.type === "fixture") {
     return applyFixtureBeatPresentation(beat, loadFixture(source.fixtureId));
   }
@@ -794,6 +892,12 @@ export async function resolveBeatScreens(
   beat: LearningTrackBeatInstance,
 ): Promise<LearningTrackScreenPayload[]> {
   const { source } = beat;
+  if (source.type === "inline") {
+    if (beat.kind !== "presentation") {
+      throw new Error(`${beat.kind} cannot use an inline presentation source.`);
+    }
+    return buildPresentationScreens(beat);
+  }
   if (source.type === "fixture") {
     return applyFixtureBeatPresentation(beat, loadFixture(source.fixtureId));
   }

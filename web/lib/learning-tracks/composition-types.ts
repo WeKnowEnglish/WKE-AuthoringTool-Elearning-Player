@@ -13,6 +13,7 @@ export type LearningTrackScreenPayload = {
 };
 
 export type LearningTrackBeatKind =
+  | "presentation"
   | "explore_hotspots"
   | "language_in_focus"
   | "flashcards"
@@ -68,6 +69,7 @@ export type LearningTrackLibraryFormat =
   | "explore_hotspots";
 
 export type LearningTrackBeatSource =
+  | { type: "inline" }
   | { type: "fixture"; fixtureId: LearningTrackFixtureId }
   | {
       type: "vocab_compile";
@@ -257,9 +259,28 @@ export type LearningTrackCrosswordSettings = {
   clueMode: GamesCrosswordClueMode;
 };
 
+/** One teacher-authored slide inside an inline track presentation. */
+export type LearningTrackPresentationSlide = {
+  id: string;
+  title: string;
+  bodyText: string;
+  backgroundImageUrl?: string;
+  backgroundColor: string;
+  imageFit: "cover" | "contain";
+};
+
+/** Informational, non-graded deck shown between practice activities. */
+export type LearningTrackPresentationSettings = {
+  slides: LearningTrackPresentationSlide[];
+  autoPlayNarration: boolean;
+  autoAdvanceOnPass: boolean;
+};
+
 export type LearningTrackBeatPresentation = {
   afterBridge?: LearningTrackAfterBridge;
   introTemplateId?: string;
+  /** Inline instructional slide deck. */
+  presentationDeck?: LearningTrackPresentationSettings;
   /** Flashcards activity settings (not per-card). */
   flashcards?: LearningTrackFlashcardsSettings;
   /** Multiple choice activity settings (not per-question). */
@@ -382,6 +403,7 @@ export type CompileLearningTrackResult = {
 };
 
 export const LEARNING_TRACK_BEAT_LABELS: Record<LearningTrackBeatKind, string> = {
+  presentation: "Presentation",
   explore_hotspots: "Explore hotspots",
   language_in_focus: "Language in Focus",
   flashcards: "Flashcards",
@@ -398,6 +420,7 @@ export const LEARNING_TRACK_BEAT_LABELS: Record<LearningTrackBeatKind, string> =
 };
 
 export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
+  "presentation",
   "explore_hotspots",
   "flashcards",
   "language_in_focus",

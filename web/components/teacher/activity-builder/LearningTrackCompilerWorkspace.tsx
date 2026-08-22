@@ -26,6 +26,7 @@ import { downloadTextFile } from "@/lib/activity-builder/games/mc-quiz";
 import { VocabularyListWorkspace } from "@/components/teacher/activity-builder/VocabularyListWorkspace";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
 import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
+import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import {
   AuthoringItemPager,
   useAuthoringItemIndex,
@@ -40,6 +41,7 @@ import {
   clampMcOptionCount,
   compileLearningTrackAsync,
   createBeatInstance,
+  createPresentationSlide,
   defaultFlashcardsSettings,
   defaultLetterMixupSettings,
   defaultListenAndChooseSettings,
@@ -53,6 +55,7 @@ import {
   defaultMemorySettings,
   defaultWordSearchSettings,
   defaultCrosswordSettings,
+  defaultPresentationSettings,
   fixtureIdForKind,
   libraryFormatForBeatKind,
   listHotspotPanelsFromScreens,
@@ -87,6 +90,7 @@ import {
   type LearningTrackMemorySettings,
   type LearningTrackWordSearchSettings,
   type LearningTrackCrosswordSettings,
+  type LearningTrackPresentationSettings,
   HOBBIES_DAY_1_COMPOSITION,
 } from "@/lib/learning-tracks/composer";
 import {
@@ -742,6 +746,67 @@ export function LearningTrackCompilerWorkspace({
         }
       : null;
 
+  const selectedPresentationSettings: LearningTrackPresentationSettings | null =
+    selectedCompositionBeat?.kind === "presentation"
+      ? {
+          ...defaultPresentationSettings(),
+          ...selectedCompositionBeat.presentation?.presentationDeck,
+          slides: selectedCompositionBeat.presentation?.presentationDeck?.slides?.length
+            ? selectedCompositionBeat.presentation.presentationDeck.slides
+            : defaultPresentationSettings().slides,
+        }
+      : null;
+
+  const updatePresentationDeck = (
+    next: LearningTrackPresentationSettings,
+  ) => updateSelectedPresentation({ presentationDeck: next });
+
+  const patchPresentationSlide = (
+    slideId: string,
+    patch: Partial<LearningTrackPresentationSettings["slides"][number]>,
+  ) => {
+    if (!selectedPresentationSettings) return;
+    updatePresentationDeck({
+      ...selectedPresentationSettings,
+      slides: selectedPresentationSettings.slides.map((slide) =>
+        slide.id === slideId ? { ...slide, ...patch } : slide,
+      ),
+    });
+  };
+
+  const addPresentationSlide = () => {
+    if (!selectedPresentationSettings) return;
+    updatePresentationDeck({
+      ...selectedPresentationSettings,
+      slides: [
+        ...selectedPresentationSettings.slides,
+        createPresentationSlide(selectedPresentationSettings.slides.length + 1),
+      ],
+    });
+  };
+
+  const removePresentationSlide = (slideId: string) => {
+    if (!selectedPresentationSettings || selectedPresentationSettings.slides.length <= 1) {
+      setNotice("A presentation needs at least one slide.");
+      return;
+    }
+    updatePresentationDeck({
+      ...selectedPresentationSettings,
+      slides: selectedPresentationSettings.slides.filter((slide) => slide.id !== slideId),
+    });
+  };
+
+  const movePresentationSlide = (index: number, direction: -1 | 1) => {
+    if (!selectedPresentationSettings) return;
+    const target = index + direction;
+    if (target < 0 || target >= selectedPresentationSettings.slides.length) return;
+    const slides = [...selectedPresentationSettings.slides];
+    const [slide] = slides.splice(index, 1);
+    if (!slide) return;
+    slides.splice(target, 0, slide);
+    updatePresentationDeck({ ...selectedPresentationSettings, slides });
+  };
+
   const selectedMcItems = useMemo(() => {
     if (!selectedMcSettings || !selectedBeat || !pack) return [];
     return listMcQuizItemsFromScreens(
@@ -865,6 +930,12 @@ export function LearningTrackCompilerWorkspace({
   const setSourceMode = (mode: LearningTrackBeatSource["type"]) => {
     if (!selectedCompositionBeat) return;
     const { kind } = selectedCompositionBeat;
+    if (mode === "inline") {
+      if (kind === "presentation") {
+        updateSelectedBeatSource({ type: "inline" }, "Presentation");
+      }
+      return;
+    }
     if (mode === "fixture") {
       const fixtureId = fixtureIdForKind(kind);
       if (fixtureId) {
@@ -1531,6 +1602,9 @@ export function LearningTrackCompilerWorkspace({
                     setSourceMode(event.target.value as LearningTrackBeatSource["type"])
                   }
                 >
+                  {selectedCompositionBeat.kind === "presentation" && (
+                    <option value="inline">Slides created in this track</option>
+                  )}
                   {canUseFixture && <option value="fixture">Demo fixture</option>}
                   {canUseVocab && <option value="vocab_compile">Vocabulary list</option>}
                   {canUseLibrary && (
@@ -1542,6 +1616,13 @@ export function LearningTrackCompilerWorkspace({
                   )}
                 </select>
               </label>
+
+              {selectedCompositionBeat.source.type === "inline" && (
+                <p className="mt-2 text-[11px] leading-snug ltc-subtle">
+                  This presentation is stored with the track and plays as a slide deck in
+                  Lesson Player.
+                </p>
+              )}
 
               {selectedCompositionBeat.source.type === "fixture" && (
                 <p className="mt-2 text-[11px] leading-snug ltc-subtle">
@@ -1632,7 +1713,9 @@ export function LearningTrackCompilerWorkspace({
                 </div>
               )}
 
-              {!canUseVocab && !canUseLibrary && (
+              {!canUseVocab &&
+                !canUseLibrary &&
+                selectedCompositionBeat.kind !== "presentation" && (
                 <p className="mt-2 text-[11px] leading-snug ltc-subtle">
                   Language in Focus remains fixture-only until its authoring format
                   is added to the Activity Bank.
@@ -1649,6 +1732,174 @@ export function LearningTrackCompilerWorkspace({
               <SkeletonBlock label="Select an activity" />
             </CollapsibleSettingsPanel>
           )}
+
+          {selectedPresentationSettings ? (
+            <CollapsibleSettingsPanel
+              sectionId="presentation-settings"
+              title={`Presentation slides (${selectedPresentationSettings.slides.length})`}
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="text-[11px] leading-snug ltc-subtle">
+                Use short slides to explain or model the learning before students practise.
+                Students complete the activity after viewing every slide.
+              </p>
+
+              <div className="mt-3 space-y-3">
+                {selectedPresentationSettings.slides.map((slide, index) => (
+                  <div key={slide.id} className="ltc-panel rounded-lg border p-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold ltc-fg">Slide {index + 1}</p>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="ltc-btn rounded px-1.5 py-0.5 text-[10px]"
+                          disabled={index === 0}
+                          aria-label={`Move slide ${index + 1} earlier`}
+                          onClick={() => movePresentationSlide(index, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="ltc-btn rounded px-1.5 py-0.5 text-[10px]"
+                          disabled={index === selectedPresentationSettings.slides.length - 1}
+                          aria-label={`Move slide ${index + 1} later`}
+                          onClick={() => movePresentationSlide(index, 1)}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-40"
+                          disabled={selectedPresentationSettings.slides.length <= 1}
+                          onClick={() => removePresentationSlide(slide.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <label className="mt-2 block text-[11px] ltc-muted">
+                      Heading
+                      <input
+                        className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                        value={slide.title}
+                        onChange={(event) =>
+                          patchPresentationSlide(slide.id, { title: event.target.value })
+                        }
+                      />
+                    </label>
+
+                    <label className="mt-2 block text-[11px] ltc-muted">
+                      Teaching text
+                      <textarea
+                        className="ltc-input mt-1 min-h-24 w-full resize-y rounded border px-2 py-1.5 text-xs"
+                        value={slide.bodyText}
+                        onChange={(event) =>
+                          patchPresentationSlide(slide.id, { bodyText: event.target.value })
+                        }
+                      />
+                    </label>
+
+                    <div className="mt-2">
+                      <MediaUrlControls
+                        label="Background image (optional)"
+                        value={slide.backgroundImageUrl ?? ""}
+                        onChange={(backgroundImageUrl) =>
+                          patchPresentationSlide(slide.id, {
+                            backgroundImageUrl: backgroundImageUrl.trim() || undefined,
+                          })
+                        }
+                        compact
+                        libraryQueryHint={slide.title || "presentation slide"}
+                        uploadItemName={`Presentation slide ${index + 1}`}
+                      />
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <label className="block text-[11px] ltc-muted">
+                        Image fit
+                        <select
+                          className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
+                          value={slide.imageFit}
+                          onChange={(event) =>
+                            patchPresentationSlide(slide.id, {
+                              imageFit: event.target.value as "cover" | "contain",
+                            })
+                          }
+                        >
+                          <option value="cover">Fill slide</option>
+                          <option value="contain">Show whole image</option>
+                        </select>
+                      </label>
+                      <label className="block text-[11px] ltc-muted">
+                        Background
+                        <div className="mt-1 flex items-center gap-1">
+                          <input
+                            type="color"
+                            className="h-8 w-10 rounded border p-0.5"
+                            value={slide.backgroundColor}
+                            onChange={(event) =>
+                              patchPresentationSlide(slide.id, {
+                                backgroundColor: event.target.value,
+                              })
+                            }
+                          />
+                          <input
+                            className="ltc-input min-w-0 flex-1 rounded border px-1.5 py-1.5 font-mono text-[10px]"
+                            value={slide.backgroundColor}
+                            onChange={(event) =>
+                              patchPresentationSlide(slide.id, {
+                                backgroundColor: event.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="ltc-btn mt-3 w-full rounded px-2.5 py-1.5 text-xs"
+                onClick={addPresentationSlide}
+              >
+                Add slide
+              </button>
+
+              <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs ltc-fg">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={selectedPresentationSettings.autoPlayNarration}
+                  onChange={(event) =>
+                    updatePresentationDeck({
+                      ...selectedPresentationSettings,
+                      autoPlayNarration: event.target.checked,
+                    })
+                  }
+                />
+                Read each slide aloud automatically
+              </label>
+              <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs ltc-fg">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={selectedPresentationSettings.autoAdvanceOnPass}
+                  onChange={(event) =>
+                    updatePresentationDeck({
+                      ...selectedPresentationSettings,
+                      autoAdvanceOnPass: event.target.checked,
+                    })
+                  }
+                />
+                Continue automatically after the final slide
+              </label>
+            </CollapsibleSettingsPanel>
+          ) : null}
 
           {selectedFlashcardsSettings ? (
             <CollapsibleSettingsPanel
@@ -2733,6 +2984,7 @@ export function LearningTrackCompilerWorkspace({
           !selectedMemorySettings &&
           !selectedWordSearchSettings &&
           !selectedCrosswordSettings &&
+          !selectedPresentationSettings &&
           selectedCompositionBeat ? (
             <CollapsibleSettingsPanel
               sectionId="activity-settings"

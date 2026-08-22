@@ -15,6 +15,7 @@ import {
   classroomRealtimeNativeShellAuthorityReady,
   classroomRealtimeNativeShellPilotEnabled,
 } from "@/lib/classroom-realtime/shadow-mode";
+import { getClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
 
 type Body = {
   joinCode?: string;
@@ -78,7 +79,8 @@ export async function POST(request: Request) {
     const nativeSupabaseShell =
       Boolean(session.classId) &&
       classroomRealtimeNativeShellPilotEnabled() &&
-      classroomRealtimeNativeShellAuthorityReady();
+      classroomRealtimeNativeShellAuthorityReady() &&
+      Boolean(await getClassroomRuntimeSnapshot(session.id));
     if (!nativeSupabaseShell) {
       try {
         assertLiveblocksSecret();

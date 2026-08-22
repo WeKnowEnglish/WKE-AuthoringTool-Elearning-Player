@@ -22,6 +22,8 @@ import {
   type LearningTrackMemorySettings,
   type LearningTrackWordSearchSettings,
   type LearningTrackCrosswordSettings,
+  type LearningTrackPresentationSettings,
+  type LearningTrackPresentationSlide,
   type LearningTrackPlannedBridge,
   type LearningTrackRecipe,
   type LearningTrackVocabCompileFormat,
@@ -39,6 +41,33 @@ export const DEFAULT_LINE_MATCH_BODY =
   "Draw a line from each word to its picture.";
 export const DEFAULT_SENTENCE_SCRAMBLE_BODY = "Put the words in order.";
 export const DEFAULT_FILL_BLANKS_BODY = "Choose the missing word.";
+
+function newPresentationSlideId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `slide-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `slide-${Date.now().toString(36)}`;
+}
+
+export function createPresentationSlide(
+  index = 1,
+): LearningTrackPresentationSlide {
+  return {
+    id: newPresentationSlideId(),
+    title: index === 1 ? "Key idea" : `Slide ${index}`,
+    bodyText: "Add the explanation students should learn here.",
+    backgroundColor: "#f8fafc",
+    imageFit: "cover",
+  };
+}
+
+export function defaultPresentationSettings(): LearningTrackPresentationSettings {
+  return {
+    slides: [createPresentationSlide(1)],
+    autoPlayNarration: false,
+    autoAdvanceOnPass: false,
+  };
+}
 
 export function defaultFlashcardsSettings(): LearningTrackFlashcardsSettings {
   return {
@@ -169,6 +198,8 @@ export function defaultSourceForKind(
   }
 
   switch (kind) {
+    case "presentation":
+      return { type: "inline" };
     case "explore_hotspots":
       return { type: "fixture", fixtureId: "hobbies-hotspots" };
     case "language_in_focus":
@@ -237,6 +268,9 @@ export function createBeatInstance(
   overrides?: Partial<LearningTrackBeatInstance>,
   trackVocabListId?: string,
 ): LearningTrackBeatInstance {
+  const presentationDeck =
+    overrides?.presentation?.presentationDeck ??
+    (kind === "presentation" ? defaultPresentationSettings() : undefined);
   const flashcards =
     overrides?.presentation?.flashcards ??
     (kind === "flashcards" ? defaultFlashcardsSettings() : undefined);
@@ -287,6 +321,7 @@ export function createBeatInstance(
       ...(overrides?.presentation?.introTemplateId
         ? { introTemplateId: overrides.presentation.introTemplateId }
         : {}),
+      ...(presentationDeck ? { presentationDeck } : {}),
       ...(flashcards ? { flashcards } : {}),
       ...(multipleChoice ? { multipleChoice } : {}),
       ...(letterMixup ? { letterMixup } : {}),

@@ -9,6 +9,7 @@ export {
 } from "@/lib/learning-tracks/compile-learning-track";
 export {
   compositionFromRecipe,
+  createPresentationSlide,
   createBeatInstance,
   defaultAfterBridgeForKind,
   defaultFlashcardsSettings,
@@ -24,6 +25,7 @@ export {
   defaultMemorySettings,
   defaultWordSearchSettings,
   defaultCrosswordSettings,
+  defaultPresentationSettings,
   defaultSourceForKind,
   fixtureIdForKind,
   isLearningTrackComposition,
@@ -79,6 +81,8 @@ export type {
   LearningTrackMemorySettings,
   LearningTrackWordSearchSettings,
   LearningTrackCrosswordSettings,
+  LearningTrackPresentationSettings,
+  LearningTrackPresentationSlide,
   LearningTrackPlannedBridge,
   LearningTrackRecipe,
   LearningTrackScreenPayload,

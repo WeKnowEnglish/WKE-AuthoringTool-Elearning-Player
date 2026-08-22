@@ -636,6 +636,8 @@ export const storyItemSchema = z
     h_percent: z.number(),
     /** Optional visual card around item image in student view (default: on). */
     show_card: z.boolean().optional().default(true),
+    /** Visual variant for shape items; older shapes default to rectangle. */
+    shape_variant: z.enum(["rectangle", "ellipse"]).optional(),
     /** Show this item when page starts; if false, can be revealed by triggers. */
     show_on_start: z.boolean().optional().default(true),
     /** Simple, stable image scale multiplier inside the item box. */
@@ -1950,6 +1952,7 @@ const presentationElementSchema = z.object({
   text_size_px: z.number().min(10).max(128).optional(),
   image_url: z.string().optional(),
   color_hex: z.string().optional(),
+  shape_variant: z.enum(["rectangle", "ellipse"]).optional(),
   line_width_px: z.number().min(1).max(24).optional(),
   show_card: z.boolean().optional().default(true),
   // Draggable interaction modes for V1.
@@ -2122,6 +2125,7 @@ function presentationElementToStoryItem(
     text_color: el.text_color,
     text_size_px: el.text_size_px,
     color_hex: el.color_hex,
+    shape_variant: el.shape_variant,
     line_width_px: el.line_width_px,
     show_card: el.show_card,
     draggable_mode: el.draggable_mode ?? "none",

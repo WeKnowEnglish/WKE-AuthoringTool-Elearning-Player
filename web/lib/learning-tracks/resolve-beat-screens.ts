@@ -73,6 +73,7 @@ import hobbiesLikeIngScreen from "@/lib/learning-tracks/fixtures/hobbies-like-in
 import hobbiesFlashcardsPack from "@/lib/learning-tracks/fixtures/hobbies-flashcards.lessonplayer.json";
 import hobbiesListenPack from "@/lib/learning-tracks/fixtures/hobbies-listen-choose.lessonplayer.json";
 import { wkeActivityToExploreHotspotsPayload } from "@/lib/wke-activity/to-lesson-screen";
+import { presentationElementsForSlide } from "@/lib/learning-tracks/presentation-elements";
 
 export function asScreen(value: unknown, label: string): LearningTrackScreenPayload {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -104,53 +105,48 @@ export function buildPresentationScreens(
   const settings = presentationSettingsForBeat(beat);
   const slides = settings.slides.map((slide, index) => {
     const title = slide.title.trim();
-    const bodyText = slide.bodyText.trim();
     const backgroundImageUrl = slide.backgroundImageUrl?.trim();
-    if (!title && !bodyText && !backgroundImageUrl) {
-      throw new Error(`Presentation slide ${index + 1} needs text or an image.`);
+    const authoringElements = presentationElementsForSlide(slide).filter(
+      (element) => element.kind !== "text" || element.text.trim(),
+    );
+    if (authoringElements.length === 0 && !backgroundImageUrl) {
+      throw new Error(`Presentation slide ${index + 1} needs text, a shape, or an image.`);
     }
 
-    const elements: Array<Record<string, unknown>> = [];
-    if (title) {
-      elements.push({
-        id: `${beat.id}-slide-${index + 1}-title`,
-        kind: "text",
-        label: "Slide heading",
-        text: title,
-        text_color: "#0f172a",
-        text_size_px: 40,
-        x_percent: 7,
-        y_percent: 7,
-        w_percent: 86,
-        h_percent: 15,
-        z_index: 2,
-        visible: true,
-        show_card: true,
-      });
-    }
-    if (bodyText) {
-      elements.push({
-        id: `${beat.id}-slide-${index + 1}-body`,
-        kind: "text",
-        label: "Teaching text",
-        text: bodyText,
-        text_color: "#1e293b",
-        text_size_px: 27,
-        x_percent: 9,
-        y_percent: title ? 28 : 12,
-        w_percent: 82,
-        h_percent: title ? 60 : 76,
-        z_index: 1,
-        visible: true,
-        show_card: true,
-      });
-    }
+    const elements = authoringElements.map((element) => ({
+      id: element.id,
+      kind: element.kind,
+      label: element.kind === "text" ? "Text box" : "Shape",
+      x_percent: element.xPercent,
+      y_percent: element.yPercent,
+      w_percent: element.widthPercent,
+      h_percent: element.heightPercent,
+      z_index: element.zIndex,
+      visible: true,
+      ...(element.kind === "text"
+        ? {
+            text: element.text,
+            text_color: element.textColor,
+            text_size_px: element.textSizePx,
+            show_card: element.showCard,
+          }
+        : {
+            color_hex: element.fillColor,
+            shape_variant: element.shape,
+            show_card: false,
+          }),
+    }));
+    const readAloudText = authoringElements
+      .filter((element) => element.kind === "text")
+      .map((element) => element.text.trim())
+      .filter(Boolean)
+      .join(". ");
 
     return {
       id: `${beat.id}-slide-${index + 1}`,
       title: title || `Slide ${index + 1}`,
       body_text: "",
-      read_aloud_text: [title, bodyText].filter(Boolean).join(". "),
+      read_aloud_text: readAloudText,
       auto_play_page_text: settings.autoPlayNarration,
       ...(backgroundImageUrl ? { background_image_url: backgroundImageUrl } : {}),
       background_color: slide.backgroundColor.trim() || "#f8fafc",

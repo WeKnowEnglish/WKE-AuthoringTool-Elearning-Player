@@ -27,6 +27,7 @@ import { VocabularyListWorkspace } from "@/components/teacher/activity-builder/V
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
 import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
+import { PresentationSlideCanvasEditor } from "@/components/teacher/activity-builder/PresentationSlideCanvasEditor";
 import {
   AuthoringItemPager,
   useAuthoringItemIndex,
@@ -315,6 +316,10 @@ export function LearningTrackCompilerWorkspace({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [addKind, setAddKind] = useState<LearningTrackBeatKind>("flashcards");
+  const [presentationSlideId, setPresentationSlideId] = useState<string | null>(null);
+  const [presentationCanvasMode, setPresentationCanvasMode] = useState<"edit" | "preview">(
+    "edit",
+  );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [compiled, setCompiled] = useState<CompiledState>({
     pack: null,
@@ -757,6 +762,17 @@ export function LearningTrackCompilerWorkspace({
         }
       : null;
 
+  const selectedPresentationSlide =
+    selectedPresentationSettings?.slides.find(
+      (slide) => slide.id === presentationSlideId,
+    ) ?? selectedPresentationSettings?.slides[0] ?? null;
+
+  useEffect(() => {
+    if (selectedCompositionBeat?.kind === "presentation") {
+      setPresentationCanvasMode("edit");
+    }
+  }, [selectedCompositionBeat?.id, selectedCompositionBeat?.kind]);
+
   const updatePresentationDeck = (
     next: LearningTrackPresentationSettings,
   ) => updateSelectedPresentation({ presentationDeck: next });
@@ -776,13 +792,15 @@ export function LearningTrackCompilerWorkspace({
 
   const addPresentationSlide = () => {
     if (!selectedPresentationSettings) return;
+    const newSlide = createPresentationSlide(
+      selectedPresentationSettings.slides.length + 1,
+    );
     updatePresentationDeck({
       ...selectedPresentationSettings,
-      slides: [
-        ...selectedPresentationSettings.slides,
-        createPresentationSlide(selectedPresentationSettings.slides.length + 1),
-      ],
+      slides: [...selectedPresentationSettings.slides, newSlide],
     });
+    setPresentationSlideId(newSlide.id);
+    setPresentationCanvasMode("edit");
   };
 
   const removePresentationSlide = (slideId: string) => {
@@ -794,6 +812,12 @@ export function LearningTrackCompilerWorkspace({
       ...selectedPresentationSettings,
       slides: selectedPresentationSettings.slides.filter((slide) => slide.id !== slideId),
     });
+    if (presentationSlideId === slideId) {
+      setPresentationSlideId(
+        selectedPresentationSettings.slides.find((slide) => slide.id !== slideId)?.id ??
+          null,
+      );
+    }
   };
 
   const movePresentationSlide = (index: number, direction: -1 | 1) => {
@@ -1499,10 +1523,47 @@ export function LearningTrackCompilerWorkspace({
           </CollapsibleSettingsPanel>
         </aside>
 
-        {/* Center: Lesson Player preview */}
+        {/* Center: presentation canvas or Lesson Player preview */}
         <section className="flex min-h-0 min-w-0 flex-col ltc-preview-shell">
+          {selectedPresentationSettings ? (
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--ltc-border)] px-3 py-2">
+              <p className="truncate text-xs font-semibold ltc-fg">
+                {selectedPresentationSlide?.title ?? "Presentation slide"}
+              </p>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                    presentationCanvasMode === "edit"
+                      ? "ltc-btn-primary"
+                      : "ltc-btn"
+                  }`}
+                  onClick={() => setPresentationCanvasMode("edit")}
+                >
+                  Edit slide
+                </button>
+                <button
+                  type="button"
+                  className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                    presentationCanvasMode === "preview"
+                      ? "ltc-btn-primary"
+                      : "ltc-btn"
+                  }`}
+                  onClick={() => setPresentationCanvasMode("preview")}
+                >
+                  Student preview
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="relative min-h-0 flex-1 overflow-hidden ltc-preview-stage">
-            {compiled.error ? (
+            {selectedPresentationSlide && presentationCanvasMode === "edit" ? (
+              <PresentationSlideCanvasEditor
+                key={selectedPresentationSlide.id}
+                slide={selectedPresentationSlide}
+                onChange={(slide) => patchPresentationSlide(slide.id, slide)}
+              />
+            ) : compiled.error ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
                 <p className="ltc-warn-text max-w-md text-sm">{compiled.error}</p>
               </div>
@@ -1745,11 +1806,32 @@ export function LearningTrackCompilerWorkspace({
                 Students complete the activity after viewing every slide.
               </p>
 
+              <p className="mt-2 rounded-md border border-sky-200 bg-sky-50 px-2 py-1.5 text-[11px] leading-snug text-sky-900">
+                Choose a slide and select <strong>Edit slide</strong> in the center. Add,
+                move, resize, layer, or delete text boxes and shapes directly on the canvas.
+              </p>
+
               <div className="mt-3 space-y-3">
                 {selectedPresentationSettings.slides.map((slide, index) => (
-                  <div key={slide.id} className="ltc-panel rounded-lg border p-2.5">
+                  <div
+                    key={slide.id}
+                    className={`ltc-panel rounded-lg border p-2.5 ${
+                      selectedPresentationSlide?.id === slide.id
+                        ? "ring-2 ring-sky-500"
+                        : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold ltc-fg">Slide {index + 1}</p>
+                      <button
+                        type="button"
+                        className="min-w-0 truncate text-left text-xs font-semibold ltc-link"
+                        onClick={() => {
+                          setPresentationSlideId(slide.id);
+                          setPresentationCanvasMode("edit");
+                        }}
+                      >
+                        Slide {index + 1}: {slide.title || "Untitled"}
+                      </button>
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -1781,7 +1863,7 @@ export function LearningTrackCompilerWorkspace({
                     </div>
 
                     <label className="mt-2 block text-[11px] ltc-muted">
-                      Heading
+                      Slide name (teacher only)
                       <input
                         className="ltc-input mt-1 w-full rounded border px-2 py-1.5 text-xs"
                         value={slide.title}
@@ -1791,16 +1873,16 @@ export function LearningTrackCompilerWorkspace({
                       />
                     </label>
 
-                    <label className="mt-2 block text-[11px] ltc-muted">
-                      Teaching text
-                      <textarea
-                        className="ltc-input mt-1 min-h-24 w-full resize-y rounded border px-2 py-1.5 text-xs"
-                        value={slide.bodyText}
-                        onChange={(event) =>
-                          patchPresentationSlide(slide.id, { bodyText: event.target.value })
-                        }
-                      />
-                    </label>
+                    <button
+                      type="button"
+                      className="ltc-btn-primary mt-2 w-full rounded px-2 py-1.5 text-xs"
+                      onClick={() => {
+                        setPresentationSlideId(slide.id);
+                        setPresentationCanvasMode("edit");
+                      }}
+                    >
+                      Edit slide canvas
+                    </button>
 
                     <div className="mt-2">
                       <MediaUrlControls

@@ -262,12 +262,45 @@ export type LearningTrackCrosswordSettings = {
 /** One teacher-authored slide inside an inline track presentation. */
 export type LearningTrackPresentationSlide = {
   id: string;
+  /** Teacher-facing slide label; text elements are the student-visible content. */
   title: string;
+  /** Legacy fixed-body field. New decks store visible content in `elements`. */
   bodyText: string;
   backgroundImageUrl?: string;
   backgroundColor: string;
   imageFit: "cover" | "contain";
+  /** Undefined means a legacy heading/body slide; an empty array is intentional. */
+  elements?: LearningTrackPresentationElement[];
 };
+
+type LearningTrackPresentationElementBase = {
+  id: string;
+  xPercent: number;
+  yPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+  zIndex: number;
+};
+
+export type LearningTrackPresentationTextElement =
+  LearningTrackPresentationElementBase & {
+    kind: "text";
+    text: string;
+    textColor: string;
+    textSizePx: number;
+    showCard: boolean;
+  };
+
+export type LearningTrackPresentationShapeElement =
+  LearningTrackPresentationElementBase & {
+    kind: "shape";
+    shape: "rectangle" | "ellipse";
+    fillColor: string;
+  };
+
+export type LearningTrackPresentationElement =
+  | LearningTrackPresentationTextElement
+  | LearningTrackPresentationShapeElement;
 
 /** Informational, non-graded deck shown between practice activities. */
 export type LearningTrackPresentationSettings = {

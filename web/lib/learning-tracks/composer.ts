@@ -43,6 +43,12 @@ export {
 } from "@/lib/learning-tracks/composition";
 export { createHobbiesVocabularyListDocument } from "@/lib/learning-tracks/create-hobbies-vocabulary-list";
 export {
+  clampPresentationElement,
+  createPresentationShapeElement,
+  createPresentationTextElement,
+  presentationElementsForSlide,
+} from "@/lib/learning-tracks/presentation-elements";
+export {
   beatSupportsFixture,
   beatSupportsLibrary,
   libraryFormatForBeatKind,
@@ -83,6 +89,9 @@ export type {
   LearningTrackCrosswordSettings,
   LearningTrackPresentationSettings,
   LearningTrackPresentationSlide,
+  LearningTrackPresentationElement,
+  LearningTrackPresentationTextElement,
+  LearningTrackPresentationShapeElement,
   LearningTrackPlannedBridge,
   LearningTrackRecipe,
   LearningTrackScreenPayload,

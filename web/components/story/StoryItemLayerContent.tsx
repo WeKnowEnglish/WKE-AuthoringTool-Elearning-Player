@@ -38,7 +38,14 @@ export function StoryItemLayerContent({
   if (kind === "shape") {
     const fill = item.color_hex?.trim() || "#3b82f6";
     return (
-      <span className="block h-full w-full rounded-lg" style={{ backgroundColor: fill }} aria-hidden />
+      <span
+        className="block h-full w-full"
+        style={{
+          backgroundColor: fill,
+          borderRadius: item.shape_variant === "ellipse" ? "9999px" : "0.5rem",
+        }}
+        aria-hidden
+      />
     );
   }
 

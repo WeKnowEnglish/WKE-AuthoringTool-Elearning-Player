@@ -55,9 +55,35 @@ describe("LTC presentation activity", () => {
             {
               id: "slide-two",
               title: "Try it",
-              bodyText: "Can I have the blue pencil, please?",
+              bodyText: "Legacy text is ignored once editable elements exist.",
               backgroundColor: "#eff6ff",
               imageFit: "cover",
+              elements: [
+                {
+                  id: "movable-text",
+                  kind: "text",
+                  text: "Can I have the blue pencil, please?",
+                  textColor: "#1e3a8a",
+                  textSizePx: 32,
+                  showCard: false,
+                  xPercent: 14,
+                  yPercent: 18,
+                  widthPercent: 72,
+                  heightPercent: 24,
+                  zIndex: 2,
+                },
+                {
+                  id: "blue-circle",
+                  kind: "shape",
+                  shape: "ellipse",
+                  fillColor: "#60a5fa",
+                  xPercent: 38,
+                  yPercent: 50,
+                  widthPercent: 24,
+                  heightPercent: 30,
+                  zIndex: 1,
+                },
+              ],
             },
           ],
         },
@@ -84,6 +110,26 @@ describe("LTC presentation activity", () => {
     expect(
       parsed && "pages" in parsed ? parsed.pages?.[0]?.auto_play_page_text : null,
     ).toBe(true);
+    expect(
+      parsed && "pages" in parsed
+        ? parsed.pages?.[1]?.items.find((item) => item.id === "movable-text")
+        : null,
+    ).toMatchObject({
+      kind: "text",
+      text: "Can I have the blue pencil, please?",
+      x_percent: 14,
+      w_percent: 72,
+      show_card: false,
+    });
+    expect(
+      parsed && "pages" in parsed
+        ? parsed.pages?.[1]?.items.find((item) => item.id === "blue-circle")
+        : null,
+    ).toMatchObject({
+      kind: "shape",
+      shape_variant: "ellipse",
+      color_hex: "#60a5fa",
+    });
   });
 
   it("rejects a completely empty presentation slide", () => {
@@ -106,7 +152,9 @@ describe("LTC presentation activity", () => {
       },
     });
 
-    expect(() => resolveBeatScreensSync(beat)).toThrow(/slide 1 needs text or an image/i);
+    expect(() => resolveBeatScreensSync(beat)).toThrow(
+      /slide 1 needs text, a shape, or an image/i,
+    );
   });
 });
 

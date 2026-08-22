@@ -28,6 +28,7 @@ import {
   type LearningTrackRecipe,
   type LearningTrackVocabCompileFormat,
 } from "@/lib/learning-tracks/composition-types";
+import { createPresentationTextElement } from "@/lib/learning-tracks/presentation-elements";
 
 /** Default: picture on front; word + example on back. */
 export const DEFAULT_FLASHCARDS_FRONT_FACES: GamesFlashcardFace[] = ["picture"];
@@ -54,10 +55,31 @@ export function createPresentationSlide(
 ): LearningTrackPresentationSlide {
   return {
     id: newPresentationSlideId(),
-    title: index === 1 ? "Key idea" : `Slide ${index}`,
-    bodyText: "Add the explanation students should learn here.",
+    title: `Slide ${index}`,
+    bodyText: "",
     backgroundColor: "#f8fafc",
     imageFit: "cover",
+    elements: [
+      createPresentationTextElement({
+        text: index === 1 ? "Key idea" : `Slide ${index}`,
+        textSizePx: 40,
+        xPercent: 7,
+        yPercent: 8,
+        widthPercent: 86,
+        heightPercent: 16,
+        zIndex: 2,
+      }),
+      createPresentationTextElement({
+        text: "Add the explanation students should learn here.",
+        textColor: "#1e293b",
+        textSizePx: 27,
+        xPercent: 10,
+        yPercent: 32,
+        widthPercent: 80,
+        heightPercent: 42,
+        zIndex: 1,
+      }),
+    ],
   };
 }
 

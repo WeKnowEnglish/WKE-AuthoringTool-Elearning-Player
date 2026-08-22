@@ -7,6 +7,7 @@ import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
 import { listPublishedClassMaterialsForStudentClass } from "@/lib/data/class-lessons";
 import { getClassScheduleForStudentClass } from "@/lib/data/class-meeting-slots";
 import { getActiveLiveSessionForStudentClass } from "@/lib/data/student-live";
+import { getTrialStudentDiscoveryForClass } from "@/lib/data/trial-availability";
 import { createClient } from "@/lib/supabase/server";
 import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
 
@@ -40,13 +41,16 @@ export default async function SecondaryClassroomPage({ params }: Props) {
     notFound();
   }
 
-  const [posts, materials, schedule, liveSession, assignedHomework] =
+  const [posts, materials, schedule, liveSession, assignedHomework, trialDiscovery] =
     await Promise.all([
       listClassPostsForStudentClass(classId),
       listPublishedClassMaterialsForStudentClass(classId),
       getClassScheduleForStudentClass(classId),
       getActiveLiveSessionForStudentClass(classId),
       listAssignedHomeworkForStudent(),
+      membership.classKind === "trial"
+        ? getTrialStudentDiscoveryForClass(classId)
+        : Promise.resolve(null),
     ]);
 
   const recentHomework = assignedHomework
@@ -72,6 +76,7 @@ export default async function SecondaryClassroomPage({ params }: Props) {
       homeLabel="Back to Home"
       tone="secondary"
       tabSettings={membership.studentTabs}
+      trialDiscovery={trialDiscovery}
     />
   );
 }

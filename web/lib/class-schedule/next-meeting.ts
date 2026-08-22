@@ -197,6 +197,7 @@ export type LiveClassMeetingWindow = {
   endsAt: Date;
   slot: ClassMeetingSlot;
   label: string;
+  source?: "recurring" | "trial";
 };
 
 /**
@@ -274,6 +275,7 @@ export function resolveLiveClassMeeting(
     endsAt: best.endsAt,
     slot: best.slot,
     label: best.label,
+    source: "recurring",
   };
 }
 

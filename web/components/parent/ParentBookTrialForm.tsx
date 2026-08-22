@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { TrialTimeDisplay } from "@/components/parent/TrialTimeDisplay";
 import { requestTrialBooking } from "@/lib/actions/trial-availability";
-import { formatTrialSlotLabel } from "@/lib/class-schedule/trial-format";
 import type { TeacherAvailabilitySlot } from "@/lib/class-schedule/trial-types";
 
 type ChildOption = {
@@ -180,7 +180,7 @@ export function ParentBookTrialForm({
                   className="mt-1"
                 />
                 <span className="text-sm font-semibold text-slate-800">
-                  {formatTrialSlotLabel(slot)}
+                  <TrialTimeDisplay {...slot} />
                   {slot.note ? (
                     <span className="mt-0.5 block text-xs font-semibold text-slate-500">
                       {slot.note}
@@ -194,7 +194,7 @@ export function ParentBookTrialForm({
       </fieldset>
 
       <label className="mt-4 block text-sm font-bold text-slate-800">
-        Note for teacher (optional)
+        Help the teacher prepare (optional)
         <textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
@@ -202,7 +202,7 @@ export function ParentBookTrialForm({
           rows={3}
           disabled={isPending}
           className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold"
-          placeholder="Goals, level, or questions"
+          placeholder="Interests, English experience, goals, or anything that helps your child feel comfortable"
         />
       </label>
 

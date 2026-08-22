@@ -9,7 +9,7 @@ import {
   type ClassSessionPhase,
 } from "@/lib/class-schedule/class-clock";
 import { getClassLiveState } from "@/lib/class-schedule/live-state";
-import { resolveLiveClassMeeting } from "@/lib/class-schedule/next-meeting";
+import { resolveClassLiveMeeting } from "@/lib/class-schedule/trial-meeting";
 import { listMeetingSlotsForClassServiceRole } from "@/lib/daily/schedule-bind";
 import { occurrenceStartsMatch } from "@/lib/class-schedule/occurrence-match";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
@@ -94,7 +94,7 @@ export async function ensureClassSessionForClock(input: {
   }
 
   const slots = await listMeetingSlotsForClassServiceRole(input.classId);
-  const meeting = resolveLiveClassMeeting(slots, new Date(nowMs));
+  const meeting = await resolveClassLiveMeeting(input.classId, slots, new Date(nowMs));
 
   if (!meeting) {
     return {
@@ -215,7 +215,7 @@ export async function ensureClassSessionForClock(input: {
     classId: input.classId,
     classLessonId: input.classLessonId,
     title: input.title ?? meeting.label,
-    meetingSlotId: meeting.slot.id,
+    meetingSlotId: meeting.source === "trial" ? null : meeting.slot.id,
     occurrenceStartsAt: meeting.startsAt.toISOString(),
     occurrenceEndsAt: meeting.endsAt.toISOString(),
     sessionKind: "scheduled",
@@ -255,10 +255,21 @@ export async function listClassIdsWithUpcomingSlots(
     .select("class_id")
     .limit(500);
   const ids = [...new Set((data ?? []).map((r) => r.class_id as string))];
+  const { data: trialRows } = await supabase
+    .from("trial_occurrences")
+    .select("class_id, starts_at")
+    .not("class_id", "is", null)
+    .gte("starts_at", new Date(nowMs - 4 * 60 * 60 * 1000).toISOString())
+    .lte("starts_at", new Date(nowMs + CLASS_WAITING_OPEN_MS + 60_000).toISOString())
+    .limit(200);
+  for (const row of trialRows ?? []) {
+    if (row.class_id) ids.push(row.class_id as string);
+  }
+  const uniqueIds = [...new Set(ids)];
   const due: string[] = [];
-  for (const classId of ids) {
+  for (const classId of uniqueIds) {
     const slots = await listMeetingSlotsForClassServiceRole(classId);
-    const meeting = resolveLiveClassMeeting(slots, new Date(nowMs), {
+    const meeting = await resolveClassLiveMeeting(classId, slots, new Date(nowMs), {
       lookAheadMs: CLASS_WAITING_OPEN_MS + 60_000,
       postEndGraceMs: 15 * 60 * 1000,
     });

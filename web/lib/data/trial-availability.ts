@@ -10,8 +10,10 @@ import type {
   TeacherAvailabilitySlot,
   TrialBookingRequest,
   TrialOccurrence,
+  TrialStudentDiscovery,
 } from "@/lib/class-schedule/trial-types";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
 function isMissingTrialTable(error: { message?: string; code?: string } | null): boolean {
   if (!error) return false;
@@ -44,9 +46,10 @@ export const listMyAvailabilitySlots = cache(async function listMyAvailabilitySl
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("teacher_availability_slots")
-    .select("id, teacher_id, starts_at, duration_minutes, timezone, status, note")
+    .select("id, teacher_id, starts_at, duration_minutes, timezone, status, note, series_id, series_sequence")
     .eq("teacher_id", teacherId)
     .neq("status", "cancelled")
+    .gt("starts_at", new Date().toISOString())
     .order("starts_at", { ascending: true });
 
   if (error) {
@@ -68,7 +71,7 @@ export const listMyTrialBookings = cache(async function listMyTrialBookings(): P
   const { data, error } = await supabase
     .from("trial_booking_requests")
     .select(
-      "id, teacher_id, availability_slot_id, guardian_user_id, student_id, student_display_name, child_age_band, status, guardian_note, teacher_note, occurrence_id, class_id, created_at",
+      "id, teacher_id, availability_slot_id, guardian_user_id, student_id, student_display_name, child_age_band, student_created_for_trial, status, guardian_note, teacher_note, occurrence_id, class_id, created_at",
     )
     .eq("teacher_id", teacherId)
     .order("created_at", { ascending: false })
@@ -123,7 +126,7 @@ export async function listOpenAvailabilityForTeacher(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("teacher_availability_slots")
-    .select("id, teacher_id, starts_at, duration_minutes, timezone, status, note")
+    .select("id, teacher_id, starts_at, duration_minutes, timezone, status, note, series_id, series_sequence")
     .eq("teacher_id", id)
     .eq("status", "open")
     .gt("starts_at", new Date().toISOString())
@@ -150,7 +153,7 @@ export async function listParentTrialBookingsForStudent(
   const { data, error } = await supabase
     .from("trial_booking_requests")
     .select(
-      "id, teacher_id, availability_slot_id, guardian_user_id, student_id, student_display_name, child_age_band, status, guardian_note, teacher_note, occurrence_id, class_id, created_at",
+      "id, teacher_id, availability_slot_id, guardian_user_id, student_id, student_display_name, child_age_band, student_created_for_trial, status, guardian_note, teacher_note, occurrence_id, class_id, created_at",
     )
     .eq("student_id", id)
     .order("created_at", { ascending: false })
@@ -232,7 +235,7 @@ export async function listParentOwnTrialBookings(): Promise<TrialBookingRequest[
   const { data, error } = await supabase
     .from("trial_booking_requests")
     .select(
-      "id, teacher_id, availability_slot_id, guardian_user_id, student_id, student_display_name, child_age_band, status, guardian_note, teacher_note, occurrence_id, class_id, created_at",
+      "id, teacher_id, availability_slot_id, guardian_user_id, student_id, student_display_name, child_age_band, student_created_for_trial, status, guardian_note, teacher_note, occurrence_id, class_id, created_at",
     )
     .eq("guardian_user_id", user.id)
     .order("created_at", { ascending: false })
@@ -302,4 +305,117 @@ export async function listParentOwnUpcomingTrialOccurrences(): Promise<TrialOccu
   return (data ?? [])
     .map((row) => mapTrialOccurrenceRow(row as Parameters<typeof mapTrialOccurrenceRow>[0]))
     .filter((row): row is TrialOccurrence => Boolean(row));
+}
+
+export type ParentTrialBookingDetails = {
+  booking: TrialBookingRequest;
+  openSlots: TeacherAvailabilitySlot[];
+  studentUsername: string | null;
+};
+
+/** Parent-owned booking detail used by the edit/reschedule and child setup page. */
+export async function getParentTrialBookingDetails(
+  bookingId: string,
+): Promise<ParentTrialBookingDetails | null> {
+  noStore();
+  const id = bookingId.trim();
+  if (!id) return null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) return null;
+
+  const { data: row, error } = await supabase
+    .from("trial_booking_requests")
+    .select(
+      "id, teacher_id, availability_slot_id, guardian_user_id, student_id, student_display_name, child_age_band, student_created_for_trial, status, guardian_note, teacher_note, occurrence_id, class_id, created_at",
+    )
+    .eq("id", id)
+    .eq("guardian_user_id", user.id)
+    .maybeSingle();
+  if (error) {
+    if (isMissingTrialTable(error)) return null;
+    throw error;
+  }
+  if (!row) return null;
+
+  const booking = mapTrialBookingRow(
+    row as Parameters<typeof mapTrialBookingRow>[0],
+  );
+  const { data: currentSlot, error: currentSlotError } = await supabase
+    .from("teacher_availability_slots")
+    .select("id, starts_at, duration_minutes, timezone")
+    .eq("id", booking.availabilitySlotId)
+    .maybeSingle();
+  if (currentSlotError && !isMissingTrialTable(currentSlotError)) {
+    throw currentSlotError;
+  }
+  if (currentSlot) {
+    booking.startsAt = String(currentSlot.starts_at);
+    booking.durationMinutes = Number(currentSlot.duration_minutes);
+    booking.timezone = String(currentSlot.timezone);
+  }
+
+  const openSlots = await listOpenAvailabilityForTeacher(booking.teacherId);
+  let studentUsername: string | null = null;
+  if (booking.studentCreatedForTrial && booking.studentId) {
+    const admin = createServiceRoleSupabase();
+    if (admin) {
+      const { data: profile } = await admin
+        .from("student_profiles")
+        .select("username")
+        .eq("user_id", booking.studentId)
+        .maybeSingle();
+      studentUsername =
+        typeof profile?.username === "string" ? profile.username : null;
+    }
+  }
+
+  return { booking, openSlots, studentUsername };
+}
+
+function mapTrialStudentDiscoveryRow(row: Record<string, unknown>): TrialStudentDiscovery {
+  return {
+    id: String(row.id),
+    bookingId: String(row.booking_id),
+    classId: String(row.class_id),
+    teacherId: String(row.teacher_id),
+    guardianUserId: String(row.guardian_user_id),
+    studentId: String(row.student_id),
+    preferredName: String(row.preferred_name || "Student"),
+    interests: row.interests ? String(row.interests) : null,
+    englishGoals: row.english_goals ? String(row.english_goals) : null,
+    englishUse: row.english_use ? String(row.english_use) : null,
+    confidence:
+      typeof row.confidence === "number" ? row.confidence : null,
+    feelsEasy: row.feels_easy ? String(row.feels_easy) : null,
+    feelsDifficult: row.feels_difficult ? String(row.feels_difficult) : null,
+    submittedAt: String(row.submitted_at),
+  };
+}
+
+export async function getTrialStudentDiscoveryForClass(
+  classId: string,
+): Promise<TrialStudentDiscovery | null> {
+  noStore();
+  const id = classId.trim();
+  if (!id) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("trial_student_discovery")
+    .select(
+      "id, booking_id, class_id, teacher_id, guardian_user_id, student_id, preferred_name, interests, english_goals, english_use, confidence, feels_easy, feels_difficult, submitted_at",
+    )
+    .eq("class_id", id)
+    .maybeSingle();
+  if (error) {
+    if (isMissingTrialTable(error)) return null;
+    const message = error.message?.toLowerCase() ?? "";
+    if (message.includes("trial_student_discovery") || error.code === "PGRST205") {
+      return null;
+    }
+    throw error;
+  }
+  return data ? mapTrialStudentDiscoveryRow(data as Record<string, unknown>) : null;
 }

@@ -10,6 +10,8 @@ export type TeacherAvailabilitySlot = {
   timezone: string;
   status: AvailabilitySlotStatus;
   note: string | null;
+  seriesId: string | null;
+  seriesSequence: number | null;
 };
 
 export type TrialBookingRequest = {
@@ -20,6 +22,7 @@ export type TrialBookingRequest = {
   studentId: string | null;
   studentDisplayName: string;
   childAgeBand: string | null;
+  studentCreatedForTrial: boolean;
   status: TrialBookingStatus;
   guardianNote: string | null;
   teacherNote: string | null;
@@ -29,6 +32,23 @@ export type TrialBookingRequest = {
   startsAt: string | null;
   durationMinutes: number | null;
   timezone: string | null;
+};
+
+export type TrialStudentDiscovery = {
+  id: string;
+  bookingId: string;
+  classId: string;
+  teacherId: string;
+  guardianUserId: string;
+  studentId: string;
+  preferredName: string;
+  interests: string | null;
+  englishGoals: string | null;
+  englishUse: string | null;
+  confidence: number | null;
+  feelsEasy: string | null;
+  feelsDifficult: string | null;
+  submittedAt: string;
 };
 
 export type TrialOccurrence = {

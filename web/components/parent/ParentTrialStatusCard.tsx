@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useParentI18n } from "@/components/parent/ParentI18nProvider";
+import { TrialTimeDisplay } from "@/components/parent/TrialTimeDisplay";
 import { cancelTrialBooking } from "@/lib/actions/trial-availability";
-import { formatTrialSlotLabel } from "@/lib/class-schedule/trial-format";
 import type {
   TrialBookingRequest,
   TrialOccurrence,
@@ -23,9 +24,15 @@ export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
   const pending = bookings.filter((booking) => booking.status === "pending");
   const nextOccurrence = occurrences[0] ?? null;
   const confirmedBooking =
-    bookings.find((booking) => booking.status === "confirmed" && booking.occurrenceId) ?? null;
+    bookings.find(
+      (booking) =>
+        booking.status === "confirmed" && booking.id === nextOccurrence?.bookingId,
+    ) ?? null;
+  const closed = bookings
+    .filter((booking) => booking.status === "declined" || booking.status === "cancelled")
+    .slice(0, 2);
 
-  if (!pending.length && !nextOccurrence) return null;
+  if (!pending.length && !nextOccurrence && !closed.length) return null;
 
   const cancel = (bookingId: string) => {
     setError(null);
@@ -51,12 +58,20 @@ export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
             {t("trial.confirmedTitle")}
           </h2>
           <p className="mt-1 text-sm font-semibold text-slate-700">
-            {formatTrialSlotLabel(nextOccurrence)}
+            <TrialTimeDisplay {...nextOccurrence} />
           </p>
           {confirmedBooking?.classId ? (
             <p className="mt-1 text-xs font-semibold text-slate-600">
               {t("trial.classroomReady")}
             </p>
+          ) : null}
+          {confirmedBooking ? (
+            <Link
+              href={`/parent/trials/${confirmedBooking.id}`}
+              className="mt-3 inline-flex text-xs font-extrabold text-teal-900 underline"
+            >
+              View details and student setup
+            </Link>
           ) : null}
         </div>
       ) : null}
@@ -74,21 +89,53 @@ export function ParentTrialStatusCard({ bookings, occurrences }: Props) {
               >
                 <span>
                   {booking.startsAt && booking.timezone && booking.durationMinutes != null
-                    ? formatTrialSlotLabel({
-                        startsAt: booking.startsAt,
-                        durationMinutes: booking.durationMinutes,
-                        timezone: booking.timezone,
-                      })
+                    ? <TrialTimeDisplay
+                        startsAt={booking.startsAt}
+                        durationMinutes={booking.durationMinutes}
+                        timezone={booking.timezone}
+                        compact
+                      />
                     : t("trial.awaiting")}
                 </span>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => cancel(booking.id)}
-                  className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                <div className="flex gap-2">
+                  <Link
+                    href={`/parent/trials/${booking.id}`}
+                    className="rounded-lg border border-indigo-300 bg-white px-2.5 py-1 text-xs font-extrabold text-indigo-700"
+                  >
+                    View / edit
+                  </Link>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => cancel(booking.id)}
+                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    {t("trial.cancel")}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {closed.length > 0 ? (
+        <div className="mt-4 border-t border-teal-100 pt-3">
+          <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
+            Recent requests
+          </p>
+          <ul className="mt-2 space-y-2">
+            {closed.map((booking) => (
+              <li key={booking.id} className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold text-slate-700">
+                  {booking.studentDisplayName} · {booking.status}
+                </span>
+                <Link
+                  href={`/parent/trials/${booking.id}`}
+                  className="text-xs font-extrabold text-indigo-700 underline"
                 >
-                  {t("trial.cancel")}
-                </button>
+                  View details
+                </Link>
               </li>
             ))}
           </ul>

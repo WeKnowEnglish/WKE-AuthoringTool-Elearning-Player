@@ -12,11 +12,13 @@ import type { ClassVocabularyListSummary } from "@/components/teacher/class-hub/
 import { CreateLessonTab } from "@/components/teacher/class-hub/CreateLessonTab";
 import { StudentsHomeworkTab } from "@/components/teacher/class-hub/StudentsHomeworkTab";
 import { TeachTab } from "@/components/teacher/class-hub/TeachTab";
+import { TeacherTrialDiscoveryCard } from "@/components/teacher/trial/TeacherTrialDiscoveryCard";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { StudentClassroomTabSettings } from "@/lib/classroom/classroom-tabs";
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { ClassMeetingSlot } from "@/lib/class-schedule/types";
+import type { TrialStudentDiscovery } from "@/lib/class-schedule/trial-types";
 import type { ClassScheduleGroupingBoard } from "@/lib/class-schedule/preference-types";
 import type {
   ClassLesson,
@@ -90,6 +92,7 @@ export type TeacherClassHubClientProps = {
   spaceItems: TeacherSpaceItemSummary[];
   studentTabSettings: StudentClassroomTabSettings;
   classKind: "regular" | "trial";
+  trialDiscovery: TrialStudentDiscovery | null;
 };
 
 export function TeacherClassHubClient({
@@ -122,6 +125,7 @@ export function TeacherClassHubClient({
   spaceItems,
   studentTabSettings,
   classKind,
+  trialDiscovery,
 }: TeacherClassHubClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -244,6 +248,10 @@ export function TeacherClassHubClient({
         open={historyOpen}
         onClose={closeHistory}
       />
+
+      {classKind === "trial" ? (
+        <TeacherTrialDiscoveryCard discovery={trialDiscovery} />
+      ) : null}
 
       {tabs.length > 1 ? (
         <nav

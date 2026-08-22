@@ -18,6 +18,7 @@ import { getClassRoster, getTeacherClass } from "@/lib/data/teacher-classes";
 import { listTeacherWordPacksForClass } from "@/lib/data/teacher-word-packs";
 import { getPendingSentenceCountsForClass } from "@/lib/data/teacher-sentence-submissions";
 import { listMyTeacherSpaceItems } from "@/lib/data/teacher-space";
+import { getTrialStudentDiscoveryForClass } from "@/lib/data/trial-availability";
 import { listPublishedQuestionSetsForHost } from "@/lib/live-game/server/question-set-list";
 import { playPathForStudioActivity } from "@/lib/studio-activities/paths";
 import { createClient } from "@/lib/supabase/server";
@@ -61,6 +62,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     meetingSlots,
     scheduleGroupingBoard,
     spaceItems,
+    trialDiscovery,
   ] = await Promise.all([
     getClassRoster(classId),
     getClassMasteryOverview(classId),
@@ -85,6 +87,9 @@ export default async function TeacherClassDetailPage({ params }: Props) {
       firstChoiceCounts: {},
     })),
     listMyTeacherSpaceItems(),
+    teacherClass.class_kind === "trial"
+      ? getTrialStudentDiscoveryForClass(classId)
+      : Promise.resolve(null),
   ]);
 
   const packQuizzes = activityCards
@@ -193,6 +198,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
           materials: teacherClass.student_tab_materials_enabled,
         }}
         classKind={teacherClass.class_kind}
+        trialDiscovery={trialDiscovery}
       />
     </Suspense>
   );

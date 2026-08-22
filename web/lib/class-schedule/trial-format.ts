@@ -54,6 +54,8 @@ export function mapAvailabilitySlotRow(row: {
   timezone: string;
   status: string;
   note: string | null;
+  series_id?: string | null;
+  series_sequence?: number | null;
 }): TeacherAvailabilitySlot | null {
   const startsAt = normalizeTrialStartsAt(row.starts_at);
   if (!startsAt) return null;
@@ -65,6 +67,9 @@ export function mapAvailabilitySlotRow(row: {
     timezone: normalizeMeetingTimezone(row.timezone),
     status: normalizeAvailabilitySlotStatus(row.status),
     note: row.note?.trim() ? row.note.trim().slice(0, 280) : null,
+    seriesId: row.series_id ?? null,
+    seriesSequence:
+      typeof row.series_sequence === "number" ? row.series_sequence : null,
   };
 }
 
@@ -76,6 +81,7 @@ export function mapTrialBookingRow(row: {
   student_id: string | null;
   student_display_name?: string | null;
   child_age_band?: string | null;
+  student_created_for_trial?: boolean | null;
   status: string;
   guardian_note: string | null;
   teacher_note: string | null;
@@ -94,6 +100,7 @@ export function mapTrialBookingRow(row: {
     studentId: row.student_id,
     studentDisplayName: (row.student_display_name ?? "Student").trim() || "Student",
     childAgeBand: row.child_age_band?.trim() ? row.child_age_band.trim().slice(0, 40) : null,
+    studentCreatedForTrial: Boolean(row.student_created_for_trial),
     status: normalizeTrialBookingStatus(row.status),
     guardianNote: row.guardian_note,
     teacherNote: row.teacher_note,
@@ -141,15 +148,23 @@ export function formatTrialSlotLabel(input: {
   durationMinutes: number;
   timezone: string;
 }): string {
+  return formatTrialSlotLabelInTimeZone(input, input.timezone);
+}
+
+/** Format a slot for the viewer while retaining the source slot duration. */
+export function formatTrialSlotLabelInTimeZone(
+  input: { startsAt: string; durationMinutes: number; timezone: string },
+  displayTimezone: string,
+): string {
   const date = new Date(input.startsAt);
   if (!Number.isFinite(date.getTime())) return "Unavailable time";
   const when = new Intl.DateTimeFormat(undefined, {
-    timeZone: input.timezone,
+    timeZone: displayTimezone,
     weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
-  return `${when} · ${input.durationMinutes} min · ${input.timezone}`;
+  return `${when} · ${input.durationMinutes} min · ${displayTimezone}`;
 }

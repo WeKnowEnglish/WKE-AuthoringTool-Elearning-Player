@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isTeacher } from "@/lib/auth/roles";
+import { canHostLive, isTeacher } from "@/lib/auth/roles";
 import {
   normalizeMeetingDuration,
   normalizeMeetingTimezone,
   wallClockInTimeZoneToUtcIso,
 } from "@/lib/class-schedule/normalize";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
 export type TrialActionResult =
   | { ok: true }
@@ -19,7 +20,7 @@ export type TrialConfirmResult =
       classId: string | null;
       occurrenceId: string | null;
       studentId: string | null;
-      createdCredentials: { username: string; pin: string } | null;
+      createdAccount: { username: string } | null;
     }
   | { ok: false; error: string };
 
@@ -55,6 +56,16 @@ function rpcErrorMessage(payload: unknown, fallback: string): string {
       return "That time is no longer available.";
     case "slot_not_found":
       return "That time slot was not found.";
+    case "slot_not_editable":
+      return "Only open, unbooked times can be edited.";
+    case "slot_overlap":
+      return "You already have a trial time at that exact time.";
+    case "invalid_start":
+      return "Choose a valid future date and time.";
+    case "invalid_timezone":
+      return "Choose a valid timezone.";
+    case "no_future_slots":
+      return "No future times could be created. Check the date and recurrence.";
     case "not_guardian":
       return "You can only book for a linked child.";
     case "child_name_required":
@@ -83,10 +94,43 @@ export async function createTeacherAvailabilitySlot(input: {
   timezone: string;
   note?: string;
 }): Promise<TrialActionResult> {
+  return createTeacherAvailabilitySeries({
+    startDate: input.startsAtWall.slice(0, 10),
+    startTime: input.startsAtWall.slice(11, 16),
+    repeatWeeks: 1,
+    durationMinutes: input.durationMinutes,
+    timezone: input.timezone,
+    note: input.note,
+  });
+}
+
+async function requireLiveTeacherUserId(): Promise<string> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id || !isTeacher(user)) {
+    throw new Error("Teacher authentication required.");
+  }
+  if (!canHostLive(user)) {
+    throw new Error("Teacher Plus is required to accept and host live trials.");
+  }
+  return user.id;
+}
+
+export async function createTeacherAvailabilitySeries(input: {
+  startDate: string;
+  startTime: string;
+  repeatWeeks: number;
+  durationMinutes: number;
+  timezone: string;
+  note?: string;
+}): Promise<TrialActionResult> {
   try {
-    const teacherId = await requireTeacherUserId();
+    await requireTeacherUserId();
     const timezone = normalizeMeetingTimezone(input.timezone);
-    const startsAt = wallClockInTimeZoneToUtcIso(input.startsAtWall, timezone);
+    const startsAtWall = `${input.startDate.trim()}T${input.startTime.trim()}`;
+    const startsAt = wallClockInTimeZoneToUtcIso(startsAtWall, timezone);
     if (!startsAt) return { ok: false, error: "Choose a valid start time." };
     if (new Date(startsAt).getTime() <= Date.now()) {
       return { ok: false, error: "Start time must be in the future." };
@@ -94,22 +138,65 @@ export async function createTeacherAvailabilitySlot(input: {
 
     const note = input.note?.trim() ? input.note.trim().slice(0, 280) : null;
     const supabase = await createClient();
-    const { error } = await supabase.from("teacher_availability_slots").insert({
-      teacher_id: teacherId,
-      starts_at: startsAt,
-      duration_minutes: normalizeMeetingDuration(input.durationMinutes),
-      timezone,
-      status: "open",
-      note,
+    const repeatWeeks = Math.max(1, Math.min(Math.round(input.repeatWeeks || 1), 16));
+    const { data, error } = await supabase.rpc("create_trial_availability_series", {
+      p_starts_on: input.startDate.trim(),
+      p_local_start_time: input.startTime.trim(),
+      p_repeat_weeks: repeatWeeks,
+      p_duration_minutes: normalizeMeetingDuration(input.durationMinutes),
+      p_timezone: timezone,
+      p_note: note,
     });
 
     if (error) return { ok: false, error: error.message };
+    if (!data || typeof data !== "object" || !(data as { ok?: boolean }).ok) {
+      return { ok: false, error: rpcErrorMessage(data, "Could not publish availability.") };
+    }
     revalidateTrialSurfaces();
     return { ok: true };
   } catch (error) {
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Could not publish slot.",
+    };
+  }
+}
+
+export async function updateTeacherAvailabilitySlot(input: {
+  slotId: string;
+  startsAtWall: string;
+  durationMinutes: number;
+  timezone: string;
+  note?: string;
+}): Promise<TrialActionResult> {
+  try {
+    await requireTeacherUserId();
+    const id = input.slotId.trim();
+    const timezone = normalizeMeetingTimezone(input.timezone);
+    const startsAt = wallClockInTimeZoneToUtcIso(input.startsAtWall, timezone);
+    if (!id) return { ok: false, error: "Missing slot." };
+    if (!startsAt || new Date(startsAt).getTime() <= Date.now()) {
+      return { ok: false, error: "Choose a valid future date and time." };
+    }
+    const note = input.note?.trim() ? input.note.trim().slice(0, 280) : null;
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("update_trial_availability_slot", {
+      p_slot_id: id,
+      p_starts_at: startsAt,
+      p_duration_minutes: normalizeMeetingDuration(input.durationMinutes),
+      p_timezone: timezone,
+      p_note: note,
+    });
+    if (error) return { ok: false, error: error.message };
+    if (!data || typeof data !== "object" || !(data as { ok?: boolean }).ok) {
+      return { ok: false, error: rpcErrorMessage(data, "Could not update time.") };
+    }
+    revalidateTrialSurfaces();
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not update time.",
     };
   }
 }
@@ -160,7 +247,9 @@ export async function setTeacherTrialsEnabled(
   enabled: boolean,
 ): Promise<TrialActionResult> {
   try {
-    const teacherId = await requireTeacherUserId();
+    const teacherId = enabled
+      ? await requireLiveTeacherUserId()
+      : await requireTeacherUserId();
     const supabase = await createClient();
     const { data: space, error: spaceError } = await supabase
       .from("teacher_spaces")
@@ -281,6 +370,90 @@ export async function cancelTrialBooking(bookingId: string): Promise<TrialAction
   }
 }
 
+export async function updatePendingTrialBooking(input: {
+  bookingId: string;
+  availabilitySlotId: string;
+  childDisplayName?: string | null;
+  childAgeBand?: string | null;
+  guardianNote?: string | null;
+}): Promise<TrialActionResult> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.id) return { ok: false, error: "Sign in as a parent." };
+    const bookingId = input.bookingId.trim();
+    const slotId = input.availabilitySlotId.trim();
+    if (!bookingId || !slotId) return { ok: false, error: "Missing booking details." };
+    const { data, error } = await supabase.rpc("update_pending_trial_booking", {
+      p_booking_id: bookingId,
+      p_availability_slot_id: slotId,
+      p_child_display_name: input.childDisplayName?.trim() || null,
+      p_child_age_band: input.childAgeBand?.trim() || null,
+      p_guardian_note: input.guardianNote?.trim().slice(0, 400) || null,
+    });
+    if (error) return { ok: false, error: error.message };
+    if (!data || typeof data !== "object" || !(data as { ok?: boolean }).ok) {
+      return { ok: false, error: rpcErrorMessage(data, "Could not update booking.") };
+    }
+    revalidatePath(`/parent/trials/${bookingId}`);
+    revalidateTrialSurfaces();
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not update booking.",
+    };
+  }
+}
+
+export async function setTrialStudentPin(input: {
+  bookingId: string;
+  pin: string;
+}): Promise<TrialActionResult> {
+  try {
+    const pin = input.pin.trim();
+    if (!/^\d{6}$/.test(pin)) {
+      return { ok: false, error: "Choose a six-digit secret code." };
+    }
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.id) return { ok: false, error: "Sign in as a parent." };
+    const bookingId = input.bookingId.trim();
+    const { data: booking, error } = await supabase
+      .from("trial_booking_requests")
+      .select("student_id, student_created_for_trial, status")
+      .eq("id", bookingId)
+      .eq("guardian_user_id", user.id)
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    if (
+      !booking?.student_id ||
+      !booking.student_created_for_trial ||
+      booking.status !== "confirmed"
+    ) {
+      return { ok: false, error: "Student setup is not available for this booking." };
+    }
+    const admin = createServiceRoleSupabase();
+    if (!admin) return { ok: false, error: "Student setup is not configured." };
+    const { error: updateError } = await admin.auth.admin.updateUserById(
+      String(booking.student_id),
+      { password: pin },
+    );
+    if (updateError) return { ok: false, error: updateError.message };
+    revalidatePath(`/parent/trials/${bookingId}`);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not set the secret code.",
+    };
+  }
+}
+
 export async function confirmTrialBooking(input: {
   bookingId: string;
   teacherNote?: string;
@@ -305,7 +478,7 @@ export async function confirmTrialBooking(input: {
 
     let studentId =
       typeof existing.student_id === "string" ? existing.student_id : null;
-    let createdCredentials: { username: string; pin: string } | null = null;
+    let createdAccount: { username: string } | null = null;
 
     if (!studentId) {
       const {
@@ -338,10 +511,7 @@ export async function confirmTrialBooking(input: {
       }
 
       studentId = created.student.studentId;
-      createdCredentials = {
-        username: created.student.username,
-        pin: created.student.pin,
-      };
+      createdAccount = { username: created.student.username };
     }
 
     const note = input.teacherNote?.trim() ? input.teacherNote.trim().slice(0, 400) : null;
@@ -365,7 +535,7 @@ export async function confirmTrialBooking(input: {
       classId: typeof payload.classId === "string" ? payload.classId : null,
       occurrenceId: typeof payload.occurrenceId === "string" ? payload.occurrenceId : null,
       studentId,
-      createdCredentials,
+      createdAccount,
     };
   } catch (error) {
     return {

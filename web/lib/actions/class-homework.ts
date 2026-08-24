@@ -27,6 +27,7 @@ import { freezeClozeOpenHomeworkPayload } from "@/lib/class-homework/freeze-cloz
 import { freezeReadAndAnswerHomeworkPayload } from "@/lib/class-homework/freeze-read-and-answer";
 import { freezePictureStoryHomeworkPayload } from "@/lib/class-homework/freeze-picture-story";
 import { freezeGradedTrackHomeworkPayload } from "@/lib/class-homework/freeze-graded-track";
+import { freezeHomeworkTemplateDocument } from "@/lib/class-homework/freeze-homework-template";
 import { freezeAssessmentTrackHomeworkPayload } from "@/lib/class-homework/freeze-assessment-track";
 import {
   ASSIGNABLE_DOCUMENT_HOMEWORK_ERROR,
@@ -218,6 +219,22 @@ export async function saveClassHomework(input: {
             existing.status === "draft"
           ? (existing.status as ClassHomeworkStatus)
           : "draft";
+
+    // New template assignments must become independent of the registry source.
+    // Do not retrofit already-assigned legacy rows: their live-template fallback
+    // is the safest available representation of the content students began.
+    if (
+      payload.type === "homework_template" &&
+      !payload.document &&
+      existing.status === "draft" &&
+      status === "assigned"
+    ) {
+      payload = {
+        ...payload,
+        document: freezeHomeworkTemplateDocument(payload.templateId),
+        frozenAt: new Date().toISOString(),
+      };
+    }
 
     if (status === "assigned" || status === "closed") {
       if (payload.type === "homework_template") {
@@ -707,6 +724,7 @@ export async function assignHomeworkTemplate(input: {
       templateId: definition.id,
       title: definition.title,
       sectionCount: definition.sectionCount,
+      document: freezeHomeworkTemplateDocument(definition.id),
       frozenAt: now,
     };
     const { data: inserted, error: insertError } = await supabase

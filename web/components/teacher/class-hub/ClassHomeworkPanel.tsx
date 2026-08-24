@@ -138,7 +138,7 @@ export function ClassHomeworkPanel({
   };
 
   const copyStudentLink = async (homeworkId: string) => {
-    const url = `${window.location.origin}/primary/homework/${encodeURIComponent(homeworkId)}`;
+    const url = `${window.location.origin}/homework/${encodeURIComponent(homeworkId)}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {

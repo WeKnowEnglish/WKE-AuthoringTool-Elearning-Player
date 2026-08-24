@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev --webpack",
@@ -76,7 +76,7 @@
     "@next/bundle-analyzer": "^16.2.4",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^28.0.3",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cross-env": "^10.1.0",

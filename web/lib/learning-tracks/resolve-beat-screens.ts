@@ -25,6 +25,7 @@ import {
   defaultFlashcardsSettings,
   defaultLetterMixupSettings,
   defaultListenAndChooseSettings,
+  defaultListeningItemMatchSettings,
   defaultExploreHotspotsSettings,
   defaultLanguageInFocusSettings,
   defaultMultipleChoiceSettings,
@@ -47,6 +48,7 @@ import type {
   LearningTrackLetterMixupSettings,
   LearningTrackLibraryFormat,
   LearningTrackListenAndChooseSettings,
+  LearningTrackListeningItemMatchSettings,
   LearningTrackExploreHotspotsSettings,
   LearningTrackLanguageInFocusSettings,
   LearningTrackMultipleChoiceSettings,
@@ -168,6 +170,88 @@ export function buildPresentationScreens(
   ];
 }
 
+function listeningItemMatchSettingsForBeat(
+  beat: LearningTrackBeatInstance,
+): LearningTrackListeningItemMatchSettings {
+  return (
+    beat.presentation?.listeningItemMatch ??
+    defaultListeningItemMatchSettings()
+  );
+}
+
+/** Compile the existing assessment item-match model into a Lesson Player task. */
+export function buildListeningItemMatchScreens(
+  beat: LearningTrackBeatInstance,
+): LearningTrackScreenPayload[] {
+  const settings = listeningItemMatchSettingsForBeat(beat);
+  const audioText = settings.audioText.trim();
+  const audioUrl = settings.audioUrl?.trim();
+
+  if (!audioText && !audioUrl) {
+    throw new Error("Listen and match needs an audio clip or narration text.");
+  }
+  if (settings.prompts.length !== 5) {
+    throw new Error("Listen and match needs exactly 5 people or prompts.");
+  }
+  if (settings.choices.length !== 8) {
+    throw new Error("Listen and match needs exactly 8 choices (5 answers and 3 distractors).");
+  }
+
+  const choiceIds = new Set(settings.choices.map((choice) => choice.id));
+  const promptIds = new Set(settings.prompts.map((prompt) => prompt.id));
+  if (choiceIds.size !== settings.choices.length) {
+    throw new Error("Listen and match choice ids must be unique.");
+  }
+  if (promptIds.size !== settings.prompts.length) {
+    throw new Error("Listen and match prompt ids must be unique.");
+  }
+  if (
+    settings.choices.some(
+      (choice) => !choice.id.trim() || !choice.label.trim(),
+    ) ||
+    settings.prompts.some(
+      (prompt) => !prompt.id.trim() || !prompt.label.trim(),
+    )
+  ) {
+    throw new Error("Every Listen and match prompt and choice needs a label.");
+  }
+
+  const correctChoiceIds = settings.prompts.map(
+    (prompt) => prompt.correctChoiceId,
+  );
+  if (correctChoiceIds.some((choiceId) => !choiceIds.has(choiceId))) {
+    throw new Error("Every Listen and match prompt needs a valid correct choice.");
+  }
+  if (new Set(correctChoiceIds).size !== settings.prompts.length) {
+    throw new Error(
+      "Each Listen and match answer must be used once so three choices remain as distractors.",
+    );
+  }
+
+  return [
+    {
+      type: "interaction",
+      subtype: "listening_item_match",
+      body_text: "Listen, then match each person to the correct choice.",
+      ...(audioText ? { dialog_text: audioText } : {}),
+      ...(audioUrl ? { prompt_audio_url: audioUrl } : {}),
+      shuffle_choices: true,
+      choices: settings.choices.map((choice) => ({
+        id: choice.id,
+        label: choice.label.trim(),
+        ...(choice.imageSrc?.trim()
+          ? { image_url: choice.imageSrc.trim() }
+          : {}),
+      })),
+      prompts: settings.prompts.map((prompt) => ({
+        id: prompt.id,
+        label: prompt.label.trim(),
+        correct_choice_id: prompt.correctChoiceId,
+      })),
+    },
+  ];
+}
+
 export function screensFromGamesPack(
   pack: unknown,
   label: string,
@@ -204,6 +288,8 @@ export function libraryFormatForBeatKind(
 ): LearningTrackLibraryFormat | null {
   switch (kind) {
     case "presentation":
+      return null;
+    case "listening_item_match":
       return null;
     case "multiple_choice":
       return "multiple_choice";
@@ -844,7 +930,9 @@ async function screensFromLibraryActivity(
 /** True when this beat can be resolved without IndexedDB. */
 export function beatSourceIsSync(beat: LearningTrackBeatInstance): boolean {
   const { source } = beat;
-  if (source.type === "inline") return beat.kind === "presentation";
+  if (source.type === "inline") {
+    return beat.kind === "presentation" || beat.kind === "listening_item_match";
+  }
   if (source.type === "fixture") return true;
   if (source.type === "vocab_compile") {
     return source.listId === HOBBIES_DEFAULT_VOCAB_LIST_ID;
@@ -858,10 +946,11 @@ export function resolveBeatScreensSync(
 ): LearningTrackScreenPayload[] {
   const { source } = beat;
   if (source.type === "inline") {
-    if (beat.kind !== "presentation") {
-      throw new Error(`${beat.kind} cannot use an inline presentation source.`);
+    if (beat.kind === "presentation") return buildPresentationScreens(beat);
+    if (beat.kind === "listening_item_match") {
+      return buildListeningItemMatchScreens(beat);
     }
-    return buildPresentationScreens(beat);
+    throw new Error(`${beat.kind} cannot use an inline source.`);
   }
   if (source.type === "fixture") {
     return applyFixtureBeatPresentation(beat, loadFixture(source.fixtureId));
@@ -889,10 +978,11 @@ export async function resolveBeatScreens(
 ): Promise<LearningTrackScreenPayload[]> {
   const { source } = beat;
   if (source.type === "inline") {
-    if (beat.kind !== "presentation") {
-      throw new Error(`${beat.kind} cannot use an inline presentation source.`);
+    if (beat.kind === "presentation") return buildPresentationScreens(beat);
+    if (beat.kind === "listening_item_match") {
+      return buildListeningItemMatchScreens(beat);
     }
-    return buildPresentationScreens(beat);
+    throw new Error(`${beat.kind} cannot use an inline source.`);
   }
   if (source.type === "fixture") {
     return applyFixtureBeatPresentation(beat, loadFixture(source.fixtureId));

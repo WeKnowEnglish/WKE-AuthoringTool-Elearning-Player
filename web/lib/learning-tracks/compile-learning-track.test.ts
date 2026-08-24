@@ -8,6 +8,7 @@ import {
   defaultFillBlanksSettings,
   defaultLetterMixupSettings,
   defaultLineMatchSettings,
+  defaultListeningItemMatchSettings,
   defaultMultipleChoiceSettings,
   defaultSentenceScrambleSettings,
   defaultTrueFalseSettings,
@@ -155,6 +156,50 @@ describe("LTC presentation activity", () => {
     expect(() => resolveBeatScreensSync(beat)).toThrow(
       /slide 1 needs text, a shape, or an image/i,
     );
+  });
+});
+
+describe("LTC listen and match activity", () => {
+  it("creates five prompts, eight choices, and a playable interaction", () => {
+    const defaults = defaultListeningItemMatchSettings();
+    expect(defaults.prompts).toHaveLength(5);
+    expect(defaults.choices).toHaveLength(8);
+
+    const beat = createBeatInstance("listening_item_match", {
+      id: "beat-listening-item-match",
+      presentation: { listeningItemMatch: defaults },
+    });
+    expect(beat.source).toEqual({ type: "inline" });
+
+    const screens = resolveBeatScreensSync(beat);
+    expect(screens).toHaveLength(1);
+    expect(screens[0]).toMatchObject({
+      type: "interaction",
+      subtype: "listening_item_match",
+      shuffle_choices: true,
+    });
+
+    const parsed = parseScreenPayload("interaction", screens[0]);
+    expect(parsed?.type).toBe("interaction");
+    expect(parsed?.subtype).toBe("listening_item_match");
+    if (parsed?.type === "interaction" && parsed.subtype === "listening_item_match") {
+      expect(parsed.prompts).toHaveLength(5);
+      expect(parsed.choices).toHaveLength(8);
+      expect(
+        new Set(parsed.prompts.map((prompt) => prompt.correct_choice_id)).size,
+      ).toBe(5);
+    }
+  });
+
+  it("rejects a task that does not leave exactly three distractors", () => {
+    const settings = defaultListeningItemMatchSettings();
+    settings.prompts[1]!.correctChoiceId = settings.prompts[0]!.correctChoiceId;
+    const beat = createBeatInstance("listening_item_match", {
+      id: "beat-invalid-listening-item-match",
+      presentation: { listeningItemMatch: settings },
+    });
+
+    expect(() => resolveBeatScreensSync(beat)).toThrow(/three choices remain/i);
   });
 });
 

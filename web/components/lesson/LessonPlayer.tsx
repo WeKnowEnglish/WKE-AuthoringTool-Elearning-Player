@@ -186,6 +186,13 @@ const LazyLetterMixup = lazyWithDiagnostics("interaction:LetterMixupView", () =>
 const LazyWordShapeHunt = lazyWithDiagnostics("interaction:WordShapeHuntView", () =>
   import("./interactions/WordShapeHuntView").then((m) => ({ default: m.WordShapeHuntView })),
 );
+const LazyListeningItemMatch = lazyWithDiagnostics(
+  "interaction:ListeningItemMatchView",
+  () =>
+    import("./interactions/ListeningItemMatchView").then((m) => ({
+      default: m.ListeningItemMatchView,
+    })),
+);
 const LazyWordSearch = lazyWithDiagnostics("interaction:WordSearchView", () =>
   import("./interactions/WordSearchView").then((m) => ({ default: m.WordSearchView })),
 );
@@ -1980,6 +1987,18 @@ export function LessonPlayer({
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
+      {parsed.type === "interaction" && parsed.subtype === "listening_item_match" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyListeningItemMatch
+              key={screen.id}
+              parsed={parsed}
+              {...nav}
+              {...passHandlers}
+            />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
       {parsed.type === "interaction" && parsed.subtype === "wordsearch" && (
         <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
           <InteractionLazyShell fillStage={fillInteractionStage}>
@@ -2162,6 +2181,12 @@ function extractTrackedWords(payload: ScreenPayload): string[] {
       );
       return uniqueWords(words);
     }
+    case "listening_item_match":
+      return uniqueWords(
+        extractWords(payload.dialog_text ?? "")
+          .concat(payload.prompts.flatMap((prompt) => extractWords(prompt.label)))
+          .concat(payload.choices.flatMap((choice) => extractWords(choice.label))),
+      );
     default:
       return [];
   }
@@ -2176,6 +2201,7 @@ function vocabResponseKind(payload: ScreenPayload | null): StudentResponseKind {
     case "true_false":
     case "mc_quiz":
     case "listen_and_choose":
+    case "listening_item_match":
       return "tap";
     default:
       return "other";
@@ -2188,6 +2214,7 @@ function vocabEvidenceMode(payload: ScreenPayload | null): EvidenceMode {
     case "true_false":
     case "mc_quiz":
     case "listen_and_choose":
+    case "listening_item_match":
       return "recognition";
     case "letter_mixup":
       return "production";

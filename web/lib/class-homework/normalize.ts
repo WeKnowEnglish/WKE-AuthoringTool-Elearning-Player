@@ -39,6 +39,7 @@ import {
 import { validateReadAndAnswerDocument } from "@/lib/read-and-answer";
 import { validatePictureStoryDocument } from "@/lib/picture-story";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
+import { parseFrozenHomeworkTemplateDocument } from "@/lib/class-homework/freeze-homework-template";
 import { isHomeworkTemplateId } from "@/lib/homework-templates/registry";
 import { getHomeworkTemplateDefinition } from "@/lib/homework-templates/registry";
 import {
@@ -383,11 +384,19 @@ export function normalizeHomeworkPayload(raw: unknown): ClassHomeworkPayload | n
   if (input.type === "homework_template") {
     const definition = getHomeworkTemplateDefinition(input.templateId);
     if (!definition) return null;
+    const document =
+      input.document === undefined
+        ? null
+        : parseFrozenHomeworkTemplateDocument(definition.id, input.document);
+    if (input.document !== undefined && !document) return null;
     return {
       type: "homework_template",
       templateId: definition.id,
       title: asString(input.title).trim() || definition.title,
       sectionCount: definition.sectionCount,
+      ...(document
+        ? { document: document as unknown as Record<string, unknown> }
+        : {}),
       frozenAt:
         typeof input.frozenAt === "string" && input.frozenAt.trim()
           ? input.frozenAt.trim()

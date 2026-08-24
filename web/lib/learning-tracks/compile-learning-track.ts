@@ -30,6 +30,7 @@ function estimatedMinutesForKind(kind: LearningTrackBeatKind): number {
   if (kind === "explore_hotspots" || kind === "language_in_focus") return 2.5;
   if (kind === "flashcards") return 2;
   if (kind === "listen_and_choose") return 2.5;
+  if (kind === "listening_item_match") return 3;
   if (kind === "multiple_choice") return 2;
   return 1.5;
 }

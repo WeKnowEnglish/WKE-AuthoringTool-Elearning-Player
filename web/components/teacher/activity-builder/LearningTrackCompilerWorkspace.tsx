@@ -25,6 +25,7 @@ import {
 import { downloadTextFile } from "@/lib/activity-builder/games/mc-quiz";
 import { VocabularyListWorkspace } from "@/components/teacher/activity-builder/VocabularyListWorkspace";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
+import { AssessmentListeningItemMatchPartEditor } from "@/components/teacher/activity-builder/AssessmentListeningItemMatchPartEditor";
 import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { PresentationSlideCanvasEditor } from "@/components/teacher/activity-builder/PresentationSlideCanvasEditor";
@@ -46,6 +47,7 @@ import {
   defaultFlashcardsSettings,
   defaultLetterMixupSettings,
   defaultListenAndChooseSettings,
+  defaultListeningItemMatchSettings,
   defaultExploreHotspotsSettings,
   defaultLanguageInFocusSettings,
   defaultMultipleChoiceSettings,
@@ -80,6 +82,7 @@ import {
   type LearningTrackFlashcardsSettings,
   type LearningTrackLetterMixupSettings,
   type LearningTrackListenAndChooseSettings,
+  type LearningTrackListeningItemMatchSettings,
   type LearningTrackExploreHotspotsSettings,
   type LearningTrackLanguageInFocusSettings,
   type LearningTrackLessonPlayerPack,
@@ -94,6 +97,7 @@ import {
   type LearningTrackPresentationSettings,
   HOBBIES_DAY_1_COMPOSITION,
 } from "@/lib/learning-tracks/composer";
+import type { AssessmentPart } from "@/lib/assessment/types";
 import {
   GAMES_FLASHCARD_FACES,
   type GamesFlashcardFace,
@@ -727,6 +731,28 @@ export function LearningTrackCompilerWorkspace({
         }
       : null;
 
+  const selectedListeningItemMatchSettings: LearningTrackListeningItemMatchSettings | null =
+    selectedCompositionBeat?.kind === "listening_item_match"
+      ? {
+          ...defaultListeningItemMatchSettings(),
+          ...selectedCompositionBeat.presentation?.listeningItemMatch,
+        }
+      : null;
+
+  const selectedListeningItemMatchPart: Extract<
+    AssessmentPart,
+    { kind: "listening_item_match" }
+  > | null = selectedListeningItemMatchSettings
+    ? {
+        id: selectedCompositionBeat?.id ?? "listening-item-match",
+        partNumber: 1,
+        title: selectedCompositionBeat?.label ?? "Listen and match",
+        instructions: "Listen and match each person to the correct choice.",
+        kind: "listening_item_match",
+        activity: selectedListeningItemMatchSettings,
+      }
+    : null;
+
   const selectedMemorySettings: LearningTrackMemorySettings | null =
     selectedCompositionBeat?.kind === "memory"
       ? {
@@ -884,6 +910,10 @@ export function LearningTrackCompilerWorkspace({
       setRightOpenSectionId("listen-questions");
       return;
     }
+    if (kind === "listening_item_match") {
+      setRightOpenSectionId("listening-item-match-settings");
+      return;
+    }
     if (kind === "language_in_focus") {
       setRightOpenSectionId("lif-questions");
     }
@@ -955,8 +985,11 @@ export function LearningTrackCompilerWorkspace({
     if (!selectedCompositionBeat) return;
     const { kind } = selectedCompositionBeat;
     if (mode === "inline") {
-      if (kind === "presentation") {
-        updateSelectedBeatSource({ type: "inline" }, "Presentation");
+      if (kind === "presentation" || kind === "listening_item_match") {
+        updateSelectedBeatSource(
+          { type: "inline" },
+          LEARNING_TRACK_BEAT_LABELS[kind],
+        );
       }
       return;
     }
@@ -1666,6 +1699,9 @@ export function LearningTrackCompilerWorkspace({
                   {selectedCompositionBeat.kind === "presentation" && (
                     <option value="inline">Slides created in this track</option>
                   )}
+                  {selectedCompositionBeat.kind === "listening_item_match" && (
+                    <option value="inline">Created in this track</option>
+                  )}
                   {canUseFixture && <option value="fixture">Demo fixture</option>}
                   {canUseVocab && <option value="vocab_compile">Vocabulary list</option>}
                   {canUseLibrary && (
@@ -1680,8 +1716,9 @@ export function LearningTrackCompilerWorkspace({
 
               {selectedCompositionBeat.source.type === "inline" && (
                 <p className="mt-2 text-[11px] leading-snug ltc-subtle">
-                  This presentation is stored with the track and plays as a slide deck in
-                  Lesson Player.
+                  {selectedCompositionBeat.kind === "presentation"
+                    ? "This presentation is stored with the track and plays as a slide deck in Lesson Player."
+                    : "This listening task is stored with the track and plays in Learn or assigned homework."}
                 </p>
               )}
 
@@ -1774,9 +1811,7 @@ export function LearningTrackCompilerWorkspace({
                 </div>
               )}
 
-              {!canUseVocab &&
-                !canUseLibrary &&
-                selectedCompositionBeat.kind !== "presentation" && (
+              {selectedCompositionBeat.kind === "language_in_focus" && (
                 <p className="mt-2 text-[11px] leading-snug ltc-subtle">
                   Language in Focus remains fixture-only until its authoring format
                   is added to the Activity Bank.
@@ -2394,6 +2429,40 @@ export function LearningTrackCompilerWorkspace({
                   }
                 />
               </div>
+            </CollapsibleSettingsPanel>
+          ) : null}
+
+          {selectedListeningItemMatchPart ? (
+            <CollapsibleSettingsPanel
+              sectionId="listening-item-match-settings"
+              title="Listen and match settings"
+              openSectionId={rightOpenSectionId}
+              onOpenSection={setRightOpenSectionId}
+            >
+              <p className="mb-3 text-[11px] leading-snug ltc-subtle">
+                Add one audio track or narration script. Students match five
+                people or prompts to eight choices; three choices are
+                distractors. Choices can be objects, places, hobbies, or other
+                text-and-picture answers.
+              </p>
+              <div className="mb-3 grid grid-cols-2 gap-2 text-center text-[10px] font-semibold">
+                <span className="rounded-md bg-sky-50 px-2 py-1.5 text-sky-900">
+                  5 prompts
+                </span>
+                <span className="rounded-md bg-amber-50 px-2 py-1.5 text-amber-900">
+                  8 choices · 3 unused
+                </span>
+              </div>
+              <AssessmentListeningItemMatchPartEditor
+                part={selectedListeningItemMatchPart}
+                promptCountLimits={{ min: 5, max: 5 }}
+                choiceCountLimits={{ min: 8, max: 8 }}
+                onChange={(next) =>
+                  updateSelectedPresentation({
+                    listeningItemMatch: next.activity,
+                  })
+                }
+              />
             </CollapsibleSettingsPanel>
           ) : null}
 
@@ -3057,6 +3126,7 @@ export function LearningTrackCompilerWorkspace({
           !selectedMcSettings &&
           !selectedLetterSettings &&
           !selectedListenSettings &&
+          !selectedListeningItemMatchSettings &&
           !selectedHotspotsSettings &&
           !selectedLifSettings &&
           !selectedLineMatchSettings &&

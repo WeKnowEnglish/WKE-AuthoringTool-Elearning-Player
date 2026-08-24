@@ -13,6 +13,8 @@ import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
+import { parseFrozenSecondaryHomeworkTemplateDocument } from "@/lib/class-homework/freeze-homework-template";
+import { homeworkPortalPath, resolveHomeworkPortal } from "@/lib/class-homework/portal";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import { SECONDARY_HOMEWORK_ONE } from "@/lib/homework-templates/secondary-homework-one";
 import {
@@ -22,6 +24,7 @@ import {
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { createClient } from "@/lib/supabase/server";
+import { learningBandFromUser } from "@/lib/student-classes/portal-paths";
 import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
 
 export const metadata: Metadata = {
@@ -74,6 +77,9 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
+  if (resolveHomeworkPortal(payload, learningBandFromUser(user)) === "primary") {
+    redirect(homeworkPortalPath(homeworkId, "primary"));
+  }
   const needsTemplateSubmission =
     (payload.type === "homework_template" &&
       payload.templateId === "secondary-homework-template-one") ||
@@ -205,6 +211,11 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
           homeHref="/secondary"
           initialSubmission={templateSubmission}
           initialRecording={templateRecordings[0]}
+          content={
+            payload.document
+              ? (parseFrozenSecondaryHomeworkTemplateDocument(payload.document) ?? undefined)
+              : undefined
+          }
         />
       ) : null}
 

@@ -15,6 +15,8 @@ type ItemMatchPart = Extract<AssessmentPart, { kind: "listening_item_match" }>;
 type Props = {
   part: ItemMatchPart;
   onChange: (next: ItemMatchPart) => void;
+  promptCountLimits?: { min: number; max: number };
+  choiceCountLimits?: { min: number; max: number };
 };
 
 function emptyChoice(): ItemMatchPart["activity"]["choices"][number] {
@@ -37,6 +39,8 @@ function emptyPrompt(
 export function AssessmentListeningItemMatchPartEditor({
   part,
   onChange,
+  promptCountLimits = { min: 1, max: 12 },
+  choiceCountLimits = { min: 2, max: 12 },
 }: Props) {
   const { audioText, audioUrl, choices, prompts } = part.activity;
   const [choiceIndex, setChoiceIndex] = useAuthoringItemIndex(
@@ -62,8 +66,8 @@ export function AssessmentListeningItemMatchPartEditor({
         onIndexChange={setPromptIndex}
         label="Prompt"
         itemLabels={prompts.map((row) => row.label.trim() || "Prompt")}
-        minCount={1}
-        maxCount={12}
+        minCount={promptCountLimits.min}
+        maxCount={promptCountLimits.max}
         onAdd={() => {
           patchActivity((activity) => ({
             ...activity,
@@ -150,8 +154,8 @@ export function AssessmentListeningItemMatchPartEditor({
           onIndexChange={setChoiceIndex}
           label="Choice"
           itemLabels={choices.map((row) => row.label.trim() || "Choice")}
-          minCount={2}
-          maxCount={12}
+          minCount={choiceCountLimits.min}
+          maxCount={choiceCountLimits.max}
           onAdd={() => {
             patchActivity((activity) => ({
               ...activity,

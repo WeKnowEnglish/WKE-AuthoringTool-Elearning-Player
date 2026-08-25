@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomInt } from "node:crypto";
+
 import {
   normalizeUsername,
   usernameToStudentEmail,
@@ -30,12 +32,11 @@ function baseUsernameFromDisplayName(displayName: string): string {
 }
 
 function randomPin(): string {
-  const n = Math.floor(100000 + Math.random() * 900000);
-  return String(n);
+  return String(randomInt(100000, 1000000));
 }
 
 function randomSuffix(): string {
-  return String(Math.floor(10 + Math.random() * 90));
+  return String(randomInt(10, 100));
 }
 
 /** Create a student Auth user + profile for a confirmed trial prospect. */

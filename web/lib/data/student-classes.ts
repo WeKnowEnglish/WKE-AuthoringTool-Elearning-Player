@@ -12,6 +12,7 @@ export type StudentClassMembership = {
   joinCode: string;
   enrolledAt: string;
   studentTabs: StudentClassroomTabSettings;
+  classKind: "regular" | "trial";
 };
 
 type StudentClassMembershipRow = {
@@ -22,6 +23,7 @@ type StudentClassMembershipRow = {
   student_tab_schedule_enabled?: boolean | null;
   student_tab_noticeboard_enabled?: boolean | null;
   student_tab_materials_enabled?: boolean | null;
+  class_kind?: string | null;
 };
 
 export async function getStudentClassMemberships(): Promise<StudentClassMembership[]> {
@@ -49,6 +51,7 @@ export async function getStudentClassMemberships(): Promise<StudentClassMembersh
       noticeboard: row.student_tab_noticeboard_enabled ?? false,
       materials: row.student_tab_materials_enabled ?? false,
     }),
+    classKind: row.class_kind === "trial" ? "trial" : "regular",
   }));
 }
 

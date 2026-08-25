@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   cancelTeacherAvailabilitySlot,
-  createTeacherAvailabilitySlot,
+  createTeacherAvailabilitySeries,
   setTeacherTrialsEnabled,
+  updateTeacherAvailabilitySlot,
 } from "@/lib/actions/trial-availability";
 import { formatTrialSlotLabel } from "@/lib/class-schedule/trial-format";
 import type { TeacherAvailabilitySlot } from "@/lib/class-schedule/trial-types";
@@ -23,13 +24,36 @@ type Props = {
   spacePublished: boolean;
 };
 
-function defaultWallStart(): string {
-  const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  date.setMinutes(0, 0, 0);
-  if (date.getHours() < 9) date.setHours(16);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  // Wall clock for the form (interpreted in selected timezone on save)
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function defaultDateAndTime(): { date: string; time: string } {
+  const value = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  value.setMinutes(0, 0, 0);
+  if (value.getHours() < 9) value.setHours(16);
+  return {
+    date: `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`,
+    time: `${pad(value.getHours())}:${pad(value.getMinutes())}`,
+  };
+}
+
+function wallParts(startsAt: string, timezone: string): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(startsAt));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return {
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    time: `${get("hour")}:${get("minute")}`,
+  };
 }
 
 export function TeacherAvailabilityPanel({
@@ -40,18 +64,23 @@ export function TeacherAvailabilityPanel({
   spacePublished,
 }: Props) {
   const router = useRouter();
+  const defaults = useMemo(defaultDateAndTime, []);
   const [slots, setSlots] = useState(initialSlots);
-  const [startsWall, setStartsWall] = useState(defaultWallStart);
+  const [startDate, setStartDate] = useState(defaults.date);
+  const [startTime, setStartTime] = useState(defaults.time);
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [timezone, setTimezone] = useState(DEFAULT_CLASS_MEETING_TIMEZONE);
   const [detectedZone, setDetectedZone] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [trialsEnabled, setTrialsEnabled] = useState(initialTrialsEnabled);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  useEffect(() => setSlots(initialSlots), [initialSlots]);
   useEffect(() => {
     const detected = detectBrowserTimeZone();
     setDetectedZone(detected);
@@ -63,25 +92,63 @@ export function TeacherAvailabilityPanel({
     [detectedZone],
   );
 
-  const publish = () => {
+  const resetForm = () => {
+    const next = defaultDateAndTime();
+    setStartDate(next.date);
+    setStartTime(next.time);
+    setRepeatWeeks(1);
+    setDurationMinutes(45);
+    setNote("");
+    setEditingSlotId(null);
+  };
+
+  const save = () => {
     setError(null);
     setMessage(null);
     startTransition(async () => {
-      const result = await createTeacherAvailabilitySlot({
-        startsAtWall: startsWall,
-        durationMinutes,
-        timezone,
-        note,
-      });
+      const result = editingSlotId
+        ? await updateTeacherAvailabilitySlot({
+            slotId: editingSlotId,
+            startsAtWall: `${startDate}T${startTime}`,
+            durationMinutes,
+            timezone,
+            note,
+          })
+        : await createTeacherAvailabilitySeries({
+            startDate,
+            startTime,
+            repeatWeeks,
+            durationMinutes,
+            timezone,
+            note,
+          });
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setMessage("Open slot published.");
-      setNote("");
-      setStartsWall(defaultWallStart());
+      setMessage(
+        editingSlotId
+          ? "Trial time updated."
+          : repeatWeeks > 1
+            ? `${repeatWeeks} weekly trial times published.`
+            : "Open trial time published.",
+      );
+      resetForm();
       router.refresh();
     });
+  };
+
+  const beginEdit = (slot: TeacherAvailabilitySlot) => {
+    const wall = wallParts(slot.startsAt, slot.timezone);
+    setStartDate(wall.date);
+    setStartTime(wall.time);
+    setDurationMinutes(slot.durationMinutes);
+    setTimezone(slot.timezone);
+    setNote(slot.note ?? "");
+    setRepeatWeeks(1);
+    setEditingSlotId(slot.id);
+    setError(null);
+    setMessage("Editing one occurrence. Other recurring times will not move.");
   };
 
   const cancel = (slotId: string) => {
@@ -94,7 +161,8 @@ export function TeacherAvailabilityPanel({
         return;
       }
       setSlots((current) => current.filter((slot) => slot.id !== slotId));
-      setMessage("Slot cancelled.");
+      if (editingSlotId === slotId) resetForm();
+      setMessage("Trial time cancelled.");
       router.refresh();
     });
   };
@@ -111,7 +179,7 @@ export function TeacherAvailabilityPanel({
       setTrialsEnabled(enabled);
       setMessage(
         enabled
-          ? "Parents can find you on /parents/teachers and your Classroom Wall."
+          ? "Parents can find you in the teacher directory and on your Classroom Wall."
           : "Trial discovery turned off.",
       );
       router.refresh();
@@ -134,8 +202,8 @@ export function TeacherAvailabilityPanel({
         Publish trial times
       </h2>
       <p className="mt-1 text-sm font-semibold text-slate-600">
-        Enter the start in the timezone you choose below. Parents request a slot; you confirm in
-        the inbox.
+        Publish one time or repeat it weekly. Past unbooked times disappear automatically;
+        completed and booked trials remain in history.
       </p>
 
       <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -150,7 +218,7 @@ export function TeacherAvailabilityPanel({
           <span>
             List me for parent trial booking
             <span className="mt-0.5 block text-xs font-semibold text-slate-500">
-              Requires a published Classroom Wall. Light and Plus teachers can accept trials.
+              Requires a published Classroom Wall and Teacher Plus for live hosting.
               {!spacePublished ? " Publish your space first." : null}
             </span>
           </span>
@@ -163,9 +231,7 @@ export function TeacherAvailabilityPanel({
         </p>
         <p className="mt-1 break-all text-sm font-semibold text-slate-800">{bookingLink}</p>
         {publicBookPath ? (
-          <p className="mt-1 text-xs font-semibold text-slate-600">
-            Public path: {publicBookPath}
-          </p>
+          <p className="mt-1 text-xs font-semibold text-slate-600">Public path: {publicBookPath}</p>
         ) : null}
         <button
           type="button"
@@ -178,27 +244,54 @@ export function TeacherAvailabilityPanel({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-bold text-slate-800">
-          Start (in selected timezone)
+          Date
           <input
-            type="datetime-local"
-            value={startsWall}
-            onChange={(event) => setStartsWall(event.target.value)}
+            type="date"
+            value={startDate}
+            onChange={(event) => setStartDate(event.target.value)}
             disabled={isPending}
             className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold"
           />
         </label>
         <label className="block text-sm font-bold text-slate-800">
-          Duration (minutes)
+          Start time
           <input
-            type="number"
-            min={15}
-            max={240}
-            step={15}
-            value={durationMinutes}
-            onChange={(event) => setDurationMinutes(Number(event.target.value) || 45)}
+            type="time"
+            value={startTime}
+            onChange={(event) => setStartTime(event.target.value)}
             disabled={isPending}
             className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold"
           />
+        </label>
+        {!editingSlotId ? (
+          <label className="block text-sm font-bold text-slate-800">
+            Repeat
+            <select
+              value={repeatWeeks}
+              onChange={(event) => setRepeatWeeks(Number(event.target.value))}
+              disabled={isPending}
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold"
+            >
+              <option value={1}>One time</option>
+              <option value={4}>Weekly · 4 weeks</option>
+              <option value={8}>Weekly · 8 weeks</option>
+              <option value={12}>Weekly · 12 weeks</option>
+              <option value={16}>Weekly · 16 weeks</option>
+            </select>
+          </label>
+        ) : null}
+        <label className="block text-sm font-bold text-slate-800">
+          Duration
+          <select
+            value={durationMinutes}
+            onChange={(event) => setDurationMinutes(Number(event.target.value))}
+            disabled={isPending}
+            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold"
+          >
+            {[30, 45, 60, 75, 90].map((minutes) => (
+              <option key={minutes} value={minutes}>{minutes} minutes</option>
+            ))}
+          </select>
         </label>
         <label className="block text-sm font-bold text-slate-800 sm:col-span-2">
           Timezone
@@ -208,11 +301,7 @@ export function TeacherAvailabilityPanel({
             disabled={isPending}
             className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold"
           >
-            {timezoneOptions.map((zone) => (
-              <option key={zone} value={zone}>
-                {zone}
-              </option>
-            ))}
+            {timezoneOptions.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
           </select>
         </label>
         <label className="block text-sm font-bold text-slate-800 sm:col-span-2">
@@ -223,27 +312,39 @@ export function TeacherAvailabilityPanel({
             onChange={(event) => setNote(event.target.value)}
             maxLength={280}
             disabled={isPending}
-            placeholder="e.g. Placement chat · Zoom"
+            placeholder="e.g. Placement and conversation trial"
             className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-semibold"
           />
         </label>
       </div>
 
-      <button
-        type="button"
-        onClick={publish}
-        disabled={isPending}
-        className="mt-4 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-slate-800 disabled:opacity-60"
-      >
-        {isPending ? "Saving…" : "Publish open slot"}
-      </button>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={save}
+          disabled={isPending}
+          className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-slate-800 disabled:opacity-60"
+        >
+          {isPending ? "Saving…" : editingSlotId ? "Save changes" : "Publish availability"}
+        </button>
+        {editingSlotId ? (
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={isPending}
+            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-extrabold text-slate-700"
+          >
+            Stop editing
+          </button>
+        ) : null}
+      </div>
 
       {error ? <p className="mt-3 text-sm font-bold text-rose-700">{error}</p> : null}
       {message ? <p className="mt-3 text-sm font-bold text-emerald-700">{message}</p> : null}
 
       <ul className="mt-6 space-y-2">
         {slots.length === 0 ? (
-          <li className="text-sm font-semibold text-slate-500">No published slots yet.</li>
+          <li className="text-sm font-semibold text-slate-500">No upcoming times.</li>
         ) : (
           slots.map((slot) => (
             <li
@@ -256,18 +357,29 @@ export function TeacherAvailabilityPanel({
                 </p>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   {slot.status}
+                  {slot.seriesId ? " · recurring" : ""}
                   {slot.note ? ` · ${slot.note}` : ""}
                 </p>
               </div>
               {slot.status === "open" ? (
-                <button
-                  type="button"
-                  onClick={() => cancel(slot.id)}
-                  disabled={isPending}
-                  className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-extrabold text-slate-700 hover:bg-white disabled:opacity-60"
-                >
-                  Cancel
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => beginEdit(slot)}
+                    disabled={isPending}
+                    className="rounded-lg border border-indigo-300 bg-white px-2.5 py-1 text-xs font-extrabold text-indigo-700 disabled:opacity-60"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cancel(slot.id)}
+                    disabled={isPending}
+                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-extrabold text-slate-700 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                </div>
               ) : null}
             </li>
           ))

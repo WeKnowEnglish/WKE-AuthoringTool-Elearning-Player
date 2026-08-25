@@ -14,11 +14,10 @@ type Props = {
   initialBookings: TrialBookingRequest[];
 };
 
-type CredentialNotice = {
+type AccountNotice = {
   bookingId: string;
   childName: string;
   username: string;
-  pin: string;
   classId: string | null;
 };
 
@@ -26,7 +25,7 @@ export function TeacherTrialInbox({ initialBookings }: Props) {
   const router = useRouter();
   const [bookings, setBookings] = useState(initialBookings);
   const [error, setError] = useState<string | null>(null);
-  const [credentials, setCredentials] = useState<CredentialNotice | null>(null);
+  const [accountNotice, setAccountNotice] = useState<AccountNotice | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const pending = bookings.filter((booking) => booking.status === "pending");
@@ -34,7 +33,7 @@ export function TeacherTrialInbox({ initialBookings }: Props) {
 
   const confirm = (booking: TrialBookingRequest) => {
     setError(null);
-    setCredentials(null);
+    setAccountNotice(null);
     startTransition(async () => {
       const result = await confirmTrialBooking({ bookingId: booking.id });
       if (!result.ok) {
@@ -54,12 +53,11 @@ export function TeacherTrialInbox({ initialBookings }: Props) {
             : row,
         ),
       );
-      if (result.createdCredentials) {
-        setCredentials({
+      if (result.createdAccount) {
+        setAccountNotice({
           bookingId: booking.id,
           childName: booking.studentDisplayName,
-          username: result.createdCredentials.username,
-          pin: result.createdCredentials.pin,
+          username: result.createdAccount.username,
           classId: result.classId,
         });
       }
@@ -94,22 +92,19 @@ export function TeacherTrialInbox({ initialBookings }: Props) {
 
       {error ? <p className="mt-3 text-sm font-bold text-rose-700">{error}</p> : null}
 
-      {credentials ? (
+      {accountNotice ? (
         <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950">
-          <p className="font-extrabold">Student account created for {credentials.childName}</p>
+          <p className="font-extrabold">Student account created for {accountNotice.childName}</p>
           <p className="mt-2 font-semibold">
-            Username: <span className="font-black">{credentials.username}</span>
-          </p>
-          <p className="font-semibold">
-            Secret code: <span className="font-black">{credentials.pin}</span>
+            Username: <span className="font-black">{accountNotice.username}</span>
           </p>
           <p className="mt-2 text-xs font-semibold text-emerald-900/80">
-            Share these once with the family. They can change the code later from the student
-            profile tools if you enable that.
+            The parent can now choose the student&apos;s secret code securely from their trial
+            booking details. You no longer need to transport a password.
           </p>
-          {credentials.classId ? (
+          {accountNotice.classId ? (
             <Link
-              href={`/teacher/classes/${credentials.classId}`}
+              href={`/teacher/classes/${accountNotice.classId}`}
               className="mt-3 inline-flex text-xs font-extrabold text-emerald-900 underline"
             >
               Open trial class

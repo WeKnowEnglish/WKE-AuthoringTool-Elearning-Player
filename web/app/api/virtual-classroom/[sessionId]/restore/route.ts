@@ -9,6 +9,11 @@ import {
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
 import { ensureVcMember } from "@/lib/virtual-classroom/server/liveblocks-session";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
+import { getClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
+import {
+  classroomRealtimeNativeShellAuthorityReady,
+  classroomRealtimeNativeShellPilotEnabled,
+} from "@/lib/classroom-realtime/shadow-mode";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 
@@ -33,16 +38,24 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: message }, { status: 403 });
   }
 
-  try {
-    await ensureVcMember({
-      roomId: session.liveblocksRoomId,
-      userId: teacher.userId,
-      displayName: teacher.displayName,
-      role: "host",
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Room unavailable.";
-    return NextResponse.json({ error: message }, { status: 404 });
+  const nativeSupabaseShell =
+    Boolean(session.classId) &&
+    classroomRealtimeNativeShellPilotEnabled() &&
+    classroomRealtimeNativeShellAuthorityReady() &&
+    Boolean(await getClassroomRuntimeSnapshot(session.id));
+
+  if (!nativeSupabaseShell) {
+    try {
+      await ensureVcMember({
+        roomId: session.liveblocksRoomId,
+        userId: teacher.userId,
+        displayName: teacher.displayName,
+        role: "host",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Room unavailable.";
+      return NextResponse.json({ error: message }, { status: 404 });
+    }
   }
 
   const cookieStore = await cookies();

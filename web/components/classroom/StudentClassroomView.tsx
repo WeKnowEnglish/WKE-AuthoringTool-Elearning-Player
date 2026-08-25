@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
+import { StudentTrialDiscoveryCard } from "@/components/classroom/StudentTrialDiscoveryCard";
 import type { StudentClassMembership } from "@/lib/data/student-classes";
 import type { ClassPost } from "@/lib/class-posts/types";
 import type { StudentHomeworkCard } from "@/lib/class-homework/types";
@@ -18,6 +19,7 @@ import { ClassPostFeed } from "@/components/classroom/ClassPostFeed";
 import { ClassMaterialsList } from "@/components/classroom/ClassMaterialsList";
 import { ClassMeetingSchedule } from "@/components/classroom/ClassMeetingSchedule";
 import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
+import type { TrialStudentDiscovery } from "@/lib/class-schedule/trial-types";
 
 type Props = {
   membership: StudentClassMembership;
@@ -33,6 +35,7 @@ type Props = {
   tone?: "primary" | "secondary";
   initialTab?: ClassroomTabId;
   tabSettings?: StudentClassroomTabSettings;
+  trialDiscovery?: TrialStudentDiscovery | null;
 };
 
 /**
@@ -52,6 +55,7 @@ export function StudentClassroomView({
   tone = "primary",
   initialTab = "stream",
   tabSettings = membership.studentTabs ?? DEFAULT_STUDENT_CLASSROOM_TAB_SETTINGS,
+  trialDiscovery = null,
 }: Props) {
   useEffect(() => {
     recordAppDiagnostic("student", "class", "classroom_opened", {
@@ -114,16 +118,24 @@ export function StudentClassroomView({
             );
           }
           return (
-            <ClassroomStream
-              posts={posts}
-              schedule={schedule}
-              recentHomework={recentHomework}
-              homeworkBasePath={homeworkBasePath}
-              tone={tone}
-              noticeboardHref={noticeboardHref}
-              scheduleHref={scheduleHref}
-              liveSession={liveSession}
-            />
+            <div className="mx-auto w-full max-w-3xl">
+              {membership.classKind === "trial" ? (
+                <StudentTrialDiscoveryCard
+                  classId={membership.classId}
+                  initialDiscovery={trialDiscovery}
+                />
+              ) : null}
+              <ClassroomStream
+                posts={posts}
+                schedule={schedule}
+                recentHomework={recentHomework}
+                homeworkBasePath={homeworkBasePath}
+                tone={tone}
+                noticeboardHref={noticeboardHref}
+                scheduleHref={scheduleHref}
+                liveSession={liveSession}
+              />
+            </div>
           );
         }}
       </ClassroomShell>

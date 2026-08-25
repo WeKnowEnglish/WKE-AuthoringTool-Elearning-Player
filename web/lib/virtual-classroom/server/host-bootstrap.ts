@@ -55,11 +55,14 @@ export async function bootstrapVirtualClassroomHost(input: {
   /** When true, do not end other active sessions for the class (reuse path handles that). */
   skipEndOthers?: boolean;
 }): Promise<HostVirtualClassroomResult> {
-  const nativeSupabaseShell =
+  const nativeSupabaseShellRequested =
     Boolean(input.classId) &&
     classroomRealtimeNativeShellPilotEnabled() &&
     classroomRealtimeNativeShellAuthorityReady();
-  const secret = nativeSupabaseShell ? null : assertLiveblocksSecret();
+  // Liveblocks remains the recovery transport when the native runtime cannot
+  // be seeded. Validate it before persisting the session so a configuration
+  // error cannot leave an active classroom with no usable room.
+  const secret = assertLiveblocksSecret();
   const joinCode = generateJoinCode();
   const sessionId = classSessionIdFromJoinCode(joinCode);
   const roomId = toVirtualClassroomRoomId(joinCode);
@@ -91,14 +94,15 @@ export async function bootstrapVirtualClassroomHost(input: {
   // Phase-one Supabase migration: seed recovery state without changing the
   // current Liveblocks runtime transport.  A missing local migration must not
   // prevent a teacher from starting an existing classroom.
-  await seedClassroomRuntimeSnapshot(
+  const runtimeSeed = await seedClassroomRuntimeSnapshot(
     createInitialClassroomRuntimeSnapshot({
       sessionId,
       actorUserId: input.teacher.userId,
     }),
   );
+  const nativeSupabaseShell = nativeSupabaseShellRequested && runtimeSeed.ok;
 
-  if (!nativeSupabaseShell && secret) {
+  if (!nativeSupabaseShell) {
     const liveblocks = new Liveblocks({ secret });
     await liveblocks.createRoom(roomId, { defaultAccesses: [] });
 

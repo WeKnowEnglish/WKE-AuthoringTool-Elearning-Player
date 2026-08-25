@@ -9,6 +9,7 @@ export {
 } from "@/lib/learning-tracks/compile-learning-track";
 export {
   compositionFromRecipe,
+  createPresentationSlide,
   createBeatInstance,
   defaultAfterBridgeForKind,
   defaultFlashcardsSettings,
@@ -24,6 +25,7 @@ export {
   defaultMemorySettings,
   defaultWordSearchSettings,
   defaultCrosswordSettings,
+  defaultPresentationSettings,
   defaultSourceForKind,
   fixtureIdForKind,
   isLearningTrackComposition,
@@ -40,6 +42,12 @@ export {
   DEFAULT_MC_OPTION_COUNT,
 } from "@/lib/learning-tracks/composition";
 export { createHobbiesVocabularyListDocument } from "@/lib/learning-tracks/create-hobbies-vocabulary-list";
+export {
+  clampPresentationElement,
+  createPresentationShapeElement,
+  createPresentationTextElement,
+  presentationElementsForSlide,
+} from "@/lib/learning-tracks/presentation-elements";
 export {
   beatSupportsFixture,
   beatSupportsLibrary,
@@ -79,6 +87,11 @@ export type {
   LearningTrackMemorySettings,
   LearningTrackWordSearchSettings,
   LearningTrackCrosswordSettings,
+  LearningTrackPresentationSettings,
+  LearningTrackPresentationSlide,
+  LearningTrackPresentationElement,
+  LearningTrackPresentationTextElement,
+  LearningTrackPresentationShapeElement,
   LearningTrackPlannedBridge,
   LearningTrackRecipe,
   LearningTrackScreenPayload,

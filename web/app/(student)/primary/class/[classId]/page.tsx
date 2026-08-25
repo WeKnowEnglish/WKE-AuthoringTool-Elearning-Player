@@ -9,6 +9,7 @@ import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
 import { listPublishedClassMaterialsForStudentClass } from "@/lib/data/class-lessons";
 import { getClassScheduleForStudentClass } from "@/lib/data/class-meeting-slots";
 import { getActiveLiveSessionForStudentClass } from "@/lib/data/student-live";
+import { getTrialStudentDiscoveryForClass } from "@/lib/data/trial-availability";
 import {
   PRIMARY_CHROME_CLASS,
   PRIMARY_CHROME_STYLE,
@@ -51,13 +52,16 @@ export default async function PrimaryClassroomPage({ params, searchParams }: Pro
     notFound();
   }
 
-  const [posts, materials, schedule, liveSession, assignedHomework] =
+  const [posts, materials, schedule, liveSession, assignedHomework, trialDiscovery] =
     await Promise.all([
       listClassPostsForStudentClass(classId),
       listPublishedClassMaterialsForStudentClass(classId),
       getClassScheduleForStudentClass(classId),
       getActiveLiveSessionForStudentClass(classId),
       listAssignedHomeworkForStudent(),
+      membership.classKind === "trial"
+        ? getTrialStudentDiscoveryForClass(classId)
+        : Promise.resolve(null),
     ]);
 
   const openForClass = assignedHomework.filter((item) => item.classId === classId);
@@ -84,6 +88,7 @@ export default async function PrimaryClassroomPage({ params, searchParams }: Pro
         tone="primary"
         initialTab={parseClassroomTab(tabParam, membership.studentTabs)}
         tabSettings={membership.studentTabs}
+        trialDiscovery={trialDiscovery}
       />
     </div>
   );

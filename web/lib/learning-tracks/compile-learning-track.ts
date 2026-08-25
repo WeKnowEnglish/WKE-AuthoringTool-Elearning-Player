@@ -26,6 +26,7 @@ import type {
 import { LEARNING_TRACK_BEAT_LABELS } from "@/lib/learning-tracks/composition-types";
 
 function estimatedMinutesForKind(kind: LearningTrackBeatKind): number {
+  if (kind === "presentation") return 2;
   if (kind === "explore_hotspots" || kind === "language_in_focus") return 2.5;
   if (kind === "flashcards") return 2;
   if (kind === "listen_and_choose") return 2.5;

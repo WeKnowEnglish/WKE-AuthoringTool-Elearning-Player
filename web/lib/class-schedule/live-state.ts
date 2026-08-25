@@ -6,13 +6,10 @@ import {
   CLASS_WAITING_OPEN_MS,
   deriveScheduledClockPhase,
   type ClassLivePhase,
-  type ClassSessionKind,
 } from "@/lib/class-schedule/class-clock";
 import type { ClassLiveState } from "@/lib/class-schedule/live-state-types";
-import {
-  resolveLiveClassMeeting,
-  type LiveClassMeetingWindow,
-} from "@/lib/class-schedule/next-meeting";
+import type { LiveClassMeetingWindow } from "@/lib/class-schedule/next-meeting";
+import { resolveClassLiveMeeting } from "@/lib/class-schedule/trial-meeting";
 import { listMeetingSlotsForClassServiceRole } from "@/lib/daily/schedule-bind";
 import type { VirtualClassroomSessionRecord } from "@/lib/virtual-classroom/domain";
 import {
@@ -68,7 +65,7 @@ export async function getClassLiveState(
     getActiveVirtualClassroomForClass(classId),
   ]);
 
-  const liveMeeting = resolveLiveClassMeeting(slots, new Date(nowMs), {
+  const liveMeeting = await resolveClassLiveMeeting(classId, slots, new Date(nowMs), {
     lookAheadMs: 24 * 60 * 60 * 1000,
     postEndGraceMs: 15 * 60 * 1000,
   });
@@ -155,7 +152,7 @@ function buildScheduledState(
       occurrenceStartsAt: meeting.startsAt.toISOString(),
       occurrenceEndsAt: meeting.endsAt.toISOString(),
       occurrenceLabel: meeting.label,
-      meetingSlotId: meeting.slot.id,
+      meetingSlotId: meeting.source === "trial" ? null : meeting.slot.id,
       waitingOpensAt,
       autoLiveAt,
     });
@@ -187,7 +184,7 @@ function buildScheduledState(
     occurrenceStartsAt: meeting.startsAt.toISOString(),
     occurrenceEndsAt: meeting.endsAt.toISOString(),
     occurrenceLabel: meeting.label,
-    meetingSlotId: meeting.slot.id,
+    meetingSlotId: meeting.source === "trial" ? null : meeting.slot.id,
     sessionId: activeSession?.id ?? null,
     joinCode: activeSession?.joinCode ?? null,
     sessionTitle: activeSession?.title ?? null,

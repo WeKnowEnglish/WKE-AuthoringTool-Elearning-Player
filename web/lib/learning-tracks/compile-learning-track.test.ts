@@ -17,6 +17,7 @@ import { parseLearningTrackLessonPlayerPack } from "@/lib/learning-tracks/parse-
 import { resolveBeatScreensSync } from "@/lib/learning-tracks/resolve-beat-screens";
 import type { LearningTrackComposition } from "@/lib/learning-tracks/composition-types";
 import { HOBBIES_DEFAULT_VOCAB_LIST_ID } from "@/lib/learning-tracks/composition-types";
+import { parseScreenPayload } from "@/lib/lesson-schemas";
 
 describe("compileLearningTrack", () => {
   it("compiles hobbies Day 1 into a playable track pack", () => {
@@ -30,6 +31,130 @@ describe("compileLearningTrack", () => {
 
     const parsed = parseLearningTrackLessonPlayerPack(pack);
     expect(parsed.screens.length).toBe(pack.screens.length);
+  });
+});
+
+describe("LTC presentation activity", () => {
+  it("creates an inline deck and compiles it into a playable slide story", () => {
+    const beat = createBeatInstance("presentation", {
+      id: "beat-presentation",
+      label: "How to ask politely",
+      presentation: {
+        presentationDeck: {
+          autoPlayNarration: true,
+          autoAdvanceOnPass: false,
+          slides: [
+            {
+              id: "slide-one",
+              title: "Use please",
+              bodyText: "Say please when you ask for something.",
+              backgroundImageUrl: "/media/polite-request.png",
+              backgroundColor: "#fef3c7",
+              imageFit: "contain",
+            },
+            {
+              id: "slide-two",
+              title: "Try it",
+              bodyText: "Legacy text is ignored once editable elements exist.",
+              backgroundColor: "#eff6ff",
+              imageFit: "cover",
+              elements: [
+                {
+                  id: "movable-text",
+                  kind: "text",
+                  text: "Can I have the blue pencil, please?",
+                  textColor: "#1e3a8a",
+                  textSizePx: 32,
+                  showCard: false,
+                  xPercent: 14,
+                  yPercent: 18,
+                  widthPercent: 72,
+                  heightPercent: 24,
+                  zIndex: 2,
+                },
+                {
+                  id: "blue-circle",
+                  kind: "shape",
+                  shape: "ellipse",
+                  fillColor: "#60a5fa",
+                  xPercent: 38,
+                  yPercent: 50,
+                  widthPercent: 24,
+                  heightPercent: 30,
+                  zIndex: 1,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(beat.source).toEqual({ type: "inline" });
+    const screens = resolveBeatScreensSync(beat);
+    expect(screens).toHaveLength(1);
+    expect(screens[0]).toMatchObject({
+      type: "interaction",
+      subtype: "presentation_interactive",
+      pass_rule: "visit_all_slides",
+      auto_advance_on_pass: false,
+    });
+
+    const parsed = parseScreenPayload("interaction", screens[0]);
+    expect(parsed?.type).toBe("story");
+    expect(parsed && "layout_mode" in parsed ? parsed.layout_mode : null).toBe("slide");
+    expect(parsed && "pages" in parsed ? parsed.pages : []).toHaveLength(2);
+    expect(
+      parsed && "pages" in parsed ? parsed.pages?.[0]?.read_aloud_text : null,
+    ).toContain("Say please");
+    expect(
+      parsed && "pages" in parsed ? parsed.pages?.[0]?.auto_play_page_text : null,
+    ).toBe(true);
+    expect(
+      parsed && "pages" in parsed
+        ? parsed.pages?.[1]?.items.find((item) => item.id === "movable-text")
+        : null,
+    ).toMatchObject({
+      kind: "text",
+      text: "Can I have the blue pencil, please?",
+      x_percent: 14,
+      w_percent: 72,
+      show_card: false,
+    });
+    expect(
+      parsed && "pages" in parsed
+        ? parsed.pages?.[1]?.items.find((item) => item.id === "blue-circle")
+        : null,
+    ).toMatchObject({
+      kind: "shape",
+      shape_variant: "ellipse",
+      color_hex: "#60a5fa",
+    });
+  });
+
+  it("rejects a completely empty presentation slide", () => {
+    const beat = createBeatInstance("presentation", {
+      id: "beat-empty-presentation",
+      presentation: {
+        presentationDeck: {
+          autoPlayNarration: false,
+          autoAdvanceOnPass: false,
+          slides: [
+            {
+              id: "empty-slide",
+              title: " ",
+              bodyText: " ",
+              backgroundColor: "#ffffff",
+              imageFit: "cover",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(() => resolveBeatScreensSync(beat)).toThrow(
+      /slide 1 needs text, a shape, or an image/i,
+    );
   });
 });
 

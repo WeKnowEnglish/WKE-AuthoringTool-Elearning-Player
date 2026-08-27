@@ -1,0 +1,5 @@
+-- Deterministic local-only seed data belongs here.
+--
+-- The legacy migration files already contain the historical curriculum/demo inserts that were
+-- part of the original rollout. Do not copy production student, teacher, or classroom data into
+-- this file.

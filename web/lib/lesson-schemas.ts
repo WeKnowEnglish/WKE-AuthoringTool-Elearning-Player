@@ -3959,6 +3959,13 @@ export const interactionPayloadSchema = z.intersection(
     quiz_group_id: z.string().optional(),
     quiz_group_title: z.string().optional(),
     quiz_group_order: z.number().int().min(0).optional(),
+    /** Stable authoring and track identifiers used by grading adapters. */
+    item_id: z.string().optional(),
+    source_beat_id: z.string().optional(),
+    grading_part_id: z.string().optional(),
+    grading_item_id: z.string().optional(),
+    /** Optional policy stamp for compiled instructional screens. */
+    grading_policy: z.enum(["automatic", "completion", "teacher_review", "ungraded"]).optional(),
     /** Vocabulary set runs: stable word id for session stats / review list. */
     vocab_word_id: z.string().optional(),
   }),

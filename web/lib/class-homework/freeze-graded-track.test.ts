@@ -30,6 +30,12 @@ describe("freezeGradedTrackHomeworkPayload", () => {
     expect(payload.sectionCount).toBe(6);
 
     const freeze = parseGradedTrackFreezeDocument(payload.document);
+    expect(freeze?.gradingManifest?.parts).toHaveLength(6);
+    expect(freeze?.gradingManifest?.parts[0]).toMatchObject({
+      partId: draft.parts[0]!.id,
+      format: "picture_cloze",
+      gradingPolicy: "automatic",
+    });
     expect(freeze?.primaryDocument?.sections[0]?.title).toBe("Custom cloze label");
     expect(freeze?.primaryDocument?.sections[0]?.instructions).toBe(
       "Edited instructions for freeze.",
@@ -54,6 +60,9 @@ describe("freezeGradedTrackHomeworkPayload", () => {
     expect(payload.sectionCount).toBe(5);
     const freeze = parseGradedTrackFreezeDocument(payload.document);
     expect(freeze?.secondaryDocument?.reading.title).toBeTruthy();
+    expect(freeze?.gradingManifest?.parts.map((part) => part.partId)).toEqual(
+      draft.parts.map((part) => part.id),
+    );
   });
 
   it("blocks assignment when a Secondary correct answer is blank", () => {

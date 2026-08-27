@@ -29,9 +29,24 @@ describe("compileLearningTrack", () => {
     expect(pack.kind).toBe("lessonplayer-track-pack");
     expect(pack.screens.length).toBeGreaterThan(5);
     expect(beatPlan.length).toBe(HOBBIES_DAY_1_COMPOSITION.beats.length);
+    const firstBeat = beatPlan[0]!;
+    const firstScreen = pack.screens[firstBeat.screenStart]!;
+    expect(firstScreen.grading_part_id).toBe(firstBeat.id);
+    expect(["automatic", "completion", "ungraded"]).toContain(firstScreen.grading_policy);
+    expect(firstScreen.source_beat_id).toBe(firstBeat.id);
+    expect(firstScreen.grading_item_id).toBe(
+      typeof firstScreen.item_id === "string"
+        ? firstScreen.item_id
+        : `${firstBeat.id}:item:1`,
+    );
 
     const parsed = parseLearningTrackLessonPlayerPack(pack);
     expect(parsed.screens.length).toBe(pack.screens.length);
+    expect(parsed.screens[firstBeat.screenStart]).toMatchObject({
+      grading_part_id: firstBeat.id,
+      grading_item_id: firstScreen.grading_item_id,
+      grading_policy: firstScreen.grading_policy,
+    });
   });
 });
 

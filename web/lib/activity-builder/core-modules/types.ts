@@ -1,3 +1,5 @@
+import type { GradedActivityPolicy } from "@/lib/graded-activities/types";
+
 /**
  * Core activity module ids — procedural vocab-compile formats (V1 suite).
  * Keep in sync with Learning Track `vocab_compile` beat kinds where applicable.
@@ -17,6 +19,28 @@ export const CORE_MODULE_IDS = [
 ] as const;
 
 export type CoreModuleId = (typeof CORE_MODULE_IDS)[number];
+
+export const CORE_MODULE_GRADING_POLICIES: Record<
+  CoreModuleId,
+  GradedActivityPolicy
+> = {
+  multiple_choice: "automatic",
+  letter_mixup: "automatic",
+  flashcards: "completion",
+  listen_and_choose: "automatic",
+  line_match: "automatic",
+  true_false: "automatic",
+  sentence_scramble: "automatic",
+  fill_blanks: "automatic",
+  wordsearch: "completion",
+  crossword: "completion",
+  memory: "completion",
+};
+
+export function getCoreModuleGradingPolicy(id: CoreModuleId): GradedActivityPolicy {
+  return CORE_MODULE_GRADING_POLICIES[id];
+}
+
 
 export function isCoreModuleId(value: string): value is CoreModuleId {
   return (CORE_MODULE_IDS as readonly string[]).includes(value);

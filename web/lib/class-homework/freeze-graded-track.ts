@@ -28,6 +28,10 @@ import {
   parseHomeworkCollectionDocument,
   type HomeworkCollectionDocument,
 } from "@/lib/homework-collections";
+import {
+  buildGradedTrackManifest,
+  type GradedTrackManifest,
+} from "@/lib/graded-activities";
 
 export type GradedTrackFreezeDocument = {
   version: 1;
@@ -50,6 +54,8 @@ export type GradedTrackFreezeDocument = {
   secondaryParts?: SecondaryHomeworkPartInstance[];
   /** Template-independent activities added to the graded timeline. */
   collectionDocument?: HomeworkCollectionDocument;
+  /** Shared, answer-free grading map for every frozen activity and item. */
+  gradingManifest?: GradedTrackManifest;
 };
 
 function templateSectionsFromParts(doc: ActivityTrackDocument) {
@@ -255,6 +261,7 @@ export function buildGradedTrackFreezeDocument(
       sectionId:
         part.source.type === "template_section" ? part.source.sectionId : part.id,
     })),
+    gradingManifest: buildGradedTrackManifest(doc),
   };
 
   const genericParts = parts.flatMap((part) =>
@@ -335,6 +342,18 @@ export function parseGradedTrackFreezeDocument(
     const collectionDocument = parseHomeworkCollectionDocument(row.collectionDocument);
     if (!collectionDocument) return null;
     freeze.collectionDocument = collectionDocument;
+  }
+  if (row.gradingManifest !== undefined) {
+    if (
+      !row.gradingManifest ||
+      typeof row.gradingManifest !== "object" ||
+      Array.isArray(row.gradingManifest) ||
+      (row.gradingManifest as Record<string, unknown>).version !== 1 ||
+      (row.gradingManifest as Record<string, unknown>).trackId !== row.trackId ||
+      !Array.isArray((row.gradingManifest as Record<string, unknown>).parts)
+    ) {
+      return null;
+    }
   }
   if (row.secondaryParts !== undefined && !Array.isArray(row.secondaryParts)) {
     return null;

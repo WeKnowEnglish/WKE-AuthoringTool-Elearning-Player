@@ -24,6 +24,21 @@ import type {
   LearningTrackScreenPayload,
 } from "@/lib/learning-tracks/composition-types";
 import { LEARNING_TRACK_BEAT_LABELS } from "@/lib/learning-tracks/composition-types";
+import {
+  getCoreModuleGradingPolicy,
+  isCoreModuleId,
+} from "@/lib/activity-builder/core-modules";
+import type { GradedActivityPolicy } from "@/lib/graded-activities";
+
+function gradingPolicyForBeat(kind: LearningTrackBeatKind): GradedActivityPolicy {
+  if (isCoreModuleId(kind)) {
+    return getCoreModuleGradingPolicy(kind);
+  }
+  if (kind === "listening_item_match") return "automatic";
+  if (kind === "explore_hotspots") return "completion";
+  return "ungraded";
+}
+
 
 function estimatedMinutesForKind(kind: LearningTrackBeatKind): number {
   if (kind === "presentation") return 2;
@@ -68,6 +83,22 @@ function normalizeComposition(
   return compositionFromRecipe(input as LearningTrackRecipe);
 }
 
+function stampBeatGradingIds(
+  beat: LearningTrackBeatInstance,
+  screens: LearningTrackScreenPayload[],
+): LearningTrackScreenPayload[] {
+  return screens.map((screen, index) => ({
+    ...screen,
+    source_beat_id: beat.id,
+    grading_part_id: beat.id,
+    grading_policy: gradingPolicyForBeat(beat.kind),
+    grading_item_id:
+      typeof screen.item_id === "string" && screen.item_id.trim()
+        ? screen.item_id.trim()
+        : `${beat.id}:item:${index + 1}`,
+  }));
+}
+
 function appendBeatPlan(input: {
   beat: LearningTrackBeatInstance;
   beatScreens: LearningTrackScreenPayload[];
@@ -77,7 +108,8 @@ function appendBeatPlan(input: {
 }) {
   const { beat, beatScreens, screens, nextBeat, beatPlan } = input;
   const screenStart = screens.length;
-  screens.push(...beatScreens);
+  const stampedBeatScreens = stampBeatGradingIds(beat, beatScreens);
+  screens.push(...stampedBeatScreens);
   const screenEnd = screens.length;
   const plannedBridge = resolveAfterBridgePlan(beat, nextBeat);
   const beatLabel = beat.label ?? LEARNING_TRACK_BEAT_LABELS[beat.kind];

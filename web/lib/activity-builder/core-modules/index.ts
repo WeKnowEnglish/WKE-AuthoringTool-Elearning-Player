@@ -1,6 +1,8 @@
 export {
   CORE_MODULE_IDS,
   CORE_MODULE_META,
+  CORE_MODULE_GRADING_POLICIES,
+  getCoreModuleGradingPolicy,
   getCoreModuleMeta,
   isCoreModuleId,
   type CoreModuleId,

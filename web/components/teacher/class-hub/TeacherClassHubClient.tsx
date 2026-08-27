@@ -11,6 +11,7 @@ import { ClassStreamTab } from "@/components/teacher/class-hub/ClassStreamTab";
 import type { ClassVocabularyListSummary } from "@/components/teacher/class-hub/ClassVocabularyListsPanel";
 import { CreateLessonTab } from "@/components/teacher/class-hub/CreateLessonTab";
 import { StudentsHomeworkTab } from "@/components/teacher/class-hub/StudentsHomeworkTab";
+import type { HomeworkTrackDraftOption } from "@/components/teacher/class-hub/ClassHomeworkPanel";
 import { TeachTab } from "@/components/teacher/class-hub/TeachTab";
 import { TeacherTrialDiscoveryCard } from "@/components/teacher/trial/TeacherTrialDiscoveryCard";
 import type { TeacherTier } from "@/lib/auth/roles";
@@ -70,6 +71,7 @@ export type TeacherClassHubClientProps = {
   vcSessionHistory: VirtualClassroomSessionHistoryItem[];
   lessons: ClassLesson[];
   studioActivities: StudioActivityOption[];
+  homeworkTrackDrafts: HomeworkTrackDraftOption[];
   vocabularyLists: ClassVocabularyListSummary[];
   liveGameSets: LiveGameQuestionSetOption[];
   homework: ClassHomework[];
@@ -113,6 +115,7 @@ export function TeacherClassHubClient({
   vcSessionHistory,
   lessons,
   studioActivities,
+  homeworkTrackDrafts,
   vocabularyLists,
   liveGameSets,
   homework,
@@ -334,6 +337,8 @@ export function TeacherClassHubClient({
           homeworkCompletions={homeworkCompletions}
           packQuizzes={packQuizzes}
           packFlashcardSets={packFlashcardSets}
+          studioActivities={studioActivities}
+          homeworkTrackDrafts={homeworkTrackDrafts}
         />
       ) : null}
 

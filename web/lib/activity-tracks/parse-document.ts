@@ -5,9 +5,11 @@ import {
   ACTIVITY_TRACK_DOCUMENT_VERSION,
   type ActivityTrackAssessmentOrigin,
   type ActivityTrackDocument,
+  type ActivityTrackGradedArchive,
   type ActivityTrackGradedOrigin,
   type ActivityTrackLevel,
   type ActivityTrackMode,
+  type ActivityTrackModeArchive,
   type ActivityTrackPart,
   type ActivityTrackPartKind,
   type ActivityTrackPartSource,
@@ -107,6 +109,40 @@ function parseAssessmentOrigin(raw: unknown): ActivityTrackAssessmentOrigin | nu
   };
 }
 
+function parseGradedArchive(raw: unknown): ActivityTrackGradedArchive | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const parts = Array.isArray(row.parts)
+    ? row.parts.map(parsePart).filter((part): part is ActivityTrackPart => Boolean(part))
+    : [];
+  const level: ActivityTrackLevel =
+    row.level === "primary" || row.level === "secondary" || row.level === "either"
+      ? row.level
+      : "either";
+  return {
+    parts,
+    gradedOrigin: parseGradedOrigin(row.gradedOrigin),
+    instructions: typeof row.instructions === "string" ? row.instructions : "",
+    estimatedMinutes:
+      typeof row.estimatedMinutes === "number" ? row.estimatedMinutes : null,
+    level,
+  };
+}
+
+function parseModeArchive(raw: unknown): ActivityTrackModeArchive | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const row = raw as Record<string, unknown>;
+  const archive: ActivityTrackModeArchive = {};
+  const graded = parseGradedArchive(row.graded);
+  if (graded) archive.graded = graded;
+  if (isLearningTrackComposition(row.practice)) {
+    archive.practice = row.practice;
+  } else if (row.practice === null) {
+    archive.practice = null;
+  }
+  return Object.keys(archive).length > 0 ? archive : undefined;
+}
+
 /** Validate and normalize a stored activity track draft document. */
 export function parseActivityTrackDocument(raw: unknown): ActivityTrackDocument | null {
   if (!raw || typeof raw !== "object") return null;
@@ -163,6 +199,7 @@ export function parseActivityTrackDocument(raw: unknown): ActivityTrackDocument 
     gradedOrigin: mode === "graded" ? parseGradedOrigin(row.gradedOrigin) : null,
     assessmentDefinition,
     assessmentOrigin,
+    modeArchive: parseModeArchive(row.modeArchive),
     libraryId: typeof row.libraryId === "string" ? row.libraryId : null,
     bankActivityId: typeof row.bankActivityId === "string" ? row.bankActivityId : null,
     createdAt: typeof row.createdAt === "string" ? row.createdAt : new Date().toISOString(),

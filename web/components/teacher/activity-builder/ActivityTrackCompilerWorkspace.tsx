@@ -14,11 +14,15 @@ import {
   ArrowUp,
   ChevronRight,
   Copy,
+  Eye,
+  Pencil,
   PanelLeft,
   PanelLeftClose,
   Plus,
+  Settings2,
   Save,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   ACTIVITY_TRACK_MODE_COPY,
@@ -111,7 +115,8 @@ export function ActivityTrackCompilerWorkspace({
   const [addOpen, setAddOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignNotice, setAssignNotice] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [inspectorWidth, setInspectorWidth] = useState(INSPECTOR_WIDTH_DEFAULT);
   const [inspectorResizing, setInspectorResizing] = useState(false);
   const docRef = useRef<ActivityTrackDocument | null>(null);
@@ -120,7 +125,13 @@ export function ActivityTrackCompilerWorkspace({
     null,
   );
   const inspectorWidthRef = useRef(inspectorWidth);
-  inspectorWidthRef.current = inspectorWidth;
+  useEffect(() => {
+    setSettingsOpen(window.matchMedia("(min-width: 80rem)").matches);
+  }, []);
+
+  useEffect(() => {
+    inspectorWidthRef.current = inspectorWidth;
+  }, [inspectorWidth]);
 
   useEffect(() => {
     try {
@@ -342,6 +353,8 @@ export function ActivityTrackCompilerWorkspace({
         initialLibraryId={doc.libraryId}
         initialBankActivityId={doc.bankActivityId}
         coverImageUrl={doc.coverImageUrl ?? null}
+        savedGradedPartCount={doc.modeArchive?.graded?.parts.length ?? 0}
+        onRestoreGraded={() => handleModeChange("graded")}
         onCoverImageChange={(coverImageUrl) =>
           persistDoc({ ...doc, coverImageUrl: coverImageUrl || null })
         }
@@ -370,6 +383,9 @@ export function ActivityTrackCompilerWorkspace({
     selection.type === "part"
       ? doc.parts.find((part) => part.id === selection.partId) ?? null
       : null;
+  const selectedPartIndex = selectedPart
+    ? doc.parts.findIndex((part) => part.id === selectedPart.id)
+    : -1;
   const homeworkParts = doc.parts.filter(partHasHomeworkContent);
   const canAssignGraded = doc.mode === "graded" && homeworkParts.length > 0;
   const originDefinition = doc.gradedOrigin?.preset !== "blank" && doc.gradedOrigin
@@ -419,18 +435,33 @@ export function ActivityTrackCompilerWorkspace({
 
   const handleModeChange = (nextMode: ActivityTrackMode) => {
     if (nextMode === doc.mode) return;
+    const archive = doc.modeArchive ?? {};
+
     if (nextMode === "practice") {
       const ok = window.confirm(
-        "Switch to Practice? This loads the Learning Track compiler (Hobbies starter). Current track content will be cleared.",
+        "Switch to Practice? Your graded homework will be saved so you can switch back without losing it.",
       );
       if (!ok) return;
-      const composition = seedPracticeComposition({
-        trackId: doc.id,
-        title: doc.title,
-      });
+      const nextArchive = { ...archive };
+      if (doc.mode === "graded") {
+        nextArchive.graded = {
+          parts: doc.parts,
+          gradedOrigin: doc.gradedOrigin,
+          instructions: doc.instructions,
+          estimatedMinutes: doc.estimatedMinutes,
+          level: doc.level,
+        };
+      }
+      const composition =
+        archive.practice ??
+        seedPracticeComposition({
+          trackId: doc.id,
+          title: doc.title,
+        });
       persistDoc({
         ...doc,
         mode: "practice",
+        modeArchive: nextArchive,
         parts: [],
         gradedOrigin: null,
         assessmentDefinition: null,
@@ -445,9 +476,21 @@ export function ActivityTrackCompilerWorkspace({
     }
     if (nextMode === "assessment") {
       const ok = window.confirm(
-        "Switch to Assessment? This clones the Primary A2 Reading & Writing paper. Current track content will be cleared.",
+        "Switch to Assessment? Your current track will be saved so you can switch back later.",
       );
       if (!ok) return;
+      const nextArchive = { ...archive };
+      if (doc.mode === "graded") {
+        nextArchive.graded = {
+          parts: doc.parts,
+          gradedOrigin: doc.gradedOrigin,
+          instructions: doc.instructions,
+          estimatedMinutes: doc.estimatedMinutes,
+          level: doc.level,
+        };
+      } else if (doc.mode === "practice" && doc.practiceComposition) {
+        nextArchive.practice = doc.practiceComposition;
+      }
       const assessment = seedAssessmentFromTemplate({
         trackId: doc.id,
         title: doc.title,
@@ -456,24 +499,48 @@ export function ActivityTrackCompilerWorkspace({
         ...assessment,
         createdAt: doc.createdAt,
         coverImageUrl: doc.coverImageUrl ?? null,
+        modeArchive: nextArchive,
       });
       setSelection({ type: "track" });
       return;
     }
     const ok = window.confirm(
-      "Switch to Graded? This clones Primary Homework Template One. Current track content will be cleared.",
+      archive.graded
+        ? "Switch to Graded homework? Your saved graded parts will be restored."
+        : "Switch to Graded? This starts from the Primary Homework Template unless you had graded content saved from an earlier switch.",
     );
     if (!ok) return;
-    const graded = seedGradedFromTemplate({
-      trackId: doc.id,
-      title: doc.title,
-      templateId: "homework-template-one",
-    });
-    persistDoc({
-      ...graded,
-      createdAt: doc.createdAt,
-      coverImageUrl: doc.coverImageUrl ?? null,
-    });
+    const nextArchive = { ...archive };
+    if (doc.mode === "practice" && doc.practiceComposition) {
+      nextArchive.practice = doc.practiceComposition;
+    }
+    if (archive.graded) {
+      persistDoc({
+        ...doc,
+        mode: "graded",
+        modeArchive: nextArchive,
+        parts: archive.graded.parts,
+        gradedOrigin: archive.graded.gradedOrigin,
+        instructions: archive.graded.instructions,
+        estimatedMinutes: archive.graded.estimatedMinutes,
+        level: archive.graded.level,
+        practiceComposition: null,
+        assessmentDefinition: null,
+        assessmentOrigin: null,
+      });
+    } else {
+      const graded = seedGradedFromTemplate({
+        trackId: doc.id,
+        title: doc.title,
+        templateId: "homework-template-one",
+      });
+      persistDoc({
+        ...graded,
+        createdAt: doc.createdAt,
+        coverImageUrl: doc.coverImageUrl ?? null,
+        modeArchive: nextArchive,
+      });
+    }
     setSelection({ type: "track" });
   };
 
@@ -571,14 +638,14 @@ export function ActivityTrackCompilerWorkspace({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-stone-100">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <header className="flex items-center justify-between gap-2 border-b border-stone-200 bg-white px-2.5 py-2 sm:px-4 sm:py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
           <Link
             href="/teacher/activity-builder/tracks"
-            className="inline-flex h-9 items-center gap-1 rounded-lg border border-stone-300 px-2.5 text-xs font-bold text-stone-700 hover:bg-stone-50"
+            className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg border border-stone-300 px-2 text-xs font-bold text-stone-700 hover:bg-stone-50 sm:px-2.5"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Tracks
+            <span className="hidden sm:inline">Tracks</span>
           </Link>
           <ChevronRight className="hidden h-4 w-4 text-stone-400 sm:block" />
           <input
@@ -586,26 +653,26 @@ export function ActivityTrackCompilerWorkspace({
             onChange={(event) =>
               patchDoc((prev) => ({ ...prev, title: event.target.value }))
             }
-            className="min-w-[12rem] max-w-md truncate rounded-lg border border-transparent bg-transparent px-2 py-1 text-base font-extrabold text-stone-900 outline-none hover:border-stone-300 focus:border-stone-400"
+            className="min-w-0 flex-1 truncate rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-sm font-extrabold text-stone-900 outline-none hover:border-stone-300 focus:border-stone-400 sm:min-w-[12rem] sm:max-w-md sm:px-2 sm:text-base"
             aria-label="Track title"
           />
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${modeBadgeClass(doc.mode)}`}
+            className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide md:inline-flex ${modeBadgeClass(doc.mode)}`}
           >
             {modeCopy.title}
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {saveFlash ? (
             <span className="text-xs font-bold text-emerald-700">Saved</span>
           ) : null}
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-stone-900 px-3 text-xs font-bold text-white hover:bg-stone-800"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-stone-900 px-2.5 text-xs font-bold text-white hover:bg-stone-800 sm:px-3"
           >
             <Save className="h-3.5 w-3.5" />
-            Save
+            <span className="hidden sm:inline">Save</span>
           </button>
           <button
             type="button"
@@ -619,7 +686,7 @@ export function ActivityTrackCompilerWorkspace({
               persistDoc(doc);
               setAssignOpen(true);
             }}
-            className="inline-flex min-h-9 items-center rounded-lg border border-amber-600 bg-amber-600 px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-50 disabled:text-stone-400"
+            className="inline-flex min-h-9 items-center rounded-lg border border-amber-600 bg-amber-600 px-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-50 disabled:text-stone-400 sm:px-3"
           >
             Assign
           </button>
@@ -636,22 +703,137 @@ export function ActivityTrackCompilerWorkspace({
         </button>
       ) : null}
 
+      <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-stone-200 bg-white px-2.5 py-2 xl:hidden">
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          aria-expanded={settingsOpen}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-2.5 text-xs font-bold text-stone-700"
+        >
+          <Settings2 className="h-4 w-4" />
+          <span className="hidden sm:inline">Settings</span>
+        </button>
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">Part to edit</span>
+          <select
+            value={selection.type === "part" ? selection.partId : "__track"}
+            onChange={(event) => {
+              const partId = event.target.value;
+              setSelection(
+                partId === "__track"
+                  ? { type: "track" }
+                  : { type: "part", partId },
+              );
+              setMobileView("edit");
+            }}
+            className="h-9 w-full min-w-0 truncate rounded-lg border border-stone-300 bg-white px-2.5 text-xs font-bold text-stone-800"
+          >
+            <option value="__track">Track details</option>
+            {doc.parts.map((part, index) => (
+              <option key={part.id} value={part.id}>
+                Part {index + 1} of {doc.parts.length} - {part.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setAddOpen((open) => !open)}
+            className="inline-flex h-9 items-center gap-1 rounded-lg bg-stone-900 px-2.5 text-xs font-bold text-white"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Add part</span>
+          </button>
+          {addOpen ? (
+            <div className="absolute top-full right-0 z-50 mt-2 max-h-72 w-72 overflow-y-auto rounded-xl border border-stone-200 bg-white p-2 shadow-xl">
+              {(doc.mode === "graded"
+                ? ACTIVITY_TRACK_PART_CATALOG.filter((entry) =>
+                    gradedPartKindsForOrigin(doc.gradedOrigin).includes(
+                      entry.kind,
+                    ),
+                  )
+                : ACTIVITY_TRACK_PART_CATALOG
+              ).map((entry) => {
+                const allowed =
+                  doc.mode === "graded"
+                    ? true
+                    : isPartKindAllowedForMode(entry.kind, doc.mode);
+                return (
+                  <button
+                    key={entry.kind}
+                    type="button"
+                    disabled={!allowed}
+                    onClick={() => addPart(entry.kind)}
+                    className={
+                      "mb-1 w-full rounded-lg px-2.5 py-2 text-left last:mb-0 " +
+                      (allowed
+                        ? "hover:bg-stone-100"
+                        : "cursor-not-allowed opacity-40")
+                    }
+                  >
+                    <p className="text-xs font-extrabold text-stone-900">
+                      {entry.label}
+                    </p>
+                    <p className="text-[11px] font-semibold text-stone-500">
+                      {entry.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+        <div className="grid w-full grid-cols-2 rounded-lg bg-stone-100 p-1 md:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileView("edit")}
+            className={
+              "inline-flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-bold " +
+              (mobileView === "edit"
+                ? "bg-white text-stone-900 shadow-sm"
+                : "text-stone-500")
+            }
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileView("preview")}
+            className={
+              "inline-flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-bold " +
+              (mobileView === "preview"
+                ? "bg-white text-stone-900 shadow-sm"
+                : "text-stone-500")
+            }
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Preview
+          </button>
+        </div>
+      </div>
+
       <div
         ref={layoutRef}
-        style={{ ["--inspector-w" as string]: `${inspectorWidth}px` }}
-        className={`relative grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden ${
-          settingsOpen
-            ? "lg:grid-cols-[240px_minmax(0,1fr)_var(--inspector-w)]"
-            : "lg:grid-cols-[minmax(0,1fr)_var(--inspector-w)]"
-        } ${inspectorResizing ? "select-none" : ""}`}
+        style={{ ["--inspector-w" as string]: inspectorWidth + "px" }}
+        className={
+          "relative grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[minmax(300px,0.9fr)_minmax(380px,1.1fr)] md:grid-rows-[minmax(0,1fr)] " +
+          (settingsOpen
+            ? "xl:grid-cols-[240px_minmax(0,1fr)_var(--inspector-w)] "
+            : "xl:grid-cols-[minmax(0,1fr)_var(--inspector-w)] ") +
+          (inspectorResizing ? "select-none" : "")
+        }
       >
         <button
           type="button"
           onClick={() => setSettingsOpen((open) => !open)}
           aria-expanded={settingsOpen}
-          aria-label={settingsOpen ? "Collapse track settings" : "Expand track settings"}
+          aria-label={
+            settingsOpen ? "Collapse track settings" : "Expand track settings"
+          }
           title={settingsOpen ? "Hide settings" : "Show settings"}
-          className="absolute left-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-stone-300 bg-white text-stone-700 shadow-sm hover:bg-stone-50"
+          className="absolute left-2 top-2 z-20 hidden h-8 w-8 items-center justify-center rounded-lg border border-stone-300 bg-white text-stone-700 shadow-sm hover:bg-stone-50 xl:inline-flex"
         >
           {settingsOpen ? (
             <PanelLeftClose className="h-4 w-4" />
@@ -661,7 +843,34 @@ export function ActivityTrackCompilerWorkspace({
         </button>
 
         {settingsOpen ? (
-        <aside className="min-h-0 space-y-4 overflow-y-auto border-b border-stone-200 bg-white p-4 pt-12 lg:border-b-0 lg:border-r">
+          <button
+            type="button"
+            aria-label="Close track settings"
+            onClick={() => setSettingsOpen(false)}
+            className="absolute inset-0 z-30 bg-stone-950/25 xl:hidden"
+          />
+        ) : null}
+
+        {settingsOpen ? (
+        <aside className="absolute inset-y-0 left-0 z-40 min-h-0 w-[min(22rem,calc(100%-3rem))] space-y-4 overflow-y-auto border-r border-stone-200 bg-white p-4 shadow-xl xl:relative xl:inset-auto xl:z-auto xl:w-auto xl:pt-12 xl:shadow-none">
+          <div className="flex items-center justify-between gap-2 xl:hidden">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
+                Track
+              </p>
+              <p className="text-sm font-extrabold text-stone-900">
+                Settings
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(false)}
+              aria-label="Close track settings"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-300 text-stone-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
               Mode
@@ -693,6 +902,25 @@ export function ActivityTrackCompilerWorkspace({
             <p className="mt-2 text-xs font-semibold leading-5 text-stone-600">
               {modeCopy.blurb}
             </p>
+            {doc.mode === "practice" && doc.modeArchive?.graded?.parts.length ? (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <p className="text-xs font-bold text-amber-950">
+                  Saved graded homework ({doc.modeArchive.graded.parts.length}{" "}
+                  part{doc.modeArchive.graded.parts.length === 1 ? "" : "s"})
+                </p>
+                <p className="mt-1 text-[11px] font-semibold leading-snug text-amber-900">
+                  Switch to Graded to restore the homework you had before
+                  opening Practice.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleModeChange("graded")}
+                  className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-amber-600 px-3 text-xs font-extrabold text-white"
+                >
+                  Restore graded homework
+                </button>
+              </div>
+            ) : null}
             {originDefinition ? (
               <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-950">
                 Cloned from{" "}
@@ -801,7 +1029,12 @@ export function ActivityTrackCompilerWorkspace({
         </aside>
         ) : null}
 
-        <section className="flex min-h-0 flex-col overflow-hidden">
+        <section
+          className={
+            (mobileView === "preview" ? "flex " : "hidden ") +
+            "min-h-0 min-w-0 flex-col overflow-hidden md:flex"
+          }
+        >
           <div className="relative min-h-0 flex-1 overflow-hidden bg-stone-200">
             <div
               className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-white"
@@ -816,7 +1049,7 @@ export function ActivityTrackCompilerWorkspace({
             </div>
           </div>
 
-          <div className="border-t border-stone-200 bg-white px-3 py-3">
+          <div className="hidden border-t border-stone-200 bg-white px-3 py-3 xl:block">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
                 Timeline
@@ -915,7 +1148,12 @@ export function ActivityTrackCompilerWorkspace({
           </div>
         </section>
 
-        <aside className="relative min-h-0 overflow-y-auto border-t border-stone-200 bg-white p-4 lg:border-t-0 lg:border-l">
+        <aside
+          className={
+            (mobileView === "edit" ? "block " : "hidden ") +
+            "relative min-h-0 min-w-0 overflow-x-hidden overflow-y-auto border-t border-stone-200 bg-white p-3 md:block md:border-t-0 md:border-l sm:p-4"
+          }
+        >
           <div
             role="separator"
             aria-orientation="vertical"
@@ -928,7 +1166,7 @@ export function ActivityTrackCompilerWorkspace({
             onPointerMove={onInspectorResizePointerMove}
             onPointerUp={endInspectorResize}
             onPointerCancel={endInspectorResize}
-            className={`absolute top-0 bottom-0 left-0 z-20 hidden w-3 -translate-x-1/2 cursor-col-resize touch-none lg:block ${
+            className={`absolute top-0 bottom-0 left-0 z-20 hidden w-3 -translate-x-1/2 cursor-col-resize touch-none xl:block ${
               inspectorResizing ? "bg-sky-400/25" : "hover:bg-sky-400/20"
             }`}
           >
@@ -939,60 +1177,91 @@ export function ActivityTrackCompilerWorkspace({
               }`}
             />
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-            Inspector
-          </p>
+          <div className="flex min-w-0 items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
+                Edit part
+              </p>
+              <p className="truncate text-sm font-extrabold text-stone-900">
+                {selectedPart?.label ?? "Choose a part"}
+              </p>
+            </div>
+            {selectedPartIndex >= 0 ? (
+              <span className="shrink-0 text-[10px] font-bold text-stone-500">Part {selectedPartIndex + 1} of {doc.parts.length}</span>
+            ) : null}
+          </div>
           {selectedPart ? (
             <div className="mt-3 space-y-3">
-              <label className="block text-xs font-bold text-stone-800">
-                Part label
-                <input
-                  value={selectedPart.label}
-                  onChange={(event) => {
-                    const label = event.target.value;
-                    patchDoc((prev) => ({
-                      ...prev,
-                      parts: prev.parts.map((part) =>
-                        part.id === selectedPart.id ? { ...part, label } : part,
-                      ),
-                    }));
-                  }}
-                  className="mt-1.5 w-full rounded-lg border border-stone-300 px-2.5 py-2 text-sm font-semibold"
-                />
-              </label>
-              {selectedPart.source.type === "template_section" ? (
-                <label className="block text-xs font-bold text-stone-800">
-                  Section instructions
-                  <textarea
-                    value={selectedInstructions}
-                    onChange={(event) => {
-                      const instructions = event.target.value;
-                      patchDoc((prev) => ({
-                        ...prev,
-                        parts: prev.parts.map((part) => {
-                          if (
-                            part.id !== selectedPart.id ||
-                            part.source.type !== "template_section"
-                          ) {
-                            return part;
-                          }
-                          return {
-                            ...part,
-                            source: {
-                              ...part.source,
-                              section: {
-                                ...part.source.section,
-                                instructions,
-                              },
-                            },
-                          };
-                        }),
-                      }));
-                    }}
-                    rows={4}
-                    className="mt-1.5 w-full resize-y rounded-lg border border-stone-300 px-2.5 py-2 text-sm font-semibold leading-5"
-                  />
-                </label>
+              {selectedPart.source.type !== "homework_part" ? (
+                <details className="group rounded-xl border border-stone-200 bg-white">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wide text-stone-500">
+                        Part setup
+                      </p>
+                      <p className="truncate text-xs font-bold text-stone-800">
+                        {selectedPart.label}
+                      </p>
+                    </div>
+                    <span className="text-xs font-black text-stone-400 transition group-open:rotate-180">
+                      ▾
+                    </span>
+                  </summary>
+                  <div className="space-y-3 border-t border-stone-200 p-3">
+                    <label className="block text-xs font-bold text-stone-800">
+                      Part label
+                      <input
+                        value={selectedPart.label}
+                        onChange={(event) => {
+                          const label = event.target.value;
+                          patchDoc((prev) => ({
+                            ...prev,
+                            parts: prev.parts.map((part) =>
+                              part.id === selectedPart.id
+                                ? { ...part, label }
+                                : part,
+                            ),
+                          }));
+                        }}
+                        className="mt-1.5 w-full rounded-lg border border-stone-300 px-2.5 py-2 text-sm font-semibold"
+                      />
+                    </label>
+                    {selectedPart.source.type === "template_section" ? (
+                      <label className="block text-xs font-bold text-stone-800">
+                        Section instructions
+                        <textarea
+                          value={selectedInstructions}
+                          onChange={(event) => {
+                            const instructions = event.target.value;
+                            patchDoc((prev) => ({
+                              ...prev,
+                              parts: prev.parts.map((part) => {
+                                if (
+                                  part.id !== selectedPart.id ||
+                                  part.source.type !== "template_section"
+                                ) {
+                                  return part;
+                                }
+                                return {
+                                  ...part,
+                                  source: {
+                                    ...part.source,
+                                    section: {
+                                      ...part.source.section,
+                                      instructions,
+                                    },
+                                  },
+                                };
+                              }),
+                            }));
+                          }}
+                          rows={3}
+                          className="mt-1.5 w-full resize-y rounded-lg border border-stone-300 px-2.5 py-2 text-sm font-semibold leading-5"
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                </details>
               ) : null}
 
               {selectedPart.source.type === "template_section"
@@ -1134,6 +1403,12 @@ export function ActivityTrackCompilerWorkspace({
                   }}
                 />
               ) : null}
+              <details className="group rounded-xl border border-stone-200 bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-xs font-bold text-stone-700 [&::-webkit-details-marker]:hidden">
+                  Advanced part actions
+                  <span className="text-stone-400 transition group-open:rotate-180">▾</span>
+                </summary>
+                <div className="space-y-3 border-t border-stone-200 p-3">
               <p className="rounded-lg bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600">
                 Kind:{" "}
                 <span className="font-extrabold text-stone-900">
@@ -1199,6 +1474,8 @@ export function ActivityTrackCompilerWorkspace({
                   </p>
                 ) : null}
               </div>
+                </div>
+              </details>
             </div>
           ) : (
             <div className="mt-3 space-y-3 text-sm font-semibold text-stone-600">

@@ -285,6 +285,9 @@ export type LearningTrackCompilerWorkspaceProps = {
   onCoverImageChange?: (url: string) => void;
   /** Persist composition + bank refs onto the Track Builder draft. */
   onDraftSync?: (patch: LearningTrackCompilerDraftSync) => void;
+  /** When embedded in Track Builder, graded homework saved before Practice switch. */
+  savedGradedPartCount?: number;
+  onRestoreGraded?: () => void;
 };
 
 /**
@@ -301,6 +304,8 @@ export function LearningTrackCompilerWorkspace({
   coverImageUrl = null,
   onCoverImageChange,
   onDraftSync,
+  savedGradedPartCount = 0,
+  onRestoreGraded,
 }: LearningTrackCompilerWorkspaceProps = {}) {
   const embedded = chrome === "embedded";
   const [composition, setComposition] = useState<LearningTrackComposition>(() =>
@@ -1404,6 +1409,26 @@ export function LearningTrackCompilerWorkspace({
           </button>
         </div>
       </header>
+
+      {embedded && savedGradedPartCount > 0 && onRestoreGraded ? (
+        <div className="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-bold text-amber-950">
+            Saved graded homework ({savedGradedPartCount}{" "}
+            part{savedGradedPartCount === 1 ? "" : "s"})
+          </p>
+          <p className="mt-1 text-xs ltc-subtle">
+            Switch back to Graded to restore the homework you had before opening
+            Practice.
+          </p>
+          <button
+            type="button"
+            className="ltc-btn-primary mt-2 rounded-lg px-3 py-1.5 text-xs"
+            onClick={onRestoreGraded}
+          >
+            Restore graded homework
+          </button>
+        </div>
+      ) : null}
 
       {compiled.error ? (
         <p className="ltc-error-banner shrink-0 border-b px-4 py-2 text-sm">

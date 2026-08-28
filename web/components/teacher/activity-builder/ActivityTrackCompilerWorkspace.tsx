@@ -9,9 +9,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
+  ChevronLeft,
   ChevronRight,
   Copy,
   Eye,
@@ -21,7 +20,6 @@ import {
   Plus,
   Settings2,
   Save,
-  Trash2,
   X,
 } from "lucide-react";
 import {
@@ -1122,24 +1120,100 @@ export function ActivityTrackCompilerWorkspace({
                 {doc.parts.map((part, index) => {
                   const active =
                     selection.type === "part" && selection.partId === part.id;
+                  const canDuplicate =
+                    part.source.type === "homework_part" ||
+                    part.source.type === "template_section";
+                  const canRemove =
+                    doc.mode !== "graded" || doc.parts.length > 1;
                   return (
                     <li key={part.id} className="shrink-0">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelection({ type: "part", partId: part.id })
-                        }
-                        className={`min-w-[8.5rem] rounded-xl border px-3 py-2 text-left ${
+                      <div
+                        className={`min-w-[8.5rem] rounded-xl border px-3 py-2 ${
                           active
                             ? "border-stone-900 bg-stone-900 text-white"
-                            : "border-stone-200 bg-stone-50 text-stone-800 hover:border-stone-400"
+                            : "border-stone-200 bg-stone-50 text-stone-800"
                         }`}
                       >
-                        <p className="text-[10px] font-bold uppercase tracking-wide opacity-70">
-                          Part {index + 1}
-                        </p>
-                        <p className="mt-0.5 text-xs font-extrabold">{part.label}</p>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelection({ type: "part", partId: part.id })
+                          }
+                          className="w-full text-left"
+                        >
+                          <p
+                            className={`text-[10px] font-bold uppercase tracking-wide ${
+                              active ? "text-white/70" : "text-stone-500"
+                            }`}
+                          >
+                            Part {index + 1}
+                          </p>
+                          <p className="mt-0.5 text-xs font-extrabold">{part.label}</p>
+                        </button>
+                        <div className="mt-2 flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            aria-label={`Move ${part.label} earlier`}
+                            onClick={() => movePart(part.id, -1)}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-md disabled:opacity-30 ${
+                              active
+                                ? "text-white hover:bg-white/15"
+                                : "text-stone-600 hover:bg-stone-200"
+                            }`}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index >= doc.parts.length - 1}
+                            aria-label={`Move ${part.label} later`}
+                            onClick={() => movePart(part.id, 1)}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-md disabled:opacity-30 ${
+                              active
+                                ? "text-white hover:bg-white/15"
+                                : "text-stone-600 hover:bg-stone-200"
+                            }`}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                          {canDuplicate ? (
+                            <button
+                              type="button"
+                              aria-label={`Duplicate ${part.label}`}
+                              onClick={() => duplicateHomeworkPart(part.id)}
+                              className={`inline-flex h-7 w-7 items-center justify-center rounded-md ${
+                                active
+                                  ? "text-white hover:bg-white/15"
+                                  : "text-stone-600 hover:bg-stone-200"
+                              }`}
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            disabled={!canRemove}
+                            aria-label={`Remove ${part.label}`}
+                            title={
+                              !canRemove
+                                ? "Keep at least one part on a Graded track"
+                                : undefined
+                            }
+                            onClick={() => {
+                              if (!window.confirm(`Remove “${part.label}”?`)) return;
+                              removePart(part.id);
+                            }}
+                            className={`ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md disabled:opacity-30 ${
+                              active
+                                ? "text-red-200 hover:bg-white/15"
+                                : "text-red-700 hover:bg-red-50"
+                            }`}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
                     </li>
                   );
                 })}
@@ -1403,79 +1477,6 @@ export function ActivityTrackCompilerWorkspace({
                   }}
                 />
               ) : null}
-              <details className="group rounded-xl border border-stone-200 bg-white">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-xs font-bold text-stone-700 [&::-webkit-details-marker]:hidden">
-                  Advanced part actions
-                  <span className="text-stone-400 transition group-open:rotate-180">▾</span>
-                </summary>
-                <div className="space-y-3 border-t border-stone-200 p-3">
-              <p className="rounded-lg bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600">
-                Kind:{" "}
-                <span className="font-extrabold text-stone-900">
-                  {selectedPart.kind}
-                </span>
-                <br />
-                Source:{" "}
-                {selectedPart.source.type === "template_section"
-                  ? "cloned template section (frozen on assign)"
-                  : selectedPart.source.type === "homework_part"
-                    ? "reusable homework activity (frozen on assign)"
-                    : "empty shell"}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => movePart(selectedPart.id, -1)}
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-stone-300 px-2.5 text-xs font-bold"
-                >
-                  <ArrowUp className="h-3.5 w-3.5" />
-                  Up
-                </button>
-                <button
-                  type="button"
-                  onClick={() => movePart(selectedPart.id, 1)}
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-stone-300 px-2.5 text-xs font-bold"
-                >
-                  <ArrowDown className="h-3.5 w-3.5" />
-                  Down
-                </button>
-                {selectedPart.source.type === "homework_part" ||
-                selectedPart.source.type === "template_section" ? (
-                  <button
-                    type="button"
-                    onClick={() => duplicateHomeworkPart(selectedPart.id)}
-                    className="inline-flex h-9 items-center gap-1 rounded-lg border border-stone-300 px-2.5 text-xs font-bold"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    Duplicate
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  disabled={doc.mode === "graded" && doc.parts.length <= 1}
-                  title={
-                    doc.mode === "graded" && doc.parts.length <= 1
-                      ? "Keep at least one part on a Graded track"
-                      : undefined
-                  }
-                  onClick={() => {
-                    if (!window.confirm(`Remove “${selectedPart.label}”?`)) return;
-                    removePart(selectedPart.id);
-                  }}
-                  className="inline-flex h-9 items-center gap-1 rounded-lg border border-red-200 px-2.5 text-xs font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Remove
-                </button>
-                {selectedPart.source.type === "template_section" ? (
-                  <p className="text-[11px] font-semibold text-stone-500">
-                    Removing drops this part from student homework on the next assign.
-                    Use Reset from template to restore the full clone.
-                  </p>
-                ) : null}
-              </div>
-                </div>
-              </details>
             </div>
           ) : (
             <div className="mt-3 space-y-3 text-sm font-semibold text-stone-600">

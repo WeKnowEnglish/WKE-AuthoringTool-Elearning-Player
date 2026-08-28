@@ -782,6 +782,63 @@ export function ActivityTrackCompilerWorkspace({
             </div>
           ) : null}
         </div>
+        {selectedPart ? (
+          <div
+            role="group"
+            className="flex w-full items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 p-1 sm:w-auto"
+            aria-label={`Actions for ${selectedPart.label}`}
+          >
+            <button
+              type="button"
+              disabled={selectedPartIndex <= 0}
+              aria-label={`Move ${selectedPart.label} earlier`}
+              title="Move part earlier"
+              onClick={() => movePart(selectedPart.id, -1)}
+              className="inline-flex h-8 flex-1 items-center justify-center rounded-md text-stone-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-30 sm:w-8 sm:flex-none"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled={selectedPartIndex >= doc.parts.length - 1}
+              aria-label={`Move ${selectedPart.label} later`}
+              title="Move part later"
+              onClick={() => movePart(selectedPart.id, 1)}
+              className="inline-flex h-8 flex-1 items-center justify-center rounded-md text-stone-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-30 sm:w-8 sm:flex-none"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            {selectedPart.source.type === "homework_part" ||
+            selectedPart.source.type === "template_section" ? (
+              <button
+                type="button"
+                aria-label={`Duplicate ${selectedPart.label}`}
+                title="Duplicate part"
+                onClick={() => duplicateHomeworkPart(selectedPart.id)}
+                className="inline-flex h-8 flex-1 items-center justify-center rounded-md text-stone-600 hover:bg-white sm:w-8 sm:flex-none"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              disabled={doc.mode === "graded" && doc.parts.length <= 1}
+              aria-label={`Remove ${selectedPart.label}`}
+              title={
+                doc.mode === "graded" && doc.parts.length <= 1
+                  ? "Keep at least one part on a Graded track"
+                  : "Remove part"
+              }
+              onClick={() => {
+                if (!window.confirm(`Remove “${selectedPart.label}”?`)) return;
+                removePart(selectedPart.id);
+              }}
+              className="inline-flex h-8 flex-1 items-center justify-center rounded-md text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30 sm:w-8 sm:flex-none"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
         <div className="grid w-full grid-cols-2 rounded-lg bg-stone-100 p-1 md:hidden">
           <button
             type="button"

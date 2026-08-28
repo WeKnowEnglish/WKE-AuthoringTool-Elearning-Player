@@ -181,7 +181,6 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
             const copy = {
               ...question,
               id: freshId(),
-              prompt: question.prompt ? question.prompt + " copy" : "",
               options,
               correctOptionId:
                 optionIds.get(question.correctOptionId) ?? options[0]?.id ?? "",

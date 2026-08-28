@@ -276,6 +276,66 @@ export function HomeworkCollectionPlayer({
               ))
             : null}
 
+          {part.kind === "listening_item_match"
+            ? (() => {
+                const { activity } = part;
+                const choiceOptions = shuffled(activity.choices);
+                return (
+                  <div className="space-y-4">
+                    {activity.audioUrl ? (
+                      <audio
+                        controls
+                        preload="metadata"
+                        src={activity.audioUrl}
+                        className="w-full"
+                      />
+                    ) : activity.audioText ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.speechSynthesis.cancel();
+                          window.speechSynthesis.speak(
+                            new SpeechSynthesisUtterance(activity.audioText),
+                          );
+                        }}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-extrabold text-white"
+                      >
+                        <Volume2 className="h-4 w-4" />
+                        Play conversation
+                      </button>
+                    ) : (
+                      <p className="text-xs font-bold text-amber-700">
+                        Audio has not been added yet.
+                      </p>
+                    )}
+                    {activity.prompts.map((prompt, index) => (
+                      <label
+                        key={prompt.id}
+                        className="block rounded-xl border border-stone-200 p-4 text-sm font-extrabold text-stone-900"
+                      >
+                        {index + 1}. {prompt.label}
+                        <select
+                          value={currentAnswers[prompt.id] ?? ""}
+                          onChange={(event) =>
+                            setAnswer(prompt.id, event.target.value)
+                          }
+                          className="mt-3 w-full rounded-xl border-2 border-stone-200 bg-white px-3 py-3 text-sm font-bold text-stone-900 outline-none focus:border-teal-600"
+                        >
+                          <option value="">Choose an answer…</option>
+                          {choiceOptions.map((choice, choiceIndex) => (
+                            <option key={choice.id} value={choice.id}>
+                              {String.fromCharCode(65 + choiceIndex)}.{" "}
+                              {choice.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })()
+            : null}
+
           {part.kind === "sentence_scramble"
             ? part.items.map((item, index) => {
                 const tokens = item.sentence.split(/\s+/).filter(Boolean);

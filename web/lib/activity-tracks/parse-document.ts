@@ -26,6 +26,7 @@ function isPartKind(value: unknown): value is ActivityTrackPartKind {
       "flashcards",
       "fill_blanks",
       "listen_and_choose",
+      "listening_item_match",
       "line_match",
       "true_false",
       "sentence_scramble",

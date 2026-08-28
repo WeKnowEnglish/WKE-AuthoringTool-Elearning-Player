@@ -11,6 +11,9 @@ function itemLabel(part: HomeworkCollectionPart, itemId: string): string {
   if (part.kind === "multiple_choice") return part.questions.find((item) => item.id === itemId)?.prompt ?? itemId;
   if (part.kind === "line_match") return part.pairs.find((item) => item.id === itemId)?.left ?? itemId;
   if (part.kind === "free_response") return part.prompts.find((item) => item.id === itemId)?.prompt ?? itemId;
+  if (part.kind === "listening_item_match") {
+    return part.activity.prompts.find((item) => item.id === itemId)?.label ?? itemId;
+  }
   return part.items.find((item) => item.id === itemId)?.prompt ?? itemId;
 }
 
@@ -30,6 +33,10 @@ function displayAnswer(part: HomeworkCollectionPart, answer: string): string {
       const choice = item.choices.find((entry) => entry.id === answer);
       if (choice) return choice.label || "Picture choice";
     }
+  }
+  if (part.kind === "listening_item_match") {
+    const choice = part.activity.choices.find((entry) => entry.id === answer);
+    if (choice) return choice.label || "Choice";
   }
   return answer;
 }

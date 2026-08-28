@@ -24,6 +24,9 @@ function itemIds(part: HomeworkCollectionPart): Set<string> {
   if (part.kind === "free_response") {
     return new Set(part.prompts.map((prompt) => prompt.id));
   }
+  if (part.kind === "listening_item_match") {
+    return new Set(part.activity.prompts.map((prompt) => prompt.id));
+  }
   return new Set(part.items.map((item) => item.id));
 }
 

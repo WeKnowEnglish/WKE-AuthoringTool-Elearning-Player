@@ -17,6 +17,7 @@ export type ActivityTrackPartKind =
   | "flashcards"
   | "fill_blanks"
   | "listen_and_choose"
+  | "listening_item_match"
   | "line_match"
   | "true_false"
   | "sentence_scramble"
@@ -149,6 +150,11 @@ export const ACTIVITY_TRACK_PART_CATALOG: ActivityTrackPartCatalogEntry[] = [
     kind: "listen_and_choose",
     label: "Listen and choose",
     description: "Hear a prompt, then pick a picture.",
+  },
+  {
+    kind: "listening_item_match",
+    label: "Listen and match",
+    description: "One conversation track, then match prompts to choices.",
   },
   {
     kind: "line_match",

@@ -32,6 +32,9 @@ function collectionItemIds(part: HomeworkCollectionPart): string[] {
   if (part.kind === "free_response") {
     return part.prompts.map((prompt) => prompt.id);
   }
+  if (part.kind === "listening_item_match") {
+    return part.activity.prompts.map((prompt) => prompt.id);
+  }
   return part.items.map((item) => item.id);
 }
 

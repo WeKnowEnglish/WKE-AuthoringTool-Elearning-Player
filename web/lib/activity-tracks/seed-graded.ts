@@ -19,9 +19,16 @@ import {
   type ActivityTrackPartKind,
 } from "@/lib/activity-tracks/types";
 import {
+  GRADED_REUSABLE_PART_KINDS,
+  isInlineHomeworkCollectionKind,
+  isLpGradedPackKind,
+  isReadingModuleKind,
+} from "@/lib/activity-formats/registry";
+import {
   createHomeworkCollectionPart,
-  isHomeworkCollectionPartKind,
 } from "@/lib/homework-collections";
+import { seedLessonPlayerPackFromTrackKind } from "@/lib/homework-collections/lesson-player-pack";
+import { seedDocumentModuleFromTrackKind } from "@/lib/homework-collections/document-module";
 
 export type GradedTemplateChoice = HomeworkTemplateId;
 
@@ -75,12 +82,14 @@ const SECONDARY_GRADED_KINDS = [
   "secondary_corrections",
   "secondary_dialogue",
   "secondary_questions",
-  "speaking_prompt",
 ] as const satisfies readonly ActivityTrackPartKind[];
 
 type SecondaryGradedKind = (typeof SECONDARY_GRADED_KINDS)[number];
 
-const SECONDARY_KIND_TO_PART_ID: Record<SecondaryGradedKind, string> = {
+const SECONDARY_KIND_TO_PART_ID: Record<
+  SecondaryGradedKind | "speaking_prompt",
+  string
+> = {
   secondary_sequence: "community-sequence",
   secondary_corrections: "past-corrections",
   secondary_dialogue: "irregular-dialogue",
@@ -173,15 +182,7 @@ export function gradedPartKindsForOrigin(
   origin: ActivityTrackGradedOrigin | null | undefined,
 ): readonly ActivityTrackPartKind[] {
   if (!origin) return [];
-  const reusable = [
-    "multiple_choice",
-    "letter_mixup",
-    "line_match",
-    "listen_and_choose",
-    "listening_item_match",
-    "sentence_scramble",
-    "free_response",
-  ] as const satisfies readonly ActivityTrackPartKind[];
+  const reusable = GRADED_REUSABLE_PART_KINDS;
   return origin.level === "primary"
     ? [...PRIMARY_GRADED_KINDS, ...reusable]
     : [...SECONDARY_GRADED_KINDS, ...reusable];
@@ -221,7 +222,50 @@ export function seedGradedPartFromKind(input: {
   level: "primary" | "secondary";
   existingParts?: readonly ActivityTrackPart[];
 }): ActivityTrackPart | null {
-  if (isHomeworkCollectionPartKind(input.kind)) {
+  if (input.kind === "writing_prompt") {
+    const freePart = createHomeworkCollectionPart("free_response");
+    if (freePart.kind !== "free_response") throw new Error("Expected free response part");
+    const writingPart = {
+      ...freePart,
+      title: "Writing prompt",
+      prompts: [
+        {
+          ...freePart.prompts[0]!,
+          prompt: "Write your response to the prompt.",
+          minWords: 10,
+          maxPoints: 10,
+        },
+      ],
+    };
+    return {
+      id: writingPart.id,
+      order: input.order,
+      kind: "writing_prompt",
+      label: "Writing prompt",
+      source: { type: "homework_part", part: writingPart },
+    };
+  }
+  if (isLpGradedPackKind(input.kind)) {
+    const part = seedLessonPlayerPackFromTrackKind(input.kind);
+    return {
+      id: part.id,
+      order: input.order,
+      kind: input.kind,
+      label: part.title,
+      source: { type: "homework_part", part },
+    };
+  }
+  if (isReadingModuleKind(input.kind)) {
+    const part = seedDocumentModuleFromTrackKind(input.kind);
+    return {
+      id: part.id,
+      order: input.order,
+      kind: input.kind,
+      label: part.title,
+      source: { type: "homework_part", part },
+    };
+  }
+  if (isInlineHomeworkCollectionKind(input.kind)) {
     const part = createHomeworkCollectionPart(input.kind);
     return {
       id: part.id,

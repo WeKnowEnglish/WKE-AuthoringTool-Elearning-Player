@@ -156,6 +156,19 @@ const customChecks = new Map([
         "and pg_get_constraintdef(c.oid) ilike '%memory%') = 3",
     },
   ],
+  [
+    "140_homework_collection_speaking_recordings.sql",
+    {
+      label: "homework collection speaking recordings table and policies",
+      expression:
+        "to_regclass('public.homework_collection_speaking_recordings') is not null " +
+        "and exists (select 1 from pg_policies where schemaname = 'public' " +
+        "and tablename = 'homework_collection_speaking_recordings' " +
+        "and policyname = 'homework_collection_speaking_teacher_select') " +
+        "and exists (select 1 from pg_policies where schemaname = 'storage' " +
+        "and tablename = 'objects' and policyname = 'homework_collection_voice_teacher_read')",
+    },
+  ],
 ]);
 
 function stripComments(sql) {

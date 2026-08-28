@@ -2465,23 +2465,12 @@ export function LearningTrackCompilerWorkspace({
               onOpenSection={setRightOpenSectionId}
             >
               <p className="mb-3 text-[11px] leading-snug ltc-subtle">
-                Add one audio track or narration script. Students match five
-                people or prompts to eight choices; three choices are
-                distractors. Choices can be objects, places, hobbies, or other
-                text-and-picture answers.
+                Add one audio track or narration script. Students match each
+                person or prompt to a choice. Extra choices can stay unused as
+                distractors.
               </p>
-              <div className="mb-3 grid grid-cols-2 gap-2 text-center text-[10px] font-semibold">
-                <span className="rounded-md bg-sky-50 px-2 py-1.5 text-sky-900">
-                  5 prompts
-                </span>
-                <span className="rounded-md bg-amber-50 px-2 py-1.5 text-amber-900">
-                  8 choices · 3 unused
-                </span>
-              </div>
               <AssessmentListeningItemMatchPartEditor
                 part={selectedListeningItemMatchPart}
-                promptCountLimits={{ min: 5, max: 5 }}
-                choiceCountLimits={{ min: 8, max: 8 }}
                 onChange={(next) =>
                   updateSelectedPresentation({
                     listeningItemMatch: next.activity,

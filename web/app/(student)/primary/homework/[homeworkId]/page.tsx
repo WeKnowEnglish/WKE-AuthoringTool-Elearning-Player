@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { HomeworkWritingPromptPlayer } from "@/components/homework/HomeworkWritingPromptPlayer";
-import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
+import { GradedTrackPlayer } from "@/components/homework/GradedTrackPlayer";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
@@ -29,10 +29,11 @@ import { parseFrozenPrimaryHomeworkTemplateDocument } from "@/lib/class-homework
 import { homeworkPortalPath, resolveHomeworkPortal } from "@/lib/class-homework/portal";
 import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolve-assessment-definition";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
-import type { HomeworkTemplateOne } from "@/lib/homework-templates/homework-template-one";
 import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessmentSpeakingReview } from "@/lib/data/assessment-attempts";
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
+import { getMyHomeworkCollectionSpeakingRecordings } from "@/lib/data/homework-collection-speaking-recordings";
+import { getMyHomeworkTemplateSubmission } from "@/lib/data/homework-template-submissions";
 import { createClient } from "@/lib/supabase/server";
 import { learningBandFromUser } from "@/lib/student-classes/portal-paths";
 
@@ -124,9 +125,18 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
     payload.type === "graded_track"
       ? parseGradedTrackFreezeDocument(payload.document)
       : null;
-  const collectionAttempt = gradedFreeze?.collectionDocument
-    ? await getMyHomeworkCollectionAttempt(homework.id)
-    : null;
+  const [collectionAttempt, templateSubmission, collectionSpeakingRecordings] =
+    await Promise.all([
+      gradedFreeze?.collectionDocument
+        ? getMyHomeworkCollectionAttempt(homework.id)
+        : Promise.resolve(null),
+      gradedFreeze?.primaryDocument
+        ? getMyHomeworkTemplateSubmission(homework.id)
+        : Promise.resolve(null),
+      gradedFreeze?.collectionDocument
+        ? getMyHomeworkCollectionSpeakingRecordings(homework.id)
+        : Promise.resolve([]),
+    ]);
   const typeLabel = CLASS_HOMEWORK_PAYLOAD_LABELS[payload.type];
   const eyebrow = `${homework.classTitle} · ${typeLabel}`;
 
@@ -348,42 +358,16 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
         />
       ) : null}
 
-      {payload.type === "graded_track" && payload.level === "primary" ? (
-        (() => {
-          const freeze = gradedFreeze;
-          const document = freeze?.primaryDocument as HomeworkTemplateOne | undefined;
-          return document || freeze?.collectionDocument ? (
-            <div className="space-y-6">
-              {document ? (
-                <HomeworkTemplateOnePilot
-                  homeworkId={homework.id}
-                  alreadyCompleted={Boolean(homework.completedAt)}
-                  document={document}
-                  deferOverallCompletion={Boolean(freeze?.collectionDocument)}
-                />
-              ) : null}
-              {freeze?.collectionDocument ? (
-                <div className={document ? "border-t-4 border-dashed border-teal-200 pt-6" : ""}>
-                  {document ? (
-                    <p className="mb-3 text-sm font-extrabold uppercase tracking-wide text-teal-800">
-                      Collection activities
-                    </p>
-                  ) : null}
-                  <HomeworkCollectionPlayer
-                    homeworkId={homework.id}
-                    document={freeze.collectionDocument}
-                    initialAttempt={collectionAttempt}
-                    alreadyCompleted={Boolean(homework.completedAt)}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="rounded-xl border-2 border-dashed border-neutral-400 bg-white px-4 py-5 text-sm font-semibold text-neutral-600">
-              Graded track content is missing. Ask your teacher to re-assign this homework.
-            </p>
-          );
-        })()
+      {payload.type === "graded_track" && payload.level === "primary" && gradedFreeze ? (
+        <GradedTrackPlayer
+          freeze={gradedFreeze}
+          homeworkId={homework.id}
+          alreadyCompleted={Boolean(homework.completedAt)}
+          initialCollectionAttempt={collectionAttempt}
+          initialTemplateSubmission={templateSubmission}
+          initialSpeakingRecordings={collectionSpeakingRecordings}
+          homeHref="/primary"
+        />
       ) : null}
       </HomeworkStartGate>
     </HomeworkPlayChrome>

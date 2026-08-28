@@ -96,6 +96,7 @@ export function HomeworkTemplateOnePilot({
   mode = "student",
   focusSectionId = null,
   deferOverallCompletion = false,
+  segmentMode = false,
 }: {
   homeworkId?: string;
   alreadyCompleted?: boolean;
@@ -109,6 +110,8 @@ export function HomeworkTemplateOnePilot({
   focusSectionId?: string | null;
   /** Mixed collections submit globally after their generic activities. */
   deferOverallCompletion?: boolean;
+  /** Embedded inside GradedTrackPlayer — hides sidebar nav and outer chrome. */
+  segmentMode?: boolean;
 } = {}) {
   const router = useRouter();
   const authoringPreview = mode === "authoring-preview";
@@ -226,6 +229,14 @@ export function HomeworkTemplateOnePilot({
     sectionId: string,
     snapshot: HomeworkTemplatePartSnapshot,
   ) => {
+    if (segmentMode && deferOverallCompletion) {
+      savePartThen(sectionId, snapshot, () => {
+        setDoneSectionIds((current) => new Set(current).add(sectionId));
+        setCompletionNotice("");
+      });
+      return;
+    }
+
     const index = navSections.findIndex((section) => section.id === sectionId);
     const isLast = index >= 0 && index === navSections.length - 1;
 
@@ -272,7 +283,7 @@ export function HomeworkTemplateOnePilot({
   }
 
   const assigned = Boolean(homeworkId);
-  const embedded = authoringPreview || assigned;
+  const embedded = authoringPreview || assigned || segmentMode;
   const activeIndex = navSections.findIndex(
     (section) => section.id === activeSectionId,
   );
@@ -348,7 +359,7 @@ export function HomeworkTemplateOnePilot({
       }
     >
       <div className={embedded ? "space-y-4" : "mx-auto max-w-7xl space-y-4"}>
-        {authoringPreview ? (
+        {authoringPreview && !segmentMode ? (
           <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white/95 px-4 py-3 shadow-sm">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wide text-amber-800">
@@ -376,7 +387,7 @@ export function HomeworkTemplateOnePilot({
               </button>
             </div>
           </header>
-        ) : assigned ? null : (
+        ) : assigned || segmentMode ? null : (
           <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white/95 px-4 py-3 shadow-sm">
             <div>
               <Link
@@ -415,7 +426,8 @@ export function HomeworkTemplateOnePilot({
           </p>
         ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <div className={segmentMode ? "min-w-0 space-y-3" : "grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]"}>
+          {!segmentMode ? (
           <aside className="space-y-2 lg:sticky lg:top-4 lg:self-start">
             <div className="flex items-center justify-between gap-2 px-2">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
@@ -487,9 +499,10 @@ export function HomeworkTemplateOnePilot({
               );
             })}
           </aside>
+          ) : null}
 
           <div className="min-w-0 space-y-3">
-            {previousSection ? (
+            {!segmentMode && previousSection ? (
               <button
                 type="button"
                 onClick={() => setActiveSectionId(previousSection.id)}

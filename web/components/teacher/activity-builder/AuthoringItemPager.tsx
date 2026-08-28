@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "lucide-react";
 
 type PagerTone = "stone" | "ltc";
@@ -120,6 +120,16 @@ export function AuthoringItemPager({
   const useChips =
     Array.isArray(itemLabels) && itemLabels.length === safeCount && safeCount > 0;
   const navBarClass = stickyNav ? classes.stickyBar : classes.bar;
+
+  const handleKeyboardNav = (event: KeyboardEvent) => {
+    if (!event.ctrlKey || event.key !== "Tab" || safeCount < 2) return;
+    event.preventDefault();
+    if (event.shiftKey) {
+      if (index > 0) onIndexChange(index - 1);
+    } else if (index < safeCount - 1) {
+      onIndexChange(index + 1);
+    }
+  };
 
   if (safeCount < 1) {
     return (
@@ -293,8 +303,13 @@ export function AuthoringItemPager({
       : "rounded-xl border border-stone-200 bg-stone-50/80 p-2.5";
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" onKeyDown={handleKeyboardNav}>
       {nav}
+      {safeCount > 1 ? (
+        <p className={`text-[10px] font-semibold ${classes.label} opacity-70`}>
+          Ctrl+Tab next · Ctrl+Shift+Tab previous
+        </p>
+      ) : null}
       <div className={frame}>{children}</div>
     </div>
   );

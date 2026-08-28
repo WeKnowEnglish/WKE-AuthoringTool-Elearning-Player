@@ -3784,7 +3784,7 @@ export const listenAndChoosePayloadSchema = z
     }
   });
 
-/** Listen to one audio track, then match five prompts to eight choices. */
+/** Listen to one audio track, then match prompts to choices (with optional distractors). */
 export const listeningItemMatchPayloadSchema = z
   .object({
     type: z.literal("interaction"),
@@ -3803,7 +3803,8 @@ export const listeningItemMatchPayloadSchema = z
           image_url: z.string().optional(),
         }),
       )
-      .length(8),
+      .min(2)
+      .max(12),
     prompts: z
       .array(
         z.object({
@@ -3812,7 +3813,8 @@ export const listeningItemMatchPayloadSchema = z
           correct_choice_id: z.string().min(1),
         }),
       )
-      .length(5),
+      .min(1)
+      .max(12),
     guide: guideSchema,
   })
   .superRefine((data, ctx) => {
@@ -3838,6 +3840,14 @@ export const listeningItemMatchPayloadSchema = z
       });
     }
 
+    if (data.choices.length < data.prompts.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "listening_item_match needs at least as many choices as prompts",
+      });
+    }
+
     const correctIds = data.prompts.map((prompt) => prompt.correct_choice_id);
     for (const correctId of correctIds) {
       if (!choiceIds.has(correctId)) {
@@ -3851,7 +3861,7 @@ export const listeningItemMatchPayloadSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          "listening_item_match must use five different answers, leaving three distractors",
+          "listening_item_match must use each correct answer once (no duplicate matches)",
       });
     }
   });

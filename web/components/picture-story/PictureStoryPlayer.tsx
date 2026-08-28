@@ -10,6 +10,7 @@ import {
   scorePictureStoryPlayable,
   type PictureStoryPlayable,
 } from "@/lib/picture-story";
+import { useSyncedAnswerMap } from "@/lib/homework-collections/use-synced-answer-map";
 
 type Stage = "overview" | "frames" | "questions" | "review";
 
@@ -17,16 +18,24 @@ type Props = {
   activity: PictureStoryPlayable;
   eyebrow?: string;
   onMastered?: () => void;
+  answers?: Record<string, string>;
+  onAnswersChange?: (answers: Record<string, string>) => void;
+  embedInHomeworkCollection?: boolean;
 };
 
 export function PictureStoryPlayer({
   activity,
   eyebrow = "Picture story",
   onMastered,
+  answers: controlledAnswers,
+  onAnswersChange,
+  embedInHomeworkCollection = false,
 }: Props) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useSyncedAnswerMap(controlledAnswers, onAnswersChange);
   const [checked, setChecked] = useState(false);
-  const [stage, setStage] = useState<Stage>("overview");
+  const [stage, setStage] = useState<Stage>(
+    embedInHomeworkCollection ? "frames" : "overview",
+  );
   const [frameIndex, setFrameIndex] = useState(0);
   const [reviewFrameOpen, setReviewFrameOpen] = useState(false);
   const [reviewFrameIndex, setReviewFrameIndex] = useState(0);

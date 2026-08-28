@@ -12,6 +12,8 @@ import {
 } from "@/components/teacher/activity-builder/AuthoringItemPager";
 import { AudioClipControls } from "@/components/teacher/activity-builder/AudioClipControls";
 import { AssessmentListeningItemMatchPartEditor } from "@/components/teacher/activity-builder/AssessmentListeningItemMatchPartEditor";
+import { HomeworkCollectionLessonPlayerPackEditor } from "@/components/teacher/activity-builder/HomeworkCollectionLessonPlayerPackEditor";
+import { HomeworkCollectionDocumentModuleEditor } from "@/components/teacher/activity-builder/HomeworkCollectionDocumentModuleEditor";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 
 type Props = {
@@ -1062,6 +1064,70 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </AuthoringItemPager>
       ) : null}
 
+      {part.kind === "speaking_prompt" ? (
+        <div className="space-y-3">
+          <label className="block text-[11px] font-bold text-stone-700">
+            Speaking prompt
+            <textarea
+              value={part.prompt}
+              onChange={(event) =>
+                onChange({ ...part, prompt: event.target.value })
+              }
+              rows={4}
+              placeholder="What should the student talk about?"
+              className={fieldClass}
+            />
+          </label>
+          <MediaUrlControls
+            label="Optional picture"
+            value={part.imageUrl ?? ""}
+            onChange={(imageUrl) =>
+              onChange({
+                ...part,
+                ...(imageUrl ? { imageUrl } : {}),
+              })
+            }
+          />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label className="text-[11px] font-bold text-stone-600">
+              Max recording (seconds)
+              <input
+                type="number"
+                min={15}
+                max={120}
+                value={part.maxDurationSeconds}
+                onChange={(event) =>
+                  onChange({
+                    ...part,
+                    maxDurationSeconds: Math.max(
+                      15,
+                      Math.min(120, Number(event.target.value) || 60),
+                    ),
+                  })
+                }
+                className={fieldClass}
+              />
+            </label>
+            <label className="text-[11px] font-bold text-stone-600">
+              Points
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={part.maxPoints}
+                onChange={(event) =>
+                  onChange({
+                    ...part,
+                    maxPoints: Math.max(1, Number(event.target.value) || 1),
+                  })
+                }
+                className={fieldClass}
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
+
       {part.kind === "listening_item_match" ? (
         <AssessmentListeningItemMatchPartEditor
           part={{
@@ -1072,14 +1138,26 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
             instructions: part.instructions,
             activity: part.activity,
           }}
-          promptCountLimits={{ min: 5, max: 5 }}
-          choiceCountLimits={{ min: 8, max: 8 }}
           onChange={(next) =>
             onChange({
               ...part,
               activity: next.activity,
             })
           }
+        />
+      ) : null}
+
+      {part.kind === "lesson_player_pack" ? (
+        <HomeworkCollectionLessonPlayerPackEditor
+          part={part}
+          onChange={(nextPart) => onChange(nextPart)}
+        />
+      ) : null}
+
+      {part.kind === "document_module" ? (
+        <HomeworkCollectionDocumentModuleEditor
+          part={part}
+          onChange={(nextPart) => onChange(nextPart)}
         />
       ) : null}
     </div>

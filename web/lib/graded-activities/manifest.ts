@@ -8,6 +8,8 @@ import {
   homeworkCollectionPartMaxScore,
   type HomeworkCollectionPart,
 } from "@/lib/homework-collections";
+import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
+import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
 import {
   GRADED_ACTIVITY_MANIFEST_VERSION,
   type GradedActivityManifestItem,
@@ -32,8 +34,17 @@ function collectionItemIds(part: HomeworkCollectionPart): string[] {
   if (part.kind === "free_response") {
     return part.prompts.map((prompt) => prompt.id);
   }
+  if (part.kind === "speaking_prompt") {
+    return [part.responseId];
+  }
   if (part.kind === "listening_item_match") {
     return part.activity.prompts.map((prompt) => prompt.id);
+  }
+  if (part.kind === "lesson_player_pack") {
+    return lessonPlayerPackItemIds(part);
+  }
+  if (part.kind === "document_module") {
+    return documentModuleItemIds(part);
   }
   return part.items.map((item) => item.id);
 }
@@ -45,7 +56,9 @@ function collectionManifestPart(
   const promptScores =
     part.kind === "free_response"
       ? new Map(part.prompts.map((prompt) => [prompt.id, prompt.maxPoints]))
-      : null;
+      : part.kind === "speaking_prompt"
+        ? new Map([[part.responseId, part.maxPoints]])
+        : null;
   const items = collectionItemIds(part).map((itemId) => ({
     itemId,
     required: part.required,
@@ -54,7 +67,11 @@ function collectionManifestPart(
   return {
     partId: part.id,
     label,
-    format: part.kind,
+    format: part.kind === "lesson_player_pack"
+      ? part.studioFormat
+      : part.kind === "document_module"
+        ? part.moduleFormat
+        : part.kind,
     contentVersion: part.schemaVersion,
     gradingPolicy: homeworkCollectionGradingMode(part.kind),
     required: part.required,

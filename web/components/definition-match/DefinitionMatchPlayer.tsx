@@ -9,6 +9,7 @@ import {
   scoreDefinitionMatchPlayable,
   type DefinitionMatchPlayable,
 } from "@/lib/definition-match";
+import { useSyncedAnswerMap } from "@/lib/homework-collections/use-synced-answer-map";
 
 type Stage = "overview" | "activity" | "review";
 
@@ -16,6 +17,9 @@ type Props = {
   activity: DefinitionMatchPlayable;
   eyebrow?: string;
   onMastered?: () => void;
+  answers?: Record<string, string>;
+  onAnswersChange?: (answers: Record<string, string>) => void;
+  embedInHomeworkCollection?: boolean;
 };
 
 function shuffleIds(ids: string[]): string[] {
@@ -31,11 +35,16 @@ export function DefinitionMatchPlayer({
   activity,
   eyebrow = "Definition match",
   onMastered,
+  answers: controlledAnswers,
+  onAnswersChange,
+  embedInHomeworkCollection = false,
 }: Props) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useSyncedAnswerMap(controlledAnswers, onAnswersChange);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
-  const [stage, setStage] = useState<Stage>("overview");
+  const [stage, setStage] = useState<Stage>(
+    embedInHomeworkCollection ? "activity" : "overview",
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [wordOrder] = useState(() => {
     const ids = activity.pairs.map((pair) => pair.id);

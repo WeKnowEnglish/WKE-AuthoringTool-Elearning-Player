@@ -11,6 +11,15 @@ import {
   homeworkCollectionPartItemCount,
   homeworkCollectionPartMaxScore,
 } from "@/lib/homework-collections/document";
+import { isCompletionLpStudioFormat } from "@/lib/activity-formats/registry";
+import {
+  lessonPlayerPackItemIds,
+  scoreGradedLessonPlayerPackAnswers,
+} from "@/lib/homework-collections/lesson-player-pack";
+import {
+  documentModuleItemIds,
+  scoreDocumentModuleAnswers,
+} from "@/lib/homework-collections/document-module";
 
 function normalizeAnswer(value: unknown): string {
   return typeof value === "string" ? value.trim().slice(0, 10_000) : "";
@@ -32,8 +41,15 @@ function allowedAnswerIds(part: HomeworkCollectionPart): Set<string> {
   }
   if (part.kind === "line_match") return new Set(part.pairs.map((pair) => pair.id));
   if (part.kind === "free_response") return new Set(part.prompts.map((prompt) => prompt.id));
+  if (part.kind === "speaking_prompt") return new Set([part.responseId]);
   if (part.kind === "listening_item_match") {
     return new Set(part.activity.prompts.map((prompt) => prompt.id));
+  }
+  if (part.kind === "lesson_player_pack") {
+    return new Set(lessonPlayerPackItemIds(part));
+  }
+  if (part.kind === "document_module") {
+    return new Set(documentModuleItemIds(part));
   }
   return new Set(part.items.map((item) => item.id));
 }
@@ -97,6 +113,17 @@ export function scoreHomeworkCollectionPart(
       (total, item) => total + (comparable(answers[item.id] ?? "") === comparable(item.sentence) ? 1 : 0),
       0,
     );
+  } else if (part.kind === "lesson_player_pack") {
+    if (isCompletionLpStudioFormat(part.studioFormat)) {
+      const ids = lessonPlayerPackItemIds(part);
+      const completed =
+        ids.length > 0 && ids.every((id) => Boolean(answers[id]?.trim()));
+      correct = completed ? ids.length : 0;
+    } else {
+      correct = scoreGradedLessonPlayerPackAnswers(part, answers);
+    }
+  } else if (part.kind === "document_module") {
+    correct = scoreDocumentModuleAnswers(part, answers);
   } else {
     correct = null;
   }
@@ -159,6 +186,9 @@ export function homeworkCollectionRequiredPartsComplete(
         const words = answer.trim() ? answer.trim().split(/\s+/).length : 0;
         return words >= prompt.minWords;
       });
+    }
+    if (part.kind === "speaking_prompt") {
+      return Boolean(scored.answers[part.responseId]?.trim());
     }
     return true;
   });

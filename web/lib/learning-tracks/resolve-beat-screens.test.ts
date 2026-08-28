@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import bakeryQuickCheck from "@/content/pilots/games-mc-quiz/bakery-quick-check.json";
 import hobbiesHotspots from "@/content/pilots/explore-hotspots/hobbies-listening-hotspots.wkeactivity.json";
 import { wkeActivityToExploreHotspotsPayload } from "@/lib/wke-activity/to-lesson-screen";
 import {
@@ -19,9 +20,48 @@ describe("libraryFormatForBeatKind / beatSupportsLibrary", () => {
     expect(beatSupportsLibrary("language_in_focus")).toBe(false);
   });
 
-  it("does not enable quiz library ports yet", () => {
+  it("enables library for mapped quiz formats", () => {
     expect(libraryFormatForBeatKind("multiple_choice")).toBe("multiple_choice");
-    expect(beatSupportsLibrary("multiple_choice")).toBe(false);
+    expect(beatSupportsLibrary("multiple_choice")).toBe(true);
+    expect(beatSupportsLibrary("flashcards")).toBe(true);
+    expect(beatSupportsLibrary("wordsearch")).toBe(true);
+  });
+});
+
+describe("resolveBeatScreens library multiple_choice", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("loads games pack from Activity Bank", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          format: "multiple_choice",
+          pack: bakeryQuickCheck,
+        }),
+      }),
+    );
+
+    const beat: LearningTrackBeatInstance = {
+      id: "mc",
+      kind: "multiple_choice",
+      source: {
+        type: "library",
+        libraryId: "bank-mc-1",
+        format: "multiple_choice",
+      },
+    };
+
+    const screens = await resolveBeatScreens(beat);
+    expect(screens.length).toBeGreaterThan(0);
+    expect(screens[0]?.subtype).toBe("mc_quiz");
+    expect(screens[0]?.question).toMatch(/bread|bakery/i);
   });
 });
 

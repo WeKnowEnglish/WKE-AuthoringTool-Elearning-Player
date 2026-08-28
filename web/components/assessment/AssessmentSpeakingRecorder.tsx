@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleStop, Mic, RotateCcw, Save } from "lucide-react";
 import { saveAssessmentSpeakingRecording } from "@/lib/actions/assessment-speaking";
+import { saveHomeworkCollectionSpeakingRecording } from "@/lib/actions/homework-collection-speaking";
 import { saveHomeworkTemplateSpeakingRecording } from "@/lib/actions/homework-template-speaking";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 
@@ -13,7 +14,7 @@ type Props = {
   maxDurationSeconds: number;
   initialRecording?: AssessmentSpeakingRecording;
   onSaved: (recording: AssessmentSpeakingRecording) => void;
-  submissionKind?: "assessment" | "homework-template";
+  submissionKind?: "assessment" | "homework-template" | "homework-collection";
 };
 
 function formatTime(ms: number) {
@@ -103,7 +104,9 @@ export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, max
     formData.set("audio", new File([blob], `answer.${extension}`, { type: blob.type || "audio/webm" }));
     const result = submissionKind === "homework-template"
       ? await saveHomeworkTemplateSpeakingRecording(formData)
-      : await saveAssessmentSpeakingRecording(formData);
+      : submissionKind === "homework-collection"
+        ? await saveHomeworkCollectionSpeakingRecording(formData)
+        : await saveAssessmentSpeakingRecording(formData);
     setSaving(false);
     if (!result.ok) { setError(result.error); return; }
     setSaved(true);

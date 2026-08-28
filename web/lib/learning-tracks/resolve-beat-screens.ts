@@ -22,6 +22,11 @@ import {
 } from "@/lib/activity-library";
 import { enrichVocabListMediaFromLexicon } from "@/lib/actions/lexicon-media";
 import {
+  LISTENING_ITEM_MATCH_MAX_CHOICES,
+  LISTENING_ITEM_MATCH_MAX_PROMPTS,
+  listeningItemMatchCountIssues,
+} from "@/lib/listening-item-match/limits";
+import {
   defaultFlashcardsSettings,
   defaultLetterMixupSettings,
   defaultListenAndChooseSettings,
@@ -74,7 +79,6 @@ import hobbiesHotspotsScreen from "@/lib/learning-tracks/fixtures/hobbies-hotspo
 import hobbiesLikeIngScreen from "@/lib/learning-tracks/fixtures/hobbies-like-ing.screen.json";
 import hobbiesFlashcardsPack from "@/lib/learning-tracks/fixtures/hobbies-flashcards.lessonplayer.json";
 import hobbiesListenPack from "@/lib/learning-tracks/fixtures/hobbies-listen-choose.lessonplayer.json";
-import { wkeActivityToExploreHotspotsPayload } from "@/lib/wke-activity/to-lesson-screen";
 import { presentationElementsForSlide } from "@/lib/learning-tracks/presentation-elements";
 
 export function asScreen(value: unknown, label: string): LearningTrackScreenPayload {
@@ -190,11 +194,22 @@ export function buildListeningItemMatchScreens(
   if (!audioText && !audioUrl) {
     throw new Error("Listen and match needs an audio clip or narration text.");
   }
-  if (settings.prompts.length !== 5) {
-    throw new Error("Listen and match needs exactly 5 people or prompts.");
+  const countIssues = listeningItemMatchCountIssues({
+    promptCount: settings.prompts.length,
+    choiceCount: settings.choices.length,
+  });
+  if (countIssues.length > 0) {
+    throw new Error(countIssues[0]);
   }
-  if (settings.choices.length !== 8) {
-    throw new Error("Listen and match needs exactly 8 choices (5 answers and 3 distractors).");
+  if (settings.prompts.length > LISTENING_ITEM_MATCH_MAX_PROMPTS) {
+    throw new Error(
+      `Listen and match supports up to ${LISTENING_ITEM_MATCH_MAX_PROMPTS} prompts.`,
+    );
+  }
+  if (settings.choices.length > LISTENING_ITEM_MATCH_MAX_CHOICES) {
+    throw new Error(
+      `Listen and match supports up to ${LISTENING_ITEM_MATCH_MAX_CHOICES} choices.`,
+    );
   }
 
   const choiceIds = new Set(settings.choices.map((choice) => choice.id));
@@ -224,7 +239,7 @@ export function buildListeningItemMatchScreens(
   }
   if (new Set(correctChoiceIds).size !== settings.prompts.length) {
     throw new Error(
-      "Each Listen and match answer must be used once so three choices remain as distractors.",
+      "Each Listen and match prompt needs a unique correct choice.",
     );
   }
 
@@ -252,19 +267,7 @@ export function buildListeningItemMatchScreens(
   ];
 }
 
-export function screensFromGamesPack(
-  pack: unknown,
-  label: string,
-): LearningTrackScreenPayload[] {
-  if (!pack || typeof pack !== "object" || Array.isArray(pack)) {
-    throw new Error(`${label} pack must be an object.`);
-  }
-  const screens = (pack as { screens?: unknown }).screens;
-  if (!Array.isArray(screens) || screens.length < 1) {
-    throw new Error(`${label} pack needs screens.`);
-  }
-  return screens.map((screen, index) => asScreen(screen, `${label} screen ${index + 1}`));
-}
+export { screensFromGamesPack } from "@/lib/learning-tracks/games-pack-screens";
 
 export function loadFixture(fixtureId: LearningTrackFixtureId): LearningTrackScreenPayload[] {
   switch (fixtureId) {
@@ -326,8 +329,7 @@ export function libraryFormatForBeatKind(
 
 /** True when LTC can pick a saved Activity Bank / library activity for this beat. */
 export function beatSupportsLibrary(kind: LearningTrackBeatKind): boolean {
-  // Explore hotspots resolves from studio_activities (Phase 3). Quiz library ports still pending.
-  return kind === "explore_hotspots";
+  return libraryFormatForBeatKind(kind) !== null;
 }
 
 export function vocabCompileFormatForBeatKind(
@@ -873,59 +875,8 @@ async function compileQuizScreensFromList(
   return exportVocabCompileScreens(list, format, label, beat);
 }
 
-async function loadExploreHotspotsScreensFromBank(
-  activityId: string,
-): Promise<LearningTrackScreenPayload[]> {
-  const response = await fetch(
-    `/api/studio/activities/${encodeURIComponent(activityId)}`,
-    { method: "GET", credentials: "same-origin" },
-  );
-  const payload = (await response.json().catch(() => null)) as {
-    ok?: boolean;
-    format?: string;
-    pack?: unknown;
-    authoring?: unknown;
-    error?: string;
-  } | null;
-  if (!response.ok || !payload?.ok) {
-    throw new Error(
-      payload?.error ||
-        `Could not load hotspot activity (${response.status}). Save it from Activity Builder → Explore hotspots first.`,
-    );
-  }
-  if (payload.format && payload.format !== "explore_hotspots") {
-    throw new Error("That Activity Bank item is not an explore-hotspots activity.");
-  }
-  if (
-    payload.pack &&
-    typeof payload.pack === "object" &&
-    !Array.isArray(payload.pack) &&
-    (payload.pack as { subtype?: unknown }).subtype === "explore_hotspots"
-  ) {
-    return [asScreen(payload.pack, "Explore hotspots")];
-  }
-  if (payload.authoring) {
-    return [
-      asScreen(
-        wkeActivityToExploreHotspotsPayload(payload.authoring),
-        "Explore hotspots",
-      ),
-    ];
-  }
-  throw new Error("Explore hotspots activity is missing pack and authoring data.");
-}
-
-async function screensFromLibraryActivity(
-  libraryId: string,
-  format: LearningTrackLibraryFormat,
-): Promise<LearningTrackScreenPayload[]> {
-  if (format === "explore_hotspots") {
-    return loadExploreHotspotsScreensFromBank(libraryId);
-  }
-  throw new Error(
-    `Library beat source (${format}) is not wired in Lesson Player yet. Use a hobbies fixture or vocab-compile source for now.`,
-  );
-}
+import { screensFromGamesPack } from "@/lib/learning-tracks/games-pack-screens";
+import { screensFromLibraryActivity } from "@/lib/learning-tracks/library-beat-screens";
 
 /** True when this beat can be resolved without IndexedDB. */
 export function beatSourceIsSync(beat: LearningTrackBeatInstance): boolean {
@@ -999,9 +950,7 @@ export async function resolveBeatScreens(
   if (source.type === "library") {
     const expected = libraryFormatForBeatKind(beat.kind);
     if (!expected || !beatSupportsLibrary(beat.kind)) {
-      throw new Error(
-        `${beat.kind} cannot use a library activity yet — keep the hobbies fixture for now.`,
-      );
+      throw new Error(`${beat.kind} cannot use a library activity source.`);
     }
     if (source.format !== expected) {
       throw new Error(

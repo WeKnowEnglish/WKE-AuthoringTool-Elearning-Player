@@ -5,8 +5,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
 import { recordStudioActivityHomeworkCompletion } from "@/lib/actions/class-homework";
 import type { HomeworkStudioFormat } from "@/lib/class-homework/types";
+import { parseLearningTrackLessonPlayerPack } from "@/lib/learning-tracks/parse-track-pack";
 import { spacePackToLessonScreens } from "@/lib/teacher-space/pack-to-screens";
 import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+
+const PracticeTrackPlayer = dynamic(
+  () =>
+    import("@/components/practice/PracticeTrackPlayer").then((module) => ({
+      default: module.PracticeTrackPlayer,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-8 text-center text-sm font-semibold text-[var(--pl-muted)]">
+        Loading activity…
+      </div>
+    ),
+  },
+);
 
 const LessonPlayer = dynamic(
   () =>
@@ -49,7 +65,19 @@ export function HomeworkStudioActivityPlayer({
   const [saveError, setSaveError] = useState<string | null>(null);
   const recordedRef = useRef(alreadyCompleted);
 
+  const learningTrackPack = useMemo(() => {
+    if (format !== "learning_track") return null;
+    try {
+      return parseLearningTrackLessonPlayerPack(pack);
+    } catch {
+      return null;
+    }
+  }, [format, pack]);
+
   const view = useMemo(() => {
+    if (format === "learning_track") {
+      return { data: null, error: learningTrackPack ? null : "Could not open this learning track." };
+    }
     try {
       return {
         data: spacePackToLessonScreens(format, pack, activityId),
@@ -61,10 +89,10 @@ export function HomeworkStudioActivityPlayer({
         error: error instanceof Error ? error.message : "Could not open this activity.",
       };
     }
-  }, [activityId, format, pack]);
+  }, [activityId, format, learningTrackPack, pack]);
 
   useEffect(() => {
-    if (!finished || recordedRef.current) return;
+    if (format === "learning_track" || !finished || recordedRef.current) return;
     recordedRef.current = true;
     setSaving(true);
     setSaveError(null);
@@ -78,7 +106,22 @@ export function HomeworkStudioActivityPlayer({
       setCompletedAt(result.finishedAt);
       if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     });
-  }, [finished, homeworkId]);
+  }, [finished, format, homeworkId]);
+
+  if (format === "learning_track" && learningTrackPack) {
+    return (
+      <PracticeTrackPlayer
+        key={playKey}
+        pack={learningTrackPack}
+        lessonId={`space-track-${activityId}`}
+        mode="student"
+        homeworkId={homeworkId}
+        activityId={activityId}
+        title={title}
+        alreadyCompleted={alreadyCompleted}
+      />
+    );
+  }
 
   if (view.error || !view.data) {
     return (

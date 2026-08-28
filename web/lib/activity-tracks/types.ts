@@ -22,6 +22,14 @@ export type ActivityTrackPartKind =
   | "true_false"
   | "sentence_scramble"
   | "letter_mixup"
+  | "wordsearch"
+  | "crossword"
+  | "memory"
+  | "read_and_answer"
+  | "cloze_choice"
+  | "cloze_open"
+  | "definition_match"
+  | "picture_story"
   | "explore_hotspots"
   | "picture_cloze"
   | "word_annotation"
@@ -175,6 +183,46 @@ export const ACTIVITY_TRACK_PART_CATALOG: ActivityTrackPartCatalogEntry[] = [
     kind: "letter_mixup",
     label: "Letter mixup",
     description: "Rebuild the word.",
+  },
+  {
+    kind: "wordsearch",
+    label: "Word search",
+    description: "Find words in a grid.",
+  },
+  {
+    kind: "crossword",
+    label: "Crossword",
+    description: "Solve clues in a crossword grid.",
+  },
+  {
+    kind: "memory",
+    label: "Memory",
+    description: "Match pairs from a memory grid.",
+  },
+  {
+    kind: "read_and_answer",
+    label: "Read and answer",
+    description: "Read a passage, then answer questions.",
+  },
+  {
+    kind: "cloze_choice",
+    label: "Cloze with choices",
+    description: "Fill gaps in a passage from options.",
+  },
+  {
+    kind: "cloze_open",
+    label: "Open cloze",
+    description: "Type the missing words in a passage.",
+  },
+  {
+    kind: "definition_match",
+    label: "Definition match",
+    description: "Match words to their definitions.",
+  },
+  {
+    kind: "picture_story",
+    label: "Picture story",
+    description: "Read a picture sequence and answer questions.",
   },
   {
     kind: "explore_hotspots",

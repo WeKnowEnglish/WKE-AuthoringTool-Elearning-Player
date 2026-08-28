@@ -10,6 +10,8 @@ import type {
   GradedActivityResponse,
   GradedActivityRunResult,
 } from "@/lib/graded-activities/types";
+import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
+import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
 
 export type HomeworkCollectionLessonPlayerResponses = Record<
   string,
@@ -24,8 +26,17 @@ function itemIds(part: HomeworkCollectionPart): Set<string> {
   if (part.kind === "free_response") {
     return new Set(part.prompts.map((prompt) => prompt.id));
   }
+  if (part.kind === "speaking_prompt") {
+    return new Set([part.responseId]);
+  }
   if (part.kind === "listening_item_match") {
     return new Set(part.activity.prompts.map((prompt) => prompt.id));
+  }
+  if (part.kind === "lesson_player_pack") {
+    return new Set(lessonPlayerPackItemIds(part));
+  }
+  if (part.kind === "document_module") {
+    return new Set(documentModuleItemIds(part));
   }
   return new Set(part.items.map((item) => item.id));
 }

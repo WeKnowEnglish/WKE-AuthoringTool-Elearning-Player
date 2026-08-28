@@ -140,4 +140,26 @@ describe("homework collections", () => {
       expect(homeworkCollectionPartValidationIssues(part).length).toBeGreaterThan(0);
     }
   });
+
+  it("scores speaking prompts for teacher review when a recording id is saved", () => {
+    const speaking = createHomeworkCollectionPart("speaking_prompt", "speak");
+    if (speaking.kind !== "speaking_prompt") throw new Error("Expected speaking");
+    speaking.prompt = "Describe your weekend.";
+    const document = parseHomeworkCollectionDocument({ version: 1, parts: [speaking] });
+    expect(document?.parts).toHaveLength(1);
+
+    const withoutRecording = scoreHomeworkCollectionAttempt(document!, {
+      speak: { answers: {} },
+    });
+    expect(withoutRecording.parts.speak?.correct).toBeNull();
+    expect(homeworkCollectionRequiredPartsComplete(document!, withoutRecording)).toBe(false);
+
+    const withRecording = scoreHomeworkCollectionAttempt(document!, {
+      speak: { answers: { [speaking.responseId]: "recording-uuid" } },
+    });
+    expect(withRecording.parts.speak?.correct).toBeNull();
+    expect(withRecording.parts.speak?.answered).toBe(1);
+    expect(homeworkCollectionRequiredPartsComplete(document!, withRecording)).toBe(true);
+    expect(homeworkCollectionAttemptTotals(withRecording).manualMaxScore).toBe(5);
+  });
 });

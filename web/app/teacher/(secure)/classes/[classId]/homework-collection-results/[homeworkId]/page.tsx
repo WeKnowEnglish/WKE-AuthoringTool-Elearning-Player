@@ -4,17 +4,35 @@ import { HomeworkCollectionReviewForm } from "@/components/teacher/homework/Home
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import { getClassHomework } from "@/lib/data/class-homework";
 import { listHomeworkCollectionAttemptsForTeacher } from "@/lib/data/homework-collection-attempts";
+import { listHomeworkCollectionSpeakingRecordingsForTeacher } from "@/lib/data/homework-collection-speaking-recordings";
 import { getTeacherClass } from "@/lib/data/teacher-classes";
 import type { HomeworkCollectionPart } from "@/lib/homework-collections";
+import type { AssessmentSpeakingRecording } from "@/lib/assessment";
+import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
+import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
 
 function itemLabel(part: HomeworkCollectionPart, itemId: string): string {
   if (part.kind === "multiple_choice") return part.questions.find((item) => item.id === itemId)?.prompt ?? itemId;
   if (part.kind === "line_match") return part.pairs.find((item) => item.id === itemId)?.left ?? itemId;
   if (part.kind === "free_response") return part.prompts.find((item) => item.id === itemId)?.prompt ?? itemId;
+  if (part.kind === "speaking_prompt") return part.prompt;
   if (part.kind === "listening_item_match") {
     return part.activity.prompts.find((item) => item.id === itemId)?.label ?? itemId;
   }
-  return part.items.find((item) => item.id === itemId)?.prompt ?? itemId;
+  if (part.kind === "lesson_player_pack") {
+    const index = lessonPlayerPackItemIds(part).indexOf(itemId);
+    return index >= 0 ? `${part.studioFormat} item ${index + 1}` : itemId;
+  }
+  if (part.kind === "document_module") {
+    const index = documentModuleItemIds(part).indexOf(itemId);
+    return index >= 0
+      ? `${part.moduleFormat.replace(/_/g, " ")} ${index + 1}`
+      : itemId;
+  }
+  if (part.kind === "letter_mixup" || part.kind === "listen_and_choose" || part.kind === "sentence_scramble") {
+    return part.items.find((item) => item.id === itemId)?.prompt ?? itemId;
+  }
+  return itemId;
 }
 
 function displayAnswer(part: HomeworkCollectionPart, answer: string): string {
@@ -41,16 +59,33 @@ function displayAnswer(part: HomeworkCollectionPart, answer: string): string {
   return answer;
 }
 
+function speakingRecordingForAnswer(
+  recordings: readonly AssessmentSpeakingRecording[],
+  part: HomeworkCollectionPart,
+  answer: string,
+): AssessmentSpeakingRecording | null {
+  if (part.kind !== "speaking_prompt") return null;
+  return (
+    recordings.find(
+      (recording) =>
+        recording.id === answer &&
+        recording.partId === part.id &&
+        recording.responseId === part.responseId,
+    ) ?? null
+  );
+}
+
 export default async function HomeworkCollectionResultsPage({
   params,
 }: {
   params: Promise<{ classId: string; homeworkId: string }>;
 }) {
   const { classId, homeworkId } = await params;
-  const [teacherClass, homework, attempts] = await Promise.all([
+  const [teacherClass, homework, attempts, speakingByStudent] = await Promise.all([
     getTeacherClass(classId),
     getClassHomework(homeworkId),
     listHomeworkCollectionAttemptsForTeacher({ classId, homeworkId }),
+    listHomeworkCollectionSpeakingRecordingsForTeacher({ classId, homeworkId }),
   ]);
   if (!teacherClass || !homework || homework.classId !== classId || homework.payload.type !== "graded_track") {
     notFound();
@@ -71,7 +106,7 @@ export default async function HomeworkCollectionResultsPage({
         </p>
         <h1 className="mt-1 text-2xl font-bold text-neutral-900">{homework.title}</h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Objective activities are scored from the frozen answer key. Review free responses and return focused feedback here.
+          Objective activities are scored from the frozen answer key. Review written and spoken responses here.
         </p>
       </header>
 
@@ -82,6 +117,7 @@ export default async function HomeworkCollectionResultsPage({
       ) : (
         <div className="space-y-4">
           {attempts.map((attempt) => {
+            const studentRecordings = speakingByStudent.get(attempt.studentId) ?? [];
             const reviewed = Object.values(attempt.review?.parts ?? {});
             const reviewedScore = reviewed.reduce((total, part) => total + part.score, 0);
             const reviewedMax = reviewed.reduce((total, part) => total + part.maxScore, 0);
@@ -125,12 +161,28 @@ export default async function HomeworkCollectionResultsPage({
                           )}
                         </div>
                         <dl className="mt-3 space-y-2">
-                          {Object.entries(scored.answers).map(([itemId, answer]) => (
+                          {Object.entries(scored.answers).map(([itemId, answer]) => {
+                            const recording = part
+                              ? speakingRecordingForAnswer(studentRecordings, part, answer)
+                              : null;
+                            return (
                             <div key={itemId}>
                               <dt className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{itemLabel(part, itemId)}</dt>
-                              <dd className="whitespace-pre-wrap text-sm font-medium text-neutral-800">{displayAnswer(part, answer)}</dd>
+                              <dd className="whitespace-pre-wrap text-sm font-medium text-neutral-800">
+                                {recording?.url ? (
+                                  <audio
+                                    controls
+                                    preload="metadata"
+                                    src={recording.url}
+                                    className="mt-1 w-full"
+                                  />
+                                ) : (
+                                  displayAnswer(part, answer)
+                                )}
+                              </dd>
                             </div>
-                          ))}
+                            );
+                          })}
                         </dl>
                       </article>
                     );

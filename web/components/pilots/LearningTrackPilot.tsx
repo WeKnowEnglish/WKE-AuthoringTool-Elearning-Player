@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { PracticeTrackPlayer } from "@/components/practice/PracticeTrackPlayer";
 import { useStudioPackQuerySource } from "@/components/pilots/useStudioPackQuerySource";
 import { buildHobbiesDay1BuiltinTrackPack } from "@/lib/learning-tracks/build-hobbies-day-1-builtin";
 import {
@@ -156,17 +157,26 @@ export function LearningTrackPilot() {
     <div className="rounded-2xl border-2 border-kid-ink/20 bg-white px-6 py-10 text-center">
       <p className="text-lg font-extrabold text-kid-ink">Loading Studio track…</p>
     </div>
-  ) : (
+  ) : embed ? (
     <LessonPlayer
       key={`${generation}:${initialScreenIndex}`}
       lessonId={`pilot-learning-track-${pack.id}`}
       lessonTitle={pack.title}
       screens={screens}
       mode="preview"
-      previewAudience={embed ? "published" : "authoring"}
+      previewAudience="published"
       initialScreenIndex={initialScreenIndex}
-      immersiveLayout={embed}
-      embedNaturalHeight={embed}
+      immersiveLayout
+      embedNaturalHeight
+    />
+  ) : (
+    <PracticeTrackPlayer
+      key={`${generation}:${initialScreenIndex}`}
+      pack={pack}
+      lessonId={`pilot-learning-track-${pack.id}`}
+      title={pack.title}
+      mode="pilot"
+      initialScreenIndex={initialScreenIndex}
     />
   );
 

@@ -11,6 +11,7 @@ import {
   scoreClozeOpenPlayable,
   type ClozeOpenPlayable,
 } from "@/lib/cloze-open";
+import { useSyncedAnswerMap } from "@/lib/homework-collections/use-synced-answer-map";
 
 type Stage = "overview" | "activity" | "review";
 
@@ -18,16 +19,24 @@ type Props = {
   activity: ClozeOpenPlayable;
   eyebrow?: string;
   onMastered?: () => void;
+  answers?: Record<string, string>;
+  onAnswersChange?: (answers: Record<string, string>) => void;
+  embedInHomeworkCollection?: boolean;
 };
 
 export function ClozeOpenPlayer({
   activity,
   eyebrow = "Open cloze",
   onMastered,
+  answers: controlledAnswers,
+  onAnswersChange,
+  embedInHomeworkCollection = false,
 }: Props) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useSyncedAnswerMap(controlledAnswers, onAnswersChange);
   const [checked, setChecked] = useState(false);
-  const [stage, setStage] = useState<Stage>("overview");
+  const [stage, setStage] = useState<Stage>(
+    embedInHomeworkCollection ? "activity" : "overview",
+  );
 
   const gaps = useMemo(() => listClozeOpenGaps(activity.segments), [activity.segments]);
   const normalization = useMemo(

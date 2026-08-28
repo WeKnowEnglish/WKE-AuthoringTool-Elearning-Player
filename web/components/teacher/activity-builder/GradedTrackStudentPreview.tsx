@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
-import { SecondaryHomeworkOneShell } from "@/components/secondary/SecondaryHomeworkOneShell";
 import {
   partHasHomeworkContent,
   type ActivityTrackDocument,
 } from "@/lib/activity-tracks";
 import { buildGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
-import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
+import { GradedTrackPlayer } from "@/components/homework/GradedTrackPlayer";
 
 type Props = {
   doc: ActivityTrackDocument;
@@ -81,61 +79,11 @@ export function GradedTrackStudentPreview({
     );
   }
 
-  const { freeze } = preview;
-  const focusedFreezePart = focusPartId
-    ? freeze.parts.find((part) => part.id === focusPartId)
-    : null;
-  const focusSectionId = focusedFreezePart?.sectionId ?? null;
-  const partLabels = Object.fromEntries(
-    freeze.parts.map((part) => [part.sectionId, part.label]),
-  );
-
-  const focusedCollectionPart = focusPartId
-    ? freeze.collectionDocument?.parts.find((part) => part.id === focusPartId)
-    : null;
-  if (
-    freeze.collectionDocument &&
-    (focusedCollectionPart || (!freeze.primaryDocument && !freeze.secondaryDocument))
-  ) {
-    return (
-      <HomeworkCollectionPlayer
-        document={freeze.collectionDocument}
-        mode="authoring-preview"
-        focusPartId={focusedCollectionPart?.id ?? null}
-      />
-    );
-  }
-
-  if (freeze.level === "primary" && freeze.primaryDocument) {
-    return (
-      <HomeworkTemplateOnePilot
-        key={`${freeze.trackId}:primary`}
-        mode="authoring-preview"
-        document={freeze.primaryDocument}
-        focusSectionId={focusSectionId}
-      />
-    );
-  }
-
-  if (freeze.level === "secondary" && freeze.secondaryDocument) {
-    return (
-      <SecondaryHomeworkOneShell
-        key={`${freeze.trackId}:secondary`}
-        mode="authoring-preview"
-        content={freeze.secondaryDocument}
-        focusPartId={focusSectionId}
-        partInstances={freeze.secondaryParts}
-        partLabels={partLabels}
-        title={freeze.title}
-        subtitle={freeze.instructions || undefined}
-        visiblePartIds={freeze.parts.map((part) => part.sectionId)}
-      />
-    );
-  }
-
   return (
-    <div className="flex h-full min-h-[16rem] items-center justify-center p-6 text-sm font-semibold text-stone-600">
-      Freeze built, but no student document was produced.
-    </div>
+    <GradedTrackPlayer
+      freeze={preview.freeze}
+      mode="authoring-preview"
+      focusPartId={focusPartId}
+    />
   );
 }

@@ -6,6 +6,23 @@ import {
   type HomeworkCollectionPartKind,
 } from "@/lib/homework-collections/types";
 import { defaultListeningItemMatchSettings } from "@/lib/learning-tracks/composition";
+import {
+  LISTENING_ITEM_MATCH_MAX_CHOICES,
+  LISTENING_ITEM_MATCH_MAX_PROMPTS,
+  LISTENING_ITEM_MATCH_MIN_CHOICES,
+  LISTENING_ITEM_MATCH_MIN_PROMPTS,
+  listeningItemMatchCountIssues,
+} from "@/lib/listening-item-match/limits";
+import {
+  lessonPlayerPackItemIds,
+  lessonPlayerPackValidationIssues,
+} from "@/lib/homework-collections/lesson-player-pack";
+import {
+  documentModuleItemIds,
+  documentModuleValidationIssues,
+  isCollectionReadingModuleFormat,
+} from "@/lib/homework-collections/document-module";
+import { isHomeworkStudioFormat } from "@/lib/class-homework/types";
 
 const MAX_PARTS = 30;
 const MAX_ITEMS = 50;
@@ -56,13 +73,18 @@ export function homeworkCollectionPartLabel(kind: HomeworkCollectionPartKind): s
   if (kind === "listen_and_choose") return "Listen and choose";
   if (kind === "listening_item_match") return "Listen and match";
   if (kind === "sentence_scramble") return "Sentence scramble";
+  if (kind === "lesson_player_pack") return "Quiz activity";
+  if (kind === "document_module") return "Reading activity";
+  if (kind === "speaking_prompt") return "Speaking prompt";
   return "Free response";
 }
 
 export function homeworkCollectionGradingMode(
   kind: HomeworkCollectionPartKind,
 ): "automatic" | "teacher_review" {
-  return kind === "free_response" ? "teacher_review" : "automatic";
+  return kind === "free_response" || kind === "speaking_prompt"
+    ? "teacher_review"
+    : "automatic";
 }
 
 function hasText(value: unknown): value is string {
@@ -243,11 +265,21 @@ export function homeworkCollectionPartValidationIssues(raw: unknown): string[] {
     }
     const choices = Array.isArray(activity.choices) ? activity.choices : [];
     const prompts = Array.isArray(activity.prompts) ? activity.prompts : [];
-    if (choices.length !== 8) {
-      issues.push("Listen and match needs exactly 8 choices (5 answers and 3 distractors).");
+    for (const message of listeningItemMatchCountIssues({
+      promptCount: prompts.length,
+      choiceCount: choices.length,
+    })) {
+      issues.push(message);
     }
-    if (prompts.length !== 5) {
-      issues.push("Listen and match needs exactly 5 prompts to match.");
+    if (prompts.length > LISTENING_ITEM_MATCH_MAX_PROMPTS) {
+      issues.push(
+        `Listen and match supports up to ${LISTENING_ITEM_MATCH_MAX_PROMPTS} prompts.`,
+      );
+    }
+    if (choices.length > LISTENING_ITEM_MATCH_MAX_CHOICES) {
+      issues.push(
+        `Listen and match supports up to ${LISTENING_ITEM_MATCH_MAX_CHOICES} choices.`,
+      );
     }
     addIdIssues(choices, "Choice", issues);
     addIdIssues(prompts, "Prompt", issues);
@@ -285,10 +317,54 @@ export function homeworkCollectionPartValidationIssues(raw: unknown): string[] {
       );
     if (new Set(correctIds).size !== prompts.length) {
       issues.push(
-        "Each Listen and match answer must be used once so three choices remain as distractors.",
+        "Each prompt needs a unique correct choice (no duplicate matches).",
       );
     }
     return issues;
+  }
+
+  if (raw.kind === "lesson_player_pack") {
+    const studioFormat = raw.studioFormat;
+    if (!isHomeworkStudioFormat(studioFormat) || studioFormat === "learning_track") {
+      issues.push("Choose a supported quiz format.");
+    }
+    if (!isRecord(raw.pack)) {
+      issues.push("Lesson Player pack is missing.");
+    }
+    if (issues.length > 0) return issues;
+    return lessonPlayerPackValidationIssues({
+      schemaVersion: HOMEWORK_COLLECTION_VERSION,
+      id: typeof raw.id === "string" ? raw.id : "part",
+      kind: "lesson_player_pack",
+      title: typeof raw.title === "string" ? raw.title : "",
+      instructions: typeof raw.instructions === "string" ? raw.instructions : "",
+      required: raw.required !== false,
+      studioFormat: studioFormat as import("@/lib/class-homework/types").HomeworkStudioFormat,
+      pack: raw.pack as Record<string, unknown>,
+      authoringSession: raw.authoringSession as import("@/lib/activity-builder/games/quiz-builder-session").QuizSession | undefined,
+    });
+  }
+
+  if (raw.kind === "document_module") {
+    const moduleFormat = raw.moduleFormat;
+    if (!isCollectionReadingModuleFormat(moduleFormat)) {
+      issues.push("Choose a supported reading activity format.");
+      return issues;
+    }
+    if (!isRecord(raw.document)) {
+      issues.push("Reading activity content is missing.");
+      return issues;
+    }
+    return documentModuleValidationIssues({
+      schemaVersion: HOMEWORK_COLLECTION_VERSION,
+      id: typeof raw.id === "string" ? raw.id : "part",
+      kind: "document_module",
+      title: typeof raw.title === "string" ? raw.title : "",
+      instructions: typeof raw.instructions === "string" ? raw.instructions : "",
+      required: raw.required !== false,
+      moduleFormat,
+      document: raw.document as Record<string, unknown>,
+    });
   }
 
   if (raw.kind === "sentence_scramble") {
@@ -307,6 +383,39 @@ export function homeworkCollectionPartValidationIssues(raw: unknown): string[] {
       }
     });
     return issues;
+  }
+
+  if (raw.kind === "speaking_prompt") {
+    if (!hasText(raw.prompt)) {
+      issues.push("Add a speaking prompt for students.");
+    }
+    if (!hasText(raw.responseId)) {
+      issues.push("Speaking response id is missing.");
+    }
+    const maxDuration = Number(raw.maxDurationSeconds);
+    if (
+      !Number.isInteger(maxDuration) ||
+      maxDuration < 15 ||
+      maxDuration > 120
+    ) {
+      issues.push("Max recording length must be between 15 and 120 seconds.");
+    }
+    const maxPoints = Number(raw.maxPoints);
+    if (!Number.isInteger(maxPoints) || maxPoints < 1 || maxPoints > 100) {
+      issues.push("Points must be between 1 and 100.");
+    }
+    if (
+      raw.imageUrl !== undefined &&
+      raw.imageUrl !== "" &&
+      !cleanUrl(raw.imageUrl)
+    ) {
+      issues.push("Picture URL must be a valid http(s) link or site path.");
+    }
+    return issues;
+  }
+
+  if (raw.kind !== "free_response") {
+    return ["Choose a supported homework activity type."];
   }
 
   const prompts = Array.isArray(raw.prompts) ? raw.prompts : [];
@@ -429,6 +538,16 @@ export function createHomeworkCollectionPart(
           sentence: "This is an example sentence.",
         },
       ],
+    };
+  }
+  if (kind === "speaking_prompt") {
+    return {
+      ...base,
+      kind,
+      prompt: "Describe what you see or answer the question aloud.",
+      responseId: crypto.randomUUID(),
+      maxDurationSeconds: 60,
+      maxPoints: 5,
     };
   }
   return {
@@ -575,7 +694,7 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
     const audioText = cleanText(activityRaw.audioText, 5000);
     if (!audioUrl && !audioText) return null;
     const choices = (Array.isArray(activityRaw.choices) ? activityRaw.choices : [])
-      .slice(0, 8)
+      .slice(0, LISTENING_ITEM_MATCH_MAX_CHOICES)
       .flatMap((value, index) => {
         if (!isRecord(value)) return [];
         const label = cleanText(value.label, 500);
@@ -588,7 +707,7 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
         }];
       });
     const prompts = (Array.isArray(activityRaw.prompts) ? activityRaw.prompts : [])
-      .slice(0, 5)
+      .slice(0, LISTENING_ITEM_MATCH_MAX_PROMPTS)
       .flatMap((value, index) => {
         if (!isRecord(value)) return [];
         const label = cleanText(value.label, 500);
@@ -601,8 +720,13 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
           correctChoiceId,
         }];
       });
-    if (choices.length !== 8 || prompts.length !== 5) return null;
-    if (new Set(prompts.map((prompt) => prompt.correctChoiceId)).size !== 5) {
+    if (
+      choices.length < LISTENING_ITEM_MATCH_MIN_CHOICES ||
+      prompts.length < LISTENING_ITEM_MATCH_MIN_PROMPTS ||
+      choices.length < prompts.length ||
+      new Set(prompts.map((prompt) => prompt.correctChoiceId)).size !==
+        prompts.length
+    ) {
       return null;
     }
     return {
@@ -642,6 +766,61 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
       });
     return items.length ? { ...base, kind, items } : null;
   }
+
+  if (kind === "lesson_player_pack") {
+    const studioFormat = raw.studioFormat;
+    if (!isHomeworkStudioFormat(studioFormat) || studioFormat === "learning_track") {
+      return null;
+    }
+    if (!isRecord(raw.pack)) return null;
+    const part: import("@/lib/homework-collections/types").HomeworkCollectionLessonPlayerPackPart = {
+      ...base,
+      kind,
+      studioFormat,
+      pack: raw.pack as Record<string, unknown>,
+      ...(raw.authoringSession
+        ? { authoringSession: raw.authoringSession as import("@/lib/activity-builder/games/quiz-builder-session").QuizSession }
+        : {}),
+    };
+    return lessonPlayerPackValidationIssues(part).length === 0 ? part : null;
+  }
+
+  if (kind === "document_module") {
+    const moduleFormat = raw.moduleFormat;
+    if (!isCollectionReadingModuleFormat(moduleFormat)) return null;
+    if (!isRecord(raw.document)) return null;
+    const part: import("@/lib/homework-collections/types").HomeworkCollectionDocumentModulePart = {
+      ...base,
+      kind,
+      moduleFormat,
+      document: raw.document as Record<string, unknown>,
+    };
+    return documentModuleValidationIssues(part).length === 0 ? part : null;
+  }
+
+  if (kind === "speaking_prompt") {
+    const prompt = cleanText(raw.prompt, 2000);
+    if (!prompt) return null;
+    const responseId = cleanId(raw.responseId, "response");
+    const maxDurationSeconds = Number.isFinite(raw.maxDurationSeconds)
+      ? Math.max(15, Math.min(120, Math.round(Number(raw.maxDurationSeconds))))
+      : 60;
+    const maxPoints = Number.isFinite(raw.maxPoints)
+      ? Math.max(1, Math.min(100, Math.round(Number(raw.maxPoints))))
+      : 5;
+    const imageUrl = cleanUrl(raw.imageUrl);
+    return {
+      ...base,
+      kind,
+      prompt,
+      responseId,
+      maxDurationSeconds,
+      maxPoints,
+      ...(imageUrl ? { imageUrl } : {}),
+    };
+  }
+
+  if (kind !== "free_response") return null;
 
   const prompts = (Array.isArray(raw.prompts) ? raw.prompts : [])
     .slice(0, MAX_ITEMS)
@@ -684,13 +863,19 @@ export function homeworkCollectionPartItemCount(part: HomeworkCollectionPart): n
   if (part.kind === "multiple_choice") return part.questions.length;
   if (part.kind === "line_match") return part.pairs.length;
   if (part.kind === "free_response") return part.prompts.length;
+  if (part.kind === "speaking_prompt") return 1;
   if (part.kind === "listening_item_match") return part.activity.prompts.length;
+  if (part.kind === "lesson_player_pack") return lessonPlayerPackItemIds(part).length;
+  if (part.kind === "document_module") return documentModuleItemIds(part).length;
   return part.items.length;
 }
 
 export function homeworkCollectionPartMaxScore(part: HomeworkCollectionPart): number {
   if (part.kind === "free_response") {
     return part.prompts.reduce((total, prompt) => total + prompt.maxPoints, 0);
+  }
+  if (part.kind === "speaking_prompt") {
+    return part.maxPoints;
   }
   return homeworkCollectionPartItemCount(part);
 }

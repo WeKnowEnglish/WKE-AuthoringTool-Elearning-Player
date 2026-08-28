@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { HomeworkWritingPromptPlayer } from "@/components/homework/HomeworkWritingPromptPlayer";
-import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
+import { GradedTrackPlayer } from "@/components/homework/GradedTrackPlayer";
 import { HomeworkFlashcardsPlayer } from "@/components/primary/HomeworkFlashcardsPlayer";
 import { HomeworkPackQuizPlayer } from "@/components/primary/HomeworkPackQuizPlayer";
 import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
@@ -16,13 +16,13 @@ import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-grad
 import { parseFrozenSecondaryHomeworkTemplateDocument } from "@/lib/class-homework/freeze-homework-template";
 import { homeworkPortalPath, resolveHomeworkPortal } from "@/lib/class-homework/portal";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
-import { SECONDARY_HOMEWORK_ONE } from "@/lib/homework-templates/secondary-homework-one";
 import {
   getMyHomeworkTemplateSpeakingRecordings,
   getMyHomeworkTemplateSubmission,
 } from "@/lib/data/homework-template-submissions";
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
+import { getMyHomeworkCollectionSpeakingRecordings } from "@/lib/data/homework-collection-speaking-recordings";
 import { createClient } from "@/lib/supabase/server";
 import { learningBandFromUser } from "@/lib/student-classes/portal-paths";
 import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
@@ -88,12 +88,14 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
   const gradedFreeze = payload.type === "graded_track"
     ? parseGradedTrackFreezeDocument(payload.document)
     : null;
-  const [templateSubmission, templateRecordings, writingSubmission, collectionAttempt] = await Promise.all([
+  const [templateSubmission, templateRecordings, writingSubmission, collectionAttempt, collectionSpeakingRecordings] = await Promise.all([
     needsTemplateSubmission ? getMyHomeworkTemplateSubmission(homework.id) : Promise.resolve(null),
     needsTemplateSubmission ? getMyHomeworkTemplateSpeakingRecordings(homework.id) : Promise.resolve([]),
     needsWritingSubmission ? getMyHomeworkWritingSubmission(homework.id) : Promise.resolve(null),
     gradedFreeze?.collectionDocument ? getMyHomeworkCollectionAttempt(homework.id) : Promise.resolve(null),
+    gradedFreeze?.collectionDocument ? getMyHomeworkCollectionSpeakingRecordings(homework.id) : Promise.resolve([]),
   ]);
+  const gradedSpeakingRecordings = [...templateRecordings, ...collectionSpeakingRecordings];
   const flashcardCards =
     payload.type === "pack_flashcards"
       ? parseStoredPackFlashcardCards(payload.cards ?? [])
@@ -219,59 +221,16 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
         />
       ) : null}
 
-      {payload.type === "graded_track" && payload.level === "secondary" ? (
-        (() => {
-          const freeze = gradedFreeze;
-          const content = freeze?.secondaryDocument as
-            | typeof SECONDARY_HOMEWORK_ONE
-            | undefined;
-          return content || freeze?.collectionDocument ? (
-            <div className="space-y-6">
-              {content ? (
-                <SecondaryHomeworkOneShell
-                  homeworkId={homework.id}
-                  alreadyCompleted={Boolean(homework.completedAt)}
-                  homeHref="/secondary"
-                  initialSubmission={templateSubmission}
-                  initialRecording={templateRecordings[0]}
-                  initialRecordings={templateRecordings}
-                  content={content}
-                  partInstances={freeze?.secondaryParts}
-                  visiblePartIds={freeze?.parts.map((part) => part.sectionId)}
-                  partLabels={
-                    freeze
-                      ? Object.fromEntries(
-                          freeze.parts.map((part) => [part.sectionId, part.label]),
-                        )
-                      : undefined
-                  }
-                  title={freeze?.title}
-                  subtitle={freeze?.instructions || undefined}
-                  deferOverallCompletion={Boolean(freeze?.collectionDocument)}
-                />
-              ) : null}
-              {freeze?.collectionDocument ? (
-                <div className={content ? "border-t-4 border-dashed border-teal-200 pt-6" : ""}>
-                  {content ? (
-                    <p className="mb-3 text-sm font-extrabold uppercase tracking-wide text-teal-800">
-                      Collection activities
-                    </p>
-                  ) : null}
-                  <HomeworkCollectionPlayer
-                    homeworkId={homework.id}
-                    document={freeze.collectionDocument}
-                    initialAttempt={collectionAttempt}
-                    alreadyCompleted={Boolean(homework.completedAt)}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="rounded-xl border-2 border-dashed border-neutral-400 bg-white px-4 py-5 text-sm font-semibold text-neutral-600">
-              Graded track content is missing. Ask your teacher to re-assign this homework.
-            </p>
-          );
-        })()
+      {payload.type === "graded_track" && payload.level === "secondary" && gradedFreeze ? (
+        <GradedTrackPlayer
+          freeze={gradedFreeze}
+          homeworkId={homework.id}
+          alreadyCompleted={Boolean(homework.completedAt)}
+          initialCollectionAttempt={collectionAttempt}
+          initialTemplateSubmission={templateSubmission}
+          initialSpeakingRecordings={gradedSpeakingRecordings}
+          homeHref="/secondary"
+        />
       ) : null}
       </HomeworkStartGate>
     </HomeworkPlayChrome>

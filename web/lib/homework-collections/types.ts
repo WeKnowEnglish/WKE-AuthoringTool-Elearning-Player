@@ -1,5 +1,9 @@
 /** Versioned, template-independent parts used by Graded Homework collections. */
 
+import type { HomeworkStudioFormat } from "@/lib/class-homework/types";
+import type { QuizSession } from "@/lib/activity-builder/games/quiz-builder-session";
+import type { CollectionReadingModuleFormat } from "@/lib/homework-collections/document-module";
+
 export const HOMEWORK_COLLECTION_VERSION = 1 as const;
 
 export const HOMEWORK_COLLECTION_PART_KINDS = [
@@ -10,6 +14,9 @@ export const HOMEWORK_COLLECTION_PART_KINDS = [
   "listening_item_match",
   "sentence_scramble",
   "free_response",
+  "speaking_prompt",
+  "lesson_player_pack",
+  "document_module",
 ] as const;
 
 export type HomeworkCollectionPartKind =
@@ -100,6 +107,32 @@ export type HomeworkCollectionFreeResponsePart = HomeworkCollectionPartBase & {
   }>;
 };
 
+/** Single spoken response recorded by the student (teacher review). */
+export type HomeworkCollectionSpeakingPromptPart = HomeworkCollectionPartBase & {
+  kind: "speaking_prompt";
+  prompt: string;
+  imageUrl?: string;
+  responseId: string;
+  maxDurationSeconds: number;
+  maxPoints: number;
+};
+
+/** Frozen Lesson Player quiz pack (flashcards, true/false, word games, etc.). */
+export type HomeworkCollectionLessonPlayerPackPart = HomeworkCollectionPartBase & {
+  kind: "lesson_player_pack";
+  studioFormat: HomeworkStudioFormat;
+  pack: Record<string, unknown>;
+  /** Round-trip quiz authoring for in-track editing. */
+  authoringSession?: QuizSession;
+};
+
+/** Reading / document homework module (read and answer, cloze, etc.). */
+export type HomeworkCollectionDocumentModulePart = HomeworkCollectionPartBase & {
+  kind: "document_module";
+  moduleFormat: CollectionReadingModuleFormat;
+  document: Record<string, unknown>;
+};
+
 export type HomeworkCollectionPart =
   | HomeworkCollectionMultipleChoicePart
   | HomeworkCollectionLetterMixupPart
@@ -107,7 +140,10 @@ export type HomeworkCollectionPart =
   | HomeworkCollectionListenAndChoosePart
   | HomeworkCollectionListeningItemMatchPart
   | HomeworkCollectionSentenceScramblePart
-  | HomeworkCollectionFreeResponsePart;
+  | HomeworkCollectionFreeResponsePart
+  | HomeworkCollectionSpeakingPromptPart
+  | HomeworkCollectionLessonPlayerPackPart
+  | HomeworkCollectionDocumentModulePart;
 
 export type HomeworkCollectionDocument = {
   version: typeof HOMEWORK_COLLECTION_VERSION;

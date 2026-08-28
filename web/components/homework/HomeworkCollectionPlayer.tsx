@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import Image from "next/image";
 import { ArrowLeft, ArrowRight, Check, RotateCcw, Volume2 } from "lucide-react";
+import { AssessmentSpeakingRecorder } from "@/components/assessment/AssessmentSpeakingRecorder";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
 import { saveHomeworkCollectionAttempt } from "@/lib/actions/homework-collection-attempt";
 import {
@@ -12,6 +14,9 @@ import {
   type HomeworkCollectionPart,
 } from "@/lib/homework-collections";
 import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+import { HomeworkCollectionLessonPlayerPartSurface } from "@/components/homework/HomeworkCollectionLessonPlayerPartSurface";
+import { HomeworkCollectionDocumentModulePartSurface } from "@/components/homework/HomeworkCollectionDocumentModulePartSurface";
+import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 
 type Responses = Record<string, { answers: Record<string, string> }>;
 
@@ -23,6 +28,12 @@ type Props = {
   mode?: "student" | "authoring-preview";
   focusPartId?: string | null;
   onSubmitted?: () => void;
+  /** Embedded inside GradedTrackPlayer — hides nav/footer; parent owns navigation. */
+  segmentMode?: boolean;
+  responses?: Responses;
+  onResponsesChange?: (responses: Responses) => void;
+  speakingRecordings?: readonly AssessmentSpeakingRecording[];
+  onSpeakingRecordingSaved?: (recording: AssessmentSpeakingRecording) => void;
 };
 
 function responsesFromAttempt(attempt?: HomeworkCollectionAttempt | null): Responses {
@@ -79,6 +90,11 @@ export function HomeworkCollectionPlayer({
   mode = "student",
   focusPartId = null,
   onSubmitted,
+  segmentMode = false,
+  responses: controlledResponses,
+  onResponsesChange,
+  speakingRecordings = [],
+  onSpeakingRecordingSaved,
 }: Props) {
   const authoringPreview = mode === "authoring-preview";
   const [activeIndex, setActiveIndex] = useState(() => {
@@ -87,7 +103,21 @@ export function HomeworkCollectionPlayer({
       : -1;
     return focusIndex >= 0 ? focusIndex : 0;
   });
-  const [responses, setResponses] = useState<Responses>(() => responsesFromAttempt(initialAttempt));
+  const [internalResponses, setInternalResponses] = useState<Responses>(() =>
+    responsesFromAttempt(initialAttempt),
+  );
+  const responses = controlledResponses ?? internalResponses;
+  const patchResponses = useCallback(
+    (updater: (current: Responses) => Responses) => {
+      const next = updater(controlledResponses ?? internalResponses);
+      if (onResponsesChange) {
+        onResponsesChange(next);
+      } else {
+        setInternalResponses(next);
+      }
+    },
+    [controlledResponses, internalResponses, onResponsesChange],
+  );
   const [attempt, setAttempt] = useState(initialAttempt ?? null);
   const [notice, setNotice] = useState<string | null>(null);
   const [finished, setFinished] = useState(initialAttempt?.status === "submitted");
@@ -100,7 +130,7 @@ export function HomeworkCollectionPlayer({
 
   const currentAnswers = responses[part.id]?.answers ?? {};
   const setAnswer = (itemId: string, value: string) => {
-    setResponses((current) => ({
+    patchResponses((current) => ({
       ...current,
       [part.id]: {
         answers: { ...(current[part.id]?.answers ?? {}), [itemId]: value },
@@ -153,7 +183,7 @@ export function HomeworkCollectionPlayer({
     ? homeworkCollectionAttemptTotals(attempt.content)
     : homeworkCollectionAttemptTotals(previewContent);
 
-  if (finished && attempt) {
+  if (!segmentMode && finished && attempt) {
     const hasManual = attempt.manualMaxScore > 0;
     return (
       <HomeworkFinishPanel
@@ -172,12 +202,13 @@ export function HomeworkCollectionPlayer({
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 p-3 sm:p-5">
-      {alreadyCompleted && !authoringPreview ? (
+    <div className={segmentMode ? "space-y-5" : "mx-auto w-full max-w-4xl space-y-4 p-3 sm:p-5"}>
+      {!segmentMode && alreadyCompleted && !authoringPreview ? (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
           This homework is already complete. You can still review your work.
         </p>
       ) : null}
+      {!segmentMode ? (
       <nav className="flex gap-1 overflow-x-auto pb-1" aria-label="Homework activities">
         {document.parts.map((entry, index) => {
           const answered = Object.values(responses[entry.id]?.answers ?? {}).filter(Boolean).length;
@@ -194,9 +225,12 @@ export function HomeworkCollectionPlayer({
           );
         })}
       </nav>
+      ) : null}
 
-      <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
-        <PartHeader part={part} index={displayIndex} total={document.parts.length} />
+      <section className={segmentMode ? "space-y-5" : "rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6"}>
+        {!segmentMode ? (
+          <PartHeader part={part} index={displayIndex} total={document.parts.length} />
+        ) : null}
 
         <div className="mt-6 space-y-5">
           {part.kind === "multiple_choice"
@@ -362,6 +396,35 @@ export function HomeworkCollectionPlayer({
               })
             : null}
 
+          {part.kind === "lesson_player_pack" ? (
+            <HomeworkCollectionLessonPlayerPartSurface
+              part={part}
+              answers={currentAnswers}
+              onAnswersChange={(nextAnswers) => {
+                patchResponses((current) => ({
+                  ...current,
+                  [part.id]: { answers: nextAnswers },
+                }));
+                setNotice(null);
+              }}
+              previewMode={authoringPreview}
+            />
+          ) : null}
+
+          {part.kind === "document_module" ? (
+            <HomeworkCollectionDocumentModulePartSurface
+              part={part}
+              answers={currentAnswers}
+              onAnswersChange={(nextAnswers) => {
+                patchResponses((current) => ({
+                  ...current,
+                  [part.id]: { answers: nextAnswers },
+                }));
+                setNotice(null);
+              }}
+            />
+          ) : null}
+
           {part.kind === "free_response"
             ? part.prompts.map((prompt, index) => {
                 const value = currentAnswers[prompt.id] ?? "";
@@ -374,10 +437,49 @@ export function HomeworkCollectionPlayer({
                 );
               })
             : null}
+
+          {part.kind === "speaking_prompt" ? (
+            <div className="space-y-4">
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-extrabold leading-6 text-stone-900">
+                {part.prompt}
+              </p>
+              {part.imageUrl ? (
+                <figure className="overflow-hidden rounded-xl border border-stone-200 bg-white p-3">
+                  <Image
+                    src={part.imageUrl}
+                    alt=""
+                    width={960}
+                    height={540}
+                    className="mx-auto max-h-72 w-auto rounded-lg object-contain"
+                  />
+                </figure>
+              ) : null}
+              <AssessmentSpeakingRecorder
+                homeworkId={homeworkId}
+                partId={part.id}
+                responseId={part.responseId}
+                maxDurationSeconds={part.maxDurationSeconds}
+                initialRecording={speakingRecordings.find(
+                  (recording) =>
+                    recording.partId === part.id &&
+                    recording.responseId === part.responseId,
+                )}
+                submissionKind="homework-collection"
+                onSaved={(recording) => {
+                  setAnswer(part.responseId, recording.id);
+                  onSpeakingRecordingSaved?.(recording);
+                }}
+              />
+              <p className="text-xs font-bold text-stone-500">
+                Your teacher will listen and award up to {part.maxPoints} points.
+              </p>
+            </div>
+          ) : null}
         </div>
 
-        {notice ? <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">{notice}</p> : null}
+        {!segmentMode && notice ? <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">{notice}</p> : null}
 
+        {!segmentMode ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
           <button type="button" disabled={pending || displayIndex === 0} onClick={() => save(false, Math.max(0, displayIndex - 1))} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-stone-300 px-4 text-sm font-bold disabled:opacity-30"><ArrowLeft className="h-4 w-4" /> Previous</button>
           <p className="text-xs font-bold text-stone-500">{recordedTotals.answered} response{recordedTotals.answered === 1 ? "" : "s"} added</p>
@@ -387,6 +489,7 @@ export function HomeworkCollectionPlayer({
             <button type="button" disabled={pending || authoringPreview} onClick={() => save(true)} className="inline-flex min-h-11 items-center rounded-xl bg-violet-700 px-5 text-sm font-extrabold text-white disabled:opacity-50">{authoringPreview ? "Preview only" : pending ? "Submitting…" : "Submit homework"}</button>
           )}
         </div>
+        ) : null}
       </section>
     </div>
   );

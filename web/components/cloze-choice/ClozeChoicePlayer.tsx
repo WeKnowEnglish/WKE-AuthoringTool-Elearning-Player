@@ -10,6 +10,7 @@ import {
   scoreClozeChoicePlayable,
   type ClozeChoicePlayable,
 } from "@/lib/cloze-choice";
+import { useSyncedAnswerMap } from "@/lib/homework-collections/use-synced-answer-map";
 
 type Stage = "overview" | "activity" | "review";
 
@@ -17,6 +18,9 @@ type Props = {
   activity: ClozeChoicePlayable;
   eyebrow?: string;
   onMastered?: () => void;
+  answers?: Record<string, string>;
+  onAnswersChange?: (answers: Record<string, string>) => void;
+  embedInHomeworkCollection?: boolean;
 };
 
 function shuffleOptions(options: string[]): string[] {
@@ -32,10 +36,15 @@ export function ClozeChoicePlayer({
   activity,
   eyebrow = "Cloze with choices",
   onMastered,
+  answers: controlledAnswers,
+  onAnswersChange,
+  embedInHomeworkCollection = false,
 }: Props) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useSyncedAnswerMap(controlledAnswers, onAnswersChange);
   const [checked, setChecked] = useState(false);
-  const [stage, setStage] = useState<Stage>("overview");
+  const [stage, setStage] = useState<Stage>(
+    embedInHomeworkCollection ? "activity" : "overview",
+  );
 
   const gaps = useMemo(() => listClozeChoiceGaps(activity.segments), [activity.segments]);
   const [optionOrder] = useState(() => {

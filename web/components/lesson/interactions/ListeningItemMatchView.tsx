@@ -182,7 +182,7 @@ export function ListeningItemMatchView({
     if (wrongIds.size === 0) {
       setLockedPromptIds(correctIds);
       setWrongPromptIds(new Set());
-      setFeedback("Excellent listening — all five matches are correct!");
+      setFeedback("Excellent listening — all matches are correct!");
       onPass();
       return;
     }

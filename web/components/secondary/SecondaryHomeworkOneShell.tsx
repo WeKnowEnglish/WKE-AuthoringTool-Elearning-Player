@@ -62,6 +62,8 @@ type Props = {
   partInstances?: readonly SecondaryHomeworkPartInstance[];
   /** Mixed collections submit globally after their generic activities. */
   deferOverallCompletion?: boolean;
+  /** Embedded inside GradedTrackPlayer — hides sidebar nav and outer chrome. */
+  segmentMode?: boolean;
 };
 
 function firstIncompletePart(
@@ -96,6 +98,7 @@ export function SecondaryHomeworkOneShell({
   visiblePartIds,
   partInstances,
   deferOverallCompletion = false,
+  segmentMode = false,
 }: Props) {
   const router = useRouter();
   const authoringPreview = mode === "authoring-preview";
@@ -300,9 +303,13 @@ export function SecondaryHomeworkOneShell({
         }
       }
       setSavedParts((current) => new Set(current).add(partId));
-      const nextPart = navParts.find((part) => part.order === activePart.order + 1);
-      if (nextPart) setActivePartId(nextPart.id);
-      setNotice("Part saved.");
+      if (!segmentMode) {
+        const nextPart = navParts.find((part) => part.order === activePart.order + 1);
+        if (nextPart) setActivePartId(nextPart.id);
+        setNotice("Part saved.");
+      } else {
+        setNotice("");
+      }
     });
   }
 
@@ -341,7 +348,11 @@ export function SecondaryHomeworkOneShell({
       }
       if (deferOverallCompletion) {
         setSavedParts((current) => new Set(current).add(activePart.id));
-        setNotice("Template activities saved. Continue to the collection activities below.");
+        setNotice(
+          segmentMode
+            ? ""
+            : "Template activities saved. Continue to the collection activities below.",
+        );
         return;
       }
       const completion = await recordHomeworkTemplateCompletion({ homeworkId });
@@ -418,7 +429,8 @@ export function SecondaryHomeworkOneShell({
   }
 
   return (
-    <div className={authoringPreview ? "space-y-4 p-3 sm:p-4" : "space-y-4"}>
+    <div className={segmentMode ? "space-y-4" : authoringPreview ? "space-y-4 p-3 sm:p-4" : "space-y-4"}>
+      {!segmentMode ? (
       <header className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -451,10 +463,12 @@ export function SecondaryHomeworkOneShell({
           </button>
         ) : null}
       </header>
+      ) : null}
 
       {notice ? <p role="status" className="rounded-xl border-2 border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-900">{notice}</p> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <div className={segmentMode ? "min-w-0" : "grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]"}>
+        {!segmentMode ? (
         <nav aria-label="Homework parts" className="space-y-2 lg:sticky lg:top-4 lg:self-start">
           <p className="px-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
             {navParts.length}-part homework
@@ -481,14 +495,17 @@ export function SecondaryHomeworkOneShell({
             );
           })}
         </nav>
+        ) : null}
 
-        <section className="min-w-0 rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <section className={segmentMode ? "min-w-0" : "min-w-0 rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-sm sm:p-6"}>
+          {!segmentMode ? (
           <div className="mb-5">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-700">
               Part {activePart.order} of {navParts.length}
             </p>
             <h3 className="mt-1 text-xl font-black text-[#17375e]">{activeLabel}</h3>
           </div>
+          ) : null}
 
           {activePart.templatePartId === "community-sequence" ? <div>
             <p className="font-bold text-slate-700">{readingContent.instructions}</p>

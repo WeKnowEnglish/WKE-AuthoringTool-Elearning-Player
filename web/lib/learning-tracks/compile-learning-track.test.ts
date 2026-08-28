@@ -206,7 +206,7 @@ describe("LTC listen and match activity", () => {
     }
   });
 
-  it("rejects a task that does not leave exactly three distractors", () => {
+  it("rejects duplicate correct choices across prompts", () => {
     const settings = defaultListeningItemMatchSettings();
     settings.prompts[1]!.correctChoiceId = settings.prompts[0]!.correctChoiceId;
     const beat = createBeatInstance("listening_item_match", {
@@ -214,7 +214,7 @@ describe("LTC listen and match activity", () => {
       presentation: { listeningItemMatch: settings },
     });
 
-    expect(() => resolveBeatScreensSync(beat)).toThrow(/three choices remain/i);
+    expect(() => resolveBeatScreensSync(beat)).toThrow(/unique correct choice/i);
   });
 });
 

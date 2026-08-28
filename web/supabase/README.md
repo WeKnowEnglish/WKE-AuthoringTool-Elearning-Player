@@ -37,7 +37,7 @@ passwords, access tokens, service-role keys, or files from `supabase/.temp`.
 
 The original migration set used three-digit versions. Four duplicate version pairs were
 consolidated without changing their SQL order, leaving one file for every version from `001`
-through `139`. The audit treats historical demo/curriculum seed rows as informational because
+through `140`. The audit treats historical demo/curriculum seed rows as informational because
 data can legitimately be edited or removed after a migration; schema markers remain blocking.
 
 Migration-history repair must only be run after reviewing the audit output. Repair updates

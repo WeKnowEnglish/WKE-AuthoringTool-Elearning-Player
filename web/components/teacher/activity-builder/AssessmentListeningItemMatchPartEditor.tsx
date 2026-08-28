@@ -9,6 +9,12 @@ import { AssessmentInspectorSection } from "@/components/teacher/activity-builde
 import { AssessmentQuestionEditor } from "@/components/teacher/activity-builder/AssessmentQuestionEditor";
 import { AssessmentListeningAudioFields } from "@/components/teacher/activity-builder/AssessmentListeningAudioFields";
 import type { AssessmentPart } from "@/lib/assessment/types";
+import {
+  LISTENING_ITEM_MATCH_MAX_CHOICES,
+  LISTENING_ITEM_MATCH_MAX_PROMPTS,
+  LISTENING_ITEM_MATCH_MIN_CHOICES,
+  LISTENING_ITEM_MATCH_MIN_PROMPTS,
+} from "@/lib/listening-item-match/limits";
 
 type ItemMatchPart = Extract<AssessmentPart, { kind: "listening_item_match" }>;
 
@@ -39,8 +45,14 @@ function emptyPrompt(
 export function AssessmentListeningItemMatchPartEditor({
   part,
   onChange,
-  promptCountLimits = { min: 1, max: 12 },
-  choiceCountLimits = { min: 2, max: 12 },
+  promptCountLimits = {
+    min: LISTENING_ITEM_MATCH_MIN_PROMPTS,
+    max: LISTENING_ITEM_MATCH_MAX_PROMPTS,
+  },
+  choiceCountLimits = {
+    min: LISTENING_ITEM_MATCH_MIN_CHOICES,
+    max: LISTENING_ITEM_MATCH_MAX_CHOICES,
+  },
 }: Props) {
   const { audioText, audioUrl, choices, prompts } = part.activity;
   const [choiceIndex, setChoiceIndex] = useAuthoringItemIndex(
@@ -69,10 +81,17 @@ export function AssessmentListeningItemMatchPartEditor({
         minCount={promptCountLimits.min}
         maxCount={promptCountLimits.max}
         onAdd={() => {
-          patchActivity((activity) => ({
-            ...activity,
-            prompts: [...activity.prompts, emptyPrompt(activity.choices)],
-          }));
+          patchActivity((activity) => {
+            let choices = activity.choices;
+            if (activity.prompts.length >= choices.length) {
+              choices = [...choices, emptyChoice()];
+            }
+            return {
+              ...activity,
+              choices,
+              prompts: [...activity.prompts, emptyPrompt(choices)],
+            };
+          });
           setPromptIndex(prompts.length);
         }}
         onRemove={() => {
@@ -164,7 +183,11 @@ export function AssessmentListeningItemMatchPartEditor({
             setChoiceIndex(choices.length);
           }}
           onRemove={() => {
-            if (choices.length <= 2 || !choice) return;
+            const minChoices = Math.max(
+              choiceCountLimits.min,
+              prompts.length,
+            );
+            if (choices.length <= minChoices || !choice) return;
             patchActivity((activity) => ({
               ...activity,
               choices: activity.choices.filter((row) => row.id !== choice.id),

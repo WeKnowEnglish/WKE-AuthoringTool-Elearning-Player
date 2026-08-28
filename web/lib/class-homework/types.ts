@@ -107,6 +107,8 @@ export type ClassHomeworkPayload =
       templateId: HomeworkTemplateId;
       title: string;
       sectionCount: number;
+      /** Assignment-owned template snapshot. Missing only on legacy rows. */
+      document?: Record<string, unknown>;
       frozenAt: string;
     }
   | {

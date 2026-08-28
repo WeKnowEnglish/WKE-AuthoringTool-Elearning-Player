@@ -25,6 +25,8 @@ import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
+import { parseFrozenPrimaryHomeworkTemplateDocument } from "@/lib/class-homework/freeze-homework-template";
+import { homeworkPortalPath, resolveHomeworkPortal } from "@/lib/class-homework/portal";
 import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolve-assessment-definition";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import type { HomeworkTemplateOne } from "@/lib/homework-templates/homework-template-one";
@@ -32,6 +34,7 @@ import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessm
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { createClient } from "@/lib/supabase/server";
+import { learningBandFromUser } from "@/lib/student-classes/portal-paths";
 
 /**
  * Product C — teacher homework (pack quiz / flashcards / notes / Activity Bank).
@@ -90,6 +93,9 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
+  if (resolveHomeworkPortal(payload, learningBandFromUser(user)) === "secondary") {
+    redirect(homeworkPortalPath(homeworkId, "secondary"));
+  }
   if (payload.type === "primary_a2_assessment") {
     const [initialAttempt, initialSpeakingRecordings, speakingReview] = await Promise.all([
       getMyAssessmentAttempt(homework.id),
@@ -334,6 +340,11 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
         <HomeworkTemplateOnePilot
           homeworkId={homework.id}
           alreadyCompleted={Boolean(homework.completedAt)}
+          document={
+            payload.document
+              ? (parseFrozenPrimaryHomeworkTemplateDocument(payload.document) ?? undefined)
+              : undefined
+          }
         />
       ) : null}
 

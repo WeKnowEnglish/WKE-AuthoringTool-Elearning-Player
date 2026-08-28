@@ -1,4 +1,5 @@
 import { SecondaryHome } from "@/components/secondary/SecondaryHome";
+import { StudentHomeworkAutoRefresh } from "@/components/classroom/StudentHomeworkAutoRefresh";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
 import { listActiveLiveSessionsForStudent } from "@/lib/data/student-live";
 import { getStudentClassMemberships } from "@/lib/data/student-classes";
@@ -13,10 +14,13 @@ export default async function SecondaryHomePage() {
   ]);
 
   return (
-    <SecondaryHome
+    <>
+      <StudentHomeworkAutoRefresh />
+      <SecondaryHome
       classMemberships={classMemberships}
       liveSessions={liveSessions}
       assignedHomework={assignedHomework}
-    />
+      />
+    </>
   );
 }

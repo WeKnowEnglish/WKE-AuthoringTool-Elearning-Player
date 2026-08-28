@@ -7,6 +7,17 @@ import {
   deleteClassHomework,
   saveClassHomework,
 } from "@/lib/actions/class-homework";
+import type { ClassHomeworkSourceInput } from "@/lib/actions/class-homework";
+import {
+  assignableStudioHomeworkFormatLabel,
+  isAssignableStudioHomeworkFormat,
+} from "@/lib/class-homework/assignable-studio-formats";
+import type { StudioActivityOption } from "@/lib/class-lessons/types";
+import {
+  getHomeworkTemplateDefinition,
+  HOMEWORK_TEMPLATE_IDS,
+  type HomeworkTemplateId,
+} from "@/lib/homework-templates/registry";
 import {
   formatHomeworkListSubtitle,
   packFlashcardsEmptyDropdownCopy,
@@ -47,6 +58,54 @@ type RosterName = {
   displayName: string;
 };
 
+export type HomeworkTrackDraftOption = {
+  id: string;
+  title: string;
+  mode: "practice" | "graded" | "assessment";
+  level: "primary" | "secondary" | "either";
+};
+
+const ACTIVITY_BANK_PAYLOAD_TYPES = new Set<ClassHomeworkPayload["type"]>([
+  "studio_activity",
+  "picture_cloze",
+  "verb_table",
+  "sentence_columns",
+  "word_annotation",
+  "picture_writing",
+  "question_writing",
+  "definition_match",
+  "cloze_choice",
+  "cloze_open",
+  "read_and_answer",
+  "picture_story",
+]);
+
+type HomeworkEditorType =
+  | "studio_activity"
+  | "activity_track"
+  | "pack_quiz"
+  | "pack_flashcards"
+  | "word_pack_practice"
+  | "external_note"
+  | "writing_prompt"
+  | "homework_template"
+  | "primary_a2_assessment"
+  | "frozen_activity";
+
+function activityBankIdForPayload(payload: ClassHomeworkPayload): string {
+  return ACTIVITY_BANK_PAYLOAD_TYPES.has(payload.type) &&
+    "activityId" in payload &&
+    typeof payload.activityId === "string"
+    ? payload.activityId
+    : "";
+}
+
+function editorTypeForPayload(payload: ClassHomeworkPayload): HomeworkEditorType {
+  if (ACTIVITY_BANK_PAYLOAD_TYPES.has(payload.type)) return "studio_activity";
+  if (payload.type === "graded_track") return "frozen_activity";
+  return payload.type as HomeworkEditorType;
+}
+
 type Props = {
   classId: string;
   archived: boolean;
@@ -55,6 +114,8 @@ type Props = {
   wordPacks: TeacherWordPackSummary[];
   packQuizzes: QuizOption[];
   packFlashcardSets: FlashcardSetOption[];
+  studioActivities: StudioActivityOption[];
+  homeworkTrackDrafts: HomeworkTrackDraftOption[];
   rosterSize: number;
   rosterNames: RosterName[];
   completions: HomeworkCompletionSummary[];
@@ -84,6 +145,8 @@ export function ClassHomeworkPanel({
   wordPacks,
   packQuizzes,
   packFlashcardSets,
+  studioActivities,
+  homeworkTrackDrafts,
   rosterSize,
   rosterNames,
   completions,
@@ -138,7 +201,7 @@ export function ClassHomeworkPanel({
   };
 
   const copyStudentLink = async (homeworkId: string) => {
-    const url = `${window.location.origin}/primary/homework/${encodeURIComponent(homeworkId)}`;
+    const url = `${window.location.origin}/homework/${encodeURIComponent(homeworkId)}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {
@@ -165,6 +228,8 @@ export function ClassHomeworkPanel({
         wordPacks={wordPacks}
         packQuizzes={packQuizzes}
         packFlashcardSets={packFlashcardSets}
+        studioActivities={studioActivities}
+        homeworkTrackDrafts={homeworkTrackDrafts}
         finishers={completionsByHomework.get(editing.id) ?? []}
         nameByStudentId={nameByStudentId}
         busy={isPending}
@@ -318,6 +383,8 @@ function HomeworkEditor({
   wordPacks,
   packQuizzes,
   packFlashcardSets,
+  studioActivities,
+  homeworkTrackDrafts,
   finishers,
   nameByStudentId,
   busy,
@@ -332,6 +399,8 @@ function HomeworkEditor({
   wordPacks: TeacherWordPackSummary[];
   packQuizzes: QuizOption[];
   packFlashcardSets: FlashcardSetOption[];
+  studioActivities: StudioActivityOption[];
+  homeworkTrackDrafts: HomeworkTrackDraftOption[];
   finishers: HomeworkCompletionSummary[];
   nameByStudentId: Map<string, string>;
   busy: boolean;
@@ -348,35 +417,70 @@ function HomeworkEditor({
     gradedFreeze?.primaryDocument || gradedFreeze?.secondaryDocument,
   );
   const rosterStudents = Array.from(nameByStudentId, ([studentId, displayName]) => ({ studentId, displayName }));
-  const typeOptions = (
-    isLight
-      ? ([
-          ["pack_quiz", ACTIVITY_LABEL],
-          ["pack_flashcards", FLASHCARDS_LABEL],
-          ["word_pack_practice", "Word pack practice"],
-          ["writing_prompt", "Writing homework"],
-          ["homework_template", "Homework template"],
-          ["primary_a2_assessment", "Primary A2 assessment"],
-        ] as const)
-      : ([
-          ["pack_quiz", ACTIVITY_LABEL],
-          ["pack_flashcards", FLASHCARDS_LABEL],
-          ["word_pack_practice", "Word pack practice"],
-          ["external_note", "Note / reminder"],
-          ["writing_prompt", "Writing homework"],
-          ["homework_template", "Homework template"],
-          ["primary_a2_assessment", "Primary A2 assessment"],
-        ] as const)
+  const assignableStudioActivities = studioActivities.filter((activity) =>
+    isAssignableStudioHomeworkFormat(activity.format),
   );
-  const initialType =
-    isLight && homework.payload.type === "external_note" ? "pack_quiz" : homework.payload.type;
+  const templateOptions = HOMEWORK_TEMPLATE_IDS.map((id) =>
+    getHomeworkTemplateDefinition(id),
+  ).filter(
+    (definition): definition is NonNullable<typeof definition> =>
+      definition !== null && definition.contentStatus === "ready",
+  );
+  const initialType: HomeworkEditorType =
+    isLight && homework.payload.type === "external_note"
+      ? assignableStudioActivities.length > 0
+        ? "studio_activity"
+        : homeworkTrackDrafts.length > 0
+          ? "activity_track"
+          : "pack_quiz"
+      : editorTypeForPayload(homework.payload);
+  const typeOptions: ReadonlyArray<readonly [HomeworkEditorType, string]> = isLight
+    ? [
+        ["studio_activity", "Activity Bank"],
+        ["activity_track", "Track Builder"],
+        ["pack_quiz", ACTIVITY_LABEL],
+        ["pack_flashcards", FLASHCARDS_LABEL],
+        ["word_pack_practice", "Word pack practice"],
+        ["writing_prompt", "Writing homework"],
+        ["homework_template", "Homework template"],
+        ["primary_a2_assessment", "Primary A2 assessment"],
+        ...(initialType === "frozen_activity"
+          ? ([["frozen_activity", "Frozen graded track"]] as const)
+          : []),
+      ]
+    : [
+        ["studio_activity", "Activity Bank"],
+        ["activity_track", "Track Builder"],
+        ["pack_quiz", ACTIVITY_LABEL],
+        ["pack_flashcards", FLASHCARDS_LABEL],
+        ["word_pack_practice", "Word pack practice"],
+        ["external_note", "Note / reminder"],
+        ["writing_prompt", "Writing homework"],
+        ["homework_template", "Homework template"],
+        ["primary_a2_assessment", "Primary A2 assessment"],
+        ...(initialType === "frozen_activity"
+          ? ([["frozen_activity", "Frozen graded track"]] as const)
+          : []),
+      ];
   const [title, setTitle] = useState(homework.title);
   const [instructions, setInstructions] = useState(homework.instructions);
   const [dueLocal, setDueLocal] = useState(toDatetimeLocalValue(homework.dueAt));
   const [status, setStatus] = useState(homework.status);
   const [assignToAll, setAssignToAll] = useState(homework.targetStudentIds === null);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>(homework.targetStudentIds ?? rosterStudents.map((student) => student.studentId));
-  const [payloadType, setPayloadType] = useState(initialType);
+  const [payloadType, setPayloadType] = useState<HomeworkEditorType>(initialType);
+  const currentActivityId = activityBankIdForPayload(homework.payload);
+  const [studioActivityId, setStudioActivityId] = useState(
+    currentActivityId || assignableStudioActivities[0]?.id || "",
+  );
+  const [trackDraftId, setTrackDraftId] = useState(
+    homeworkTrackDrafts[0]?.id ?? "",
+  );
+  const currentTemplateId =
+    homework.payload.type === "homework_template" ? homework.payload.templateId : null;
+  const [templateId, setTemplateId] = useState<HomeworkTemplateId>(
+    currentTemplateId ?? templateOptions[0]?.id ?? "homework-template-one",
+  );
   const [quizId, setQuizId] = useState(
     homework.payload.type === "pack_quiz" ? homework.payload.quizId : "",
   );
@@ -401,7 +505,36 @@ function HomeworkEditor({
   const [isPending, startTransition] = useTransition();
   const pending = busy || isPending;
 
+  const buildSource = (): ClassHomeworkSourceInput | null => {
+    if (payloadType === "studio_activity") {
+      if (!studioActivityId) return null;
+      if (currentActivityId === studioActivityId) return null;
+      return { type: "studio_activity", activityId: studioActivityId };
+    }
+    if (payloadType === "activity_track") {
+      if (!trackDraftId) return null;
+      return { type: "activity_track", trackId: trackDraftId };
+    }
+    if (payloadType === "homework_template") {
+      if (currentTemplateId === templateId) return null;
+      return { type: "homework_template", templateId };
+    }
+    return null;
+  };
+
   const buildPayload = (): ClassHomeworkPayload | null => {
+    if (payloadType === "frozen_activity") {
+      return homework.payload.type === "graded_track" ? homework.payload : null;
+    }
+    if (payloadType === "activity_track") {
+      return null;
+    }
+    if (payloadType === "studio_activity") {
+      return currentActivityId === studioActivityId ? homework.payload : null;
+    }
+    if (payloadType === "homework_template") {
+      return currentTemplateId === templateId ? homework.payload : null;
+    }
     if (payloadType === "primary_a2_assessment") {
       return homework.payload.type === "primary_a2_assessment"
         ? homework.payload
@@ -413,9 +546,6 @@ function HomeworkEditor({
             itemCount: assessmentProgress(PRIMARY_A2_ASSESSMENT_PILOT, {}).total,
             frozenAt: new Date().toISOString(),
           };
-    }
-    if (payloadType === "homework_template") {
-      return homework.payload.type === "homework_template" ? homework.payload : null;
     }
     if (payloadType === "pack_quiz") {
       const quiz = packQuizzes.find((item) => item.id === quizId);
@@ -464,9 +594,10 @@ function HomeworkEditor({
 
   const save = (nextStatus = status) => {
     setError(null);
+    const source = buildSource();
     const payload = buildPayload();
-    if (!payload) {
-      setError("Complete the homework type fields before saving.");
+    if (!payload && !source) {
+      setError("Choose a complete homework activity before saving.");
       return;
     }
     startTransition(async () => {
@@ -476,7 +607,8 @@ function HomeworkEditor({
         instructions,
         dueAt: dueLocal ? new Date(dueLocal).toISOString() : null,
         status: nextStatus,
-        payload,
+        ...(payload ? { payload } : {}),
+        ...(source ? { source } : {}),
         targetStudentIds: assignToAll ? null : selectedStudentIds,
       });
       if (!result.ok) {
@@ -579,6 +711,115 @@ function HomeworkEditor({
           </p>
         ) : null}
       </fieldset>
+
+      {payloadType === "studio_activity" ? (
+        <div className="space-y-1">
+          <label className="block text-sm font-semibold">
+            Saved Activity Bank item
+            <select
+              value={studioActivityId}
+              disabled={archived || pending}
+              onChange={(event) => setStudioActivityId(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
+            >
+              <option value="">Select a saved activity…</option>
+              {currentActivityId &&
+              !assignableStudioActivities.some((activity) => activity.id === currentActivityId) ? (
+                <option value={currentActivityId}>
+                  {homework.payload.type === "studio_activity"
+                    ? homework.payload.title
+                    : homework.title}{" "}
+                  (frozen source)
+                </option>
+              ) : null}
+              {assignableStudioActivities.map((activity) => (
+                <option key={activity.id} value={activity.id}>
+                  {activity.title} — {assignableStudioHomeworkFormatLabel(activity.format)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {assignableStudioActivities.length === 0 && !currentActivityId ? (
+            <p className="text-xs font-normal text-amber-800">
+              No assignable Activity Bank items yet.{" "}
+              <Link href="/teacher/activity-builder" className="font-semibold underline">
+                Build or publish an activity
+              </Link>
+              , then return here.
+            </p>
+          ) : (
+            <p className="text-xs font-normal text-neutral-500">
+              Includes learning tracks, quizzes, listening, matching, writing, and homework
+              modules. Students receive a frozen copy.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {payloadType === "activity_track" ? (
+        <div className="space-y-1">
+          <label className="block text-sm font-semibold">
+            Saved Track Builder item
+            <select
+              value={trackDraftId}
+              disabled={archived || pending}
+              onChange={(event) => setTrackDraftId(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
+            >
+              <option value="">Select a saved track…</option>
+              {homeworkTrackDrafts.map((track) => (
+                <option key={track.id} value={track.id}>
+                  {track.title} —{" "}
+                  {track.mode === "graded"
+                    ? "Homework collection"
+                    : track.mode === "assessment"
+                      ? "Assessment"
+                      : "Published practice track"}
+                </option>
+              ))}
+            </select>
+          </label>
+          {homeworkTrackDrafts.length === 0 ? (
+            <p className="text-xs font-normal text-amber-800">
+              No assignable server-saved tracks yet.{" "}
+              <Link href="/teacher/activity-builder/tracks" className="font-semibold underline">
+                Open Track Builder
+              </Link>
+              , save the track, and publish Practice Tracks to the Activity Bank.
+            </p>
+          ) : (
+            <p className="text-xs font-normal text-neutral-500">
+              Homework collections and assessments freeze directly from the saved track. Practice
+              tracks use their published Activity Bank copy.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {payloadType === "homework_template" ? (
+        <label className="block text-sm font-semibold">
+          Homework template
+          <select
+            value={templateId}
+            disabled={archived || pending}
+            onChange={(event) => setTemplateId(event.target.value as HomeworkTemplateId)}
+            className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
+          >
+            {templateOptions.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.title} — {template.level === "secondary" ? "Secondary" : "Primary"}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      {payloadType === "frozen_activity" ? (
+        <p className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+          This assignment keeps its frozen graded-track content. Choose another type only if you
+          want to replace it.
+        </p>
+      ) : null}
 
       {payloadType === "pack_quiz" ? (
         <div className="space-y-1">

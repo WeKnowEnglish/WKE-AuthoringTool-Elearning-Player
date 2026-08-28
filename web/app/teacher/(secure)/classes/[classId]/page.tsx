@@ -2,6 +2,7 @@ import type { ClassVocabularyListSummary } from "@/components/teacher/class-hub/
 import { TeacherClassHubClient } from "@/components/teacher/class-hub/TeacherClassHubClient";
 import { listAssignableActivitiesForClass } from "@/lib/assignable-activities/registry";
 import { getTeacherTier } from "@/lib/auth/roles";
+import { listActivityTrackDraftsForTeacher } from "@/lib/activity-tracks/draft-server";
 import type { LiveGameQuestionSetOption } from "@/lib/class-lessons/types";
 import {
   listClassHomeworkCompletionsForClass,
@@ -54,6 +55,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     wordPacks,
     lessons,
     studioActivities,
+    trackDrafts,
     liveGameSetsRaw,
     homework,
     activityCards,
@@ -74,6 +76,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     listTeacherWordPacksForClass(classId),
     listClassLessonsWithStepsForClass(classId),
     listMyStudioActivities(),
+    user?.id ? listActivityTrackDraftsForTeacher(user.id).catch(() => []) : Promise.resolve([]),
     listPublishedQuestionSetsForHost(),
     listClassHomeworkForClass(classId),
     listAssignableActivitiesForClass(classId),
@@ -130,6 +133,15 @@ export default async function TeacherClassDetailPage({ params }: Props) {
     playPath: activity.playPath,
   }));
 
+  const homeworkTrackDrafts = trackDrafts
+    .filter((track) => track.mode !== "practice" || Boolean(track.bankActivityId))
+    .map((track) => ({
+      id: track.id,
+      title: track.title,
+      mode: track.mode,
+      level: track.level,
+    }));
+
   const vocabularyLists: ClassVocabularyListSummary[] = studioActivities
     .filter((activity) => activity.format === "vocabulary_list")
     .map((activity) => {
@@ -182,6 +194,7 @@ export default async function TeacherClassDetailPage({ params }: Props) {
         vcSessionHistory={vcSessionHistory}
         lessons={lessons}
         studioActivities={studioActivityOptions}
+        homeworkTrackDrafts={homeworkTrackDrafts}
         vocabularyLists={vocabularyLists}
         liveGameSets={liveGameSets}
         homework={homework}

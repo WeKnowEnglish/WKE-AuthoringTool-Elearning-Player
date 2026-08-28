@@ -87,11 +87,34 @@ describe("homework collections", () => {
     });
   });
 
+  it("scores listen and match prompts against shared choices", () => {
+    const part = createHomeworkCollectionPart("listening_item_match", "listen-match");
+    if (part.kind !== "listening_item_match") throw new Error("Expected listen and match");
+    part.activity.audioText = "Mia painted. Ethan rode his bike.";
+    const [firstPrompt, secondPrompt] = part.activity.prompts;
+    const firstChoice = part.activity.choices.find(
+      (choice) => choice.id === firstPrompt!.correctChoiceId,
+    );
+    expect(firstChoice).toBeTruthy();
+    const document = { version: 1 as const, parts: [part] };
+    const content = scoreHomeworkCollectionAttempt(document, {
+      "listen-match": {
+        answers: {
+          [firstPrompt!.id]: firstPrompt!.correctChoiceId,
+          [secondPrompt!.id]: "wrong-choice-id",
+        },
+      },
+    });
+    expect(content.parts["listen-match"]?.correct).toBe(1);
+    expect(content.parts["listen-match"]?.itemCount).toBe(5);
+  });
+
   it("reports blank required content for every collection activity without throwing", () => {
     const multipleChoice = createHomeworkCollectionPart("multiple_choice", "mc-blank");
     const letters = createHomeworkCollectionPart("letter_mixup", "letters-blank");
     const matching = createHomeworkCollectionPart("line_match", "match-blank");
     const listening = createHomeworkCollectionPart("listen_and_choose", "listen-blank");
+    const listenMatch = createHomeworkCollectionPart("listening_item_match", "listen-match-blank");
     const sentence = createHomeworkCollectionPart("sentence_scramble", "sentence-blank");
     const response = createHomeworkCollectionPart("free_response", "response-blank");
 
@@ -101,6 +124,7 @@ describe("homework collections", () => {
     if (letters.kind === "letter_mixup") letters.items[0]!.targetWord = "";
     if (matching.kind === "line_match") matching.pairs[0]!.right = "";
     if (listening.kind === "listen_and_choose") listening.items[0]!.speakText = "";
+    if (listenMatch.kind === "listening_item_match") listenMatch.activity.audioText = "";
     if (sentence.kind === "sentence_scramble") sentence.items[0]!.sentence = "";
     if (response.kind === "free_response") response.prompts[0]!.prompt = "";
 
@@ -109,6 +133,7 @@ describe("homework collections", () => {
       letters,
       matching,
       listening,
+      listenMatch,
       sentence,
       response,
     ]) {

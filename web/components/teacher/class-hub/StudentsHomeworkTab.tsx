@@ -1,7 +1,11 @@
 import { ClassRosterTable } from "@/components/teacher/ClassRosterTable";
-import { ClassHomeworkPanel } from "@/components/teacher/class-hub/ClassHomeworkPanel";
+import {
+  ClassHomeworkPanel,
+  type HomeworkTrackDraftOption,
+} from "@/components/teacher/class-hub/ClassHomeworkPanel";
 import type { TeacherTier } from "@/lib/auth/roles";
 import type { ClassHomework, HomeworkCompletionSummary } from "@/lib/class-homework/types";
+import type { StudioActivityOption } from "@/lib/class-lessons/types";
 import type { ClassRosterStudent } from "@/lib/data/teacher-classes";
 import type { TeacherWordPackSummary } from "@/lib/data/teacher-word-packs";
 import type { TeacherClassStudentMasteryPreview } from "@/lib/mastery/teacher-mastery-summary";
@@ -32,6 +36,8 @@ type Props = {
   homework: ClassHomework[];
   packQuizzes: QuizOption[];
   packFlashcardSets: FlashcardSetOption[];
+  studioActivities: StudioActivityOption[];
+  homeworkTrackDrafts: HomeworkTrackDraftOption[];
   homeworkCompletions: HomeworkCompletionSummary[];
 };
 
@@ -47,6 +53,8 @@ export function StudentsHomeworkTab({
   homework,
   packQuizzes,
   packFlashcardSets,
+  studioActivities,
+  homeworkTrackDrafts,
   homeworkCompletions,
 }: Props) {
   const isLight = teacherTier === "light";
@@ -93,6 +101,8 @@ export function StudentsHomeworkTab({
         wordPacks={wordPacks}
         packQuizzes={packQuizzes}
         packFlashcardSets={packFlashcardSets}
+        studioActivities={studioActivities}
+        homeworkTrackDrafts={homeworkTrackDrafts}
         rosterSize={roster.length}
         rosterNames={roster.map((student) => ({
           studentId: student.studentId,

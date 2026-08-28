@@ -3784,6 +3784,78 @@ export const listenAndChoosePayloadSchema = z
     }
   });
 
+/** Listen to one audio track, then match five prompts to eight choices. */
+export const listeningItemMatchPayloadSchema = z
+  .object({
+    type: z.literal("interaction"),
+    subtype: z.literal("listening_item_match"),
+    body_text: z.string().optional(),
+    /** Narration spoken by TTS when no recorded clip is supplied. */
+    dialog_text: z.string().optional(),
+    /** Optional recorded listening track; preferred over TTS. */
+    prompt_audio_url: z.string().optional(),
+    shuffle_choices: z.boolean().optional().default(true),
+    choices: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+          image_url: z.string().optional(),
+        }),
+      )
+      .length(8),
+    prompts: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+          correct_choice_id: z.string().min(1),
+        }),
+      )
+      .length(5),
+    guide: guideSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.dialog_text?.trim() && !data.prompt_audio_url?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "listening_item_match requires dialog_text and/or prompt_audio_url",
+      });
+    }
+
+    const choiceIds = new Set(data.choices.map((choice) => choice.id));
+    const promptIds = new Set(data.prompts.map((prompt) => prompt.id));
+    if (choiceIds.size !== data.choices.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "listening_item_match choice ids must be unique",
+      });
+    }
+    if (promptIds.size !== data.prompts.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "listening_item_match prompt ids must be unique",
+      });
+    }
+
+    const correctIds = data.prompts.map((prompt) => prompt.correct_choice_id);
+    for (const correctId of correctIds) {
+      if (!choiceIds.has(correctId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `listening_item_match references unknown choice ${correctId}`,
+        });
+      }
+    }
+    if (new Set(correctIds).size !== data.prompts.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "listening_item_match must use five different answers, leaving three distractors",
+      });
+    }
+  });
+
 export const essayPayloadSchema = z.object({
   type: z.literal("interaction"),
   subtype: z.literal("essay"),
@@ -3872,6 +3944,7 @@ export const interactionPayloadSchema = z.intersection(
     lineMatchPayloadSchema,
     soundSortPayloadSchema,
     listenAndChoosePayloadSchema,
+    listeningItemMatchPayloadSchema,
     flashcardsPayloadSchema,
     essayPayloadSchema,
     voiceQuestionPayloadSchema,
@@ -3886,6 +3959,13 @@ export const interactionPayloadSchema = z.intersection(
     quiz_group_id: z.string().optional(),
     quiz_group_title: z.string().optional(),
     quiz_group_order: z.number().int().min(0).optional(),
+    /** Stable authoring and track identifiers used by grading adapters. */
+    item_id: z.string().optional(),
+    source_beat_id: z.string().optional(),
+    grading_part_id: z.string().optional(),
+    grading_item_id: z.string().optional(),
+    /** Optional policy stamp for compiled instructional screens. */
+    grading_policy: z.enum(["automatic", "completion", "teacher_review", "ungraded"]).optional(),
     /** Vocabulary set runs: stable word id for session stats / review list. */
     vocab_word_id: z.string().optional(),
   }),

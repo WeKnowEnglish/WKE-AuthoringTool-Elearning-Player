@@ -80,6 +80,13 @@ import {
 import { VocabActivityRewardScreen } from "@/components/lesson/VocabActivityRewardScreen";
 import { PostQuizReportView } from "@/components/lesson/interactions/PostQuizReportView";
 import type { TrackScreenOutcome } from "@/lib/learning-tracks/report-results";
+import {
+  appendGradedActivityAttempt,
+  buildGradedActivityRunResult,
+  type GradedActivityAttemptEvent,
+  type GradedActivityResponse,
+  type GradedActivityRunResult,
+} from "@/lib/graded-activities";
 import { GrammarActivityRewardScreen } from "@/components/grammar/lesson/GrammarActivityRewardScreen";
 import { GrammarPosterScreen } from "@/components/grammar/lesson/GrammarPosterScreen";
 import type { GrammarDifficulty } from "@/lib/grammar-builder/schema";
@@ -185,6 +192,13 @@ const LazyLetterMixup = lazyWithDiagnostics("interaction:LetterMixupView", () =>
 );
 const LazyWordShapeHunt = lazyWithDiagnostics("interaction:WordShapeHuntView", () =>
   import("./interactions/WordShapeHuntView").then((m) => ({ default: m.WordShapeHuntView })),
+);
+const LazyListeningItemMatch = lazyWithDiagnostics(
+  "interaction:ListeningItemMatchView",
+  () =>
+    import("./interactions/ListeningItemMatchView").then((m) => ({
+      default: m.ListeningItemMatchView,
+    })),
 );
 const LazyWordSearch = lazyWithDiagnostics("interaction:WordSearchView", () =>
   import("./interactions/WordSearchView").then((m) => ({ default: m.WordSearchView })),
@@ -432,13 +446,15 @@ type Props = {
   onPracticeSessionBind?: (api: { exitIfOpen: () => void }) => void;
   /** Fired when the active screen index changes (vocab overlay progress). */
   onScreenIndexChange?: (index: number) => void;
+  /** Fired for every wrong or correct response; first attempts are never overwritten. */
+  onActivityAttempt?: (event: GradedActivityAttemptEvent) => void;
   /**
    * Preview mode only: fired once when the run reaches the end screen
    * (e.g. homework freeze play that records completion outside LessonPlayer).
    */
-  onPreviewComplete?: () => void;
+  onPreviewComplete?: (result: GradedActivityRunResult) => void;
   /** Fired once after a real student run reaches completion. */
-  onStudentComplete?: () => void;
+  onStudentComplete?: (result: GradedActivityRunResult) => void;
 };
 
 export function LessonPlayer({
@@ -471,6 +487,7 @@ export function LessonPlayer({
   grammarFinishLabel,
   onPracticeSessionBind,
   onScreenIndexChange,
+  onActivityAttempt,
   onPreviewComplete,
   onStudentComplete,
 }: Props) {
@@ -488,7 +505,6 @@ export function LessonPlayer({
     Record<string, TrackScreenOutcome>
   >({});
   const trackScreenOutcomesRef = useRef(trackScreenOutcomes);
-  trackScreenOutcomesRef.current = trackScreenOutcomes;
   const [gold, setGold] = useState(0);
   const [experience, setExperience] = useState(0);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -768,6 +784,7 @@ export function LessonPlayer({
 
   const resetRunScreenOutcomes = useCallback(() => {
     setTrackScreenOutcomes({});
+    trackScreenOutcomesRef.current = {};
     clearInteractionTransientState();
     interactionPassedScreenIdRef.current = null;
     setInteractionPass(false);
@@ -966,10 +983,15 @@ export function LessonPlayer({
         screenCount: screens.length,
         mode,
       });
+      const runResult = buildGradedActivityRunResult({
+        lessonId,
+        outcomes: trackScreenOutcomesRef.current,
+      });
+
       if (isPreview) {
-        onPreviewComplete?.();
+        onPreviewComplete?.(runResult);
       } else {
-        onStudentComplete?.();
+        onStudentComplete?.(runResult);
       }
     }
   }, [
@@ -1222,17 +1244,35 @@ export function LessonPlayer({
     ...(effectiveImmersiveLayout ? { controlsPlacement: "stage-footer" as const } : {}),
   };
 
+  const recordActivityAttempt = (
+    passed: boolean,
+    response?: GradedActivityResponse,
+  ) => {
+    const { event, outcome } = appendGradedActivityAttempt({
+      lessonId,
+      screen: {
+        screenId: screen.id,
+        screenType: screen.screen_type,
+        payload: screen.payload,
+      },
+      current: trackScreenOutcomesRef.current[screen.id],
+      response,
+      passed,
+    });
+    const next = {
+      ...trackScreenOutcomesRef.current,
+      [screen.id]: outcome,
+    };
+    trackScreenOutcomesRef.current = next;
+    setTrackScreenOutcomes(next);
+    onActivityAttempt?.(event);
+  };
+
   const passHandlers = {
-    onPass: () => {
+    onPass: (response?: GradedActivityResponse) => {
       if (trackScreenOutcomesRef.current[screen.id]?.passed) return;
       interactionPassedScreenIdRef.current = screen.id;
-      setTrackScreenOutcomes((current) => ({
-        ...current,
-        [screen.id]: {
-          passed: true,
-          wrongAttempts: current[screen.id]?.wrongAttempts ?? 0,
-        },
-      }));
+      recordActivityAttempt(true, response);
       setInteractionFeedback("correct");
       window.setTimeout(() => setInteractionFeedback("none"), 750);
       setInteractionPass(true);
@@ -1312,14 +1352,8 @@ export function LessonPlayer({
         recordVocabRunPass(vocabSessionRef.current, screenHadWrongRef.current);
       }
     },
-    onWrong: () => {
-      setTrackScreenOutcomes((current) => ({
-        ...current,
-        [screen.id]: {
-          passed: current[screen.id]?.passed ?? false,
-          wrongAttempts: (current[screen.id]?.wrongAttempts ?? 0) + 1,
-        },
-      }));
+    onWrong: (response?: GradedActivityResponse) => {
+      recordActivityAttempt(false, response);
       setInteractionFeedback("wrong");
       window.setTimeout(() => setInteractionFeedback("none"), 520);
       playSfx("wrong", muted);
@@ -1980,6 +2014,18 @@ export function LessonPlayer({
           </InteractionLazyShell>
         </InteractionFeedbackShell>
       )}
+      {parsed.type === "interaction" && parsed.subtype === "listening_item_match" && (
+        <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
+          <InteractionLazyShell fillStage={fillInteractionStage}>
+            <LazyListeningItemMatch
+              key={screen.id}
+              parsed={parsed}
+              {...nav}
+              {...passHandlers}
+            />
+          </InteractionLazyShell>
+        </InteractionFeedbackShell>
+      )}
       {parsed.type === "interaction" && parsed.subtype === "wordsearch" && (
         <InteractionFeedbackShell kind={interactionFeedback} fillStage={fillInteractionStage}>
           <InteractionLazyShell fillStage={fillInteractionStage}>
@@ -2162,6 +2208,12 @@ function extractTrackedWords(payload: ScreenPayload): string[] {
       );
       return uniqueWords(words);
     }
+    case "listening_item_match":
+      return uniqueWords(
+        extractWords(payload.dialog_text ?? "")
+          .concat(payload.prompts.flatMap((prompt) => extractWords(prompt.label)))
+          .concat(payload.choices.flatMap((choice) => extractWords(choice.label))),
+      );
     default:
       return [];
   }
@@ -2176,6 +2228,7 @@ function vocabResponseKind(payload: ScreenPayload | null): StudentResponseKind {
     case "true_false":
     case "mc_quiz":
     case "listen_and_choose":
+    case "listening_item_match":
       return "tap";
     default:
       return "other";
@@ -2188,6 +2241,7 @@ function vocabEvidenceMode(payload: ScreenPayload | null): EvidenceMode {
     case "true_false":
     case "mc_quiz":
     case "listen_and_choose":
+    case "listening_item_match":
       return "recognition";
     case "letter_mixup":
       return "production";

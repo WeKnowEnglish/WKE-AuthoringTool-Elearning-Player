@@ -12,6 +12,7 @@ import {
   type LearningTrackFlashcardsSettings,
   type LearningTrackLetterMixupSettings,
   type LearningTrackListenAndChooseSettings,
+  type LearningTrackListeningItemMatchSettings,
   type LearningTrackExploreHotspotsSettings,
   type LearningTrackLanguageInFocusSettings,
   type LearningTrackMultipleChoiceSettings,
@@ -121,6 +122,22 @@ export function defaultListenAndChooseSettings(): LearningTrackListenAndChooseSe
   return {};
 }
 
+export function defaultListeningItemMatchSettings(): LearningTrackListeningItemMatchSettings {
+  const choices = Array.from({ length: 8 }, (_, index) => ({
+    id: `choice-${index + 1}`,
+    label: `Choice ${String.fromCharCode(65 + index)}`,
+  }));
+  return {
+    audioText: "Listen and match each person to the correct choice.",
+    choices,
+    prompts: Array.from({ length: 5 }, (_, index) => ({
+      id: `person-${index + 1}`,
+      label: `Person ${index + 1}`,
+      correctChoiceId: choices[index]!.id,
+    })),
+  };
+}
+
 export function defaultExploreHotspotsSettings(): LearningTrackExploreHotspotsSettings {
   return {};
 }
@@ -222,6 +239,8 @@ export function defaultSourceForKind(
   switch (kind) {
     case "presentation":
       return { type: "inline" };
+    case "listening_item_match":
+      return { type: "inline" };
     case "explore_hotspots":
       return { type: "fixture", fixtureId: "hobbies-hotspots" };
     case "language_in_focus":
@@ -305,6 +324,11 @@ export function createBeatInstance(
   const listenAndChoose =
     overrides?.presentation?.listenAndChoose ??
     (kind === "listen_and_choose" ? defaultListenAndChooseSettings() : undefined);
+  const listeningItemMatch =
+    overrides?.presentation?.listeningItemMatch ??
+    (kind === "listening_item_match"
+      ? defaultListeningItemMatchSettings()
+      : undefined);
   const exploreHotspots =
     overrides?.presentation?.exploreHotspots ??
     (kind === "explore_hotspots" ? defaultExploreHotspotsSettings() : undefined);
@@ -348,6 +372,7 @@ export function createBeatInstance(
       ...(multipleChoice ? { multipleChoice } : {}),
       ...(letterMixup ? { letterMixup } : {}),
       ...(listenAndChoose ? { listenAndChoose } : {}),
+      ...(listeningItemMatch ? { listeningItemMatch } : {}),
       ...(exploreHotspots ? { exploreHotspots } : {}),
       ...(languageInFocus ? { languageInFocus } : {}),
       ...(lineMatch ? { lineMatch } : {}),

@@ -4,6 +4,7 @@ import type {
   GamesMemoryTextMode,
 } from "@/lib/activity-builder/games/types-word-games";
 import type { CoreModuleId } from "@/lib/activity-builder/core-modules/types";
+import type { AssessmentPart } from "@/lib/assessment/types";
 
 /** Lesson Player interaction screen payload (snake_case). Opaque to Studio validators. */
 export type LearningTrackScreenPayload = {
@@ -17,6 +18,7 @@ export type LearningTrackBeatKind =
   | "explore_hotspots"
   | "language_in_focus"
   | "flashcards"
+  | "listening_item_match"
   | "listen_and_choose"
   | "multiple_choice"
   | "letter_mixup"
@@ -40,6 +42,7 @@ export const QUIZ_REPORT_BEAT_KINDS: readonly LearningTrackBeatKind[] = [
   "wordsearch",
   "crossword",
   "memory",
+  "listening_item_match",
 ] as const;
 
 export type LearningTrackFixtureId =
@@ -166,6 +169,16 @@ export type LearningTrackListenItemOverlay = {
 export type LearningTrackListenAndChooseSettings = {
   itemOverlays?: LearningTrackListenItemOverlay[];
 };
+
+/**
+ * One audio track followed by a 5-to-8 matching task. This deliberately reuses
+ * the assessment activity shape so the same authored content can move between
+ * practice, homework, and assessment without conversion.
+ */
+export type LearningTrackListeningItemMatchSettings = Extract<
+  AssessmentPart,
+  { kind: "listening_item_match" }
+>["activity"];
 
 /** Per-turn Explore Hotspots audio — keyed by dialogue id + turn index (legacy Phase E). */
 export type LearningTrackHotspotTurnOverlay = {
@@ -322,6 +335,8 @@ export type LearningTrackBeatPresentation = {
   letterMixup?: LearningTrackLetterMixupSettings;
   /** Listen & Choose prompt audio / auto-play overlays. */
   listenAndChoose?: LearningTrackListenAndChooseSettings;
+  /** One audio track with five prompts and eight choices (three distractors). */
+  listeningItemMatch?: LearningTrackListeningItemMatchSettings;
   /** Explore Hotspots dialogue turn audio overlays. */
   exploreHotspots?: LearningTrackExploreHotspotsSettings;
   /** Language in Focus listen-example audio overlays. */
@@ -440,6 +455,7 @@ export const LEARNING_TRACK_BEAT_LABELS: Record<LearningTrackBeatKind, string> =
   explore_hotspots: "Explore hotspots",
   language_in_focus: "Language in Focus",
   flashcards: "Flashcards",
+  listening_item_match: "Listen and match",
   listen_and_choose: "Listen and choose",
   multiple_choice: "Multiple choice",
   letter_mixup: "Letter scramble",
@@ -456,6 +472,7 @@ export const LEARNING_TRACK_BEAT_KIND_OPTIONS: LearningTrackBeatKind[] = [
   "presentation",
   "explore_hotspots",
   "flashcards",
+  "listening_item_match",
   "language_in_focus",
   "listen_and_choose",
   "multiple_choice",

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { StudentClassroomView } from "@/components/classroom/StudentClassroomView";
+import { StudentHomeworkAutoRefresh } from "@/components/classroom/StudentHomeworkAutoRefresh";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { parseClassroomTab } from "@/lib/classroom/classroom-tabs";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
@@ -74,6 +75,7 @@ export default async function PrimaryClassroomPage({ params, searchParams }: Pro
 
   return (
     <div className={`${PRIMARY_CHROME_CLASS}`} style={PRIMARY_CHROME_STYLE}>
+      <StudentHomeworkAutoRefresh />
       <StudentClassroomView
         membership={membership}
         memberships={memberships}

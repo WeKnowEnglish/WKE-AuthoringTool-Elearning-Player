@@ -8,6 +8,7 @@ import {
   defaultFillBlanksSettings,
   defaultLetterMixupSettings,
   defaultLineMatchSettings,
+  defaultListeningItemMatchSettings,
   defaultMultipleChoiceSettings,
   defaultSentenceScrambleSettings,
   defaultTrueFalseSettings,
@@ -28,9 +29,24 @@ describe("compileLearningTrack", () => {
     expect(pack.kind).toBe("lessonplayer-track-pack");
     expect(pack.screens.length).toBeGreaterThan(5);
     expect(beatPlan.length).toBe(HOBBIES_DAY_1_COMPOSITION.beats.length);
+    const firstBeat = beatPlan[0]!;
+    const firstScreen = pack.screens[firstBeat.screenStart]!;
+    expect(firstScreen.grading_part_id).toBe(firstBeat.id);
+    expect(["automatic", "completion", "ungraded"]).toContain(firstScreen.grading_policy);
+    expect(firstScreen.source_beat_id).toBe(firstBeat.id);
+    expect(firstScreen.grading_item_id).toBe(
+      typeof firstScreen.item_id === "string"
+        ? firstScreen.item_id
+        : `${firstBeat.id}:item:1`,
+    );
 
     const parsed = parseLearningTrackLessonPlayerPack(pack);
     expect(parsed.screens.length).toBe(pack.screens.length);
+    expect(parsed.screens[firstBeat.screenStart]).toMatchObject({
+      grading_part_id: firstBeat.id,
+      grading_item_id: firstScreen.grading_item_id,
+      grading_policy: firstScreen.grading_policy,
+    });
   });
 });
 
@@ -155,6 +171,50 @@ describe("LTC presentation activity", () => {
     expect(() => resolveBeatScreensSync(beat)).toThrow(
       /slide 1 needs text, a shape, or an image/i,
     );
+  });
+});
+
+describe("LTC listen and match activity", () => {
+  it("creates five prompts, eight choices, and a playable interaction", () => {
+    const defaults = defaultListeningItemMatchSettings();
+    expect(defaults.prompts).toHaveLength(5);
+    expect(defaults.choices).toHaveLength(8);
+
+    const beat = createBeatInstance("listening_item_match", {
+      id: "beat-listening-item-match",
+      presentation: { listeningItemMatch: defaults },
+    });
+    expect(beat.source).toEqual({ type: "inline" });
+
+    const screens = resolveBeatScreensSync(beat);
+    expect(screens).toHaveLength(1);
+    expect(screens[0]).toMatchObject({
+      type: "interaction",
+      subtype: "listening_item_match",
+      shuffle_choices: true,
+    });
+
+    const parsed = parseScreenPayload("interaction", screens[0]);
+    expect(parsed?.type).toBe("interaction");
+    expect(parsed?.subtype).toBe("listening_item_match");
+    if (parsed?.type === "interaction" && parsed.subtype === "listening_item_match") {
+      expect(parsed.prompts).toHaveLength(5);
+      expect(parsed.choices).toHaveLength(8);
+      expect(
+        new Set(parsed.prompts.map((prompt) => prompt.correct_choice_id)).size,
+      ).toBe(5);
+    }
+  });
+
+  it("rejects a task that does not leave exactly three distractors", () => {
+    const settings = defaultListeningItemMatchSettings();
+    settings.prompts[1]!.correctChoiceId = settings.prompts[0]!.correctChoiceId;
+    const beat = createBeatInstance("listening_item_match", {
+      id: "beat-invalid-listening-item-match",
+      presentation: { listeningItemMatch: settings },
+    });
+
+    expect(() => resolveBeatScreensSync(beat)).toThrow(/three choices remain/i);
   });
 });
 

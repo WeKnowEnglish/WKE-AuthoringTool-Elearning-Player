@@ -1,7 +1,6 @@
-export type TrackScreenOutcome = {
-  passed: boolean;
-  wrongAttempts: number;
-};
+import type { GradedActivityScreenOutcome } from "@/lib/graded-activities/types";
+export type TrackScreenOutcome = GradedActivityScreenOutcome;
+
 
 export type PostQuizReportSummary = {
   total: number;

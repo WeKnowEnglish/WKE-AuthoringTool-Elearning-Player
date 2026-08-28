@@ -14,6 +14,7 @@ import {
   parseStoredPackFlashcardCards,
 } from "@/lib/class-homework/freeze-pack-flashcards";
 import { freezePackQuizPayload, parseStoredPackQuizQuestions } from "@/lib/class-homework/freeze-pack-quiz";
+import { freezeStudioHomeworkSource } from "@/lib/class-homework/freeze-studio-source";
 import { freezeStudioActivityHomeworkPayload } from "@/lib/class-homework/freeze-studio-activity";
 import { freezePictureClozeHomeworkPayload } from "@/lib/class-homework/freeze-picture-cloze";
 import { freezeVerbTableHomeworkPayload } from "@/lib/class-homework/freeze-verb-table";
@@ -27,6 +28,7 @@ import { freezeClozeOpenHomeworkPayload } from "@/lib/class-homework/freeze-cloz
 import { freezeReadAndAnswerHomeworkPayload } from "@/lib/class-homework/freeze-read-and-answer";
 import { freezePictureStoryHomeworkPayload } from "@/lib/class-homework/freeze-picture-story";
 import { freezeGradedTrackHomeworkPayload } from "@/lib/class-homework/freeze-graded-track";
+import { freezeHomeworkTemplateDocument } from "@/lib/class-homework/freeze-homework-template";
 import { freezeAssessmentTrackHomeworkPayload } from "@/lib/class-homework/freeze-assessment-track";
 import {
   ASSIGNABLE_DOCUMENT_HOMEWORK_ERROR,
@@ -34,9 +36,11 @@ import {
 } from "@/lib/class-homework/assignable-studio-formats";
 import {
   type ClassHomework,
+  type ClassHomeworkPayload,
   type ClassHomeworkStatus,
 } from "@/lib/class-homework/types";
 import type { ActivityTrackDocument } from "@/lib/activity-tracks/types";
+import { getActivityTrackDraftForTeacher } from "@/lib/activity-tracks/draft-server";
 import { getClassHomework } from "@/lib/data/class-homework";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -47,6 +51,11 @@ import {
   getHomeworkTemplateDefinition,
   type HomeworkTemplateId,
 } from "@/lib/homework-templates/registry";
+export type ClassHomeworkSourceInput =
+  | { type: "studio_activity"; activityId: string }
+  | { type: "homework_template"; templateId: HomeworkTemplateId }
+  | { type: "activity_track"; trackId: string };
+
 export type ClassHomeworkActionResult =
   | { ok: true; homework: ClassHomework }
   | { ok: false; error: string };
@@ -64,7 +73,10 @@ async function requireTeacherUserId(): Promise<string> {
 
 function revalidateClass(classId: string) {
   revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/primary/class/${classId}`);
+  revalidatePath(`/secondary/class/${classId}`);
   revalidatePath("/primary");
+  revalidatePath("/secondary");
 }
 
 export async function createClassHomework(input: {
@@ -124,7 +136,9 @@ export async function saveClassHomework(input: {
   instructions?: string;
   dueAt?: string | null;
   status?: ClassHomeworkStatus;
-  payload: unknown;
+  /** Resolve and freeze a saved Activity Bank item or built-in template. */
+  source?: ClassHomeworkSourceInput;
+  payload?: unknown;
   /** Null assigns to the whole class; omitted preserves the current audience. */
   targetStudentIds?: string[] | null;
 }): Promise<ClassHomeworkActionResult> {
@@ -144,7 +158,72 @@ export async function saveClassHomework(input: {
     if (existingError) return { ok: false, error: existingError.message };
     if (!existing) return { ok: false, error: "Homework not found." };
 
-    let payload = normalizeHomeworkPayload(input.payload);
+    let payload: ClassHomeworkPayload | null = null;
+    if (input.source?.type === "studio_activity") {
+      const activityId = input.source.activityId.trim();
+      if (!activityId) return { ok: false, error: "Choose an Activity Bank item." };
+      const { data: activity, error: activityError } = await supabase
+        .from("studio_activities")
+        .select("id, title, format, pack, authoring")
+        .eq("id", activityId)
+        .eq("teacher_id", teacherId)
+        .maybeSingle();
+      if (activityError) return { ok: false, error: activityError.message };
+      if (!activity) return { ok: false, error: "Activity Bank item not found." };
+      payload = freezeStudioHomeworkSource({
+        activityId,
+        format: String(activity.format ?? ""),
+        pack: activity.pack,
+        authoring: activity.authoring,
+        titleHint: typeof activity.title === "string" ? activity.title : null,
+      });
+    } else if (input.source?.type === "activity_track") {
+      const trackId = input.source.trackId.trim();
+      if (!trackId) return { ok: false, error: "Choose a Track Builder item." };
+      const track = await getActivityTrackDraftForTeacher(teacherId, trackId);
+      if (!track) return { ok: false, error: "Track Builder item not found." };
+      if (track.mode === "graded") {
+        payload = freezeGradedTrackHomeworkPayload({ document: track });
+      } else if (track.mode === "assessment") {
+        payload = freezeAssessmentTrackHomeworkPayload({ document: track });
+      } else {
+        const bankActivityId = track.bankActivityId?.trim();
+        if (!bankActivityId) {
+          return {
+            ok: false,
+            error: "Publish this Practice Track to the Activity Bank before assigning it here.",
+          };
+        }
+        const { data: activity, error: activityError } = await supabase
+          .from("studio_activities")
+          .select("id, title, format, pack, authoring")
+          .eq("id", bankActivityId)
+          .eq("teacher_id", teacherId)
+          .maybeSingle();
+        if (activityError) return { ok: false, error: activityError.message };
+        if (!activity) return { ok: false, error: "Published Practice Track not found." };
+        payload = freezeStudioHomeworkSource({
+          activityId: bankActivityId,
+          format: String(activity.format ?? ""),
+          pack: activity.pack,
+          authoring: activity.authoring,
+          titleHint: typeof activity.title === "string" ? activity.title : track.title,
+        });
+      }
+    } else if (input.source?.type === "homework_template") {
+      const definition = getHomeworkTemplateDefinition(input.source.templateId);
+      if (!definition) return { ok: false, error: "Homework template not found." };
+      payload = {
+        type: "homework_template",
+        templateId: definition.id,
+        title: definition.title,
+        sectionCount: definition.sectionCount,
+        document: freezeHomeworkTemplateDocument(definition.id),
+        frozenAt: new Date().toISOString(),
+      };
+    } else {
+      payload = normalizeHomeworkPayload(input.payload);
+    }
     if (!payload) {
       return { ok: false, error: "Choose a valid homework type and complete the fields." };
     }
@@ -218,6 +297,22 @@ export async function saveClassHomework(input: {
             existing.status === "draft"
           ? (existing.status as ClassHomeworkStatus)
           : "draft";
+
+    // New template assignments must become independent of the registry source.
+    // Do not retrofit already-assigned legacy rows: their live-template fallback
+    // is the safest available representation of the content students began.
+    if (
+      payload.type === "homework_template" &&
+      !payload.document &&
+      existing.status === "draft" &&
+      status === "assigned"
+    ) {
+      payload = {
+        ...payload,
+        document: freezeHomeworkTemplateDocument(payload.templateId),
+        frozenAt: new Date().toISOString(),
+      };
+    }
 
     if (status === "assigned" || status === "closed") {
       if (payload.type === "homework_template") {
@@ -707,6 +802,7 @@ export async function assignHomeworkTemplate(input: {
       templateId: definition.id,
       title: definition.title,
       sectionCount: definition.sectionCount,
+      document: freezeHomeworkTemplateDocument(definition.id),
       frozenAt: now,
     };
     const { data: inserted, error: insertError } = await supabase

@@ -56,8 +56,8 @@ export function McQuizView({
   parsed: Extract<ScreenPayload, { type: "interaction"; subtype: "mc_quiz" }>;
   muted: boolean;
   passed: boolean;
-  onPass: () => void;
-  onWrong: () => void;
+  onPass: (selectedOptionId?: string) => void;
+  onWrong: (selectedOptionId?: string) => void;
   snappyCorrect?: boolean;
 } & NavProps) {
   const stageFooter = isStageFooterNav(controlsPlacement);
@@ -188,24 +188,24 @@ export function McQuizView({
       if (audioUrl) {
         if (snappyCorrect) {
           void playRecordedPrompt();
-          onPass();
+          onPass(opt.id);
         } else {
           await playRecordedPrompt();
-          onPass();
+          onPass(opt.id);
         }
       } else if (snappyCorrect) {
         speakText(opt.label, { muted });
-        onPass();
+        onPass(opt.id);
       } else {
         await speakTextAndWait(opt.label, { muted });
-        onPass();
+        onPass(opt.id);
       }
       setIsResolving(false);
       return;
     }
     setWrongOptionId(opt.id);
     triggerBuzz();
-    onWrong();
+    onWrong(opt.id);
     if (wrongFlashTimerRef.current) {
       clearTimeout(wrongFlashTimerRef.current);
     }

@@ -2,3 +2,4 @@ export * from "@/lib/homework-collections/types";
 export * from "@/lib/homework-collections/document";
 export * from "@/lib/homework-collections/scoring";
 export * from "@/lib/homework-collections/attempt";
+export * from "@/lib/homework-collections/lesson-player-responses";

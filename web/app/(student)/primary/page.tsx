@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PrimaryDashboardClient } from "@/components/primary/PrimaryDashboardClient";
+import { StudentHomeworkAutoRefresh } from "@/components/classroom/StudentHomeworkAutoRefresh";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
 import { listActiveLiveSessionsForStudent } from "@/lib/data/student-live";
@@ -46,7 +47,9 @@ export default async function PrimaryDashboardPage({ searchParams }: Props) {
   ]);
 
   return (
-    <PrimaryDashboardClient
+    <>
+      <StudentHomeworkAutoRefresh />
+      <PrimaryDashboardClient
       studentKey={user.id}
       primaryTourSeen={user.user_metadata?.primary_home_tour_version === 2}
       classMemberships={classMemberships}
@@ -55,6 +58,7 @@ export default async function PrimaryDashboardPage({ searchParams }: Props) {
       initialNav={params.nav ?? null}
       initialSetId={params.set ?? null}
       initialMessage={params.message ?? null}
-    />
+      />
+    </>
   );
 }

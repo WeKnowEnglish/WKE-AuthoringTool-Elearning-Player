@@ -617,6 +617,15 @@ export const PILOT_CATALOG: PilotEntry[] = [
     subtype: "guided_dialogue",
   },
   {
+    title: "Listen and match",
+    description:
+      "View: ListeningItemMatchView. One audio track, 5 prompts → 8 choices. Wired in Practice tracks and Graded homework collections.",
+    group: "salvageable",
+    status: "review",
+    subtype: "listening_item_match",
+    studioHref: "/teacher/activity-builder/tracks",
+  },
+  {
     title: "Sound sort",
     description: "Listen to prompt audio, choose the matching picture. View: SoundSortView.",
     group: "salvageable",

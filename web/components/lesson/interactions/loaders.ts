@@ -48,6 +48,9 @@ export function prefetchInteractionChunk(subtype: InteractionSubtype): void {
     case "listen_and_choose":
       void import("./ListenAndChooseView");
       break;
+    case "listening_item_match":
+      void import("./ListeningItemMatchView");
+      break;
     case "flashcards":
       void import("./FlashcardsView");
       break;

@@ -178,6 +178,7 @@ export function gradedPartKindsForOrigin(
     "letter_mixup",
     "line_match",
     "listen_and_choose",
+    "listening_item_match",
     "sentence_scramble",
     "free_response",
   ] as const satisfies readonly ActivityTrackPartKind[];

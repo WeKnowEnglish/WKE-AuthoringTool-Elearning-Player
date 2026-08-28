@@ -17,6 +17,7 @@ export type ActivityTrackPartKind =
   | "flashcards"
   | "fill_blanks"
   | "listen_and_choose"
+  | "listening_item_match"
   | "line_match"
   | "true_false"
   | "sentence_scramble"
@@ -76,6 +77,21 @@ export type ActivityTrackAssessmentOrigin = {
   paper?: "full" | "reading-writing";
 };
 
+/** Saved when switching away from Graded so teachers can return without losing parts. */
+export type ActivityTrackGradedArchive = {
+  parts: ActivityTrackPart[];
+  gradedOrigin: ActivityTrackGradedOrigin | null;
+  instructions: string;
+  estimatedMinutes: number | null;
+  level: ActivityTrackLevel;
+};
+
+/** Round-trip snapshots when toggling Practice ↔ Graded ↔ Assessment. */
+export type ActivityTrackModeArchive = {
+  graded?: ActivityTrackGradedArchive;
+  practice?: LearningTrackComposition | null;
+};
+
 export type ActivityTrackDocument = {
   version: typeof ACTIVITY_TRACK_DOCUMENT_VERSION;
   id: string;
@@ -96,6 +112,8 @@ export type ActivityTrackDocument = {
   assessmentDefinition: AssessmentDefinition | null;
   /** Assessment mode: which fixture was cloned. */
   assessmentOrigin: ActivityTrackAssessmentOrigin | null;
+  /** Preserved content from the last mode switch (Practice ↔ Graded). */
+  modeArchive?: ActivityTrackModeArchive;
   /** IndexedDB Activity Library id after Save. */
   libraryId: string | null;
   /** My Activity Bank id after Publish. */
@@ -132,6 +150,11 @@ export const ACTIVITY_TRACK_PART_CATALOG: ActivityTrackPartCatalogEntry[] = [
     kind: "listen_and_choose",
     label: "Listen and choose",
     description: "Hear a prompt, then pick a picture.",
+  },
+  {
+    kind: "listening_item_match",
+    label: "Listen and match",
+    description: "One conversation track, then match prompts to choices.",
   },
   {
     kind: "line_match",

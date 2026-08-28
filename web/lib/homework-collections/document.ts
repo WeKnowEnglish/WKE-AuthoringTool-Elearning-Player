@@ -5,6 +5,7 @@ import {
   type HomeworkCollectionPart,
   type HomeworkCollectionPartKind,
 } from "@/lib/homework-collections/types";
+import { defaultListeningItemMatchSettings } from "@/lib/learning-tracks/composition";
 
 const MAX_PARTS = 30;
 const MAX_ITEMS = 50;
@@ -53,6 +54,7 @@ export function homeworkCollectionPartLabel(kind: HomeworkCollectionPartKind): s
   if (kind === "letter_mixup") return "Scramble letters";
   if (kind === "line_match") return "Match pictures";
   if (kind === "listen_and_choose") return "Listen and choose";
+  if (kind === "listening_item_match") return "Listen and match";
   if (kind === "sentence_scramble") return "Sentence scramble";
   return "Free response";
 }
@@ -229,6 +231,66 @@ export function homeworkCollectionPartValidationIssues(raw: unknown): string[] {
     return issues;
   }
 
+  if (raw.kind === "listening_item_match") {
+    const activity = isRecord(raw.activity) ? raw.activity : {};
+    const audioUrl = cleanUrl(activity.audioUrl);
+    const audioText = cleanText(activity.audioText, 5000);
+    if (!audioUrl && !audioText) {
+      issues.push("Add an audio clip or narration text for the conversation.");
+    }
+    if (hasText(activity.audioUrl) && !audioUrl) {
+      issues.push("The listening track URL is invalid.");
+    }
+    const choices = Array.isArray(activity.choices) ? activity.choices : [];
+    const prompts = Array.isArray(activity.prompts) ? activity.prompts : [];
+    if (choices.length !== 8) {
+      issues.push("Listen and match needs exactly 8 choices (5 answers and 3 distractors).");
+    }
+    if (prompts.length !== 5) {
+      issues.push("Listen and match needs exactly 5 prompts to match.");
+    }
+    addIdIssues(choices, "Choice", issues);
+    addIdIssues(prompts, "Prompt", issues);
+    choices.forEach((choice, index) => {
+      if (!isRecord(choice)) return;
+      const label = cleanText(choice.label, 500);
+      const imageSrc = cleanUrl(choice.imageSrc);
+      if (!label && !imageSrc) {
+        issues.push(`Choice ${index + 1} needs a label or picture.`);
+      }
+      if (hasText(choice.imageSrc) && !imageSrc) {
+        issues.push(`Choice ${index + 1} has an invalid picture URL.`);
+      }
+    });
+    prompts.forEach((prompt, index) => {
+      if (!isRecord(prompt)) return;
+      if (!hasText(prompt.label)) {
+        issues.push(`Prompt ${index + 1} needs a label.`);
+      }
+      const correctChoiceId = cleanText(prompt.correctChoiceId, 100);
+      if (
+        !correctChoiceId ||
+        !choices.some(
+          (choice) => isRecord(choice) && choice.id === correctChoiceId,
+        )
+      ) {
+        issues.push(`Prompt ${index + 1} needs a valid correct choice.`);
+      }
+    });
+    const correctIds = prompts
+      .flatMap((prompt) =>
+        isRecord(prompt) && hasText(prompt.correctChoiceId)
+          ? [prompt.correctChoiceId.trim()]
+          : [],
+      );
+    if (new Set(correctIds).size !== prompts.length) {
+      issues.push(
+        "Each Listen and match answer must be used once so three choices remain as distractors.",
+      );
+    }
+    return issues;
+  }
+
   if (raw.kind === "sentence_scramble") {
     const items = Array.isArray(raw.items) ? raw.items : [];
     if (items.length < 1 || items.length > MAX_ITEMS) {
@@ -347,6 +409,13 @@ export function createHomeworkCollectionPart(
           correctChoiceId,
         },
       ],
+    };
+  }
+  if (kind === "listening_item_match") {
+    return {
+      ...base,
+      kind,
+      activity: defaultListeningItemMatchSettings(),
     };
   }
   if (kind === "sentence_scramble") {
@@ -500,6 +569,54 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
     return items.length ? { ...base, kind, items } : null;
   }
 
+  if (kind === "listening_item_match") {
+    const activityRaw = isRecord(raw.activity) ? raw.activity : {};
+    const audioUrl = cleanUrl(activityRaw.audioUrl);
+    const audioText = cleanText(activityRaw.audioText, 5000);
+    if (!audioUrl && !audioText) return null;
+    const choices = (Array.isArray(activityRaw.choices) ? activityRaw.choices : [])
+      .slice(0, 8)
+      .flatMap((value, index) => {
+        if (!isRecord(value)) return [];
+        const label = cleanText(value.label, 500);
+        const imageSrc = cleanUrl(value.imageSrc);
+        if (!label && !imageSrc) return [];
+        return [{
+          id: cleanId(value.id, `choice-${index + 1}`),
+          label,
+          ...(imageSrc ? { imageSrc } : {}),
+        }];
+      });
+    const prompts = (Array.isArray(activityRaw.prompts) ? activityRaw.prompts : [])
+      .slice(0, 5)
+      .flatMap((value, index) => {
+        if (!isRecord(value)) return [];
+        const label = cleanText(value.label, 500);
+        if (!label) return [];
+        const correctChoiceId = cleanId(value.correctChoiceId, choices[0]?.id ?? "");
+        if (!choices.some((choice) => choice.id === correctChoiceId)) return [];
+        return [{
+          id: cleanId(value.id, `prompt-${index + 1}`),
+          label,
+          correctChoiceId,
+        }];
+      });
+    if (choices.length !== 8 || prompts.length !== 5) return null;
+    if (new Set(prompts.map((prompt) => prompt.correctChoiceId)).size !== 5) {
+      return null;
+    }
+    return {
+      ...base,
+      kind,
+      activity: {
+        audioText,
+        ...(audioUrl ? { audioUrl } : {}),
+        choices,
+        prompts,
+      },
+    };
+  }
+
   if (kind === "sentence_scramble") {
     const items = (Array.isArray(raw.items) ? raw.items : [])
       .slice(0, MAX_ITEMS)
@@ -567,6 +684,7 @@ export function homeworkCollectionPartItemCount(part: HomeworkCollectionPart): n
   if (part.kind === "multiple_choice") return part.questions.length;
   if (part.kind === "line_match") return part.pairs.length;
   if (part.kind === "free_response") return part.prompts.length;
+  if (part.kind === "listening_item_match") return part.activity.prompts.length;
   return part.items.length;
 }
 

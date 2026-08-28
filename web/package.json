@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev --webpack",
@@ -40,7 +40,14 @@
     "generate:secondary-primary-lexicon-map": "tsx scripts/generate-secondary-primary-lexicon-map.ts",
     "add:secondary-lexicon-gaps": "node scripts/add-secondary-lexicon-gaps-to-dictionary.mjs",
     "prepare:landing-mascots": "tsx scripts/prepare-landing-mascots.ts",
-    "build:primary-vocab-search-index": "node scripts/build-primary-vocabulary-search-index.mjs"
+    "build:primary-vocab-search-index": "node scripts/build-primary-vocabulary-search-index.mjs",
+    "supabase:version": "supabase --version",
+    "supabase:status": "supabase migration list --linked",
+    "supabase:audit": "node scripts/audit-supabase-migration-baseline.mjs",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset",
+    "supabase:new": "supabase migration new"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.91.0",
@@ -76,7 +83,7 @@
     "@next/bundle-analyzer": "^16.2.4",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^28.0.3",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cross-env": "^10.1.0",
@@ -86,6 +93,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "jsdom": "^29.1.1",
+    "supabase": "2.116.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",

@@ -7,6 +7,7 @@ export const HOMEWORK_COLLECTION_PART_KINDS = [
   "letter_mixup",
   "line_match",
   "listen_and_choose",
+  "listening_item_match",
   "sentence_scramble",
   "free_response",
 ] as const;
@@ -68,6 +69,17 @@ export type HomeworkCollectionListenAndChoosePart = HomeworkCollectionPartBase &
   }>;
 };
 
+/** One shared audio track, then match five prompts to eight choices (three distractors). */
+export type HomeworkCollectionListeningItemMatchPart = HomeworkCollectionPartBase & {
+  kind: "listening_item_match";
+  activity: {
+    audioText: string;
+    audioUrl?: string;
+    choices: Array<{ id: string; label: string; imageSrc?: string }>;
+    prompts: Array<{ id: string; label: string; correctChoiceId: string }>;
+  };
+};
+
 export type HomeworkCollectionSentenceScramblePart = HomeworkCollectionPartBase & {
   kind: "sentence_scramble";
   items: Array<{
@@ -93,6 +105,7 @@ export type HomeworkCollectionPart =
   | HomeworkCollectionLetterMixupPart
   | HomeworkCollectionLineMatchPart
   | HomeworkCollectionListenAndChoosePart
+  | HomeworkCollectionListeningItemMatchPart
   | HomeworkCollectionSentenceScramblePart
   | HomeworkCollectionFreeResponsePart;
 

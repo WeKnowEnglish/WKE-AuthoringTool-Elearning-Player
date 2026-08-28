@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { StudentClassroomView } from "@/components/classroom/StudentClassroomView";
+import { StudentHomeworkAutoRefresh } from "@/components/classroom/StudentHomeworkAutoRefresh";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
 import { getStudentClassMemberships } from "@/lib/data/student-classes";
 import { listClassPostsForStudentClass } from "@/lib/data/class-posts";
@@ -63,7 +64,9 @@ export default async function SecondaryClassroomPage({ params }: Props) {
     });
 
   return (
-    <StudentClassroomView
+    <>
+      <StudentHomeworkAutoRefresh />
+      <StudentClassroomView
       membership={membership}
       memberships={memberships}
       posts={posts}
@@ -77,6 +80,7 @@ export default async function SecondaryClassroomPage({ params }: Props) {
       tone="secondary"
       tabSettings={membership.studentTabs}
       trialDiscovery={trialDiscovery}
-    />
+      />
+    </>
   );
 }

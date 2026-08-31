@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
   ChevronRight,
-  Headphones,
   Mic,
+  MousePointer2,
+  Pencil,
   RotateCcw,
   Sparkles,
   Square,
@@ -17,6 +18,7 @@ import {
 
 type StationId = "sports" | "art" | "books" | "pets" | "music" | "badges";
 type Anchor = "close_left" | "close_right" | "lower_left" | "lower_right" | "center_close";
+type KeelanPose = "hello" | "listening" | "explaining" | "pointing" | "encouraging";
 
 type StageStep = {
   id: string;
@@ -25,10 +27,11 @@ type StageStep = {
   helper?: string;
   anchor: Anchor;
   facing: "left" | "right" | "front";
+  pose: KeelanPose;
   characterScale: number;
   dim: number;
   focus?: StationId;
-  action: "continue" | "tap_target" | "observe" | "choose" | "question" | "record" | "reflect" | "complete";
+  action: "continue" | "write_name" | "tap_target" | "observe" | "choose" | "question" | "record" | "reflect" | "complete";
 };
 
 const STATIONS: Record<
@@ -51,21 +54,22 @@ const STEPS: StageStep[] = [
     helper: "Tap continue when you’re ready to explore.",
     anchor: "close_right",
     facing: "left",
+    pose: "hello",
     characterScale: 132,
     dim: 0.48,
     action: "continue",
   },
   {
     id: "badge-mission",
-    eyebrow: "Your first mission",
-    line: "My friend badge is empty. Can you find the table where children are making badges?",
-    helper: "Tap the correct place in the picture.",
+    eyebrow: "Your name badge",
+    line: "What’s your name?",
+    helper: "Write your name on the badge with your finger, stylus, or mouse.",
     anchor: "close_left",
     facing: "right",
-    characterScale: 128,
-    dim: 0.46,
-    focus: "badges",
-    action: "tap_target",
+    pose: "pointing",
+    characterScale: 116,
+    dim: 0.52,
+    action: "write_name",
   },
   {
     id: "observe",
@@ -74,6 +78,7 @@ const STEPS: StageStep[] = [
     helper: "Tap any activity that interests you.",
     anchor: "lower_right",
     facing: "left",
+    pose: "listening",
     characterScale: 70,
     dim: 0.05,
     action: "observe",
@@ -85,6 +90,7 @@ const STEPS: StageStep[] = [
     helper: "Tap the sports station.",
     anchor: "close_right",
     facing: "left",
+    pose: "explaining",
     characterScale: 120,
     dim: 0.42,
     focus: "sports",
@@ -97,6 +103,7 @@ const STEPS: StageStep[] = [
     helper: "Tap the art station.",
     anchor: "close_right",
     facing: "left",
+    pose: "explaining",
     characterScale: 116,
     dim: 0.42,
     focus: "art",
@@ -109,6 +116,7 @@ const STEPS: StageStep[] = [
     helper: "Tap the book station.",
     anchor: "close_left",
     facing: "right",
+    pose: "explaining",
     characterScale: 116,
     dim: 0.42,
     focus: "books",
@@ -121,6 +129,7 @@ const STEPS: StageStep[] = [
     helper: "Tap the pet station.",
     anchor: "close_left",
     facing: "right",
+    pose: "explaining",
     characterScale: 116,
     dim: 0.42,
     focus: "pets",
@@ -133,6 +142,7 @@ const STEPS: StageStep[] = [
     helper: "Tap the music station.",
     anchor: "close_left",
     facing: "right",
+    pose: "explaining",
     characterScale: 116,
     dim: 0.42,
     focus: "music",
@@ -141,10 +151,11 @@ const STEPS: StageStep[] = [
   {
     id: "choose",
     eyebrow: "Make it personal",
-    line: "Which station would you visit? Choose one and tell me why.",
-    helper: "There is no wrong choice.",
+    line: "Which station would you like to visit?",
+    helper: "Choose one. Then tell Keelan why.",
     anchor: "lower_left",
     facing: "right",
+    pose: "listening",
     characterScale: 68,
     dim: 0.18,
     action: "choose",
@@ -156,6 +167,7 @@ const STEPS: StageStep[] = [
     helper: "Use the picture to choose the best answer.",
     anchor: "lower_right",
     facing: "left",
+    pose: "pointing",
     characterScale: 65,
     dim: 0.34,
     focus: "art",
@@ -168,6 +180,7 @@ const STEPS: StageStep[] = [
     helper: "This is a starting sample, not a test. Listen back and keep the version you want.",
     anchor: "lower_left",
     facing: "right",
+    pose: "listening",
     characterScale: 60,
     dim: 0.18,
     action: "record",
@@ -179,6 +192,7 @@ const STEPS: StageStep[] = [
     helper: "Choose the answer that feels true for you.",
     anchor: "center_close",
     facing: "front",
+    pose: "listening",
     characterScale: 112,
     dim: 0.52,
     action: "reflect",
@@ -187,21 +201,35 @@ const STEPS: StageStep[] = [
     id: "complete",
     eyebrow: "Session complete",
     line: "You helped me meet new friends—and you made a great start too!",
-    helper: "Your next visit will build bigger answers and friendly questions.",
+    helper: "Now strengthen your Welcome Fair words, sentences, and writing in the practice pack.",
     anchor: "close_right",
     facing: "left",
+    pose: "encouraging",
     characterScale: 125,
     dim: 0.44,
     action: "complete",
   },
 ];
 
-const ANCHOR_STYLE: Record<Anchor, { left: string; bottom: string; width: string; height: string }> = {
-  close_left: { left: "-7%", bottom: "-34%", width: "42%", height: "142%" },
-  close_right: { left: "70%", bottom: "-34%", width: "42%", height: "142%" },
-  lower_left: { left: "1%", bottom: "-13%", width: "24%", height: "82%" },
-  lower_right: { left: "78%", bottom: "-13%", width: "24%", height: "82%" },
-  center_close: { left: "35%", bottom: "-35%", width: "32%", height: "140%" },
+const ANCHOR_CLASS: Record<Anchor, string> = {
+  close_left:
+    "left-[-5%] top-[1%] h-[74%] w-[58%] sm:left-[-3%] sm:top-[-5%] sm:h-[100%] sm:w-[38%]",
+  close_right:
+    "right-[-5%] top-[1%] h-[74%] w-[58%] sm:right-[-3%] sm:top-[-5%] sm:h-[100%] sm:w-[38%]",
+  lower_left:
+    "left-[1%] top-[2%] h-[56%] w-[40%] sm:top-[5%] sm:h-[72%] sm:w-[24%]",
+  lower_right:
+    "right-[1%] top-[2%] h-[56%] w-[40%] sm:top-[5%] sm:h-[72%] sm:w-[24%]",
+  center_close:
+    "left-[17%] top-[0%] h-[68%] w-[66%] sm:left-[33%] sm:top-[-4%] sm:h-[94%] sm:w-[34%]",
+};
+
+const KEELAN_POSE_SRC: Record<KeelanPose, string> = {
+  hello: "/curriculum/grade-4-movers/characters/poses/keelan-hello-wave.webp",
+  listening: "/curriculum/grade-4-movers/characters/poses/keelan-listening.webp",
+  explaining: "/curriculum/grade-4-movers/characters/poses/keelan-explaining.webp",
+  pointing: "/curriculum/grade-4-movers/characters/poses/keelan-pointing.webp",
+  encouraging: "/curriculum/grade-4-movers/characters/poses/keelan-encouraging.webp",
 };
 
 function useLocalVoiceRecorder(maxSeconds = 20) {
@@ -267,24 +295,136 @@ function useLocalVoiceRecorder(maxSeconds = 20) {
 }
 
 function Mascot({ step }: { step: StageStep }) {
-  const anchor = ANCHOR_STYLE[step.anchor];
   const faceTransform =
     step.facing === "left" ? "scaleX(-1)" : step.facing === "right" ? "scaleX(1)" : "scaleX(1)";
   return (
     <div
-      className="pointer-events-none absolute z-30 transition-all duration-700 ease-out motion-reduce:duration-150"
-      style={{ ...anchor, transform: faceTransform }}
+      className={`pointer-events-none absolute z-30 transition-all duration-700 ease-out motion-reduce:duration-150 ${ANCHOR_CLASS[step.anchor]}`}
+      data-keelan-pose={step.pose}
+      style={{ transform: faceTransform }}
       aria-hidden
     >
       <div className="relative h-full w-full" style={{ transform: `scale(${step.characterScale / 125})`, transformOrigin: "bottom center" }}>
         <Image
-          src="/landing/primary-mascot.png"
+          key={step.pose}
+          src={KEELAN_POSE_SRC[step.pose]}
           alt=""
           fill
           priority
-          className="object-contain object-bottom drop-shadow-[0_14px_18px_rgba(30,20,70,0.28)]"
+          className="object-contain object-bottom drop-shadow-[0_18px_18px_rgba(15,10,35,0.42)]"
           unoptimized
         />
+      </div>
+    </div>
+  );
+}
+
+function HandwritingBadge({ onInkChange }: { onInkChange: (hasInk: boolean) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const [hasInk, setHasInk] = useState(false);
+
+  function getPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const canvas = event.currentTarget;
+    const bounds = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - bounds.left) / bounds.width) * canvas.width,
+      y: ((event.clientY - bounds.top) / bounds.height) * canvas.height,
+    };
+  }
+
+  function beginWriting(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const canvas = event.currentTarget;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    const point = getPoint(event);
+    canvas.setPointerCapture(event.pointerId);
+    drawingRef.current = true;
+    context.strokeStyle = "#312e81";
+    context.fillStyle = "#312e81";
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.lineWidth = 9;
+    context.beginPath();
+    context.arc(point.x, point.y, 4.5, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath();
+    context.moveTo(point.x, point.y);
+    setHasInk(true);
+    onInkChange(true);
+  }
+
+  function keepWriting(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (!drawingRef.current) return;
+    const context = event.currentTarget.getContext("2d");
+    if (!context) return;
+
+    const point = getPoint(event);
+    context.lineTo(point.x, point.y);
+    context.stroke();
+  }
+
+  function endWriting(event: ReactPointerEvent<HTMLCanvasElement>) {
+    drawingRef.current = false;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function clearBadge() {
+    const canvas = canvasRef.current;
+    canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+    drawingRef.current = false;
+    setHasInk(false);
+    onInkChange(false);
+  }
+
+  return (
+    <div className="mt-3 max-w-xl rounded-[1.4rem] border-4 border-violet-700 bg-amber-50 p-2 shadow-inner">
+      <div className="rounded-xl bg-violet-700 px-4 py-2 text-center text-white">
+        <p className="text-lg font-black uppercase tracking-[0.18em]">Hello!</p>
+        <p className="text-xs font-bold">My name is</p>
+      </div>
+      <div className="relative mt-2 overflow-hidden rounded-xl border-2 border-dashed border-violet-300 bg-white">
+        <canvas
+          ref={canvasRef}
+          width={900}
+          height={260}
+          onPointerDown={beginWriting}
+          onPointerMove={keepWriting}
+          onPointerUp={endWriting}
+          onPointerCancel={endWriting}
+          className="h-24 w-full cursor-crosshair touch-none sm:h-28"
+          aria-label="Write your name on the badge"
+        />
+        {!hasInk ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
+            <div className="flex items-center gap-3 rounded-full bg-amber-100/95 px-5 py-3 text-violet-800 shadow-lg ring-4 ring-amber-300/70">
+              <Pencil className="h-8 w-8 -rotate-12 animate-bounce motion-reduce:animate-none" />
+              <svg viewBox="0 0 110 32" className="h-8 w-24 overflow-visible" fill="none">
+                <path
+                  d="M4 23 C20 4, 32 31, 48 13 S76 29, 105 8"
+                  stroke="currentColor"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeDasharray="8 8"
+                  className="animate-pulse motion-reduce:animate-none"
+                />
+              </svg>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3 px-1">
+        <p className="text-xs font-bold text-violet-900">Write it your way—neatness doesn’t matter.</p>
+        <button
+          type="button"
+          onClick={clearBadge}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border-2 border-violet-200 bg-white px-3 text-xs font-black text-violet-800"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Clear
+        </button>
       </div>
     </div>
   );
@@ -293,9 +433,11 @@ function Mascot({ step }: { step: StageStep }) {
 export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
+  const [badgeHasInk, setBadgeHasInk] = useState(false);
   const [stationChoice, setStationChoice] = useState<StationId | null>(null);
   const [questionCorrect, setQuestionCorrect] = useState(false);
   const [reflection, setReflection] = useState<string | null>(null);
+  const choiceVoice = useLocalVoiceRecorder(15);
   const voice = useLocalVoiceRecorder(20);
   const step = STEPS[stepIndex] ?? STEPS[0];
   const progress = Math.round(((stepIndex + 1) / STEPS.length) * 100);
@@ -304,12 +446,13 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
   const selectedLabel = stationChoice ? STATIONS[stationChoice].short : null;
 
   const canContinue = useMemo(() => {
+    if (step.action === "write_name") return badgeHasInk;
     if (step.action === "record") return Boolean(voice.audioUrl || voice.error);
     if (step.action === "reflect") return Boolean(reflection);
     if (step.action === "question") return questionCorrect;
-    if (step.action === "choose") return Boolean(stationChoice);
+    if (step.action === "choose") return Boolean(stationChoice && (choiceVoice.audioUrl || choiceVoice.error));
     return step.action === "continue";
-  }, [questionCorrect, reflection, stationChoice, step.action, voice.audioUrl, voice.error]);
+  }, [badgeHasInk, choiceVoice.audioUrl, choiceVoice.error, questionCorrect, reflection, stationChoice, step.action, voice.audioUrl, voice.error]);
 
   function advance() {
     setMessage(null);
@@ -317,9 +460,11 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
   }
 
   function reset() {
+    choiceVoice.clear();
     voice.clear();
     setStepIndex(0);
     setMessage(null);
+    setBadgeHasInk(false);
     setStationChoice(null);
     setQuestionCorrect(false);
     setReflection(null);
@@ -374,7 +519,7 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
         </header>
 
         <section className="relative overflow-hidden rounded-[1.75rem] border-4 border-white/80 bg-slate-900 shadow-2xl">
-          <div className="relative aspect-[16/9] min-h-[31rem] w-full overflow-hidden sm:min-h-0">
+          <div className="relative isolate aspect-[16/9] min-h-[31rem] w-full overflow-hidden sm:min-h-0">
             <Image
               src="/curriculum/grade-4-movers/unit-1/welcome-fair.png"
               alt="A busy school Welcome Fair with sports, art, books, pets, music, and badge-making stations"
@@ -416,7 +561,16 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
                     onClick={() => handleStation(id)}
                     className={`absolute rounded-2xl transition ${interactive ? "cursor-pointer hover:bg-white/10 focus-visible:outline-4 focus-visible:outline-amber-300" : "pointer-events-none"} ${isFocus ? "animate-pulse motion-reduce:animate-none" : ""}`}
                     style={{ left: `${region.left}%`, top: `${region.top}%`, width: `${region.width}%`, height: `${region.height}%` }}
-                  />
+                  >
+                    {interactive && (isFocus || step.action === "observe") ? (
+                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden>
+                        <span className="relative flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-amber-300 text-violet-950 shadow-[0_8px_24px_rgba(0,0,0,0.38)] sm:h-14 sm:w-14">
+                          <span className="absolute inset-[-0.35rem] rounded-full border-4 border-amber-300/80 animate-ping motion-reduce:animate-none" />
+                          <MousePointer2 className="relative h-6 w-6 animate-bounce fill-white motion-reduce:animate-none sm:h-7 sm:w-7" />
+                        </span>
+                      </span>
+                    ) : null}
+                  </button>
                 );
               })}
             </div>
@@ -430,8 +584,12 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-700">{step.eyebrow}</p>
-                  <p className="mt-1 text-base font-black leading-6 text-slate-900 sm:text-lg">{step.line}</p>
+                  <p className={`mt-1 font-black text-slate-900 ${step.action === "choose" ? "text-xl leading-7 sm:text-3xl sm:leading-9" : "text-base leading-6 sm:text-lg"}`}>{step.line}</p>
                   {step.helper ? <p className="mt-1 text-xs font-semibold leading-5 text-slate-500 sm:text-sm">{step.helper}</p> : null}
+
+                  {step.action === "write_name" ? (
+                    <HandwritingBadge onInkChange={setBadgeHasInk} />
+                  ) : null}
 
                   {step.action === "choose" ? (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -439,13 +597,55 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
                         <button
                           key={id}
                           type="button"
-                          onClick={() => setStationChoice(id)}
+                          onClick={() => {
+                            if (stationChoice !== id) choiceVoice.clear();
+                            setStationChoice(id);
+                          }}
                           className={`min-h-10 rounded-xl border-2 px-3 text-sm font-black ${stationChoice === id ? "border-violet-700 bg-violet-700 text-white" : "border-violet-200 bg-violet-50 text-violet-900"}`}
                         >
                           {station.label}
                         </button>
                       ))}
-                      {selectedLabel ? <p className="basis-full text-sm font-bold text-emerald-700">I’d visit the {selectedLabel} station because it looks interesting.</p> : null}
+                      {selectedLabel ? (
+                        <div className="basis-full rounded-2xl border-2 border-violet-200 bg-violet-50 p-3 sm:p-4">
+                          <p className="text-xl font-black leading-7 text-violet-950 sm:text-2xl sm:leading-8">
+                            I’d like to visit the <span className="text-fuchsia-700">{selectedLabel} station</span> because…
+                          </p>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {!choiceVoice.recording ? (
+                              <button
+                                type="button"
+                                onClick={() => void choiceVoice.start()}
+                                className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg ring-4 ring-rose-200"
+                              >
+                                <Mic className="h-5 w-5" /> {choiceVoice.audioUrl ? "Say it again" : "Say my answer"}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={choiceVoice.stop}
+                                className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg ring-4 ring-rose-200"
+                              >
+                                <Square className="h-5 w-5" /> Stop
+                              </button>
+                            )}
+                            {choiceVoice.recording ? <span className="text-sm font-black text-rose-700">Listening…</span> : null}
+                          </div>
+                          {choiceVoice.audioUrl ? (
+                            <div className="mt-3 flex flex-wrap items-center gap-3">
+                              <audio controls src={choiceVoice.audioUrl} className="h-10 max-w-full" aria-label="Play your station answer" />
+                              <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-700">
+                                <Check className="h-4 w-4" /> Answer ready
+                              </span>
+                            </div>
+                          ) : null}
+                          {choiceVoice.error ? (
+                            <p className="mt-2 text-xs font-bold text-amber-800">
+                              {choiceVoice.error} You may continue without recording in this pilot.
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
 
@@ -519,20 +719,36 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
 
                   {step.action === "complete" ? (
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Link href={pilotMode ? "/pilots/grade-4-learning-paths" : "/primary/learn/grade-4"} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-black text-white">
-                        <Sparkles className="h-4 w-4" /> Back to Unit 1
+                      <Link
+                        href={pilotMode ? "/pilots/grade-4-learning-paths/unit-1/session-1/practice" : "/primary/learn/grade-4/unit-1/session-1/practice"}
+                        className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-5 text-sm font-black text-white shadow-lg ring-4 ring-violet-200"
+                      >
+                        <Sparkles className="h-5 w-5" /> Start practice pack
+                      </Link>
+                      <Link href={pilotMode ? "/pilots/grade-4-learning-paths" : "/primary/learn/grade-4"} className="inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-violet-200 px-4 text-sm font-black text-violet-900">
+                        Back to Unit 1
                       </Link>
                       <button type="button" onClick={reset} className="inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-violet-200 px-4 text-sm font-black text-violet-900">
                         <RotateCcw className="h-4 w-4" /> Play again
                       </button>
                     </div>
                   ) : canContinue ? (
-                    <button type="button" onClick={advance} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-violet-700 px-5 text-sm font-black text-white">
-                      Continue <ChevronRight className="h-4 w-4" />
+                    <button
+                      type="button"
+                      onClick={advance}
+                      className="relative mt-4 inline-flex min-h-14 min-w-44 items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-6 text-base font-black text-white shadow-[0_10px_24px_rgba(109,40,217,0.36)] ring-4 ring-violet-200 transition hover:scale-[1.03] active:scale-95"
+                    >
+                      <MousePointer2 className="h-5 w-5 animate-bounce fill-white motion-reduce:animate-none" />
+                      {step.action === "write_name" ? "Wear my badge" : "Continue"}
+                      <ChevronRight className="h-5 w-5 animate-pulse motion-reduce:animate-none" />
                     </button>
+                  ) : step.action === "write_name" ? (
+                    <span className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2 text-xs font-black text-amber-900 ring-2 ring-amber-300">
+                      <Pencil className="h-5 w-5 animate-bounce motion-reduce:animate-none" /> Write your name to make your badge
+                    </span>
                   ) : step.action === "tap_target" || step.action === "observe" ? (
-                    <span className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-xs font-black text-amber-900">
-                      <Headphones className="h-4 w-4" /> Look at the scene and tap
+                    <span className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2 text-xs font-black text-amber-900 ring-2 ring-amber-300">
+                      <MousePointer2 className="h-5 w-5 animate-bounce fill-white motion-reduce:animate-none" /> Look at the scene and tap
                     </span>
                   ) : null}
                 </div>
@@ -544,4 +760,3 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
     </main>
   );
 }
-

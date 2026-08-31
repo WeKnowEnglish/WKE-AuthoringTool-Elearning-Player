@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight, Copy, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -1055,6 +1056,21 @@ export function LearningTrackCompilerWorkspace({
     setNotice(
       `Removed ${removed?.label ?? LEARNING_TRACK_BEAT_LABELS[removed!.kind]} from the track.`,
     );
+  };
+
+  const duplicateBeat = (index: number) => {
+    const original = composition.beats[index];
+    if (!original) return;
+    const clone = structuredClone(original);
+    clone.id = crypto.randomUUID();
+    const baseLabel = clone.label ?? LEARNING_TRACK_BEAT_LABELS[clone.kind];
+    clone.label = `${baseLabel} copy`;
+    editBeats((beats) => {
+      beats.splice(index + 1, 0, clone);
+      return beats;
+    });
+    setSelectedBeatId(clone.id);
+    setNotice(`Duplicated ${clone.label}.`);
   };
 
   const addBeat = () => {
@@ -3190,7 +3206,7 @@ export function LearningTrackCompilerWorkspace({
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[11px] ltc-subtle">
               {composition.beats.length} activities
-              {pack ? ` · ${pack.screens.length} screens` : ""} · drag to reorder
+              {pack ? ` · ${pack.screens.length} screens` : ""}
             </p>
             <select
               className="ltc-input rounded border px-2 py-1 text-xs"
@@ -3255,33 +3271,41 @@ export function LearningTrackCompilerWorkspace({
                         : compositionBeat.kind}
                     </p>
                   </button>
-                  <div className="mt-2 flex items-center gap-1">
+                  <div className="mt-2 flex items-center gap-0.5">
                     <button
                       type="button"
-                      className="ltc-btn-ghost rounded px-1.5 py-0.5 text-[11px] disabled:opacity-30"
+                      className="ltc-btn-ghost inline-flex h-7 w-7 items-center justify-center rounded disabled:opacity-30"
                       disabled={index === 0}
                       aria-label={`Move ${label} earlier`}
                       onClick={() => moveBeatTo(index, index - 1)}
                     >
-                      ←
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
-                      className="ltc-btn-ghost rounded px-1.5 py-0.5 text-[11px] disabled:opacity-30"
+                      className="ltc-btn-ghost inline-flex h-7 w-7 items-center justify-center rounded disabled:opacity-30"
                       disabled={index >= composition.beats.length - 1}
                       aria-label={`Move ${label} later`}
                       onClick={() => moveBeatTo(index, index + 1)}
                     >
-                      →
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
-                      className="ml-auto ltc-btn-ghost rounded px-1.5 py-0.5 text-[11px] ltc-danger disabled:opacity-30"
+                      className="ltc-btn-ghost inline-flex h-7 w-7 items-center justify-center rounded"
+                      aria-label={`Duplicate ${label}`}
+                      onClick={() => duplicateBeat(index)}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="ltc-btn-ghost ml-auto inline-flex h-7 w-7 items-center justify-center rounded ltc-danger disabled:opacity-30"
                       disabled={composition.beats.length <= 1}
                       aria-label={`Remove ${label}`}
                       onClick={() => removeBeat(index)}
                     >
-                      Remove
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>

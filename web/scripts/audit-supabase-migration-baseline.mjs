@@ -169,6 +169,19 @@ const customChecks = new Map([
         "and tablename = 'objects' and policyname = 'homework_collection_voice_teacher_read')",
     },
   ],
+  [
+    "141_student_course_session_runs.sql",
+    {
+      label: "student course session runs table and student-owned policies",
+      expression:
+        "to_regclass('public.student_course_session_runs') is not null " +
+        "and (select count(*) from pg_policies where schemaname = 'public' " +
+        "and tablename = 'student_course_session_runs' " +
+        "and policyname in ('student_course_session_runs_student_select', " +
+        "'student_course_session_runs_student_insert', " +
+        "'student_course_session_runs_student_update')) = 3",
+    },
+  ],
 ]);
 
 function stripComments(sql) {

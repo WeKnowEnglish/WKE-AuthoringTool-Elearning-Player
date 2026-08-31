@@ -9,6 +9,7 @@ import {
 } from "@/lib/class-schedule/class-clock";
 import type { ClassLiveState } from "@/lib/class-schedule/live-state-types";
 import type { LiveClassMeetingWindow } from "@/lib/class-schedule/next-meeting";
+import { occurrenceStartsMatch } from "@/lib/class-schedule/occurrence-match";
 import { resolveClassLiveMeeting } from "@/lib/class-schedule/trial-meeting";
 import { listMeetingSlotsForClassServiceRole } from "@/lib/daily/schedule-bind";
 import type { VirtualClassroomSessionRecord } from "@/lib/virtual-classroom/domain";
@@ -42,6 +43,62 @@ function emptyState(partial?: Partial<ClassLiveState>): ClassLiveState {
   };
 }
 
+/**
+ * An active persisted waiting/live session is the connection authority.
+ * Schedule resolution enriches the card, but cannot hide a room the teacher
+ * has already opened.
+ */
+export function stateFromOpenClassSession(
+  session: VirtualClassroomSessionRecord,
+  meeting: LiveClassMeetingWindow | null,
+): ClassLiveState | null {
+  if (
+    session.status !== "active" ||
+    (session.classPhase !== "waiting" && session.classPhase !== "live")
+  ) {
+    return null;
+  }
+
+  const meetingMatches = Boolean(
+    meeting &&
+      session.occurrenceStartsAt &&
+      occurrenceStartsMatch(session.occurrenceStartsAt, meeting.startsAt),
+  );
+  const occurrenceStartsAt =
+    session.occurrenceStartsAt ??
+    (meetingMatches ? meeting?.startsAt.toISOString() ?? null : null);
+  const occurrenceEndsAt =
+    session.occurrenceEndsAt ??
+    (meetingMatches ? meeting?.endsAt.toISOString() ?? null : null);
+  const startMs = occurrenceStartsAt
+    ? new Date(occurrenceStartsAt).getTime()
+    : Number.NaN;
+  const isWaiting = session.classPhase === "waiting";
+
+  return emptyState({
+    phase: isWaiting ? "waiting" : "live",
+    kind: session.sessionKind,
+    occurrenceStartsAt,
+    occurrenceEndsAt,
+    occurrenceLabel: meetingMatches ? meeting?.label ?? null : null,
+    meetingSlotId: session.meetingSlotId,
+    sessionId: session.id,
+    joinCode: session.joinCode,
+    sessionTitle: session.title,
+    classPhase: session.classPhase,
+    canStudentEnterWaiting: isWaiting,
+    canStudentEnterLive: !isWaiting,
+    canTeacherJoinVideo: true,
+    canTeacherStartNow: isWaiting,
+    waitingOpensAt: Number.isFinite(startMs)
+      ? new Date(startMs - CLASS_WAITING_OPEN_MS).toISOString()
+      : null,
+    autoLiveAt: Number.isFinite(startMs)
+      ? new Date(startMs - CLASS_LIVE_OPEN_MS).toISOString()
+      : null,
+  });
+}
+
 function sessionAllowsStudentEntry(
   session: VirtualClassroomSessionRecord | null,
 ): boolean {
@@ -69,6 +126,11 @@ export async function getClassLiveState(
     lookAheadMs: 24 * 60 * 60 * 1000,
     postEndGraceMs: 15 * 60 * 1000,
   });
+
+  const openSessionState = activeSession
+    ? stateFromOpenClassSession(activeSession, liveMeeting)
+    : null;
+  if (openSessionState) return openSessionState;
 
   if (activeSession?.sessionKind === "extra" || (activeSession && !liveMeeting)) {
     if (activeSession && activeSession.status === "active") {

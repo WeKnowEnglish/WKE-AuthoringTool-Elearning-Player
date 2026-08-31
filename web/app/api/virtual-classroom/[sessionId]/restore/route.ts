@@ -7,7 +7,7 @@ import {
   VC_MEMBER_COOKIE,
 } from "@/lib/virtual-classroom/session-cookie";
 import { getVirtualClassroomSessionById } from "@/lib/virtual-classroom/server/session";
-import { ensureVcMember } from "@/lib/virtual-classroom/server/liveblocks-session";
+import { ensureVirtualClassroomHostRoom } from "@/lib/virtual-classroom/server/host-bootstrap";
 import { requireVirtualClassroomSessionHost } from "@/lib/virtual-classroom/server/access";
 import { getClassroomRuntimeSnapshot } from "@/lib/virtual-classroom/server/runtime-snapshot";
 import {
@@ -46,11 +46,13 @@ export async function POST(_request: Request, context: RouteContext) {
 
   if (!nativeSupabaseShell) {
     try {
-      await ensureVcMember({
+      await ensureVirtualClassroomHostRoom({
+        sessionId: session.id,
+        joinCode: session.joinCode,
         roomId: session.liveblocksRoomId,
-        userId: teacher.userId,
-        displayName: teacher.displayName,
-        role: "host",
+        classId: session.classId,
+        title: session.title,
+        teacher,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Room unavailable.";

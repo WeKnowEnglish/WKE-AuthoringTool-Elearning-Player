@@ -19,6 +19,7 @@ import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 type Props = {
   part: HomeworkCollectionPart;
   onChange: (part: HomeworkCollectionPart) => void;
+  view?: "all" | "setup" | "content" | "review";
 };
 
 const fieldClass =
@@ -30,9 +31,25 @@ function freshId() {
   return crypto.randomUUID();
 }
 
-export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
+function authoringItemCount(part: HomeworkCollectionPart): number {
+  const record = part as unknown as Record<string, unknown>;
+  for (const key of ["questions", "items", "pairs", "prompts"]) {
+    const value = record[key];
+    if (Array.isArray(value)) return value.length;
+  }
+  return 1;
+}
+
+export function HomeworkCollectionPartEditor({
+  part,
+  onChange,
+  view = "all",
+}: Props) {
   const issues = homeworkCollectionPartValidationIssues(part);
   const gradingMode = homeworkCollectionGradingMode(part.kind);
+  const showSetup = view === "all" || view === "setup";
+  const showContent = view === "all" || view === "content";
+  const showReview = view === "review";
   const patchBase = (
     patch: Partial<
       Pick<HomeworkCollectionPart, "title" | "instructions" | "required">
@@ -77,7 +94,11 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
 
   return (
     <div className="min-w-0 space-y-3">
-      <details className="group rounded-xl border border-stone-200 bg-white">
+      {showSetup ? (
+      <details
+        open={view === "setup"}
+        className="group rounded-xl border border-stone-200 bg-white"
+      >
         <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-extrabold uppercase tracking-wide text-stone-500">
@@ -134,14 +155,15 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
           </label>
         </div>
       </details>
+      ) : null}
 
-      {issues.length > 0 ? (
+      {!showReview && issues.length > 0 ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-4 text-amber-900">
           Keep editing — {issues[0]}
         </p>
       ) : null}
 
-      {part.kind === "multiple_choice" ? (
+      {showContent && part.kind === "multiple_choice" ? (
         <AuthoringItemPager
           count={part.questions.length}
           index={questionIndex}
@@ -181,7 +203,6 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
             const copy = {
               ...question,
               id: freshId(),
-              prompt: question.prompt ? question.prompt + " copy" : "",
               options,
               correctOptionId:
                 optionIds.get(question.correctOptionId) ?? options[0]?.id ?? "",
@@ -327,7 +348,7 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </AuthoringItemPager>
       ) : null}
 
-      {part.kind === "letter_mixup" ? (
+      {showContent && part.kind === "letter_mixup" ? (
         <AuthoringItemPager
           count={part.items.length}
           index={wordIndex}
@@ -451,7 +472,7 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </AuthoringItemPager>
       ) : null}
 
-      {part.kind === "line_match" ? (
+      {showContent && part.kind === "line_match" ? (
         <AuthoringItemPager
           count={part.pairs.length}
           index={pairIndex}
@@ -549,7 +570,7 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </AuthoringItemPager>
       ) : null}
 
-      {part.kind === "listen_and_choose" ? (
+      {showContent && part.kind === "listen_and_choose" ? (
         <AuthoringItemPager
           count={part.items.length}
           index={listeningIndex}
@@ -811,7 +832,7 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </AuthoringItemPager>
       ) : null}
 
-      {part.kind === "sentence_scramble" ? (
+      {showContent && part.kind === "sentence_scramble" ? (
         <AuthoringItemPager
           count={part.items.length}
           index={sentenceIndex}
@@ -942,7 +963,7 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </AuthoringItemPager>
       ) : null}
 
-      {part.kind === "free_response" ? (
+      {showContent && part.kind === "free_response" ? (
         <AuthoringItemPager
           count={part.prompts.length}
           index={promptIndex}
@@ -1064,7 +1085,7 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </AuthoringItemPager>
       ) : null}
 
-      {part.kind === "speaking_prompt" ? (
+      {showContent && part.kind === "speaking_prompt" ? (
         <div className="space-y-3">
           <label className="block text-[11px] font-bold text-stone-700">
             Speaking prompt
@@ -1128,7 +1149,7 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         </div>
       ) : null}
 
-      {part.kind === "listening_item_match" ? (
+      {showContent && part.kind === "listening_item_match" ? (
         <AssessmentListeningItemMatchPartEditor
           part={{
             id: part.id,
@@ -1147,18 +1168,85 @@ export function HomeworkCollectionPartEditor({ part, onChange }: Props) {
         />
       ) : null}
 
-      {part.kind === "lesson_player_pack" ? (
+      {showContent && part.kind === "lesson_player_pack" ? (
         <HomeworkCollectionLessonPlayerPackEditor
           part={part}
           onChange={(nextPart) => onChange(nextPart)}
         />
       ) : null}
 
-      {part.kind === "document_module" ? (
+      {showContent && part.kind === "document_module" ? (
         <HomeworkCollectionDocumentModuleEditor
           part={part}
           onChange={(nextPart) => onChange(nextPart)}
         />
+      ) : null}
+
+      {showReview ? (
+        <section
+          className={
+            "rounded-2xl border p-4 " +
+            (issues.length === 0
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50")
+          }
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p
+                className={
+                  "text-xs font-extrabold uppercase tracking-wide " +
+                  (issues.length === 0 ? "text-emerald-800" : "text-amber-800")
+                }
+              >
+                {issues.length === 0 ? "Ready to assign" : "Needs attention"}
+              </p>
+              <p className="mt-1 text-base font-extrabold text-stone-950">
+                {part.title || "Untitled activity"}
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-stone-700 shadow-sm">
+              {gradingMode === "automatic" ? "Auto graded" : "Teacher reviewed"}
+            </span>
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+            <div className="rounded-xl bg-white p-3">
+              <dt className="font-bold text-stone-500">Items</dt>
+              <dd className="mt-1 text-lg font-extrabold text-stone-950">
+                {authoringItemCount(part)}
+              </dd>
+            </div>
+            <div className="rounded-xl bg-white p-3">
+              <dt className="font-bold text-stone-500">Submission</dt>
+              <dd className="mt-1 font-extrabold text-stone-950">
+                {part.required ? "Required" : "Optional"}
+              </dd>
+            </div>
+            <div className="col-span-2 rounded-xl bg-white p-3 sm:col-span-1">
+              <dt className="font-bold text-stone-500">Grading</dt>
+              <dd className="mt-1 font-extrabold text-stone-950">
+                {gradingMode === "automatic" ? "Automatic" : "Teacher review"}
+              </dd>
+            </div>
+          </dl>
+          {issues.length > 0 ? (
+            <ul className="mt-4 space-y-2">
+              {issues.map((issue) => (
+                <li
+                  key={issue}
+                  className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-950"
+                >
+                  {issue}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-xs font-semibold leading-5 text-emerald-950">
+              Required content and answer rules are complete. The live student
+              viewport uses the same frozen assignment format students receive.
+            </p>
+          )}
+        </section>
       ) : null}
     </div>
   );

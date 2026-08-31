@@ -162,6 +162,15 @@ export const PILOT_SECTIONS: PilotSectionDef[] = [
 
 export const PILOT_CATALOG: PilotEntry[] = [
   {
+    href: "/pilots/grade-4-learning-paths",
+    title: "Grade 4 WKE Learning Paths",
+    description:
+      "Curriculum shelf plus Unit 1 Session 1: a character-led welcome-fair lesson with scene focus, learner choice, comprehension, and a local voice baseline ready for speech-trigger integration.",
+    group: "activities",
+    status: "active",
+    subtype: "guided_dialogue",
+  },
+  {
     href: "/pilots/primary-a2-assessment",
     title: "Primary A2 assessment",
     description:

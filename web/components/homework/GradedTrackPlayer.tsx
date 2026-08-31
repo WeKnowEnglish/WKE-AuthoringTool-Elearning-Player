@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Volume2 } from "lucide-react";
 import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
 import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
 import { SecondaryHomeworkOneShell } from "@/components/secondary/SecondaryHomeworkOneShell";
@@ -73,16 +73,18 @@ function SegmentHeader({
   segment,
   index,
   total,
+  accentClass,
 }: {
   segment: GradedTrackSegment;
   index: number;
   total: number;
+  accentClass: string;
 }) {
   const badge = gradingBadge(segment.gradingPolicy);
   return (
     <header>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-teal-700">
+        <p className={`text-xs font-extrabold uppercase tracking-wide ${accentClass}`}>
           Activity {index + 1} of {total}
         </p>
         <span
@@ -98,6 +100,31 @@ function SegmentHeader({
   );
 }
 
+function playerTheme(theme: GradedTrackFreezeDocument["design"]["theme"]) {
+  if (theme === "navy") {
+    return {
+      page: "bg-slate-100",
+      accent: "text-slate-700",
+      active: "border-slate-800 bg-slate-800 text-white",
+      action: "bg-slate-800 text-white",
+    };
+  }
+  if (theme === "warm") {
+    return {
+      page: "bg-amber-50",
+      accent: "text-amber-800",
+      active: "border-amber-800 bg-amber-800 text-white",
+      action: "bg-amber-800 text-white",
+    };
+  }
+  return {
+    page: "bg-stone-50",
+    accent: "text-teal-700",
+    active: "border-teal-700 bg-teal-700 text-white",
+    action: "bg-teal-700 text-white",
+  };
+}
+
 export function GradedTrackPlayer({
   freeze,
   homeworkId,
@@ -110,6 +137,7 @@ export function GradedTrackPlayer({
   homeHref,
 }: Props) {
   const authoringPreview = mode === "authoring-preview";
+  const theme = playerTheme(freeze.design.theme);
   const resolved = useMemo(() => resolveGradedTrack(freeze), [freeze]);
   const { segments } = resolved;
   const hasCollectionSegments = segments.some(
@@ -226,12 +254,95 @@ export function GradedTrackPlayer({
   const secondaryDocument =
     freeze.level === "secondary" ? freeze.secondaryDocument : undefined;
 
+  const speakSupport = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const text = [
+      freeze.title,
+      freeze.description,
+      freeze.instructions,
+      freeze.support.learnerMessage,
+      freeze.support.vocabularySupport,
+    ]
+      .filter((entry) => entry.trim())
+      .join(". ");
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  };
+
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 p-3 sm:p-5">
+    <div className={`min-h-full ${theme.page}`}>
+      <div
+        className={`mx-auto w-full space-y-4 p-3 sm:p-5 ${
+          freeze.design.contentWidth === "wide" ? "max-w-6xl" : "max-w-4xl"
+        }`}
+      >
       {alreadyCompleted && !authoringPreview ? (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
           This homework is already complete. You can still review your work.
         </p>
+      ) : null}
+
+      {(freeze.coverImageUrl ||
+        freeze.topic ||
+        freeze.description ||
+        freeze.instructions ||
+        freeze.support.learnerMessage) ? (
+        <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+          {freeze.coverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- frozen teacher-selected asset URL
+            <img
+              src={freeze.coverImageUrl}
+              alt=""
+              className="max-h-56 w-full object-cover"
+            />
+          ) : null}
+          <div className="p-4 sm:p-5">
+            {freeze.topic ? (
+              <p className={`text-xs font-extrabold uppercase tracking-wide ${theme.accent}`}>
+                {freeze.topic}
+              </p>
+            ) : null}
+            <h1 className="mt-1 text-2xl font-black text-stone-950">{freeze.title}</h1>
+            {freeze.description ? (
+              <p className="mt-2 text-sm font-semibold leading-6 text-stone-600">
+                {freeze.description}
+              </p>
+            ) : null}
+            {freeze.instructions ? (
+              <p className="mt-3 rounded-xl bg-stone-100 px-3 py-2.5 text-sm font-semibold leading-6 text-stone-800">
+                {freeze.instructions}
+              </p>
+            ) : null}
+            {freeze.support.learnerMessage ? (
+              <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm font-semibold leading-6 text-sky-950">
+                {freeze.support.learnerMessage}
+              </p>
+            ) : null}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {freeze.support.vocabularySupport ? (
+                <details className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm">
+                  <summary className="cursor-pointer font-bold text-stone-800">
+                    Vocabulary help
+                  </summary>
+                  <p className="mt-2 whitespace-pre-line font-semibold leading-6 text-stone-600">
+                    {freeze.support.vocabularySupport}
+                  </p>
+                </details>
+              ) : null}
+              {freeze.support.readDirectionsAloud ? (
+                <button
+                  type="button"
+                  onClick={speakSupport}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800"
+                >
+                  <Volume2 className="h-4 w-4" />
+                  Read directions aloud
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </section>
       ) : null}
 
       <nav
@@ -250,14 +361,17 @@ export function GradedTrackPlayer({
               key={entry.partId}
               type="button"
               onClick={() => handleNavigate(index)}
+              aria-label={`Activity ${index + 1}: ${entry.label}`}
               className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-extrabold ${
                 index === displayIndex
-                  ? "border-teal-700 bg-teal-700 text-white"
+                  ? theme.active
                   : "border-stone-200 bg-white text-stone-700"
               }`}
             >
               {answered ? <Check className="h-3.5 w-3.5" /> : null}
-              {index + 1}. {entry.label}
+              {freeze.design.progressStyle === "numbers"
+                ? index + 1
+                : `${index + 1}. ${entry.label}`}
             </button>
           );
         })}
@@ -268,6 +382,7 @@ export function GradedTrackPlayer({
           segment={segment}
           index={displayIndex}
           total={segments.length}
+          accentClass={theme.accent}
         />
 
         <div className="mt-6">
@@ -357,7 +472,7 @@ export function GradedTrackPlayer({
                 type="button"
                 disabled={pending}
                 onClick={() => handleNavigate(displayIndex + 1)}
-                className="inline-flex min-h-11 items-center gap-1 rounded-xl bg-teal-700 px-4 text-sm font-extrabold text-white disabled:opacity-50"
+                className={`inline-flex min-h-11 items-center gap-1 rounded-xl px-4 text-sm font-extrabold disabled:opacity-50 ${theme.action}`}
               >
                 {pending ? "Saving…" : "Save & continue"}
                 <ArrowRight className="h-4 w-4" />
@@ -375,6 +490,7 @@ export function GradedTrackPlayer({
           </div>
         ) : null}
       </section>
+      </div>
     </div>
   );
 }

@@ -8,11 +8,15 @@ export type {
   ActivityTrackPartCatalogEntry,
   ActivityTrackPartKind,
   ActivityTrackPartSource,
+  ActivityTrackSupportSettings,
+  ActivityTrackDesignSettings,
 } from "@/lib/activity-tracks/types";
 export {
   ACTIVITY_TRACK_DOCUMENT_VERSION,
   ACTIVITY_TRACK_MODE_COPY,
   ACTIVITY_TRACK_PART_CATALOG,
+  DEFAULT_ACTIVITY_TRACK_SUPPORT,
+  DEFAULT_ACTIVITY_TRACK_DESIGN,
   createEmptyActivityTrack,
   createEmptyPart,
   isPartKindAllowedForMode,
@@ -52,3 +56,15 @@ export {
   removeActivityTrackDraft,
   type ActivityTrackDraftSaveResult,
 } from "@/lib/activity-tracks/draft-sync";
+export {
+  activityCountLabel,
+  activityItemCount,
+  activityItemNoun,
+  collectTrackMediaUsages,
+  trackMediaIssues,
+  trackScoringParts,
+  type TrackMediaIssue,
+  type TrackMediaKind,
+  type TrackMediaUsage,
+  type TrackScoringPart,
+} from "@/lib/activity-tracks/authoring-insights";

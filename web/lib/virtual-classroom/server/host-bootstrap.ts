@@ -23,7 +23,10 @@ import {
   createInitialClassroomRuntimeSnapshot,
   seedClassroomRuntimeSnapshot,
 } from "@/lib/virtual-classroom/server/runtime-snapshot";
-import { createVirtualClassroomSession } from "@/lib/virtual-classroom/server/session";
+import {
+  createVirtualClassroomSession,
+  updateVirtualClassroomSessionPhase,
+} from "@/lib/virtual-classroom/server/session";
 
 export type HostVirtualClassroomResult = {
   sessionId: string;
@@ -40,6 +43,50 @@ export type HostVirtualClassroomResult = {
   /** Present when Daily is enabled and room attach succeeded. */
   dailyRoomUrl: string | null;
 };
+
+type EnsureHostRoomInput = {
+  sessionId: string;
+  joinCode: string;
+  roomId: string;
+  classId: string | null;
+  title: string;
+  teacher: { userId: string; displayName: string };
+};
+
+/**
+ * Idempotently provision or repair the collaboration room behind a persisted
+ * classroom session. A teacher reopening a valid session can therefore recover
+ * from a partial first launch instead of being stranded on "room not found."
+ */
+export async function ensureVirtualClassroomHostRoom(
+  input: EnsureHostRoomInput,
+): Promise<void> {
+  const secret = assertLiveblocksSecret();
+  const liveblocks = new Liveblocks({ secret });
+  await liveblocks.getOrCreateRoom(input.roomId, { defaultAccesses: [] });
+
+  const initial = createVirtualClassroomInitialStorage({
+    sessionId: input.sessionId,
+    joinCode: input.joinCode,
+    classId: input.classId ?? "",
+    hostUserId: input.teacher.userId,
+    title: input.title,
+  });
+  const root = new LiveObject(initial);
+  const plain = toPlainLson(root) as PlainLsonObject;
+  try {
+    await liveblocks.initializeStorageDocument(input.roomId, plain);
+  } catch {
+    // Expected when an already-initialized room is being reopened.
+  }
+
+  await ensureVcMember({
+    roomId: input.roomId,
+    userId: input.teacher.userId,
+    displayName: input.teacher.displayName,
+    role: "host",
+  });
+}
 
 /** Shared bootstrap for class-linked and one-off Virtual Classroom hosts. */
 export async function bootstrapVirtualClassroomHost(input: {
@@ -62,7 +109,7 @@ export async function bootstrapVirtualClassroomHost(input: {
   // Liveblocks remains the recovery transport when the native runtime cannot
   // be seeded. Validate it before persisting the session so a configuration
   // error cannot leave an active classroom with no usable room.
-  const secret = assertLiveblocksSecret();
+  assertLiveblocksSecret();
   const joinCode = generateJoinCode();
   const sessionId = classSessionIdFromJoinCode(joinCode);
   const roomId = toVirtualClassroomRoomId(joinCode);
@@ -103,30 +150,20 @@ export async function bootstrapVirtualClassroomHost(input: {
   const nativeSupabaseShell = nativeSupabaseShellRequested && runtimeSeed.ok;
 
   if (!nativeSupabaseShell) {
-    const liveblocks = new Liveblocks({ secret });
-    await liveblocks.createRoom(roomId, { defaultAccesses: [] });
-
-    const initial = createVirtualClassroomInitialStorage({
-      sessionId,
-      joinCode,
-      classId: input.classId ?? "",
-      hostUserId: input.teacher.userId,
-      title,
-    });
-    const root = new LiveObject(initial);
-    const plain = toPlainLson(root) as PlainLsonObject;
     try {
-      await liveblocks.initializeStorageDocument(roomId, plain);
-    } catch {
-      // client initialStorage fallback
+      await ensureVirtualClassroomHostRoom({
+        sessionId,
+        joinCode,
+        roomId,
+        classId: input.classId,
+        title,
+        teacher: input.teacher,
+      });
+    } catch (error) {
+      // Do not leave an active database session pointing at an unusable room.
+      await updateVirtualClassroomSessionPhase(sessionId, "ended").catch(() => null);
+      throw error;
     }
-
-    await ensureVcMember({
-      roomId,
-      userId: input.teacher.userId,
-      displayName: input.teacher.displayName,
-      role: "host",
-    });
   }
 
   // Daily room creation is intentionally deferred to the token request. It no

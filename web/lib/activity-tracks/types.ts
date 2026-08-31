@@ -12,6 +12,30 @@ export type ActivityTrackMode = "practice" | "graded" | "assessment";
 
 export type ActivityTrackLevel = "primary" | "secondary" | "either";
 
+export type ActivityTrackSupportSettings = {
+  learnerMessage: string;
+  vocabularySupport: string;
+  readDirectionsAloud: boolean;
+};
+
+export type ActivityTrackDesignSettings = {
+  theme: "teal" | "navy" | "warm";
+  contentWidth: "focused" | "wide";
+  progressStyle: "labels" | "numbers";
+};
+
+export const DEFAULT_ACTIVITY_TRACK_SUPPORT: ActivityTrackSupportSettings = {
+  learnerMessage: "",
+  vocabularySupport: "",
+  readDirectionsAloud: false,
+};
+
+export const DEFAULT_ACTIVITY_TRACK_DESIGN: ActivityTrackDesignSettings = {
+  theme: "teal",
+  contentWidth: "focused",
+  progressStyle: "labels",
+};
+
 export type ActivityTrackPartKind =
   | "multiple_choice"
   | "flashcards"
@@ -105,9 +129,13 @@ export type ActivityTrackDocument = {
   id: string;
   mode: ActivityTrackMode;
   title: string;
+  topic: string;
+  description: string;
   /** Teacher-selected card image. Falls back to activity content only when unset. */
   coverImageUrl?: string | null;
   instructions: string;
+  support: ActivityTrackSupportSettings;
+  design: ActivityTrackDesignSettings;
   level: ActivityTrackLevel;
   estimatedMinutes: number | null;
   vocabListId: string | null;
@@ -365,8 +393,12 @@ export function createEmptyActivityTrack(input: {
     id,
     mode: input.mode,
     title,
+    topic: "",
+    description: "",
     coverImageUrl: null,
     instructions: practiceComposition?.aim ?? "",
+    support: { ...DEFAULT_ACTIVITY_TRACK_SUPPORT },
+    design: { ...DEFAULT_ACTIVITY_TRACK_DESIGN },
     level: "either",
     estimatedMinutes: practiceComposition?.durationTargetMin ?? null,
     vocabListId: practiceComposition?.vocabListId ?? null,

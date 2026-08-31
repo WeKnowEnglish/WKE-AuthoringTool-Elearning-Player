@@ -7,13 +7,13 @@ create table if not exists public.student_course_session_runs (
   unit_id text not null,
   session_id text not null,
   content_version text not null,
-  status text not null default ''in_progress''
-    check (status in (''in_progress'', ''completed'')),
-  active_phase text not null default ''hotspot''
-    check (active_phase in (''hotspot'', ''practice'')),
-  active_step_id text not null default '''',
-  state jsonb not null default ''{}''::jsonb
-    check (jsonb_typeof(state) = ''object''),
+  status text not null default 'in_progress'
+    check (status in ('in_progress', 'completed')),
+  active_phase text not null default 'hotspot'
+    check (active_phase in ('hotspot', 'practice')),
+  active_step_id text not null default '',
+  state jsonb not null default '{}'::jsonb
+    check (jsonb_typeof(state) = 'object'),
   started_at timestamptz not null default now(),
   completed_at timestamptz,
   created_at timestamptz not null default now(),

@@ -77,6 +77,11 @@ export async function POST(request: Request, context: RouteContext) {
           { status: 409 },
         );
       }
+      if (mode === "live" && ensured.session.classPhase !== "live") {
+        throw new Error(
+          "The classroom room opened, but its live status was not published.",
+        );
+      }
 
       const cookies = await mintHostCookiesForSession({
         session: ensured.session,

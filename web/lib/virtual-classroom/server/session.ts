@@ -39,10 +39,19 @@ function mapRow(row: Record<string, unknown>): VirtualClassroomSessionRecord {
   };
 }
 
-export async function endActiveSessionsForClass(classId: string): Promise<void> {
+function requireServiceRoleClient() {
   const supabase = createServiceRoleSupabase();
-  if (!supabase) return;
-  await supabase
+  if (!supabase) {
+    throw new Error(
+      "Virtual Classroom persistence is unavailable. Configure SUPABASE_SERVICE_ROLE_KEY.",
+    );
+  }
+  return supabase;
+}
+
+export async function endActiveSessionsForClass(classId: string): Promise<void> {
+  const supabase = requireServiceRoleClient();
+  const { error } = await supabase
     .from("class_sessions")
     .update({
       status: "ended",
@@ -51,13 +60,13 @@ export async function endActiveSessionsForClass(classId: string): Promise<void> 
     })
     .eq("class_id", classId)
     .eq("status", "active");
+  if (error) throw error;
 }
 
 /** Ends other active one-off sessions created by this teacher. */
 export async function endActiveOneOffSessionsForTeacher(teacherId: string): Promise<void> {
-  const supabase = createServiceRoleSupabase();
-  if (!supabase) return;
-  await supabase
+  const supabase = requireServiceRoleClient();
+  const { error } = await supabase
     .from("class_sessions")
     .update({
       status: "ended",
@@ -67,6 +76,7 @@ export async function endActiveOneOffSessionsForTeacher(teacherId: string): Prom
     .eq("created_by", teacherId)
     .is("class_id", null)
     .eq("status", "active");
+  if (error) throw error;
 }
 
 export type CreateVirtualClassroomSessionInput = {
@@ -87,8 +97,7 @@ export type CreateVirtualClassroomSessionInput = {
 export async function createVirtualClassroomSession(
   input: CreateVirtualClassroomSessionInput,
 ): Promise<void> {
-  const supabase = createServiceRoleSupabase();
-  if (!supabase) return;
+  const supabase = requireServiceRoleClient();
 
   if (input.classId) {
     await endActiveSessionsForClass(input.classId);
@@ -96,7 +105,7 @@ export async function createVirtualClassroomSession(
     await endActiveOneOffSessionsForTeacher(input.createdBy);
   }
 
-  await supabase.from("class_sessions").upsert({
+  const { error } = await supabase.from("class_sessions").upsert({
     id: input.id,
     class_id: input.classId,
     class_lesson_id: input.classLessonId ?? null,
@@ -112,14 +121,14 @@ export async function createVirtualClassroomSession(
     session_kind: input.sessionKind ?? "extra",
     class_phase: input.classPhase ?? "live",
   });
+  if (error) throw error;
 }
 
 export async function updateVirtualClassroomSessionPhase(
   sessionId: string,
   classPhase: ClassSessionPhase,
 ): Promise<VirtualClassroomSessionRecord | null> {
-  const supabase = createServiceRoleSupabase();
-  if (!supabase) return null;
+  const supabase = requireServiceRoleClient();
   const patch: Record<string, unknown> = {
     class_phase: classPhase,
   };
@@ -127,12 +136,13 @@ export async function updateVirtualClassroomSessionPhase(
     patch.status = "ended";
     patch.ended_at = new Date().toISOString();
   }
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("class_sessions")
     .update(patch)
     .eq("id", sessionId)
     .select("*")
     .maybeSingle();
+  if (error) throw error;
   if (!data) return null;
   return mapRow(data as Record<string, unknown>);
 }

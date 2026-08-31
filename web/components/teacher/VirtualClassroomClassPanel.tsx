@@ -38,7 +38,11 @@ export function VirtualClassroomClassPanel({
       const res = await fetch(
         `/api/virtual-classroom/class/${encodeURIComponent(classId)}/live-state`,
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(payload.error ?? "Could not check the scheduled classroom.");
+        return;
+      }
       setLiveState((await res.json()) as ClassLiveState);
     } catch {
       // ignore
@@ -193,9 +197,9 @@ export function VirtualClassroomClassPanel({
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Virtual Classroom</h2>
         <p className="text-sm text-slate-600">
-          Prepare a Ready lesson anytime. Open the classroom early for prep, or start now.
-          Scheduled classes auto-open a waiting room 15 minutes before class and go live at
-          5 minutes before.
+          Choose a lesson, then go live for students. Use teacher-only preparation when you
+          need to check the room first. Scheduled classes open a waiting room 15 minutes
+          before class.
         </p>
       </div>
 
@@ -217,7 +221,15 @@ export function VirtualClassroomClassPanel({
               </span>
             ) : null}
           </p>
-          {liveState.phase === "idle" && liveState.waitingOpensAt ? (
+          {liveState.canStudentEnterWaiting || liveState.canStudentEnterLive ? (
+            <p className="mt-1 text-xs font-bold text-emerald-700">
+              Students can see this class and join now.
+            </p>
+          ) : liveState.classPhase === "prep" ? (
+            <p className="mt-1 text-xs font-bold text-amber-700">
+              Teacher preparation only — students cannot see or join yet.
+            </p>
+          ) : liveState.phase === "idle" && liveState.waitingOpensAt ? (
             <p className="mt-1 text-xs text-slate-500">
               Waiting opens{" "}
               {new Date(liveState.waitingOpensAt).toLocaleString()} · Auto-live{" "}
@@ -251,21 +263,6 @@ export function VirtualClassroomClassPanel({
             </select>
           </label>
 
-          <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-3">
-            <p className="text-sm font-bold text-amber-950">Temporary one-off class</p>
-            <p className="mt-0.5 text-xs text-amber-900">
-              Starts a live session for this class right away — no schedule slot required. Use
-              while iterating; enrolled students join with the session code.
-            </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void host("extra")}
-              className="mt-2 rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50"
-            >
-              {busy ? "Starting…" : "Start temporary class"}
-            </button>
-          </div>
 
           {joinCode ? (
             <p className="text-sm text-slate-700">
@@ -290,7 +287,11 @@ export function VirtualClassroomClassPanel({
                 onClick={() => void reopen()}
                 className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
               >
-                {busy ? "Opening…" : "Open session"}
+                {busy
+                  ? "Opening…"
+                  : liveState?.classPhase === "live"
+                    ? "Re-enter live class"
+                    : "Open teacher room"}
               </button>
             ) : null}
             <button
@@ -299,7 +300,7 @@ export function VirtualClassroomClassPanel({
               onClick={() => void host("early")}
               className="rounded-lg border border-teal-700 px-4 py-2 text-sm font-bold text-teal-900 disabled:opacity-50"
             >
-              {busy ? "…" : "Open classroom early"}
+              {busy ? "…" : "Prepare room (teacher only)"}
             </button>
             <button
               type="button"
@@ -307,13 +308,30 @@ export function VirtualClassroomClassPanel({
               onClick={() => void host("live")}
               className="rounded-lg bg-teal-800 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
-              {busy ? "…" : "Start class now"}
+              {busy ? "…" : "Go live for students"}
             </button>
           </div>
           <p className="text-xs text-slate-500">
-            Early / Start now follow the class schedule window. For unscheduled teaching, use{" "}
-            <span className="font-semibold text-slate-700">Start temporary class</span> above.
+            Preparation and live start follow the class schedule.
           </p>
+
+          <details className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-3">
+            <summary className="cursor-pointer text-sm font-bold text-amber-950">
+              Need an unscheduled class?
+            </summary>
+            <p className="mt-1 text-xs text-amber-900">
+              Start a live class without a schedule slot. Enrolled students will see it
+              automatically on their home and classroom screens.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void host("extra")}
+              className="mt-2 rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50"
+            >
+              {busy ? "Starting…" : "Go live without a schedule"}
+            </button>
+          </details>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
         </>
       )}

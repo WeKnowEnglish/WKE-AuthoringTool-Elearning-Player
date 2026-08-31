@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-const HOMEWORK_REFRESH_MS = 15_000;
+const STUDENT_PORTAL_REFRESH_MS = 5_000;
 
 /**
- * Keep an idle student home/class screen in sync while a teacher is assigning.
- * Server homework reads are no-store, so router.refresh() fetches the current
- * RLS-filtered assignment list without reloading the browser or losing login.
+ * Keep an idle student home/class screen in sync with live-class and homework
+ * changes. Server reads are no-store, so router.refresh() fetches the current
+ * enrolled-class state without reloading the browser or losing login.
  */
 export function StudentHomeworkAutoRefresh() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export function StudentHomeworkAutoRefresh() {
       router.refresh();
     };
 
-    const intervalId = window.setInterval(refresh, HOMEWORK_REFRESH_MS);
+    const intervalId = window.setInterval(refresh, STUDENT_PORTAL_REFRESH_MS);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
 

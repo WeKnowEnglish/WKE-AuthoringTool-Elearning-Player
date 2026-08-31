@@ -158,12 +158,18 @@ export async function ensureClassSessionForClock(input: {
         active.id,
         targetPhase,
       );
-      promoted = Boolean(updated);
-      active = updated ?? active;
+      if (!updated) {
+        throw new Error("Could not publish the classroom phase.");
+      }
+      promoted = true;
+      active = updated;
     } else if (forceLive && active.classPhase !== "live") {
       const updated = await updateVirtualClassroomSessionPhase(active.id, "live");
-      promoted = Boolean(updated);
-      active = updated ?? active;
+      if (!updated) {
+        throw new Error("Could not publish the classroom as live.");
+      }
+      promoted = true;
+      active = updated;
     }
     return {
       session: active,

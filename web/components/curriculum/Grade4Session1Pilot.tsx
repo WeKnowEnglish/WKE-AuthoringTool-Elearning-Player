@@ -15,6 +15,11 @@ import {
   Square,
   Volume2,
 } from "lucide-react";
+import type {
+  CourseSessionRunRecord,
+  Session1HotspotProgress,
+} from "@/lib/curriculum/session-run";
+import { useGrade4Session1Autosave } from "@/lib/curriculum/use-session-run-autosave";
 
 type StationId = "sports" | "art" | "books" | "pets" | "music" | "badges";
 type Anchor = "close_left" | "close_right" | "lower_left" | "lower_right" | "center_close";
@@ -430,13 +435,32 @@ function HandwritingBadge({ onInkChange }: { onInkChange: (hasInk: boolean) => v
   );
 }
 
-export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean }) {
-  const [stepIndex, setStepIndex] = useState(0);
+export function Grade4Session1Pilot({
+  pilotMode = false,
+  initialRun = null,
+}: {
+  pilotMode?: boolean;
+  initialRun?: CourseSessionRunRecord | null;
+}) {
+  const restoredHotspot = initialRun?.state.hotspot;
+  const restoredStationChoice =
+    restoredHotspot?.stationChoice && restoredHotspot.stationChoice in STATIONS
+      ? restoredHotspot.stationChoice as StationId
+      : null;
+  const [stepIndex, setStepIndex] = useState(() => {
+    const restoredIndex = STEPS.findIndex(
+      (candidate) => candidate.id === restoredHotspot?.activeStepId,
+    );
+    return restoredIndex >= 0 ? restoredIndex : 0;
+  });
   const [message, setMessage] = useState<string | null>(null);
-  const [badgeHasInk, setBadgeHasInk] = useState(false);
-  const [stationChoice, setStationChoice] = useState<StationId | null>(null);
-  const [questionCorrect, setQuestionCorrect] = useState(false);
-  const [reflection, setReflection] = useState<string | null>(null);
+  const [badgeHasInk, setBadgeHasInk] = useState(restoredHotspot?.badgeComplete ?? false);
+  const [stationChoice, setStationChoice] = useState<StationId | null>(restoredStationChoice);
+  const [questionCorrect, setQuestionCorrect] = useState(restoredHotspot?.questionCorrect ?? false);
+  const [reflection, setReflection] = useState<string | null>(restoredHotspot?.reflection ?? null);
+  const [completedVoiceParts, setCompletedVoiceParts] = useState<string[]>(
+    restoredHotspot?.completedVoiceParts ?? [],
+  );
   const choiceVoice = useLocalVoiceRecorder(15);
   const voice = useLocalVoiceRecorder(20);
   const step = STEPS[stepIndex] ?? STEPS[0];
@@ -444,15 +468,52 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
 
   const focusRegion = step.focus ? STATIONS[step.focus] : null;
   const selectedLabel = stationChoice ? STATIONS[stationChoice].short : null;
+  const choiceVoiceComplete =
+    completedVoiceParts.includes("station-choice") || Boolean(choiceVoice.audioUrl || choiceVoice.error);
+  const baselineVoiceComplete =
+    completedVoiceParts.includes("baseline") || Boolean(voice.audioUrl || voice.error);
+
+  useEffect(() => {
+    if (!choiceVoice.audioUrl && !choiceVoice.error) return;
+    setCompletedVoiceParts((current) =>
+      current.includes("station-choice") ? current : [...current, "station-choice"],
+    );
+  }, [choiceVoice.audioUrl, choiceVoice.error]);
+
+  useEffect(() => {
+    if (!voice.audioUrl && !voice.error) return;
+    setCompletedVoiceParts((current) =>
+      current.includes("baseline") ? current : [...current, "baseline"],
+    );
+  }, [voice.audioUrl, voice.error]);
+
+  const hotspotProgress = useMemo<Session1HotspotProgress>(
+    () => ({
+      activeStepId: step.id,
+      badgeComplete: badgeHasInk,
+      stationChoice,
+      questionCorrect,
+      reflection,
+      completedVoiceParts,
+    }),
+    [badgeHasInk, completedVoiceParts, questionCorrect, reflection, stationChoice, step.id],
+  );
+  const saveState = useGrade4Session1Autosave({
+    enabled: !pilotMode,
+    phase: "hotspot",
+    status: "in_progress",
+    activeStepId: step.id,
+    progress: hotspotProgress,
+  });
 
   const canContinue = useMemo(() => {
     if (step.action === "write_name") return badgeHasInk;
-    if (step.action === "record") return Boolean(voice.audioUrl || voice.error);
+    if (step.action === "record") return baselineVoiceComplete;
     if (step.action === "reflect") return Boolean(reflection);
     if (step.action === "question") return questionCorrect;
-    if (step.action === "choose") return Boolean(stationChoice && (choiceVoice.audioUrl || choiceVoice.error));
+    if (step.action === "choose") return Boolean(stationChoice && choiceVoiceComplete);
     return step.action === "continue";
-  }, [badgeHasInk, choiceVoice.audioUrl, choiceVoice.error, questionCorrect, reflection, stationChoice, step.action, voice.audioUrl, voice.error]);
+  }, [badgeHasInk, baselineVoiceComplete, choiceVoiceComplete, questionCorrect, reflection, stationChoice, step.action]);
 
   function advance() {
     setMessage(null);
@@ -468,6 +529,7 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
     setStationChoice(null);
     setQuestionCorrect(false);
     setReflection(null);
+    setCompletedVoiceParts([]);
   }
 
   function handleStation(id: StationId) {
@@ -506,7 +568,14 @@ export function Grade4Session1Pilot({ pilotMode = false }: { pilotMode?: boolean
           <div className="flex items-center gap-3">
             {pilotMode ? (
               <span className="hidden rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-900 sm:inline">Pilot · local voice playback</span>
-            ) : null}
+            ) : (
+              <span
+                className={`hidden rounded-full px-3 py-1 text-xs font-black sm:inline ${saveState.status === "error" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800"}`}
+                title={saveState.status === "error" ? saveState.error : undefined}
+              >
+                {saveState.status === "saving" ? "Saving…" : saveState.status === "error" ? "Save paused" : "Progress saved"}
+              </span>
+            )}
             <button type="button" onClick={reset} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-black text-slate-600">
               <RotateCcw className="h-4 w-4" /> Reset
             </button>

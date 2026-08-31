@@ -16,6 +16,11 @@ import {
   Sparkles,
   Volume2,
 } from "lucide-react";
+import type {
+  CourseSessionRunRecord,
+  Session1PracticeProgress,
+} from "@/lib/curriculum/session-run";
+import { useGrade4Session1Autosave } from "@/lib/curriculum/use-session-run-autosave";
 import {
   SESSION_1_GRAMMAR_ITEMS,
   SESSION_1_LETTER_SCRAMBLES,
@@ -447,25 +452,22 @@ function FixSentence({ onComplete, onBack }: { onComplete: () => void; onBack: (
   );
 }
 
-function FreeWriting({ onComplete, onBack }: { onComplete: () => void; onBack: () => void }) {
-  const storageKey = "wke-grade4-unit1-session1-writing";
-  const [draft, setDraft] = useState("");
-  const [loaded, setLoaded] = useState(false);
+function FreeWriting({
+  draft,
+  onDraftChange,
+  onComplete,
+  onBack,
+}: {
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onComplete: () => void;
+  onBack: () => void;
+}) {
   const words = useMemo(() => draft.trim().split(/\s+/).filter(Boolean).length, [draft]);
   const ready = words >= SESSION_1_WRITING_PROMPT.minimumWords;
 
-  useEffect(() => {
-    setDraft(window.localStorage.getItem(storageKey) ?? "");
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    window.localStorage.setItem(storageKey, draft);
-  }, [draft, loaded]);
-
   function addWord(word: string) {
-    setDraft((current) => `${current}${current && !current.endsWith(" ") ? " " : ""}${word} `);
+    onDraftChange(`${draft}${draft && !draft.endsWith(" ") ? " " : ""}${word} `);
   }
 
   return (
@@ -493,7 +495,7 @@ function FreeWriting({ onComplete, onBack }: { onComplete: () => void; onBack: (
               <span className="text-sm font-black text-slate-700">Your writing</span>
               <textarea
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => onDraftChange(event.target.value)}
                 rows={9}
                 className="mt-2 w-full resize-y rounded-2xl border-4 border-slate-200 bg-slate-50 p-4 text-lg font-semibold leading-7 text-slate-950 outline-none focus:border-emerald-400"
                 placeholder="I’d like to visit…"
@@ -527,16 +529,30 @@ function FreeWriting({ onComplete, onBack }: { onComplete: () => void; onBack: (
   );
 }
 
-export function Grade4Session1PracticePack({ pilotMode = false }: { pilotMode?: boolean }) {
+export function Grade4Session1PracticePack({
+  pilotMode = false,
+  initialRun = null,
+}: {
+  pilotMode?: boolean;
+  initialRun?: CourseSessionRunRecord | null;
+}) {
   const completionStorageKey = "wke-grade4-unit1-session1-practice-completed";
-  const [active, setActive] = useState<Session1PracticeActivityId | null>(null);
-  const [completed, setCompleted] = useState<Session1PracticeActivityId[]>([]);
-  const [progressLoaded, setProgressLoaded] = useState(false);
+  const writingStorageKey = "wke-grade4-unit1-session1-writing";
+  const restoredPractice = initialRun?.state.practice;
+  const [active, setActive] = useState<Session1PracticeActivityId | null>(
+    restoredPractice?.activeActivityId ?? null,
+  );
+  const [completed, setCompleted] = useState<Session1PracticeActivityId[]>(
+    restoredPractice?.completedActivityIds ?? [],
+  );
+  const [writingDraft, setWritingDraft] = useState(restoredPractice?.writingDraft ?? "");
+  const [progressLoaded, setProgressLoaded] = useState(!pilotMode);
   const backHref = pilotMode
     ? "/pilots/grade-4-learning-paths/unit-1/session-1"
     : "/primary/learn/grade-4/unit-1/session-1";
 
   useEffect(() => {
+    if (!pilotMode) return;
     try {
       const saved = JSON.parse(window.localStorage.getItem(completionStorageKey) ?? "[]");
       const validIds = new Set(ACTIVITIES.map((activity) => activity.id));
@@ -546,28 +562,45 @@ export function Grade4Session1PracticePack({ pilotMode = false }: { pilotMode?: 
     } catch {
       setCompleted([]);
     } finally {
+      setWritingDraft(window.localStorage.getItem(writingStorageKey) ?? "");
       setProgressLoaded(true);
     }
-  }, []);
+  }, [pilotMode]);
 
   useEffect(() => {
-    if (!progressLoaded) return;
+    if (!pilotMode || !progressLoaded) return;
     window.localStorage.setItem(completionStorageKey, JSON.stringify(completed));
-  }, [completed, progressLoaded]);
+    window.localStorage.setItem(writingStorageKey, writingDraft);
+  }, [completed, pilotMode, progressLoaded, writingDraft]);
 
   function complete(id: Session1PracticeActivityId) {
     setCompleted((current) => current.includes(id) ? current : [...current, id]);
     setActive(null);
   }
 
+  const percentage = Math.round((completed.length / ACTIVITIES.length) * 100);
+  const allComplete = completed.length === ACTIVITIES.length;
+  const practiceProgress = useMemo<Session1PracticeProgress>(
+    () => ({
+      activeActivityId: active,
+      completedActivityIds: completed,
+      writingDraft,
+    }),
+    [active, completed, writingDraft],
+  );
+  const saveState = useGrade4Session1Autosave({
+    enabled: !pilotMode,
+    phase: "practice",
+    status: allComplete ? "completed" : "in_progress",
+    activeStepId: active ?? "practice-menu",
+    progress: practiceProgress,
+  });
+
   if (active === "vocabulary") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><VocabularyCards onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
   if (active === "letter-scramble") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><LetterScramble onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
   if (active === "grammar-focus") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><GrammarFocus onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
   if (active === "fix-sentence") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><FixSentence onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
-  if (active === "free-writing") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><FreeWriting onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
-
-  const percentage = Math.round((completed.length / ACTIVITIES.length) * 100);
-  const allComplete = completed.length === ACTIVITIES.length;
+  if (active === "free-writing") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><FreeWriting draft={writingDraft} onDraftChange={setWritingDraft} onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
 
   return (
     <main className="min-h-dvh bg-[linear-gradient(155deg,#171229_0%,#2d1b69_55%,#164e63_100%)] px-3 py-5 sm:px-6">
@@ -582,7 +615,17 @@ export function Grade4Session1PracticePack({ pilotMode = false }: { pilotMode?: 
               <h1 className="text-2xl font-black text-slate-950 sm:text-4xl">Welcome Fair practice pack</h1>
               <p className="mt-1 text-sm font-bold text-slate-600 sm:text-base">Five short activities that turn your hotspot speaking into strong homework practice.</p>
             </div>
-            <span className="rounded-full bg-violet-700 px-4 py-2 text-sm font-black text-white">{completed.length}/5 done</span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="rounded-full bg-violet-700 px-4 py-2 text-sm font-black text-white">{completed.length}/5 done</span>
+              {!pilotMode ? (
+                <span
+                  className={`text-xs font-black ${saveState.status === "error" ? "text-amber-700" : "text-emerald-700"}`}
+                  title={saveState.status === "error" ? saveState.error : undefined}
+                >
+                  {saveState.status === "saving" ? "Saving…" : saveState.status === "error" ? "Save paused" : "Progress saved"}
+                </span>
+              ) : null}
+            </div>
             <div className="basis-full">
               <div className="h-3 overflow-hidden rounded-full bg-slate-200">
                 <div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-cyan-500 transition-all duration-500" style={{ width: `${percentage}%` }} />

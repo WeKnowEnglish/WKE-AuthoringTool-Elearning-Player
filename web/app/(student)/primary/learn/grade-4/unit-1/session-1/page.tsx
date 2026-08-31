@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Grade4Session1Pilot } from "@/components/curriculum/Grade4Session1Pilot";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
+import { getMyGrade4Session1Run } from "@/lib/data/course-session-runs";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -16,6 +17,6 @@ export default async function Grade4Session1Page() {
   if (!user) redirect("/login?next=/primary/learn/grade-4/unit-1/session-1");
   if (isTeacher(user)) redirect(TEACHER_DEFAULT_PATH);
   if (!isStudent(user)) redirect("/login?error=unknown_role");
-  return <Grade4Session1Pilot />;
+  const initialRun = await getMyGrade4Session1Run();
+  return <Grade4Session1Pilot initialRun={initialRun} />;
 }
-

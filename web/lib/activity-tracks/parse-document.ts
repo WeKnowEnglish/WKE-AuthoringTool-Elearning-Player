@@ -3,6 +3,8 @@ import { isHomeworkTemplateId } from "@/lib/homework-templates/registry";
 import { parseAssessmentDefinition } from "@/lib/assessment/parse-definition";
 import {
   ACTIVITY_TRACK_DOCUMENT_VERSION,
+  DEFAULT_ACTIVITY_TRACK_DESIGN,
+  DEFAULT_ACTIVITY_TRACK_SUPPORT,
   type ActivityTrackAssessmentOrigin,
   type ActivityTrackDocument,
   type ActivityTrackGradedArchive,
@@ -13,6 +15,8 @@ import {
   type ActivityTrackPart,
   type ActivityTrackPartKind,
   type ActivityTrackPartSource,
+  type ActivityTrackDesignSettings,
+  type ActivityTrackSupportSettings,
 } from "@/lib/activity-tracks/types";
 import { seedPracticeComposition } from "@/lib/activity-tracks/seed-practice";
 import { seedAssessmentFromTemplate } from "@/lib/activity-tracks/seed-assessment";
@@ -152,6 +156,33 @@ function parseModeArchive(raw: unknown): ActivityTrackModeArchive | undefined {
   return Object.keys(archive).length > 0 ? archive : undefined;
 }
 
+function parseSupportSettings(raw: unknown): ActivityTrackSupportSettings {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...DEFAULT_ACTIVITY_TRACK_SUPPORT };
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    learnerMessage:
+      typeof row.learnerMessage === "string" ? row.learnerMessage : "",
+    vocabularySupport:
+      typeof row.vocabularySupport === "string" ? row.vocabularySupport : "",
+    readDirectionsAloud: row.readDirectionsAloud === true,
+  };
+}
+
+function parseDesignSettings(raw: unknown): ActivityTrackDesignSettings {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...DEFAULT_ACTIVITY_TRACK_DESIGN };
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    theme:
+      row.theme === "navy" || row.theme === "warm" ? row.theme : "teal",
+    contentWidth: row.contentWidth === "wide" ? "wide" : "focused",
+    progressStyle: row.progressStyle === "numbers" ? "numbers" : "labels",
+  };
+}
+
 /** Validate and normalize a stored activity track draft document. */
 export function parseActivityTrackDocument(raw: unknown): ActivityTrackDocument | null {
   if (!raw || typeof raw !== "object") return null;
@@ -197,8 +228,12 @@ export function parseActivityTrackDocument(raw: unknown): ActivityTrackDocument 
     id: row.id,
     mode,
     title: row.title,
+    topic: typeof row.topic === "string" ? row.topic : "",
+    description: typeof row.description === "string" ? row.description : "",
     coverImageUrl: typeof row.coverImageUrl === "string" ? row.coverImageUrl.trim() || null : null,
     instructions: typeof row.instructions === "string" ? row.instructions : "",
+    support: parseSupportSettings(row.support),
+    design: parseDesignSettings(row.design),
     level,
     estimatedMinutes:
       typeof row.estimatedMinutes === "number" ? row.estimatedMinutes : null,

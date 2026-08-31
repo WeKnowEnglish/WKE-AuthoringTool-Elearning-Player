@@ -1,4 +1,10 @@
-import type { ActivityTrackDocument } from "@/lib/activity-tracks/types";
+import {
+  DEFAULT_ACTIVITY_TRACK_DESIGN,
+  DEFAULT_ACTIVITY_TRACK_SUPPORT,
+  type ActivityTrackDesignSettings,
+  type ActivityTrackDocument,
+  type ActivityTrackSupportSettings,
+} from "@/lib/activity-tracks/types";
 import type { ClassHomeworkPayload } from "@/lib/class-homework/types";
 import {
   HOMEWORK_TEMPLATE_ONE,
@@ -37,7 +43,12 @@ export type GradedTrackFreezeDocument = {
   version: 1;
   trackId: string;
   title: string;
+  topic: string;
+  description: string;
+  coverImageUrl: string | null;
   instructions: string;
+  support: ActivityTrackSupportSettings;
+  design: ActivityTrackDesignSettings;
   level: "primary" | "secondary";
   originTemplateId: string;
   estimatedMinutes: number | null;
@@ -249,7 +260,12 @@ export function buildGradedTrackFreezeDocument(
     version: 1,
     trackId: doc.id,
     title: doc.title.trim() || "Graded homework",
+    topic: doc.topic.trim(),
+    description: doc.description.trim(),
+    coverImageUrl: doc.coverImageUrl?.trim() || null,
     instructions: doc.instructions.trim(),
+    support: { ...doc.support },
+    design: { ...doc.design },
     level: doc.gradedOrigin.level,
     originTemplateId: doc.gradedOrigin.templateId,
     estimatedMinutes: doc.estimatedMinutes,
@@ -337,7 +353,42 @@ export function parseGradedTrackFreezeDocument(
   if (row.level !== "primary" && row.level !== "secondary") return null;
   if (typeof row.originTemplateId !== "string") return null;
   if (!Array.isArray(row.parts) || row.parts.length < 1) return null;
-  const freeze = raw as GradedTrackFreezeDocument;
+  const supportRow =
+    row.support && typeof row.support === "object" && !Array.isArray(row.support)
+      ? (row.support as Record<string, unknown>)
+      : {};
+  const designRow =
+    row.design && typeof row.design === "object" && !Array.isArray(row.design)
+      ? (row.design as Record<string, unknown>)
+      : {};
+  const freeze: GradedTrackFreezeDocument = {
+    ...(raw as GradedTrackFreezeDocument),
+    topic: typeof row.topic === "string" ? row.topic : "",
+    description: typeof row.description === "string" ? row.description : "",
+    coverImageUrl:
+      typeof row.coverImageUrl === "string" ? row.coverImageUrl.trim() || null : null,
+    support: {
+      ...DEFAULT_ACTIVITY_TRACK_SUPPORT,
+      learnerMessage:
+        typeof supportRow.learnerMessage === "string"
+          ? supportRow.learnerMessage
+          : "",
+      vocabularySupport:
+        typeof supportRow.vocabularySupport === "string"
+          ? supportRow.vocabularySupport
+          : "",
+      readDirectionsAloud: supportRow.readDirectionsAloud === true,
+    },
+    design: {
+      ...DEFAULT_ACTIVITY_TRACK_DESIGN,
+      theme:
+        designRow.theme === "navy" || designRow.theme === "warm"
+          ? designRow.theme
+          : "teal",
+      contentWidth: designRow.contentWidth === "wide" ? "wide" : "focused",
+      progressStyle: designRow.progressStyle === "numbers" ? "numbers" : "labels",
+    },
+  };
   if (row.collectionDocument !== undefined) {
     const collectionDocument = parseHomeworkCollectionDocument(row.collectionDocument);
     if (!collectionDocument) return null;

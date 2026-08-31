@@ -7,6 +7,8 @@ import type {
 import { formatLabel } from "@/lib/activity-builder/games/quiz-builder-session";
 import {
   ACTIVITY_TRACK_DOCUMENT_VERSION,
+  DEFAULT_ACTIVITY_TRACK_DESIGN,
+  DEFAULT_ACTIVITY_TRACK_SUPPORT,
   type ActivityTrackDocument,
 } from "@/lib/activity-tracks/types";
 import {
@@ -236,7 +238,12 @@ export function createPracticeTrackFromQuizCards(
     id,
     mode: "practice",
     title,
+    topic: "",
+    description: "",
+    coverImageUrl: null,
     instructions: practiceComposition.aim,
+    support: { ...DEFAULT_ACTIVITY_TRACK_SUPPORT },
+    design: { ...DEFAULT_ACTIVITY_TRACK_DESIGN },
     level: "either",
     estimatedMinutes: practiceComposition.durationTargetMin,
     vocabListId: practiceComposition.vocabListId ?? null,

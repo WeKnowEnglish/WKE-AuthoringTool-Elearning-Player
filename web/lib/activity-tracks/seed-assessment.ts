@@ -5,6 +5,8 @@ import {
 } from "@/lib/assessment/sample-primary-a2";
 import {
   ACTIVITY_TRACK_DOCUMENT_VERSION,
+  DEFAULT_ACTIVITY_TRACK_DESIGN,
+  DEFAULT_ACTIVITY_TRACK_SUPPORT,
   type ActivityTrackDocument,
 } from "@/lib/activity-tracks/types";
 
@@ -45,7 +47,12 @@ export function seedAssessmentFromTemplate(input: {
     id: input.trackId,
     mode: "assessment",
     title,
+    topic: "English assessment",
+    description: definition.audience,
+    coverImageUrl: null,
     instructions: definition.audience,
+    support: { ...DEFAULT_ACTIVITY_TRACK_SUPPORT },
+    design: { ...DEFAULT_ACTIVITY_TRACK_DESIGN },
     level: "primary",
     estimatedMinutes: definition.estimatedMinutes,
     vocabListId: null,

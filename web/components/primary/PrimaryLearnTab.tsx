@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import NextImage from "next/image";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ChevronRight, Library, Lock } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, GraduationCap, Library, Lock } from "lucide-react";
 
 import { PrimaryVocabularyTab } from "@/components/primary/PrimaryVocabularyTab";
 import { PrimaryGrammarPosterThumbnail } from "@/components/primary/PrimaryGrammarPosterThumbnail";
@@ -167,9 +167,50 @@ export function PrimaryLearnTab({
       <header className="px-0.5">
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Learn</h1>
         <p className="mt-1 text-sm font-semibold text-[var(--pl-muted)] sm:text-base">
-          Scroll sideways to browse Comics, Vocabulary, and Grammar.
+          Choose a learning path, or browse Comics, Vocabulary, and Grammar.
         </p>
       </header>
+
+      <LearnShelf
+        title="WKE Learning Paths"
+        subtitle="Complete courses built for your level"
+        icon={<GraduationCap className="h-5 w-5" aria-hidden />}
+      >
+        <Link
+          href="/primary/learn/grade-4"
+          data-shelf-card
+          aria-label="Open Grade 4 WKE Learning Paths"
+          className="group flex w-[15rem] shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-sky-200 bg-white text-left shadow-sm transition hover:border-sky-400 hover:shadow-md active:scale-[0.99] sm:w-[18rem]"
+        >
+          <span className="relative aspect-[16/9] w-full overflow-hidden bg-sky-100">
+            <NextImage
+              src="/curriculum/grade-4-movers/unit-1/welcome-fair.png"
+              alt="A lively school welcome fair with activity stations"
+              fill
+              draggable={false}
+              className="pointer-events-none object-cover transition-transform duration-300 group-hover:scale-105"
+              unoptimized
+            />
+            <span className="absolute left-2 top-2 rounded-full bg-sky-600 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+              Grade 4 · Movers
+            </span>
+          </span>
+          <span className="flex items-start justify-between gap-2 p-4">
+            <span className="min-w-0">
+              <span className="block text-base font-extrabold text-[var(--pl-ink)]">
+                Unit 1 · Meet Me!
+              </span>
+              <span className="mt-1 block text-xs font-semibold text-[var(--pl-muted)]">
+                Explore the welcome fair and practise introducing yourself.
+              </span>
+              <span className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-sky-700">
+                Session 1 ready
+              </span>
+            </span>
+            <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 transition group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+      </LearnShelf>
 
       <LearnShelf
         title="Comics"

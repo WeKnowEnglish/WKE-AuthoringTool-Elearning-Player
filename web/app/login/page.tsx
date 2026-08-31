@@ -12,7 +12,6 @@ type Props = {
     next?: string;
     error?: string;
     message?: string;
-    reason?: string;
   }>;
 };
 
@@ -46,11 +45,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const portalRaw = firstParam(sp.portal);
   const defaultPortal: PortalKind =
     portalRaw === "teacher" ? "teacher" : "student";
-  const initialMessage =
-    firstParam(sp.message) ||
-    (firstParam(sp.reason) === "idle"
-      ? "You were signed out after 10 minutes without activity. Please sign in again."
-      : undefined);
+  const initialMessage = firstParam(sp.message) || undefined;
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
 import { AppDiagnosticsInit } from "@/components/app-diagnostics/AppDiagnosticsInit";
-import { IdleSessionLogout } from "@/components/auth/IdleSessionLogout";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
@@ -29,7 +28,6 @@ export default function RootLayout({
     <html lang="en" className={`${nunito.variable} h-full`}>
       <body className="min-h-full font-sans antialiased">
         <AppDiagnosticsInit />
-        <IdleSessionLogout />
         {children}
       </body>
     </html>

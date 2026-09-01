@@ -1,0 +1,93 @@
+.keelanIdle {
+  animation: keelanIdle 3.2s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+.keelanTalk {
+  animation: keelanTalk 0.42s ease-in-out infinite alternate;
+  transform-origin: 50% 100%;
+}
+
+.playPulse {
+  animation: playPulse 1.35s ease-in-out infinite;
+}
+
+.sparkle {
+  animation: sparkle 1.8s ease-in-out infinite;
+}
+
+.spiral {
+  background: conic-gradient(from 20deg, rgba(124,58,237,.92), rgba(236,72,153,.88), rgba(250,204,21,.86), rgba(14,165,233,.88), rgba(124,58,237,.92));
+  animation: spiralIdle 9s linear infinite;
+}
+
+.spiralOpening {
+  animation: spiralOpen .9s cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.curtainLeft,
+.curtainRight {
+  background: linear-gradient(135deg, #4c1d95, #7c3aed 48%, #db2777);
+  transition: transform .82s cubic-bezier(.22,.75,.2,1);
+}
+
+.curtainLeft { transform-origin: left center; }
+.curtainRight { transform-origin: right center; }
+.curtainLeftOpen { transform: translateX(-104%) rotate(-5deg); }
+.curtainRightOpen { transform: translateX(104%) rotate(5deg); }
+
+.stageEnter { animation: stageEnter .7s ease-out both; }
+.rewardPop { animation: rewardPop .58s cubic-bezier(.2,.9,.25,1.35) both; }
+
+@keyframes keelanIdle {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  45% { transform: translateY(-1.2%) scale(1.015, .985); }
+  55% { transform: translateY(-1.4%) scale(1.02, .98); }
+}
+
+@keyframes keelanTalk {
+  from { transform: translateY(0) scale(1, 1); }
+  to { transform: translateY(-1%) scale(1.018, .982); }
+}
+
+@keyframes playPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250,204,21,.55); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 18px rgba(250,204,21,0); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: .35; transform: rotate(0deg) scale(.75); }
+  50% { opacity: 1; transform: rotate(25deg) scale(1.15); }
+}
+
+@keyframes spiralIdle { to { transform: rotate(360deg); } }
+
+@keyframes spiralOpen {
+  0% { opacity: .95; transform: scale(1) rotate(0); }
+  100% { opacity: 0; transform: scale(3.4) rotate(190deg); }
+}
+
+@keyframes stageEnter {
+  from { opacity: 0; transform: scale(1.025); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes rewardPop {
+  from { opacity: 0; transform: translateY(12px) scale(.7); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keelanIdle,
+  .keelanTalk,
+  .playPulse,
+  .sparkle,
+  .spiral,
+  .spiralOpening,
+  .stageEnter,
+  .rewardPop {
+    animation: none;
+  }
+  .curtainLeft,
+  .curtainRight { transition-duration: .12s; }
+}

@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  Home,
   Languages,
   ListChecks,
   PencilLine,
@@ -81,6 +82,24 @@ function ActivityIcon({ id, className = "h-7 w-7" }: { id: Session1PracticeActiv
   if (id === "grammar-focus") return <Languages className={className} />;
   if (id === "fix-sentence") return <ListChecks className={className} />;
   return <PencilLine className={className} />;
+}
+
+function PracticeStageShell({ active, completed, onNavigate, children }: { active: Session1PracticeActivityId; completed: Session1PracticeActivityId[]; onNavigate: (id: Session1PracticeActivityId | null) => void; children: React.ReactNode }) {
+  return (
+    <main className="min-h-dvh bg-[linear-gradient(155deg,#171229_0%,#2d1b69_55%,#164e63_100%)] p-2 sm:p-4">
+      <div className="mx-auto max-w-6xl">
+        <nav className="mb-3 flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/20 bg-white/95 p-2 shadow-xl" aria-label="Session 1 practice activities">
+          <button type="button" onClick={() => onNavigate(null)} className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border-2 border-slate-200 bg-white text-slate-700" aria-label="All practice activities"><Home className="h-5 w-5" /></button>
+          {ACTIVITIES.map((activity, index) => {
+            const selected = activity.id === active;
+            const done = completed.includes(activity.id);
+            return <button key={activity.id} type="button" onClick={() => onNavigate(activity.id)} className={`flex min-h-12 min-w-36 shrink-0 items-center gap-2 rounded-xl border-2 px-3 text-left text-xs font-black transition ${selected ? "border-violet-700 bg-violet-700 text-white shadow-lg" : done ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700"}`}><span className={`flex h-8 w-8 items-center justify-center rounded-lg ${selected ? "bg-white/20" : done ? "bg-emerald-200" : "bg-slate-100"}`}>{done && !selected ? <Check className="h-4 w-4" /> : index + 1}</span><span className="truncate">{activity.title}</span></button>;
+          })}
+        </nav>
+        {children}
+      </div>
+    </main>
+  );
 }
 
 function speak(text: string) {
@@ -596,11 +615,11 @@ export function Grade4Session1PracticePack({
     progress: practiceProgress,
   });
 
-  if (active === "vocabulary") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><VocabularyCards onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
-  if (active === "letter-scramble") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><LetterScramble onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
-  if (active === "grammar-focus") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><GrammarFocus onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
-  if (active === "fix-sentence") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><FixSentence onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
-  if (active === "free-writing") return <main className="min-h-dvh bg-[#171229] p-2 sm:p-5"><div className="mx-auto max-w-6xl"><FreeWriting draft={writingDraft} onDraftChange={setWritingDraft} onComplete={() => complete(active)} onBack={() => setActive(null)} /></div></main>;
+  if (active === "vocabulary") return <PracticeStageShell active={active} completed={completed} onNavigate={setActive}><VocabularyCards onComplete={() => complete(active)} onBack={() => setActive(null)} /></PracticeStageShell>;
+  if (active === "letter-scramble") return <PracticeStageShell active={active} completed={completed} onNavigate={setActive}><LetterScramble onComplete={() => complete(active)} onBack={() => setActive(null)} /></PracticeStageShell>;
+  if (active === "grammar-focus") return <PracticeStageShell active={active} completed={completed} onNavigate={setActive}><GrammarFocus onComplete={() => complete(active)} onBack={() => setActive(null)} /></PracticeStageShell>;
+  if (active === "fix-sentence") return <PracticeStageShell active={active} completed={completed} onNavigate={setActive}><FixSentence onComplete={() => complete(active)} onBack={() => setActive(null)} /></PracticeStageShell>;
+  if (active === "free-writing") return <PracticeStageShell active={active} completed={completed} onNavigate={setActive}><FreeWriting draft={writingDraft} onDraftChange={setWritingDraft} onComplete={() => complete(active)} onBack={() => setActive(null)} /></PracticeStageShell>;
 
   return (
     <main className="min-h-dvh bg-[linear-gradient(155deg,#171229_0%,#2d1b69_55%,#164e63_100%)] px-3 py-5 sm:px-6">

@@ -1,0 +1,220 @@
+{
+  "character": "Keelan",
+  "session": "grade-4-unit-1-session-1",
+  "protocol": "young-goofy-v2",
+  "model": "gpt-4o-mini-tts-2025-12-15",
+  "voice": "coral",
+  "format": "mp3",
+  "speed": 0.96,
+  "clipCount": 52,
+  "clips": {
+    "s1-welcome": {
+      "text": "Hi! I’m Keelan. Oh! I’m really glad you’re here. Ready for a new-friend adventure?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-welcome.mp3"
+    },
+    "s1-badge-question": {
+      "text": "First things first—what’s your name? Write it on your explorer badge.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-badge-question.mp3"
+    },
+    "s1-badge-ready": {
+      "text": "Ooh, brilliant! Your explorer badge is ready. Wear it proudly!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-badge-ready.mp3"
+    },
+    "s1-fair-open": {
+      "text": "Ta-da! The fair is open. What do you see first? Tap a glowing station.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-fair-open.mp3"
+    },
+    "s1-explore-mission": {
+      "text": "There are five activity stations. Explore where ever you want. At each one, tell me: do you like it?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-explore-mission.mp3"
+    },
+    "s1-station-sports": {
+      "text": "Whoa, football! This boy likes playing football. Can you spot his black-and-white ball?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-station-sports.mp3"
+    },
+    "s1-station-art": {
+      "text": "Ooh, look at all those colours! She likes painting. What would you paint?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-station-art.mp3"
+    },
+    "s1-station-books": {
+      "text": "Aha, the book corner! These friends enjoy reading and sharing their favourite stories.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-station-books.mp3"
+    },
+    "s1-station-pets": {
+      "text": "Eek—tiny animals! This child has got a pet picture. Which animal can you see?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-station-pets.mp3"
+    },
+    "s1-station-music": {
+      "text": "Listen! They can play music together. One plays the keyboard, and one plays the guitar.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-station-music.mp3"
+    },
+    "s1-opinion-like-a": {
+      "text": "Me too! Boop—that goes on your badge.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-opinion-like-a.mp3"
+    },
+    "s1-opinion-like-b": {
+      "text": "Good choice! That one gets a sparkle.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-opinion-like-b.mp3"
+    },
+    "s1-opinion-not-for-me-a": {
+      "text": "That’s okay! Everyone likes different things.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-opinion-not-for-me-a.mp3"
+    },
+    "s1-opinion-not-for-me-b": {
+      "text": "Fair enough! Let’s discover something else.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-opinion-not-for-me-b.mp3"
+    },
+    "s1-all-stations-complete": {
+      "text": "You visited every station! High five—well, imaginary high five!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-all-stations-complete.mp3"
+    },
+    "s1-choose-station": {
+      "text": "Now choose your favourite station. Which one would you like to visit?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-choose-station.mp3"
+    },
+    "s1-explain-choice": {
+      "text": "Great choice! Tell me why you chose it. You can start with: I’d like to visit... because...",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-explain-choice.mp3"
+    },
+    "s1-microphone-first-use": {
+      "text": "Tap the microphone when you’re ready. If your browser asks, tap Allow so I can listen.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-microphone-first-use.mp3"
+    },
+    "s1-recording-ready": {
+      "text": "Got it! Listen back. You can keep it, or try again.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-recording-ready.mp3"
+    },
+    "s1-check-speaking-invite": {
+      "text": "Want my help? Tap Check my speaking, and I’ll listen for the important parts.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-check-speaking-invite.mp3"
+    },
+    "s1-choice-feedback-clear": {
+      "text": "I heard you clearly! You told me your choice and your reason. Nice speaking!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-choice-feedback-clear.mp3"
+    },
+    "s1-choice-feedback-missing-reason": {
+      "text": "Nice start! I heard your choice. Now add a reason with because.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-choice-feedback-missing-reason.mp3"
+    },
+    "s1-choice-feedback-station-unclear": {
+      "text": "Good start! Say the station name once more, a little slowly.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-choice-feedback-station-unclear.mp3"
+    },
+    "s1-feedback-word-unclear": {
+      "text": "Good speaking! Try the glowing word once more, a little slowly and clearly.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-feedback-word-unclear.mp3"
+    },
+    "s1-feedback-could-not-hear": {
+      "text": "Oops—my ears missed that one! Move a little closer, and let’s try again.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-feedback-could-not-hear.mp3"
+    },
+    "s1-feedback-service-resting": {
+      "text": "Hmm... my listening gadget is taking a nap. You can still play your recording and keep going.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-feedback-service-resting.mp3"
+    },
+    "s1-microphone-help": {
+      "text": "Oops! I can’t hear the microphone yet. Ask a grown-up for help, or try again.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-microphone-help.mp3"
+    },
+    "s1-picture-check-intro": {
+      "text": "Three quick picture clues! Can you collect all three power-ups?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-check-intro.mp3"
+    },
+    "s1-picture-question-sports": {
+      "text": "Look at the sports station. He likes... playing football, painting, or reading?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-question-sports.mp3"
+    },
+    "s1-picture-question-art": {
+      "text": "Look at the art station. She likes... playing football, painting, or reading?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-question-art.mp3"
+    },
+    "s1-picture-question-books": {
+      "text": "Look at the book corner. They enjoy... reading, playing music, or making badges?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-question-books.mp3"
+    },
+    "s1-picture-question-pets": {
+      "text": "Look near the animal table. This child has got... a pet picture, a guitar, or a football?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-question-pets.mp3"
+    },
+    "s1-picture-question-music": {
+      "text": "Look at the music station. They can... play music, read together, or paint a picture?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-question-music.mp3"
+    },
+    "s1-picture-correct-a": {
+      "text": "Yes! Power-up collected!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-correct-a.mp3"
+    },
+    "s1-picture-correct-b": {
+      "text": "You got it! Zap!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-correct-b.mp3"
+    },
+    "s1-picture-correct-c": {
+      "text": "That’s it! Nice looking.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-correct-c.mp3"
+    },
+    "s1-picture-hint-sports": {
+      "text": "Almost! Look for the black-and-white ball.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-hint-sports.mp3"
+    },
+    "s1-picture-hint-art": {
+      "text": "Hmm... look at the paintbrush and all those colours.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-hint-art.mp3"
+    },
+    "s1-picture-hint-books": {
+      "text": "Take another look at what they’re holding.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-hint-books.mp3"
+    },
+    "s1-picture-hint-pets": {
+      "text": "Look closely near the animal table.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-hint-pets.mp3"
+    },
+    "s1-picture-hint-music": {
+      "text": "Can you spot the keyboard and guitar?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-hint-music.mp3"
+    },
+    "s1-picture-check-complete": {
+      "text": "Three out of three! Picture power-up complete!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-picture-check-complete.mp3"
+    },
+    "s1-baseline-intro": {
+      "text": "Now let’s make your first speaking sample. Tell me your name, your age, and one thing you like. This is a starting point, not a test.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-baseline-intro.mp3"
+    },
+    "s1-baseline-model": {
+      "text": "You can say: My name is... I’m... years old... and I like...",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-baseline-model.mp3"
+    },
+    "s1-baseline-feedback-clear": {
+      "text": "I heard your name, your age, and something you like. Brilliant!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-baseline-feedback-clear.mp3"
+    },
+    "s1-baseline-feedback-name": {
+      "text": "Nice start! I’m still listening for your name.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-baseline-feedback-name.mp3"
+    },
+    "s1-baseline-feedback-age": {
+      "text": "Nice start! Now add your age.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-baseline-feedback-age.mp3"
+    },
+    "s1-baseline-feedback-like": {
+      "text": "Nice start! Tell me one thing you like.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-baseline-feedback-like.mp3"
+    },
+    "s1-baseline-feedback-several": {
+      "text": "Nice start! Check the three picture clues, then try once more when you’re ready.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-baseline-feedback-several.mp3"
+    },
+    "s1-reflection": {
+      "text": "How did speaking feel today? Pick the answer that feels true for you. Then choose one speaking power-up for next time.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-reflection.mp3"
+    },
+    "s1-complete": {
+      "text": "Adventure complete! Your explorer badge has its first sparkle. You spoke, listened, and learned about new friends. Great work!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-complete.mp3"
+    },
+    "s1-practice-invite": {
+      "text": "Ready for the next challenge? Take your badge into the practice games!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-1/s1-practice-invite.mp3"
+    }
+  }
+}

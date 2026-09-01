@@ -40,6 +40,8 @@
     "generate:secondary-primary-lexicon-map": "tsx scripts/generate-secondary-primary-lexicon-map.ts",
     "add:secondary-lexicon-gaps": "node scripts/add-secondary-lexicon-gaps-to-dictionary.mjs",
     "prepare:landing-mascots": "tsx scripts/prepare-landing-mascots.ts",
+    "voice:keelan-samples": "node scripts/generate-keelan-voice-samples.mjs",
+    "voice:keelan-session-1": "node scripts/generate-keelan-session-1-dialogue.mjs",
     "build:primary-vocab-search-index": "node scripts/build-primary-vocabulary-search-index.mjs",
     "supabase:version": "supabase --version",
     "supabase:status": "supabase migration list --linked",

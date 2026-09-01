@@ -30,11 +30,19 @@ import {
   VolumeX,
 } from "lucide-react";
 import { speakText, stopSpeaking, unlockSpeechSynthesis } from "@/lib/audio/tts";
-import { createAudioMediaRecorder } from "@/lib/media/recorded-audio";
+import {
+  createAudioMediaRecorder,
+  recordedAudioFile,
+} from "@/lib/media/recorded-audio";
 import {
   SESSION_1_DIALOGUE,
   type Session1DialogueId,
 } from "@/lib/curriculum/session-1-dialogue.generated";
+import {
+  normalizeSession1SpeakingFeedback,
+  type Session1SpeakingFeedback,
+  type Session1SpeakingPromptId,
+} from "@/lib/curriculum/session-1-speaking-feedback";
 import type {
   CourseSessionRunRecord,
   Session1HotspotProgress,
@@ -164,9 +172,10 @@ function useSessionSounds(enabled: boolean) {
   }, [enabled]);
 }
 
-function useVoiceRecorder(maxSeconds: number, onComplete?: () => void) {
+function useVoiceRecorder(maxSeconds: number, onComplete?: () => void, onError?: () => void) {
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [microphoneReady, setMicrophoneReady] = useState(false);
@@ -196,6 +205,7 @@ function useVoiceRecorder(maxSeconds: number, onComplete?: () => void) {
       if (current?.startsWith("blob:")) URL.revokeObjectURL(current);
       return null;
     });
+    setAudioFile(null);
     setDurationSeconds(0);
     setError(null);
   }, []);
@@ -216,8 +226,13 @@ function useVoiceRecorder(maxSeconds: number, onComplete?: () => void) {
       chunksRef.current = [];
       recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        setAudioUrl(URL.createObjectURL(blob));
+        const file = recordedAudioFile(
+          chunksRef.current,
+          recorder.mimeType,
+          "session-1-speaking",
+        );
+        setAudioFile(file);
+        setAudioUrl(URL.createObjectURL(file));
         setRecording(false);
         setDurationSeconds(Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)));
         stream.getTracks().forEach((track) => track.stop());
@@ -234,10 +249,11 @@ function useVoiceRecorder(maxSeconds: number, onComplete?: () => void) {
       }, 250);
     } catch {
       setError("Microphone access was blocked. Allow it in the browser, then try again.");
+      onError?.();
     }
-  }, [clear, maxSeconds, onComplete, stop]);
+  }, [clear, maxSeconds, onComplete, onError, stop]);
 
-  return { recording, audioUrl, error, durationSeconds, microphoneReady, start, stop, clear };
+  return { recording, audioUrl, audioFile, error, durationSeconds, microphoneReady, start, stop, clear };
 }
 
 function Mascot({ step, talking = false }: { step: StageStep; talking?: boolean }) {
@@ -343,12 +359,130 @@ function IntroGate({ opening, returning, onStart }: { opening: boolean; returnin
 
 type RecorderState = ReturnType<typeof useVoiceRecorder>;
 
-function VoiceControls({ recorder, buttonLabel, pilotMode, onSkip }: { recorder: RecorderState; buttonLabel: string; pilotMode: boolean; onSkip: () => void }) {
+function feedbackVoiceId(feedback: Session1SpeakingFeedback): Session1DialogueId {
+  if (feedback.status === "try_again") return "s1-feedback-could-not-hear";
+  const missingIds = feedback.heardParts.filter((part) => !part.heard).map((part) => part.id);
+  if (feedback.promptId === "station-choice") {
+    if (missingIds.includes("station")) return "s1-choice-feedback-station-unclear";
+    if (missingIds.includes("reason")) return "s1-choice-feedback-missing-reason";
+    if (feedback.clarityCues.length > 0) return "s1-feedback-word-unclear";
+    return "s1-choice-feedback-clear";
+  }
+  if (missingIds.length > 1) return "s1-baseline-feedback-several";
+  if (missingIds.includes("name")) return "s1-baseline-feedback-name";
+  if (missingIds.includes("age")) return "s1-baseline-feedback-age";
+  if (missingIds.includes("interest")) return "s1-baseline-feedback-like";
+  if (feedback.clarityCues.length > 0) return "s1-feedback-word-unclear";
+  return "s1-baseline-feedback-clear";
+}
+
+function HighlightedTranscript({
+  text,
+  cues,
+}: {
+  text: string;
+  cues: Session1SpeakingFeedback["clarityCues"];
+}) {
+  const lower = text.toLowerCase();
+  const ranges: Array<{ start: number; end: number }> = [];
+  for (const cue of cues) {
+    const needle = cue.text.trim().toLowerCase();
+    if (!needle) continue;
+    let cursor = 0;
+    while (cursor < lower.length) {
+      const start = lower.indexOf(needle, cursor);
+      if (start < 0) break;
+      ranges.push({ start, end: start + needle.length });
+      cursor = start + needle.length;
+    }
+  }
+  const ordered = ranges
+    .sort((a, b) => a.start - b.start || b.end - a.end)
+    .filter((range, index, items) => index === 0 || range.start >= items[index - 1].end);
+  if (ordered.length === 0) return <>{text}</>;
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  ordered.forEach((range, index) => {
+    if (range.start > cursor) parts.push(text.slice(cursor, range.start));
+    parts.push(
+      <mark key={index} className="rounded bg-yellow-300 px-0.5 text-fuchsia-950 ring-2 ring-yellow-400">
+        {text.slice(range.start, range.end)}
+      </mark>,
+    );
+    cursor = range.end;
+  });
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return <>{parts}</>;
+}
+
+function VoiceControls({
+  recorder,
+  buttonLabel,
+  promptId,
+  stationId,
+  feedback,
+  onFeedback,
+  onRecordingStart,
+  onFeedbackUnavailable,
+  onSkip,
+}: {
+  recorder: RecorderState;
+  buttonLabel: string;
+  promptId: Session1SpeakingPromptId;
+  stationId?: ActivityStationId | null;
+  feedback: Session1SpeakingFeedback | null;
+  onFeedback: (feedback: Session1SpeakingFeedback) => void;
+  onRecordingStart: () => void;
+  onFeedbackUnavailable: () => void;
+  onSkip: () => void;
+}) {
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
+
+  async function checkSpeaking() {
+    if (!recorder.audioFile || checking) return;
+    setChecking(true);
+    setCheckError(null);
+    const formData = new FormData();
+    formData.set("audio", recorder.audioFile, recorder.audioFile.name);
+    formData.set("promptId", promptId);
+    if (stationId) formData.set("stationId", stationId);
+    try {
+      const response = await fetch("/api/primary/session-1/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json().catch(() => null) as
+        | { feedback?: unknown; error?: unknown }
+        | null;
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Keelan could not check that recording just now.",
+        );
+      }
+      const normalized = normalizeSession1SpeakingFeedback(payload?.feedback);
+      if (!normalized) throw new Error("Keelan could not read the speaking feedback.");
+      onFeedback(normalized);
+    } catch (error) {
+      setCheckError(
+        error instanceof Error
+          ? error.message
+          : "Keelan’s listening gadget is resting. You can keep going.",
+      );
+      onFeedbackUnavailable();
+    } finally {
+      setChecking(false);
+    }
+  }
+
   return (
     <div className="mt-3 rounded-2xl border-2 border-violet-200 bg-violet-50 p-3 sm:p-4">
       <div className="flex flex-wrap items-center gap-3">
         {!recorder.recording ? (
-          <button type="button" onClick={() => void recorder.start()} className="inline-flex min-h-14 items-center gap-3 rounded-2xl bg-rose-600 px-6 text-base font-black text-white shadow-lg ring-4 ring-rose-200 transition hover:scale-[1.03] active:scale-95">
+          <button type="button" onClick={() => { onRecordingStart(); setCheckError(null); void recorder.start(); }} disabled={checking} className="inline-flex min-h-14 items-center gap-3 rounded-2xl bg-rose-600 px-6 text-base font-black text-white shadow-lg ring-4 ring-rose-200 transition hover:scale-[1.03] active:scale-95 disabled:opacity-50">
             <Mic className="h-6 w-6" /> {recorder.audioUrl ? "Record again" : buttonLabel}
           </button>
         ) : (
@@ -361,7 +495,50 @@ function VoiceControls({ recorder, buttonLabel, pilotMode, onSkip }: { recorder:
         </span>
       </div>
       {recorder.audioUrl ? <div className="mt-3 flex flex-wrap items-center gap-3"><audio controls src={recorder.audioUrl} className="h-11 max-w-full" aria-label="Play your recorded answer" /><span className="inline-flex items-center gap-1 text-xs font-black text-emerald-700"><Check className="h-4 w-4" /> Answer ready · {recorder.durationSeconds}s</span></div> : null}
-      {recorder.error ? <div className="mt-3 rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-900"><p>{recorder.error}</p>{pilotMode ? <button type="button" onClick={onSkip} className="mt-2 min-h-10 rounded-xl border-2 border-amber-500 bg-white px-4 font-black">Continue in pilot without audio</button> : null}</div> : null}
+      {recorder.audioFile && !feedback ? (
+        <div className="mt-4 rounded-2xl border-2 border-fuchsia-200 bg-white p-3">
+          <button type="button" onClick={() => void checkSpeaking()} disabled={checking} className={"inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-6 text-lg font-black text-white shadow-lg transition hover:scale-[1.01] active:scale-95 disabled:opacity-70 " + styles.playPulse}>
+            <Sparkles className={"h-6 w-6 " + (checking ? "animate-spin" : "")} />
+            {checking ? "Keelan is listening…" : "Check my speaking"}
+          </button>
+          <p className="mt-2 text-center text-[11px] font-bold leading-4 text-slate-500">
+            This recording is sent to OpenAI for this check. WKE does not save the audio.
+          </p>
+        </div>
+      ) : null}
+      {feedback ? (
+        <div className={"mt-4 rounded-2xl border-3 p-4 " + (feedback.status === "clear" ? "border-emerald-300 bg-emerald-50" : feedback.status === "try_again" ? "border-amber-300 bg-amber-50" : "border-sky-300 bg-sky-50")} role="status">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-sm" aria-hidden>{feedback.status === "clear" ? "✨" : "💬"}</span>
+            <div>
+              <p className="text-lg font-black text-violet-950">{feedback.title}</p>
+              <p className="mt-1 font-bold text-slate-700">{feedback.message}</p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl bg-white/90 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-700">Keelan heard</p>
+            <p className="mt-1 text-base font-black text-slate-900">“<HighlightedTranscript text={feedback.transcript} cues={feedback.clarityCues} />”</p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {feedback.heardParts.map((part) => (
+              <span key={part.id} className={"inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-black " + (part.heard ? "bg-emerald-600 text-white" : "bg-white text-violet-800 ring-2 ring-violet-200")}>
+                {part.heard ? <Check className="h-4 w-4" /> : <Lightbulb className="h-4 w-4" />}
+                {part.label}
+              </span>
+            ))}
+          </div>
+          {feedback.clarityCues.length > 0 ? (
+            <div className="mt-3 rounded-xl bg-yellow-200 p-3 text-sm font-black text-yellow-950">
+              Try the glowing {feedback.clarityCues.length === 1 ? "part" : "parts"} once more:
+              <span className="ml-2 inline-flex flex-wrap gap-2">
+                {feedback.clarityCues.map((cue) => <mark key={cue.text} className="rounded-lg bg-white px-2 py-1 text-fuchsia-800">{cue.text}</mark>)}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {recorder.error ? <div className="mt-3 rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-900"><p>{recorder.error}</p><button type="button" onClick={onSkip} className="mt-2 min-h-10 rounded-xl border-2 border-amber-500 bg-white px-4 font-black">Keep going</button></div> : null}
+      {checkError ? <div className="mt-3 rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-900"><p>{checkError}</p><button type="button" onClick={onSkip} className="mt-2 min-h-10 rounded-xl border-2 border-amber-500 bg-white px-4 font-black">Keep going without feedback</button></div> : null}
     </div>
   );
 }
@@ -396,6 +573,9 @@ export function Grade4Session1PilotV2({ pilotMode = false, initialRun = null }: 
   const [reflection, setReflection] = useState<string | null>(restored?.reflection ?? null);
   const [nextStepGoal, setNextStepGoal] = useState<string | null>(restored?.nextStepGoal ?? null);
   const [completedVoiceParts, setCompletedVoiceParts] = useState<string[]>(restored?.completedVoiceParts ?? []);
+  const [speakingFeedback, setSpeakingFeedback] = useState<
+    Partial<Record<Session1SpeakingPromptId, Session1SpeakingFeedback>>
+  >({});
   const [wrongCheck, setWrongCheck] = useState(false);
   const step = STEPS[stepIndex] ?? STEPS[0];
   const playEffect = useSessionSounds(soundEnabled);
@@ -471,17 +651,18 @@ export function Grade4Session1PilotV2({ pilotMode = false, initialRun = null }: 
   }, [playLine]);
 
   const markChoiceVoiceComplete = useCallback(() => {
-    setCompletedVoiceParts((current) => current.includes("station-choice") ? current : [...current, "station-choice"]);
     playEffect("correct");
-    playDialogue("s1-recording-ready");
+    playDialogue("s1-recording-ready", () => playDialogue("s1-check-speaking-invite"));
   }, [playDialogue, playEffect]);
   const markBaselineVoiceComplete = useCallback(() => {
-    setCompletedVoiceParts((current) => current.includes("baseline") ? current : [...current, "baseline"]);
     playEffect("correct");
-    playDialogue("s1-recording-ready");
+    playDialogue("s1-recording-ready", () => playDialogue("s1-check-speaking-invite"));
   }, [playDialogue, playEffect]);
-  const choiceVoice = useVoiceRecorder(15, markChoiceVoiceComplete);
-  const baselineVoice = useVoiceRecorder(20, markBaselineVoiceComplete);
+  const handleMicrophoneError = useCallback(() => {
+    playDialogue("s1-microphone-help");
+  }, [playDialogue]);
+  const choiceVoice = useVoiceRecorder(15, markChoiceVoiceComplete, handleMicrophoneError);
+  const baselineVoice = useVoiceRecorder(20, markBaselineVoiceComplete, handleMicrophoneError);
 
   useEffect(() => {
     if (entryState !== "ready") return;
@@ -507,8 +688,8 @@ export function Grade4Session1PilotV2({ pilotMode = false, initialRun = null }: 
 
   const exploredCount = ACTIVITY_STATION_IDS.filter((id) => introducedStationIds.includes(id) && stationOpinions[id]).length;
   const pictureCheckComplete = selectedChecks.length === 3 && selectedChecks.every((item) => pictureCheckCorrectIds.includes(item.id));
-  const choiceComplete = completedVoiceParts.includes("station-choice") || (pilotMode && Boolean(choiceVoice.error));
-  const baselineComplete = completedVoiceParts.includes("baseline") || (pilotMode && Boolean(baselineVoice.error));
+  const choiceComplete = completedVoiceParts.includes("station-choice");
+  const baselineComplete = completedVoiceParts.includes("baseline");
 
   const canContinue = useMemo(() => {
     if (step.action === "write_name") return badgeHasInk;
@@ -583,6 +764,27 @@ export function Grade4Session1PilotV2({ pilotMode = false, initialRun = null }: 
     setReflection(null);
     setNextStepGoal(null);
     setCompletedVoiceParts([]);
+    setSpeakingFeedback({});
+  }
+
+  function completeSpeakingPart(promptId: Session1SpeakingPromptId) {
+    setCompletedVoiceParts((current) => current.includes(promptId) ? current : [...current, promptId]);
+  }
+
+  function clearSpeakingPart(promptId: Session1SpeakingPromptId) {
+    setSpeakingFeedback((current) => {
+      const next = { ...current };
+      delete next[promptId];
+      return next;
+    });
+    setCompletedVoiceParts((current) => current.filter((part) => part !== promptId));
+  }
+
+  function acceptSpeakingFeedback(feedback: Session1SpeakingFeedback) {
+    setSpeakingFeedback((current) => ({ ...current, [feedback.promptId]: feedback }));
+    completeSpeakingPart(feedback.promptId);
+    playEffect(feedback.status === "try_again" ? "retry" : "correct");
+    playDialogue(feedbackVoiceId(feedback));
   }
 
   function visitStation(id: ActivityStationId) {
@@ -700,8 +902,8 @@ export function Grade4Session1PilotV2({ pilotMode = false, initialRun = null }: 
 
                   {step.action === "choose" ? (
                     <div className="mt-4">
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{ACTIVITY_STATION_IDS.map((id) => <button key={id} type="button" onClick={() => { if (stationChoice !== id) choiceVoice.clear(); setStationChoice(id); playEffect("tap"); playDialogue("s1-explain-choice"); }} className={`min-h-14 rounded-2xl border-3 px-3 text-sm font-black ${stationChoice === id ? "border-violet-700 bg-violet-700 text-white" : "border-violet-200 bg-violet-50 text-violet-900"}`}><span className="mr-1 text-xl">{STATIONS[id].emoji}</span>{STATIONS[id].label}</button>)}</div>
-                      {stationChoice ? <div className="mt-3 rounded-2xl bg-violet-50 p-3"><p className="text-xl font-black text-violet-950 sm:text-2xl">I’d like to visit <span className="text-fuchsia-700">{STATIONS[stationChoice].label}</span> because…</p><VoiceControls recorder={choiceVoice} buttonLabel="Say my answer" pilotMode={pilotMode} onSkip={() => setCompletedVoiceParts((current) => current.includes("station-choice") ? current : [...current, "station-choice"])} /></div> : null}
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{ACTIVITY_STATION_IDS.map((id) => <button key={id} type="button" onClick={() => { if (stationChoice !== id) { choiceVoice.clear(); clearSpeakingPart("station-choice"); } setStationChoice(id); playEffect("tap"); playDialogue("s1-explain-choice"); }} className={`min-h-14 rounded-2xl border-3 px-3 text-sm font-black ${stationChoice === id ? "border-violet-700 bg-violet-700 text-white" : "border-violet-200 bg-violet-50 text-violet-900"}`}><span className="mr-1 text-xl">{STATIONS[id].emoji}</span>{STATIONS[id].label}</button>)}</div>
+                      {stationChoice ? <div className="mt-3 rounded-2xl bg-violet-50 p-3"><p className="text-xl font-black text-violet-950 sm:text-2xl">I’d like to visit <span className="text-fuchsia-700">{STATIONS[stationChoice].label}</span> because…</p><VoiceControls recorder={choiceVoice} buttonLabel="Say my answer" promptId="station-choice" stationId={stationChoice} feedback={speakingFeedback["station-choice"] ?? null} onFeedback={acceptSpeakingFeedback} onRecordingStart={() => clearSpeakingPart("station-choice")} onFeedbackUnavailable={() => playDialogue("s1-feedback-service-resting")} onSkip={() => completeSpeakingPart("station-choice")} /></div> : null}
                     </div>
                   ) : null}
 
@@ -709,7 +911,7 @@ export function Grade4Session1PilotV2({ pilotMode = false, initialRun = null }: 
                     currentCheck ? <div className="mt-4 rounded-2xl border-3 border-yellow-300 bg-yellow-50 p-3 sm:p-4"><p className="text-2xl font-black text-violet-950 sm:text-3xl">{currentCheck.prompt}</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{currentCheck.options.map((answer) => <button key={answer} type="button" onClick={() => answerCheck(answer)} className="min-h-16 rounded-2xl border-3 border-violet-200 bg-white px-4 text-lg font-black text-violet-950 shadow-sm transition hover:-translate-y-1 hover:border-violet-600 active:translate-y-0">{answer}</button>)}</div>{wrongCheck ? <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-100 p-3 font-black text-amber-900"><Lightbulb className="h-5 w-5" />{currentCheck.hint}</p> : null}</div> : <div className={`mt-4 rounded-2xl bg-emerald-100 p-4 text-center text-xl font-black text-emerald-900 ${styles.rewardPop}`}><Sparkles className="mx-auto h-9 w-9" />Three picture power-ups collected!</div>
                   ) : null}
 
-                  {step.action === "record" ? <div className="mt-4"><div className="grid grid-cols-3 gap-2 text-center"><span className="rounded-2xl bg-sky-100 p-3 font-black text-sky-900">🪪 My name</span><span className="rounded-2xl bg-amber-100 p-3 font-black text-amber-900">🎂 My age</span><span className="rounded-2xl bg-emerald-100 p-3 font-black text-emerald-900">❤️ I like…</span></div><button type="button" onClick={() => playDialogue("s1-baseline-model")} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-2xl border-2 border-sky-300 bg-sky-50 px-5 font-black text-sky-900 shadow-sm transition hover:scale-[1.02] active:scale-95"><Volume2 className="h-5 w-5" />Hear an example</button><VoiceControls recorder={baselineVoice} buttonLabel="Start my sample" pilotMode={pilotMode} onSkip={() => setCompletedVoiceParts((current) => current.includes("baseline") ? current : [...current, "baseline"])} /></div> : null}
+                  {step.action === "record" ? <div className="mt-4"><div className="grid grid-cols-3 gap-2 text-center"><span className="rounded-2xl bg-sky-100 p-3 font-black text-sky-900">🪪 My name</span><span className="rounded-2xl bg-amber-100 p-3 font-black text-amber-900">🎂 My age</span><span className="rounded-2xl bg-emerald-100 p-3 font-black text-emerald-900">❤️ I like…</span></div><button type="button" onClick={() => playDialogue("s1-baseline-model")} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-2xl border-2 border-sky-300 bg-sky-50 px-5 font-black text-sky-900 shadow-sm transition hover:scale-[1.02] active:scale-95"><Volume2 className="h-5 w-5" />Hear an example</button><VoiceControls recorder={baselineVoice} buttonLabel="Start my sample" promptId="baseline" feedback={speakingFeedback.baseline ?? null} onFeedback={acceptSpeakingFeedback} onRecordingStart={() => clearSpeakingPart("baseline")} onFeedbackUnavailable={() => playDialogue("s1-feedback-service-resting")} onSkip={() => completeSpeakingPart("baseline")} /></div> : null}
 
                   {step.action === "reflect" ? <div className="mt-4 grid gap-4 lg:grid-cols-2"><div><p className="mb-2 font-black text-slate-700">How did speaking feel?</p><div className="grid gap-2">{["I felt ready", "I needed thinking time", "I want more practice"].map((option) => <button key={option} type="button" onClick={() => { setReflection(option); playEffect("tap"); }} className={`min-h-12 rounded-2xl border-3 px-4 text-left font-black ${reflection === option ? "border-violet-700 bg-violet-700 text-white" : "border-violet-200 bg-white text-violet-900"}`}>{option}</button>)}</div></div><div><p className="mb-2 font-black text-slate-700">My next power-up:</p><div className="grid gap-2">{["Say a longer reason", "Make my words clearer", "Learn more fair words"].map((option) => <button key={option} type="button" onClick={() => { setNextStepGoal(option); playEffect("tap"); }} className={`min-h-12 rounded-2xl border-3 px-4 text-left font-black ${nextStepGoal === option ? "border-emerald-700 bg-emerald-600 text-white" : "border-emerald-200 bg-white text-emerald-900"}`}><Flag className="mr-2 inline h-5 w-5" />{option}</button>)}</div></div></div> : null}
 

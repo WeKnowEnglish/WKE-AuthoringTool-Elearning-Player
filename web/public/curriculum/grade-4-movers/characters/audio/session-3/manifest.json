@@ -1,0 +1,316 @@
+{
+  "session": "grade-4-unit-1-session-3",
+  "model": "gpt-4o-mini-tts-2025-12-15",
+  "format": "mp3",
+  "clipCount": 47,
+  "voices": {
+    "Keelan": {
+      "voice": "coral",
+      "speed": 0.96,
+      "playbackRate": 1,
+      "protocol": "young-goofy-v2"
+    },
+    "Mia": {
+      "voice": "nova",
+      "speed": 0.92,
+      "playbackRate": 1.14,
+      "protocol": "creative-cartoon-child-v3"
+    },
+    "Leo": {
+      "voice": "verse",
+      "speed": 0.94,
+      "playbackRate": 1.12,
+      "protocol": "sporty-cartoon-child-v3"
+    },
+    "Sam": {
+      "voice": "alloy",
+      "speed": 0.93,
+      "playbackRate": 1.13,
+      "protocol": "story-cartoon-child-v3"
+    }
+  },
+  "clips": {
+    "s3-welcome": {
+      "speaker": "Keelan",
+      "text": "Welcome back! Today we’re hunting for something brilliant: a thing that two friends both like.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-welcome.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-mission": {
+      "speaker": "Keelan",
+      "text": "First, find the three glowing activity badges. They will power our Friendship Circle!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-mission.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-badge-painting": {
+      "speaker": "Keelan",
+      "text": "Painting animals! Mia’s favourite.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-badge-painting.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-badge-football": {
+      "speaker": "Keelan",
+      "text": "Playing football! That one belongs to Leo.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-badge-football.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-badge-reading": {
+      "speaker": "Keelan",
+      "text": "Reading funny stories! I can almost hear Sam laughing.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-badge-reading.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-badges-ready": {
+      "speaker": "Keelan",
+      "text": "Three badges found! The Friendship Circle is awake.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-badges-ready.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-choose-favourite": {
+      "speaker": "Keelan",
+      "text": "Which activity do you like most? Choose with your heart, not with your homework brain.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-choose-favourite.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-favourite-confirm": {
+      "speaker": "Keelan",
+      "text": "Great choice! Now let’s discover who likes it too.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-favourite-confirm.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-question-intro": {
+      "speaker": "Keelan",
+      "text": "Our friendship question needs three parts: Do... you like... and the activity.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-question-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-question-painting": {
+      "speaker": "Keelan",
+      "text": "Do you like painting animals?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-question-painting.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-question-football": {
+      "speaker": "Keelan",
+      "text": "Do you like playing football?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-question-football.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-question-reading": {
+      "speaker": "Keelan",
+      "text": "Do you like reading funny stories?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-question-reading.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-question-success": {
+      "speaker": "Keelan",
+      "text": "Yes! Do you like...? Your follow-up question is ready.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-question-success.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-record-question": {
+      "speaker": "Keelan",
+      "text": "Say your full question. Tap the microphone when you’re ready.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-record-question.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-recording-ready": {
+      "speaker": "Keelan",
+      "text": "Question captured! Listen back, keep it, or try once more.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-recording-ready.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-chats-intro": {
+      "speaker": "Keelan",
+      "text": "Ask Mia, Leo, and Sam in any order. Listen for yes, I do, or no, I don’t.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-chats-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-ask-mia": {
+      "speaker": "Keelan",
+      "text": "Mia is ready. Ask your question!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-ask-mia.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-ask-leo": {
+      "speaker": "Keelan",
+      "text": "Leo is ready. Ask your question!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-ask-leo.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-ask-sam": {
+      "speaker": "Keelan",
+      "text": "Sam is ready. Ask your question!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-ask-sam.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-mia-painting-yes": {
+      "speaker": "Mia",
+      "text": "Yes, I do! I love painting animals, especially cats.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/mia/session-3/s3-mia-painting-yes.mp3?v=creative-cartoon-child-v3",
+      "playbackRate": 1.14
+    },
+    "s3-mia-football-no": {
+      "speaker": "Mia",
+      "text": "No, I don’t, but I like the bright colours on football shirts.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/mia/session-3/s3-mia-football-no.mp3?v=creative-cartoon-child-v3",
+      "playbackRate": 1.14
+    },
+    "s3-mia-reading-no": {
+      "speaker": "Mia",
+      "text": "No, I don’t read many funny stories, but they sound fun.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/mia/session-3/s3-mia-reading-no.mp3?v=creative-cartoon-child-v3",
+      "playbackRate": 1.14
+    },
+    "s3-leo-painting-no": {
+      "speaker": "Leo",
+      "text": "No, I don’t, but I can help choose a really cool animal.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/leo/session-3/s3-leo-painting-no.mp3?v=sporty-cartoon-child-v3",
+      "playbackRate": 1.12
+    },
+    "s3-leo-football-yes": {
+      "speaker": "Leo",
+      "text": "Yes, I do! I love playing football with my friends.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/leo/session-3/s3-leo-football-yes.mp3?v=sporty-cartoon-child-v3",
+      "playbackRate": 1.12
+    },
+    "s3-leo-reading-no": {
+      "speaker": "Leo",
+      "text": "No, I don’t read many stories, but funny ones could be good.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/leo/session-3/s3-leo-reading-no.mp3?v=sporty-cartoon-child-v3",
+      "playbackRate": 1.12
+    },
+    "s3-sam-painting-no": {
+      "speaker": "Sam",
+      "text": "No, I don’t, but paintings can tell brilliant stories.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/sam/session-3/s3-sam-painting-no.mp3?v=story-cartoon-child-v3",
+      "playbackRate": 1.13
+    },
+    "s3-sam-football-no": {
+      "speaker": "Sam",
+      "text": "No, I don’t, but I would cheer for your team.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/sam/session-3/s3-sam-football-no.mp3?v=story-cartoon-child-v3",
+      "playbackRate": 1.13
+    },
+    "s3-sam-reading-yes": {
+      "speaker": "Sam",
+      "text": "Yes, I do! Funny stories make me laugh so much.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/sam/session-3/s3-sam-reading-yes.mp3?v=story-cartoon-child-v3",
+      "playbackRate": 1.13
+    },
+    "s3-react-yes": {
+      "speaker": "Keelan",
+      "text": "A yes answer! You can say: Me too!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-react-yes.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-react-no": {
+      "speaker": "Keelan",
+      "text": "A no answer. That’s okay—friends can like different things.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-react-no.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-all-chats": {
+      "speaker": "Keelan",
+      "text": "Three conversations complete! One friend shares your favourite.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-all-chats.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-match-intro": {
+      "speaker": "Keelan",
+      "text": "Who said yes to your favourite activity? Join the two matching badges.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-match-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-common-painting": {
+      "speaker": "Keelan",
+      "text": "Mia and you both like painting animals. Say: We both like painting animals.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-common-painting.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-common-football": {
+      "speaker": "Keelan",
+      "text": "Leo and you both like playing football. Say: We both like playing football.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-common-football.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-common-reading": {
+      "speaker": "Keelan",
+      "text": "Sam and you both like reading funny stories. Say: We both like reading funny stories.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-common-reading.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-record-common": {
+      "speaker": "Keelan",
+      "text": "Now record your common-ground sentence. Make the word both sparkle.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-record-common.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-common-ready": {
+      "speaker": "Keelan",
+      "text": "You connected two people with one clear sentence. Friendship power!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-common-ready.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-check-intro": {
+      "speaker": "Keelan",
+      "text": "Three quick clues before the Friendship Circle opens. Ready?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-check-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-check-football": {
+      "speaker": "Keelan",
+      "text": "Who says yes to playing football: Mia, Leo, or Sam?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-check-football.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-check-negative": {
+      "speaker": "Keelan",
+      "text": "Which answer means no: Yes, I do; No, I don’t; or Me too?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-check-negative.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-check-shared": {
+      "speaker": "Keelan",
+      "text": "Which sentence shows a shared interest: We both like reading; Sam likes reading; or Do you like reading?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-check-shared.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-check-retry": {
+      "speaker": "Keelan",
+      "text": "Almost! Use the picture clue and listen once more.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-check-retry.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-check-correct": {
+      "speaker": "Keelan",
+      "text": "That’s the one! Common-ground clue collected.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-check-correct.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-check-complete": {
+      "speaker": "Keelan",
+      "text": "Three clues collected! The Friendship Circle is shining.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-check-complete.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-reflect": {
+      "speaker": "Keelan",
+      "text": "Which friendship power helped most: asking, listening, or connecting?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-reflect.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-complete": {
+      "speaker": "Keelan",
+      "text": "Mission complete! You asked a follow-up question, understood yes and no, and found something in common.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-complete.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s3-practice-invite": {
+      "speaker": "Keelan",
+      "text": "Take your Friendship Circle into the practice games and power up both, do, and don’t.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-3/s3-practice-invite.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    }
+  }
+}

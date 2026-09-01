@@ -6,12 +6,18 @@ import {
 } from "@/lib/curriculum/grade-4-movers";
 
 describe("Grade 4 Movers curriculum pilot", () => {
-  it("publishes Session 1 and keeps the rest of Unit 1 visible as planned", () => {
+  it("publishes the first three pilots and keeps the rest of Unit 1 visible as planned", () => {
     const sessions = GRADE_4_MOVERS_COURSE.units[0]?.sessions ?? [];
 
     expect(sessions).toHaveLength(9);
     expect(sessions[0]?.status).toBe("pilot");
-    expect(sessions.slice(1).every((session) => session.status === "planned")).toBe(true);
+    expect(sessions[1]?.status).toBe("pilot");
+    expect(sessions[1]?.pilotHref).toBe("/pilots/grade-4-learning-paths/unit-1/session-2");
+    expect(sessions[1]?.studentHref).toBe("/primary/learn/grade-4/unit-1/session-2");
+    expect(sessions[2]?.status).toBe("pilot");
+    expect(sessions[2]?.pilotHref).toBe("/pilots/grade-4-learning-paths/unit-1/session-3");
+    expect(sessions[2]?.studentHref).toBe("/primary/learn/grade-4/unit-1/session-3");
+    expect(sessions.slice(3).every((session) => session.status === "planned")).toBe(true);
   });
 
   it("uses specific, non-punitive segment feedback for speech triggers", () => {

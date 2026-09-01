@@ -7,7 +7,11 @@ import { GRADE_4_MOVERS_COURSE } from "@/lib/curriculum/grade-4-movers";
 export function Grade4LearningPathsCatalog({ pilotMode = false }: { pilotMode?: boolean }) {
   const unit = GRADE_4_MOVERS_COURSE.units[0];
   const firstSession = unit.sessions[0];
+  const secondSession = unit.sessions[1];
+  const thirdSession = unit.sessions[2];
   const launchHref = pilotMode ? firstSession.pilotHref : firstSession.studentHref;
+  const secondLaunchHref = pilotMode ? secondSession.pilotHref : secondSession.studentHref;
+  const thirdLaunchHref = pilotMode ? thirdSession.pilotHref : thirdSession.studentHref;
 
   return (
     <main className="min-h-dvh bg-[#f5f3ff] px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
@@ -61,6 +65,7 @@ export function Grade4LearningPathsCatalog({ pilotMode = false }: { pilotMode?: 
           </div>
 
           <div className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_17rem]">
+            <div className="space-y-3">
             <article className="overflow-hidden rounded-[1.5rem] border-2 border-violet-300 bg-violet-50">
               <div className="grid sm:grid-cols-[15rem_minmax(0,1fr)]">
                 <div className="relative min-h-48 sm:min-h-full">
@@ -100,6 +105,37 @@ export function Grade4LearningPathsCatalog({ pilotMode = false }: { pilotMode?: 
               </div>
             </article>
 
+            <article className="overflow-hidden rounded-[1.5rem] border-2 border-fuchsia-300 bg-fuchsia-50">
+              <div className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-black text-fuchsia-700">
+                    <span>SESSION 2</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-slate-600"><Clock3 className="h-3.5 w-3.5" /> {secondSession.durationMinutes} min</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-slate-600"><Mic2 className="h-3.5 w-3.5" /> Ask and listen</span>
+                  </div>
+                  <h3 className="mt-2 text-xl font-black">{secondSession.title}</h3>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">{secondSession.description}</p>
+                </div>
+                {secondLaunchHref ? <Link href={secondLaunchHref} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-fuchsia-700 px-5 text-sm font-black text-white shadow-sm transition hover:bg-fuchsia-800">Play Session 2 <ChevronRight className="h-4 w-4" /></Link> : <span className="inline-flex min-h-12 shrink-0 items-center rounded-xl bg-slate-100 px-5 text-sm font-black text-slate-400"><Lock className="mr-2 h-4 w-4" /> Coming next</span>}
+              </div>
+            </article>
+
+            <article className="overflow-hidden rounded-[1.5rem] border-2 border-amber-300 bg-amber-50">
+              <div className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-black text-amber-800">
+                    <span>SESSION 3</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-slate-600"><Clock3 className="h-3.5 w-3.5" /> {thirdSession.durationMinutes} min</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-slate-600"><Mic2 className="h-3.5 w-3.5" /> Ask and connect</span>
+                  </div>
+                  <h3 className="mt-2 text-xl font-black">{thirdSession.title}</h3>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">{thirdSession.description}</p>
+                </div>
+                {thirdLaunchHref ? <Link href={thirdLaunchHref} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 text-sm font-black text-white shadow-sm transition hover:bg-amber-700">Play Session 3 <ChevronRight className="h-4 w-4" /></Link> : <span className="inline-flex min-h-12 shrink-0 items-center rounded-xl bg-slate-100 px-5 text-sm font-black text-slate-400"><Lock className="mr-2 h-4 w-4" /> Coming next</span>}
+              </div>
+            </article>
+            </div>
+
             <aside className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-black">Unit journey</p>
               <ol className="mt-3 space-y-2">
@@ -122,4 +158,3 @@ export function Grade4LearningPathsCatalog({ pilotMode = false }: { pilotMode?: 
     </main>
   );
 }
-

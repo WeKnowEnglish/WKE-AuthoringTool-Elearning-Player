@@ -1,0 +1,334 @@
+{
+  "session": "grade-4-unit-1-session-2",
+  "model": "gpt-4o-mini-tts-2025-12-15",
+  "format": "mp3",
+  "clipCount": 50,
+  "voices": {
+    "Keelan": {
+      "voice": "coral",
+      "speed": 0.96,
+      "playbackRate": 1,
+      "protocol": "young-goofy-v2"
+    },
+    "Mia": {
+      "voice": "nova",
+      "speed": 0.92,
+      "playbackRate": 1.14,
+      "protocol": "creative-cartoon-child-v3"
+    },
+    "Leo": {
+      "voice": "verse",
+      "speed": 0.94,
+      "playbackRate": 1.12,
+      "protocol": "sporty-cartoon-child-v3"
+    },
+    "Sam": {
+      "voice": "alloy",
+      "speed": 0.93,
+      "playbackRate": 1.13,
+      "protocol": "story-cartoon-child-v3"
+    }
+  },
+  "clips": {
+    "s2-welcome": {
+      "speaker": "Keelan",
+      "text": "You’re back! Brilliant! My Friend Finder has three empty cards. Will you help me meet some new friends?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-welcome.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-clue-name": {
+      "speaker": "Keelan",
+      "text": "A name clue! We can ask: What’s your name?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-clue-name.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-clue-age": {
+      "speaker": "Keelan",
+      "text": "A birthday clue! We can ask: How old are you?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-clue-age.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-clue-likes": {
+      "speaker": "Keelan",
+      "text": "A heart clue! We need to discover what each friend likes doing.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-clue-likes.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-clue-can": {
+      "speaker": "Keelan",
+      "text": "A star clue! Let’s listen for something each friend can do.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-clue-can.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-finder-open": {
+      "speaker": "Keelan",
+      "text": "Boop! Four clues found. The Friend Finder is ready!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-finder-open.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-question-intro": {
+      "speaker": "Keelan",
+      "text": "First, let’s build the question that opens every friendship door.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-question-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-question-model": {
+      "speaker": "Keelan",
+      "text": "What... do you like... doing?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-question-model.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-question-success": {
+      "speaker": "Keelan",
+      "text": "Yes! What do you like doing? Question power ready!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-question-success.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-friends-intro": {
+      "speaker": "Keelan",
+      "text": "Mia, Leo, and Sam are waiting. Choose anyone first. Friendship adventures don’t need a straight line!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-friends-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-choose-friend": {
+      "speaker": "Keelan",
+      "text": "Tap a friend. Then ask our question and listen for two clues.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-choose-friend.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-ask-prompt": {
+      "speaker": "Keelan",
+      "text": "Your turn! Ask: What do you like doing?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-ask-prompt.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-microphone-first-use": {
+      "speaker": "Keelan",
+      "text": "Tap the microphone when you’re ready. If your browser asks, tap Allow so I can hear your question.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-microphone-first-use.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-recording-ready": {
+      "speaker": "Keelan",
+      "text": "Got it! Listen back. Keep it, or try it once more—both are good choices.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-recording-ready.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-profile-listen": {
+      "speaker": "Keelan",
+      "text": "Listen closely for two things: what your new friend likes, and what they can do.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-profile-listen.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-profile-correct": {
+      "speaker": "Keelan",
+      "text": "You heard it! That clue fits the profile.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-profile-correct.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-profile-retry-mia": {
+      "speaker": "Keelan",
+      "text": "Hmm... let’s hear Mia again. Her orange paint mark is a helpful clue.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-profile-retry-mia.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-profile-retry-leo": {
+      "speaker": "Keelan",
+      "text": "Let’s replay Leo. His green football badge can help us.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-profile-retry-leo.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-profile-retry-sam": {
+      "speaker": "Keelan",
+      "text": "One more listen to Sam. Look for the purple book with the star.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-profile-retry-sam.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-all-profiles": {
+      "speaker": "Keelan",
+      "text": "Three profiles complete! You asked, listened, and remembered. High five!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-all-profiles.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-match-intro": {
+      "speaker": "Keelan",
+      "text": "Who would you like to meet again? Choose the friend who interests you most.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-match-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-match-mia": {
+      "speaker": "Keelan",
+      "text": "Mia! A colourful choice. She likes painting animals.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-match-mia.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-match-leo": {
+      "speaker": "Keelan",
+      "text": "Leo! A sporty choice. He likes playing football.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-match-leo.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-match-sam": {
+      "speaker": "Keelan",
+      "text": "Sam! A story-filled choice. He likes reading funny stories.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-match-sam.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-introduce": {
+      "speaker": "Keelan",
+      "text": "Now introduce your friend. Choose the person word, then choose what they like.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-introduce.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-intro-model-mia": {
+      "speaker": "Keelan",
+      "text": "This is Mia. She likes painting animals.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-intro-model-mia.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-intro-model-leo": {
+      "speaker": "Keelan",
+      "text": "This is Leo. He likes playing football.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-intro-model-leo.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-intro-model-sam": {
+      "speaker": "Keelan",
+      "text": "This is Sam. He likes reading funny stories.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-intro-model-sam.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-intro-retry": {
+      "speaker": "Keelan",
+      "text": "Good start! Check the friend card, and power up one missing part.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-intro-retry.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-intro-success": {
+      "speaker": "Keelan",
+      "text": "That’s it! You introduced your new friend clearly.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-intro-success.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-intro": {
+      "speaker": "Keelan",
+      "text": "Three final clues! Show the Friend Finder what you remember.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-intro.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-question-mia": {
+      "speaker": "Keelan",
+      "text": "What does Mia like doing? Painting animals, playing football, or reading funny stories?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-question-mia.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-question-leo": {
+      "speaker": "Keelan",
+      "text": "What can Leo do? Draw a cat, kick with both feet, or make character voices?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-question-leo.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-question-sam": {
+      "speaker": "Keelan",
+      "text": "Who likes reading funny stories? Mia, Leo, or Sam?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-question-sam.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-hint-mia": {
+      "speaker": "Keelan",
+      "text": "Look for Mia’s orange paint mark, then try once more.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-hint-mia.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-hint-leo": {
+      "speaker": "Keelan",
+      "text": "Remember Leo’s green football badge. What could he do?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-hint-leo.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-hint-sam": {
+      "speaker": "Keelan",
+      "text": "The purple star book belongs to our funny-story friend.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-hint-sam.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-correct-a": {
+      "speaker": "Keelan",
+      "text": "Yes! Friend clue collected!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-correct-a.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-correct-b": {
+      "speaker": "Keelan",
+      "text": "You remembered! Sparkle power!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-correct-b.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-correct-c": {
+      "speaker": "Keelan",
+      "text": "That’s the one! Nice listening.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-correct-c.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-check-complete": {
+      "speaker": "Keelan",
+      "text": "Three out of three! The Friend Finder is shining again!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-check-complete.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-reflect": {
+      "speaker": "Keelan",
+      "text": "Which power did you use most today: asking, listening, or remembering?",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-reflect.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-complete": {
+      "speaker": "Keelan",
+      "text": "Friendship mission complete! You can ask a question, listen for clues, and introduce someone new. Brilliant work!",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-complete.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-practice-invite": {
+      "speaker": "Keelan",
+      "text": "Your Friend Finder is ready for more! Take it into the practice games and power up your new language.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/keelan/session-2/s2-practice-invite.mp3?v=young-goofy-v2",
+      "playbackRate": 1
+    },
+    "s2-mia-profile": {
+      "speaker": "Mia",
+      "text": "Hi! I’m Mia. I’m nine. I like painting animals, and I can draw a cat.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/mia/session-2/s2-mia-profile.mp3?v=creative-cartoon-child-v3",
+      "playbackRate": 1.14
+    },
+    "s2-mia-greeting": {
+      "speaker": "Mia",
+      "text": "Hi again! Maybe we can paint an animal together.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/mia/session-2/s2-mia-greeting.mp3?v=creative-cartoon-child-v3",
+      "playbackRate": 1.14
+    },
+    "s2-leo-profile": {
+      "speaker": "Leo",
+      "text": "Hello! I’m Leo. I’m ten. I like playing football, and I can kick with both feet.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/leo/session-2/s2-leo-profile.mp3?v=sporty-cartoon-child-v3",
+      "playbackRate": 1.12
+    },
+    "s2-leo-greeting": {
+      "speaker": "Leo",
+      "text": "Great choice! We could practise football together.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/leo/session-2/s2-leo-greeting.mp3?v=sporty-cartoon-child-v3",
+      "playbackRate": 1.12
+    },
+    "s2-sam-profile": {
+      "speaker": "Sam",
+      "text": "Hi there! I’m Sam. I’m nine. I like reading funny stories, and I can make character voices.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/sam/session-2/s2-sam-profile.mp3?v=story-cartoon-child-v3",
+      "playbackRate": 1.13
+    },
+    "s2-sam-greeting": {
+      "speaker": "Sam",
+      "text": "Nice to meet you! I know a story that might make you laugh.",
+      "audioUrl": "/curriculum/grade-4-movers/characters/audio/sam/session-2/s2-sam-greeting.mp3?v=story-cartoon-child-v3",
+      "playbackRate": 1.13
+    }
+  }
+}

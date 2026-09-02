@@ -167,7 +167,7 @@ export function PrimaryLearnTab({
       <header className="px-0.5">
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Learn</h1>
         <p className="mt-1 text-sm font-semibold text-[var(--pl-muted)] sm:text-base">
-          Choose a learning path, or browse Comics, Vocabulary, and Grammar.
+          Choose a learning path, or browse Easy Readers, Comics, Vocabulary, and Grammar.
         </p>
       </header>
 
@@ -208,6 +208,81 @@ export function PrimaryLearnTab({
               </span>
             </span>
             <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 transition group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+      </LearnShelf>
+
+      <LearnShelf
+        title="Easy Readers"
+        subtitle="Read, listen, learn new words, and check understanding"
+        icon={<BookOpen className="h-5 w-5" aria-hidden />}
+      >
+        <Link
+          href="/primary/learn/easy-readers/the-new-student"
+          data-shelf-card
+          aria-label="Read The New Student, A1 Easy Reader Book 1"
+          className="group flex w-[11.5rem] shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-blue-200 bg-white text-left shadow-sm transition hover:border-blue-400 hover:shadow-md active:scale-[0.99] sm:w-[13rem]"
+        >
+          <span className="relative aspect-[3/4] w-full overflow-hidden bg-sky-100">
+            <NextImage
+              src="/easy-readers/book-1/cover.png"
+              alt="Cover of The New Student"
+              fill
+              draggable={false}
+              className="pointer-events-none object-cover transition-transform duration-300 group-hover:scale-105"
+              unoptimized
+            />
+            <span className="absolute left-2 top-2 rounded-full bg-[#173b8f] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+              A1 · Book 1
+            </span>
+          </span>
+          <span className="flex items-start justify-between gap-1.5 p-3">
+            <span className="min-w-0">
+              <span className="block text-sm font-extrabold leading-snug text-[var(--pl-ink)]">
+                The New Student
+              </span>
+              <span className="mt-1 block line-clamp-2 text-[11px] font-semibold text-[var(--pl-muted)]">
+                Join Sam on his first day and meet two new friends.
+              </span>
+              <span className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-blue-700">
+                6 chapters · Start reading
+              </span>
+            </span>
+            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 transition group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+        <Link
+          href="/primary/learn/easy-readers/where-is-milo"
+          data-shelf-card
+          aria-label="Read Where Is Milo, A1 Easy Reader Book 2"
+          className="group flex w-[11.5rem] shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-green-200 bg-white text-left shadow-sm transition hover:border-green-400 hover:shadow-md active:scale-[0.99] sm:w-[13rem]"
+        >
+          <span className="relative aspect-[3/4] w-full overflow-hidden bg-green-100">
+            <NextImage
+              src="/easy-readers/book-2/cover.png"
+              alt="Cover of Where Is Milo?"
+              fill
+              draggable={false}
+              className="pointer-events-none object-cover transition-transform duration-300 group-hover:scale-105"
+              unoptimized
+            />
+            <span className="absolute left-2 top-2 rounded-full bg-[#279b2e] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+              A1 · Book 2
+            </span>
+          </span>
+          <span className="flex items-start justify-between gap-1.5 p-3">
+            <span className="min-w-0">
+              <span className="block text-sm font-extrabold leading-snug text-[var(--pl-ink)]">
+                Where Is Milo?
+              </span>
+              <span className="mt-1 block line-clamp-2 text-[11px] font-semibold text-[var(--pl-muted)]">
+                Follow Mia and Leo’s clues from home to the park.
+              </span>
+              <span className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-green-700">
+                6 chapters · New
+              </span>
+            </span>
+            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-green-600 transition group-hover:translate-x-0.5" />
           </span>
         </Link>
       </LearnShelf>

@@ -20,6 +20,10 @@ import {
   documentModuleItemIds,
   scoreDocumentModuleAnswers,
 } from "@/lib/homework-collections/document-module";
+import {
+  creativePresentationAnswerIds,
+  creativePresentationStepAnswerIds,
+} from "@/lib/homework-collections/creative-presentation";
 
 function normalizeAnswer(value: unknown): string {
   return typeof value === "string" ? value.trim().slice(0, 10_000) : "";
@@ -41,6 +45,9 @@ function allowedAnswerIds(part: HomeworkCollectionPart): Set<string> {
   }
   if (part.kind === "line_match") return new Set(part.pairs.map((pair) => pair.id));
   if (part.kind === "free_response") return new Set(part.prompts.map((prompt) => prompt.id));
+  if (part.kind === "creative_presentation") {
+    return new Set(creativePresentationAnswerIds(part));
+  }
   if (part.kind === "speaking_prompt") return new Set([part.responseId]);
   if (part.kind === "listening_item_match") {
     return new Set(part.activity.prompts.map((prompt) => prompt.id));
@@ -189,6 +196,11 @@ export function homeworkCollectionRequiredPartsComplete(
     }
     if (part.kind === "speaking_prompt") {
       return Boolean(scored.answers[part.responseId]?.trim());
+    }
+    if (part.kind === "creative_presentation") {
+      return creativePresentationStepAnswerIds(part)
+        .flat()
+        .every((id) => Boolean(scored.answers[id]?.trim()));
     }
     return true;
   });

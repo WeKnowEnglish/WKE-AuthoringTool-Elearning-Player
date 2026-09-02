@@ -13,6 +13,7 @@ export const HOMEWORK_COLLECTION_PART_KINDS = [
   "listen_and_choose",
   "listening_item_match",
   "sentence_scramble",
+  "creative_presentation",
   "free_response",
   "speaking_prompt",
   "lesson_player_pack",
@@ -107,6 +108,36 @@ export type HomeworkCollectionFreeResponsePart = HomeworkCollectionPartBase & {
   }>;
 };
 
+export type HomeworkCollectionCreativePresentationPart =
+  HomeworkCollectionPartBase & {
+    kind: "creative_presentation";
+    templateId: "vlog-plan-v1";
+    idea: {
+      textId: string;
+      mediaId: string;
+      question: string;
+      direction: string;
+      starters: string[];
+    };
+    plan: {
+      question: string;
+      direction: string;
+      fields: Array<{ id: string; label: string; starter: string }>;
+    };
+    story: {
+      question: string;
+      direction: string;
+      frames: Array<{ id: string; label: string }>;
+    };
+    opening: {
+      textId: string;
+      question: string;
+      direction: string;
+      starters: string[];
+    };
+    maxPoints: number;
+  };
+
 /** Single spoken response recorded by the student (teacher review). */
 export type HomeworkCollectionSpeakingPromptPart = HomeworkCollectionPartBase & {
   kind: "speaking_prompt";
@@ -140,6 +171,7 @@ export type HomeworkCollectionPart =
   | HomeworkCollectionListenAndChoosePart
   | HomeworkCollectionListeningItemMatchPart
   | HomeworkCollectionSentenceScramblePart
+  | HomeworkCollectionCreativePresentationPart
   | HomeworkCollectionFreeResponsePart
   | HomeworkCollectionSpeakingPromptPart
   | HomeworkCollectionLessonPlayerPackPart

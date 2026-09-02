@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Grade4Session1Pilot } from "@/components/curriculum/Grade4Session1Pilot";
+import { Grade4Session1PilotV2 } from "@/components/curriculum/Grade4Session1PilotV2";
 
 export const metadata: Metadata = {
   title: "Enter the Welcome Fair — Grade 4 Pilot",
@@ -8,6 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Grade4Session1PilotPage() {
-  return <Grade4Session1Pilot pilotMode />;
+  return <Grade4Session1PilotV2 pilotMode />;
 }
-

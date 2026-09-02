@@ -10,6 +10,7 @@ import type { HomeworkCollectionPart } from "@/lib/homework-collections";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
 import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
+import { CreativePresentationViewer } from "@/components/homework/CreativePresentationViewer";
 
 function itemLabel(part: HomeworkCollectionPart, itemId: string): string {
   if (part.kind === "multiple_choice") return part.questions.find((item) => item.id === itemId)?.prompt ?? itemId;
@@ -151,7 +152,7 @@ export default async function HomeworkCollectionResultsPage({
                     const part = partById.get(scored.partId);
                     if (!part) return null;
                     return (
-                      <article key={scored.partId} className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+                      <article key={scored.partId} className={`rounded-lg border border-neutral-200 bg-neutral-50 p-4 ${part.kind === "creative_presentation" ? "lg:col-span-2" : ""}`}>
                         <div className="flex items-center justify-between gap-2">
                           <h3 className="font-semibold text-neutral-900">{part.title}</h3>
                           {scored.correct === null ? (
@@ -160,6 +161,15 @@ export default async function HomeworkCollectionResultsPage({
                             <span className="text-xs font-semibold text-emerald-700">{scored.correct}/{scored.maxScore}</span>
                           )}
                         </div>
+                        {part.kind === "creative_presentation" ? (
+                          <div className="mt-4">
+                            <CreativePresentationViewer
+                              part={part}
+                              answers={scored.answers}
+                              studentName={attempt.displayName}
+                            />
+                          </div>
+                        ) : (
                         <dl className="mt-3 space-y-2">
                           {Object.entries(scored.answers).map(([itemId, answer]) => {
                             const recording = part
@@ -184,6 +194,7 @@ export default async function HomeworkCollectionResultsPage({
                             );
                           })}
                         </dl>
+                        )}
                       </article>
                     );
                   })}

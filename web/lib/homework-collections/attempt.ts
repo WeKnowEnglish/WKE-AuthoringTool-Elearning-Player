@@ -6,7 +6,10 @@ import {
   type HomeworkCollectionReviewPart,
   type HomeworkCollectionScoredPart,
 } from "@/lib/homework-collections/types";
-import { isHomeworkCollectionPartKind } from "@/lib/homework-collections/document";
+import {
+  homeworkCollectionGradingMode,
+  isHomeworkCollectionPartKind,
+} from "@/lib/homework-collections/document";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -40,7 +43,7 @@ export function normalizeHomeworkCollectionAttemptContent(
     parts[partId.slice(0, 100)] = {
       partId: partId.slice(0, 100),
       kind: value.kind,
-      gradingMode: value.kind === "free_response" ? "teacher_review" : "automatic",
+      gradingMode: homeworkCollectionGradingMode(value.kind),
       answers,
       correct,
       maxScore,

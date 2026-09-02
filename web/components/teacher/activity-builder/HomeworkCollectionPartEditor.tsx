@@ -14,6 +14,7 @@ import { AudioClipControls } from "@/components/teacher/activity-builder/AudioCl
 import { AssessmentListeningItemMatchPartEditor } from "@/components/teacher/activity-builder/AssessmentListeningItemMatchPartEditor";
 import { HomeworkCollectionLessonPlayerPackEditor } from "@/components/teacher/activity-builder/HomeworkCollectionLessonPlayerPackEditor";
 import { HomeworkCollectionDocumentModuleEditor } from "@/components/teacher/activity-builder/HomeworkCollectionDocumentModuleEditor";
+import { CreativePresentationPartEditor } from "@/components/teacher/activity-builder/CreativePresentationPartEditor";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 
 type Props = {
@@ -32,6 +33,7 @@ function freshId() {
 }
 
 function authoringItemCount(part: HomeworkCollectionPart): number {
+  if (part.kind === "creative_presentation") return 4;
   const record = part as unknown as Record<string, unknown>;
   for (const key of ["questions", "items", "pairs", "prompts"]) {
     const value = record[key];
@@ -1083,6 +1085,10 @@ export function HomeworkCollectionPartEditor({
             </div>
           ) : null}
         </AuthoringItemPager>
+      ) : null}
+
+      {showContent && part.kind === "creative_presentation" ? (
+        <CreativePresentationPartEditor part={part} onChange={onChange} />
       ) : null}
 
       {showContent && part.kind === "speaking_prompt" ? (

@@ -48,6 +48,7 @@ export function activityItemCount(part: ActivityTrackPart): number {
   if (part.source.type === "empty") return 0;
   if (part.source.type === "homework_part") {
     const record = part.source.part as unknown as Record<string, unknown>;
+    if (part.source.part.kind === "creative_presentation") return 4;
     if (part.source.part.kind === "speaking_prompt") return 1;
     if (part.source.part.kind === "listening_item_match") {
       return part.source.part.activity.prompts.length;
@@ -78,6 +79,7 @@ export function activityItemCount(part: ActivityTrackPart): number {
 }
 
 export function activityItemNoun(part: ActivityTrackPart): string {
+  if (part.kind === "creative_presentation") return "step";
   if (part.kind === "multiple_choice" || part.kind === "secondary_questions") {
     return "question";
   }

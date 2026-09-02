@@ -17,6 +17,7 @@ import {
   type GradedTrackSegment,
 } from "@/lib/graded-tracks";
 import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
+import { CreativePresentationViewer } from "@/components/homework/CreativePresentationViewer";
 
 type CollectionResponses = Record<string, { answers: Record<string, string> }>;
 
@@ -163,6 +164,10 @@ export function GradedTrackPlayer({
   const [finished, setFinished] = useState(alreadyCompleted);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const creativeParts =
+    freeze.collectionDocument?.parts.filter(
+      (part) => part.kind === "creative_presentation",
+    ) ?? [];
 
   const displayIndex =
     authoringPreview && focusPartId
@@ -237,15 +242,26 @@ export function GradedTrackPlayer({
 
   if (finished) {
     return (
-      <HomeworkFinishPanel
-        title="Homework submitted"
-        detail="Your answers were saved. Teacher-reviewed activities will appear after feedback."
-        saving={pending}
-        saved
-        saveError={notice}
-        retryLabel="Review activities"
-        onRetry={() => setFinished(false)}
-      />
+      <div className="mx-auto w-full max-w-5xl space-y-5 p-3 sm:p-5">
+        <HomeworkFinishPanel
+          title="Homework submitted"
+          detail="Your work was saved. Your teacher can now review it."
+          saving={pending}
+          saved
+          saveError={notice}
+          retryLabel="Review activities"
+          onRetry={() => setFinished(false)}
+        />
+        {creativeParts.map((part) => (
+          <section key={part.id} className="space-y-2">
+            <h2 className="text-lg font-extrabold text-stone-950">Your finished VLOG plan</h2>
+            <CreativePresentationViewer
+              part={part}
+              answers={collectionResponses[part.id]?.answers ?? {}}
+            />
+          </section>
+        ))}
+      </div>
     );
   }
 

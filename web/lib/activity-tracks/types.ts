@@ -62,6 +62,7 @@ export type ActivityTrackPartKind =
   | "picture_writing"
   | "question_writing"
   | "writing_prompt"
+  | "creative_presentation"
   | "free_response"
   | "speaking_prompt"
   | "secondary_sequence"
@@ -297,6 +298,12 @@ export const ACTIVITY_TRACK_PART_CATALOG: ActivityTrackPartCatalogEntry[] = [
     kind: "writing_prompt",
     label: "Writing prompt",
     description: "Student writing for teacher review.",
+    gradedOnly: true,
+  },
+  {
+    kind: "creative_presentation",
+    label: "Creative presentation",
+    description: "Guided VLOG plan with simple writing, photos, and drawing.",
     gradedOnly: true,
   },
   {

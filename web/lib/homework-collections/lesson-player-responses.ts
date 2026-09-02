@@ -12,6 +12,7 @@ import type {
 } from "@/lib/graded-activities/types";
 import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
 import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
+import { creativePresentationAnswerIds } from "@/lib/homework-collections/creative-presentation";
 
 export type HomeworkCollectionLessonPlayerResponses = Record<
   string,
@@ -25,6 +26,9 @@ function itemIds(part: HomeworkCollectionPart): Set<string> {
   if (part.kind === "line_match") return new Set(part.pairs.map((pair) => pair.id));
   if (part.kind === "free_response") {
     return new Set(part.prompts.map((prompt) => prompt.id));
+  }
+  if (part.kind === "creative_presentation") {
+    return new Set(creativePresentationAnswerIds(part));
   }
   if (part.kind === "speaking_prompt") {
     return new Set([part.responseId]);

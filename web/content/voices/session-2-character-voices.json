@@ -1,0 +1,34 @@
+{
+  "model": "gpt-4o-mini-tts-2025-12-15",
+  "format": "mp3",
+  "characters": {
+    "Keelan": {
+      "voice": "coral",
+      "speed": 0.96,
+      "playbackRate": 1,
+      "protocol": "young-goofy-v2",
+      "instructions": "Perform as Keelan, a young, goofy fantasy creature and friendly learning companion. Sound bright, bouncy, curious, playful, and a little mischievous, with clear international English and a light British character. Use elastic rhythm, tiny amused reactions, and a grin in the voice. Speak clearly enough for a Grade 4 English learner. Do not sound like an adult presenter, a preschool baby voice, or an exaggerated squeaky cartoon."
+    },
+    "Mia": {
+      "voice": "nova",
+      "speed": 0.92,
+      "playbackRate": 1.14,
+      "protocol": "creative-cartoon-child-v3",
+      "instructions": "Perform as Mia, a fictional animated eight-to-nine-year-old schoolgirl speaking to another child. She must unmistakably sound like a child, not an adult acting friendly. Use a noticeably high, light pitch; a very small youthful vocal resonance; quick emotional reactions; short breath groups; and an excited playground rhythm. Let a shy little smile turn into delight when she mentions painting and the cat. Keep the performance cute, spontaneous, and slightly cartoony while every word remains clear. Avoid all elderly, motherly, mature, breathy, elegant, polished, teacherly, theatrical, or presenter qualities. Avoid a baby or toddler voice and avoid extreme squeaking. Use neutral international English for a Grade 4 learner."
+    },
+    "Leo": {
+      "voice": "verse",
+      "speed": 0.94,
+      "playbackRate": 1.12,
+      "protocol": "sporty-cartoon-child-v3",
+      "instructions": "Perform as Leo, a fictional animated nine-to-ten-year-old schoolboy talking to a classmate. He must unmistakably sound like a pre-teen child, not a grown man. Use a higher boyish pitch; a small light vocal resonance with no chest weight; quick eager timing; and the bouncy, slightly messy rhythm of a child ready to run outside. Make football excitement pop without shouting. Keep him cute, spontaneous, and lightly cartoony while speaking clearly. Avoid every deep, gravelly, mature, slow, authoritative, coach-like, announcer-like, polished, or adult-man quality. Do not imitate a toddler. Use neutral international English for a Grade 4 learner."
+    },
+    "Sam": {
+      "voice": "alloy",
+      "speed": 0.93,
+      "playbackRate": 1.13,
+      "protocol": "story-cartoon-child-v3",
+      "instructions": "Perform as Sam, a fictional animated nine-year-old schoolchild chatting with a new friend. Sam must unmistakably sound like a child, not a young adult or narrator. Use a high light child pitch; a small youthful vocal resonance; quick curious timing; and cheeky little changes of expression as if trying not to giggle. The line is casual playground conversation, never a staged story reading. Keep it cute, spontaneous, and lightly cartoony while retaining clear words. Avoid British narrator cadence, mature resonance, formal diction, slow storytelling, theatrical acting, polish, or any adult quality. Do not imitate a baby or toddler. Use a neutral international English accent for a Grade 4 learner."
+    }
+  }
+}

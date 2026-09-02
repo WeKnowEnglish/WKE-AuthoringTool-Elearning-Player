@@ -4,6 +4,7 @@ const SPEAK_TIMEOUT_MS = 20_000;
 const CHROME_KEEPALIVE_MS = 4_000;
 /** Chrome often drops speak() if it runs in the same tick as cancel(). */
 const SPEAK_AFTER_CANCEL_MS = 50;
+let speechRequestGeneration = 0;
 
 /** Chrome/Edge often start with synthesis paused until resume() after a user gesture. */
 export function prepareSpeechSynthesis(): void {
@@ -69,6 +70,7 @@ function startChromeSpeechKeepAlive(): () => void {
 }
 
 export function stopSpeaking() {
+  speechRequestGeneration += 1;
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   try {
     window.speechSynthesis.cancel();
@@ -88,10 +90,12 @@ export function speakText(
   prepareSpeechSynthesis();
   const needsGap = window.speechSynthesis.speaking || window.speechSynthesis.pending;
   stopSpeaking();
+  const requestGeneration = speechRequestGeneration;
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = opts?.lang ?? "en-US";
   u.rate = opts?.rate ?? 0.92;
   const start = () => {
+    if (requestGeneration !== speechRequestGeneration) return;
     try {
       window.speechSynthesis.resume();
       window.speechSynthesis.speak(u);
@@ -124,9 +128,10 @@ export function speakTextAndWait(
     prepareSpeechSynthesis();
     const needsGap = window.speechSynthesis.speaking || window.speechSynthesis.pending;
     stopSpeaking();
+    const requestGeneration = speechRequestGeneration;
     if (needsGap) {
       await delay(SPEAK_AFTER_CANCEL_MS);
-      if (opts?.signal?.aborted) return false;
+      if (opts?.signal?.aborted || requestGeneration !== speechRequestGeneration) return false;
     }
 
     return new Promise<boolean>((resolve) => {
@@ -143,7 +148,7 @@ export function speakTextAndWait(
         resolve(ok);
       };
 
-      if (opts?.signal?.aborted) {
+      if (opts?.signal?.aborted || requestGeneration !== speechRequestGeneration) {
         finish(false);
         return;
       }
@@ -176,6 +181,10 @@ export function speakTextAndWait(
       }
 
       stopKeepAlive = startChromeSpeechKeepAlive();
+      if (requestGeneration !== speechRequestGeneration) {
+        finish(false);
+        return;
+      }
       try {
         window.speechSynthesis.resume();
         window.speechSynthesis.speak(u);

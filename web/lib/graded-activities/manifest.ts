@@ -10,6 +10,7 @@ import {
 } from "@/lib/homework-collections";
 import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
 import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
+import { creativePresentationAnswerIds } from "@/lib/homework-collections/creative-presentation";
 import {
   GRADED_ACTIVITY_MANIFEST_VERSION,
   type GradedActivityManifestItem,
@@ -33,6 +34,9 @@ function collectionItemIds(part: HomeworkCollectionPart): string[] {
   if (part.kind === "line_match") return part.pairs.map((pair) => pair.id);
   if (part.kind === "free_response") {
     return part.prompts.map((prompt) => prompt.id);
+  }
+  if (part.kind === "creative_presentation") {
+    return creativePresentationAnswerIds(part);
   }
   if (part.kind === "speaking_prompt") {
     return [part.responseId];
@@ -58,7 +62,9 @@ function collectionManifestPart(
       ? new Map(part.prompts.map((prompt) => [prompt.id, prompt.maxPoints]))
       : part.kind === "speaking_prompt"
         ? new Map([[part.responseId, part.maxPoints]])
-        : null;
+        : part.kind === "creative_presentation"
+          ? new Map(creativePresentationAnswerIds(part).map((itemId) => [itemId, 0]))
+          : null;
   const items = collectionItemIds(part).map((itemId) => ({
     itemId,
     required: part.required,
@@ -85,6 +91,7 @@ function policyForTemplateKind(kind: ActivityTrackPartKind): GradedActivityPolic
     kind === "picture_writing" ||
     kind === "question_writing" ||
     kind === "writing_prompt" ||
+    kind === "creative_presentation" ||
     kind === "free_response" ||
     kind === "speaking_prompt"
   ) {

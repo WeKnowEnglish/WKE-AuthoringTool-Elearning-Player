@@ -4,7 +4,7 @@ export const GRADE_4_SESSION_1_RUN = {
   courseId: "grade-4-wke-learning-paths",
   unitId: "unit-1-meet-me",
   sessionId: "session-1-enter-the-welcome-fair",
-  contentVersion: "2026-08-31.1",
+  contentVersion: "2026-08-31.2",
 } as const;
 
 export type CourseSessionRunPhase = "hotspot" | "practice";
@@ -13,9 +13,15 @@ export type CourseSessionRunStatus = "in_progress" | "completed";
 export type Session1HotspotProgress = {
   activeStepId: string;
   badgeComplete: boolean;
+  badgePreview: string | null;
   stationChoice: string | null;
+  stationOpinions: Record<string, "like" | "dont_like">;
+  introducedStationIds: string[];
+  pictureCheckItemIds: string[];
+  pictureCheckCorrectIds: string[];
   questionCorrect: boolean;
   reflection: string | null;
+  nextStepGoal: string | null;
   completedVoiceParts: string[];
 };
 
@@ -69,9 +75,15 @@ export function emptySession1RunState(): Session1RunState {
     hotspot: {
       activeStepId: "welcome",
       badgeComplete: false,
+      badgePreview: null,
       stationChoice: null,
+      stationOpinions: {},
+      introducedStationIds: [],
+      pictureCheckItemIds: [],
+      pictureCheckCorrectIds: [],
       questionCorrect: false,
       reflection: null,
+      nextStepGoal: null,
       completedVoiceParts: [],
     },
     practice: {
@@ -84,12 +96,32 @@ export function emptySession1RunState(): Session1RunState {
 
 export function normalizeSession1HotspotProgress(value: unknown): Session1HotspotProgress {
   const input = record(value);
+  const rawOpinions = record(input.stationOpinions);
+  const stationOpinions = Object.fromEntries(
+    Object.entries(rawOpinions)
+      .filter(([, opinion]) => opinion === "like" || opinion === "dont_like")
+      .slice(0, 8),
+  ) as Record<string, "like" | "dont_like">;
+  const shortStringList = (candidate: unknown, maxItems: number) =>
+    Array.isArray(candidate)
+      ? [...new Set(candidate.map((item) => shortString(item, 40)).filter(Boolean))].slice(0, maxItems)
+      : [];
+  const badgePreview = typeof input.badgePreview === "string" &&
+      input.badgePreview.startsWith("data:image/") && input.badgePreview.length <= 18000
+    ? input.badgePreview
+    : null;
   return {
     activeStepId: shortString(input.activeStepId, 120) || "welcome",
     badgeComplete: input.badgeComplete === true,
+    badgePreview,
     stationChoice: shortString(input.stationChoice, 40) || null,
+    stationOpinions,
+    introducedStationIds: shortStringList(input.introducedStationIds, 8),
+    pictureCheckItemIds: shortStringList(input.pictureCheckItemIds, 3),
+    pictureCheckCorrectIds: shortStringList(input.pictureCheckCorrectIds, 5),
     questionCorrect: input.questionCorrect === true,
     reflection: shortString(input.reflection, 120) || null,
+    nextStepGoal: shortString(input.nextStepGoal, 120) || null,
     completedVoiceParts: Array.isArray(input.completedVoiceParts)
       ? [...new Set(input.completedVoiceParts.map((part) => shortString(part, 60)).filter(Boolean))].slice(0, 10)
       : [],

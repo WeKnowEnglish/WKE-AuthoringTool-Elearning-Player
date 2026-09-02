@@ -10,6 +10,7 @@ export function gradedTrackTemplateGradingPolicy(
     kind === "picture_writing" ||
     kind === "question_writing" ||
     kind === "writing_prompt" ||
+    kind === "creative_presentation" ||
     kind === "free_response" ||
     kind === "speaking_prompt"
   ) {

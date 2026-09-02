@@ -182,6 +182,19 @@ const customChecks = new Map([
         "'student_course_session_runs_student_update')) = 3",
     },
   ],
+  [
+    "142_homework_collection_media.sql",
+    {
+      label: "homework collection media table, policies, and private bucket",
+      expression:
+        "to_regclass('public.homework_collection_media') is not null " +
+        "and exists (select 1 from storage.buckets where id = 'homework_media') " +
+        "and (select count(*) from pg_policies where schemaname = 'public' " +
+        "and tablename = 'homework_collection_media' " +
+        "and policyname in ('homework_collection_media_student_select', " +
+        "'homework_collection_media_teacher_select')) = 2",
+    },
+  ],
 ]);
 
 function stripComments(sql) {

@@ -12,6 +12,18 @@ import {
   type CourseSessionRunStatus,
 } from "@/lib/curriculum/session-run";
 import { createClient } from "@/lib/supabase/server";
+import {
+  GRADE_4_SESSION_2_RUN,
+  normalizeSession2CourseRunRow,
+  normalizeSession2RunProgress,
+  type Session2CourseRunRecord,
+} from "@/lib/curriculum/session-2-run";
+import {
+  GRADE_4_SESSION_3_RUN,
+  normalizeSession3CourseRunRow,
+  normalizeSession3RunProgress,
+  type Session3CourseRunRecord,
+} from "@/lib/curriculum/session-3-run";
 
 type SaveCourseSessionRunInput = {
   phase: CourseSessionRunPhase;
@@ -106,5 +118,101 @@ export async function saveMyGrade4Session1Run(
       ok: false,
       error: error instanceof Error ? error.message : "Could not save session progress.",
     };
+  }
+}
+
+export async function saveMyGrade4Session2Run(input: {
+  status?: CourseSessionRunStatus;
+  activeStepId?: string;
+  progress: unknown;
+}): Promise<{ ok: true; run: Session2CourseRunRecord } | { ok: false; error: string }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id || !isStudent(user)) return { ok: false, error: "Student authentication required." };
+
+    const { data: existing, error: existingError } = await supabase
+      .from("student_course_session_runs")
+      .select("status, started_at, completed_at")
+      .eq("student_id", user.id)
+      .eq("course_id", GRADE_4_SESSION_2_RUN.courseId)
+      .eq("unit_id", GRADE_4_SESSION_2_RUN.unitId)
+      .eq("session_id", GRADE_4_SESSION_2_RUN.sessionId)
+      .maybeSingle();
+    if (existingError && !/student_course_session_runs|schema cache|does not exist/i.test(existingError.message)) return { ok: false, error: existingError.message };
+
+    const state = normalizeSession2RunProgress(input.progress);
+    const now = new Date().toISOString();
+    const status = existing?.status === "completed" || input.status === "completed" ? "completed" : "in_progress";
+    const { data, error } = await supabase
+      .from("student_course_session_runs")
+      .upsert({
+        student_id: user.id,
+        course_id: GRADE_4_SESSION_2_RUN.courseId,
+        unit_id: GRADE_4_SESSION_2_RUN.unitId,
+        session_id: GRADE_4_SESSION_2_RUN.sessionId,
+        content_version: GRADE_4_SESSION_2_RUN.contentVersion,
+        status,
+        active_phase: "hotspot",
+        active_step_id: typeof input.activeStepId === "string" ? input.activeStepId.trim().slice(0, 80) : "",
+        state,
+        started_at: typeof existing?.started_at === "string" ? existing.started_at : now,
+        completed_at: status === "completed" ? typeof existing?.completed_at === "string" ? existing.completed_at : now : null,
+        updated_at: now,
+      }, { onConflict: "student_id,course_id,unit_id,session_id" })
+      .select("id, student_id, content_version, status, active_step_id, state, started_at, completed_at, updated_at")
+      .single();
+    if (error || !data) return { ok: false, error: error && /student_course_session_runs|schema cache|does not exist/i.test(error.message) ? "Session progress requires migration 141." : error?.message ?? "Could not save Session 2 progress." };
+    return { ok: true, run: normalizeSession2CourseRunRow(data as Record<string, unknown>) };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Could not save Session 2 progress." };
+  }
+}
+
+export async function saveMyGrade4Session3Run(input: {
+  status?: CourseSessionRunStatus;
+  activeStepId?: string;
+  progress: unknown;
+}): Promise<{ ok: true; run: Session3CourseRunRecord } | { ok: false; error: string }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id || !isStudent(user)) return { ok: false, error: "Student authentication required." };
+
+    const { data: existing, error: existingError } = await supabase
+      .from("student_course_session_runs")
+      .select("status, started_at, completed_at")
+      .eq("student_id", user.id)
+      .eq("course_id", GRADE_4_SESSION_3_RUN.courseId)
+      .eq("unit_id", GRADE_4_SESSION_3_RUN.unitId)
+      .eq("session_id", GRADE_4_SESSION_3_RUN.sessionId)
+      .maybeSingle();
+    if (existingError && !/student_course_session_runs|schema cache|does not exist/i.test(existingError.message)) return { ok: false, error: existingError.message };
+
+    const state = normalizeSession3RunProgress(input.progress);
+    const now = new Date().toISOString();
+    const status = existing?.status === "completed" || input.status === "completed" ? "completed" : "in_progress";
+    const { data, error } = await supabase
+      .from("student_course_session_runs")
+      .upsert({
+        student_id: user.id,
+        course_id: GRADE_4_SESSION_3_RUN.courseId,
+        unit_id: GRADE_4_SESSION_3_RUN.unitId,
+        session_id: GRADE_4_SESSION_3_RUN.sessionId,
+        content_version: GRADE_4_SESSION_3_RUN.contentVersion,
+        status,
+        active_phase: "hotspot",
+        active_step_id: typeof input.activeStepId === "string" ? input.activeStepId.trim().slice(0, 80) : "",
+        state,
+        started_at: typeof existing?.started_at === "string" ? existing.started_at : now,
+        completed_at: status === "completed" ? typeof existing?.completed_at === "string" ? existing.completed_at : now : null,
+        updated_at: now,
+      }, { onConflict: "student_id,course_id,unit_id,session_id" })
+      .select("id, student_id, content_version, status, active_step_id, state, started_at, completed_at, updated_at")
+      .single();
+    if (error || !data) return { ok: false, error: error && /student_course_session_runs|schema cache|does not exist/i.test(error.message) ? "Session progress requires migration 141." : error?.message ?? "Could not save Session 3 progress." };
+    return { ok: true, run: normalizeSession3CourseRunRow(data as Record<string, unknown>) };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Could not save Session 3 progress." };
   }
 }

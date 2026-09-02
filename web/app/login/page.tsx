@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PortalLoginPanel, type PortalKind } from "@/components/auth/PortalLoginPanel";
 import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 import { getAppRole, mustChangePassword } from "@/lib/auth/roles";
+import { resolveStudentDoorBand } from "@/lib/auth/student-login";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ type Props = {
   searchParams?: Promise<{
     portal?: string;
     next?: string;
+    band?: string;
     error?: string;
     message?: string;
   }>;
@@ -55,6 +57,10 @@ export default async function LoginPage({ searchParams }: Props) {
           One place to sign in — students and teachers go to the right home automatically.
         </p>
         <PortalLoginPanel
+          learningBand={resolveStudentDoorBand({
+            bandParam: firstParam(sp.band) || null,
+            nextPath: firstParam(sp.next) || null,
+          })}
           defaultPortal={defaultPortal}
           nextPath={firstParam(sp.next) || undefined}
           initialError={firstParam(sp.error) || undefined}

@@ -22,6 +22,7 @@ import { HomeworkPictureStoryPlayer } from "@/components/primary/HomeworkPicture
 import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
 import { PrimaryA2AssessmentPilot } from "@/components/assessment/PrimaryA2AssessmentPilot";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
+import { studentLoginPath } from "@/lib/auth/student-login";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
@@ -84,7 +85,7 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
 
   if (!user) {
     const next = `/primary/homework/${encodeURIComponent(homeworkId)}`;
-    redirect(`/login?portal=student&next=${encodeURIComponent(next)}`);
+    redirect(studentLoginPath("a1", next));
   }
   if (isTeacher(user)) redirect(TEACHER_DEFAULT_PATH);
   if (!isStudent(user)) redirect("/login?error=unknown_role");

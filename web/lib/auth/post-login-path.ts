@@ -7,13 +7,14 @@ import {
   TEACHER_SET_PASSWORD_PATH,
   type AppRole,
 } from "@/lib/auth/roles";
+import { isStudentLoginPath } from "@/lib/auth/student-login";
 import { isSecondaryEligibleBand } from "@/lib/auth/student-bands";
 
 export const STUDENT_SECONDARY_DEFAULT_PATH = "/secondary";
 
 function safeInternalPath(path: string | null | undefined, fallback: string): string {
   if (!path || !path.startsWith("/") || path.startsWith("//")) return fallback;
-  if (path.startsWith(LOGIN_PATH)) return fallback;
+  if (path.startsWith(LOGIN_PATH) || isStudentLoginPath(path)) return fallback;
   return path;
 }
 

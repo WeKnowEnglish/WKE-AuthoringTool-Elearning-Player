@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PrimaryDashboardClient } from "@/components/primary/PrimaryDashboardClient";
 import { StudentHomeworkAutoRefresh } from "@/components/classroom/StudentHomeworkAutoRefresh";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
+import { studentLoginPath } from "@/lib/auth/student-login";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
 import { listActiveLiveSessionsForStudent } from "@/lib/data/student-live";
 import { getStudentClassMemberships } from "@/lib/data/student-classes";
@@ -28,7 +29,7 @@ export default async function PrimaryDashboardPage({ searchParams }: Props) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/primary");
+    redirect(studentLoginPath("a1"));
   }
 
   if (isTeacher(user)) {

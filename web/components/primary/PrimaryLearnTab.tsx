@@ -251,6 +251,40 @@ export function PrimaryLearnTab({
             <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 transition group-hover:translate-x-0.5" />
           </span>
         </Link>
+        <Link
+          href="/primary/learn/easy-readers/where-is-milo"
+          data-shelf-card
+          aria-label="Read Where Is Milo, A1 Easy Reader Book 2"
+          className="group flex w-[11.5rem] shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-green-200 bg-white text-left shadow-sm transition hover:border-green-400 hover:shadow-md active:scale-[0.99] sm:w-[13rem]"
+        >
+          <span className="relative aspect-[3/4] w-full overflow-hidden bg-green-100">
+            <NextImage
+              src="/easy-readers/book-2/cover.png"
+              alt="Cover of Where Is Milo?"
+              fill
+              draggable={false}
+              className="pointer-events-none object-cover transition-transform duration-300 group-hover:scale-105"
+              unoptimized
+            />
+            <span className="absolute left-2 top-2 rounded-full bg-[#279b2e] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+              A1 · Book 2
+            </span>
+          </span>
+          <span className="flex items-start justify-between gap-1.5 p-3">
+            <span className="min-w-0">
+              <span className="block text-sm font-extrabold leading-snug text-[var(--pl-ink)]">
+                Where Is Milo?
+              </span>
+              <span className="mt-1 block line-clamp-2 text-[11px] font-semibold text-[var(--pl-muted)]">
+                Follow Mia and Leo’s clues from home to the park.
+              </span>
+              <span className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-green-700">
+                6 chapters · New
+              </span>
+            </span>
+            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-green-600 transition group-hover:translate-x-0.5" />
+          </span>
+        </Link>
       </LearnShelf>
 
       <LearnShelf

@@ -24,5 +24,11 @@ export default async function PrimaryWhereIsMiloPage() {
   if (isTeacher(user)) redirect(TEACHER_DEFAULT_PATH);
   if (!isStudent(user)) redirect("/login?error=unknown_role");
 
-  return <EasyReaderPlayer book={bookTwo} />;
+  return (
+    <EasyReaderPlayer
+      book={bookTwo}
+      backHref="/primary?nav=learn"
+      backLabel="Back to Learn"
+    />
+  );
 }

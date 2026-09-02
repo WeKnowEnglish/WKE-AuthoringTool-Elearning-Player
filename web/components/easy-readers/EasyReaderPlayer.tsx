@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
+  ArrowLeft,
   Award,
   BookOpen,
   Check,
@@ -24,12 +26,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EasyReaderBook } from "@/content/easy-readers/book-1";
 import { speakText, speakTextAndWait, stopSpeaking } from "@/lib/audio/tts";
 
-type Props = { book: EasyReaderBook };
+type Props = {
+  book: EasyReaderBook;
+  backHref?: string;
+  backLabel?: string;
+};
 type AnswerState = Record<string, "correct" | "wrong">;
 
 const progressStorageKey = (bookId: string) => `wke-easy-reader:${bookId}:progress-v1`;
 
-export function EasyReaderPlayer({ book }: Props) {
+export function EasyReaderPlayer({
+  book,
+  backHref,
+  backLabel = "Back",
+}: Props) {
   const [started, setStarted] = useState(false);
   const [chapterIndex, setChapterIndex] = useState(0);
   const [openWord, setOpenWord] = useState<string | null>(null);
@@ -161,6 +171,11 @@ export function EasyReaderPlayer({ book }: Props) {
   if (!started) {
     return (
       <main className="min-h-dvh bg-[radial-gradient(circle_at_15%_20%,#ffffff_0_10%,transparent_32%),linear-gradient(145deg,#dff4ff_0%,#ffffff_52%,#efe8ff_100%)] p-3 sm:p-8">
+        {backHref ? (
+          <div className="mx-auto mb-4 max-w-6xl">
+            <ReaderBackLink href={backHref} label={backLabel} />
+          </div>
+        ) : null}
         <section className="mx-auto grid min-h-[calc(100dvh-1.5rem)] max-w-6xl items-center gap-7 overflow-hidden rounded-[2rem] border-4 border-[#173b8f] bg-white/95 p-4 shadow-[9px_9px_0_#173b8f] md:grid-cols-[minmax(260px,0.76fr)_1.24fr] md:p-9">
           <div className="mx-auto w-full max-w-[350px] overflow-hidden rounded-[1.6rem] border-4 border-[#173b8f] shadow-[0_20px_50px_rgba(23,59,143,0.24)]">
             <Image
@@ -228,7 +243,12 @@ export function EasyReaderPlayer({ book }: Props) {
 
   if (completed) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-[radial-gradient(circle_at_top,#fff8bf,#dff4ff_55%,#e9ddff)] p-5">
+      <main className="relative flex min-h-dvh items-center justify-center bg-[radial-gradient(circle_at_top,#fff8bf,#dff4ff_55%,#e9ddff)] p-5 pt-24">
+        {backHref ? (
+          <div className="absolute left-5 top-5 sm:left-8 sm:top-8">
+            <ReaderBackLink href={backHref} label={backLabel} />
+          </div>
+        ) : null}
         <section className="w-full max-w-2xl rounded-[2rem] border-4 border-[#173b8f] bg-white p-7 text-center shadow-[9px_9px_0_#173b8f] sm:p-10">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-4 border-[#173b8f] bg-[#ffe135]">
             <Award className="h-14 w-14 text-[#173b8f]" aria-hidden />
@@ -278,13 +298,25 @@ export function EasyReaderPlayer({ book }: Props) {
       <div className="mx-auto max-w-7xl">
         <header className="sticky top-2 z-30 rounded-2xl border-4 border-[#173b8f] bg-white/95 px-3 py-3 shadow-[5px_5px_0_#173b8f] backdrop-blur-md sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-[#279b2e]">
-                {book.level} · {book.title}
-              </p>
-              <h1 className="truncate text-lg font-black text-[#173b8f] sm:text-2xl">
-                Chapter {chapter.number}: {chapter.title}
-              </h1>
+            <div className="flex min-w-0 items-center gap-3">
+              {backHref ? (
+                <Link
+                  href={backHref}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-[#b8c9ee] bg-[#eef4ff] text-[#173b8f] hover:border-[#173b8f] focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-[#6f3cc3]"
+                  aria-label={backLabel}
+                  title={backLabel}
+                >
+                  <ArrowLeft className="h-5 w-5" aria-hidden />
+                </Link>
+              ) : null}
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-[#279b2e]">
+                  {book.level} · {book.title}
+                </p>
+                <h1 className="truncate text-lg font-black text-[#173b8f] sm:text-2xl">
+                  Chapter {chapter.number}: {chapter.title}
+                </h1>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -595,5 +627,17 @@ export function EasyReaderPlayer({ book }: Props) {
         </div>
       ) : null}
     </main>
+  );
+}
+
+function ReaderBackLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex min-h-12 items-center gap-2 rounded-xl border-3 border-[#173b8f] bg-white px-4 font-black text-[#173b8f] shadow-[3px_3px_0_#173b8f] transition hover:-translate-y-0.5 hover:bg-[#eef4ff] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-[#6f3cc3] motion-reduce:hover:translate-y-0"
+    >
+      <ArrowLeft className="h-5 w-5" aria-hidden />
+      {label}
+    </Link>
   );
 }

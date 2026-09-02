@@ -162,4 +162,55 @@ describe("homework collections", () => {
     expect(homeworkCollectionRequiredPartsComplete(document!, withRecording)).toBe(true);
     expect(homeworkCollectionAttemptTotals(withRecording).manualMaxScore).toBe(5);
   });
+
+  it("round-trips the VLOG presentation and requires every simple step", () => {
+    const presentation = createHomeworkCollectionPart(
+      "creative_presentation",
+      "vlog",
+    );
+    if (presentation.kind !== "creative_presentation") {
+      throw new Error("Expected creative presentation");
+    }
+    const document = parseHomeworkCollectionDocument({
+      version: 1,
+      parts: [presentation],
+    });
+    expect(document?.parts[0]).toMatchObject({
+      kind: "creative_presentation",
+      templateId: "vlog-plan-v1",
+      maxPoints: 20,
+    });
+
+    const partial = scoreHomeworkCollectionAttempt(document!, {
+      vlog: {
+        answers: {
+          [presentation.idea.textId]: "My VLOG is about street food.",
+          [presentation.idea.mediaId]: "/api/homework-collection-media/cover",
+        },
+      },
+    });
+    expect(partial.parts.vlog?.correct).toBeNull();
+    expect(homeworkCollectionRequiredPartsComplete(document!, partial)).toBe(false);
+
+    const answers = Object.fromEntries(
+      [
+        presentation.idea.textId,
+        presentation.idea.mediaId,
+        ...presentation.plan.fields.map((field) => field.id),
+        ...presentation.story.frames.map((frame) => frame.id),
+        presentation.opening.textId,
+      ].map((id) => [id, `answer for ${id}`]),
+    );
+    const complete = scoreHomeworkCollectionAttempt(document!, {
+      vlog: { answers },
+    });
+    expect(complete.parts.vlog).toMatchObject({
+      gradingMode: "teacher_review",
+      answered: 9,
+      itemCount: 9,
+      maxScore: 20,
+    });
+    expect(homeworkCollectionRequiredPartsComplete(document!, complete)).toBe(true);
+    expect(homeworkCollectionAttemptTotals(complete).manualMaxScore).toBe(20);
+  });
 });

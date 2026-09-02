@@ -23,6 +23,12 @@ import {
   isCollectionReadingModuleFormat,
 } from "@/lib/homework-collections/document-module";
 import { isHomeworkStudioFormat } from "@/lib/class-homework/types";
+import {
+  createCreativePresentationContent,
+  creativePresentationAnswerIds,
+  creativePresentationValidationIssues,
+  parseCreativePresentationContent,
+} from "@/lib/homework-collections/creative-presentation";
 
 const MAX_PARTS = 30;
 const MAX_ITEMS = 50;
@@ -76,13 +82,16 @@ export function homeworkCollectionPartLabel(kind: HomeworkCollectionPartKind): s
   if (kind === "lesson_player_pack") return "Quiz activity";
   if (kind === "document_module") return "Reading activity";
   if (kind === "speaking_prompt") return "Speaking prompt";
+  if (kind === "creative_presentation") return "Creative presentation";
   return "Free response";
 }
 
 export function homeworkCollectionGradingMode(
   kind: HomeworkCollectionPartKind,
 ): "automatic" | "teacher_review" {
-  return kind === "free_response" || kind === "speaking_prompt"
+  return kind === "free_response" ||
+    kind === "speaking_prompt" ||
+    kind === "creative_presentation"
     ? "teacher_review"
     : "automatic";
 }
@@ -414,6 +423,19 @@ export function homeworkCollectionPartValidationIssues(raw: unknown): string[] {
     return issues;
   }
 
+  if (raw.kind === "creative_presentation") {
+    const part = {
+      schemaVersion: HOMEWORK_COLLECTION_VERSION,
+      id: typeof raw.id === "string" ? raw.id : "part",
+      kind: "creative_presentation" as const,
+      title: typeof raw.title === "string" ? raw.title : "",
+      instructions: typeof raw.instructions === "string" ? raw.instructions : "",
+      required: raw.required !== false,
+      ...parseCreativePresentationContent(raw),
+    };
+    return [...issues, ...creativePresentationValidationIssues(part)];
+  }
+
   if (raw.kind !== "free_response") {
     return ["Choose a supported homework activity type."];
   }
@@ -548,6 +570,15 @@ export function createHomeworkCollectionPart(
       responseId: crypto.randomUUID(),
       maxDurationSeconds: 60,
       maxPoints: 5,
+    };
+  }
+  if (kind === "creative_presentation") {
+    return {
+      ...base,
+      kind,
+      title: "Plan your VLOG",
+      instructions: "Complete the four simple steps.",
+      ...createCreativePresentationContent(),
     };
   }
   return {
@@ -820,6 +851,15 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
     };
   }
 
+  if (kind === "creative_presentation") {
+    const part = {
+      ...base,
+      kind,
+      ...parseCreativePresentationContent(raw),
+    };
+    return creativePresentationValidationIssues(part).length === 0 ? part : null;
+  }
+
   if (kind !== "free_response") return null;
 
   const prompts = (Array.isArray(raw.prompts) ? raw.prompts : [])
@@ -863,6 +903,9 @@ export function homeworkCollectionPartItemCount(part: HomeworkCollectionPart): n
   if (part.kind === "multiple_choice") return part.questions.length;
   if (part.kind === "line_match") return part.pairs.length;
   if (part.kind === "free_response") return part.prompts.length;
+  if (part.kind === "creative_presentation") {
+    return creativePresentationAnswerIds(part).length;
+  }
   if (part.kind === "speaking_prompt") return 1;
   if (part.kind === "listening_item_match") return part.activity.prompts.length;
   if (part.kind === "lesson_player_pack") return lessonPlayerPackItemIds(part).length;
@@ -875,6 +918,9 @@ export function homeworkCollectionPartMaxScore(part: HomeworkCollectionPart): nu
     return part.prompts.reduce((total, prompt) => total + prompt.maxPoints, 0);
   }
   if (part.kind === "speaking_prompt") {
+    return part.maxPoints;
+  }
+  if (part.kind === "creative_presentation") {
     return part.maxPoints;
   }
   return homeworkCollectionPartItemCount(part);

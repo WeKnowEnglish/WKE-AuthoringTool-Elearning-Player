@@ -279,6 +279,15 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/teacher/activity-builder/tracks",
+    title: "Creative presentation (VLOG)",
+    description:
+      "Guided Grade 8–9 VLOG homework: four simple writing/photo/drawing steps, a finished presentation display, and teacher review. Author in Track Builder graded mode. Needs migration 142 for private pictures.",
+    group: "activities",
+    status: "review",
+    studioHref: "/teacher/activity-builder/tracks",
+  },
+  {
     href: "/pilots/picture-cloze",
     title: "Picture cloze",
     description:

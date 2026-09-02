@@ -1,0 +1,110 @@
+<div id="wke-simple-vlog-homework">
+  <div class="wke-simple-app">
+    <header class="wke-simple-top">
+      <div><p>HOMEWORK</p><h1>Plan your VLOG</h1></div>
+      <span aria-live="polite">Saved ✓</span>
+    </header>
+    <div class="wke-simple-progress" aria-label="Step 1 of 4"><div></div></div>
+
+    <main class="wke-simple-main">
+      <p class="wke-simple-step">1 of 4</p>
+      <section class="wke-simple-task">
+        <h2>Your VLOG idea</h2>
+        <p class="wke-simple-question">What is your VLOG about?</p>
+        <p class="wke-simple-direction">Write 2 or 3 sentences.</p>
+        <textarea rows="6" aria-label="Your VLOG idea" placeholder="My VLOG is about..."></textarea>
+        <button type="button" class="wke-simple-help" aria-expanded="false">Need help writing?</button>
+        <div class="wke-simple-help-text" hidden>
+          <button type="button">My VLOG is about…</button>
+          <button type="button">I chose this because…</button>
+          <button type="button">People will see…</button>
+        </div>
+        <div class="wke-simple-picture">
+          <div aria-hidden="true">＋</div>
+          <strong>Add one picture</strong>
+          <span>You can use a photo or draw.</span>
+          <div class="wke-simple-picture-actions">
+            <button type="button"><i data-lucide="image" aria-hidden="true"></i>Add photo</button>
+            <button type="button"><i data-lucide="pencil" aria-hidden="true"></i>Draw</button>
+          </div>
+        </div>
+      </section>
+      <div class="wke-simple-actions">
+        <button type="button" class="wke-back" disabled>Back</button>
+        <button type="button" class="wke-next">Next</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+  #wke-simple-vlog-homework { width:100%; color:light-dark(#17343a,#eff9f8); font-family:Inter,"Segoe UI",sans-serif; }
+  #wke-simple-vlog-homework * { box-sizing:border-box; }
+  #wke-simple-vlog-homework button,#wke-simple-vlog-homework textarea,#wke-simple-vlog-homework input { font:inherit; }
+  #wke-simple-vlog-homework button { cursor:pointer; }
+  #wke-simple-vlog-homework .wke-simple-app { overflow:hidden; max-width:760px; margin:0 auto; background:light-dark(#f3f8f7,#13272e); border:1px solid light-dark(#c9dcda,#3c575e); border-radius:20px; box-shadow:0 18px 50px light-dark(rgba(26,66,70,.12),rgba(0,0,0,.25)); }
+  #wke-simple-vlog-homework .wke-simple-top { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 22px; background:light-dark(#fff,#1b343c); }
+  #wke-simple-vlog-homework .wke-simple-top p,#wke-simple-vlog-homework .wke-simple-top h1 { margin:0; }
+  #wke-simple-vlog-homework .wke-simple-top p { margin-bottom:3px; color:light-dark(#18766f,#71d8ce); font-size:.72rem; font-weight:500; letter-spacing:.08em; }
+  #wke-simple-vlog-homework .wke-simple-top h1 { font-size:1.25rem; font-weight:500; }
+  #wke-simple-vlog-homework .wke-simple-top span { color:light-dark(#54706d,#b6cbc8); font-size:.8rem; }
+  #wke-simple-vlog-homework .wke-simple-progress { height:7px; background:light-dark(#dce8e6,#29434a); }
+  #wke-simple-vlog-homework .wke-simple-progress div { width:25%; height:100%; background:light-dark(#168078,#39b4aa); transition:width .2s ease; }
+  #wke-simple-vlog-homework .wke-simple-main { max-width:600px; margin:0 auto; padding:28px 20px 24px; }
+  #wke-simple-vlog-homework .wke-simple-step { margin:0 0 8px; color:light-dark(#16766f,#73d8cf); font-size:.8rem; font-weight:500; }
+  #wke-simple-vlog-homework .wke-simple-task { padding:24px; background:light-dark(#fff,#1d353d); border:1px solid light-dark(#ccdcda,#405b62); border-radius:17px; }
+  #wke-simple-vlog-homework .wke-simple-task h2 { margin:0; font-size:1.35rem; font-weight:500; }
+  #wke-simple-vlog-homework .wke-simple-question { margin:18px 0 3px; font-size:1.05rem; font-weight:500; }
+  #wke-simple-vlog-homework .wke-simple-direction { margin:0; color:light-dark(#5f7572,#b8cdca); font-size:.85rem; }
+  #wke-simple-vlog-homework textarea,#wke-simple-vlog-homework input { width:100%; margin-top:14px; padding:13px 14px; color:inherit; background:light-dark(#fbfdfc,#152b32); border:1px solid light-dark(#aebfbd,#567078); border-radius:11px; font-size:1rem; }
+  #wke-simple-vlog-homework textarea { resize:vertical; }
+  #wke-simple-vlog-homework .wke-simple-help { min-height:44px; padding:0; color:light-dark(#4b6470,#b7d3df); background:transparent; border:0; font-size:.85rem; font-weight:500; text-decoration:underline; }
+  #wke-simple-vlog-homework .wke-simple-help-text { display:flex; flex-wrap:wrap; gap:7px; margin:2px 0 10px; }
+  #wke-simple-vlog-homework .wke-simple-help-text[hidden] { display:none; }
+  #wke-simple-vlog-homework .wke-simple-help-text button { min-height:38px; padding:7px 10px; color:inherit; background:light-dark(#e9f4f2,#29464d); border:0; border-radius:9px; font-size:.78rem; }
+  #wke-simple-vlog-homework .wke-simple-picture { display:grid; place-items:center; margin-top:14px; min-height:190px; padding:22px; text-align:center; background:light-dark(#eef7f5,#193e42); border:2px dashed light-dark(#8dbab4,#5b9b95); border-radius:13px; }
+  #wke-simple-vlog-homework .wke-simple-picture>div:first-child { color:light-dark(#1a7d76,#67d6cc); font-size:2rem; }
+  #wke-simple-vlog-homework .wke-simple-picture strong { margin-top:3px; font-weight:500; }
+  #wke-simple-vlog-homework .wke-simple-picture span { margin-top:4px; color:light-dark(#5e7470,#b7cdca); font-size:.8rem; }
+  #wke-simple-vlog-homework .wke-simple-picture-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:14px; }
+  #wke-simple-vlog-homework .wke-simple-picture-actions button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:0 14px; color:inherit; background:light-dark(#fff,#24464d); border:1px solid light-dark(#aac3c0,#5a777d); border-radius:10px; font-weight:500; }
+  #wke-simple-vlog-homework .wke-simple-actions { display:flex; justify-content:space-between; gap:12px; margin-top:18px; }
+  #wke-simple-vlog-homework .wke-simple-actions button { min-width:100px; min-height:48px; padding:0 20px; border-radius:11px; font-weight:500; }
+  #wke-simple-vlog-homework .wke-back { color:inherit; background:light-dark(#fff,#203940); border:1px solid light-dark(#b7c9c6,#536d74); }
+  #wke-simple-vlog-homework .wke-next { color:#fff; background:light-dark(#157c75,#167e77); border:0; }
+  #wke-simple-vlog-homework button:disabled { cursor:default; opacity:.38; }
+  #wke-simple-vlog-homework .wke-three-fields { display:grid; gap:11px; margin-top:16px; }
+  #wke-simple-vlog-homework .wke-three-fields label { font-weight:500; }
+  #wke-simple-vlog-homework .wke-three-fields input { margin-top:5px; }
+  #wke-simple-vlog-homework .wke-plan-parts { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
+  #wke-simple-vlog-homework .wke-plan-box { min-height:150px; padding:13px; text-align:center; background:light-dark(#eef7f5,#193e42); border:2px dashed light-dark(#8dbab4,#5b9b95); border-radius:11px; }
+  #wke-simple-vlog-homework .wke-plan-box strong { display:block; margin-bottom:10px; font-weight:500; }
+  #wke-simple-vlog-homework .wke-plan-box button { min-height:44px; padding:0 10px; color:inherit; background:light-dark(#fff,#24464d); border:1px solid light-dark(#aac3c0,#5a777d); border-radius:9px; }
+  @media(max-width:540px){#wke-simple-vlog-homework .wke-simple-main{padding:20px 12px}#wke-simple-vlog-homework .wke-simple-task{padding:18px}#wke-simple-vlog-homework .wke-plan-parts{grid-template-columns:1fr}#wke-simple-vlog-homework .wke-simple-picture-actions{width:100%}#wke-simple-vlog-homework .wke-simple-picture-actions button{flex:1}}
+</style>
+
+<script>
+  (() => {
+    const root=document.getElementById('wke-simple-vlog-homework'); if(!root)return;
+    const task=root.querySelector('.wke-simple-task');
+    const stepText=root.querySelector('.wke-simple-step');
+    const progress=root.querySelector('.wke-simple-progress div');
+    const progressWrap=root.querySelector('.wke-simple-progress');
+    const back=root.querySelector('.wke-back');
+    const next=root.querySelector('.wke-next');
+    let step=1;
+    const help=`<button type="button" class="wke-simple-help" aria-expanded="false">Need help writing?</button><div class="wke-simple-help-text" hidden><button type="button">My VLOG is about…</button><button type="button">I chose this because…</button><button type="button">People will see…</button></div>`;
+    const picture=`<div class="wke-simple-picture"><div aria-hidden="true">＋</div><strong>Add one picture</strong><span>You can use a photo or draw.</span><div class="wke-simple-picture-actions"><button type="button"><i data-lucide="image" aria-hidden="true"></i>Add photo</button><button type="button"><i data-lucide="pencil" aria-hidden="true"></i>Draw</button></div></div>`;
+    const screens={
+      1:`<h2>Your VLOG idea</h2><p class="wke-simple-question">What is your VLOG about?</p><p class="wke-simple-direction">Write 2 or 3 sentences.</p><textarea rows="6" aria-label="Your VLOG idea" placeholder="My VLOG is about..."></textarea>${help}${picture}`,
+      2:`<h2>Your video plan</h2><p class="wke-simple-question">What will happen in your VLOG?</p><p class="wke-simple-direction">Write short answers.</p><div class="wke-three-fields"><label>Where will you go?<input type="text" placeholder="I will go to..."></label><label>What will you show?<input type="text" placeholder="I will show..."></label><label>Who will you talk to?<input type="text" placeholder="I will talk to..."></label></div>`,
+      3:`<h2>Show your plan</h2><p class="wke-simple-question">Show 3 parts of your VLOG.</p><p class="wke-simple-direction">Draw or add a photo for each part.</p><div class="wke-plan-parts"><div class="wke-plan-box"><strong>First</strong><button type="button">Add or draw</button></div><div class="wke-plan-box"><strong>Next</strong><button type="button">Add or draw</button></div><div class="wke-plan-box"><strong>Last</strong><button type="button">Add or draw</button></div></div>`,
+      4:`<h2>Start your VLOG</h2><p class="wke-simple-question">What will you say first?</p><p class="wke-simple-direction">Write 3 or 4 sentences.</p><textarea rows="8" aria-label="VLOG beginning" placeholder="Hi everyone! Welcome to my VLOG..."></textarea><div class="wke-simple-help-text"><button type="button">Hi everyone!</button><button type="button">Today I am going to…</button><button type="button">Let's get started!</button></div>`
+    };
+    function wireHelp(){const b=root.querySelector('.wke-simple-help');const t=root.querySelector('.wke-simple-help-text');if(b&&t)b.addEventListener('click',()=>{const open=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',String(!open));t.hidden=open});if(globalThis.lucide)globalThis.lucide.createIcons({attrs:{width:16,height:16}})}
+    function show(){task.innerHTML=screens[step];stepText.textContent=`${step} of 4`;progress.style.width=`${step*25}%`;progressWrap.setAttribute('aria-label',`Step ${step} of 4`);back.disabled=step===1;next.textContent=step===4?'Finish':'Next';wireHelp()}
+    back.addEventListener('click',()=>{if(step>1){step-=1;show()}});
+    next.addEventListener('click',()=>{if(step<4){step+=1;show()}});
+    wireHelp();
+  })();
+</script>

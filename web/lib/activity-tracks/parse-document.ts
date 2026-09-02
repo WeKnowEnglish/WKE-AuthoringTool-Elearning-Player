@@ -51,6 +51,7 @@ function isPartKind(value: unknown): value is ActivityTrackPartKind {
       "picture_writing",
       "question_writing",
       "writing_prompt",
+      "creative_presentation",
       "free_response",
       "speaking_prompt",
       "secondary_sequence",

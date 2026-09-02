@@ -16,6 +16,7 @@ import {
 import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
 import { HomeworkCollectionLessonPlayerPartSurface } from "@/components/homework/HomeworkCollectionLessonPlayerPartSurface";
 import { HomeworkCollectionDocumentModulePartSurface } from "@/components/homework/HomeworkCollectionDocumentModulePartSurface";
+import { CreativePresentationPlayer } from "@/components/homework/CreativePresentationPlayer";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 
 type Responses = Record<string, { answers: Record<string, string> }>;
@@ -422,6 +423,16 @@ export function HomeworkCollectionPlayer({
                 }));
                 setNotice(null);
               }}
+            />
+          ) : null}
+
+          {part.kind === "creative_presentation" ? (
+            <CreativePresentationPlayer
+              part={part}
+              answers={currentAnswers}
+              onAnswer={setAnswer}
+              homeworkId={homeworkId}
+              previewMode={authoringPreview}
             />
           ) : null}
 

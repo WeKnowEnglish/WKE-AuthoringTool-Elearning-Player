@@ -33,6 +33,7 @@ export const INLINE_HOMEWORK_COLLECTION_KINDS = [
   "listen_and_choose",
   "listening_item_match",
   "sentence_scramble",
+  "creative_presentation",
   "free_response",
   "speaking_prompt",
 ] as const satisfies readonly HomeworkCollectionPartKind[];

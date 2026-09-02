@@ -14,6 +14,9 @@ packages/**/package-lock.json
 # Generated image working files (publish final assets from web/public instead)
 web/work/
 
+# OpenAI Sites checkouts are versioned and published through their own repositories.
+sites/easy-reader-player/
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

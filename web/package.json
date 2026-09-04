@@ -44,6 +44,7 @@
     "voice:keelan-session-1": "node scripts/generate-keelan-session-1-dialogue.mjs",
     "voice:session-2": "node scripts/generate-session-2-dialogue.mjs",
     "voice:session-3": "node scripts/generate-session-3-dialogue.mjs",
+    "generate:worksheet": "node scripts/generate-worksheet.mjs",
     "build:primary-vocab-search-index": "node scripts/build-primary-vocabulary-search-index.mjs",
     "supabase:version": "supabase --version",
     "supabase:status": "supabase migration list --linked",

@@ -1,0 +1,84 @@
+{
+  "id": "grade-4-unit-1-meet-me",
+  "title": "Meet Me!",
+  "subtitle": "Grade 4 · Unit 1 · Welcome Fair",
+  "level": "Cambridge Movers / A1",
+  "minutes": 15,
+  "school": "We Know English Center",
+  "intro": "Help Keelan finish the friend badges. Write in complete sentences when you can.",
+  "sections": [
+    {
+      "type": "match",
+      "title": "1. Match the question to the answer",
+      "instruction": "Write the letter next to each question.",
+      "left": [
+        "What's your name?",
+        "How old are you?",
+        "What do you like doing?",
+        "Where do you live?",
+        "Can you swim?",
+        "Have you got a pet?"
+      ],
+      "right": [
+        "I like drawing and painting.",
+        "Yes, I can.",
+        "My name's Linh.",
+        "I live in Hanoi.",
+        "I'm nine years old.",
+        "Yes, I have. I've got a cat."
+      ],
+      "answers": ["C", "E", "A", "D", "B", "F"]
+    },
+    {
+      "type": "choose",
+      "title": "2. Circle the correct word",
+      "items": [
+        { "before": "I", "options": ["am", "is"], "after": "nine years old.", "answer": "am" },
+        { "before": "She", "options": ["like", "likes"], "after": "reading.", "answer": "likes" },
+        { "before": "I", "options": ["have got", "has got"], "after": "a football.", "answer": "have got" },
+        { "before": "He", "options": ["can", "cans"], "after": "play chess.", "answer": "can" },
+        { "before": "My favourite sport", "options": ["is", "are"], "after": "basketball.", "answer": "is" }
+      ]
+    },
+    {
+      "type": "gapfill",
+      "title": "3. Complete the sentences",
+      "instruction": "Use each word once.",
+      "bank": ["like", "because", "and", "but", "can"],
+      "items": [
+        { "text": "I like painting _____ I like drawing.", "answer": "and" },
+        { "text": "I like football _____ I don't like basketball.", "answer": "but" },
+        { "text": "I like cooking _____ it's fun.", "answer": "because" },
+        { "text": "I _____ swim quite well.", "answer": "can" },
+        { "text": "What do you _____ doing?", "answer": "like" }
+      ]
+    },
+    {
+      "type": "scramble",
+      "title": "4. Put the words in order",
+      "instruction": "Write a question. Don't forget the question mark.",
+      "items": [
+        { "words": ["name", "What's", "your"], "answer": "What's your name?" },
+        { "words": ["you", "How", "are", "old"], "answer": "How old are you?" },
+        { "words": ["like", "do", "What", "doing", "you"], "answer": "What do you like doing?" },
+        { "words": ["you", "Can", "dance"], "answer": "Can you dance?" },
+        { "words": ["about", "What", "you"], "answer": "What about you?" }
+      ]
+    },
+    {
+      "type": "writing",
+      "title": "5. Finish your friend badge",
+      "instruction": "Write about you. Use complete sentences.",
+      "prompts": [
+        { "label": "Name", "frame": "My name's ____________________." },
+        { "label": "Age", "frame": "I'm ______ years old." },
+        { "label": "Home", "frame": "I live in ____________________." },
+        { "label": "Interest", "frame": "I like ____________________." },
+        { "label": "Ability", "frame": "I can ____________________." },
+        { "label": "Favourite", "frame": "My favourite ________ is ________ because ____________________." }
+      ],
+      "lines": 4,
+      "stretch": "Now write one more sentence with and, but, or because."
+    }
+  ]
+}

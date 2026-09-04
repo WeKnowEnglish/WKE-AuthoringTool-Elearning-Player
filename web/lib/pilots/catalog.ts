@@ -776,6 +776,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Classroom & collab ──────────────────────────────────────────
   {
+    href: "/pilots/class-hub-mvp",
+    title: "Class hub MVP (looks)",
+    description:
+      "Looks-only redesign of private teacher class management: a situation-aware home that reshapes around live class, homework, and what needs the teacher — instead of six tabs. Production /teacher/classes/[id] is unchanged.",
+    group: "classroom",
+    status: "review",
+  },
+  {
     title: "Private Classroom (student)",
     description:
       "Enrollment-gated async classroom at /primary/class/[classId] and /secondary/class/[classId] — teacher posts (announcements/photos), Live-now shell, weekly schedule / next lesson. Distinct from public /wke and live VC join.",

@@ -18,6 +18,8 @@ export const parentMessagesVi = {
   "nav.child": "Con",
   "nav.chooseChild": "Chọn con",
   "nav.parentPortal": "Cổng phụ huynh",
+  "nav.lessons": "Buổi học",
+  "nav.lessonsShort": "Mua",
 
   "login.title": "Cổng phụ huynh",
   "login.subtitle":
@@ -150,4 +152,41 @@ export const parentMessagesVi = {
   "langTip.message": "Xem cổng phụ huynh bằng tiếng Việt? · View in Vietnamese?",
   "langTip.chooseVi": "Tiếng Việt",
   "langTip.dismiss": "Để sau",
+
+  "checkout.eyebrow": "Gói buổi học",
+  "checkout.title": "Mua buổi học",
+  "checkout.subtitle":
+    "Thanh toán gói 8 buổi, hoặc nhiều gói, cho một con đã liên kết. Trang thanh toán an toàn của Stripe sẽ mở ra.",
+  "checkout.child": "Con",
+  "checkout.chooseChild": "Chọn con",
+  "checkout.noChildTitle": "Cần liên kết con trước",
+  "checkout.noChildBody":
+    "Cần lời mời từ giáo viên trước khi bạn có thể mua gói buổi học cho học sinh.",
+  "checkout.pack": "Gói buổi học",
+  "checkout.quantity": "Mua bao nhiêu gói?",
+  "checkout.quantityPacks": "{count} × {lessons} buổi",
+  "checkout.lessonsCount": "{count} buổi học",
+  "checkout.remainingCount": "Còn {count} buổi",
+  "checkout.total": "Tổng:",
+  "checkout.pay": "Thanh toán an toàn",
+  "checkout.paying": "Đang mở trang thanh toán…",
+  "checkout.secure": "Thông tin thẻ được nhập trên Stripe, không trên trang này.",
+  "checkout.notConfigured":
+    "Thanh toán trực tuyến đang được thiết lập. Hãy liên hệ nhà trường nếu bạn cần thanh toán ngay.",
+  "checkout.noPackages": "Chưa có gói buổi học nào được mở bán. Vui lòng quay lại sau.",
+  "checkout.errorGeneric": "Hãy chọn con và một gói buổi học.",
+  "checkout.canceled": "Bạn đã hủy thanh toán. Có thể thử lại khi sẵn sàng.",
+  "checkout.recent": "Giao dịch gần đây",
+  "checkout.paidOn": "Đã thanh toán {date}",
+  "checkout.successEyebrow": "Thanh toán",
+  "checkout.successTitle": "Đã nhận thanh toán",
+  "checkout.successBody":
+    "Cảm ơn bạn. Số buổi học này đã được cộng vào số buổi còn lại của con.",
+  "checkout.successPending": "Đang xác nhận thanh toán",
+  "checkout.successPendingBody":
+    "Stripe vẫn đang xác nhận giao dịch. Hãy tải lại trang sau giây lát nếu buổi học chưa xuất hiện.",
+  "checkout.missingSession": "Không tìm thấy giao dịch này.",
+  "checkout.backToPortal": "Về cổng phụ huynh",
+  "checkout.buyAgain": "Mua thêm gói",
+  "children.buyLessons": "Mua buổi học",
 } as const satisfies Record<ParentMessageKey, string>;

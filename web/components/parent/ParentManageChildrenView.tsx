@@ -42,12 +42,20 @@ export function ParentManageChildrenView(props: { students: ParentLinkedStudent[
                   aria-label={t("children.activeAccess")}
                 />
               </div>
-              <Link
-                href={`/parent/students/${student.studentId}/stream`}
-                className="mt-5 inline-flex rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-indigo-700"
-              >
-                {t("children.viewUpdates")}
-              </Link>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link
+                  href={`/parent/students/${student.studentId}/stream`}
+                  className="inline-flex rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-indigo-700"
+                >
+                  {t("children.viewUpdates")}
+                </Link>
+                <Link
+                  href={`/parent/checkout?student=${encodeURIComponent(student.studentId)}`}
+                  className="inline-flex rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-extrabold text-slate-700 hover:bg-slate-50"
+                >
+                  {t("children.buyLessons")}
+                </Link>
+              </div>
             </article>
           ))}
         </div>

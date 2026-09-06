@@ -44,6 +44,7 @@ function supabaseStoragePattern():
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["stripe"],
   outputFileTracingExcludes: {
     "/api/dev/apply-letter-fruit-picks": devSourceWriterTraceExcludes,
     "/api/dev/apply-letter-fruit-plot-picks": devSourceWriterTraceExcludes,

@@ -17,6 +17,7 @@ export type PilotGroup =
   | "classroom"
   | "grammar_product"
   | "community"
+  | "billing"
   | "dead";
 
 export type PilotEntry = {
@@ -50,6 +51,7 @@ export type PilotSectionId =
   | "classroom"
   | "grammar_product"
   | "community"
+  | "billing"
   | "dead";
 
 export type PilotSectionDef = {
@@ -148,6 +150,14 @@ export const PILOT_SECTIONS: PilotSectionDef[] = [
     purpose:
       "Indexable thought-leadership and teacher resources (/resources). Not product pilots — listed so triage does not miss public content routes.",
     groups: ["community"],
+    tone: "product",
+  },
+  {
+    id: "billing",
+    title: "Parent billing",
+    purpose:
+      "Parent lesson-pack checkout, Stripe webhooks, and admin package pricing. Product path, not a Games pilot.",
+    groups: ["billing"],
     tone: "product",
   },
   {
@@ -828,6 +838,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     description:
       "Public /parents explains process and methods; CTAs to create account and /parents/teachers directory for trial discovery.",
     group: "classroom",
+    status: "review",
+  },
+  {
+    href: "/parent/checkout",
+    title: "Parent lesson-pack checkout",
+    description:
+      "Parents buy packs of 8 lessons (or multiples) via Stripe Checkout. Admin prices packages at /teacher/admin/packages. Credits land on the chosen child after webhook/success confirmation.",
+    group: "billing",
     status: "review",
   },
   {

@@ -22,8 +22,8 @@ export default async function TeacherAdminHubPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Admin</h1>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-          Manage teacher access requests, teacher tiers, student PIN recovery, and WKE
-          Library contributions.
+          Manage teacher access requests, teacher tiers, student PIN recovery, parent lesson
+          packages, and WKE Library contributions.
         </p>
       </div>
 
@@ -76,6 +76,15 @@ export default async function TeacherAdminHubPage() {
             Family access
           </p>
           <p className="mt-2 text-lg font-bold text-neutral-900">Guardians &amp; audit</p>
+        </Link>
+        <Link
+          href="/teacher/admin/packages"
+          className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm hover:border-neutral-400"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Lesson packages
+          </p>
+          <p className="mt-2 text-lg font-bold text-neutral-900">Prices &amp; 8-lesson packs</p>
         </Link>
       </div>
 

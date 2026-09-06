@@ -16,6 +16,8 @@ export const parentMessagesEn = {
   "nav.child": "Child",
   "nav.chooseChild": "Choose a child",
   "nav.parentPortal": "Parent portal",
+  "nav.lessons": "Lessons",
+  "nav.lessonsShort": "Pay",
 
   "login.title": "Parent portal",
   "login.subtitle":
@@ -148,6 +150,43 @@ export const parentMessagesEn = {
   "langTip.message": "Xem cổng phụ huynh bằng tiếng Việt? · View in Vietnamese?",
   "langTip.chooseVi": "Tiếng Việt",
   "langTip.dismiss": "Not now",
+
+  "checkout.eyebrow": "Lesson packs",
+  "checkout.title": "Buy lessons",
+  "checkout.subtitle":
+    "Pay for a pack of 8 lessons, or more than one pack, for a linked child. Checkout opens a secure Stripe payment page.",
+  "checkout.child": "Child",
+  "checkout.chooseChild": "Choose a child",
+  "checkout.noChildTitle": "Link a child first",
+  "checkout.noChildBody":
+    "A teacher invitation is needed before you can buy lesson packs for a student.",
+  "checkout.pack": "Lesson pack",
+  "checkout.quantity": "How many packs?",
+  "checkout.quantityPacks": "{count} × {lessons} lessons",
+  "checkout.lessonsCount": "{count} lessons",
+  "checkout.remainingCount": "{count} lessons remaining",
+  "checkout.total": "Total:",
+  "checkout.pay": "Pay securely",
+  "checkout.paying": "Opening checkout…",
+  "checkout.secure": "Card details are entered on Stripe, not on this site.",
+  "checkout.notConfigured":
+    "Online checkout is being set up. Please contact the school if you need to pay now.",
+  "checkout.noPackages": "No lesson packs are on sale yet. Please check back soon.",
+  "checkout.errorGeneric": "Choose a child and a lesson pack.",
+  "checkout.canceled": "Payment was canceled. You can try again when you are ready.",
+  "checkout.recent": "Recent purchases",
+  "checkout.paidOn": "Paid {date}",
+  "checkout.successEyebrow": "Checkout",
+  "checkout.successTitle": "Payment received",
+  "checkout.successBody":
+    "Thank you. Those lessons have been added to your child's remaining lesson balance.",
+  "checkout.successPending": "Confirming payment",
+  "checkout.successPendingBody":
+    "Stripe is still confirming this payment. Refresh this page in a moment if the lessons do not appear yet.",
+  "checkout.missingSession": "We could not find this payment.",
+  "checkout.backToPortal": "Back to parent portal",
+  "checkout.buyAgain": "Buy another pack",
+  "children.buyLessons": "Buy lessons",
 } as const;
 
 export type ParentMessageKey = keyof typeof parentMessagesEn;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BookOpenText, House, Settings, UsersRound } from "lucide-react";
+import { Bell, BookOpenText, House, Settings, UsersRound, Wallet } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { SignOutForm } from "@/components/auth/SignOutForm";
@@ -28,7 +28,7 @@ function NavLink(props: {
     <Link
       href={props.href}
       aria-current={props.active ? "page" : undefined}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-extrabold transition ${
+      className={`inline-flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-[11px] font-extrabold transition sm:w-auto sm:flex-row sm:gap-2 sm:px-3 sm:text-sm ${
         props.active
           ? "bg-indigo-600 text-white shadow-sm"
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
@@ -72,7 +72,9 @@ export function ParentPortalShell(props: {
               ? "parent_notifications_viewed"
               : pathname === "/parent/settings"
                 ? "parent_settings_viewed"
-                : "parent_portal_viewed";
+                : pathname.startsWith("/parent/checkout")
+                  ? "parent_checkout_viewed"
+                  : "parent_portal_viewed";
     recordAppDiagnostic("parent", "navigation", eventName);
   }, [pathname]);
 
@@ -117,6 +119,14 @@ export function ParentPortalShell(props: {
                   {Math.min(props.unreadNotificationCount, 99)}
                 </span>
               ) : null}
+            </Link>
+            <Link
+              href="/parent/checkout"
+              aria-label={t("nav.lessons")}
+              aria-current={pathname.startsWith("/parent/checkout") ? "page" : undefined}
+              className="rounded-xl border border-slate-300 p-2 text-slate-700 hover:bg-slate-50"
+            >
+              <Wallet className="h-5 w-5" aria-hidden />
             </Link>
             <Link
               href="/parent/settings"
@@ -164,6 +174,12 @@ export function ParentPortalShell(props: {
                 icon={<UsersRound className="h-4 w-4" aria-hidden />}
               />
               <NavLink
+                href="/parent/checkout"
+                active={pathname.startsWith("/parent/checkout")}
+                label={t("nav.lessons")}
+                icon={<Wallet className="h-4 w-4" aria-hidden />}
+              />
+              <NavLink
                 href="/parent/notifications"
                 active={pathname === "/parent/notifications"}
                 label={t("nav.alerts")}
@@ -180,7 +196,7 @@ export function ParentPortalShell(props: {
       {props.students.length > 0 ? (
         <nav
           aria-label={t("nav.parentPortal")}
-          className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 gap-1 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden"
+          className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 gap-1 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden"
         >
           <NavLink
             href={streamHref}
@@ -199,6 +215,12 @@ export function ParentPortalShell(props: {
             active={pathname === "/parent/manage-children"}
             label={t("nav.children")}
             icon={<UsersRound className="h-4 w-4" aria-hidden />}
+          />
+          <NavLink
+            href="/parent/checkout"
+            active={pathname.startsWith("/parent/checkout")}
+            label={t("nav.lessonsShort")}
+            icon={<Wallet className="h-4 w-4" aria-hidden />}
           />
           <NavLink
             href="/parent/notifications"

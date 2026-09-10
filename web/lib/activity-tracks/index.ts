@@ -68,3 +68,4 @@ export {
   type TrackMediaUsage,
   type TrackScoringPart,
 } from "@/lib/activity-tracks/authoring-insights";
+export { focusedHomeworkCollectionPreview } from "@/lib/activity-tracks/focused-homework-preview";

@@ -9,6 +9,10 @@ import type {
 import {
   DEFAULT_PICTURE_STORY_INSTRUCTIONS,
   PICTURE_STORY_KIND,
+  PICTURE_STORY_MAX_FRAMES,
+  PICTURE_STORY_MAX_QUESTIONS,
+  PICTURE_STORY_MIN_FRAMES,
+  PICTURE_STORY_MIN_QUESTIONS,
   PICTURE_STORY_QUESTION_TYPES,
 } from "@/lib/picture-story/types";
 
@@ -56,7 +60,7 @@ function parseQuestionType(value: unknown, index: number): PictureStoryQuestionT
     return value as PictureStoryQuestionType;
   }
   throw new Error(
-    `questions[${index}].type must be "sentence_completion" or "multiple_choice".`,
+    `questions[${index}].type must be "sentence_completion", "multiple_choice", or "free_response".`,
   );
 }
 
@@ -100,6 +104,12 @@ function parseQuestion(
     }
   }
 
+  if (type === "free_response") {
+    if (options.length > 0) {
+      throw new Error(`questions[${index}].options must be empty for free_response.`);
+    }
+  }
+
   if (type === "multiple_choice") {
     if (options.length < 2) {
       throw new Error(`questions[${index}].options needs at least 2 choices.`);
@@ -120,7 +130,7 @@ function parseQuestion(
   };
 }
 
-/** Validate a picture-story authoring document (3–6 frames, 3–6 questions). */
+/** Validate a picture-story authoring document (1–6 frames, 1–6 questions). */
 export function validatePictureStoryDocument(raw: unknown): PictureStoryDocument {
   const doc = assertRecord(raw, "picture story document");
   if (doc.version !== 1) {
@@ -129,17 +139,17 @@ export function validatePictureStoryDocument(raw: unknown): PictureStoryDocument
   if (doc.kind !== PICTURE_STORY_KIND) {
     throw new Error(`picture story document.kind must be "${PICTURE_STORY_KIND}".`);
   }
-  if (!Array.isArray(doc.frames) || doc.frames.length < 3) {
-    throw new Error("Need at least 3 frames.");
+  if (!Array.isArray(doc.frames) || doc.frames.length < PICTURE_STORY_MIN_FRAMES) {
+    throw new Error(`Need at least ${PICTURE_STORY_MIN_FRAMES} frame.`);
   }
-  if (doc.frames.length > 6) {
-    throw new Error("Supports at most 6 frames.");
+  if (doc.frames.length > PICTURE_STORY_MAX_FRAMES) {
+    throw new Error(`Supports at most ${PICTURE_STORY_MAX_FRAMES} frames.`);
   }
-  if (!Array.isArray(doc.questions) || doc.questions.length < 3) {
-    throw new Error("Need at least 3 questions.");
+  if (!Array.isArray(doc.questions) || doc.questions.length < PICTURE_STORY_MIN_QUESTIONS) {
+    throw new Error(`Need at least ${PICTURE_STORY_MIN_QUESTIONS} question.`);
   }
-  if (doc.questions.length > 6) {
-    throw new Error("Supports at most 6 questions.");
+  if (doc.questions.length > PICTURE_STORY_MAX_QUESTIONS) {
+    throw new Error(`Supports at most ${PICTURE_STORY_MAX_QUESTIONS} questions.`);
   }
 
   const frames = doc.frames.map((frame, index) => parseFrame(frame, index));

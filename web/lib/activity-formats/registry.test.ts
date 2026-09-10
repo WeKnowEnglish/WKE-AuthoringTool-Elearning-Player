@@ -64,6 +64,20 @@ describe("seedGradedPartFromKind LP packs", () => {
     if (part?.source.type !== "homework_part") throw new Error("expected homework part");
     expect(part.source.part.kind).toBe("document_module");
     expect(part.source.part.moduleFormat).toBe("read_and_answer");
+    expect(part.source.part.title).toBe("Read and answer");
+  });
+
+  it("seeds picture_story as a blank document_module homework part", () => {
+    const part = seedGradedPartFromKind({
+      kind: "picture_story",
+      order: 1,
+      level: "primary",
+    });
+    expect(part?.source.type).toBe("homework_part");
+    if (part?.source.type !== "homework_part") throw new Error("expected homework part");
+    expect(part.source.part.kind).toBe("document_module");
+    expect(part.source.part.moduleFormat).toBe("picture_story");
+    expect(part.source.part.title).toBe("Picture story");
   });
 
   it("scores document module answers from frozen content", () => {

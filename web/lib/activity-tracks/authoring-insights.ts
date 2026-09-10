@@ -50,6 +50,12 @@ export function activityItemCount(part: ActivityTrackPart): number {
     const record = part.source.part as unknown as Record<string, unknown>;
     if (part.source.part.kind === "creative_presentation") return 4;
     if (part.source.part.kind === "speaking_prompt") return 1;
+    if (part.source.part.kind === "document_module") {
+      const nested = part.source.part.document;
+      if (isRecord(nested)) {
+        return firstArrayLength(nested, ["questions", "pairs"]) ?? 1;
+      }
+    }
     if (part.source.part.kind === "listening_item_match") {
       return part.source.part.activity.prompts.length;
     }
@@ -81,6 +87,9 @@ export function activityItemCount(part: ActivityTrackPart): number {
 export function activityItemNoun(part: ActivityTrackPart): string {
   if (part.kind === "creative_presentation") return "step";
   if (part.kind === "multiple_choice" || part.kind === "secondary_questions") {
+    return "question";
+  }
+  if (part.kind === "picture_story" || part.kind === "read_and_answer") {
     return "question";
   }
   if (part.kind === "line_match" || part.kind === "definition_match") return "pair";

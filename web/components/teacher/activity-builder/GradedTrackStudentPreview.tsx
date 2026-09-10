@@ -2,11 +2,13 @@
 
 import { useMemo } from "react";
 import {
+  focusedHomeworkCollectionPreview,
   partHasHomeworkContent,
   type ActivityTrackDocument,
 } from "@/lib/activity-tracks";
 import { buildGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import { GradedTrackPlayer } from "@/components/homework/GradedTrackPlayer";
+import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollectionPlayer";
 
 type Props = {
   doc: ActivityTrackDocument;
@@ -62,6 +64,24 @@ export function GradedTrackStudentPreview({
   }
 
   if (preview.status === "error") {
+    const focusedCollection = focusedHomeworkCollectionPreview(doc, focusPartId);
+    if (focusedCollection) {
+      return (
+        <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,_#fafaf9,_#e7e5e4_70%)]">
+          <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-[11px] font-semibold leading-5 text-amber-950">
+            Previewing this activity only. Fix every activity to preview the full homework.
+            {preview.message ? ` ${preview.message}` : ""}
+          </p>
+          <div className="min-h-0 flex-1 overflow-auto p-3">
+            <HomeworkCollectionPlayer
+              document={focusedCollection}
+              mode="authoring-preview"
+              segmentMode
+            />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex h-full min-h-[16rem] items-center justify-center bg-[radial-gradient(circle_at_top,_#fafaf9,_#e7e5e4_70%)] p-6">
         <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-amber-50 px-6 py-8 text-center shadow-sm">

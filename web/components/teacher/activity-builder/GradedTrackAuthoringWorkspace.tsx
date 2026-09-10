@@ -52,6 +52,8 @@ import { GradedTrackSupportStep } from "@/components/teacher/activity-builder/Gr
 import { GradedTrackMediaStep } from "@/components/teacher/activity-builder/GradedTrackMediaStep";
 import { GradedTrackPointsStep } from "@/components/teacher/activity-builder/GradedTrackPointsStep";
 import { GradedTrackDesignStep } from "@/components/teacher/activity-builder/GradedTrackDesignStep";
+import { ActivitySkillPicker } from "@/components/teacher/activity-builder/ActivitySkillPicker";
+import { ACTIVITY_TRACK_PART_SKILLS } from "@/lib/activity-skills";
 
 type Props = {
   document: ActivityTrackDocument;
@@ -652,7 +654,7 @@ export function GradedTrackAuthoringWorkspace({
             aria-label="Close add activity"
             className="absolute inset-0 bg-stone-950/50"
           />
-          <section className="relative z-10 max-h-[80dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl">
+          <section className="relative z-10 max-h-[85dvh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-wide text-sky-700">
@@ -662,7 +664,7 @@ export function GradedTrackAuthoringWorkspace({
                   Choose an activity type
                 </h2>
                 <p className="mt-1 text-xs font-semibold text-stone-600">
-                  Every option opens its complete authoring editor.
+                  Browse by language skill. Every option opens its complete authoring editor.
                 </p>
               </div>
               <button
@@ -674,27 +676,21 @@ export function GradedTrackAuthoringWorkspace({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {ACTIVITY_TRACK_PART_CATALOG.filter((entry) =>
-                gradedPartKindsForOrigin(track.gradedOrigin).includes(entry.kind),
-              ).map((entry) => (
-                <button
-                  key={entry.kind}
-                  type="button"
-                  onClick={() => {
-                    onAddPart(entry.kind);
-                    setAddOpen(false);
-                  }}
-                  className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-left hover:border-sky-400 hover:bg-sky-50"
-                >
-                  <span className="block text-sm font-extrabold text-stone-950">
-                    {entry.label}
-                  </span>
-                  <span className="mt-1 block text-xs font-semibold leading-5 text-stone-600">
-                    {entry.description}
-                  </span>
-                </button>
-              ))}
+            <div className="mt-4">
+              <ActivitySkillPicker
+                options={ACTIVITY_TRACK_PART_CATALOG.filter((entry) =>
+                  gradedPartKindsForOrigin(track.gradedOrigin).includes(entry.kind),
+                ).map((entry) => ({
+                  id: entry.kind,
+                  label: entry.label,
+                  description: entry.description,
+                  skill: ACTIVITY_TRACK_PART_SKILLS[entry.kind],
+                }))}
+                onChoose={(kind) => {
+                  onAddPart(kind);
+                  setAddOpen(false);
+                }}
+              />
             </div>
           </section>
         </div>

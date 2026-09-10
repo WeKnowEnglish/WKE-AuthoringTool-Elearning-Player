@@ -24,7 +24,10 @@ import {
   toReadAndAnswerPlayable,
   validateReadAndAnswerDocument,
 } from "@/lib/read-and-answer";
-import { documentModuleFormatLabel } from "@/lib/homework-collections/document-module";
+import {
+  documentModuleFormatLabel,
+  documentModuleValidationIssues,
+} from "@/lib/homework-collections/document-module";
 
 type Props = {
   part: HomeworkCollectionDocumentModulePart;
@@ -32,11 +35,23 @@ type Props = {
   onAnswersChange: (answers: Record<string, string>) => void;
 };
 
+function withPartChrome<T extends { title: string; instructions: string }>(
+  playable: T,
+  part: HomeworkCollectionDocumentModulePart,
+): T {
+  return {
+    ...playable,
+    title: part.title.trim() || playable.title,
+    instructions: part.instructions.trim() || playable.instructions,
+  };
+}
+
 export function HomeworkCollectionDocumentModulePartSurface({
   part,
   answers,
   onAnswersChange,
 }: Props) {
+  const issues = documentModuleValidationIssues(part);
   const shared = {
     answers,
     onAnswersChange,
@@ -47,47 +62,62 @@ export function HomeworkCollectionDocumentModulePartSurface({
   const readAndAnswer = useMemo(() => {
     if (part.moduleFormat !== "read_and_answer") return null;
     try {
-      return toReadAndAnswerPlayable(validateReadAndAnswerDocument(part.document));
+      return withPartChrome(
+        toReadAndAnswerPlayable(validateReadAndAnswerDocument(part.document)),
+        part,
+      );
     } catch {
       return null;
     }
-  }, [part.document, part.moduleFormat]);
+  }, [part]);
 
   const clozeChoice = useMemo(() => {
     if (part.moduleFormat !== "cloze_choice") return null;
     try {
-      return toClozeChoicePlayable(validateClozeChoiceDocument(part.document));
+      return withPartChrome(
+        toClozeChoicePlayable(validateClozeChoiceDocument(part.document)),
+        part,
+      );
     } catch {
       return null;
     }
-  }, [part.document, part.moduleFormat]);
+  }, [part]);
 
   const clozeOpen = useMemo(() => {
     if (part.moduleFormat !== "cloze_open") return null;
     try {
-      return toClozeOpenPlayable(validateClozeOpenDocument(part.document));
+      return withPartChrome(
+        toClozeOpenPlayable(validateClozeOpenDocument(part.document)),
+        part,
+      );
     } catch {
       return null;
     }
-  }, [part.document, part.moduleFormat]);
+  }, [part]);
 
   const definitionMatch = useMemo(() => {
     if (part.moduleFormat !== "definition_match") return null;
     try {
-      return toDefinitionMatchPlayable(validateDefinitionMatchDocument(part.document));
+      return withPartChrome(
+        toDefinitionMatchPlayable(validateDefinitionMatchDocument(part.document)),
+        part,
+      );
     } catch {
       return null;
     }
-  }, [part.document, part.moduleFormat]);
+  }, [part]);
 
   const pictureStory = useMemo(() => {
     if (part.moduleFormat !== "picture_story") return null;
     try {
-      return toPictureStoryPlayable(validatePictureStoryDocument(part.document));
+      return withPartChrome(
+        toPictureStoryPlayable(validatePictureStoryDocument(part.document)),
+        part,
+      );
     } catch {
       return null;
     }
-  }, [part.document, part.moduleFormat]);
+  }, [part]);
 
   if (part.moduleFormat === "read_and_answer" && readAndAnswer) {
     return <ReadAndAnswerPlayer activity={readAndAnswer} {...shared} />;
@@ -106,8 +136,19 @@ export function HomeworkCollectionDocumentModulePartSurface({
   }
 
   return (
-    <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
-      Reading activity content is not available or failed validation.
-    </p>
+    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-semibold text-amber-950">
+      <p>Keep editing this activity to preview it.</p>
+      {issues.length > 0 ? (
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs font-semibold text-amber-900">
+          {issues.slice(0, 5).map((issue) => (
+            <li key={issue}>{issue}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-xs font-semibold text-amber-900">
+          Reading activity content is not available or failed validation.
+        </p>
+      )}
+    </div>
   );
 }

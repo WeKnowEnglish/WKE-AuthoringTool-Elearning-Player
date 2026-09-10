@@ -30,6 +30,7 @@ import { AssessmentListeningItemMatchPartEditor } from "@/components/teacher/act
 import { TrackCoverImageEditor } from "@/components/teacher/activity-builder/TrackCoverImageEditor";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
 import { PresentationSlideCanvasEditor } from "@/components/teacher/activity-builder/PresentationSlideCanvasEditor";
+import { ActivitySkillPicker } from "@/components/teacher/activity-builder/ActivitySkillPicker";
 import {
   AuthoringItemPager,
   useAuthoringItemIndex,
@@ -104,6 +105,7 @@ import {
   type GamesFlashcardFace,
 } from "@/lib/activity-builder/games/types-flashcards";
 import type { LessonScreenRow } from "@/lib/lesson/types";
+import { LEARNING_TRACK_BEAT_SKILLS } from "@/lib/activity-skills";
 import { AssignStudioActivityHomeworkOverlay } from "@/components/teacher/AssignStudioActivityHomeworkOverlay";
 import "./ltc-workspace.css";
 
@@ -325,7 +327,7 @@ export function LearningTrackCompilerWorkspace({
   const [assignOpen, setAssignOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [addKind, setAddKind] = useState<LearningTrackBeatKind>("flashcards");
+  const [addOpen, setAddOpen] = useState(false);
   const [presentationSlideId, setPresentationSlideId] = useState<string | null>(null);
   const [presentationCanvasMode, setPresentationCanvasMode] = useState<"edit" | "preview">(
     "edit",
@@ -1073,8 +1075,8 @@ export function LearningTrackCompilerWorkspace({
     setNotice(`Duplicated ${clone.label}.`);
   };
 
-  const addBeat = () => {
-    const beat = createBeatInstance(addKind, undefined, composition.vocabListId);
+  const addBeat = (kind: LearningTrackBeatKind) => {
+    const beat = createBeatInstance(kind, undefined, composition.vocabListId);
     editBeats((beats) => {
       beats.push(beat);
       return beats;
@@ -1082,7 +1084,7 @@ export function LearningTrackCompilerWorkspace({
     setSelectedBeatId(beat.id);
     const fromTrackVocab = beat.source.type === "vocab_compile" && composition.vocabListId;
     setNotice(
-      `Added ${LEARNING_TRACK_BEAT_LABELS[addKind]}${
+      `Added ${LEARNING_TRACK_BEAT_LABELS[kind]}${
         fromTrackVocab ? ` from ${trackVocabLabel}.` : "."
       }`,
     );
@@ -3208,22 +3210,10 @@ export function LearningTrackCompilerWorkspace({
               {composition.beats.length} activities
               {pack ? ` · ${pack.screens.length} screens` : ""}
             </p>
-            <select
-              className="ltc-input rounded border px-2 py-1 text-xs"
-              value={addKind}
-              aria-label="Activity type to add"
-              onChange={(event) => setAddKind(event.target.value as LearningTrackBeatKind)}
-            >
-              {LEARNING_TRACK_BEAT_KIND_OPTIONS.map((kind) => (
-                <option key={kind} value={kind}>
-                  {LEARNING_TRACK_BEAT_LABELS[kind]}
-                </option>
-              ))}
-            </select>
             <button
               type="button"
               className="ltc-btn-primary rounded px-2.5 py-1 text-xs"
-              onClick={addBeat}
+              onClick={() => setAddOpen(true)}
             >
               Add activity
             </button>
@@ -3329,6 +3319,58 @@ export function LearningTrackCompilerWorkspace({
           })}
         </div>
       </footer>
+
+      {addOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add activity"
+        >
+          <button
+            type="button"
+            onClick={() => setAddOpen(false)}
+            aria-label="Close add activity"
+            className="absolute inset-0 bg-stone-950/50"
+          />
+          <section className="relative z-10 max-h-[85dvh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-wide text-sky-700">
+                  Student activity
+                </p>
+                <h2 className="mt-1 text-lg font-black text-stone-950">
+                  Choose an activity type
+                </h2>
+                <p className="mt-1 text-xs font-semibold text-stone-600">
+                  Browse the activities available in this Practice track by language skill.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddOpen(false)}
+                aria-label="Close"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-300 text-stone-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-4">
+              <ActivitySkillPicker
+                options={LEARNING_TRACK_BEAT_KIND_OPTIONS.map((kind) => ({
+                  id: kind,
+                  label: LEARNING_TRACK_BEAT_LABELS[kind],
+                  skill: LEARNING_TRACK_BEAT_SKILLS[kind],
+                }))}
+                onChoose={(kind) => {
+                  addBeat(kind);
+                  setAddOpen(false);
+                }}
+              />
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {vocabOverlay ? (
         <div

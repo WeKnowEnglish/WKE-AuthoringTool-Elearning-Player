@@ -16,6 +16,9 @@ import { HomeworkCollectionLessonPlayerPackEditor } from "@/components/teacher/a
 import { HomeworkCollectionDocumentModuleEditor } from "@/components/teacher/activity-builder/HomeworkCollectionDocumentModuleEditor";
 import { CreativePresentationPartEditor } from "@/components/teacher/activity-builder/CreativePresentationPartEditor";
 import { MediaUrlControls } from "@/components/teacher/media/MediaUrlControls";
+import { asDefinitionMatchDraft } from "@/lib/definition-match/draft";
+import { asPictureStoryDraft } from "@/lib/picture-story/draft";
+import { asReadAndAnswerDraft } from "@/lib/read-and-answer/draft";
 
 type Props = {
   part: HomeworkCollectionPart;
@@ -34,6 +37,17 @@ function freshId() {
 
 function authoringItemCount(part: HomeworkCollectionPart): number {
   if (part.kind === "creative_presentation") return 4;
+  if (part.kind === "document_module") {
+    if (part.moduleFormat === "picture_story") {
+      return asPictureStoryDraft(part.document).questions.length;
+    }
+    if (part.moduleFormat === "read_and_answer") {
+      return asReadAndAnswerDraft(part.document).questions.length;
+    }
+    if (part.moduleFormat === "definition_match") {
+      return asDefinitionMatchDraft(part.document).pairs.length;
+    }
+  }
   const record = part as unknown as Record<string, unknown>;
   for (const key of ["questions", "items", "pairs", "prompts"]) {
     const value = record[key];
@@ -56,7 +70,23 @@ export function HomeworkCollectionPartEditor({
     patch: Partial<
       Pick<HomeworkCollectionPart, "title" | "instructions" | "required">
     >,
-  ) => onChange({ ...part, ...patch } as HomeworkCollectionPart);
+  ) => {
+    if (part.kind === "document_module") {
+      onChange({
+        ...part,
+        ...patch,
+        document: {
+          ...part.document,
+          ...(typeof patch.title === "string" ? { title: patch.title } : {}),
+          ...(typeof patch.instructions === "string"
+            ? { instructions: patch.instructions }
+            : {}),
+        },
+      });
+      return;
+    }
+    onChange({ ...part, ...patch } as HomeworkCollectionPart);
+  };
 
   const [questionIndex, setQuestionIndex] = useAuthoringItemIndex(
     part.kind === "multiple_choice" ? part.questions.length : 0,

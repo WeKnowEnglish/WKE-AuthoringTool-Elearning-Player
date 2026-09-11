@@ -32,6 +32,12 @@ Must be **server-only** (no `NEXT_PUBLIC_`). The app calls Gemini only from teac
 
 If this key leaks, revoke it in Google AI Studio and create a new one.
 
+### Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`)
+
+Must be **server-only** (no `NEXT_PUBLIC_`). Checkout Sessions are created from a signed-in parent action; the webhook at `POST /api/webhooks/stripe` verifies the Stripe signature before granting lesson credits. Package prices live in the database and are never trusted from the browser.
+
+If a secret leaks, roll it in the Stripe Dashboard and update `.env.local` / production env.
+
 ## Operational checklist
 
 - Keep **`.env.local`** out of git (already in `.gitignore`).

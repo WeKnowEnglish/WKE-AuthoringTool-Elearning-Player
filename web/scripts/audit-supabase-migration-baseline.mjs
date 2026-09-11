@@ -195,6 +195,25 @@ const customChecks = new Map([
         "'homework_collection_media_teacher_select')) = 2",
     },
   ],
+  [
+    "143_parent_lesson_packs.sql",
+    {
+      label: "parent lesson packs, orders, credits, and Stripe webhook log",
+      expression:
+        "to_regclass('public.lesson_packages') is not null " +
+        "and to_regclass('public.lesson_pack_orders') is not null " +
+        "and to_regclass('public.student_lesson_credits') is not null " +
+        "and to_regclass('public.student_lesson_credit_ledger') is not null " +
+        "and to_regclass('public.stripe_webhook_events') is not null " +
+        "and exists (select 1 from information_schema.columns " +
+        "where table_schema = 'public' and table_name = 'parent_profiles' " +
+        "and column_name = 'stripe_customer_id') " +
+        "and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace " +
+        "where n.nspname = 'public' and p.proname = 'grant_lesson_pack_purchase') " +
+        "and exists (select 1 from pg_policies where schemaname = 'public' " +
+        "and tablename = 'lesson_packages' and policyname = 'lesson_packages_select_active')",
+    },
+  ],
 ]);
 
 function stripComments(sql) {

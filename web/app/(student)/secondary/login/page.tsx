@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/post-login-path";
 import { getAppRole } from "@/lib/auth/roles";
 import { isSecondaryEligibleBand } from "@/lib/auth/student-bands";
+import { STUDENT_PRIMARY_LOGIN_PATH } from "@/lib/auth/student-login";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -72,8 +73,8 @@ export default async function SecondaryLoginPage({ searchParams }: Props) {
         />
         <p className="mt-4 text-center text-xs font-semibold text-kid-ink/70">
           Looking for Primary?{" "}
-          <Link href="/" className="underline">
-            Back to path picker
+          <Link href={STUDENT_PRIMARY_LOGIN_PATH} className="underline">
+            Primary student login
           </Link>
         </p>
       </div>

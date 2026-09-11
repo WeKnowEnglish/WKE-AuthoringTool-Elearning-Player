@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, KeyRound } from "lucide-react";
+import {
+  STUDENT_PRIMARY_LOGIN_PATH,
+  STUDENT_SECONDARY_LOGIN_PATH,
+} from "@/lib/auth/student-login";
 
 // This public doorway intentionally sits outside the authenticated student layout.
 export const metadata: Metadata = {
@@ -54,7 +58,7 @@ export default function StudentsLandingPage() {
 
         <div className="mt-8 grid gap-6 lg:mt-12 lg:grid-cols-2 lg:gap-8">
           <Link
-            href="/login?portal=student&next=/primary"
+            href={STUDENT_PRIMARY_LOGIN_PATH}
             className={`${cardClass} border-kid-ink bg-[#ffe66d]`}
           >
             <div className="relative z-10 flex h-full max-w-[64%] flex-col items-start">
@@ -83,7 +87,7 @@ export default function StudentsLandingPage() {
           </Link>
 
           <Link
-            href="/secondary/login"
+            href={STUDENT_SECONDARY_LOGIN_PATH}
             className={`${cardClass} border-[#172554] bg-[linear-gradient(145deg,#172554_0%,#1d4ed8_58%,#0891b2_100%)] text-white shadow-[7px_7px_0_0_#0f172a] focus-visible:outline-[#172554]`}
           >
             <div className="relative z-10 flex h-full max-w-[64%] flex-col items-start">

@@ -42,3 +42,7 @@ export type ReadAndAnswerPlayable = {
 export const READ_AND_ANSWER_KIND = "read-and-answer" as const;
 export const DEFAULT_READ_AND_ANSWER_INSTRUCTIONS =
   "Read the passage. Then answer the questions.";
+export const DEFAULT_READ_AND_ANSWER_TITLE = "Read and answer";
+export const READ_AND_ANSWER_MIN_QUESTIONS = 3;
+export const READ_AND_ANSWER_MAX_QUESTIONS = 5;
+export const READ_AND_ANSWER_MIN_PASSAGE_CHARS = 40;

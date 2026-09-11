@@ -3,6 +3,7 @@
 export const PICTURE_STORY_QUESTION_TYPES = [
   "sentence_completion",
   "multiple_choice",
+  "free_response",
 ] as const;
 
 export type PictureStoryQuestionType = (typeof PICTURE_STORY_QUESTION_TYPES)[number];
@@ -52,3 +53,8 @@ export type PictureStoryPlayable = {
 export const PICTURE_STORY_KIND = "picture-story" as const;
 export const DEFAULT_PICTURE_STORY_INSTRUCTIONS =
   "Read each picture story page. Then complete the sentences and answer the questions.";
+export const DEFAULT_PICTURE_STORY_TITLE = "Picture story";
+export const PICTURE_STORY_MIN_FRAMES = 1;
+export const PICTURE_STORY_MAX_FRAMES = 6;
+export const PICTURE_STORY_MIN_QUESTIONS = 1;
+export const PICTURE_STORY_MAX_QUESTIONS = 6;

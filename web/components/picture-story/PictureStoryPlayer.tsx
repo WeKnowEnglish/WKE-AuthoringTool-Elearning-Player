@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import { BookOpenCheck, Images } from "lucide-react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { KidPanel } from "@/components/kid-ui/KidPanel";
+import { PictureStoryFrameImage } from "@/components/picture-story/PictureStoryFrameImage";
 import {
   isPictureStoryAnswerCorrect,
   isPictureStoryMastered,
+  isPictureStoryQuestionAutoGraded,
+  pictureStoryFrameNav,
   scorePictureStoryPlayable,
   type PictureStoryPlayable,
 } from "@/lib/picture-story";
@@ -45,8 +48,10 @@ export function PictureStoryPlayer({
     Boolean((answers[question.id] ?? "").trim()),
   );
   const mastered = checked && isPictureStoryMastered(score);
-  const frame = activity.frames[frameIndex];
-  const reviewFrame = activity.frames[reviewFrameIndex];
+  const frameNav = pictureStoryFrameNav(activity.frames.length, frameIndex);
+  const reviewNav = pictureStoryFrameNav(activity.frames.length, reviewFrameIndex);
+  const frame = activity.frames[frameNav.index];
+  const reviewFrame = activity.frames[reviewNav.index];
 
   const frameById = useMemo(() => {
     const map = new Map(activity.frames.map((item) => [item.id, item]));
@@ -67,12 +72,12 @@ export function PictureStoryPlayer({
             </p>
             <ul className="mt-5 space-y-2 text-sm font-bold text-kid-ink/70">
               <li>
-                ✓ {activity.frames.length} picture
-                {activity.frames.length === 1 ? "" : "s"} to read
+                ✓ {activity.frames.length}{" "}
+                {activity.frames.length === 1 ? "picture" : "pictures"} to read
               </li>
               <li>
-                ✓ Then {activity.questions.length} question
-                {activity.questions.length === 1 ? "" : "s"}
+                ✓ Then {activity.questions.length}{" "}
+                {activity.questions.length === 1 ? "question" : "questions"}
               </li>
             </ul>
             <KidButton
@@ -88,9 +93,7 @@ export function PictureStoryPlayer({
           <div className="rounded-3xl bg-teal-100 p-7 text-center">
             <Images className="mx-auto h-24 w-24 text-teal-800" />
             <p className="mt-3 text-lg font-black text-[#17375e]">
-              Look at each picture.
-              <br />
-              Then answer.
+              {pictureStoryFrameNav(activity.frames.length, 0).overviewCue}
             </p>
           </div>
         </div>
@@ -99,35 +102,37 @@ export function PictureStoryPlayer({
   }
 
   if (stage === "frames" && frame) {
-    const isLast = frameIndex >= activity.frames.length - 1;
     return (
       <div className="space-y-4">
         <KidPanel className="bg-white">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-teal-800">
-            {eyebrow} · Page {frameIndex + 1} of {activity.frames.length}
+            {eyebrow} · {frameNav.pageLabel}
           </p>
           <h2 className="mt-1 text-2xl font-black text-kid-ink">{activity.title}</h2>
         </KidPanel>
 
         <KidPanel className="bg-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <PictureStoryFrameImage
             src={frame.imageUrl}
             alt={frame.imageAlt}
-            className="max-h-80 w-full rounded-2xl object-cover"
+            className="max-h-80 w-full object-cover object-top"
           />
           <p className="mt-4 text-base font-semibold leading-8 text-slate-800">{frame.text}</p>
         </KidPanel>
 
         <KidPanel className="flex flex-wrap items-center justify-between gap-3 bg-white">
-          <KidButton
-            variant="secondary"
-            disabled={frameIndex === 0}
-            onClick={() => setFrameIndex((current) => Math.max(0, current - 1))}
-          >
-            Previous
-          </KidButton>
-          {isLast ? (
+          {frameNav.showPager ? (
+            <KidButton
+              variant="secondary"
+              disabled={frameNav.isFirst}
+              onClick={() => setFrameIndex((current) => Math.max(0, current - 1))}
+            >
+              Previous
+            </KidButton>
+          ) : (
+            <span />
+          )}
+          {frameNav.isLast ? (
             <KidButton onClick={() => setStage("questions")}>Answer questions</KidButton>
           ) : (
             <KidButton
@@ -166,28 +171,35 @@ export function PictureStoryPlayer({
         </p>
         <div className="mx-auto mt-6 max-w-3xl space-y-3 text-left">
           {activity.questions.map((question, index) => {
-            const ok = isPictureStoryAnswerCorrect(answers[question.id] ?? "", question);
+            const studentAnswer = answers[question.id] ?? "";
+            const autoGraded = isPictureStoryQuestionAutoGraded(question);
+            const ok = isPictureStoryAnswerCorrect(studentAnswer, question);
             const evidence = frameById.get(question.evidenceFrameId);
             return (
               <div
                 key={question.id}
                 className={`rounded-2xl border-2 p-4 ${
-                  ok
-                    ? "border-emerald-200 bg-emerald-50"
-                    : "border-amber-200 bg-amber-50"
+                  !autoGraded
+                    ? "border-sky-200 bg-sky-50"
+                    : ok
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-amber-200 bg-amber-50"
                 }`}
               >
                 <p className="text-xs font-black uppercase tracking-wide text-teal-800">
                   Question {index + 1}
+                  {!autoGraded ? " · Written answer" : ""}
                 </p>
                 <p className="mt-1 text-sm font-bold text-slate-800">{question.prompt}</p>
                 <p className="mt-2 text-sm font-semibold text-slate-700">
-                  {question.type === "multiple_choice"
-                    ? `Answer: ${
-                        question.options.find((option) => option.id === question.correctOptionId)
-                          ?.text ?? question.correctOptionId
-                      }`
-                    : `Answer: ${question.acceptedAnswers[0] ?? ""}`}
+                  {question.type === "free_response"
+                    ? `You wrote: ${studentAnswer.trim() || "—"}`
+                    : question.type === "multiple_choice"
+                      ? `Answer: ${
+                          question.options.find((option) => option.id === question.correctOptionId)
+                            ?.text ?? question.correctOptionId
+                        }`
+                      : `Answer: ${question.acceptedAnswers[0] ?? ""}`}
                 </p>
                 {evidence ? (
                   <p className="mt-1 text-xs font-semibold text-slate-500">
@@ -235,7 +247,7 @@ export function PictureStoryPlayer({
                 setReviewFrameOpen((open) => !open);
               }}
             >
-              {reviewFrameOpen ? "Hide story" : "Look at the story again"}
+              {reviewFrameOpen ? "Hide story" : frameNav.lookAgainLabel}
             </KidButton>
           </div>
         ) : null}
@@ -244,28 +256,30 @@ export function PictureStoryPlayer({
       {activity.allowStoryReviewDuringQuestions && reviewFrameOpen && reviewFrame ? (
         <KidPanel className="bg-white">
           <p className="text-xs font-black uppercase tracking-wide text-teal-800">
-            Story page {reviewFrameIndex + 1} of {activity.frames.length}
+            {reviewNav.reviewPageLabel}
           </p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={reviewFrame.imageUrl}
-            alt={reviewFrame.imageAlt}
-            className="mt-3 max-h-56 w-full rounded-2xl object-cover"
-          />
+          <div className="mt-3">
+            <PictureStoryFrameImage
+              src={reviewFrame.imageUrl}
+              alt={reviewFrame.imageAlt}
+              className="max-h-56 w-full object-cover object-top"
+            />
+          </div>
           <p className="mt-3 text-sm font-semibold leading-7 text-slate-800">
             {reviewFrame.text}
           </p>
+          {reviewNav.showPager ? (
           <div className="mt-3 flex flex-wrap gap-2">
             <KidButton
               variant="secondary"
-              disabled={reviewFrameIndex === 0}
+              disabled={reviewNav.isFirst}
               onClick={() => setReviewFrameIndex((current) => Math.max(0, current - 1))}
             >
               Previous
             </KidButton>
             <KidButton
               variant="secondary"
-              disabled={reviewFrameIndex >= activity.frames.length - 1}
+              disabled={reviewNav.isLast}
               onClick={() =>
                 setReviewFrameIndex((current) =>
                   Math.min(activity.frames.length - 1, current + 1),
@@ -275,6 +289,7 @@ export function PictureStoryPlayer({
               Next
             </KidButton>
           </div>
+          ) : null}
         </KidPanel>
       ) : null}
 
@@ -319,6 +334,21 @@ export function PictureStoryPlayer({
                     );
                   })}
                 </div>
+              ) : question.type === "free_response" ? (
+                <textarea
+                  aria-label="Write your answer"
+                  value={selected}
+                  rows={4}
+                  onChange={(event) => {
+                    setChecked(false);
+                    setAnswers((current) => ({
+                      ...current,
+                      [question.id]: event.target.value,
+                    }));
+                  }}
+                  className="mt-3 w-full rounded-xl border-2 border-teal-600 bg-white px-3 py-2.5 text-sm font-bold"
+                  placeholder="Write your answer…"
+                />
               ) : (
                 <input
                   type="text"
@@ -358,7 +388,7 @@ export function PictureStoryPlayer({
         </p>
         <div className="flex flex-wrap gap-2">
           <KidButton variant="secondary" onClick={() => setStage("frames")}>
-            Back to story
+            {frameNav.backToFramesLabel}
           </KidButton>
           <KidButton
             disabled={!complete}

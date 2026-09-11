@@ -8,6 +8,9 @@ import type {
 import {
   DEFAULT_READ_AND_ANSWER_INSTRUCTIONS,
   READ_AND_ANSWER_KIND,
+  READ_AND_ANSWER_MAX_QUESTIONS,
+  READ_AND_ANSWER_MIN_PASSAGE_CHARS,
+  READ_AND_ANSWER_MIN_QUESTIONS,
 } from "@/lib/read-and-answer/types";
 
 function assertRecord(value: unknown, label: string): Record<string, unknown> {
@@ -65,8 +68,10 @@ function parseQuestion(raw: unknown, index: number): ReadAndAnswerQuestion {
 function parsePassage(raw: unknown): ReadAndAnswerPassage {
   const passage = assertRecord(raw, "passage");
   const text = assertString(passage.text, "passage.text");
-  if (text.length < 40) {
-    throw new Error("passage.text must be at least 40 characters.");
+  if (text.length < READ_AND_ANSWER_MIN_PASSAGE_CHARS) {
+    throw new Error(
+      `passage.text must be at least ${READ_AND_ANSWER_MIN_PASSAGE_CHARS} characters.`,
+    );
   }
   const title =
     typeof passage.title === "string" && passage.title.trim()
@@ -100,11 +105,11 @@ export function validateReadAndAnswerDocument(raw: unknown): ReadAndAnswerDocume
   if (doc.kind !== READ_AND_ANSWER_KIND) {
     throw new Error(`read and answer document.kind must be "${READ_AND_ANSWER_KIND}".`);
   }
-  if (!Array.isArray(doc.questions) || doc.questions.length < 3) {
-    throw new Error("Need at least 3 questions.");
+  if (!Array.isArray(doc.questions) || doc.questions.length < READ_AND_ANSWER_MIN_QUESTIONS) {
+    throw new Error(`Need at least ${READ_AND_ANSWER_MIN_QUESTIONS} questions.`);
   }
-  if (doc.questions.length > 5) {
-    throw new Error("Supports at most 5 questions.");
+  if (doc.questions.length > READ_AND_ANSWER_MAX_QUESTIONS) {
+    throw new Error(`Supports at most ${READ_AND_ANSWER_MAX_QUESTIONS} questions.`);
   }
 
   const questions = doc.questions.map((question, index) => parseQuestion(question, index));

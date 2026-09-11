@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { StudentClassroomView } from "@/components/classroom/StudentClassroomView";
 import { StudentHomeworkAutoRefresh } from "@/components/classroom/StudentHomeworkAutoRefresh";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
+import { studentLoginPath } from "@/lib/auth/student-login";
 import { parseClassroomTab } from "@/lib/classroom/classroom-tabs";
 import { listAssignedHomeworkForStudent } from "@/lib/data/class-homework";
 import { getStudentClassMemberships } from "@/lib/data/student-classes";
@@ -38,7 +39,7 @@ export default async function PrimaryClassroomPage({ params, searchParams }: Pro
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/login?next=/primary/class/${encodeURIComponent(classId)}`);
+    redirect(studentLoginPath("a1", `/primary/class/${encodeURIComponent(classId)}`));
   }
   if (isTeacher(user)) {
     redirect(TEACHER_DEFAULT_PATH);

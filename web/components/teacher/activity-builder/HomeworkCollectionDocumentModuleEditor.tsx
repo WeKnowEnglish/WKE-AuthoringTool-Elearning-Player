@@ -2,6 +2,9 @@
 
 import type { HomeworkCollectionDocumentModulePart } from "@/lib/homework-collections";
 import { documentModuleValidationIssues } from "@/lib/homework-collections/document-module";
+import { DefinitionMatchDocumentModuleEditor } from "@/components/teacher/activity-builder/DefinitionMatchDocumentModuleEditor";
+import { PictureStoryDocumentModuleEditor } from "@/components/teacher/activity-builder/PictureStoryDocumentModuleEditor";
+import { ReadAndAnswerDocumentModuleEditor } from "@/components/teacher/activity-builder/ReadAndAnswerDocumentModuleEditor";
 
 type Props = {
   part: HomeworkCollectionDocumentModulePart;
@@ -12,8 +15,17 @@ const fieldClass =
   "mt-1 min-w-0 w-full rounded-lg border border-stone-300 bg-white px-2.5 py-2 text-sm font-semibold text-stone-900";
 
 export function HomeworkCollectionDocumentModuleEditor({ part, onChange }: Props) {
-  const issues = documentModuleValidationIssues(part);
+  if (part.moduleFormat === "picture_story") {
+    return <PictureStoryDocumentModuleEditor part={part} onChange={onChange} />;
+  }
+  if (part.moduleFormat === "read_and_answer") {
+    return <ReadAndAnswerDocumentModuleEditor part={part} onChange={onChange} />;
+  }
+  if (part.moduleFormat === "definition_match") {
+    return <DefinitionMatchDocumentModuleEditor part={part} onChange={onChange} />;
+  }
 
+  const issues = documentModuleValidationIssues(part);
   const patchDocument = (patch: Record<string, unknown>) => {
     onChange({
       ...part,

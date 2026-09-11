@@ -1,13 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { PictureStoryDocumentModuleEditor } from "@/components/teacher/activity-builder/PictureStoryDocumentModuleEditor";
+import {
+  collectionPartFromReadingDocument,
+  documentModuleValidationIssues,
+} from "@/lib/homework-collections/document-module";
+import { asPictureStoryDraft } from "@/lib/picture-story/draft";
 import {
   createSamplePictureStoryDocument,
   pictureStoryStubPack,
   validatePictureStoryDocument,
   type PictureStoryDocument,
 } from "@/lib/picture-story";
+import type { HomeworkCollectionDocumentModulePart } from "@/lib/homework-collections";
+
+const WORKSPACE_PART_ID = "activity-bank-picture-story";
+
+function documentFromPart(
+  part: HomeworkCollectionDocumentModulePart,
+): PictureStoryDocument {
+  return {
+    ...asPictureStoryDraft(part.document),
+    title: part.title,
+    instructions: part.instructions,
+  };
+}
 
 export function PictureStoryWorkspace() {
   const [document, setDocument] = useState<PictureStoryDocument>(() =>
@@ -16,6 +35,17 @@ export function PictureStoryWorkspace() {
   const [activityId, setActivityId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+
+  const part = useMemo(
+    () =>
+      collectionPartFromReadingDocument(
+        "picture_story",
+        document as unknown as Record<string, unknown>,
+        WORKSPACE_PART_ID,
+      ),
+    [document],
+  );
+  const issues = documentModuleValidationIssues(part);
 
   const saveToBank = async () => {
     setBusy(true);
@@ -70,13 +100,12 @@ export function PictureStoryWorkspace() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
       <header>
         <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
-          Homework module · Reading
+          Admin · Activity Bank
         </p>
         <h1 className="mt-1 text-2xl font-bold text-stone-900">Picture story</h1>
         <p className="mt-1 text-sm text-stone-600">
-          Author picture frames plus comprehension questions, save to Activity Bank, then
-          assign as homework. Students play a dedicated shell (not Lesson Player). Start
-          from the sample.
+          Author picture frames and questions, then save to Activity Bank. Teachers assign
+          the same format from Graded Track Builder. This page stays admin-only.
         </p>
       </header>
 
@@ -87,74 +116,19 @@ export function PictureStoryWorkspace() {
       ) : null}
 
       <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-stone-900">Starter</h2>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            setDocument(createSamplePictureStoryDocument());
-            setActivityId(null);
-            setBanner("Loaded Mia's Little Seed sample.");
+        <PictureStoryDocumentModuleEditor
+          part={part}
+          showIdentityFields
+          onChange={(nextPart) => {
+            const next = documentFromPart(nextPart);
+            if (next.id !== document.id) setActivityId(null);
+            setDocument(next);
           }}
-          className="mt-3 rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-800"
-        >
-          Load sample
-        </button>
-      </section>
-
-      <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-stone-900">Activity</h2>
-        <label className="mt-3 block text-xs text-stone-600">
-          Title
-          <input
-            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
-            value={document.title}
-            onChange={(event) =>
-              setDocument((current) => ({ ...current, title: event.target.value }))
-            }
-          />
-        </label>
-        <label className="mt-3 block text-xs text-stone-600">
-          Instructions
-          <textarea
-            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
-            rows={2}
-            value={document.instructions}
-            onChange={(event) =>
-              setDocument((current) => ({
-                ...current,
-                instructions: event.target.value,
-              }))
-            }
-          />
-        </label>
-        <p className="mt-3 text-xs text-stone-500">
-          {document.frames.length} frame{document.frames.length === 1 ? "" : "s"} ·{" "}
-          {document.questions.length} question
-          {document.questions.length === 1 ? "" : "s"}
-          {document.allowStoryReviewDuringQuestions
-            ? " · story review during questions"
-            : ""}
-        </p>
-        <ul className="mt-2 space-y-2 text-xs text-stone-700">
-          {document.frames.map((frame, index) => (
-            <li key={frame.id}>
-              <span className="font-semibold">Frame {index + 1}</span> {frame.imageAlt}
-            </li>
-          ))}
-        </ul>
-        <ul className="mt-3 space-y-2 text-xs text-stone-700">
-          {document.questions.map((question, index) => (
-            <li key={question.id}>
-              <span className="font-semibold">Q{index + 1}</span> ({question.type}){" "}
-              {question.prompt}
-            </li>
-          ))}
-        </ul>
+        />
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || issues.length > 0}
             onClick={() => void saveToBank()}
             className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
           >

@@ -7,58 +7,12 @@ import { listHomeworkCollectionAttemptsForTeacher } from "@/lib/data/homework-co
 import { listHomeworkCollectionSpeakingRecordingsForTeacher } from "@/lib/data/homework-collection-speaking-recordings";
 import { getTeacherClass } from "@/lib/data/teacher-classes";
 import type { HomeworkCollectionPart } from "@/lib/homework-collections";
+import {
+  homeworkCollectionDisplayAnswer,
+  homeworkCollectionItemLabel,
+} from "@/lib/homework-collections/review-display";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
-import { lessonPlayerPackItemIds } from "@/lib/homework-collections/lesson-player-pack";
-import { documentModuleItemIds } from "@/lib/homework-collections/document-module";
 import { CreativePresentationViewer } from "@/components/homework/CreativePresentationViewer";
-
-function itemLabel(part: HomeworkCollectionPart, itemId: string): string {
-  if (part.kind === "multiple_choice") return part.questions.find((item) => item.id === itemId)?.prompt ?? itemId;
-  if (part.kind === "line_match") return part.pairs.find((item) => item.id === itemId)?.left ?? itemId;
-  if (part.kind === "free_response") return part.prompts.find((item) => item.id === itemId)?.prompt ?? itemId;
-  if (part.kind === "speaking_prompt") return part.prompt;
-  if (part.kind === "listening_item_match") {
-    return part.activity.prompts.find((item) => item.id === itemId)?.label ?? itemId;
-  }
-  if (part.kind === "lesson_player_pack") {
-    const index = lessonPlayerPackItemIds(part).indexOf(itemId);
-    return index >= 0 ? `${part.studioFormat} item ${index + 1}` : itemId;
-  }
-  if (part.kind === "document_module") {
-    const index = documentModuleItemIds(part).indexOf(itemId);
-    return index >= 0
-      ? `${part.moduleFormat.replace(/_/g, " ")} ${index + 1}`
-      : itemId;
-  }
-  if (part.kind === "letter_mixup" || part.kind === "listen_and_choose" || part.kind === "sentence_scramble") {
-    return part.items.find((item) => item.id === itemId)?.prompt ?? itemId;
-  }
-  return itemId;
-}
-
-function displayAnswer(part: HomeworkCollectionPart, answer: string): string {
-  if (part.kind === "multiple_choice") {
-    for (const question of part.questions) {
-      const option = question.options.find((item) => item.id === answer);
-      if (option) return option.text;
-    }
-  }
-  if (part.kind === "line_match") {
-    const pair = part.pairs.find((item) => item.id === answer);
-    if (pair) return pair.right || "Picture match";
-  }
-  if (part.kind === "listen_and_choose") {
-    for (const item of part.items) {
-      const choice = item.choices.find((entry) => entry.id === answer);
-      if (choice) return choice.label || "Picture choice";
-    }
-  }
-  if (part.kind === "listening_item_match") {
-    const choice = part.activity.choices.find((entry) => entry.id === answer);
-    if (choice) return choice.label || "Choice";
-  }
-  return answer;
-}
 
 function speakingRecordingForAnswer(
   recordings: readonly AssessmentSpeakingRecording[],
@@ -177,7 +131,7 @@ export default async function HomeworkCollectionResultsPage({
                               : null;
                             return (
                             <div key={itemId}>
-                              <dt className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{itemLabel(part, itemId)}</dt>
+                              <dt className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{homeworkCollectionItemLabel(part, itemId)}</dt>
                               <dd className="whitespace-pre-wrap text-sm font-medium text-neutral-800">
                                 {recording?.url ? (
                                   <audio
@@ -187,7 +141,7 @@ export default async function HomeworkCollectionResultsPage({
                                     className="mt-1 w-full"
                                   />
                                 ) : (
-                                  displayAnswer(part, answer)
+                                  homeworkCollectionDisplayAnswer(part, itemId, answer)
                                 )}
                               </dd>
                             </div>

@@ -826,7 +826,9 @@ export function parseHomeworkCollectionPart(raw: unknown): HomeworkCollectionPar
       moduleFormat,
       document: raw.document as Record<string, unknown>,
     };
-    return documentModuleValidationIssues(part).length === 0 ? part : null;
+    // Keep incomplete reading drafts so Track Builder can save them. Assign
+    // still requires documentModuleValidationIssues to be empty.
+    return part;
   }
 
   if (kind === "speaking_prompt") {

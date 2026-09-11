@@ -6,3 +6,7 @@ export * from "@/lib/homework-collections/lesson-player-responses";
 export * from "@/lib/homework-collections/lesson-player-pack";
 export * from "@/lib/homework-collections/document-module";
 export * from "@/lib/homework-collections/creative-presentation";
+export {
+  homeworkCollectionDisplayAnswer,
+  homeworkCollectionItemLabel,
+} from "@/lib/homework-collections/review-display";

@@ -78,6 +78,23 @@ describe("resolvePostLoginPath", () => {
     ).toBe("/primary?nav=games");
   });
 
+  it("blocks student login doors used as next paths", () => {
+    expect(
+      resolvePostLoginPath({
+        role: "student",
+        learningBand: "a1",
+        next: "/primary/login",
+      }),
+    ).toBe("/primary");
+    expect(
+      resolvePostLoginPath({
+        role: "student",
+        learningBand: "a2",
+        next: "/secondary/login",
+      }),
+    ).toBe("/secondary");
+  });
+
   it("allows deep links into the primary dashboard", () => {
     expect(
       resolvePostLoginPath({

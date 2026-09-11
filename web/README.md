@@ -13,6 +13,7 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
    - `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` — **same values** (required for teacher sign-in in the browser)
    - `GEMINI_API_KEY` — Google AI Studio key (**never** prefix with `NEXT_PUBLIC_`)
    - Optional: `GEMINI_MODEL` — defaults to `gemini-2.5-flash` (see `lib/ai/gemini.ts`)
+   - Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` — parent lesson-pack checkout at `/parent/checkout`. Admin prices packs at `/teacher/admin/packages`. Apply `supabase/migrations/143_parent_lesson_packs.sql`. Local webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`. Never prefix the secret key with `NEXT_PUBLIC_`.
 
    See **[SECURITY.md](./SECURITY.md)** for why the Supabase “public” key is not a secret and what actually protects your data (RLS, no service role in the client).
 

@@ -6,6 +6,8 @@ import type {
 import {
   DEFAULT_DEFINITION_MATCH_INSTRUCTIONS,
   DEFINITION_MATCH_KIND,
+  DEFINITION_MATCH_MAX_PAIRS,
+  DEFINITION_MATCH_MIN_PAIRS,
 } from "@/lib/definition-match/types";
 
 function assertRecord(value: unknown, label: string): Record<string, unknown> {
@@ -56,11 +58,11 @@ export function validateDefinitionMatchDocument(
       `definition match document.kind must be "${DEFINITION_MATCH_KIND}".`,
     );
   }
-  if (!Array.isArray(doc.pairs) || doc.pairs.length < 4) {
-    throw new Error("pairs needs at least 4 word-definition pairs.");
+  if (!Array.isArray(doc.pairs) || doc.pairs.length < DEFINITION_MATCH_MIN_PAIRS) {
+    throw new Error(`pairs needs at least ${DEFINITION_MATCH_MIN_PAIRS} word-definition pairs.`);
   }
-  if (doc.pairs.length > 10) {
-    throw new Error("pairs supports at most 10 pairs.");
+  if (doc.pairs.length > DEFINITION_MATCH_MAX_PAIRS) {
+    throw new Error(`pairs supports at most ${DEFINITION_MATCH_MAX_PAIRS} pairs.`);
   }
 
   const pairs = doc.pairs.map((pair, index) => parsePair(pair, index));

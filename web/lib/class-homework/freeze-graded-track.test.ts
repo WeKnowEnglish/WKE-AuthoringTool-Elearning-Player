@@ -613,4 +613,85 @@ describe("freezeGradedTrackHomeworkPayload", () => {
       freezeGradedTrackHomeworkPayload({ document: draft }),
     ).toThrow(/option 1 needs text/i);
   });
+
+  it("blocks assignment of a blank picture story", () => {
+    const draft = seedBlankGradedCollection({
+      trackId: "track-blank-picture-story",
+      title: "Look and answer",
+      level: "primary",
+    });
+    const pictureStory = seedGradedPartFromKind({
+      kind: "picture_story",
+      order: 1,
+      level: "primary",
+    });
+    draft.parts = [pictureStory!];
+
+    expect(() => freezeGradedTrackHomeworkPayload({ document: draft })).toThrow(
+      /Fix “Picture story”/i,
+    );
+  });
+
+  it("freezes a one-frame authored picture story", () => {
+    const draft = seedBlankGradedCollection({
+      trackId: "track-one-frame-picture-story",
+      title: "Cat on the mat",
+      level: "primary",
+    });
+    const pictureStory = seedGradedPartFromKind({
+      kind: "picture_story",
+      order: 1,
+      level: "primary",
+    });
+    if (pictureStory?.source.type !== "homework_part") {
+      throw new Error("Expected picture story activity");
+    }
+    const part = pictureStory.source.part;
+    if (part.kind !== "document_module") throw new Error("Expected document module");
+    part.title = "The cat";
+    part.document = {
+      version: 1,
+      kind: "picture-story",
+      id: "one-frame",
+      title: "The cat",
+      instructions: "Look at the picture. Then answer.",
+      allowStoryReviewDuringQuestions: true,
+      frames: [
+        {
+          id: "f1",
+          imageUrl: "https://example.com/cat.jpg",
+          imageAlt: "A cat sits on a mat.",
+          text: "The cat sits on the mat.",
+        },
+      ],
+      questions: [
+        {
+          id: "q1",
+          type: "multiple_choice",
+          prompt: "Where is the cat?",
+          acceptedAnswers: [],
+          options: [
+            { id: "a", text: "On the mat" },
+            { id: "b", text: "In a tree" },
+          ],
+          correctOptionId: "a",
+          evidenceFrameId: "f1",
+        },
+      ],
+    };
+    draft.parts = [pictureStory];
+
+    const freeze = parseGradedTrackFreezeDocument(
+      freezeGradedTrackHomeworkPayload({ document: draft }).document,
+    );
+    expect(freeze?.collectionDocument?.parts).toHaveLength(1);
+    const frozenPart = freeze?.collectionDocument?.parts[0];
+    expect(frozenPart?.kind).toBe("document_module");
+    if (frozenPart?.kind !== "document_module") return;
+    expect(frozenPart.moduleFormat).toBe("picture_story");
+    expect(frozenPart.document).toMatchObject({
+      frames: [{ id: "f1" }],
+      questions: [{ id: "q1" }],
+    });
+  });
 });

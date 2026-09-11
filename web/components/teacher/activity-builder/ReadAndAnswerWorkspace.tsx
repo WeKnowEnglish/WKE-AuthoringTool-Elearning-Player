@@ -1,13 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { ReadAndAnswerDocumentModuleEditor } from "@/components/teacher/activity-builder/ReadAndAnswerDocumentModuleEditor";
+import {
+  collectionPartFromReadingDocument,
+  documentModuleValidationIssues,
+} from "@/lib/homework-collections/document-module";
+import { asReadAndAnswerDraft } from "@/lib/read-and-answer/draft";
 import {
   createSampleReadAndAnswerDocument,
   readAndAnswerStubPack,
   validateReadAndAnswerDocument,
   type ReadAndAnswerDocument,
 } from "@/lib/read-and-answer";
+import type { HomeworkCollectionDocumentModulePart } from "@/lib/homework-collections";
+
+const WORKSPACE_PART_ID = "activity-bank-read-and-answer";
+
+function documentFromPart(
+  part: HomeworkCollectionDocumentModulePart,
+): ReadAndAnswerDocument {
+  return {
+    ...asReadAndAnswerDraft(part.document),
+    title: part.title,
+    instructions: part.instructions,
+  };
+}
 
 export function ReadAndAnswerWorkspace() {
   const [document, setDocument] = useState<ReadAndAnswerDocument>(() =>
@@ -16,6 +35,17 @@ export function ReadAndAnswerWorkspace() {
   const [activityId, setActivityId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+
+  const part = useMemo(
+    () =>
+      collectionPartFromReadingDocument(
+        "read_and_answer",
+        document as unknown as Record<string, unknown>,
+        WORKSPACE_PART_ID,
+      ),
+    [document],
+  );
+  const issues = documentModuleValidationIssues(part);
 
   const saveToBank = async () => {
     setBusy(true);
@@ -69,13 +99,12 @@ export function ReadAndAnswerWorkspace() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
       <header>
         <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
-          Homework module · Reading
+          Admin · Activity Bank
         </p>
         <h1 className="mt-1 text-2xl font-bold text-stone-900">Read and answer</h1>
         <p className="mt-1 text-sm text-stone-600">
-          Author a short passage with multiple-choice questions, save to Activity Bank,
-          then assign as homework. Students play a dedicated shell (not Lesson Player).
-          Start from the sample.
+          Author a short passage and questions, then save to Activity Bank. Teachers assign
+          the same format from Graded Track Builder. This page stays admin-only.
         </p>
       </header>
 
@@ -86,70 +115,19 @@ export function ReadAndAnswerWorkspace() {
       ) : null}
 
       <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-stone-900">Starter</h2>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            setDocument(createSampleReadAndAnswerDocument());
-            setActivityId(null);
-            setBanner("Loaded busy-Saturday sample.");
+        <ReadAndAnswerDocumentModuleEditor
+          part={part}
+          showIdentityFields
+          onChange={(nextPart) => {
+            const next = documentFromPart(nextPart);
+            if (next.id !== document.id) setActivityId(null);
+            setDocument(next);
           }}
-          className="mt-3 rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-800"
-        >
-          Load sample
-        </button>
-      </section>
-
-      <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-stone-900">Activity</h2>
-        <label className="mt-3 block text-xs text-stone-600">
-          Title
-          <input
-            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
-            value={document.title}
-            onChange={(event) =>
-              setDocument((current) => ({ ...current, title: event.target.value }))
-            }
-          />
-        </label>
-        <label className="mt-3 block text-xs text-stone-600">
-          Instructions
-          <textarea
-            className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
-            rows={2}
-            value={document.instructions}
-            onChange={(event) =>
-              setDocument((current) => ({
-                ...current,
-                instructions: event.target.value,
-              }))
-            }
-          />
-        </label>
-        {document.passage.title ? (
-          <p className="mt-3 text-xs text-stone-500">Passage: {document.passage.title}</p>
-        ) : null}
-        <p className="mt-2 line-clamp-3 text-xs text-stone-600">{document.passage.text}</p>
-        <p className="mt-3 text-xs text-stone-500">
-          {document.questions.length} question
-          {document.questions.length === 1 ? "" : "s"}
-          {document.shuffleOptions ? " · options shuffled in player" : ""}
-        </p>
-        <ul className="mt-2 space-y-2 text-xs text-stone-700">
-          {document.questions.map((question, index) => (
-            <li key={question.id}>
-              <span className="font-semibold">#{index + 1}</span> {question.prompt}
-              <span className="mt-0.5 block text-stone-500">
-                Choices: {question.options.map((option) => option.text).join(" · ")}
-              </span>
-            </li>
-          ))}
-        </ul>
+        />
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || issues.length > 0}
             onClick={() => void saveToBank()}
             className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
           >

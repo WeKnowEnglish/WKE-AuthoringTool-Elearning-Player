@@ -16,12 +16,21 @@ export function normalizePictureStoryAnswer(value: string): string {
     .toLocaleLowerCase();
 }
 
+export function isPictureStoryQuestionAutoGraded(
+  question: PictureStoryQuestion,
+): boolean {
+  return question.type === "multiple_choice" || question.type === "sentence_completion";
+}
+
 export function isPictureStoryAnswerCorrect(
   value: string,
   question: PictureStoryQuestion,
 ): boolean {
   if (question.type === "multiple_choice") {
     return value === question.correctOptionId;
+  }
+  if (question.type === "free_response") {
+    return Boolean(value.trim());
   }
   if (question.type !== "sentence_completion") return false;
   return question.acceptedAnswers.some(

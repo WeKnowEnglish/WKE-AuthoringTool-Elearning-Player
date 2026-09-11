@@ -28,3 +28,6 @@ export type DefinitionMatchPlayable = {
 export const DEFINITION_MATCH_KIND = "definition-match" as const;
 export const DEFAULT_DEFINITION_MATCH_INSTRUCTIONS =
   "Match each word to its meaning.";
+export const DEFAULT_DEFINITION_MATCH_TITLE = "Definition match";
+export const DEFINITION_MATCH_MIN_PAIRS = 4;
+export const DEFINITION_MATCH_MAX_PAIRS = 10;

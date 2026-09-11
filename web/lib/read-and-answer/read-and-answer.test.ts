@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  asReadAndAnswerDraft,
+  cloneReadAndAnswerDocumentForAuthoring,
+  createBlankReadAndAnswerDocument,
   createSampleReadAndAnswerDocument,
   isReadAndAnswerMastered,
   readAndAnswerStubPack,
@@ -36,6 +39,14 @@ describe("read and answer module", () => {
     ).toBe(false);
   });
 
+  it("does not treat a blank starter as assignable", () => {
+    const blank = createBlankReadAndAnswerDocument();
+    expect(blank.questions).toHaveLength(3);
+    expect(blank.title).not.toBe("A Busy Saturday");
+    expect(blank.passage.text).toBe("");
+    expect(() => validateReadAndAnswerDocument(blank)).toThrow();
+  });
+
   it("rejects too few questions", () => {
     expect(() =>
       validateReadAndAnswerDocument({
@@ -70,5 +81,19 @@ describe("read and answer module", () => {
         ],
       }),
     ).toThrow(/at least 3 questions/);
+  });
+
+  it("keeps incomplete drafts editable and remaps sample ids on clone", () => {
+    const fromEmpty = asReadAndAnswerDraft({});
+    expect(fromEmpty.questions).toHaveLength(3);
+    expect(fromEmpty.passage.text).toBe("");
+    expect(asReadAndAnswerDraft({}).questions[0]!.id).toBe(fromEmpty.questions[0]!.id);
+
+    const sample = createSampleReadAndAnswerDocument();
+    const clone = cloneReadAndAnswerDocumentForAuthoring(sample);
+    expect(clone.id).not.toBe(sample.id);
+    expect(clone.questions[0]!.id).not.toBe(sample.questions[0]!.id);
+    expect(clone.questions[0]!.options[0]!.id).not.toBe(sample.questions[0]!.options[0]!.id);
+    expect(validateReadAndAnswerDocument(clone).passage.text).toBe(sample.passage.text);
   });
 });

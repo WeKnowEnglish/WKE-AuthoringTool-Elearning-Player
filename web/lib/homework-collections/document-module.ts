@@ -21,17 +21,17 @@ import {
 import {
   scoreDefinitionMatchAnswers,
   validateDefinitionMatchDocument,
-  createSampleDefinitionMatchDocument,
+  createBlankDefinitionMatchDocument,
 } from "@/lib/definition-match";
 import {
   scorePictureStoryAnswers,
   validatePictureStoryDocument,
-  createSamplePictureStoryDocument,
+  createBlankPictureStoryDocument,
 } from "@/lib/picture-story";
 import {
   scoreReadAndAnswerAnswers,
   validateReadAndAnswerDocument,
-  createSampleReadAndAnswerDocument,
+  createBlankReadAndAnswerDocument,
 } from "@/lib/read-and-answer";
 import {
   HOMEWORK_COLLECTION_VERSION,
@@ -75,10 +75,7 @@ export function blankDocumentForModuleFormat(
 ): Record<string, unknown> {
   switch (format) {
     case "read_and_answer":
-      return cloneWithFreshIds(createSampleReadAndAnswerDocument()) as unknown as Record<
-        string,
-        unknown
-      >;
+      return createBlankReadAndAnswerDocument() as unknown as Record<string, unknown>;
     case "cloze_choice":
       return cloneWithFreshIds(createSampleClozeChoiceDocument()) as unknown as Record<
         string,
@@ -90,20 +87,32 @@ export function blankDocumentForModuleFormat(
         unknown
       >;
     case "definition_match":
-      return cloneWithFreshIds(createSampleDefinitionMatchDocument()) as unknown as Record<
-        string,
-        unknown
-      >;
+      return createBlankDefinitionMatchDocument() as unknown as Record<string, unknown>;
     case "picture_story":
-      return cloneWithFreshIds(createSamplePictureStoryDocument()) as unknown as Record<
-        string,
-        unknown
-      >;
+      return createBlankPictureStoryDocument() as unknown as Record<string, unknown>;
     default: {
       const _exhaustive: never = format;
       throw new Error(`Unsupported reading module format: ${_exhaustive}`);
     }
   }
+}
+
+export function collectionPartFromReadingDocument(
+  format: CollectionReadingModuleFormat,
+  document: Record<string, unknown>,
+  id: string,
+): HomeworkCollectionDocumentModulePart {
+  return {
+    schemaVersion: HOMEWORK_COLLECTION_VERSION,
+    id,
+    kind: "document_module",
+    title: typeof document.title === "string" ? document.title : "",
+    instructions:
+      typeof document.instructions === "string" ? document.instructions : "",
+    required: true,
+    moduleFormat: format,
+    document,
+  };
 }
 
 export function createDocumentModuleCollectionPart(
@@ -116,15 +125,10 @@ export function createDocumentModuleCollectionPart(
       ? document.title.trim()
       : format.replace(/_/g, " ");
   return {
-    schemaVersion: HOMEWORK_COLLECTION_VERSION,
-    id,
-    kind: "document_module",
+    ...collectionPartFromReadingDocument(format, document, id),
     title,
     instructions:
       typeof document.instructions === "string" ? document.instructions.trim() : "",
-    required: true,
-    moduleFormat: format,
-    document,
   };
 }
 

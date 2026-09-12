@@ -27,14 +27,18 @@ Failed uploads stay queued and retry when the browser returns online, becomes vi
 
 ## Retention
 
-Raw `platform_usage_events` rows are intended for a maximum of 60 days. A scheduled deletion job must be configured in Supabase before production launch:
+Raw `platform_usage_events` rows are retained for a maximum of 60 days. Migration 147 provides the
+indexed, service-only `prune_platform_usage_events` function. `vercel.json` calls the protected
+`/api/cron/diagnostics-retention` route daily; the hosting environment must provide `CRON_SECRET`.
+The verified maintenance operation is equivalent to:
 
 ```sql
 delete from public.platform_usage_events
 where received_at < now() - interval '60 days';
 ```
 
-Only anonymous aggregates should be retained longer.
+Only anonymous aggregates should be retained longer. The WKE-003 release gate inserts an old and a
+current synthetic probe, verifies the boundary, and removes the remaining probe.
 
 ## Deployment
 
@@ -51,8 +55,12 @@ Apply migration `088_platform_usage_events.sql` before expecting central events 
 - Classroom requested and opened
 - Existing lesson start, screen advance, and lesson complete events
 - Browser offline/online transitions and privacy-safe runtime error codes
+- Writing-homework assignment created, homework opened, save settled, submit settled, duplicate
+  prevented, and teacher result opened, correlated by homework ID
 
-The next instrumentation pass should add Secondary activity lifecycle events, homework starts/completions, explicit activity-load success/failure boundaries, and global client error capture.
+Student homework diagnostics discard authenticated identity and never include the educational
+response. The next instrumentation pass should add Secondary non-homework activity lifecycle events,
+explicit activity-load success/failure boundaries, and global client error capture.
 
 ## Application-wide interaction coverage plan
 

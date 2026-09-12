@@ -1,9 +1,9 @@
 # GOAL WKE-003 — Release-Gate the Complete Homework Journey
 
-Status: Proposed  
+Status: Completed (advisory gate)
 Priority: P1  
 Cadence: Ongoing  
-Last updated: 2026-09-10
+Last updated: 2026-09-13
 
 ## Primary Stakeholder
 
@@ -177,20 +177,36 @@ External services or decisions:
 
 Completed:
 
-- Goal definition and initial repository evidence collected.
+- Selected Playwright plus Vitest after a writing-journey testability spike.
+- Added disposable, self-cleaning teacher/class/student/admin fixtures.
+- Added the complete desktop and narrow-mobile teacher-to-student writing journey.
+- Proved anonymous, wrong-role, untargeted, and unenrolled denial at browser and write layers.
+- Proved immutable retry plus exactly one submission, completion, and eligible reward.
+- Added correlated homework lifecycle diagnostics and administrator timeline search by homework ID.
+- Added student-identity and educational-response privacy assertions.
+- Added the service-only 60-day raw-event cleanup function, daily protected route, and schedule.
+- Added one advisory pre-release command with safe preflight, named failure stages, and nonzero exit.
+- Recorded the accessibility review and operating instructions.
 
 Remaining:
 
-- Tooling decision, fixtures, journey automation, diagnostics expansion, release integration, and validation.
+- Human decision: promote the gate from advisory to mandatory after team adoption.
+- Hosting setup: ensure `CRON_SECRET` is configured for the deployed daily retention schedule.
+- Manual spot check: screen-reader speech output and physical-device touch ergonomics before mandatory rollout.
 
 Evidence:
 
-- Repository inventory dated 2026-09-10.
+- `npm run test:release:homework` (three consecutive runs per desktop/mobile viewport).
+- `docs/testing/homework-release-gate.md` for the testability decision, safeguards, and review record.
+- Migration `147_platform_diagnostics_retention.sql` applied to the confirmed linked project on 2026-09-13.
+- Retention probe passed: 61-day row deleted and current row retained.
+- Failure propagation dry run exits nonzero and identifies the intentionally failed stage.
 
 Known limitations:
 
-- No checked-in CI workflow or browser end-to-end runner was found during the initial inventory.
+- The release command is intentionally advisory and local/deployment-provider neutral; no repository CI provider has been selected.
+- The single shared development server can be slower while unrelated features are recompiling; use `WKE_003_BASE_URL` to reuse it safely.
 
 Recommended next task:
 
-- Run a one-session testability spike for the writing-prompt journey and record whether existing Vitest/smoke tooling can prove cookie/session behavior or a minimal browser runner is required.
+- Review the first advisory release records and decide when this gate should become mandatory.

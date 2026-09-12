@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import path from "node:path";
+import { resolveNextOutputMode } from "./lib/build/next-output-mode";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
 
@@ -43,7 +44,10 @@ function supabaseStoragePattern():
 }
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Next 16.3's Vercel adapter does not emit next-server.js.nft.json, while
+  // standalone finalization still reads it. Vercel builds its own deployment
+  // artifacts, so keep standalone output only for Docker/self-hosted builds.
+  output: resolveNextOutputMode({ vercel: process.env.VERCEL }),
   serverExternalPackages: ["stripe"],
   outputFileTracingExcludes: {
     "/api/dev/apply-letter-fruit-picks": devSourceWriterTraceExcludes,

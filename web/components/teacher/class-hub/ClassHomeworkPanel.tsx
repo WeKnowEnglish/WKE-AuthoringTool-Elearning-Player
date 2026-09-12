@@ -35,6 +35,7 @@ import {
   PRIMARY_A2_ASSESSMENT_ID,
   PRIMARY_A2_ASSESSMENT_PILOT,
 } from "@/lib/assessment";
+import { recordHomeworkJourneyEvent } from "@/lib/homework-journey/diagnostics";
 
 const ACTIVITY_LABEL = sourceLabelForAssignableKind("pack_mc_quiz");
 const FLASHCARDS_LABEL = sourceLabelForAssignableKind("pack_flashcards");
@@ -594,6 +595,7 @@ function HomeworkEditor({
 
   const save = (nextStatus = status) => {
     setError(null);
+    const startedAt = performance.now();
     const source = buildSource();
     const payload = buildPayload();
     if (!payload && !source) {
@@ -614,6 +616,17 @@ function HomeworkEditor({
       if (!result.ok) {
         setError(result.error);
         return;
+      }
+      if (nextStatus === "assigned" && homework.status !== "assigned") {
+        recordHomeworkJourneyEvent({
+          surface: "teacher",
+          name: "assignment_created",
+          homeworkId: result.homework.id,
+          classId,
+          status: "assigned",
+          durationMs: Math.max(0, performance.now() - startedAt),
+          synthetic: title.trim().startsWith("WKE-003"),
+        });
       }
       onSaved(result.homework);
     });

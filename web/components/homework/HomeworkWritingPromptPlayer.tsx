@@ -19,6 +19,7 @@ import {
   readHomeworkWritingDraft,
   writeHomeworkWritingDraft,
 } from "@/lib/homework-writing/draft-storage";
+import { recordHomeworkJourneyEvent } from "@/lib/homework-journey/diagnostics";
 
 type Props = {
   homeworkId: string;
@@ -97,11 +98,20 @@ export function HomeworkWritingPromptPlayer({
   const locked = status === "submitted";
 
   async function persist(submit: boolean) {
+    const startedAt = performance.now();
     setSaving(true);
     setError(null);
     setAuthFailure(null);
     if (submit) recordHomeworkFinalizationStarted(homeworkId, "writing_prompt");
     const result = await saveHomeworkWritingSubmission({ homeworkId, text, submit });
+    recordHomeworkJourneyEvent({
+      surface: "student",
+      name: submit ? "submit_settled" : "save_settled",
+      homeworkId,
+      status: result.ok ? "succeeded" : "failed",
+      durationMs: Math.max(0, performance.now() - startedAt),
+      synthetic: prompt.startsWith("WKE-003"),
+    });
     if (submit) recordHomeworkFinalizationOutcome(homeworkId, "writing_prompt", result);
     setSaving(false);
     if (!result.ok) {
@@ -123,7 +133,11 @@ export function HomeworkWritingPromptPlayer({
 
   if (status === "submitted") {
     return (
-      <div className="rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-8 text-center shadow-sm">
+      <div
+        role="status"
+        aria-live="polite"
+        className="rounded-[1.75rem] border border-[var(--pl-border)] bg-[var(--pl-card)] px-4 py-8 text-center shadow-sm"
+      >
         <h2 className="text-2xl font-extrabold text-[var(--pl-ink)]">Submitted!</h2>
         <p className="mt-2 text-sm font-semibold text-[var(--pl-muted)]">
           Your teacher can read your writing in Class Hub.

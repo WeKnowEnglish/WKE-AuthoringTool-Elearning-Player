@@ -52,7 +52,8 @@ export function diagnosticIdentityForStorage(
   if (
     event.surface === "student" &&
     ((event.phase === "homework_auth" && event.name === "homework_auth_failed") ||
-      event.phase === "homework_finalization")
+      event.phase === "homework_finalization" ||
+      (event.surface === "student" && event.phase === "homework_journey"))
   ) {
     return {
       userId: null,

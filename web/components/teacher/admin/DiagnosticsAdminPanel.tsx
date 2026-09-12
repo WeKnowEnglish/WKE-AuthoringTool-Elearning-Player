@@ -71,7 +71,7 @@ export function DiagnosticsAdminPanel({
       if (surface !== "all" && event.surface !== surface) return false;
       if (kind !== "all" && event.kind !== kind) return false;
       if (!needle) return true;
-      return [event.userLabel, event.name, event.phase, event.route, event.activityId, event.errorCode]
+      return [event.userLabel, event.name, event.phase, event.route, event.activityId, event.homeworkId, event.errorCode]
         .some((value) => value?.toLowerCase().includes(needle));
     });
   }, [centralEvents, kind, query, surface]);
@@ -116,7 +116,7 @@ export function DiagnosticsAdminPanel({
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Student, event, activity, route, error…"
+          placeholder="Student, event, homework, route, error…"
           className="min-w-[240px] flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
         />
         {SURFACES.map((item) => (
@@ -155,6 +155,7 @@ export function DiagnosticsAdminPanel({
                 <p>session: {event.sessionId}</p>
                 {event.route ? <p>route: {event.route}</p> : null}
                 {event.activityId ? <p>activity: {event.activityId}</p> : null}
+                {event.homeworkId ? <p>homework: {event.homeworkId}</p> : null}
                 {event.status ? <p>status: {event.status}</p> : null}
                 {event.errorCode ? <p className="text-red-700">error: {event.errorCode}</p> : null}
                 <pre className="col-span-full mt-1 whitespace-pre-wrap break-words">{JSON.stringify(event.metadata, null, 2)}</pre>

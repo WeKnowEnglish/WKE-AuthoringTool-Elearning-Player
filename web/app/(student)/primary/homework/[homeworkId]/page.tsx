@@ -33,6 +33,7 @@ import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolv
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessmentSpeakingReview } from "@/lib/data/assessment-attempts";
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
+import { HomeworkJourneyOpenedBeacon } from "@/lib/homework-journey/diagnostics";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { getMyHomeworkCollectionSpeakingRecordings } from "@/lib/data/homework-collection-speaking-recordings";
 import { getMyHomeworkTemplateSubmission } from "@/lib/data/homework-template-submissions";
@@ -151,6 +152,13 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
       frame={homeworkFrame(payload.type)}
       showContext={payload.type !== "homework_template"}
     >
+      <HomeworkJourneyOpenedBeacon
+        surface="student"
+        name="homework_opened"
+        homeworkId={homework.id}
+        classId={homework.classId}
+        synthetic={homework.title.startsWith("WKE-003")}
+      />
       <HomeworkStartGate
         typeLabel={typeLabel}
         alreadyCompleted={Boolean(homework.completedAt)}

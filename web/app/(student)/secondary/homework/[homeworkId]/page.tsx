@@ -23,6 +23,7 @@ import {
   getMyHomeworkTemplateSpeakingRecordings,
   getMyHomeworkTemplateSubmission,
 } from "@/lib/data/homework-template-submissions";
+import { HomeworkJourneyOpenedBeacon } from "@/lib/homework-journey/diagnostics";
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { getMyHomeworkCollectionSpeakingRecordings } from "@/lib/data/homework-collection-speaking-recordings";
@@ -118,6 +119,13 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
       homeHref="/secondary"
       frame={homeworkFrame(payload.type)}
     >
+      <HomeworkJourneyOpenedBeacon
+        surface="student"
+        name="homework_opened"
+        homeworkId={homework.id}
+        classId={homework.classId}
+        synthetic={homework.title.startsWith("WKE-003")}
+      />
       <HomeworkStartGate
         typeLabel={typeLabel}
         alreadyCompleted={Boolean(homework.completedAt)}

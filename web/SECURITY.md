@@ -52,4 +52,11 @@ Teacher AI generation is limited per teacher user in-memory (see `lib/rate-limit
 
 Daily video routes use `lib/rate-limit` — **Upstash Redis** when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, otherwise in-memory per instance.
 
+Public child self-registration is disabled by default in production through
+`NEXT_PUBLIC_STUDENT_SELF_REGISTRATION_ENABLED`. Normal production accounts
+should be created through a teacher- or parent-managed relationship. If an
+approved pilot explicitly enables public registration, the server also requires
+Upstash and applies hashed client and username limits before using the service
+role to create an account.
+
 Virtual Classroom host/member cookies are HMAC-signed (`VIRTUAL_CLASSROOM_COOKIE_SECRET` or `LIVEBLOCKS_SECRET_KEY`).

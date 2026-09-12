@@ -6,6 +6,8 @@ import { saveAssessmentSpeakingRecording } from "@/lib/actions/assessment-speaki
 import { saveHomeworkCollectionSpeakingRecording } from "@/lib/actions/homework-collection-speaking";
 import { saveHomeworkTemplateSpeakingRecording } from "@/lib/actions/homework-template-speaking";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
+import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
+import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 
 type Props = {
   homeworkId?: string;
@@ -30,6 +32,8 @@ export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, max
   const [saved, setSaved] = useState(Boolean(initialRecording));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { authFailure, captureAuthFailure, clearAuthFailure } =
+    useStudentActionAuthFailure();
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -45,6 +49,7 @@ export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, max
 
   const start = async () => {
     setError("");
+    clearAuthFailure();
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setError("Recording is not supported in this browser.");
       return;
@@ -88,6 +93,7 @@ export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, max
     if (!blob) return;
     setSaving(true);
     setError("");
+    clearAuthFailure();
     if (!homeworkId) {
       const pilotRecording = { id: `pilot-${partId}-${Date.now()}`, partId, responseId, durationMs: elapsedMs, url: previewUrl };
       setSaved(true);
@@ -108,7 +114,17 @@ export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, max
         ? await saveHomeworkCollectionSpeakingRecording(formData)
         : await saveAssessmentSpeakingRecording(formData);
     setSaving(false);
-    if (!result.ok) { setError(result.error); return; }
+    if (!result.ok) {
+      const action =
+        submissionKind === "homework-template"
+          ? "save_template_speaking"
+          : submissionKind === "homework-collection"
+            ? "save_collection_speaking"
+            : "save_assessment_speaking";
+      if (captureAuthFailure(result, action)) return;
+      setError(result.error);
+      return;
+    }
     setSaved(true);
     setPreviewUrl(result.recording.url || previewUrl);
     onSaved(result.recording);
@@ -121,6 +137,16 @@ export function AssessmentSpeakingRecorder({ homeworkId, partId, responseId, max
       {recording ? <button type="button" onClick={stop} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-red-600 px-4 font-black text-white"><CircleStop className="h-5 w-5" />Stop</button> : <button type="button" onClick={() => void start()} disabled={saving} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#17375e] px-4 font-black text-white disabled:opacity-50">{previewUrl ? <RotateCcw className="h-5 w-5" /> : <Mic className="h-5 w-5" />}{previewUrl ? "Record again" : "Start recording"}</button>}
       {blob && !recording ? <button type="button" onClick={() => void save()} disabled={saving || saved} className="inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-[#17375e] bg-[#ffd34f] px-4 font-black text-[#17375e] disabled:opacity-50"><Save className="h-5 w-5" />{saving ? "Saving…" : saved ? "Saved" : homeworkId ? "Save answer" : "Keep pilot recording"}</button> : null}
     </div>
+    {authFailure && homeworkId ? (
+      <div className="mt-3">
+        <StudentActionFailureNotice
+          failure={authFailure.failure}
+          homeworkId={homeworkId}
+          action={authFailure.action}
+          onRetry={clearAuthFailure}
+        />
+      </div>
+    ) : null}
     {error ? <p role="alert" className="mt-3 rounded-xl bg-red-100 p-3 text-sm font-bold text-red-800">{error}</p> : null}
     {!homeworkId ? <p className="mt-3 text-xs font-bold text-violet-800">Pilot recordings stay only in this browser tab. Assigned homework uploads them privately for the teacher.</p> : null}
   </section>;

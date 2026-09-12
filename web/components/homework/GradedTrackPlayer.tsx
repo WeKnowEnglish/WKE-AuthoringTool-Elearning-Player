@@ -18,6 +18,8 @@ import {
 } from "@/lib/graded-tracks";
 import { acceptPrimaryRewardReceipt } from "@/lib/primary-player/client";
 import { CreativePresentationViewer } from "@/components/homework/CreativePresentationViewer";
+import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
+import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 
 type CollectionResponses = Record<string, { answers: Record<string, string> }>;
 
@@ -163,6 +165,8 @@ export function GradedTrackPlayer({
   >(() => [...initialSpeakingRecordings]);
   const [finished, setFinished] = useState(alreadyCompleted);
   const [notice, setNotice] = useState<string | null>(null);
+  const { authFailure, captureAuthFailure, clearAuthFailure } =
+    useStudentActionAuthFailure();
   const [pending, startTransition] = useTransition();
   const creativeParts =
     freeze.collectionDocument?.parts.filter(
@@ -203,10 +207,12 @@ export function GradedTrackPlayer({
       return;
     }
     setNotice(null);
+    clearAuthFailure();
     startTransition(async () => {
       if (hasCollectionSegments && homeworkId) {
         const result = await saveCollectionDraft(false);
         if (!result.ok) {
+          if (captureAuthFailure(result, "save_graded_track_draft")) return;
           setNotice(result.error);
           return;
         }
@@ -218,10 +224,14 @@ export function GradedTrackPlayer({
   const handleFinalSubmit = () => {
     if (authoringPreview) return;
     setNotice(null);
+    clearAuthFailure();
     startTransition(async () => {
       if (hasCollectionSegments && homeworkId) {
         const collectionResult = await saveCollectionDraft(true);
         if (!collectionResult.ok) {
+          if (captureAuthFailure(collectionResult, "submit_graded_track_collection")) {
+            return;
+          }
           setNotice(collectionResult.error);
           return;
         }
@@ -229,6 +239,7 @@ export function GradedTrackPlayer({
       if (hasTemplateSegments && homeworkId) {
         const completion = await recordHomeworkTemplateCompletion({ homeworkId });
         if (!completion.ok) {
+          if (captureAuthFailure(completion, "complete_graded_track")) return;
           setNotice(completion.error);
           return;
         }
@@ -465,6 +476,15 @@ export function GradedTrackPlayer({
             />
           ) : null}
         </div>
+
+        {authFailure && homeworkId ? (
+          <StudentActionFailureNotice
+            failure={authFailure.failure}
+            homeworkId={homeworkId}
+            action={authFailure.action}
+            onRetry={clearAuthFailure}
+          />
+        ) : null}
 
         {notice ? (
           <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">

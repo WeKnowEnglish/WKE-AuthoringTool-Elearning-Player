@@ -1,23 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isStudent } from "@/lib/auth/roles";
+import type { StudentActionAuthFailure } from "@/lib/auth/student-action-auth";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import {
+  studentHomeworkForbiddenFailure,
+  studentHomeworkServiceUnavailableFailure,
+  studentHomeworkUnavailableFailure,
+} from "@/lib/auth/student-homework-access";
 import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import { emptyHomeworkTemplateSubmissionContent, normalizeHomeworkTemplatePartSnapshot, normalizeHomeworkTemplateSubmissionContent } from "@/lib/homework-templates/homework-template-submission";
 import { isHomeworkTemplatePartId } from "@/lib/homework-templates/registry";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
-import { createClient } from "@/lib/supabase/server";
 
-export async function saveHomeworkTemplatePart(input: { homeworkId: string; partId: string; snapshot: unknown; submit?: boolean }): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveHomeworkTemplatePart(input: { homeworkId: string; partId: string; snapshot: unknown; submit?: boolean }): Promise<{ ok: true } | { ok: false; error: string } | StudentActionAuthFailure> {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id || !isStudent(user)) return { ok: false, error: "Student authentication required." };
     const homeworkId = input.homeworkId.trim();
+    const auth = await resolveStudentActionSession({
+      nextPath: homeworkId ? `/homework/${encodeURIComponent(homeworkId)}` : "/",
+    });
+    if (!auth.ok) return auth;
+    const { supabase, user } = auth;
     const partId = input.partId.trim();
     const snapshot = normalizeHomeworkTemplatePartSnapshot(input.snapshot);
     if (!snapshot) return { ok: false, error: "This homework response is invalid." };
-    const { data: homework } = await supabase.from("class_homework").select("id, class_id, status, payload, target_student_ids").eq("id", homeworkId).maybeSingle();
+    const { data: homework, error: homeworkError } = await supabase.from("class_homework").select("id, class_id, status, payload, target_student_ids").eq("id", homeworkId).maybeSingle();
+    if (homeworkError) return studentHomeworkServiceUnavailableFailure();
     const payload = normalizeHomeworkPayload(homework?.payload);
     const isTemplate = payload?.type === "homework_template";
     const isGradedTrack = payload?.type === "graded_track";
@@ -26,7 +34,7 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
       !["assigned", "closed"].includes(String(homework.status)) ||
       (!isTemplate && !isGradedTrack)
     ) {
-      return { ok: false, error: "This homework template is not available." };
+      return studentHomeworkUnavailableFailure();
     }
     const templateId = isTemplate
       ? payload.templateId
@@ -54,10 +62,10 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
     const targets = Array.isArray(homework.target_student_ids)
       ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
       : null;
-    if (targets && !targets.includes(user.id)) return { ok: false, error: "This homework was not assigned to you." };
+    if (targets && !targets.includes(user.id)) return studentHomeworkForbiddenFailure();
     const { data: memberships, error: membershipError } = await supabase.rpc("student_class_memberships");
-    if (membershipError) return { ok: false, error: membershipError.message };
-    if (!((memberships ?? []) as Array<{ class_id: string }>).some((row) => row.class_id === homework.class_id)) return { ok: false, error: "You are not enrolled in this class." };
+    if (membershipError) return studentHomeworkServiceUnavailableFailure();
+    if (!((memberships ?? []) as Array<{ class_id: string }>).some((row) => row.class_id === homework.class_id)) return studentHomeworkForbiddenFailure();
     const { data: existing, error: existingError } = await supabase.from("homework_template_submissions").select("content, status").eq("homework_id", homeworkId).eq("student_id", user.id).maybeSingle();
     if (existingError && /homework_template_submissions|schema cache|does not exist/i.test(existingError.message)) return { ok: false, error: "Template submissions require migration 102." };
     if (existingError) return { ok: false, error: existingError.message };

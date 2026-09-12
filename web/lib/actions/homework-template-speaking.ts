@@ -2,14 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
-import { isStudent } from "@/lib/auth/roles";
+import type { StudentActionAuthFailure } from "@/lib/auth/student-action-auth";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import {
+  studentHomeworkForbiddenFailure,
+  studentHomeworkServiceUnavailableFailure,
+  studentHomeworkUnavailableFailure,
+} from "@/lib/auth/student-homework-access";
 import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import {
   COMMUNITY_SPEAKING_MAX_SECONDS,
   COMMUNITY_SPEAKING_RESPONSE_ID,
   SECONDARY_HOMEWORK_ONE_ID,
 } from "@/lib/homework-templates/secondary-homework-one";
-import { createClient } from "@/lib/supabase/server";
 
 const BUCKET = "voice_submissions";
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -27,7 +32,8 @@ const ALLOWED_AUDIO = new Set([
 
 type SaveResult =
   | { ok: true; recording: AssessmentSpeakingRecording }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  | StudentActionAuthFailure;
 
 function safeSegment(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80);
@@ -40,11 +46,12 @@ function migrationError(message: string) {
 }
 
 export async function saveHomeworkTemplateSpeakingRecording(formData: FormData): Promise<SaveResult> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.id || !isStudent(user)) return { ok: false, error: "Student authentication required." };
-
   const homeworkId = String(formData.get("homework_id") ?? "").trim();
+  const auth = await resolveStudentActionSession({
+    nextPath: homeworkId ? `/homework/${encodeURIComponent(homeworkId)}` : "/",
+  });
+  if (!auth.ok) return auth;
+  const { supabase, user } = auth;
   const partId = String(formData.get("part_id") ?? "").trim();
   const responseId = String(formData.get("response_id") ?? "").trim();
   const durationMs = Number(formData.get("duration_ms"));
@@ -63,23 +70,24 @@ export async function saveHomeworkTemplateSpeakingRecording(formData: FormData):
   if (file.size <= 0 || file.size > MAX_BYTES) return { ok: false, error: "The recording must be smaller than 8 MB." };
   if (!ALLOWED_AUDIO.has(contentType)) return { ok: false, error: "This browser recorded an unsupported audio format." };
 
-  const { data: homework } = await supabase
+  const { data: homework, error: homeworkError } = await supabase
     .from("class_homework")
     .select("id, class_id, status, payload, target_student_ids")
     .eq("id", homeworkId)
     .maybeSingle();
+  if (homeworkError) return studentHomeworkServiceUnavailableFailure();
   const payload = normalizeHomeworkPayload(homework?.payload);
   if (!homework || homework.status !== "assigned" || payload?.type !== "homework_template" || payload.templateId !== SECONDARY_HOMEWORK_ONE_ID) {
-    return { ok: false, error: "This homework is not available for recording." };
+    return studentHomeworkUnavailableFailure();
   }
   const targets = Array.isArray(homework.target_student_ids)
     ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
     : null;
-  if (targets && !targets.includes(user.id)) return { ok: false, error: "This homework was not assigned to you." };
+  if (targets && !targets.includes(user.id)) return studentHomeworkForbiddenFailure();
   const { data: memberships, error: membershipError } = await supabase.rpc("student_class_memberships");
-  if (membershipError) return { ok: false, error: membershipError.message };
+  if (membershipError) return studentHomeworkServiceUnavailableFailure();
   if (!((memberships ?? []) as Array<{ class_id: string }>).some((row) => row.class_id === homework.class_id)) {
-    return { ok: false, error: "You are not enrolled in this class." };
+    return studentHomeworkForbiddenFailure();
   }
 
   const { data: previous, error: previousError } = await supabase

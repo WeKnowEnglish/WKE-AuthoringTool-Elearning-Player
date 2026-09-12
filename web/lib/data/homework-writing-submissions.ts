@@ -1,5 +1,7 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { isStudent, isTeacher } from "@/lib/auth/roles";
+import { isTeacher } from "@/lib/auth/roles";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import type { StudentHomeworkSession } from "@/lib/auth/student-homework-session";
 import { createClient } from "@/lib/supabase/server";
 
 export type HomeworkWritingSubmission = {
@@ -38,13 +40,16 @@ function normalizeRow(row: {
 
 export async function getMyHomeworkWritingSubmission(
   homeworkId: string,
+  verifiedSession?: StudentHomeworkSession,
 ): Promise<HomeworkWritingSubmission | null> {
   noStore();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.id || !isStudent(user)) return null;
+  const session =
+    verifiedSession ??
+    (await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    }));
+  if (!session.ok) return null;
+  const { supabase, user } = session;
   const { data, error } = await supabase
     .from("homework_writing_submissions")
     .select("id, homework_id, student_id, status, text, submitted_at, updated_at")

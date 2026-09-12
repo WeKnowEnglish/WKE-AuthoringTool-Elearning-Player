@@ -1,5 +1,7 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { isStudent, isTeacher } from "@/lib/auth/roles";
+import { isTeacher } from "@/lib/auth/roles";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import type { StudentHomeworkSession } from "@/lib/auth/student-homework-session";
 import {
   assessmentProgress,
   PRIMARY_A2_ASSESSMENT_PILOT,
@@ -14,13 +16,16 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function getMyAssessmentAttempt(
   homeworkId: string,
+  verifiedSession?: StudentHomeworkSession,
 ): Promise<AssessmentAttempt | null> {
   noStore();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.id || !isStudent(user)) return null;
+  const session =
+    verifiedSession ??
+    (await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    }));
+  if (!session.ok) return null;
+  const { supabase, user } = session;
 
   const [{ data: homework }, { data, error }] = await Promise.all([
     supabase.from("class_homework").select("payload").eq("id", homeworkId).maybeSingle(),
@@ -58,11 +63,18 @@ async function signedRecording(supabase: Awaited<ReturnType<typeof createClient>
   return { id: String(row.id), partId: String(row.part_id), responseId: String(row.response_id), durationMs: Number(row.duration_ms), url: data?.signedUrl ?? "" };
 }
 
-export async function getMyAssessmentSpeakingRecordings(homeworkId: string): Promise<AssessmentSpeakingRecording[]> {
+export async function getMyAssessmentSpeakingRecordings(
+  homeworkId: string,
+  verifiedSession?: StudentHomeworkSession,
+): Promise<AssessmentSpeakingRecording[]> {
   noStore();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.id || !isStudent(user)) return [];
+  const session =
+    verifiedSession ??
+    (await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    }));
+  if (!session.ok) return [];
+  const { supabase, user } = session;
   const { data, error } = await supabase.from("assessment_speaking_recordings")
     .select("id, part_id, response_id, duration_ms, storage_path")
     .eq("homework_id", homeworkId).eq("student_id", user.id);
@@ -79,11 +91,18 @@ function normalizeSpeakingReview(row: { scores: unknown; feedback: unknown; revi
   return { scores, feedback: typeof row.feedback === "string" ? row.feedback : "", reviewedAt: String(row.reviewed_at) };
 }
 
-export async function getMyAssessmentSpeakingReview(homeworkId: string): Promise<AssessmentSpeakingReview | null> {
+export async function getMyAssessmentSpeakingReview(
+  homeworkId: string,
+  verifiedSession?: StudentHomeworkSession,
+): Promise<AssessmentSpeakingReview | null> {
   noStore();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.id || !isStudent(user)) return null;
+  const session =
+    verifiedSession ??
+    (await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    }));
+  if (!session.ok) return null;
+  const { supabase, user } = session;
   const { data, error } = await supabase.from("assessment_speaking_reviews").select("scores, feedback, reviewed_at").eq("homework_id", homeworkId).eq("student_id", user.id).maybeSingle();
   if (error) {
     if (/assessment_speaking_reviews|schema cache|does not exist/i.test(error.message)) return null;

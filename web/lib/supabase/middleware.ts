@@ -35,7 +35,14 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // A transient identity-provider/network failure must not make the proxy
+    // replace the protected route's structured recovery experience with a 500.
+    // The downstream route or Server Action still performs the authoritative
+    // student check, and database RLS remains enforced.
+  }
 
   return supabaseResponse;
 }

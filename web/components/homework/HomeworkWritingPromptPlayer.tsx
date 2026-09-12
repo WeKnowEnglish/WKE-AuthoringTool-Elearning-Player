@@ -2,12 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
 import { saveHomeworkWritingSubmission } from "@/lib/actions/homework-writing-submission";
+import {
+  isStudentActionAuthFailure,
+  type StudentActionAuthFailure,
+} from "@/lib/auth/student-action-auth";
 import { countWritingWords } from "@/lib/class-homework/normalize";
 import type { HomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
+import {
+  clearHomeworkWritingDraft,
+  readHomeworkWritingDraft,
+  writeHomeworkWritingDraft,
+} from "@/lib/homework-writing/draft-storage";
 
 type Props = {
   homeworkId: string;
+  studentId: string;
   prompt: string;
   payloadInstructions?: string;
   minWords?: number;
@@ -19,6 +30,7 @@ type Props = {
 
 export function HomeworkWritingPromptPlayer({
   homeworkId,
+  studentId,
   prompt,
   payloadInstructions,
   minWords = 0,
@@ -33,15 +45,48 @@ export function HomeworkWritingPromptPlayer({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authFailure, setAuthFailure] = useState<{
+    failure: StudentActionAuthFailure;
+    action: "save_draft" | "submit";
+  } | null>(null);
+  const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(initialSubmission?.updatedAt ?? null);
 
   useEffect(() => {
-    setText(initialSubmission?.text ?? "");
-    setStatus(
-      initialSubmission?.status === "submitted" || alreadyCompleted ? "submitted" : "in_progress",
-    );
-    setSavedAt(initialSubmission?.updatedAt ?? null);
-  }, [alreadyCompleted, initialSubmission]);
+    const applyRecoveredDraft = () => {
+      const submitted = initialSubmission?.status === "submitted" || alreadyCompleted;
+      if (submitted) {
+        clearHomeworkWritingDraft(studentId, homeworkId);
+        setText(initialSubmission?.text ?? "");
+        setStatus("submitted");
+        setSavedAt(initialSubmission?.updatedAt ?? null);
+        setRecoveryNotice(null);
+        return;
+      }
+
+      const localDraft = readHomeworkWritingDraft(studentId, homeworkId);
+      const serverUpdatedAt = Date.parse(initialSubmission?.updatedAt ?? "");
+      const localUpdatedAt = Date.parse(localDraft?.updatedAt ?? "");
+      if (
+        localDraft?.text &&
+        (!initialSubmission?.text ||
+          !Number.isFinite(serverUpdatedAt) ||
+          (Number.isFinite(localUpdatedAt) && localUpdatedAt > serverUpdatedAt))
+      ) {
+        setText(localDraft.text);
+        setSavedAt(localDraft.updatedAt);
+        setRecoveryNotice("We restored writing that was kept safely on this device.");
+      } else {
+        setText(initialSubmission?.text ?? "");
+        setSavedAt(initialSubmission?.updatedAt ?? null);
+        setRecoveryNotice(null);
+      }
+      setStatus("in_progress");
+    };
+
+    const timeoutId = window.setTimeout(applyRecoveredDraft, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [alreadyCompleted, homeworkId, initialSubmission, studentId]);
 
   const wordCount = countWritingWords(text);
   const canSubmit = text.trim().length > 0 && (minWords <= 0 || wordCount >= minWords);
@@ -50,12 +95,22 @@ export function HomeworkWritingPromptPlayer({
   async function persist(submit: boolean) {
     setSaving(true);
     setError(null);
+    setAuthFailure(null);
     const result = await saveHomeworkWritingSubmission({ homeworkId, text, submit });
     setSaving(false);
     if (!result.ok) {
-      setError(result.error);
+      if (isStudentActionAuthFailure(result)) {
+        setAuthFailure({
+          failure: result,
+          action: submit ? "submit" : "save_draft",
+        });
+      } else {
+        setError(result.error);
+      }
       return;
     }
+    clearHomeworkWritingDraft(studentId, homeworkId);
+    setRecoveryNotice(null);
     setStatus(result.status);
     setSavedAt(new Date().toISOString());
   }
@@ -98,7 +153,11 @@ export function HomeworkWritingPromptPlayer({
         <textarea
           value={text}
           disabled={locked || saving}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            const nextText = event.target.value;
+            setText(nextText);
+            writeHomeworkWritingDraft(studentId, homeworkId, nextText);
+          }}
           rows={10}
           className="mt-2 w-full rounded-2xl border border-[var(--pl-border)] bg-white px-4 py-3 text-base font-medium text-[var(--pl-ink)] outline-none focus:border-[var(--pl-teal)]"
           placeholder="Write here…"
@@ -114,10 +173,29 @@ export function HomeworkWritingPromptPlayer({
         <p className="text-sm font-semibold text-[var(--pl-muted)]">{wordCount} words</p>
       )}
 
-      {savedAt && status === "in_progress" ? (
-        <p className="text-xs font-semibold text-emerald-700">Draft saved.</p>
+      {recoveryNotice ? (
+        <p role="status" className="text-sm font-semibold text-emerald-800">
+          {recoveryNotice}
+        </p>
+      ) : savedAt && status === "in_progress" ? (
+        <p role="status" className="text-xs font-semibold text-emerald-700">
+          Draft saved.
+        </p>
       ) : null}
-      {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
+      {authFailure ? (
+        <StudentActionFailureNotice
+          failure={authFailure.failure}
+          homeworkId={homeworkId}
+          action={authFailure.action}
+          retainedWorkMessage="Your writing is still kept on this device."
+          onRetry={() => setAuthFailure(null)}
+        />
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-sm font-semibold text-red-600">
+          {error}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button

@@ -18,6 +18,10 @@ import {
   usernameToStudentEmail,
 } from "@/lib/auth/student-credentials";
 import {
+  isStudentSelfRegistrationEnabled,
+  STUDENT_SELF_REGISTRATION_DISABLED_MESSAGE,
+} from "@/lib/auth/student-registration-policy";
+import {
   learningBandLabel,
   type LearningBand,
 } from "@/lib/learning-band";
@@ -25,7 +29,8 @@ import { writeLearningBandCookie } from "@/lib/learning-band-cookie";
 import { setLearningBand } from "@/lib/progress/local-storage";
 import { createClient } from "@/lib/supabase/client";
 import { TeacherAccessRequestForm } from "@/components/auth/TeacherAccessRequestForm";
-import { flushAppDiagnosticQueue, recordAppDiagnostic } from "@/lib/app-diagnostics/client";
+import { recordAppDiagnostic } from "@/lib/app-diagnostics/client";
+import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 
 export type PortalKind = "student" | "teacher";
 
@@ -63,6 +68,8 @@ export function PortalLoginPanel({
   className,
 }: Props) {
   const router = useRouter();
+  const hydrated = useClientHydrated();
+  const studentSelfRegistrationEnabled = isStudentSelfRegistrationEnabled();
   const [portal, setPortal] = useState<PortalKind>(studentOnly ? "student" : defaultPortal);
   const [studentMode, setStudentMode] = useState<"sign_in" | "sign_up">("sign_in");
 
@@ -90,15 +97,16 @@ export function PortalLoginPanel({
       if (opts.migrateGuestProgress) {
         migrateLocalStorageToStudentStorageId(opts.authUserId);
       }
-      await ensureMasteryHydratedForCurrentStudent();
-      if (opts.migrateGuestProgress) {
-        await pushLocalMasteryBacklogForCurrentStudent();
-      }
+      void ensureMasteryHydratedForCurrentStudent()
+        .then(() =>
+          opts.migrateGuestProgress ? pushLocalMasteryBacklogForCurrentStudent() : undefined,
+        )
+        .catch(() => undefined);
     }
     setLearningBand(band);
     writeLearningBandCookie(band);
     if (opts?.persistBand !== false) {
-      await updateStudentLearningBand(band);
+      void updateStudentLearningBand(band).catch(() => undefined);
     }
     const path = resolvePostLoginPath({
       role: "student",
@@ -189,7 +197,6 @@ export function PortalLoginPanel({
         portal: "student",
         mode: studentMode,
       }, { status: "succeeded" });
-      await flushAppDiagnosticQueue();
 
       if (studentMode === "sign_up") {
         if (!doorBand) {
@@ -278,7 +285,6 @@ export function PortalLoginPanel({
       recordAppDiagnostic("teacher", "authentication", "login_succeeded", {
         portal: "teacher",
       }, { status: "succeeded" });
-      await flushAppDiagnosticQueue();
       router.push(path);
       router.refresh();
     } finally {
@@ -369,21 +375,34 @@ export function PortalLoginPanel({
             >
               I&apos;m back
             </button>
-            <button
-              type="button"
-              className={clsx(
-                "rounded-lg border-2 px-3 py-1.5 [touch-action:manipulation]",
-                studentMode === "sign_up" ?
-                  "border-kid-ink bg-kid-panel"
-                : "border-transparent text-kid-ink/70 underline",
-              )}
-              onClick={() => setStudentMode("sign_up")}
-            >
-              I&apos;m new
-            </button>
+            {studentSelfRegistrationEnabled ?
+              <button
+                type="button"
+                className={clsx(
+                  "rounded-lg border-2 px-3 py-1.5 [touch-action:manipulation]",
+                  studentMode === "sign_up" ?
+                    "border-kid-ink bg-kid-panel"
+                  : "border-transparent text-kid-ink/70 underline",
+                )}
+                onClick={() => setStudentMode("sign_up")}
+              >
+                I&apos;m new
+              </button>
+            : null}
           </div>
 
-          <form onSubmit={onStudentSubmit} className="space-y-3" noValidate>
+          {!studentSelfRegistrationEnabled ?
+            <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-950">
+              {STUDENT_SELF_REGISTRATION_DISABLED_MESSAGE}
+            </p>
+          : null}
+
+          <form
+            onSubmit={onStudentSubmit}
+            className="space-y-3"
+            data-login-ready={hydrated ? "true" : "false"}
+            noValidate
+          >
             <div>
               <label className="block text-sm font-bold" htmlFor="portal-username">
                 Username
@@ -393,6 +412,7 @@ export function PortalLoginPanel({
                 type="text"
                 required
                 autoComplete="username"
+                disabled={!hydrated || loading}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className={inputClass}
@@ -409,6 +429,7 @@ export function PortalLoginPanel({
                 required
                 inputMode="numeric"
                 autoComplete={studentMode === "sign_up" ? "new-password" : "current-password"}
+                disabled={!hydrated || loading}
                 pattern="\d{4,6}"
                 maxLength={6}
                 value={pin}
@@ -422,7 +443,12 @@ export function PortalLoginPanel({
                 {message}
               </p>
             : null}
-            <KidButton type="submit" variant="accent" className="w-full" disabled={loading}>
+            <KidButton
+              type="submit"
+              variant="accent"
+              className="w-full"
+              disabled={!hydrated || loading}
+            >
               {loading ?
                 "Please wait…"
               : studentMode === "sign_up" ?
@@ -433,7 +459,11 @@ export function PortalLoginPanel({
         </>
       : requestingTeacherAccess ?
         <TeacherAccessRequestForm onCancel={() => setRequestingTeacherAccess(false)} />
-      : <form onSubmit={onTeacherSubmit} className="space-y-3">
+      : <form
+          onSubmit={onTeacherSubmit}
+          className="space-y-3"
+          data-login-ready={hydrated ? "true" : "false"}
+        >
           <div>
             <label className="block text-sm font-medium" htmlFor="portal-teacher-email">
               Email
@@ -443,6 +473,7 @@ export function PortalLoginPanel({
               type="email"
               required
               autoComplete="email"
+              disabled={!hydrated || loading}
               value={teacherEmail}
               onChange={(e) => setTeacherEmail(e.target.value)}
               className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
@@ -457,6 +488,7 @@ export function PortalLoginPanel({
               type="password"
               required
               autoComplete="current-password"
+              disabled={!hydrated || loading}
               value={teacherPassword}
               onChange={(e) => setTeacherPassword(e.target.value)}
               className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
@@ -477,7 +509,7 @@ export function PortalLoginPanel({
           : null}
           <button
             type="submit"
-            disabled={loading}
+            disabled={!hydrated || loading}
             className="w-full rounded bg-neutral-900 py-2.5 font-semibold text-white [touch-action:manipulation] active:bg-neutral-950 disabled:opacity-60"
           >
             {loading ? "Signing in…" : "Teacher sign in"}

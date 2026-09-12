@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isStudent } from "@/lib/auth/roles";
+import type { StudentActionAuthFailure } from "@/lib/auth/student-action-auth";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import {
+  studentHomeworkForbiddenFailure,
+  studentHomeworkServiceUnavailableFailure,
+  studentHomeworkUnavailableFailure,
+} from "@/lib/auth/student-homework-access";
 import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import {
@@ -11,12 +17,12 @@ import {
   scoreHomeworkCollectionAttempt,
   type HomeworkCollectionAttempt,
 } from "@/lib/homework-collections";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
 type SaveResult =
   | { ok: true; attempt: HomeworkCollectionAttempt; rewardReceipt?: unknown }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  | StudentActionAuthFailure;
 
 export async function saveHomeworkCollectionAttempt(input: {
   homeworkId: string;
@@ -24,23 +30,23 @@ export async function saveHomeworkCollectionAttempt(input: {
   submit?: boolean;
 }): Promise<SaveResult> {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id || !isStudent(user)) {
-      return { ok: false, error: "Student authentication required." };
-    }
     const homeworkId = input.homeworkId.trim();
     if (!homeworkId) return { ok: false, error: "Missing homework." };
+    const auth = await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    });
+    if (!auth.ok) return auth;
+    const { supabase, user } = auth;
 
     const { data: homework, error: homeworkError } = await supabase
       .from("class_homework")
       .select("id, class_id, status, payload, target_student_ids")
       .eq("id", homeworkId)
       .maybeSingle();
-    if (homeworkError) return { ok: false, error: homeworkError.message };
+    if (homeworkError) return studentHomeworkServiceUnavailableFailure();
     const payload = normalizeHomeworkPayload(homework?.payload);
     if (!homework || payload?.type !== "graded_track" || !["assigned", "closed"].includes(String(homework.status))) {
-      return { ok: false, error: "This homework collection is not available." };
+      return studentHomeworkUnavailableFailure();
     }
     const freeze = parseGradedTrackFreezeDocument(payload.document);
     const document = freeze?.collectionDocument;
@@ -49,15 +55,15 @@ export async function saveHomeworkCollectionAttempt(input: {
     const { data: memberships, error: membershipError } = await supabase.rpc(
       "student_class_memberships",
     );
-    if (membershipError) return { ok: false, error: membershipError.message };
+    if (membershipError) return studentHomeworkServiceUnavailableFailure();
     if (!((memberships ?? []) as Array<{ class_id: string }>).some((row) => row.class_id === homework.class_id)) {
-      return { ok: false, error: "You are not enrolled in this class." };
+      return studentHomeworkForbiddenFailure();
     }
     const targets = Array.isArray(homework.target_student_ids)
       ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
       : null;
     if (targets && !targets.includes(user.id)) {
-      return { ok: false, error: "This homework was not assigned to you." };
+      return studentHomeworkForbiddenFailure();
     }
 
     const content = scoreHomeworkCollectionAttempt(document, input.responses);

@@ -9,7 +9,10 @@ import { HomeworkPlayChrome } from "@/components/primary/HomeworkPlayChrome";
 import { HomeworkStartGate } from "@/components/primary/HomeworkStartGate";
 import { HomeworkStudioActivityPlayer } from "@/components/primary/HomeworkStudioActivityPlayer";
 import { SecondaryHomeworkOneShell } from "@/components/secondary/SecondaryHomeworkOneShell";
-import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
+import { StudentSessionUnavailablePage } from "@/components/homework/StudentSessionUnavailablePage";
+import { StudentHomeworkServiceUnavailablePage } from "@/components/homework/StudentHomeworkServiceUnavailablePage";
+import { isSecondaryEligibleBand } from "@/lib/auth/student-bands";
+import { resolveStudentRouteSession } from "@/lib/auth/student-route-auth";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
@@ -23,9 +26,7 @@ import {
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { getMyHomeworkCollectionSpeakingRecordings } from "@/lib/data/homework-collection-speaking-recordings";
-import { createClient } from "@/lib/supabase/server";
 import { learningBandFromUser } from "@/lib/student-classes/portal-paths";
-import { requireSecondaryStudentAccess } from "../../_lib/requireSecondaryAccess";
 
 export const metadata: Metadata = {
   title: "Homework | We Know English",
@@ -62,18 +63,22 @@ function homeworkFrame(
 export default async function SecondaryHomeworkPage({ params }: Props) {
   const { homeworkId } = await params;
   const homeworkPath = `/secondary/homework/${encodeURIComponent(homeworkId)}`;
-  await requireSecondaryStudentAccess({ next: homeworkPath });
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await resolveStudentRouteSession(homeworkPath);
+  if (!session.ok) {
+    return <StudentSessionUnavailablePage retryPath={homeworkPath} />;
+  }
+  const { user } = session;
+  if (!isSecondaryEligibleBand(learningBandFromUser(user))) {
+    redirect("/primary?message=secondary_for_a2");
+  }
 
-  if (!user) redirect(`/login?portal=student&next=${encodeURIComponent(homeworkPath)}`);
-  if (isTeacher(user)) redirect(TEACHER_DEFAULT_PATH);
-  if (!isStudent(user)) redirect("/login?error=unknown_role");
-
-  const detail = await getHomeworkForStudent(homeworkId);
-  if (!detail) notFound();
+  const detail = await getHomeworkForStudent(homeworkId, session);
+  if (!detail.ok) {
+    if (detail.recovery === "retry") {
+      return <StudentHomeworkServiceUnavailablePage retryPath={homeworkPath} />;
+    }
+    notFound();
+  }
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
@@ -89,11 +94,11 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
     ? parseGradedTrackFreezeDocument(payload.document)
     : null;
   const [templateSubmission, templateRecordings, writingSubmission, collectionAttempt, collectionSpeakingRecordings] = await Promise.all([
-    needsTemplateSubmission ? getMyHomeworkTemplateSubmission(homework.id) : Promise.resolve(null),
-    needsTemplateSubmission ? getMyHomeworkTemplateSpeakingRecordings(homework.id) : Promise.resolve([]),
-    needsWritingSubmission ? getMyHomeworkWritingSubmission(homework.id) : Promise.resolve(null),
-    gradedFreeze?.collectionDocument ? getMyHomeworkCollectionAttempt(homework.id) : Promise.resolve(null),
-    gradedFreeze?.collectionDocument ? getMyHomeworkCollectionSpeakingRecordings(homework.id) : Promise.resolve([]),
+    needsTemplateSubmission ? getMyHomeworkTemplateSubmission(homework.id, session) : Promise.resolve(null),
+    needsTemplateSubmission ? getMyHomeworkTemplateSpeakingRecordings(homework.id, session) : Promise.resolve([]),
+    needsWritingSubmission ? getMyHomeworkWritingSubmission(homework.id, session) : Promise.resolve(null),
+    gradedFreeze?.collectionDocument ? getMyHomeworkCollectionAttempt(homework.id, session) : Promise.resolve(null),
+    gradedFreeze?.collectionDocument ? getMyHomeworkCollectionSpeakingRecordings(homework.id, session) : Promise.resolve([]),
   ]);
   const gradedSpeakingRecordings = [...templateRecordings, ...collectionSpeakingRecordings];
   const flashcardCards =
@@ -137,6 +142,7 @@ export default async function SecondaryHomeworkPage({ params }: Props) {
       {payload.type === "writing_prompt" ? (
         <HomeworkWritingPromptPlayer
           homeworkId={homework.id}
+          studentId={user.id}
           prompt={payload.prompt}
           payloadInstructions={payload.instructions}
           minWords={payload.minWords}

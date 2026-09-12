@@ -82,8 +82,15 @@ function scheduleDiagnosticFlush() {
   }, 1_000);
 }
 
+export function shouldDeferAppDiagnosticFlush(pathname: string): boolean {
+  return pathname === "/login" ||
+    pathname === "/primary/login" ||
+    pathname === "/secondary/login";
+}
+
 export async function flushAppDiagnosticQueue(): Promise<number> {
   if (typeof window === "undefined") return 0;
+  if (shouldDeferAppDiagnosticFlush(window.location.pathname)) return 0;
   if (flushPromise) return flushPromise;
 
   flushPromise = (async () => {

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getAppRole, isAdmin } from "@/lib/auth/roles";
 import {
   appDiagnosticBatchSchema,
+  diagnosticIdentityForStorage,
   sanitizeDiagnosticMetadata,
   sanitizeDiagnosticRoute,
 } from "@/lib/app-diagnostics/schema";
@@ -63,34 +64,41 @@ export async function POST(request: Request) {
     classroomReader?.displayName ??
     (user?.user_metadata?.display_name as string | undefined)?.trim() ??
     null;
-  const rows = parsed.data.events.map((event) => ({
-    event_id: event.id,
-    occurred_at: new Date(event.at).toISOString(),
-    user_id: user?.id ?? null,
-    role,
-    session_id: event.sessionId,
-    device_id: event.deviceId,
-    surface: event.surface,
-    phase: event.phase,
-    event_name: event.name,
-    event_kind: event.kind,
-    duration_ms: event.durationMs ?? null,
-    route: sanitizeDiagnosticRoute(event.route),
-    class_id: event.classId ?? null,
-    classroom_session_id:
-      event.classroomSessionId && /^vcs_[A-Za-z0-9_-]+$/.test(event.classroomSessionId)
-        ? event.classroomSessionId
-        : null,
-    participant_id: participantId,
-    participant_display_name: participantDisplayName,
-    activity_id: event.activityId ?? null,
-    homework_id: event.homeworkId ?? null,
-    status: event.status ?? null,
-    error_code: event.errorCode ?? null,
-    metadata: sanitizeDiagnosticMetadata(event.detail),
-    app_version: event.appVersion ?? null,
-    device_category: event.deviceCategory ?? "unknown",
-  }));
+  const rows = parsed.data.events.map((event) => {
+    const identity = diagnosticIdentityForStorage(event, {
+      userId: user?.id ?? null,
+      participantId,
+      participantDisplayName,
+    });
+    return {
+      event_id: event.id,
+      occurred_at: new Date(event.at).toISOString(),
+      user_id: identity.userId,
+      role,
+      session_id: event.sessionId,
+      device_id: event.deviceId,
+      surface: event.surface,
+      phase: event.phase,
+      event_name: event.name,
+      event_kind: event.kind,
+      duration_ms: event.durationMs ?? null,
+      route: sanitizeDiagnosticRoute(event.route),
+      class_id: event.classId ?? null,
+      classroom_session_id:
+        event.classroomSessionId && /^vcs_[A-Za-z0-9_-]+$/.test(event.classroomSessionId)
+          ? event.classroomSessionId
+          : null,
+      participant_id: identity.participantId,
+      participant_display_name: identity.participantDisplayName,
+      activity_id: event.activityId ?? null,
+      homework_id: event.homeworkId ?? null,
+      status: event.status ?? null,
+      error_code: event.errorCode ?? null,
+      metadata: sanitizeDiagnosticMetadata(event.detail),
+      app_version: event.appVersion ?? null,
+      device_category: event.deviceCategory ?? "unknown",
+    };
+  });
 
   const { error } = await service.from("platform_usage_events").upsert(rows, {
     onConflict: "event_id",

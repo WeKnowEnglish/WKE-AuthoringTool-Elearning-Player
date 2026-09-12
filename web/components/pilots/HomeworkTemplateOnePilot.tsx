@@ -12,6 +12,8 @@ import { VerbTablePlayer } from "@/components/verb-table/VerbTablePlayer";
 import { WordAnnotationPlayer } from "@/components/word-annotation/WordAnnotationPlayer";
 import { recordHomeworkTemplateCompletion } from "@/lib/actions/class-homework";
 import { saveHomeworkTemplatePart } from "@/lib/actions/homework-template-submission";
+import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
+import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 import type { HomeworkTemplatePartSnapshot } from "@/lib/homework-templates/homework-template-submission";
 import {
   HOMEWORK_TEMPLATE_ONE,
@@ -144,6 +146,8 @@ export function HomeworkTemplateOnePilot({
       ? "This homework is already marked complete. You can redo it to send reviewable answers to your teacher."
       : "",
   );
+  const { authFailure, captureAuthFailure, clearAuthFailure } =
+    useStudentActionAuthFailure();
 
   useEffect(() => {
     if (authoringPreview) return;
@@ -185,6 +189,7 @@ export function HomeworkTemplateOnePilot({
     setDoneSectionIds(new Set());
     setResetNonce((value) => value + 1);
     setCompletionNotice("");
+    clearAuthFailure();
     if (!authoringPreview) {
       window.localStorage.removeItem(storageKey);
     }
@@ -212,10 +217,15 @@ export function HomeworkTemplateOnePilot({
       onSaved();
       return;
     }
+    clearAuthFailure();
     setCompletionNotice("Saving your work…");
     void saveHomeworkTemplatePart({ homeworkId, partId, snapshot }).then(
       (result) => {
         if (!result.ok) {
+          if (captureAuthFailure(result, "save_template_part")) {
+            setCompletionNotice("");
+            return;
+          }
           setCompletionNotice(result.error);
           return;
         }
@@ -241,6 +251,7 @@ export function HomeworkTemplateOnePilot({
     const isLast = index >= 0 && index === navSections.length - 1;
 
     if (isLast && homeworkId) {
+      clearAuthFailure();
       setCompletionNotice("Submitting your work…");
       void saveHomeworkTemplatePart({
         homeworkId,
@@ -249,6 +260,10 @@ export function HomeworkTemplateOnePilot({
         submit: true,
       }).then(async (submissionResult) => {
         if (!submissionResult.ok) {
+          if (captureAuthFailure(submissionResult, "submit_template")) {
+            setCompletionNotice("");
+            return;
+          }
           setCompletionNotice(submissionResult.error);
           return;
         }
@@ -259,6 +274,10 @@ export function HomeworkTemplateOnePilot({
         }
         const result = await recordHomeworkTemplateCompletion({ homeworkId });
         if (!result.ok) {
+          if (captureAuthFailure(result, "complete_template")) {
+            setCompletionNotice("");
+            return;
+          }
           setCompletionNotice(result.error);
           return;
         }
@@ -419,6 +438,15 @@ export function HomeworkTemplateOnePilot({
             </div>
           </header>
         )}
+
+        {authFailure && homeworkId ? (
+          <StudentActionFailureNotice
+            failure={authFailure.failure}
+            homeworkId={homeworkId}
+            action={authFailure.action}
+            onRetry={clearAuthFailure}
+          />
+        ) : null}
 
         {completionNotice ? (
           <p className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900">

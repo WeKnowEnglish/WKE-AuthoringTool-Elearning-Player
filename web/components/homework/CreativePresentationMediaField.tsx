@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { ImagePlus, Pencil, RotateCcw, Save, Undo2, X } from "lucide-react";
 import { saveHomeworkCollectionMedia } from "@/lib/actions/homework-collection-media";
+import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
+import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 
 type Point = { x: number; y: number };
 type Stroke = { points: Point[]; erase: boolean };
@@ -32,6 +34,8 @@ export function CreativePresentationMediaField({
   const [erase, setErase] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { authFailure, captureAuthFailure, clearAuthFailure } =
+    useStudentActionAuthFailure();
 
   const paintCanvas = useCallback((next: Stroke[]) => {
     const canvas = canvasRef.current;
@@ -69,6 +73,7 @@ export function CreativePresentationMediaField({
 
   const uploadFile = (file: File) => {
     setNotice(null);
+    clearAuthFailure();
     if (previewMode || !homeworkId) {
       const reader = new FileReader();
       reader.onload = () => onChange(typeof reader.result === "string" ? reader.result : "");
@@ -84,6 +89,7 @@ export function CreativePresentationMediaField({
       formData.set("file", file);
       const result = await saveHomeworkCollectionMedia(formData);
       if (!result.ok) {
+        if (captureAuthFailure(result, "save_collection_media")) return;
         setNotice(result.error);
         return;
       }
@@ -155,7 +161,17 @@ export function CreativePresentationMediaField({
           <button type="button" onClick={() => setDrawing(false)} className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-stone-300 bg-white px-3 text-sm font-bold text-stone-700"><X className="h-4 w-4" />Cancel</button>
           <button type="button" disabled={pending || strokes.length === 0} onClick={saveDrawing} className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-teal-700 px-4 text-sm font-extrabold text-white disabled:opacity-50"><Save className="h-4 w-4" />{pending ? "Saving…" : "Use drawing"}</button>
         </div>
-        {notice ? <p className="mt-2 text-xs font-bold text-rose-700">{notice}</p> : null}
+        {authFailure && homeworkId ? (
+          <div className="mt-2">
+            <StudentActionFailureNotice
+              failure={authFailure.failure}
+              homeworkId={homeworkId}
+              action={authFailure.action}
+              onRetry={clearAuthFailure}
+            />
+          </div>
+        ) : null}
+        {notice ? <p role="alert" className="mt-2 text-xs font-bold text-rose-700">{notice}</p> : null}
       </div>
     );
   }
@@ -175,7 +191,17 @@ export function CreativePresentationMediaField({
         <button type="button" disabled={pending} onClick={() => fileRef.current?.click()} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-teal-200 bg-white px-2 text-xs font-extrabold text-teal-900 disabled:opacity-50"><ImagePlus className="h-4 w-4" />{value ? "Change" : "Add photo"}</button>
         <button type="button" disabled={pending} onClick={() => { setStrokes([]); setDrawing(true); }} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-teal-200 bg-white px-2 text-xs font-extrabold text-teal-900 disabled:opacity-50"><Pencil className="h-4 w-4" />Draw</button>
       </div>
-      {notice ? <p className="mt-2 text-xs font-bold text-rose-700">{notice}</p> : null}
+      {authFailure && homeworkId ? (
+        <div className="mt-2">
+          <StudentActionFailureNotice
+            failure={authFailure.failure}
+            homeworkId={homeworkId}
+            action={authFailure.action}
+            onRetry={clearAuthFailure}
+          />
+        </div>
+      ) : null}
+      {notice ? <p role="alert" className="mt-2 text-xs font-bold text-rose-700">{notice}</p> : null}
     </div>
   );
 }

@@ -1,7 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isStudent, isTeacher } from "@/lib/auth/roles";
+import { isTeacher } from "@/lib/auth/roles";
+import type { StudentActionAuthFailure } from "@/lib/auth/student-action-auth";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import {
+  studentHomeworkForbiddenFailure,
+  studentHomeworkServiceUnavailableFailure,
+  studentHomeworkUnavailableFailure,
+} from "@/lib/auth/student-homework-access";
 import {
   normalizeDueAt,
   normalizeHomeworkInstructions,
@@ -762,7 +769,8 @@ export async function assignPackFlashcardSetAsHomework(input: {
 
 export type RecordHomeworkCompletionResult =
   | { ok: true; finishedAt: string; rewardReceipt?: Record<string, unknown> }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  | StudentActionAuthFailure;
 
 /** Create an assignment from a registered six-part homework template. */
 export async function assignHomeworkTemplate(input: {
@@ -1043,16 +1051,14 @@ async function recordCatalogHomeworkCompletion(input: {
   >;
 }): Promise<RecordHomeworkCompletionResult> {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.id || !isStudent(user)) {
-      return { ok: false, error: "Student authentication required." };
-    }
-
     const homeworkId = input.homeworkId.trim();
     if (!homeworkId) return { ok: false, error: "Missing homework." };
+
+    const auth = await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    });
+    if (!auth.ok) return auth;
+    const { supabase, user } = auth;
 
     const { data: homework, error: homeworkError } = await supabase
       .from("class_homework")
@@ -1060,15 +1066,10 @@ async function recordCatalogHomeworkCompletion(input: {
       .eq("id", homeworkId)
       .maybeSingle();
 
-    if (homeworkError) {
-      if (/class_homework|schema cache|does not exist/i.test(homeworkError.message)) {
-        return { ok: false, error: "Homework isn’t available yet." };
-      }
-      return { ok: false, error: homeworkError.message };
-    }
-    if (!homework) return { ok: false, error: "Homework not found." };
+    if (homeworkError) return studentHomeworkServiceUnavailableFailure();
+    if (!homework) return studentHomeworkUnavailableFailure();
     if (homework.status !== "assigned" && homework.status !== "closed") {
-      return { ok: false, error: "This homework isn’t assigned yet." };
+      return studentHomeworkUnavailableFailure();
     }
 
     const payload = normalizeHomeworkPayload(homework.payload);
@@ -1141,16 +1142,16 @@ async function recordCatalogHomeworkCompletion(input: {
     const { data: memberships, error: membershipError } = await supabase.rpc(
       "student_class_memberships",
     );
-    if (membershipError) return { ok: false, error: membershipError.message };
+    if (membershipError) return studentHomeworkServiceUnavailableFailure();
     const enrolled = ((memberships ?? []) as Array<{ class_id: string }>).some(
       (row) => row.class_id === homework.class_id,
     );
-    if (!enrolled) return { ok: false, error: "You’re not in this class." };
+    if (!enrolled) return studentHomeworkForbiddenFailure();
     const targetStudentIds = Array.isArray(homework.target_student_ids)
       ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
       : null;
     if (targetStudentIds && !targetStudentIds.includes(user.id)) {
-      return { ok: false, error: "This homework was not assigned to you." };
+      return studentHomeworkForbiddenFailure();
     }
 
     const now = new Date().toISOString();

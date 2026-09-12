@@ -4,6 +4,10 @@
 
 Start with [docs/lesson-player-master-document.md](./docs/lesson-player-master-document.md) for the current student-experience brief, architecture direction, archive policy, and roadmap.
 
+Use [docs/CODEX_MASTER_GOALS.md](./docs/CODEX_MASTER_GOALS.md) as the platform-wide guide for creating, prioritizing, executing, and updating engineering goals. The repository remains the source of truth for current implementation details.
+
+The current executable sequence is listed in [docs/goals/README.md](./docs/goals/README.md).
+
 For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./docs/CURSOR_LESSON_CREATION_HANDOFF.md).
 
 ## Setup

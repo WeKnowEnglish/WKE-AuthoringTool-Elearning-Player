@@ -14,6 +14,12 @@ export type LevelUpEventDetail = {
 };
 
 export function dispatchLevelUp(detail: LevelUpEventDetail): void {
-  if (typeof window === "undefined") return;
+  if (
+    typeof window === "undefined" ||
+    typeof window.dispatchEvent !== "function" ||
+    typeof CustomEvent !== "function"
+  ) {
+    return;
+  }
   window.dispatchEvent(new CustomEvent<LevelUpEventDetail>(LEVEL_UP_EVENT, { detail }));
 }

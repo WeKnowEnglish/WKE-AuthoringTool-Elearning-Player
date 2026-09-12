@@ -585,6 +585,15 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Deferred · worlds ───────────────────────────────────────────
   {
+    href: "/pilots/world",
+    title: "WKE World (3D globe foundation)",
+    description:
+      "Interactive 3D globe sandbox: drag to spin, pinch/wheel to zoom. Ocean + EDU Studio World island landmark. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
     href: "/primary?nav=games",
     title: "World explore (Simple World)",
     description:

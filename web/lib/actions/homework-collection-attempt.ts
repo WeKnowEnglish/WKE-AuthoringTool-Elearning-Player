@@ -18,9 +18,18 @@ import {
   type HomeworkCollectionAttempt,
 } from "@/lib/homework-collections";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
+import {
+  parseHomeworkFinalizationReceipt,
+  type HomeworkFinalizationReceipt,
+} from "@/lib/homework-finalization/receipt";
 
 type SaveResult =
-  | { ok: true; attempt: HomeworkCollectionAttempt; rewardReceipt?: unknown }
+  | {
+      ok: true;
+      attempt: HomeworkCollectionAttempt;
+      receipt?: HomeworkFinalizationReceipt;
+      rewardReceipt?: Record<string, unknown>;
+    }
   | { ok: false; error: string }
   | StudentActionAuthFailure;
 
@@ -71,6 +80,39 @@ export async function saveHomeworkCollectionAttempt(input: {
       return { ok: false, error: "Complete every required activity before submitting." };
     }
     const totals = homeworkCollectionAttemptTotals(content);
+    if (input.submit) {
+      const { data, error } = await supabase.rpc(
+        "finalize_homework_collection_attempt",
+        {
+          p_homework_id: homeworkId,
+          p_content: content,
+          p_auto_score: totals.autoScore,
+          p_auto_max_score: totals.autoMaxScore,
+          p_manual_max_score: totals.manualMaxScore,
+          p_item_count: totals.itemCount,
+        },
+      );
+      if (error) return { ok: false, error: error.message };
+      const result = data as { attempt?: unknown; receipt?: unknown } | null;
+      const receipt = parseHomeworkFinalizationReceipt(result?.receipt);
+      if (!receipt || !result?.attempt) {
+        return { ok: false, error: "Homework was saved but its completion receipt was invalid." };
+      }
+      const attempt = homeworkCollectionAttemptFromRow(result.attempt as Record<string, unknown>);
+      revalidatePath("/primary");
+      revalidatePath("/secondary");
+      revalidatePath(`/primary/homework/${homeworkId}`);
+      revalidatePath(`/secondary/homework/${homeworkId}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}/homework-collection-results/${homeworkId}`);
+      return {
+        ok: true,
+        attempt,
+        receipt,
+        ...(receipt.rewardReceipt ? { rewardReceipt: receipt.rewardReceipt } : {}),
+      };
+    }
+
     const admin = createServiceRoleSupabase();
     if (!admin) {
       return {
@@ -101,12 +143,12 @@ export async function saveHomeworkCollectionAttempt(input: {
         {
           homework_id: homeworkId,
           student_id: user.id,
-          status: input.submit ? "submitted" : "in_progress",
+          status: "in_progress",
           content,
           auto_score: totals.autoScore,
           auto_max_score: totals.autoMaxScore,
           manual_max_score: totals.manualMaxScore,
-          submitted_at: input.submit ? now : null,
+          submitted_at: null,
           updated_at: now,
         },
         { onConflict: "homework_id,student_id" },
@@ -120,21 +162,6 @@ export async function saveHomeworkCollectionAttempt(input: {
       return { ok: false, error: saveError?.message ?? "Could not save this homework." };
     }
 
-    let rewardReceipt: unknown;
-    if (input.submit) {
-      const { data: completion, error: completionError } = await supabase.rpc(
-        "complete_primary_homework",
-        { p_homework_id: homeworkId, p_questions_total: totals.itemCount },
-      );
-      if (completionError) return { ok: false, error: completionError.message };
-      rewardReceipt = (completion as { rewardReceipt?: unknown } | null)?.rewardReceipt;
-      await admin
-        .from("class_homework_completions")
-        .update({ correct_count: totals.autoScore, updated_at: now })
-        .eq("homework_id", homeworkId)
-        .eq("student_id", user.id);
-    }
-
     revalidatePath("/primary");
     revalidatePath("/secondary");
     revalidatePath(`/primary/homework/${homeworkId}`);
@@ -144,7 +171,6 @@ export async function saveHomeworkCollectionAttempt(input: {
     return {
       ok: true,
       attempt: homeworkCollectionAttemptFromRow(saved as Record<string, unknown>),
-      ...(rewardReceipt ? { rewardReceipt } : {}),
     };
   } catch (error) {
     return {

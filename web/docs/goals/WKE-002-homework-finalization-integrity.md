@@ -1,9 +1,9 @@
 # GOAL WKE-002 — Homework Submission Finishes Exactly Once
 
-Status: Ready  
+Status: Complete
 Priority: P0  
 Cadence: One-time  
-Last updated: 2026-09-12
+Last updated: 2026-09-13
 
 ## Primary Stakeholder
 
@@ -66,7 +66,17 @@ For writing prompts, homework templates, and graded-track collections, make fina
 
 ## Current Implementation
 
-The current design already has valuable foundations: RLS on student-facing submission tables, unique homework/student records, an idempotent reward ledger, and an atomic completion-plus-reward function. This goal should extend and connect those foundations rather than create a parallel submission system.
+Migrations 145–146 now connect the existing response tables, completion row,
+and reward ledger through three format-specific atomic RPCs with one shared
+receipt. Draft/autosave behavior remains separate and editable; final responses
+are immutable. Graded tracks with both template and collection segments update
+both teacher-visible response states in the same transaction.
+
+The conservative legacy policy is approved in implementation: a response that
+was already submitted without a completion when migration 145 ran is captured
+in `homework_finalization_legacy_orphans` and can be completed on retry without
+issuing an ambiguous historical reward. Existing completion rows without a
+reward remain protected by migration 136.
 
 Relevant areas:
 
@@ -92,8 +102,8 @@ Blocks or enables:
 
 External services or decisions:
 
-- Decide whether the finalization operation belongs in one generalized RPC or a small set of format-specific RPCs sharing invariants. Make this decision after the state-machine audit.
-- Confirm the eligibility rule for reconciling legacy submitted rows without reward events.
+- Implemented as small format-specific RPCs sharing finalization invariants.
+- Legacy ambiguous rows are reconciled without a reward; no destructive or reward-bearing backfill runs automatically.
 
 ## Constraints and Safeguards
 
@@ -170,20 +180,28 @@ External services or decisions:
 
 Completed:
 
-- Goal definition and initial repository evidence collected.
-
-Remaining:
-
-- State-machine audit, implementation, migration, reconciliation, and validation.
+- Checked-in state machine and invariants in `docs/homework-finalization.md`.
+- Shared receipt parser and privacy-safe lifecycle diagnostics.
+- Atomic writing, template, and graded-track finalization RPCs deployed to linked Supabase in migrations 145–146.
+- Immutable final responses, conservative legacy guard, retry reconciliation, and read-only audit command.
+- Student actions use one finalization boundary; obsolete second completion calls were removed.
+- Accessible pending/status feedback is present across scoped flows.
 
 Evidence:
 
-- Repository inventory dated 2026-09-10.
+- Linked-database live suite on 2026-09-13: all three formats passed five concurrent requests with one response, one completion, and one reward; immutable replay and injected partial recovery passed.
+- Negative live checks passed for anonymous, teacher, unenrolled student, and untargeted student.
+- Teacher-authenticated reads saw one submitted result for each scoped format.
+- Legacy completion replay produced zero new reward events.
+- Post-test read-only audit: zero submitted-without-completion rows for writing, templates, and graded tracks; zero guarded legacy orphans; the three known historical scoped completions without rewards remain unchanged.
+- Production build passed with 155 routes; typecheck and focused Goal 2 tests passed.
+- Full suite: 3,232 tests passed and one unrelated timing test timed out under aggregate load; that test passed in isolation (8/8).
 
 Known limitations:
 
-- No production orphan or duplicate rate has been measured yet.
+- The live harness uses purpose-created test accounts and cleans up its generated homework rows; it does not retain permanent student fixtures.
+- `completionsWithoutScopedSubmission` in the audit includes valid homework formats outside this goal and is informational only.
 
 Recommended next task:
 
-- Map each scoped format's draft-to-result writes and identify every failure boundary before designing the finalization contract.
+- Proceed to WKE-003's end-to-end homework release gate using the WKE-002 live harness as its finalization layer.

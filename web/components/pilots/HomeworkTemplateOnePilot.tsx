@@ -10,8 +10,11 @@ import { QuestionWritingPlayer } from "@/components/question-writing/QuestionWri
 import { SentenceColumnsPlayer } from "@/components/sentence-columns/SentenceColumnsPlayer";
 import { VerbTablePlayer } from "@/components/verb-table/VerbTablePlayer";
 import { WordAnnotationPlayer } from "@/components/word-annotation/WordAnnotationPlayer";
-import { recordHomeworkTemplateCompletion } from "@/lib/actions/class-homework";
 import { saveHomeworkTemplatePart } from "@/lib/actions/homework-template-submission";
+import {
+  recordHomeworkFinalizationOutcome,
+  recordHomeworkFinalizationStarted,
+} from "@/lib/homework-finalization/diagnostics";
 import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
 import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 import type { HomeworkTemplatePartSnapshot } from "@/lib/homework-templates/homework-template-submission";
@@ -253,12 +256,14 @@ export function HomeworkTemplateOnePilot({
     if (isLast && homeworkId) {
       clearAuthFailure();
       setCompletionNotice("Submitting your work…");
+      recordHomeworkFinalizationStarted(homeworkId, "homework_template");
       void saveHomeworkTemplatePart({
         homeworkId,
         partId: sectionId,
         snapshot,
         submit: true,
-      }).then(async (submissionResult) => {
+      }).then((submissionResult) => {
+        recordHomeworkFinalizationOutcome(homeworkId, "homework_template", submissionResult);
         if (!submissionResult.ok) {
           if (captureAuthFailure(submissionResult, "submit_template")) {
             setCompletionNotice("");
@@ -270,15 +275,6 @@ export function HomeworkTemplateOnePilot({
         if (deferOverallCompletion) {
           setDoneSectionIds((current) => new Set(current).add(sectionId));
           setCompletionNotice("Template activities saved. Continue to the collection activities below.");
-          return;
-        }
-        const result = await recordHomeworkTemplateCompletion({ homeworkId });
-        if (!result.ok) {
-          if (captureAuthFailure(result, "complete_template")) {
-            setCompletionNotice("");
-            return;
-          }
-          setCompletionNotice(result.error);
           return;
         }
         setDoneSectionIds((current) => new Set(current).add(sectionId));
@@ -449,7 +445,7 @@ export function HomeworkTemplateOnePilot({
         ) : null}
 
         {completionNotice ? (
-          <p className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900">
+          <p role="status" aria-live="polite" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900">
             {completionNotice}
           </p>
         ) : null}

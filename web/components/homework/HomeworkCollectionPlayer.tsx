@@ -7,6 +7,10 @@ import { AssessmentSpeakingRecorder } from "@/components/assessment/AssessmentSp
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
 import { saveHomeworkCollectionAttempt } from "@/lib/actions/homework-collection-attempt";
 import {
+  recordHomeworkFinalizationOutcome,
+  recordHomeworkFinalizationStarted,
+} from "@/lib/homework-finalization/diagnostics";
+import {
   homeworkCollectionAttemptTotals,
   homeworkCollectionGradingMode,
   type HomeworkCollectionAttempt,
@@ -153,11 +157,13 @@ export function HomeworkCollectionPlayer({
     setNotice(null);
     clearAuthFailure();
     startTransition(async () => {
+      if (submit) recordHomeworkFinalizationStarted(homeworkId, "graded_track");
       const result = await saveHomeworkCollectionAttempt({
         homeworkId,
         responses,
         submit,
       });
+      if (submit) recordHomeworkFinalizationOutcome(homeworkId, "graded_track", result);
       if (!result.ok) {
         if (
           captureAuthFailure(
@@ -512,7 +518,7 @@ export function HomeworkCollectionPlayer({
             />
           </div>
         ) : null}
-        {!segmentMode && notice ? <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">{notice}</p> : null}
+        {!segmentMode && notice ? <p role="status" aria-live="polite" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">{notice}</p> : null}
 
         {!segmentMode ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">

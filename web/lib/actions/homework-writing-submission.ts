@@ -13,10 +13,17 @@ import {
   normalizeHomeworkPayload,
   normalizeWritingSubmissionText,
 } from "@/lib/class-homework/normalize";
-import { recordWritingPromptHomeworkCompletion } from "@/lib/actions/class-homework";
+import {
+  parseHomeworkFinalizationReceipt,
+  type HomeworkFinalizationReceipt,
+} from "@/lib/homework-finalization/receipt";
 
 type SaveHomeworkWritingSubmissionResult =
-  | { ok: true; status: "in_progress" | "submitted" }
+  | {
+      ok: true;
+      status: "in_progress" | "submitted";
+      receipt?: HomeworkFinalizationReceipt;
+    }
   | { ok: false; error: string }
   | StudentActionAuthFailure;
 
@@ -99,8 +106,27 @@ export async function saveHomeworkWritingSubmission(input: {
       return { ok: true, status: "submitted" };
     }
 
-    const now = new Date().toISOString();
     const status = input.submit ? "submitted" : "in_progress";
+    if (input.submit) {
+      const { data, error } = await supabase.rpc(
+        "finalize_homework_writing_submission",
+        { p_homework_id: homeworkId, p_text: text },
+      );
+      if (error) return { ok: false, error: error.message };
+      const receipt = parseHomeworkFinalizationReceipt(
+        (data as { receipt?: unknown } | null)?.receipt,
+      );
+      if (!receipt) {
+        return { ok: false, error: "Homework was saved but its completion receipt was invalid." };
+      }
+      revalidatePath(`/primary/homework/${homeworkId}`);
+      revalidatePath(`/secondary/homework/${homeworkId}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}/homework-writing-results/${homeworkId}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}`);
+      return { ok: true, status: "submitted", receipt };
+    }
+
+    const now = new Date().toISOString();
     const { error } = await supabase.from("homework_writing_submissions").upsert(
       {
         homework_id: homeworkId,
@@ -119,13 +145,6 @@ export async function saveHomeworkWritingSubmission(input: {
           ? "Writing submissions require migration 123."
           : error.message,
       };
-    }
-
-    if (input.submit) {
-      const completion = await recordWritingPromptHomeworkCompletion({ homeworkId });
-      if (!completion.ok) {
-        return { ok: false, error: completion.error };
-      }
     }
 
     revalidatePath(`/primary/homework/${homeworkId}`);

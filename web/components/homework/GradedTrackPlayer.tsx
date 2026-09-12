@@ -6,8 +6,12 @@ import { HomeworkCollectionPlayer } from "@/components/homework/HomeworkCollecti
 import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
 import { SecondaryHomeworkOneShell } from "@/components/secondary/SecondaryHomeworkOneShell";
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
-import { recordHomeworkTemplateCompletion } from "@/lib/actions/class-homework";
 import { saveHomeworkCollectionAttempt } from "@/lib/actions/homework-collection-attempt";
+import { finalizeHomeworkTemplateSubmission } from "@/lib/actions/homework-template-submission";
+import {
+  recordHomeworkFinalizationOutcome,
+  recordHomeworkFinalizationStarted,
+} from "@/lib/homework-finalization/diagnostics";
 import type { GradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import type { HomeworkCollectionAttempt } from "@/lib/homework-collections";
 import type { HomeworkTemplateSubmission } from "@/lib/homework-templates/homework-template-submission";
@@ -191,11 +195,13 @@ export function GradedTrackPlayer({
 
   const saveCollectionDraft = async (submit: boolean) => {
     if (!homeworkId || !freeze.collectionDocument) return { ok: true as const };
+    if (submit) recordHomeworkFinalizationStarted(homeworkId, "graded_track");
     const result = await saveHomeworkCollectionAttempt({
       homeworkId,
       responses: collectionResponses,
       submit,
     });
+    if (submit) recordHomeworkFinalizationOutcome(homeworkId, "graded_track", result);
     if (!result.ok) return result;
     if (result.rewardReceipt) acceptPrimaryRewardReceipt(result.rewardReceipt);
     return result;
@@ -236,15 +242,17 @@ export function GradedTrackPlayer({
           return;
         }
       }
-      if (hasTemplateSegments && homeworkId) {
-        const completion = await recordHomeworkTemplateCompletion({ homeworkId });
+      if (hasTemplateSegments && !hasCollectionSegments && homeworkId) {
+        recordHomeworkFinalizationStarted(homeworkId, "graded_track");
+        const completion = await finalizeHomeworkTemplateSubmission({ homeworkId });
+        recordHomeworkFinalizationOutcome(homeworkId, "graded_track", completion);
         if (!completion.ok) {
           if (captureAuthFailure(completion, "complete_graded_track")) return;
           setNotice(completion.error);
           return;
         }
-        if (completion.rewardReceipt) {
-          acceptPrimaryRewardReceipt(completion.rewardReceipt);
+        if (completion.receipt.rewardReceipt) {
+          acceptPrimaryRewardReceipt(completion.receipt.rewardReceipt);
         }
       }
       setFinished(true);
@@ -487,7 +495,7 @@ export function GradedTrackPlayer({
         ) : null}
 
         {notice ? (
-          <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">
+          <p role="status" aria-live="polite" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">
             {notice}
           </p>
         ) : null}

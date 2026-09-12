@@ -22,6 +22,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:wke-001-live": "node scripts/check-wke-001-live-env.mjs && cross-env WKE_001_LIVE_ACCEPTANCE=true playwright test --config=playwright.wke-001-live.config.ts",
+    "test:wke-002-live": "cross-env WKE_002_LIVE_CONFIRMATION=linked-project-authorized node scripts/test-wke-002-live.mjs",
+    "audit:wke-002": "node scripts/audit-wke-002-finalization.mjs",
     "provision:wke-001": "tsx scripts/provision-wke-001-fixtures.ts",
     "test:smoke": "node scripts/smoke-production-routes.mjs",
     "test:seo": "node scripts/seo-integration-smoke.mjs",

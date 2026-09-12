@@ -12,8 +12,12 @@ import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import { emptyHomeworkTemplateSubmissionContent, normalizeHomeworkTemplatePartSnapshot, normalizeHomeworkTemplateSubmissionContent } from "@/lib/homework-templates/homework-template-submission";
 import { isHomeworkTemplatePartId } from "@/lib/homework-templates/registry";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
+import {
+  parseHomeworkFinalizationReceipt,
+  type HomeworkFinalizationReceipt,
+} from "@/lib/homework-finalization/receipt";
 
-export async function saveHomeworkTemplatePart(input: { homeworkId: string; partId: string; snapshot: unknown; submit?: boolean }): Promise<{ ok: true } | { ok: false; error: string } | StudentActionAuthFailure> {
+export async function saveHomeworkTemplatePart(input: { homeworkId: string; partId: string; snapshot: unknown; submit?: boolean }): Promise<{ ok: true; receipt?: HomeworkFinalizationReceipt } | { ok: false; error: string } | StudentActionAuthFailure> {
   try {
     const homeworkId = input.homeworkId.trim();
     const auth = await resolveStudentActionSession({
@@ -72,8 +76,24 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
     if (existing?.status === "submitted" && !input.submit) return { ok: true };
     const content = existing ? normalizeHomeworkTemplateSubmissionContent(existing.content) : emptyHomeworkTemplateSubmissionContent();
     content.parts[partId] = snapshot;
+    if (input.submit) {
+      const { data, error } = await supabase.rpc(
+        "finalize_homework_template_submission",
+        { p_homework_id: homeworkId, p_content: content },
+      );
+      if (error) return { ok: false, error: error.message };
+      const receipt = parseHomeworkFinalizationReceipt(
+        (data as { receipt?: unknown } | null)?.receipt,
+      );
+      if (!receipt) return { ok: false, error: "Homework was saved but its completion receipt was invalid." };
+      revalidatePath(`/primary/homework/${homeworkId}`);
+      revalidatePath(`/secondary/homework/${homeworkId}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}/homework-template-results/${homeworkId}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}`);
+      return { ok: true, receipt };
+    }
     const now = new Date().toISOString();
-    const { error } = await supabase.from("homework_template_submissions").upsert({ homework_id: homeworkId, student_id: user.id, status: input.submit ? "submitted" : "in_progress", content, submitted_at: input.submit ? now : null, updated_at: now }, { onConflict: "homework_id,student_id" });
+    const { error } = await supabase.from("homework_template_submissions").upsert({ homework_id: homeworkId, student_id: user.id, status: "in_progress", content, submitted_at: null, updated_at: now }, { onConflict: "homework_id,student_id" });
     if (error) return { ok: false, error: /homework_template_submissions|schema cache|does not exist/i.test(error.message) ? "Template submissions require migration 102." : error.message };
     revalidatePath(`/primary/homework/${homeworkId}`);
     revalidatePath(`/secondary/homework/${homeworkId}`);
@@ -81,5 +101,48 @@ export async function saveHomeworkTemplatePart(input: { homeworkId: string; part
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Could not save the homework response." };
+  }
+}
+
+export async function finalizeHomeworkTemplateSubmission(input: {
+  homeworkId: string;
+}): Promise<
+  | { ok: true; receipt: HomeworkFinalizationReceipt }
+  | { ok: false; error: string }
+  | StudentActionAuthFailure
+> {
+  try {
+    const homeworkId = input.homeworkId.trim();
+    const auth = await resolveStudentActionSession({
+      nextPath: homeworkId ? `/homework/${encodeURIComponent(homeworkId)}` : "/",
+    });
+    if (!auth.ok) return auth;
+    const { supabase, user } = auth;
+    const { data: existing, error: existingError } = await supabase
+      .from("homework_template_submissions")
+      .select("content")
+      .eq("homework_id", homeworkId)
+      .eq("student_id", user.id)
+      .maybeSingle();
+    if (existingError) return { ok: false, error: existingError.message };
+    if (!existing) return { ok: false, error: "Complete a template activity before submitting." };
+    const content = normalizeHomeworkTemplateSubmissionContent(existing.content);
+    const { data, error } = await supabase.rpc(
+      "finalize_homework_template_submission",
+      { p_homework_id: homeworkId, p_content: content },
+    );
+    if (error) return { ok: false, error: error.message };
+    const receipt = parseHomeworkFinalizationReceipt(
+      (data as { receipt?: unknown } | null)?.receipt,
+    );
+    if (!receipt) return { ok: false, error: "Homework was saved but its completion receipt was invalid." };
+    revalidatePath(`/primary/homework/${homeworkId}`);
+    revalidatePath(`/secondary/homework/${homeworkId}`);
+    return { ok: true, receipt };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not submit the homework response.",
+    };
   }
 }

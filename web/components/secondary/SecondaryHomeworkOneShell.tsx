@@ -13,8 +13,11 @@ import {
 } from "lucide-react";
 import { AssessmentSpeakingRecorder } from "@/components/assessment/AssessmentSpeakingRecorder";
 import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
-import { recordHomeworkTemplateCompletion } from "@/lib/actions/class-homework";
 import { saveHomeworkTemplatePart } from "@/lib/actions/homework-template-submission";
+import {
+  recordHomeworkFinalizationOutcome,
+  recordHomeworkFinalizationStarted,
+} from "@/lib/homework-finalization/diagnostics";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
 import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 import type { HomeworkTemplateSubmission } from "@/lib/homework-templates/homework-template-submission";
@@ -333,6 +336,8 @@ export function SecondaryHomeworkOneShell({
         return;
       }
       const hasNextPart = activeIndex < navParts.length - 1;
+      const willFinalize = !hasNextPart && !deferOverallCompletion;
+      if (willFinalize) recordHomeworkFinalizationStarted(homeworkId, "homework_template");
       const submission = await saveHomeworkTemplatePart({
         homeworkId,
         partId: activePart.id,
@@ -341,8 +346,9 @@ export function SecondaryHomeworkOneShell({
           correct: null,
           total: speakingContent.teacherScoreTotal,
         },
-        submit: !hasNextPart && !deferOverallCompletion,
+        submit: willFinalize,
       });
+      if (willFinalize) recordHomeworkFinalizationOutcome(homeworkId, "homework_template", submission);
       if (!submission.ok) {
         if (captureAuthFailure(submission, "submit_secondary_template")) return;
         setNotice(submission.error);
@@ -361,12 +367,6 @@ export function SecondaryHomeworkOneShell({
             ? ""
             : "Template activities saved. Continue to the collection activities below.",
         );
-        return;
-      }
-      const completion = await recordHomeworkTemplateCompletion({ homeworkId });
-      if (!completion.ok) {
-        if (captureAuthFailure(completion, "complete_secondary_template")) return;
-        setNotice(completion.error);
         return;
       }
       setSavedParts((current) => new Set(current).add(activePart.id));

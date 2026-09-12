@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
 import { saveHomeworkWritingSubmission } from "@/lib/actions/homework-writing-submission";
 import {
+  recordHomeworkFinalizationOutcome,
+  recordHomeworkFinalizationStarted,
+} from "@/lib/homework-finalization/diagnostics";
+import {
   isStudentActionAuthFailure,
   type StudentActionAuthFailure,
 } from "@/lib/auth/student-action-auth";
@@ -96,7 +100,9 @@ export function HomeworkWritingPromptPlayer({
     setSaving(true);
     setError(null);
     setAuthFailure(null);
+    if (submit) recordHomeworkFinalizationStarted(homeworkId, "writing_prompt");
     const result = await saveHomeworkWritingSubmission({ homeworkId, text, submit });
+    if (submit) recordHomeworkFinalizationOutcome(homeworkId, "writing_prompt", result);
     setSaving(false);
     if (!result.ok) {
       if (isStudentActionAuthFailure(result)) {

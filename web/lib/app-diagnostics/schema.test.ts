@@ -62,6 +62,27 @@ describe("central app diagnostics schema", () => {
     });
   });
 
+  it("removes authenticated identity from homework finalization telemetry", () => {
+    expect(
+      diagnosticIdentityForStorage(
+        {
+          surface: "student",
+          phase: "homework_finalization",
+          name: "duplicate_prevented",
+        },
+        {
+          userId: "student-auth-id",
+          participantId: "student-auth-id",
+          participantDisplayName: "Student Name",
+        },
+      ),
+    ).toEqual({
+      userId: null,
+      participantId: null,
+      participantDisplayName: null,
+    });
+  });
+
   it("accepts the retryable homework-service code without sensitive detail", () => {
     const parsed = appDiagnosticBatchSchema.safeParse({
       events: [

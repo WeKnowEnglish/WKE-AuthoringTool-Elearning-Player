@@ -70,6 +70,44 @@ export function useClassroomRealtimeShadowPresence(
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     let snapshotVersion: number | null = initialSnapshot?.stateVersion ?? null;
     let lastPatchAt = 0;
+    let reconnectStartedAt: number | null = null;
+    let reconnectLoadInFlight = false;
+    const diagnosticSurface = input.role === "host" ? "teacher" : "student";
+    const diagnosticOptions = {
+      classId: input.classId,
+      classroomSessionId: input.sessionId,
+    };
+
+    const startReconnect = (reason: string) => {
+      if (reconnectStartedAt != null) return;
+      reconnectStartedAt = performance.now();
+      recordAppDiagnostic(
+        diagnosticSurface,
+        "virtual-classroom",
+        "classroom_reconnect_started",
+        { reason },
+        { ...diagnosticOptions, status: "started" },
+      );
+    };
+
+    const finishReconnect = (ok: boolean, errorCode?: string) => {
+      if (reconnectStartedAt == null) return;
+      const durationMs = Math.max(0, performance.now() - reconnectStartedAt);
+      recordAppDiagnostic(
+        diagnosticSurface,
+        "virtual-classroom",
+        ok ? "classroom_reconnect_recovered" : "classroom_reconnect_failed",
+        undefined,
+        {
+          ...diagnosticOptions,
+          kind: ok ? "span" : "error",
+          durationMs,
+          status: ok ? "recovered" : "failed",
+          ...(ok ? {} : { errorCode: errorCode ?? "classroom_reconnect_failed" }),
+        },
+      );
+      reconnectStartedAt = null;
+    };
     setHealth({
       enabled: true,
       snapshot: initialSnapshot ? "loaded" : "loading",
@@ -84,7 +122,7 @@ export function useClassroomRealtimeShadowPresence(
       const state = channel.presenceState<ClassroomParticipantPresence>();
       return Object.values(state)
         .flat()
-        .flatMap(({ presence_ref: _presenceRef, ...value }) =>
+        .flatMap((value) =>
           typeof value.userId === "string" &&
           typeof value.displayName === "string" &&
           (value.role === "teacher" || value.role === "student")
@@ -93,7 +131,9 @@ export function useClassroomRealtimeShadowPresence(
         );
     };
 
-    const loadSnapshot = async (clearLivePatch = false) => {
+    const loadSnapshot = async (clearLivePatch = false, reconnectAttempt = false) => {
+      if (reconnectAttempt && reconnectLoadInFlight) return;
+      if (reconnectAttempt) reconnectLoadInFlight = true;
       try {
         const response = await diagnosticFetch(
           `/api/virtual-classroom/${encodeURIComponent(input.sessionId)}/runtime`,
@@ -123,10 +163,17 @@ export function useClassroomRealtimeShadowPresence(
             runtimePatch: clearLivePatch && response.ok ? null : current.runtimePatch,
           }));
         }
-      } catch (error) {
-        if (!disposed && !(error instanceof DOMException && error.name === "AbortError")) {
-          setHealth((current) => ({ ...current, snapshot: "failed" }));
+        if (reconnectAttempt) {
+          finishReconnect(response.ok, response.ok ? undefined : `classroom_reconnect_http_${response.status}`);
         }
+      } catch (error) {
+        const aborted = error instanceof DOMException && error.name === "AbortError";
+        if (!disposed && !aborted) {
+          setHealth((current) => ({ ...current, snapshot: "failed" }));
+          if (reconnectAttempt) finishReconnect(false, "classroom_reconnect_network_error");
+        }
+      } finally {
+        if (reconnectAttempt) reconnectLoadInFlight = false;
       }
     };
 
@@ -142,6 +189,14 @@ export function useClassroomRealtimeShadowPresence(
     // channel becomes a source of UI state. The response is intentionally not
     // rendered in shadow mode.
     if (!initialSnapshot) void loadSnapshot();
+
+    const handleOffline = () => startReconnect("browser_offline");
+    const handleOnline = () => {
+      startReconnect("browser_online");
+      void loadSnapshot(true, true);
+    };
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
 
     channel.on("broadcast", { event: "runtime:updated" }, ({ payload }) => {
       const event = payload as { sessionId?: unknown; stateVersion?: unknown };
@@ -232,10 +287,13 @@ export function useClassroomRealtimeShadowPresence(
       if (status !== "SUBSCRIBED") {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setHealth((current) => ({ ...current, channel: "failed" }));
+          startReconnect(status.toLowerCase());
+          finishReconnect(false, `classroom_reconnect_${status.toLowerCase()}`);
         }
         return;
       }
       setHealth((current) => ({ ...current, channel: "connected" }));
+      if (reconnectStartedAt != null) void loadSnapshot(true, true);
       void channel.track({
         userId: input.userId,
         displayName: input.displayName,
@@ -249,9 +307,11 @@ export function useClassroomRealtimeShadowPresence(
       disposed = true;
       controller.abort();
       if (refreshTimer) clearTimeout(refreshTimer);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
       void supabase.removeChannel(channel);
     };
-  }, [enabled, initialSnapshot, input.displayName, input.role, input.sessionId, input.userId]);
+  }, [enabled, initialSnapshot, input.classId, input.displayName, input.role, input.sessionId, input.userId]);
 
   return health;
 }

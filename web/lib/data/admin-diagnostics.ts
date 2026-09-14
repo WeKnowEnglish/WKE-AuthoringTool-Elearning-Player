@@ -1,5 +1,9 @@
 import "server-only";
 import { listAuthUsersPaginated, requireAdminContext } from "@/lib/admin/admin-context";
+import {
+  buildPlatformHealthSnapshot,
+  type PlatformHealthSnapshot,
+} from "@/lib/app-diagnostics/platform-health";
 import type { AppDiagnosticKind, AppDiagnosticSurface } from "@/lib/app-diagnostics/types";
 
 export type CentralDiagnosticEvent = {
@@ -17,6 +21,7 @@ export type CentralDiagnosticEvent = {
   durationMs: number | null;
   route: string | null;
   classId: string | null;
+  classroomSessionId: string | null;
   activityId: string | null;
   homeworkId: string | null;
   status: string | null;
@@ -30,7 +35,7 @@ type DiagnosticRow = {
   event_id: string;
   occurred_at: string;
   received_at: string;
-  user_id: string;
+  user_id: string | null;
   role: string;
   session_id: string;
   device_id: string;
@@ -41,6 +46,7 @@ type DiagnosticRow = {
   duration_ms: number | null;
   route: string | null;
   class_id: string | null;
+  classroom_session_id: string | null;
   activity_id: string | null;
   homework_id: string | null;
   status: string | null;
@@ -60,7 +66,7 @@ export async function listRecentCentralDiagnostics(hours = 24): Promise<{
   const since = new Date(Date.now() - Math.max(1, Math.min(hours, 168)) * 3_600_000).toISOString();
   const { data, error } = await admin.ctx.service
     .from("platform_usage_events")
-    .select("event_id,occurred_at,received_at,user_id,role,session_id,device_id,surface,phase,event_name,event_kind,duration_ms,route,class_id,activity_id,homework_id,status,error_code,metadata,app_version,device_category")
+    .select("event_id,occurred_at,received_at,user_id,role,session_id,device_id,surface,phase,event_name,event_kind,duration_ms,route,class_id,classroom_session_id,activity_id,homework_id,status,error_code,metadata,app_version,device_category")
     .gte("occurred_at", since)
     .order("occurred_at", { ascending: false })
     .limit(2_000);
@@ -87,7 +93,7 @@ export async function listRecentCentralDiagnostics(hours = 24): Promise<{
       id: row.event_id,
       occurredAt: row.occurred_at,
       receivedAt: row.received_at,
-      userLabel: labels.get(row.user_id) ?? "Unknown user",
+      userLabel: row.user_id ? labels.get(row.user_id) ?? "Unknown user" : "Anonymous diagnostic",
       role: row.role,
       sessionId: row.session_id,
       deviceId: row.device_id,
@@ -98,6 +104,7 @@ export async function listRecentCentralDiagnostics(hours = 24): Promise<{
       durationMs: row.duration_ms,
       route: row.route,
       classId: row.class_id,
+      classroomSessionId: row.classroom_session_id,
       activityId: row.activity_id,
       homeworkId: row.homework_id,
       status: row.status,
@@ -109,3 +116,15 @@ export async function listRecentCentralDiagnostics(hours = 24): Promise<{
   };
 }
 
+export async function getPlatformHealth(hours = 24): Promise<{
+  events: CentralDiagnosticEvent[];
+  health: PlatformHealthSnapshot;
+  error: string | null;
+}> {
+  const boundedHours = Math.max(1, Math.min(hours, 168));
+  const central = await listRecentCentralDiagnostics(boundedHours);
+  return {
+    ...central,
+    health: buildPlatformHealthSnapshot(central.events, { windowHours: boundedHours }),
+  };
+}

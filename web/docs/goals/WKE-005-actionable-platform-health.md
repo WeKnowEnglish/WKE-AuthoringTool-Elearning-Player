@@ -1,9 +1,9 @@
 # GOAL WKE-005 — Turn Diagnostics into Actionable Platform Health
 
-Status: Ready
+Status: Complete
 Priority: P1
 Cadence: Ongoing
-Last updated: 2026-09-13
+Last updated: 2026-09-15
 
 ## Primary Stakeholder
 
@@ -177,22 +177,33 @@ External services or decisions:
 
 Completed:
 
-- Goal definition grounded in the existing global diagnostics capture, central event table, administrator timeline, and retention work.
+- Added a deterministic aggregation engine for authentication, homework, activity loading, and live classroom journeys.
+- Added privacy-safe fingerprints using structural allowlisted fields, normalized routes, safe codes, and release identifiers.
+- Added grouped issues with count, trend, first/latest occurrence, affected sessions, release, device breakdown, and user-count suppression below three.
+- Added administrator filters for time window, journey, surface, severity, release, and device, plus issue-to-timeline drill-down.
+- Added explicit activity-load failures and native-classroom reconnect started, recovered, and failed events.
+- Added administrator authorization, aggregation, route normalization, HTTP failure, reconnect, and privacy regression tests.
+- Documented thresholds, fingerprint fields, rollout safeguards, and the operator response.
 
-Remaining:
+Remaining ongoing operations (not completion blockers):
 
-- Confirm the first four journey contracts, implement grouping and UI, validate privacy/access, and observe advisory thresholds.
+- Observe one normal teaching cycle before confirming or changing the advisory 25%/three-failure threshold.
+- Re-run the full repository type check and build after the intentionally uncommitted character/world work compiles cleanly.
 
 Evidence:
 
-- `components/app-diagnostics/AppDiagnosticsInit.tsx` already captures global errors, promise rejections, connectivity, sessions, and web vitals.
-- `lib/data/admin-diagnostics.ts` currently returns a bounded 24-hour raw timeline.
-- WKE-003 completed homework lifecycle correlation and 60-day raw-event retention.
+- `lib/app-diagnostics/platform-health.test.ts` covers six aggregation and privacy cases.
+- `lib/admin/admin-context.test.ts` denies anonymous, student, teacher, and parent-like access and allows an explicitly marked administrator.
+- Final focused validation passed 31/31 tests (26 Goal 5 checks plus 5 billing compatibility checks) with no lint errors in the changed files.
+- A local synthetic tablet-width browser check identified and drilled into the top issue in 1.7 seconds, displayed all five matching events, had no horizontal overflow at 820px, and confirmed keyboard focus on the Journey filter.
+- `docs/platform-health.md` records the operational contract and response workflow.
 
 Known limitations:
 
-- Existing error names such as `Error` are too broad to identify many distinct defects without a stronger safe fingerprint.
+- Thresholds are advisory until normal production volume is observed.
+- The dashboard reads a bounded maximum of 2,000 raw events; longer-term analytics remain intentionally out of scope.
+- Full-project validation is currently blocked only by type errors in intentionally uncommitted character/world files; focused Goal 5 checks and the local browser acceptance pass.
 
 Recommended next task:
 
-- After WKE-004 confirms the diagnostic table boundary, implement fingerprint and aggregation fixtures before designing the summary UI.
+- Confirm the Goal 6 pilot class, expected roster, and realtime capacity before changing WKE-006 from Proposed to Ready.

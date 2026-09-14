@@ -19,6 +19,8 @@ const MAX_QUEUED_EVENTS = 500;
 const BATCH_SIZE = 50;
 let flushTimer: number | null = null;
 let flushPromise: Promise<number> | null = null;
+let memorySessionId: string | null = null;
+let memoryDeviceId: string | null = null;
 
 function randomId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
@@ -128,22 +130,36 @@ export async function flushAppDiagnosticQueue(): Promise<number> {
 
 export function getAppDiagnosticSessionId() {
   if (typeof window === "undefined") return "server";
-  let sessionId = window.sessionStorage.getItem(SESSION_KEY);
-  if (!sessionId) {
-    sessionId = randomId("session");
-    window.sessionStorage.setItem(SESSION_KEY, sessionId);
+  try {
+    const stored = window.sessionStorage.getItem(SESSION_KEY);
+    if (stored) {
+      memorySessionId = stored;
+      return stored;
+    }
+    memorySessionId ??= randomId("session");
+    window.sessionStorage.setItem(SESSION_KEY, memorySessionId);
+    return memorySessionId;
+  } catch {
+    memorySessionId ??= randomId("session");
+    return memorySessionId;
   }
-  return sessionId;
 }
 
 function getDeviceId() {
   if (typeof window === "undefined") return "server";
-  let deviceId = window.localStorage.getItem(DEVICE_KEY);
-  if (!deviceId) {
-    deviceId = randomId("device");
-    window.localStorage.setItem(DEVICE_KEY, deviceId);
+  try {
+    const stored = window.localStorage.getItem(DEVICE_KEY);
+    if (stored) {
+      memoryDeviceId = stored;
+      return stored;
+    }
+    memoryDeviceId ??= randomId("device");
+    window.localStorage.setItem(DEVICE_KEY, memoryDeviceId);
+    return memoryDeviceId;
+  } catch {
+    memoryDeviceId ??= randomId("device");
+    return memoryDeviceId;
   }
-  return deviceId;
 }
 
 function currentRoute() {

@@ -1056,6 +1056,31 @@ export function LessonPlayer({
     };
   }, [interactionPass, parsed, goNext, lessonId, screen, screens, index]);
 
+  const activityLoadFailureRef = useRef<string | null>(null);
+  const activityLoadFailureKey =
+    screens.length === 0 ? `${lessonId}:empty` : !parsed && screen ? `${lessonId}:${screen.id}` : null;
+  useEffect(() => {
+    if (!activityLoadFailureKey) {
+      activityLoadFailureRef.current = null;
+      return;
+    }
+    if (activityLoadFailureRef.current === activityLoadFailureKey) return;
+    activityLoadFailureRef.current = activityLoadFailureKey;
+    const emptyLesson = screens.length === 0;
+    recordAppDiagnostic(
+      "lesson",
+      "activity_load",
+      "activity_load_failed",
+      { reason: emptyLesson ? "empty_lesson" : "unsupported_screen_type" },
+      {
+        kind: "error",
+        activityId: lessonId,
+        status: "failed",
+        errorCode: emptyLesson ? "activity_has_no_screens" : "activity_screen_unsupported",
+      },
+    );
+  }, [activityLoadFailureKey, lessonId, screens.length]);
+
   if (screens.length === 0 || !screen) {
     return (
       <KidPanel>

@@ -24,14 +24,14 @@ The next proposed sequence strengthens the platform around that proven journey:
 | 2 | [WKE-002 — Homework Submission Finishes Exactly Once](./WKE-002-homework-finalization-integrity.md) | Complete | P0 | Submitted work, completion, progress, and rewards reach one recoverable, idempotent outcome. |
 | 3 | [WKE-003 — Release-Gate the Complete Homework Journey](./WKE-003-homework-journey-release-gate.md) | Completed (advisory gate) | P1 | One cross-role journey is automated, release-gated, and observable without collecting student responses. |
 | 4 | [WKE-004 — Establish a Trustworthy Database Architecture Map](./WKE-004-database-architecture-audit.md) | Complete | P1 | A reproducible map and read-only audit make learning-critical data ownership, access, relationships, and risks explicit. |
-| 5 | [WKE-005 — Turn Diagnostics into Actionable Platform Health](./WKE-005-actionable-platform-health.md) | Ready | P1 | Administrators can identify the most important current learning interruption from privacy-safe grouped evidence in under one minute. |
+| 5 | [WKE-005 — Turn Diagnostics into Actionable Platform Health](./WKE-005-actionable-platform-health.md) | Complete | P1 | Administrators can identify the most important current learning interruption from privacy-safe grouped evidence in under one minute. |
 | 6 | [WKE-006 — Prove a Reconnect-Safe Live Classroom Pilot](./WKE-006-reconnect-safe-classroom-pilot.md) | Proposed | P1 | A class-linked teacher/student lesson recovers current classroom state after refresh, disconnect, and late join before wider rollout. |
 
 ## Execution Rule
 
 WKE-001 through WKE-003 are complete; the WKE-003 release gate remains advisory until the team chooses to make it mandatory.
 
-WKE-004 is complete. WKE-005 is Ready because WKE-004 confirmed the ownership, privacy, retention, and access boundary of diagnostic storage. WKE-006 becomes Ready after WKE-005 defines the reconnect health contract and the team confirms the pilot class and realtime capacity.
+WKE-004 and WKE-005 are complete. WKE-006 remains Proposed until the team confirms the pilot class and realtime capacity; the required reconnect health contract is now available.
 
 Working on one goal does not authorize unrelated cleanup or a broad subsystem rewrite. Follow the inspect, report, slice, test, regression-review, document, and status-update workflow in the master guide.
 

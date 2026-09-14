@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The central diagnostics stream helps administrators reconstruct authenticated student and teacher sessions, identify activity failures, and measure performance across devices. It is operational evidence, not the authoritative learning record. Assessment and mastery continue to use `student_learning_evidence` and related reporting tables.
+The central diagnostics stream helps administrators reconstruct authenticated student and teacher sessions, identify activity failures, and measure performance across devices. It is operational evidence, not the authoritative learning record. Assessment and mastery continue to use `student_learning_evidence` and related reporting tables. See [Platform health contract](./platform-health.md) for journey rules, issue grouping, thresholds, and operator response.
 
 ## Data flow
 
@@ -11,7 +11,7 @@ The central diagnostics stream helps administrators reconstruct authenticated st
 3. Up to 50 events are sent to `POST /api/diagnostics/events`.
 4. The API derives user identity and role from the authenticated server session.
 5. Valid events are inserted idempotently into `platform_usage_events`.
-6. Administrators can inspect the last 24 hours at `/teacher/admin/diagnostics`.
+6. Administrators can inspect grouped Platform Health and its privacy-limited timeline at `/teacher/admin/diagnostics` for a bounded 6-hour, 24-hour, or 7-day window.
 
 Failed uploads stay queued and retry when the browser returns online, becomes visible, or records another event. Diagnostics must never block the learning interface.
 
@@ -59,8 +59,9 @@ Apply migration `088_platform_usage_events.sql` before expecting central events 
   prevented, and teacher result opened, correlated by homework ID
 
 Student homework diagnostics discard authenticated identity and never include the educational
-response. The next instrumentation pass should add Secondary non-homework activity lifecycle events,
-explicit activity-load success/failure boundaries, and global client error capture.
+response. Goal 5 adds explicit activity-load failure events, grouped journey health, and safe native
+classroom reconnect outcomes. Secondary non-homework lifecycle depth remains a later instrumentation
+increment.
 
 ## Application-wide interaction coverage plan
 

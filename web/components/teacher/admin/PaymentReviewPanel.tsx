@@ -29,10 +29,10 @@ export function PaymentReviewPanel(props: { items: PaymentReviewItem[] }) {
                   {item.disputeStatus ? `Dispute: ${item.disputeStatus}` : item.refundStatus}
                 </td>
                 <td className="px-2 py-2 text-amber-900">
-                  {formatStripeMoney(item.refundedAmount, item.currency)}
+                  {formatStripeMoney(item.refundedAmount, item.currency, item.currency === "vnd" ? "vi-VN" : "en-US")}
                 </td>
                 <td className="px-2 py-2 text-amber-900">
-                  {item.lessonCount} lessons · {formatStripeMoney(item.unitAmount * item.quantity, item.currency)}
+                  {item.lessonCount} lessons · {formatStripeMoney(item.unitAmount * item.quantity, item.currency, item.currency === "vnd" ? "vi-VN" : "en-US")}
                 </td>
                 <td className="px-2 py-2 font-mono text-xs text-amber-900">
                   {item.orderId.slice(0, 8)}

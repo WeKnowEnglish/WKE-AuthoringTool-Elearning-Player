@@ -1,0 +1,1863 @@
+{
+  "generatedAt": "2026-09-14T17:50:59.227Z",
+  "registryVersion": 1,
+  "reviewedThroughMigration": "149",
+  "inventory": {
+    "tablesAndViews": 111,
+    "functions": 70,
+    "triggers": 3,
+    "foreignKeys": 197,
+    "indexes": 368,
+    "policies": 260,
+    "tableGrants": 1176,
+    "functionGrants": 123
+  },
+  "findings": [
+    {
+      "code": "usage_needs_verification",
+      "severity": "P3",
+      "blocking": false,
+      "subject": "table:public.student_lesson_progress",
+      "message": "Static evidence is insufficient; usage must be verified before cleanup.",
+      "evidence": {}
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_enrollments",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_enrollments",
+      "message": "Role authenticated has INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_homework",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_homework_completions",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_homework_completions",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_session_attendance",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_session_attendance",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_audit_log",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_audit_log",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_invitations",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_invitations",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_attempts",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_attempts",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_media",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_media",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_reviews",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_reviews",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_speaking_recordings",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_speaking_recordings",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_reviews",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_reviews",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_speaking_recordings",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_speaking_recordings",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_submissions",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_submissions",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_writing_submissions",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_writing_submissions",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.lesson_pack_orders",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.lesson_pack_orders",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.lesson_packages",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.lesson_packages",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_notifications",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_notifications",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_profiles",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_profiles",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_progress_reports",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_progress_reports",
+      "message": "Role authenticated has DELETE, INSERT but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_stream_publications",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.primary_player_profiles",
+      "message": "Role anon has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.primary_player_profiles",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.primary_reward_events",
+      "message": "Role anon has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.primary_reward_events",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.stripe_webhook_events",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.stripe_webhook_events",
+      "message": "Role authenticated has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_guardians",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_guardians",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_learning_evidence",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_learning_evidence",
+      "message": "Role authenticated has DELETE, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_lesson_credit_ledger",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_lesson_credit_ledger",
+      "message": "Role authenticated has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_lesson_credits",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_lesson_credits",
+      "message": "Role authenticated has DELETE, INSERT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_mastery_records",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_mastery_records",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_profiles",
+      "message": "Role anon has DELETE, INSERT but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_profiles",
+      "message": "Role authenticated has DELETE, INSERT but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete",
+          "insert"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.teacher_classes",
+      "message": "Role anon has DELETE, INSERT, SELECT, UPDATE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "anon",
+        "privileges": [
+          "delete",
+          "insert",
+          "select",
+          "update"
+        ]
+      }
+    },
+    {
+      "code": "grant_without_applicable_policy",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.teacher_classes",
+      "message": "Role authenticated has DELETE but no matching policy; this is deny-by-default but may indicate drift.",
+      "evidence": {
+        "role": "authenticated",
+        "privileges": [
+          "delete"
+        ]
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.activity_library_items.activity_library_items_created_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "created_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.assessment_speaking_recordings.assessment_speaking_recordings_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.assessment_speaking_reviews.assessment_speaking_reviews_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.assessment_speaking_reviews.assessment_speaking_reviews_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_homework.class_homework_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_meeting_slots.class_meeting_slots_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_post_student_tags.class_post_student_tags_tagged_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "tagged_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_posts.class_posts_activity_space_item_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "activity_space_item_id"
+        ],
+        "references": "public.teacher_space_items"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_posts.class_posts_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_schedule_preferences.class_schedule_preferences_guardian_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "guardian_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_schedule_preferences.class_schedule_preferences_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_schedule_windows.class_schedule_windows_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_session_attendance.class_session_attendance_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_session_speaking_reports.class_session_speaking_reports_source_transcript_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "source_transcript_id"
+        ],
+        "references": "public.class_session_transcripts"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_session_speaking_reports.class_session_speaking_reports_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.class_sessions.class_sessions_meeting_slot_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "meeting_slot_id"
+        ],
+        "references": "public.class_meeting_slots"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.comic_pages.comic_pages_uploaded_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "uploaded_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.daily_webhook_events.daily_webhook_events_session_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "session_id"
+        ],
+        "references": "public.class_sessions"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.grammar_modules.grammar_modules_updated_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "updated_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_audit_log.guardian_audit_log_actor_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "actor_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_audit_log.guardian_audit_log_guardian_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "guardian_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_audit_log.guardian_audit_log_invitation_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "invitation_id"
+        ],
+        "references": "public.guardian_invitations"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.guardian_invitations.guardian_invitations_accepted_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "accepted_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_attempts.homework_collection_attempts_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_media.homework_collection_media_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_reviews.homework_collection_reviews_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_reviews.homework_collection_reviews_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_collection_speaking_recordings.homework_collection_speaking_recordings_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_finalization_legacy_orphans.homework_finalization_legacy_orphans_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_reviews.homework_template_reviews_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_reviews.homework_template_reviews_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_speaking_recordings.homework_template_speaking_recordings_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_template_submissions.homework_template_submissions_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.homework_writing_submissions.homework_writing_submissions_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.lesson_pack_orders.lesson_pack_orders_package_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "package_id"
+        ],
+        "references": "public.lesson_packages"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.lexicon_media_links.lexicon_media_links_created_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "created_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.live_game_question_encounters.live_game_question_encounters_question_set_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "question_set_id"
+        ],
+        "references": "public.live_game_question_sets"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.live_game_report_participants.live_game_report_participants_account_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "account_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.live_game_report_rounds.live_game_report_rounds_host_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "host_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.live_game_report_rounds.live_game_report_rounds_question_set_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "question_set_id"
+        ],
+        "references": "public.live_game_question_sets"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.live_game_support_events.live_game_support_events_encounter_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "encounter_id"
+        ],
+        "references": "public.live_game_question_encounters"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.media_assets.media_assets_uploaded_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "uploaded_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.media_lexicon_match_queue.media_lexicon_match_queue_reviewed_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "reviewed_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_notifications.parent_notifications_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_progress_reports.parent_progress_reports_class_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "class_id"
+        ],
+        "references": "public.teacher_classes"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_stream_publications.parent_stream_publications_class_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "class_id"
+        ],
+        "references": "public.teacher_classes"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.parent_stream_publications.parent_stream_publications_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.platform_lexicon_entries.platform_lexicon_entries_promoted_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "promoted_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.platform_lexicon_overrides.platform_lexicon_overrides_updated_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "updated_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.platform_usage_events.platform_usage_events_homework_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "homework_id"
+        ],
+        "references": "public.class_homework"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_guardians.student_guardians_invited_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "invited_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_guardians.student_guardians_revoked_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "revoked_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_guardians.student_guardians_source_invitation_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "source_invitation_id"
+        ],
+        "references": "public.guardian_invitations"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_lesson_progress.student_lesson_progress_lesson_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "lesson_id"
+        ],
+        "references": "public.lessons"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_sentence_submissions.student_sentence_submissions_supersedes_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "supersedes_id"
+        ],
+        "references": "public.student_sentence_submissions"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_sentence_submissions.student_sentence_submissions_teacher_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_voice_submissions.student_voice_submissions_screen_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "screen_id"
+        ],
+        "references": "public.lesson_screens"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.student_voice_submissions.student_voice_submissions_student_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.teacher_availability_series.teacher_availability_series_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.teacher_classes.teacher_classes_course_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "course_id"
+        ],
+        "references": "public.courses"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.teacher_lexicon_entries.teacher_lexicon_entries_promotion_reviewed_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "promotion_reviewed_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.teacher_space_items.teacher_space_items_studio_activity_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "studio_activity_id"
+        ],
+        "references": "public.studio_activities"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.trial_booking_requests.trial_booking_requests_class_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "class_id"
+        ],
+        "references": "public.teacher_classes"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.trial_booking_requests.trial_booking_requests_occurrence_fk",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "occurrence_id"
+        ],
+        "references": "public.trial_occurrences"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.trial_occurrences.trial_occurrences_class_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "class_id"
+        ],
+        "references": "public.teacher_classes"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.trial_occurrences.trial_occurrences_guardian_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "guardian_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.trial_student_discovery.trial_student_discovery_guardian_user_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "guardian_user_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.trial_student_discovery.trial_student_discovery_student_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "student_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.trial_student_discovery.trial_student_discovery_teacher_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "teacher_id"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.whiteboard_rounds.whiteboard_rounds_class_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "class_id"
+        ],
+        "references": "public.teacher_classes"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.whiteboard_rounds.whiteboard_rounds_session_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "session_id"
+        ],
+        "references": "public.class_sessions"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.wke_library_items.wke_library_items_reviewed_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "reviewed_by"
+        ],
+        "references": "auth.users"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.wke_library_items.wke_library_items_submitted_from_studio_activity_id_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "submitted_from_studio_activity_id"
+        ],
+        "references": "public.studio_activities"
+      }
+    },
+    {
+      "code": "foreign_key_without_leading_index",
+      "severity": "P2",
+      "blocking": false,
+      "subject": "public.wke_library_items.wke_library_items_updated_by_fkey",
+      "message": "The foreign-key columns are not the leading columns of a valid index.",
+      "evidence": {
+        "columns": [
+          "updated_by"
+        ],
+        "references": "auth.users"
+      }
+    }
+  ]
+}

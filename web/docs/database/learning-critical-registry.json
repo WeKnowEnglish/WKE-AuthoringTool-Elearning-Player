@@ -1,0 +1,1099 @@
+{
+  "version": 1,
+  "reviewedThroughMigration": "149",
+  "scope": "Learning-critical public objects plus storage and realtime policy surfaces for the first 100 active students.",
+  "objects": [
+    {
+      "name": "public.student_profiles",
+      "kind": "table",
+      "journeys": [
+        "identity"
+      ],
+      "owner": "Student identity",
+      "sensitivity": "student personal data",
+      "authority": "student identity and authorized staff",
+      "migration": "supabase/migrations/022_student_profiles.sql",
+      "relationships": [
+        "user_id -> auth.users.id"
+      ],
+      "access": "student-owned with authorized staff paths",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/student-auth.ts",
+        "lib/actions/admin-users.ts"
+      ]
+    },
+    {
+      "name": "public.teacher_classes",
+      "kind": "table",
+      "journeys": [
+        "class-membership",
+        "homework-finalization",
+        "classroom-recovery"
+      ],
+      "owner": "Teacher class management",
+      "sensitivity": "class metadata",
+      "authority": "owning teacher",
+      "migration": "supabase/migrations/026_teacher_classes.sql",
+      "relationships": [
+        "teacher_id -> auth.users.id"
+      ],
+      "access": "teacher-owned; enrolled-student scoped reads",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/teacher-classes.ts",
+        "lib/class-schedule/ensure-session.ts"
+      ]
+    },
+    {
+      "name": "public.class_enrollments",
+      "kind": "table",
+      "journeys": [
+        "class-membership",
+        "homework-finalization",
+        "classroom-recovery"
+      ],
+      "owner": "Class membership",
+      "sensitivity": "student-class relationship",
+      "authority": "teacher and guarded student join",
+      "migration": "supabase/migrations/026_teacher_classes.sql",
+      "relationships": [
+        "class_id -> teacher_classes.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "teacher class scope; student reads own membership",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/whiteboard/product/access.ts",
+        "lib/actions/student-classes.ts"
+      ]
+    },
+    {
+      "name": "public.class_homework",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Teacher homework assignment",
+      "sensitivity": "targeting and educational content",
+      "authority": "owning teacher",
+      "migration": "supabase/migrations/064_class_homework.sql",
+      "relationships": [
+        "class_id -> teacher_classes.id",
+        "teacher_id -> auth.users.id"
+      ],
+      "access": "teacher-managed; enrolled and targeted student reads",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/class-homework.ts",
+        "lib/data/class-homework.ts"
+      ]
+    },
+    {
+      "name": "public.class_homework_completions",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization",
+        "rewards"
+      ],
+      "owner": "Homework completion",
+      "sensitivity": "student completion and score",
+      "authority": "atomic finalization RPC",
+      "migration": "supabase/migrations/065_class_homework_completions.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own; teacher class scope; service reconciliation",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/class-homework.ts",
+        "lib/actions/assessment-attempt.ts"
+      ]
+    },
+    {
+      "name": "public.homework_finalization_legacy_orphans",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization",
+        "rewards"
+      ],
+      "owner": "Legacy split-finalization reconciliation",
+      "sensitivity": "student completion repair metadata",
+      "authority": "service-only reconciliation",
+      "migration": "supabase/migrations/145_atomic_homework_submission_finalization.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "service role only; never a browser data path",
+      "usage": "confirmed",
+      "callSites": [
+        "supabase/migrations/145_atomic_homework_submission_finalization.sql",
+        "scripts/audit-wke-002-finalization.mjs"
+      ]
+    },
+    {
+      "name": "public.homework_writing_submissions",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Writing homework",
+      "sensitivity": "student educational response",
+      "authority": "student draft then immutable submission",
+      "migration": "supabase/migrations/123_homework_writing_submissions.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own targeted response; teacher assignment scope",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-writing-submission.ts",
+        "lib/data/homework-writing-submissions.ts"
+      ]
+    },
+    {
+      "name": "public.homework_template_submissions",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Template homework",
+      "sensitivity": "student educational response",
+      "authority": "student draft then immutable submission",
+      "migration": "supabase/migrations/102_homework_template_submissions.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own targeted response; teacher assignment scope",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-template-submission.ts",
+        "lib/data/homework-template-submissions.ts"
+      ]
+    },
+    {
+      "name": "public.homework_template_reviews",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Template homework review",
+      "sensitivity": "student feedback and grades",
+      "authority": "assignment-owning teacher",
+      "migration": "supabase/migrations/110_homework_template_reviews.sql",
+      "relationships": [
+        "submission_id -> homework_template_submissions.id"
+      ],
+      "access": "teacher assignment scope; student own review read",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-template-review.ts",
+        "lib/data/homework-template-submissions.ts"
+      ]
+    },
+    {
+      "name": "public.homework_template_speaking_recordings",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Template speaking evidence",
+      "sensitivity": "student voice metadata",
+      "authority": "student-owned recording metadata",
+      "migration": "supabase/migrations/111_homework_template_speaking_recordings.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own targeted recording; teacher assignment scope",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-template-speaking.ts",
+        "lib/data/homework-template-submissions.ts"
+      ]
+    },
+    {
+      "name": "public.homework_collection_attempts",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Collection homework",
+      "sensitivity": "student response and score",
+      "authority": "student attempt then atomic finalization",
+      "migration": "supabase/migrations/137_homework_collection_attempts.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own targeted attempt; teacher assignment scope",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-collection-attempt.ts",
+        "lib/data/homework-collection-attempts.ts"
+      ]
+    },
+    {
+      "name": "public.homework_collection_reviews",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Collection homework review",
+      "sensitivity": "student feedback and grades",
+      "authority": "assignment-owning teacher",
+      "migration": "supabase/migrations/137_homework_collection_attempts.sql",
+      "relationships": [
+        "attempt_id -> homework_collection_attempts.id"
+      ],
+      "access": "teacher assignment scope; student own review read",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-collection-review.ts",
+        "lib/data/homework-collection-attempts.ts"
+      ]
+    },
+    {
+      "name": "public.homework_collection_speaking_recordings",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Collection speaking evidence",
+      "sensitivity": "student voice metadata",
+      "authority": "student-owned recording metadata",
+      "migration": "supabase/migrations/140_homework_collection_speaking_recordings.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own targeted recording; teacher assignment scope",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-collection-speaking.ts",
+        "lib/data/homework-collection-speaking-recordings.ts"
+      ]
+    },
+    {
+      "name": "public.homework_collection_media",
+      "kind": "table",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Collection media evidence",
+      "sensitivity": "student media metadata",
+      "authority": "student-owned metadata and private storage",
+      "migration": "supabase/migrations/142_homework_collection_media.sql",
+      "relationships": [
+        "homework_id -> class_homework.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own targeted media; teacher assignment scope",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-collection-media.ts",
+        "app/api/homework-collection-media/[mediaId]/route.ts"
+      ]
+    },
+    {
+      "name": "public.student_lesson_progress",
+      "kind": "table",
+      "journeys": [
+        "learning-progress"
+      ],
+      "owner": "Legacy lesson progress",
+      "sensitivity": "student learning progress",
+      "authority": "legacy student path",
+      "migration": "supabase/migrations/001_initial.sql",
+      "relationships": [
+        "student_id -> auth.users.id",
+        "lesson_id -> lessons.id"
+      ],
+      "access": "legacy ownership requires review",
+      "usage": "unknown",
+      "callSites": [
+        "supabase/migrations/001_initial.sql"
+      ]
+    },
+    {
+      "name": "public.student_learning_evidence",
+      "kind": "table",
+      "journeys": [
+        "learning-progress",
+        "parent-access"
+      ],
+      "owner": "Mastery evidence",
+      "sensitivity": "student learning evidence",
+      "authority": "student sync and authorized teacher aggregation",
+      "migration": "supabase/migrations/024_student_mastery.sql",
+      "relationships": [
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own; authorized teacher reads",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/mastery/supabase-sync.ts",
+        "lib/mastery/teacher-queries.ts"
+      ]
+    },
+    {
+      "name": "public.student_mastery_records",
+      "kind": "table",
+      "journeys": [
+        "learning-progress",
+        "parent-access"
+      ],
+      "owner": "Mastery state",
+      "sensitivity": "student mastery estimates",
+      "authority": "mastery synchronization",
+      "migration": "supabase/migrations/024_student_mastery.sql",
+      "relationships": [
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own; teacher authorized; parent via curated report",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/mastery/supabase-sync.ts",
+        "lib/mastery/teacher-queries.ts"
+      ]
+    },
+    {
+      "name": "public.primary_player_profiles",
+      "kind": "table",
+      "journeys": [
+        "rewards"
+      ],
+      "owner": "Primary reward profile",
+      "sensitivity": "student reward state",
+      "authority": "reward RPCs",
+      "migration": "supabase/migrations/134_primary_player_rewards.sql",
+      "relationships": [
+        "student_id -> auth.users.id"
+      ],
+      "access": "student-owned snapshot through guarded RPCs",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/primary-player/client.ts",
+        "lib/actions/class-homework.ts"
+      ]
+    },
+    {
+      "name": "public.primary_reward_events",
+      "kind": "table",
+      "journeys": [
+        "rewards",
+        "homework-finalization"
+      ],
+      "owner": "Reward ledger",
+      "sensitivity": "student reward history",
+      "authority": "reward and finalization RPCs",
+      "migration": "supabase/migrations/134_primary_player_rewards.sql",
+      "relationships": [
+        "student_id -> auth.users.id"
+      ],
+      "access": "student own read; guarded RPC writes",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/primary-player/client.ts",
+        "scripts/audit-wke-002-finalization.mjs"
+      ]
+    },
+    {
+      "name": "public.parent_profiles",
+      "kind": "table",
+      "journeys": [
+        "parent-access",
+        "identity"
+      ],
+      "owner": "Parent identity",
+      "sensitivity": "parent personal and billing identifiers",
+      "authority": "parent with service-managed billing fields",
+      "migration": "supabase/migrations/105_parent_guardian_foundation.sql",
+      "relationships": [
+        "user_id -> auth.users.id"
+      ],
+      "access": "parent own; narrow service/admin access",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/parent-notifications.ts",
+        "lib/billing/fulfill-checkout.ts"
+      ]
+    },
+    {
+      "name": "public.student_guardians",
+      "kind": "table",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Guardian relationship",
+      "sensitivity": "family relationship",
+      "authority": "invitation and acceptance RPCs",
+      "migration": "supabase/migrations/105_parent_guardian_foundation.sql",
+      "relationships": [
+        "student_id -> auth.users.id",
+        "guardian_id -> auth.users.id"
+      ],
+      "access": "active guardian and authorized teacher",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/parent/guardian-data.ts",
+        "lib/actions/guardian-invitations.ts"
+      ]
+    },
+    {
+      "name": "public.guardian_invitations",
+      "kind": "table",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Guardian invitations",
+      "sensitivity": "family invitation metadata",
+      "authority": "authorized teacher and server RPCs",
+      "migration": "supabase/migrations/105_parent_guardian_foundation.sql",
+      "relationships": [
+        "student_id -> auth.users.id"
+      ],
+      "access": "teacher-managed; token-scoped guardian RPC",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/guardian-invitations.ts",
+        "lib/data/admin-guardians.ts"
+      ]
+    },
+    {
+      "name": "public.guardian_invitation_tokens",
+      "kind": "table",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Invitation security",
+      "sensitivity": "hashed invitation credential",
+      "authority": "server RPCs",
+      "migration": "supabase/migrations/105_parent_guardian_foundation.sql",
+      "relationships": [
+        "invitation_id -> guardian_invitations.id"
+      ],
+      "access": "service/RPC only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/guardian-invitations.ts",
+        "lib/parent/guardian-data.ts"
+      ]
+    },
+    {
+      "name": "public.guardian_audit_log",
+      "kind": "table",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Guardian access audit",
+      "sensitivity": "family access security history",
+      "authority": "server and guardian RPCs",
+      "migration": "supabase/migrations/105_parent_guardian_foundation.sql",
+      "relationships": [
+        "student_id -> auth.users.id"
+      ],
+      "access": "restricted administrator/service review",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/admin-guardians.ts",
+        "lib/data/admin-guardians.ts"
+      ]
+    },
+    {
+      "name": "public.parent_progress_reports",
+      "kind": "table",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Parent progress reporting",
+      "sensitivity": "student progress narrative",
+      "authority": "teacher draft/publish RPCs",
+      "migration": "supabase/migrations/107_parent_progress_reports.sql",
+      "relationships": [
+        "student_id -> auth.users.id",
+        "teacher_id -> auth.users.id"
+      ],
+      "access": "teacher authoring; guardian published-read RPC",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/parent-progress-reports.ts",
+        "lib/parent/progress-report-data.ts"
+      ]
+    },
+    {
+      "name": "public.parent_stream_publications",
+      "kind": "table",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Parent class stream",
+      "sensitivity": "class publication scope",
+      "authority": "class teacher",
+      "migration": "supabase/migrations/106_parent_guardian_stream.sql",
+      "relationships": [
+        "post_id -> class_posts.id"
+      ],
+      "access": "teacher-managed; guardian curated RPC",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/parent-stream-publications.ts",
+        "lib/parent/parent-stream.ts"
+      ]
+    },
+    {
+      "name": "public.parent_notifications",
+      "kind": "table",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Parent notifications",
+      "sensitivity": "parent-student notification metadata",
+      "authority": "server creation and parent read state",
+      "migration": "supabase/migrations/108_parent_notifications_and_pilot_support.sql",
+      "relationships": [
+        "parent_id -> auth.users.id",
+        "student_id -> auth.users.id"
+      ],
+      "access": "parent own; server creates",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/parent/parent-notifications.ts",
+        "lib/email/parent-notifications.ts"
+      ]
+    },
+    {
+      "name": "public.platform_usage_events",
+      "kind": "table",
+      "journeys": [
+        "diagnostics"
+      ],
+      "owner": "Platform diagnostics",
+      "sensitivity": "pseudonymous operational metadata",
+      "authority": "authenticated ingestion and service admin read",
+      "migration": "supabase/migrations/088_platform_usage_events.sql",
+      "relationships": [
+        "user_id -> auth.users.id (logical; retention applies)"
+      ],
+      "access": "no direct client reads; 60-day raw retention",
+      "usage": "confirmed",
+      "callSites": [
+        "app/api/diagnostics/events/route.ts",
+        "lib/data/admin-diagnostics.ts"
+      ]
+    },
+    {
+      "name": "public.class_sessions",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery",
+        "class-membership"
+      ],
+      "owner": "Classroom lifecycle",
+      "sensitivity": "classroom access metadata",
+      "authority": "session host and teacher server paths",
+      "migration": "supabase/migrations/048_whiteboard_p2.sql",
+      "relationships": [
+        "class_id -> teacher_classes.id",
+        "created_by is the logical host identity"
+      ],
+      "access": "host, teacher, enrolled member, integrations",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/virtual-classroom/server/session.ts",
+        "lib/daily/session-room.ts"
+      ]
+    },
+    {
+      "name": "public.class_session_attendance",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Classroom attendance",
+      "sensitivity": "student attendance metadata",
+      "authority": "Daily/server and lobby heartbeat",
+      "migration": "supabase/migrations/117_daily_video_classroom.sql",
+      "relationships": [
+        "session_id -> class_sessions.id",
+        "user_id -> auth.users.id"
+      ],
+      "access": "authorized server and participant registry",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/daily/attendance.ts",
+        "lib/virtual-classroom/server/session-history.ts"
+      ]
+    },
+    {
+      "name": "public.class_session_runtime_snapshots",
+      "kind": "table",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Classroom control plane",
+      "sensitivity": "current classroom control state",
+      "authority": "server-only versioned snapshot RPC",
+      "migration": "supabase/migrations/127_class_session_runtime_snapshots.sql",
+      "relationships": [
+        "session_id -> class_sessions.id"
+      ],
+      "access": "service only; clients use authorized endpoint",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/virtual-classroom/server/runtime-snapshot.ts",
+        "app/api/virtual-classroom/[sessionId]/runtime/route.ts"
+      ]
+    },
+    {
+      "name": "public.join_class_by_code",
+      "kind": "function",
+      "journeys": [
+        "class-membership",
+        "identity"
+      ],
+      "owner": "Student class joining",
+      "sensitivity": "join credential and membership",
+      "authority": "authenticated student RPC",
+      "migration": "supabase/migrations/026_teacher_classes.sql",
+      "relationships": [
+        "validates teacher_classes then writes class_enrollments"
+      ],
+      "access": "authenticated students",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/student-classes.ts"
+      ]
+    },
+    {
+      "name": "public.student_class_memberships",
+      "kind": "function",
+      "journeys": [
+        "class-membership",
+        "homework-finalization"
+      ],
+      "owner": "Membership projection",
+      "sensitivity": "student class membership",
+      "authority": "caller-scoped RPC",
+      "migration": "supabase/migrations/139_trial_onboarding_first_pass.sql",
+      "relationships": [
+        "reads class_enrollments and teacher_classes"
+      ],
+      "access": "caller receives own memberships",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/data/student-classes.ts",
+        "lib/actions/class-homework.ts"
+      ]
+    },
+    {
+      "name": "public.finalize_homework_writing_submission",
+      "kind": "function",
+      "journeys": [
+        "homework-finalization",
+        "rewards"
+      ],
+      "owner": "Writing finalization",
+      "sensitivity": "response and completion",
+      "authority": "targeted student RPC",
+      "migration": "supabase/migrations/145_atomic_homework_submission_finalization.sql",
+      "relationships": [
+        "locks writing response; calls shared finalizer"
+      ],
+      "access": "authenticated targeted student",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-writing-submission.ts"
+      ]
+    },
+    {
+      "name": "public.finalize_homework_template_submission",
+      "kind": "function",
+      "journeys": [
+        "homework-finalization",
+        "rewards"
+      ],
+      "owner": "Template finalization",
+      "sensitivity": "response and completion",
+      "authority": "targeted student RPC",
+      "migration": "supabase/migrations/145_atomic_homework_submission_finalization.sql",
+      "relationships": [
+        "locks template response; calls shared finalizer"
+      ],
+      "access": "authenticated targeted student",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-template-submission.ts"
+      ]
+    },
+    {
+      "name": "public.finalize_homework_collection_attempt",
+      "kind": "function",
+      "journeys": [
+        "homework-finalization",
+        "rewards"
+      ],
+      "owner": "Collection finalization",
+      "sensitivity": "response and completion",
+      "authority": "targeted student RPC",
+      "migration": "supabase/migrations/145_atomic_homework_submission_finalization.sql",
+      "relationships": [
+        "locks collection attempt; calls shared finalizer"
+      ],
+      "access": "authenticated targeted student",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-collection-attempt.ts"
+      ]
+    },
+    {
+      "name": "public.finish_homework_finalization",
+      "kind": "function",
+      "journeys": [
+        "homework-finalization",
+        "rewards"
+      ],
+      "owner": "Shared completion reconciliation",
+      "sensitivity": "completion and reward state",
+      "authority": "internal finalization helper",
+      "migration": "supabase/migrations/146_homework_finalization_reconciliation_signal.sql",
+      "relationships": [
+        "writes completion; calls reward completion"
+      ],
+      "access": "not directly executable by browser roles",
+      "usage": "confirmed",
+      "callSites": [
+        "supabase/migrations/145_atomic_homework_submission_finalization.sql"
+      ]
+    },
+    {
+      "name": "public.complete_primary_homework",
+      "kind": "function",
+      "journeys": [
+        "homework-finalization",
+        "rewards"
+      ],
+      "owner": "Exactly-once homework reward",
+      "sensitivity": "completion and reward state",
+      "authority": "guarded finalization",
+      "migration": "supabase/migrations/136_guard_legacy_homework_rewards.sql",
+      "relationships": [
+        "upserts completion and applies reward once"
+      ],
+      "access": "authenticated targeted student",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/class-homework.ts",
+        "supabase/migrations/146_homework_finalization_reconciliation_signal.sql"
+      ]
+    },
+    {
+      "name": "public.apply_primary_reward",
+      "kind": "function",
+      "journeys": [
+        "rewards"
+      ],
+      "owner": "Idempotent reward mutation",
+      "sensitivity": "student reward state",
+      "authority": "authenticated student and event idempotency",
+      "migration": "supabase/migrations/134_primary_player_rewards.sql",
+      "relationships": [
+        "writes reward ledger and profile"
+      ],
+      "access": "caller own profile",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/primary-player/client.ts"
+      ]
+    },
+    {
+      "name": "public.parent_linked_students",
+      "kind": "function",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Guardian student boundary",
+      "sensitivity": "family and student identity",
+      "authority": "active guardian relationship",
+      "migration": "supabase/migrations/113_class_schedule_preferences.sql",
+      "relationships": [
+        "reads guardians and student profiles"
+      ],
+      "access": "authenticated active guardian",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/parent/guardian-data.ts",
+        "lib/parent/parent-schedule.ts"
+      ]
+    },
+    {
+      "name": "public.parent_student_stream",
+      "kind": "function",
+      "journeys": [
+        "parent-access"
+      ],
+      "owner": "Curated guardian stream",
+      "sensitivity": "student and class publication",
+      "authority": "active guardian relationship",
+      "migration": "supabase/migrations/107_parent_progress_reports.sql",
+      "relationships": [
+        "reads guardian links and published posts"
+      ],
+      "access": "authenticated active guardian",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/parent/parent-stream.ts"
+      ]
+    },
+    {
+      "name": "public.parent_published_progress_report",
+      "kind": "function",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Curated progress report",
+      "sensitivity": "student progress report",
+      "authority": "active guardian and published status",
+      "migration": "supabase/migrations/107_parent_progress_reports.sql",
+      "relationships": [
+        "reads linked published report"
+      ],
+      "access": "authenticated active guardian",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/parent/progress-report-data.ts"
+      ]
+    },
+    {
+      "name": "public.prune_platform_usage_events",
+      "kind": "function",
+      "journeys": [
+        "diagnostics"
+      ],
+      "owner": "Diagnostics retention",
+      "sensitivity": "pseudonymous operations",
+      "authority": "service-only maintenance",
+      "migration": "supabase/migrations/147_platform_diagnostics_retention.sql",
+      "relationships": [
+        "prunes platform_usage_events after retention"
+      ],
+      "access": "service role only",
+      "usage": "confirmed",
+      "callSites": [
+        "app/api/cron/diagnostics-retention/route.ts",
+        "scripts/test-wke-003-retention.mjs"
+      ]
+    },
+    {
+      "name": "public.advance_class_session_runtime_snapshot",
+      "kind": "function",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Versioned classroom updates",
+      "sensitivity": "classroom control state",
+      "authority": "server compare-and-swap",
+      "migration": "supabase/migrations/129_class_session_runtime_snapshot_advance.sql",
+      "relationships": [
+        "advances one class_session_runtime_snapshots row"
+      ],
+      "access": "service/server adapter only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/virtual-classroom/server/runtime-snapshot.ts"
+      ]
+    },
+    {
+      "name": "storage.objects",
+      "kind": "policy-surface",
+      "journeys": [
+        "homework-finalization"
+      ],
+      "owner": "Private homework media",
+      "sensitivity": "student voice and media",
+      "authority": "bucket/path policies",
+      "migration": "supabase/migrations/142_homework_collection_media.sql",
+      "relationships": [
+        "paths correspond to homework media metadata"
+      ],
+      "access": "student own targeted object; teacher assignment scope",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/homework-collection-media.ts",
+        "lib/actions/homework-collection-speaking.ts"
+      ]
+    },
+    {
+      "name": "realtime.messages",
+      "kind": "policy-surface",
+      "journeys": [
+        "classroom-recovery"
+      ],
+      "owner": "Private classroom realtime",
+      "sensitivity": "ephemeral control and presence",
+      "authority": "teacher and enrolled members",
+      "migration": "supabase/migrations/128_classroom_realtime_authorization.sql",
+      "relationships": [
+        "classroom topic maps to class_sessions.id"
+      ],
+      "access": "private Broadcast and Presence policies",
+      "usage": "confirmed",
+      "callSites": [
+        "components/virtual-classroom/useClassroomRealtimeShadowPresence.ts"
+      ]
+    },
+    {
+      "name": "public.lesson_packages",
+      "kind": "table",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Lesson-pack catalog",
+      "sensitivity": "commercial package configuration",
+      "authority": "administrator-managed catalog",
+      "migration": "supabase/migrations/143_parent_lesson_packs.sql",
+      "relationships": [
+        "referenced by lesson_pack_orders.package_id"
+      ],
+      "access": "authenticated active-package read; administrator service writes",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/data/lesson-packages.ts",
+        "lib/actions/admin-lesson-packages.ts"
+      ]
+    },
+    {
+      "name": "public.lesson_pack_orders",
+      "kind": "table",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Parent lesson-pack billing",
+      "sensitivity": "family purchase and Stripe identifiers",
+      "authority": "signed Stripe webhook and service fulfillment",
+      "migration": "supabase/migrations/143_parent_lesson_packs.sql",
+      "relationships": [
+        "guardian_user_id -> auth.users.id",
+        "student_id -> auth.users.id",
+        "package_id -> lesson_packages.id"
+      ],
+      "access": "guardian own read; service-only order lifecycle writes",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/actions/parent-checkout.ts",
+        "lib/billing/fulfill-checkout.ts"
+      ]
+    },
+    {
+      "name": "public.student_lesson_credits",
+      "kind": "table",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Prepaid lesson entitlement",
+      "sensitivity": "student lesson balance",
+      "authority": "idempotent purchase grant and future attendance policy",
+      "migration": "supabase/migrations/143_parent_lesson_packs.sql",
+      "relationships": [
+        "student_id -> auth.users.id"
+      ],
+      "access": "active guardian read; service-only mutation",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/data/lesson-packages.ts",
+        "lib/billing/fulfill-checkout.ts"
+      ]
+    },
+    {
+      "name": "public.student_lesson_credit_ledger",
+      "kind": "table",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Lesson entitlement ledger",
+      "sensitivity": "student financial-entitlement history",
+      "authority": "service-only entitlement transactions",
+      "migration": "supabase/migrations/143_parent_lesson_packs.sql",
+      "relationships": [
+        "student_id -> auth.users.id",
+        "order_id -> lesson_pack_orders.id"
+      ],
+      "access": "service role only",
+      "usage": "confirmed",
+      "callSites": [
+        "supabase/migrations/143_parent_lesson_packs.sql"
+      ]
+    },
+    {
+      "name": "public.stripe_webhook_events",
+      "kind": "table",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Stripe webhook idempotency",
+      "sensitivity": "payment event identifiers and processing state",
+      "authority": "signed Stripe webhook",
+      "migration": "supabase/migrations/143_parent_lesson_packs.sql",
+      "relationships": [
+        "Stripe event id is the idempotency key"
+      ],
+      "access": "service role only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/billing/fulfill-checkout.ts",
+        "app/api/webhooks/stripe/route.ts"
+      ]
+    },
+    {
+      "name": "public.grant_lesson_pack_purchase",
+      "kind": "function",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Exactly-once lesson purchase grant",
+      "sensitivity": "student lesson balance mutation",
+      "authority": "paid internal order",
+      "migration": "supabase/migrations/143_parent_lesson_packs.sql",
+      "relationships": [
+        "writes student_lesson_credit_ledger and student_lesson_credits"
+      ],
+      "access": "service role only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/billing/fulfill-checkout.ts"
+      ]
+    },
+    {
+      "name": "public.claim_stripe_webhook_event",
+      "kind": "function",
+      "journeys": [
+        "parent-access",
+        "learning-progress"
+      ],
+      "owner": "Stripe webhook delivery claim",
+      "sensitivity": "payment event processing state",
+      "authority": "signed Stripe webhook",
+      "migration": "supabase/migrations/149_stripe_webhook_busy_claim.sql",
+      "relationships": [
+        "claims stripe_webhook_events before fulfillment"
+      ],
+      "access": "service role only",
+      "usage": "confirmed",
+      "callSites": [
+        "lib/billing/fulfill-checkout.ts"
+      ]
+    }
+  ]
+}

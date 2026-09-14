@@ -19,6 +19,9 @@ passwords, access tokens, service-role keys, or files from `supabase/.temp`.
 - `npm run supabase:version` — confirm the pinned CLI version.
 - `npm run supabase:status` — compare local and linked migration history.
 - `npm run supabase:audit` — verify the legacy migration baseline against the linked schema.
+- `npm run audit:database:registry` — verify the learning-critical ownership registry and migration review boundary without connecting to Supabase.
+- `npm run audit:database` — run the metadata-only architecture audit against the linked schema.
+- `npm run test:database-architecture` — run fixture tests for the architecture audit rules.
 - `npm run supabase:start` — start the local Supabase stack (Docker required).
 - `npm run supabase:reset` — rebuild only the local database from migrations and seed data.
 - `npm run supabase:stop` — stop the local Supabase stack.
@@ -32,6 +35,13 @@ passwords, access tokens, service-role keys, or files from `supabase/.temp`.
 - Do not make production schema changes in the Dashboard SQL/Table editors.
 - Do not run `supabase db push` while `npm run supabase:status` reports divergence.
 - Coordinate remote pushes so only one person deploys migrations at a time.
+- Review and update `docs/database/learning-critical-registry.json` for every new migration. The registry audit fails if its reviewed migration marker is stale.
+
+## Architecture map
+
+The living learning-critical data map, audit rules, findings, and maintenance checklist are in
+`docs/database.md`. The linked architecture query reads only PostgreSQL catalogs and
+`information_schema`; it never selects application rows or changes the schema.
 
 ## Legacy baseline
 

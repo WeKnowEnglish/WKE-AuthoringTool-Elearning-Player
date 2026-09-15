@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error Deployment preflight intentionally runs as plain Node ESM.
-import { validateWke006PilotEnv } from "../../scripts/check-wke-006-pilot-env.mjs";
+import {
+  assertWke006PreviewReachable,
+  validateWke006PilotEnv,
+  wke006PreviewHeaders,
+} from "../../scripts/check-wke-006-pilot-env.mjs";
 
 const full = {
   WKE_006_PILOT_CONFIRMATION: "preview-reconnect-pilot",
@@ -51,5 +55,33 @@ describe("WKE-006 preview pilot preflight", () => {
   it("requires the native shell for the reconnect pilot", () => {
     expect(validateWke006PilotEnv({ ...full, NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT: "false" }))
       .toContain("NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT=true is required for this pilot gate.");
+  });
+
+  it("adds the Vercel automation bypass without exposing it in the URL", () => {
+    expect(wke006PreviewHeaders({ VERCEL_AUTOMATION_BYPASS_SECRET: "private-value" }))
+      .toEqual({
+        "x-vercel-protection-bypass": "private-value",
+        "x-vercel-set-bypass-cookie": "true",
+      });
+  });
+
+  it("accepts Vercel's temporary Netscape cookie jar without exposing its value", () => {
+    const jar = [
+      "# Netscape HTTP Cookie File",
+      "#HttpOnly_.vercel.app\tTRUE\t/\tTRUE\t0\t_vercel_jwt\tprivate-cookie",
+    ].join("\n");
+    expect(wke006PreviewHeaders(
+      { WKE_006_VERCEL_COOKIE_FILE: ".vercel/wke-006-cookie.txt" },
+      () => jar,
+    )).toEqual({ cookie: "_vercel_jwt=private-cookie" });
+  });
+
+  it("fails before fixture creation when Vercel Authentication intercepts Preview", async () => {
+    const protectedPreviewFetch = async () => new Response(null, {
+      status: 307,
+      headers: { location: "https://vercel.com/sso-api?url=preview" },
+    });
+    await expect(assertWke006PreviewReachable(full, protectedPreviewFetch))
+      .rejects.toThrow("WKE_006_VERCEL_COOKIE_FILE");
   });
 });

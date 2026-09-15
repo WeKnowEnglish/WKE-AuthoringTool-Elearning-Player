@@ -150,7 +150,16 @@ WKE_006_SUPABASE_CONNECTION_CAPACITY=...
 WKE_006_LIVEBLOCKS_CONNECTION_CAPACITY=...
 WKE_006_ROLLBACK_OWNER=...
 NEXT_PUBLIC_APP_DIAGNOSTICS_ENABLED=true
+VERCEL_AUTOMATION_BYPASS_SECRET=...
+WKE_006_VERCEL_COOKIE_FILE=.vercel/wke006-cookies.txt
 ```
+
+When Vercel Deployment Protection intercepts the Preview, use either
+`VERCEL_AUTOMATION_BYPASS_SECRET` or `WKE_006_VERCEL_COOKIE_FILE`. The cookie
+jar can be created by authenticated Vercel CLI without exposing the bypass
+secret. Keep either credential only in ignored local or CI secret storage. The
+gate sends the credential as an authorization header and disables Playwright
+traces while it is present so it is not retained in test artifacts.
 
 The student count must be at least two. Each recorded connection capacity must
 cover the students, one teacher, and at least one spare connection. Keep the
@@ -174,4 +183,3 @@ control-affecting duplicate participant, repeated recovery failure, recovery
 P95 above five seconds, or provider capacity below roster plus buffer. The
 rollback owner disables `NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT`
 and redeploys; additive migrations remain in place.
-

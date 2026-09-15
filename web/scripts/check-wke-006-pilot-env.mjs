@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 import { validateClassroomRealtimeRollout } from "./check-classroom-realtime-rollout.mjs";
@@ -82,8 +83,57 @@ export function assertWke006PilotEnv(env = process.env) {
   assert.equal(errors.length, 0, `WKE-006 pilot preflight failed:\n- ${errors.join("\n- ")}`);
 }
 
+function netscapeCookieHeader(contents) {
+  return contents
+    .split(/\r?\n/)
+    .filter((line) => line && (!line.startsWith("#") || line.startsWith("#HttpOnly_")))
+    .map((line) => line.split("\t"))
+    .filter((fields) => fields.length >= 7 && fields[5] && fields[6])
+    .map((fields) => `${fields[5]}=${fields[6]}`)
+    .join("; ");
+}
+
+export function wke006PreviewHeaders(env = process.env, readFile = readFileSync) {
+  const secret = env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+  if (secret) {
+    return {
+      "x-vercel-protection-bypass": secret,
+      "x-vercel-set-bypass-cookie": "true",
+    };
+  }
+  const cookieFile = env.WKE_006_VERCEL_COOKIE_FILE?.trim();
+  if (!cookieFile) return {};
+  const cookie = netscapeCookieHeader(readFile(cookieFile, "utf8"));
+  return cookie ? { cookie } : {};
+}
+
+export async function assertWke006PreviewReachable(
+  env = process.env,
+  fetchImpl = globalThis.fetch,
+) {
+  const baseUrl = env.WKE_006_BASE_URL?.trim();
+  if (!baseUrl) return;
+  const response = await fetchImpl(new URL("/login?portal=teacher", baseUrl), {
+    redirect: "manual",
+    headers: wke006PreviewHeaders(env),
+  });
+  const location = response.headers.get("location");
+  if (response.status >= 300 && response.status < 400 && location) {
+    const redirect = new URL(location, baseUrl);
+    if (redirect.hostname === "vercel.com" || redirect.hostname.endsWith(".vercel.com")) {
+      throw new Error(
+        "WKE-006 Preview is protected by Vercel Authentication. Configure VERCEL_AUTOMATION_BYPASS_SECRET or WKE_006_VERCEL_COOKIE_FILE in the local operator environment, then rerun the gate.",
+      );
+    }
+  }
+  if (response.status >= 500) {
+    throw new Error(`WKE-006 Preview reachability check returned HTTP ${response.status}.`);
+  }
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   loadEnv({ path: ".env.local", override: false });
   assertWke006PilotEnv();
+  await assertWke006PreviewReachable();
   console.log("WKE-006 preview preflight passed; secrets and capacity values were not printed.");
 }

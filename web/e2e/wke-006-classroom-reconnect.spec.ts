@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { config as loadEnv } from "dotenv";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
@@ -13,6 +14,47 @@ const publicKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+function previewProtectionHeaders() {
+  const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+  if (secret) {
+    return {
+      "x-vercel-protection-bypass": secret,
+      "x-vercel-set-bypass-cookie": "true",
+    };
+  }
+  const cookieFile = process.env.WKE_006_VERCEL_COOKIE_FILE?.trim();
+  if (!cookieFile) return {};
+  const cookie = readFileSync(cookieFile, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => line && (!line.startsWith("#") || line.startsWith("#HttpOnly_")))
+    .map((line) => line.split("\t"))
+    .filter((fields) => fields.length >= 7 && fields[5] && fields[6])
+    .map((fields) => `${fields[5]}=${fields[6]}`)
+    .join("; ");
+  return cookie ? { cookie } : {};
+}
+
+const protectionHeaders = previewProtectionHeaders();
+const usesProtectionCredential = Object.keys(protectionHeaders).length > 0;
+
+function previewProtectionCookies() {
+  const cookieFile = process.env.WKE_006_VERCEL_COOKIE_FILE?.trim();
+  if (!cookieFile) return [];
+  return readFileSync(cookieFile, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => line && (!line.startsWith("#") || line.startsWith("#HttpOnly_")))
+    .map((line) => line.split("\t"))
+    .filter((fields) => fields.length >= 7 && fields[0] && fields[2] && fields[5] && fields[6])
+    .map((fields) => ({
+      domain: fields[0].replace(/^#HttpOnly_/, ""),
+      path: fields[2],
+      secure: fields[3] === "TRUE",
+      expires: Number.parseInt(fields[4], 10),
+      name: fields[5],
+      value: fields[6],
+      httpOnly: fields[0].startsWith("#HttpOnly_"),
+    }));
+}
 const admin = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -58,6 +100,7 @@ async function createAuthUser(input: {
     user_metadata: {
       display_name: input.displayName,
       wke_fixture_goal: "WKE-006",
+      ...(input.role === "student" ? { learning_band: "a1" } : {}),
     },
   });
   assert.ifError(error);
@@ -245,7 +288,10 @@ async function newSurface(browser: Browser, viewport: { width: number; height: n
   const context = await browser.newContext({
     baseURL: process.env.WKE_006_BASE_URL,
     viewport,
+    ...(usesProtectionCredential ? { extraHTTPHeaders: protectionHeaders } : {}),
   });
+  const cookies = previewProtectionCookies();
+  if (cookies.length > 0) await context.addCookies(cookies);
   return { context, page: await context.newPage() };
 }
 

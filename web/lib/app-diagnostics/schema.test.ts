@@ -104,6 +104,27 @@ describe("central app diagnostics schema", () => {
     });
   });
 
+  it.each([
+    "classroom_reconnect_started",
+    "classroom_reconnect_recovered",
+    "classroom_reconnect_failed",
+  ])("removes student identity from %s telemetry", (name) => {
+    expect(
+      diagnosticIdentityForStorage(
+        { surface: "student", phase: "virtual-classroom", name },
+        {
+          userId: "student-auth-id",
+          participantId: "student-auth-id",
+          participantDisplayName: "Student Name",
+        },
+      ),
+    ).toEqual({
+      userId: null,
+      participantId: null,
+      participantDisplayName: null,
+    });
+  });
+
   it("accepts the retryable homework-service code without sensitive detail", () => {
     const parsed = appDiagnosticBatchSchema.safeParse({
       events: [

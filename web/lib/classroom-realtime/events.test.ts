@@ -26,6 +26,23 @@ describe("classroom realtime event contract", () => {
     expect(shouldApplyRealtimeEvent({ type: "runtime:updated", sessionId: "session-1", stateVersion: 5, changed: [], sentAt: 1 }, 4)).toBe(true);
   });
 
+  it("rejects a delayed patch from an older committed snapshot", () => {
+    expect(shouldApplyRealtimeEvent({
+      type: "runtime:patch",
+      sessionId: "session-1",
+      stateVersion: 4,
+      patch: { uiMode: "meeting" },
+      sentAt: 1,
+    }, 5)).toBe(false);
+    expect(shouldApplyRealtimeEvent({
+      type: "runtime:patch",
+      sessionId: "session-1",
+      stateVersion: 6,
+      patch: { uiMode: "learn" },
+      sentAt: 1,
+    }, 5)).toBe(true);
+  });
+
   it("always permits transient presence events", () => {
     expect(shouldApplyRealtimeEvent({ type: "presence:hand", sessionId: "session-1", userId: "student-1", raised: true, sentAt: 1 }, 4)).toBe(true);
   });

@@ -25,13 +25,13 @@ The next proposed sequence strengthens the platform around that proven journey:
 | 3 | [WKE-003 — Release-Gate the Complete Homework Journey](./WKE-003-homework-journey-release-gate.md) | Completed (advisory gate) | P1 | One cross-role journey is automated, release-gated, and observable without collecting student responses. |
 | 4 | [WKE-004 — Establish a Trustworthy Database Architecture Map](./WKE-004-database-architecture-audit.md) | Complete | P1 | A reproducible map and read-only audit make learning-critical data ownership, access, relationships, and risks explicit. |
 | 5 | [WKE-005 — Turn Diagnostics into Actionable Platform Health](./WKE-005-actionable-platform-health.md) | Complete | P1 | Administrators can identify the most important current learning interruption from privacy-safe grouped evidence in under one minute. |
-| 6 | [WKE-006 — Prove a Reconnect-Safe Live Classroom Pilot](./WKE-006-reconnect-safe-classroom-pilot.md) | Proposed | P1 | A class-linked teacher/student lesson recovers current classroom state after refresh, disconnect, and late join before wider rollout. |
+| 6 | [WKE-006 — Prove a Reconnect-Safe Live Classroom Pilot](./WKE-006-reconnect-safe-classroom-pilot.md) | In Progress | P1 | A class-linked teacher/student lesson recovers current classroom state after refresh, disconnect, and late join before wider rollout. |
 
 ## Execution Rule
 
 WKE-001 through WKE-003 are complete; the WKE-003 release gate remains advisory until the team chooses to make it mandatory.
 
-WKE-004 and WKE-005 are complete. WKE-006 remains Proposed until the team confirms the pilot class and realtime capacity; the required reconnect health contract is now available.
+WKE-004 and WKE-005 are complete. WKE-006 is In Progress: the reconnect contract and guarded browser gate are implemented, while 3/3 Preview evidence, capacity confirmation, rollback rehearsal, and the supervised pilot remain required.
 
 Working on one goal does not authorize unrelated cleanup or a broad subsystem rewrite. Follow the inspect, report, slice, test, regression-review, document, and status-update workflow in the master guide.
 

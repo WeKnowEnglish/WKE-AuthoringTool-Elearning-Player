@@ -18,7 +18,7 @@ Classroom history, particularly migration 117 (session attendance) and
 migration 122 (lobby attendance fields). A project that has run the repository
 migrations sequentially already has those prerequisites.
 
-No migration after 130 is required for the native-shell pilot in this branch.
+Migrations 127–130 enable the native shell. Goal WKE-006 also requires migration 131 so privacy-safe classroom reconnect evidence can be stored and reviewed in Platform Health.
 
 Run this read-only verification in the Supabase SQL editor after applying the
 migrations. All four object checks must be `true`, and both named policies must
@@ -121,8 +121,10 @@ not sufficient.
 5. Enable the read pilots and participant registry in Preview.
 6. Enable the three server authority flags in Preview.
 7. Enable the native-shell flag last and redeploy Preview.
-8. Run the two-browser checklist in `REALTIME_MIGRATION_AUDIT.md`.
-9. Repeat the same variable set and deployment sequence in Production.
+8. Complete the WKE-006 capacity and rollback-owner record below.
+9. Run `npm run test:release:classroom`; it must pass three consecutive times against Preview.
+10. Rehearse the native-shell flag rollback in Preview.
+11. Select one small supervised class, then repeat the approved variable sequence in Production.
 
 ## 5. Fast rollback
 
@@ -131,4 +133,45 @@ immediately restores the outer Liveblocks compatibility shell. The database
 migrations are additive and should not be rolled back. After the compatibility
 deployment is live, the three server authority flags can also be disabled if a
 full write-path rollback is needed.
+
+## 6. WKE-006 Preview acceptance
+
+The gate creates disposable teacher, class, two enrolled students, and a student
+enrolled in a different class. It deletes these fixtures after every run. The
+public production hostname is refused; use a Vercel Preview URL only.
+
+Add these values to the local operator environment. Capacity values are the
+current plan limits verified in the provider dashboards, not estimates:
+
+```dotenv
+WKE_006_BASE_URL=https://your-preview-url.example
+WKE_006_PILOT_STUDENT_COUNT=...
+WKE_006_SUPABASE_CONNECTION_CAPACITY=...
+WKE_006_LIVEBLOCKS_CONNECTION_CAPACITY=...
+WKE_006_ROLLBACK_OWNER=...
+NEXT_PUBLIC_APP_DIAGNOSTICS_ENABLED=true
+```
+
+The student count must be at least two. Each recorded connection capacity must
+cover the students, one teacher, and at least one spare connection. Keep the
+existing confirmed Supabase project-ref variable and the full flag set from
+section 3 in the operator environment.
+
+Run one diagnostic pass first:
+
+```bash
+npm run test:release:classroom:once
+```
+
+Then record the required release evidence:
+
+```bash
+npm run test:release:classroom
+```
+
+Stop immediately for unauthorized access, newer state being replaced, a
+control-affecting duplicate participant, repeated recovery failure, recovery
+P95 above five seconds, or provider capacity below roster plus buffer. The
+rollback owner disables `NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT`
+and redeploys; additive migrations remain in place.
 

@@ -5,6 +5,8 @@ import {
   classroomRealtimeChannelConfig,
   classroomRealtimeTopic,
 } from "@/lib/classroom-realtime/channel";
+import { shouldApplyRealtimeEvent, type ClassroomRealtimeEvent } from "@/lib/classroom-realtime/events";
+import type { ClassroomRecoveryState } from "@/lib/classroom-realtime/recovery-feedback";
 import { classroomRealtimeShadowModeEnabled } from "@/lib/classroom-realtime/shadow-mode";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -30,6 +32,7 @@ export type ClassroomRealtimeShadowHealth = {
   enabled: boolean;
   snapshot: "idle" | "loading" | "loaded" | "failed";
   channel: "idle" | "connecting" | "connected" | "failed";
+  recovery: ClassroomRecoveryState;
   snapshotVersion: number | null;
   runtimeSnapshot: ClassroomRuntimeSnapshot | null;
   runtimePatch: ClassroomRuntimePatch | null;
@@ -50,6 +53,7 @@ export function useClassroomRealtimeShadowPresence(
     enabled,
     snapshot: enabled ? (initialSnapshot ? "loaded" : "loading") : "idle",
     channel: enabled ? "connecting" : "idle",
+    recovery: "idle",
     snapshotVersion: initialSnapshot?.stateVersion ?? null,
     runtimeSnapshot: initialSnapshot,
     runtimePatch: null,
@@ -58,7 +62,7 @@ export function useClassroomRealtimeShadowPresence(
 
   useEffect(() => {
     if (!enabled) {
-      setHealth({ enabled: false, snapshot: "idle", channel: "idle", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null, participants: [] });
+      setHealth({ enabled: false, snapshot: "idle", channel: "idle", recovery: "idle", snapshotVersion: null, runtimeSnapshot: null, runtimePatch: null, participants: [] });
       return;
     }
 
@@ -69,8 +73,10 @@ export function useClassroomRealtimeShadowPresence(
     const controller = new AbortController();
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     let snapshotVersion: number | null = initialSnapshot?.stateVersion ?? null;
+    let latestObservedVersion: number | null = snapshotVersion;
     let lastPatchAt = 0;
     let reconnectStartedAt: number | null = null;
+    let reconnectPending = false;
     let reconnectLoadInFlight = false;
     const diagnosticSurface = input.role === "host" ? "teacher" : "student";
     const diagnosticOptions = {
@@ -79,6 +85,8 @@ export function useClassroomRealtimeShadowPresence(
     };
 
     const startReconnect = (reason: string) => {
+      reconnectPending = true;
+      setHealth((current) => ({ ...current, recovery: "reconnecting" }));
       if (reconnectStartedAt != null) return;
       reconnectStartedAt = performance.now();
       recordAppDiagnostic(
@@ -107,11 +115,14 @@ export function useClassroomRealtimeShadowPresence(
         },
       );
       reconnectStartedAt = null;
+      if (ok) reconnectPending = false;
+      setHealth((current) => ({ ...current, recovery: ok ? "recovered" : "failed" }));
     };
     setHealth({
       enabled: true,
       snapshot: initialSnapshot ? "loaded" : "loading",
       channel: "connecting",
+      recovery: "idle",
       snapshotVersion,
       runtimeSnapshot: initialSnapshot,
       runtimePatch: null,
@@ -153,7 +164,10 @@ export function useClassroomRealtimeShadowPresence(
         } | null;
         const nextSnapshot = payload?.snapshot;
         const nextVersion = nextSnapshot?.stateVersion;
-        if (typeof nextVersion === "number") snapshotVersion = nextVersion;
+        if (typeof nextVersion === "number") {
+          snapshotVersion = nextVersion;
+          latestObservedVersion = Math.max(latestObservedVersion ?? 0, nextVersion);
+        }
         if (!disposed) {
           setHealth((current) => ({
             ...current,
@@ -203,8 +217,9 @@ export function useClassroomRealtimeShadowPresence(
       if (
         event.sessionId === input.sessionId &&
         typeof event.stateVersion === "number" &&
-        (snapshotVersion === null || event.stateVersion > snapshotVersion)
+        (latestObservedVersion === null || event.stateVersion > latestObservedVersion)
       ) {
+        latestObservedVersion = event.stateVersion;
         scheduleSnapshotRefresh(Date.now() - lastPatchAt < 1_500 ? 10_000 : 1_200);
       }
     });
@@ -212,6 +227,8 @@ export function useClassroomRealtimeShadowPresence(
     channel.on("broadcast", { event: "classroom:ended" }, ({ payload }) => {
       const event = payload as { sessionId?: unknown; stateVersion?: unknown };
       if (event.sessionId !== input.sessionId || typeof event.stateVersion !== "number") return;
+      if (latestObservedVersion !== null && event.stateVersion <= latestObservedVersion) return;
+      latestObservedVersion = event.stateVersion;
       if (!disposed) {
         setHealth((current) => ({
           ...current,
@@ -232,12 +249,10 @@ export function useClassroomRealtimeShadowPresence(
     });
 
     channel.on("broadcast", { event: "runtime:patch" }, ({ payload }) => {
-      const event = payload as {
-        sessionId?: unknown;
-        patch?: ClassroomRuntimePatch;
-        sentAt?: unknown;
-      };
-      if (event.sessionId !== input.sessionId || !event.patch) return;
+      const event = payload as ClassroomRealtimeEvent;
+      if (event.type !== "runtime:patch" || event.sessionId !== input.sessionId || !event.patch) return;
+      if (!shouldApplyRealtimeEvent(event, latestObservedVersion)) return;
+      if (typeof event.stateVersion === "number") latestObservedVersion = event.stateVersion;
       const patch = event.patch;
       if (typeof event.sentAt === "number") {
         recordAppDiagnostic(
@@ -289,11 +304,17 @@ export function useClassroomRealtimeShadowPresence(
           setHealth((current) => ({ ...current, channel: "failed" }));
           startReconnect(status.toLowerCase());
           finishReconnect(false, `classroom_reconnect_${status.toLowerCase()}`);
+        } else if (status === "CLOSED") {
+          setHealth((current) => ({ ...current, channel: "connecting" }));
+          startReconnect("channel_closed");
         }
         return;
       }
       setHealth((current) => ({ ...current, channel: "connected" }));
-      if (reconnectStartedAt != null) void loadSnapshot(true, true);
+      if (reconnectPending) {
+        startReconnect("channel_resubscribed");
+        void loadSnapshot(true, true);
+      }
       void channel.track({
         userId: input.userId,
         displayName: input.displayName,

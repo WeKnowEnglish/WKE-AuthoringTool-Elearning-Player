@@ -12,6 +12,8 @@ export type ClassroomRealtimeEvent =
   | {
       type: "runtime:patch";
       sessionId: string;
+      /** Durable version that produced the patch. Legacy shadow patches may omit it. */
+      stateVersion?: number;
       patch: ClassroomRuntimePatch;
       sentAt: number;
     }
@@ -53,7 +55,14 @@ export function shouldApplyRealtimeEvent(
   event: ClassroomRealtimeEvent,
   currentSnapshotVersion: number | null,
 ): boolean {
-  if (event.type === "presence:hand" || event.type === "runtime:patch") return true;
+  if (event.type === "presence:hand") return true;
+  if (event.type === "runtime:patch") {
+    return (
+      typeof event.stateVersion !== "number" ||
+      currentSnapshotVersion === null ||
+      event.stateVersion > currentSnapshotVersion
+    );
+  }
   return currentSnapshotVersion === null || event.stateVersion > currentSnapshotVersion;
 }
 

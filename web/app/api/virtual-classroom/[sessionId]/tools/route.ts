@@ -187,6 +187,7 @@ export async function POST(request: Request, context: RouteContext) {
           ? broadcastClassroomRealtimeEvent({
               type: "runtime:patch",
               sessionId: session.id,
+              stateVersion: authorityResult.snapshot.stateVersion,
               patch: authorityResult.patch,
               sentAt: Date.now(),
             })

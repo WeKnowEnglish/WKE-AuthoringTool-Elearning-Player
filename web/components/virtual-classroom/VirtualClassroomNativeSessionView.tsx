@@ -11,6 +11,7 @@ import { useLobbyPresence } from "@/components/virtual-classroom/useLobbyPresenc
 import { VirtualClassroomLearnControlsContent } from "@/components/virtual-classroom/VirtualClassroomLearnControls";
 import { VirtualClassroomLearnStage } from "@/components/virtual-classroom/VirtualClassroomLearnStage";
 import { launchWhiteboardInLearn } from "@/components/virtual-classroom/VirtualClassroomWhiteboardEmbed";
+import { classroomRecoveryFeedback } from "@/lib/classroom-realtime/recovery-feedback";
 import { resolveClassroomRuntimeViewState } from "@/lib/classroom-realtime/runtime-view-state";
 import {
   diagnosticFetch,
@@ -222,6 +223,7 @@ export function VirtualClassroomNativeSessionView(props: Props) {
         patch: mergeRuntimePatches(realtime.runtimePatch, optimisticPatch),
       })
     : null;
+  const recoveryFeedback = classroomRecoveryFeedback(realtime.recovery);
   const members = realtime.participants.map((participant) => ({
     id: participant.userId,
     name: participant.displayName,
@@ -375,7 +377,11 @@ export function VirtualClassroomNativeSessionView(props: Props) {
 
   if (!runtime) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-slate-100 p-6 text-center">
+      <div
+        role={realtime.snapshot === "failed" ? "alert" : "status"}
+        aria-live={realtime.snapshot === "failed" ? "assertive" : "polite"}
+        className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-slate-100 p-6 text-center"
+      >
         <p className="font-bold text-slate-900">
           {realtime.snapshot === "failed" ? "Could not restore the classroom" : "Connecting to classroom…"}
         </p>
@@ -438,6 +444,21 @@ export function VirtualClassroomNativeSessionView(props: Props) {
         <p className="fixed left-1/2 top-3 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700 shadow-lg">
           {error}
         </p>
+      ) : null}
+      {recoveryFeedback ? (
+        <div
+          data-classroom-recovery-state={realtime.recovery}
+          role={recoveryFeedback.role}
+          aria-live={recoveryFeedback.role === "alert" ? "assertive" : "polite"}
+          className={`pointer-events-none fixed left-1/2 top-3 z-50 w-[min(92vw,28rem)] -translate-x-1/2 rounded-xl border px-4 py-2 text-center text-sm shadow-lg ${
+            realtime.recovery === "failed"
+              ? "border-red-300 bg-red-50 text-red-900"
+              : "border-teal-300 bg-white/95 text-teal-950"
+          }`}
+        >
+          <p className="font-extrabold">{recoveryFeedback.title}</p>
+          <p className="text-xs">{recoveryFeedback.detail}</p>
+        </div>
       ) : null}
       {busy === "tools" ? (
         <p

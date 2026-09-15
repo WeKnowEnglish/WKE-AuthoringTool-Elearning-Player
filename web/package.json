@@ -26,6 +26,8 @@
     "audit:wke-002": "node scripts/audit-wke-002-finalization.mjs",
     "test:release:homework": "cross-env WKE_003_RELEASE_CONFIRMATION=advisory-linked-project node scripts/run-wke-003-release-gate.mjs",
     "test:release:homework:once": "cross-env WKE_003_RELEASE_CONFIRMATION=advisory-linked-project WKE_003_GATE_RUNS=1 node scripts/run-wke-003-release-gate.mjs",
+    "test:release:classroom": "cross-env WKE_006_PILOT_CONFIRMATION=preview-reconnect-pilot node scripts/run-wke-006-pilot-gate.mjs",
+    "test:release:classroom:once": "cross-env WKE_006_PILOT_CONFIRMATION=preview-reconnect-pilot WKE_006_GATE_RUNS=1 node scripts/run-wke-006-pilot-gate.mjs",
     "provision:wke-001": "tsx scripts/provision-wke-001-fixtures.ts",
     "test:smoke": "node scripts/smoke-production-routes.mjs",
     "test:seo": "node scripts/seo-integration-smoke.mjs",

@@ -1,9 +1,9 @@
 # GOAL WKE-006 — Prove a Reconnect-Safe Live Classroom Pilot
 
-Status: Proposed
+Status: In Progress
 Priority: P1
 Cadence: One-time pilot, then ongoing regression coverage
-Last updated: 2026-09-13
+Last updated: 2026-09-15
 
 ## Primary Stakeholder
 
@@ -192,10 +192,17 @@ External services or decisions:
 Completed:
 
 - Goal definition grounded in the existing native shell, recovery snapshot, private realtime, feature flags, and rollback documentation.
+- WKE-004 and WKE-005 prerequisites are complete.
+- Versioned native-shell patches now reject stale committed state.
+- Students and teachers receive text and live-region feedback for reconnecting, restored, and failed recovery states.
+- A guarded Preview preflight, isolated two-student fixture, desktop-teacher/mobile-student browser journey, cleanup, capacity check, and 3-run command are implemented.
+- Ended classrooms are denied by the recovery endpoint even when a browser retains an old session cookie.
 
 Remaining:
 
-- Complete WKE-004/WKE-005 prerequisites, implement the browser gate and feedback, pass Preview, confirm capacity, and run the supervised pilot.
+- Configure the documented WKE-006 Preview-only variables, confirm current provider capacity and rollback owner, and record a 3/3 Preview result.
+- Perform the supervised small production pilot after Preview approval; choose the teacher/class and record recovery measurements.
+- Rehearse the native-shell flag rollback in Preview before approving production.
 
 Evidence:
 
@@ -209,4 +216,4 @@ Known limitations:
 
 Recommended next task:
 
-- After WKE-004 and the WKE-005 reconnect contract, automate the existing two-browser native-shell rollout check in Preview.
+- Deploy a Preview with the full native-shell flag set, fill the non-secret WKE-006 capacity/ownership values, and run `npm run test:release:classroom` for the required 3/3 evidence.

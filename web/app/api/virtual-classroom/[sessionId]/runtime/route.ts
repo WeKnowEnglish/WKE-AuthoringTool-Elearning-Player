@@ -12,8 +12,8 @@ import { withCollabServerTiming } from "@/lib/collab-diagnostics/server-timing";
 
 /**
  * Recovery-only endpoint for the versioned Supabase runtime snapshot.
- * It is not yet called by the classroom UI; Liveblocks remains the live
- * transport until the channel migration is complete.
+ * The native shell calls this after initial load and reconnect. The route
+ * never exposes an ended classroom, even to a browser with an old cookie.
  */
 export async function GET(
   request: Request,
@@ -24,6 +24,9 @@ export async function GET(
   timer.setContext({ activity: "classroom", sessionId });
   const session = await getVirtualClassroomSessionById(sessionId);
   if (!session) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+  if (session.status !== "active") {
+    return NextResponse.json({ error: "This classroom has ended." }, { status: 410 });
+  }
   timer.setContext({ classId: session.classId });
 
   const cookieStore = await cookies();

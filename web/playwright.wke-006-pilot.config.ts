@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 loadEnv({ path: ".env.local", override: false });
 
-function protectionHeaders() {
+function protectionHeaders(): Record<string, string> {
   const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
   if (secret) {
     return {

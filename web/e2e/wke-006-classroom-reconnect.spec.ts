@@ -14,7 +14,7 @@ const publicKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-function previewProtectionHeaders() {
+function previewProtectionHeaders(): Record<string, string> {
   const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
   if (secret) {
     return {

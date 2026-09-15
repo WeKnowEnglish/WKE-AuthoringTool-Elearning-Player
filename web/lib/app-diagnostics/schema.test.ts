@@ -105,13 +105,16 @@ describe("central app diagnostics schema", () => {
   });
 
   it.each([
-    "classroom_reconnect_started",
-    "classroom_reconnect_recovered",
-    "classroom_reconnect_failed",
-  ])("removes student identity from %s telemetry", (name) => {
+    ["student", "classroom_reconnect_started"],
+    ["student", "classroom_reconnect_recovered"],
+    ["student", "classroom_reconnect_failed"],
+    ["teacher", "classroom_reconnect_started"],
+    ["teacher", "classroom_reconnect_recovered"],
+    ["teacher", "classroom_reconnect_failed"],
+  ] as const)("removes %s identity from %s telemetry", (surface, name) => {
     expect(
       diagnosticIdentityForStorage(
-        { surface: "student", phase: "virtual-classroom", name },
+        { surface, phase: "virtual-classroom", name },
         {
           userId: "student-auth-id",
           participantId: "student-auth-id",

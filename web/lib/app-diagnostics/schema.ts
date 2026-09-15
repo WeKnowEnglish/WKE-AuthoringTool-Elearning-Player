@@ -49,13 +49,15 @@ export function diagnosticIdentityForStorage(
     participantDisplayName: string | null;
   },
 ) {
+  const isAnonymousClassroomReconnect =
+    event.phase === "virtual-classroom" &&
+    /^classroom_reconnect_(started|recovered|failed)$/.test(event.name);
   if (
-    event.surface === "student" &&
-    ((event.phase === "homework_auth" && event.name === "homework_auth_failed") ||
-      event.phase === "homework_finalization" ||
-      event.phase === "homework_journey" ||
-      (event.phase === "virtual-classroom" &&
-        /^classroom_reconnect_(started|recovered|failed)$/.test(event.name)))
+    isAnonymousClassroomReconnect ||
+    (event.surface === "student" &&
+      ((event.phase === "homework_auth" && event.name === "homework_auth_failed") ||
+        event.phase === "homework_finalization" ||
+        event.phase === "homework_journey"))
   ) {
     return {
       userId: null,

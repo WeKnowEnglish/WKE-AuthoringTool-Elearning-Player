@@ -3,7 +3,7 @@
 Status: In Progress
 Priority: P1
 Cadence: One-time pilot, then ongoing regression coverage
-Last updated: 2026-09-15
+Last updated: 2026-09-16
 
 ## Primary Stakeholder
 
@@ -197,12 +197,18 @@ Completed:
 - Students and teachers receive text and live-region feedback for reconnecting, restored, and failed recovery states.
 - A guarded Preview preflight, isolated two-student fixture, desktop-teacher/mobile-student browser journey, cleanup, capacity check, and 3-run command are implemented.
 - Ended classrooms are denied by the recovery endpoint even when a browser retains an old session cookie.
+- The linked Supabase project and migrations 127–131 were verified before the pilot.
+- Preview deployment `wke-authoring-tool-elearning-player-iwqb5r21x-we-know-english.vercel.app` passed 53 recovery, authorization, ordering, privacy, and environment contract tests plus three consecutive browser journeys in 3.6 minutes. Each run used a fresh teacher, class, two enrolled students, and one wrong-class student, and completed fixture cleanup.
+- The live Preview gate exposed and corrected reconnect identity retention for both students and teachers, protected-Preview automation, fixture metadata, fixture cleanup, and a pre-hydration join race.
+- Preview rollback was rehearsed by overriding only `feat/activity-builder` with `NEXT_PUBLIC_CLASSROOM_REALTIME_NATIVE_SHELL_PILOT=false`. Deployment `wke-authoring-tool-elearning-player-ccbf4sxqf-we-know-english.vercel.app` passed the compatibility-shell journey, including teacher state, first join, late join, teacher refresh, wrong-class denial, ended-session denial, and cleanup.
+- The Preview-only native-shell flag was restored to `true`. Deployment `wke-authoring-tool-elearning-player-kcuis2vwu-we-know-english.vercel.app` then passed all 53 contracts and one complete native browser journey. Production configuration was not changed during the drill.
+- Brady is the recorded rollback owner for the pilot.
 
 Remaining:
 
-- Configure the documented WKE-006 Preview-only variables, confirm current provider capacity and rollback owner, and record a 3/3 Preview result.
-- Perform the supervised small production pilot after Preview approval; choose the teacher/class and record recovery measurements.
-- Rehearse the native-shell flag rollback in Preview before approving production.
+- Confirm the actual Supabase and Liveblocks account-plan connection limits in their authenticated dashboards. The automated gate used conservative published lower-plan values (Supabase 200 and Liveblocks 10) only to prove roster headroom; those values are not a substitute for the required account check.
+- Choose the pilot teacher and small class, approve the production flag window, and perform the supervised production pilot with recorded recovery P50/P95, connection headroom, message/write rates, and stop-condition review.
+- Review the resulting reconnect events in Platform Health as an administrator and attach that human-view evidence to the production pilot record.
 
 Evidence:
 
@@ -216,4 +222,4 @@ Known limitations:
 
 Recommended next task:
 
-- Deploy a Preview with the full native-shell flag set, fill the non-secret WKE-006 capacity/ownership values, and run `npm run test:release:classroom` for the required 3/3 evidence.
+- Confirm the two provider-plan limits, select the pilot teacher/class and time window, then run the documented supervised production pilot. Do not mark WKE-006 Complete until that real-class evidence and the administrator Platform Health review are recorded.

@@ -36,6 +36,9 @@ function previewProtectionHeaders(): Record<string, string> {
 
 const protectionHeaders = previewProtectionHeaders();
 const usesProtectionCredential = Object.keys(protectionHeaders).length > 0;
+const expectedClassroomShell = process.env.WKE_006_EXPECTED_SHELL === "liveblocks-compat"
+  ? "liveblocks-compat"
+  : "supabase-native";
 
 function previewProtectionCookies() {
   const cookieFile = process.env.WKE_006_VERCEL_COOKIE_FILE?.trim();
@@ -214,7 +217,7 @@ async function joinClassroom(page: Page, student: Student, joinCode: string) {
   await page.getByRole("button", { name: "Enter classroom" }).click();
   console.log("WKE-006 journey: classroom join submitted");
   await page.waitForURL(/\/virtual-classroom\/vcs_[A-Z0-9]+$/i, { waitUntil: "domcontentloaded" });
-  await expect(page.locator('[data-classroom-shell="supabase-native"]')).toBeVisible();
+  await expect(page.locator(`[data-classroom-shell="${expectedClassroomShell}"]`)).toBeVisible();
   console.log("WKE-006 journey: classroom shell visible");
 }
 
@@ -246,7 +249,7 @@ async function hostClassroom(page: Page, fixture: Fixture) {
     returnHref: `/teacher/classes/${fixture.classId}`,
   });
   await page.goto(`/teacher/virtual-classroom/${body.sessionId}`, { waitUntil: "domcontentloaded" });
-  await expect(page.locator('[data-classroom-shell="supabase-native"]')).toBeVisible();
+  await expect(page.locator(`[data-classroom-shell="${expectedClassroomShell}"]`)).toBeVisible();
   return { sessionId: body.sessionId, joinCode: body.joinCode };
 }
 
@@ -383,8 +386,46 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
       }
       await expect(first.page.getByText("Session points", { exact: true })).toBeVisible();
 
+      if (expectedClassroomShell === "liveblocks-compat") {
+        const second = await newSurface(browser, { width: 390, height: 844 });
+        secondContext = second.context;
+        await joinClassroom(second.page, fixture.second, hosted.joinCode);
+        await expect(second.page.getByText(announcement)).toBeVisible();
+        await expect(second.page.getByText("Class timer", { exact: true })).toBeVisible();
+
+        await teacher.page.reload({ waitUntil: "domcontentloaded" });
+        await expect(teacher.page.locator('[data-classroom-shell="liveblocks-compat"]')).toBeVisible();
+        await expect(teacher.page.getByText(announcement)).toBeVisible();
+
+        const denied = await newSurface(browser, { width: 390, height: 844 });
+        deniedContext = denied.context;
+        await signInStudent(denied.page, fixture.wrongClass);
+        const deniedJoin = await denied.page.evaluate(async (joinCode) => {
+          const response = await fetch("/api/virtual-classroom/join", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ joinCode }),
+          });
+          return response.status;
+        }, hosted.joinCode);
+        expect(deniedJoin).toBe(403);
+
+        assert.ifError((await admin.from("class_sessions").update({
+          status: "ended",
+          class_phase: "ended",
+          ended_at: new Date().toISOString(),
+        }).eq("id", hosted.sessionId)).error);
+        const endedStatus = await first.page.evaluate(async (sessionId) =>
+          (await fetch(`/api/virtual-classroom/${sessionId}/runtime`, { cache: "no-store" })).status,
+        hosted.sessionId);
+        expect(endedStatus).toBe(410);
+        console.log("WKE-006 rollback: compatibility journey verified");
+        return;
+      }
+
       await first.page.reload({ waitUntil: "domcontentloaded" });
-      await expect(first.page.locator('[data-classroom-shell="supabase-native"]')).toBeVisible();
+      await expect(first.page.locator(`[data-classroom-shell="${expectedClassroomShell}"]`)).toBeVisible();
       await expect(first.page.getByText(announcement)).toBeVisible();
 
       await first.context.setOffline(true);
@@ -402,7 +443,7 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
       console.log("WKE-006 journey: late-join student restored");
 
       await teacher.page.reload({ waitUntil: "domcontentloaded" });
-      await expect(teacher.page.locator('[data-classroom-shell="supabase-native"]')).toBeVisible();
+      await expect(teacher.page.locator(`[data-classroom-shell="${expectedClassroomShell}"]`)).toBeVisible();
       await expect(teacher.page.getByText(announcement)).toBeVisible();
       await command(teacher.page, hosted.sessionId, { type: "SET_ANNOUNCEMENT", message: `${announcement} Restored.` });
       await expect(first.page.getByText(`${announcement} Restored.`)).toBeVisible();

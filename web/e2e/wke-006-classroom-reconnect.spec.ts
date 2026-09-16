@@ -459,10 +459,11 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
       hosted.sessionId);
       expect(endedStatus).toBe(410);
     } finally {
-      await deniedContext?.close();
-      await secondContext?.close();
-      await firstContext?.close();
-      await teacherContext?.close();
+      await Promise.allSettled(
+        [deniedContext, secondContext, firstContext, teacherContext]
+          .filter((context): context is BrowserContext => context !== null)
+          .map((context) => context.close()),
+      );
       await cleanupFixture(fixture);
     }
   });

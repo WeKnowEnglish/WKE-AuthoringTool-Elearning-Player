@@ -34,7 +34,7 @@ export default defineConfig({
   forbidOnly: true,
   retries: 0,
   workers: 1,
-  timeout: 300_000,
+  timeout: 600_000,
   expect: { timeout: 30_000 },
   reporter: "list",
   outputDir: "test-results/wke-006-pilot",

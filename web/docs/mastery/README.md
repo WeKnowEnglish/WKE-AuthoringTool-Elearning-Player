@@ -167,7 +167,7 @@ Historical docs and code live in `C:\Users\brady\ai-tutor\docs\mastery\` and `fr
 
 | T1 Teacher mastery reads | Done — [PROPOSAL_T1_TEACHER_MASTERY_READS.md](./PROPOSAL_T1_TEACHER_MASTERY_READS.md) · migration `027` |
 
-| T2 Teacher diagnostic UI | Awaiting approval — [PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md](./PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md) |
+| T2 Teacher diagnostic UI | Done — [PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md](./PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md) · [QA](./QA_T2_TEACHER_DIAGNOSTIC_UI.md) |
 | P9 Activity card Start / Try Again / Open | Done — [PROPOSAL_P9_ACTIVITY_CARD_ACTIONS.md](./PROPOSAL_P9_ACTIVITY_CARD_ACTIONS.md) |
 
 | P6A Secondary cloze coverage | Done — [QA_P6A_CLOZE_COVERAGE.md](./QA_P6A_CLOZE_COVERAGE.md) |
@@ -176,7 +176,7 @@ Historical docs and code live in `C:\Users\brady\ai-tutor\docs\mastery\` and `fr
 
 | L5 Secondary learn lane | Done — [QA_L5_SECONDARY_LEARN.md](./QA_L5_SECONDARY_LEARN.md) |
 
-| **Next** | T2 implement (after approval) · P6C content ops |
+| **Next** | [WKE-007 durable assigned-practice evidence](../goals/WKE-007-canonical-assigned-practice-evidence.md), then T3 class insights or P6C content ops |
 
 
 

@@ -1,13 +1,21 @@
 "use client";
 
-import { GLOBE_RADIUS, OCEAN_COLOR } from "./globe-config";
+import { useLayoutEffect, useMemo } from "react";
+import { buildPlanetGeometry } from "./build-planet-geometry";
 
-/** Temporary ocean sphere. Landmarks sit on this surface via GlobeLandmarks. */
+/** Whole-planet grass with clay cliffs. Campus is a low meadow, not an island. */
 export function GlobePlaceholder() {
+  const geometry = useMemo(() => buildPlanetGeometry(), []);
+
+  useLayoutEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
   return (
-    <mesh name="ocean">
-      <sphereGeometry args={[GLOBE_RADIUS, 32, 32]} />
-      <meshStandardMaterial color={OCEAN_COLOR} roughness={0.55} metalness={0.04} />
+    <mesh name="planet" geometry={geometry} userData={{ landmassId: "home" }}>
+      <meshStandardMaterial vertexColors roughness={0.88} metalness={0} />
     </mesh>
   );
 }

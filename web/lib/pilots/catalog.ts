@@ -588,7 +588,34 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/world",
     title: "WKE World (3D globe foundation)",
     description:
-      "Interactive 3D globe sandbox: drag to spin, pinch/wheel to zoom. Ocean + EDU Studio World island landmark. Not shippable.",
+      "Grass planet with cliffs. House and school open walkable yards plus interiors (classroom / empty house with a fridge). House studio stays modular. Student map at /primary/world.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/world/play/school",
+    title: "House & school play spaces",
+    description:
+      "Walk the yard, then go inside. School is a classroom; house is empty except a fridge. Clay buildings stay. Student: /primary/world/play/cottage and /school.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/character-editor",
+    title: "Character editor (3D prototype)",
+    description:
+      "Modular student avatar: rotate, swap parts, recolor, save. Placeholder meshes now; Shape Builder GLBs drop into /characters/parts. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/character-kit",
+    title: "Character head kit (Level 1)",
+    description:
+      "Authoring: lock Front/Side/3/4, overlay the seed GLB on a photo plate, then write profile rings + sculpt strokes in kit JSON. Local mesh builder emits a GLB. Not shippable.",
     group: "deferred",
     status: "review",
     notShippable: true,

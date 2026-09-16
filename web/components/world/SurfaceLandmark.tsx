@@ -11,6 +11,7 @@ type Props = {
   /** Extra spin around the surface normal, in radians. */
   yaw?: number;
   name?: string;
+  userData?: Record<string, unknown>;
   children: ReactNode;
 };
 
@@ -23,7 +24,7 @@ function latLonNormal(latDeg: number, lonDeg: number): Vector3 {
 }
 
 /** Sit a Y-up landmark on the globe so its local up matches the surface normal. */
-export function SurfaceLandmark({ lat, lon, radius, scale = 1, yaw = 0, name, children }: Props) {
+export function SurfaceLandmark({ lat, lon, radius, scale = 1, yaw = 0, name, userData, children }: Props) {
   const groupRef = useRef<Group>(null);
 
   useLayoutEffect(() => {
@@ -37,7 +38,7 @@ export function SurfaceLandmark({ lat, lon, radius, scale = 1, yaw = 0, name, ch
   }, [lat, lon, radius, scale, yaw]);
 
   return (
-    <group ref={groupRef} name={name}>
+    <group ref={groupRef} name={name} userData={userData}>
       {children}
     </group>
   );

@@ -48,3 +48,6 @@ next-env.d.ts
 /primary-vocabulary-package-v0.1.0/
 /primary-vocabulary-package-v0.1.0.zip
 /primary-vocabulary-package-*/
+
+# Local visual verification and extraction scratch files
+/tmp/

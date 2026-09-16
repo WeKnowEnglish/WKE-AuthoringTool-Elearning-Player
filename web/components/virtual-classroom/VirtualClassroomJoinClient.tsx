@@ -1,16 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { diagnosticFetch } from "@/lib/collab-diagnostics/client";
 import { setVirtualClassroomContext } from "@/lib/virtual-classroom/client-context";
 
 export function VirtualClassroomJoinClient() {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => setReady(true), []);
 
   const join = async () => {
     setBusy(true);
@@ -82,7 +85,10 @@ export function VirtualClassroomJoinClient() {
   };
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4 py-10">
+    <div
+      data-join-ready={ready ? "true" : "false"}
+      className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4 py-10"
+    >
       <h1 className="text-3xl font-extrabold text-slate-900">Join Virtual Classroom</h1>
       <p className="text-slate-600">
         Enter the session code from your teacher. Class sessions need a signed-in enrolled student;
@@ -111,7 +117,7 @@ export function VirtualClassroomJoinClient() {
       </label>
       <button
         type="button"
-        disabled={busy || joinCode.trim().length < 4}
+        disabled={!ready || busy || joinCode.trim().length < 4}
         onClick={() => void join()}
         className="rounded-xl bg-teal-800 py-3 text-sm font-bold text-white disabled:opacity-50"
       >

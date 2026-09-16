@@ -40,6 +40,7 @@ export default defineConfig({
   outputDir: "test-results/wke-006-pilot",
   use: {
     baseURL: process.env.WKE_006_BASE_URL,
+    actionTimeout: 30_000,
     navigationTimeout: 90_000,
     // Vercel's bypass value is an access credential. Do not write it into trace artifacts.
     trace: usesProtectionCredential ? "off" : "retain-on-failure",

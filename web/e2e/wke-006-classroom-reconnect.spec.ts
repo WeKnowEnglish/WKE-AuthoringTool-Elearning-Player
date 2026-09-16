@@ -198,18 +198,24 @@ async function signInTeacher(page: Page, teacher: Credentials) {
 async function signInStudent(page: Page, student: Student) {
   await page.goto("/login?portal=student&next=/virtual-classroom/join", { waitUntil: "domcontentloaded" });
   await expect(page.locator('form[data-login-ready="true"]')).toBeVisible();
+  console.log("WKE-006 journey: student login form ready");
   await page.getByLabel("Username").fill(student.username);
   await page.getByLabel("Secret code").fill(student.pin);
   await page.getByRole("button", { name: /^Sign in$/ }).click();
+  console.log("WKE-006 journey: student credentials submitted");
   await page.waitForURL((next) => next.pathname === "/virtual-classroom/join", { waitUntil: "domcontentloaded" });
+  console.log("WKE-006 journey: student signed in");
 }
 
 async function joinClassroom(page: Page, student: Student, joinCode: string) {
   await signInStudent(page, student);
+  await expect(page.locator('[data-join-ready="true"]')).toBeVisible();
   await page.getByLabel("Session code").fill(joinCode);
   await page.getByRole("button", { name: "Enter classroom" }).click();
+  console.log("WKE-006 journey: classroom join submitted");
   await page.waitForURL(/\/virtual-classroom\/vcs_[A-Z0-9]+$/i, { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-classroom-shell="supabase-native"]')).toBeVisible();
+  console.log("WKE-006 journey: classroom shell visible");
 }
 
 async function hostClassroom(page: Page, fixture: Fixture) {
@@ -309,10 +315,12 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
       teacherContext = teacher.context;
       await signInTeacher(teacher.page, fixture.teacher);
       const hosted = await hostClassroom(teacher.page, fixture);
+      console.log("WKE-006 journey: teacher hosted classroom");
 
       const first = await newSurface(browser, { width: 390, height: 844 });
       firstContext = first.context;
       await joinClassroom(first.page, fixture.first, hosted.joinCode);
+      console.log("WKE-006 journey: first student joined");
 
       await expect.poll(async () => {
         const { count } = await admin
@@ -343,6 +351,7 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
         { type: "AWARD_POINTS", studentId: fixture.first.id, delta: 1, label: "point" },
         { type: "SET_LEADERBOARD_VISIBLE", showLeaderboard: true },
       ]) await command(teacher.page, hosted.sessionId, body);
+      console.log("WKE-006 journey: teacher state applied");
 
       const expectedSnapshot = await expect.poll(async () => {
         const { data, error } = await admin
@@ -383,18 +392,21 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
       await first.context.setOffline(false);
       await expect(first.page.locator('[data-classroom-recovery-state="recovered"]')).toContainText("latest saved lesson state");
       await expect(first.page.getByText(announcement)).toBeVisible();
+      console.log("WKE-006 journey: first student recovered");
 
       const second = await newSurface(browser, { width: 390, height: 844 });
       secondContext = second.context;
       await joinClassroom(second.page, fixture.second, hosted.joinCode);
       await expect(second.page.getByText(announcement)).toBeVisible();
       await expect(second.page.getByText("Class timer", { exact: true })).toBeVisible();
+      console.log("WKE-006 journey: late-join student restored");
 
       await teacher.page.reload({ waitUntil: "domcontentloaded" });
       await expect(teacher.page.locator('[data-classroom-shell="supabase-native"]')).toBeVisible();
       await expect(teacher.page.getByText(announcement)).toBeVisible();
       await command(teacher.page, hosted.sessionId, { type: "SET_ANNOUNCEMENT", message: `${announcement} Restored.` });
       await expect(first.page.getByText(`${announcement} Restored.`)).toBeVisible();
+      console.log("WKE-006 journey: teacher refresh restored control");
 
       const { data: attendance, error: attendanceError } = await admin
         .from("class_session_attendance")
@@ -423,6 +435,7 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
       hosted.sessionId);
       expect(deniedSnapshot).toBe(403);
       await expectPrivateChannelDenied(fixture.wrongClass, hosted.sessionId);
+      console.log("WKE-006 journey: wrong-class access denied");
 
       await expect.poll(async () => {
         const { data } = await admin
@@ -448,6 +461,7 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
         assert.equal(event.participant_display_name, null);
         if (event.event_name === "classroom_reconnect_recovered") assert(Number(event.duration_ms) >= 0);
       }
+      console.log("WKE-006 journey: reconnect diagnostics verified");
 
       assert.ifError((await admin.from("class_sessions").update({
         status: "ended",
@@ -458,13 +472,17 @@ test.describe("WKE-006 reconnect-safe native classroom", () => {
         (await fetch(`/api/virtual-classroom/${sessionId}/runtime`, { cache: "no-store" })).status,
       hosted.sessionId);
       expect(endedStatus).toBe(410);
+      console.log("WKE-006 journey: ended session rejected");
     } finally {
+      console.log("WKE-006 journey: closing browser contexts");
       await Promise.allSettled(
         [deniedContext, secondContext, firstContext, teacherContext]
           .filter((context): context is BrowserContext => context !== null)
           .map((context) => context.close()),
       );
+      console.log("WKE-006 journey: cleaning disposable fixtures");
       await cleanupFixture(fixture);
+      console.log("WKE-006 journey: cleanup complete");
     }
   });
 });

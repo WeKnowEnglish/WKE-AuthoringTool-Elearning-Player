@@ -134,9 +134,8 @@ export function CharacterKitForm({
           </select>
         </label>
         <p className="text-xs text-[var(--pl-muted)]">
-          Cursor matches the dense skull to the seed GLB (blue ghost) and an optional photo plate, then writes{" "}
-          <code>profile</code> rings and <code>sculpts</code> in JSON. Run{" "}
-          <code>npm run character:build-hero</code> to emit{" "}
+          Design a vinyl skull with click-to-stamp brushes. Profile rings are the silhouette;{" "}
+          <code>sculpts</code> are local form. Run <code>npm run character:build-hero</code> to emit{" "}
           <code>public/characters/heroes/hero_kid_v1.glb</code>.
         </p>
         <ColorSwatches
@@ -206,9 +205,8 @@ export function CharacterKitForm({
       {onPlateViewChange ? (
         <Fieldset title="Shape match">
           <p className="text-xs text-[var(--pl-muted)]">
-            Front / side / 3/4 lock the camera. The blue ghost is the seed GLB scaled so its skull (hair dropped)
-            matches the cage — hair on the ghost is extra, not the target. Put a reference PNG in{" "}
-            <code>/characters/reference/</code> and paste its URL to sit the models on that image.
+            Front / side / 3/4 lock the camera. The blue ghost is Mixamo vibe only — not a silhouette to fill. Put a
+            reference PNG in <code>/characters/reference/</code> and paste its URL to sit the vinyl head on that image.
           </p>
           <div className="flex flex-wrap gap-2">
             {HEAD_PLATE_VIEWS.map((view) => (
@@ -256,7 +254,7 @@ export function CharacterKitForm({
             />
           </label>
           <p className="text-xs text-[var(--pl-muted)]">
-            Precise local form goes in <code>sculpts</code>: origin, radius, and a delta. Mirror is on by default.
+            Click the skull to stamp. Ghost overlay is optional vibe, not a match target.
           </p>
         </Fieldset>
       ) : null}

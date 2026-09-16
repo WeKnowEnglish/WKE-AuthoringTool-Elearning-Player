@@ -24,8 +24,8 @@ function fitGhost(root: Object3D, scale: number, liftY: number) {
 }
 
 /**
- * Seed / reference GLB drawn in the same camera as the procedural skull
- * so Cursor can match silhouettes instead of guessing from inflate sliders.
+ * Optional Mixamo vibe overlay. Not a silhouette to match — vinyl sculpting
+ * is click-to-stamp on the lathe cage.
  */
 export function HeadModelGhost({
   src = SEED_HEAD_GHOST_SRC,
@@ -48,6 +48,7 @@ export function HeadModelGhost({
         side: DoubleSide,
       });
       child.renderOrder = 2;
+      child.raycast = () => {};
     });
     fitGhost(cloned, scale, SEED_HEAD_GHOST_LIFT_Y);
     return cloned;

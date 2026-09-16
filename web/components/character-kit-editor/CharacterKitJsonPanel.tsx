@@ -22,8 +22,8 @@ export function CharacterKitJsonPanel({ kit, onApply }: Props) {
     <fieldset className="space-y-2 rounded-xl border-2 border-[var(--pl-border)] bg-white p-3">
       <legend className="px-1 text-sm font-extrabold">Kit JSON</legend>
       <p className="text-xs text-[var(--pl-muted)]">
-        Cursor matches the mesh to the plate by editing <code>profile</code> and <code>sculpts</code>. Apply after you
-        paste.
+        Profile is the vinyl silhouette. <code>sculpts</code> are click-stamped brushes (inflate / pinch / flatten /
+        move). Apply after you paste.
       </p>
       <textarea
         className="h-56 w-full resize-y rounded-lg border-2 border-[var(--pl-border)] bg-[#0f172a] p-2 font-mono text-xs text-[#e2e8f0]"

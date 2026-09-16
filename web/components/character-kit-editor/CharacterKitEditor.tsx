@@ -39,7 +39,7 @@ export function CharacterKitEditor() {
   const [showPolygons, setShowPolygons] = useState(false);
   const [highlights, setHighlights] = useState<RegionHighlightFlags>(NO_REGION_HIGHLIGHTS);
   const [plateView, setPlateView] = useState<HeadPlateView>("front");
-  const [showGhost, setShowGhost] = useState(true);
+  const [showGhost, setShowGhost] = useState(false);
   const [ghostWireframe, setGhostWireframe] = useState(false);
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [saved, setSaved] = useState(false);
@@ -77,8 +77,8 @@ export function CharacterKitEditor() {
             </p>
             <h1 className="text-2xl font-extrabold">Head kit authoring</h1>
             <p className="text-sm text-[var(--pl-muted)]">
-              Lock a view, overlay the seed GLB on a photo, then edit <code>profile</code> and{" "}
-              <code>sculpts</code> in JSON until the mesh matches. Students keep using the character editor.
+              Design a vinyl toy skull: lock a view, click the mesh to stamp inflate / pinch / flatten.
+              The seed ghost is vibe only. Students keep using the character editor.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

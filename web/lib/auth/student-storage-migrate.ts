@@ -3,6 +3,8 @@ import {
   ensureGuestDeviceId,
   readLegacyAnonymousDeviceId,
 } from "@/lib/auth/student-storage-id";
+import { CHARACTER_STORAGE_KEY } from "@/lib/character/character-storage";
+import { CHARACTER_KIT_STORAGE_KEY } from "@/lib/character/kit/kit-storage";
 import { REWARDS_STORAGE_KEY } from "@/lib/progress/rewards";
 import { PROGRESS_STORAGE_KEY } from "@/lib/progress/types";
 import { LOCAL_ACTIVITY_STORAGE_KEY_PREFIX } from "@/lib/secondary/local-activity-store";
@@ -20,6 +22,8 @@ const CORE_BASE_KEYS = [
   REWARDS_STORAGE_KEY,
   MASTERY_STORAGE_KEY,
   MASTERY_EVIDENCE_STORAGE_KEY,
+  CHARACTER_STORAGE_KEY,
+  CHARACTER_KIT_STORAGE_KEY,
 ] as const;
 
 const PREFIXED_SECONDARY_KEYS = [

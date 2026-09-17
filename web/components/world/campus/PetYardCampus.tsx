@@ -6,7 +6,6 @@ import { Box, Cylinder, Sphere } from "./campus-primitives";
 export function PetYardCampus() {
   return (
     <group name="pet-yard">
-      <Box args={[1.55, 0.06, 1.35]} position={[0, 0.03, 0]} tone={{ color: "#86efac" }} />
       <Box args={[1.55, 0.16, 0.06]} position={[0, 0.12, -0.64]} tone={{ color: "#d6d3d1" }} />
       <Box args={[1.55, 0.16, 0.06]} position={[0, 0.12, 0.64]} tone={{ color: "#d6d3d1" }} />
       <Box args={[0.06, 0.16, 1.28]} position={[-0.74, 0.12, 0]} tone={{ color: "#d6d3d1" }} />

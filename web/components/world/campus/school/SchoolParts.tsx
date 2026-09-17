@@ -15,7 +15,6 @@ const STONE = "#e7e5e4";
 const STONE_DEEP = "#a8a29e";
 const GOLD = "#fbbf24";
 const PATH = "#d6d3d1";
-const LAWN = "#8fce6b";
 const SAND = "#f5d89a";
 
 const WING_W = 0.72;
@@ -152,7 +151,6 @@ export function SchoolSign() {
 export function SchoolYard() {
   return (
     <group name="school-yard">
-      <RoundedBox args={[3.35, 0.04, 2.35]} radius={0.08} position={[0.12, 0.015, 0.38]} tone={{ color: LAWN }} />
       <Box args={[0.36, 0.03, 1.05]} position={[0, 0.04, FRONT_Z + 0.78]} tone={{ color: PATH }} />
       <Box args={[0.12, 0.025, 0.12]} position={[-0.1, 0.05, FRONT_Z + 0.95]} tone={{ color: STONE }} />
       <Box args={[0.12, 0.025, 0.12]} position={[0.1, 0.05, FRONT_Z + 1.08]} tone={{ color: STONE }} />

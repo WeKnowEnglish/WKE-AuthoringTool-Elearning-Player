@@ -13,6 +13,8 @@ const SIGN_IN_LABEL: Record<string, string> = {
   "Play games": "Sign in to play",
   "See your pet": "Sign in to see your pet",
   "Walk around": "Sign in to walk around",
+  "Go inside": "Sign in to go inside",
+  "Go in": "Sign in to go in",
 };
 
 export function worldCta(selection: WorldSelection, signedIn: boolean): WorldCta | null {

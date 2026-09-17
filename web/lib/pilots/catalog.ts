@@ -588,16 +588,25 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/world",
     title: "WKE World (3D globe foundation)",
     description:
-      "Grass planet with cliffs. House and school open walkable yards plus interiors (classroom / empty house with a fridge). House studio stays modular. Student map at /primary/world.",
+      "Walk the spinning globe; the camera stays on the student from a high south look-down. House, school, and pet sit on the planet. Go inside from there. Student map at /primary/world.",
     group: "deferred",
     status: "review",
     notShippable: true,
   },
   {
-    href: "/pilots/world/play/school",
+    href: "/pilots/world/play/school?inside=1",
     title: "House & school play spaces",
     description:
-      "Walk the yard, then go inside. School is a classroom; house is empty except a fridge. Clay buildings stay. Student: /primary/world/play/cottage and /school.",
+      "Interiors opened from the globe. School is a classroom; house uses the student room layout (fridge starter). Walking out a door returns to the planet. Clay buildings stay. Student: /primary/world/play/cottage?inside=1 and /school?inside=1.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/world/design/cottage",
+    title: "House room designer",
+    description:
+      "Kid floor, walls, and furniture designer with Door/Corner/Top camera buttons. Same UI as student Decorate. Save as starter downloads the JSON recipe walk-around uses. Not shippable.",
     group: "deferred",
     status: "review",
     notShippable: true,
@@ -615,7 +624,16 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/character-kit",
     title: "Character head kit (Level 1)",
     description:
-      "Authoring: lock Front/Side/3/4, overlay the seed GLB on a photo plate, then write profile rings + sculpt strokes in kit JSON. Local mesh builder emits a GLB. Not shippable.",
+      "Authoring: vinyl toy skull — lock Front/Side/3/4, click-to-stamp inflate/pinch/flatten on the lathe cage. Seed GLB ghost is vibe only, not a silhouette to match. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/character-production-1",
+    title: "Character Production 1",
+    description:
+      "Locked vinyl full-body kid: kit lathe head plus rounded hoodie/shorts/sneakers. No reference photo. Download kit JSON or export GLB. Not shippable.",
     group: "deferred",
     status: "review",
     notShippable: true,

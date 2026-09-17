@@ -106,21 +106,21 @@ export const HOME_LOCALS: Record<HomeSpotId, { localX: number; localZ: number; y
 const HOME_SPOTS: Record<HomeSpotId, { label: string; blurb: string; href: string; ctaLabel: string }> = {
   cottage: {
     label: "Your house",
-    blurb: "Walk the yard, then peek inside. The fridge is waiting.",
-    href: "/primary/world/play/cottage",
-    ctaLabel: "Walk around",
+    blurb: "Step inside from the globe. The fridge is waiting.",
+    href: "/primary/world/play/cottage?inside=1",
+    ctaLabel: "Go inside",
   },
   school: {
     label: "School",
-    blurb: "Walk the yard, then go into the classroom.",
-    href: "/primary/world/play/school",
-    ctaLabel: "Walk around",
+    blurb: "Step inside from the globe into the classroom.",
+    href: "/primary/world/play/school?inside=1",
+    ctaLabel: "Go inside",
   },
   pet: {
     label: "Pet yard",
-    blurb: "Your pet lives here.",
+    blurb: "Your pet lives on the globe. Come play.",
     href: "/primary?nav=games",
-    ctaLabel: "See your pet",
+    ctaLabel: "Play with your pet",
   },
 };
 
@@ -136,6 +136,10 @@ export function homeSpotLabel(spot: HomeSpotId): string {
 
 function isHomeSpot(value: string | undefined): value is HomeSpotId {
   return value === "cottage" || value === "school" || value === "pet";
+}
+
+export function isHomeSpotId(value: string | undefined): value is HomeSpotId {
+  return isHomeSpot(value);
 }
 
 export function selectionFromLandmass(id: string, spot?: string): WorldSelection | null {

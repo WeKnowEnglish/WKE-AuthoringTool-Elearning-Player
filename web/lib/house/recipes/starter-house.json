@@ -1,0 +1,15 @@
+{
+  "format": "wke-house-interior",
+  "version": 1,
+  "floor": "wood",
+  "walls": "stripes",
+  "items": [
+    {
+      "id": "starter-fridge",
+      "kind": "fridge",
+      "x": 3.5,
+      "z": -3.5,
+      "rot": 3
+    }
+  ]
+}

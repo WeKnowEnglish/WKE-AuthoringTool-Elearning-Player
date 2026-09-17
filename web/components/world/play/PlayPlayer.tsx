@@ -15,6 +15,7 @@ type Keys = {
 
 type Props = {
   spawn: { x: number; z: number };
+  spawnYaw?: number;
   walls: Aabb[];
   clampRadius?: number;
   clampBounds?: Aabb;
@@ -36,6 +37,7 @@ function axisFromHeld(held: Set<string>, negative: string[], positive: string[])
 
 export function PlayPlayer({
   spawn,
+  spawnYaw = Math.PI,
   walls,
   clampRadius,
   clampBounds,
@@ -53,6 +55,7 @@ export function PlayPlayer({
   const onMoveRef = useRef(onMove);
   const offsetRef = useRef(cameraOffset);
   const clampBoundsRef = useRef(clampBounds);
+  const walkingRef = useRef(false);
   wallsRef.current = walls;
   stickRef.current = stick;
   onMoveRef.current = onMove;
@@ -60,8 +63,8 @@ export function PlayPlayer({
   clampBoundsRef.current = clampBounds;
 
   useEffect(() => {
-    pos.current = { x: spawn.x, z: spawn.z, yaw: Math.PI };
-  }, [spawn.x, spawn.z]);
+    pos.current = { x: spawn.x, z: spawn.z, yaw: spawnYaw };
+  }, [spawn.x, spawn.z, spawnYaw]);
 
   useEffect(() => {
     const applyHeld = () => {
@@ -101,6 +104,7 @@ export function PlayPlayer({
     const inputX = keys.current.x + (stickRef.current?.x ?? 0);
     const inputZ = keys.current.z + (stickRef.current?.z ?? 0);
     const len = Math.hypot(inputX, inputZ);
+    walkingRef.current = len > 0.08;
     if (len > 0.08) {
       const nx = inputX / len;
       const nz = inputZ / len;
@@ -137,13 +141,13 @@ export function PlayPlayer({
       CAM_POS.x = Math.min(bounds.maxX - pad, Math.max(bounds.minX + pad, CAM_POS.x));
       CAM_POS.z = Math.min(bounds.maxZ - pad, Math.max(bounds.minZ + pad, CAM_POS.z));
     }
-    camera.position.lerp(CAM_POS, 0.12);
+    camera.position.lerp(CAM_POS, 0.18);
     camera.lookAt(LOOK_AT);
   });
 
   return (
     <group ref={groupRef} position={[spawn.x, 0, spawn.z]}>
-      <PlayKid />
+      <PlayKid walkingRef={walkingRef} />
     </group>
   );
 }

@@ -2,12 +2,13 @@ import { aabbFromCenter, type Aabb } from "./play-move";
 import type { PlaySpotId } from "./play-spots";
 
 export const PLAYER_RADIUS = 0.28;
-export const PLAYER_SPEED = 4.2;
+export const PLAYER_SPEED = 6.2;
 export const YARD_RADIUS = 14;
 
 export const PLAY_SCALE: Record<PlaySpotId, number> = {
   cottage: 4,
   school: 5,
+  pet: 7,
 };
 
 function scaledAabb(spot: PlaySpotId, x: number, z: number, width: number, depth: number): Aabb {
@@ -16,12 +17,16 @@ function scaledAabb(spot: PlaySpotId, x: number, z: number, width: number, depth
 }
 
 export function yardSpawn(spot: PlaySpotId): { x: number; z: number } {
-  return spot === "cottage" ? { x: 0, z: 6.2 } : { x: 0, z: 9.4 };
+  if (spot === "cottage") return { x: 0, z: 6.2 };
+  if (spot === "pet") return { x: 6.8, z: 6.2 };
+  return { x: 0, z: 9.4 };
 }
 
 export function yardDoor(spot: PlaySpotId): { x: number; z: number } {
   const scale = PLAY_SCALE[spot];
-  return spot === "cottage" ? { x: 0, z: 0.55 * scale } : { x: 0, z: 0.52 * scale };
+  if (spot === "cottage") return { x: 0, z: 0.55 * scale };
+  if (spot === "pet") return { x: 0.78 * scale, z: 0 };
+  return { x: 0, z: 0.52 * scale };
 }
 
 /** Solid bits in the walkable yard: building, fence (with a gate gap), bus. */
@@ -31,6 +36,14 @@ export function yardWalls(spot: PlaySpotId): Aabb[] {
       scaledAabb(spot, 0, -0.04, 1.22, 1.0),
       scaledAabb(spot, -0.6, 0.92, 0.52, 0.1),
       scaledAabb(spot, 0.6, 0.92, 0.52, 0.1),
+    ];
+  }
+  if (spot === "pet") {
+    return [
+      scaledAabb(spot, -0.28, -0.18, 0.48, 0.42),
+      scaledAabb(spot, 0, -0.64, 1.55, 0.06),
+      scaledAabb(spot, 0, 0.64, 1.55, 0.06),
+      scaledAabb(spot, -0.74, 0, 0.06, 1.28),
     ];
   }
   return [
@@ -52,7 +65,6 @@ export function houseInsideWalls(): Aabb[] {
     aabbFromCenter(5.15, 0, 0.4, 10.6, pad),
     aabbFromCenter(-3.2, 5.15, 4.2, 0.4, pad),
     aabbFromCenter(3.2, 5.15, 4.2, 0.4, pad),
-    aabbFromCenter(3.35, -3.85, 1.3, 2.2, pad),
   ];
 }
 
@@ -103,8 +115,9 @@ export function yardReturnSpawn(spot: PlaySpotId): { x: number; z: number } {
   return yardSpawn(spot);
 }
 
-/** Walked out the doorway — send them back to the yard. */
+/** Walked out the doorway — send them back to the globe. */
 export function leftInterior(spot: PlaySpotId, x: number, z: number): boolean {
+  if (spot === "pet") return false;
   if (spot === "cottage") return z > 4.9 && Math.abs(x) < 1.4;
   return z > 5.9 && Math.abs(x) < 1.7;
 }

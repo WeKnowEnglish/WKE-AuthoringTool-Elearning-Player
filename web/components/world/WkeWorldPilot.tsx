@@ -18,6 +18,8 @@ import {
   type HomeSpotId,
   type WorldSelection,
 } from "./world-landmasses";
+import { MovePad } from "./play/MovePad";
+import { enterHref, enterLabel } from "@/lib/world/globe-walk";
 import { WorldPlacementPanel } from "./WorldPlacementPanel";
 import { useWorldPlacements } from "./WorldPlacementContext";
 
@@ -45,7 +47,7 @@ const CampusStudio = dynamic(
   },
 );
 
-export function WkeWorldPilot() {
+export function WkeWorldPilot({ spawnSpot = null }: { spawnSpot?: HomeSpotId | null }) {
   const { placements, editMode, setEditMode, selectedId, setSelectedId, updatePlacement } = useWorldPlacements();
   const [selection, setSelection] = useState<WorldSelection | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -53,6 +55,11 @@ export function WkeWorldPilot() {
   const [focus, setFocus] = useState<GlobeFocus | null>(null);
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [studioSpot, setStudioSpot] = useState<HomeSpotId | null>(null);
+  const [playMode, setPlayMode] = useState(Boolean(spawnSpot));
+  const [stick, setStick] = useState({ x: 0, z: 0 });
+  const [nearSpot, setNearSpot] = useState<HomeSpotId | null>(spawnSpot);
+  const [jumpSpot, setJumpSpot] = useState<HomeSpotId | null>(spawnSpot);
+  const [spawnKey, setSpawnKey] = useState(0);
   const bootedRef = useRef(false);
 
   const aimLandmass = useCallback((id: string, distance: number) => {
@@ -111,8 +118,14 @@ export function WkeWorldPilot() {
   useEffect(() => {
     if (bootedRef.current) return;
     bootedRef.current = true;
+    if (spawnSpot) {
+      setPlayMode(true);
+      setJumpSpot(spawnSpot);
+      setNearSpot(spawnSpot);
+      return;
+    }
     showOverview();
-  }, [showOverview]);
+  }, [showOverview, spawnSpot]);
 
   const onGlobeSelect = useCallback(
     (next: WorldSelection | null) => {
@@ -181,23 +194,41 @@ export function WkeWorldPilot() {
           <p className="text-xs text-white/55">
             {studioSpot
               ? "Studio. Turn the component and edit its file."
-              : editMode
+              : playMode
+                ? "Student play. Walk the globe; the camera stays on the kid."
+                : editMode
                 ? "Edit mode. Drag a building to place it."
-                : "Grass planet. Open a studio to edit House, School, or Pet."}
+                : "Grass planet. House, school, and pet sit on the globe. Open a studio to edit them."}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <button
               type="button"
-              aria-pressed={!studioSpot}
+              aria-pressed={!studioSpot && !playMode}
               className={`pointer-events-auto rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                !studioSpot ? "bg-sky-400 text-slate-900" : "bg-white/12 text-white/85 hover:bg-white/20"
+                !studioSpot && !playMode ? "bg-sky-400 text-slate-900" : "bg-white/12 text-white/85 hover:bg-white/20"
               }`}
               onClick={() => {
                 setStudioSpot(null);
+                setPlayMode(false);
                 if (!focusedId) showOverview();
               }}
             >
               Map
+            </button>
+            <button
+              type="button"
+              aria-pressed={playMode}
+              className={`pointer-events-auto rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                playMode ? "bg-sky-400 text-slate-900" : "bg-white/12 text-white/85 hover:bg-white/20"
+              }`}
+              onClick={() => {
+                setStudioSpot(null);
+                setEditMode(false);
+                setPlayMode(true);
+                setSpawnKey((key) => key + 1);
+              }}
+            >
+              Play
             </button>
             {HOME_NAV.map((item) => (
               <button
@@ -207,12 +238,15 @@ export function WkeWorldPilot() {
                 className={`pointer-events-auto rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                   studioSpot === item.spot ? "bg-amber-300 text-slate-900" : "bg-white/12 text-white/85 hover:bg-white/20"
                 }`}
-                onClick={() => openStudio(item.spot)}
+                onClick={() => {
+                  setPlayMode(false);
+                  openStudio(item.spot);
+                }}
               >
                 {item.shortLabel}
               </button>
             ))}
-            {studioSpot ? null : (
+            {studioSpot || playMode ? null : (
               <>
                 <button
                   type="button"
@@ -263,17 +297,26 @@ export function WkeWorldPilot() {
           <WorldPlacementPanel onChoose={onEditPick} />
         </div>
       )}
-      {studioSpot || editMode || !selection ? null : (
+      {playMode && nearSpot ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 flex justify-center px-4">
+          <Link
+            href={enterHref(nearSpot, "pilot")}
+            className="pointer-events-auto rounded-full bg-sky-400 px-4 py-2 text-sm font-semibold text-slate-900"
+          >
+            {enterLabel(nearSpot)}
+          </Link>
+        </div>
+      ) : studioSpot || editMode || !selection ? null : (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center p-4">
           <div className="pointer-events-auto rounded-xl bg-black/60 px-4 py-3 text-white">
             <p className="text-sm font-semibold">{selection.label}</p>
             <p className="mt-1 text-xs text-white/70">{selection.blurb}</p>
-            {selection.spot === "cottage" || selection.spot === "school" ? (
+            {selection.spot ? (
               <Link
-                href={`/pilots/world/play/${selection.spot}`}
+                href={enterHref(selection.spot, "pilot")}
                 className="mt-3 inline-flex rounded-md bg-sky-400 px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-sky-300"
               >
-                Walk around
+                {enterLabel(selection.spot)}
               </Link>
             ) : null}
           </div>
@@ -288,16 +331,22 @@ export function WkeWorldPilot() {
         <CampusStudio spot={studioSpot} />
       ) : (
         <WorldGlobe
-          focus={focus}
+          focus={playMode ? null : focus}
           focusedLandmassId={focusedId}
-          focusedSpot={focusedSpot}
-          editMode={editMode}
-          selectedPlacementId={selectedId}
+          focusedSpot={playMode ? nearSpot : focusedSpot}
+          editMode={playMode ? false : editMode}
+          selectedPlacementId={playMode ? null : selectedId}
+          walkMode={playMode}
+          spawnSpot={playMode ? jumpSpot : null}
+          spawnKey={spawnKey}
+          stick={stick}
           onSelect={onGlobeSelect}
           onEditPick={onEditPick}
           onEditMove={onEditMove}
+          onNearSpot={setNearSpot}
         />
       )}
+      {playMode ? <MovePad onChange={setStick} hintClassName="text-white/80" /> : null}
     </div>
   );
 }

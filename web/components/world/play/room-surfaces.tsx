@@ -43,7 +43,7 @@ export function PatternedBox({
   roughness?: number;
 }) {
   return (
-    <mesh position={position}>
+    <mesh key={kind} position={position}>
       <boxGeometry args={args} />
       <meshStandardMaterial
         color={kind === "wood" ? "#8d5a32" : kind === "stripes" ? "#f6ead8" : "#e8e8e8"}

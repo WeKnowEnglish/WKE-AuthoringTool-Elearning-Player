@@ -51,19 +51,19 @@ describe("worldCta", () => {
     });
   });
 
-  it("sends house and school to the walkable play space", () => {
+  it("sends house and school inside from the globe", () => {
     expect(
       worldCta(
         selection({
           spot: "school",
-          href: "/primary/world/play/school",
-          ctaLabel: "Walk around",
+          href: "/primary/world/play/school?inside=1",
+          ctaLabel: "Go inside",
         }),
         true,
       ),
     ).toEqual({
-      href: "/primary/world/play/school",
-      label: "Walk around",
+      href: "/primary/world/play/school?inside=1",
+      label: "Go inside",
       disabled: false,
     });
   });

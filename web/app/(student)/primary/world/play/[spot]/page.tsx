@@ -4,19 +4,27 @@ import { CampusPlaySpace } from "@/components/world/play/CampusPlaySpace";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { studentLoginPath } from "@/lib/auth/student-login";
 import { createClient } from "@/lib/supabase/server";
-import { isPlaySpot } from "@/lib/world/play-spots";
+import { isPlaySpot, playHref, playMapHref, type PlaySpotId } from "@/lib/world/play-spots";
 
 export const metadata: Metadata = {
-  title: "Walk around | WKE World",
+  title: "Inside | WKE World",
   robots: { index: false, follow: false },
 };
 
 type Props = {
   params: Promise<{ spot: string }>;
+  searchParams: Promise<{ inside?: string }>;
 };
 
-export default async function PrimaryWorldPlayPage({ params }: Props) {
+function studentDestination(spot: PlaySpotId, inside?: string): string {
+  if (spot === "pet") return "/primary?nav=games";
+  if (inside !== "1") return playMapHref(spot);
+  return playHref(spot);
+}
+
+export default async function PrimaryWorldPlayPage({ params, searchParams }: Props) {
   const { spot } = await params;
+  const { inside } = await searchParams;
   if (!isPlaySpot(spot)) notFound();
 
   const supabase = await createClient();
@@ -25,7 +33,7 @@ export default async function PrimaryWorldPlayPage({ params }: Props) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(studentLoginPath("a1", `/primary/world/play/${spot}`));
+    redirect(studentLoginPath("a1", studentDestination(spot, inside)));
   }
   if (isTeacher(user)) {
     redirect(TEACHER_DEFAULT_PATH);
@@ -34,5 +42,18 @@ export default async function PrimaryWorldPlayPage({ params }: Props) {
     redirect("/login?error=unknown_role");
   }
 
-  return <CampusPlaySpace spot={spot} backHref="/primary/world" />;
+  if (spot === "pet") {
+    redirect("/primary?nav=games");
+  }
+  if (inside !== "1") {
+    redirect(playMapHref(spot));
+  }
+
+  return (
+    <CampusPlaySpace
+      spot={spot}
+      backHref={playMapHref(spot)}
+      designHref={spot === "cottage" ? "/primary/world/design/cottage" : undefined}
+    />
+  );
 }

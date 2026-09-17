@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { WkeWorldMap } from "@/components/world/WkeWorldMap";
+import { isHomeSpotId } from "@/components/world/world-landmasses";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { studentLoginPath } from "@/lib/auth/student-login";
 import { getStudentClassMemberships } from "@/lib/data/student-classes";
@@ -8,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "WKE World",
-  description: "Your map. Tap a place, or open the whole map.",
+  description: "Walk your globe. Go inside the house or school, or play with your pet.",
   robots: { index: false, follow: false },
 };
 
@@ -20,7 +21,12 @@ function studentNameFromMetadata(metadata: Record<string, unknown> | undefined):
   return null;
 }
 
-export default async function PrimaryWorldPage() {
+type Props = {
+  searchParams: Promise<{ at?: string }>;
+};
+
+export default async function PrimaryWorldPage({ searchParams }: Props) {
+  const { at } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -43,6 +49,7 @@ export default async function PrimaryWorldPage() {
       studentKey={user.id}
       studentName={studentNameFromMetadata(user.user_metadata as Record<string, unknown>)}
       classTitle={classes[0]?.title ?? null}
+      spawnSpot={isHomeSpotId(at) ? at : null}
     />
   );
 }

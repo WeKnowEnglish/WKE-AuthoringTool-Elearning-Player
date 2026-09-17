@@ -6,6 +6,7 @@ import { addVec3, getBodyRig } from "@/lib/character/character-rig";
 import { normalizeCharacterConfig } from "@/lib/character/character-normalize";
 import type { CharacterConfig, CharacterPartDef, CharacterPartFit } from "@/lib/character/character-types";
 import { kitFromCharacterConfig } from "@/lib/character/kit/kit-from-config";
+import type { CharacterKitDocument } from "@/lib/character/kit/kit-types";
 import {
   AccessoryPart,
   BodyBase,
@@ -19,6 +20,8 @@ import { CharacterKitHead } from "./kit/CharacterKitHead";
 
 type Props = {
   config: CharacterConfig;
+  /** Optional authored head kit (wardrobe / kit studio). */
+  kit?: CharacterKitDocument | null;
   scale?: number;
 };
 
@@ -81,7 +84,7 @@ function SlotMesh({
  * Assembled student avatar. Safe to reuse in WKE World, minigames, and profiles.
  * Do not put editor chrome, cameras, or lights in this component.
  */
-export function CharacterModel({ config, scale = 1 }: Props) {
+export function CharacterModel({ config, kit, scale = 1 }: Props) {
   const safe = normalizeCharacterConfig(config);
   const rig = getBodyRig(safe.body);
   const hair = findPart("hair", safe.hair);
@@ -90,7 +93,7 @@ export function CharacterModel({ config, scale = 1 }: Props) {
   const bottom = findPart("bottom", safe.bottom);
   const shoes = findPart("shoes", safe.shoes);
   const accessory = findPart("accessory", safe.accessory);
-  const kit = kitFromCharacterConfig(safe);
+  const headKit = kit ?? kitFromCharacterConfig(safe);
   const studioFace = Boolean(face?.studio);
   const studioHair = Boolean(hair?.studio);
 
@@ -100,11 +103,11 @@ export function CharacterModel({ config, scale = 1 }: Props) {
         rig={rig}
         color={safe.skinColor}
         showTorso={false}
-        showArms={safe.top === "top_03"}
-        showLegs={safe.bottom !== "bottom_02"}
+        showArms={safe.top === "top_03" || safe.top === "top_06"}
+        showLegs={safe.bottom !== "bottom_02" && safe.bottom !== "bottom_05"}
       />
       <group position={rig.sockets.head} scale={rig.partScale}>
-        <CharacterKitHead kit={kit} showFace={!studioFace} showHair={!studioHair} />
+        <CharacterKitHead kit={headKit} showFace={!studioFace} showHair={!studioHair} />
         {face && studioFace ? (
           <SlotMesh def={face} config={safe} fallback={null} />
         ) : null}

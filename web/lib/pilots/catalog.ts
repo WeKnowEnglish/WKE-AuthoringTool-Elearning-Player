@@ -597,7 +597,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/world/play/school?inside=1",
     title: "House & school play spaces",
     description:
-      "Interiors opened from the globe. School is a classroom; house uses the student room layout (fridge starter). Walking out a door returns to the planet. Clay buildings stay. Student: /primary/world/play/cottage?inside=1 and /school?inside=1.",
+      "Interiors opened from the globe. House wardrobe opens outfit/face editors; saved avatar walks the room and globe. Walking out a door returns to the planet. Student: /primary/world/play/cottage?inside=1.",
     group: "deferred",
     status: "review",
     notShippable: true,
@@ -606,7 +606,25 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/world/design/cottage",
     title: "House room designer",
     description:
-      "Kid floor, walls, and furniture designer with Door/Corner/Top camera buttons. Same UI as student Decorate. Save as starter downloads the JSON recipe walk-around uses. Not shippable.",
+      "Kid floor, walls, and furniture designer with Door/Corner/Top camera buttons. Includes wardrobe. Same UI as student Decorate. Save as starter downloads the JSON recipe walk-around uses. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/primary/world/outfit",
+    title: "House wardrobe · outfit",
+    description:
+      "Student outfit editor opened from the house wardrobe. Saves to the same character config the globe/house avatar wears. Pilot mirror: /pilots/character-editor.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/primary/world/face",
+    title: "House wardrobe · face kit",
+    description:
+      "Student head kit editor opened from the house wardrobe. Saved kit becomes the play avatar head. Pilot mirror: /pilots/character-kit.",
     group: "deferred",
     status: "review",
     notShippable: true,
@@ -615,7 +633,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/character-editor",
     title: "Character editor (3D prototype)",
     description:
-      "Modular student avatar: rotate, swap parts, recolor, save. Placeholder meshes now; Shape Builder GLBs drop into /characters/parts. Not shippable.",
+      "Student avatar picker: 6 face looks + 10 hair styles + expanded clothes (8 tops, 6 bottoms, 6 shoes, 6 accessories), body, recolor, save. Faces change eye/nose/mouth layout on the vinyl head; hair is shell+tuft recipes; clothes are procedural meshes. Worn in WKE World via wardrobe. Not shippable.",
     group: "deferred",
     status: "review",
     notShippable: true,
@@ -624,7 +642,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/character-kit",
     title: "Character head kit (Level 1)",
     description:
-      "Authoring: vinyl toy skull — lock Front/Side/3/4, click-to-stamp inflate/pinch/flatten on the lathe cage. Seed GLB ghost is vibe only, not a silhouette to match. Not shippable.",
+      "Authoring: vinyl toy skull — lock Front/Side/3/4, click-to-stamp inflate/pinch/flatten on the lathe cage. Saved kits show on the world avatar. Not shippable.",
     group: "deferred",
     status: "review",
     notShippable: true,

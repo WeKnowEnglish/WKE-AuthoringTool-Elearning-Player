@@ -14,9 +14,18 @@ export function kitFromCharacterConfig(config: CharacterConfig): CharacterKitDoc
     name: "Student head",
     skinColor: config.skinColor,
     hairColor: config.hairColor,
-    eyes: { ...DEFAULT_CHARACTER_KIT.eyes, open: face.open },
+    eyes: {
+      ...DEFAULT_CHARACTER_KIT.eyes,
+      ...face.eyes,
+      open: face.open,
+    },
+    nose: {
+      ...DEFAULT_CHARACTER_KIT.nose,
+      ...face.nose,
+    },
     mouth: {
       ...DEFAULT_CHARACTER_KIT.mouth,
+      ...face.mouth,
       width: face.mouthWidth,
       expression: face.expression,
     },

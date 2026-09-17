@@ -68,11 +68,42 @@ export const CHARACTER_ASSETS: Record<CharacterCategory, CharacterPartDef[]> = {
       align: "bottom",
       targetHeight: 0.95,
     }),
+    part("hair", "hair_07", "Fringe", {
+      socket: "head",
+      offset: [0, 0.42, 0.04],
+      tint: "hair",
+      align: "bottom",
+      targetHeight: 1.05,
+    }),
+    part("hair", "hair_08", "Bowl", {
+      socket: "head",
+      offset: [0, 0.4, -0.02],
+      tint: "hair",
+      align: "bottom",
+      targetHeight: 1.0,
+    }),
+    part("hair", "hair_09", "Twintails", {
+      socket: "head",
+      offset: [0, 0.36, -0.08],
+      tint: "hair",
+      align: "bottom",
+      targetHeight: 1.35,
+    }),
+    part("hair", "hair_10", "Fluffy", {
+      socket: "head",
+      offset: [0, 0.5, -0.04],
+      tint: "hair",
+      align: "bottom",
+      targetHeight: 1.2,
+    }),
   ],
   face: [
     part("face", "face_01", "Smile", { socket: "face", tint: "none", align: "center" }),
     part("face", "face_02", "Cheer", { socket: "face", tint: "none", align: "center" }),
     part("face", "face_03", "Wow", { socket: "face", tint: "none", align: "center" }),
+    part("face", "face_04", "Big eyes", { socket: "face", tint: "none", align: "center" }),
+    part("face", "face_05", "Soft", { socket: "face", tint: "none", align: "center" }),
+    part("face", "face_06", "Cheeky", { socket: "face", tint: "none", align: "center" }),
   ],
   top: [
     part("top", "top_01", "T-shirt", {
@@ -99,6 +130,30 @@ export const CHARACTER_ASSETS: Record<CharacterCategory, CharacterPartDef[]> = {
       align: "center",
       targetHeight: 1.5,
     }),
+    part("top", "top_05", "Polo", {
+      socket: "chest",
+      tint: "top",
+      align: "center",
+      targetHeight: 1.4,
+    }),
+    part("top", "top_06", "Vest", {
+      socket: "chest",
+      tint: "top",
+      align: "center",
+      targetHeight: 1.28,
+    }),
+    part("top", "top_07", "Raincoat", {
+      socket: "chest",
+      tint: "top",
+      align: "center",
+      targetHeight: 1.7,
+    }),
+    part("top", "top_08", "Jersey", {
+      socket: "chest",
+      tint: "top",
+      align: "center",
+      targetHeight: 1.42,
+    }),
   ],
   bottom: [
     part("bottom", "bottom_01", "Shorts", {
@@ -121,6 +176,27 @@ export const CHARACTER_ASSETS: Record<CharacterCategory, CharacterPartDef[]> = {
       align: "center",
       targetHeight: 0.85,
     }),
+    part("bottom", "bottom_04", "Capris", {
+      socket: "hips",
+      offset: [0, -0.2, 0],
+      tint: "bottom",
+      align: "center",
+      targetHeight: 1.05,
+    }),
+    part("bottom", "bottom_05", "Overalls", {
+      socket: "hips",
+      offset: [0, -0.2, 0],
+      tint: "bottom",
+      align: "center",
+      targetHeight: 1.5,
+    }),
+    part("bottom", "bottom_06", "Culottes", {
+      socket: "hips",
+      offset: [0, -0.08, 0],
+      tint: "bottom",
+      align: "center",
+      targetHeight: 0.9,
+    }),
   ],
   shoes: [
     part("shoes", "shoes_01", "Sneakers", {
@@ -140,6 +216,24 @@ export const CHARACTER_ASSETS: Record<CharacterCategory, CharacterPartDef[]> = {
       tint: "shoes",
       align: "bottom",
       targetHeight: 0.28,
+    }),
+    part("shoes", "shoes_04", "High tops", {
+      socket: "feet",
+      tint: "shoes",
+      align: "bottom",
+      targetHeight: 0.5,
+    }),
+    part("shoes", "shoes_05", "Sandals", {
+      socket: "feet",
+      tint: "shoes",
+      align: "bottom",
+      targetHeight: 0.24,
+    }),
+    part("shoes", "shoes_06", "Rain boots", {
+      socket: "feet",
+      tint: "shoes",
+      align: "bottom",
+      targetHeight: 0.7,
     }),
   ],
   accessory: [
@@ -162,6 +256,27 @@ export const CHARACTER_ASSETS: Record<CharacterCategory, CharacterPartDef[]> = {
       tint: "top",
       align: "center",
       targetHeight: 0.28,
+    }),
+    part("accessory", "accessory_04", "Cap", {
+      socket: "head",
+      offset: [0, 0.52, 0.05],
+      tint: "top",
+      align: "center",
+      targetHeight: 0.35,
+    }),
+    part("accessory", "accessory_05", "Headphones", {
+      socket: "head",
+      offset: [0, 0.28, 0],
+      tint: "none",
+      align: "center",
+      targetHeight: 0.4,
+    }),
+    part("accessory", "accessory_06", "Scarf", {
+      socket: "chest",
+      offset: [0, 0.55, 0.05],
+      tint: "top",
+      align: "center",
+      targetHeight: 0.35,
     }),
   ],
 };

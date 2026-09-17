@@ -53,10 +53,12 @@ describe("randomCharacterConfig", () => {
     }
   });
 
-  it("has at least three options in the main mix-and-match slots", () => {
-    expect(CHARACTER_ASSETS.hair.length).toBeGreaterThanOrEqual(3);
-    expect(CHARACTER_ASSETS.top.length).toBeGreaterThanOrEqual(3);
-    expect(CHARACTER_ASSETS.bottom.length).toBeGreaterThanOrEqual(3);
-    expect(CHARACTER_ASSETS.shoes.length).toBeGreaterThanOrEqual(3);
+  it("has expanded mix-and-match slots for students", () => {
+    expect(CHARACTER_ASSETS.hair.length).toBeGreaterThanOrEqual(10);
+    expect(CHARACTER_ASSETS.face.length).toBeGreaterThanOrEqual(6);
+    expect(CHARACTER_ASSETS.top.length).toBeGreaterThanOrEqual(8);
+    expect(CHARACTER_ASSETS.bottom.length).toBeGreaterThanOrEqual(6);
+    expect(CHARACTER_ASSETS.shoes.length).toBeGreaterThanOrEqual(6);
+    expect(CHARACTER_ASSETS.accessory.length).toBeGreaterThanOrEqual(6);
   });
 });

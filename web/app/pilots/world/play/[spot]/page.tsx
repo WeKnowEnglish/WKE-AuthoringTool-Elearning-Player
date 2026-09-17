@@ -24,6 +24,7 @@ export default async function WorldPlayPilotPage({ params, searchParams }: Props
       spot={spot}
       backHref={playMapHref(spot, "pilot")}
       designHref={spot === "cottage" ? "/pilots/world/design/cottage" : undefined}
+      surface="pilot"
     />
   );
 }

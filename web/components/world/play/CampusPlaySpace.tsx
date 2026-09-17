@@ -2,7 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { nearPoint } from "@/lib/world/play-move";
 import {
@@ -21,7 +21,9 @@ import { HouseInterior } from "./HouseInterior";
 import { MovePad } from "./MovePad";
 import { SchoolClassroom } from "./SchoolClassroom";
 import { PlayPlayer } from "./PlayPlayer";
+import { WardrobePanel } from "./WardrobePanel";
 import { furnitureWalls } from "@/lib/house/house-collision";
+import { ensureWardrobe, nearWardrobe as isNearWardrobe } from "@/lib/house/house-specials";
 import { loadHouseLayout } from "@/lib/house/house-storage";
 import { STARTER_HOUSE } from "@/lib/house/house-normalize";
 
@@ -29,14 +31,19 @@ type Props = {
   spot: Exclude<PlaySpotId, "pet">;
   backHref: string;
   designHref?: string;
+  surface?: "student" | "pilot";
 };
 
-export function CampusPlaySpace({ spot, backHref, designHref }: Props) {
+export function CampusPlaySpace({ spot, backHref, designHref, surface = "student" }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [layout, setLayout] = useState(STARTER_HOUSE);
   const [stick, setStick] = useState({ x: 0, z: 0 });
   const [nearDoor, setNearDoor] = useState(false);
+  const [nearWardrobe, setNearWardrobe] = useState(false);
+  const [wardrobeOpen, setWardrobeOpen] = useState(false);
   const nearDoorRef = useRef(false);
+  const nearWardrobeRef = useRef(false);
   const leavingRef = useRef(false);
 
   const spawn = spot === "cottage" ? houseInsideSpawn() : schoolInsideSpawn();
@@ -48,10 +55,13 @@ export function CampusPlaySpace({ spot, backHref, designHref }: Props) {
   const clampBounds = spot === "cottage" ? houseInsideBounds() : schoolInsideBounds();
   const doorRef = useRef(door);
   doorRef.current = door;
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+  const returnTo = `${pathname}?inside=1`;
 
   useEffect(() => {
     if (spot !== "cottage") return;
-    setLayout(loadHouseLayout());
+    setLayout(ensureWardrobe(loadHouseLayout()));
   }, [spot]);
 
   const goOutside = () => {
@@ -87,10 +97,18 @@ export function CampusPlaySpace({ spot, backHref, designHref }: Props) {
               goOutside();
               return;
             }
-            const next = nearPoint(x, z, doorRef.current.x, doorRef.current.z, 1.35);
-            if (next !== nearDoorRef.current) {
-              nearDoorRef.current = next;
-              setNearDoor(next);
+            const atDoor = nearPoint(x, z, doorRef.current.x, doorRef.current.z, 1.35);
+            if (atDoor !== nearDoorRef.current) {
+              nearDoorRef.current = atDoor;
+              setNearDoor(atDoor);
+            }
+            if (spot === "cottage") {
+              const atWardrobe = isNearWardrobe(layoutRef.current, x, z);
+              if (atWardrobe !== nearWardrobeRef.current) {
+                nearWardrobeRef.current = atWardrobe;
+                setNearWardrobe(atWardrobe);
+                if (!atWardrobe) setWardrobeOpen(false);
+              }
             }
           }}
         />
@@ -99,7 +117,11 @@ export function CampusPlaySpace({ spot, backHref, designHref }: Props) {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-4">
         <div>
           <p className="text-sm font-semibold text-slate-900">{playSpotLabel(spot)}</p>
-          <p className="text-xs text-slate-700">Walk around inside. Walk out the door to go back to the globe.</p>
+          <p className="text-xs text-slate-700">
+            {spot === "cottage"
+              ? "Walk to the wardrobe to change your look. Walk out the door for the globe."
+              : "Walk around inside. Walk out the door to go back to the globe."}
+          </p>
         </div>
         <div className="pointer-events-auto flex flex-wrap gap-2">
           <Link href={backHref} className="rounded-md bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-white">
@@ -113,7 +135,7 @@ export function CampusPlaySpace({ spot, backHref, designHref }: Props) {
         </div>
       </div>
 
-      {nearDoor ? (
+      {nearDoor && !wardrobeOpen ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 flex justify-center">
           <button
             type="button"
@@ -124,6 +146,20 @@ export function CampusPlaySpace({ spot, backHref, designHref }: Props) {
           </button>
         </div>
       ) : null}
+
+      {nearWardrobe && !wardrobeOpen && !nearDoor ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 flex justify-center">
+          <button
+            type="button"
+            className="pointer-events-auto rounded-full bg-amber-300 px-4 py-2 text-sm font-semibold text-slate-900"
+            onClick={() => setWardrobeOpen(true)}
+          >
+            Open wardrobe
+          </button>
+        </div>
+      ) : null}
+
+      {wardrobeOpen ? <WardrobePanel returnTo={returnTo} surface={surface} onClose={() => setWardrobeOpen(false)} /> : null}
 
       <MovePad onChange={setStick} />
     </div>

@@ -35,6 +35,7 @@ export type FurnitureDef = {
 
 export const FURNITURE: Record<HouseFurnitureId, FurnitureDef> = {
   fridge: { id: "fridge", label: "Fridge", footprint: [1, 1.2], collide: true, src: "/world/props/kitchen/fridge.gltf" },
+  wardrobe: { id: "wardrobe", label: "Wardrobe", footprint: [1.5, 0.6], collide: true },
   bed: { id: "bed", label: "Bed", footprint: [2, 2.5], collide: true },
   table: { id: "table", label: "Table", footprint: [1.5, 1.5], collide: true },
   chair: { id: "chair", label: "Chair", footprint: [0.5, 0.5], collide: true },

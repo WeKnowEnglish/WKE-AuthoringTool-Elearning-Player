@@ -44,6 +44,16 @@ export function HouseFurnitureMesh({
         {kind === "fridge" ? (
           <PlayGltf src={FURNITURE.fridge.src!} position={[0, 0, 0]} rotation={[0, -Math.PI / 2, 0]} scale={0.62} ground={false} />
         ) : null}
+        {kind === "wardrobe" ? (
+          <>
+            <Box args={[1.4, 1.85, 0.52]} position={[0, 0.95, 0]} tone={{ color: "#b45309", roughness: 0.82 }} />
+            <Box args={[0.64, 1.55, 0.06]} position={[-0.34, 0.92, 0.28]} tone={{ color: "#fbbf24", roughness: 0.78 }} />
+            <Box args={[0.64, 1.55, 0.06]} position={[0.34, 0.92, 0.28]} tone={{ color: "#f59e0b", roughness: 0.78 }} />
+            <Sphere radius={0.05} position={[-0.12, 0.95, 0.34]} tone={{ color: "#fde68a" }} />
+            <Sphere radius={0.05} position={[0.12, 0.95, 0.34]} tone={{ color: "#fde68a" }} />
+            <Box args={[1.48, 0.1, 0.58]} position={[0, 1.9, 0]} tone={{ color: "#92400e", roughness: 0.86 }} />
+          </>
+        ) : null}
         {kind === "bed" ? (
           <>
             <Box args={[2, 0.28, 2.4]} position={[0, 0.22, 0]} tone={{ color: "#60a5fa", roughness: 0.88 }} />

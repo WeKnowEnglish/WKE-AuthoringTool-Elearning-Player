@@ -6,7 +6,7 @@ import type { Group } from "three";
 import { Vector3 } from "three";
 import { clampToAabb, moveWithWalls, type Aabb } from "@/lib/world/play-move";
 import { PLAYER_RADIUS, PLAYER_SPEED } from "@/lib/world/play-layout";
-import { PlayKid } from "./PlayKid";
+import { PlayAvatar } from "./PlayAvatar";
 
 type Keys = {
   x: number;
@@ -147,7 +147,7 @@ export function PlayPlayer({
 
   return (
     <group ref={groupRef} position={[spawn.x, 0, spawn.z]}>
-      <PlayKid walkingRef={walkingRef} />
+      <PlayAvatar walkingRef={walkingRef} />
     </group>
   );
 }

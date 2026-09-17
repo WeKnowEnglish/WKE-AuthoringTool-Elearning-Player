@@ -1,4 +1,5 @@
 import { CharacterKitEditor } from "@/components/character-kit-editor/CharacterKitEditor";
+import { safeAppReturnHref } from "@/lib/world/play-avatar";
 
 export const metadata = {
   title: "Character kit — Pilot",
@@ -6,6 +7,11 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function CharacterKitPilotPage() {
-  return <CharacterKitEditor />;
+type Props = {
+  searchParams: Promise<{ next?: string }>;
+};
+
+export default async function CharacterKitPilotPage({ searchParams }: Props) {
+  const { next } = await searchParams;
+  return <CharacterKitEditor returnHref={safeAppReturnHref(next, "") || null} />;
 }

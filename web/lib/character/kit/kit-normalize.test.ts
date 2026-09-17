@@ -177,4 +177,17 @@ describe("kitFromCharacterConfig", () => {
     expect(kit.eyes.open).toBe(true);
     expect(kit.mouth.expression).toBe("wow");
   });
+
+  it("applies big-eyes face layout, not only expression", () => {
+    const kit = kitFromCharacterConfig({ ...DEFAULT_CHARACTER_CONFIG, face: "face_04" });
+    expect(kit.eyes.size).toBeGreaterThan(1.4);
+    expect(kit.mouth.expression).toBe("smile");
+  });
+
+  it("loads fringe and fluffy hair recipes", () => {
+    expect(hairPreset("hair_07")?.tufts).toHaveLength(3);
+    expect(hairPreset("hair_10")?.tufts.length).toBeGreaterThan(3);
+    const kit = kitFromCharacterConfig({ ...DEFAULT_CHARACTER_CONFIG, hair: "hair_09" });
+    expect(kit.hair.tufts.map((tuft) => tuft.id)).toEqual(["tail_left", "tail_right", "crown"]);
+  });
 });

@@ -39,7 +39,7 @@ const CharacterKitPreview = dynamic(
   },
 );
 
-export function CharacterKitEditor() {
+export function CharacterKitEditor({ returnHref }: { returnHref?: string | null }) {
   const hydrated = useClientHydrated();
   const [kit, setKit] = useState<CharacterKitDocument>(DEFAULT_CHARACTER_KIT);
   const [showHair, setShowHair] = useState(false);
@@ -108,18 +108,32 @@ export function CharacterKitEditor() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {returnHref ? (
+              <Link
+                href={returnHref}
+                className="rounded-lg border-2 border-[var(--pl-border)] bg-amber-200 px-3 py-2 text-sm font-semibold"
+              >
+                Back to house
+              </Link>
+            ) : null}
             <Link
-              href="/pilots/character-editor"
+              href={
+                returnHref
+                  ? `/primary/world/outfit?next=${encodeURIComponent(returnHref)}`
+                  : "/pilots/character-editor"
+              }
               className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-2 text-sm font-semibold"
             >
               Student editor
             </Link>
-            <Link
-              href="/pilots"
-              className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-2 text-sm font-semibold"
-            >
-              Back to pilots
-            </Link>
+            {returnHref ? null : (
+              <Link
+                href="/pilots"
+                className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-2 text-sm font-semibold"
+              >
+                Back to pilots
+              </Link>
+            )}
           </div>
         </header>
 

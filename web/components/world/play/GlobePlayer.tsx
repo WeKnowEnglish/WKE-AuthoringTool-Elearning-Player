@@ -3,7 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, type MutableRefObject } from "react";
 import { Matrix4, Vector3, type Group } from "three";
-import { PlayKid } from "./PlayKid";
+import { PlayAvatar } from "./PlayAvatar";
 import {
   GLOBE_KID_SCALE,
   GLOBE_WALK_SPEED,
@@ -129,7 +129,7 @@ export function GlobePlayer({ spawnSpot = null, spawnKey = 0, stick = { x: 0, z:
 
   return (
     <group ref={groupRef}>
-      <PlayKid walkingRef={walkingRef} />
+      <PlayAvatar walkingRef={walkingRef} />
     </group>
   );
 }

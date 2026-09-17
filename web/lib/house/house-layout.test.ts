@@ -9,8 +9,9 @@ describe("normalizeHouseLayout", () => {
   it("keeps the starter fridge on wood and stripes", () => {
     expect(STARTER_HOUSE.floor).toBe("wood");
     expect(STARTER_HOUSE.walls).toBe("stripes");
-    expect(STARTER_HOUSE.items).toHaveLength(1);
+    expect(STARTER_HOUSE.items).toHaveLength(2);
     expect(STARTER_HOUSE.items[0]?.kind).toBe("fridge");
+    expect(STARTER_HOUSE.items.some((item) => item.kind === "wardrobe")).toBe(true);
   });
 
   it("drops unknown furniture and clamps rot", () => {
@@ -62,7 +63,7 @@ describe("furniture walls", () => {
         { id: "rug", kind: "rug", x: 0, z: 0, rot: 0 },
       ],
     });
-    expect(furnitureWalls(layout)).toHaveLength(1);
+    expect(furnitureWalls(layout)).toHaveLength(2);
   });
 });
 

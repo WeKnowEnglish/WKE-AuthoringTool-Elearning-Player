@@ -54,6 +54,7 @@ export default async function PrimaryWorldPlayPage({ params, searchParams }: Pro
       spot={spot}
       backHref={playMapHref(spot)}
       designHref={spot === "cottage" ? "/primary/world/design/cottage" : undefined}
+      surface="student"
     />
   );
 }

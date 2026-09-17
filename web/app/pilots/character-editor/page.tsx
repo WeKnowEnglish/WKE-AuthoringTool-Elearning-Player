@@ -1,4 +1,5 @@
 import { CharacterEditor } from "@/components/character-editor/CharacterEditor";
+import { safeAppReturnHref } from "@/lib/world/play-avatar";
 
 export const metadata = {
   title: "Character editor — Pilot",
@@ -6,6 +7,11 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function CharacterEditorPilotPage() {
-  return <CharacterEditor />;
+type Props = {
+  searchParams: Promise<{ next?: string }>;
+};
+
+export default async function CharacterEditorPilotPage({ searchParams }: Props) {
+  const { next } = await searchParams;
+  return <CharacterEditor returnHref={safeAppReturnHref(next, "") || null} />;
 }

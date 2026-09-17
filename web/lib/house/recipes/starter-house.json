@@ -10,6 +10,13 @@
       "x": 3.5,
       "z": -3.5,
       "rot": 3
+    },
+    {
+      "id": "starter-wardrobe",
+      "kind": "wardrobe",
+      "x": -3.5,
+      "z": -3.5,
+      "rot": 1
     }
   ]
 }

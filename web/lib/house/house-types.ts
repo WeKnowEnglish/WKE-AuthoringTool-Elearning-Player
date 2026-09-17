@@ -10,7 +10,7 @@ export type HouseFloorId = (typeof FLOOR_IDS)[number];
 export const WALL_IDS = ["stripes", "tan", "mint", "sky"] as const;
 export type HouseWallId = (typeof WALL_IDS)[number];
 
-export const FURNITURE_IDS = ["fridge", "bed", "table", "chair", "shelf", "plant", "rug"] as const;
+export const FURNITURE_IDS = ["fridge", "wardrobe", "bed", "table", "chair", "shelf", "plant", "rug"] as const;
 export type HouseFurnitureId = (typeof FURNITURE_IDS)[number];
 
 export const CAMERA_PRESETS = ["door", "corner", "top"] as const;

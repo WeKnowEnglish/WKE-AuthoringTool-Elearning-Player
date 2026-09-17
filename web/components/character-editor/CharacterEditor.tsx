@@ -26,7 +26,7 @@ const CharacterPreview = dynamic(
   },
 );
 
-export function CharacterEditor() {
+export function CharacterEditor({ returnHref }: { returnHref?: string | null }) {
   const hydrated = useClientHydrated();
   const [config, setConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
   const [category, setCategory] = useState<CharacterCategory>("hair");
@@ -75,20 +75,37 @@ export function CharacterEditor() {
               Character studio
             </p>
             <h1 className="text-2xl font-extrabold">Make your character</h1>
+            <p className="text-sm text-[var(--pl-muted)]">
+              Pick a face look, hair style, and clothes, then recolor. Hair, Face, and clothing tabs list every student option.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {returnHref ? (
+              <Link
+                href={returnHref}
+                className="rounded-lg border-2 border-[var(--pl-border)] bg-amber-200 px-3 py-2 text-sm font-semibold text-[var(--pl-ink)]"
+              >
+                Back to house
+              </Link>
+            ) : null}
             <Link
-              href="/pilots/character-kit"
+              href={
+                returnHref
+                  ? `/primary/world/face?next=${encodeURIComponent(returnHref)}`
+                  : "/pilots/character-kit"
+              }
               className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--pl-ink)]"
             >
               Head kit
             </Link>
-            <Link
-              href="/pilots"
-              className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--pl-ink)]"
-            >
-              Back to pilots
-            </Link>
+            {returnHref ? null : (
+              <Link
+                href="/pilots"
+                className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--pl-ink)]"
+              >
+                Back to pilots
+              </Link>
+            )}
           </div>
         </header>
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[11rem_minmax(0,1fr)_22rem] lg:items-stretch">

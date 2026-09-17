@@ -12,3 +12,11 @@ export function ToySkinMaterial({ color }: SkinProps) {
 export function ToyHairMaterial({ color }: SkinProps) {
   return <meshStandardMaterial color={color} roughness={0.55} metalness={0} />;
 }
+
+export function ToyClothMaterial({ color }: SkinProps) {
+  return <meshStandardMaterial color={color} roughness={0.48} metalness={0} />;
+}
+
+export function ToyShoeMaterial({ color }: SkinProps) {
+  return <meshStandardMaterial color={color} roughness={0.38} metalness={0.04} />;
+}

@@ -8,7 +8,15 @@ import { cloneHair } from "@/lib/character/kit/hair-shell";
 import { createHairTuft } from "@/lib/character/kit/kit-normalize";
 import { HAIR_KIT_PRESETS } from "@/lib/character/kit/kit-presets";
 import { HEAD_PLATE_LABEL } from "@/lib/character/kit/head-plates";
-import { HEAD_PLATE_VIEWS, type CharacterKitDocument, type HeadPlateView, type KitHairTuft, type KitMouthExpression } from "@/lib/character/kit/kit-types";
+import {
+  HEAD_PLATE_VIEWS,
+  HEAD_SCULPT_MODES,
+  type CharacterKitDocument,
+  type HeadPlateView,
+  type KitHairTuft,
+  type KitMouthExpression,
+} from "@/lib/character/kit/kit-types";
+import { MAX_SCULPT_STROKES, type SculptBrush, sculptModeOf } from "@/lib/character/kit/sculpt-strokes";
 import {
   HIGHLIGHT_HEX,
   NO_REGION_HIGHLIGHTS,
@@ -31,6 +39,11 @@ type Props = {
   onShowGhostChange?: (showGhost: boolean) => void;
   ghostWireframe?: boolean;
   onGhostWireframeChange?: (wireframe: boolean) => void;
+  brush?: SculptBrush;
+  onBrushChange?: (brush: SculptBrush) => void;
+  onUndoSculpt?: () => void;
+  onClearSculpts?: () => void;
+  onDeleteSculpt?: (id: string) => void;
 };
 
 function Slider({
@@ -90,6 +103,11 @@ export function CharacterKitForm({
   onShowGhostChange,
   ghostWireframe,
   onGhostWireframeChange,
+  brush,
+  onBrushChange,
+  onUndoSculpt,
+  onClearSculpts,
+  onDeleteSculpt,
 }: Props) {
   const hairs = partsForCategory("hair");
 
@@ -228,7 +246,7 @@ export function CharacterKitForm({
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input
                 type="checkbox"
-                checked={showGhost ?? true}
+                checked={showGhost ?? false}
                 onChange={(event) => onShowGhostChange(event.target.checked)}
               />
               Ghost seed GLB
@@ -256,6 +274,99 @@ export function CharacterKitForm({
           <p className="text-xs text-[var(--pl-muted)]">
             Click the skull to stamp. Ghost overlay is optional vibe, not a match target.
           </p>
+        </Fieldset>
+      ) : null}
+
+      {onBrushChange && brush ? (
+        <Fieldset title="Sculpt">
+          <p className="text-xs text-[var(--pl-muted)]">
+            Click the skull to stamp. Inflate / pinch / flatten follow the surface normal — no JSON origin guessing.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {HEAD_SCULPT_MODES.map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={`rounded-lg border-2 px-3 py-1 text-sm font-bold capitalize ${
+                  brush.mode === mode
+                    ? "border-[var(--pl-ink)] bg-[var(--pl-yellow)]"
+                    : "border-[var(--pl-border)] bg-white"
+                }`}
+                onClick={() => onBrushChange({ ...brush, mode })}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+          <Slider
+            label="Radius"
+            value={brush.radius}
+            min={0.05}
+            max={0.45}
+            step={0.01}
+            onChange={(radius) => onBrushChange({ ...brush, radius })}
+          />
+          <Slider
+            label="Strength"
+            value={brush.strength}
+            min={0.01}
+            max={0.16}
+            step={0.005}
+            onChange={(strength) => onBrushChange({ ...brush, strength })}
+          />
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={brush.mirror}
+              onChange={(event) => onBrushChange({ ...brush, mirror: event.target.checked })}
+            />
+            Mirror X
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-1 text-sm font-bold"
+              onClick={onUndoSculpt}
+              disabled={!kit.sculpts?.length}
+            >
+              Undo last
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-1 text-sm font-bold"
+              onClick={onClearSculpts}
+              disabled={!kit.sculpts?.length}
+            >
+              Clear
+            </button>
+          </div>
+          <p className="text-xs text-[var(--pl-muted)]">
+            {(kit.sculpts ?? []).length}/{MAX_SCULPT_STROKES} stamps
+          </p>
+          <ul className="max-h-48 space-y-1 overflow-y-auto overscroll-contain">
+            {(kit.sculpts ?? []).map((stroke) => (
+              <li
+                key={stroke.id}
+                className="flex items-center justify-between gap-2 rounded-lg bg-[var(--pl-bg)] px-2 py-1 text-xs"
+              >
+                <span className="min-w-0 truncate font-semibold">
+                  {sculptModeOf(stroke)} {stroke.id}{" "}
+                  <span className="font-medium text-[var(--pl-muted)]">
+                    {stroke.origin.map((value) => value.toFixed(2)).join(", ")}
+                  </span>
+                </span>
+                {onDeleteSculpt ? (
+                  <button
+                    type="button"
+                    className="shrink-0 font-bold text-red-700"
+                    onClick={() => onDeleteSculpt(stroke.id)}
+                  >
+                    Delete
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </Fieldset>
       ) : null}
 

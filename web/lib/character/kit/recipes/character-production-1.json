@@ -1,12 +1,12 @@
 {
   "format": "wke-character-kit",
   "version": 1,
-  "id": "wke_simple_kid",
-  "name": "Simple kid",
+  "id": "character_production_1",
+  "name": "Character Production 1",
   "hero": "toy_head_v1",
   "skinColor": "#F1C7A8",
-  "hairColor": "#6B3F24",
-  "regions": { "crown": 1, "cheeks": 1, "chin": 1 },
+  "hairColor": "#3B2618",
+  "regions": { "crown": 1, "cheeks": 1, "chin": 1.05 },
   "profile": [
     { "y": -0.82, "rx": 0.07, "rz": 0.07, "z": 0.12 },
     { "y": -0.72, "rx": 0.44, "rz": 0.34, "z": 0.16 },
@@ -43,15 +43,33 @@
       "mode": "pinch",
       "strength": 0.04,
       "mirror": true
+    },
+    {
+      "id": "jaw_round",
+      "origin": [0.2, -0.56, 0.3],
+      "radius": 0.18,
+      "delta": [0, 0, 0],
+      "mode": "inflate",
+      "strength": 0.03,
+      "mirror": true
+    },
+    {
+      "id": "brow_smooth",
+      "origin": [0, 0.18, 0.48],
+      "radius": 0.22,
+      "delta": [0, 0, 0],
+      "mode": "flatten",
+      "strength": 0.1,
+      "mirror": false
     }
   ],
-  "eyes": { "spacing": 0.54, "size": 1.3, "height": 0.04, "forward": 0.56, "open": false },
-  "nose": { "size": 0.78, "height": -0.14, "forward": 0.62 },
-  "mouth": { "width": 1.32, "height": -0.38, "forward": 0.58, "expression": "smile" },
-  "ears": { "size": 0.72 },
+  "eyes": { "spacing": 0.5, "size": 1.12, "height": 0.02, "forward": 0.54, "open": false },
+  "nose": { "size": 0.7, "height": -0.14, "forward": 0.6 },
+  "mouth": { "width": 1.16, "height": -0.36, "forward": 0.56, "expression": "smile" },
+  "ears": { "size": 0.7 },
   "hair": {
     "hairlineY": 0.02,
-    "overshoot": 0.08,
+    "overshoot": 0.12,
     "backBias": -0.2,
     "shell": [
       { "y": 0.02, "rx": 0.82, "rz": 0.48, "z": 0 },
@@ -62,7 +80,11 @@
       { "y": 0.78, "rx": 0.08, "rz": 0.08, "z": 0 }
     ],
     "tufts": [
-      { "id": "tuft_top", "position": [0.04, 0.74, 0.06], "radius": 0.11, "length": 0.04, "tilt": [0.6, 0, 0.2] }
+      { "id": "tuft_top", "position": [0.04, 0.74, 0.06], "radius": 0.11, "length": 0.04, "tilt": [0.6, 0, 0.2] },
+      { "id": "tuft_front", "position": [0, 0.58, 0.22], "radius": 0.09, "length": 0.08, "tilt": [0.5, 0, 0] },
+      { "id": "tuft_left", "position": [-0.22, 0.64, 0.08], "radius": 0.08, "length": 0.1, "tilt": [0.28, 0, 0.48] },
+      { "id": "tuft_right", "position": [0.22, 0.64, 0.08], "radius": 0.08, "length": 0.1, "tilt": [0.28, 0, -0.48] },
+      { "id": "tuft_back", "position": [0, 0.62, -0.18], "radius": 0.1, "length": 0.08, "tilt": [-0.35, 0, 0] }
     ]
   }
 }

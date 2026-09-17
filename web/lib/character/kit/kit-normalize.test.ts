@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CHARACTER_CONFIG } from "@/lib/character/character-defaults";
 import { kitFromCharacterConfig } from "./kit-from-config";
-import { DEFAULT_CHARACTER_KIT } from "./kit-defaults";
+import { DEFAULT_CHARACTER_KIT, VINYL_SCULPT_RECIPE } from "./kit-defaults";
 import { hairPreset } from "./kit-presets";
 import { normalizeCharacterKit } from "./kit-normalize";
 
@@ -11,6 +11,12 @@ describe("normalizeCharacterKit", () => {
     expect(kit.hero).toBe("toy_head_v1");
     expect(kit.hair.tufts.length).toBe(DEFAULT_CHARACTER_KIT.hair.tufts.length);
     expect(kit.hair.hairlineY).toBe(DEFAULT_CHARACTER_KIT.hair.hairlineY);
+    expect(kit.sculpts).toHaveLength(VINYL_SCULPT_RECIPE.length);
+    expect(kit.sculpts?.map((stroke) => stroke.id)).toEqual(VINYL_SCULPT_RECIPE.map((stroke) => stroke.id));
+  });
+
+  it("keeps an explicit empty sculpt list instead of the vinyl recipe", () => {
+    const kit = normalizeCharacterKit({ sculpts: [] });
     expect(kit.sculpts).toEqual([]);
   });
 
@@ -154,6 +160,7 @@ describe("normalizeCharacterKit", () => {
     });
     expect(kit.sculpts).toHaveLength(1);
     expect(kit.sculpts?.[0]?.id).toBe("cheek");
+    expect(kit.sculpts?.[0]?.mode).toBe("move");
     expect(kit.sculpts?.[0]?.mirror).toBe(true);
   });
 });

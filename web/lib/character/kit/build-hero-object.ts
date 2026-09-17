@@ -12,7 +12,7 @@ import { HEAD_LANDMARKS } from "@/components/character/student-head-landmarks";
 import { applyProfileRegions, DEFAULT_HEAD_PROFILE } from "./head-profile";
 import { buildHeadGeometryFromProfile } from "./build-head-geometry";
 import { resolveHairShell } from "./hair-shell";
-import { sculptToySkull } from "./sculpt-toy-skull";
+import { sculptEyeSockets } from "./sculpt-toy-skull";
 import { applySculptStrokes } from "./sculpt-strokes";
 import type { CharacterKitDocument, HeadProfileRing, KitHairTuft } from "./kit-types";
 
@@ -100,12 +100,12 @@ export function buildHeroObject(kit: CharacterKitDocument, options: BuildHeroOpt
   const rings = applyProfileRegions(kit.profile ?? DEFAULT_HEAD_PROFILE, kit.regions);
   const half = kit.eyes.spacing / 2;
   const skull = buildHeadGeometryFromProfile(rings);
-  sculptToySkull(skull, {
+  applySculptStrokes(skull, kit.sculpts ?? []);
+  sculptEyeSockets(skull, {
     leftEye: [-half, kit.eyes.height, kit.eyes.forward],
     rightEye: [half, kit.eyes.height, kit.eyes.forward],
     eyeRadius: EYE_RADIUS * kit.eyes.size,
   });
-  applySculptStrokes(skull, kit.sculpts ?? []);
   const head = new Mesh(skull, skinMaterial(kit.skinColor));
   head.name = "heroSkull";
   root.add(head);

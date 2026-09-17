@@ -20,34 +20,18 @@ export type ToySkullSculpt = {
 };
 
 /**
- * After the lathe: tuck side cheeks so they do not balloon past the GLB
- * face, drop a chin pad into the ghost jaw, and bowl sockets for the globes.
+ * Parametric sockets that follow kit.eyes. Chin/cheek form lives in sculpt strokes.
  */
-export function sculptToySkull(geometry: BufferGeometry, sculpt: ToySkullSculpt): BufferGeometry {
+export function sculptEyeSockets(geometry: BufferGeometry, sculpt: ToySkullSculpt): BufferGeometry {
   const positions = geometry.getAttribute("position");
   if (!positions) return geometry;
   const socketRadius = sculpt.eyeRadius * 1.62;
   const socketDepth = sculpt.eyeRadius * 0.58;
-  const chin: Vec3 = [0, -0.74, 0.32];
 
   for (let index = 0; index < positions.count; index += 1) {
     let x = positions.getX(index);
     let y = positions.getY(index);
     let z = positions.getZ(index);
-
-    if (z > 0.1 && y > -0.48 && y < 0.16) {
-      const along = smoothstep(1 - Math.abs(y + 0.1) / 0.4);
-      const side = smoothstep((Math.abs(x) - 0.22) / 0.4) * smoothstep((0.74 - Math.abs(x)) / 0.2);
-      const front = smoothstep((z - 0.1) / 0.28);
-      x -= Math.sign(x || 1) * along * side * front * 0.04;
-    }
-
-    const chinDist = dist3(x, y, z, chin);
-    if (chinDist < 0.22) {
-      const weight = smoothstep(1 - chinDist / 0.22);
-      z += weight * 0.055;
-      y -= weight * 0.025;
-    }
 
     for (const eye of [sculpt.leftEye, sculpt.rightEye]) {
       const d = dist3(x, y, z, eye);
@@ -65,6 +49,9 @@ export function sculptToySkull(geometry: BufferGeometry, sculpt: ToySkullSculpt)
   geometry.computeVertexNormals();
   return geometry;
 }
+
+/** @deprecated Use sculptEyeSockets — chin/cheek are kit strokes now. */
+export const sculptToySkull = sculptEyeSockets;
 
 export function nearestVertexZ(geometry: BufferGeometry, x: number, y: number): number {
   const positions = geometry.getAttribute("position");

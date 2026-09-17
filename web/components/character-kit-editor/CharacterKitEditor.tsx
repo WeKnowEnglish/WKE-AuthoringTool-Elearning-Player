@@ -14,6 +14,13 @@ import { exportKitGroupToGlb } from "@/lib/character/kit/kit-export-glb";
 import { normalizeCharacterKit } from "@/lib/character/kit/kit-normalize";
 import { loadCharacterKit, saveCharacterKit } from "@/lib/character/kit/kit-storage";
 import { HEAD_PLATE_VIEWS, type CharacterKitDocument, type HeadPlateView } from "@/lib/character/kit/kit-types";
+import type { Vec3 } from "@/lib/character/character-types";
+import {
+  createSculptStroke,
+  DEFAULT_SCULPT_BRUSH,
+  MAX_SCULPT_STROKES,
+  type SculptBrush,
+} from "@/lib/character/kit/sculpt-strokes";
 import { PRIMARY_CHROME_CLASS, PRIMARY_CHROME_STYLE } from "@/lib/primary/primary-chrome";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { CharacterKitFallback2D } from "./CharacterKitPreview";
@@ -41,6 +48,8 @@ export function CharacterKitEditor() {
   const [plateView, setPlateView] = useState<HeadPlateView>("front");
   const [showGhost, setShowGhost] = useState(false);
   const [ghostWireframe, setGhostWireframe] = useState(false);
+  const [brush, setBrush] = useState<SculptBrush>(DEFAULT_SCULPT_BRUSH);
+  const [lastHit, setLastHit] = useState<Vec3 | null>(null);
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [saved, setSaved] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -62,6 +71,23 @@ export function CharacterKitEditor() {
   const apply = (next: CharacterKitDocument) => {
     setKit(normalizeCharacterKit(next));
     setExportError(null);
+  };
+
+  const stamp = (origin: Vec3, normal: Vec3) => {
+    setLastHit(origin);
+    setKit((current) => {
+      const strokes = current.sculpts ?? [];
+      if (strokes.length >= MAX_SCULPT_STROKES) return current;
+      return normalizeCharacterKit({
+        ...current,
+        sculpts: [...strokes, createSculptStroke({ ...brush, origin, normal })],
+      });
+    });
+    setExportError(null);
+  };
+
+  const patchSculpts = (sculpts: CharacterKitDocument["sculpts"]) => {
+    apply({ ...kit, sculpts });
   };
 
   return (
@@ -111,6 +137,9 @@ export function CharacterKitEditor() {
                 plateView={plateView}
                 showGhost={showGhost}
                 ghostWireframe={ghostWireframe}
+                stampRadius={brush.radius}
+                lastHit={lastHit}
+                onStamp={stamp}
               />
             )}
             <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-wrap gap-2">
@@ -195,6 +224,17 @@ export function CharacterKitEditor() {
                 onShowGhostChange={setShowGhost}
                 ghostWireframe={ghostWireframe}
                 onGhostWireframeChange={setGhostWireframe}
+                brush={brush}
+                onBrushChange={setBrush}
+                onUndoSculpt={() => {
+                  patchSculpts((kit.sculpts ?? []).slice(0, -1));
+                  setLastHit(null);
+                }}
+                onClearSculpts={() => {
+                  patchSculpts([]);
+                  setLastHit(null);
+                }}
+                onDeleteSculpt={(id) => patchSculpts((kit.sculpts ?? []).filter((stroke) => stroke.id !== id))}
               />
               <CharacterKitJsonPanel kit={kit} onApply={apply} />
             </div>

@@ -16,15 +16,23 @@ export type HeadRegions = {
 export const HEAD_PLATE_VIEWS = ["front", "threeQuarter", "side"] as const;
 export type HeadPlateView = (typeof HEAD_PLATE_VIEWS)[number];
 
+export const HEAD_SCULPT_MODES = ["inflate", "pinch", "flatten", "move"] as const;
+export type HeadSculptMode = (typeof HEAD_SCULPT_MODES)[number];
+
 /**
- * Local vertex push on the dense skull. Cursor writes these instead of
- * inflate sliders so cheeks, chin, and sockets can be shaped independently.
+ * Local vertex push on the dense skull. Click-to-stamp writes these so
+ * cheeks and chin can be shaped without guessing JSON origins.
+ * `inflate` / `pinch` / `flatten` act along vertex normals.
+ * Legacy rows are `move` with a world `delta`.
  */
 export type HeadSculptStroke = {
   id: string;
   origin: Vec3;
   radius: number;
   delta: Vec3;
+  mode?: HeadSculptMode;
+  /** World units for inflate/pinch; flatten blend uses the same 0–0.4 range. */
+  strength?: number;
   /** Mirror across X when origin is off-center. Default true. */
   mirror?: boolean;
 };
@@ -101,7 +109,7 @@ export type CharacterKitDocument = {
   regions: HeadRegions;
   /** Optional skull silhouette. Omit to use the default kid profile. */
   profile?: HeadProfileRing[];
-  /** Dense-mesh sculpt strokes. Applied after the lathe and sockets. */
+  /** Dense-mesh sculpt strokes. Applied after the lathe; sockets follow kit.eyes after strokes. */
   sculpts?: HeadSculptStroke[];
   /** Optional reference photo for the current plate view. */
   plateSrc?: string;

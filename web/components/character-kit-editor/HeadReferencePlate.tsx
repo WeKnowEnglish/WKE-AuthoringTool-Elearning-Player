@@ -10,8 +10,8 @@ type Props = {
 };
 
 /**
- * Camera-facing reference photo. The 3D head (and seed ghost) sit on top of
- * this plate so Cursor can map a GLB silhouette onto an image.
+ * Camera-facing reference photo. Optional vibe plate — vinyl sculpting
+ * is click-to-stamp on the lathe cage, not a silhouette overlay match.
  */
 export function HeadReferencePlate({ src, opacity = 0.55 }: Props) {
   const texture = useTexture(src);

@@ -45,6 +45,7 @@ If a secret leaks, roll it in the Stripe Dashboard and update `.env.local` / pro
 - In Supabase: **Authentication → URL configuration** — restrict redirect URLs to your real domains.
 - Optional: Supabase **Network restrictions** / project settings if your plan supports IP allowlists.
 - Production: use **HTTPS** (Hostinger); the app sets security headers (see `next.config.ts`).
+- Hostinger Node.js deploy, env, and cron: **[docs/hosting/HOSTINGER.md](./docs/hosting/HOSTINGER.md)**. Do not put the service role in Hostinger’s browser-visible settings.
 
 ## Rate limits
 

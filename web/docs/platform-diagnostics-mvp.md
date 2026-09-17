@@ -29,7 +29,9 @@ Failed uploads stay queued and retry when the browser returns online, becomes vi
 
 Raw `platform_usage_events` rows are retained for a maximum of 60 days. Migration 147 provides the
 indexed, service-only `prune_platform_usage_events` function. `vercel.json` calls the protected
-`/api/cron/diagnostics-retention` route daily; the hosting environment must provide `CRON_SECRET`.
+`/api/cron/diagnostics-retention` route daily on Vercel. Hostinger has no `vercel.json` crons —
+schedule the same URL from hPanel (see `docs/hosting/HOSTINGER.md`). The hosting environment
+must provide `CRON_SECRET`.
 The verified maintenance operation is equivalent to:
 
 ```sql

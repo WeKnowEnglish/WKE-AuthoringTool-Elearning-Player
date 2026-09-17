@@ -73,9 +73,12 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
 
 ## Hostinger (Node.js)
 
-- Build: `npm run build`
-- Start: `npm run start` (set `PORT` in the panel if required)
-- `next.config.ts` uses `output: "standalone"` for a smaller production bundle in Docker/Node hosting.
+Keep `weknowenglish.online` on Vercel until a Hostinger test URL works. Full wizard settings, env split, cron, and cutover: **[docs/hosting/HOSTINGER.md](./docs/hosting/HOSTINGER.md)**.
+
+- Root directory in hPanel: `web` (the git clone must still include `packages/`)
+- Node.js: **24**
+- Build: `npm run build` · Start: `npm run start` (Hostinger supplies `PORT`)
+- Non-Vercel builds emit `output: "standalone"` (`lib/build/next-output-mode.ts`)
 
 ## Project layout
 

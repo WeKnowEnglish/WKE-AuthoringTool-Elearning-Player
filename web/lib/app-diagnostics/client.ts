@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveAppReleaseVersion } from "@/lib/build/app-release";
 import { resolveServerMs } from "@/lib/live-game/diagnostics/server-timing-parse";
 import type {
   AppDiagnosticDetail,
@@ -215,7 +216,7 @@ export function recordAppDiagnostic(
     homeworkId: options?.homeworkId,
     status: options?.status,
     errorCode: options?.errorCode,
-    appVersion: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "development",
+    appVersion: resolveAppReleaseVersion(),
     deviceCategory: deviceCategory(),
   };
   const events = [...readAppDiagnosticEvents(), event].slice(-MAX_EVENTS);

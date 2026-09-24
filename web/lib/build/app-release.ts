@@ -1,4 +1,5 @@
 export type AppReleaseEnvironment = {
+  [key: string]: string | undefined;
   NEXT_PUBLIC_GIT_COMMIT_SHA?: string;
   NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?: string;
 };

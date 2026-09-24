@@ -16,7 +16,8 @@ describe("Next deployment output mode", () => {
   it("wires the environment decision into next.config.ts", () => {
     const config = readFileSync(resolve(process.cwd(), "next.config.ts"), "utf8");
     expect(config).toContain(
-      "output: resolveNextOutputMode({ vercel: process.env.VERCEL })",
+      "const nextOutputMode = resolveNextOutputMode({ vercel: process.env.VERCEL })",
     );
+    expect(config).toContain('nextOutputMode === "standalone" ? repositoryRoot : undefined');
   });
 });

@@ -1,0 +1,26 @@
+.git
+.github
+.cursor
+**/.cursor
+**/.next
+**/node_modules
+**/.env
+**/.env.*
+!web/.env.example
+**/*.log
+**/*.tsbuildinfo
+**/coverage
+**/playwright-report
+**/test-results
+**/tmp
+web/e2e
+web/docs
+web/sample-imports
+web/work
+sites
+work
+Project Plans
+Media Attibution
+*.docx
+*.xlsx
+~$*

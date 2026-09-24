@@ -4,6 +4,7 @@ import path from "node:path";
 import { resolveNextOutputMode } from "./lib/build/next-output-mode";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
+const nextOutputMode = resolveNextOutputMode({ vercel: process.env.VERCEL });
 
 const repositoryRoot = path.resolve(process.cwd(), "..");
 const exploreHotspotsPlayEntry = path.join(
@@ -47,7 +48,13 @@ const nextConfig: NextConfig = {
   // Next 16.3's Vercel adapter does not emit next-server.js.nft.json, while
   // standalone finalization still reads it. Vercel builds its own deployment
   // artifacts, so keep standalone output only for Docker/self-hosted builds.
-  output: resolveNextOutputMode({ vercel: process.env.VERCEL }),
+  output: nextOutputMode,
+  // The app imports the two local @wke packages from ../packages. Trace from
+  // the repository root so Docker's standalone bundle retains any runtime
+  // files that Next discovers outside web/. Keep Vercel's adapter behavior
+  // unchanged because it owns tracing and packaging there.
+  outputFileTracingRoot:
+    nextOutputMode === "standalone" ? repositoryRoot : undefined,
   serverExternalPackages: ["stripe"],
   outputFileTracingExcludes: {
     "/api/dev/apply-letter-fruit-picks": devSourceWriterTraceExcludes,

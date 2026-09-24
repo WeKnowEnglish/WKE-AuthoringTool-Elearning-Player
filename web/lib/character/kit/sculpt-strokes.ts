@@ -196,9 +196,13 @@ export function parseSculptStrokes(raw: unknown): HeadSculptStroke[] {
     const origin = Array.isArray(row.origin) && row.origin.length === 3 ? row.origin : null;
     if (!origin) continue;
     const mode = parseMode(row.mode);
-    const hasDelta = Array.isArray(row.delta) && row.delta.length === 3;
+    const parsedDelta: Vec3 | null =
+      Array.isArray(row.delta) && row.delta.length === 3
+        ? [row.delta[0], row.delta[1], row.delta[2]]
+        : null;
+    const hasDelta = parsedDelta !== null;
     if (mode === "move" && !hasDelta) continue;
-    const delta = hasDelta ? row.delta : [0, 0, 0];
+    const delta: Vec3 = parsedDelta ?? [0, 0, 0];
     const radius = typeof row.radius === "number" && Number.isFinite(row.radius) ? row.radius : 0.2;
     const id = typeof row.id === "string" && row.id.trim() ? row.id.trim() : `sculpt_${index + 1}`;
     const strength =

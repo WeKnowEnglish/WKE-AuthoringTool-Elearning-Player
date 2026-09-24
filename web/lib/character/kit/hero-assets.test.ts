@@ -5,6 +5,7 @@ import { normalizeCharacterKit } from "./kit-normalize";
 describe("hero assets", () => {
   it("keeps the image-to-3D slot and rejects unknown heroes", () => {
     expect(isRegisteredHero("hero_kid_v1")).toBe(true);
+    expect(isRegisteredHero("chibi_bust_v1")).toBe(true);
     expect(isRegisteredHero("seed_boy")).toBe(true);
     expect(isRegisteredHero("seed_boy_head")).toBe(true);
     expect(findHero("seed_boy_head").tintHair).toBeFalsy();

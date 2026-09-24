@@ -7,16 +7,17 @@ type Props = {
   returnTo: string;
   surface?: "student" | "pilot";
   onClose: () => void;
+  onPractice: () => void;
 };
 
-export function WardrobePanel({ returnTo, surface = "student", onClose }: Props) {
+export function WardrobePanel({ returnTo, surface = "student", onClose, onPractice }: Props) {
   return (
     <div className="pointer-events-none absolute inset-0 z-20 flex items-end justify-center bg-black/35 p-4 pb-28 sm:items-center sm:pb-4">
       <div className="pointer-events-auto w-full max-w-md rounded-2xl bg-[#fff7ed] p-4 text-slate-900 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-lg font-extrabold">Wardrobe</p>
-            <p className="mt-1 text-sm text-slate-700">Change your clothes, or make a cool face for your avatar.</p>
+            <p className="mt-1 text-sm text-slate-700">Change your look, or practice clothing words.</p>
           </div>
           <button
             type="button"
@@ -39,6 +40,13 @@ export function WardrobePanel({ returnTo, surface = "student", onClose }: Props)
           >
             Make my face
           </Link>
+          <button
+            type="button"
+            className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-900 hover:bg-emerald-100"
+            onClick={onPractice}
+          >
+            Practice: What are you wearing?
+          </button>
         </div>
       </div>
     </div>

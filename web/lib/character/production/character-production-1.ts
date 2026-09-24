@@ -12,9 +12,9 @@ export const CHARACTER_PRODUCTION_1_ID = "character_production_1";
 export const CHARACTER_PRODUCTION_1_NAME = "Character Production 1";
 
 const PRODUCTION_HAIR: KitHair = {
-  hairlineY: 0.02,
-  overshoot: 0.12,
-  backBias: -0.2,
+  hairlineY: 0.08,
+  overshoot: 0.04,
+  backBias: -0.12,
   shell: REFERENCE_KID_HAIR.shell?.map((ring) => ({ ...ring })),
   tufts: [
     ...REFERENCE_KID_HAIR.tufts.map((tuft) => ({
@@ -22,10 +22,10 @@ const PRODUCTION_HAIR: KitHair = {
       position: [...tuft.position] as [number, number, number],
       tilt: [...tuft.tilt] as [number, number, number],
     })),
-    { id: "tuft_front", position: [0, 0.58, 0.22], radius: 0.09, length: 0.08, tilt: [0.5, 0, 0] },
-    { id: "tuft_left", position: [-0.22, 0.64, 0.08], radius: 0.08, length: 0.1, tilt: [0.28, 0, 0.48] },
-    { id: "tuft_right", position: [0.22, 0.64, 0.08], radius: 0.08, length: 0.1, tilt: [0.28, 0, -0.48] },
-    { id: "tuft_back", position: [0, 0.62, -0.18], radius: 0.1, length: 0.08, tilt: [-0.35, 0, 0] },
+    { id: "tuft_front", position: [0, 0.54, 0.18], radius: 0.06, length: 0.06, tilt: [0.45, 0, 0] },
+    { id: "tuft_left", position: [-0.18, 0.6, 0.06], radius: 0.06, length: 0.07, tilt: [0.25, 0, 0.4] },
+    { id: "tuft_right", position: [0.18, 0.6, 0.06], radius: 0.06, length: 0.07, tilt: [0.25, 0, -0.4] },
+    { id: "tuft_back", position: [0, 0.58, -0.14], radius: 0.07, length: 0.06, tilt: [-0.3, 0, 0] },
   ],
 };
 
@@ -33,20 +33,20 @@ const PRODUCTION_SCULPTS: HeadSculptStroke[] = [
   ...cloneSculptStrokes(VINYL_SCULPT_RECIPE),
   {
     id: "jaw_round",
-    origin: [0.2, -0.56, 0.3],
-    radius: 0.18,
+    origin: [0.18, -0.48, 0.26],
+    radius: 0.16,
     delta: [0, 0, 0],
     mode: "inflate",
-    strength: 0.03,
+    strength: 0.025,
     mirror: true,
   },
   {
     id: "brow_smooth",
-    origin: [0, 0.18, 0.48],
-    radius: 0.22,
+    origin: [0, 0.14, 0.42],
+    radius: 0.2,
     delta: [0, 0, 0],
     mode: "flatten",
-    strength: 0.1,
+    strength: 0.07,
     mirror: false,
   },
 ];
@@ -60,13 +60,13 @@ export const CHARACTER_PRODUCTION_1_KIT: CharacterKitDocument = {
   hero: TOY_HEAD_HERO_ID,
   skinColor: SKIN_SWATCHES[0].hex,
   hairColor: HAIR_SWATCHES[1].hex,
-  regions: { crown: 1, cheeks: 1, chin: 1.05 },
+  regions: { crown: 1.08, cheeks: 1.06, chin: 1 },
   profile: DEFAULT_HEAD_PROFILE.map((ring) => ({ ...ring })),
   sculpts: cloneSculptStrokes(PRODUCTION_SCULPTS),
-  eyes: { spacing: 0.5, size: 1.12, height: 0.02, forward: 0.54, open: false },
-  nose: { size: 0.7, height: -0.14, forward: 0.6 },
-  mouth: { width: 1.16, height: -0.36, forward: 0.56, expression: "smile" },
-  ears: { size: 0.7 },
+  eyes: { spacing: 0.46, size: 0.88, height: 0.05, forward: 0.44, open: false },
+  nose: { size: 0.58, height: -0.08, forward: 0.48 },
+  mouth: { width: 1.02, height: -0.28, forward: 0.46, expression: "smile" },
+  ears: { size: 0.6 },
   hair: cloneHair(PRODUCTION_HAIR),
 };
 

@@ -25,8 +25,8 @@ export type ToySkullSculpt = {
 export function sculptEyeSockets(geometry: BufferGeometry, sculpt: ToySkullSculpt): BufferGeometry {
   const positions = geometry.getAttribute("position");
   if (!positions) return geometry;
-  const socketRadius = sculpt.eyeRadius * 1.62;
-  const socketDepth = sculpt.eyeRadius * 0.58;
+  const socketRadius = sculpt.eyeRadius * 1.35;
+  const socketDepth = sculpt.eyeRadius * 0.38;
 
   for (let index = 0; index < positions.count; index += 1) {
     let x = positions.getX(index);

@@ -6,18 +6,30 @@ import type { HeadProfileRing } from "./kit-types";
 export const HEAD_MESH_LATITUDES = 96;
 export const HEAD_MESH_RADIAL = 128;
 
+export type HeadGeometryOptions = {
+  latitudes?: number;
+  segments?: number;
+  /** Pure elliptical rings — no front-face flatten (smoother vinyl bust). */
+  circular?: boolean;
+};
+
 /**
  * Builds a closed skull from latitude rings. Pole fans cap chin and crown
  * so the surface stays continuous — no open rims.
  */
 export function buildHeadGeometryFromProfile(
   rings: HeadProfileRing[],
-  segments = HEAD_MESH_RADIAL,
+  segmentsOrOptions: number | HeadGeometryOptions = HEAD_MESH_RADIAL,
 ): BufferGeometry {
   if (rings.length < 2) {
     return new BufferGeometry();
   }
-  const meshRings = densifyProfileRings(rings, HEAD_MESH_LATITUDES);
+  const options: HeadGeometryOptions =
+    typeof segmentsOrOptions === "number" ? { segments: segmentsOrOptions } : segmentsOrOptions;
+  const latitudes = options.latitudes ?? HEAD_MESH_LATITUDES;
+  const segments = options.segments ?? HEAD_MESH_RADIAL;
+  const circular = options.circular === true;
+  const meshRings = densifyProfileRings(rings, latitudes);
   const positions: number[] = [];
   const first = meshRings[0]!;
   const last = meshRings[meshRings.length - 1]!;
@@ -27,8 +39,8 @@ export function buildHeadGeometryFromProfile(
       const angle = (spoke / segments) * Math.PI * 2;
       const cosine = Math.cos(angle);
       const sine = Math.sin(angle);
-      // n>2 flattens the front of each ring into a toy face plane.
-      const power = sine > 0 ? 2 / 2.35 : 1;
+      // Mild front soften for toy faces; circular for blank vinyl busts.
+      const power = circular ? 1 : sine > 0 ? 0.92 : 1;
       const px = Math.sign(cosine) * Math.pow(Math.abs(cosine), power);
       const pz = Math.sign(sine) * Math.pow(Math.abs(sine), power);
       positions.push(ring.rx * px, ring.y, (ring.z ?? 0) + ring.rz * pz);

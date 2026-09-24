@@ -2,29 +2,43 @@ import {
   CapsuleGeometry,
   Color,
   Group,
+  LatheGeometry,
   Mesh,
+  MeshPhysicalMaterial,
   MeshStandardMaterial,
   SphereGeometry,
   TorusGeometry,
+  Vector2,
   type Object3D,
 } from "three";
 import { HEAD_LANDMARKS } from "@/components/character/student-head-landmarks";
+import { HEAD_MESH_RADIAL, buildHeadGeometryFromProfile } from "./build-head-geometry";
+import { isChibiBustHero } from "./chibi-bust";
 import { applyProfileRegions, DEFAULT_HEAD_PROFILE } from "./head-profile";
-import { buildHeadGeometryFromProfile } from "./build-head-geometry";
+import { findHero } from "./hero-assets";
 import { resolveHairShell } from "./hair-shell";
 import { sculptEyeSockets } from "./sculpt-toy-skull";
 import { applySculptStrokes } from "./sculpt-strokes";
 import type { CharacterKitDocument, HeadProfileRing, KitHairTuft } from "./kit-types";
 
-export const EYE_RADIUS = 0.185;
+export const EYE_RADIUS = 0.14;
 
 export type BuildHeroOptions = {
   showFace?: boolean;
   showHair?: boolean;
 };
 
-function skinMaterial(hex: string): MeshStandardMaterial {
-  return new MeshStandardMaterial({ color: new Color(hex), roughness: 0.4, metalness: 0 });
+function skinMaterial(hex: string, vinyl = false): MeshStandardMaterial | MeshPhysicalMaterial {
+  if (vinyl) {
+    return new MeshPhysicalMaterial({
+      color: new Color(hex),
+      roughness: 0.28,
+      metalness: 0,
+      clearcoat: 0.4,
+      clearcoatRoughness: 0.32,
+    });
+  }
+  return new MeshStandardMaterial({ color: new Color(hex), roughness: 0.42, metalness: 0 });
 }
 
 function hairMaterial(hex: string): MeshStandardMaterial {
@@ -70,6 +84,59 @@ function addEar(parent: Group, side: -1 | 1, color: string, scale: number) {
   parent.add(mesh);
 }
 
+/** Soft oval ear pad with a gentle concha dent — no sharp torus rings. */
+function addChibiEar(parent: Group, side: -1 | 1, color: string, scale: number) {
+  const material = skinMaterial(color, true);
+  const group = new Group();
+  group.name = side < 0 ? "leftEar" : "rightEar";
+  group.position.set(side * 0.54, -0.05, -0.02);
+  group.rotation.set(0.06, side * 0.55, side * 0.08);
+  group.scale.setScalar(0.95 * scale);
+
+  const pad = new Mesh(new SphereGeometry(0.17, 36, 28), material);
+  pad.scale.set(0.5, 1.05, 0.58);
+  pad.position.set(side * 0.01, 0, 0);
+
+  const rim = new Mesh(new SphereGeometry(0.12, 28, 22), material);
+  rim.scale.set(0.42, 0.95, 0.48);
+  rim.position.set(side * 0.04, 0.01, 0.02);
+
+  const concha = new Mesh(new SphereGeometry(0.09, 24, 18), material);
+  concha.scale.set(0.48, 0.78, 0.28);
+  concha.position.set(side * -0.01, 0.015, 0.055);
+
+  group.add(pad, rim, concha);
+  parent.add(group);
+}
+
+function addToyNeck(parent: Group, color: string, chinY: number) {
+  const neck = new Mesh(new CapsuleGeometry(0.11, 0.14, 8, 16), skinMaterial(color));
+  neck.name = "heroNeck";
+  neck.position.set(0, chinY + 0.04, 0.14);
+  parent.add(neck);
+}
+
+/** One lathed neck→pedestal surface so joins stay continuous. */
+function addChibiBustNeck(parent: Group, color: string, chinY: number) {
+  const material = skinMaterial(color, true);
+  const points = [
+    new Vector2(0.1, chinY + 0.04),
+    new Vector2(0.14, chinY - 0.02),
+    new Vector2(0.17, chinY - 0.1),
+    new Vector2(0.19, chinY - 0.16),
+    new Vector2(0.23, chinY - 0.21),
+    new Vector2(0.28, chinY - 0.25),
+    new Vector2(0.32, chinY - 0.28),
+    new Vector2(0.34, chinY - 0.3),
+    new Vector2(0.34, chinY - 0.33),
+    new Vector2(0.0, chinY - 0.33),
+  ];
+  const neck = new Mesh(new LatheGeometry(points, 64), material);
+  neck.name = "heroPedestal";
+  neck.position.set(0, 0, 0.02);
+  parent.add(neck);
+}
+
 function addHair(parent: Group, kit: CharacterKitDocument, skull: HeadProfileRing[]) {
   const material = hairMaterial(kit.hairColor);
   const shell = new Mesh(buildHeadGeometryFromProfile(resolveHairShell(kit.hair, skull)), material);
@@ -92,28 +159,40 @@ function addTuft(parent: Group, tuft: KitHairTuft, material: MeshStandardMateria
  * Local mesh builder. Same object the kit preview and the CLI export.
  */
 export function buildHeroObject(kit: CharacterKitDocument, options: BuildHeroOptions = {}): Group {
-  const showFace = options.showFace ?? true;
-  const showHair = options.showHair ?? true;
+  const hero = findHero(kit.hero);
+  const blankBust = Boolean(hero.blankBust) || isChibiBustHero(kit.hero);
+  const showFace = blankBust ? false : (options.showFace ?? true);
+  const showHair = blankBust ? (options.showHair ?? false) : (options.showHair ?? true);
   const root = new Group();
   root.name = "characterKitHead";
 
   const rings = applyProfileRegions(kit.profile ?? DEFAULT_HEAD_PROFILE, kit.regions);
   const half = kit.eyes.spacing / 2;
-  const skull = buildHeadGeometryFromProfile(rings);
+  const skull = buildHeadGeometryFromProfile(
+    rings,
+    blankBust ? { circular: true, latitudes: 128, segments: 160 } : HEAD_MESH_RADIAL,
+  );
   applySculptStrokes(skull, kit.sculpts ?? []);
-  sculptEyeSockets(skull, {
-    leftEye: [-half, kit.eyes.height, kit.eyes.forward],
-    rightEye: [half, kit.eyes.height, kit.eyes.forward],
-    eyeRadius: EYE_RADIUS * kit.eyes.size,
-  });
-  const head = new Mesh(skull, skinMaterial(kit.skinColor));
+  if (!blankBust) {
+    sculptEyeSockets(skull, {
+      leftEye: [-half, kit.eyes.height, kit.eyes.forward],
+      rightEye: [half, kit.eyes.height, kit.eyes.forward],
+      eyeRadius: EYE_RADIUS * kit.eyes.size,
+    });
+  }
+  const head = new Mesh(skull, skinMaterial(kit.skinColor, blankBust));
   head.name = "heroSkull";
   root.add(head);
-  addEar(root, -1, kit.skinColor, kit.ears.size);
-  addEar(root, 1, kit.skinColor, kit.ears.size);
-  const neck = new Mesh(new CapsuleGeometry(0.11, 0.14, 8, 16), skinMaterial(kit.skinColor));
-  neck.position.set(0, (rings[0]?.y ?? HEAD_LANDMARKS.neck[1]) + 0.04, 0.14);
-  root.add(neck);
+
+  if (blankBust) {
+    addChibiEar(root, -1, kit.skinColor, kit.ears.size);
+    addChibiEar(root, 1, kit.skinColor, kit.ears.size);
+    addChibiBustNeck(root, kit.skinColor, rings[0]?.y ?? HEAD_LANDMARKS.neck[1]);
+  } else {
+    addEar(root, -1, kit.skinColor, kit.ears.size);
+    addEar(root, 1, kit.skinColor, kit.ears.size);
+    addToyNeck(root, kit.skinColor, rings[0]?.y ?? HEAD_LANDMARKS.neck[1]);
+  }
 
   if (showFace) {
     const face = new Group();

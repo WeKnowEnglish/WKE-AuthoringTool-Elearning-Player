@@ -3,6 +3,8 @@ import type { Vec3 } from "@/lib/character/character-types";
 export const CHARACTER_KIT_FORMAT = "wke-character-kit" as const;
 export const CHARACTER_KIT_VERSION = 1;
 export const TOY_HEAD_HERO_ID = "toy_head_v1";
+/** Smooth blank vinyl bust from the chibi reference sheet (kit alternate). */
+export const CHIBI_BUST_HERO_ID = "chibi_bust_v1";
 
 export type HeadHeroId = string;
 export type KitMouthExpression = "smile" | "cheer" | "wow";

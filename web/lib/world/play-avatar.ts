@@ -5,8 +5,8 @@ import { kitFromCharacterConfig } from "@/lib/character/kit/kit-from-config";
 import { loadCharacterKit } from "@/lib/character/kit/kit-storage";
 import type { CharacterKitDocument } from "@/lib/character/kit/kit-types";
 
-/** Match the old PlayKid visual height inside rooms. */
-export const PLAY_AVATAR_HEIGHT = 1.15;
+/** Match a readable kid height inside rooms (CharacterModel is ~4.9 tall). */
+export const PLAY_AVATAR_HEIGHT = 1.28;
 export const CHARACTER_MODEL_HEIGHT = 4.9;
 export const PLAY_AVATAR_SCALE = PLAY_AVATAR_HEIGHT / CHARACTER_MODEL_HEIGHT;
 

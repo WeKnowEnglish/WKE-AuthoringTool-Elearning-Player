@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { ColorSwatches } from "@/components/character-editor/ColorSwatches";
 import { HAIR_SWATCHES, SKIN_SWATCHES, partsForCategory } from "@/lib/character/character-assets";
 import { HERO_ASSETS } from "@/lib/character/kit/hero-assets";
+import { CHIBI_BUST_KIT, isChibiBustHero } from "@/lib/character/kit/chibi-bust";
+import { DEFAULT_CHARACTER_KIT } from "@/lib/character/kit/kit-defaults";
 import { cloneHair } from "@/lib/character/kit/hair-shell";
 import { createHairTuft } from "@/lib/character/kit/kit-normalize";
 import { HAIR_KIT_PRESETS } from "@/lib/character/kit/kit-presets";
@@ -11,6 +13,7 @@ import { HEAD_PLATE_LABEL } from "@/lib/character/kit/head-plates";
 import {
   HEAD_PLATE_VIEWS,
   HEAD_SCULPT_MODES,
+  TOY_HEAD_HERO_ID,
   type CharacterKitDocument,
   type HeadPlateView,
   type KitHairTuft,
@@ -142,7 +145,28 @@ export function CharacterKitForm({
           <select
             className="mt-1 w-full rounded-lg border-2 border-[var(--pl-border)] px-2 py-1"
             value={kit.hero}
-            onChange={(event) => patch({ hero: event.target.value })}
+            onChange={(event) => {
+              const hero = event.target.value;
+              if (isChibiBustHero(hero)) {
+                onChange({
+                  ...CHIBI_BUST_KIT,
+                  skinColor: kit.skinColor,
+                  hairColor: kit.hairColor,
+                });
+                return;
+              }
+              if (hero === TOY_HEAD_HERO_ID) {
+                onChange({
+                  ...DEFAULT_CHARACTER_KIT,
+                  skinColor: kit.skinColor,
+                  hairColor: kit.hairColor,
+                  name: kit.name,
+                  id: kit.id,
+                });
+                return;
+              }
+              patch({ hero });
+            }}
           >
             {HERO_ASSETS.map((item) => (
               <option key={item.id} value={item.id}>
@@ -152,9 +176,9 @@ export function CharacterKitForm({
           </select>
         </label>
         <p className="text-xs text-[var(--pl-muted)]">
-          Design a vinyl skull with click-to-stamp brushes. Profile rings are the silhouette;{" "}
-          <code>sculpts</code> are local form. Run <code>npm run character:build-hero</code> to emit{" "}
-          <code>public/characters/heroes/hero_kid_v1.glb</code>.
+          Pick <strong>Chibi vinyl bust</strong> for the blank reference-sheet head (concha ears +
+          pedestal neck). Toy procedural keeps the face sockets. Profile rings are the silhouette;{" "}
+          <code>sculpts</code> are local form.
         </p>
         <ColorSwatches
           label="Skin"

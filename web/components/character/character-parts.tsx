@@ -1,5 +1,8 @@
 "use client";
 
+import { useFrame } from "@react-three/fiber";
+import { useRef, type MutableRefObject } from "react";
+import type { Mesh } from "three";
 import type { CharacterBodyRig } from "@/lib/character/character-types";
 import { ToyHairMaterial } from "./toy-materials";
 
@@ -15,12 +18,14 @@ export function BodyBase({
   showTorso = true,
   showArms = true,
   showLegs = true,
+  walkingRef,
 }: {
   rig: CharacterBodyRig;
   color: string;
   showTorso?: boolean;
   showArms?: boolean;
   showLegs?: boolean;
+  walkingRef?: MutableRefObject<boolean>;
 }) {
   const s = rig.partScale;
   const chest = rig.sockets.chest;
@@ -28,6 +33,24 @@ export function BodyBase({
   const compact = rig.id === "body_03";
   const tall = rig.id === "body_02";
   const torsoWide = compact ? 0.78 : tall ? 0.7 : 0.74;
+  const leftLeg = useRef<Mesh>(null);
+  const rightLeg = useRef<Mesh>(null);
+  const leftArm = useRef<Mesh>(null);
+  const rightArm = useRef<Mesh>(null);
+  const gait = useRef(0);
+  const amp = useRef(0);
+
+  useFrame((_, dt) => {
+    const moving = walkingRef?.current === true;
+    const step = Math.min(dt, 0.05);
+    amp.current = moving ? Math.min(1, amp.current + step * 8) : Math.max(0, amp.current - step * 10);
+    if (amp.current > 0.01) gait.current += step * 10;
+    const swing = Math.sin(gait.current) * 0.55 * amp.current;
+    if (leftLeg.current) leftLeg.current.rotation.x = swing;
+    if (rightLeg.current) rightLeg.current.rotation.x = -swing;
+    if (leftArm.current) leftArm.current.rotation.x = -swing * 0.7;
+    if (rightArm.current) rightArm.current.rotation.x = swing * 0.7;
+  });
 
   return (
     <group>
@@ -39,32 +62,42 @@ export function BodyBase({
       ) : null}
       {showArms ? (
         <>
-          <mesh position={[chest[0] - 0.92 * s, chest[1] - 0.05 * s, chest[2]]} rotation={[0, 0, 0.22]} scale={s}>
-            <capsuleGeometry args={[0.2, 0.72, 4, 8]} />
+          <mesh
+            ref={leftArm}
+            position={[chest[0] - 0.92 * s, chest[1] - 0.05 * s, chest[2]]}
+            rotation={[0, 0, 0.22]}
+            scale={s}
+          >
+            <capsuleGeometry args={[0.24, 0.72, 4, 8]} />
             <Lambert color={color} />
           </mesh>
-          <mesh position={[chest[0] + 0.92 * s, chest[1] - 0.05 * s, chest[2]]} rotation={[0, 0, -0.22]} scale={s}>
-            <capsuleGeometry args={[0.2, 0.72, 4, 8]} />
+          <mesh
+            ref={rightArm}
+            position={[chest[0] + 0.92 * s, chest[1] - 0.05 * s, chest[2]]}
+            rotation={[0, 0, -0.22]}
+            scale={s}
+          >
+            <capsuleGeometry args={[0.24, 0.72, 4, 8]} />
             <Lambert color={color} />
           </mesh>
         </>
       ) : null}
       <mesh position={[chest[0] - 1.08 * s, hips[1] + 0.55 * s, chest[2]]} scale={s}>
-        <sphereGeometry args={[0.22, 8, 8]} />
+        <sphereGeometry args={[0.24, 8, 8]} />
         <Lambert color={color} />
       </mesh>
       <mesh position={[chest[0] + 1.08 * s, hips[1] + 0.55 * s, chest[2]]} scale={s}>
-        <sphereGeometry args={[0.22, 8, 8]} />
+        <sphereGeometry args={[0.24, 8, 8]} />
         <Lambert color={color} />
       </mesh>
       {showLegs ? (
         <>
-          <mesh position={[hips[0] - 0.28 * s, hips[1] - 0.55 * s, hips[2]]} scale={s}>
-            <capsuleGeometry args={[0.2, 0.85, 4, 8]} />
+          <mesh ref={leftLeg} position={[hips[0] - 0.28 * s, hips[1] - 0.55 * s, hips[2]]} scale={s}>
+            <capsuleGeometry args={[0.24, 0.85, 4, 8]} />
             <Lambert color={color} />
           </mesh>
-          <mesh position={[hips[0] + 0.28 * s, hips[1] - 0.55 * s, hips[2]]} scale={s}>
-            <capsuleGeometry args={[0.2, 0.85, 4, 8]} />
+          <mesh ref={rightLeg} position={[hips[0] + 0.28 * s, hips[1] - 0.55 * s, hips[2]]} scale={s}>
+            <capsuleGeometry args={[0.24, 0.85, 4, 8]} />
             <Lambert color={color} />
           </mesh>
         </>
@@ -177,19 +210,19 @@ export function TopPart({ recipe, color }: { recipe: string; color: string }) {
     return (
       <group>
         <mesh>
-          <boxGeometry args={[1.72, 1.42, 1.02]} />
+          <boxGeometry args={[1.58, 1.32, 0.94]} />
           <Lambert color={color} />
         </mesh>
-        <mesh position={[0, 0.72, -0.08]} rotation={[0.35, 0, 0]}>
-          <torusGeometry args={[0.42, 0.16, 8, 14, Math.PI]} />
+        <mesh position={[0, 0.66, -0.06]} rotation={[0.35, 0, 0]}>
+          <torusGeometry args={[0.36, 0.13, 8, 14, Math.PI]} />
           <Lambert color={color} />
         </mesh>
-        <mesh position={[-0.98, 0.05, 0]} rotation={[0, 0, 0.18]}>
-          <capsuleGeometry args={[0.26, 0.7, 4, 8]} />
+        <mesh position={[-0.9, 0.05, 0]} rotation={[0, 0, 0.18]}>
+          <capsuleGeometry args={[0.22, 0.62, 4, 8]} />
           <Lambert color={color} />
         </mesh>
-        <mesh position={[0.98, 0.05, 0]} rotation={[0, 0, -0.18]}>
-          <capsuleGeometry args={[0.26, 0.7, 4, 8]} />
+        <mesh position={[0.9, 0.05, 0]} rotation={[0, 0, -0.18]}>
+          <capsuleGeometry args={[0.22, 0.62, 4, 8]} />
           <Lambert color={color} />
         </mesh>
       </group>
@@ -304,15 +337,15 @@ export function TopPart({ recipe, color }: { recipe: string; color: string }) {
   return (
     <group>
       <mesh>
-        <boxGeometry args={[1.62, 1.28, 0.96]} />
+        <boxGeometry args={[1.48, 1.18, 0.88]} />
         <Lambert color={color} />
       </mesh>
-      <mesh position={[-0.92, 0.18, 0]} rotation={[0, 0, 0.2]}>
-        <capsuleGeometry args={[0.22, 0.42, 4, 8]} />
+      <mesh position={[-0.84, 0.16, 0]} rotation={[0, 0, 0.2]}>
+        <capsuleGeometry args={[0.2, 0.38, 4, 8]} />
         <Lambert color={color} />
       </mesh>
-      <mesh position={[0.92, 0.18, 0]} rotation={[0, 0, -0.2]}>
-        <capsuleGeometry args={[0.22, 0.42, 4, 8]} />
+      <mesh position={[0.84, 0.16, 0]} rotation={[0, 0, -0.2]}>
+        <capsuleGeometry args={[0.2, 0.38, 4, 8]} />
         <Lambert color={color} />
       </mesh>
     </group>

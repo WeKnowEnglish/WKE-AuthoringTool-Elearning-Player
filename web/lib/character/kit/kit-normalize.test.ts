@@ -42,8 +42,8 @@ describe("normalizeCharacterKit", () => {
       ],
     });
     expect(kit.profile).toHaveLength(DEFAULT_CHARACTER_KIT.profile.length);
-    expect(kit.profile?.[0]?.y).toBe(-0.82);
-    expect(kit.profile?.[1]?.rx).toBeGreaterThan(0.24);
+    expect(kit.profile?.[0]?.y).toBe(DEFAULT_CHARACTER_KIT.profile[0]!.y);
+    expect(kit.profile?.[1]?.rx).toBeGreaterThan(0.2);
     expect(kit.eyes.forward).toBe(DEFAULT_CHARACTER_KIT.eyes.forward);
   });
 
@@ -68,9 +68,9 @@ describe("normalizeCharacterKit", () => {
         { y: 0.73, rx: 0.06, rz: 0.06, z: 0 },
       ],
     });
-    expect(kit.profile?.[0]?.y).toBe(-0.82);
-    expect(kit.eyes.size).toBe(1.3);
-    expect(kit.mouth.width).toBe(1.32);
+    expect(kit.profile?.[0]?.y).toBe(DEFAULT_CHARACTER_KIT.profile[0]!.y);
+    expect(kit.eyes.size).toBe(DEFAULT_CHARACTER_KIT.eyes.size);
+    expect(kit.mouth.width).toBe(DEFAULT_CHARACTER_KIT.mouth.width);
   });
 
   it("replaces the pointed 14-ring egg with the hair-dropped seed profile", () => {
@@ -93,7 +93,8 @@ describe("normalizeCharacterKit", () => {
       ],
     });
     expect(kit.profile).toHaveLength(16);
-    expect(kit.profile?.[7]?.rx).toBeCloseTo(0.7, 2);
+    const cheek = kit.profile!.reduce((best, ring) => (ring.rx > best.rx ? ring : best));
+    expect(cheek.rx).toBeCloseTo(0.6, 2);
   });
 
   it("replaces the pre-seed 9-ring toy skull with the closed seed profile", () => {
@@ -135,7 +136,7 @@ describe("normalizeCharacterKit", () => {
     expect(kit.hair.hairlineY).toBeCloseTo(0.13);
     expect(kit.hair.backBias).toBeCloseTo(-0.05);
     expect(kit.hair.tufts).toEqual([
-      { id: "side", position: [0.3, 0.4, 0.1], radius: 0.2, length: 0.132, tilt: [0.6, 0, 0.2] },
+      { id: "side", position: [0.3, 0.4, 0.1], radius: 0.2, length: 0.132, tilt: [0.5, 0, 0.1] },
     ]);
   });
 

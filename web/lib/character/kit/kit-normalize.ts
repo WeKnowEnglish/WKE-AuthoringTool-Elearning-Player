@@ -112,9 +112,11 @@ export function normalizeCharacterKit(raw: unknown): CharacterKitDocument {
     profile: legacySkull
       ? normalizeHeadProfile(DEFAULT_CHARACTER_KIT.profile)
       : normalizeHeadProfile(source.profile),
-    sculpts: Array.isArray(source.sculpts)
-      ? parseSculptStrokes(source.sculpts)
-      : cloneSculptStrokes(DEFAULT_CHARACTER_KIT.sculpts ?? []),
+    sculpts: legacySkull
+      ? cloneSculptStrokes(DEFAULT_CHARACTER_KIT.sculpts ?? [])
+      : Array.isArray(source.sculpts)
+        ? parseSculptStrokes(source.sculpts)
+        : cloneSculptStrokes(DEFAULT_CHARACTER_KIT.sculpts ?? []),
     plateSrc: typeof source.plateSrc === "string" && source.plateSrc.trim() ? source.plateSrc.trim() : undefined,
     eyes: {
       spacing: num(eyes?.spacing, DEFAULT_CHARACTER_KIT.eyes.spacing, 0.2, 0.7),

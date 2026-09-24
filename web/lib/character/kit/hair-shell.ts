@@ -7,12 +7,14 @@ import type { HeadProfileRing, KitHair, KitHairTuft } from "./kit-types";
  * build time from hairlineY, overshoot, and backBias.
  */
 export const REFERENCE_KID_HAIR_SHELL: HeadProfileRing[] = [
-  { y: 0.02, rx: 0.82, rz: 0.48, z: 0 },
-  { y: 0.18, rx: 0.8, rz: 0.58, z: 0 },
-  { y: 0.36, rx: 0.7, rz: 0.66, z: 0 },
-  { y: 0.52, rx: 0.54, rz: 0.58, z: 0 },
-  { y: 0.66, rx: 0.32, rz: 0.36, z: 0 },
+  { y: 0.02, rx: 0.64, rz: 0.5, z: 0.01 },
+  { y: 0.18, rx: 0.62, rz: 0.52, z: 0 },
+  { y: 0.34, rx: 0.56, rz: 0.54, z: -0.01 },
+  { y: 0.48, rx: 0.46, rz: 0.48, z: -0.01 },
+  { y: 0.6, rx: 0.34, rz: 0.36, z: 0 },
+  { y: 0.7, rx: 0.2, rz: 0.2, z: 0 },
   { y: 0.78, rx: 0.08, rz: 0.08, z: 0 },
+  { y: 0.84, rx: 0.03, rz: 0.03, z: 0 },
 ];
 
 export function cloneHair(hair: KitHair): KitHair {

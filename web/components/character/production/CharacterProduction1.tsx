@@ -26,7 +26,7 @@ export function CharacterProduction1({ scale = 1 }: Props) {
       <VinylKidBody config={config} rig={rig} />
       <group
         position={[rig.sockets.head[0], rig.sockets.head[1] - 0.06, rig.sockets.head[2] + 0.03]}
-        scale={rig.partScale * 1.14}
+        scale={rig.partScale * 0.82}
       >
         <CharacterKitHead kit={kit} showFace showHair />
       </group>

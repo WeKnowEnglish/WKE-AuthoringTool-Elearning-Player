@@ -1,4 +1,4 @@
-import { TOY_HEAD_HERO_ID } from "./kit-types";
+import { CHIBI_BUST_HERO_ID, TOY_HEAD_HERO_ID } from "./kit-types";
 
 export const HERO_PUBLIC_ROOT = "/characters/heroes";
 
@@ -26,6 +26,8 @@ export type CharacterHeroDef = {
   hasSeparateHair?: boolean;
   /** Kit preview framing. Full-body seeds need a pulled-back camera. */
   preview?: CharacterHeroPreview;
+  /** Procedural blank bust: no face sockets, concha ears, pedestal neck. */
+  blankBust?: boolean;
 };
 
 /**
@@ -41,6 +43,15 @@ export const HERO_ASSETS: CharacterHeroDef[] = [
     includesFace: false,
     includesHair: false,
     tintSkin: true,
+  },
+  {
+    id: CHIBI_BUST_HERO_ID,
+    name: "Chibi vinyl bust",
+    kind: "procedural",
+    includesFace: false,
+    includesHair: false,
+    tintSkin: true,
+    blankBust: true,
   },
   {
     id: "hero_kid_v1",

@@ -597,7 +597,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/world/play/school?inside=1",
     title: "House & school play spaces",
     description:
-      "Interiors opened from the globe. House wardrobe opens outfit/face editors; saved avatar walks the room and globe. Walking out a door returns to the planet. Student: /primary/world/play/cottage?inside=1.",
+      "Interiors opened from the globe. House wardrobe (outfit/face + clothing words) and fridge (food words); school desk/board prompts. Saved avatar walks rooms and globe. Student: /primary/world/play/cottage?inside=1.",
     group: "deferred",
     status: "review",
     notShippable: true,
@@ -642,7 +642,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/character-kit",
     title: "Character head kit (Level 1)",
     description:
-      "Authoring: vinyl toy skull — lock Front/Side/3/4, click-to-stamp inflate/pinch/flatten on the lathe cage. Saved kits show on the world avatar. Not shippable.",
+      "Authoring: vinyl toy skull or Chibi vinyl bust alternate (blank reference-sheet head, concha ears, pedestal neck). Lock Front/Side/3/4, click-to-stamp on the lathe cage. Saved kits show on the world avatar. Not shippable.",
     group: "deferred",
     status: "review",
     notShippable: true,

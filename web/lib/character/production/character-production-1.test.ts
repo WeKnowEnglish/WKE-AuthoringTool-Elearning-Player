@@ -19,7 +19,7 @@ describe("Character Production 1", () => {
     expect(kit.hero).toBe("toy_head_v1");
     expect(kit.sculpts?.map((stroke) => stroke.id)).toEqual([
       "chin_pad",
-      "cheek_tuck",
+      "cheek_pad",
       "jaw_round",
       "brow_smooth",
     ]);
@@ -35,7 +35,7 @@ describe("Character Production 1", () => {
     expect(group.getObjectByName("heroSkull")).toBeTruthy();
     expect(group.getObjectByName("kitHair")).toBeTruthy();
     const size = new Box3().setFromObject(group).getSize(new Vector3());
-    expect(size.y).toBeGreaterThan(1.4);
+    expect(size.y).toBeGreaterThan(1.2);
     disposeHeroObject(group);
   });
 });

@@ -13,24 +13,24 @@ describe("head profile mesher", () => {
     expect(geometry.getIndex()!.count / 3).toBe(profileHeadTriangleCount());
     expect(geometry.getIndex()!.count / 3).toBeGreaterThan(20000);
     const size = new Box3().setFromBufferAttribute(geometry.attributes.position).getSize(new Vector3());
-    expect(size.y).toBeGreaterThan(1.4);
-    expect(size.x).toBeGreaterThan(1.2);
-    expect(size.y / size.x).toBeGreaterThan(0.88);
+    expect(size.y).toBeGreaterThan(1.2);
+    expect(size.x).toBeGreaterThan(1.05);
+    expect(size.y / size.x).toBeGreaterThan(0.95);
     const maxRx = Math.max(...DEFAULT_HEAD_PROFILE.map((ring) => ring.rx));
     const maxRz = Math.max(...DEFAULT_HEAD_PROFILE.map((ring) => ring.rz));
-    expect(maxRz / maxRx).toBeLessThan(0.82);
+    expect(maxRz / maxRx).toBeLessThan(0.9);
     expect(DEFAULT_HEAD_PROFILE).toHaveLength(16);
-    expect(DEFAULT_HEAD_PROFILE[1]!.rx).toBeGreaterThan(0.24);
-    expect(DEFAULT_HEAD_PROFILE[1]!.z).toBeGreaterThan(0.1);
-    expect(DEFAULT_HEAD_PROFILE[1]!.z).toBeLessThan(0.22);
+    expect(DEFAULT_HEAD_PROFILE[1]!.rx).toBeGreaterThan(0.2);
+    expect(DEFAULT_HEAD_PROFILE[1]!.z).toBeGreaterThan(0.02);
+    expect(DEFAULT_HEAD_PROFILE[1]!.z).toBeLessThan(0.08);
     const cheek = DEFAULT_HEAD_PROFILE.reduce((best, ring) => (ring.rx > best.rx ? ring : best));
-    expect(cheek.y).toBeLessThan(0);
+    expect(cheek.y).toBeLessThan(0.05);
     const temple = DEFAULT_HEAD_PROFILE.find((ring) => ring.y > 0.12 && ring.y < 0.32)!;
-    expect(temple.rx).toBeGreaterThan(cheek.rx - 0.08);
-    expect(cheek.rx).toBeCloseTo(0.7, 2);
-    expect(cheek.rx).toBeLessThan(0.74);
+    expect(temple.rx).toBeLessThan(cheek.rx + 0.02);
+    expect(cheek.rx).toBeCloseTo(0.6, 2);
+    expect(cheek.rx).toBeLessThan(0.64);
     const dome = DEFAULT_HEAD_PROFILE.find((ring) => ring.y > 0.5 && ring.y < 0.6)!;
-    expect(dome.rx).toBeGreaterThan(0.3);
+    expect(dome.rx).toBeGreaterThan(0.35);
     const counts = new Map<string, number>();
     const index = geometry.getIndex()!.array;
     for (let i = 0; i < index.length; i += 3) {
@@ -67,8 +67,8 @@ describe("buildHeroObject", () => {
     expect(group.getObjectByName("kitFace")).toBeTruthy();
     expect(group.getObjectByName("hairShell")).toBeTruthy();
     expect(group.getObjectByName("tuft_top")).toBeTruthy();
-    expect(DEFAULT_CHARACTER_KIT.eyes.size).toBeGreaterThan(1.2);
-    expect(DEFAULT_CHARACTER_KIT.mouth.width).toBeGreaterThan(1.2);
+    expect(DEFAULT_CHARACTER_KIT.eyes.size).toBeGreaterThan(0.85);
+    expect(DEFAULT_CHARACTER_KIT.mouth.width).toBeGreaterThan(0.95);
     disposeHeroObject(group);
   });
 

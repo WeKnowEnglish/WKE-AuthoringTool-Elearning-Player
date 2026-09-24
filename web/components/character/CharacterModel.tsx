@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, type MutableRefObject, type ReactNode } from "react";
 import { findPart } from "@/lib/character/character-assets";
 import { addVec3, getBodyRig } from "@/lib/character/character-rig";
 import { normalizeCharacterConfig } from "@/lib/character/character-normalize";
@@ -23,6 +23,7 @@ type Props = {
   /** Optional authored head kit (wardrobe / kit studio). */
   kit?: CharacterKitDocument | null;
   scale?: number;
+  walkingRef?: MutableRefObject<boolean>;
 };
 
 function tintFor(fit: CharacterPartFit, config: CharacterConfig): string | undefined {
@@ -84,7 +85,7 @@ function SlotMesh({
  * Assembled student avatar. Safe to reuse in WKE World, minigames, and profiles.
  * Do not put editor chrome, cameras, or lights in this component.
  */
-export function CharacterModel({ config, kit, scale = 1 }: Props) {
+export function CharacterModel({ config, kit, scale = 1, walkingRef }: Props) {
   const safe = normalizeCharacterConfig(config);
   const rig = getBodyRig(safe.body);
   const hair = findPart("hair", safe.hair);
@@ -105,8 +106,9 @@ export function CharacterModel({ config, kit, scale = 1 }: Props) {
         showTorso={false}
         showArms={safe.top === "top_03" || safe.top === "top_06"}
         showLegs={safe.bottom !== "bottom_02" && safe.bottom !== "bottom_05"}
+        walkingRef={walkingRef}
       />
-      <group position={rig.sockets.head} scale={rig.partScale}>
+      <group position={rig.sockets.head} scale={rig.partScale * 0.78}>
         <CharacterKitHead kit={headKit} showFace={!studioFace} showHair={!studioHair} />
         {face && studioFace ? (
           <SlotMesh def={face} config={safe} fallback={null} />

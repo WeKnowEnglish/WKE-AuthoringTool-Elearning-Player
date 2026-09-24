@@ -21,7 +21,7 @@ describe("hair shell", () => {
   it("uses the authored reference shell when present", () => {
     const shell = resolveHairShell(REFERENCE_KID_HAIR, DEFAULT_HEAD_PROFILE);
     expect(shell).toHaveLength(REFERENCE_KID_HAIR.shell!.length);
-    expect(shell[0]!.rz).toBeCloseTo(0.48 * 1.08);
-    expect(shell[0]!.z).toBeCloseTo(-0.2);
+    expect(shell[0]!.rz).toBeCloseTo(0.5 * 1.04);
+    expect(shell[0]!.z).toBeCloseTo(0.01 - 0.06);
   });
 });

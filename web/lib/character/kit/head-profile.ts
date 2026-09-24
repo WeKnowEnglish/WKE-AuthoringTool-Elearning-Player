@@ -1,26 +1,26 @@
 import type { HeadProfileRing, HeadRegions } from "./kit-types";
 
 /**
- * Seed skull without hair, then retargeted to the GLB face: longer chin,
- * slimmer cheeks (hair volume is not cheek fat), round crown kept.
+ * Soft kid skull: cheek-widest mid face, full rounded cranium, short chin,
+ * little forward snout. Built for cute/equalized proportions on the body.
  */
 export const DEFAULT_HEAD_PROFILE: HeadProfileRing[] = [
-  { y: -0.82, rx: 0.07, rz: 0.07, z: 0.12 },
-  { y: -0.72, rx: 0.44, rz: 0.34, z: 0.16 },
-  { y: -0.62, rx: 0.6, rz: 0.44, z: 0.12 },
-  { y: -0.5, rx: 0.66, rz: 0.5, z: 0.08 },
-  { y: -0.39, rx: 0.68, rz: 0.52, z: 0.04 },
-  { y: -0.28, rx: 0.69, rz: 0.52, z: 0.02 },
-  { y: -0.17, rx: 0.7, rz: 0.52, z: 0 },
-  { y: -0.05, rx: 0.7, rz: 0.53, z: 0 },
-  { y: 0.06, rx: 0.69, rz: 0.52, z: -0.01 },
-  { y: 0.17, rx: 0.68, rz: 0.51, z: -0.01 },
-  { y: 0.28, rx: 0.66, rz: 0.5, z: -0.01 },
-  { y: 0.4, rx: 0.62, rz: 0.48, z: -0.01 },
-  { y: 0.51, rx: 0.54, rz: 0.42, z: -0.01 },
-  { y: 0.62, rx: 0.4, rz: 0.32, z: 0 },
-  { y: 0.66, rx: 0.22, rz: 0.18, z: 0 },
-  { y: 0.73, rx: 0.06, rz: 0.06, z: 0 },
+  { y: -0.66, rx: 0.05, rz: 0.05, z: 0.02 },
+  { y: -0.56, rx: 0.28, rz: 0.24, z: 0.04 },
+  { y: -0.46, rx: 0.44, rz: 0.38, z: 0.03 },
+  { y: -0.34, rx: 0.52, rz: 0.44, z: 0.02 },
+  { y: -0.22, rx: 0.58, rz: 0.48, z: 0.01 },
+  { y: -0.1, rx: 0.6, rz: 0.5, z: 0 },
+  { y: 0.02, rx: 0.59, rz: 0.5, z: 0 },
+  { y: 0.14, rx: 0.57, rz: 0.49, z: 0 },
+  { y: 0.26, rx: 0.55, rz: 0.48, z: -0.01 },
+  { y: 0.38, rx: 0.52, rz: 0.46, z: -0.01 },
+  { y: 0.48, rx: 0.48, rz: 0.44, z: -0.01 },
+  { y: 0.56, rx: 0.42, rz: 0.4, z: 0 },
+  { y: 0.64, rx: 0.32, rz: 0.3, z: 0 },
+  { y: 0.7, rx: 0.18, rz: 0.16, z: 0 },
+  { y: 0.74, rx: 0.08, rz: 0.08, z: 0 },
+  { y: 0.78, rx: 0.04, rz: 0.04, z: 0 },
 ];
 
 const LEGACY_TOY_RING_COUNT = 9;
@@ -37,6 +37,8 @@ export function isLegacyToyProfile(rings: HeadProfileRing[] | null): boolean {
   if (rings.length === LEGACY_SQUAT_RING_COUNT) {
     const chin = rings[0]!;
     const cheek = rings[7]!;
+    // Long bulbous mid-face band (max rx 0.70) with heavy forward snout.
+    if (chin.y === -0.82 && chin.rx === 0.07 && cheek.rx === 0.7 && cheek.y === -0.05) return true;
     if (chin.y === -0.63 && chin.rx === 0.06 && cheek.rx === 0.78 && cheek.y === -0.05) return true;
     return chin.y === -0.73 && chin.rx === 0.06 && cheek.rx === 0.78;
   }

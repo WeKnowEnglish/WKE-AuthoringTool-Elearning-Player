@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { STARTER_HOUSE } from "./house-normalize";
-import { ensureWardrobe, nearestWardrobeApproach, wardrobeApproach, wardrobeItems } from "./house-specials";
+import {
+  ensureHouseSpecials,
+  ensureWardrobe,
+  nearestWardrobeApproach,
+  nearFridge,
+  wardrobeApproach,
+  wardrobeItems,
+} from "./house-specials";
 import { canPlaceItem } from "./house-grid";
 
 describe("house specials", () => {
@@ -28,5 +35,14 @@ describe("house specials", () => {
     };
     const next = ensureWardrobe(old);
     expect(wardrobeItems(next)).toHaveLength(1);
+  });
+
+  it("keeps fridge and wardrobe specials together", () => {
+    const bare = { ...STARTER_HOUSE, items: [] };
+    const next = ensureHouseSpecials(bare);
+    expect(next.items.some((item) => item.kind === "wardrobe")).toBe(true);
+    expect(next.items.some((item) => item.kind === "fridge")).toBe(true);
+    const fridge = next.items.find((item) => item.kind === "fridge")!;
+    expect(nearFridge(next, fridge.x, fridge.z)).toBe(true);
   });
 });

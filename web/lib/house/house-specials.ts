@@ -1,14 +1,14 @@
 import { FURNITURE } from "./house-catalog";
 import { canPlaceItem } from "./house-grid";
 import { STARTER_HOUSE } from "./house-normalize";
-import type { HouseInteriorLayout, HousePlacedItem } from "./house-types";
+import type { HouseFurnitureId, HouseInteriorLayout, HousePlacedItem } from "./house-types";
 
-export const WARDROBE_ENTER_RADIUS = 2.1;
+export const FURNITURE_ENTER_RADIUS = 2.1;
 
-/** Stand in front of the wardrobe doors (local +Z of the mesh). */
-export function wardrobeApproach(item: HousePlacedItem): { x: number; z: number } {
-  const depth = FURNITURE.wardrobe.footprint[1];
-  const reach = depth / 2 + 0.85;
+/** Stand in front of the item's local +Z face. */
+export function furnitureApproach(item: HousePlacedItem, reachExtra = 0.85): { x: number; z: number } {
+  const depth = FURNITURE[item.kind].footprint[1];
+  const reach = depth / 2 + reachExtra;
   const yaw = item.rot * (Math.PI / 2);
   return {
     x: item.x + Math.sin(yaw) * reach,
@@ -16,8 +16,20 @@ export function wardrobeApproach(item: HousePlacedItem): { x: number; z: number 
   };
 }
 
+export function furnitureOfKind(layout: HouseInteriorLayout, kind: HouseFurnitureId): HousePlacedItem[] {
+  return layout.items.filter((item) => item.kind === kind);
+}
+
+export function wardrobeApproach(item: HousePlacedItem): { x: number; z: number } {
+  return furnitureApproach(item);
+}
+
 export function wardrobeItems(layout: HouseInteriorLayout): HousePlacedItem[] {
-  return layout.items.filter((item) => item.kind === "wardrobe");
+  return furnitureOfKind(layout, "wardrobe");
+}
+
+export function fridgeItems(layout: HouseInteriorLayout): HousePlacedItem[] {
+  return furnitureOfKind(layout, "fridge");
 }
 
 /** Older saves may predate the wardrobe — drop in the starter one when it fits. */
@@ -29,19 +41,54 @@ export function ensureWardrobe(layout: HouseInteriorLayout): HouseInteriorLayout
   return { ...layout, items: [...layout.items, { ...starter, id: "starter-wardrobe" }] };
 }
 
-export function nearWardrobe(
+/** Keep fridge present for the kitchen English hotspot. */
+export function ensureFridge(layout: HouseInteriorLayout): HouseInteriorLayout {
+  if (fridgeItems(layout).length > 0) return layout;
+  const starter = STARTER_HOUSE.items.find((item) => item.kind === "fridge");
+  if (!starter) return layout;
+  if (canPlaceItem(layout.items, starter) != null) return layout;
+  return { ...layout, items: [...layout.items, { ...starter, id: "starter-fridge" }] };
+}
+
+export function ensureHouseSpecials(layout: HouseInteriorLayout): HouseInteriorLayout {
+  return ensureFridge(ensureWardrobe(layout));
+}
+
+export function nearFurnitureKind(
   layout: HouseInteriorLayout,
+  kind: HouseFurnitureId,
   x: number,
   z: number,
-  radius = WARDROBE_ENTER_RADIUS,
+  radius = FURNITURE_ENTER_RADIUS,
 ): boolean {
-  for (const item of wardrobeItems(layout)) {
-    const point = wardrobeApproach(item);
+  for (const item of furnitureOfKind(layout, kind)) {
+    const point = furnitureApproach(item);
     if (Math.hypot(x - point.x, z - point.z) <= radius) return true;
     if (Math.hypot(x - item.x, z - item.z) <= radius) return true;
   }
   return false;
 }
+
+export function nearWardrobe(
+  layout: HouseInteriorLayout,
+  x: number,
+  z: number,
+  radius = FURNITURE_ENTER_RADIUS,
+): boolean {
+  return nearFurnitureKind(layout, "wardrobe", x, z, radius);
+}
+
+export function nearFridge(
+  layout: HouseInteriorLayout,
+  x: number,
+  z: number,
+  radius = FURNITURE_ENTER_RADIUS,
+): boolean {
+  return nearFurnitureKind(layout, "fridge", x, z, radius);
+}
+
+/** @deprecated use FURNITURE_ENTER_RADIUS */
+export const WARDROBE_ENTER_RADIUS = FURNITURE_ENTER_RADIUS;
 
 export function nearestWardrobeApproach(
   layout: HouseInteriorLayout,

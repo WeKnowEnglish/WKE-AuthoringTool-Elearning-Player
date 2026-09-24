@@ -9,8 +9,8 @@ import {
 
 describe("play avatar", () => {
   it("keeps the play figure near kid height", () => {
-    expect(PLAY_AVATAR_SCALE).toBeGreaterThan(0.2);
-    expect(PLAY_AVATAR_SCALE).toBeLessThan(0.3);
+    expect(PLAY_AVATAR_SCALE).toBeGreaterThan(0.22);
+    expect(PLAY_AVATAR_SCALE).toBeLessThan(0.32);
   });
 
   it("routes wardrobe edits back to the house", () => {

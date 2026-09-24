@@ -416,6 +416,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     studioHref: "/teacher/activity-builder/hotspots",
   },
   {
+    href: "/pilots/mystery",
+    title: "Mystery investigation",
+    description:
+      "Reusable click-and-solve foundation: percentage hotspots, evidence collection, responsive case file, and device-local progress. First case: The Missing A/C Remote.",
+    group: "activities",
+    status: "active",
+  },
+  {
     href: "/pilots/activity-intro",
     title: "Activity intro",
     description:

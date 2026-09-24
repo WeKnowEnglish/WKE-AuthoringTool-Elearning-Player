@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Green Valley classroom</title>
+  <desc id="desc">A colorful classroom with a notice board, bookshelf, teacher desk, chair, backpack, air conditioner, remote holder, and trash bin.</desc>
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9f8ff"/>
+      <stop offset="1" stop-color="#c8ecfa"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4d8a7"/>
+      <stop offset="1" stop-color="#d5a968"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#152668" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="610" fill="url(#wall)"/>
+  <path d="M0 610h1600v290H0z" fill="url(#floor)"/>
+  <path d="M0 610h1600" stroke="#7b5a36" stroke-width="16"/>
+  <path d="M0 760h1600M250 610l-80 290M560 610l-25 290M900 610l35 290M1240 610l85 290" stroke="#bd8e52" stroke-width="4" opacity=".55"/>
+
+  <!-- Notice board and morning photo -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="70" width="350" height="245" rx="20" fill="#f5a623" stroke="#152668" stroke-width="12"/>
+    <rect x="92" y="92" width="306" height="201" rx="10" fill="#fff6d8"/>
+    <rect x="120" y="122" width="130" height="125" rx="8" fill="#b8e8fb" stroke="#152668" stroke-width="6"/>
+    <circle cx="160" cy="166" r="20" fill="#f2ad78"/>
+    <circle cx="211" cy="166" r="20" fill="#8d5b3f"/>
+    <path d="M132 220q28-56 56 0M184 220q28-56 56 0" fill="#5d7de8"/>
+    <rect x="274" y="125" width="94" height="18" rx="9" fill="#ffd84d"/>
+    <rect x="274" y="158" width="72" height="14" rx="7" fill="#8fd0ea"/>
+    <rect x="274" y="187" width="88" height="14" rx="7" fill="#8fd0ea"/>
+    <rect x="274" y="216" width="60" height="14" rx="7" fill="#8fd0ea"/>
+  </g>
+
+  <!-- Window -->
+  <g filter="url(#shadow)" stroke="#152668" stroke-width="10">
+    <rect x="520" y="80" width="360" height="250" rx="14" fill="#92d9ff"/>
+    <path d="M700 85v240M525 205h350"/>
+    <path d="M535 300q90-100 170 0t165 0" fill="#8ed081" stroke="none"/>
+    <circle cx="815" cy="135" r="38" fill="#ffe135" stroke="none"/>
+  </g>
+
+  <!-- A/C and empty remote holder -->
+  <g filter="url(#shadow)">
+    <rect x="1180" y="80" width="310" height="125" rx="30" fill="#fff" stroke="#152668" stroke-width="12"/>
+    <path d="M1220 154h232" stroke="#8bb6c8" stroke-width="13" stroke-linecap="round"/>
+    <circle cx="1445" cy="116" r="8" fill="#16a34a"/>
+    <rect x="1356" y="217" width="122" height="126" rx="18" fill="#fff" stroke="#152668" stroke-width="10"/>
+    <rect x="1380" y="242" width="74" height="76" rx="12" fill="#d9e7ec" stroke="#8aa7b2" stroke-width="6" stroke-dasharray="12 8"/>
+    <path d="M1391 280h52" stroke="#8aa7b2" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Bookshelf -->
+  <g filter="url(#shadow)">
+    <rect x="55" y="360" width="370" height="410" rx="18" fill="#9b623d" stroke="#152668" stroke-width="12"/>
+    <path d="M65 494h350M65 628h350" stroke="#152668" stroke-width="10"/>
+    <g stroke="#152668" stroke-width="5">
+      <rect x="82" y="389" width="42" height="96" rx="5" fill="#ff7474"/>
+      <rect x="129" y="405" width="42" height="80" rx="5" fill="#66c7ed"/>
+      <rect x="176" y="379" width="46" height="106" rx="5" fill="#ffe135"/>
+      <rect x="227" y="397" width="38" height="88" rx="5" fill="#74d18a"/>
+      <rect x="270" y="386" width="45" height="99" rx="5" fill="#be8dec"/>
+      <rect x="320" y="402" width="40" height="83" rx="5" fill="#ff9d4d"/>
+      <rect x="365" y="390" width="34" height="95" rx="5" fill="#5d7de8"/>
+      <rect x="82" y="520" width="46" height="99" rx="5" fill="#68c6a1"/>
+      <rect x="133" y="536" width="38" height="83" rx="5" fill="#ff9d4d"/>
+      <rect x="176" y="511" width="45" height="108" rx="5" fill="#ff7474"/>
+      <rect x="226" y="529" width="40" height="90" rx="5" fill="#66c7ed"/>
+      <rect x="271" y="516" width="43" height="103" rx="5" fill="#ffe135"/>
+    </g>
+    <rect x="323" y="539" width="62" height="28" rx="8" fill="#f7e6c8"/>
+    <rect x="82" y="654" width="105" height="82" rx="8" fill="#5d7de8" stroke="#152668" stroke-width="5"/>
+    <rect x="204" y="650" width="80" height="86" rx="8" fill="#ffe135" stroke="#152668" stroke-width="5"/>
+  </g>
+
+  <!-- Teacher desk -->
+  <g filter="url(#shadow)">
+    <rect x="500" y="585" width="470" height="160" rx="18" fill="#f7b65c" stroke="#152668" stroke-width="12"/>
+    <path d="M552 744v110M915 744v110" stroke="#152668" stroke-width="24" stroke-linecap="round"/>
+    <rect x="575" y="530" width="155" height="58" rx="12" fill="#fff" stroke="#152668" stroke-width="8"/>
+    <path d="M600 550h98M600 570h70" stroke="#66c7ed" stroke-width="8" stroke-linecap="round"/>
+    <path d="M790 585v-75" stroke="#152668" stroke-width="12"/>
+    <path d="M790 522q45-72 90 0" fill="#74d18a" stroke="#152668" stroke-width="8"/>
+  </g>
+
+  <!-- Moved chair -->
+  <g filter="url(#shadow)" transform="rotate(-8 1030 690)">
+    <rect x="960" y="500" width="135" height="145" rx="20" fill="#66c7ed" stroke="#152668" stroke-width="12"/>
+    <rect x="950" y="645" width="155" height="55" rx="16" fill="#66c7ed" stroke="#152668" stroke-width="12"/>
+    <path d="M975 696l-30 150M1080 696l35 150" stroke="#152668" stroke-width="18" stroke-linecap="round"/>
+  </g>
+
+  <!-- Backpack -->
+  <g filter="url(#shadow)">
+    <path d="M1120 672q0-78 74-78t74 78v126h-148z" fill="#5d7de8" stroke="#152668" stroke-width="12"/>
+    <path d="M1153 607q0-48 41-48t41 48" fill="none" stroke="#152668" stroke-width="12"/>
+    <rect x="1144" y="704" width="100" height="64" rx="24" fill="#8fa8ff" stroke="#152668" stroke-width="8"/>
+    <circle cx="1194" cy="686" r="8" fill="#ffe135"/>
+  </g>
+
+  <!-- Trash bin and batteries -->
+  <g filter="url(#shadow)">
+    <path d="M1420 630h120l-16 178h-88z" fill="#8bb6c8" stroke="#152668" stroke-width="12"/>
+    <path d="M1408 630h144" stroke="#152668" stroke-width="18" stroke-linecap="round"/>
+    <g transform="rotate(18 1455 616)">
+      <rect x="1428" y="598" width="64" height="24" rx="12" fill="#d5d8dc" stroke="#152668" stroke-width="5"/>
+      <rect x="1479" y="603" width="16" height="14" rx="3" fill="#f5a623"/>
+    </g>
+    <g transform="rotate(-12 1500 604)">
+      <rect x="1470" y="582" width="64" height="24" rx="12" fill="#d5d8dc" stroke="#152668" stroke-width="5"/>
+      <rect x="1521" y="587" width="16" height="14" rx="3" fill="#f5a623"/>
+    </g>
+  </g>
+</svg>

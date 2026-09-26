@@ -20,17 +20,18 @@ In hPanel:
 |---|---|
 | Repository | this Lesson Player repo |
 | Branch | a `hostinger-preview` branch if you do not want every `main` push to rebuild; otherwise `main` |
-| Root directory | `web` |
+| Root directory | repository root (leave the field empty or use `/`) |
 | Node.js | **24** (`package.json` `engines` and `.nvmrc`) |
 | Framework | Next.js **SSR** (not static export) |
-| Build command | `build` |
-| Output directory | `.next` |
-| Entry file | leave empty so Hostinger runs `next start` |
+| Build command | `npm run build` |
+| Output directory | `web/.next` |
+| Start command | `npm run start` |
+| Entry file | leave empty |
 | Database wizard | **skip** — reuse the existing Supabase project |
 
-The full git clone must be present. `web/package.json` depends on `file:../packages/explore-hotspots-play` and `file:../packages/explore-hotspots-author`. `npm run build` fails fast if those siblings are missing.
+Deploy from the repository root. The root npm workspace installs `web/` together with `packages/explore-hotspots-play` and `packages/explore-hotspots-author`; selecting `web/` as the Hostinger root strips those sibling packages and causes `Module not found` errors.
 
-Do **not** set `VERCEL=1`. Self-hosted builds emit `output: "standalone"` when that variable is unset.
+Do **not** set `VERCEL=1`. The root build/start scripts select Hostinger's managed Next.js output automatically, while Docker builds continue to use standalone output.
 
 If the build runs out of memory, add this Hostinger environment variable and rebuild:
 

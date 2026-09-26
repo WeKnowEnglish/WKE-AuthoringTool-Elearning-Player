@@ -8,6 +8,10 @@ describe("Next deployment output mode", () => {
     expect(resolveNextOutputMode({ vercel: "1" })).toBeUndefined();
   });
 
+  it("lets managed Node hosting run the normal Next.js server", () => {
+    expect(resolveNextOutputMode({ managedHosting: "true" })).toBeUndefined();
+  });
+
   it("keeps standalone output for local and self-hosted builds", () => {
     expect(resolveNextOutputMode({})).toBe("standalone");
     expect(resolveNextOutputMode({ vercel: "" })).toBe("standalone");
@@ -15,9 +19,8 @@ describe("Next deployment output mode", () => {
 
   it("wires the environment decision into next.config.ts", () => {
     const config = readFileSync(resolve(process.cwd(), "next.config.ts"), "utf8");
-    expect(config).toContain(
-      "const nextOutputMode = resolveNextOutputMode({ vercel: process.env.VERCEL })",
-    );
+    expect(config).toContain("managedHosting: process.env.WKE_MANAGED_HOSTING");
+    expect(config).toContain("vercel: process.env.VERCEL");
     expect(config).toContain('nextOutputMode === "standalone" ? repositoryRoot : undefined');
   });
 });

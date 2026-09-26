@@ -4,7 +4,10 @@ import path from "node:path";
 import { resolveNextOutputMode } from "./lib/build/next-output-mode";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
-const nextOutputMode = resolveNextOutputMode({ vercel: process.env.VERCEL });
+const nextOutputMode = resolveNextOutputMode({
+  managedHosting: process.env.WKE_MANAGED_HOSTING,
+  vercel: process.env.VERCEL,
+});
 
 const repositoryRoot = path.resolve(process.cwd(), "..");
 const exploreHotspotsPlayEntry = path.join(

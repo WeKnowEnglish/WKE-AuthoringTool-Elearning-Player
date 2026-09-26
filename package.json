@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "build": "cross-env WKE_MANAGED_HOSTING=true npm run build:managed --workspace=web",
-    "start": "cross-env WKE_MANAGED_HOSTING=true npm run start --workspace=web"
+    "start": "cross-env WKE_MANAGED_HOSTING=true node web/.next/standalone/web/server.js"
   },
   "devDependencies": {
     "cross-env": "^10.1.0"

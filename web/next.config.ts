@@ -3,10 +3,8 @@ import bundleAnalyzer from "@next/bundle-analyzer";
 import path from "node:path";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
-const managedRuntime = Boolean(
-  process.env.WKE_MANAGED_HOSTING?.trim() || process.env.VERCEL?.trim(),
-);
-const nextOutputMode: "standalone" | undefined = managedRuntime ? undefined : "standalone";
+const vercelRuntime = Boolean(process.env.VERCEL?.trim());
+const nextOutputMode: "standalone" | undefined = vercelRuntime ? undefined : "standalone";
 
 const repositoryRoot = path.resolve(process.cwd(), "..");
 const exploreHotspotsPlayEntry = path.join(

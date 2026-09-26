@@ -2,7 +2,6 @@
 
 import { clsx } from "clsx";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { KidButton } from "@/components/kid-ui/KidButton";
 import { registerStudentAccount, updateStudentLearningBand } from "@/lib/actions/student-auth";
@@ -67,7 +66,6 @@ export function PortalLoginPanel({
   initialMessage,
   className,
 }: Props) {
-  const router = useRouter();
   const hydrated = useClientHydrated();
   const studentSelfRegistrationEnabled = isStudentSelfRegistrationEnabled();
   const [portal, setPortal] = useState<PortalKind>(studentOnly ? "student" : defaultPortal);
@@ -285,8 +283,11 @@ export function PortalLoginPanel({
       recordAppDiagnostic("teacher", "authentication", "login_succeeded", {
         portal: "teacher",
       }, { status: "succeeded" });
-      router.push(path);
-      router.refresh();
+      // Force a new document request after authentication. A client-side
+      // transition can reuse an unauthenticated App Router response before the
+      // freshly written Supabase cookies are visible to the server, which
+      // sends the teacher straight back to the login page on managed hosts.
+      window.location.assign(path);
     } finally {
       setLoading(false);
     }

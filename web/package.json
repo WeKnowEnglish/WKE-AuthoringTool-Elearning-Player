@@ -12,6 +12,8 @@
     "clean": "node -e \"try { require('fs').rmSync('.next', { recursive: true, force: true }); } catch (e) { if (e.code !== 'ENOENT') throw e; }\"",
     "postinstall": "node ./scripts/ensure-explore-hotspots-react.mjs",
     "build": "next build",
+    "prebuild:managed": "npm run prebuild",
+    "build:managed": "next build --webpack",
     "build:live-game-ground": "node scripts/build-english-craft-ground.mjs",
     "prebuild": "node ./scripts/check-web-workspace.mjs && node ./scripts/check-classroom-realtime-rollout.mjs && node ./scripts/ensure-explore-hotspots-react.mjs && npm run validate:grammar",
     "analyze": "cross-env ANALYZE=true next build",

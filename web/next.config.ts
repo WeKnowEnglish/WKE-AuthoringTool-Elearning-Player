@@ -1,13 +1,12 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import path from "node:path";
-import { resolveNextOutputMode } from "./lib/build/next-output-mode";
 
 const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
-const nextOutputMode = resolveNextOutputMode({
-  managedHosting: process.env.WKE_MANAGED_HOSTING,
-  vercel: process.env.VERCEL,
-});
+const managedRuntime = Boolean(
+  process.env.WKE_MANAGED_HOSTING?.trim() || process.env.VERCEL?.trim(),
+);
+const nextOutputMode: "standalone" | undefined = managedRuntime ? undefined : "standalone";
 
 const repositoryRoot = path.resolve(process.cwd(), "..");
 const exploreHotspotsPlayEntry = path.join(

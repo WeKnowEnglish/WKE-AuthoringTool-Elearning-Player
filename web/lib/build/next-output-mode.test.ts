@@ -1,26 +1,15 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { resolveNextOutputMode } from "./next-output-mode";
 
 describe("Next deployment output mode", () => {
-  it("lets Vercel's adapter own deployment packaging", () => {
-    expect(resolveNextOutputMode({ vercel: "1" })).toBeUndefined();
-  });
-
-  it("lets managed Node hosting run the normal Next.js server", () => {
-    expect(resolveNextOutputMode({ managedHosting: "true" })).toBeUndefined();
-  });
-
-  it("keeps standalone output for local and self-hosted builds", () => {
-    expect(resolveNextOutputMode({})).toBe("standalone");
-    expect(resolveNextOutputMode({ vercel: "" })).toBe("standalone");
-  });
-
-  it("wires the environment decision into next.config.ts", () => {
+  it("keeps managed hosting on the normal Next.js server and Docker on standalone", () => {
     const config = readFileSync(resolve(process.cwd(), "next.config.ts"), "utf8");
-    expect(config).toContain("managedHosting: process.env.WKE_MANAGED_HOSTING");
-    expect(config).toContain("vercel: process.env.VERCEL");
+    expect(config).toContain("process.env.WKE_MANAGED_HOSTING?.trim()");
+    expect(config).toContain("process.env.VERCEL?.trim()");
+    expect(config).toContain(
+      'const nextOutputMode: "standalone" | undefined = managedRuntime ? undefined : "standalone"',
+    );
     expect(config).toContain('nextOutputMode === "standalone" ? repositoryRoot : undefined');
   });
 });

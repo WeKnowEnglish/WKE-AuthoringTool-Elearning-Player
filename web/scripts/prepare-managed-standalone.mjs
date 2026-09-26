@@ -1,4 +1,4 @@
-import { cpSync, existsSync } from "node:fs";
+import { cpSync, existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const webRoot = process.cwd();
@@ -22,5 +22,19 @@ function copyRequiredDirectory(relativeSource, relativeDestination) {
 
 copyRequiredDirectory("public", "public");
 copyRequiredDirectory(".next/static", ".next/static");
+
+// outputFileTracingRoot is the repository root, so Next writes the generated
+// app server to standalone/web/server.js and shared node_modules beside web/.
+// Hostinger expects nodejs/server.js at the artifact root. Keep the wrapper at
+// that root so Node can resolve next from the adjacent node_modules directory.
+writeFileSync(
+  resolve(webRoot, ".next", "standalone", "server.js"),
+  [
+    '"use strict";',
+    'process.env.HOSTNAME = "0.0.0.0";',
+    'require("./web/server.js");',
+    "",
+  ].join("\n"),
+);
 
 console.log("Managed-hosting standalone bundle: OK");

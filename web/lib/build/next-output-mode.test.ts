@@ -20,7 +20,14 @@ describe("Next deployment output mode", () => {
       readFileSync(resolve(process.cwd(), "package.json"), "utf8"),
     ) as { scripts: Record<string, string> };
 
-    expect(rootPackage.scripts.start).toContain("web/.next/standalone/web/server.js");
+    const packagingScript = readFileSync(
+      resolve(process.cwd(), "scripts", "prepare-managed-standalone.mjs"),
+      "utf8",
+    );
+
+    expect(rootPackage.scripts.start).toContain("web/.next/standalone/server.js");
+    expect(packagingScript).toContain('process.env.HOSTNAME = "0.0.0.0"');
+    expect(packagingScript).toContain('require("./web/server.js")');
     expect(webPackage.scripts["build:managed"]).toBe("next build --webpack");
     expect(webPackage.scripts["postbuild:managed"]).toBe(
       "node ./scripts/prepare-managed-standalone.mjs",

@@ -68,6 +68,7 @@ export type PublicTeacherSpacePage = {
     wall_sections: TeacherSpaceSection[];
     theme_id: ClassroomThemeId;
     trials_enabled?: boolean;
+    show_trial_times?: boolean;
   };
   items: TeacherSpaceItemSummary[];
 };

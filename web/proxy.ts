@@ -1,9 +1,11 @@
 import { type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { applyTrafficAttribution } from "@/lib/traffic/apply-attribution-cookie";
 
 /** Next.js 16+ — replaces deprecated `middleware.ts` / `middleware` export. */
 export async function proxy(request: NextRequest) {
-  return updateSession(request);
+  const response = await updateSession(request);
+  return applyTrafficAttribution(request, response);
 }
 
 export const config = {

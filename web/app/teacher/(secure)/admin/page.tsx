@@ -49,6 +49,15 @@ export default async function TeacherAdminHubPage() {
           <p className="mt-2 text-3xl font-bold text-neutral-900">{libraryPending}</p>
         </Link>
         <Link
+          href="/teacher/admin/traffic"
+          className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm hover:border-neutral-400"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Traffic sources
+          </p>
+          <p className="mt-2 text-lg font-bold text-neutral-900">Where visits start</p>
+        </Link>
+        <Link
           href="/teacher/admin/teachers"
           className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm hover:border-neutral-400"
         >

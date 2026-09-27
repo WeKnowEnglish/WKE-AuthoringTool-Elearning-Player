@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatPublicTrialDayLabel,
+  formatPublicTrialRange,
   formatTrialSlotLabel,
   formatTrialSlotLabelInTimeZone,
+  groupPublicTrialTimes,
   mapAvailabilitySlotRow,
+  publicTrialTimezoneLabel,
 } from "@/lib/class-schedule/trial-format";
 
 describe("trial time formatting", () => {
@@ -32,5 +36,42 @@ describe("trial time formatting", () => {
     });
     expect(mapped?.seriesId).toBeNull();
     expect(mapped?.seriesSequence).toBeNull();
+  });
+});
+
+describe("public wall trial schedule", () => {
+  const saturday = {
+    startsAt: "2026-08-22T02:00:00.000Z",
+    durationMinutes: 45,
+    timezone: "Asia/Ho_Chi_Minh",
+  };
+  const laterSaturday = {
+    startsAt: "2026-08-22T06:00:00.000Z",
+    durationMinutes: 30,
+    timezone: "Asia/Ho_Chi_Minh",
+  };
+  const sunday = {
+    startsAt: "2026-08-23T02:00:00.000Z",
+    durationMinutes: 45,
+    timezone: "Asia/Ho_Chi_Minh",
+  };
+
+  it("formats a clock range and day in the teacher timezone", () => {
+    expect(formatPublicTrialDayLabel(saturday.startsAt, saturday.timezone)).toBe("Sat, Aug 22");
+    expect(formatPublicTrialRange(saturday)).toMatch(/9:00.*9:45/);
+  });
+
+  it("groups open times by day and keeps a single timezone footnote", () => {
+    const groups = groupPublicTrialTimes([
+      saturday,
+      laterSaturday,
+      sunday,
+      { startsAt: "not-a-date", durationMinutes: 45, timezone: "Asia/Ho_Chi_Minh" },
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.slots).toHaveLength(2);
+    expect(groups[0]?.dayLabel).toBe("Sat, Aug 22");
+    expect(groups[1]?.dayLabel).toBe("Sun, Aug 23");
+    expect(publicTrialTimezoneLabel(groups)).toBe("Asia/Ho_Chi_Minh");
   });
 });

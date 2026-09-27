@@ -6,6 +6,7 @@ import {
 } from "@/lib/lesson-plans/download-token";
 import { MINI_SERIES_LIBRARY } from "@/lib/lesson-plans/mini-series-manifest";
 import { recordResourceDownloadLead } from "@/lib/lesson-plans/record-download-lead";
+import { readTrafficAttribution } from "@/lib/traffic/read-attribution";
 
 const bodySchema = z.object({
   email: z.string().trim().email().max(320),
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     sourcePage,
     bundleId: MINI_SERIES_LIBRARY.id,
     userAgent: request.headers.get("user-agent"),
+    attribution: await readTrafficAttribution(),
   });
 
   const token = createResourceDownloadToken(email);

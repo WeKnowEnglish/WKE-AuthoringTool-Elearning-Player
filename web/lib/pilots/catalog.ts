@@ -424,6 +424,14 @@ export const PILOT_CATALOG: PilotEntry[] = [
     status: "review",
   },
   {
+    href: "/teacher/admin/traffic",
+    title: "Traffic sources",
+    description:
+      "Admin view of the first page and referring site for new visitors. Lesson-plan file downloads are recorded with success or failure.",
+    group: "experiments",
+    status: "review",
+  },
+  {
     href: "/teacher/admin/diagnostics",
     title: "Session diagnostics",
     description:
@@ -642,7 +650,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/pilots/character-kit",
     title: "Character head kit (Level 1)",
     description:
-      "Authoring: vinyl toy skull or Chibi vinyl bust alternate (blank reference-sheet head, concha ears, pedestal neck). Lock Front/Side/3/4, click-to-stamp on the lathe cage. Saved kits show on the world avatar. Not shippable.",
+      "Authoring: vinyl toy skull, Chibi vinyl bust, or seed GLBs (boy / girl 1 Tripo Mixamo). Lock Front/Side/3/4, click-to-stamp on the lathe cage. Saved kits show on the world avatar. Not shippable.",
     group: "deferred",
     status: "review",
     notShippable: true,
@@ -900,7 +908,7 @@ export const PILOT_CATALOG: PilotEntry[] = [
     href: "/teacher/availability",
     title: "Trial availability + booking",
     description:
-      "Teacher publishes open trial slots; parent books via /parent/book-trial (linked child or prospect); confirm creates student+guardian link for prospects, then trial class enrollment.",
+      "Teacher publishes open trial slots and can show the next two weeks on the Classroom Wall. Parents book via /parent/book-trial (linked child or prospect); confirm creates student+guardian link for prospects, then trial class enrollment.",
     group: "classroom",
     status: "review",
   },

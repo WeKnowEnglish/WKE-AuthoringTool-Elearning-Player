@@ -2,6 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ClassroomActivityTile } from "@/components/teacher-space/ClassroomActivityTile";
+import { WallTrialSchedule } from "@/components/teacher-space/WallTrialSchedule";
+import {
+  groupPublicTrialTimes,
+  publicTrialTimezoneLabel,
+} from "@/lib/class-schedule/trial-format";
+import { listPublicTrialTimes } from "@/lib/data/trial-availability";
 import { loadPublicTeacherSpace } from "@/lib/data/teacher-space";
 import { classroomThemeStyle } from "@/lib/teacher-space/themes";
 
@@ -35,6 +41,11 @@ export default async function PublicTeacherSpacePage({ params }: Props) {
   const visibleSections = orphanedItems.length
     ? [...page.space.wall_sections, { id: "more-activities", label: "More activities" }]
     : page.space.wall_sections;
+  const trialTimes =
+    page.space.trials_enabled && page.space.show_trial_times
+      ? await listPublicTrialTimes(page.space.handle).catch(() => [])
+      : [];
+  const trialGroups = groupPublicTrialTimes(trialTimes);
 
   return (
     <main
@@ -117,6 +128,12 @@ export default async function PublicTeacherSpacePage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      <WallTrialSchedule
+        handle={page.space.handle}
+        groups={trialGroups}
+        timezoneLabel={publicTrialTimezoneLabel(trialGroups)}
+      />
 
       <section
         id="activities"

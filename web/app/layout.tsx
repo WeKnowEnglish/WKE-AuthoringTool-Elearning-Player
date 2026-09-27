@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
 import Script from "next/script";
 import { AppDiagnosticsInit } from "@/components/app-diagnostics/AppDiagnosticsInit";
+import { TrafficArrivalPing } from "@/components/traffic/TrafficArrivalPing";
 import { SITE_NAME, SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full font-sans antialiased">
         <AppDiagnosticsInit />
+        <TrafficArrivalPing />
         {children}
       </body>
     </html>

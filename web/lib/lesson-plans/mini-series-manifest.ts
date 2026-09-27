@@ -192,6 +192,14 @@ export function findLessonBySlug(lessonSlug: string): { pack: MiniSeriesPack; le
   return undefined;
 }
 
+export function miniSeriesDownloadLabel(resourceId: string): string {
+  const ref = parseMiniSeriesResourceId(resourceId);
+  if (!ref) return resourceId;
+  if (ref.kind === "library") return "Full library";
+  if (ref.kind === "pack") return findPackBySlug(ref.packSlug)?.title ?? resourceId;
+  return findLessonBySlug(ref.lessonSlug)?.lesson.title ?? resourceId;
+}
+
 export function listAllLessons(): { pack: MiniSeriesPack; lesson: MiniSeriesLesson }[] {
   return MINI_SERIES_PACKS.flatMap((pack) =>
     pack.lessons.map((lesson) => ({ pack, lesson })),

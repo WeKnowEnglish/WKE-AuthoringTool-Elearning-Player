@@ -2,12 +2,14 @@ import "server-only";
 
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import { MINI_SERIES_LIBRARY_ID } from "@/lib/lesson-plans/mini-series-manifest";
+import { attributionDbFields, attributionMissingColumn, type TrafficAttribution } from "@/lib/traffic/attribution";
 
 export type RecordResourceDownloadLeadInput = {
   email: string;
   sourcePage: string;
   bundleId?: string;
   userAgent?: string | null;
+  attribution?: TrafficAttribution | null;
 };
 
 export async function recordResourceDownloadLead(
@@ -22,12 +24,19 @@ export async function recordResourceDownloadLead(
     return { stored: false };
   }
 
-  const { error } = await client.from("resource_download_leads").insert({
+  const base = {
     email,
     bundle_id: input.bundleId ?? MINI_SERIES_LIBRARY_ID,
     source_page: input.sourcePage,
     user_agent: input.userAgent?.slice(0, 512) ?? null,
+  };
+  let { error } = await client.from("resource_download_leads").insert({
+    ...base,
+    ...attributionDbFields(input.attribution ?? null),
   });
+  if (error && attributionMissingColumn(error.message)) {
+    ({ error } = await client.from("resource_download_leads").insert(base));
+  }
 
   if (error) {
     if (process.env.NODE_ENV === "development") {

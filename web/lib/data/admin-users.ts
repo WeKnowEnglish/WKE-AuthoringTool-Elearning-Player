@@ -20,6 +20,11 @@ export type AdminAccessRequest = {
   provisionedUserId: string | null;
   welcomeEmailStatus: "pending" | "sent" | "failed" | null;
   welcomeEmailedAt: string | null;
+  landingPath: string | null;
+  referrerHost: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
   createdAt: string;
 };
 
@@ -39,6 +44,11 @@ function mapRow(row: Record<string, unknown>): AdminAccessRequest {
     provisionedUserId: (row.provisioned_user_id as string | null) ?? null,
     welcomeEmailStatus: (row.welcome_email_status as AdminAccessRequest["welcomeEmailStatus"]) ?? null,
     welcomeEmailedAt: (row.welcome_emailed_at as string | null) ?? null,
+    landingPath: (row.landing_path as string | null) ?? null,
+    referrerHost: (row.referrer_host as string | null) ?? null,
+    utmSource: (row.utm_source as string | null) ?? null,
+    utmMedium: (row.utm_medium as string | null) ?? null,
+    utmCampaign: (row.utm_campaign as string | null) ?? null,
     createdAt: String(row.created_at ?? ""),
   };
 }
@@ -71,6 +81,7 @@ export async function listAdminAccessRequests(opts?: {
   // Optional review / welcome columns (migrations 066–067) — best-effort enrich.
   const ids = (data ?? []).map((row) => String(row.id));
   let extrasById = new Map<string, Record<string, unknown>>();
+  let attributionById = new Map<string, Record<string, unknown>>();
   if (ids.length > 0) {
     const extras = await gate.ctx.service
       .from("teacher_access_requests")
@@ -83,6 +94,15 @@ export async function listAdminAccessRequests(opts?: {
         extras.data.map((row) => [String(row.id), row as Record<string, unknown>]),
       );
     }
+    const attribution = await gate.ctx.service
+      .from("teacher_access_requests")
+      .select("id, landing_path, referrer_host, utm_source, utm_medium, utm_campaign")
+      .in("id", ids);
+    if (!attribution.error && attribution.data) {
+      attributionById = new Map(
+        attribution.data.map((row) => [String(row.id), row as Record<string, unknown>]),
+      );
+    }
   }
 
   return {
@@ -90,15 +110,20 @@ export async function listAdminAccessRequests(opts?: {
     requests: (data ?? []).map((row) => {
       const base = mapRow(row as Record<string, unknown>);
       const extra = extrasById.get(base.id);
-      if (!extra) return base;
+      const source = attributionById.get(base.id);
       return {
         ...base,
-        reviewedBy: (extra.reviewed_by as string | null) ?? null,
-        reviewNote: (extra.review_note as string | null) ?? null,
-        provisionedUserId: (extra.provisioned_user_id as string | null) ?? null,
+        reviewedBy: (extra?.reviewed_by as string | null) ?? null,
+        reviewNote: (extra?.review_note as string | null) ?? null,
+        provisionedUserId: (extra?.provisioned_user_id as string | null) ?? null,
         welcomeEmailStatus:
-          (extra.welcome_email_status as AdminAccessRequest["welcomeEmailStatus"]) ?? null,
-        welcomeEmailedAt: (extra.welcome_emailed_at as string | null) ?? null,
+          (extra?.welcome_email_status as AdminAccessRequest["welcomeEmailStatus"]) ?? null,
+        welcomeEmailedAt: (extra?.welcome_emailed_at as string | null) ?? null,
+        landingPath: (source?.landing_path as string | null) ?? null,
+        referrerHost: (source?.referrer_host as string | null) ?? null,
+        utmSource: (source?.utm_source as string | null) ?? null,
+        utmMedium: (source?.utm_medium as string | null) ?? null,
+        utmCampaign: (source?.utm_campaign as string | null) ?? null,
       };
     }),
   };

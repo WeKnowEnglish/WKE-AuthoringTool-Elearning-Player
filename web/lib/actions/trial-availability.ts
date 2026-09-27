@@ -46,6 +46,18 @@ function revalidateTrialSurfaces(studentId?: string | null) {
   }
 }
 
+async function revalidateTeacherWall(teacherId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("teacher_spaces")
+    .select("handle")
+    .eq("teacher_id", teacherId)
+    .maybeSingle();
+  if (typeof data?.handle === "string" && data.handle) {
+    revalidatePath(`/wke/${data.handle}`);
+  }
+}
+
 function rpcErrorMessage(payload: unknown, fallback: string): string {
   if (!payload || typeof payload !== "object") return fallback;
   const error = (payload as { error?: unknown }).error;
@@ -127,7 +139,7 @@ export async function createTeacherAvailabilitySeries(input: {
   note?: string;
 }): Promise<TrialActionResult> {
   try {
-    await requireTeacherUserId();
+    const teacherId = await requireTeacherUserId();
     const timezone = normalizeMeetingTimezone(input.timezone);
     const startsAtWall = `${input.startDate.trim()}T${input.startTime.trim()}`;
     const startsAt = wallClockInTimeZoneToUtcIso(startsAtWall, timezone);
@@ -153,6 +165,7 @@ export async function createTeacherAvailabilitySeries(input: {
       return { ok: false, error: rpcErrorMessage(data, "Could not publish availability.") };
     }
     revalidateTrialSurfaces();
+    await revalidateTeacherWall(teacherId);
     return { ok: true };
   } catch (error) {
     return {
@@ -170,7 +183,7 @@ export async function updateTeacherAvailabilitySlot(input: {
   note?: string;
 }): Promise<TrialActionResult> {
   try {
-    await requireTeacherUserId();
+    const teacherId = await requireTeacherUserId();
     const id = input.slotId.trim();
     const timezone = normalizeMeetingTimezone(input.timezone);
     const startsAt = wallClockInTimeZoneToUtcIso(input.startsAtWall, timezone);
@@ -192,6 +205,7 @@ export async function updateTeacherAvailabilitySlot(input: {
       return { ok: false, error: rpcErrorMessage(data, "Could not update time.") };
     }
     revalidateTrialSurfaces();
+    await revalidateTeacherWall(teacherId);
     return { ok: true };
   } catch (error) {
     return {
@@ -234,6 +248,7 @@ export async function cancelTeacherAvailabilitySlot(
 
     if (error) return { ok: false, error: error.message };
     revalidateTrialSurfaces();
+    await revalidateTeacherWall(teacherId);
     return { ok: true };
   } catch (error) {
     return {
@@ -271,13 +286,27 @@ export async function setTeacherTrialsEnabled(
       };
     }
 
-    const { error } = await supabase
+    const updatedAt = new Date().toISOString();
+    const patch: { trials_enabled: boolean; updated_at: string; show_trial_times?: boolean } = {
+      trials_enabled: Boolean(enabled),
+      updated_at: updatedAt,
+    };
+    if (!enabled) patch.show_trial_times = false;
+
+    let { error } = await supabase
       .from("teacher_spaces")
-      .update({
-        trials_enabled: Boolean(enabled),
-        updated_at: new Date().toISOString(),
-      })
+      .update(patch)
       .eq("teacher_id", teacherId);
+
+    if (error && /show_trial_times/i.test(error.message)) {
+      ({ error } = await supabase
+        .from("teacher_spaces")
+        .update({
+          trials_enabled: Boolean(enabled),
+          updated_at: updatedAt,
+        })
+        .eq("teacher_id", teacherId));
+    }
 
     if (error) return { ok: false, error: error.message };
     revalidateTrialSurfaces();
@@ -289,6 +318,64 @@ export async function setTeacherTrialsEnabled(
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Could not update trial setting.",
+    };
+  }
+}
+
+export async function setTeacherShowTrialTimes(
+  enabled: boolean,
+): Promise<TrialActionResult> {
+  try {
+    const teacherId = await requireTeacherUserId();
+    const supabase = await createClient();
+    const { data: space, error: spaceError } = await supabase
+      .from("teacher_spaces")
+      .select("id, is_published, handle, trials_enabled")
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+
+    if (spaceError) {
+      if (/trials_enabled/i.test(spaceError.message)) {
+        return {
+          ok: false,
+          error: "Apply migration 115_prospect_trials_and_hardening.sql before showing trial times.",
+        };
+      }
+      return { ok: false, error: spaceError.message };
+    }
+    if (!space?.is_published) {
+      return { ok: false, error: "Publish your Classroom Wall before showing trial times." };
+    }
+    if (enabled && !space.trials_enabled) {
+      return { ok: false, error: "Turn on trial booking before showing times on your wall." };
+    }
+
+    const { error } = await supabase
+      .from("teacher_spaces")
+      .update({
+        show_trial_times: Boolean(enabled),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("teacher_id", teacherId);
+
+    if (error) {
+      if (/show_trial_times/i.test(error.message)) {
+        return {
+          ok: false,
+          error: "Apply migration 151_teacher_wall_trial_schedule.sql to show trial times on your wall.",
+        };
+      }
+      return { ok: false, error: error.message };
+    }
+    revalidateTrialSurfaces();
+    if (typeof space.handle === "string") {
+      revalidatePath(`/wke/${space.handle}`);
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not update the wall schedule.",
     };
   }
 }

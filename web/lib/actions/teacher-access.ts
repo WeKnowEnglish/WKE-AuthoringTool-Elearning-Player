@@ -5,6 +5,12 @@ import { rateLimitAllow } from "@/lib/rate-limit/memory";
 import { sendTeacherAccessAdminNotification } from "@/lib/email/teacher-welcome";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 import {
+  attributionDbFields,
+  attributionEmailLines,
+  attributionMissingColumn,
+} from "@/lib/traffic/attribution";
+import { readTrafficAttribution } from "@/lib/traffic/read-attribution";
+import {
   validateTeacherAccessRequest,
   type TeacherAccessRequestInput,
 } from "@/lib/teacher-access/request-validation";
@@ -30,23 +36,28 @@ export async function requestTeacherAccess(
   }
 
   const admin = createServiceRoleSupabase();
+  const attribution = await readTrafficAttribution();
   let requestId: string | undefined;
   if (admin) {
-    const { data, error } = await admin
+    const base = {
+      full_name: validated.value.fullName,
+      email: validated.value.email,
+      school: validated.value.school,
+      reason: validated.value.reason,
+      notification_status: "pending",
+    };
+    let inserted = await admin
       .from("teacher_access_requests")
-      .insert({
-        full_name: validated.value.fullName,
-        email: validated.value.email,
-        school: validated.value.school,
-        reason: validated.value.reason,
-        notification_status: "pending",
-      })
+      .insert({ ...base, ...attributionDbFields(attribution) })
       .select("id")
       .single();
-    if (error) {
+    if (inserted.error && attributionMissingColumn(inserted.error.message)) {
+      inserted = await admin.from("teacher_access_requests").insert(base).select("id").single();
+    }
+    if (inserted.error || !inserted.data) {
       return { ok: false, error: "Teacher access requests are temporarily unavailable." };
     }
-    requestId = String(data.id);
+    requestId = String(inserted.data.id);
   }
 
   let notified = false;
@@ -54,6 +65,7 @@ export async function requestTeacherAccess(
     const sent = await sendTeacherAccessAdminNotification({
       requestId,
       ...validated.value,
+      attributionLines: attributionEmailLines(attribution),
     });
     notified = sent.ok;
   } catch {

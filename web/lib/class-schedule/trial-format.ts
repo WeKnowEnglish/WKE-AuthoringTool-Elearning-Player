@@ -142,6 +142,87 @@ export function mapTrialOccurrenceRow(row: {
   };
 }
 
+export type PublicTrialTime = {
+  startsAt: string;
+  durationMinutes: number;
+  timezone: string;
+};
+
+export type PublicTrialTimeGroup = {
+  dayKey: string;
+  dayLabel: string;
+  timezone: string;
+  slots: Array<{ startsAt: string; label: string }>;
+};
+
+function zonedDayKey(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** Clock range in the teacher's timezone, e.g. "4:00–4:45 PM". */
+export function formatPublicTrialRange(input: PublicTrialTime): string | null {
+  const start = new Date(input.startsAt);
+  if (!Number.isFinite(start.getTime())) return null;
+  const minutes = Number.isFinite(input.durationMinutes) ? input.durationMinutes : 0;
+  const end = new Date(start.getTime() + Math.max(0, minutes) * 60_000);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: input.timezone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).formatRange(start, end);
+}
+
+export function formatPublicTrialDayLabel(startsAt: string, timezone: string): string | null {
+  const date = new Date(startsAt);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+/** Group already-sorted open times by calendar day in each slot's timezone. */
+export function groupPublicTrialTimes(times: PublicTrialTime[]): PublicTrialTimeGroup[] {
+  const groups: PublicTrialTimeGroup[] = [];
+  for (const time of times) {
+    const start = new Date(time.startsAt);
+    if (!Number.isFinite(start.getTime())) continue;
+    const label = formatPublicTrialRange(time);
+    const dayLabel = formatPublicTrialDayLabel(time.startsAt, time.timezone);
+    if (!label || !dayLabel) continue;
+    const dayKey = `${time.timezone}|${zonedDayKey(start, time.timezone)}`;
+    const slot = { startsAt: time.startsAt, label };
+    const current = groups[groups.length - 1];
+    if (current && current.dayKey === dayKey) {
+      current.slots.push(slot);
+      continue;
+    }
+    groups.push({
+      dayKey,
+      dayLabel,
+      timezone: time.timezone,
+      slots: [slot],
+    });
+  }
+  return groups;
+}
+
+/** One timezone footnote when every visible time shares it. */
+export function publicTrialTimezoneLabel(groups: PublicTrialTimeGroup[]): string | null {
+  const zones = [...new Set(groups.map((group) => group.timezone))];
+  return zones.length === 1 ? zones[0] : null;
+}
+
 /** Label like "Tue, Aug 4 · 4:00 PM (45 min)" in the slot timezone. */
 export function formatTrialSlotLabel(input: {
   startsAt: string;

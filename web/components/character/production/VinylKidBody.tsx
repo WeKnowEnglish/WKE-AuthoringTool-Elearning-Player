@@ -1,10 +1,13 @@
 "use client";
 
-import type { CharacterBodyRig, CharacterConfig } from "@/lib/character/character-types";
+import type {
+  CharacterBodyRig,
+  LegacyModularCharacterConfig,
+} from "@/lib/character/character-types";
 import { ToyClothMaterial, ToyShoeMaterial, ToySkinMaterial } from "../toy-materials";
 
 type Props = {
-  config: CharacterConfig;
+  config: LegacyModularCharacterConfig;
   rig: CharacterBodyRig;
 };
 

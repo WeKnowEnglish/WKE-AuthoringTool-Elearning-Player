@@ -3,7 +3,7 @@ import { safeAppReturnHref } from "@/lib/world/play-avatar";
 
 export const metadata = {
   title: "Character editor — Pilot",
-  description: "Modular 3D student avatar editor. Placeholder parts now; Shape Builder GLBs later.",
+  description: "Single-base WKE girl editor with safe fused-texture recoloring.",
   robots: { index: false, follow: false },
 };
 

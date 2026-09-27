@@ -1,60 +1,62 @@
-import {
-  CLOTHING_SWATCHES,
-  HAIR_SWATCHES,
-  SKIN_SWATCHES,
-  isKnownSwatch,
-  isRegisteredPart,
-} from "./character-assets";
 import { DEFAULT_CHARACTER_CONFIG } from "./character-defaults";
 import type { CharacterConfig, CharacterSwatch } from "./character-types";
+import {
+  WKE_GIRL_DEFAULT_HAIR,
+  WKE_GIRL_DEFAULT_OUTFIT,
+  WKE_GIRL_HAIR_SWATCHES,
+  WKE_GIRL_OUTFIT_SWATCHES,
+  WKE_GIRL_SKIN_SWATCHES,
+  isKnownWkeGirlSwatch,
+  isWkeGirlBase,
+  isWkeGirlHair,
+  isWkeGirlOutfit,
+} from "./wke-girl-assets";
 
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function partId(
-  category: "body" | "hair" | "face" | "top" | "bottom" | "shoes",
+function color(
   value: unknown,
+  swatches: CharacterSwatch[],
   fallback: string,
 ): string {
-  const id = asString(value);
-  if (id && isRegisteredPart(category, id)) return id;
-  return fallback;
+  if (!isKnownWkeGirlSwatch(swatches, value)) return fallback;
+  return (
+    swatches.find((item) => item.hex.toLowerCase() === value.toLowerCase())?.hex ??
+    value
+  );
 }
 
-function colorId(value: unknown, swatches: CharacterSwatch[], fallback: string): string {
-  const hex = asString(value);
-  if (hex && isKnownSwatch(swatches, hex)) {
-    return swatches.find((item) => item.hex.toLowerCase() === hex.toLowerCase())?.hex ?? fallback;
-  }
-  if (hex && /^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
-  return fallback;
-}
-
-function accessoryId(value: unknown): string | null {
-  if (value === null || value === "none" || value === "") return null;
-  const id = asString(value);
-  if (id && isRegisteredPart("accessory", id)) return id;
-  return DEFAULT_CHARACTER_CONFIG.accessory;
-}
-
+/**
+ * Normalizes both the v2 single-girl document and the former procedural
+ * loadout. Legacy top/bottom colors are deliberately migrated so existing
+ * students keep a recognizable palette after the base-avatar switch.
+ */
 export function normalizeCharacterConfig(raw: unknown): CharacterConfig {
   const source =
-    raw && typeof raw === "object" ? (raw as Partial<CharacterConfig>) : DEFAULT_CHARACTER_CONFIG;
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const defaults = DEFAULT_CHARACTER_CONFIG;
 
   return {
-    body: partId("body", source.body, defaults.body),
-    skinColor: colorId(source.skinColor, SKIN_SWATCHES, defaults.skinColor),
-    hair: partId("hair", source.hair, defaults.hair),
-    hairColor: colorId(source.hairColor, HAIR_SWATCHES, defaults.hairColor),
-    face: partId("face", source.face, defaults.face),
-    top: partId("top", source.top, defaults.top),
-    topColor: colorId(source.topColor, CLOTHING_SWATCHES, defaults.topColor),
-    bottom: partId("bottom", source.bottom, defaults.bottom),
-    bottomColor: colorId(source.bottomColor, CLOTHING_SWATCHES, defaults.bottomColor ?? defaults.topColor),
-    shoes: partId("shoes", source.shoes, defaults.shoes),
-    shoeColor: colorId(source.shoeColor, CLOTHING_SWATCHES, defaults.shoeColor ?? defaults.topColor),
-    accessory: accessoryId(source.accessory),
+    version: 2,
+    base: isWkeGirlBase(source.base) ? source.base : defaults.base,
+    hair: isWkeGirlHair(source.hair)
+      ? source.hair
+      : WKE_GIRL_DEFAULT_HAIR.id,
+    outfit: isWkeGirlOutfit(source.outfit)
+      ? source.outfit
+      : WKE_GIRL_DEFAULT_OUTFIT.id,
+    skinColor: color(
+      source.skinColor,
+      WKE_GIRL_SKIN_SWATCHES,
+      defaults.skinColor,
+    ),
+    hairColor: color(
+      source.hairColor,
+      WKE_GIRL_HAIR_SWATCHES,
+      defaults.hairColor,
+    ),
+    outfitColor: color(
+      source.outfitColor ?? source.topColor,
+      WKE_GIRL_OUTFIT_SWATCHES,
+      defaults.outfitColor,
+    ),
   };
 }

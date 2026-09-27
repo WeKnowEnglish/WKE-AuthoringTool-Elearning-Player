@@ -4,7 +4,10 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { useLayoutEffect } from "react";
 import { CharacterModel } from "@/components/character/CharacterModel";
 import { CharacterTurntable } from "@/components/character/CharacterTurntable";
-import type { CharacterConfig } from "@/lib/character/character-types";
+import type {
+  CharacterConfig,
+  LegacyModularCharacterConfig,
+} from "@/lib/character/character-types";
 
 type Props = {
   config: CharacterConfig;
@@ -13,7 +16,7 @@ type Props = {
 function FramedCamera() {
   const camera = useThree((state) => state.camera);
   useLayoutEffect(() => {
-    camera.position.set(0, 2.4, 10.4);
+    camera.position.set(0, 2.4, 11.1);
     camera.lookAt(0, 2.25, 0);
     camera.updateProjectionMatrix();
   }, [camera]);
@@ -25,7 +28,7 @@ export function CharacterPreview({ config }: Props) {
     <Canvas
       className="h-full w-full"
       dpr={[1, 1.5]}
-      camera={{ position: [0, 2.4, 10.4], fov: 34, near: 0.1, far: 40 }}
+      camera={{ position: [0, 2.4, 11.1], fov: 34, near: 0.1, far: 40 }}
       gl={{ antialias: true }}
       style={{ width: "100%", height: "100%", touchAction: "none" }}
     >
@@ -34,14 +37,20 @@ export function CharacterPreview({ config }: Props) {
       <directionalLight position={[3.2, 6.4, 4.2]} intensity={1.25} />
       <directionalLight position={[-2.4, 2.2, 3.2]} intensity={0.35} />
       <FramedCamera />
-      <CharacterTurntable>
+      <CharacterTurntable idleSpin={false} initialYaw={0.35}>
         <CharacterModel config={config} />
       </CharacterTurntable>
     </Canvas>
   );
 }
 
-export function CharacterFallback2D({ config }: Props) {
+export function CharacterFallback2D({
+  config,
+}: {
+  config: CharacterConfig | LegacyModularCharacterConfig;
+}) {
+  const outfitColor =
+    "outfitColor" in config ? config.outfitColor : config.topColor;
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
       <div className="flex flex-col items-center" aria-hidden>
@@ -53,21 +62,21 @@ export function CharacterFallback2D({ config }: Props) {
           className="flex h-16 w-16 items-center justify-center rounded-full text-lg"
           style={{ background: config.skinColor }}
         >
-          {config.face === "face_03" ? "o" : config.face === "face_02" ? "^" : "u"}
+          u
         </div>
-        <div className="h-20 w-20 rounded-md" style={{ background: config.topColor }} />
+        <div className="h-20 w-20 rounded-md" style={{ background: outfitColor }} />
         <div
           className="h-12 w-16 rounded-b-md"
-          style={{ background: config.bottomColor ?? config.topColor }}
+          style={{ background: outfitColor }}
         />
         <div className="flex gap-3">
           <div
             className="h-4 w-7 rounded"
-            style={{ background: config.shoeColor ?? config.topColor }}
+            style={{ background: outfitColor }}
           />
           <div
             className="h-4 w-7 rounded"
-            style={{ background: config.shoeColor ?? config.topColor }}
+            style={{ background: outfitColor }}
           />
         </div>
       </div>

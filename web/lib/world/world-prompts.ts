@@ -29,35 +29,18 @@ function shuffle<T>(items: T[]): T[] {
   return next;
 }
 
-function topWord(topId: string): string {
-  if (topId.includes("03") || topId.includes("hoodie")) return "hoodie";
-  if (topId.includes("01")) return "t-shirt";
-  return "shirt";
-}
-
-function bottomWord(bottomId: string): string {
-  if (bottomId.includes("02") || bottomId.includes("short")) return "shorts";
-  if (bottomId.includes("03") || bottomId.includes("skirt")) return "skirt";
-  return "pants";
-}
-
-function shoeWord(shoeId: string): string {
-  if (shoeId.includes("02")) return "boots";
-  if (shoeId.includes("03")) return "sandals";
-  return "shoes";
-}
-
-function clothingWord(config: CharacterConfig): { answerId: string; label: string; decoys: [string, string] } {
+function clothingWord(): { answerId: string; label: string; decoys: [string, string] } {
   const pool = [
-    { answerId: "top", label: topWord(config.top), decoys: ["hat", "sock"] as [string, string] },
-    { answerId: "bottom", label: bottomWord(config.bottom), decoys: ["coat", "scarf"] as [string, string] },
-    { answerId: "shoes", label: shoeWord(config.shoes), decoys: ["bag", "belt"] as [string, string] },
+    { answerId: "top", label: "shirt", decoys: ["hat", "sock"] as [string, string] },
+    { answerId: "bottom", label: "skirt", decoys: ["coat", "scarf"] as [string, string] },
+    { answerId: "shoes", label: "shoes", decoys: ["bag", "belt"] as [string, string] },
   ];
   return pool[Math.floor(Math.random() * pool.length)]!;
 }
 
 export function buildClothesPrompt(config: CharacterConfig = DEFAULT_CHARACTER_CONFIG): WorldPrompt {
-  const pick = clothingWord(config);
+  void config;
+  const pick = clothingWord();
   const choices = shuffle([
     { id: pick.answerId, label: pick.label },
     { id: "d1", label: pick.decoys[0] },

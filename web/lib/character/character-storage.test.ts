@@ -30,9 +30,9 @@ describe("character-storage", () => {
     vi.stubGlobal("localStorage", localStorage);
     vi.stubGlobal("window", Object.assign(globalThis, { localStorage }));
 
-    saveCharacterConfig({ ...DEFAULT_CHARACTER_CONFIG, hair: "hair_04" }, "student-1");
-    expect(loadCharacterConfig("student-1")?.hair).toBe("hair_04");
-    expect(localStorage.getItem(`${CHARACTER_STORAGE_KEY}:student-1`)).toContain("hair_04");
+    saveCharacterConfig({ ...DEFAULT_CHARACTER_CONFIG, hairColor: "#112233" }, "student-1");
+    expect(loadCharacterConfig("student-1")?.hairColor).toBe("#112233");
+    expect(localStorage.getItem(`${CHARACTER_STORAGE_KEY}:student-1`)).toContain("#112233");
   });
 
   it("returns null for missing or invalid JSON", () => {

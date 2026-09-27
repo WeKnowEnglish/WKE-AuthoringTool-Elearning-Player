@@ -1,29 +1,21 @@
-import {
-  CHARACTER_ASSETS,
-  CLOTHING_SWATCHES,
-  HAIR_SWATCHES,
-  SKIN_SWATCHES,
-} from "./character-assets";
+import { DEFAULT_CHARACTER_CONFIG } from "./character-defaults";
 import type { CharacterConfig } from "./character-types";
+import {
+  WKE_GIRL_HAIR_SWATCHES,
+  WKE_GIRL_OUTFIT_SWATCHES,
+  WKE_GIRL_SKIN_SWATCHES,
+} from "./wke-girl-assets";
 
 function pick<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)]!;
 }
 
+/** Keeps the sole base/hair/outfit fixed and surprises only the safe colors. */
 export function randomCharacterConfig(): CharacterConfig {
-  const accessory = Math.random() < 0.45 ? pick(CHARACTER_ASSETS.accessory).id : null;
   return {
-    body: pick(CHARACTER_ASSETS.body).id,
-    skinColor: pick(SKIN_SWATCHES).hex,
-    hair: pick(CHARACTER_ASSETS.hair).id,
-    hairColor: pick(HAIR_SWATCHES).hex,
-    face: pick(CHARACTER_ASSETS.face).id,
-    top: pick(CHARACTER_ASSETS.top).id,
-    topColor: pick(CLOTHING_SWATCHES).hex,
-    bottom: pick(CHARACTER_ASSETS.bottom).id,
-    bottomColor: pick(CLOTHING_SWATCHES).hex,
-    shoes: pick(CHARACTER_ASSETS.shoes).id,
-    shoeColor: pick(CLOTHING_SWATCHES).hex,
-    accessory,
+    ...DEFAULT_CHARACTER_CONFIG,
+    skinColor: pick(WKE_GIRL_SKIN_SWATCHES).hex,
+    hairColor: pick(WKE_GIRL_HAIR_SWATCHES).hex,
+    outfitColor: pick(WKE_GIRL_OUTFIT_SWATCHES).hex,
   };
 }

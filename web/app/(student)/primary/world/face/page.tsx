@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CharacterKitEditor } from "@/components/character-kit-editor/CharacterKitEditor";
 import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
 import { studentLoginPath } from "@/lib/auth/student-login";
 import { createClient } from "@/lib/supabase/server";
 import { safeAppReturnHref } from "@/lib/world/play-avatar";
 
 export const metadata: Metadata = {
-  title: "Make my face | WKE World",
+  title: "Customize character | WKE World",
   robots: { index: false, follow: false },
 };
 
@@ -32,9 +31,8 @@ export default async function PrimaryWorldFacePage({ searchParams }: Props) {
     redirect("/login?error=unknown_role");
   }
 
-  return (
-    <CharacterKitEditor
-      returnHref={safeAppReturnHref(next, "/primary/world/play/cottage?inside=1")}
-    />
+  const returnHref = safeAppReturnHref(next, "/primary/world/play/cottage?inside=1");
+  redirect(
+    `/primary/world/outfit?next=${encodeURIComponent(returnHref)}`,
   );
 }

@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import type { Group } from "three";
 import { CharacterModel } from "@/components/character/CharacterModel";
 import { CHARACTER_STORAGE_KEY } from "@/lib/character/character-storage";
-import { CHARACTER_KIT_STORAGE_KEY } from "@/lib/character/kit/kit-storage";
 import { loadPlayAvatarLook, PLAY_AVATAR_SCALE, type PlayAvatarLook } from "@/lib/world/play-avatar";
 
 type Props = {
@@ -14,12 +13,20 @@ type Props = {
 };
 
 function lookKey(look: PlayAvatarLook): string {
-  return `${look.config.top}:${look.config.bottom}:${look.config.shoes}:${look.config.hair}:${look.kit.id}:${look.kit.name}`;
+  const config = look.config;
+  return [
+    config.base,
+    config.hair,
+    config.outfit,
+    config.skinColor,
+    config.hairColor,
+    config.outfitColor,
+  ].join(":");
 }
 
 /**
- * Student avatar in world play. Uses the outfit editor loadout and, when
- * present, the head kit from the character kit studio.
+ * Student avatar in world play. Uses the same sole WKE girl base and saved
+ * safe-color loadout as the character editor.
  */
 export function PlayAvatar({ walkingRef, scale = PLAY_AVATAR_SCALE }: Props) {
   const rootRef = useRef<Group>(null);
@@ -31,7 +38,7 @@ export function PlayAvatar({ walkingRef, scale = PLAY_AVATAR_SCALE }: Props) {
     refresh();
     const onStorage = (event: StorageEvent) => {
       if (!event.key) return;
-      if (event.key.includes(CHARACTER_STORAGE_KEY) || event.key.includes(CHARACTER_KIT_STORAGE_KEY)) {
+      if (event.key.includes(CHARACTER_STORAGE_KEY)) {
         refresh();
       }
     };
@@ -61,7 +68,12 @@ export function PlayAvatar({ walkingRef, scale = PLAY_AVATAR_SCALE }: Props) {
 
   return (
     <group ref={rootRef} name="play-avatar">
-      <CharacterModel key={lookKey(look)} config={look.config} kit={look.kit} scale={scale} walkingRef={walkingRef} />
+      <CharacterModel
+        key={lookKey(look)}
+        config={look.config}
+        scale={scale}
+        walkingRef={walkingRef}
+      />
     </group>
   );
 }

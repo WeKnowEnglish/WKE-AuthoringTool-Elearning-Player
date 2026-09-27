@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { faceEditorHref, outfitEditorHref } from "@/lib/world/play-avatar";
+import { outfitEditorHref } from "@/lib/world/play-avatar";
 
 type Props = {
   returnTo: string;
@@ -17,7 +17,9 @@ export function WardrobePanel({ returnTo, surface = "student", onClose, onPracti
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-lg font-extrabold">Wardrobe</p>
-            <p className="mt-1 text-sm text-slate-700">Change your look, or practice clothing words.</p>
+            <p className="mt-1 text-sm text-slate-700">
+              Customize your WKE Girl, or practice clothing words.
+            </p>
           </div>
           <button
             type="button"
@@ -32,13 +34,7 @@ export function WardrobePanel({ returnTo, surface = "student", onClose, onPracti
             href={outfitEditorHref(returnTo, surface)}
             className="rounded-xl bg-sky-400 px-4 py-3 text-center text-sm font-bold text-slate-900 hover:bg-sky-300"
           >
-            Change outfit
-          </Link>
-          <Link
-            href={faceEditorHref(returnTo, surface)}
-            className="rounded-xl bg-amber-300 px-4 py-3 text-center text-sm font-bold text-slate-900 hover:bg-amber-200"
-          >
-            Make my face
+            Customize my character
           </Link>
           <button
             type="button"

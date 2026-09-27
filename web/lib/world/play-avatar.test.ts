@@ -17,7 +17,7 @@ describe("play avatar", () => {
     const home = "/pilots/world/play/cottage?inside=1";
     expect(outfitEditorHref(home, "pilot")).toContain("character-editor");
     expect(outfitEditorHref(home, "pilot")).toContain(encodeURIComponent(home));
-    expect(faceEditorHref(home)).toContain("/primary/world/face");
+    expect(faceEditorHref(home)).toContain("/primary/world/outfit");
   });
 
   it("rejects external return URLs", () => {
@@ -28,7 +28,8 @@ describe("play avatar", () => {
     );
   });
 
-  it("keeps a default outfit shape", () => {
-    expect(DEFAULT_CHARACTER_CONFIG.top).toBeTruthy();
+  it("keeps the sole WKE girl base and outfit", () => {
+    expect(DEFAULT_CHARACTER_CONFIG.base).toBe("wke_girl_v1");
+    expect(DEFAULT_CHARACTER_CONFIG.outfit).toBe("wke_girl_outfit_original");
   });
 });

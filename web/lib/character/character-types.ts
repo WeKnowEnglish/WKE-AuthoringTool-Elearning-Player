@@ -30,10 +30,27 @@ export type CharacterAlign = "center" | "bottom" | "top";
 export type Vec3 = [number, number, number];
 
 /**
- * Saved student avatar. IDs refer to registry rows, never meshes.
- * Compatible with future Shape Builder GLB parts that share those IDs.
+ * Saved student avatar for the current single-character MVP.
+ *
+ * The three IDs are registry references even though each registry currently
+ * contains one row. Keeping the slots explicit lets separated hair/outfit
+ * GLBs be added later without changing persistence or editor state.
  */
 export type CharacterConfig = {
+  version: 2;
+  base: string;
+  hair: string;
+  outfit: string;
+  skinColor: string;
+  hairColor: string;
+  outfitColor: string;
+};
+
+/**
+ * Compatibility type for the retired procedural character prototypes.
+ * These values are not part of the live student avatar data model.
+ */
+export type LegacyModularCharacterConfig = {
   body: string;
   skinColor: string;
   hair: string;

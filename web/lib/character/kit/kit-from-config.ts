@@ -4,13 +4,23 @@ import { facePreset, hairPreset } from "./kit-presets";
 import { normalizeCharacterKit } from "./kit-normalize";
 import type { CharacterKitDocument } from "./kit-types";
 
-/** Student loadout → evaluated head kit. */
-export function kitFromCharacterConfig(config: CharacterConfig): CharacterKitDocument {
-  const hair = hairPreset(config.hair) ?? DEFAULT_CHARACTER_KIT.hair;
-  const face = facePreset(config.face);
+type KitCompatibleColors = Pick<CharacterConfig, "skinColor" | "hairColor"> & {
+  hair?: string;
+  face?: string;
+};
+
+/**
+ * Legacy procedural head adapter retained for the separate authoring pilot.
+ * It is no longer consumed by the live student avatar.
+ */
+export function kitFromCharacterConfig(config: KitCompatibleColors): CharacterKitDocument {
+  const hairId = config.hair?.startsWith("hair_") ? config.hair : "hair_02";
+  const faceId = config.face?.startsWith("face_") ? config.face : "face_01";
+  const hair = hairPreset(hairId) ?? DEFAULT_CHARACTER_KIT.hair;
+  const face = facePreset(faceId);
   return normalizeCharacterKit({
     ...DEFAULT_CHARACTER_KIT,
-    id: `student_${config.hair}_${config.face}`,
+    id: `student_${hairId}_${faceId}`,
     name: "Student head",
     skinColor: config.skinColor,
     hairColor: config.hairColor,

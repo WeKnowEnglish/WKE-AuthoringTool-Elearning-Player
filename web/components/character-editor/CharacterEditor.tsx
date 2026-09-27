@@ -7,7 +7,8 @@ import { detectWebGL } from "@/components/world/detect-webgl";
 import { DEFAULT_CHARACTER_CONFIG } from "@/lib/character/character-defaults";
 import { randomCharacterConfig } from "@/lib/character/character-randomize";
 import { loadCharacterConfig, saveCharacterConfig } from "@/lib/character/character-storage";
-import type { CharacterCategory, CharacterConfig } from "@/lib/character/character-types";
+import type { CharacterConfig } from "@/lib/character/character-types";
+import type { WkeGirlCustomizationCategory } from "@/lib/character/wke-girl-assets";
 import { PRIMARY_CHROME_CLASS, PRIMARY_CHROME_STYLE } from "@/lib/primary/primary-chrome";
 import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 import { CharacterCategoryTabs } from "./CharacterCategoryTabs";
@@ -29,7 +30,7 @@ const CharacterPreview = dynamic(
 export function CharacterEditor({ returnHref }: { returnHref?: string | null }) {
   const hydrated = useClientHydrated();
   const [config, setConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
-  const [category, setCategory] = useState<CharacterCategory>("hair");
+  const [category, setCategory] = useState<WkeGirlCustomizationCategory>("hair");
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -74,9 +75,9 @@ export function CharacterEditor({ returnHref }: { returnHref?: string | null }) 
             <p className="text-xs font-bold uppercase tracking-wide text-[var(--pl-purple)]">
               Character studio
             </p>
-            <h1 className="text-2xl font-extrabold">Make your character</h1>
+            <h1 className="text-2xl font-extrabold">Customize your WKE Girl</h1>
             <p className="text-sm text-[var(--pl-muted)]">
-              Pick a face look, hair style, and clothes, then recolor. Hair, Face, and clothing tabs list every student option.
+              Start with one polished avatar. Choose safe hair, outfit, and skin colors now; modular styles come next.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -88,16 +89,6 @@ export function CharacterEditor({ returnHref }: { returnHref?: string | null }) 
                 Back to house
               </Link>
             ) : null}
-            <Link
-              href={
-                returnHref
-                  ? `/primary/world/face?next=${encodeURIComponent(returnHref)}`
-                  : "/pilots/character-kit"
-              }
-              className="rounded-lg border-2 border-[var(--pl-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--pl-ink)]"
-            >
-              Head kit
-            </Link>
             {returnHref ? null : (
               <Link
                 href="/pilots"

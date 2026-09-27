@@ -2,63 +2,69 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CHARACTER_CONFIG } from "./character-defaults";
 import { normalizeCharacterConfig } from "./character-normalize";
 import { randomCharacterConfig } from "./character-randomize";
-import { CHARACTER_ASSETS, isRegisteredPart } from "./character-assets";
+import {
+  WKE_GIRL_BASES,
+  WKE_GIRL_HAIR,
+  WKE_GIRL_OUTFITS,
+  isWkeGirlBase,
+  isWkeGirlHair,
+  isWkeGirlOutfit,
+} from "./wke-girl-assets";
 
 describe("normalizeCharacterConfig", () => {
-  it("returns defaults for missing config", () => {
+  it("returns the single WKE girl defaults for missing config", () => {
     expect(normalizeCharacterConfig(null)).toEqual(DEFAULT_CHARACTER_CONFIG);
     expect(normalizeCharacterConfig(undefined)).toEqual(DEFAULT_CHARACTER_CONFIG);
   });
 
-  it("keeps a valid saved config", () => {
+  it("keeps a valid v2 saved config", () => {
     const saved = {
       ...DEFAULT_CHARACTER_CONFIG,
-      hair: "hair_05",
-      top: "top_03",
-      accessory: "accessory_01",
+      hairColor: "#112233",
+      outfitColor: "#445566",
     };
     expect(normalizeCharacterConfig(saved)).toEqual(saved);
   });
 
-  it("falls back when a hairstyle id is removed", () => {
-    expect(normalizeCharacterConfig({ ...DEFAULT_CHARACTER_CONFIG, hair: "hair_gone" }).hair).toBe(
-      DEFAULT_CHARACTER_CONFIG.hair,
-    );
+  it("rejects removed character seeds and part IDs", () => {
+    const next = normalizeCharacterConfig({
+      ...DEFAULT_CHARACTER_CONFIG,
+      base: "seed_boy",
+      hair: "hair_05",
+      outfit: "top_03",
+    });
+    expect(next.base).toBe(DEFAULT_CHARACTER_CONFIG.base);
+    expect(next.hair).toBe(DEFAULT_CHARACTER_CONFIG.hair);
+    expect(next.outfit).toBe(DEFAULT_CHARACTER_CONFIG.outfit);
   });
 
-  it("treats none and null accessory as empty", () => {
-    expect(normalizeCharacterConfig({ ...DEFAULT_CHARACTER_CONFIG, accessory: null }).accessory).toBeNull();
-    expect(normalizeCharacterConfig({ accessory: "none" }).accessory).toBeNull();
-  });
-
-  it("fills incomplete config", () => {
-    const next = normalizeCharacterConfig({ hair: "hair_01" });
-    expect(next.body).toBe(DEFAULT_CHARACTER_CONFIG.body);
-    expect(next.hair).toBe("hair_01");
-    expect(next.top).toBe(DEFAULT_CHARACTER_CONFIG.top);
+  it("migrates useful colors from the former procedural loadout", () => {
+    const next = normalizeCharacterConfig({
+      body: "body_02",
+      hair: "hair_09",
+      skinColor: "#A56F50",
+      hairColor: "#3B2618",
+      topColor: "#635BFF",
+      bottomColor: "#2B3A67",
+    });
+    expect(next.base).toBe(DEFAULT_CHARACTER_CONFIG.base);
+    expect(next.skinColor).toBe("#A56F50");
+    expect(next.hairColor).toBe("#3B2618");
+    expect(next.outfitColor).toBe("#635BFF");
   });
 });
 
-describe("randomCharacterConfig", () => {
-  it("only picks registered ids", () => {
-    const next = randomCharacterConfig();
-    expect(isRegisteredPart("body", next.body)).toBe(true);
-    expect(isRegisteredPart("hair", next.hair)).toBe(true);
-    expect(isRegisteredPart("face", next.face)).toBe(true);
-    expect(isRegisteredPart("top", next.top)).toBe(true);
-    expect(isRegisteredPart("bottom", next.bottom)).toBe(true);
-    expect(isRegisteredPart("shoes", next.shoes)).toBe(true);
-    if (next.accessory) {
-      expect(isRegisteredPart("accessory", next.accessory)).toBe(true);
-    }
+describe("single WKE girl registry", () => {
+  it("contains exactly one selectable base, hair, and outfit", () => {
+    expect(WKE_GIRL_BASES).toHaveLength(1);
+    expect(WKE_GIRL_HAIR).toHaveLength(1);
+    expect(WKE_GIRL_OUTFITS).toHaveLength(1);
   });
 
-  it("has expanded mix-and-match slots for students", () => {
-    expect(CHARACTER_ASSETS.hair.length).toBeGreaterThanOrEqual(10);
-    expect(CHARACTER_ASSETS.face.length).toBeGreaterThanOrEqual(6);
-    expect(CHARACTER_ASSETS.top.length).toBeGreaterThanOrEqual(8);
-    expect(CHARACTER_ASSETS.bottom.length).toBeGreaterThanOrEqual(6);
-    expect(CHARACTER_ASSETS.shoes.length).toBeGreaterThanOrEqual(6);
-    expect(CHARACTER_ASSETS.accessory.length).toBeGreaterThanOrEqual(6);
+  it("keeps randomization on the registered single avatar", () => {
+    const next = randomCharacterConfig();
+    expect(isWkeGirlBase(next.base)).toBe(true);
+    expect(isWkeGirlHair(next.hair)).toBe(true);
+    expect(isWkeGirlOutfit(next.outfit)).toBe(true);
   });
 });

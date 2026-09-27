@@ -1,31 +1,30 @@
 "use client";
 
 import { clsx } from "clsx";
-import { CHARACTER_CATEGORIES, type CharacterCategory } from "@/lib/character/character-types";
+import {
+  WKE_GIRL_CUSTOMIZATION_CATEGORIES,
+  type WkeGirlCustomizationCategory,
+} from "@/lib/character/wke-girl-assets";
 
-const LABELS: Record<CharacterCategory, string> = {
-  body: "Body",
+const LABELS: Record<WkeGirlCustomizationCategory, string> = {
   hair: "Hair",
-  face: "Face",
-  top: "Top",
-  bottom: "Bottom",
-  shoes: "Shoes",
-  accessory: "Extras",
+  outfit: "Outfit",
+  skin: "Skin",
 };
 
 type Props = {
-  value: CharacterCategory;
-  onChange: (category: CharacterCategory) => void;
+  value: WkeGirlCustomizationCategory;
+  onChange: (category: WkeGirlCustomizationCategory) => void;
 };
 
 export function CharacterCategoryTabs({ value, onChange }: Props) {
   return (
     <div
       role="tablist"
-      aria-label="Character parts"
+      aria-label="WKE Girl customization"
       className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:overflow-visible"
     >
-      {CHARACTER_CATEGORIES.map((category) => {
+      {WKE_GIRL_CUSTOMIZATION_CATEGORIES.map((category) => {
         const selected = category === value;
         return (
           <button

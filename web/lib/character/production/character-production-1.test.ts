@@ -2,7 +2,6 @@ import { Box3, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { buildHeroObject, disposeHeroObject } from "../kit/build-hero-object";
 import { normalizeCharacterKit } from "../kit/kit-normalize";
-import { normalizeCharacterConfig } from "../character-normalize";
 import {
   CHARACTER_PRODUCTION_1_CONFIG,
   CHARACTER_PRODUCTION_1_ID,
@@ -13,7 +12,7 @@ import {
 describe("Character Production 1", () => {
   it("locks a named vinyl kit and body loadout", () => {
     const kit = normalizeCharacterKit(CHARACTER_PRODUCTION_1_KIT);
-    const config = normalizeCharacterConfig(CHARACTER_PRODUCTION_1_CONFIG);
+    const config = CHARACTER_PRODUCTION_1_CONFIG;
     expect(kit.id).toBe(CHARACTER_PRODUCTION_1_ID);
     expect(kit.name).toBe(CHARACTER_PRODUCTION_1_NAME);
     expect(kit.hero).toBe("toy_head_v1");

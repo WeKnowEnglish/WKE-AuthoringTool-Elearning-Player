@@ -1,5 +1,5 @@
 import { CLOTHING_SWATCHES, HAIR_SWATCHES, SKIN_SWATCHES } from "@/lib/character/character-assets";
-import type { CharacterConfig } from "@/lib/character/character-types";
+import type { LegacyModularCharacterConfig } from "@/lib/character/character-types";
 import { cloneHair } from "@/lib/character/kit/hair-shell";
 import { DEFAULT_HEAD_PROFILE } from "@/lib/character/kit/head-profile";
 import { VINYL_SCULPT_RECIPE } from "@/lib/character/kit/kit-defaults";
@@ -71,7 +71,7 @@ export const CHARACTER_PRODUCTION_1_KIT: CharacterKitDocument = {
 };
 
 /** Matching full-body loadout. Clothes are the vinyl figure, not student placeholders. */
-export const CHARACTER_PRODUCTION_1_CONFIG: CharacterConfig = {
+export const CHARACTER_PRODUCTION_1_CONFIG: LegacyModularCharacterConfig = {
   body: "body_01",
   skinColor: SKIN_SWATCHES[0].hex,
   hair: "hair_02",

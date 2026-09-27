@@ -8,7 +8,7 @@ import { registerStudentAccount, updateStudentLearningBand } from "@/lib/actions
 import { authCallbackRedirectUrl } from "@/lib/auth/auth-email-redirect";
 import { migrateLocalStorageToStudentStorageId } from "@/lib/auth/student-storage-migrate";
 import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
-import { getAppRole, mustChangePassword } from "@/lib/auth/roles";
+import { getAppRole } from "@/lib/auth/roles";
 import { resolveLearningBand } from "@/lib/auth/student-bands";
 import { setStudentStorageIdCache } from "@/lib/auth/student-storage-id";
 import { ensureMasteryHydratedForCurrentStudent, pushLocalMasteryBacklogForCurrentStudent } from "@/lib/mastery/supabase-sync";
@@ -252,33 +252,33 @@ export function PortalLoginPanel({
     }, { status: "started" });
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: teacherEmail.trim(),
-        password: teacherPassword,
+      const response = await fetch("/api/auth/password-login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: teacherEmail.trim(),
+          password: teacherPassword,
+          expectedRole: "teacher",
+        }),
       });
-      if (error) {
+      const result = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        mustChangePassword?: boolean;
+      } | null;
+      if (!response.ok || !result?.ok) {
         recordAppDiagnostic("teacher", "authentication", "login_failed", {
           portal: "teacher",
           reason: "authentication_rejected",
         }, { kind: "error", status: "failed", errorCode: "teacher_auth_rejected" });
-        setMessage(error.message);
+        setMessage(result?.error ?? "We couldn't complete sign-in. Please try again.");
         return;
       }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (getAppRole(user) !== "teacher") {
-        await supabase.auth.signOut();
-        setMessage("This account is not a teacher.");
-        return;
-      }
-
       const path = resolvePostLoginPath({
         role: "teacher",
         next: nextPath,
-        mustChangePassword: mustChangePassword(user),
+        mustChangePassword: result.mustChangePassword === true,
       });
       recordAppDiagnostic("teacher", "authentication", "login_succeeded", {
         portal: "teacher",
@@ -288,6 +288,12 @@ export function PortalLoginPanel({
       // freshly written Supabase cookies are visible to the server, which
       // sends the teacher straight back to the login page on managed hosts.
       window.location.assign(path);
+    } catch {
+      recordAppDiagnostic("teacher", "authentication", "login_failed", {
+        portal: "teacher",
+        reason: "connection_failed",
+      }, { kind: "error", status: "failed", errorCode: "auth_connection_failed" });
+      setMessage("We couldn't connect to the sign-in service. Please try again.");
     } finally {
       setLoading(false);
     }

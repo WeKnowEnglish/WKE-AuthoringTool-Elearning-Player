@@ -21,8 +21,9 @@ import { HomeworkReadAndAnswerPlayer } from "@/components/primary/HomeworkReadAn
 import { HomeworkPictureStoryPlayer } from "@/components/primary/HomeworkPictureStoryPlayer";
 import { HomeworkTemplateOnePilot } from "@/components/pilots/HomeworkTemplateOnePilot";
 import { PrimaryA2AssessmentPilot } from "@/components/assessment/PrimaryA2AssessmentPilot";
-import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
-import { studentLoginPath } from "@/lib/auth/student-login";
+import { StudentSessionUnavailablePage } from "@/components/homework/StudentSessionUnavailablePage";
+import { StudentHomeworkServiceUnavailablePage } from "@/components/homework/StudentHomeworkServiceUnavailablePage";
+import { resolveStudentRouteSession } from "@/lib/auth/student-route-auth";
 import { CLASS_HOMEWORK_PAYLOAD_LABELS, type ClassHomeworkPayloadType } from "@/lib/class-homework/types";
 import { parseStoredPackFlashcardCards } from "@/lib/class-homework/freeze-pack-flashcards";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
@@ -32,10 +33,10 @@ import { resolveHomeworkAssessmentDefinition } from "@/lib/class-homework/resolv
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import { getMyAssessmentAttempt, getMyAssessmentSpeakingRecordings, getMyAssessmentSpeakingReview } from "@/lib/data/assessment-attempts";
 import { getMyHomeworkWritingSubmission } from "@/lib/data/homework-writing-submissions";
+import { HomeworkJourneyOpenedBeacon } from "@/lib/homework-journey/diagnostics";
 import { getMyHomeworkCollectionAttempt } from "@/lib/data/homework-collection-attempts";
 import { getMyHomeworkCollectionSpeakingRecordings } from "@/lib/data/homework-collection-speaking-recordings";
 import { getMyHomeworkTemplateSubmission } from "@/lib/data/homework-template-submissions";
-import { createClient } from "@/lib/supabase/server";
 import { learningBandFromUser } from "@/lib/student-classes/portal-paths";
 
 /**
@@ -78,20 +79,20 @@ function homeworkFrame(
 
 export default async function PrimaryHomeworkPage({ params }: Props) {
   const { homeworkId } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    const next = `/primary/homework/${encodeURIComponent(homeworkId)}`;
-    redirect(studentLoginPath("a1", next));
+  const homeworkPath = `/primary/homework/${encodeURIComponent(homeworkId)}`;
+  const session = await resolveStudentRouteSession(homeworkPath);
+  if (!session.ok) {
+    return <StudentSessionUnavailablePage retryPath={homeworkPath} />;
   }
-  if (isTeacher(user)) redirect(TEACHER_DEFAULT_PATH);
-  if (!isStudent(user)) redirect("/login?error=unknown_role");
+  const { user } = session;
 
-  const detail = await getHomeworkForStudent(homeworkId);
-  if (!detail) notFound();
+  const detail = await getHomeworkForStudent(homeworkId, session);
+  if (!detail.ok) {
+    if (detail.recovery === "retry") {
+      return <StudentHomeworkServiceUnavailablePage retryPath={homeworkPath} />;
+    }
+    notFound();
+  }
 
   const { homework, quizQuestions } = detail;
   const payload = homework.payload;
@@ -100,9 +101,9 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
   }
   if (payload.type === "primary_a2_assessment") {
     const [initialAttempt, initialSpeakingRecordings, speakingReview] = await Promise.all([
-      getMyAssessmentAttempt(homework.id),
-      getMyAssessmentSpeakingRecordings(homework.id),
-      getMyAssessmentSpeakingReview(homework.id),
+      getMyAssessmentAttempt(homework.id, session),
+      getMyAssessmentSpeakingRecordings(homework.id, session),
+      getMyAssessmentSpeakingReview(homework.id, session),
     ]);
     return (
       <PrimaryA2AssessmentPilot
@@ -120,7 +121,7 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
       : [];
   const writingSubmission =
     payload.type === "writing_prompt"
-      ? await getMyHomeworkWritingSubmission(homework.id)
+      ? await getMyHomeworkWritingSubmission(homework.id, session)
       : null;
   const gradedFreeze =
     payload.type === "graded_track"
@@ -129,13 +130,13 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
   const [collectionAttempt, templateSubmission, collectionSpeakingRecordings] =
     await Promise.all([
       gradedFreeze?.collectionDocument
-        ? getMyHomeworkCollectionAttempt(homework.id)
+        ? getMyHomeworkCollectionAttempt(homework.id, session)
         : Promise.resolve(null),
       gradedFreeze?.primaryDocument
-        ? getMyHomeworkTemplateSubmission(homework.id)
+        ? getMyHomeworkTemplateSubmission(homework.id, session)
         : Promise.resolve(null),
       gradedFreeze?.collectionDocument
-        ? getMyHomeworkCollectionSpeakingRecordings(homework.id)
+        ? getMyHomeworkCollectionSpeakingRecordings(homework.id, session)
         : Promise.resolve([]),
     ]);
   const typeLabel = CLASS_HOMEWORK_PAYLOAD_LABELS[payload.type];
@@ -151,6 +152,13 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
       frame={homeworkFrame(payload.type)}
       showContext={payload.type !== "homework_template"}
     >
+      <HomeworkJourneyOpenedBeacon
+        surface="student"
+        name="homework_opened"
+        homeworkId={homework.id}
+        classId={homework.classId}
+        synthetic={homework.title.startsWith("WKE-003")}
+      />
       <HomeworkStartGate
         typeLabel={typeLabel}
         alreadyCompleted={Boolean(homework.completedAt)}
@@ -175,6 +183,7 @@ export default async function PrimaryHomeworkPage({ params }: Props) {
       {payload.type === "writing_prompt" ? (
         <HomeworkWritingPromptPlayer
           homeworkId={homework.id}
+          studentId={user.id}
           prompt={payload.prompt}
           payloadInstructions={payload.instructions}
           minWords={payload.minWords}

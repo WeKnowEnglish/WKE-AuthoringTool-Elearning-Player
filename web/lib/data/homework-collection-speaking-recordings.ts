@@ -1,6 +1,8 @@
 import { unstable_noStore as noStore } from "next/cache";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
-import { isStudent, isTeacher } from "@/lib/auth/roles";
+import { isTeacher } from "@/lib/auth/roles";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import type { StudentHomeworkSession } from "@/lib/auth/student-homework-session";
 import { createClient } from "@/lib/supabase/server";
 
 async function signedRecording(
@@ -27,13 +29,16 @@ async function signedRecording(
 
 export async function getMyHomeworkCollectionSpeakingRecordings(
   homeworkId: string,
+  verifiedSession?: StudentHomeworkSession,
 ): Promise<AssessmentSpeakingRecording[]> {
   noStore();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.id || !isStudent(user)) return [];
+  const session =
+    verifiedSession ??
+    (await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    }));
+  if (!session.ok) return [];
+  const { supabase, user } = session;
   const { data, error } = await supabase
     .from("homework_collection_speaking_recordings")
     .select("id, part_id, response_id, duration_ms, storage_path")

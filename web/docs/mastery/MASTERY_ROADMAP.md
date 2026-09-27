@@ -52,7 +52,7 @@ Aligned with whole-app [adaptive learning plan](../adaptive-learning-architectur
 | **Supabase mastery persistence (P1)** | PR5 | Layer C: durable evidence + records, cross-device | ✅ [MASTERY_SUPABASE_SYNC.md](./MASTERY_SUPABASE_SYNC.md) |
 | **Sync diagnostic (D1)** | — | Dev debug panel for queue, push, server rows | D1a ✅ · D1b deferred |
 | **Teacher classes / roster (T0)** | — | Classes + join codes + enrollment RLS | ✅ [PROPOSAL_T0_TEACHER_CLASSES.md](./PROPOSAL_T0_TEACHER_CLASSES.md) |
-| **Teacher / parent mastery views** | PR6 | Weak words, review queues, class summaries | T1 ✅ reads · T2 UI pending |
+| **Teacher / parent mastery views** | PR6 | Weak words, review queues, class summaries | T1 ✅ reads · T2 ✅ diagnostic UI · parent progress publishing present |
 | **Cloze paragraph generator** | PR7 | Generated paragraphs from bank | Content pipeline; after M4 |
 | **Grammar evidence emitter** | GKE Phase 4 | `recordGrammarEvidence` for grammar targets | ✅ G1 — [PROPOSAL](./PROPOSAL_GRAMMAR_EVIDENCE_EMITTER.md) · [EVIDENCE-RULES](../grammar-knowledge-engine/EVIDENCE-RULES.md) |
 | **Board game / story / pet bridges** | — | Emit evidence without owning math | Per-feature thin wrappers |
@@ -87,7 +87,7 @@ Through M6 + post-M6 tracks, the platform should:
 - [x] Account-scoped local mastery/progress per auth user (P0 Layers A + B)
 - [x] Balanced secondary daily mix (S1a + S1b wired)
 - [x] Backend persistence for authenticated students (P1 ✅ — [MASTERY_SUPABASE_SYNC.md](./MASTERY_SUPABASE_SYNC.md))
-- [ ] Teachers can see weak targets and review needs (post-M6)
+- [x] Teachers can see weak targets and review needs (T2)
 - [ ] Grammar and other lanes emit evidence (GKE / bridges) — **grammar poster T/F ✅ G1**; other lanes pending
 
 ---
@@ -106,9 +106,9 @@ Through M6 + post-M6 tracks, the platform should:
 
 ## Next step
 
-**T2 — Teacher diagnostic UI** — [PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md](./PROPOSAL_T2_TEACHER_DIAGNOSTIC_UI.md) (awaiting approval).
+**WKE-007 — Durable assigned-practice evidence** — [goal](../goals/WKE-007-canonical-assigned-practice-evidence.md).
 
-Tabbed student progress view + enhanced class roster. Then T3 class insights.
+T2's tabbed student progress view and enhanced class roster are implemented. Make the selected assigned Practice Activity Track slice produce trustworthy evidence before expanding to T3 class insights.
 
 ---
 

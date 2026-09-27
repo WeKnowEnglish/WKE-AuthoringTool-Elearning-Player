@@ -108,7 +108,7 @@ describe("skill ranks", () => {
   });
 
   it("rejects unimplemented skills", () => {
-    const result = purchaseSkillRank("activity_gold", 1);
+    const result = purchaseSkillRank("pet_decay_slow", 1);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("not_implemented");
   });

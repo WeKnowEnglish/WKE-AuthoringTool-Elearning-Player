@@ -8,14 +8,23 @@ import {
   type LetterFruitPicksPayload,
 } from "@/lib/topdown/letter-fruit-picks-sync";
 
-const WEB_ROOT = process.cwd();
+const ATLAS_REPO_PATH = "lib/topdown/letter-fruit-atlas.ts";
+const PRESETS_REPO_PATH = "lib/topdown/letter-fruit-overlay-presets.ts";
+const ATLAS_FILE_PATH = join(
+  /* turbopackIgnore: true */ process.cwd(),
+  ATLAS_REPO_PATH,
+);
+const PRESETS_FILE_PATH = join(
+  /* turbopackIgnore: true */ process.cwd(),
+  PRESETS_REPO_PATH,
+);
 
-function readRepoFile(relativePath: string): string {
-  return readFileSync(join(WEB_ROOT, relativePath), "utf8");
+function readRepoFile(filePath: string): string {
+  return readFileSync(filePath, "utf8");
 }
 
-function writeRepoFile(relativePath: string, contents: string): void {
-  writeFileSync(join(WEB_ROOT, relativePath), contents, "utf8");
+function writeRepoFile(filePath: string, contents: string): void {
+  writeFileSync(filePath, contents, "utf8");
 }
 
 export async function POST(request: Request) {
@@ -32,18 +41,19 @@ export async function POST(request: Request) {
 
   try {
     const picks = normalizeLetterFruitPicksPayload(payload);
-    const atlasPath = "lib/topdown/letter-fruit-atlas.ts";
-    const presetsPath = "lib/topdown/letter-fruit-overlay-presets.ts";
 
-    writeRepoFile(atlasPath, patchLetterFruitAtlasAssets(readRepoFile(atlasPath), picks));
     writeRepoFile(
-      presetsPath,
-      patchLetterFruitOverlayPresets(readRepoFile(presetsPath), picks),
+      ATLAS_FILE_PATH,
+      patchLetterFruitAtlasAssets(readRepoFile(ATLAS_FILE_PATH), picks),
+    );
+    writeRepoFile(
+      PRESETS_FILE_PATH,
+      patchLetterFruitOverlayPresets(readRepoFile(PRESETS_FILE_PATH), picks),
     );
 
     return NextResponse.json({
       ok: true,
-      updated: [atlasPath, presetsPath],
+      updated: [ATLAS_REPO_PATH, PRESETS_REPO_PATH],
       tileCount: picks.length,
     });
   } catch (error) {

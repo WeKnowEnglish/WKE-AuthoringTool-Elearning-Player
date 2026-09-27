@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getClassHomework } from "@/lib/data/class-homework";
 import { listHomeworkWritingSubmissionsForTeacher } from "@/lib/data/homework-writing-submissions";
 import { getTeacherClass } from "@/lib/data/teacher-classes";
+import { HomeworkJourneyOpenedBeacon } from "@/lib/homework-journey/diagnostics";
 
 function formatWhen(value: string | null) {
   if (!value) return "Not submitted";
@@ -30,6 +31,13 @@ export default async function HomeworkWritingResultsPage({
 
   return (
     <main className="space-y-5">
+      <HomeworkJourneyOpenedBeacon
+        surface="teacher"
+        name="teacher_result_opened"
+        homeworkId={homeworkId}
+        classId={classId}
+        synthetic={homework.title.startsWith("WKE-003")}
+      />
       <Link
         href={`/teacher/classes/${classId}?tab=students`}
         className="text-sm font-semibold text-teal-700 underline"

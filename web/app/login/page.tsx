@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { PortalLoginPanel, type PortalKind } from "@/components/auth/PortalLoginPanel";
 import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
+import {
+  requestedLoginRole,
+  shouldAutoRedirectFromLogin,
+} from "@/lib/auth/login-account-switch";
 import { getAppRole, mustChangePassword } from "@/lib/auth/roles";
 import { resolveStudentDoorBand } from "@/lib/auth/student-login";
 import { createClient } from "@/lib/supabase/server";
@@ -29,7 +33,15 @@ export default async function LoginPage({ searchParams }: Props) {
   } = await supabase.auth.getUser();
 
   const role = getAppRole(user);
-  if (role) {
+  const portalRaw = firstParam(sp.portal);
+  const requestedPortal = requestedLoginRole(portalRaw);
+  if (
+    role &&
+    shouldAutoRedirectFromLogin({
+      currentRole: role,
+      requestedPortal,
+    })
+  ) {
     const learningBand =
       typeof user?.user_metadata?.learning_band === "string"
         ? user.user_metadata.learning_band
@@ -44,9 +56,8 @@ export default async function LoginPage({ searchParams }: Props) {
     );
   }
 
-  const portalRaw = firstParam(sp.portal);
   const defaultPortal: PortalKind =
-    portalRaw === "teacher" ? "teacher" : "student";
+    requestedPortal === "teacher" ? "teacher" : "student";
   const initialMessage = firstParam(sp.message) || undefined;
 
   return (

@@ -41,6 +41,33 @@ export const appDiagnosticBatchSchema = z.object({
 
 export type ValidatedAppDiagnosticEvent = z.infer<typeof appDiagnosticEventSchema>;
 
+export function diagnosticIdentityForStorage(
+  event: Pick<ValidatedAppDiagnosticEvent, "surface" | "phase" | "name">,
+  identity: {
+    userId: string | null;
+    participantId: string | null;
+    participantDisplayName: string | null;
+  },
+) {
+  const isAnonymousClassroomReconnect =
+    event.phase === "virtual-classroom" &&
+    /^classroom_reconnect_(started|recovered|failed)$/.test(event.name);
+  if (
+    isAnonymousClassroomReconnect ||
+    (event.surface === "student" &&
+      ((event.phase === "homework_auth" && event.name === "homework_auth_failed") ||
+        event.phase === "homework_finalization" ||
+        event.phase === "homework_journey"))
+  ) {
+    return {
+      userId: null,
+      participantId: null,
+      participantDisplayName: null,
+    };
+  }
+  return identity;
+}
+
 export function sanitizeDiagnosticRoute(route: string | undefined): string | null {
   if (!route) return null;
   const [pathname] = route.split("?");

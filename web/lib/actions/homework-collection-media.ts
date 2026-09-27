@@ -1,11 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isStudent } from "@/lib/auth/roles";
+import type { StudentActionAuthFailure } from "@/lib/auth/student-action-auth";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import {
+  studentHomeworkForbiddenFailure,
+  studentHomeworkServiceUnavailableFailure,
+  studentHomeworkUnavailableFailure,
+} from "@/lib/auth/student-homework-access";
 import { normalizeHomeworkPayload } from "@/lib/class-homework/normalize";
 import { parseGradedTrackFreezeDocument } from "@/lib/class-homework/freeze-graded-track";
 import { creativePresentationMediaIds } from "@/lib/homework-collections";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role-client";
 
 const BUCKET = "homework_media";
@@ -14,7 +19,8 @@ const ALLOWED_IMAGES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 type SaveResult =
   | { ok: true; mediaId: string; url: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  | StudentActionAuthFailure;
 
 function safeSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 100);
@@ -22,13 +28,12 @@ function safeSegment(value: string): string {
 
 export async function saveHomeworkCollectionMedia(formData: FormData): Promise<SaveResult> {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id || !isStudent(user)) {
-      return { ok: false, error: "Student authentication required." };
-    }
-
     const homeworkId = String(formData.get("homework_id") ?? "").trim();
+    const auth = await resolveStudentActionSession({
+      nextPath: homeworkId ? `/homework/${encodeURIComponent(homeworkId)}` : "/",
+    });
+    if (!auth.ok) return auth;
+    const { supabase, user } = auth;
     const partId = String(formData.get("part_id") ?? "").trim();
     const slotId = String(formData.get("slot_id") ?? "").trim();
     const upload = formData.get("file");
@@ -52,10 +57,10 @@ export async function saveHomeworkCollectionMedia(formData: FormData): Promise<S
       .select("id,class_id,status,payload,target_student_ids")
       .eq("id", homeworkId)
       .maybeSingle();
-    if (homeworkError) return { ok: false, error: homeworkError.message };
+    if (homeworkError) return studentHomeworkServiceUnavailableFailure();
     const payload = normalizeHomeworkPayload(homework?.payload);
     if (!homework || homework.status !== "assigned" || payload?.type !== "graded_track") {
-      return { ok: false, error: "This homework is not open." };
+      return studentHomeworkUnavailableFailure();
     }
     const freeze = parseGradedTrackFreezeDocument(payload.document);
     const part = freeze?.collectionDocument?.parts.find((entry) => entry.id === partId);
@@ -66,17 +71,17 @@ export async function saveHomeworkCollectionMedia(formData: FormData): Promise<S
     const { data: memberships, error: membershipError } = await supabase.rpc(
       "student_class_memberships",
     );
-    if (membershipError) return { ok: false, error: membershipError.message };
+    if (membershipError) return studentHomeworkServiceUnavailableFailure();
     if (!((memberships ?? []) as Array<{ class_id: string }>).some(
       (row) => row.class_id === homework.class_id,
     )) {
-      return { ok: false, error: "You are not enrolled in this class." };
+      return studentHomeworkForbiddenFailure();
     }
     const targets = Array.isArray(homework.target_student_ids)
       ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
       : null;
     if (targets && !targets.includes(user.id)) {
-      return { ok: false, error: "This homework was not assigned to you." };
+      return studentHomeworkForbiddenFailure();
     }
 
     const admin = createServiceRoleSupabase();

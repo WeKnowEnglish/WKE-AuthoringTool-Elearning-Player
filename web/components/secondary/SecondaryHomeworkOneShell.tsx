@@ -12,9 +12,14 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { AssessmentSpeakingRecorder } from "@/components/assessment/AssessmentSpeakingRecorder";
-import { recordHomeworkTemplateCompletion } from "@/lib/actions/class-homework";
+import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
 import { saveHomeworkTemplatePart } from "@/lib/actions/homework-template-submission";
+import {
+  recordHomeworkFinalizationOutcome,
+  recordHomeworkFinalizationStarted,
+} from "@/lib/homework-finalization/diagnostics";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
+import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 import type { HomeworkTemplateSubmission } from "@/lib/homework-templates/homework-template-submission";
 import { getHomeworkTemplateDefinition } from "@/lib/homework-templates/registry";
 import {
@@ -200,6 +205,8 @@ export function SecondaryHomeworkOneShell({
   );
   const [checkedScores, setCheckedScores] = useState<Record<string, number>>({});
   const [notice, setNotice] = useState(alreadyCompleted ? "This homework has already been submitted. You can review your answers below." : "");
+  const { authFailure, captureAuthFailure, clearAuthFailure } =
+    useStudentActionAuthFailure();
   const [pending, startTransition] = useTransition();
   const activePart =
     navParts.find((part) => part.id === activePartId) ?? navParts[0]!;
@@ -294,10 +301,12 @@ export function SecondaryHomeworkOneShell({
 
   function saveObjectivePart(partId: string, answers: Record<string, string>, correct: number, total: number) {
     setNotice("");
+    clearAuthFailure();
     startTransition(async () => {
       if (homeworkId) {
         const result = await saveHomeworkTemplatePart({ homeworkId, partId, snapshot: { answers, correct, total } });
         if (!result.ok) {
+          if (captureAuthFailure(result, "save_secondary_template_part")) return;
           setNotice(result.error);
           return;
         }
@@ -319,6 +328,7 @@ export function SecondaryHomeworkOneShell({
       return;
     }
     setNotice("");
+    clearAuthFailure();
     startTransition(async () => {
       if (!homeworkId) {
         setSavedParts((current) => new Set(current).add(activePart.id));
@@ -326,6 +336,8 @@ export function SecondaryHomeworkOneShell({
         return;
       }
       const hasNextPart = activeIndex < navParts.length - 1;
+      const willFinalize = !hasNextPart && !deferOverallCompletion;
+      if (willFinalize) recordHomeworkFinalizationStarted(homeworkId, "homework_template");
       const submission = await saveHomeworkTemplatePart({
         homeworkId,
         partId: activePart.id,
@@ -334,9 +346,11 @@ export function SecondaryHomeworkOneShell({
           correct: null,
           total: speakingContent.teacherScoreTotal,
         },
-        submit: !hasNextPart && !deferOverallCompletion,
+        submit: willFinalize,
       });
+      if (willFinalize) recordHomeworkFinalizationOutcome(homeworkId, "homework_template", submission);
       if (!submission.ok) {
+        if (captureAuthFailure(submission, "submit_secondary_template")) return;
         setNotice(submission.error);
         return;
       }
@@ -353,11 +367,6 @@ export function SecondaryHomeworkOneShell({
             ? ""
             : "Template activities saved. Continue to the collection activities below.",
         );
-        return;
-      }
-      const completion = await recordHomeworkTemplateCompletion({ homeworkId });
-      if (!completion.ok) {
-        setNotice(completion.error);
         return;
       }
       setSavedParts((current) => new Set(current).add(activePart.id));
@@ -388,6 +397,7 @@ export function SecondaryHomeworkOneShell({
     setRecordingsByPart({});
     setCheckedScores({});
     setNotice("");
+    clearAuthFailure();
   }
 
   function objectiveFooter(input: {
@@ -465,6 +475,14 @@ export function SecondaryHomeworkOneShell({
       </header>
       ) : null}
 
+      {authFailure && homeworkId ? (
+        <StudentActionFailureNotice
+          failure={authFailure.failure}
+          homeworkId={homeworkId}
+          action={authFailure.action}
+          onRetry={clearAuthFailure}
+        />
+      ) : null}
       {notice ? <p role="status" className="rounded-xl border-2 border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-900">{notice}</p> : null}
 
       <div className={segmentMode ? "min-w-0" : "grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]"}>

@@ -43,6 +43,8 @@ export function StudentLayoutClient({
     pathname === "/" ||
     onMarketing ||
     pathname === "/primary" ||
+    pathname === "/primary/world" ||
+    pathname.startsWith("/primary/world/") ||
     pathname.startsWith("/primary/learn/easy-readers/") ||
     pathname.startsWith("/primary/homework/") ||
     pathname.startsWith("/primary/class/") ||

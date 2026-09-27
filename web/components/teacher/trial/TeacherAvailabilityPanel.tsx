@@ -64,7 +64,7 @@ export function TeacherAvailabilityPanel({
   spacePublished,
 }: Props) {
   const router = useRouter();
-  const defaults = useMemo(defaultDateAndTime, []);
+  const defaults = useMemo(() => defaultDateAndTime(), []);
   const [slots, setSlots] = useState(initialSlots);
   const [startDate, setStartDate] = useState(defaults.date);
   const [startTime, setStartTime] = useState(defaults.time);

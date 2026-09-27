@@ -125,7 +125,7 @@ Use these boundaries for future work:
 Preferred direction:
 
 - Treat `LessonPlayer` as the canonical runtime shell for structured learning screens.
-- Treat `StudentHubClient` as the canonical child portal shell.
+- Treat the `/primary` and `/secondary` landing routes and their shared student layouts as the canonical portal shells. Keep `StudentHubClient` only as a legacy migration reference while any dependent behavior remains.
 - Treat vocabulary, explore, pet, and future board-game loops as modes that plug into the same progress and feedback contracts.
 - Move reusable test/prototype logic out of `teststartpage` naming when it becomes production student-hub behavior.
 - Keep migration support for legacy story and presentation payloads until old rows are converted or formally retired.
@@ -187,7 +187,7 @@ Deliverables:
 - Use spaced review to choose daily quest targets and vocabulary runs.
 - Add hint levels and repair attempts as first-class learning signals.
 - Distinguish fluency practice from first exposure.
-- Add teacher-visible mastery summaries.
+- Extend the existing teacher-visible mastery summaries into actionable, evidence-linked reteach and next-practice decisions.
 
 ### Milestone 4: Strengthen Story And Authentic Use
 
@@ -227,11 +227,11 @@ Deliverables:
 
 ## Next Implementation Priorities
 
-1. Expand `StudentPracticeSessionEvent` from the vocabulary pilot to explore, pet, and course lessons (see [Student Practice Session Contract](./student-practice-session-contract.md)).
-2. Audit production references to `teststartpage` and sort them into keep, rename, or retire.
-3. Decide the fate of the board-game prototype before it grows further.
-4. Wire hint recording when the hint system is redesigned.
-5. Plan Student Tracker sync from the session event shape (deferred).
+1. Implement [WKE-007](./goals/WKE-007-canonical-assigned-practice-evidence.md): make the selected assigned Practice Activity Track slice produce durable, target-linked, idempotent evidence.
+2. Implement [WKE-008](./goals/WKE-008-authoring-to-learning-release-gate.md): release-gate the validated teacher-authoring-to-student-learning journey.
+3. Implement [WKE-009](./goals/WKE-009-mastery-to-next-practice-loop.md): turn trustworthy vocabulary/grammar mastery into one transparent next action.
+4. Audit production references to `teststartpage` and sort them into keep, rename, or retire.
+5. Decide the fate of the board-game prototype before it grows further.
 
 ## Milestone Detail Documents
 

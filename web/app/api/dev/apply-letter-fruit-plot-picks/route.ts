@@ -7,14 +7,18 @@ import {
   type LetterFruitPlotPicksPayload,
 } from "@/lib/topdown/letter-fruit-plot-picks-sync";
 
-const WEB_ROOT = process.cwd();
+const PRESETS_REPO_PATH = "lib/topdown/letter-fruit-plot-presets.ts";
+const PRESETS_FILE_PATH = join(
+  /* turbopackIgnore: true */ process.cwd(),
+  PRESETS_REPO_PATH,
+);
 
-function readRepoFile(relativePath: string): string {
-  return readFileSync(join(WEB_ROOT, relativePath), "utf8");
+function readRepoFile(filePath: string): string {
+  return readFileSync(filePath, "utf8");
 }
 
-function writeRepoFile(relativePath: string, contents: string): void {
-  writeFileSync(join(WEB_ROOT, relativePath), contents, "utf8");
+function writeRepoFile(filePath: string, contents: string): void {
+  writeFileSync(filePath, contents, "utf8");
 }
 
 export async function POST(request: Request) {
@@ -31,13 +35,15 @@ export async function POST(request: Request) {
 
   try {
     const picks = normalizeLetterFruitPlotPicksPayload(payload);
-    const presetsPath = "lib/topdown/letter-fruit-plot-presets.ts";
 
-    writeRepoFile(presetsPath, patchLetterFruitPlotPresets(readRepoFile(presetsPath), picks));
+    writeRepoFile(
+      PRESETS_FILE_PATH,
+      patchLetterFruitPlotPresets(readRepoFile(PRESETS_FILE_PATH), picks),
+    );
 
     return NextResponse.json({
       ok: true,
-      updated: [presetsPath],
+      updated: [PRESETS_REPO_PATH],
       presetCount: picks.length,
     });
   } catch (error) {

@@ -51,6 +51,20 @@ describe("Virtual Classroom runtime snapshot access", () => {
     expect(resolveVirtualClassroomRuntimeReader({ session, memberCookie, hostCookie: null })).toBeNull();
   });
 
+  it("rejects an expired member token", () => {
+    const memberCookie = encodeVcMemberToken({
+      sessionId: session.id,
+      joinCode: session.joinCode,
+      roomId: session.liveblocksRoomId,
+      userId: "student-1",
+      displayName: "Mia",
+      role: "member",
+      expiresAt: Date.now() - 1,
+    });
+
+    expect(resolveVirtualClassroomRuntimeReader({ session, memberCookie, hostCookie: null })).toBeNull();
+  });
+
   it("accepts the signed host cookie for the matching session", () => {
     expect(resolveVirtualClassroomRuntimeReader({
       session,

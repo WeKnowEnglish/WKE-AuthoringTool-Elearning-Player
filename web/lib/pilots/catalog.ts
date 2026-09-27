@@ -585,6 +585,78 @@ export const PILOT_CATALOG: PilotEntry[] = [
 
   // ── Deferred · worlds ───────────────────────────────────────────
   {
+    href: "/pilots/world",
+    title: "WKE World (3D globe foundation)",
+    description:
+      "Walk the spinning globe; the camera stays on the student from a high south look-down. House, school, and pet sit on the planet. Go inside from there. Student map at /primary/world.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/world/play/school?inside=1",
+    title: "House & school play spaces",
+    description:
+      "Interiors opened from the globe. House wardrobe (outfit/face + clothing words) and fridge (food words); school desk/board prompts. Saved avatar walks rooms and globe. Student: /primary/world/play/cottage?inside=1.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/world/design/cottage",
+    title: "House room designer",
+    description:
+      "Kid floor, walls, and furniture designer with Door/Corner/Top camera buttons. Includes wardrobe. Same UI as student Decorate. Save as starter downloads the JSON recipe walk-around uses. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/primary/world/outfit",
+    title: "House wardrobe · outfit",
+    description:
+      "Student outfit editor opened from the house wardrobe. Saves to the same character config the globe/house avatar wears. Pilot mirror: /pilots/character-editor.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/primary/world/face",
+    title: "House wardrobe · face kit",
+    description:
+      "Student head kit editor opened from the house wardrobe. Saved kit becomes the play avatar head. Pilot mirror: /pilots/character-kit.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/character-editor",
+    title: "Character editor (3D prototype)",
+    description:
+      "Student avatar picker: 6 face looks + 10 hair styles + expanded clothes (8 tops, 6 bottoms, 6 shoes, 6 accessories), body, recolor, save. Faces change eye/nose/mouth layout on the vinyl head; hair is shell+tuft recipes; clothes are procedural meshes. Worn in WKE World via wardrobe. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/character-kit",
+    title: "Character head kit (Level 1)",
+    description:
+      "Authoring: vinyl toy skull or Chibi vinyl bust alternate (blank reference-sheet head, concha ears, pedestal neck). Lock Front/Side/3/4, click-to-stamp on the lathe cage. Saved kits show on the world avatar. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
+    href: "/pilots/character-production-1",
+    title: "Character Production 1",
+    description:
+      "Locked vinyl full-body kid: kit lathe head plus rounded hoodie/shorts/sneakers. No reference photo. Download kit JSON or export GLB. Not shippable.",
+    group: "deferred",
+    status: "review",
+    notShippable: true,
+  },
+  {
     href: "/primary?nav=games",
     title: "World explore (Simple World)",
     description:

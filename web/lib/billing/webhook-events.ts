@@ -15,3 +15,25 @@ export function isClosedCheckoutEventType(eventType: string): boolean {
     eventType === "checkout.session.async_payment_failed"
   );
 }
+
+export function isRefundEventType(eventType: string): boolean {
+  return (
+    eventType === "refund.created" ||
+    eventType === "refund.updated" ||
+    eventType === "refund.failed" ||
+    eventType === "charge.refunded"
+  );
+}
+
+export function isDisputeEventType(eventType: string): boolean {
+  return eventType === "charge.dispute.created" || eventType === "charge.dispute.closed";
+}
+
+export function isSupportedStripeEventType(eventType: string): boolean {
+  return (
+    isPaidCheckoutEventType(eventType) ||
+    isClosedCheckoutEventType(eventType) ||
+    isRefundEventType(eventType) ||
+    isDisputeEventType(eventType)
+  );
+}

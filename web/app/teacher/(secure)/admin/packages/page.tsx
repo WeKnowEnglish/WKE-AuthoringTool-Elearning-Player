@@ -1,6 +1,8 @@
 import { AdminLessonPackagesPanel } from "@/components/teacher/admin/AdminLessonPackagesPanel";
 import { AdminSubnav } from "@/components/teacher/admin/AdminSubnav";
+import { PaymentReviewPanel } from "@/components/teacher/admin/PaymentReviewPanel";
 import { listAdminLessonPackages } from "@/lib/data/lesson-packages";
+import { listPaymentReviewItems } from "@/lib/data/payment-reviews";
 
 export const metadata = {
   title: "Lesson packages — Admin",
@@ -8,7 +10,10 @@ export const metadata = {
 };
 
 export default async function AdminLessonPackagesPage() {
-  const result = await listAdminLessonPackages();
+  const [result, reviews] = await Promise.all([
+    listAdminLessonPackages(),
+    listPaymentReviewItems(),
+  ]);
 
   return (
     <>
@@ -20,6 +25,13 @@ export default async function AdminLessonPackagesPage() {
         </p>
       </div>
       <AdminSubnav active="packages" />
+      {reviews.ok ? (
+        <PaymentReviewPanel items={reviews.items} />
+      ) : (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Payment review could not be loaded: {reviews.error}
+        </div>
+      )}
       {result.ok ? (
         <AdminLessonPackagesPanel packages={result.packages} />
       ) : (

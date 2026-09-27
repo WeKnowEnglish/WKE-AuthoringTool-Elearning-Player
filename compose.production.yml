@@ -1,0 +1,72 @@
+name: wke-production
+
+services:
+  wke:
+    image: wke:${WKE_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        WKE_APP_VERSION: ${WKE_APP_VERSION:-0.1.0}
+        WKE_GIT_COMMIT_SHA: ${WKE_GIT_COMMIT_SHA:-unknown}
+      secrets:
+        - source: wke_build_env
+          target: wke_env
+    env_file:
+      - ${WKE_ENV_FILE:-./web/.env.production}
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      WKE_APP_VERSION: ${WKE_APP_VERSION:-0.1.0}
+      WKE_GIT_COMMIT_SHA: ${WKE_GIT_COMMIT_SHA:-unknown}
+      NEXT_PUBLIC_GIT_COMMIT_SHA: ${WKE_GIT_COMMIT_SHA:-unknown}
+    expose:
+      - "3000"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 4
+    networks:
+      - edge
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      WKE_HOSTNAME: ${WKE_HOSTNAME:-hostinger-test.weknowenglish.online}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      wke:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - edge
+
+secrets:
+  wke_build_env:
+    file: ${WKE_ENV_FILE:-./web/.env.production}
+
+networks:
+  edge:
+    name: wke-edge
+
+volumes:
+  caddy_data:
+  caddy_config:

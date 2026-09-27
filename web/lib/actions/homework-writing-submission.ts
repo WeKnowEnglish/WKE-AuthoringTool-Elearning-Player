@@ -1,30 +1,46 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isStudent } from "@/lib/auth/roles";
+import type { StudentActionAuthFailure } from "@/lib/auth/student-action-auth";
+import { resolveStudentActionSession } from "@/lib/auth/student-action-auth-server";
+import {
+  studentHomeworkForbiddenFailure,
+  studentHomeworkServiceUnavailableFailure,
+  studentHomeworkUnavailableFailure,
+} from "@/lib/auth/student-homework-access";
 import {
   countWritingWords,
   normalizeHomeworkPayload,
   normalizeWritingSubmissionText,
 } from "@/lib/class-homework/normalize";
-import { recordWritingPromptHomeworkCompletion } from "@/lib/actions/class-homework";
-import { createClient } from "@/lib/supabase/server";
+import {
+  parseHomeworkFinalizationReceipt,
+  type HomeworkFinalizationReceipt,
+} from "@/lib/homework-finalization/receipt";
+
+type SaveHomeworkWritingSubmissionResult =
+  | {
+      ok: true;
+      status: "in_progress" | "submitted";
+      receipt?: HomeworkFinalizationReceipt;
+    }
+  | { ok: false; error: string }
+  | StudentActionAuthFailure;
 
 export async function saveHomeworkWritingSubmission(input: {
   homeworkId: string;
   text: string;
   submit?: boolean;
-}): Promise<{ ok: true; status: "in_progress" | "submitted" } | { ok: false; error: string }> {
+}): Promise<SaveHomeworkWritingSubmissionResult> {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.id || !isStudent(user)) {
-      return { ok: false, error: "Student authentication required." };
-    }
-
     const homeworkId = input.homeworkId.trim();
+    const auth = await resolveStudentActionSession({
+      nextPath: homeworkId
+        ? `/homework/${encodeURIComponent(homeworkId)}`
+        : "/",
+    });
+    if (!auth.ok) return auth;
+    const { supabase, user } = auth;
     const text = normalizeWritingSubmissionText(input.text);
     if (!text) return { ok: false, error: "Write something before saving." };
 
@@ -33,7 +49,7 @@ export async function saveHomeworkWritingSubmission(input: {
       .select("id, class_id, status, payload, target_student_ids")
       .eq("id", homeworkId)
       .maybeSingle();
-    if (homeworkError) return { ok: false, error: homeworkError.message };
+    if (homeworkError) return studentHomeworkServiceUnavailableFailure();
     const payload = normalizeHomeworkPayload(homework?.payload);
     if (
       !homework ||
@@ -41,7 +57,7 @@ export async function saveHomeworkWritingSubmission(input: {
       payload.type !== "writing_prompt" ||
       !["assigned", "closed"].includes(String(homework.status))
     ) {
-      return { ok: false, error: "This writing homework is not available." };
+      return studentHomeworkUnavailableFailure();
     }
 
     if (input.submit && payload.minWords) {
@@ -58,19 +74,19 @@ export async function saveHomeworkWritingSubmission(input: {
       ? homework.target_student_ids.filter((id): id is string => typeof id === "string")
       : null;
     if (targets && !targets.includes(user.id)) {
-      return { ok: false, error: "This homework was not assigned to you." };
+      return studentHomeworkForbiddenFailure();
     }
 
     const { data: memberships, error: membershipError } = await supabase.rpc(
       "student_class_memberships",
     );
-    if (membershipError) return { ok: false, error: membershipError.message };
+    if (membershipError) return studentHomeworkServiceUnavailableFailure();
     if (
       !((memberships ?? []) as Array<{ class_id: string }>).some(
         (row) => row.class_id === homework.class_id,
       )
     ) {
-      return { ok: false, error: "You are not enrolled in this class." };
+      return studentHomeworkForbiddenFailure();
     }
 
     const { data: existing, error: existingError } = await supabase
@@ -90,8 +106,27 @@ export async function saveHomeworkWritingSubmission(input: {
       return { ok: true, status: "submitted" };
     }
 
-    const now = new Date().toISOString();
     const status = input.submit ? "submitted" : "in_progress";
+    if (input.submit) {
+      const { data, error } = await supabase.rpc(
+        "finalize_homework_writing_submission",
+        { p_homework_id: homeworkId, p_text: text },
+      );
+      if (error) return { ok: false, error: error.message };
+      const receipt = parseHomeworkFinalizationReceipt(
+        (data as { receipt?: unknown } | null)?.receipt,
+      );
+      if (!receipt) {
+        return { ok: false, error: "Homework was saved but its completion receipt was invalid." };
+      }
+      revalidatePath(`/primary/homework/${homeworkId}`);
+      revalidatePath(`/secondary/homework/${homeworkId}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}/homework-writing-results/${homeworkId}`);
+      revalidatePath(`/teacher/classes/${String(homework.class_id)}`);
+      return { ok: true, status: "submitted", receipt };
+    }
+
+    const now = new Date().toISOString();
     const { error } = await supabase.from("homework_writing_submissions").upsert(
       {
         homework_id: homeworkId,
@@ -110,13 +145,6 @@ export async function saveHomeworkWritingSubmission(input: {
           ? "Writing submissions require migration 123."
           : error.message,
       };
-    }
-
-    if (input.submit) {
-      const completion = await recordWritingPromptHomeworkCompletion({ homeworkId });
-      if (!completion.ok) {
-        return { ok: false, error: completion.error };
-      }
     }
 
     revalidatePath(`/primary/homework/${homeworkId}`);

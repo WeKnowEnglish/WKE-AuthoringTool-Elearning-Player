@@ -7,6 +7,10 @@ import { AssessmentSpeakingRecorder } from "@/components/assessment/AssessmentSp
 import { HomeworkFinishPanel } from "@/components/primary/HomeworkPlayChrome";
 import { saveHomeworkCollectionAttempt } from "@/lib/actions/homework-collection-attempt";
 import {
+  recordHomeworkFinalizationOutcome,
+  recordHomeworkFinalizationStarted,
+} from "@/lib/homework-finalization/diagnostics";
+import {
   homeworkCollectionAttemptTotals,
   homeworkCollectionGradingMode,
   type HomeworkCollectionAttempt,
@@ -18,6 +22,8 @@ import { HomeworkCollectionLessonPlayerPartSurface } from "@/components/homework
 import { HomeworkCollectionDocumentModulePartSurface } from "@/components/homework/HomeworkCollectionDocumentModulePartSurface";
 import { CreativePresentationPlayer } from "@/components/homework/CreativePresentationPlayer";
 import type { AssessmentSpeakingRecording } from "@/lib/assessment";
+import { StudentActionFailureNotice } from "@/components/homework/StudentActionFailureNotice";
+import { useStudentActionAuthFailure } from "@/lib/auth/use-student-action-auth-failure";
 
 type Responses = Record<string, { answers: Record<string, string> }>;
 
@@ -121,6 +127,8 @@ export function HomeworkCollectionPlayer({
   );
   const [attempt, setAttempt] = useState(initialAttempt ?? null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { authFailure, captureAuthFailure, clearAuthFailure } =
+    useStudentActionAuthFailure();
   const [finished, setFinished] = useState(initialAttempt?.status === "submitted");
   const [pending, startTransition] = useTransition();
   const focusedIndex = focusPartId
@@ -138,6 +146,7 @@ export function HomeworkCollectionPlayer({
       },
     }));
     setNotice(null);
+    clearAuthFailure();
   };
 
   const save = (submit: boolean, nextIndex?: number) => {
@@ -146,13 +155,24 @@ export function HomeworkCollectionPlayer({
       return;
     }
     setNotice(null);
+    clearAuthFailure();
     startTransition(async () => {
+      if (submit) recordHomeworkFinalizationStarted(homeworkId, "graded_track");
       const result = await saveHomeworkCollectionAttempt({
         homeworkId,
         responses,
         submit,
       });
+      if (submit) recordHomeworkFinalizationOutcome(homeworkId, "graded_track", result);
       if (!result.ok) {
+        if (
+          captureAuthFailure(
+            result,
+            submit ? "submit_collection" : "save_collection_draft",
+          )
+        ) {
+          return;
+        }
         setNotice(result.error);
         return;
       }
@@ -488,7 +508,17 @@ export function HomeworkCollectionPlayer({
           ) : null}
         </div>
 
-        {!segmentMode && notice ? <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">{notice}</p> : null}
+        {!segmentMode && authFailure && homeworkId ? (
+          <div className="mt-4">
+            <StudentActionFailureNotice
+              failure={authFailure.failure}
+              homeworkId={homeworkId}
+              action={authFailure.action}
+              onRetry={clearAuthFailure}
+            />
+          </div>
+        ) : null}
+        {!segmentMode && notice ? <p role="status" aria-live="polite" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800">{notice}</p> : null}
 
         {!segmentMode ? (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">

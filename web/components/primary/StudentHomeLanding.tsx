@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
   Coins,
   Gamepad2,
+  Globe,
   Home,
   Library,
   Menu,
@@ -323,6 +325,15 @@ export function StudentHomeLanding({
             </button>
           );
         })}
+        <Link
+          href="/primary/world"
+          className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-bold text-[var(--pl-muted)] transition hover:bg-[var(--pl-bg)] hover:text-[var(--pl-ink)]"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--pl-bg)] text-[var(--pl-muted)]">
+            <Globe className="h-4 w-4" />
+          </span>
+          Map
+        </Link>
       </nav>
 
       <div className="mt-4 flex flex-col gap-2">
@@ -405,6 +416,14 @@ export function StudentHomeLanding({
               </div>
             </div>
           </div>
+
+          <Link
+            href="/primary/world"
+            aria-label="Open map"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--pl-border)] bg-[var(--pl-bg)] text-[var(--pl-ink)] hover:bg-white"
+          >
+            <Globe className="h-5 w-5" />
+          </Link>
 
           <div className="flex items-center gap-1.5 rounded-2xl border border-[var(--pl-border)] bg-[var(--pl-bg)] px-2.5 py-1.5 text-xs font-extrabold tabular-nums">
             <Coins className="h-4 w-4 text-[var(--pl-gold)]" />

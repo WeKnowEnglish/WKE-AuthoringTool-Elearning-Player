@@ -1,0 +1,55 @@
+{
+  "format": "wke-character-kit",
+  "version": 1,
+  "id": "chibi_bust_v1",
+  "name": "Chibi vinyl bust",
+  "hero": "chibi_bust_v1",
+  "skinColor": "#F1C7A8",
+  "hairColor": "#6B3F24",
+  "regions": { "crown": 1.02, "cheeks": 1.04, "chin": 1 },
+  "profile": [
+    { "y": -0.82, "rx": 0.06, "rz": 0.06, "z": 0.01 },
+    { "y": -0.74, "rx": 0.18, "rz": 0.17, "z": 0.02 },
+    { "y": -0.66, "rx": 0.32, "rz": 0.3, "z": 0.03 },
+    { "y": -0.56, "rx": 0.44, "rz": 0.4, "z": 0.035 },
+    { "y": -0.44, "rx": 0.53, "rz": 0.47, "z": 0.035 },
+    { "y": -0.32, "rx": 0.58, "rz": 0.5, "z": 0.03 },
+    { "y": -0.2, "rx": 0.59, "rz": 0.52, "z": 0.02 },
+    { "y": -0.08, "rx": 0.57, "rz": 0.53, "z": 0.012 },
+    { "y": 0.04, "rx": 0.55, "rz": 0.54, "z": 0.005 },
+    { "y": 0.16, "rx": 0.53, "rz": 0.55, "z": 0 },
+    { "y": 0.28, "rx": 0.51, "rz": 0.56, "z": -0.008 },
+    { "y": 0.4, "rx": 0.49, "rz": 0.55, "z": -0.012 },
+    { "y": 0.52, "rx": 0.45, "rz": 0.52, "z": -0.01 },
+    { "y": 0.62, "rx": 0.38, "rz": 0.45, "z": -0.006 },
+    { "y": 0.7, "rx": 0.28, "rz": 0.34, "z": 0 },
+    { "y": 0.76, "rx": 0.16, "rz": 0.2, "z": 0 },
+    { "y": 0.8, "rx": 0.06, "rz": 0.08, "z": 0 }
+  ],
+  "sculpts": [
+    {
+      "id": "cheek_soft",
+      "origin": [0.4, -0.24, 0.26],
+      "radius": 0.34,
+      "delta": [0, 0, 0],
+      "mode": "inflate",
+      "strength": 0.028,
+      "mirror": true
+    },
+    {
+      "id": "face_soft",
+      "origin": [0, -0.16, 0.46],
+      "radius": 0.3,
+      "delta": [0, 0, 0.012],
+      "mode": "move",
+      "strength": 0.02,
+      "mirror": false
+    }
+  ],
+  "plateSrc": "/characters/heroes/chibi_bust_v1_ref.png",
+  "eyes": { "spacing": 0.46, "size": 0.9, "height": 0.02, "forward": 0.48, "open": false },
+  "nose": { "size": 0.55, "height": -0.12, "forward": 0.5 },
+  "mouth": { "width": 1, "height": -0.32, "forward": 0.48, "expression": "smile" },
+  "ears": { "size": 1.05 },
+  "hair": { "hairlineY": 0.2, "overshoot": 0.02, "backBias": -0.04, "tufts": [] }
+}

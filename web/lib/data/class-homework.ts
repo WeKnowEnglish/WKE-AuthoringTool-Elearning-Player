@@ -2,6 +2,15 @@ import { unstable_noStore as noStore } from "next/cache";
 import { cache } from "react";
 import { isStudent, isTeacher } from "@/lib/auth/roles";
 import {
+  resolveStudentActionSession,
+} from "@/lib/auth/student-action-auth-server";
+import type { StudentActionAuthFailure } from "@/lib/auth/student-action-auth";
+import {
+  studentHomeworkServiceUnavailableFailure,
+  studentHomeworkUnavailableFailure,
+} from "@/lib/auth/student-homework-access";
+import type { StudentHomeworkSession } from "@/lib/auth/student-homework-session";
+import {
   normalizeDueAt,
   normalizeHomeworkInstructions,
   normalizeHomeworkPayload,
@@ -250,16 +259,30 @@ export async function listAssignedHomeworkForStudent(): Promise<StudentHomeworkC
   }));
 }
 
-export async function getHomeworkForStudent(homeworkId: string): Promise<{
-  homework: StudentHomeworkCard;
-  quizQuestions: PackQuizCompiledQuestion[] | null;
-} | null> {
+export type StudentHomeworkLoadResult =
+  | {
+      ok: true;
+      homework: StudentHomeworkCard;
+      quizQuestions: PackQuizCompiledQuestion[] | null;
+    }
+  | StudentActionAuthFailure;
+
+export async function getHomeworkForStudent(
+  homeworkId: string,
+  verifiedSession?: StudentHomeworkSession,
+): Promise<StudentHomeworkLoadResult> {
   noStore();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.id || !isStudent(user)) return null;
+  const session =
+    verifiedSession ??
+    (await resolveStudentActionSession({
+      nextPath: `/homework/${encodeURIComponent(homeworkId)}`,
+    }));
+  if (!session.ok) {
+    return session.recovery === "retry"
+      ? studentHomeworkServiceUnavailableFailure()
+      : session;
+  }
+  const { supabase, user } = session;
 
   const { data, error } = await supabase
     .from("class_homework")
@@ -268,20 +291,22 @@ export async function getHomeworkForStudent(homeworkId: string): Promise<{
     .maybeSingle();
 
   if (error) {
-    if (isMissingHomeworkTable(error)) return null;
-    throw error;
+    return studentHomeworkServiceUnavailableFailure();
   }
-  if (!data) return null;
+  if (!data) return studentHomeworkUnavailableFailure();
 
   const mapped = mapHomework(data as HomeworkRow);
   if (!mapped || (mapped.status !== "assigned" && mapped.status !== "closed")) {
-    return null;
+    return studentHomeworkUnavailableFailure();
   }
 
-  const { data: memberships } = await supabase.rpc("student_class_memberships");
+  const { data: memberships, error: membershipError } = await supabase.rpc(
+    "student_class_memberships",
+  );
+  if (membershipError) return studentHomeworkServiceUnavailableFailure();
   const classRows = (memberships ?? []) as Array<{ class_id: string; title: string }>;
   const membership = classRows.find((row) => row.class_id === mapped.classId);
-  if (!membership) return null;
+  if (!membership) return studentHomeworkUnavailableFailure();
 
   let completedAt: string | null = null;
   const { data: completion, error: completionError } = await supabase
@@ -291,7 +316,9 @@ export async function getHomeworkForStudent(homeworkId: string): Promise<{
     .eq("student_id", user.id)
     .maybeSingle();
   if (completionError) {
-    if (!isMissingCompletionsTable(completionError)) throw completionError;
+    if (!isMissingCompletionsTable(completionError)) {
+      return studentHomeworkServiceUnavailableFailure();
+    }
   } else if (completion && typeof completion.finished_at === "string") {
     completedAt = completion.finished_at;
   }
@@ -314,7 +341,7 @@ export async function getHomeworkForStudent(homeworkId: string): Promise<{
     quizQuestions = await loadQuizQuestionsForAssignedHomework(mapped.payload);
   }
 
-  return { homework, quizQuestions };
+  return { ok: true, homework, quizQuestions };
 }
 
 async function loadQuizQuestionsForAssignedHomework(

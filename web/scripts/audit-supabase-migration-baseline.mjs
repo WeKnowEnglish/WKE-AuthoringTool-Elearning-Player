@@ -214,6 +214,26 @@ const customChecks = new Map([
         "and tablename = 'lesson_packages' and policyname = 'lesson_packages_select_active')",
     },
   ],
+  [
+    "144_student_homework_write_rls_hardening.sql",
+    {
+      label: "student homework write policies enforce role and assignment target",
+      expression:
+        "(select count(*) from pg_policies where schemaname = 'public' " +
+        "and policyname in ('class_homework_completions_student_insert', " +
+        "'class_homework_completions_student_update', " +
+        "'homework_template_speaking_student_insert', " +
+        "'homework_template_speaking_student_update', " +
+        "'homework_collection_speaking_student_insert', " +
+        "'homework_collection_speaking_student_update') " +
+        "and coalesce(with_check, '') ilike '%is_student%' " +
+        "and coalesce(with_check, '') ilike '%target_student_ids%') = 6 " +
+        "and (select count(*) from pg_policies where schemaname = 'public' " +
+        "and policyname in ('homework_template_speaking_student_select', " +
+        "'homework_collection_speaking_student_select') " +
+        "and coalesce(qual, '') ilike '%is_student%') = 2",
+    },
+  ],
 ]);
 
 function stripComments(sql) {

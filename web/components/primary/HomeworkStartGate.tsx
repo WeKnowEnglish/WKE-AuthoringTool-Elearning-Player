@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useClientHydrated } from "@/lib/react/use-client-hydrated";
 
 type Props = {
   /** Shown under the assignment chrome before play begins. */
@@ -14,6 +15,7 @@ type Props = {
  */
 export function HomeworkStartGate({ typeLabel, alreadyCompleted = false, children }: Props) {
   const [started, setStarted] = useState(false);
+  const hydrated = useClientHydrated();
 
   if (started) return <>{children}</>;
 
@@ -32,8 +34,10 @@ export function HomeworkStartGate({ typeLabel, alreadyCompleted = false, childre
       </p>
       <button
         type="button"
+        data-homework-start-ready={hydrated ? "true" : "false"}
+        disabled={!hydrated}
         onClick={() => setStarted(true)}
-        className="mt-6 inline-flex min-h-12 min-w-[12rem] items-center justify-center rounded-2xl bg-[var(--pl-teal)] px-6 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)] active:scale-[0.98]"
+        className="mt-6 inline-flex min-h-12 min-w-[12rem] items-center justify-center rounded-2xl bg-[var(--pl-teal)] px-6 text-sm font-extrabold text-white transition hover:bg-[var(--pl-teal-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
       >
         {alreadyCompleted ? "Open homework" : "Start homework"}
       </button>

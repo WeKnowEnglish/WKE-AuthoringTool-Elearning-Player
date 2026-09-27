@@ -66,7 +66,7 @@ export async function startParentLessonCheckout(input: {
 
   const lessonCount = Number(pack.lesson_count) * quantity;
   const unitAmount = Number(pack.unit_amount);
-  const currency = String(pack.currency);
+  const currency = String(pack.currency).toLowerCase();
   const now = new Date().toISOString();
 
   const { data: order, error: orderError } = await service
@@ -98,11 +98,20 @@ export async function startParentLessonCheckout(input: {
 
   const origin = requestOriginFromHeaders(await headers());
   const locale = profile?.preferred_language === "vi" ? "vi" : "en";
+  const checkoutMetadata = {
+    order_id: String(order.id),
+    guardian_user_id: user.id,
+    student_id: studentId,
+    package_id: String(pack.id),
+    quantity: String(quantity),
+    lesson_count: String(lessonCount),
+  };
 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer: profile?.stripe_customer_id || undefined,
+      customer_creation: profile?.stripe_customer_id ? undefined : "always",
       customer_email: profile?.stripe_customer_id ? undefined : user.email || undefined,
       client_reference_id: String(order.id),
       locale,
@@ -121,13 +130,9 @@ export async function startParentLessonCheckout(input: {
           },
         },
       ],
-      metadata: {
-        order_id: String(order.id),
-        guardian_user_id: user.id,
-        student_id: studentId,
-        package_id: String(pack.id),
-        quantity: String(quantity),
-        lesson_count: String(lessonCount),
+      metadata: checkoutMetadata,
+      payment_intent_data: {
+        metadata: checkoutMetadata,
       },
       success_url: `${origin}/parent/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/parent/checkout?canceled=1`,
@@ -137,14 +142,27 @@ export async function startParentLessonCheckout(input: {
       throw new Error("Stripe did not return a checkout URL.");
     }
 
-    await service
+    const { error: sessionSaveError } = await service
       .from("lesson_pack_orders")
       .update({
         stripe_checkout_session_id: session.id,
         stripe_customer_id: typeof session.customer === "string" ? session.customer : null,
+        stripe_livemode: session.livemode,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", order.id);
+      .eq("id", order.id)
+      .eq("status", "pending");
+    if (sessionSaveError) {
+      try {
+        if (session.status === "open") await stripe.checkout.sessions.expire(session.id);
+      } catch (expireError) {
+        logStripe("checkout_session_expire_failed", {
+          orderId: String(order.id),
+          message: expireError instanceof Error ? expireError.message : "Could not expire session.",
+        });
+      }
+      throw new Error(`Could not save checkout reference: ${sessionSaveError.message}`);
+    }
 
     return { ok: true, url: session.url };
   } catch (error) {
@@ -176,15 +194,32 @@ export async function confirmParentLessonCheckout(
   } = await supabase.auth.getUser();
   if (!user?.id) return { ok: false, error: "Sign in again to continue." };
 
+  const service = createServiceRoleSupabase();
+  if (!service) return { ok: false, error: "Checkout is not available yet." };
+
   try {
     const session = await stripe.checkout.sessions.retrieve(id);
-    if (session.metadata?.guardian_user_id && session.metadata.guardian_user_id !== user.id) {
+    if (session.metadata?.guardian_user_id !== user.id) {
+      return { ok: false, error: "This payment does not belong to this account." };
+    }
+    const { data: ownedOrder, error: ownershipError } = await service
+      .from("lesson_pack_orders")
+      .select("id")
+      .eq("id", session.metadata.order_id)
+      .eq("stripe_checkout_session_id", session.id)
+      .eq("guardian_user_id", user.id)
+      .maybeSingle();
+    if (ownershipError || !ownedOrder) {
       return { ok: false, error: "This payment does not belong to this account." };
     }
     if (session.payment_status === "paid") {
       const result = await fulfillPaidCheckoutSession({
         id: session.id,
         payment_status: session.payment_status,
+        amount_total: session.amount_total,
+        currency: session.currency,
+        client_reference_id: session.client_reference_id,
+        livemode: session.livemode,
         payment_intent: session.payment_intent,
         customer: session.customer,
         metadata: (session.metadata ?? null) as Record<string, string> | null,
@@ -199,4 +234,3 @@ export async function confirmParentLessonCheckout(
     return { ok: false, error: "We could not confirm this payment yet. Please refresh." };
   }
 }
-

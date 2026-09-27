@@ -4,6 +4,10 @@
 
 Start with [docs/lesson-player-master-document.md](./docs/lesson-player-master-document.md) for the current student-experience brief, architecture direction, archive policy, and roadmap.
 
+Use [docs/CODEX_MASTER_GOALS.md](./docs/CODEX_MASTER_GOALS.md) as the platform-wide guide for creating, prioritizing, executing, and updating engineering goals. The repository remains the source of truth for current implementation details.
+
+The current executable sequence is listed in [docs/goals/README.md](./docs/goals/README.md).
+
 For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./docs/CURSOR_LESSON_CREATION_HANDOFF.md).
 
 ## Setup
@@ -67,11 +71,14 @@ For Cursor lesson-building work, use [docs/CURSOR_LESSON_CREATION_HANDOFF.md](./
 - **`app_metadata.role` must be `teacher`:** Otherwise sign-in succeeds but the app signs you out with “not a teacher.” Run `npm run create-teacher -- your@email.com YourPassword` again (it updates role for an existing user) or set `{ "role": "teacher" }` under **App metadata** in the Dashboard.
 - **Password reset email opens the site but there is no reset page:** The app must expose `/auth/callback` (see above) and **Redirect URLs** must allow it. Then use **Email me a reset link** on `/teacher/login`, or set **redirect URL** in the Dashboard “Reset password” template to `{your origin}/auth/callback?next=/teacher/reset-password`.
 
-## Hostinger (Node.js)
+## Hostinger deployment
 
-- Build: `npm run build`
-- Start: `npm run start` (set `PORT` in the panel if required)
-- `next.config.ts` uses `output: "standalone"` for a smaller production bundle in Docker/Node hosting.
+Keep `weknowenglish.online` on Vercel until a Hostinger test URL works.
+
+- **VPS + Docker (deployment-platform path):** [docs/hosting/HOSTINGER_VPS_DOCKER.md](./docs/hosting/HOSTINGER_VPS_DOCKER.md)
+- **hPanel managed Node.js wizard:** [docs/hosting/HOSTINGER.md](./docs/hosting/HOSTINGER.md)
+
+Both paths use Node.js 24 and preserve the full clone because `web/` depends on the local `packages/` workspace. Non-Vercel builds emit Next.js standalone output.
 
 ## Project layout
 

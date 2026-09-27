@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { isStudent, isTeacher, TEACHER_DEFAULT_PATH } from "@/lib/auth/roles";
+import { StudentSessionUnavailablePage } from "@/components/homework/StudentSessionUnavailablePage";
+import { StudentHomeworkServiceUnavailablePage } from "@/components/homework/StudentHomeworkServiceUnavailablePage";
+import { resolveStudentRouteSession } from "@/lib/auth/student-route-auth";
 import {
   homeworkPortalPath,
   resolveHomeworkPortal,
 } from "@/lib/class-homework/portal";
 import { getHomeworkForStudent } from "@/lib/data/class-homework";
 import { learningBandFromUser } from "@/lib/student-classes/portal-paths";
-import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Homework | We Know English",
@@ -22,19 +23,19 @@ type Props = {
 export default async function HomeworkRouterPage({ params }: Props) {
   const { homeworkId } = await params;
   const canonicalPath = `/homework/${encodeURIComponent(homeworkId)}`;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/login?portal=student&next=${encodeURIComponent(canonicalPath)}`);
+  const session = await resolveStudentRouteSession(canonicalPath);
+  if (!session.ok) {
+    return <StudentSessionUnavailablePage retryPath={canonicalPath} />;
   }
-  if (isTeacher(user)) redirect(TEACHER_DEFAULT_PATH);
-  if (!isStudent(user)) redirect("/login?error=unknown_role");
+  const { user } = session;
 
-  const detail = await getHomeworkForStudent(homeworkId);
-  if (!detail) notFound();
+  const detail = await getHomeworkForStudent(homeworkId, session);
+  if (!detail.ok) {
+    if (detail.recovery === "retry") {
+      return <StudentHomeworkServiceUnavailablePage retryPath={canonicalPath} />;
+    }
+    notFound();
+  }
 
   const portal = resolveHomeworkPortal(
     detail.homework.payload,

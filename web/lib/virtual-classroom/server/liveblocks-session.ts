@@ -101,6 +101,7 @@ export async function setVcActiveActivity(input: {
         ? broadcastClassroomRealtimeEvent({
             type: "runtime:patch",
             sessionId: input.sessionId,
+            stateVersion: authority.snapshot.stateVersion,
             patch: authority.patch,
             sentAt: Date.now(),
           })

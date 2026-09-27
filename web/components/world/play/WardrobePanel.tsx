@@ -1,0 +1,50 @@
+"use client";
+
+import Link from "next/link";
+import { outfitEditorHref } from "@/lib/world/play-avatar";
+
+type Props = {
+  returnTo: string;
+  surface?: "student" | "pilot";
+  onClose: () => void;
+  onPractice: () => void;
+};
+
+export function WardrobePanel({ returnTo, surface = "student", onClose, onPractice }: Props) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex items-end justify-center bg-black/35 p-4 pb-28 sm:items-center sm:pb-4">
+      <div className="pointer-events-auto w-full max-w-md rounded-2xl bg-[#fff7ed] p-4 text-slate-900 shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-lg font-extrabold">Wardrobe</p>
+            <p className="mt-1 text-sm text-slate-700">
+              Customize your WKE Girl, or practice clothing words.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-md bg-white px-2.5 py-1 text-sm font-semibold text-slate-800 hover:bg-slate-100"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+        <div className="mt-4 flex flex-col gap-2">
+          <Link
+            href={outfitEditorHref(returnTo, surface)}
+            className="rounded-xl bg-sky-400 px-4 py-3 text-center text-sm font-bold text-slate-900 hover:bg-sky-300"
+          >
+            Customize my character
+          </Link>
+          <button
+            type="button"
+            className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-900 hover:bg-emerald-100"
+            onClick={onPractice}
+          >
+            Practice: What are you wearing?
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

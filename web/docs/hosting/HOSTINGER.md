@@ -102,6 +102,16 @@ If login bounces to `weknowenglish.online`, `APP_ORIGIN` or Supabase redirects a
 
 ## Phase 4 — cutover (only after Phase 3)
 
+Run the repeatable public production gate before and after cutover:
+
+~~~bash
+npm run test:hostinger:production
+~~~
+
+The gate verifies HTTPS reachability, health/runtime configuration, auth redirects,
+anti-cache headers, configured cron protection, and webhook route reachability. It
+does not execute cron jobs or submit signed webhook events.
+
 1. Set `APP_ORIGIN` and `NEXT_PUBLIC_APP_ORIGIN` to `https://weknowenglish.online` and **rebuild**.
 2. Attach `weknowenglish.online` to the Node app; wait for SSL.
 3. Point DNS from Vercel to Hostinger. Lower TTL beforehand if you can.

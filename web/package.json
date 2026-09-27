@@ -33,6 +33,7 @@
     "test:release:classroom:once": "cross-env WKE_006_PILOT_CONFIRMATION=preview-reconnect-pilot WKE_006_GATE_RUNS=1 node scripts/run-wke-006-pilot-gate.mjs",
     "provision:wke-001": "tsx scripts/provision-wke-001-fixtures.ts",
     "test:smoke": "node scripts/smoke-production-routes.mjs",
+    "test:hostinger:production": "node scripts/check-hostinger-production.mjs",
     "test:seo": "node scripts/seo-integration-smoke.mjs",
     "test:seo:unit": "vitest run lib/seo",
     "test:grammar": "vitest run lib/grammar-builder lib/grammar-templates",

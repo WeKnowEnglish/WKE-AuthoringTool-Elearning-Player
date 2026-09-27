@@ -100,6 +100,17 @@ Expect HTTP 200. `401` / `503` means `CRON_SECRET` is missing or wrong.
 
 If login bounces to `weknowenglish.online`, `APP_ORIGIN` or Supabase redirects are still production-only.
 
+### Keep the last successful release live
+
+Current Hostinger Node.js deployments are stored under `hbuilds/versions/<build-id>/`, while
+`hbuilds/current` points at the live successful version. A failed build should leave that pointer
+on the previous version. See [INFRA-002 managed releases](./INFRA-002_MANAGED_RELEASES.md) for the
+preview-first promotion contract and the release-health waiter used by the future dashboard.
+
+If the site returns 503 for the entire build, inspect the Hostinger resource graphs and confirm the
+application uses the `hbuilds/current/nodejs` layout. That symptom usually indicates resource
+saturation or a legacy layout rather than a failed build replacing the live files.
+
 ## Phase 4 — cutover (only after Phase 3)
 
 Run the repeatable public production gate before and after cutover:

@@ -1,0 +1,66 @@
+name: Hostinger release gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment to verify
+        required: true
+        type: choice
+        options:
+          - production
+          - preview
+        default: production
+      expected_sha:
+        description: Exact Git commit expected from /api/health
+        required: true
+        type: string
+      timeout_seconds:
+        description: Maximum time to wait for the release
+        required: true
+        type: string
+        default: "1200"
+
+concurrency:
+  group: hostinger-release-gate-${{ inputs.target }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  wait-for-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      WKE_DEPLOYMENT_ORIGIN: ${{ inputs.target == 'production' && 'https://weknowenglish.online' || vars.HOSTINGER_PREVIEW_ORIGIN }}
+      WKE_EXPECTED_GIT_COMMIT_SHA: ${{ inputs.expected_sha }}
+      WKE_DEPLOYMENT_TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
+      WKE_DEPLOYMENT_POLL_SECONDS: "15"
+      WKE_REQUIRED_HEALTHY_CHECKS: "2"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Require preview origin when selected
+        if: inputs.target == 'preview'
+        shell: bash
+        run: |
+          if [ -z "$WKE_DEPLOYMENT_ORIGIN" ]; then
+            echo "Set the HOSTINGER_PREVIEW_ORIGIN repository variable before verifying preview."
+            exit 1
+          fi
+
+      - name: Wait for exact healthy release
+        run: node web/scripts/wait-for-hostinger-release.mjs
+
+      - name: Run public acceptance checks
+        env:
+          WKE_PRODUCTION_ORIGIN: ${{ env.WKE_DEPLOYMENT_ORIGIN }}
+        run: node web/scripts/check-hostinger-production.mjs
+

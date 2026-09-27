@@ -34,6 +34,8 @@
     "provision:wke-001": "tsx scripts/provision-wke-001-fixtures.ts",
     "test:smoke": "node scripts/smoke-production-routes.mjs",
     "test:hostinger:production": "node scripts/check-hostinger-production.mjs",
+    "test:hostinger:release-controller": "node --test scripts/hostinger-release-core.test.mjs",
+    "wait:hostinger:release": "node scripts/wait-for-hostinger-release.mjs",
     "test:seo": "node scripts/seo-integration-smoke.mjs",
     "test:seo:unit": "vitest run lib/seo",
     "test:grammar": "vitest run lib/grammar-builder lib/grammar-templates",

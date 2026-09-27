@@ -197,7 +197,9 @@ export async function getPublishedTeacherSpaceByHandle(
       .eq("handle", handle)
       .eq("is_published", true)
       .maybeSingle();
-    spaceRow = fallback.data;
+    spaceRow = fallback.data
+      ? { ...fallback.data, show_trial_times: false }
+      : null;
     spaceError = fallback.error;
   } else if (spaceRow) {
     showTrialTimes = Boolean(
